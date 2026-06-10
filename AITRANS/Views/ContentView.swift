@@ -55,20 +55,14 @@ private struct WorkspaceView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
                 HeaderBar()
-                HeroPanel(selectedTab: $selectedTab)
-                ModeSelector()
-                LanguagePanel()
-                TranscriptPanel()
-                SummaryPanel()
+                ProAccountPanel()
+                MainTranslatorPanel(selectedTab: $selectedTab)
+                ProFeatureGrid(selectedTab: $selectedTab)
+                RecentTranslationPanel()
             }
             .padding(.horizontal, 18)
             .padding(.top, 12)
-            .padding(.bottom, 18)
-        }
-        .safeAreaInset(edge: .bottom) {
-            ControlDock()
-                .padding(.horizontal, 16)
-                .padding(.bottom, 8)
+            .padding(.bottom, 92)
         }
     }
 }
@@ -79,7 +73,9 @@ private struct HistoryView: View {
     @State private var query = ""
     @State private var showClearConfirmation = false
     @State private var showImporter = false
+    @State private var showExporter = false
     @State private var showImportResult = false
+    @State private var exportDocument = JSONExportDocument(data: Data())
 
     private var filteredSessions: [TranslationSessionRecord] {
         let sessions = store.recentSessions
@@ -125,7 +121,14 @@ private struct HistoryView: View {
 
                 HStack(spacing: 10) {
                     SecondaryActionButton(icon: "square.and.arrow.up", title: "导出 JSON") {
-                        _ = store.exportSnapshot()
+                        guard let url = store.exportSnapshot(),
+                              let data = try? Data(contentsOf: url) else {
+                            showImportResult = true
+                            return
+                        }
+
+                        exportDocument = JSONExportDocument(data: data)
+                        showExporter = true
                     }
 
                     SecondaryActionButton(icon: "square.and.arrow.down", title: "导入 JSON") {
@@ -179,7 +182,21 @@ private struct HistoryView: View {
             }
             showImportResult = true
         }
-        .alert("数据导入", isPresented: $showImportResult) {
+        .fileExporter(
+            isPresented: $showExporter,
+            document: exportDocument,
+            contentType: .json,
+            defaultFilename: "aitrans-export"
+        ) { result in
+            switch result {
+            case .success(let url):
+                store.dataTransferMessage = "已导出到 \(url.lastPathComponent)"
+            case .failure(let error):
+                store.dataTransferMessage = "导出失败：\(error.localizedDescription)"
+                showImportResult = true
+            }
+        }
+        .alert("数据操作", isPresented: $showImportResult) {
             Button("知道了", role: .cancel) {}
         } message: {
             Text(store.dataTransferMessage)
@@ -305,6 +322,28 @@ private struct AppBackground: View {
     }
 }
 
+private struct JSONExportDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.json] }
+
+    var data: Data
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        data = configuration.file.regularFileContents ?? Data()
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
+}
+
+private extension UTType {
+    static let ggufModel = UTType(filenameExtension: "gguf") ?? .data
+}
+
 private struct HeaderBar: View {
     @EnvironmentObject private var store: TranslationSessionStore
 
@@ -337,7 +376,7 @@ private struct HeaderBar: View {
             Text("秒译")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
                 .lineLimit(1)
-            Text("本地 AI 同声传译")
+            Text("本地 AI 翻译")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.70))
                 .lineLimit(1)
@@ -417,6 +456,525 @@ private struct AppMark: View {
                 .offset(x: -5, y: 4)
         }
         .frame(width: 54, height: 54)
+    }
+}
+
+private struct ProAccountPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Label(store.proStatusTitle, systemImage: store.isProUnlocked ? "crown.fill" : "person.crop.circle.badge.plus")
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .foregroundStyle(store.isProUnlocked ? Color.warning : .white)
+                Text(store.isProUnlocked ? store.proPlan.detail : "免费：中文、英语文本翻译")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("\(store.proPlan.productID) · \(store.proPlan.displayPrice)")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.38))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.68)
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                if store.isProUnlocked {
+                    store.restoreFreeModeForDevelopment()
+                } else {
+                    store.activateProForDevelopment()
+                }
+            } label: {
+                Text(store.isProUnlocked ? "切回免费" : "开通 Pro")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(store.isProUnlocked ? .white.opacity(0.86) : .black)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+                    .padding(.horizontal, 13)
+                    .frame(height: 36)
+                    .background(store.isProUnlocked ? Color.white.opacity(0.09) : Color.warning, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(store.isProUnlocked ? "切回免费模式" : "开通 Pro")
+        }
+        .panelStyle()
+    }
+}
+
+private struct MainTranslatorPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @Binding var selectedTab: AppTab
+
+    private var latestLine: TranscriptLine? {
+        store.transcript.first
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    CompactLanguagePicker(title: "输入", selection: $store.sourceLanguage, showsProLocks: false)
+                    swapButton
+                    TargetLanguageMenu()
+                }
+
+                VStack(spacing: 10) {
+                    CompactLanguagePicker(title: "输入", selection: $store.sourceLanguage, showsProLocks: false)
+                    HStack(spacing: 10) {
+                        swapButton
+                        TargetLanguageMenu()
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                TextEditor(text: $store.draftText)
+                    .frame(minHeight: 128)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(.white)
+                    .scrollContentBackground(.hidden)
+                    .padding(12)
+                    .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(alignment: .topLeading) {
+                        if store.draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text("输入要翻译的文字")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.34))
+                                .padding(.top, 20)
+                                .padding(.leading, 17)
+                        }
+                    }
+
+                HStack(spacing: 10) {
+                    Label(store.selectedPrompt.title, systemImage: "sparkles")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.66))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+
+                    Spacer(minLength: 0)
+
+                    Button {
+                        selectedTab = .prompts
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .frame(width: 34, height: 34)
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("设置提示词")
+
+                    Button {
+                        store.submitDraft()
+                    } label: {
+                        Label(store.isProcessing ? "翻译中" : "翻译", systemImage: store.isProcessing ? "hourglass" : "arrow.right.circle.fill")
+                            .font(.system(size: 14, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .frame(width: 104, height: 40)
+                            .background(canSend ? Color.appAccent : Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSend)
+                }
+            }
+
+            Divider()
+                .overlay(.white.opacity(0.14))
+
+            VStack(alignment: .leading, spacing: 9) {
+                HStack {
+                    Label(store.targetLanguage.rawValue, systemImage: "text.bubble.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.appAccent)
+                    Spacer()
+                    Text(store.lastGenerationLabel)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.70)
+                }
+
+                Text(latestLine?.translation ?? "译文会显示在这里。")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white.opacity(latestLine == nil ? 0.42 : 0.92))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let original = latestLine?.original {
+                    Text(original)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(13)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .panelStyle(cornerRadius: 22)
+    }
+
+    private var canSend: Bool {
+        !store.draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !store.isProcessing
+            && store.canUseLanguage(store.targetLanguage)
+    }
+
+    private var swapButton: some View {
+        Button {
+            store.swapLanguages()
+        } label: {
+            Image(systemName: "arrow.left.arrow.right")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 42, height: 42)
+                .background(Color.white.opacity(0.09), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("切换源语言和目标语言")
+    }
+}
+
+private struct CompactLanguagePicker: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    let title: String
+    @Binding var selection: SupportedLanguage
+    let showsProLocks: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white.opacity(0.48))
+            Picker(title, selection: $selection) {
+                ForEach(SupportedLanguage.allCases) { language in
+                    Text(language.rawValue).tag(language)
+                }
+            }
+            .pickerStyle(.menu)
+            .tint(.white)
+            .font(.system(size: 14, weight: .bold))
+        }
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 58)
+        .background(Color.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+private struct TargetLanguageMenu: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @State private var showLockedAlert = false
+
+    var body: some View {
+        Menu {
+            ForEach(store.availableTargetLanguages) { language in
+                Button {
+                    if store.canUseLanguage(language) {
+                        store.selectTargetLanguage(language)
+                    } else {
+                        store.selectTargetLanguage(language)
+                        showLockedAlert = true
+                    }
+                } label: {
+                    Label(language.rawValue, systemImage: store.canUseLanguage(language) ? "checkmark.circle" : "lock.fill")
+                }
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("翻译成")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.48))
+                HStack(spacing: 7) {
+                    Text(store.targetLanguage.rawValue)
+                        .font(.system(size: 14, weight: .bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.76)
+                    if !store.canUseLanguage(store.targetLanguage) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.warning)
+                    }
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 58)
+            .background(Color.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .alert("Pro 语言", isPresented: $showLockedAlert) {
+            Button("知道了", role: .cancel) {}
+            Button("开通 Pro") {
+                store.activateProForDevelopment()
+            }
+        } message: {
+            Text(store.dataTransferMessage)
+        }
+    }
+}
+
+private struct ProFeatureGrid: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @Binding var selectedTab: AppTab
+    @State private var showAudioImporter = false
+    @State private var showBackgroundPlan = false
+    @State private var showImagePlan = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "Pro 功能", subtitle: store.isProUnlocked ? "已解锁" : "内购模式", icon: "crown.fill")
+
+            HStack(spacing: 10) {
+                ProFeatureCard(
+                    icon: "waveform.and.mic",
+                    title: "同声传译",
+                    detail: "系统本地语音识别 + 本地大模型翻译",
+                    isUnlocked: store.isProUnlocked
+                ) {
+                    if store.isProUnlocked {
+                        store.mode = .live
+                        if !store.isRecording {
+                            store.toggleRecording()
+                        }
+                    } else {
+                        store.dataTransferMessage = "同声传译需要 Pro"
+                    }
+                }
+
+                ProFeatureCard(
+                    icon: "camera.viewfinder",
+                    title: "图片翻译",
+                    detail: "Vision OCR + 本地模型翻译",
+                    isUnlocked: store.isProUnlocked,
+                    isComingSoon: true
+                ) {
+                    showImagePlan = true
+                }
+            }
+
+            HStack(spacing: 10) {
+                ProFeatureCard(
+                    icon: "waveform.badge.magnifyingglass",
+                    title: "音频测试",
+                    detail: "选择音频，断网本机识别后翻译",
+                    isUnlocked: store.isProUnlocked
+                ) {
+                    if store.isProUnlocked {
+                        showAudioImporter = true
+                    } else {
+                        store.dataTransferMessage = "音频离线识别测试需要 Pro"
+                    }
+                }
+
+                ProFeatureCard(
+                    icon: "rectangle.on.rectangle.badge.gearshape",
+                    title: "后台翻译",
+                    detail: "悬浮窗能力评估与扩展路线",
+                    isUnlocked: store.isProUnlocked,
+                    isComingSoon: true
+                ) {
+                    // iOS does not allow a normal app to draw a persistent overlay above other apps.
+                    showBackgroundPlan = true
+                }
+            }
+
+            AudioRecognitionPanel()
+            SpeechCapabilityPanel()
+        }
+        .panelStyle()
+        .fileImporter(isPresented: $showAudioImporter, allowedContentTypes: [.audio]) { result in
+            switch result {
+            case .success(let url):
+                store.recognizeAudioFileAndTranslate(from: url)
+            case .failure(let error):
+                store.audioRecognitionState = .failed
+                store.audioRecognitionMessage = "音频文件选择失败：\(error.localizedDescription)"
+                store.dataTransferMessage = store.audioRecognitionMessage
+            }
+        }
+        .alert("后台一键翻译", isPresented: $showBackgroundPlan) {
+            Button("知道了", role: .cancel) {}
+        } message: {
+            Text("iOS 普通 App 不能常驻覆盖其他 App 的任意悬浮窗。可行路线是 Share Extension 处理截图/文本，或 ReplayKit Broadcast Upload Extension 获取屏幕帧后做本地 OCR，但需要用户显式启动屏幕广播。")
+        }
+        .alert("图片翻译方案", isPresented: $showImagePlan) {
+            Button("知道了", role: .cancel) {}
+        } message: {
+            Text("离线优先方案：Vision VNRecognizeTextRequest 做本机 OCR，拿到文字和 boundingBox，按行/块送入本地模型翻译，再用覆盖层把译文贴在原位置旁边或替换原区域。")
+        }
+    }
+}
+
+private struct ProFeatureCard: View {
+    let icon: String
+    let title: String
+    let detail: String
+    let isUnlocked: Bool
+    var isComingSoon = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(isUnlocked ? Color.appAccent : Color.warning)
+                    Spacer()
+                    Image(systemName: isUnlocked ? "checkmark.circle.fill" : "lock.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(isUnlocked ? Color.success : Color.warning)
+                }
+
+                Text(title)
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+                Text(isComingSoon ? "开发中" : detail)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.58))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 118, alignment: .leading)
+            .background(Color.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct SpeechCapabilityPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "iphone.gen3.radiowaves.left.and.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.appAccent)
+                Text("苹果本地语音识别")
+                    .font(.system(size: 13, weight: .bold))
+                Spacer()
+                Text(store.currentSpeechCapability.supportsOnDeviceRecognition ? "当前语言可用" : "当前语言需检测")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(store.currentSpeechCapability.supportsOnDeviceRecognition ? Color.success : Color.warning)
+            }
+
+            Text("iOS 13+ 的 Speech 框架可用 `supportsOnDeviceRecognition` 判断本机是否支持离线识别，并用 `requiresOnDeviceRecognition` 强制本地识别。支持情况取决于设备和语言包。")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.58))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 6) {
+                ForEach(store.speechRecognitionCapabilities.prefix(4)) { capability in
+                    Text("\(capability.language.shortName) \(capability.supportsOnDeviceRecognition ? "本地" : "云端")")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(capability.supportsOnDeviceRecognition ? Color.success : .white.opacity(0.50))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.07), in: Capsule())
+                }
+            }
+        }
+        .padding(12)
+        .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+    }
+}
+
+private struct AudioRecognitionPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(tint)
+                Text("音频文件断网测试")
+                    .font(.system(size: 13, weight: .bold))
+                Spacer()
+                Text(statusText)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(tint)
+            }
+
+            Text(store.audioRecognitionMessage)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.58))
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !store.lastRecognizedSpeechText.isEmpty {
+                Text(store.lastRecognizedSpeechText)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+        .padding(12)
+        .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+    }
+
+    private var icon: String {
+        switch store.audioRecognitionState {
+        case .idle: "waveform"
+        case .checking: "magnifyingglass"
+        case .recognizing: "waveform.path"
+        case .translated: "checkmark.circle.fill"
+        case .failed: "xmark.octagon.fill"
+        }
+    }
+
+    private var tint: Color {
+        switch store.audioRecognitionState {
+        case .idle: .white.opacity(0.58)
+        case .checking, .recognizing: Color.warning
+        case .translated: Color.success
+        case .failed: Color.danger
+        }
+    }
+
+    private var statusText: String {
+        switch store.audioRecognitionState {
+        case .idle: "待选择"
+        case .checking: "检查中"
+        case .recognizing: "识别中"
+        case .translated: "已翻译"
+        case .failed: "失败"
+        }
+    }
+}
+
+private struct RecentTranslationPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "最近翻译", subtitle: "\(store.transcript.count) 条", icon: "clock.arrow.circlepath")
+
+            if store.transcript.isEmpty {
+                EmptyStatePanel(icon: "text.bubble", title: "暂无记录", detail: "完成一次翻译后会自动保存到本地历史。")
+            } else {
+                LazyVStack(spacing: 10) {
+                    ForEach(store.transcript.prefix(3)) { line in
+                        TranscriptCard(line: line)
+                    }
+                }
+            }
+        }
+        .panelStyle()
     }
 }
 
@@ -1031,6 +1589,9 @@ private struct PromptEditorSheet: View {
 
 private struct ModelStatusPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @State private var showModelImporter = false
+    @State private var showModelActionResult = false
+    @State private var showRemoveConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1056,12 +1617,51 @@ private struct ModelStatusPanel: View {
             }
 
             InfoRow(icon: "folder.fill", title: "模型目录", detail: store.localModelPathDisplay)
+            InfoRow(icon: "shippingbox.fill", title: "模型文件", detail: "\(store.localModelFilename) / \(store.localModelSizeDisplay)")
 
-            PrimaryActionButton(icon: "arrow.clockwise", title: "刷新模型状态") {
+            HStack(spacing: 10) {
+                PrimaryActionButton(icon: "folder.badge.plus", title: "导入 GGUF") {
+                    showModelImporter = true
+                }
+
+                SecondaryActionButton(icon: "trash.fill", title: "移除模型", tint: Color.danger) {
+                    showRemoveConfirmation = true
+                }
+                .disabled(!store.isLocalModelInstalled)
+                .opacity(store.isLocalModelInstalled ? 1 : 0.52)
+            }
+
+            SecondaryActionButton(icon: "arrow.clockwise", title: "刷新模型状态") {
                 store.refreshModelStatus()
+                store.dataTransferMessage = store.modelStatus.detail
+                showModelActionResult = true
             }
         }
         .panelStyle()
+        .fileImporter(isPresented: $showModelImporter, allowedContentTypes: [.ggufModel]) { result in
+            switch result {
+            case .success(let url):
+                _ = store.importLocalModel(from: url)
+            case .failure(let error):
+                store.dataTransferMessage = "模型导入失败：\(error.localizedDescription)"
+                store.refreshModelStatus()
+            }
+            showModelActionResult = true
+        }
+        .confirmationDialog("移除本地模型", isPresented: $showRemoveConfirmation, titleVisibility: .visible) {
+            Button("移除模型", role: .destructive) {
+                store.removeLocalModel()
+                showModelActionResult = true
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("只删除 App 沙盒中的 model.gguf，不会影响原始文件。")
+        }
+        .alert("模型文件", isPresented: $showModelActionResult) {
+            Button("知道了", role: .cancel) {}
+        } message: {
+            Text(store.dataTransferMessage)
+        }
     }
 }
 

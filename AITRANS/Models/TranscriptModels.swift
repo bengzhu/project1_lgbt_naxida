@@ -42,6 +42,25 @@ enum SupportedLanguage: String, CaseIterable, Identifiable, Codable, Sendable {
         case .german: "DE"
         }
     }
+
+    var isFreeTranslationTarget: Bool {
+        switch self {
+        case .englishUS, .simplifiedChinese:
+            true
+        case .japanese, .french, .german:
+            false
+        }
+    }
+
+    var speechLocaleIdentifier: String {
+        switch self {
+        case .englishUS: "en-US"
+        case .simplifiedChinese: "zh-CN"
+        case .japanese: "ja-JP"
+        case .french: "fr-FR"
+        case .german: "de-DE"
+        }
+    }
 }
 
 struct TranscriptLine: Identifiable, Equatable, Codable, Sendable {
@@ -85,6 +104,35 @@ struct ModelStatus: Equatable, Sendable {
     var title: String
     var detail: String
     var isReady: Bool
+}
+
+struct SpeechRecognitionCapability: Identifiable, Equatable, Sendable {
+    var id: String { language.id }
+    var language: SupportedLanguage
+    var localeIdentifier: String
+    var supportsOnDeviceRecognition: Bool
+}
+
+struct ProSubscriptionPlan: Equatable, Sendable {
+    var productID: String
+    var title: String
+    var displayPrice: String
+    var detail: String
+
+    static let development = ProSubscriptionPlan(
+        productID: "com.local.aitrans.pro.monthly",
+        title: "秒译 Pro",
+        displayPrice: "内购开发中",
+        detail: "解锁同声传译、多语言目标和图片翻译入口"
+    )
+}
+
+enum AudioRecognitionState: String, Equatable, Codable, Sendable {
+    case idle
+    case checking
+    case recognizing
+    case translated
+    case failed
 }
 
 enum ModelEngine: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -136,11 +184,19 @@ struct PromptTemplate: Identifiable, Equatable, Codable, Sendable {
     }
 
     static let interpreterID = UUID(uuidString: "4B7087C2-0CF1-4A9B-92B5-27152270A101")!
+    static let translatorID = UUID(uuidString: "F5E1EDB9-A29B-4E57-8E3B-5D0D6C62B4D5")!
     static let meetingID = UUID(uuidString: "64B62B0D-3661-4772-9F8C-8473709700B2")!
     static let conciseID = UUID(uuidString: "C2D38258-65EE-4B0A-BAC1-358111BC4FAE")!
 
     static var defaultPrompts: [PromptTemplate] {
         [
+            PromptTemplate(
+                id: translatorID,
+                title: "通用翻译",
+                instruction: "识别输入语言并翻译为目标语言。保留人名、产品名、数字、日期和专有名词，不添加解释。",
+                tone: "自然、准确、直接",
+                isBuiltIn: true
+            ),
             PromptTemplate(
                 id: interpreterID,
                 title: "同声传译",
@@ -205,6 +261,11 @@ struct ModelGenerationResult: Sendable {
     var durationMilliseconds: Int?
 }
 
+enum ModelStreamEvent: Sendable {
+    case token(String)
+    case completed(ModelGenerationResult)
+}
+
 enum DiagnosticState: String, Codable, Sendable {
     case idle
     case running
@@ -224,6 +285,26 @@ protocol LocalLanguageModeling: Sendable {
 
     func prepare() async throws
     func generate(_ request: ModelGenerationRequest) async throws -> ModelGenerationResult
+    func stream(_ request: ModelGenerationRequest) -> AsyncThrowingStream<ModelStreamEvent, Error>
+}
+
+extension LocalLanguageModeling {
+    func stream(_ request: ModelGenerationRequest) -> AsyncThrowingStream<ModelStreamEvent, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                do {
+                    let result = try await generate(request)
+                    if !result.text.isEmpty {
+                        continuation.yield(.token(result.text))
+                    }
+                    continuation.yield(.completed(result))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
+    }
 }
 
 struct TranslationSessionRecord: Identifiable, Equatable, Codable, Sendable {
@@ -248,15 +329,56 @@ struct AppSettings: Equatable, Codable, Sendable {
     var selectedPromptID: UUID
     var selectedEngine: ModelEngine
     var sampling: GenerationSampling
+    var isProUnlocked: Bool
 
     static let defaultValue = AppSettings(
-        mode: .live,
+        mode: .translate,
         sourceLanguage: .englishUS,
         targetLanguage: .simplifiedChinese,
-        selectedPromptID: PromptTemplate.interpreterID,
+        selectedPromptID: PromptTemplate.translatorID,
         selectedEngine: .mock,
-        sampling: .defaultValue
+        sampling: .defaultValue,
+        isProUnlocked: false
     )
+
+    init(
+        mode: SessionMode,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage,
+        selectedPromptID: UUID,
+        selectedEngine: ModelEngine,
+        sampling: GenerationSampling,
+        isProUnlocked: Bool
+    ) {
+        self.mode = mode
+        self.sourceLanguage = sourceLanguage
+        self.targetLanguage = targetLanguage
+        self.selectedPromptID = selectedPromptID
+        self.selectedEngine = selectedEngine
+        self.sampling = sampling
+        self.isProUnlocked = isProUnlocked
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case mode
+        case sourceLanguage
+        case targetLanguage
+        case selectedPromptID
+        case selectedEngine
+        case sampling
+        case isProUnlocked
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        mode = try container.decode(SessionMode.self, forKey: .mode)
+        sourceLanguage = try container.decode(SupportedLanguage.self, forKey: .sourceLanguage)
+        targetLanguage = try container.decode(SupportedLanguage.self, forKey: .targetLanguage)
+        selectedPromptID = try container.decode(UUID.self, forKey: .selectedPromptID)
+        selectedEngine = try container.decode(ModelEngine.self, forKey: .selectedEngine)
+        sampling = try container.decode(GenerationSampling.self, forKey: .sampling)
+        isProUnlocked = try container.decodeIfPresent(Bool.self, forKey: .isProUnlocked) ?? false
+    }
 }
 
 struct AppPersistenceSnapshot: Equatable, Codable, Sendable {

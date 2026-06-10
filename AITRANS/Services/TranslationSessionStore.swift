@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Speech
 
 @MainActor
 final class TranslationSessionStore: ObservableObject {
@@ -27,7 +28,7 @@ final class TranslationSessionStore: ObservableObject {
         didSet { persist() }
     }
 
-    @Published var selectedPromptID: UUID = PromptTemplate.interpreterID {
+    @Published var selectedPromptID: UUID = PromptTemplate.translatorID {
         didSet { persist() }
     }
 
@@ -60,6 +61,12 @@ final class TranslationSessionStore: ObservableObject {
     @Published var diagnostics: [DiagnosticCheck] = TranslationSessionStore.defaultDiagnostics
     @Published var isRunningDiagnostics = false
     @Published var dataTransferMessage = "本地数据已准备好"
+    @Published var isProUnlocked = false {
+        didSet { persist() }
+    }
+    @Published var audioRecognitionState: AudioRecognitionState = .idle
+    @Published var audioRecognitionMessage = "选择音频文件后，会强制使用 Apple 本机语音识别测试离线能力"
+    @Published var lastRecognizedSpeechText = ""
 
     let localModelDirectory: URL
     let localModelFilename = "model.gguf"
@@ -68,6 +75,7 @@ final class TranslationSessionStore: ObservableObject {
     private let mockService: any LocalLanguageModeling
     private let localService: GemmaLocalService
     private var ticker: Task<Void, Never>?
+    private var audioRecognitionTask: SFSpeechRecognitionTask?
     private var activeSessionID = UUID()
     private var activeCreatedAt = Date()
     private var liveSampleIndex = 0
@@ -97,6 +105,16 @@ final class TranslationSessionStore: ObservableObject {
         localModelDirectory.appendingPathComponent(localModelFilename).path
     }
 
+    var localModelSizeDisplay: String {
+        let modelURL = localModelDirectory.appendingPathComponent(localModelFilename)
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: modelURL.path),
+              let fileSize = attributes[.size] as? NSNumber else {
+            return "未安装"
+        }
+
+        return ByteCountFormatter.string(fromByteCount: fileSize.int64Value, countStyle: .file)
+    }
+
     var isLocalModelInstalled: Bool {
         FileManager.default.fileExists(atPath: localModelDirectory.appendingPathComponent(localModelFilename).path)
     }
@@ -121,10 +139,47 @@ final class TranslationSessionStore: ObservableObject {
         selectedEngine == .local ? localService.metadata : mockService.metadata
     }
 
+    var proStatusTitle: String {
+        isProUnlocked ? "Pro 已开通" : "Pro 未开通"
+    }
+
+    var proPlan: ProSubscriptionPlan {
+        .development
+    }
+
+    var availableTargetLanguages: [SupportedLanguage] {
+        SupportedLanguage.allCases
+    }
+
+    var speechRecognitionCapabilities: [SpeechRecognitionCapability] {
+        SupportedLanguage.allCases.map { language in
+            let recognizer = SFSpeechRecognizer(locale: Locale(identifier: language.speechLocaleIdentifier))
+            return SpeechRecognitionCapability(
+                language: language,
+                localeIdentifier: language.speechLocaleIdentifier,
+                supportsOnDeviceRecognition: recognizer?.supportsOnDeviceRecognition ?? false
+            )
+        }
+    }
+
+    var currentSpeechCapability: SpeechRecognitionCapability {
+        speechRecognitionCapabilities.first { $0.language == sourceLanguage } ?? SpeechRecognitionCapability(
+            language: sourceLanguage,
+            localeIdentifier: sourceLanguage.speechLocaleIdentifier,
+            supportsOnDeviceRecognition: false
+        )
+    }
+
     var exportURL: URL {
         persistenceURL
             .deletingLastPathComponent()
             .appendingPathComponent("aitrans-export.json")
+    }
+
+    private var audioTestDirectory: URL {
+        persistenceURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("AudioTests", isDirectory: true)
     }
 
     func toggleRecording() {
@@ -142,6 +197,10 @@ final class TranslationSessionStore: ObservableObject {
     func submitDraft() {
         let trimmed = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isProcessing else { return }
+        guard canUseLanguage(targetLanguage) else {
+            dataTransferMessage = "\(targetLanguage.rawValue) 属于 Pro 翻译语言"
+            return
+        }
 
         isProcessing = true
         let timestamp = Self.timeFormatter.string(from: Date())
@@ -151,13 +210,172 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
+    func recognizeAudioFileAndTranslate(from url: URL) {
+        guard !isProcessing else { return }
+        guard isProUnlocked else {
+            audioRecognitionState = .failed
+            audioRecognitionMessage = "音频离线识别测试需要 Pro"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+        audioRecognitionTask?.cancel()
+
+        let capability = currentSpeechCapability
+        guard capability.supportsOnDeviceRecognition else {
+            audioRecognitionState = .failed
+            audioRecognitionMessage = "\(sourceLanguage.rawValue) 当前设备未报告支持 Apple 本机语音识别，断网测试不能保证成功"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let localAudioURL: URL
+        do {
+            localAudioURL = try copyAudioFileIntoSandbox(url)
+        } catch {
+            audioRecognitionState = .failed
+            audioRecognitionMessage = "音频文件复制失败：\(error.localizedDescription)"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+
+        audioRecognitionState = .checking
+        audioRecognitionMessage = "正在请求 Apple Speech 权限"
+
+        SFSpeechRecognizer.requestAuthorization { [weak self] status in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+
+                guard status == .authorized else {
+                    self.audioRecognitionState = .failed
+                    self.audioRecognitionMessage = "Apple Speech 权限未授权，无法测试本机识别"
+                    self.dataTransferMessage = self.audioRecognitionMessage
+                    return
+                }
+
+                self.startOnDeviceAudioRecognition(localAudioURL, capability: capability)
+            }
+        }
+    }
+
+    private func startOnDeviceAudioRecognition(_ url: URL, capability: SpeechRecognitionCapability) {
+        guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: capability.localeIdentifier)) else {
+            audioRecognitionState = .failed
+            audioRecognitionMessage = "无法创建 \(capability.localeIdentifier) 语音识别器"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+
+        isProcessing = true
+        audioRecognitionState = .recognizing
+        audioRecognitionMessage = "正在用 requiresOnDeviceRecognition 识别 \(url.lastPathComponent)"
+
+        let request = SFSpeechURLRecognitionRequest(url: url)
+        request.requiresOnDeviceRecognition = true
+        request.shouldReportPartialResults = false
+
+        audioRecognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+
+                if let error {
+                    self.audioRecognitionTask = nil
+                    self.isProcessing = false
+                    self.audioRecognitionState = .failed
+                    self.audioRecognitionMessage = "本机语音识别失败：\(error.localizedDescription)"
+                    self.dataTransferMessage = self.audioRecognitionMessage
+                    return
+                }
+
+                guard let result, result.isFinal else { return }
+                self.audioRecognitionTask = nil
+
+                let text = result.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else {
+                    self.isProcessing = false
+                    self.audioRecognitionState = .failed
+                    self.audioRecognitionMessage = "语音识别完成，但没有得到文本"
+                    self.dataTransferMessage = self.audioRecognitionMessage
+                    return
+                }
+
+                self.lastRecognizedSpeechText = text
+                self.draftText = text
+                self.audioRecognitionMessage = "识别成功，正在交给翻译模型"
+
+                let timestamp = Self.timeFormatter.string(from: Date())
+                let didTranslate = await self.submit(text, timestamp: timestamp)
+                if didTranslate {
+                    self.audioRecognitionState = .translated
+                    self.audioRecognitionMessage = "已离线识别并完成翻译"
+                } else {
+                    self.audioRecognitionState = .failed
+                    self.audioRecognitionMessage = "已离线识别出文字，但翻译模型处理失败"
+                }
+                self.dataTransferMessage = self.audioRecognitionMessage
+            }
+        }
+    }
+
+    private func copyAudioFileIntoSandbox(_ url: URL) throws -> URL {
+        try FileManager.default.createDirectory(at: audioTestDirectory, withIntermediateDirectories: true)
+
+        let cleanName = url.lastPathComponent.isEmpty ? "audio-input.m4a" : url.lastPathComponent
+        let destination = audioTestDirectory.appendingPathComponent(cleanName)
+
+        if FileManager.default.fileExists(atPath: destination.path) {
+            try FileManager.default.removeItem(at: destination)
+        }
+
+        try FileManager.default.copyItem(at: url, to: destination)
+        return destination
+    }
+
     func refreshSummary() async throws {
         summary = try await summarize()
     }
 
+    func canUseLanguage(_ language: SupportedLanguage) -> Bool {
+        language.isFreeTranslationTarget || isProUnlocked
+    }
+
+    func selectTargetLanguage(_ language: SupportedLanguage) {
+        guard canUseLanguage(language) else {
+            dataTransferMessage = "\(language.rawValue) 翻译需要 Pro"
+            return
+        }
+
+        targetLanguage = language
+    }
+
+    func activateProForDevelopment() {
+        isProUnlocked = true
+        dataTransferMessage = "Pro 已开通：同声传译、日语/法语和图片翻译入口已解锁"
+    }
+
+    func restoreFreeModeForDevelopment() {
+        isProUnlocked = false
+        if !targetLanguage.isFreeTranslationTarget {
+            targetLanguage = .simplifiedChinese
+        }
+        dataTransferMessage = "已切回免费模式：保留中文和英语翻译"
+    }
+
     func swapLanguages() {
         let oldSource = sourceLanguage
-        sourceLanguage = targetLanguage
+        let oldTarget = targetLanguage
+        guard canUseLanguage(oldSource) else {
+            dataTransferMessage = "\(oldSource.rawValue) 作为目标语言需要 Pro"
+            return
+        }
+
+        sourceLanguage = oldTarget
         targetLanguage = oldSource
     }
 
@@ -203,7 +421,7 @@ final class TranslationSessionStore: ObservableObject {
         targetLanguage = record.targetLanguage
         selectedPromptID = prompts.contains(where: { $0.id == record.selectedPromptID })
             ? record.selectedPromptID
-            : PromptTemplate.interpreterID
+            : PromptTemplate.translatorID
         selectedEngine = record.selectedEngine
         elapsedSeconds = record.durationSeconds
         transcript = record.transcript
@@ -245,7 +463,8 @@ final class TranslationSessionStore: ObservableObject {
                 targetLanguage: targetLanguage,
                 selectedPromptID: selectedPromptID,
                 selectedEngine: selectedEngine,
-                sampling: sampling
+                sampling: sampling,
+                isProUnlocked: isProUnlocked
             )
         )
 
@@ -293,7 +512,7 @@ final class TranslationSessionStore: ObservableObject {
 
         applySettings(snapshot.settings)
         if !prompts.contains(where: { $0.id == selectedPromptID }) {
-            selectedPromptID = PromptTemplate.interpreterID
+            selectedPromptID = PromptTemplate.translatorID
         }
 
         if let importedActive = snapshot.activeSession {
@@ -361,7 +580,7 @@ final class TranslationSessionStore: ObservableObject {
         guard !prompt.isBuiltIn else { return }
         prompts.removeAll { $0.id == prompt.id }
         if selectedPromptID == prompt.id {
-            selectedPromptID = PromptTemplate.interpreterID
+            selectedPromptID = PromptTemplate.translatorID
         }
     }
 
@@ -371,6 +590,57 @@ final class TranslationSessionStore: ObservableObject {
 
     func setMaxTokens(_ value: Int) {
         sampling.maxTokens = min(max(value, 128), 2_048)
+    }
+
+    @discardableResult
+    func importLocalModel(from url: URL) -> Bool {
+        guard url.pathExtension.lowercased() == "gguf" else {
+            dataTransferMessage = "模型导入失败：请选择 .gguf 文件"
+            refreshModelStatus()
+            return false
+        }
+
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let destination = localModelDirectory.appendingPathComponent(localModelFilename)
+
+        do {
+            try FileManager.default.createDirectory(at: localModelDirectory, withIntermediateDirectories: true)
+            if FileManager.default.fileExists(atPath: destination.path) {
+                try FileManager.default.removeItem(at: destination)
+            }
+            try FileManager.default.copyItem(at: url, to: destination)
+            dataTransferMessage = "已导入 \(url.lastPathComponent)，保存为 \(localModelFilename)"
+            selectedEngine = .local
+            refreshModelStatus()
+            return true
+        } catch {
+            dataTransferMessage = "模型导入失败：\(error.localizedDescription)"
+            refreshModelStatus()
+            return false
+        }
+    }
+
+    func removeLocalModel() {
+        let modelURL = localModelDirectory.appendingPathComponent(localModelFilename)
+
+        do {
+            if FileManager.default.fileExists(atPath: modelURL.path) {
+                try FileManager.default.removeItem(at: modelURL)
+                dataTransferMessage = "已移除本地模型文件"
+            } else {
+                dataTransferMessage = "没有可移除的本地模型文件"
+            }
+        } catch {
+            dataTransferMessage = "移除模型失败：\(error.localizedDescription)"
+        }
+
+        refreshModelStatus()
     }
 
     func refreshModelStatus() {
@@ -431,7 +701,8 @@ final class TranslationSessionStore: ObservableObject {
         !transcript.isEmpty || summary != .empty
     }
 
-    private func submit(_ text: String, timestamp: String) async {
+    @discardableResult
+    private func submit(_ text: String, timestamp: String) async -> Bool {
         defer {
             isProcessing = false
             persist()
@@ -449,12 +720,14 @@ final class TranslationSessionStore: ObservableObject {
             transcript.insert(line, at: 0)
             draftText = ""
             try await refreshSummary()
+            return true
         } catch {
             modelStatus = ModelStatus(
                 title: "Gemma Error",
                 detail: error.localizedDescription,
                 isReady: false
             )
+            return false
         }
     }
 
@@ -462,12 +735,22 @@ final class TranslationSessionStore: ObservableObject {
         ticker?.cancel()
         ticker = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
-                await MainActor.run {
-                    self?.elapsedSeconds += 1
+                do {
+                    try await Task.sleep(for: .seconds(1))
+                } catch {
+                    break
                 }
+
+                await self?.handleRecordingTick()
             }
         }
+    }
+
+    private func handleRecordingTick() async {
+        elapsedSeconds += 1
+
+        guard isRecording, elapsedSeconds > 0, elapsedSeconds % 5 == 0 else { return }
+        await injectMockLiveLine()
     }
 
     private func injectMockLiveLine() async {
@@ -687,7 +970,7 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         if !prompts.contains(where: { $0.id == selectedPromptID }) {
-            selectedPromptID = PromptTemplate.interpreterID
+            selectedPromptID = PromptTemplate.translatorID
         }
     }
 
@@ -698,6 +981,10 @@ final class TranslationSessionStore: ObservableObject {
         selectedPromptID = settings.selectedPromptID
         selectedEngine = settings.selectedEngine
         sampling = settings.sampling
+        isProUnlocked = settings.isProUnlocked
+        if !canUseLanguage(targetLanguage) {
+            targetLanguage = .simplifiedChinese
+        }
     }
 
     private func applySeedSession(settings: AppSettings) {
@@ -748,7 +1035,8 @@ final class TranslationSessionStore: ObservableObject {
                 targetLanguage: targetLanguage,
                 selectedPromptID: selectedPromptID,
                 selectedEngine: selectedEngine,
-                sampling: sampling
+                sampling: sampling,
+                isProUnlocked: isProUnlocked
             )
         )
         Self.save(snapshot, to: persistenceURL)
