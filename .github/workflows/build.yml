@@ -64,14 +64,25 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
           | xcpretty && exit ${PIPESTATUS[0]}
 
-      - name: Tar xcarchive
-        run: tar -cvf "$archive_path.xcarchive.tar" "$archive_path.xcarchive"
+      # 打包 xcarchive 并加密
+      - name: Tar and encrypt xcarchive
+        env:
+          IPA_PASSWORD: ${{ secrets.IPA_PASSWORD }}
+        run: |
+          tar -cvf "$archive_path.xcarchive.tar" "$archive_path.xcarchive"
+          if [ -n "$IPA_PASSWORD" ]; then
+            zip -P "$IPA_PASSWORD" "$archive_path.xcarchive.tar.zip" "$archive_path.xcarchive.tar"
+            echo "ARCHIVE_ARTIFACT=$archive_path.xcarchive.tar.zip" >> $GITHUB_ENV
+          else
+            # 没设密码时直接用 tar（方便调试）
+            echo "ARCHIVE_ARTIFACT=$archive_path.xcarchive.tar" >> $GITHUB_ENV
+          fi
 
       - name: Upload xcarchive
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.archive_path }}.xcarchive.tar
-          path: ${{ env.archive_path }}.xcarchive.tar
+          name: ${{ env.ARCHIVE_ARTIFACT }}
+          path: ${{ env.ARCHIVE_ARTIFACT }}
           retention-days: 7
 
   # ─────────────────────────────────────────────
@@ -88,13 +99,21 @@ jobs:
       artifact: ${{ env.scheme }}.ipa
 
     steps:
+      # 下载加密的 xcarchive（名字和 Job1 上传的一致）
       - name: Download xcarchive
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.archive_path }}.xcarchive.tar
+          name: ${{ env.archive_path }}.xcarchive.tar.zip
 
+      # 解密 + 解压
       - name: Extract xcarchive
-        run: tar -xf "$archive_path.xcarchive.tar"
+        env:
+          IPA_PASSWORD: ${{ secrets.IPA_PASSWORD }}
+        run: |
+          if [ -n "$IPA_PASSWORD" ]; then
+            unzip -P "$IPA_PASSWORD" "$archive_path.xcarchive.tar.zip"
+          fi
+          tar -xf "$archive_path.xcarchive.tar"
 
       - name: Install ldid
         run: |
@@ -115,13 +134,12 @@ jobs:
           mv "$archive_path.xcarchive/Products/Applications" Payload
           zip -r "$scheme.ipa" "Payload" -x "._*" -x ".DS_Store" -x "__MACOSX"
 
-      # 下载时需要密码解压（把密码存到 GitHub Secrets: IPA_PASSWORD）
+      # 加密打包 ipa
       - name: Wrap IPA in password-protected zip
         env:
           IPA_PASSWORD: ${{ secrets.IPA_PASSWORD }}
         run: |
           mkdir protected
-          # 如果没有设置 IPA_PASSWORD，则不加密（方便调试）
           if [ -n "$IPA_PASSWORD" ]; then
             zip -P "$IPA_PASSWORD" "protected/$scheme-protected.zip" "$scheme.ipa"
             echo "IPA_ARTIFACT=$scheme-protected.zip" >> $GITHUB_ENV
@@ -135,4 +153,4 @@ jobs:
         with:
           name: ${{ env.IPA_ARTIFACT }}
           path: protected/${{ env.IPA_ARTIFACT }}
-          retention-days: 7   # 7天后自动删除，节省空间
+          retention-days: 7
