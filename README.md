@@ -111,3 +111,5 @@ Application Support/Models/Gemma-1.5B/model.gguf
 - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild ... generic/platform=iOS Simulator ... CODE_SIGNING_ALLOWED=NO build` 通过。
 - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild ... generic/platform=iOS ... CODE_SIGNING_ALLOWED=NO build` 通过。
 - 本机当前 CoreSimulator service 不可用，所以还没有完成真实模拟器启动和点击交互测试。
+
+fafamimi
