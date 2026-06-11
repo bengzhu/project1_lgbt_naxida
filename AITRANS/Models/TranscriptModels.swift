@@ -61,6 +61,21 @@ enum SupportedLanguage: String, CaseIterable, Identifiable, Codable, Sendable {
         case .german: "de-DE"
         }
     }
+
+    var visionRecognitionLanguageIdentifiers: [String] {
+        switch self {
+        case .englishUS:
+            ["en-US", "en"]
+        case .simplifiedChinese:
+            ["zh-Hans", "zh-CN", "zh"]
+        case .japanese:
+            ["ja-JP", "ja"]
+        case .french:
+            ["fr-FR", "fr"]
+        case .german:
+            ["de-DE", "de"]
+        }
+    }
 }
 
 struct TranscriptLine: Identifiable, Equatable, Codable, Sendable {
@@ -133,6 +148,51 @@ enum AudioRecognitionState: String, Equatable, Codable, Sendable {
     case recognizing
     case translated
     case failed
+}
+
+enum ImageTranslationState: String, Equatable, Codable, Sendable {
+    case idle
+    case loading
+    case recognizing
+    case translating
+    case translated
+    case failed
+}
+
+enum ImageTranslationOverlayMode: String, CaseIterable, Identifiable, Codable, Sendable {
+    case adjacent = "旁贴"
+    case replace = "覆盖"
+
+    var id: String { rawValue }
+}
+
+struct NormalizedImageRect: Equatable, Codable, Sendable {
+    var x: Double
+    var y: Double
+    var width: Double
+    var height: Double
+}
+
+struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
+    var id: UUID
+    var original: String
+    var translation: String
+    var confidence: Float
+    var boundingBox: NormalizedImageRect
+
+    init(
+        id: UUID = UUID(),
+        original: String,
+        translation: String = "",
+        confidence: Float,
+        boundingBox: NormalizedImageRect
+    ) {
+        self.id = id
+        self.original = original
+        self.translation = translation
+        self.confidence = confidence
+        self.boundingBox = boundingBox
+    }
 }
 
 enum ModelEngine: String, CaseIterable, Identifiable, Codable, Sendable {
