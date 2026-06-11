@@ -1,0 +1,138 @@
+name: AITRANS - Build IPA
+
+on:
+  push:
+    branches: [ smalldata_test ]   # 只在这个分支触发
+  workflow_dispatch:               # 也可以在 Actions 页面手动点触发
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Job 1: 在 macOS 上用 xcodebuild 编译，产出 xcarchive
+  # ─────────────────────────────────────────────
+  build:
+    name: Build using xcodebuild
+    runs-on: macos-latest
+    env:
+      scheme: AITRANS
+      archive_path: archive
+    outputs:
+      scheme: ${{ steps.scheme.outputs.scheme }}
+      archive_path: ${{ env.archive_path }}
+
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.5"          # 按你本机 Xcode 版本填，不确定就用 latest
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set Scheme
+        id: scheme
+        run: |
+          echo "scheme=$scheme" >> $GITHUB_OUTPUT
+          echo "Using scheme: $scheme"
+
+      - name: Set filetype_parameter
+        id: filetype_parameter
+        run: |
+          filetype_parameter=`ls -A | grep -i \\.xcworkspace\$ && echo workspace || echo project`
+          echo "filetype_parameter=$filetype_parameter" >> $GITHUB_OUTPUT
+
+      - name: Set file_to_build
+        id: file_to_build
+        run: |
+          file_to_build=`ls -A | grep -i \\.xcworkspace\$ || ls -A | grep -i \\.xcodeproj\$`
+          file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
+          echo "file_to_build=$file_to_build" >> $GITHUB_OUTPUT
+
+      - name: Archive (no signing)
+        env:
+          scheme: ${{ steps.scheme.outputs.scheme }}
+          filetype_parameter: ${{ steps.filetype_parameter.outputs.filetype_parameter }}
+          file_to_build: ${{ steps.file_to_build.outputs.file_to_build }}
+        run: |
+          xcodebuild archive \
+            -archivePath "$archive_path" \
+            -scheme "$scheme" \
+            -"$filetype_parameter" "$file_to_build" \
+            -sdk iphoneos \
+            -arch arm64 \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+          | xcpretty && exit ${PIPESTATUS[0]}
+
+      - name: Tar xcarchive
+        run: tar -cvf "$archive_path.xcarchive.tar" "$archive_path.xcarchive"
+
+      - name: Upload xcarchive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.archive_path }}.xcarchive.tar
+          path: ${{ env.archive_path }}.xcarchive.tar
+          retention-days: 7
+
+  # ─────────────────────────────────────────────
+  # Job 2: 在 Linux 上伪签名并打包成 .ipa（免费 runner）
+  # ─────────────────────────────────────────────
+  package:
+    name: Fakesign and package IPA
+    runs-on: ubuntu-latest
+    needs: [build]
+    env:
+      scheme: ${{ needs.build.outputs.scheme }}
+      archive_path: ${{ needs.build.outputs.archive_path }}
+    outputs:
+      artifact: ${{ env.scheme }}.ipa
+
+    steps:
+      - name: Download xcarchive
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.archive_path }}.xcarchive.tar
+
+      - name: Extract xcarchive
+        run: tar -xf "$archive_path.xcarchive.tar"
+
+      - name: Install ldid
+        run: |
+          curl -sSL -o /usr/local/bin/ldid \
+            "https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_linux_x86_64"
+          chmod +x /usr/local/bin/ldid
+
+      - name: Fakesign
+        run: |
+          APP_PATH="$archive_path.xcarchive/Products/Applications/$scheme.app"
+          # 先签 Frameworks（如果有的话）
+          find "$APP_PATH" -type d -path '*/Frameworks/*.framework' -exec ldid -S {} \;
+          # 再签主二进制
+          ldid -S "$APP_PATH"
+
+      - name: Create IPA
+        run: |
+          mv "$archive_path.xcarchive/Products/Applications" Payload
+          zip -r "$scheme.ipa" "Payload" -x "._*" -x ".DS_Store" -x "__MACOSX"
+
+      # 下载时需要密码解压（把密码存到 GitHub Secrets: IPA_PASSWORD）
+      - name: Wrap IPA in password-protected zip
+        env:
+          IPA_PASSWORD: ${{ secrets.IPA_PASSWORD }}
+        run: |
+          mkdir protected
+          # 如果没有设置 IPA_PASSWORD，则不加密（方便调试）
+          if [ -n "$IPA_PASSWORD" ]; then
+            zip -P "$IPA_PASSWORD" "protected/$scheme-protected.zip" "$scheme.ipa"
+            echo "IPA_ARTIFACT=$scheme-protected.zip" >> $GITHUB_ENV
+          else
+            cp "$scheme.ipa" "protected/$scheme.ipa"
+            echo "IPA_ARTIFACT=$scheme.ipa" >> $GITHUB_ENV
+          fi
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.IPA_ARTIFACT }}
+          path: protected/${{ env.IPA_ARTIFACT }}
+          retention-days: 7   # 7天后自动删除，节省空间
