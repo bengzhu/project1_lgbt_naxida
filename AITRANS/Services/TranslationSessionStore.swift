@@ -67,6 +67,14 @@ final class TranslationSessionStore: ObservableObject {
     @Published var audioRecognitionState: AudioRecognitionState = .idle
     @Published var audioRecognitionMessage = "选择音频文件后，会强制使用 Apple 本机语音识别测试离线能力"
     @Published var lastRecognizedSpeechText = ""
+    @Published var imageTranslationState: ImageTranslationState = .idle
+    @Published var imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
+    @Published var imageTranslationBlocks: [ImageTranslationBlock] = []
+    @Published var imageTranslationData: Data?
+    @Published var imageTranslationFilename = ""
+    @Published var imageTranslationRevision = 0
+    @Published var imageOverlayMode: ImageTranslationOverlayMode = .adjacent
+    @Published private(set) var speechRecognitionCapabilities: [SpeechRecognitionCapability] = []
 
     let localModelDirectory: URL
     let localModelFilename = "model.gguf"
@@ -74,6 +82,7 @@ final class TranslationSessionStore: ObservableObject {
 
     private let mockService: any LocalLanguageModeling
     private let localService: GemmaLocalService
+    private let visionOCRService = VisionOCRService()
     private var ticker: Task<Void, Never>?
     private var audioRecognitionTask: SFSpeechRecognitionTask?
     private var activeSessionID = UUID()
@@ -89,6 +98,7 @@ final class TranslationSessionStore: ObservableObject {
         self.persistenceURL = Self.makePersistenceURL()
 
         restoreSnapshot()
+        refreshSpeechRecognitionCapabilities()
         refreshModelStatus()
         persist()
     }
@@ -151,17 +161,6 @@ final class TranslationSessionStore: ObservableObject {
         SupportedLanguage.allCases
     }
 
-    var speechRecognitionCapabilities: [SpeechRecognitionCapability] {
-        SupportedLanguage.allCases.map { language in
-            let recognizer = SFSpeechRecognizer(locale: Locale(identifier: language.speechLocaleIdentifier))
-            return SpeechRecognitionCapability(
-                language: language,
-                localeIdentifier: language.speechLocaleIdentifier,
-                supportsOnDeviceRecognition: recognizer?.supportsOnDeviceRecognition ?? false
-            )
-        }
-    }
-
     var currentSpeechCapability: SpeechRecognitionCapability {
         speechRecognitionCapabilities.first { $0.language == sourceLanguage } ?? SpeechRecognitionCapability(
             language: sourceLanguage,
@@ -180,6 +179,23 @@ final class TranslationSessionStore: ObservableObject {
         persistenceURL
             .deletingLastPathComponent()
             .appendingPathComponent("AudioTests", isDirectory: true)
+    }
+
+    var imageTranslationProgressTitle: String {
+        switch imageTranslationState {
+        case .idle: "待选择"
+        case .loading: "载入中"
+        case .recognizing: "OCR 中"
+        case .translating: "翻译中"
+        case .translated: "已完成"
+        case .failed: "失败"
+        }
+    }
+
+    var imageTranslationSummary: String {
+        let translatedCount = imageTranslationBlocks.filter { !$0.translation.isEmpty }.count
+        guard !imageTranslationBlocks.isEmpty else { return "0 个文本块" }
+        return "\(translatedCount)/\(imageTranslationBlocks.count) 个文本块"
     }
 
     func toggleRecording() {
@@ -335,6 +351,93 @@ final class TranslationSessionStore: ObservableObject {
 
         try FileManager.default.copyItem(at: url, to: destination)
         return destination
+    }
+
+    func translateImage(from url: URL) {
+        guard !isProcessing else { return }
+        guard isProUnlocked else {
+            imageTranslationState = .failed
+            imageTranslationMessage = "图片翻译需要 Pro"
+            dataTransferMessage = imageTranslationMessage
+            return
+        }
+        guard canUseLanguage(targetLanguage) else {
+            imageTranslationState = .failed
+            imageTranslationMessage = "\(targetLanguage.rawValue) 图片翻译需要 Pro"
+            dataTransferMessage = imageTranslationMessage
+            return
+        }
+
+        imageTranslationState = .loading
+        imageTranslationMessage = "正在载入图片"
+        imageTranslationBlocks = []
+        imageTranslationData = nil
+        imageTranslationRevision += 1
+        imageTranslationFilename = url.lastPathComponent
+        isProcessing = true
+
+        Task { [weak self] in
+            guard let self else { return }
+
+            do {
+                let data = try await Self.loadSecurityScopedData(from: url)
+                self.imageTranslationData = data
+                self.imageTranslationRevision += 1
+                self.imageTranslationState = .recognizing
+                self.imageTranslationMessage = "正在用 Vision 本机 OCR 识别文字和位置"
+
+                let recognizedBlocks = try await self.visionOCRService.recognizeTextBlocks(
+                    in: data,
+                    sourceLanguage: self.sourceLanguage
+                )
+                guard !recognizedBlocks.isEmpty else {
+                    self.imageTranslationState = .failed
+                    self.imageTranslationMessage = "Vision OCR 没有识别到可翻译文字"
+                    self.dataTransferMessage = self.imageTranslationMessage
+                    self.isProcessing = false
+                    return
+                }
+
+                self.imageTranslationBlocks = recognizedBlocks
+                self.imageTranslationState = .translating
+                self.imageTranslationMessage = "已识别 \(recognizedBlocks.count) 个文本块，正在交给本地模型翻译"
+
+                var translatedBlocks: [ImageTranslationBlock] = []
+                for block in recognizedBlocks {
+                    var translatedBlock = block
+                    translatedBlock.translation = try await self.translate(block.original)
+                    translatedBlocks.append(translatedBlock)
+                    self.imageTranslationBlocks = translatedBlocks + Array(recognizedBlocks.dropFirst(translatedBlocks.count))
+                }
+
+                self.imageTranslationBlocks = translatedBlocks
+                self.imageTranslationState = .translated
+                self.imageTranslationMessage = "已完成 Vision OCR、本地翻译和定位覆盖"
+                self.dataTransferMessage = self.imageTranslationMessage
+                self.appendImageTranslationTranscript(blocks: translatedBlocks)
+                self.isProcessing = false
+                self.persist()
+            } catch {
+                self.imageTranslationState = .failed
+                self.imageTranslationMessage = "图片翻译失败：\(error.localizedDescription)"
+                self.dataTransferMessage = self.imageTranslationMessage
+                self.isProcessing = false
+                self.persist()
+            }
+        }
+    }
+
+    func clearImageTranslation() {
+        imageTranslationState = .idle
+        imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
+        imageTranslationBlocks = []
+        imageTranslationData = nil
+        imageTranslationFilename = ""
+        imageTranslationRevision += 1
+    }
+
+    func setImageOverlayMode(_ mode: ImageTranslationOverlayMode) {
+        imageOverlayMode = mode
     }
 
     func refreshSummary() async throws {
@@ -668,6 +771,17 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
+    func refreshSpeechRecognitionCapabilities() {
+        speechRecognitionCapabilities = SupportedLanguage.allCases.map { language in
+            let recognizer = SFSpeechRecognizer(locale: Locale(identifier: language.speechLocaleIdentifier))
+            return SpeechRecognitionCapability(
+                language: language,
+                localeIdentifier: language.speechLocaleIdentifier,
+                supportsOnDeviceRecognition: recognizer?.supportsOnDeviceRecognition ?? false
+            )
+        }
+    }
+
     func runDiagnostics() {
         guard !isRunningDiagnostics else { return }
         isRunningDiagnostics = true
@@ -804,6 +918,23 @@ final class TranslationSessionStore: ObservableObject {
         )
     }
 
+    private func appendImageTranslationTranscript(blocks: [ImageTranslationBlock]) {
+        let originals = blocks.map(\.original).joined(separator: "\n")
+        let translations = blocks.map(\.translation).joined(separator: "\n")
+        guard !originals.isEmpty, !translations.isEmpty else { return }
+
+        transcript.insert(
+            TranscriptLine(
+                speaker: imageTranslationFilename.isEmpty ? "Image OCR" : imageTranslationFilename,
+                original: originals,
+                translation: translations,
+                time: Self.timeFormatter.string(from: Date()),
+                isFinal: true
+            ),
+            at: 0
+        )
+    }
+
     private func generateWithSelectedEngine(_ request: ModelGenerationRequest) async throws -> ModelGenerationResult {
         let primary: any LocalLanguageModeling = selectedEngine == .local ? localService : mockService
 
@@ -917,6 +1048,21 @@ final class TranslationSessionStore: ObservableObject {
             prompt: selectedPrompt,
             sampling: sampling
         )
+    }
+
+    nonisolated private static func loadSecurityScopedData(from url: URL) async throws -> Data {
+        let task = Task.detached(priority: .userInitiated) {
+            let didAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if didAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            return try Data(contentsOf: url)
+        }
+
+        return try await task.value
     }
 
     private func currentSessionRecord() -> TranslationSessionRecord {
