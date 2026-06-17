@@ -60,6 +60,9 @@ final class TranslationSessionStore: ObservableObject {
     @Published var lastGenerationLabel = "等待生成"
     @Published var diagnostics: [DiagnosticCheck] = TranslationSessionStore.defaultDiagnostics
     @Published var isRunningDiagnostics = false
+    @Published var llmSmokeTest: LLMInterfaceSmokeTest = .idle
+    @Published var isRunningLLMSmokeTest = false
+    @Published var modelDownload = ModelDownloadProgress.idle
     @Published var dataTransferMessage = "本地数据已准备好"
     @Published var isProUnlocked = false {
         didSet { persist() }
@@ -78,12 +81,15 @@ final class TranslationSessionStore: ObservableObject {
 
     let localModelDirectory: URL
     let localModelFilename = "model.gguf"
+    let builtInModel = BuiltInLocalModel.gemma270M
     let persistenceURL: URL
 
     private let mockService: any LocalLanguageModeling
     private let localService: GemmaLocalService
+    private let modelDownloadService = LocalModelDownloadService()
     private let visionOCRService = VisionOCRService()
     private var ticker: Task<Void, Never>?
+    private var modelDownloadTask: Task<Void, Never>?
     private var audioRecognitionTask: SFSpeechRecognitionTask?
     private var activeSessionID = UUID()
     private var activeCreatedAt = Date()
@@ -98,6 +104,7 @@ final class TranslationSessionStore: ObservableObject {
         self.persistenceURL = Self.makePersistenceURL()
 
         restoreSnapshot()
+        updateModelDownloadStateFromDisk()
         refreshSpeechRecognitionCapabilities()
         refreshModelStatus()
         persist()
@@ -105,6 +112,7 @@ final class TranslationSessionStore: ObservableObject {
 
     deinit {
         ticker?.cancel()
+        modelDownloadTask?.cancel()
     }
 
     var selectedPrompt: PromptTemplate {
@@ -123,6 +131,26 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         return ByteCountFormatter.string(fromByteCount: fileSize.int64Value, countStyle: .file)
+    }
+
+    var builtInModelSizeDisplay: String {
+        ByteCountFormatter.string(fromByteCount: builtInModel.expectedSizeBytes, countStyle: .file)
+    }
+
+    var modelDownloadProgressDisplay: String {
+        let received = ByteCountFormatter.string(fromByteCount: modelDownload.bytesReceived, countStyle: .file)
+        let total = ByteCountFormatter.string(fromByteCount: modelDownload.totalBytes, countStyle: .file)
+        return "\(received) / \(total)"
+    }
+
+    var modelDownloadSpeedDisplay: String {
+        guard modelDownload.speedBytesPerSecond > 0 else { return "0 KB/s" }
+        let speed = ByteCountFormatter.string(fromByteCount: modelDownload.speedBytesPerSecond, countStyle: .file)
+        return "\(speed)/s"
+    }
+
+    var modelDownloadLocationDisplay: String {
+        builtInModel.sourceURL.absoluteString
     }
 
     var isLocalModelInstalled: Bool {
@@ -697,6 +725,10 @@ final class TranslationSessionStore: ObservableObject {
 
     @discardableResult
     func importLocalModel(from url: URL) -> Bool {
+        guard !modelDownload.isDownloading else {
+            dataTransferMessage = "正在下载内置模型，请等待完成或取消。"
+            return false
+        }
         guard url.pathExtension.lowercased() == "gguf" else {
             dataTransferMessage = "模型导入失败：请选择 .gguf 文件"
             refreshModelStatus()
@@ -717,7 +749,12 @@ final class TranslationSessionStore: ObservableObject {
             if FileManager.default.fileExists(atPath: destination.path) {
                 try FileManager.default.removeItem(at: destination)
             }
+            let temporaryDownload = destination.appendingPathExtension("download")
+            if FileManager.default.fileExists(atPath: temporaryDownload.path) {
+                try FileManager.default.removeItem(at: temporaryDownload)
+            }
             try FileManager.default.copyItem(at: url, to: destination)
+            modelDownload = installedDownloadProgress(message: "已导入 \(url.lastPathComponent)")
             dataTransferMessage = "已导入 \(url.lastPathComponent)，保存为 \(localModelFilename)"
             selectedEngine = .local
             refreshModelStatus()
@@ -729,8 +766,84 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
+    func downloadBuiltInModel() {
+        guard !modelDownload.isDownloading else {
+            dataTransferMessage = "已有模型下载任务运行中"
+            return
+        }
+
+        if isLocalModelInstalled {
+            modelDownload = installedDownloadProgress(message: "已安装，同名模型不会重复下载")
+            selectedEngine = .local
+            refreshModelStatus()
+            dataTransferMessage = "已安装 \(localModelFilename)，不会重复下载。先卸载后可重新下载。"
+            return
+        }
+
+        let destination = localModelDirectory.appendingPathComponent(localModelFilename)
+        modelDownload = ModelDownloadProgress(
+            phase: .downloading,
+            bytesReceived: 0,
+            totalBytes: builtInModel.expectedSizeBytes,
+            speedBytesPerSecond: 0,
+            message: "准备下载 \(builtInModel.displayName)"
+        )
+        dataTransferMessage = modelDownload.message
+
+        modelDownloadTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.modelDownloadService.download(
+                    model: self.builtInModel,
+                    to: destination
+                ) { [weak self] progress in
+                    await MainActor.run {
+                        self?.modelDownload = progress
+                        self?.dataTransferMessage = progress.message
+                    }
+                }
+
+                self.selectedEngine = .local
+                self.refreshModelStatus()
+                self.dataTransferMessage = "已下载 \(self.builtInModel.displayName)，Local 已启用。"
+                self.modelDownloadTask = nil
+            } catch is CancellationError {
+                self.cleanupPartialModelDownload()
+                self.modelDownload = ModelDownloadProgress(
+                    phase: .idle,
+                    bytesReceived: 0,
+                    totalBytes: self.builtInModel.expectedSizeBytes,
+                    speedBytesPerSecond: 0,
+                    message: "下载已取消"
+                )
+                self.dataTransferMessage = "下载已取消，临时文件已清理。"
+                self.refreshModelStatus()
+                self.modelDownloadTask = nil
+            } catch {
+                self.cleanupPartialModelDownload()
+                self.modelDownload = ModelDownloadProgress(
+                    phase: .failed,
+                    bytesReceived: self.modelDownload.bytesReceived,
+                    totalBytes: self.builtInModel.expectedSizeBytes,
+                    speedBytesPerSecond: 0,
+                    message: error.localizedDescription
+                )
+                self.dataTransferMessage = error.localizedDescription
+                self.refreshModelStatus()
+                self.modelDownloadTask = nil
+            }
+        }
+    }
+
+    func cancelModelDownload() {
+        guard modelDownload.isDownloading else { return }
+        modelDownloadTask?.cancel()
+    }
+
     func removeLocalModel() {
+        modelDownloadTask?.cancel()
         let modelURL = localModelDirectory.appendingPathComponent(localModelFilename)
+        let temporaryDownloadURL = modelURL.appendingPathExtension("download")
 
         do {
             if FileManager.default.fileExists(atPath: modelURL.path) {
@@ -739,6 +852,16 @@ final class TranslationSessionStore: ObservableObject {
             } else {
                 dataTransferMessage = "没有可移除的本地模型文件"
             }
+            if FileManager.default.fileExists(atPath: temporaryDownloadURL.path) {
+                try FileManager.default.removeItem(at: temporaryDownloadURL)
+            }
+            modelDownload = ModelDownloadProgress(
+                phase: .idle,
+                bytesReceived: 0,
+                totalBytes: builtInModel.expectedSizeBytes,
+                speedBytesPerSecond: 0,
+                message: "已卸载"
+            )
         } catch {
             dataTransferMessage = "移除模型失败：\(error.localizedDescription)"
         }
@@ -758,13 +881,13 @@ final class TranslationSessionStore: ObservableObject {
             if isLocalModelInstalled {
                 modelStatus = ModelStatus(
                     title: localService.metadata.displayName,
-                    detail: "已发现 \(localModelFilename)，准备使用本地推理占位层",
+                    detail: "已发现 \(localModelFilename)，准备使用本地 llama.cpp 推理",
                     isReady: true
                 )
             } else {
                 modelStatus = ModelStatus(
                     title: localService.metadata.displayName,
-                    detail: "未找到 \(localModelFilename)，结果会自动回退到 Mock",
+                    detail: "未找到 \(localModelFilename)，请先在模型页下载或导入 GGUF",
                     isReady: false
                 )
             }
@@ -783,7 +906,7 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func runDiagnostics() {
-        guard !isRunningDiagnostics else { return }
+        guard !isRunningDiagnostics, !isRunningLLMSmokeTest else { return }
         isRunningDiagnostics = true
         diagnostics = diagnostics.map {
             DiagnosticCheck(id: $0.id, title: $0.title, detail: "检查中...", state: .running)
@@ -793,6 +916,26 @@ final class TranslationSessionStore: ObservableObject {
             guard let self else { return }
             await self.performDiagnostics()
             self.isRunningDiagnostics = false
+        }
+    }
+
+    func runLLMInterfaceSmokeTest() {
+        guard !isRunningLLMSmokeTest, !isRunningDiagnostics else { return }
+        isRunningLLMSmokeTest = true
+        llmSmokeTest = LLMInterfaceSmokeTest(
+            input: LLMInterfaceSmokeTest.defaultInput,
+            output: "",
+            state: .running,
+            message: "正在通过当前适配器发送模拟请求...",
+            engineName: selectedAdapterMetadata.displayName,
+            tokenCount: nil,
+            durationMilliseconds: nil
+        )
+
+        Task { [weak self] in
+            guard let self else { return }
+            await self.performLLMInterfaceSmokeTest()
+            self.isRunningLLMSmokeTest = false
         }
     }
 
@@ -944,12 +1087,60 @@ final class TranslationSessionStore: ObservableObject {
             lastGenerationLabel = "\(result.engineName) · \(result.durationMilliseconds ?? 0)ms"
             return result
         } catch {
-            guard selectedEngine == .local else { throw error }
-            refreshModelStatus()
+            guard selectedEngine == .local, error is GemmaLocalServiceError else { throw error }
+            guard !isLocalModelInstalled else { throw error }
             try await mockService.prepare()
             let fallback = try await mockService.generate(request)
             lastGenerationLabel = "Local 缺失，已回退 Mock · \(fallback.durationMilliseconds ?? 0)ms"
+            dataTransferMessage = "Local 缺失：请先下载或导入 GGUF。已临时回退 Mock。"
+            refreshModelStatus()
             return fallback
+        }
+    }
+
+    private func performLLMInterfaceSmokeTest() async {
+        let input = llmSmokeTest.input.isEmpty ? LLMInterfaceSmokeTest.defaultInput : llmSmokeTest.input
+        llmSmokeTest = LLMInterfaceSmokeTest(
+            input: input,
+            output: "",
+            state: .running,
+            message: "正在通过当前适配器发送模拟请求...",
+            engineName: selectedAdapterMetadata.displayName,
+            tokenCount: nil,
+            durationMilliseconds: nil
+        )
+
+        let request = makeRequest(task: .translation, inputText: input)
+
+        do {
+            let result = try await generateWithSelectedEngine(request)
+            let trimmedOutput = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let passed = !trimmedOutput.isEmpty
+            let message = passed
+                ? "接口正常：UI 输入已到达 \(result.engineName)，并收到非空输出。"
+                : "接口异常：适配器返回空输出。"
+
+            llmSmokeTest = LLMInterfaceSmokeTest(
+                input: input,
+                output: result.text,
+                state: passed ? .passed : .failed,
+                message: message,
+                engineName: result.engineName,
+                tokenCount: result.tokenCount,
+                durationMilliseconds: result.durationMilliseconds
+            )
+            dataTransferMessage = message
+        } catch {
+            llmSmokeTest = LLMInterfaceSmokeTest(
+                input: input,
+                output: "",
+                state: .failed,
+                message: error.localizedDescription,
+                engineName: selectedAdapterMetadata.displayName,
+                tokenCount: nil,
+                durationMilliseconds: nil
+            )
+            dataTransferMessage = "LLM 接口自测失败：\(error.localizedDescription)"
         }
     }
 
@@ -1003,30 +1194,44 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         await updateDiagnostic(
-            id: "localFallback",
+            id: "llmInterface",
             state: .running,
-            detail: "正在检查 Local 模型文件和缺失回退..."
+            detail: "正在通过当前引擎验证 UI 到适配器的输入输出链路..."
         )
 
-        let previousEngine = selectedEngine
-        selectedEngine = .local
-        do {
-            _ = try await translate("Verify local fallback without downloading model.")
+        await performLLMInterfaceSmokeTest()
+        let smokeTestMetrics: String
+        if let tokenCount = llmSmokeTest.tokenCount,
+           let durationMilliseconds = llmSmokeTest.durationMilliseconds {
+            smokeTestMetrics = " \(tokenCount) tokens，\(durationMilliseconds)ms。"
+        } else {
+            smokeTestMetrics = ""
+        }
+        await updateDiagnostic(
+            id: "llmInterface",
+            state: llmSmokeTest.state,
+            detail: llmSmokeTest.message + smokeTestMetrics
+        )
+
+        await updateDiagnostic(
+            id: "localFallback",
+            state: .running,
+            detail: "正在检查 Local 模型文件..."
+        )
+
+        if isLocalModelInstalled {
             await updateDiagnostic(
                 id: "localFallback",
                 state: .passed,
-                detail: isLocalModelInstalled
-                    ? "已发现本地模型，占位 Local 生成路径可用。"
-                    : "未发现模型文件，已按预期回退到 Mock。"
+                detail: "已发现 \(localModelFilename)，可运行 Local LLM 接口自测。"
             )
-        } catch {
+        } else {
             await updateDiagnostic(
                 id: "localFallback",
                 state: .failed,
-                detail: error.localizedDescription
+                detail: "未发现模型文件。请先下载内置 Gemma 270M 或导入 GGUF。"
             )
         }
-        selectedEngine = previousEngine
         refreshModelStatus()
     }
 
@@ -1048,6 +1253,44 @@ final class TranslationSessionStore: ObservableObject {
             prompt: selectedPrompt,
             sampling: sampling
         )
+    }
+
+    private func updateModelDownloadStateFromDisk() {
+        if isLocalModelInstalled {
+            modelDownload = installedDownloadProgress(message: "已安装")
+        } else {
+            cleanupPartialModelDownload()
+            modelDownload = ModelDownloadProgress.idle
+        }
+    }
+
+    private func installedDownloadProgress(message: String) -> ModelDownloadProgress {
+        let modelURL = localModelDirectory.appendingPathComponent(localModelFilename)
+        let size = localModelSize(at: modelURL) ?? builtInModel.expectedSizeBytes
+        return ModelDownloadProgress(
+            phase: .installed,
+            bytesReceived: size,
+            totalBytes: max(size, builtInModel.expectedSizeBytes),
+            speedBytesPerSecond: 0,
+            message: message
+        )
+    }
+
+    private func localModelSize(at url: URL) -> Int64? {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let fileSize = attributes[.size] as? NSNumber else {
+            return nil
+        }
+        return fileSize.int64Value
+    }
+
+    private func cleanupPartialModelDownload() {
+        let temporaryURL = localModelDirectory
+            .appendingPathComponent(localModelFilename)
+            .appendingPathExtension("download")
+        if FileManager.default.fileExists(atPath: temporaryURL.path) {
+            try? FileManager.default.removeItem(at: temporaryURL)
+        }
     }
 
     nonisolated private static func loadSecurityScopedData(from url: URL) async throws -> Data {
@@ -1162,7 +1405,7 @@ final class TranslationSessionStore: ObservableObject {
             ],
             actions: [
                 "点击录音按钮开始模拟实时转录。",
-                "输入自定义文本后点击发送，触发 Gemma Mock 翻译。",
+                "输入自定义文本后点击发送，触发当前引擎翻译。",
                 "到提示词页面切换或创建提示词，生成请求会立即使用新设置。"
             ],
             title: "实时总结"
@@ -1262,9 +1505,15 @@ final class TranslationSessionStore: ObservableObject {
             state: .idle
         ),
         DiagnosticCheck(
+            id: "llmInterface",
+            title: "LLM 接口",
+            detail: "等待验证 UI 输入、适配器请求和输出回传。",
+            state: .idle
+        ),
+        DiagnosticCheck(
             id: "localFallback",
-            title: "Local 回退",
-            detail: "等待检查未下载模型时是否回退 Mock。",
+            title: "Local 模型",
+            detail: "等待检查 GGUF 文件是否已安装。",
             state: .idle
         )
     ]

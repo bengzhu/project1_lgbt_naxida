@@ -4,7 +4,7 @@ struct MockGemmaService: LocalLanguageModeling {
     let metadata = ModelAdapterMetadata(
         engine: .mock,
         displayName: "Gemma 1.5B Mock",
-        modelName: "gemma-1.5b-it-simulated",
+        modelName: "translation-mock",
         quantization: "Simulated Q4",
         supportsStreaming: true
     )
@@ -47,15 +47,15 @@ struct MockGemmaService: LocalLanguageModeling {
 
         switch request.targetLanguage {
         case .simplifiedChinese:
-            return "【\(promptHint)】根据「\(sourcePreview)」，我们会先确认目标，再把技术方案、时间线和风险整理成可以执行的清单。"
+            return "【\(promptHint)】\(sourcePreview) 的中文译文。"
         case .englishUS:
-            return "[\(promptHint)] Based on \"\(sourcePreview)\", let's align on the goal, then turn the technical plan, timeline, and risks into actionable notes."
+            return "[\(promptHint)] English translation of: \(sourcePreview)."
         case .japanese:
-            return "【\(promptHint)】「\(sourcePreview)」に基づき、目標を確認し、技術案、日程、リスクを実行可能なメモに整理します。"
+            return "【\(promptHint)】\(sourcePreview) の日本語訳。"
         case .french:
-            return "[\(promptHint)] À partir de \"\(sourcePreview)\", nous confirmons l'objectif, puis transformons le plan, le calendrier et les risques en actions."
+            return "[\(promptHint)] Traduction française de : \(sourcePreview)."
         case .german:
-            return "[\(promptHint)] Ausgehend von „\(sourcePreview)” klären wir das Ziel und fassen Technikplan, Zeitplan und Risiken als Aufgaben zusammen."
+            return "[\(promptHint)] Deutsche Übersetzung von: \(sourcePreview)."
         }
     }
 
@@ -71,8 +71,8 @@ struct MockGemmaService: LocalLanguageModeling {
             ],
             actions: [
                 "继续完善录音转写入口，并把真实音频文本送入同一个生成接口。",
-                "将 Gemma 1.5B 量化模型放入本地模型目录后切换 Local 引擎。",
-                "为长会议保留分段摘要，避免上下文过长。"
+                "在模型页下载内置 Gemma 270M 或导入 GGUF 后切换 Local 引擎。",
+                "用 LLM 接口自测确认真实模型输入输出。"
             ],
             title: request.mode == .summary ? "AI 总结" : "实时摘要"
         )

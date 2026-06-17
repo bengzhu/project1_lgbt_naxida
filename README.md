@@ -1,6 +1,6 @@
 # AITRANS iOS Prototype
 
-这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。当前版本不下载真实 Gemma 模型，默认使用 `MockGemmaService` 模拟 Gemma 1.5B 的翻译、总结和耗时输出，先用于 Xcode 测试 App 外形、页面互通、数据流和本地存储。
+这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
 ## 运行
 
@@ -19,14 +19,14 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-当前仓库为了在 CoreSimulator runtime 不可用的环境里完成 Xcode 构建验证，暂时没有把 `Assets.xcassets` 放进 target 的 Resources build phase；图标资源仍保留在项目目录中。你的本机 Simulator 正常后，可以在 Xcode 里把 `Assets.xcassets` 加回 `Copy Bundle Resources`，并设置 `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`。
+当前仓库暂时没有把 `Assets.xcassets` 放进 target 的 Resources build phase；图标资源仍保留在项目目录中。需要 App 图标时，可以在 Xcode 里把 `Assets.xcassets` 加回 `Copy Bundle Resources`，并设置 `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`。
 
 ## 当前界面
 
 - `工作台`：主界面是一个简洁翻译框，输入文字后点击 `翻译`，会使用当前提示词和 Mock/Local 模型接口生成译文；默认免费目标语言为中文和英语。
 - `历史`：查看和搜索本地会话记录，打开历史会话会回到工作台并恢复对应转录、摘要、语言、提示词和模型设置；也可以通过系统文件面板导出/导入 JSON 或清空历史。
 - `提示词`：选择内置提示词，新增自定义提示词，复制或编辑自定义提示词。
-- `模型`：切换 `Mock` / `Local` 引擎，查看模型目录，导入或移除本地 GGUF 文件，运行自检，调整 temperature 和 max tokens，查看真实模型接入接口说明。
+- `模型`：切换 `Mock` / `Local` 引擎，查看模型目录，导入或移除本地 GGUF 文件，运行自检，单独运行 LLM 接口自测，调整 temperature 和 max tokens，查看真实模型接入接口说明。
 
 ## Pro / 内购占位
 
@@ -78,15 +78,76 @@ Application Support/AITRANS/aitrans-export.json
 
 - 本地 JSON 是否可写入并解码。
 - Gemma 1.5B Mock 是否能生成非空输出。
-- Local 模式在未下载模型时是否按预期回退到 Mock。
+- LLM 接口是否能收到模拟输入，并从当前适配器回传非空输出。
+- Local 模式是否已经安装 GGUF 模型。
 
-模型文件不放进仓库。模型页的 `导入 GGUF` 会把你选择的 `.gguf` 文件复制到 App 沙盒内并统一命名为：
+模型文件不放进仓库。模型页可以直接下载内置最小模型，也可以手动 `导入 GGUF`。内置模型固定为：
+
+- `Gemma 3 270M IT QAT Q4_0`
+- 下载地址：[`ggml-org/gemma-3-270m-it-qat-GGUF`](https://huggingface.co/ggml-org/gemma-3-270m-it-qat-GGUF)
+- 文件：`gemma-3-270m-it-qat-Q4_0.gguf`
+- 大小：`241,410,624 bytes`，约 230 MB
+- SHA256：`3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`
+
+App 下载时会写入临时 `model.gguf.download`，成功校验后原子替换为 `model.gguf`。同名模型只保留一个；如果已安装，点击下载不会重复保存。`移除模型` 会删除 `model.gguf` 和未完成的临时下载文件。
+
+无论内置下载还是手动导入，模型都会复制到 App 沙盒内并统一命名为：
 
 ```text
 Application Support/Models/Gemma-1.5B/model.gguf
 ```
 
-如果没有这个文件，界面会显示 Local 未就绪，但生成会自动回退到 Mock，保证原型仍可使用。`移除模型` 只删除 App 沙盒中的 `model.gguf`，不影响原始文件。
+如果没有这个文件，界面会显示 Local 未就绪。普通翻译会临时回退 Mock，避免界面卡死；LLM 接口自测和诊断会明确提示缺少模型。`移除模型` 只删除 App 沙盒中的 `model.gguf` 和临时下载，不影响原始文件或远程模型。
+
+## 本地 LLM 模型准备
+
+当前项目先按 `llama.cpp + GGUF` 方向接入。原因是 `llama.cpp` 官方仓库带有 `examples/llama.swiftui`，说明它是一个在 iPhone 上运行本地推理的 SwiftUI 示例；而本项目的模型导入器已经限制 `.gguf` 文件。MLC LLM 的 iOS 路线也可行，但它需要 `mlc_llm package` 生成 runtime、tokenizer 和已转换/编译的 MLC 权重，不是直接导入 `.gguf`。
+
+先下载其中一个 `.gguf` 到 Mac：
+
+- 首推翻译冒烟：[`Qwen/Qwen2.5-0.5B-Instruct-GGUF`](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF)，文件选 `qwen2.5-0.5b-instruct-q4_k_m.gguf`，约 469 MB。体积仍小，中文/英文测试更稳。
+- 极小体积冒烟：[`unsloth/SmolLM2-135M-Instruct-GGUF`](https://huggingface.co/unsloth/SmolLM2-135M-Instruct-GGUF)，文件选 `SmolLM2-135M-Instruct-Q4_K_M.gguf`，约 101 MB。适合测加载和接口，不适合判断翻译质量。
+- 最小 Gemma 路线：[`ggml-org/gemma-3-270m-it-qat-GGUF`](https://huggingface.co/ggml-org/gemma-3-270m-it-qat-GGUF)，文件选 `gemma-3-270m-it-qat-Q4_0.gguf`，约 230 MB；或 [`ggml-org/gemma-3-270m-it-GGUF`](https://huggingface.co/ggml-org/gemma-3-270m-it-GGUF) 的 `Q8_0` 版本。
+
+Mac 机外先测：
+
+```sh
+brew install llama.cpp
+
+llama-cli \
+  -m ~/Downloads/qwen2.5-0.5b-instruct-q4_k_m.gguf \
+  -p "Translate to Simplified Chinese: Keep the model on device." \
+  -n 128
+```
+
+如果想让 `llama.cpp` 直接从 Hugging Face 拉模型，也可以先试：
+
+```sh
+brew install llama.cpp
+llama-cli -hf Qwen/Qwen2.5-0.5B-Instruct-GGUF:Q4_K_M \
+  -p "Translate to Simplified Chinese: Keep the model on device." \
+  -n 128
+```
+
+放进 App 测试时，不需要手工改名。运行 App 后进 `模型` -> `下载 Gemma`，或 `导入 GGUF` 选择下载好的 `.gguf`，App 会复制并命名为 `model.gguf`。
+
+当前已用 `gemma-3-270m-it-qat-Q4_0.gguf` 做过命令行冒烟：
+
+```sh
+llama-cli -m llm/gemma-3-270m-it-qat-Q4_0.gguf \
+  -st --no-display-prompt --no-warmup --no-perf \
+  -n 80 --temp 0.1 \
+  -p "Translate to Simplified Chinese. Output only the translation: Keep the model on device so private meeting content never leaves the phone."
+```
+
+结果：模型能正常加载并生成，速度约 130 tokens/s，但输出容易复读英文原句或 prompt，不稳定翻译成中文。因此它适合验证 GGUF 下载、加载、App 接口和闪退风险，不适合作为翻译质量测试模型。要验证翻译质量，优先换 `Qwen2.5-0.5B-Instruct-GGUF` 的 `q4_k_m` 文件。
+
+如果本地需要重建 iOS `llama.xcframework`：
+
+```sh
+git clone --depth 1 https://github.com/ggml-org/llama.cpp.git third_party/llama.cpp
+bash Tools/build-llama-ios-xcframework.sh
+```
 
 ## 大模型接入点
 
@@ -96,13 +157,15 @@ Application Support/Models/Gemma-1.5B/model.gguf
   - `ModelGenerationResult` 返回文本、摘要、引擎名、token 数和耗时。
   - `ModelStreamEvent` 和 `LocalLanguageModeling.stream(_:)` 预留逐 token 流式输出接口；默认实现会把一次性生成结果包装成流式事件，真实推理层可覆写。
 - `AITRANS/Services/MockGemmaService.swift`
-  - 当前模拟 Gemma 1.5B 输出。
+  - 当前模拟输出，用于没有 GGUF 时测试 UI、历史和回退路径。
 - `AITRANS/Services/GemmaLocalService.swift`
-  - 真实本地模型占位层，目前只检查 `model.gguf`，后续可以替换为 Core ML、llama.cpp/gguf 或 MediaPipe LLM Inference。
+  - 真实本地模型层，使用 `llama.cpp` 的 `llama.xcframework` 加载沙盒中的 `model.gguf` 并生成。
+- `AITRANS/Services/LlamaRuntime.swift`
+  - 封装 llama.cpp C API，负责加载 GGUF、分词、逐 token 生成、UTF-8 拼接和运行时锁。
 - `AITRANS/Services/TranslationSessionStore.swift`
   - 负责页面共享状态、本地 JSON 存储、导入/导出、历史清理、自检、Mock/Local 回退和生成请求组装。
 
-真实模型接入时，优先替换 `GemmaLocalService.generate(_:)` 内部实现，不需要改 UI 和历史数据结构。
+真实模型替换时，优先换 `model.gguf` 或调整 `GemmaLocalService` 的 prompt/采样参数，不需要改 UI 和历史数据结构。
 
 ## 当前验证
 
@@ -110,6 +173,4 @@ Application Support/Models/Gemma-1.5B/model.gguf
 - `jq empty AITRANS/Resources/Assets.xcassets/.../Contents.json` 通过。
 - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild ... generic/platform=iOS Simulator ... CODE_SIGNING_ALLOWED=NO build` 通过。
 - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild ... generic/platform=iOS ... CODE_SIGNING_ALLOWED=NO build` 通过。
-- 本机当前 CoreSimulator service 不可用，所以还没有完成真实模拟器启动和点击交互测试。
-
-fafamimi
+- 已确认 Debug iOS Simulator app bundle 内嵌 `llama.framework`。
