@@ -101,6 +101,9 @@ final class LlamaRuntime: @unchecked Sendable {
 
         let samplingParameters = llama_sampler_chain_default_params()
         let samplingChain = llama_sampler_chain_init(samplingParameters)
+        llama_sampler_chain_add(samplingChain, llama_sampler_init_top_k(40))
+        llama_sampler_chain_add(samplingChain, llama_sampler_init_top_p(0.90, 1))
+        llama_sampler_chain_add(samplingChain, llama_sampler_init_min_p(0.05, 1))
         llama_sampler_chain_add(samplingChain, llama_sampler_init_temp(0.2))
         llama_sampler_chain_add(samplingChain, llama_sampler_init_dist(UInt32.random(in: 1...UInt32.max)))
 
@@ -119,6 +122,7 @@ final class LlamaRuntime: @unchecked Sendable {
 
         temporaryInvalidBytes.removeAll()
         llama_memory_clear(llama_get_memory(context), true)
+        llama_sampler_reset(sampler)
 
         let promptTokens = try tokenize(prompt, addBOS: true)
         guard !promptTokens.isEmpty else {
@@ -133,6 +137,7 @@ final class LlamaRuntime: @unchecked Sendable {
         clear(&currentBatch)
         for (index, token) in promptTokens.enumerated() {
             add(&currentBatch, token, Int32(index), [0], false)
+            llama_sampler_accept(sampler, token)
         }
         currentBatch.logits[Int(currentBatch.n_tokens) - 1] = 1
 
@@ -203,7 +208,7 @@ final class LlamaRuntime: @unchecked Sendable {
         let tokens = UnsafeMutablePointer<llama_token>.allocate(capacity: capacity)
         defer { tokens.deallocate() }
 
-        let tokenCount = llama_tokenize(vocabulary, text, Int32(utf8Count), tokens, Int32(capacity), addBOS, false)
+        let tokenCount = llama_tokenize(vocabulary, text, Int32(utf8Count), tokens, Int32(capacity), addBOS, true)
         guard tokenCount > 0 else {
             throw LlamaRuntimeError.tokenizationFailed
         }
