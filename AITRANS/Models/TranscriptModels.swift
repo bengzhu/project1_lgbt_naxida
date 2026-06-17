@@ -121,6 +121,54 @@ struct ModelStatus: Equatable, Sendable {
     var isReady: Bool
 }
 
+struct BuiltInLocalModel: Equatable, Sendable {
+    var displayName: String
+    var filename: String
+    var sourceURL: URL
+    var expectedSizeBytes: Int64
+    var sha256: String
+
+    static let gemma270M = BuiltInLocalModel(
+        displayName: "Gemma 3 270M IT QAT Q4_0",
+        filename: "gemma-3-270m-it-qat-Q4_0.gguf",
+        sourceURL: URL(string: "https://huggingface.co/ggml-org/gemma-3-270m-it-qat-GGUF/resolve/main/gemma-3-270m-it-qat-Q4_0.gguf")!,
+        expectedSizeBytes: 241_410_624,
+        sha256: "3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6"
+    )
+}
+
+enum ModelDownloadPhase: String, Equatable, Sendable {
+    case idle
+    case downloading
+    case installed
+    case failed
+}
+
+struct ModelDownloadProgress: Equatable, Sendable {
+    var phase: ModelDownloadPhase
+    var bytesReceived: Int64
+    var totalBytes: Int64
+    var speedBytesPerSecond: Int64
+    var message: String
+
+    static let idle = ModelDownloadProgress(
+        phase: .idle,
+        bytesReceived: 0,
+        totalBytes: BuiltInLocalModel.gemma270M.expectedSizeBytes,
+        speedBytesPerSecond: 0,
+        message: "未下载"
+    )
+
+    var fractionCompleted: Double {
+        guard totalBytes > 0 else { return 0 }
+        return min(max(Double(bytesReceived) / Double(totalBytes), 0), 1)
+    }
+
+    var isDownloading: Bool {
+        phase == .downloading
+    }
+}
+
 struct SpeechRecognitionCapability: Identifiable, Equatable, Sendable {
     var id: String { language.id }
     var language: SupportedLanguage
@@ -204,7 +252,7 @@ enum ModelEngine: String, CaseIterable, Identifiable, Codable, Sendable {
     var title: String {
         switch self {
         case .mock: "Gemma 1.5B Mock"
-        case .local: "Gemma 1.5B Local"
+        case .local: "Local GGUF"
         }
     }
 
@@ -245,7 +293,7 @@ struct PromptTemplate: Identifiable, Equatable, Codable, Sendable {
 
     static let interpreterID = UUID(uuidString: "4B7087C2-0CF1-4A9B-92B5-27152270A101")!
     static let translatorID = UUID(uuidString: "F5E1EDB9-A29B-4E57-8E3B-5D0D6C62B4D5")!
-    static let meetingID = UUID(uuidString: "64B62B0D-3661-4772-9F8C-8473709700B2")!
+    static let literalTranslationID = UUID(uuidString: "64B62B0D-3661-4772-9F8C-8473709700B2")!
     static let conciseID = UUID(uuidString: "C2D38258-65EE-4B0A-BAC1-358111BC4FAE")!
 
     static var defaultPrompts: [PromptTemplate] {
@@ -253,7 +301,7 @@ struct PromptTemplate: Identifiable, Equatable, Codable, Sendable {
             PromptTemplate(
                 id: translatorID,
                 title: "通用翻译",
-                instruction: "识别输入语言并翻译为目标语言。保留人名、产品名、数字、日期和专有名词，不添加解释。",
+                instruction: "把输入内容从源语言翻译为目标语言。只输出译文，不解释、不总结、不改写成会议纪要。保留人名、产品名、数字、日期和专有名词。",
                 tone: "自然、准确、直接",
                 isBuiltIn: true
             ),
@@ -265,10 +313,10 @@ struct PromptTemplate: Identifiable, Equatable, Codable, Sendable {
                 isBuiltIn: true
             ),
             PromptTemplate(
-                id: meetingID,
-                title: "会议纪要",
-                instruction: "识别决策、风险、待办和负责人。总结时不要扩写没有出现的信息。",
-                tone: "结构化、准确、偏商务",
+                id: literalTranslationID,
+                title: "直译优先",
+                instruction: "逐句翻译为目标语言，尽量保持原句结构和术语。不要补充上下文，不输出项目计划、待办或总结。",
+                tone: "忠实、克制、术语一致",
                 isBuiltIn: true
             ),
             PromptTemplate(
@@ -338,6 +386,28 @@ struct DiagnosticCheck: Identifiable, Equatable, Codable, Sendable {
     var title: String
     var detail: String
     var state: DiagnosticState
+}
+
+struct LLMInterfaceSmokeTest: Equatable, Sendable {
+    var input: String
+    var output: String
+    var state: DiagnosticState
+    var message: String
+    var engineName: String
+    var tokenCount: Int?
+    var durationMilliseconds: Int?
+
+    static let defaultInput = "Keep the model on device so private text never leaves the phone."
+
+    static let idle = LLMInterfaceSmokeTest(
+        input: defaultInput,
+        output: "",
+        state: .idle,
+        message: "等待发送模拟 LLM 请求。",
+        engineName: "",
+        tokenCount: nil,
+        durationMilliseconds: nil
+    )
 }
 
 protocol LocalLanguageModeling: Sendable {

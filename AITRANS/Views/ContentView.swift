@@ -274,6 +274,7 @@ private struct ModelSettingsView: View {
 
                 ModelStatusPanel()
                 DiagnosticsPanel()
+                LLMInterfaceSmokeTestPanel()
                 EngineSelectorPanel()
                 SamplingPanel()
                 AdapterContractPanel()
@@ -786,7 +787,7 @@ private struct HeroPanel: View {
             Text("离线同传工作台")
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .fixedSize(horizontal: false, vertical: true)
-            Text("先用 Gemma 1.5B Mock 打通交互，后续替换本地推理层。")
+            Text("Mock 用于界面冒烟，Local 使用导入的 GGUF 本地推理。")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.76))
                 .fixedSize(horizontal: false, vertical: true)
@@ -1382,16 +1383,20 @@ private struct ModelStatusPanel: View {
             InfoRow(icon: "folder.fill", title: "模型目录", detail: store.localModelPathDisplay)
             InfoRow(icon: "shippingbox.fill", title: "模型文件", detail: "\(store.localModelFilename) / \(store.localModelSizeDisplay)")
 
+            BuiltInModelDownloadCard()
+
             HStack(spacing: 10) {
                 PrimaryActionButton(icon: "folder.badge.plus", title: "导入 GGUF") {
                     showModelImporter = true
                 }
+                .disabled(store.modelDownload.isDownloading)
+                .opacity(store.modelDownload.isDownloading ? 0.52 : 1)
 
                 SecondaryActionButton(icon: "trash.fill", title: "移除模型", tint: Color.danger) {
                     showRemoveConfirmation = true
                 }
-                .disabled(!store.isLocalModelInstalled)
-                .opacity(store.isLocalModelInstalled ? 1 : 0.52)
+                .disabled(!store.isLocalModelInstalled || store.modelDownload.isDownloading)
+                .opacity(store.isLocalModelInstalled && !store.modelDownload.isDownloading ? 1 : 0.52)
             }
 
             SecondaryActionButton(icon: "arrow.clockwise", title: "刷新模型状态") {
@@ -1418,13 +1423,136 @@ private struct ModelStatusPanel: View {
             }
             Button("取消", role: .cancel) {}
         } message: {
-            Text("只删除 App 沙盒中的 model.gguf，不会影响原始文件。")
+            Text("删除 App 沙盒中的 model.gguf 和临时下载文件，不影响原始文件或远程模型。")
         }
         .alert("模型文件", isPresented: $showModelActionResult) {
             Button("知道了", role: .cancel) {}
         } message: {
             Text(store.dataTransferMessage)
         }
+    }
+}
+
+private struct BuiltInModelDownloadCard: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack(alignment: .top, spacing: 11) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(tint)
+                    .frame(width: 28, height: 28)
+                    .background(tint.opacity(0.13), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(store.builtInModel.displayName)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.88))
+                    Text(store.modelDownload.message)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.60))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            ProgressView(value: store.modelDownload.fractionCompleted)
+                .tint(Color.appAccent)
+                .opacity(store.modelDownload.phase == .idle ? 0.45 : 1)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    metric("大小", store.builtInModelSizeDisplay)
+                    metric("进度", store.modelDownloadProgressDisplay)
+                    metric("速度", store.modelDownloadSpeedDisplay)
+                }
+
+                VStack(alignment: .leading, spacing: 7) {
+                    metric("大小", store.builtInModelSizeDisplay)
+                    metric("进度", store.modelDownloadProgressDisplay)
+                    metric("速度", store.modelDownloadSpeedDisplay)
+                }
+            }
+
+            Text(store.modelDownloadLocationDisplay)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.42))
+                .lineLimit(2)
+                .minimumScaleFactor(0.74)
+                .textSelection(.enabled)
+
+            HStack(spacing: 10) {
+                PrimaryActionButton(icon: primaryIcon, title: primaryTitle) {
+                    primaryAction()
+                }
+                .disabled(primaryDisabled)
+                .opacity(primaryDisabled ? 0.52 : 1)
+
+                SecondaryActionButton(icon: "xmark.circle.fill", title: "取消", tint: Color.warning) {
+                    store.cancelModelDownload()
+                }
+                .disabled(!store.modelDownload.isDownloading)
+                .opacity(store.modelDownload.isDownloading ? 1 : 0.52)
+            }
+        }
+        .padding(12)
+        .background(Color.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func metric(_ title: String, _ value: String) -> some View {
+        HStack(spacing: 5) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white.opacity(0.46))
+            Text(value)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.76))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var icon: String {
+        switch store.modelDownload.phase {
+        case .idle: "arrow.down.circle"
+        case .downloading: "arrow.down.circle.fill"
+        case .installed: "checkmark.circle.fill"
+        case .failed: "xmark.octagon.fill"
+        }
+    }
+
+    private var tint: Color {
+        switch store.modelDownload.phase {
+        case .idle: .white.opacity(0.56)
+        case .downloading: Color.warning
+        case .installed: Color.success
+        case .failed: Color.danger
+        }
+    }
+
+    private var primaryIcon: String {
+        store.isLocalModelInstalled ? "checkmark.seal.fill" : "arrow.down.circle.fill"
+    }
+
+    private var primaryTitle: String {
+        if store.modelDownload.isDownloading {
+            "下载中"
+        } else if store.isLocalModelInstalled {
+            "已安装"
+        } else {
+            "下载 Gemma"
+        }
+    }
+
+    private var primaryDisabled: Bool {
+        store.modelDownload.isDownloading || store.isLocalModelInstalled
+    }
+
+    private func primaryAction() {
+        store.downloadBuiltInModel()
     }
 }
 
@@ -1488,10 +1616,114 @@ private struct DiagnosticsPanel: View {
             ) {
                 store.runDiagnostics()
             }
-            .disabled(store.isRunningDiagnostics)
-            .opacity(store.isRunningDiagnostics ? 0.62 : 1)
+            .disabled(store.isRunningDiagnostics || store.isRunningLLMSmokeTest)
+            .opacity(store.isRunningDiagnostics || store.isRunningLLMSmokeTest ? 0.62 : 1)
         }
         .panelStyle()
+    }
+}
+
+private struct LLMInterfaceSmokeTestPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        let smokeTest = store.llmSmokeTest
+
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(
+                title: "LLM 接口自测",
+                subtitle: smokeTestSubtitle,
+                icon: "arrow.left.arrow.right.circle.fill"
+            )
+
+            InfoRow(
+                icon: "arrow.down.doc.fill",
+                title: "模拟输入",
+                detail: smokeTest.input
+            )
+
+            smokeTestStatusRow(smokeTest)
+
+            if !smokeTest.output.isEmpty {
+                InfoRow(
+                    icon: "arrow.up.doc.fill",
+                    title: "模型输出",
+                    detail: smokeTest.output
+                )
+            }
+
+            PrimaryActionButton(
+                icon: store.isRunningLLMSmokeTest ? "hourglass" : "play.fill",
+                title: store.isRunningLLMSmokeTest ? "正在自测" : "运行接口自测"
+            ) {
+                store.runLLMInterfaceSmokeTest()
+            }
+            .disabled(store.isRunningLLMSmokeTest || store.isRunningDiagnostics)
+            .opacity(store.isRunningLLMSmokeTest || store.isRunningDiagnostics ? 0.62 : 1)
+        }
+        .panelStyle()
+    }
+
+    private var smokeTestSubtitle: String {
+        if store.isRunningLLMSmokeTest {
+            return "运行中"
+        }
+
+        switch store.llmSmokeTest.state {
+        case .idle: return "未运行"
+        case .running: return "运行中"
+        case .passed: return "通过"
+        case .failed: return "失败"
+        }
+    }
+
+    private func smokeTestStatusRow(_ smokeTest: LLMInterfaceSmokeTest) -> some View {
+        HStack(alignment: .top, spacing: 11) {
+            Image(systemName: smokeTestIcon)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(smokeTestTint)
+                .frame(width: 28, height: 28)
+                .background(smokeTestTint.opacity(0.13), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(smokeTest.engineName.isEmpty ? store.selectedAdapterMetadata.displayName : smokeTest.engineName)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.86))
+
+                Text(smokeTest.message)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.58))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let tokenCount = smokeTest.tokenCount, let duration = smokeTest.durationMilliseconds {
+                    Text("\(tokenCount) tokens · \(duration)ms")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.appAccent)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(Color.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var smokeTestIcon: String {
+        switch store.llmSmokeTest.state {
+        case .idle: "circle"
+        case .running: "arrow.triangle.2.circlepath"
+        case .passed: "checkmark.circle.fill"
+        case .failed: "xmark.octagon.fill"
+        }
+    }
+
+    private var smokeTestTint: Color {
+        switch store.llmSmokeTest.state {
+        case .idle: .white.opacity(0.48)
+        case .running: Color.warning
+        case .passed: Color.success
+        case .failed: Color.danger
+        }
     }
 }
 
@@ -1607,7 +1839,7 @@ private struct AdapterContractPanel: View {
             InfoRow(
                 icon: metadata.supportsStreaming ? "dot.radiowaves.left.and.right" : "rectangle.and.text.magnifyingglass",
                 title: "生成方式",
-                detail: metadata.supportsStreaming ? "支持模拟流式输出；真实接入时可逐 token 回调 UI" : "当前 Local 占位为一次性返回；可在真实推理层中改成流式"
+                detail: metadata.supportsStreaming ? "支持逐 token 回调 UI" : "当前 Local 使用 llama.cpp 一次性返回，可继续扩展为流式输出"
             )
             InfoRow(
                 icon: "arrow.down.doc.fill",
@@ -1622,7 +1854,7 @@ private struct AdapterContractPanel: View {
             InfoRow(
                 icon: "switch.2",
                 title: "替换点",
-                detail: "实现 LocalLanguageModeling.generate 后即可替换 Mock，不影响 UI 和本地数据"
+                detail: "替换沙盒中的 model.gguf 或调整 GemmaLocalService prompt，不影响 UI 和本地数据"
             )
         }
         .panelStyle()

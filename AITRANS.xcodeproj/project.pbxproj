@@ -17,7 +17,27 @@
 		0A0000010000000000000009 /* ImageTranslationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001B /* ImageTranslationViews.swift */; };
 		0A000001000000000000000A /* VisionOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001C /* VisionOCRService.swift */; };
 		0A000001000000000000000B /* ProFeatureViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001D /* ProFeatureViews.swift */; };
+		0A000001000000000000000C /* LlamaRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001E /* LlamaRuntime.swift */; };
+		0A000001000000000000000D /* llama.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001F /* llama.xcframework */; };
+		0A000001000000000000000E /* llama.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001F /* llama.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0A000001000000000000000F /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000021 /* Metal.framework */; };
+		0A0000010000000000000022 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000023 /* Accelerate.framework */; };
+		0A0000010000000000000025 /* LocalModelDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000026 /* LocalModelDownloadService.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		0A0000010000000000000024 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				0A000001000000000000000E /* llama.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0A0000010000000000000010 /* AITRANS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AITRANS.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -34,6 +54,11 @@
 		0A000001000000000000001B /* ImageTranslationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTranslationViews.swift; sourceTree = "<group>"; };
 		0A000001000000000000001C /* VisionOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionOCRService.swift; sourceTree = "<group>"; };
 		0A000001000000000000001D /* ProFeatureViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFeatureViews.swift; sourceTree = "<group>"; };
+		0A000001000000000000001E /* LlamaRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaRuntime.swift; sourceTree = "<group>"; };
+		0A000001000000000000001F /* llama.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = "build-apple/llama.xcframework"; sourceTree = SOURCE_ROOT; };
+		0A0000010000000000000021 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		0A0000010000000000000023 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		0A0000010000000000000026 /* LocalModelDownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelDownloadService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -44,6 +69,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0A000001000000000000000F /* Metal.framework in Frameworks */,
+				0A0000010000000000000022 /* Accelerate.framework in Frameworks */,
+				0A000001000000000000000D /* llama.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -55,6 +83,7 @@
 			children = (
 				0A0000010000000000000031 /* AITRANS */,
 				0A0000010000000000000018 /* README.md */,
+				0A0000010000000000000038 /* Frameworks */,
 				0A0000010000000000000032 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -102,6 +131,8 @@
 				0A000001000000000000001C /* VisionOCRService.swift */,
 				0A0000010000000000000015 /* MockGemmaService.swift */,
 				0A0000010000000000000019 /* GemmaLocalService.swift */,
+				0A000001000000000000001E /* LlamaRuntime.swift */,
+				0A0000010000000000000026 /* LocalModelDownloadService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -126,6 +157,16 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		0A0000010000000000000038 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0A000001000000000000001F /* llama.xcframework */,
+				0A0000010000000000000021 /* Metal.framework */,
+				0A0000010000000000000023 /* Accelerate.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -136,6 +177,7 @@
 				0A0000010000000000000050 /* Sources */,
 				0A0000010000000000000020 /* Frameworks */,
 				0A0000010000000000000060 /* Resources */,
+				0A0000010000000000000024 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -207,6 +249,8 @@
 				0A0000010000000000000009 /* ImageTranslationViews.swift in Sources */,
 				0A000001000000000000000A /* VisionOCRService.swift in Sources */,
 				0A000001000000000000000B /* ProFeatureViews.swift in Sources */,
+				0A000001000000000000000C /* LlamaRuntime.swift in Sources */,
+				0A0000010000000000000025 /* LocalModelDownloadService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -335,6 +379,7 @@
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AITRANS/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -359,6 +404,7 @@
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AITRANS/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

@@ -4,3 +4,6 @@
 DerivedData/
 *.xcuserstate
 xcuserdata/
+llm/*.gguf
+third_party/llama.cpp/
+third_party/llama.cpp/build-*/
