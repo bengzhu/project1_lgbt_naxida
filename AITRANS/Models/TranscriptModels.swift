@@ -397,7 +397,7 @@ struct LLMInterfaceSmokeTest: Equatable, Sendable {
     var tokenCount: Int?
     var durationMilliseconds: Int?
 
-    static let defaultInput = "Keep the model on device so private text never leaves the phone."
+    static let defaultInput = "Keep the model on device."
 
     static let idle = LLMInterfaceSmokeTest(
         input: defaultInput,
