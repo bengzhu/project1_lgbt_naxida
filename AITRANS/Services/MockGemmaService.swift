@@ -42,20 +42,21 @@ struct MockGemmaService: LocalLanguageModeling {
 
     private func translatedText(for request: ModelGenerationRequest) -> String {
         let normalized = request.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let sourcePreview = normalized.isEmpty ? "当前输入" : String(normalized.prefix(42))
         let promptHint = request.prompt.title
 
         switch request.targetLanguage {
         case .simplifiedChinese:
-            return "【\(promptHint)】\(sourcePreview) 的中文译文。"
+            let text = normalized.isEmpty ? "当前输入已翻译为中文。" : "这是 Mock 生成的中文译文。"
+            return "【\(promptHint)】\(text)"
         case .englishUS:
-            return "[\(promptHint)] English translation of: \(sourcePreview)."
+            let text = normalized.isEmpty ? "The current input has been translated into English." : "This is a mock English translation."
+            return "[\(promptHint)] \(text)"
         case .japanese:
-            return "【\(promptHint)】\(sourcePreview) の日本語訳。"
+            return "【\(promptHint)】これは Mock 生成の日本語訳です。"
         case .french:
-            return "[\(promptHint)] Traduction française de : \(sourcePreview)."
+            return "[\(promptHint)] Ceci est une traduction française simulée."
         case .german:
-            return "[\(promptHint)] Deutsche Übersetzung von: \(sourcePreview)."
+            return "[\(promptHint)] Dies ist eine simulierte deutsche Übersetzung."
         }
     }
 

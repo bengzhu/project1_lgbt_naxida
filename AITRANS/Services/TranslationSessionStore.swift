@@ -934,12 +934,13 @@ final class TranslationSessionStore: ObservableObject {
     func runLLMInterfaceSmokeTest() {
         guard !isRunningLLMSmokeTest, !isRunningDiagnostics else { return }
         writeLaunchLLMSmokeProbe("run-smoke-test engine=\(selectedAdapterMetadata.displayName)")
+        let input = smokeTestInputForCurrentLanguageDirection()
         isRunningLLMSmokeTest = true
         llmSmokeTest = LLMInterfaceSmokeTest(
-            input: LLMInterfaceSmokeTest.defaultInput,
+            input: input,
             output: "",
             state: .running,
-            message: "正在通过当前适配器发送模拟请求...",
+            message: "正在通过当前适配器发送翻译请求...",
             engineName: selectedAdapterMetadata.displayName,
             tokenCount: nil,
             durationMilliseconds: nil
@@ -972,7 +973,11 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     @discardableResult
-    private func submit(_ text: String, timestamp: String) async -> Bool {
+    private func submit(_ text: String, timestamp: String, refreshesSummary: Bool = true) async -> Bool {
+        writeLaunchLLMSmokeProbe(
+            "submit-start source=\(sourceLanguage.rawValue) target=\(targetLanguage.rawValue) " +
+            "engine=\(selectedEngine.rawValue) installed=\(isLocalModelInstalled) input=\(Self.probeField(text))"
+        )
         defer {
             isProcessing = false
             persist()
@@ -988,10 +993,22 @@ final class TranslationSessionStore: ObservableObject {
                 isFinal: true
             )
             transcript.insert(line, at: 0)
+            writeLaunchLLMSmokeProbe(
+                "submit-done source=\(sourceLanguage.rawValue) target=\(targetLanguage.rawValue) " +
+                "engine=\(selectedEngine.rawValue) original=\(Self.probeField(line.original)) " +
+                "translation=\(Self.probeField(line.translation))"
+            )
             draftText = ""
-            await refreshSummaryAfterTranslation()
+            if refreshesSummary {
+                await refreshSummaryAfterTranslation()
+            }
             return true
         } catch {
+            writeLaunchLLMSmokeProbe(
+                "submit-error source=\(sourceLanguage.rawValue) target=\(targetLanguage.rawValue) " +
+                "engine=\(selectedEngine.rawValue) input=\(Self.probeField(text)) " +
+                "error=\(Self.probeField(error.localizedDescription))"
+            )
             modelStatus = ModelStatus(
                 title: "Gemma Error",
                 detail: error.localizedDescription,
@@ -1065,7 +1082,15 @@ final class TranslationSessionStore: ObservableObject {
 
     private func translate(_ text: String) async throws -> String {
         let request = makeRequest(task: .translation, inputText: text)
+        writeLaunchLLMSmokeProbe(
+            "translate-request source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
+            "prompt=\(request.prompt.title) input=\(Self.probeField(text))"
+        )
         let result = try await generateWithSelectedEngine(request)
+        writeLaunchLLMSmokeProbe(
+            "translate-result source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
+            "engine=\(result.engineName) output=\(Self.probeField(result.text))"
+        )
         return result.text
     }
 
@@ -1106,19 +1131,32 @@ final class TranslationSessionStore: ObservableObject {
             writeLaunchLLMSmokeProbe("prepare-start engine=\(primary.metadata.displayName)")
             try await primary.prepare()
             writeLaunchLLMSmokeProbe("prepare-done engine=\(primary.metadata.displayName)")
-            writeLaunchLLMSmokeProbe("generate-start task=\(request.task.rawValue) input=\(request.inputText)")
+            writeLaunchLLMSmokeProbe(
+                "generate-start task=\(request.task.rawValue) source=\(request.sourceLanguage.rawValue) " +
+                "target=\(request.targetLanguage.rawValue) selectedEngine=\(selectedEngine.rawValue) " +
+                "adapter=\(primary.metadata.displayName) installed=\(isLocalModelInstalled) " +
+                "input=\(Self.probeField(request.inputText))"
+            )
             let result = try await primary.generate(request)
             writeLaunchLLMSmokeProbe(
-                "generate-done engine=\(result.engineName) chars=\(result.text.count) output=\(result.text)"
+                "generate-done engine=\(result.engineName) chars=\(result.text.count) " +
+                "output=\(Self.probeField(result.text))"
             )
             lastGenerationLabel = "\(result.engineName) · \(result.durationMilliseconds ?? 0)ms"
             return result
         } catch {
-            writeLaunchLLMSmokeProbe("generate-error \(error.localizedDescription)")
+            writeLaunchLLMSmokeProbe(
+                "generate-error source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
+                "selectedEngine=\(selectedEngine.rawValue) error=\(Self.probeField(error.localizedDescription))"
+            )
             guard selectedEngine == .local, error is GemmaLocalServiceError else { throw error }
             guard !isLocalModelInstalled else { throw error }
             try await mockService.prepare()
             let fallback = try await mockService.generate(request)
+            writeLaunchLLMSmokeProbe(
+                "generate-fallback engine=\(fallback.engineName) source=\(request.sourceLanguage.rawValue) " +
+                "target=\(request.targetLanguage.rawValue) output=\(Self.probeField(fallback.text))"
+            )
             lastGenerationLabel = "Local 缺失，已回退 Mock · \(fallback.durationMilliseconds ?? 0)ms"
             dataTransferMessage = "Local 缺失：请先下载或导入 GGUF。已临时回退 Mock。"
             refreshModelStatus()
@@ -1127,13 +1165,16 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     private func performLLMInterfaceSmokeTest() async {
-        let input = llmSmokeTest.input.isEmpty ? LLMInterfaceSmokeTest.defaultInput : llmSmokeTest.input
-        writeLaunchLLMSmokeProbe("perform-start input=\(input)")
+        let input = llmSmokeTest.input.isEmpty ? smokeTestInputForCurrentLanguageDirection() : llmSmokeTest.input
+        writeLaunchLLMSmokeProbe(
+            "perform-start source=\(sourceLanguage.rawValue) target=\(targetLanguage.rawValue) " +
+            "input=\(Self.probeField(input))"
+        )
         llmSmokeTest = LLMInterfaceSmokeTest(
             input: input,
             output: "",
             state: .running,
-            message: "正在通过当前适配器发送模拟请求...",
+            message: "正在通过当前适配器发送翻译请求...",
             engineName: selectedAdapterMetadata.displayName,
             tokenCount: nil,
             durationMilliseconds: nil
@@ -1146,12 +1187,22 @@ final class TranslationSessionStore: ObservableObject {
             let trimmedOutput = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
             let trimmedInput = input.trimmingCharacters(in: .whitespacesAndNewlines)
             let repeatsInput = trimmedOutput.localizedCaseInsensitiveCompare(trimmedInput) == .orderedSame
-            let passed = !trimmedOutput.isEmpty && !repeatsInput
+            let containsInput = trimmedOutput.localizedCaseInsensitiveContains(trimmedInput)
+                || trimmedInput.localizedCaseInsensitiveContains(trimmedOutput)
+            let isPlaceholder = Self.isPlaceholderTranslationOutput(trimmedOutput)
+            let looksLikeTarget = outputLooksLikeTargetLanguage(trimmedOutput)
+            let passed = !trimmedOutput.isEmpty && !repeatsInput && !containsInput && !isPlaceholder && looksLikeTarget
             let message: String
             if trimmedOutput.isEmpty {
                 message = "接口异常：适配器返回空输出。"
             } else if repeatsInput {
                 message = "接口异常：适配器返回了原始输入。"
+            } else if containsInput {
+                message = "接口异常：输出仍包含原始输入。"
+            } else if isPlaceholder {
+                message = "接口异常：输出是占位答复。"
+            } else if !looksLikeTarget {
+                message = "接口异常：输出不像\(targetLanguage.rawValue)。"
             } else {
                 message = "接口正常：UI 输入已到达 \(result.engineName)，并收到有效输出。"
             }
@@ -1184,6 +1235,32 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
+    private func smokeTestInputForCurrentLanguageDirection() -> String {
+        switch sourceLanguage {
+        case .englishUS:
+            "The meeting starts at 9:30 tomorrow."
+        case .simplifiedChinese:
+            "请把会议记录保存在本地。"
+        case .japanese:
+            "明日の会議は九時半に始まります。"
+        case .french:
+            "La reunion commence demain a 9 h 30."
+        case .german:
+            "Die Besprechung beginnt morgen um 9:30 Uhr."
+        }
+    }
+
+    private func outputLooksLikeTargetLanguage(_ output: String) -> Bool {
+        switch targetLanguage {
+        case .simplifiedChinese:
+            Self.containsCJK(output)
+        case .englishUS:
+            Self.containsLatinLetter(output) && !Self.containsCJK(output)
+        default:
+            !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
 #if DEBUG
     private func runLaunchTranslationProbeSuite() async {
         guard !isRunningLLMSmokeTest, !isRunningDiagnostics else { return }
@@ -1193,19 +1270,23 @@ final class TranslationSessionStore: ObservableObject {
             persist()
         }
 
-        writeLaunchLLMSmokeProbe("translation-probe-suite-start cases=\(Self.launchTranslationProbeInputs.count)")
+        let allProbeCases = Self.launchTranslationProbeCases + Self.launchSubmitProbeCases
+        writeLaunchLLMSmokeProbe(
+            "translation-probe-suite-start cases=\(allProbeCases.count) " +
+            "direct=\(Self.launchTranslationProbeCases.count) submit=\(Self.launchSubmitProbeCases.count)"
+        )
 
         var passedCount = 0
         var lastOutput = ""
         var lastMessage = ""
 
-        for (index, input) in Self.launchTranslationProbeInputs.enumerated() {
+        for (index, probeCase) in Self.launchTranslationProbeCases.enumerated() {
             let caseNumber = index + 1
-            let request = makeRequest(task: .translation, inputText: input)
+            let request = makeProbeRequest(probeCase)
 
             do {
                 let result = try await generateWithSelectedEngine(request)
-                let verdict = translationProbeVerdict(input: input, output: result.text)
+                let verdict = translationProbeVerdict(probeCase: probeCase, output: result.text)
                 if verdict.passed {
                     passedCount += 1
                 }
@@ -1215,8 +1296,10 @@ final class TranslationSessionStore: ObservableObject {
                     "translation-probe case=\(caseNumber) " +
                     "state=\(verdict.passed ? "passed" : "failed") " +
                     "engine=\(result.engineName) " +
+                    "source=\(probeCase.source.rawValue) " +
+                    "target=\(probeCase.target.rawValue) " +
                     "duration=\(result.durationMilliseconds ?? 0)ms " +
-                    "input=\(Self.probeField(input)) " +
+                    "input=\(Self.probeField(probeCase.input)) " +
                     "output=\(Self.probeField(result.text)) " +
                     "reason=\(Self.probeField(verdict.message))"
                 )
@@ -1224,15 +1307,25 @@ final class TranslationSessionStore: ObservableObject {
                 lastMessage = error.localizedDescription
                 writeLaunchLLMSmokeProbe(
                     "translation-probe case=\(caseNumber) state=failed " +
-                    "input=\(Self.probeField(input)) error=\(Self.probeField(error.localizedDescription))"
+                    "source=\(probeCase.source.rawValue) target=\(probeCase.target.rawValue) " +
+                    "input=\(Self.probeField(probeCase.input)) error=\(Self.probeField(error.localizedDescription))"
                 )
             }
         }
 
-        let allPassed = passedCount == Self.launchTranslationProbeInputs.count
-        let suiteMessage = "翻译接口探针 \(passedCount)/\(Self.launchTranslationProbeInputs.count) 通过。\(lastMessage)"
+        let submitResult = await runLaunchSubmitProbeCases(startingAt: Self.launchTranslationProbeCases.count + 1)
+        passedCount += submitResult.passedCount
+        if !submitResult.lastOutput.isEmpty {
+            lastOutput = submitResult.lastOutput
+        }
+        if !submitResult.lastMessage.isEmpty {
+            lastMessage = submitResult.lastMessage
+        }
+
+        let allPassed = passedCount == allProbeCases.count
+        let suiteMessage = "翻译接口探针 \(passedCount)/\(allProbeCases.count) 通过。\(lastMessage)"
         llmSmokeTest = LLMInterfaceSmokeTest(
-            input: Self.launchTranslationProbeInputs.joined(separator: " | "),
+            input: allProbeCases.map(\.input).joined(separator: " | "),
             output: lastOutput,
             state: allPassed ? .passed : .failed,
             message: suiteMessage,
@@ -1243,13 +1336,108 @@ final class TranslationSessionStore: ObservableObject {
         dataTransferMessage = suiteMessage
         writeLaunchLLMSmokeProbe(
             "translation-probe-suite state=\(allPassed ? "passed" : "failed") " +
-            "passed=\(passedCount)/\(Self.launchTranslationProbeInputs.count)"
+            "passed=\(passedCount)/\(allProbeCases.count)"
         )
     }
 
-    private func translationProbeVerdict(input: String, output: String) -> (passed: Bool, message: String) {
+    private func runLaunchSubmitProbeCases(startingAt firstCaseNumber: Int) async
+        -> (passedCount: Int, lastOutput: String, lastMessage: String) {
+        let originalState = TranslationProbeStoreState(
+            mode: mode,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            transcript: transcript,
+            summary: summary,
+            selectedPromptID: selectedPromptID,
+            selectedEngine: selectedEngine,
+            draftText: draftText,
+            isProcessing: isProcessing,
+            modelStatus: modelStatus,
+            lastGenerationLabel: lastGenerationLabel,
+            dataTransferMessage: dataTransferMessage
+        )
+
+        isRestoring = true
+        defer {
+            restoreTranslationProbeState(originalState)
+            isRestoring = false
+        }
+
+        var passedCount = 0
+        var lastOutput = ""
+        var lastMessage = ""
+
+        for (index, probeCase) in Self.launchSubmitProbeCases.enumerated() {
+            let caseNumber = firstCaseNumber + index
+            mode = .translate
+            sourceLanguage = probeCase.source
+            targetLanguage = probeCase.target
+            selectedPromptID = PromptTemplate.translatorID
+            selectedEngine = .local
+            transcript = []
+            summary = .empty
+            draftText = ""
+            isProcessing = false
+
+            let didSubmit = await submit(probeCase.input, timestamp: "probe", refreshesSummary: false)
+            guard didSubmit, let line = transcript.first else {
+                lastMessage = modelStatus.detail
+                writeLaunchLLMSmokeProbe(
+                    "submit-probe case=\(caseNumber) state=failed source=\(probeCase.source.rawValue) " +
+                    "target=\(probeCase.target.rawValue) input=\(Self.probeField(probeCase.input)) " +
+                    "reason=\(Self.probeField(lastMessage))"
+                )
+                continue
+            }
+
+            let verdict = translationProbeVerdict(probeCase: probeCase, output: line.translation)
+            if verdict.passed {
+                passedCount += 1
+            }
+            lastOutput = line.translation
+            lastMessage = verdict.message
+            writeLaunchLLMSmokeProbe(
+                "submit-probe case=\(caseNumber) state=\(verdict.passed ? "passed" : "failed") " +
+                "source=\(probeCase.source.rawValue) target=\(probeCase.target.rawValue) " +
+                "engine=\(selectedEngine.rawValue) input=\(Self.probeField(line.original)) " +
+                "output=\(Self.probeField(line.translation)) reason=\(Self.probeField(verdict.message))"
+            )
+        }
+
+        return (passedCount, lastOutput, lastMessage)
+    }
+
+    private func restoreTranslationProbeState(_ state: TranslationProbeStoreState) {
+        mode = state.mode
+        sourceLanguage = state.sourceLanguage
+        targetLanguage = state.targetLanguage
+        transcript = state.transcript
+        summary = state.summary
+        selectedPromptID = state.selectedPromptID
+        selectedEngine = state.selectedEngine
+        draftText = state.draftText
+        isProcessing = state.isProcessing
+        modelStatus = state.modelStatus
+        lastGenerationLabel = state.lastGenerationLabel
+        dataTransferMessage = state.dataTransferMessage
+    }
+
+    private func makeProbeRequest(_ probeCase: TranslationProbeCase) -> ModelGenerationRequest {
+        ModelGenerationRequest(
+            task: .translation,
+            mode: mode,
+            inputText: probeCase.input,
+            transcriptContext: [],
+            sourceLanguage: probeCase.source,
+            targetLanguage: probeCase.target,
+            prompt: selectedPrompt,
+            sampling: sampling
+        )
+    }
+
+    private func translationProbeVerdict(probeCase: TranslationProbeCase, output: String) -> (passed: Bool, message: String) {
         let trimSet = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
-        let cleanInput = input.trimmingCharacters(in: trimSet)
+        let cleanInput = probeCase.input.trimmingCharacters(in: trimSet)
         let cleanOutput = output.trimmingCharacters(in: trimSet)
 
         guard !cleanOutput.isEmpty else {
@@ -1264,15 +1452,28 @@ final class TranslationSessionStore: ObservableObject {
             return (false, "输出包含原文")
         }
 
-        guard Self.containsCJK(output) else {
-            return (false, "输出不是中文")
+        guard !Self.isPlaceholderTranslationOutput(output) else {
+            return (false, "输出是占位答复")
+        }
+
+        switch probeCase.target {
+        case .simplifiedChinese:
+            guard Self.containsCJK(output) else {
+                return (false, "输出不是中文")
+            }
+        case .englishUS:
+            guard Self.containsLatinLetter(output), !Self.containsCJK(output) else {
+                return (false, "输出不是英文")
+            }
+        default:
+            break
         }
 
         guard !output.localizedCaseInsensitiveContains("简体中文翻译") else {
             return (false, "输出是模板占位")
         }
 
-        return (true, "有效中文译文")
+        return (true, "有效译文")
     }
 #endif
 
@@ -1490,6 +1691,19 @@ final class TranslationSessionStore: ObservableObject {
             return true
         }
 
+        let trimSet = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
+        let cleanOriginal = original.trimmingCharacters(in: trimSet)
+        let cleanTranslation = translation.trimmingCharacters(in: trimSet)
+        if !cleanOriginal.isEmpty,
+           !cleanTranslation.isEmpty,
+           cleanTranslation.localizedCaseInsensitiveContains(cleanOriginal) {
+            return true
+        }
+
+        if isPlaceholderTranslationOutput(translation) {
+            return true
+        }
+
         let promptLeakMarkers = [
             "<start_of_turn>",
             "<end_of_turn>",
@@ -1688,6 +1902,32 @@ final class TranslationSessionStore: ObservableObject {
         return merged
     }
 
+    private static func containsCJK(_ text: String) -> Bool {
+        text.unicodeScalars.contains { scalar in
+            (0x4E00...0x9FFF).contains(Int(scalar.value))
+        }
+    }
+
+    private static func containsLatinLetter(_ text: String) -> Bool {
+        text.unicodeScalars.contains { scalar in
+            (0x41...0x5A).contains(Int(scalar.value)) || (0x61...0x7A).contains(Int(scalar.value))
+        }
+    }
+
+    private static func isPlaceholderTranslationOutput(_ output: String) -> Bool {
+        let markers = [
+            "请您提供",
+            "请提供",
+            "想要翻译的文本",
+            "需要翻译的文本",
+            "无法翻译",
+            "cannot translate",
+            "please provide",
+            "provide the text"
+        ]
+        return markers.contains { output.localizedCaseInsensitiveContains($0) }
+    }
+
     private func logLaunchLLMSmokeTestResult(_ test: LLMInterfaceSmokeTest) {
 #if DEBUG
         guard Self.shouldRunLLMSmokeTestFromLaunchEnvironment else { return }
@@ -1724,28 +1964,53 @@ final class TranslationSessionStore: ObservableObject {
     }
 
 #if DEBUG
+    private struct TranslationProbeCase {
+        var source: SupportedLanguage
+        var target: SupportedLanguage
+        var input: String
+    }
+
+    private struct TranslationProbeStoreState {
+        var mode: SessionMode
+        var sourceLanguage: SupportedLanguage
+        var targetLanguage: SupportedLanguage
+        var transcript: [TranscriptLine]
+        var summary: AISummary
+        var selectedPromptID: UUID
+        var selectedEngine: ModelEngine
+        var draftText: String
+        var isProcessing: Bool
+        var modelStatus: ModelStatus
+        var lastGenerationLabel: String
+        var dataTransferMessage: String
+    }
+
     private static var shouldRunLLMSmokeTestFromLaunchEnvironment: Bool {
         ProcessInfo.processInfo.environment["AITRANS_RUN_LLM_SMOKE"] == "1"
     }
 
-    private static let launchTranslationProbeInputs = [
-        "Keep the model on device.",
-        "Translate this short sentence.",
-        "The meeting starts at 9:30 tomorrow.",
-        "Save the transcript locally."
+    private static let launchTranslationProbeCases = [
+        TranslationProbeCase(source: .englishUS, target: .simplifiedChinese, input: "Keep the model on device."),
+        TranslationProbeCase(source: .englishUS, target: .simplifiedChinese, input: "The meeting starts at 9:30 tomorrow."),
+        TranslationProbeCase(source: .englishUS, target: .simplifiedChinese, input: "Save the transcript locally."),
+        TranslationProbeCase(source: .simplifiedChinese, target: .englishUS, input: "请把会议记录保存在本地。"),
+        TranslationProbeCase(source: .simplifiedChinese, target: .englishUS, input: "明天九点半开始会议。")
     ]
 
-    private static func containsCJK(_ text: String) -> Bool {
-        text.unicodeScalars.contains { scalar in
-            (0x4E00...0x9FFF).contains(Int(scalar.value))
-        }
-    }
+    private static let launchSubmitProbeCases = [
+        TranslationProbeCase(source: .englishUS, target: .simplifiedChinese, input: "The meeting starts at 9:30 tomorrow."),
+        TranslationProbeCase(source: .simplifiedChinese, target: .englishUS, input: "请把会议记录保存在本地。")
+    ]
 
     private static func probeField(_ text: String) -> String {
         text
             .replacing("\n", with: "\\n")
             .replacing("\t", with: "\\t")
             .replacing("|", with: "\\|")
+    }
+#else
+    private static func probeField(_ text: String) -> String {
+        text
     }
 #endif
 
