@@ -88,18 +88,33 @@ struct GemmaLocalService: LocalLanguageModeling {
 
     private func generateTranslation(for request: ModelGenerationRequest) throws -> String {
         var lastError: Error?
-        for prompt in translationPrompts(for: request) {
+        for (index, prompt) in translationPrompts(for: request).enumerated() {
             do {
+                Self.writeTranslationProbeLog(
+                    "local-attempt-start index=\(index + 1) " +
+                    "source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
+                    "input=\(Self.probeField(request.inputText)) prompt=\(Self.probeField(prompt))"
+                )
                 let output = try Self.runtime.generate(
                     prompt: prompt,
                     maxTokens: min(request.sampling.maxTokens, 160)
                 )
-                return try cleanTranslationOutput(
+                Self.writeTranslationProbeLog(
+                    "local-attempt-raw index=\(index + 1) output=\(Self.probeField(output))"
+                )
+                let cleanedOutput = try cleanTranslationOutput(
                     output,
                     input: request.inputText,
                     targetLanguage: request.targetLanguage
                 )
+                Self.writeTranslationProbeLog(
+                    "local-attempt-clean index=\(index + 1) output=\(Self.probeField(cleanedOutput))"
+                )
+                return cleanedOutput
             } catch {
+                Self.writeTranslationProbeLog(
+                    "local-attempt-error index=\(index + 1) error=\(Self.probeField(error.localizedDescription))"
+                )
                 lastError = error
             }
         }
@@ -120,14 +135,21 @@ struct GemmaLocalService: LocalLanguageModeling {
             return [
                 """
                 <start_of_turn>user
-                请把下面英文翻译成简体中文，只输出中文译文：
+                翻译成中文，不要输出英文原文，不要解释：
                 \(request.inputText)
                 <end_of_turn>
                 <start_of_turn>model
                 """,
                 """
                 <start_of_turn>user
-                翻译成中文，不要输出英文原文，不要解释：
+                English -> 简体中文。只输出中文译文：
+                \(request.inputText)
+                <end_of_turn>
+                <start_of_turn>model
+                """,
+                """
+                <start_of_turn>user
+                请把下面英文翻译成简体中文，只输出中文译文：
                 \(request.inputText)
                 <end_of_turn>
                 <start_of_turn>model
@@ -197,16 +219,26 @@ struct GemmaLocalService: LocalLanguageModeling {
             }
         }
 
-        let lines = text
+        var lines = text
             .split(separator: "\n")
             .map { stripFormatting(from: String($0)) }
             .filter { !$0.isEmpty }
-            .filter { !$0.hasPrefix("- ") }
-            .filter { !$0.hasPrefix("|") && !$0.hasSuffix("|") }
-            .filter { !$0.localizedCaseInsensitiveContains("translation engine") }
-            .filter { !$0.localizedCaseInsensitiveContains("do not summarize") }
-            .filter { !$0.localizedCaseInsensitiveContains("do not add explanations") }
-            .filter { !$0.localizedCaseInsensitiveContains("简体中文翻译") }
+
+        let lineLeakMarkers = [
+            "translation engine",
+            "do not summarize",
+            "do not add explanations",
+            "English ->",
+            "只输出中文译文",
+            "只输出译文",
+            "不要输出英文原文",
+            "简体中文翻译"
+        ]
+        lines.removeAll { line in
+            line.hasPrefix("- ")
+                || (line.hasPrefix("|") && line.hasSuffix("|"))
+                || lineLeakMarkers.contains { line.localizedCaseInsensitiveContains($0) }
+        }
 
         if let last = lines.last, !last.isEmpty {
             return try validateTranslationOutput(last, input: input, targetLanguage: targetLanguage)
@@ -252,10 +284,27 @@ struct GemmaLocalService: LocalLanguageModeling {
         guard !normalizedOutput.localizedCaseInsensitiveContains(normalizedInput), !normalizedInput.localizedCaseInsensitiveContains(normalizedOutput) else {
             throw GemmaLocalServiceError.repeatedInput
         }
+        guard !isPlaceholderResponse(output) else {
+            throw GemmaLocalServiceError.emptyOutput
+        }
         guard looksLikeTargetLanguage(output, targetLanguage: targetLanguage) else {
             throw GemmaLocalServiceError.outputNotInTargetLanguage(targetLanguage)
         }
         return output
+    }
+
+    private func isPlaceholderResponse(_ output: String) -> Bool {
+        let markers = [
+            "请您提供",
+            "请提供",
+            "想要翻译的文本",
+            "需要翻译的文本",
+            "无法翻译",
+            "cannot translate",
+            "please provide",
+            "provide the text"
+        ]
+        return markers.contains { output.localizedCaseInsensitiveContains($0) }
     }
 
     private func looksLikeTargetLanguage(_ output: String, targetLanguage: SupportedLanguage) -> Bool {
@@ -263,6 +312,10 @@ struct GemmaLocalService: LocalLanguageModeling {
         case .simplifiedChinese:
             output.unicodeScalars.contains { scalar in
                 (0x4E00...0x9FFF).contains(Int(scalar.value))
+            }
+        case .englishUS:
+            output.unicodeScalars.contains { scalar in
+                (0x41...0x5A).contains(Int(scalar.value)) || (0x61...0x7A).contains(Int(scalar.value))
             }
         default:
             true
@@ -272,4 +325,33 @@ struct GemmaLocalService: LocalLanguageModeling {
     private func elapsedMilliseconds(from start: Date) -> Int {
         Int(Date.now.timeIntervalSince(start) * 1_000)
     }
+
+#if DEBUG
+    private static func writeTranslationProbeLog(_ message: String) {
+        guard ProcessInfo.processInfo.environment["AITRANS_RUN_LLM_SMOKE"] == "1" else { return }
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let directory = base.appendingPathComponent("AITRANS", isDirectory: true)
+        let url = directory.appendingPathComponent("llm-smoke-result.log")
+        let line = "\(Date.now.ISO8601Format()) \(message)\n"
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if FileManager.default.fileExists(atPath: url.path),
+           let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(Data(line.utf8))
+            try? handle.close()
+        } else {
+            try? Data(line.utf8).write(to: url, options: .atomic)
+        }
+    }
+
+    private static func probeField(_ text: String) -> String {
+        text
+            .replacing("\n", with: "\\n")
+            .replacing("\t", with: "\\t")
+            .replacing("|", with: "\\|")
+    }
+#else
+    private static func writeTranslationProbeLog(_ message: String) {}
+    private static func probeField(_ text: String) -> String { text }
+#endif
 }
