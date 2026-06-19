@@ -6,6 +6,8 @@ private enum AppTab: Hashable {
     case history
     case prompts
     case model
+    case pro
+    case developer
 }
 
 struct ContentView: View {
@@ -40,8 +42,29 @@ struct ContentView: View {
                     .tabItem {
                         Label("模型", systemImage: "memorychip")
                     }
+
+                ProMainView()
+                    .tag(AppTab.pro)
+                    .tabItem {
+                        Label("Pro", systemImage: "crown.fill")
+                    }
+
+                if store.isDeveloperModeEnabled {
+                    DeveloperConsoleView()
+                        .tag(AppTab.developer)
+                        .tabItem {
+                            Label("开发", systemImage: "hammer.fill")
+                        }
+                }
             }
             .tint(Color.appAccent)
+        }
+        .onChange(of: store.isDeveloperModeEnabled) { _, isEnabled in
+            if isEnabled {
+                selectedTab = .developer
+            } else if selectedTab == .developer {
+                selectedTab = .model
+            }
         }
         .preferredColorScheme(.dark)
     }
@@ -55,9 +78,7 @@ private struct WorkspaceView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
                 HeaderBar()
-                ProAccountPanel()
                 MainTranslatorPanel(selectedTab: $selectedTab)
-                ProFeatureGrid()
                 RecentTranslationPanel()
             }
             .padding(.horizontal, 18)
@@ -262,6 +283,7 @@ private struct PromptLibraryView: View {
 
 private struct ModelSettingsView: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @State private var developerPassword = ""
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -275,9 +297,94 @@ private struct ModelSettingsView: View {
                 ModelStatusPanel()
                 DiagnosticsPanel()
                 LLMInterfaceSmokeTestPanel()
+                DeveloperModeUnlockPanel(password: $developerPassword)
                 EngineSelectorPanel()
                 SamplingPanel()
                 AdapterContractPanel()
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 12)
+            .padding(.bottom, 92)
+        }
+    }
+}
+
+private struct ProMainView: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+                PageHeader(
+                    title: "Pro",
+                    subtitle: store.proPlan.displayPrice,
+                    icon: "crown.fill"
+                )
+
+                ProAccountPanel()
+                ProLiveInterpreterPanel()
+                ProFeatureGrid()
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 12)
+            .padding(.bottom, 92)
+        }
+        .task {
+            store.loadProSubscriptionProduct()
+        }
+    }
+}
+
+private struct DeveloperConsoleView: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+                PageHeader(
+                    title: "开发者接口",
+                    subtitle: "原始模型输入输出",
+                    icon: "hammer.fill"
+                )
+
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionTitle(title: "输入", subtitle: "\(store.sourceLanguage.shortName) -> \(store.targetLanguage.shortName)", icon: "keyboard")
+                    TextEditor(text: $store.developerProbeInput)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.white)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 110)
+                        .padding(12)
+                        .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                    PrimaryActionButton(
+                        icon: store.isRunningDeveloperProbe ? "hourglass" : "play.fill",
+                        title: store.isRunningDeveloperProbe ? "运行中" : "运行原始接口"
+                    ) {
+                        store.runDeveloperRawProbe()
+                    }
+                    .disabled(store.isRunningDeveloperProbe)
+                    .opacity(store.isRunningDeveloperProbe ? 0.62 : 1)
+                }
+                .panelStyle()
+
+                RawProbeBox(
+                    title: "大模型实际输入",
+                    icon: "arrow.down.doc.fill",
+                    text: store.developerProbePrompt.isEmpty ? "运行后显示完整 prompt。" : store.developerProbePrompt
+                )
+
+                RawProbeBox(
+                    title: store.developerProbeError.isEmpty ? "大模型实际输出" : "错误代码",
+                    icon: store.developerProbeError.isEmpty ? "arrow.up.doc.fill" : "xmark.octagon.fill",
+                    text: store.developerProbeError.isEmpty
+                        ? (store.developerProbeOutput.isEmpty ? "运行后显示模型原始输出。" : store.developerProbeOutput)
+                        : store.developerProbeError
+                )
+
+                SecondaryActionButton(icon: "lock.fill", title: "关闭开发者模式", tint: Color.warning) {
+                    store.disableDeveloperMode()
+                }
             }
             .padding(.horizontal, 18)
             .padding(.top, 12)
@@ -464,42 +571,183 @@ private struct ProAccountPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Label(store.proStatusTitle, systemImage: store.isProUnlocked ? "crown.fill" : "person.crop.circle.badge.plus")
-                    .font(.system(size: 15, weight: .heavy, design: .rounded))
-                    .foregroundStyle(store.isProUnlocked ? Color.warning : .white)
-                Text(store.isProUnlocked ? store.proPlan.detail : "免费：中文、英语文本翻译")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.62))
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("\(store.proPlan.productID) · \(store.proPlan.displayPrice)")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.38))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.68)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(store.proStatusTitle, systemImage: store.isProUnlocked ? "crown.fill" : "person.crop.circle.badge.plus")
+                        .font(.system(size: 15, weight: .heavy, design: .rounded))
+                        .foregroundStyle(store.isProUnlocked ? Color.warning : .white)
+                    Text(store.isProUnlocked ? store.proPlan.detail : "免费：中文、英语文本翻译")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.62))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("\(store.proPlan.productID) · \(store.proPlan.displayPrice)")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.38))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+                }
+
+                Spacer(minLength: 8)
+
+                Button {
+                    store.purchaseProSubscription()
+                } label: {
+                    Text(store.isProUnlocked ? "已开通" : "开通 Pro")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(store.isProUnlocked ? .white.opacity(0.86) : .black)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                        .padding(.horizontal, 13)
+                        .frame(height: 36)
+                        .background(store.isProUnlocked ? Color.white.opacity(0.09) : Color.warning, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(store.isProUnlocked)
+                .accessibilityLabel(store.isProUnlocked ? "Pro 已开通" : "开通 Pro")
             }
 
-            Spacer(minLength: 8)
+            Text(store.proPurchaseMessage)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.58))
+                .fixedSize(horizontal: false, vertical: true)
 
-            Button {
-                if store.isProUnlocked {
-                    store.restoreFreeModeForDevelopment()
-                } else {
+            HStack(spacing: 10) {
+                SecondaryActionButton(icon: "arrow.clockwise", title: "校验订阅") {
+                    store.refreshProEntitlements()
+                }
+
+                SecondaryActionButton(icon: "wrench.and.screwdriver.fill", title: "开发解锁", tint: Color.warning) {
                     store.activateProForDevelopment()
                 }
-            } label: {
-                Text(store.isProUnlocked ? "切回免费" : "开通 Pro")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(store.isProUnlocked ? .white.opacity(0.86) : .black)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-                    .padding(.horizontal, 13)
-                    .frame(height: 36)
-                    .background(store.isProUnlocked ? Color.white.opacity(0.09) : Color.warning, in: Capsule())
+
+                if store.isProUnlocked {
+                    SecondaryActionButton(icon: "person.crop.circle.badge.minus", title: "切回免费") {
+                        store.restoreFreeModeForDevelopment()
+                    }
+                }
+            }
+        }
+        .panelStyle()
+    }
+}
+
+private struct DeveloperModeUnlockPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @Binding var password: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(
+                title: "开发者模式",
+                subtitle: store.isDeveloperModeEnabled ? "已开启" : "需要密码",
+                icon: "hammer.fill"
+            )
+
+            SecureField("开发者密码", text: $password)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(12)
+                .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            HStack(spacing: 10) {
+                PrimaryActionButton(icon: "lock.open.fill", title: store.isDeveloperModeEnabled ? "已开启" : "开启") {
+                    if store.unlockDeveloperMode(password: password) {
+                        password = ""
+                    }
+                }
+                .disabled(store.isDeveloperModeEnabled)
+                .opacity(store.isDeveloperModeEnabled ? 0.62 : 1)
+
+                if store.isDeveloperModeEnabled {
+                    SecondaryActionButton(icon: "lock.fill", title: "关闭") {
+                        store.disableDeveloperMode()
+                    }
+                }
+            }
+
+            Text(store.developerModeMessage)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.58))
+        }
+        .panelStyle()
+    }
+}
+
+private struct ProLiveInterpreterPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "同声传译", subtitle: "长按识别，松手结束", icon: "mic.fill")
+
+            Button(action: {}) {
+                Label(store.isCapturingProSpeech ? "松手结束" : "按住说话", systemImage: store.isCapturingProSpeech ? "waveform.circle.fill" : "mic.circle.fill")
+                    .font(.system(size: 16, weight: .heavy))
+                    .foregroundStyle(store.isProUnlocked ? .black : .white.opacity(0.70))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(store.isProUnlocked ? Color.warning : Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(store.isProUnlocked ? "切回免费模式" : "开通 Pro")
+            .disabled(!store.isProUnlocked)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        if !store.isCapturingProSpeech {
+                            store.beginProLiveSpeechCapture()
+                        }
+                    }
+                    .onEnded { _ in
+                        store.endProLiveSpeechCapture()
+                    }
+            )
+
+            Text(store.audioRecognitionMessage)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.58))
+                .fixedSize(horizontal: false, vertical: true)
+
+            RawProbeBox(
+                title: "识别文本",
+                icon: "text.bubble.fill",
+                text: store.proLiveTranscriptText.isEmpty ? "长按麦克风后，语音识别结果显示在这里。" : store.proLiveTranscriptText
+            )
+
+            PrimaryActionButton(icon: store.isProcessing ? "hourglass" : "arrow.right.circle.fill", title: store.isProcessing ? "翻译中" : "翻译识别文本") {
+                store.translateProLiveTranscript()
+            }
+            .disabled(store.proLiveTranscriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isProcessing)
+            .opacity(store.proLiveTranscriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isProcessing ? 0.62 : 1)
+
+            if !store.proLiveTranslationText.isEmpty {
+                RawProbeBox(title: "译文", icon: "character.bubble.fill", text: store.proLiveTranslationText)
+            }
+        }
+        .panelStyle()
+    }
+}
+
+private struct RawProbeBox: View {
+    let title: String
+    let icon: String
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionTitle(title: title, subtitle: "完整内容", icon: icon)
+            ScrollView {
+                Text(text)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.86))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(12)
+            }
+            .frame(minHeight: 180)
+            .background(Color.black.opacity(0.24), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .panelStyle()
     }

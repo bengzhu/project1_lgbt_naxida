@@ -68,7 +68,13 @@ final class LlamaRuntime: @unchecked Sendable {
     func generate(prompt: String, maxTokens: Int) throws -> String {
         lock.lock()
         defer { lock.unlock() }
-        return try generateLocked(prompt: prompt, maxTokens: maxTokens)
+        return try generateLocked(prompt: prompt, maxTokens: maxTokens, trimsOutput: true)
+    }
+
+    func generateRaw(prompt: String, maxTokens: Int) throws -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        return try generateLocked(prompt: prompt, maxTokens: maxTokens, trimsOutput: false)
     }
 
     private func loadModelIfNeededLocked(at path: String) throws {
@@ -115,7 +121,7 @@ final class LlamaRuntime: @unchecked Sendable {
         loadedModelPath = path
     }
 
-    private func generateLocked(prompt: String, maxTokens: Int) throws -> String {
+    private func generateLocked(prompt: String, maxTokens: Int, trimsOutput: Bool) throws -> String {
         guard let context, let vocabulary, let sampler, var currentBatch = batch else {
             throw LlamaRuntimeError.couldNotCreateContext
         }
@@ -169,7 +175,7 @@ final class LlamaRuntime: @unchecked Sendable {
         }
 
         batch = currentBatch
-        return generatedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimsOutput ? generatedText.trimmingCharacters(in: .whitespacesAndNewlines) : generatedText
     }
 
     private func unload() {

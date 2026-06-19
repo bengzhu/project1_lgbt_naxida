@@ -45,6 +45,26 @@ struct GemmaLocalService: LocalLanguageModeling {
         try Self.runtime.loadModelIfNeeded(at: modelURL.path)
     }
 
+    func rawTranslationProbe(for request: ModelGenerationRequest) -> RawModelProbeResult {
+        let prompt = translationPrompts(for: request).first ?? ""
+
+        do {
+            let modelURL = try modelURL()
+            try Self.runtime.loadModelIfNeeded(at: modelURL.path)
+            let output = try Self.runtime.generateRaw(
+                prompt: prompt,
+                maxTokens: min(request.sampling.maxTokens, 160)
+            )
+            return RawModelProbeResult(prompt: prompt, output: output, errorCode: nil)
+        } catch {
+            return RawModelProbeResult(
+                prompt: prompt,
+                output: "",
+                errorCode: "\(type(of: error)): \(error.localizedDescription)"
+            )
+        }
+    }
+
     func generate(_ request: ModelGenerationRequest) async throws -> ModelGenerationResult {
         let start = Date.now
         let modelURL = try modelURL()
@@ -131,10 +151,13 @@ struct GemmaLocalService: LocalLanguageModeling {
     }
 
     private func translationPrompts(for request: ModelGenerationRequest) -> [String] {
+        let preset = translationPreset(for: request)
+
         if request.sourceLanguage == .englishUS, request.targetLanguage == .simplifiedChinese {
             return [
                 """
                 <start_of_turn>user
+                \(preset)
                 翻译成中文，不要输出英文原文，不要解释：
                 \(request.inputText)
                 <end_of_turn>
@@ -142,6 +165,7 @@ struct GemmaLocalService: LocalLanguageModeling {
                 """,
                 """
                 <start_of_turn>user
+                \(preset)
                 English -> 简体中文。只输出中文译文：
                 \(request.inputText)
                 <end_of_turn>
@@ -149,6 +173,7 @@ struct GemmaLocalService: LocalLanguageModeling {
                 """,
                 """
                 <start_of_turn>user
+                \(preset)
                 请把下面英文翻译成简体中文，只输出中文译文：
                 \(request.inputText)
                 <end_of_turn>
@@ -160,6 +185,7 @@ struct GemmaLocalService: LocalLanguageModeling {
         return [
             """
             <start_of_turn>user
+            \(preset)
             请把下面内容从\(request.sourceLanguage.rawValue)翻译成\(request.targetLanguage.rawValue)，只输出译文：
             \(request.inputText)
             <end_of_turn>
@@ -167,12 +193,20 @@ struct GemmaLocalService: LocalLanguageModeling {
             """,
             """
             <start_of_turn>user
+            \(preset)
             翻译成\(request.targetLanguage.rawValue)，不要输出原文，不要解释：
             \(request.inputText)
             <end_of_turn>
             <start_of_turn>model
             """
         ]
+    }
+
+    private func translationPreset(for request: ModelGenerationRequest) -> String {
+        """
+        预设提示词：\(request.prompt.instruction)
+        输出风格：\(request.prompt.tone)
+        """
     }
 
     private func summaryPrompt(for request: ModelGenerationRequest) -> String {
@@ -232,7 +266,9 @@ struct GemmaLocalService: LocalLanguageModeling {
             "只输出中文译文",
             "只输出译文",
             "不要输出英文原文",
-            "简体中文翻译"
+            "简体中文翻译",
+            "预设提示词",
+            "输出风格"
         ]
         lines.removeAll { line in
             line.hasPrefix("- ")

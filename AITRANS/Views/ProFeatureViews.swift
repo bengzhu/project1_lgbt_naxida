@@ -17,22 +17,6 @@ struct ProFeatureGrid: View {
 
             LazyVGrid(columns: columns, spacing: 10) {
                 ProFeatureCard(
-                    icon: "waveform.and.mic",
-                    title: "同声传译",
-                    detail: "系统本地语音识别 + 本地大模型翻译",
-                    isUnlocked: store.isProUnlocked
-                ) {
-                    if store.isProUnlocked {
-                        store.mode = .live
-                        if !store.isRecording {
-                            store.toggleRecording()
-                        }
-                    } else {
-                        store.dataTransferMessage = "同声传译需要 Pro"
-                    }
-                }
-
-                ProFeatureCard(
                     icon: "camera.viewfinder",
                     title: "图片翻译",
                     detail: "Vision OCR + 本地模型翻译",
