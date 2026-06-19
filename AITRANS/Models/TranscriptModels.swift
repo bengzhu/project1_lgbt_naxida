@@ -185,9 +185,15 @@ struct ProSubscriptionPlan: Equatable, Sendable {
     static let development = ProSubscriptionPlan(
         productID: "com.local.aitrans.pro.monthly",
         title: "秒译 Pro",
-        displayPrice: "内购开发中",
-        detail: "解锁同声传译、多语言目标和图片翻译入口"
+        displayPrice: "$0.99/月",
+        detail: "约 1 美元/月，解锁同声传译、多语言目标和图片翻译入口"
     )
+}
+
+struct RawModelProbeResult: Equatable, Sendable {
+    var prompt: String
+    var output: String
+    var errorCode: String?
 }
 
 enum AudioRecognitionState: String, Equatable, Codable, Sendable {
@@ -460,6 +466,7 @@ struct AppSettings: Equatable, Codable, Sendable {
     var selectedEngine: ModelEngine
     var sampling: GenerationSampling
     var isProUnlocked: Bool
+    var isDeveloperModeEnabled: Bool
 
     static let defaultValue = AppSettings(
         mode: .translate,
@@ -468,7 +475,8 @@ struct AppSettings: Equatable, Codable, Sendable {
         selectedPromptID: PromptTemplate.translatorID,
         selectedEngine: .mock,
         sampling: .defaultValue,
-        isProUnlocked: false
+        isProUnlocked: false,
+        isDeveloperModeEnabled: false
     )
 
     init(
@@ -478,7 +486,8 @@ struct AppSettings: Equatable, Codable, Sendable {
         selectedPromptID: UUID,
         selectedEngine: ModelEngine,
         sampling: GenerationSampling,
-        isProUnlocked: Bool
+        isProUnlocked: Bool,
+        isDeveloperModeEnabled: Bool = false
     ) {
         self.mode = mode
         self.sourceLanguage = sourceLanguage
@@ -487,6 +496,7 @@ struct AppSettings: Equatable, Codable, Sendable {
         self.selectedEngine = selectedEngine
         self.sampling = sampling
         self.isProUnlocked = isProUnlocked
+        self.isDeveloperModeEnabled = isDeveloperModeEnabled
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -497,6 +507,7 @@ struct AppSettings: Equatable, Codable, Sendable {
         case selectedEngine
         case sampling
         case isProUnlocked
+        case isDeveloperModeEnabled
     }
 
     init(from decoder: Decoder) throws {
@@ -508,6 +519,7 @@ struct AppSettings: Equatable, Codable, Sendable {
         selectedEngine = try container.decode(ModelEngine.self, forKey: .selectedEngine)
         sampling = try container.decode(GenerationSampling.self, forKey: .sampling)
         isProUnlocked = try container.decodeIfPresent(Bool.self, forKey: .isProUnlocked) ?? false
+        isDeveloperModeEnabled = try container.decodeIfPresent(Bool.self, forKey: .isDeveloperModeEnabled) ?? false
     }
 }
 

@@ -1,6 +1,8 @@
 import Combine
+import AVFoundation
 import Foundation
 import Speech
+import StoreKit
 
 @MainActor
 final class TranslationSessionStore: ObservableObject {
@@ -67,9 +69,22 @@ final class TranslationSessionStore: ObservableObject {
     @Published var isProUnlocked = false {
         didSet { persist() }
     }
+    @Published var isDeveloperModeEnabled = false {
+        didSet { persist() }
+    }
+    @Published var developerModeMessage = "输入密码开启开发者模式"
+    @Published var developerProbeInput = "The meeting starts at 9:30 tomorrow."
+    @Published var developerProbePrompt = ""
+    @Published var developerProbeOutput = ""
+    @Published var developerProbeError = ""
+    @Published var isRunningDeveloperProbe = false
+    @Published var proPurchaseMessage = "准备接入 App Store 订阅"
     @Published var audioRecognitionState: AudioRecognitionState = .idle
     @Published var audioRecognitionMessage = "选择音频文件后，会强制使用 Apple 本机语音识别测试离线能力"
     @Published var lastRecognizedSpeechText = ""
+    @Published var proLiveTranscriptText = ""
+    @Published var proLiveTranslationText = ""
+    @Published var isCapturingProSpeech = false
     @Published var imageTranslationState: ImageTranslationState = .idle
     @Published var imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
     @Published var imageTranslationBlocks: [ImageTranslationBlock] = []
@@ -91,6 +106,9 @@ final class TranslationSessionStore: ObservableObject {
     private var ticker: Task<Void, Never>?
     private var modelDownloadTask: Task<Void, Never>?
     private var audioRecognitionTask: SFSpeechRecognitionTask?
+    private var liveAudioEngine: AVAudioEngine?
+    private var liveSpeechRecognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var proSubscriptionProduct: Product?
     private var activeSessionID = UUID()
     private var activeCreatedAt = Date()
     private var liveSampleIndex = 0
@@ -320,6 +338,180 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
+    func beginProLiveSpeechCapture() {
+        guard isProUnlocked else {
+            audioRecognitionState = .failed
+            audioRecognitionMessage = "同声传译需要 Pro"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+        guard !isCapturingProSpeech else { return }
+
+        let capability = currentSpeechCapability
+        guard capability.supportsOnDeviceRecognition else {
+            audioRecognitionState = .failed
+            audioRecognitionMessage = "\(sourceLanguage.rawValue) 当前设备未报告支持 Apple 本机语音识别"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+
+        audioRecognitionState = .checking
+        audioRecognitionMessage = "正在请求麦克风和 Speech 权限"
+
+        SFSpeechRecognizer.requestAuthorization { [weak self] speechStatus in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                guard speechStatus == .authorized else {
+                    self.audioRecognitionState = .failed
+                    self.audioRecognitionMessage = "Apple Speech 权限未授权"
+                    self.dataTransferMessage = self.audioRecognitionMessage
+                    return
+                }
+
+                let microphoneGranted = await self.requestMicrophoneAccess()
+                guard microphoneGranted else {
+                    self.audioRecognitionState = .failed
+                    self.audioRecognitionMessage = "麦克风权限未授权"
+                    self.dataTransferMessage = self.audioRecognitionMessage
+                    return
+                }
+
+                self.startProLiveSpeechRecognition(capability: capability)
+            }
+        }
+    }
+
+    func endProLiveSpeechCapture() {
+        liveAudioEngine?.stop()
+        liveAudioEngine?.inputNode.removeTap(onBus: 0)
+        liveSpeechRecognitionRequest?.endAudio()
+        liveAudioEngine = nil
+        liveSpeechRecognitionRequest = nil
+        audioRecognitionTask?.cancel()
+        audioRecognitionTask = nil
+        isCapturingProSpeech = false
+        audioRecognitionState = proLiveTranscriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .idle : .translated
+        audioRecognitionMessage = proLiveTranscriptText.isEmpty ? "未识别到语音" : "识别完成，可点击翻译"
+    }
+
+    func translateProLiveTranscript() {
+        let text = proLiveTranscriptText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !isProcessing else { return }
+        guard isProUnlocked else {
+            audioRecognitionMessage = "同声传译需要 Pro"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+
+        isProcessing = true
+        audioRecognitionMessage = "正在翻译识别文本"
+        Task { [weak self] in
+            guard let self else { return }
+            defer {
+                self.isProcessing = false
+                self.persist()
+            }
+
+            do {
+                let translation = try await self.translate(text)
+                self.proLiveTranslationText = translation
+                self.draftText = text
+                self.transcript.insert(
+                    TranscriptLine(
+                        speaker: "Pro Live",
+                        original: text,
+                        translation: translation,
+                        time: Self.timeFormatter.string(from: Date()),
+                        isFinal: true
+                    ),
+                    at: 0
+                )
+                self.audioRecognitionState = .translated
+                self.audioRecognitionMessage = "同声传译已完成"
+                self.dataTransferMessage = self.audioRecognitionMessage
+            } catch {
+                self.audioRecognitionState = .failed
+                self.audioRecognitionMessage = "翻译失败：\(error.localizedDescription)"
+                self.dataTransferMessage = self.audioRecognitionMessage
+            }
+        }
+    }
+
+    private func requestMicrophoneAccess() async -> Bool {
+        await withCheckedContinuation { continuation in
+            if #available(iOS 17.0, *) {
+                AVAudioApplication.requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
+            } else {
+                AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
+            }
+        }
+    }
+
+    private func startProLiveSpeechRecognition(capability: SpeechRecognitionCapability) {
+        guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: capability.localeIdentifier)) else {
+            audioRecognitionState = .failed
+            audioRecognitionMessage = "无法创建 \(capability.localeIdentifier) 语音识别器"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+
+        audioRecognitionTask?.cancel()
+
+        let audioEngine = AVAudioEngine()
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.requiresOnDeviceRecognition = true
+        request.shouldReportPartialResults = true
+
+        let inputNode = audioEngine.inputNode
+        let format = inputNode.outputFormat(forBus: 0)
+        inputNode.installTap(onBus: 0, bufferSize: 1_024, format: format) { buffer, _ in
+            request.append(buffer)
+        }
+
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            audioEngine.prepare()
+            try audioEngine.start()
+        } catch {
+            inputNode.removeTap(onBus: 0)
+            audioRecognitionState = .failed
+            audioRecognitionMessage = "麦克风启动失败：\(error.localizedDescription)"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+
+        liveAudioEngine = audioEngine
+        liveSpeechRecognitionRequest = request
+        isCapturingProSpeech = true
+        proLiveTranscriptText = ""
+        proLiveTranslationText = ""
+        audioRecognitionState = .recognizing
+        audioRecognitionMessage = "按住说话，松手结束"
+
+        audioRecognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+
+                if let result {
+                    self.proLiveTranscriptText = result.bestTranscription.formattedString
+                }
+
+                if let error {
+                    self.endProLiveSpeechCapture()
+                    self.audioRecognitionState = .failed
+                    self.audioRecognitionMessage = "语音识别失败：\(error.localizedDescription)"
+                    self.dataTransferMessage = self.audioRecognitionMessage
+                }
+            }
+        }
+    }
+
     private func startOnDeviceAudioRecognition(_ url: URL, capability: SpeechRecognitionCapability) {
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: capability.localeIdentifier)) else {
             audioRecognitionState = .failed
@@ -488,6 +680,140 @@ final class TranslationSessionStore: ObservableObject {
         language.isFreeTranslationTarget || isProUnlocked
     }
 
+    func unlockDeveloperMode(password: String) -> Bool {
+        guard password == "114514" else {
+            developerModeMessage = "密码错误"
+            return false
+        }
+
+        isDeveloperModeEnabled = true
+        developerModeMessage = "开发者模式已开启"
+        return true
+    }
+
+    func disableDeveloperMode() {
+        isDeveloperModeEnabled = false
+        developerModeMessage = "开发者模式已关闭"
+    }
+
+    func runDeveloperRawProbe() {
+        let input = developerProbeInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !input.isEmpty, !isRunningDeveloperProbe else { return }
+
+        isRunningDeveloperProbe = true
+        developerProbePrompt = ""
+        developerProbeOutput = ""
+        developerProbeError = ""
+
+        let request = makeRequest(task: .translation, inputText: input)
+
+        Task { [weak self] in
+            guard let self else { return }
+            defer { self.isRunningDeveloperProbe = false }
+
+            if self.selectedEngine == .local {
+                let probe = self.localService.rawTranslationProbe(for: request)
+                self.developerProbePrompt = probe.prompt
+                self.developerProbeOutput = probe.output
+                self.developerProbeError = probe.errorCode ?? ""
+            } else {
+                do {
+                    try await self.mockService.prepare()
+                    let result = try await self.mockService.generate(request)
+                    self.developerProbePrompt = self.debugPromptPreview(for: request)
+                    self.developerProbeOutput = result.text
+                    self.developerProbeError = ""
+                } catch {
+                    self.developerProbePrompt = self.debugPromptPreview(for: request)
+                    self.developerProbeOutput = ""
+                    self.developerProbeError = "\(type(of: error)): \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    func loadProSubscriptionProduct() {
+        Task { [weak self] in
+            guard let self else { return }
+
+            do {
+                let products = try await Product.products(for: [self.proPlan.productID])
+                self.proSubscriptionProduct = products.first
+                if let product = products.first {
+                    self.proPurchaseMessage = "App Store 产品已就绪：\(product.displayName) · \(product.displayPrice)/月"
+                } else {
+                    self.proPurchaseMessage = "未在 App Store Connect 找到 \(self.proPlan.productID)，发布前需创建自动续期订阅。"
+                }
+            } catch {
+                self.proPurchaseMessage = "读取 StoreKit 产品失败：\(error.localizedDescription)"
+            }
+        }
+    }
+
+    func purchaseProSubscription() {
+        Task { [weak self] in
+            guard let self else { return }
+
+            do {
+                if self.proSubscriptionProduct == nil {
+                    let products = try await Product.products(for: [self.proPlan.productID])
+                    self.proSubscriptionProduct = products.first
+                }
+
+                guard let product = self.proSubscriptionProduct else {
+                    self.proPurchaseMessage = "订阅产品未配置：\(self.proPlan.productID)"
+                    return
+                }
+
+                let result = try await product.purchase()
+                switch result {
+                case .success(let verification):
+                    let transaction = try self.verifiedTransaction(from: verification)
+                    self.isProUnlocked = true
+                    self.proPurchaseMessage = "Pro 已开通：\(transaction.productID)"
+                    await transaction.finish()
+                case .userCancelled:
+                    self.proPurchaseMessage = "已取消购买"
+                case .pending:
+                    self.proPurchaseMessage = "购买待处理"
+                @unknown default:
+                    self.proPurchaseMessage = "未知购买状态"
+                }
+            } catch {
+                self.proPurchaseMessage = "购买失败：\(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func verifiedTransaction(from result: VerificationResult<Transaction>) throws -> Transaction {
+        switch result {
+        case .verified(let transaction):
+            transaction
+        case .unverified(_, let error):
+            throw error
+        }
+    }
+
+    func refreshProEntitlements() {
+        Task { [weak self] in
+            guard let self else { return }
+
+            do {
+                var hasEntitlement = false
+                for await result in Transaction.currentEntitlements {
+                    let transaction = try self.verifiedTransaction(from: result)
+                    if transaction.productID == self.proPlan.productID {
+                        hasEntitlement = true
+                    }
+                }
+                self.isProUnlocked = hasEntitlement
+                self.proPurchaseMessage = hasEntitlement ? "App Store 订阅有效" : "未发现有效订阅"
+            } catch {
+                self.proPurchaseMessage = "校验订阅失败：\(error.localizedDescription)"
+            }
+        }
+    }
+
     func selectTargetLanguage(_ language: SupportedLanguage) {
         guard canUseLanguage(language) else {
             dataTransferMessage = "\(language.rawValue) 翻译需要 Pro"
@@ -607,7 +933,8 @@ final class TranslationSessionStore: ObservableObject {
                 selectedPromptID: selectedPromptID,
                 selectedEngine: selectedEngine,
                 sampling: sampling,
-                isProUnlocked: isProUnlocked
+                isProUnlocked: isProUnlocked,
+                isDeveloperModeEnabled: isDeveloperModeEnabled
             )
         )
 
@@ -1588,6 +1915,24 @@ final class TranslationSessionStore: ObservableObject {
         )
     }
 
+    private func debugPromptPreview(for request: ModelGenerationRequest) -> String {
+        """
+        engine: \(selectedEngine.rawValue)
+        task: \(request.task.rawValue)
+        mode: \(request.mode.rawValue)
+        sourceLanguage: \(request.sourceLanguage.rawValue)
+        targetLanguage: \(request.targetLanguage.rawValue)
+        prompt.title: \(request.prompt.title)
+        prompt.instruction: \(request.prompt.instruction)
+        prompt.tone: \(request.prompt.tone)
+        sampling.temperature: \(request.sampling.temperature)
+        sampling.maxTokens: \(request.sampling.maxTokens)
+
+        inputText:
+        \(request.inputText)
+        """
+    }
+
     private func updateModelDownloadStateFromDisk() {
         if isLocalModelInstalled {
             modelDownload = installedDownloadProgress(message: "已安装")
@@ -1789,6 +2134,7 @@ final class TranslationSessionStore: ObservableObject {
         selectedEngine = settings.selectedEngine
         sampling = settings.sampling
         isProUnlocked = settings.isProUnlocked
+        isDeveloperModeEnabled = settings.isDeveloperModeEnabled
         if !canUseLanguage(targetLanguage) {
             targetLanguage = .simplifiedChinese
         }
@@ -1843,7 +2189,8 @@ final class TranslationSessionStore: ObservableObject {
                 selectedPromptID: selectedPromptID,
                 selectedEngine: selectedEngine,
                 sampling: sampling,
-                isProUnlocked: isProUnlocked
+                isProUnlocked: isProUnlocked,
+                isDeveloperModeEnabled: isDeveloperModeEnabled
             )
         )
         Self.save(snapshot, to: persistenceURL)
