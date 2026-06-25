@@ -23,6 +23,7 @@
 		0A000001000000000000000F /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000021 /* Metal.framework */; };
 		0A0000010000000000000022 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000023 /* Accelerate.framework */; };
 		0A0000010000000000000025 /* LocalModelDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000026 /* LocalModelDownloadService.swift */; };
+		0A0000010000000000000027 /* test in Resources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000028 /* test */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -59,6 +60,7 @@
 		0A0000010000000000000021 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		0A0000010000000000000023 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		0A0000010000000000000026 /* LocalModelDownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelDownloadService.swift; sourceTree = "<group>"; };
+		0A0000010000000000000028 /* test */ = {isa = PBXFileReference; lastKnownFileType = folder; path = test; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -83,6 +85,7 @@
 			children = (
 				0A0000010000000000000031 /* AITRANS */,
 				0A0000010000000000000018 /* README.md */,
+				0A0000010000000000000028 /* test */,
 				0A0000010000000000000038 /* Frameworks */,
 				0A0000010000000000000032 /* Products */,
 			);
@@ -229,6 +232,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0A0000010000000000000027 /* test in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
