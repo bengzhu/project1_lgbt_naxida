@@ -196,6 +196,40 @@ struct RawModelProbeResult: Equatable, Sendable {
     var errorCode: String?
 }
 
+struct DeveloperRawProbeCase: Identifiable, Equatable, Sendable {
+    var id: UUID
+    var sourceLanguage: SupportedLanguage
+    var targetLanguage: SupportedLanguage
+    var input: String
+    var prompt: String
+    var output: String
+    var errorCode: String?
+    var verdict: String
+    var isRealLocalModelOutput: Bool
+
+    init(
+        id: UUID = UUID(),
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage,
+        input: String,
+        prompt: String = "",
+        output: String = "",
+        errorCode: String? = nil,
+        verdict: String = "等待运行",
+        isRealLocalModelOutput: Bool = false
+    ) {
+        self.id = id
+        self.sourceLanguage = sourceLanguage
+        self.targetLanguage = targetLanguage
+        self.input = input
+        self.prompt = prompt
+        self.output = output
+        self.errorCode = errorCode
+        self.verdict = verdict
+        self.isRealLocalModelOutput = isRealLocalModelOutput
+    }
+}
+
 enum AudioRecognitionState: String, Equatable, Codable, Sendable {
     case idle
     case checking
@@ -270,10 +304,53 @@ enum ModelEngine: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
+enum PromptLanguageDirection: String, CaseIterable, Identifiable, Codable, Sendable {
+    case englishToChinese = "英译中"
+    case chineseToEnglish = "中译英"
+
+    var id: String { rawValue }
+
+    var sourceLanguage: SupportedLanguage {
+        switch self {
+        case .englishToChinese: .englishUS
+        case .chineseToEnglish: .simplifiedChinese
+        }
+    }
+
+    var targetLanguage: SupportedLanguage {
+        switch self {
+        case .englishToChinese: .simplifiedChinese
+        case .chineseToEnglish: .englishUS
+        }
+    }
+
+    var fallbackInstruction: String {
+        switch self {
+        case .englishToChinese:
+            "把以下翻译成中文："
+        case .chineseToEnglish:
+            "Translate the following into English:"
+        }
+    }
+
+    static func direction(source: SupportedLanguage, target: SupportedLanguage) -> PromptLanguageDirection? {
+        switch (source, target) {
+        case (.englishUS, .simplifiedChinese):
+            .englishToChinese
+        case (.simplifiedChinese, .englishUS):
+            .chineseToEnglish
+        default:
+            nil
+        }
+    }
+}
+
 struct PromptTemplate: Identifiable, Equatable, Codable, Sendable {
     var id: UUID
     var title: String
     var instruction: String
+    var englishToChineseInstruction: String
+    var chineseToEnglishInstruction: String
     var tone: String
     var createdAt: Date
     var updatedAt: Date
@@ -283,6 +360,8 @@ struct PromptTemplate: Identifiable, Equatable, Codable, Sendable {
         id: UUID = UUID(),
         title: String,
         instruction: String,
+        englishToChineseInstruction: String? = nil,
+        chineseToEnglishInstruction: String? = nil,
         tone: String,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
@@ -291,10 +370,65 @@ struct PromptTemplate: Identifiable, Equatable, Codable, Sendable {
         self.id = id
         self.title = title
         self.instruction = instruction
+        self.englishToChineseInstruction = englishToChineseInstruction ?? instruction
+        self.chineseToEnglishInstruction = chineseToEnglishInstruction ?? instruction
         self.tone = tone
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isBuiltIn = isBuiltIn
+    }
+
+    func instruction(for direction: PromptLanguageDirection) -> String {
+        let candidate: String
+        switch direction {
+        case .englishToChinese:
+            candidate = englishToChineseInstruction
+        case .chineseToEnglish:
+            candidate = chineseToEnglishInstruction
+        }
+
+        let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? direction.fallbackInstruction : trimmed
+    }
+
+    func instruction(source: SupportedLanguage, target: SupportedLanguage) -> String {
+        guard let direction = PromptLanguageDirection.direction(source: source, target: target) else {
+            let trimmed = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? "只输出译文：" : trimmed
+        }
+
+        return instruction(for: direction)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case instruction
+        case englishToChineseInstruction
+        case chineseToEnglishInstruction
+        case tone
+        case createdAt
+        case updatedAt
+        case isBuiltIn
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        instruction = try container.decode(String.self, forKey: .instruction)
+        englishToChineseInstruction = try container.decodeIfPresent(
+            String.self,
+            forKey: .englishToChineseInstruction
+        ) ?? instruction
+        chineseToEnglishInstruction = try container.decodeIfPresent(
+            String.self,
+            forKey: .chineseToEnglishInstruction
+        ) ?? instruction
+        tone = try container.decode(String.self, forKey: .tone)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        isBuiltIn = try container.decode(Bool.self, forKey: .isBuiltIn)
     }
 
     static let interpreterID = UUID(uuidString: "4B7087C2-0CF1-4A9B-92B5-27152270A101")!
@@ -306,15 +440,19 @@ struct PromptTemplate: Identifiable, Equatable, Codable, Sendable {
         [
             PromptTemplate(
                 id: translatorID,
-                title: "通用翻译",
-                instruction: "把输入内容从源语言翻译为目标语言。只输出译文，不解释、不总结、不改写成会议纪要。保留人名、产品名、数字、日期和专有名词。",
-                tone: "自然、准确、直接",
+                title: "极简翻译",
+                instruction: PromptLanguageDirection.englishToChinese.fallbackInstruction,
+                englishToChineseInstruction: PromptLanguageDirection.englishToChinese.fallbackInstruction,
+                chineseToEnglishInstruction: PromptLanguageDirection.chineseToEnglish.fallbackInstruction,
+                tone: "只输出译文",
                 isBuiltIn: true
             ),
             PromptTemplate(
                 id: interpreterID,
                 title: "同声传译",
                 instruction: "保持原意，优先给出自然、简洁、可直接展示给听众的译文。遇到不确定专有名词时保留原文。",
+                englishToChineseInstruction: "把以下英文同声传译成自然中文，只输出译文：",
+                chineseToEnglishInstruction: "Interpret the following Chinese into natural English. Output only the translation:",
                 tone: "专业、流畅、低延迟",
                 isBuiltIn: true
             ),
@@ -322,13 +460,17 @@ struct PromptTemplate: Identifiable, Equatable, Codable, Sendable {
                 id: literalTranslationID,
                 title: "直译优先",
                 instruction: "逐句翻译为目标语言，尽量保持原句结构和术语。不要补充上下文，不输出项目计划、待办或总结。",
+                englishToChineseInstruction: "把以下英文直译成中文，保留原句结构和术语，只输出译文：",
+                chineseToEnglishInstruction: "Translate the following Chinese literally into English, preserving structure and terms. Output only the translation:",
                 tone: "忠实、克制、术语一致",
                 isBuiltIn: true
             ),
             PromptTemplate(
                 id: conciseID,
-                title: "极简翻译",
+                title: "简洁翻译",
                 instruction: "只输出译文，删除寒暄和重复表达，保留数字、日期和实体名称。",
+                englishToChineseInstruction: "把以下英文翻译成简洁中文，只输出译文，保留数字、日期和实体名称：",
+                chineseToEnglishInstruction: "Translate the following Chinese into concise English. Output only the translation and preserve numbers, dates, and entity names:",
                 tone: "短句、清晰、克制",
                 isBuiltIn: true
             )

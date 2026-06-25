@@ -228,8 +228,10 @@ private struct HistoryView: View {
 private struct PromptLibraryView: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var newTitle = ""
-    @State private var newInstruction = ""
+    @State private var newEnglishToChineseInstruction = PromptLanguageDirection.englishToChinese.fallbackInstruction
+    @State private var newChineseToEnglishInstruction = PromptLanguageDirection.chineseToEnglish.fallbackInstruction
     @State private var newTone = ""
+    @State private var selectedDirection: PromptLanguageDirection = .englishToChinese
     @State private var editorPrompt: PromptTemplate?
 
     var body: some View {
@@ -243,12 +245,20 @@ private struct PromptLibraryView: View {
 
                 PromptComposer(
                     title: $newTitle,
-                    instruction: $newInstruction,
-                    tone: $newTone
+                    englishToChineseInstruction: $newEnglishToChineseInstruction,
+                    chineseToEnglishInstruction: $newChineseToEnglishInstruction,
+                    tone: $newTone,
+                    selectedDirection: $selectedDirection
                 ) {
-                    store.createPrompt(title: newTitle, instruction: newInstruction, tone: newTone)
+                    store.createPrompt(
+                        title: newTitle,
+                        englishToChineseInstruction: newEnglishToChineseInstruction,
+                        chineseToEnglishInstruction: newChineseToEnglishInstruction,
+                        tone: newTone
+                    )
                     newTitle = ""
-                    newInstruction = ""
+                    newEnglishToChineseInstruction = PromptLanguageDirection.englishToChinese.fallbackInstruction
+                    newChineseToEnglishInstruction = PromptLanguageDirection.chineseToEnglish.fallbackInstruction
                     newTone = ""
                 }
 
@@ -256,7 +266,8 @@ private struct PromptLibraryView: View {
                     ForEach(store.prompts) { prompt in
                         PromptCard(
                             prompt: prompt,
-                            isSelected: store.selectedPromptID == prompt.id
+                            isSelected: store.selectedPromptID == prompt.id,
+                            direction: selectedDirection
                         ) {
                             store.selectPrompt(prompt)
                         } onEdit: {
@@ -365,8 +376,24 @@ private struct DeveloperConsoleView: View {
                     }
                     .disabled(store.isRunningDeveloperProbe)
                     .opacity(store.isRunningDeveloperProbe ? 0.62 : 1)
+
+                    SecondaryActionButton(
+                        icon: "list.bullet.clipboard.fill",
+                        title: store.isRunningDeveloperProbe ? "批量运行中" : "运行批量探针",
+                        tint: Color.appAccent
+                    ) {
+                        store.runDeveloperRawProbeSuite()
+                    }
+                    .disabled(store.isRunningDeveloperProbe)
+                    .opacity(store.isRunningDeveloperProbe ? 0.62 : 1)
                 }
                 .panelStyle()
+
+                LazyVStack(spacing: 12) {
+                    ForEach(store.developerProbeCases) { probeCase in
+                        DeveloperProbeCaseCard(probeCase: probeCase)
+                    }
+                }
 
                 RawProbeBox(
                     title: "大模型实际输入",
@@ -389,6 +416,70 @@ private struct DeveloperConsoleView: View {
             .padding(.horizontal, 18)
             .padding(.top, 12)
             .padding(.bottom, 92)
+        }
+    }
+}
+
+private struct DeveloperProbeCaseCard: View {
+    let probeCase: DeveloperRawProbeCase
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(probeCase.sourceLanguage.shortName) -> \(probeCase.targetLanguage.shortName)")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    Text(probeCase.input)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.68))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Text(probeCase.isRealLocalModelOutput ? "Local raw" : "Mock")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(probeCase.isRealLocalModelOutput ? Color.success : Color.warning)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.white.opacity(0.07), in: Capsule())
+            }
+
+            Text(probeCase.verdict)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(probeCase.errorCode == nil ? Color.success : Color.danger)
+
+            if !probeCase.prompt.isEmpty {
+                RawProbeSnippet(title: "prompt", text: probeCase.prompt)
+            }
+
+            if let errorCode = probeCase.errorCode, !errorCode.isEmpty {
+                RawProbeSnippet(title: "error", text: errorCode)
+            } else if !probeCase.output.isEmpty {
+                RawProbeSnippet(title: "raw output", text: probeCase.output)
+            }
+        }
+        .panelStyle()
+    }
+}
+
+private struct RawProbeSnippet: View {
+    let title: String
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.46))
+            Text(text)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.76))
+                .lineLimit(8)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(9)
+                .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }
@@ -1441,18 +1532,35 @@ private struct HistorySessionCard: View {
 
 private struct PromptComposer: View {
     @Binding var title: String
-    @Binding var instruction: String
+    @Binding var englishToChineseInstruction: String
+    @Binding var chineseToEnglishInstruction: String
     @Binding var tone: String
+    @Binding var selectedDirection: PromptLanguageDirection
     let onCreate: () -> Void
 
     private var canCreate: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !instruction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var activeInstruction: Binding<String> {
+        switch selectedDirection {
+        case .englishToChinese:
+            $englishToChineseInstruction
+        case .chineseToEnglish:
+            $chineseToEnglishInstruction
+        }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionTitle(title: "新建模板", subtitle: "本地保存", icon: "plus.message.fill")
+
+            Picker("语言方向", selection: $selectedDirection) {
+                ForEach(PromptLanguageDirection.allCases) { direction in
+                    Text(direction.rawValue).tag(direction)
+                }
+            }
+            .pickerStyle(.segmented)
 
             TextField("标题，例如：法务会议", text: $title)
                 .fieldStyle()
@@ -1460,7 +1568,7 @@ private struct PromptComposer: View {
             TextField("语气，例如：正式、谨慎、保留术语", text: $tone)
                 .fieldStyle()
 
-            TextEditor(text: $instruction)
+            TextEditor(text: activeInstruction)
                 .frame(minHeight: 96)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.white)
@@ -1468,8 +1576,8 @@ private struct PromptComposer: View {
                 .scrollContentBackground(.hidden)
                 .background(Color.black.opacity(0.24), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                 .overlay(alignment: .topLeading) {
-                    if instruction.isEmpty {
-                        Text("写清楚翻译规则、输出格式和禁止事项")
+                    if activeInstruction.wrappedValue.isEmpty {
+                        Text(selectedDirection.fallbackInstruction)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.white.opacity(0.36))
                             .padding(.top, 18)
@@ -1488,6 +1596,7 @@ private struct PromptComposer: View {
 private struct PromptCard: View {
     let prompt: PromptTemplate
     let isSelected: Bool
+    let direction: PromptLanguageDirection
     let onSelect: () -> Void
     let onEdit: () -> Void
     let onDuplicate: () -> Void
@@ -1524,7 +1633,7 @@ private struct PromptCard: View {
                     .foregroundStyle(isSelected ? Color.success : .white.opacity(0.42))
             }
 
-            Text(prompt.instruction)
+            Text(prompt.instruction(for: direction))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.white.opacity(0.74))
                 .lineLimit(4)
@@ -1557,13 +1666,16 @@ private struct PromptEditorSheet: View {
 
     let prompt: PromptTemplate
     @State private var title: String
-    @State private var instruction: String
+    @State private var englishToChineseInstruction: String
+    @State private var chineseToEnglishInstruction: String
     @State private var tone: String
+    @State private var selectedDirection: PromptLanguageDirection = .englishToChinese
 
     init(prompt: PromptTemplate) {
         self.prompt = prompt
         _title = State(initialValue: prompt.title)
-        _instruction = State(initialValue: prompt.instruction)
+        _englishToChineseInstruction = State(initialValue: prompt.englishToChineseInstruction)
+        _chineseToEnglishInstruction = State(initialValue: prompt.chineseToEnglishInstruction)
         _tone = State(initialValue: prompt.tone)
     }
 
@@ -1578,8 +1690,17 @@ private struct PromptEditorSheet: View {
                     TextField("语气", text: $tone)
                 }
 
+                Section("语言方向") {
+                    Picker("语言方向", selection: $selectedDirection) {
+                        ForEach(PromptLanguageDirection.allCases) { direction in
+                            Text(direction.rawValue).tag(direction)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
                 Section("指令") {
-                    TextEditor(text: $instruction)
+                    TextEditor(text: activeInstruction)
                         .frame(minHeight: 160)
                 }
             }
@@ -1590,11 +1711,26 @@ private struct PromptEditorSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        store.updatePrompt(prompt, title: title, instruction: instruction, tone: tone)
+                        store.updatePrompt(
+                            prompt,
+                            title: title,
+                            englishToChineseInstruction: englishToChineseInstruction,
+                            chineseToEnglishInstruction: chineseToEnglishInstruction,
+                            tone: tone
+                        )
                         dismiss()
                     }
                 }
             }
+        }
+    }
+
+    private var activeInstruction: Binding<String> {
+        switch selectedDirection {
+        case .englishToChinese:
+            $englishToChineseInstruction
+        case .chineseToEnglish:
+            $chineseToEnglishInstruction
         }
     }
 }

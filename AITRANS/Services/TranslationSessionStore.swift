@@ -77,6 +77,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var developerProbePrompt = ""
     @Published var developerProbeOutput = ""
     @Published var developerProbeError = ""
+    @Published var developerProbeCases: [DeveloperRawProbeCase] = TranslationSessionStore.defaultDeveloperProbeCases
     @Published var isRunningDeveloperProbe = false
     @Published var proPurchaseMessage = "准备接入 App Store 订阅"
     @Published var audioRecognitionState: AudioRecognitionState = .idle
@@ -237,6 +238,10 @@ final class TranslationSessionStore: ObservableObject {
         persistenceURL
             .deletingLastPathComponent()
             .appendingPathComponent("AudioTests", isDirectory: true)
+    }
+
+    private var bundledTestDirectory: URL? {
+        Bundle.main.url(forResource: "test", withExtension: nil)
     }
 
     var imageTranslationProgressTitle: String {
@@ -732,6 +737,100 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
+    func runDeveloperRawProbeSuite() {
+        guard !isRunningDeveloperProbe else { return }
+
+        isRunningDeveloperProbe = true
+        developerProbePrompt = ""
+        developerProbeOutput = ""
+        developerProbeError = ""
+        developerProbeCases = Self.defaultDeveloperProbeCases.map {
+            DeveloperRawProbeCase(
+                id: $0.id,
+                sourceLanguage: $0.sourceLanguage,
+                targetLanguage: $0.targetLanguage,
+                input: $0.input,
+                verdict: "运行中"
+            )
+        }
+
+        Task { [weak self] in
+            guard let self else { return }
+            defer { self.isRunningDeveloperProbe = false }
+
+            let pendingCases = self.developerProbeCases
+            var completedCases: [DeveloperRawProbeCase] = []
+            for probeCase in pendingCases {
+                let request = self.makeProbeRequest(
+                    source: probeCase.sourceLanguage,
+                    target: probeCase.targetLanguage,
+                    input: probeCase.input
+                )
+                let completed = await self.runDeveloperProbeCase(probeCase, request: request)
+                completedCases.append(completed)
+                self.developerProbeCases = completedCases + Array(pendingCases.dropFirst(completedCases.count))
+            }
+
+            self.developerProbePrompt = completedCases.map { $0.prompt }.joined(separator: "\n\n---\n\n")
+            self.developerProbeOutput = completedCases.map { probeCase in
+                let body = probeCase.errorCode ?? probeCase.output
+                return "[\(probeCase.sourceLanguage.shortName)->\(probeCase.targetLanguage.shortName)] \(probeCase.verdict)\n\(body)"
+            }.joined(separator: "\n\n---\n\n")
+            self.developerProbeError = completedCases.compactMap(\.errorCode).joined(separator: "\n\n")
+        }
+    }
+
+    private func runDeveloperProbeCase(
+        _ probeCase: DeveloperRawProbeCase,
+        request: ModelGenerationRequest
+    ) async -> DeveloperRawProbeCase {
+        if selectedEngine == .local {
+            let probe = localService.rawTranslationProbe(for: request)
+            let verdict = probe.errorCode == nil
+                ? translationProbeVerdict(source: request.sourceLanguage, target: request.targetLanguage, input: request.inputText, output: probe.output)
+                : "Local 真实 raw 探针失败"
+            return DeveloperRawProbeCase(
+                id: probeCase.id,
+                sourceLanguage: probeCase.sourceLanguage,
+                targetLanguage: probeCase.targetLanguage,
+                input: probeCase.input,
+                prompt: probe.prompt,
+                output: probe.output,
+                errorCode: probe.errorCode,
+                verdict: verdict,
+                isRealLocalModelOutput: true
+            )
+        }
+
+        do {
+            try await mockService.prepare()
+            let result = try await mockService.generate(request)
+            return DeveloperRawProbeCase(
+                id: probeCase.id,
+                sourceLanguage: probeCase.sourceLanguage,
+                targetLanguage: probeCase.targetLanguage,
+                input: probeCase.input,
+                prompt: debugPromptPreview(for: request) + "\n\n注意：Mock 模式为模拟输出，不是真实模型 raw prompt。",
+                output: result.text,
+                errorCode: nil,
+                verdict: "Mock 模拟输出，非真实模型",
+                isRealLocalModelOutput: false
+            )
+        } catch {
+            return DeveloperRawProbeCase(
+                id: probeCase.id,
+                sourceLanguage: probeCase.sourceLanguage,
+                targetLanguage: probeCase.targetLanguage,
+                input: probeCase.input,
+                prompt: debugPromptPreview(for: request) + "\n\n注意：Mock 模式为模拟输出，不是真实模型 raw prompt。",
+                output: "",
+                errorCode: "\(type(of: error)): \(error.localizedDescription)",
+                verdict: "Mock 探针失败",
+                isRealLocalModelOutput: false
+            )
+        }
+    }
+
     func loadProSubscriptionProduct() {
         Task { [weak self] in
             guard let self else { return }
@@ -1008,30 +1107,59 @@ final class TranslationSessionStore: ObservableObject {
         selectedPromptID = prompt.id
     }
 
-    func createPrompt(title: String, instruction: String, tone: String) {
+    func createPrompt(
+        title: String,
+        englishToChineseInstruction: String,
+        chineseToEnglishInstruction: String,
+        tone: String
+    ) {
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanInstruction = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanEnglishToChinese = englishToChineseInstruction.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanChineseToEnglish = chineseToEnglishInstruction.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanTone = tone.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanTitle.isEmpty, !cleanInstruction.isEmpty else { return }
+        guard !cleanTitle.isEmpty else { return }
 
         let prompt = PromptTemplate(
             title: cleanTitle,
-            instruction: cleanInstruction,
+            instruction: cleanEnglishToChinese.isEmpty
+                ? PromptLanguageDirection.englishToChinese.fallbackInstruction
+                : cleanEnglishToChinese,
+            englishToChineseInstruction: cleanEnglishToChinese.isEmpty
+                ? PromptLanguageDirection.englishToChinese.fallbackInstruction
+                : cleanEnglishToChinese,
+            chineseToEnglishInstruction: cleanChineseToEnglish.isEmpty
+                ? PromptLanguageDirection.chineseToEnglish.fallbackInstruction
+                : cleanChineseToEnglish,
             tone: cleanTone.isEmpty ? "自然、准确" : cleanTone
         )
         prompts.insert(prompt, at: 0)
         selectedPromptID = prompt.id
     }
 
-    func updatePrompt(_ prompt: PromptTemplate, title: String, instruction: String, tone: String) {
+    func updatePrompt(
+        _ prompt: PromptTemplate,
+        title: String,
+        englishToChineseInstruction: String,
+        chineseToEnglishInstruction: String,
+        tone: String
+    ) {
         guard let index = prompts.firstIndex(where: { $0.id == prompt.id }), !prompts[index].isBuiltIn else { return }
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanInstruction = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanEnglishToChinese = englishToChineseInstruction.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanChineseToEnglish = chineseToEnglishInstruction.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanTone = tone.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanTitle.isEmpty, !cleanInstruction.isEmpty else { return }
+        guard !cleanTitle.isEmpty else { return }
 
         prompts[index].title = cleanTitle
-        prompts[index].instruction = cleanInstruction
+        prompts[index].instruction = cleanEnglishToChinese.isEmpty
+            ? PromptLanguageDirection.englishToChinese.fallbackInstruction
+            : cleanEnglishToChinese
+        prompts[index].englishToChineseInstruction = cleanEnglishToChinese.isEmpty
+            ? PromptLanguageDirection.englishToChinese.fallbackInstruction
+            : cleanEnglishToChinese
+        prompts[index].chineseToEnglishInstruction = cleanChineseToEnglish.isEmpty
+            ? PromptLanguageDirection.chineseToEnglish.fallbackInstruction
+            : cleanChineseToEnglish
         prompts[index].tone = cleanTone.isEmpty ? "自然、准确" : cleanTone
         prompts[index].updatedAt = Date()
     }
@@ -1040,10 +1168,49 @@ final class TranslationSessionStore: ObservableObject {
         let copy = PromptTemplate(
             title: "\(prompt.title) 副本",
             instruction: prompt.instruction,
+            englishToChineseInstruction: prompt.englishToChineseInstruction,
+            chineseToEnglishInstruction: prompt.chineseToEnglishInstruction,
             tone: prompt.tone
         )
         prompts.insert(copy, at: 0)
         selectedPromptID = copy.id
+    }
+
+    func runBundledAudioTest() {
+        guard let url = firstBundledTestFile(matching: Self.audioTestExtensions) else {
+            audioRecognitionState = .failed
+            audioRecognitionMessage = "test/ 未找到可测试音频"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+
+        recognizeAudioFileAndTranslate(from: url)
+    }
+
+    func runBundledOCRImageTest() {
+        guard let url = firstBundledTestFile(matching: Self.imageTestExtensions) else {
+            imageTranslationState = .failed
+            imageTranslationMessage = "test/ 未找到可测试图片"
+            dataTransferMessage = imageTranslationMessage
+            return
+        }
+
+        translateImage(from: url)
+    }
+
+    private func firstBundledTestFile(matching extensions: Set<String>) -> URL? {
+        guard let bundledTestDirectory else { return nil }
+        guard let files = try? FileManager.default.contentsOfDirectory(
+            at: bundledTestDirectory,
+            includingPropertiesForKeys: nil
+        ) else {
+            return nil
+        }
+
+        return files
+            .filter { extensions.contains($0.pathExtension.lowercased()) }
+            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+            .first
     }
 
     func deletePrompt(_ prompt: PromptTemplate) {
@@ -1923,7 +2090,7 @@ final class TranslationSessionStore: ObservableObject {
         sourceLanguage: \(request.sourceLanguage.rawValue)
         targetLanguage: \(request.targetLanguage.rawValue)
         prompt.title: \(request.prompt.title)
-        prompt.instruction: \(request.prompt.instruction)
+        prompt.instruction: \(request.prompt.instruction(source: request.sourceLanguage, target: request.targetLanguage))
         prompt.tone: \(request.prompt.tone)
         sampling.temperature: \(request.sampling.temperature)
         sampling.maxTokens: \(request.sampling.maxTokens)
@@ -1931,6 +2098,57 @@ final class TranslationSessionStore: ObservableObject {
         inputText:
         \(request.inputText)
         """
+    }
+
+    private func makeProbeRequest(
+        source: SupportedLanguage,
+        target: SupportedLanguage,
+        input: String
+    ) -> ModelGenerationRequest {
+        ModelGenerationRequest(
+            task: .translation,
+            mode: .translate,
+            inputText: input,
+            transcriptContext: [],
+            sourceLanguage: source,
+            targetLanguage: target,
+            prompt: selectedPrompt,
+            sampling: sampling
+        )
+    }
+
+    private func translationProbeVerdict(
+        source: SupportedLanguage,
+        target: SupportedLanguage,
+        input: String,
+        output: String
+    ) -> String {
+        let trimSet = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
+        let cleanInput = input.trimmingCharacters(in: trimSet)
+        let cleanOutput = output.trimmingCharacters(in: trimSet)
+
+        if cleanOutput.isEmpty {
+            return "失败：空输出"
+        }
+        if cleanOutput.localizedCaseInsensitiveCompare(cleanInput) == .orderedSame {
+            return "失败：输出等于原文"
+        }
+        if cleanOutput.localizedCaseInsensitiveContains(cleanInput) || cleanInput.localizedCaseInsensitiveContains(cleanOutput) {
+            return "失败：输出包含原文"
+        }
+        if Self.isPlaceholderTranslationOutput(output) {
+            return "失败：输出是占位答复"
+        }
+        switch target {
+        case .simplifiedChinese:
+            return Self.containsCJK(output) ? "通过：真实 Local raw 输出像中文" : "失败：输出不像中文"
+        case .englishUS:
+            return Self.containsLatinLetter(output) && !Self.containsCJK(output)
+                ? "通过：真实 Local raw 输出像英文"
+                : "失败：输出不像英文"
+        default:
+            return source == target ? "通过：同语种未严格校验" : "通过：非中英目标只校验非空"
+        }
     }
 
     private func updateModelDownloadStateFromDisk() {
@@ -2367,6 +2585,37 @@ final class TranslationSessionStore: ObservableObject {
         "For history, every session needs transcript lines, a summary, prompt settings, and model metadata.",
         "When the quantized model is ready, we can swap the mock service for the local inference runtime."
     ]
+
+    private static let defaultDeveloperProbeCases = [
+        DeveloperRawProbeCase(
+            sourceLanguage: .englishUS,
+            targetLanguage: .simplifiedChinese,
+            input: "Keep the model on device."
+        ),
+        DeveloperRawProbeCase(
+            sourceLanguage: .englishUS,
+            targetLanguage: .simplifiedChinese,
+            input: "The meeting starts at 9:30 tomorrow."
+        ),
+        DeveloperRawProbeCase(
+            sourceLanguage: .englishUS,
+            targetLanguage: .simplifiedChinese,
+            input: "Save the transcript locally."
+        ),
+        DeveloperRawProbeCase(
+            sourceLanguage: .simplifiedChinese,
+            targetLanguage: .englishUS,
+            input: "请把会议记录保存在本地。"
+        ),
+        DeveloperRawProbeCase(
+            sourceLanguage: .simplifiedChinese,
+            targetLanguage: .englishUS,
+            input: "明天九点半开始会议。"
+        )
+    ]
+
+    private static let audioTestExtensions: Set<String> = ["m4a", "wav", "mp3", "caf"]
+    private static let imageTestExtensions: Set<String> = ["png", "jpg", "jpeg", "heic"]
 
     private static let defaultDiagnostics = [
         DiagnosticCheck(

@@ -151,21 +151,22 @@ struct GemmaLocalService: LocalLanguageModeling {
     }
 
     private func translationPrompts(for request: ModelGenerationRequest) -> [String] {
-        let preset = translationPreset(for: request)
+        let instruction = request.prompt.instruction(
+            source: request.sourceLanguage,
+            target: request.targetLanguage
+        )
 
         if request.sourceLanguage == .englishUS, request.targetLanguage == .simplifiedChinese {
             return [
                 """
                 <start_of_turn>user
-                \(preset)
-                翻译成中文，不要输出英文原文，不要解释：
+                \(instruction)
                 \(request.inputText)
                 <end_of_turn>
                 <start_of_turn>model
                 """,
                 """
                 <start_of_turn>user
-                \(preset)
                 English -> 简体中文。只输出中文译文：
                 \(request.inputText)
                 <end_of_turn>
@@ -173,7 +174,6 @@ struct GemmaLocalService: LocalLanguageModeling {
                 """,
                 """
                 <start_of_turn>user
-                \(preset)
                 请把下面英文翻译成简体中文，只输出中文译文：
                 \(request.inputText)
                 <end_of_turn>
@@ -185,28 +185,19 @@ struct GemmaLocalService: LocalLanguageModeling {
         return [
             """
             <start_of_turn>user
-            \(preset)
-            请把下面内容从\(request.sourceLanguage.rawValue)翻译成\(request.targetLanguage.rawValue)，只输出译文：
+            \(instruction)
             \(request.inputText)
             <end_of_turn>
             <start_of_turn>model
             """,
             """
             <start_of_turn>user
-            \(preset)
             翻译成\(request.targetLanguage.rawValue)，不要输出原文，不要解释：
             \(request.inputText)
             <end_of_turn>
             <start_of_turn>model
             """
         ]
-    }
-
-    private func translationPreset(for request: ModelGenerationRequest) -> String {
-        """
-        预设提示词：\(request.prompt.instruction)
-        输出风格：\(request.prompt.tone)
-        """
     }
 
     private func summaryPrompt(for request: ModelGenerationRequest) -> String {

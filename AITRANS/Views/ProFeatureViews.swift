@@ -53,6 +53,16 @@ struct ProFeatureGrid: View {
                 }
             }
 
+            HStack(spacing: 10) {
+                ProTestActionButton(icon: "waveform.badge.magnifyingglass", title: "运行 test/ 音频") {
+                    store.runBundledAudioTest()
+                }
+
+                ProTestActionButton(icon: "text.viewfinder", title: "运行 test/ OCR") {
+                    store.runBundledOCRImageTest()
+                }
+            }
+
             ImageTranslationPanel()
             AudioRecognitionPanel()
             SpeechCapabilityPanel()
@@ -83,6 +93,25 @@ struct ProFeatureGrid: View {
         } message: {
             Text("iOS 普通 App 不能常驻覆盖其他 App 的任意悬浮窗。可行路线是 Share Extension 处理截图/文本，或 ReplayKit Broadcast Upload Extension 获取屏幕帧后做本地 OCR，但需要用户显式启动屏幕广播。")
         }
+    }
+}
+
+private struct ProTestActionButton: View {
+    let icon: String
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .frame(maxWidth: .infinity, minHeight: 42)
+                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 }
 
