@@ -335,8 +335,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var correctionRawOutput: String?
     var correctionErrorCode: String?
     var finalTextUsedForTranslation: String
+    var bestGroundTruthIndex: Int?
+    var bestGroundTruthText: String?
+    var ocrGroundTruthSimilarity: Double?
+    var ocrQualityLabel: String?
     var translatedText: String
     var translationCandidate: String
+    var rawOutputClassification: String
+    var candidateClassification: String
+    var failureCategory: String
     var prompt: String
     var rawOutput: String
     var errorCode: String?
@@ -362,8 +369,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         correctionRawOutput: String? = nil,
         correctionErrorCode: String? = nil,
         finalTextUsedForTranslation: String? = nil,
+        bestGroundTruthIndex: Int? = nil,
+        bestGroundTruthText: String? = nil,
+        ocrGroundTruthSimilarity: Double? = nil,
+        ocrQualityLabel: String? = nil,
         translatedText: String = "",
         translationCandidate: String = "",
+        rawOutputClassification: String = "notRun",
+        candidateClassification: String = "notRun",
+        failureCategory: String = "notRun",
         prompt: String = "",
         rawOutput: String = "",
         errorCode: String? = nil,
@@ -396,8 +410,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.correctionRawOutput = correctionRawOutput
         self.correctionErrorCode = correctionErrorCode
         self.finalTextUsedForTranslation = finalTextUsedForTranslation ?? ocrText
+        self.bestGroundTruthIndex = bestGroundTruthIndex
+        self.bestGroundTruthText = bestGroundTruthText
+        self.ocrGroundTruthSimilarity = ocrGroundTruthSimilarity
+        self.ocrQualityLabel = ocrQualityLabel
         self.translatedText = translatedText
         self.translationCandidate = translationCandidate
+        self.rawOutputClassification = rawOutputClassification
+        self.candidateClassification = candidateClassification
+        self.failureCategory = failureCategory
         self.prompt = prompt
         self.rawOutput = rawOutput
         self.errorCode = errorCode
@@ -414,19 +435,25 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
     var ocrTextOverlayImage: String?
     var blockCropsImage: String?
     var preprocessedContentImage: String?
+    var bubbleDebugImage: String?
+    var bubbleCropsImage: String?
 
     init(
         debugBoxesImage: String,
         overlayImage: String,
         ocrTextOverlayImage: String? = nil,
         blockCropsImage: String? = nil,
-        preprocessedContentImage: String? = nil
+        preprocessedContentImage: String? = nil,
+        bubbleDebugImage: String? = nil,
+        bubbleCropsImage: String? = nil
     ) {
         self.debugBoxesImage = debugBoxesImage
         self.overlayImage = overlayImage
         self.ocrTextOverlayImage = ocrTextOverlayImage
         self.blockCropsImage = blockCropsImage
         self.preprocessedContentImage = preprocessedContentImage
+        self.bubbleDebugImage = bubbleDebugImage
+        self.bubbleCropsImage = bubbleCropsImage
     }
 }
 
@@ -439,6 +466,13 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
     var nonChineseCandidates: Int
     var cjkButFailedCandidates: Int
     var likelyModelOutputFailures: Int
+    var candidateExtractorDroppedRawOutputs: Int
+    var rawOutputEmptyBlocks: Int
+    var rawOutputPlaceholderBlocks: Int
+    var rawOutputRepeatedOriginalBlocks: Int
+    var rawOutputNonChineseBlocks: Int
+    var averageOCRGroundTruthSimilarity: Double
+    var lowOCRSimilarityBlocks: [Int]
     var likelyOCRIssueBlocks: [Int]
     var likelyRuleFalseFailureBlocks: [Int]
 
@@ -451,6 +485,13 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
         nonChineseCandidates: 0,
         cjkButFailedCandidates: 0,
         likelyModelOutputFailures: 0,
+        candidateExtractorDroppedRawOutputs: 0,
+        rawOutputEmptyBlocks: 0,
+        rawOutputPlaceholderBlocks: 0,
+        rawOutputRepeatedOriginalBlocks: 0,
+        rawOutputNonChineseBlocks: 0,
+        averageOCRGroundTruthSimilarity: 0,
+        lowOCRSimilarityBlocks: [],
         likelyOCRIssueBlocks: [],
         likelyRuleFalseFailureBlocks: []
     )
@@ -482,6 +523,31 @@ struct MangaOverlayVisionAPIComparison: Equatable, Codable, Sendable {
     var error: String?
 }
 
+struct MangaOverlayFrameworkMetrics: Equatable, Codable, Sendable {
+    var totalBlocksDetected: Int
+    var processingTimeMs: Int
+    var accuracyVsGroundTruth: Double
+}
+
+struct MangaOverlayBubbleResult: Equatable, Codable, Sendable {
+    var index: Int
+    var bbox: [Double]
+    var text: String
+    var bestGroundTruthIndex: Int?
+    var bestSimilarity: Double
+}
+
+struct MangaOverlayFrameworkComparison: Equatable, Codable, Sendable {
+    var groundTruth: [String]
+    var wholePage: MangaOverlayFrameworkMetrics
+    var bubbleFirst: MangaOverlayFrameworkMetrics
+    var blocksOnlyInWholePage: [String]
+    var blocksOnlyInBubbleFirst: [String]
+    var blocksFoundByBoth: Int
+    var bubbleResults: [MangaOverlayBubbleResult]
+    var notes: [String]
+}
+
 struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var sourceImage: String
     var engineUsed: String
@@ -492,6 +558,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var correctionGuardrailTest: MangaOverlayCorrectionGuardrailTest?
     var lexiconComparison: MangaOverlayLexiconComparison?
     var visionAPIComparison: MangaOverlayVisionAPIComparison?
+    var frameworkComparison: MangaOverlayFrameworkComparison?
     var overallPassed: Bool
     var outputFiles: MangaOverlayProbeOutputFiles
     var warnings: [String]
