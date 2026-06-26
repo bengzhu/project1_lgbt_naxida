@@ -508,6 +508,15 @@ private struct MangaOverlayProbeBlockCard: View {
                 .font(.system(size: 10, weight: .bold, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.46))
 
+            if block.rawOcrText != block.ocrText {
+                RawProbeSnippet(title: "raw ocr", text: block.rawOcrText)
+            }
+            if let afterPreprocessing = block.afterPreprocessingOcrText, !afterPreprocessing.isEmpty {
+                RawProbeSnippet(title: "preprocessed ocr", text: afterPreprocessing)
+            }
+            if block.finalTextUsedForTranslation != block.ocrText {
+                RawProbeSnippet(title: "final text", text: block.finalTextUsedForTranslation)
+            }
             if !block.translatedText.isEmpty {
                 RawProbeSnippet(title: "translation", text: block.translatedText)
             }
@@ -536,7 +545,7 @@ private struct MangaOverlayProbeBlockCard: View {
     private var metadataText: String {
         let bbox = block.bbox.map { String(Int($0)) }.joined(separator: ",")
         let confidence = block.ocrConfidence.map { String(Double($0)) } ?? "null"
-        return "bbox=\(bbox) confidence=\(confidence)"
+        return "bbox=\(bbox) confidence=\(confidence) pre=\(block.preprocessingEnabled)"
     }
 }
 

@@ -87,23 +87,76 @@ struct MangaOverlayProbeService: Sendable {
         }.value
     }
 
+    func recognizePreprocessedText(
+        in image: CGImage,
+        block: MangaOverlayOCRBlock,
+        options: MangaOverlayPreprocessingOptions = .defaultValue
+    ) async throws -> String? {
+        try await Task.detached(priority: .userInitiated) {
+            guard options.enabled else { return nil }
+            let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            let cropRect = Self.expand(block.boundingBox, by: 0.18, bounds: bounds).integral
+            let cropped = try Self.croppedImage(image, rect: cropRect)
+            let prepared = try Self.preprocessedImage(cropped, options: options)
+            let candidates = try Self.recognizeTextCandidates(
+                in: prepared,
+                angle: 0,
+                scaledContentSize: CGSize(width: CGFloat(prepared.width), height: CGFloat(prepared.height)),
+                contentOrigin: .zero,
+                scale: 1
+            )
+            let text = candidates
+                .sorted {
+                    if abs($0.boundingBox.minY - $1.boundingBox.minY) > 8 {
+                        return $0.boundingBox.minY < $1.boundingBox.minY
+                    }
+                    return $0.boundingBox.minX < $1.boundingBox.minX
+                }
+                .map(\.text)
+                .joined(separator: "\n")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return text.isEmpty ? nil : text
+        }.value
+    }
+
     func renderOutputs(
         image: CGImage,
         blocks: [MangaOverlayProbeBlock],
-        outputDirectory: URL
+        outputDirectory: URL,
+        preprocessing: MangaOverlayPreprocessingOptions = .defaultValue,
+        cropping: MangaOverlayProbeCropping = .defaultValue
     ) async throws -> MangaOverlayProbeOutputFiles {
         try await Task.detached(priority: .userInitiated) {
             try Self.recreateDirectory(outputDirectory)
 
             let debugURL = outputDirectory.appendingPathComponent("1_debug_boxes.png")
             let overlayURL = outputDirectory.appendingPathComponent("1_translated_overlay.png")
+            let ocrTextURL = outputDirectory.appendingPathComponent("1_ocr_text_overlay.png")
+            let cropsURL = outputDirectory.appendingPathComponent("1_block_crops.png")
+            let preprocessedURL = outputDirectory.appendingPathComponent("1_preprocessed_content.png")
             let debugImage = try Self.drawDebugBoxes(on: image, blocks: blocks)
             let overlayImage = try Self.drawTranslatedOverlay(on: image, blocks: blocks)
+            let ocrTextImage = try Self.drawOCRTextOverlay(on: image, blocks: blocks)
+            let cropsImage = try Self.drawBlockCrops(from: image, blocks: blocks, preprocessing: preprocessing)
             try Self.writePNG(debugImage, to: debugURL)
             try Self.writePNG(overlayImage, to: overlayURL)
+            try Self.writePNG(ocrTextImage, to: ocrTextURL)
+            try Self.writePNG(cropsImage, to: cropsURL)
+
+            var preprocessedPath: String?
+            if preprocessing.enabled {
+                let contentRect = Self.contentCropRect(for: image, cropping: cropping)
+                let cropped = try Self.croppedImage(image, rect: contentRect)
+                let prepared = try Self.preprocessedImage(cropped, options: preprocessing)
+                try Self.writePNG(prepared, to: preprocessedURL)
+                preprocessedPath = preprocessedURL.path
+            }
             return MangaOverlayProbeOutputFiles(
                 debugBoxesImage: debugURL.path,
-                overlayImage: overlayURL.path
+                overlayImage: overlayURL.path,
+                ocrTextOverlayImage: ocrTextURL.path,
+                blockCropsImage: cropsURL.path,
+                preprocessedContentImage: preprocessedPath
             )
         }.value
     }
@@ -228,6 +281,144 @@ struct MangaOverlayProbeService: Sendable {
             throw MangaOverlayProbeServiceError.imageRenderFailed
         }
         return scaled
+    }
+
+    private static func preprocessedImage(_ image: CGImage, options: MangaOverlayPreprocessingOptions) throws -> CGImage {
+        var current = image
+        if options.cropUpscaleEnabled, options.cropScale > 1 {
+            current = try scaledImage(current, scale: CGFloat(options.cropScale))
+        }
+        if options.grayscaleEnabled || options.contrastBrightnessEnabled || options.adaptiveThresholdEnabled {
+            current = try rasterProcessedImage(current, options: options)
+        }
+        if options.sharpenEnabled {
+            current = try sharpenedImage(current)
+        }
+        return current
+    }
+
+    private static func rasterProcessedImage(_ image: CGImage, options: MangaOverlayPreprocessingOptions) throws -> CGImage {
+        let width = image.width
+        let height = image.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+        var pixels = [UInt8](repeating: 255, count: height * bytesPerRow)
+        guard let context = CGContext(
+            data: &pixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+
+        var luminance = [UInt8](repeating: 0, count: width * height)
+        var sum = 0
+        for y in 0..<height {
+            for x in 0..<width {
+                let offset = y * bytesPerRow + x * bytesPerPixel
+                let red = Int(pixels[offset])
+                let green = Int(pixels[offset + 1])
+                let blue = Int(pixels[offset + 2])
+                let gray = (red * 299 + green * 587 + blue * 114) / 1000
+                luminance[y * width + x] = UInt8(max(0, min(255, gray)))
+                sum += gray
+            }
+        }
+        let mean = max(1, sum / max(1, width * height))
+
+        for y in 0..<height {
+            for x in 0..<width {
+                let index = y * width + x
+                var gray = Int(luminance[index])
+                if options.contrastBrightnessEnabled {
+                    gray = max(0, min(255, Int((Double(gray - mean) * 1.35) + 188)))
+                }
+                if options.adaptiveThresholdEnabled {
+                    let localMean = localAverage(luminance, x: x, y: y, width: width, height: height, radius: 8)
+                    gray = gray < localMean - 10 ? 0 : 255
+                }
+                let offset = y * bytesPerRow + x * bytesPerPixel
+                pixels[offset] = UInt8(gray)
+                pixels[offset + 1] = UInt8(gray)
+                pixels[offset + 2] = UInt8(gray)
+                pixels[offset + 3] = 255
+            }
+        }
+
+        guard let output = context.makeImage() else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        return output
+    }
+
+    private static func localAverage(_ luminance: [UInt8], x: Int, y: Int, width: Int, height: Int, radius: Int) -> Int {
+        let minX = max(0, x - radius)
+        let maxX = min(width - 1, x + radius)
+        let minY = max(0, y - radius)
+        let maxY = min(height - 1, y + radius)
+        let step = max(1, radius / 4)
+        var sum = 0
+        var count = 0
+        for sampleY in stride(from: minY, through: maxY, by: step) {
+            for sampleX in stride(from: minX, through: maxX, by: step) {
+                sum += Int(luminance[sampleY * width + sampleX])
+                count += 1
+            }
+        }
+        return count == 0 ? 255 : sum / count
+    }
+
+    private static func sharpenedImage(_ image: CGImage) throws -> CGImage {
+        let width = image.width
+        let height = image.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+        var input = [UInt8](repeating: 255, count: height * bytesPerRow)
+        guard let inputContext = CGContext(
+            data: &input,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        inputContext.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+
+        var output = input
+        guard width > 2, height > 2 else { return image }
+        for y in 1..<(height - 1) {
+            for x in 1..<(width - 1) {
+                for channel in 0..<3 {
+                    let center = Int(input[(y * bytesPerRow) + (x * bytesPerPixel) + channel]) * 5
+                    let top = Int(input[((y - 1) * bytesPerRow) + (x * bytesPerPixel) + channel])
+                    let bottom = Int(input[((y + 1) * bytesPerRow) + (x * bytesPerPixel) + channel])
+                    let left = Int(input[(y * bytesPerRow) + ((x - 1) * bytesPerPixel) + channel])
+                    let right = Int(input[(y * bytesPerRow) + ((x + 1) * bytesPerPixel) + channel])
+                    output[(y * bytesPerRow) + (x * bytesPerPixel) + channel] = UInt8(max(0, min(255, center - top - bottom - left - right)))
+                }
+            }
+        }
+
+        guard let outputContext = CGContext(
+            data: &output,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ), let rendered = outputContext.makeImage() else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        return rendered
     }
 
     private static func rotatedImage(_ image: CGImage, angle: Int) throws -> CGImage {
@@ -573,6 +764,87 @@ struct MangaOverlayProbeService: Sendable {
                 )
             }
         }
+    }
+
+    private static func drawOCRTextOverlay(on image: CGImage, blocks: [MangaOverlayProbeBlock]) throws -> CGImage {
+        try draw(on: image) { context, _ in
+            for block in blocks {
+                let rect = rect(from: block.bbox)
+                context.setStrokeColor(CGColor(red: 0.05, green: 0.35, blue: 1, alpha: 0.9))
+                context.setLineWidth(2)
+                context.stroke(rect)
+
+                let text = "#\(block.index) raw:\n\(block.rawOcrText)\npre:\n\(block.afterPreprocessingOcrText ?? "<off/no change>")"
+                let textRect = expand(rect, by: 0.2, bounds: CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
+                context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 0.86))
+                context.fill(textRect)
+                drawFittingText(text, in: textRect.insetBy(dx: 4, dy: 4), context: context)
+            }
+        }
+    }
+
+    private static func drawBlockCrops(
+        from image: CGImage,
+        blocks: [MangaOverlayProbeBlock],
+        preprocessing: MangaOverlayPreprocessingOptions
+    ) throws -> CGImage {
+        let tileWidth: CGFloat = 260
+        let tileHeight: CGFloat = 220
+        let columns = 2
+        let rows = max(1, Int(ceil(Double(blocks.count) / Double(columns))))
+        let canvasSize = CGSize(width: tileWidth * CGFloat(columns), height: tileHeight * CGFloat(rows))
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: canvasSize, format: format)
+        var renderError: Error?
+        let rendered = renderer.image { rendererContext in
+            let context = rendererContext.cgContext
+            context.setFillColor(CGColor(red: 0.94, green: 0.94, blue: 0.94, alpha: 1))
+            context.fill(CGRect(origin: .zero, size: canvasSize))
+
+            for (offset, block) in blocks.enumerated() {
+                let column = offset % columns
+                let row = offset / columns
+                let origin = CGPoint(x: CGFloat(column) * tileWidth, y: CGFloat(row) * tileHeight)
+                let tileRect = CGRect(x: origin.x + 8, y: origin.y + 8, width: tileWidth - 16, height: tileHeight - 16)
+                do {
+                    let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+                    let cropRect = expand(rect(from: block.bbox), by: 0.25, bounds: bounds).integral
+                    let cropped = try croppedImage(image, rect: cropRect)
+                    let processed = preprocessing.enabled ? try preprocessedImage(cropped, options: preprocessing) : cropped
+                    let cropImage = UIImage(cgImage: processed)
+                    let imageRect = CGRect(x: tileRect.minX, y: tileRect.minY + 28, width: tileRect.width, height: tileRect.height - 62)
+                    context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+                    context.fill(tileRect)
+                    drawText("#\(block.index)", in: CGRect(x: tileRect.minX, y: tileRect.minY, width: 80, height: 24), fontSize: 16, textColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1), backgroundColor: CGColor(red: 1, green: 0.08, blue: 0.18, alpha: 0.88), context: context)
+                    cropImage.draw(in: aspectFitRect(imageSize: CGSize(width: processed.width, height: processed.height), bounds: imageRect))
+                    drawText(block.afterPreprocessingOcrText ?? block.rawOcrText, in: CGRect(x: tileRect.minX, y: tileRect.maxY - 32, width: tileRect.width, height: 30), fontSize: 11, textColor: CGColor(red: 0, green: 0, blue: 0, alpha: 1), backgroundColor: CGColor(red: 1, green: 1, blue: 1, alpha: 0.82), context: context)
+                } catch {
+                    renderError = error
+                }
+            }
+        }
+        if let renderError {
+            throw renderError
+        }
+        guard let output = rendered.cgImage else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        return output
+    }
+
+    private static func aspectFitRect(imageSize: CGSize, bounds: CGRect) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0 else { return bounds }
+        let scale = min(bounds.width / imageSize.width, bounds.height / imageSize.height)
+        let width = imageSize.width * scale
+        let height = imageSize.height * scale
+        return CGRect(
+            x: bounds.midX - width / 2,
+            y: bounds.midY - height / 2,
+            width: width,
+            height: height
+        )
     }
 
     private static func draw(

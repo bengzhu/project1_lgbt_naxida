@@ -152,6 +152,9 @@ test/
 - `blocks[].translationCandidate`：从 raw output 中抽取出来用于质量判定和覆盖绘制的候选译文。
 - `blocks[].failureReasons`：失败块的具体原因，例如 `翻译等于原文`、`翻译是占位答复`、`中文字符不足`、`翻译不像中文`。
 - `blocks[].qualityNotes`：非硬失败排查线索，例如 `translationContainsFullOCRText`、`latinLetters=27`、`cjkCharacters=4`。
+- `configuration.currentBlockSource`：记录当前块来源。当前是整图 OCR observations 的空间聚类/去重，即 (a)，不是图像层面的气泡连通域检测。
+- `configuration.preprocessing`：记录本轮预处理增强开关，包含灰度、对比亮度、自适应二值化、裁切放大、锐化和放大倍数。
+- `blocks[].rawOcrText` / `afterPreprocessingOcrText` / `finalTextUsedForTranslation`：记录原始 OCR、裁切预处理后二次 OCR、最终送翻译文本。当前预处理结果只用于对比展示，不替换整图 OCR 主流程。
 - `overallPassed`：至少 1 个块、所有块通过质量判定、两张 PNG 非空才为 `true`。
 
 探针验收重点：
@@ -161,6 +164,7 @@ test/
 - `1_translated_overlay.png` 中所有绘制文本必须正向可读；即使某块来自旋转 OCR，也不允许倒置或镜像。
 - `blockPassed = false` 的块也必须出现在覆盖图上，并保留失败原因，不能静默隐藏。
 - 每次运行会先清空 App 沙盒 `Application Support/AITRANS/Output/`，`scripts/export-probe-output.sh` 也会先清空项目根 `output/`，避免新旧 PNG / JSON 混在一起。
+- 输出图片包括 `1_debug_boxes.png`、`1_translated_overlay.png`、`1_ocr_text_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png`。其中 `1_block_crops.png` 是块裁切放大预处理拼图，用于目测二值化/锐化是否过激。
 
 模拟器跑完后，把沙盒输出导出到项目根 `output/`：
 
@@ -288,6 +292,10 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v3：探针输出目录每轮先清空，导出脚本也会重建项目根 `output/`，避免旧图缓存堆积或污染验收。
 - 本次未提交工作区 v3：`probe_report.json` 新增 `translationCandidate` 和 `qualityNotes`。翻译质量判定改为记录 raw output -> candidate -> checks 的链路；`翻译包含完整原文` 不再单独作为硬失败，但空输出、原文复读、占位答复、中文字符不足、非中文仍会失败。
 - 本次未提交工作区 v3 实测：用 iPhone 17 Pro 模拟器自动探针 `AITRANS_RUN_MANGA_PROBE=1` 跑 `test/1.png`，导出到 `output/`。本次 `totalBlocksDetected = 12`、`blockPassed=false` 为 7 个、`overallPassed=false`，`output/` 只包含 `1_debug_boxes.png`、`1_translated_overlay.png`、`probe_report.json` 三个最新文件。失败主要分三类：Gemma raw 输出原文/非中文，如 `IVE ARRIVED AT REN- SENPAI'S HOUSE.`；模型输出占位答复，如 `以下是翻译成中文：`；OCR 本身有明显误读，如 `THE CITY RATTLER STATE IN A PEN DAYS.`、`THOUGH THOUSH EVEN`、`SUGSESTION THE OVERRULED`。
+- 本次未提交工作区 v4：已明确当前 12 个块来自 (a) 整图 OCR observations 的空间聚类/去重，不是 (b) 图像层面的气泡检测；第 5 节气泡检测仍是后续新增能力。
+- 本次未提交工作区 v4：新增预处理增强配置和报告链路字段。当前子步骤均有开关：灰度、对比/亮度、自适应二值化、裁切放大、锐化；每块报告 `rawOcrText`、`afterPreprocessingOcrText`、`finalTextUsedForTranslation`。
+- 本次未提交工作区 v4 实测：iPhone 17 Pro 模拟器跑 `test/1.png`，`totalBlocksDetected = 12`、预处理改变 11 个块、实际用于翻译 0 个预处理结果、`blockPassed = 2`、`overallPassed=false`。结论：当前默认预处理组合过激，二值化/锐化会把漫画网点和边框噪声放大，`1_block_crops.png` 中可见黑白块明显污染文字；因此本轮只把预处理结果作为对比证据，不替换主流程。
+- 本次未提交工作区 v4：新增 `1_ocr_text_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png` 三份结果图。部署目标仍是 iOS 17.0，`RecognizeTextRequest` 新 API 必须后续用 `@available(iOS 18, *)` 条件接入；本轮只记录该限制，尚未启用新 API/自定义词表对比/气泡优先路径。
 
 ## 后续对话指引
 

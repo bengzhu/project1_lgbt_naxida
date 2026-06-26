@@ -1246,6 +1246,7 @@ final class TranslationSessionStore: ObservableObject {
                 self.mangaOverlayProbeState = .recognizing
                 self.mangaOverlayProbeMessage = "正在用 0/90/180/270 多角度 Vision OCR"
                 let recognized = try await self.mangaOverlayProbeService.recognizeTextBlocks(in: data)
+                let probeConfiguration = MangaOverlayProbeConfiguration.defaultValue
 
                 var probeBlocks = recognized.blocks.enumerated().map { index, block in
                     MangaOverlayProbeBlock(
@@ -1253,10 +1254,29 @@ final class TranslationSessionStore: ObservableObject {
                         bbox: Self.bboxArray(from: block.boundingBox),
                         rotationAngleUsed: block.rotationAngle,
                         ocrText: block.text,
-                        ocrConfidence: block.confidence
+                        ocrConfidence: block.confidence,
+                        rawOcrText: block.text,
+                        preprocessingEnabled: probeConfiguration.preprocessing.enabled
                     )
                 }
                 self.mangaOverlayProbeBlocks = probeBlocks
+
+                if probeConfiguration.preprocessing.enabled {
+                    self.mangaOverlayProbeMessage = "正在对 \(probeBlocks.count) 个文本块做裁切放大预处理 OCR"
+                    for index in probeBlocks.indices {
+                        if let enhancedText = try await self.mangaOverlayProbeService.recognizePreprocessedText(
+                            in: recognized.image,
+                            block: recognized.blocks[index],
+                            options: probeConfiguration.preprocessing
+                        ) {
+                            probeBlocks[index].afterPreprocessingOcrText = enhancedText
+                            probeBlocks[index].finalTextUsedForTranslation = probeBlocks[index].rawOcrText
+                        } else {
+                            probeBlocks[index].finalTextUsedForTranslation = probeBlocks[index].rawOcrText
+                        }
+                    }
+                    self.mangaOverlayProbeBlocks = probeBlocks
+                }
 
                 self.mangaOverlayProbeState = .translating
                 self.mangaOverlayProbeMessage = "已识别 \(probeBlocks.count) 个文本块，正在逐块翻译"
@@ -1272,12 +1292,14 @@ final class TranslationSessionStore: ObservableObject {
                 let outputFiles = try await self.mangaOverlayProbeService.renderOutputs(
                     image: recognized.image,
                     blocks: probeBlocks,
-                    outputDirectory: self.mangaOverlayOutputDirectory
+                    outputDirectory: self.mangaOverlayOutputDirectory,
+                    preprocessing: probeConfiguration.preprocessing
                 )
 
                 let report = self.makeMangaOverlayProbeReport(
                     blocks: probeBlocks,
-                    outputFiles: outputFiles
+                    outputFiles: outputFiles,
+                    configuration: probeConfiguration
                 )
                 let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
                 try MangaOverlayProbeService.writeReport(report, to: reportURL)
@@ -1292,8 +1314,12 @@ final class TranslationSessionStore: ObservableObject {
                 let report = self.makeMangaOverlayProbeReport(
                     blocks: self.mangaOverlayProbeBlocks,
                     outputFiles: outputFiles,
+                    configuration: .defaultValue,
                     extraWarnings: ["运行错误：\(type(of: error)): \(error.localizedDescription)"]
                 )
+                let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
+                try? FileManager.default.createDirectory(at: self.mangaOverlayOutputDirectory, withIntermediateDirectories: true)
+                try? MangaOverlayProbeService.writeReport(report, to: reportURL)
                 self.mangaOverlayProbeState = .failed
                 self.mangaOverlayProbeMessage = "漫画探针失败：\(error.localizedDescription)"
                 self.mangaOverlayProbeReport = report
@@ -1696,7 +1722,7 @@ final class TranslationSessionStore: ObservableObject {
         let request = makeProbeRequest(
             source: .englishUS,
             target: .simplifiedChinese,
-            input: block.ocrText
+            input: block.finalTextUsedForTranslation
         )
         let prompt: String
         let rawOutput: String
@@ -1726,14 +1752,14 @@ final class TranslationSessionStore: ObservableObject {
 
         let translationCandidate = Self.cleanMangaProbeTranslationCandidate(rawTranslatedText)
         let checks = mangaProbeChecks(
-            original: block.ocrText,
+            original: block.finalTextUsedForTranslation,
             translation: translationCandidate,
             errorCode: errorCode
         )
         let failureReasons = mangaProbeFailureReasons(checks: checks, errorCode: errorCode)
         let qualityNotes = mangaProbeQualityNotes(checks: checks, translation: translationCandidate)
         let passed = Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
-        let overlayText = passed ? translationCandidate : "翻译失败\n\(block.ocrText)"
+        let overlayText = passed ? translationCandidate : "翻译失败\n\(block.finalTextUsedForTranslation)"
 
         return MangaOverlayProbeBlock(
             id: block.id,
@@ -1742,6 +1768,13 @@ final class TranslationSessionStore: ObservableObject {
             rotationAngleUsed: block.rotationAngleUsed,
             ocrText: block.ocrText,
             ocrConfidence: block.ocrConfidence,
+            rawOcrText: block.rawOcrText,
+            preprocessingEnabled: block.preprocessingEnabled,
+            afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+            correctionEnabled: block.correctionEnabled,
+            afterCorrectionText: block.afterCorrectionText,
+            correctionRejectedReason: block.correctionRejectedReason,
+            finalTextUsedForTranslation: block.finalTextUsedForTranslation,
             translatedText: overlayText,
             translationCandidate: translationCandidate,
             prompt: prompt,
@@ -1870,6 +1903,7 @@ final class TranslationSessionStore: ObservableObject {
     private func makeMangaOverlayProbeReport(
         blocks: [MangaOverlayProbeBlock],
         outputFiles: MangaOverlayProbeOutputFiles,
+        configuration: MangaOverlayProbeConfiguration,
         extraWarnings: [String] = []
     ) -> MangaOverlayProbeReport {
         var warnings = extraWarnings
@@ -1897,6 +1931,7 @@ final class TranslationSessionStore: ObservableObject {
         return MangaOverlayProbeReport(
             sourceImage: "test/1.png",
             engineUsed: selectedAdapterMetadata.displayName,
+            configuration: configuration,
             totalBlocksDetected: blocks.count,
             blocks: blocks,
             overallPassed: allBlocksPassed && filesPresent,
