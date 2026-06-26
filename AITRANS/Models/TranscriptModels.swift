@@ -337,6 +337,10 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var deterministicCorrectionText: String?
     var deterministicCorrectionAppliedRules: [String]
     var deterministicCorrectionSimilarity: Double?
+    var deterministicCorrectionTranslationCandidate: String?
+    var deterministicCorrectionTranslationRawOutput: String?
+    var deterministicCorrectionTranslationPassed: Bool?
+    var deterministicCorrectionTranslationFailureDetail: String?
     var finalTextUsedForTranslation: String
     var bestGroundTruthIndex: Int?
     var bestGroundTruthText: String?
@@ -377,6 +381,10 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         deterministicCorrectionText: String? = nil,
         deterministicCorrectionAppliedRules: [String] = [],
         deterministicCorrectionSimilarity: Double? = nil,
+        deterministicCorrectionTranslationCandidate: String? = nil,
+        deterministicCorrectionTranslationRawOutput: String? = nil,
+        deterministicCorrectionTranslationPassed: Bool? = nil,
+        deterministicCorrectionTranslationFailureDetail: String? = nil,
         finalTextUsedForTranslation: String? = nil,
         bestGroundTruthIndex: Int? = nil,
         bestGroundTruthText: String? = nil,
@@ -424,6 +432,10 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.deterministicCorrectionText = deterministicCorrectionText
         self.deterministicCorrectionAppliedRules = deterministicCorrectionAppliedRules
         self.deterministicCorrectionSimilarity = deterministicCorrectionSimilarity
+        self.deterministicCorrectionTranslationCandidate = deterministicCorrectionTranslationCandidate
+        self.deterministicCorrectionTranslationRawOutput = deterministicCorrectionTranslationRawOutput
+        self.deterministicCorrectionTranslationPassed = deterministicCorrectionTranslationPassed
+        self.deterministicCorrectionTranslationFailureDetail = deterministicCorrectionTranslationFailureDetail
         self.finalTextUsedForTranslation = finalTextUsedForTranslation ?? ocrText
         self.bestGroundTruthIndex = bestGroundTruthIndex
         self.bestGroundTruthText = bestGroundTruthText
@@ -452,35 +464,41 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
     var overlayImage: String
     var ocrTextOverlayImage: String?
     var deterministicCorrectionOverlayImage: String?
+    var deterministicTranslationOverlayImage: String?
     var ocrProbeTextFile: String?
     var blockCropsImage: String?
     var preprocessedContentImage: String?
     var bubbleDebugImage: String?
     var bubbleCropsImage: String?
     var bubbleSeedDebugImage: String?
+    var bubbleTextOverlayImage: String?
 
     init(
         debugBoxesImage: String,
         overlayImage: String,
         ocrTextOverlayImage: String? = nil,
         deterministicCorrectionOverlayImage: String? = nil,
+        deterministicTranslationOverlayImage: String? = nil,
         ocrProbeTextFile: String? = nil,
         blockCropsImage: String? = nil,
         preprocessedContentImage: String? = nil,
         bubbleDebugImage: String? = nil,
         bubbleCropsImage: String? = nil,
-        bubbleSeedDebugImage: String? = nil
+        bubbleSeedDebugImage: String? = nil,
+        bubbleTextOverlayImage: String? = nil
     ) {
         self.debugBoxesImage = debugBoxesImage
         self.overlayImage = overlayImage
         self.ocrTextOverlayImage = ocrTextOverlayImage
         self.deterministicCorrectionOverlayImage = deterministicCorrectionOverlayImage
+        self.deterministicTranslationOverlayImage = deterministicTranslationOverlayImage
         self.ocrProbeTextFile = ocrProbeTextFile
         self.blockCropsImage = blockCropsImage
         self.preprocessedContentImage = preprocessedContentImage
         self.bubbleDebugImage = bubbleDebugImage
         self.bubbleCropsImage = bubbleCropsImage
         self.bubbleSeedDebugImage = bubbleSeedDebugImage
+        self.bubbleTextOverlayImage = bubbleTextOverlayImage
     }
 }
 
@@ -511,6 +529,9 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
     var ocrQualityProbe: [String]
     var deterministicCorrectionImprovedBlocks: [Int]
     var deterministicCorrectionAverageSimilarity: Double
+    var deterministicCorrectionTranslationTestedBlocks: [Int]
+    var deterministicCorrectionTranslationPassedBlocks: [Int]
+    var deterministicCorrectionTranslationFailedBlocks: [Int]
 
     static let empty = MangaOverlayProbeDiagnostics(
         passedBlocks: 0,
@@ -538,7 +559,10 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
         translationUsableButOCRSuspectBlocks: [],
         ocrQualityProbe: [],
         deterministicCorrectionImprovedBlocks: [],
-        deterministicCorrectionAverageSimilarity: 0
+        deterministicCorrectionAverageSimilarity: 0,
+        deterministicCorrectionTranslationTestedBlocks: [],
+        deterministicCorrectionTranslationPassedBlocks: [],
+        deterministicCorrectionTranslationFailedBlocks: []
     )
 }
 
