@@ -143,15 +143,18 @@ struct MangaOverlayProbeService: Sendable {
             let debugURL = outputDirectory.appendingPathComponent("1_debug_boxes.png")
             let overlayURL = outputDirectory.appendingPathComponent("1_translated_overlay.png")
             let ocrTextURL = outputDirectory.appendingPathComponent("1_ocr_text_overlay.png")
+            let deterministicCorrectionURL = outputDirectory.appendingPathComponent("1_deterministic_correction_overlay.png")
             let cropsURL = outputDirectory.appendingPathComponent("1_block_crops.png")
             let preprocessedURL = outputDirectory.appendingPathComponent("1_preprocessed_content.png")
             let debugImage = try Self.drawDebugBoxes(on: image, blocks: blocks)
             let overlayImage = try Self.drawTranslatedOverlay(on: image, blocks: blocks)
             let ocrTextImage = try Self.drawOCRTextOverlay(on: image, blocks: blocks)
+            let deterministicCorrectionImage = try Self.drawDeterministicCorrectionOverlay(on: image, blocks: blocks)
             let cropsImage = try Self.drawBlockCrops(from: image, blocks: blocks, preprocessing: preprocessing)
             try Self.writePNG(debugImage, to: debugURL)
             try Self.writePNG(overlayImage, to: overlayURL)
             try Self.writePNG(ocrTextImage, to: ocrTextURL)
+            try Self.writePNG(deterministicCorrectionImage, to: deterministicCorrectionURL)
             try Self.writePNG(cropsImage, to: cropsURL)
 
             var preprocessedPath: String?
@@ -166,6 +169,7 @@ struct MangaOverlayProbeService: Sendable {
                 debugBoxesImage: debugURL.path,
                 overlayImage: overlayURL.path,
                 ocrTextOverlayImage: ocrTextURL.path,
+                deterministicCorrectionOverlayImage: deterministicCorrectionURL.path,
                 blockCropsImage: cropsURL.path,
                 preprocessedContentImage: preprocessedPath,
                 bubbleDebugImage: bubbleDebugImagePath,
@@ -1388,6 +1392,41 @@ struct MangaOverlayProbeService: Sendable {
                 let text = "#\(block.index) raw:\n\(block.rawOcrText)\npre:\n\(block.afterPreprocessingOcrText ?? "<off/no change>")"
                 let textRect = expand(rect, by: 0.2, bounds: CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
                 context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 0.86))
+                context.fill(textRect)
+                drawFittingText(text, in: textRect.insetBy(dx: 4, dy: 4), context: context)
+            }
+        }
+    }
+
+    private static func drawDeterministicCorrectionOverlay(on image: CGImage, blocks: [MangaOverlayProbeBlock]) throws -> CGImage {
+        try draw(on: image) { context, _ in
+            let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            for block in blocks {
+                let rect = rect(from: block.bbox)
+                let changed = !block.deterministicCorrectionAppliedRules.isEmpty
+                context.setStrokeColor(changed
+                    ? CGColor(red: 0.58, green: 0.12, blue: 0.92, alpha: 0.95)
+                    : CGColor(red: 0.36, green: 0.36, blue: 0.36, alpha: 0.65)
+                )
+                context.setLineWidth(changed ? 2.5 : 1.5)
+                context.stroke(rect)
+
+                let originalSimilarity = block.ocrGroundTruthSimilarity.map {
+                    $0.formatted(.number.precision(.fractionLength(3)))
+                } ?? "n/a"
+                let correctedSimilarity = block.deterministicCorrectionSimilarity.map {
+                    $0.formatted(.number.precision(.fractionLength(3)))
+                } ?? "n/a"
+                let rules = block.deterministicCorrectionAppliedRules.isEmpty
+                    ? "rules: <none>"
+                    : "rules: \(block.deterministicCorrectionAppliedRules.joined(separator: ", "))"
+                let correctedText = block.deterministicCorrectionText ?? block.finalTextUsedForTranslation
+                let text = "#\(block.index) deterministic OCR\nsim: \(originalSimilarity) -> \(correctedSimilarity)\nraw:\n\(block.finalTextUsedForTranslation)\nfix:\n\(correctedText)\n\(rules)"
+                let textRect = expand(rect, by: changed ? 0.32 : 0.22, bounds: bounds)
+                context.setFillColor(changed
+                    ? CGColor(red: 0.97, green: 0.92, blue: 1, alpha: 0.9)
+                    : CGColor(red: 1, green: 1, blue: 1, alpha: 0.8)
+                )
                 context.fill(textRect)
                 drawFittingText(text, in: textRect.insetBy(dx: 4, dy: 4), context: context)
             }
