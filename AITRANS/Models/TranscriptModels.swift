@@ -250,6 +250,14 @@ struct MangaOverlayProbeChecks: Equatable, Codable, Sendable {
     var looksLikeChinese: Bool
 }
 
+struct MangaGroundTruthEntry: Equatable, Codable, Sendable {
+    var text: String
+    var type: String
+
+    static let dialogueType = "dialogue"
+    static let decorativeType = "decorative"
+}
+
 struct MangaOverlayPreprocessingOptions: Equatable, Codable, Sendable {
     var enabled: Bool
     var grayscaleEnabled: Bool
@@ -344,7 +352,12 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var finalTextUsedForTranslation: String
     var bestGroundTruthIndex: Int?
     var bestGroundTruthText: String?
+    var bestGroundTruthType: String?
+    var groundTruthMatch: String
+    var groundTruthMatchThreshold: Double
     var ocrGroundTruthSimilarity: Double?
+    var ocrLegacySimilarity: Double?
+    var wordOrderPreserved: Bool?
     var ocrQualityLabel: String?
     var translatedText: String
     var translationCandidate: String
@@ -388,7 +401,12 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         finalTextUsedForTranslation: String? = nil,
         bestGroundTruthIndex: Int? = nil,
         bestGroundTruthText: String? = nil,
+        bestGroundTruthType: String? = nil,
+        groundTruthMatch: String = "unmatched",
+        groundTruthMatchThreshold: Double = 0.42,
         ocrGroundTruthSimilarity: Double? = nil,
+        ocrLegacySimilarity: Double? = nil,
+        wordOrderPreserved: Bool? = nil,
         ocrQualityLabel: String? = nil,
         translatedText: String = "",
         translationCandidate: String = "",
@@ -439,7 +457,12 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.finalTextUsedForTranslation = finalTextUsedForTranslation ?? ocrText
         self.bestGroundTruthIndex = bestGroundTruthIndex
         self.bestGroundTruthText = bestGroundTruthText
+        self.bestGroundTruthType = bestGroundTruthType
+        self.groundTruthMatch = groundTruthMatch
+        self.groundTruthMatchThreshold = groundTruthMatchThreshold
         self.ocrGroundTruthSimilarity = ocrGroundTruthSimilarity
+        self.ocrLegacySimilarity = ocrLegacySimilarity
+        self.wordOrderPreserved = wordOrderPreserved
         self.ocrQualityLabel = ocrQualityLabel
         self.translatedText = translatedText
         self.translationCandidate = translationCandidate
@@ -473,6 +496,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
     var bubbleSeedDebugImage: String?
     var bubbleTextOverlayImage: String?
     var probeContactSheetImage: String?
+    var cleanTextDiagnosticFile: String?
 
     init(
         debugBoxesImage: String,
@@ -487,7 +511,8 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
         bubbleCropsImage: String? = nil,
         bubbleSeedDebugImage: String? = nil,
         bubbleTextOverlayImage: String? = nil,
-        probeContactSheetImage: String? = nil
+        probeContactSheetImage: String? = nil,
+        cleanTextDiagnosticFile: String? = nil
     ) {
         self.debugBoxesImage = debugBoxesImage
         self.overlayImage = overlayImage
@@ -502,6 +527,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
         self.bubbleSeedDebugImage = bubbleSeedDebugImage
         self.bubbleTextOverlayImage = bubbleTextOverlayImage
         self.probeContactSheetImage = probeContactSheetImage
+        self.cleanTextDiagnosticFile = cleanTextDiagnosticFile
     }
 }
 
@@ -520,6 +546,11 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
     var rawOutputRepeatedOriginalBlocks: Int
     var rawOutputNonChineseBlocks: Int
     var averageOCRGroundTruthSimilarity: Double
+    var averageCoreDialogueOCRSimilarity: Double
+    var averageDecorativeOCRSimilarity: Double
+    var groundTruthMatchedBlocks: Int
+    var groundTruthUnmatchedBlocks: Int
+    var wordOrderFailedBlocks: [Int]
     var lowOCRSimilarityBlocks: [Int]
     var likelyOCRIssueBlocks: [Int]
     var likelyRuleFalseFailureBlocks: [Int]
@@ -535,6 +566,7 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
     var deterministicCorrectionTranslationTestedBlocks: [Int]
     var deterministicCorrectionTranslationPassedBlocks: [Int]
     var deterministicCorrectionTranslationFailedBlocks: [Int]
+    var repeatedKeywordFailures: [String: Int]
 
     static let empty = MangaOverlayProbeDiagnostics(
         passedBlocks: 0,
@@ -551,6 +583,11 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
         rawOutputRepeatedOriginalBlocks: 0,
         rawOutputNonChineseBlocks: 0,
         averageOCRGroundTruthSimilarity: 0,
+        averageCoreDialogueOCRSimilarity: 0,
+        averageDecorativeOCRSimilarity: 0,
+        groundTruthMatchedBlocks: 0,
+        groundTruthUnmatchedBlocks: 0,
+        wordOrderFailedBlocks: [],
         lowOCRSimilarityBlocks: [],
         likelyOCRIssueBlocks: [],
         likelyRuleFalseFailureBlocks: [],
@@ -565,7 +602,8 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
         deterministicCorrectionAverageSimilarity: 0,
         deterministicCorrectionTranslationTestedBlocks: [],
         deterministicCorrectionTranslationPassedBlocks: [],
-        deterministicCorrectionTranslationFailedBlocks: []
+        deterministicCorrectionTranslationFailedBlocks: [],
+        repeatedKeywordFailures: [:]
     )
 }
 
@@ -599,6 +637,8 @@ struct MangaOverlayFrameworkMetrics: Equatable, Codable, Sendable {
     var totalBlocksDetected: Int
     var processingTimeMs: Int
     var accuracyVsGroundTruth: Double
+    var matchedGroundTruthCount: Int
+    var unmatchedBlockCount: Int
 }
 
 struct MangaOverlayBubbleResult: Equatable, Codable, Sendable {
@@ -607,18 +647,47 @@ struct MangaOverlayBubbleResult: Equatable, Codable, Sendable {
     var source: String
     var text: String
     var bestGroundTruthIndex: Int?
+    var bestGroundTruthType: String?
+    var groundTruthMatch: String
     var bestSimilarity: Double
+    var legacySimilarity: Double?
+    var wordOrderPreserved: Bool?
 }
 
 struct MangaOverlayFrameworkComparison: Equatable, Codable, Sendable {
-    var groundTruth: [String]
+    var groundTruth: [MangaGroundTruthEntry]
+    var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
     var bubbleFirst: MangaOverlayFrameworkMetrics
     var blocksOnlyInWholePage: [String]
     var blocksOnlyInBubbleFirst: [String]
     var blocksFoundByBoth: Int
+    var matchedGroundTruthUnionCount: Int
+    var consistencyPassed: Bool
+    var consistencyWarnings: [String]
     var bubbleResults: [MangaOverlayBubbleResult]
     var notes: [String]
+}
+
+struct MangaCleanTextDiagnosticCase: Equatable, Codable, Sendable {
+    var index: Int
+    var groundTruthType: String
+    var text: String
+    var prompt: String
+    var rawOutput: String
+    var translationCandidate: String
+    var passed: Bool
+    var failureReasons: [String]
+}
+
+struct MangaCleanTextDiagnosticReport: Equatable, Codable, Sendable {
+    var source: String
+    var promptTemplate: String
+    var totalCases: Int
+    var passedCases: Int
+    var failedCases: Int
+    var passRate: Double
+    var cases: [MangaCleanTextDiagnosticCase]
 }
 
 struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
@@ -632,6 +701,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var lexiconComparison: MangaOverlayLexiconComparison?
     var visionAPIComparison: MangaOverlayVisionAPIComparison?
     var frameworkComparison: MangaOverlayFrameworkComparison?
+    var cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
     var overallPassed: Bool
     var outputFiles: MangaOverlayProbeOutputFiles
     var outputDirectoryCleaned: Bool

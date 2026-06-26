@@ -358,7 +358,7 @@ struct MangaOverlayProbeService: Sendable {
 
     func runBubbleFirstProbe(
         imageData: Data,
-        groundTruth: [String],
+        groundTruth: [MangaGroundTruthEntry],
         preprocessing: MangaOverlayPreprocessingOptions,
         customWords: [String],
         outputDirectory: URL,
@@ -387,13 +387,19 @@ struct MangaOverlayProbeService: Sendable {
                     source: result.source,
                     text: result.text,
                     bestGroundTruthIndex: result.bestGroundTruthIndex,
-                    bestSimilarity: result.bestSimilarity
+                    bestGroundTruthType: result.bestGroundTruthType,
+                    groundTruthMatch: result.groundTruthMatch,
+                    bestSimilarity: result.bestSimilarity,
+                    legacySimilarity: result.legacySimilarity,
+                    wordOrderPreserved: result.wordOrderPreserved
                 )
             }
 
-            let bubbleTexts = results.map(\.text).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            let bubbleAccuracy = Self.averageBestSimilarity(texts: bubbleTexts, groundTruth: groundTruth)
-            let processingTime = Int(Date.now.timeIntervalSince(start) * 1000)
+            let bubbleMetrics = Self.frameworkMetrics(
+                texts: results.map(\.text),
+                groundTruth: groundTruth,
+                processingTimeMs: Int(Date.now.timeIntervalSince(start) * 1000)
+            )
             let debugURL = outputDirectory.appendingPathComponent("1_bubble_debug.png")
             let cropsURL = outputDirectory.appendingPathComponent("1_bubble_crops.png")
             let seedDebugURL = outputDirectory.appendingPathComponent("1_bubble_seed_debug.png")
@@ -408,15 +414,21 @@ struct MangaOverlayProbeService: Sendable {
             try Self.writePNG(textOverlayImage, to: textOverlayURL)
             let comparison = MangaOverlayFrameworkComparison(
                 groundTruth: groundTruth,
-                wholePage: MangaOverlayFrameworkMetrics(totalBlocksDetected: 0, processingTimeMs: 0, accuracyVsGroundTruth: 0),
-                bubbleFirst: MangaOverlayFrameworkMetrics(
-                    totalBlocksDetected: results.count,
-                    processingTimeMs: processingTime,
-                    accuracyVsGroundTruth: bubbleAccuracy
+                comparisonUnit: "trustedGroundTruthMatches",
+                wholePage: MangaOverlayFrameworkMetrics(
+                    totalBlocksDetected: 0,
+                    processingTimeMs: 0,
+                    accuracyVsGroundTruth: 0,
+                    matchedGroundTruthCount: 0,
+                    unmatchedBlockCount: 0
                 ),
+                bubbleFirst: bubbleMetrics,
                 blocksOnlyInWholePage: [],
                 blocksOnlyInBubbleFirst: [],
                 blocksFoundByBoth: 0,
+                matchedGroundTruthUnionCount: 0,
+                consistencyPassed: true,
+                consistencyWarnings: [],
                 bubbleResults: results,
                 notes: [
                     "bubble-first is independent probe path; it does not replace whole-page OCR",
@@ -462,12 +474,15 @@ struct MangaOverlayProbeService: Sendable {
             let similarity = block.ocrGroundTruthSimilarity.map {
                 $0.formatted(.number.precision(.fractionLength(3)))
             } ?? "nil"
+            let legacySimilarity = block.ocrLegacySimilarity.map {
+                $0.formatted(.number.precision(.fractionLength(3)))
+            } ?? "nil"
             let translation = block.translationCandidate.replacing("\n", with: " / ")
             let rawOutput = block.rawOutput.replacing("\n", with: " / ")
             let deterministicTranslation = block.deterministicCorrectionTranslationCandidate?.replacing("\n", with: " / ") ?? "nil"
             let deterministicTranslationRaw = block.deterministicCorrectionTranslationRawOutput?.replacing("\n", with: " / ") ?? "nil"
             return """
-            #\(block.index) bbox=[\(bbox)] angle=\(block.rotationAngleUsed) ocrSimilarity=\(similarity) blockPassed=\(block.blockPassed)
+            #\(block.index) bbox=[\(bbox)] angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
             rawOCR: \(raw)
             afterPreprocessing: \(preprocessed)
             finalForTranslation: \(final)
@@ -499,7 +514,7 @@ struct MangaOverlayProbeService: Sendable {
         image: CGImage,
         preprocessing: MangaOverlayPreprocessingOptions,
         customWords: [String],
-        groundTruth: [String]
+        groundTruth: [MangaGroundTruthEntry]
     ) throws -> [MangaOverlayBubbleResult] {
         let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
         let cropRect = expand(bubble.boundingBox, by: 0.08, bounds: bounds).integral
@@ -561,7 +576,11 @@ struct MangaOverlayProbeService: Sendable {
                 source: "\(bubble.source):split",
                 text: block.text,
                 bestGroundTruthIndex: match.index,
-                bestSimilarity: match.similarity
+                bestGroundTruthType: match.entry?.type,
+                groundTruthMatch: match.matchState,
+                bestSimilarity: match.similarity,
+                legacySimilarity: match.legacySimilarity,
+                wordOrderPreserved: match.wordOrderPreserved
             )
         }
     }
@@ -1355,38 +1374,143 @@ struct MangaOverlayProbeService: Sendable {
         }
     }
 
-    static func bestGroundTruthMatch(text: String, groundTruth: [String]) -> (index: Int?, similarity: Double) {
-        let normalizedText = normalizedOCRText(text)
-        guard !normalizedText.isEmpty else { return (nil, 0) }
+    static let groundTruthMatchThreshold = 0.42
+
+    struct GroundTruthMatch: Equatable, Sendable {
+        var index: Int?
+        var entry: MangaGroundTruthEntry?
+        var similarity: Double
+        var legacySimilarity: Double
+        var wordOrderPreserved: Bool?
+        var matchState: String
+    }
+
+    static func bestGroundTruthMatch(
+        text: String,
+        groundTruth: [MangaGroundTruthEntry],
+        threshold: Double = groundTruthMatchThreshold
+    ) -> GroundTruthMatch {
+        let words = normalizedWords(text)
+        guard !words.isEmpty else {
+            return GroundTruthMatch(index: nil, entry: nil, similarity: 0, legacySimilarity: 0, wordOrderPreserved: nil, matchState: "unmatched")
+        }
         var bestIndex: Int?
+        var bestEntry: MangaGroundTruthEntry?
         var bestScore = 0.0
+        var bestLegacyScore = 0.0
+        var bestWordOrder: Bool?
         for (index, truth) in groundTruth.enumerated() {
-            let score = textSimilarity(normalizedText, normalizedOCRText(truth))
+            let score = wordLevelSimilarity(words, normalizedWords(truth.text))
             if score > bestScore {
                 bestScore = score
+                bestLegacyScore = textSimilarity(normalizedOCRText(text), normalizedOCRText(truth.text))
+                bestWordOrder = wordOrderPreserved(ocrWords: words, truthWords: normalizedWords(truth.text))
                 bestIndex = index
+                bestEntry = truth
             }
         }
-        return (bestIndex, bestScore)
-    }
-
-    static func averageBestSimilarity(texts: [String], groundTruth: [String]) -> Double {
-        guard !groundTruth.isEmpty else { return 0 }
-        let scores = groundTruth.map { truth in
-            texts.map { textSimilarity(normalizedOCRText($0), normalizedOCRText(truth)) }.max() ?? 0
+        if bestScore < threshold {
+            return GroundTruthMatch(
+                index: nil,
+                entry: nil,
+                similarity: bestScore,
+                legacySimilarity: bestLegacyScore,
+                wordOrderPreserved: bestWordOrder,
+                matchState: "unmatched"
+            )
         }
-        return scores.reduce(0, +) / Double(scores.count)
+        return GroundTruthMatch(
+            index: bestIndex,
+            entry: bestEntry,
+            similarity: bestScore,
+            legacySimilarity: bestLegacyScore,
+            wordOrderPreserved: bestWordOrder,
+            matchState: "matched"
+        )
     }
 
-    static func matchedGroundTruthIndexes(texts: [String], groundTruth: [String], threshold: Double = 0.55) -> Set<Int> {
+    static func frameworkMetrics(
+        texts: [String],
+        groundTruth: [MangaGroundTruthEntry],
+        processingTimeMs: Int
+    ) -> MangaOverlayFrameworkMetrics {
+        let matches = texts.map { bestGroundTruthMatch(text: $0, groundTruth: groundTruth) }
+        let matched = matches.filter { $0.index != nil }
+        let dialogueScores = matched.filter { $0.entry?.type == MangaGroundTruthEntry.dialogueType }.map(\.similarity)
+        let scores = dialogueScores.isEmpty ? matched.map(\.similarity) : dialogueScores
+        let average = scores.isEmpty ? 0 : scores.reduce(0, +) / Double(scores.count)
+        return MangaOverlayFrameworkMetrics(
+            totalBlocksDetected: texts.count,
+            processingTimeMs: processingTimeMs,
+            accuracyVsGroundTruth: average,
+            matchedGroundTruthCount: matched.count,
+            unmatchedBlockCount: matches.count - matched.count
+        )
+    }
+
+    static func matchedGroundTruthIndexes(
+        texts: [String],
+        groundTruth: [MangaGroundTruthEntry],
+        types: Set<String> = [MangaGroundTruthEntry.dialogueType]
+    ) -> Set<Int> {
         var matched = Set<Int>()
         for text in texts {
             let match = bestGroundTruthMatch(text: text, groundTruth: groundTruth)
-            if let index = match.index, match.similarity >= threshold {
+            if let index = match.index,
+               let type = match.entry?.type,
+               types.contains(type) {
                 matched.insert(index)
             }
         }
         return matched
+    }
+
+    private static func normalizedWords(_ text: String) -> [String] {
+        text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+    }
+
+    private static func wordLevelSimilarity(_ lhs: [String], _ rhs: [String]) -> Double {
+        guard !lhs.isEmpty || !rhs.isEmpty else { return 1 }
+        let distance = levenshteinDistance(lhs, rhs)
+        return max(0, 1 - Double(distance) / Double(max(lhs.count, rhs.count, 1)))
+    }
+
+    private static func wordOrderPreserved(ocrWords: [String], truthWords: [String]) -> Bool? {
+        let matchedTruthIndexes = ocrWords.compactMap { ocrWord in
+            truthWords.firstIndex { truthWord in
+                truthWord == ocrWord || correctionWordSimilarity(ocrWord, truthWord) >= 0.74
+            }
+        }
+        guard matchedTruthIndexes.count >= 3 else { return nil }
+        return zip(matchedTruthIndexes, matchedTruthIndexes.dropFirst()).allSatisfy { $0 <= $1 }
+    }
+
+    private static func correctionWordSimilarity(_ lhs: String, _ rhs: String) -> Double {
+        guard !lhs.isEmpty || !rhs.isEmpty else { return 1 }
+        let distance = levenshteinDistance(Array(lhs), Array(rhs))
+        return 1 - Double(distance) / Double(max(max(lhs.count, rhs.count), 1))
+    }
+
+    private static func levenshteinDistance<T: Equatable>(_ lhs: [T], _ rhs: [T]) -> Int {
+        if lhs.isEmpty { return rhs.count }
+        if rhs.isEmpty { return lhs.count }
+        var previous = Array(0...rhs.count)
+        var current = Array(repeating: 0, count: rhs.count + 1)
+        for lhsIndex in 1...lhs.count {
+            current[0] = lhsIndex
+            for rhsIndex in 1...rhs.count {
+                let cost = lhs[lhsIndex - 1] == rhs[rhsIndex - 1] ? 0 : 1
+                current[rhsIndex] = min(
+                    previous[rhsIndex] + 1,
+                    current[rhsIndex - 1] + 1,
+                    previous[rhsIndex - 1] + cost
+                )
+            }
+            swap(&previous, &current)
+        }
+        return previous[rhs.count]
     }
 
     private static func drawBubbleDebug(on image: CGImage, bubbles: [MangaOverlayBubbleCandidate]) throws -> CGImage {
