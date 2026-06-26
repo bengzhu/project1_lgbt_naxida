@@ -2,1413 +2,428 @@
   "blocks" : [
     {
       "bbox" : [
-        506,
-        334,
-        42,
-        12
+        499,
+        328,
+        53,
+        68
       ],
       "blockPassed" : false,
       "checks" : {
-        "looksLikeChinese" : false,
+        "looksLikeChinese" : true,
         "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
+        "translationHasEnoughChinese" : true,
+        "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : false
       },
-      "id" : "C3AC8DCC-3BD6-4701-8D27-C4573C7821D2",
+      "failureReasons" : [
+        "翻译是占位答复"
+      ],
+      "id" : "AA22F952-B336-412A-8150-BB94FECAAC74",
       "index" : 0,
       "ocrConfidence" : 1,
-      "ocrText" : "THAT'S",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT'S\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nThat's\n",
+      "ocrText" : "THAT'S\nRIGHT,\nNOW\nI'M-",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT'S\nRIGHT,\nNOW\nI'M-\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "cjkCharacters=8"
+      ],
+      "rawOutput" : "\n以下是翻译成中文：\n\n*   **THAT'S**\n*   **RIGHT**\n*   **NOW**\n*   **I'M**",
       "rotationAngleUsed" : 0,
-      "translatedText" : "That's"
+      "translatedText" : "翻译失败\nTHAT'S\nRIGHT,\nNOW\nI'M-",
+      "translationCandidate" : "以下是翻译成中文："
     },
     {
       "bbox" : [
-        508,
-        346,
-        36,
-        12
+        112,
+        353,
+        57,
+        60
       ],
-      "blockPassed" : true,
+      "blockPassed" : false,
       "checks" : {
-        "looksLikeChinese" : true,
+        "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
+        "translationHasEnoughChinese" : false,
+        "translationNotContainOriginal" : false,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
+        "translationNotEqualOriginal" : false,
+        "translationNotPlaceholder" : true
       },
-      "id" : "8645174B-524E-4BB7-A10B-EED52CE0BF61",
+      "failureReasons" : [
+        "翻译等于原文",
+        "翻译包含完整原文",
+        "中文字符不足",
+        "翻译不像中文"
+      ],
+      "id" : "861C64AE-A239-4547-8680-4ECFFB2220DB",
       "index" : 1,
       "ocrConfidence" : 1,
-      "ocrText" : "RIGHT,",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nRIGHT,\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n右，\n",
+      "ocrText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nIVE ARRIVED AT REN- SENPAI'S HOUSE.\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "translationContainsFullOCRText",
+        "latinLetters=27"
+      ],
+      "rawOutput" : "\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
       "rotationAngleUsed" : 0,
-      "translatedText" : "右，"
+      "translatedText" : "翻译失败\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "translationCandidate" : "IVE ARRIVED AT REN- SENPAI'S HOUSE."
     },
     {
       "bbox" : [
-        120,
-        367,
-        42,
-        11
+        493,
+        557,
+        54,
+        44
       ],
-      "blockPassed" : false,
+      "blockPassed" : true,
       "checks" : {
-        "looksLikeChinese" : false,
+        "looksLikeChinese" : true,
         "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
+        "translationHasEnoughChinese" : true,
+        "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
       },
-      "id" : "88204FDD-647E-412E-B980-F839BE59EA5C",
+      "failureReasons" : [
+
+      ],
+      "id" : "BD8D89A3-BE74-4865-9132-BB75463A1751",
       "index" : 2,
       "ocrConfidence" : 1,
-      "ocrText" : "ARRIVED",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nARRIVED\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nARRIVED",
+      "ocrText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHE CITY RATTLER\nSTATE IN A PEN DAYS.\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "cjkCharacters=4"
+      ],
+      "rawOutput" : "\n**城市鼠狸**\n**州立鼠狸**\n",
       "rotationAngleUsed" : 0,
-      "translatedText" : "ARRIVED"
+      "translatedText" : "州立鼠狸",
+      "translationCandidate" : "州立鼠狸"
     },
     {
       "bbox" : [
-        130,
-        358,
-        22,
-        12
+        65,
+        677,
+        49,
+        65
       ],
       "blockPassed" : true,
       "checks" : {
         "looksLikeChinese" : true,
         "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : true,
         "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
       },
-      "id" : "C7272D6C-6317-4508-843D-27352092E8F5",
+      "failureReasons" : [
+
+      ],
+      "id" : "5145DF6B-CC36-4A40-AC1B-C6526768246D",
       "index" : 3,
       "ocrConfidence" : 1,
-      "ocrText" : "I'vE",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nI'vE\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n我\n",
-      "rotationAngleUsed" : 90,
-      "translatedText" : "我"
+      "ocrText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT'S\nWE'RE WHY\nTRANINS SPECIAL\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "cjkCharacters=4"
+      ],
+      "rawOutput" : "\n那是什么？\n",
+      "rotationAngleUsed" : 0,
+      "translatedText" : "那是什么？",
+      "translationCandidate" : "那是什么？"
     },
     {
       "bbox" : [
-        510,
-        358,
-        34,
-        10
+        235,
+        861,
+        56,
+        135
       ],
-      "blockPassed" : true,
+      "blockPassed" : false,
       "checks" : {
-        "looksLikeChinese" : true,
+        "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : false,
         "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
       },
-      "id" : "599BEA0A-358E-48BD-81F8-EF923EBE6FD2",
+      "failureReasons" : [
+        "中文字符不足",
+        "翻译不像中文"
+      ],
+      "id" : "39556E6C-8F18-4ED0-9808-74B161168F33",
       "index" : 4,
       "ocrConfidence" : 1,
-      "ocrText" : "RIGHT",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nRIGHT\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n右\n",
+      "ocrText" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "latinLetters=10"
+      ],
+      "rawOutput" : " | THOUSH EVEN\n",
       "rotationAngleUsed" : 0,
-      "translatedText" : "右"
+      "translatedText" : "翻译失败\nTHOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
+      "translationCandidate" : "THOUSH EVEN"
     },
     {
       "bbox" : [
-        118,
-        386,
-        46,
-        12
+        362,
+        849,
+        101,
+        55
       ],
-      "blockPassed" : false,
+      "blockPassed" : true,
       "checks" : {
-        "looksLikeChinese" : false,
+        "looksLikeChinese" : true,
         "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
+        "translationHasEnoughChinese" : true,
+        "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
       },
-      "id" : "17DB8002-8DC9-4D7F-8B34-897E16C1B085",
+      "failureReasons" : [
+
+      ],
+      "id" : "5F56AF18-3C59-44DE-90F8-B8E0E9C8606D",
       "index" : 5,
       "ocrConfidence" : 1,
-      "ocrText" : "SENPAI'S",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nSENPAI'S\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nSENPAI'S\n",
+      "ocrText" : "LET'S\nBATTLER!",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nLET'S\nBATTLER!\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "cjkCharacters=3"
+      ],
+      "rawOutput" : "\n以下是翻译成中文：\n\n**让我们**\n**BATTLER!**\n",
       "rotationAngleUsed" : 0,
-      "translatedText" : "SENPAI'S"
+      "translatedText" : "让我们",
+      "translationCandidate" : "让我们"
     },
     {
       "bbox" : [
-        122,
-        380,
-        38,
-        6
+        152,
+        903,
+        68,
+        56
       ],
-      "blockPassed" : true,
+      "blockPassed" : false,
       "checks" : {
-        "looksLikeChinese" : true,
+        "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
+        "translationHasEnoughChinese" : false,
+        "translationNotContainOriginal" : false,
+        "translationNotEmpty" : false,
+        "translationNotEqualOriginal" : false,
+        "translationNotPlaceholder" : false
       },
-      "id" : "601CD451-BB3A-4225-B053-4D1546DB427F",
+      "failureReasons" : [
+        "翻译为空",
+        "翻译等于原文",
+        "翻译包含完整原文",
+        "翻译是占位答复",
+        "中文字符不足",
+        "翻译不像中文"
+      ],
+      "id" : "0AA5B0BD-96C0-4652-A000-E1C3610364B7",
       "index" : 6,
       "ocrConfidence" : 1,
-      "ocrText" : "AIKEN-",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nAIKEN-\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : " | 机器学习\n",
-      "rotationAngleUsed" : 270,
-      "translatedText" : "| 机器学习"
-    },
-    {
-      "bbox" : [
-        512,
-        368,
-        30,
-        10
+      "ocrText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "translationContainsFullOCRText"
       ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "0E4B9CA5-5FE9-4485-8F4F-B61A8755C02B",
-      "index" : 7,
-      "ocrConfidence" : 1,
-      "ocrText" : "NOW",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nNOW\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n现在\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "现在"
-    },
-    {
-      "bbox" : [
-        514,
-        378,
-        28,
-        12
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "0A8ACBD6-E177-4AE7-BFCC-DCBEC8A68ADD",
-      "index" : 8,
-      "ocrConfidence" : 1,
-      "ocrText" : "I'M-",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nI'M-\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n我是一个\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "我是一个"
-    },
-    {
-      "bbox" : [
-        122,
-        394,
-        38,
-        12
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "27953254-C7FA-455A-A6B0-21DCECD93EE3",
-      "index" : 9,
-      "ocrConfidence" : 1,
-      "ocrText" : "HOUSE.",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nHOUSE.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nHOUSE\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "HOUSE"
-    },
-    {
-      "bbox" : [
-        78,
-        682,
-        26,
-        8
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "9F442D84-83CA-4867-891E-FD5D23771A75",
-      "index" : 10,
-      "ocrConfidence" : 1,
-      "ocrText" : "THAT'S",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT'S\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nThat's\n",
-      "rotationAngleUsed" : 270,
-      "translatedText" : "That's"
-    },
-    {
-      "bbox" : [
-        380,
-        856,
-        52,
-        18
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "2AEFAF8D-13EA-4410-BC80-B5EE94B188F4",
-      "index" : 11,
-      "ocrConfidence" : 1,
-      "ocrText" : "LET'S",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nLET'S\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n请将以下翻译成中文：\n**让我们**\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "请将以下翻译成中文：\n**让我们**"
-    },
-    {
-      "bbox" : [
-        244,
-        874,
-        40,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "B05723FF-B465-4314-A02B-86944963B417",
-      "index" : 12,
-      "ocrConfidence" : 1,
-      "ocrText" : "THOUSH",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHOUSH\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nTHOUSH\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "THOUSH"
-    },
-    {
-      "bbox" : [
-        250,
-        866,
-        26,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "536E54B9-9080-4B04-A30F-D691FC145ED7",
-      "index" : 13,
-      "ocrConfidence" : 1,
-      "ocrText" : "EVEN",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nEVEN\n<end_of_turn>\n<start_of_turn>model",
       "rawOutput" : " | \n",
       "rotationAngleUsed" : 0,
-      "translatedText" : "|"
+      "translatedText" : "翻译失败\nTHIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
+      "translationCandidate" : ""
     },
     {
       "bbox" : [
-        246,
-        882,
-        30,
-        12
+        501,
+        901,
+        57,
+        50
       ],
-      "blockPassed" : true,
+      "blockPassed" : false,
       "checks" : {
         "looksLikeChinese" : true,
         "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : true,
         "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : false
       },
-      "id" : "2A47FB44-0AB6-4675-AADD-3356FAF5CF65",
-      "index" : 14,
-      "ocrConfidence" : 1,
-      "ocrText" : "I SAID",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nI SAID\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n我说了\n",
-      "rotationAngleUsed" : 90,
-      "translatedText" : "我说了"
-    },
-    {
-      "bbox" : [
-        366,
-        877,
-        92,
-        21
+      "failureReasons" : [
+        "翻译是占位答复"
       ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "EACDE270-7903-49BB-8A8B-EA16AA15D583",
-      "index" : 15,
+      "id" : "8EFE1500-AF15-4D7A-BAE2-65FAD6FF7322",
+      "index" : 7,
       "ocrConfidence" : 1,
-      "ocrText" : "BATTLER!",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nBATTLER!\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : " | BATTLER!\n",
+      "ocrText" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nGET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "cjkCharacters=12"
+      ],
+      "rawOutput" : " | \n请提供您想翻译的中文句子。",
       "rotationAngleUsed" : 0,
-      "translatedText" : "| BATTLER!"
+      "translatedText" : "翻译失败\nGET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
+      "translationCandidate" : "请提供您想翻译的中文句子。"
     },
     {
       "bbox" : [
-        164,
-        908,
-        46,
-        16
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "298541D9-9040-4CA4-9C75-F2EA6E6A0A0B",
-      "index" : 16,
-      "ocrConfidence" : 0.3,
-      "ocrText" : "TORINN",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTORINN\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nTORINN\n",
-      "rotationAngleUsed" : 270,
-      "translatedText" : "TORINN"
-    },
-    {
-      "bbox" : [
-        250,
-        900,
-        26,
-        10
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "0A5307C4-1312-48FC-9AE0-CEA76D54BB53",
-      "index" : 17,
-      "ocrConfidence" : 1,
-      "ocrText" : "JUST",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nJUST\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n请提供您想要翻译的中文句子。",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "请提供您想要翻译的中文句子。"
-    },
-    {
-      "bbox" : [
-        158,
-        958,
-        56,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "F70C1831-4F8B-4C24-8099-20857372E131",
-      "index" : 18,
-      "ocrConfidence" : 1,
-      "ocrText" : "MEANINGLeSS",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nMEANINGLeSS\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : " | MEANINGLeSS\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "| MEANINGLeSS"
-    },
-    {
-      "bbox" : [
-        160,
-        944,
-        52,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "84CBF4F7-BEF5-413A-A1BF-7C9FEB6CE306",
-      "index" : 19,
-      "ocrConfidence" : 1,
-      "ocrText" : "WOLLO MAKE",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWOLLO MAKE\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nWOLLO MAKE\n",
-      "rotationAngleUsed" : 90,
-      "translatedText" : "WOLLO MAKE"
-    },
-    {
-      "bbox" : [
-        166,
-        930,
-        38,
-        8
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "D1959EB3-8F88-483B-A627-A8B535545421",
-      "index" : 20,
-      "ocrConfidence" : 1,
-      "ocrText" : "DOING IT",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nDOING IT\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n请提供您想要翻译的句子。",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "请提供您想要翻译的句子。"
-    },
-    {
-      "bbox" : [
-        240,
-        918,
         44,
-        8
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "10CA6FA2-BC1C-43CE-8C43-7B87CCA69D5F",
-      "index" : 21,
-      "ocrConfidence" : 1,
-      "ocrText" : "TRAINING",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTRAINING\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n训练\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "训练"
-    },
-    {
-      "bbox" : [
-        244,
-        912,
-        36,
-        6
+        963,
+        73,
+        100
       ],
       "blockPassed" : false,
       "checks" : {
         "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
+        "translationHasEnoughChinese" : false,
+        "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
       },
-      "id" : "21DE5D99-0CA1-435A-B280-419B9AF601EF",
-      "index" : 22,
-      "ocrConfidence" : 0.5,
-      "ocrText" : "OPECIAL",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nOPECIAL\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : " | OPECIAL\n",
-      "rotationAngleUsed" : 270,
-      "translatedText" : "| OPECIAL"
+      "failureReasons" : [
+        "中文字符不足",
+        "翻译不像中文"
+      ],
+      "id" : "CC66F59E-1A4D-4F38-B702-0E16ED3C8CA4",
+      "index" : 8,
+      "ocrConfidence" : 1,
+      "ocrText" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nSUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "latinLetters=5"
+      ],
+      "rawOutput" : "\nSUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
+      "rotationAngleUsed" : 0,
+      "translatedText" : "翻译失败\nSUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
+      "translationCandidate" : "HOUSE."
     },
     {
       "bbox" : [
-        170,
-        938,
-        30,
-        8
+        115,
+        973,
+        41,
+        59
       ],
       "blockPassed" : true,
       "checks" : {
         "looksLikeChinese" : true,
         "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : true,
         "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
       },
-      "id" : "C761174D-20B9-4AA6-8EAA-CAF129527A31",
-      "index" : 23,
+      "failureReasons" : [
+
+      ],
+      "id" : "D0A71FB6-A201-46E1-8410-E91D361ED0B7",
+      "index" : 9,
       "ocrConfidence" : 1,
-      "ocrText" : "ONLINE",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nONLINE\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : " | 实时\n",
+      "ocrText" : "What Whet are\nevery you!\ntalking",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWhat Whet are\nevery you!\ntalking\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "cjkCharacters=2"
+      ],
+      "rawOutput" : "\n翻译成中文：\n\n**什么？**\n\n**every you!**\n\n**talking**\n",
       "rotationAngleUsed" : 0,
-      "translatedText" : "| 实时"
+      "translatedText" : "什么？",
+      "translationCandidate" : "什么？"
     },
     {
       "bbox" : [
-        240,
-        934,
-        44,
-        22
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "7A0C48CB-93E2-4940-81E8-016C68586D7B",
-      "index" : 24,
-      "ocrConfidence" : 1,
-      "ocrText" : "ASKED IF",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nASKED IF\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n请将您提供的文本翻译成中文。\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "请将您提供的文本翻译成中文。"
-    },
-    {
-      "bbox" : [
-        252,
-        926,
-        20,
-        8
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "0CEC5E39-C25B-481E-96E7-E7F0C05C06E5",
-      "index" : 25,
-      "ocrConfidence" : 1,
-      "ocrText" : "AND",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nAND\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n“AND” 翻译成中文是：\n\n*   **“和”**\n*   **“与”**\n*   **“相”**\n\n希望这个翻译对您有帮助！",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "“AND” 翻译成中文是：\n\n*   **“和”**\n*   **“与”**\n*   **“相”**\n\n希望这个翻译对您有帮助！"
-    },
-    {
-      "bbox" : [
-        248,
-        960,
-        28,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "BBA77885-B53E-4963-8166-BA747F299434",
-      "index" : 26,
-      "ocrConfidence" : 1,
-      "ocrText" : "JuST",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nJuST\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nJuST\n",
-      "rotationAngleUsed" : 90,
-      "translatedText" : "JuST"
-    },
-    {
-      "bbox" : [
-        50,
-        976,
-        58,
-        10
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "B5793FFD-03C6-4475-9D13-9187888EAB9D",
-      "index" : 27,
-      "ocrConfidence" : 1,
-      "ocrText" : "SUGGESTION",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nSUGGESTION\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n请提供您想要翻译的句子。",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "请提供您想要翻译的句子。"
-    },
-    {
-      "bbox" : [
-        68,
-        968,
-        20,
-        12
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "71FA3A23-F2CA-4483-89F7-FF02F9F58F6F",
-      "index" : 28,
-      "ocrConfidence" : 1,
-      "ocrText" : "THE",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHE\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n请提供您想要翻译的中文句子。",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "请提供您想要翻译的中文句子。"
-    },
-    {
-      "bbox" : [
-        124,
-        978,
-        22,
-        12
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "B772C740-D05E-4BE4-ACCD-945ECFB316CF",
-      "index" : 29,
-      "ocrConfidence" : 1,
-      "ocrText" : "What",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWhat\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n请提供您想要翻译的中文句子。",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "请提供您想要翻译的中文句子。"
-    },
-    {
-      "bbox" : [
-        244,
-        978,
-        40,
-        10
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "76CF8016-1BDB-4CFF-9366-CBFBFC25315D",
-      "index" : 30,
-      "ocrConfidence" : 1,
-      "ocrText" : "ONLINE...",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nONLINE...\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n在线...\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "在线..."
-    },
-    {
-      "bbox" : [
-        292,
-        966,
-        34,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "A86E4D92-D4F8-410D-B5F5-DDE052B8E354",
-      "index" : 31,
-      "ocrConfidence" : 1,
-      "ocrText" : "-02 AT",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\n-02 AT\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n-02\n",
-      "rotationAngleUsed" : 270,
-      "translatedText" : "-02"
-    },
-    {
-      "bbox" : [
-        56,
-        994,
-        44,
-        8
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "E6FB3C0F-F2D7-4B51-B8EB-40C9D722408D",
-      "index" : 32,
-      "ocrConfidence" : 1,
-      "ocrText" : "OVERRULED",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nOVERRULED\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n以下是翻译：\n\n*   **被过']}\n*   **被过']}\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "以下是翻译：\n\n*   **被过']}\n*   **被过']}"
-    },
-    {
-      "bbox" : [
-        68,
-        984,
-        22,
-        10
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "096A95DF-89D3-466A-9002-4E3F78E8145B",
-      "index" : 33,
-      "ocrConfidence" : 1,
-      "ocrText" : "WAS",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWAS\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n请提供您想要翻译的中文句子。",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "请提供您想要翻译的中文句子。"
-    },
-    {
-      "bbox" : [
-        294,
-        974,
-        26,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "C1A300A1-910F-42E9-92D0-265578808C2A",
-      "index" : 34,
-      "ocrConfidence" : 0.5,
-      "ocrText" : "1svan",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\n1svan\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : " | 1svan\n",
-      "rotationAngleUsed" : 180,
-      "translatedText" : "| 1svan"
-    },
-    {
-      "bbox" : [
-        390,
-        984,
-        92,
-        21
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "1007FCD9-67D1-4E11-B800-9B668BFDB0FB",
-      "index" : 35,
-      "ocrConfidence" : 1,
-      "ocrText" : "City Battler",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nCity Battler\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n城市战士\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "城市战士"
-    },
-    {
-      "bbox" : [
+        281,
+        961,
         54,
-        1016,
-        50,
-        10
+        76
+      ],
+      "blockPassed" : false,
+      "checks" : {
+        "looksLikeChinese" : false,
+        "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : false,
+        "translationNotContainOriginal" : true,
+        "translationNotEmpty" : true,
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
+      },
+      "failureReasons" : [
+        "中文字符不足",
+        "翻译不像中文"
+      ],
+      "id" : "74115403-218D-40FE-BADC-2EA25F7FF1CB",
+      "index" : 10,
+      "ocrConfidence" : 1,
+      "ocrText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\n-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "latinLetters=19"
+      ],
+      "rawOutput" : " | -O2 AT LEAST. -02 AT\nThat seems to be\nSENPAIS SENPArS LOSIC.\n",
+      "rotationAngleUsed" : 0,
+      "translatedText" : "翻译失败\n-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
+      "translationCandidate" : "SENPAIS SENPArS LOSIC."
+    },
+    {
+      "bbox" : [
+        385,
+        978,
+        106,
+        64
       ],
       "blockPassed" : true,
       "checks" : {
         "looksLikeChinese" : true,
         "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : true,
         "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
       },
-      "id" : "C4525467-1F79-4910-9ED9-0C7E4BCDBFC8",
-      "index" : 36,
+      "failureReasons" : [
+
+      ],
+      "id" : "B6BBB065-BD4D-4C4B-B880-B5648F8F4207",
+      "index" : 11,
       "ocrConfidence" : 1,
-      "ocrText" : "THAT I'O BE",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT I'O BE\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n我就是\n",
+      "ocrText" : "City Battler\nOffline.\nTournament",
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nCity Battler\nOffline.\nTournament\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "cjkCharacters=4"
+      ],
+      "rawOutput" : " | 城市战役\n",
       "rotationAngleUsed" : 0,
-      "translatedText" : "我就是"
-    },
-    {
-      "bbox" : [
-        58,
-        1002,
-        44,
-        8
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "E87C8CBD-AE17-4D1D-946C-247389EB5B80",
-      "index" : 37,
-      "ocrConfidence" : 1,
-      "ocrText" : "NO IT WAS",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nNO IT WAS\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n**NO IT WAS**\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "**NO IT WAS**"
-    },
-    {
-      "bbox" : [
-        292,
-        990,
-        32,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "0610C711-1C40-4335-9578-AA25D9536175",
-      "index" : 38,
-      "ocrConfidence" : 1,
-      "ocrText" : "SEEMS",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nSEEMS\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nSEEMS\n",
-      "rotationAngleUsed" : 270,
-      "translatedText" : "SEEMS"
-    },
-    {
-      "bbox" : [
-        298,
-        982,
-        22,
-        8
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "37F249AA-FF4C-4BEB-9975-EFA9C83E4C77",
-      "index" : 39,
-      "ocrConfidence" : 0.3,
-      "ocrText" : "SVRL",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nSVRL\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nSVRL\n",
-      "rotationAngleUsed" : 180,
-      "translatedText" : "SVRL"
-    },
-    {
-      "bbox" : [
-        60,
-        1010,
-        38,
-        8
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "5B664E00-9D19-476C-A8CD-78234DCCEAEF",
-      "index" : 40,
-      "ocrConfidence" : 1,
-      "ocrText" : "DECIDED",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nDECIDED\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nDECIDED",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "DECIDED"
-    },
-    {
-      "bbox" : [
-        128,
-        998,
-        16,
-        10
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "DE3ADE32-A9C8-47BD-B95D-3077BEBCC71D",
-      "index" : 41,
-      "ocrConfidence" : 1,
-      "ocrText" : "you",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nyou\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n你\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "你"
-    },
-    {
-      "bbox" : [
-        294,
-        998,
-        28,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "E2F3450C-2064-4337-AD88-4B188A996452",
-      "index" : 42,
-      "ocrConfidence" : 1,
-      "ocrText" : "38 01",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\n38 01\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n38 01\n",
-      "rotationAngleUsed" : 180,
-      "translatedText" : "38 01"
-    },
-    {
-      "bbox" : [
-        408,
-        1002,
-        74,
-        20
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "188F0521-843F-47E4-8796-97E5DDD9BE69",
-      "index" : 43,
-      "ocrConfidence" : 1,
-      "ocrText" : "Offline.",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nOffline.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n**Offline**\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "**Offline**"
-    },
-    {
-      "bbox" : [
-        50,
-        1032,
-        60,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "6EAF62E8-9260-4957-9F54-5552AA04E3C4",
-      "index" : 44,
-      "ocrConfidence" : 1,
-      "ocrText" : "OVER AT REN-",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nOVER AT REN-\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n**OVER AT REN**\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "**OVER AT REN**"
-    },
-    {
-      "bbox" : [
-        60,
-        1026,
-        38,
-        8
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "8AA35316-C6BC-45C2-9BA8-94E7E88FA50C",
-      "index" : 45,
-      "ocrConfidence" : 1,
-      "ocrText" : "STAYING",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nSTAYING\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n**保持**\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "**保持**"
-    },
-    {
-      "bbox" : [
-        122,
-        1014,
-        28,
-        12
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "FF972D09-8444-4853-A4F6-2A147CA564C6",
-      "index" : 46,
-      "ocrConfidence" : 1,
-      "ocrText" : "talking",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\ntalking\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n话语\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "话语"
-    },
-    {
-      "bbox" : [
-        296,
-        1006,
-        24,
-        8
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "669F7EB9-AF1A-4B13-ACF0-E1E4E849AB9F",
-      "index" : 47,
-      "ocrConfidence" : 1,
-      "ocrText" : "-N30",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\n-N30\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n-N30\n",
-      "rotationAngleUsed" : 180,
-      "translatedText" : "-N30"
-    },
-    {
-      "bbox" : [
-        294,
-        1022,
-        30,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "D5CB111A-4286-4E8E-9BFF-E2FC32ED3C3A",
-      "index" : 48,
-      "ocrConfidence" : 1,
-      "ocrText" : "LOSIC.",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nLOSIC.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : " | LOSIC\n",
-      "rotationAngleUsed" : 90,
-      "translatedText" : "| LOSIC"
-    },
-    {
-      "bbox" : [
-        392,
-        1022,
-        94,
-        14
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "9195E3CC-4A64-449F-8065-841EEC2D9E9C",
-      "index" : 49,
-      "ocrConfidence" : 1,
-      "ocrText" : "Tournament",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTournament\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nTournament\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "Tournament"
-    },
-    {
-      "bbox" : [
-        60,
-        1042,
-        38,
-        9
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "D8753F51-F8F0-4597-AEA7-C4252F6540E9",
-      "index" : 50,
-      "ocrConfidence" : 1,
-      "ocrText" : "SENPATS",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nSENPATS\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : " | SENPATS\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "| SENPATS"
-    },
-    {
-      "bbox" : [
-        126,
-        1028,
-        24,
-        6
-      ],
-      "blockPassed" : true,
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true
-      },
-      "id" : "5A81216F-0526-4786-BA24-60E02A52CDF9",
-      "index" : 51,
-      "ocrConfidence" : 0.5,
-      "ocrText" : "DOUTS",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nDOUTS\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n请提供您想要翻译的中文句子。",
-      "rotationAngleUsed" : 270,
-      "translatedText" : "请提供您想要翻译的中文句子。"
-    },
-    {
-      "bbox" : [
-        288,
-        1014,
-        40,
-        10
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "863FF2E5-7352-4975-AFCC-FFD00F10E52C",
-      "index" : 52,
-      "ocrConfidence" : 0.3,
-      "ocrText" : "SIMO39",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nSIMO39\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nSIMO39\n",
-      "rotationAngleUsed" : 180,
-      "translatedText" : "SIMO39"
-    },
-    {
-      "bbox" : [
-        64,
-        1050,
-        32,
-        8
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "0A0E3BDD-7355-4934-BBF9-C2A7A4A48980",
-      "index" : 53,
-      "ocrConfidence" : 1,
-      "ocrText" : "HOUSE.",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nHOUSE.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nHOUSE\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "HOUSE"
-    },
-    {
-      "bbox" : [
-        150,
-        1132,
-        14,
-        16
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "4D015A79-3CE7-4AAC-813C-D9C2040F4E3D",
-      "index" : 54,
-      "ocrConfidence" : 0.5,
-      "ocrText" : "V",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nV\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nV\n",
-      "rotationAngleUsed" : 90,
-      "translatedText" : "V"
-    },
-    {
-      "bbox" : [
-        248,
-        1132,
-        16,
-        20
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "B08E81B0-5594-475E-ACFF-B803466DA01D",
-      "index" : 55,
-      "ocrConfidence" : 0.5,
-      "ocrText" : "2",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\n2\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n2\n",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "2"
-    },
-    {
-      "bbox" : [
-        412,
-        1132,
-        16,
-        18
-      ],
-      "blockPassed" : false,
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false
-      },
-      "id" : "15C78B0F-61EE-4797-BD18-F10546401602",
-      "index" : 56,
-      "ocrConfidence" : 1,
-      "ocrText" : "V",
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nV\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nV\n",
-      "rotationAngleUsed" : 180,
-      "translatedText" : "V"
+      "translatedText" : "城市战役",
+      "translationCandidate" : "城市战役"
     }
   ],
   "engineUsed" : "Local GGUF",
   "outputFiles" : {
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2FF56117-7622-40CC-B26F-949A968A021A\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2FF56117-7622-40CC-B26F-949A968A021A\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png"
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/4F4EC2D9-B8A8-49DC-BE77-62EC644A4FB3\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/4F4EC2D9-B8A8-49DC-BE77-62EC644A4FB3\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png"
   },
   "overallPassed" : false,
   "sourceImage" : "test\/1.png",
-  "totalBlocksDetected" : 57,
+  "totalBlocksDetected" : 12,
   "warnings" : [
-    "block 0 判定失败",
-    "block 2 判定失败",
-    "block 5 判定失败",
-    "block 9 判定失败",
-    "block 10 判定失败",
-    "block 12 判定失败",
-    "block 13 判定失败",
-    "block 15 判定失败",
-    "block 16 判定失败",
-    "block 18 判定失败",
-    "block 19 判定失败",
-    "block 22 判定失败",
-    "block 25 判定失败",
-    "block 26 判定失败",
-    "block 31 判定失败",
-    "block 34 判定失败",
-    "block 37 判定失败",
-    "block 38 判定失败",
-    "block 39 判定失败",
-    "block 40 判定失败",
-    "block 42 判定失败",
-    "block 43 判定失败",
-    "block 44 判定失败",
-    "block 47 判定失败",
-    "block 48 判定失败",
-    "block 49 判定失败",
-    "block 50 判定失败",
-    "block 52 判定失败",
-    "block 53 判定失败",
-    "block 54 判定失败",
-    "block 55 判定失败",
-    "block 56 判定失败"
+    "block 0 判定失败：翻译是占位答复",
+    "block 1 判定失败：翻译等于原文、翻译包含完整原文、中文字符不足、翻译不像中文",
+    "block 4 判定失败：中文字符不足、翻译不像中文",
+    "block 6 判定失败：翻译为空、翻译等于原文、翻译包含完整原文、翻译是占位答复、中文字符不足、翻译不像中文",
+    "block 7 判定失败：翻译是占位答复",
+    "block 8 判定失败：中文字符不足、翻译不像中文",
+    "block 10 判定失败：中文字符不足、翻译不像中文"
   ]
 }

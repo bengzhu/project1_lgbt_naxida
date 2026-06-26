@@ -132,11 +132,13 @@ test/
 开发页新增 `运行漫画覆盖翻译探针`，固定读取 bundle 内 `test/1.png`，不污染当前会话、历史或普通图片翻译状态。流程：
 
 1. 读取 `test/1.png`。
-2. 对原图做 0°、90°、180°、270° 四次 Apple Vision OCR，识别英文文字块。
-3. 将旋转图坐标还原成原图像素 bbox，坐标约定为左上角原点 `[x, y, width, height]`。
-4. 对重复文本块按 bbox 重叠和文本相似度合并，保留置信度/文本长度更好的结果。
-5. 对每个块复用当前英译中提示词和当前引擎翻译；Local 模式记录真实 `llama.cpp` prompt/raw output，Mock 模式标记为模拟。
-6. 生成 `Application Support/AITRANS/Output/1_debug_boxes.png`、`1_translated_overlay.png` 和 `probe_report.json`。
+2. 先按可配置比例裁掉浏览器 UI / 广告 / 底部导航，本次默认 `topRatio = 0.235`、`bottomRatio = 0.14`。
+3. 对裁切后的漫画内容做 2x 放大，再做 0°、90°、180°、270° 四次 Apple Vision OCR，识别英文文字块。
+4. 将旋转图坐标还原成原图像素 bbox，坐标约定为左上角原点 `[x, y, width, height]`；输出绘制同样使用左上角坐标，避免上下翻转。
+5. 对 OCR 候选按 bbox 重叠、文本相似度、相邻行/段落空间关系合并，目标是一个对话框对应一个逻辑块。
+6. 对每个合并块复用当前英译中极简提示词 `把以下翻译成中文：` 和当前引擎翻译；Local 模式记录真实 `llama.cpp` prompt/raw output，Mock 模式标记为模拟。
+7. 质量判定失败时也会绘制覆盖层，文本为 `翻译失败` + OCR 原文，并在报告写入失败原因，避免静默跳过。
+8. 生成 `Application Support/AITRANS/Output/1_debug_boxes.png`、`1_translated_overlay.png` 和 `probe_report.json`。
 
 探针报告字段：
 
@@ -147,7 +149,18 @@ test/
 - `blocks[].rotationAngleUsed`：该块来自 0/90/180/270 哪个 OCR 角度。
 - `blocks[].prompt` / `rawOutput` / `errorCode`：真实输入输出或错误。
 - `blocks[].checks`：`ocrNotEmpty`、`translationNotEmpty`、`translationNotEqualOriginal`、`translationNotContainOriginal`、`looksLikeChinese`。
+- `blocks[].translationCandidate`：从 raw output 中抽取出来用于质量判定和覆盖绘制的候选译文。
+- `blocks[].failureReasons`：失败块的具体原因，例如 `翻译等于原文`、`翻译是占位答复`、`中文字符不足`、`翻译不像中文`。
+- `blocks[].qualityNotes`：非硬失败排查线索，例如 `translationContainsFullOCRText`、`latinLetters=27`、`cjkCharacters=4`。
 - `overallPassed`：至少 1 个块、所有块通过质量判定、两张 PNG 非空才为 `true`。
+
+探针验收重点：
+
+- `probe_report.json` 不应包含广告横幅、地址栏、翻页导航、系统状态栏等浏览器 UI 文本。
+- `1_debug_boxes.png` 中同一对话框不应出现密集堆叠红框；一个气泡通常对应一个块。
+- `1_translated_overlay.png` 中所有绘制文本必须正向可读；即使某块来自旋转 OCR，也不允许倒置或镜像。
+- `blockPassed = false` 的块也必须出现在覆盖图上，并保留失败原因，不能静默隐藏。
+- 每次运行会先清空 App 沙盒 `Application Support/AITRANS/Output/`，`scripts/export-probe-output.sh` 也会先清空项目根 `output/`，避免新旧 PNG / JSON 混在一起。
 
 模拟器跑完后，把沙盒输出导出到项目根 `output/`：
 
@@ -270,7 +283,11 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区：项目根 `test/` 已打进 App bundle，Pro 页新增 `运行 test/ 音频` 和 `运行 test/ OCR` 测试入口。当前 `test/` 为空，空目录预期会显示未找到可测试文件。
 - 本次未提交工作区：开发页新增 `test/1.png` 漫画覆盖翻译探针。实现多角度 Vision OCR、bbox 像素坐标还原、逐块英译中 raw prompt/raw output 报告、`1_debug_boxes.png`、`1_translated_overlay.png` 和 `probe_report.json` 沙盒输出。
 - 本次未提交工作区：新增 `scripts/export-probe-output.sh`，用 `xcrun simctl get_app_container` 从模拟器沙盒导出 `Application Support/AITRANS/Output/` 到项目根 `output/`。已知限制：导出依赖手动脚本；背景色采样优先可读性，不追求完美还原气泡。
-- 本次未提交工作区实测：用模拟器自动探针 `AITRANS_RUN_MANGA_PROBE=1` 跑 `test/1.png`，导出到 `output/`。本次 Local GGUF 识别 57 个文字块，25 个块通过翻译判定，`overallPassed=false`；失败主要来自 Gemma 270M raw 输出复读英文/数字、Vision 把部分 UI/装饰文字识别成文本块、多角度 OCR 仍有重复或偏移。
+- 本次未提交工作区 v2：漫画覆盖探针新增内容区域裁切、2x OCR 放大、候选文本相似度去重、段落/对话框空间聚类、聚类后二次合并；修复输出 PNG 坐标系不一致导致的译文倒置/镜像问题。
+- 本次未提交工作区 v2：翻译失败块不再跳过覆盖绘制，改为显示 `翻译失败` + OCR 原文，并在 `probe_report.json` 写入 `failureReasons`；开发页块详情同步显示失败原因。
+- 本次未提交工作区 v3：探针输出目录每轮先清空，导出脚本也会重建项目根 `output/`，避免旧图缓存堆积或污染验收。
+- 本次未提交工作区 v3：`probe_report.json` 新增 `translationCandidate` 和 `qualityNotes`。翻译质量判定改为记录 raw output -> candidate -> checks 的链路；`翻译包含完整原文` 不再单独作为硬失败，但空输出、原文复读、占位答复、中文字符不足、非中文仍会失败。
+- 本次未提交工作区 v3 实测：用 iPhone 17 Pro 模拟器自动探针 `AITRANS_RUN_MANGA_PROBE=1` 跑 `test/1.png`，导出到 `output/`。本次 `totalBlocksDetected = 12`、`blockPassed=false` 为 7 个、`overallPassed=false`，`output/` 只包含 `1_debug_boxes.png`、`1_translated_overlay.png`、`probe_report.json` 三个最新文件。失败主要分三类：Gemma raw 输出原文/非中文，如 `IVE ARRIVED AT REN- SENPAI'S HOUSE.`；模型输出占位答复，如 `以下是翻译成中文：`；OCR 本身有明显误读，如 `THE CITY RATTLER STATE IN A PEN DAYS.`、`THOUGH THOUSH EVEN`、`SUGSESTION THE OVERRULED`。
 
 ## 后续对话指引
 

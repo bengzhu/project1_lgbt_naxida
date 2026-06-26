@@ -511,6 +511,15 @@ private struct MangaOverlayProbeBlockCard: View {
             if !block.translatedText.isEmpty {
                 RawProbeSnippet(title: "translation", text: block.translatedText)
             }
+            if !block.translationCandidate.isEmpty, block.translationCandidate != block.translatedText {
+                RawProbeSnippet(title: "translation candidate", text: block.translationCandidate)
+            }
+            if !block.failureReasons.isEmpty {
+                RawProbeSnippet(title: "failure", text: block.failureReasons.joined(separator: "\n"))
+            }
+            if !block.qualityNotes.isEmpty {
+                RawProbeSnippet(title: "quality notes", text: block.qualityNotes.joined(separator: "\n"))
+            }
             if !block.prompt.isEmpty {
                 RawProbeSnippet(title: "prompt", text: block.prompt)
             }

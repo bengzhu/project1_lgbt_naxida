@@ -14,6 +14,7 @@ if [[ ! -d "$SOURCE" ]]; then
   exit 1
 fi
 
+rm -rf "$DESTINATION"
 mkdir -p "$DESTINATION"
 cp -R "$SOURCE"/. "$DESTINATION"/
 echo "Exported probe output to $DESTINATION"
