@@ -472,6 +472,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
     var bubbleCropsImage: String?
     var bubbleSeedDebugImage: String?
     var bubbleTextOverlayImage: String?
+    var probeContactSheetImage: String?
 
     init(
         debugBoxesImage: String,
@@ -485,7 +486,8 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
         bubbleDebugImage: String? = nil,
         bubbleCropsImage: String? = nil,
         bubbleSeedDebugImage: String? = nil,
-        bubbleTextOverlayImage: String? = nil
+        bubbleTextOverlayImage: String? = nil,
+        probeContactSheetImage: String? = nil
     ) {
         self.debugBoxesImage = debugBoxesImage
         self.overlayImage = overlayImage
@@ -499,6 +501,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
         self.bubbleCropsImage = bubbleCropsImage
         self.bubbleSeedDebugImage = bubbleSeedDebugImage
         self.bubbleTextOverlayImage = bubbleTextOverlayImage
+        self.probeContactSheetImage = probeContactSheetImage
     }
 }
 

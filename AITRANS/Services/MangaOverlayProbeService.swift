@@ -135,7 +135,7 @@ struct MangaOverlayProbeService: Sendable {
         preprocessing: MangaOverlayPreprocessingOptions = .defaultValue,
         cropping: MangaOverlayProbeCropping = .defaultValue,
         bubbleDebugImagePath: String? = nil,
-        bubbleCropsImagePath: String? = nil
+        bubbleCropsImagePath: String? = nil,
         bubbleTextOverlayImagePath: String? = nil
     ) async throws -> MangaOverlayProbeOutputFiles {
         try await Task.detached(priority: .userInitiated) {
@@ -293,7 +293,7 @@ struct MangaOverlayProbeService: Sendable {
         customWords: [String],
         outputDirectory: URL,
         cropping: MangaOverlayProbeCropping = .defaultValue
-    ) async throws -> (comparison: MangaOverlayFrameworkComparison, debugPath: String, cropsPath: String, seedDebugPath: String) {
+    ) async throws -> (comparison: MangaOverlayFrameworkComparison, debugPath: String, cropsPath: String, seedDebugPath: String, textOverlayPath: String) {
         let start = Date.now
         return try await Task.detached(priority: .userInitiated) {
             let image = try Self.makeImage(from: imageData)
@@ -327,12 +327,15 @@ struct MangaOverlayProbeService: Sendable {
             let debugURL = outputDirectory.appendingPathComponent("1_bubble_debug.png")
             let cropsURL = outputDirectory.appendingPathComponent("1_bubble_crops.png")
             let seedDebugURL = outputDirectory.appendingPathComponent("1_bubble_seed_debug.png")
+            let textOverlayURL = outputDirectory.appendingPathComponent("1_bubble_text_overlay.png")
             let debugImage = try Self.drawBubbleDebug(on: image, bubbles: bubbles)
             let cropsImage = try Self.drawBubbleCrops(from: image, bubbles: bubbles, results: results, preprocessing: preprocessing)
             let seedDebugImage = try Self.drawBubbleDebug(on: image, bubbles: seedDebugCandidates)
+            let textOverlayImage = try Self.drawBubbleTextOverlay(on: image, results: results)
             try Self.writePNG(debugImage, to: debugURL)
             try Self.writePNG(cropsImage, to: cropsURL)
             try Self.writePNG(seedDebugImage, to: seedDebugURL)
+            try Self.writePNG(textOverlayImage, to: textOverlayURL)
             let comparison = MangaOverlayFrameworkComparison(
                 groundTruth: groundTruth,
                 wholePage: MangaOverlayFrameworkMetrics(totalBlocksDetected: 0, processingTimeMs: 0, accuracyVsGroundTruth: 0),
@@ -350,7 +353,7 @@ struct MangaOverlayProbeService: Sendable {
                     "bubble detection uses near-white connected components, so non-white narration/effect text can be missed"
                 ]
             )
-            return (comparison, debugURL.path, cropsURL.path, seedDebugURL.path)
+            return (comparison, debugURL.path, cropsURL.path, seedDebugURL.path, textOverlayURL.path)
         }.value
     }
 
@@ -1387,6 +1390,25 @@ struct MangaOverlayProbeService: Sendable {
             throw MangaOverlayProbeServiceError.imageRenderFailed
         }
         return output
+    }
+
+    private static func drawBubbleTextOverlay(on image: CGImage, results: [MangaOverlayBubbleResult]) throws -> CGImage {
+        try draw(on: image) { context, _ in
+            let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            for result in results {
+                let rect = rect(from: result.bbox)
+                context.setStrokeColor(CGColor(red: 0.05, green: 0.38, blue: 0.95, alpha: 0.95))
+                context.setLineWidth(2)
+                context.stroke(rect)
+
+                let similarity = result.bestSimilarity.formatted(.number.precision(.fractionLength(3)))
+                let text = "#\(result.index) bubble-first\nsim=\(similarity)\n\(result.text)"
+                let textRect = expand(rect, by: 0.22, bounds: bounds)
+                context.setFillColor(CGColor(red: 0.9, green: 0.95, blue: 1, alpha: 0.9))
+                context.fill(textRect)
+                drawFittingText(text, in: textRect.insetBy(dx: 4, dy: 4), context: context)
+            }
+        }
     }
 
     private static func drawDebugBoxes(on image: CGImage, blocks: [MangaOverlayProbeBlock]) throws -> CGImage {
