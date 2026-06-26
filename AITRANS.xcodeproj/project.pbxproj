@@ -24,6 +24,7 @@
 		0A0000010000000000000022 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000023 /* Accelerate.framework */; };
 		0A0000010000000000000025 /* LocalModelDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000026 /* LocalModelDownloadService.swift */; };
 		0A0000010000000000000027 /* test in Resources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000028 /* test */; };
+		0A0000010000000000000029 /* MangaOverlayProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000002A /* MangaOverlayProbeService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -61,6 +62,7 @@
 		0A0000010000000000000023 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		0A0000010000000000000026 /* LocalModelDownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelDownloadService.swift; sourceTree = "<group>"; };
 		0A0000010000000000000028 /* test */ = {isa = PBXFileReference; lastKnownFileType = folder; path = test; sourceTree = SOURCE_ROOT; };
+		0A000001000000000000002A /* MangaOverlayProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaOverlayProbeService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -136,6 +138,7 @@
 				0A0000010000000000000019 /* GemmaLocalService.swift */,
 				0A000001000000000000001E /* LlamaRuntime.swift */,
 				0A0000010000000000000026 /* LocalModelDownloadService.swift */,
+				0A000001000000000000002A /* MangaOverlayProbeService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -255,6 +258,7 @@
 				0A000001000000000000000B /* ProFeatureViews.swift in Sources */,
 				0A000001000000000000000C /* LlamaRuntime.swift in Sources */,
 				0A0000010000000000000025 /* LocalModelDownloadService.swift in Sources */,
+				0A0000010000000000000029 /* MangaOverlayProbeService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

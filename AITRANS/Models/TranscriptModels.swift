@@ -230,6 +230,88 @@ struct DeveloperRawProbeCase: Identifiable, Equatable, Sendable {
     }
 }
 
+enum MangaOverlayProbeState: String, Equatable, Codable, Sendable {
+    case idle
+    case loading
+    case recognizing
+    case translating
+    case rendering
+    case completed
+    case failed
+}
+
+struct MangaOverlayProbeChecks: Equatable, Codable, Sendable {
+    var ocrNotEmpty: Bool
+    var translationNotEmpty: Bool
+    var translationNotEqualOriginal: Bool
+    var translationNotContainOriginal: Bool
+    var looksLikeChinese: Bool
+}
+
+struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
+    var id: UUID
+    var index: Int
+    var bbox: [Double]
+    var rotationAngleUsed: Int
+    var ocrText: String
+    var ocrConfidence: Float?
+    var translatedText: String
+    var prompt: String
+    var rawOutput: String
+    var errorCode: String?
+    var checks: MangaOverlayProbeChecks
+    var blockPassed: Bool
+
+    init(
+        id: UUID = UUID(),
+        index: Int,
+        bbox: [Double],
+        rotationAngleUsed: Int,
+        ocrText: String,
+        ocrConfidence: Float?,
+        translatedText: String = "",
+        prompt: String = "",
+        rawOutput: String = "",
+        errorCode: String? = nil,
+        checks: MangaOverlayProbeChecks = MangaOverlayProbeChecks(
+            ocrNotEmpty: false,
+            translationNotEmpty: false,
+            translationNotEqualOriginal: false,
+            translationNotContainOriginal: false,
+            looksLikeChinese: false
+        ),
+        blockPassed: Bool = false
+    ) {
+        self.id = id
+        self.index = index
+        self.bbox = bbox
+        self.rotationAngleUsed = rotationAngleUsed
+        self.ocrText = ocrText
+        self.ocrConfidence = ocrConfidence
+        self.translatedText = translatedText
+        self.prompt = prompt
+        self.rawOutput = rawOutput
+        self.errorCode = errorCode
+        self.checks = checks
+        self.blockPassed = blockPassed
+    }
+}
+
+struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
+    var debugBoxesImage: String
+    var overlayImage: String
+}
+
+struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
+    var sourceImage: String
+    var engineUsed: String
+    var totalBlocksDetected: Int
+    var blocks: [MangaOverlayProbeBlock]
+    var overallPassed: Bool
+    var outputFiles: MangaOverlayProbeOutputFiles
+    var warnings: [String]
+}
+
 enum AudioRecognitionState: String, Equatable, Codable, Sendable {
     case idle
     case checking

@@ -79,6 +79,11 @@ final class TranslationSessionStore: ObservableObject {
     @Published var developerProbeError = ""
     @Published var developerProbeCases: [DeveloperRawProbeCase] = TranslationSessionStore.defaultDeveloperProbeCases
     @Published var isRunningDeveloperProbe = false
+    @Published var mangaOverlayProbeState: MangaOverlayProbeState = .idle
+    @Published var mangaOverlayProbeMessage = "等待运行 test/1.png 漫画覆盖翻译探针"
+    @Published var mangaOverlayProbeReport: MangaOverlayProbeReport?
+    @Published var mangaOverlayProbeBlocks: [MangaOverlayProbeBlock] = []
+    @Published var isRunningMangaOverlayProbe = false
     @Published var proPurchaseMessage = "准备接入 App Store 订阅"
     @Published var audioRecognitionState: AudioRecognitionState = .idle
     @Published var audioRecognitionMessage = "选择音频文件后，会强制使用 Apple 本机语音识别测试离线能力"
@@ -104,6 +109,7 @@ final class TranslationSessionStore: ObservableObject {
     private let localService: GemmaLocalService
     private let modelDownloadService = LocalModelDownloadService()
     private let visionOCRService = VisionOCRService()
+    private let mangaOverlayProbeService = MangaOverlayProbeService()
     private var ticker: Task<Void, Never>?
     private var modelDownloadTask: Task<Void, Never>?
     private var audioRecognitionTask: SFSpeechRecognitionTask?
@@ -128,6 +134,7 @@ final class TranslationSessionStore: ObservableObject {
         refreshModelStatus()
         persist()
         runLaunchLLMSmokeTestIfNeeded()
+        runLaunchMangaOverlayProbeIfNeeded()
     }
 
     deinit {
@@ -142,6 +149,15 @@ final class TranslationSessionStore: ObservableObject {
         selectedEngine = .local
         Task { @MainActor [weak self] in
             await self?.runLaunchTranslationProbeSuite()
+        }
+#endif
+    }
+
+    private func runLaunchMangaOverlayProbeIfNeeded() {
+#if DEBUG
+        guard Self.shouldRunMangaOverlayProbeFromLaunchEnvironment else { return }
+        Task { @MainActor [weak self] in
+            self?.runMangaOverlayProbe()
         }
 #endif
     }
@@ -242,6 +258,12 @@ final class TranslationSessionStore: ObservableObject {
 
     private var bundledTestDirectory: URL? {
         Bundle.main.url(forResource: "test", withExtension: nil)
+    }
+
+    private var mangaOverlayOutputDirectory: URL {
+        persistenceURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("Output", isDirectory: true)
     }
 
     var imageTranslationProgressTitle: String {
@@ -1198,6 +1220,88 @@ final class TranslationSessionStore: ObservableObject {
         translateImage(from: url)
     }
 
+    func runMangaOverlayProbe() {
+        guard !isRunningMangaOverlayProbe else { return }
+        guard let url = bundledTestDirectory?.appendingPathComponent("1.png"),
+              FileManager.default.fileExists(atPath: url.path) else {
+            mangaOverlayProbeState = .failed
+            mangaOverlayProbeMessage = "test/1.png 未找到，请确认已放入项目根 test/ 并重新构建。"
+            dataTransferMessage = mangaOverlayProbeMessage
+            return
+        }
+
+        isRunningMangaOverlayProbe = true
+        mangaOverlayProbeState = .loading
+        mangaOverlayProbeMessage = "正在读取 test/1.png"
+        mangaOverlayProbeReport = nil
+        mangaOverlayProbeBlocks = []
+        dataTransferMessage = mangaOverlayProbeMessage
+
+        Task { [weak self] in
+            guard let self else { return }
+            defer { self.isRunningMangaOverlayProbe = false }
+
+            do {
+                let data = try Data(contentsOf: url)
+                self.mangaOverlayProbeState = .recognizing
+                self.mangaOverlayProbeMessage = "正在用 0/90/180/270 多角度 Vision OCR"
+                let recognized = try await self.mangaOverlayProbeService.recognizeTextBlocks(in: data)
+
+                var probeBlocks = recognized.blocks.enumerated().map { index, block in
+                    MangaOverlayProbeBlock(
+                        index: index,
+                        bbox: Self.bboxArray(from: block.boundingBox),
+                        rotationAngleUsed: block.rotationAngle,
+                        ocrText: block.text,
+                        ocrConfidence: block.confidence
+                    )
+                }
+                self.mangaOverlayProbeBlocks = probeBlocks
+
+                self.mangaOverlayProbeState = .translating
+                self.mangaOverlayProbeMessage = "已识别 \(probeBlocks.count) 个文本块，正在逐块翻译"
+
+                for index in probeBlocks.indices {
+                    let translated = await self.translateMangaProbeBlock(probeBlocks[index])
+                    probeBlocks[index] = translated
+                    self.mangaOverlayProbeBlocks = probeBlocks
+                }
+
+                self.mangaOverlayProbeState = .rendering
+                self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
+                let outputFiles = try await self.mangaOverlayProbeService.renderOutputs(
+                    image: recognized.image,
+                    blocks: probeBlocks,
+                    outputDirectory: self.mangaOverlayOutputDirectory
+                )
+
+                let report = self.makeMangaOverlayProbeReport(
+                    blocks: probeBlocks,
+                    outputFiles: outputFiles
+                )
+                let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
+                try MangaOverlayProbeService.writeReport(report, to: reportURL)
+
+                self.mangaOverlayProbeState = report.overallPassed ? .completed : .failed
+                self.mangaOverlayProbeMessage = "漫画探针完成：\(report.blocks.count) 块，overallPassed=\(report.overallPassed)，输出 \(self.mangaOverlayOutputDirectory.path)"
+                self.mangaOverlayProbeReport = report
+                self.mangaOverlayProbeBlocks = report.blocks
+                self.dataTransferMessage = self.mangaOverlayProbeMessage
+            } catch {
+                let outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
+                let report = self.makeMangaOverlayProbeReport(
+                    blocks: self.mangaOverlayProbeBlocks,
+                    outputFiles: outputFiles,
+                    extraWarnings: ["运行错误：\(type(of: error)): \(error.localizedDescription)"]
+                )
+                self.mangaOverlayProbeState = .failed
+                self.mangaOverlayProbeMessage = "漫画探针失败：\(error.localizedDescription)"
+                self.mangaOverlayProbeReport = report
+                self.dataTransferMessage = self.mangaOverlayProbeMessage
+            }
+        }
+    }
+
     private func firstBundledTestFile(matching extensions: Set<String>) -> URL? {
         guard let bundledTestDirectory else { return nil }
         guard let files = try? FileManager.default.contentsOfDirectory(
@@ -1586,6 +1690,124 @@ final class TranslationSessionStore: ObservableObject {
             "engine=\(result.engineName) output=\(Self.probeField(result.text))"
         )
         return result.text
+    }
+
+    private func translateMangaProbeBlock(_ block: MangaOverlayProbeBlock) async -> MangaOverlayProbeBlock {
+        let request = makeProbeRequest(
+            source: .englishUS,
+            target: .simplifiedChinese,
+            input: block.ocrText
+        )
+        let prompt: String
+        let rawOutput: String
+        let translatedText: String
+        let errorCode: String?
+
+        if selectedEngine == .local {
+            let probe = localService.rawTranslationProbe(for: request)
+            prompt = probe.prompt
+            rawOutput = probe.output
+            translatedText = probe.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            errorCode = probe.errorCode
+        } else {
+            prompt = debugPromptPreview(for: request) + "\n\n注意：Mock 模式为模拟输出，不是真实模型 raw prompt。"
+            do {
+                try await mockService.prepare()
+                let result = try await mockService.generate(request)
+                rawOutput = result.text
+                translatedText = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                errorCode = nil
+            } catch {
+                rawOutput = ""
+                translatedText = ""
+                errorCode = "\(type(of: error)): \(error.localizedDescription)"
+            }
+        }
+
+        let checks = mangaProbeChecks(
+            original: block.ocrText,
+            translation: translatedText,
+            errorCode: errorCode
+        )
+
+        return MangaOverlayProbeBlock(
+            id: block.id,
+            index: block.index,
+            bbox: block.bbox,
+            rotationAngleUsed: block.rotationAngleUsed,
+            ocrText: block.ocrText,
+            ocrConfidence: block.ocrConfidence,
+            translatedText: translatedText,
+            prompt: prompt,
+            rawOutput: rawOutput,
+            errorCode: errorCode,
+            checks: checks,
+            blockPassed: Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
+        )
+    }
+
+    private func mangaProbeChecks(
+        original: String,
+        translation: String,
+        errorCode: String?
+    ) -> MangaOverlayProbeChecks {
+        let trimSet = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
+        let cleanOriginal = original.trimmingCharacters(in: trimSet)
+        let cleanTranslation = translation.trimmingCharacters(in: trimSet)
+        let translationNotEmpty = errorCode == nil && !cleanTranslation.isEmpty
+        return MangaOverlayProbeChecks(
+            ocrNotEmpty: !cleanOriginal.isEmpty,
+            translationNotEmpty: translationNotEmpty,
+            translationNotEqualOriginal: translationNotEmpty && cleanTranslation.localizedCaseInsensitiveCompare(cleanOriginal) != .orderedSame,
+            translationNotContainOriginal: translationNotEmpty && !cleanTranslation.localizedCaseInsensitiveContains(cleanOriginal),
+            looksLikeChinese: translationNotEmpty && Self.containsCJK(cleanTranslation)
+        )
+    }
+
+    private static func mangaProbeBlockPassed(_ checks: MangaOverlayProbeChecks, errorCode: String?) -> Bool {
+        errorCode == nil
+            && checks.ocrNotEmpty
+            && checks.translationNotEmpty
+            && checks.translationNotEqualOriginal
+            && checks.translationNotContainOriginal
+            && checks.looksLikeChinese
+    }
+
+    private func makeMangaOverlayProbeReport(
+        blocks: [MangaOverlayProbeBlock],
+        outputFiles: MangaOverlayProbeOutputFiles,
+        extraWarnings: [String] = []
+    ) -> MangaOverlayProbeReport {
+        var warnings = extraWarnings
+        if blocks.isEmpty {
+            warnings.append("检测到 0 个文字块")
+        }
+        for block in blocks where !block.blockPassed {
+            warnings.append("block \(block.index) 判定失败")
+        }
+        if outputFiles.debugBoxesImage.isEmpty || outputFiles.overlayImage.isEmpty {
+            warnings.append("输出图片未生成")
+        } else {
+            if !Self.fileIsNonEmpty(path: outputFiles.debugBoxesImage) {
+                warnings.append("1_debug_boxes.png 为空或不存在")
+            }
+            if !Self.fileIsNonEmpty(path: outputFiles.overlayImage) {
+                warnings.append("1_translated_overlay.png 为空或不存在")
+            }
+        }
+
+        let allBlocksPassed = !blocks.isEmpty && blocks.allSatisfy(\.blockPassed)
+        let filesPresent = Self.fileIsNonEmpty(path: outputFiles.debugBoxesImage)
+            && Self.fileIsNonEmpty(path: outputFiles.overlayImage)
+        return MangaOverlayProbeReport(
+            sourceImage: "test/1.png",
+            engineUsed: selectedAdapterMetadata.displayName,
+            totalBlocksDetected: blocks.count,
+            blocks: blocks,
+            overallPassed: allBlocksPassed && filesPresent,
+            outputFiles: outputFiles,
+            warnings: warnings
+        )
     }
 
     private func summarize() async throws -> AISummary {
@@ -2554,6 +2776,10 @@ final class TranslationSessionStore: ObservableObject {
         ProcessInfo.processInfo.environment["AITRANS_RUN_LLM_SMOKE"] == "1"
     }
 
+    private static var shouldRunMangaOverlayProbeFromLaunchEnvironment: Bool {
+        ProcessInfo.processInfo.environment["AITRANS_RUN_MANGA_PROBE"] == "1"
+    }
+
     private static let launchTranslationProbeCases = [
         TranslationProbeCase(source: .englishUS, target: .simplifiedChinese, input: "Keep the model on device."),
         TranslationProbeCase(source: .englishUS, target: .simplifiedChinese, input: "The meeting starts at 9:30 tomorrow."),
@@ -2616,6 +2842,24 @@ final class TranslationSessionStore: ObservableObject {
 
     private static let audioTestExtensions: Set<String> = ["m4a", "wav", "mp3", "caf"]
     private static let imageTestExtensions: Set<String> = ["png", "jpg", "jpeg", "heic"]
+
+    private static func bboxArray(from rect: CGRect) -> [Double] {
+        [
+            Double(rect.minX.rounded()),
+            Double(rect.minY.rounded()),
+            Double(rect.width.rounded()),
+            Double(rect.height.rounded())
+        ]
+    }
+
+    private static func fileIsNonEmpty(path: String) -> Bool {
+        guard !path.isEmpty,
+              let attributes = try? FileManager.default.attributesOfItem(atPath: path),
+              let size = attributes[.size] as? NSNumber else {
+            return false
+        }
+        return size.int64Value > 0
+    }
 
     private static let defaultDiagnostics = [
         DiagnosticCheck(
