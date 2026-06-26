@@ -152,11 +152,14 @@ test/
 - `blocks[].translationCandidate`：从 raw output 中抽取出来用于质量判定和覆盖绘制的候选译文。
 - `blocks[].rawOutputClassification` / `candidateClassification` / `failureCategory`：分别记录模型 raw 输出类型、候选译文类型和失败归因。常见值包括 `chinese`、`nonChinese`、`placeholder`、`repeatedOriginal`、`symbolsOnly`、`modelOutputFailure`、`ocrInputSuspect`、`ruleFalseFailureSuspected`。
 - `blocks[].bestGroundTruthText` / `ocrGroundTruthSimilarity` / `ocrQualityLabel`：把当前 OCR 文本和 `test/1.ground_truth.json` 的人工真值做相似度对照，用于判断翻译差是否先由 OCR 输入错误导致。
+- `blocks[].bestGroundTruthType` / `groundTruthMatch` / `groundTruthMatchThreshold`：人工真值匹配类型与是否可信匹配。低于阈值的块会标为 `unmatched`，不再强行配一个错误真值，也不纳入准确率统计。
+- `blocks[].ocrLegacySimilarity` / `wordOrderPreserved`：保留旧相似度作对照，同时新增词级编辑距离相似度和词序信号。词序错乱的 OCR 会明显降分，避免旧算法把乱序文本算成高准确。
 - `blocks[].failureReasons`：失败块的具体原因，例如 `翻译等于原文`、`翻译是占位答复`、`中文字符不足`、`翻译不像中文`。
 - `blocks[].qualityNotes`：非硬失败排查线索，例如 `translationContainsFullOCRText`、`latinLetters=27`、`cjkCharacters=4`。
 - `blocks[].translationDecisionTrace` / `translationFailureDetail`：逐块记录 raw 分类、候选分类、每条硬判定布尔值和失败归因；用于确认失败来自模型 raw 输出、OCR 输入、候选抽取，还是规则误伤。
 - `blocks[].ocrProbeNotes`：逐块记录 OCR 和人工真值的相似度、质量标签、已知 OCR 混淆提示。
 - `diagnostics`：本轮整体排查汇总，统计通过/失败块、空候选、占位输出、复读原文、非中文输出、raw 输出类型、候选抽取丢弃、平均 OCR 真值相似度、疑似 OCR 问题块、疑似规则误伤块、失败分类分布、中文候选失败原因分布、翻译语言质量通过/失败块、硬通过但质量可疑块。
+- `diagnostics.averageCoreDialogueOCRSimilarity` / `averageDecorativeOCRSimilarity` / `groundTruthMatchedBlocks` / `groundTruthUnmatchedBlocks` / `wordOrderFailedBlocks` / `repeatedKeywordFailures`：可信匹配后的核心对话/装饰文字分开统计、未匹配块计数、词序失败块和高频专有名词损坏追踪。
 - `configuration.currentBlockSource`：记录当前块来源。当前是整图 OCR observations 的空间聚类/去重，即 (a)，不是图像层面的气泡连通域检测。
 - `configuration.preprocessing`：记录本轮预处理增强开关，包含灰度、对比亮度、自适应二值化、裁切放大、锐化和放大倍数。
 - `configuration.customLexiconEnabled` / `customLexicon`：记录 Vision `customWords` 是否启用和本轮词表。
@@ -167,6 +170,8 @@ test/
 - `correctionGuardrailTest`：固定构造 `XQZ 12 ///` -> `The City Battler Tournament starts in a few days.` 的过度纠错测试，用来证明护栏会拒绝模型瞎猜。
 - `lexiconComparison`：同图同参数下 Vision `customWords` 开/关对比，记录总块数和发生变化的块编号。
 - `visionAPIComparison`：旧 `VNRecognizeTextRequest` 与 iOS 18+ Swift 原生 `RecognizeTextRequest` 的 0° OCR 对比。当前只作为独立探针，不替换主流程。
+- `frameworkComparison`：整页 OCR 与 bubble-first 对照。差集列表、交集数量和汇总准确率都从最终明细现场计算，`consistencyPassed` 必须为 `true`；如果计数和列表不一致，会写入 `consistencyWarnings`。
+- `cleanTextDiagnostic` / `output/clean_text_diagnostic.json`：跳过 OCR，直接把 `test/1.ground_truth.json` 中的 dialogue 真值送入当前翻译链路，用于判断失败来自 OCR 噪声还是当前 Local 模型/判定链路。
 - `overallPassed`：至少 1 个块、所有块通过质量判定、两张 PNG 非空才为 `true`。
 - `outputDirectoryCleaned` / `retainedOutputFiles` / `outputCleanupPolicy`：记录本轮输出目录是否按清理策略重建，以及本轮最终保留的 PNG/JSON 文件名。
 
@@ -181,6 +186,8 @@ test/
 - 翻译失败排查规范：先看 `failureCategory`，再看 `rawOutputClassification` 和 `candidateClassification`。如果 `failureCategory = ocrInputSuspect`，优先修 OCR/合并/裁切；如果是 `modelOutputFailure`，优先换模型、调采样或 prompt；如果是 `translationLanguageQualityFailure`，说明模型给了中文或半中文，但候选本身过短、混入未翻译英文或像解释文本；如果是 `ruleFalseFailureSuspected`，才优先放宽判定规则。不要只看覆盖图猜测失败原因。
 - 翻译规则排查规范：如果 `likelyRuleFalseFailureBlocks = []`，说明本轮没有发现“真实中文译文被规则误杀”。`cjkButFailedCandidates` 只表示“候选含中文但未过端到端质量门”，需继续看 `cjkFailureBreakdown`；中文候选存在不等于通过，硬通过前还会检查解释/列表型输出、长原文短译文、中英混排和 OCR 输入质量。
 - OCR 质量排查规范：先按 `ocrGroundTruthSimilarity` 从低到高看 `blocks[].finalTextUsedForTranslation`。本探针用 `test/1.ground_truth.json` 做真值；换测试图时应同步更新真值文件，否则相似度只作参考。
+- 可信准确率规范：只看 `groundTruthMatch = matched` 的块；核心对话和 `decorative` 装饰标题分开统计。`unmatched` 块必须保留在明细里，但不能混进平均准确率。旧版 `accuracyVsGroundTruth = 0.8378 / 0.8755` 使用了不完整真值和过宽相似度，只能作为历史对照，不能再作为验收数字。
+- 干净文本诊断规范：如果 `cleanTextDiagnostic.passRate` 仍低，说明即使没有 OCR 噪声，当前翻译模型/输出风格也不稳定；这时不要只调 OCR 或放宽质量规则。
 
 模拟器跑完后，把沙盒输出导出到项目根 `output/`：
 
@@ -352,6 +359,11 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v20：新增 `1_probe_contact_sheet.png` 总览拼图，基于本轮已生成 PNG 拼成 2 列：全图 OCR、bubble-first OCR、bubble crops、翻译覆盖、确定性 OCR、确定性纠错翻译。`probe_report.json` 新增 `outputFiles.probeContactSheetImage`，并把该文件写入 `retainedOutputFiles`。
 - 本次未提交工作区 v20：输出清理统计进一步可验证，`probe_report.json` 新增 `outputCleanupRemovedItemCount` 和 `outputFileCountAfterCleanup`；`1_ocr_probe_text.txt` 增加 `qualityNotes` 和 `decisionTrace`，便于直接看翻译失败来自模型 raw 输出、候选抽取、规则，还是 OCR 输入。
 - 本次未提交工作区 v20 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后，导出目录只保留本轮 14 个文件，`outputCleanupRemovedItemCount = 13`、`outputFileCountAfterCleanup = 14`，`1_probe_contact_sheet.png = 1040x2040` 且非空。`totalBlocksDetected = 12`、`passedBlocks = 0`、`failedBlocks = 12`、`likelyRuleFalseFailureBlocks = []`、`translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 5, translationLanguageQualityFailure: 4, translationUsableButOCRSuspect: 1 }`。结论：仍未发现“实际翻译成功但规则太严误杀”；相反，坏译文主要来自当前 Local 模型 raw 输出复读/占位/解释，和 OCR 原句错误。bubble-first 对比仍优于整页：`wholePage accuracy = 0.8378 / 12 blocks`，`bubbleFirst accuracy = 0.8755 / 15 blocks / 16904ms`。
+- 本次未提交工作区 v21：修正 `test/1.ground_truth.json` 为结构化真值，当前共 12 条：11 条 `dialogue`、1 条 `decorative`。补齐 `This is an offline tournament...`、`What are you even talking about?`、`We need to get results...`，并把 `City Battler Offline Tournament 開催!!` 单独标为装饰标题。
+- 本次未提交工作区 v21：真值匹配改为可拒绝匹配，阈值当前为 `0.42`；相似度改用词级 Levenshtein，并保留 `ocrLegacySimilarity` 作历史对照，另写入 `wordOrderPreserved`。候选选择 bug 已修复：生产选择只看非真值的文本质量和“预处理是否保留 raw 词”，不再默认把更好的 `afterPreprocessing` 丢掉；#0 实测选择 `afterPreprocessing`，`rawTruthSimilarity = 0.857`、`preprocessedTruthSimilarity = 1.000`。
+- 本次未提交工作区 v21 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 并导出，`totalBlocksDetected = 12`、可信匹配 10 块、未匹配 2 块。可信核心对话平均 OCR 相似度为 `0.6196`，装饰标题为 `0.8000`；bubble-first 可信核心对话为 `0.7397`。旧版 `0.8378 / 0.8755` 被确认偏高，主要原因是旧真值不完整、强行错误匹配和旧相似度对词序错乱过宽。
+- 本次未提交工作区 v21：双框架对比改为从明细实时计算并做一致性校验。本轮 `blocksFoundByBoth = 8`、`blocksOnlyInWholePage = ["Let's Battle!"]`、`blocksOnlyInBubbleFirst = ["What are you even talking about?", "We need to get results at this tournament to save the gaming club from being disbanded."]`、`matchedGroundTruthUnionCount = 11`、`consistencyPassed = true`。
+- 本次未提交工作区 v21：新增专有名词损坏追踪和干净真值直送翻译诊断。`repeatedKeywordFailures = { "senpai's": 2 }`；`clean_text_diagnostic.json` 显示 11 条干净 dialogue 直送当前翻译链路，4 条通过、7 条失败，`passRate = 0.3636`。结论：排除 OCR 噪声后当前 Gemma 270M 仍大量复读、混入英文或输出解释文本，下一轮应优先评估更换/对比翻译模型，而不是继续放宽质量规则。
 
 ## 后续对话指引
 

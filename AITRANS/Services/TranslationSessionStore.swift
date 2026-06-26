@@ -1275,13 +1275,21 @@ final class TranslationSessionStore: ObservableObject {
                         rawOcrText: block.text,
                         preprocessingEnabled: probeConfiguration.preprocessing.enabled,
                         bestGroundTruthIndex: matchIndex,
-                        bestGroundTruthText: matchIndex.map { groundTruth[$0] },
+                        bestGroundTruthText: match.entry?.text,
+                        bestGroundTruthType: match.entry?.type,
+                        groundTruthMatch: match.matchState,
+                        groundTruthMatchThreshold: MangaOverlayProbeService.groundTruthMatchThreshold,
                         ocrGroundTruthSimilarity: match.similarity,
+                        ocrLegacySimilarity: match.legacySimilarity,
+                        wordOrderPreserved: match.wordOrderPreserved,
                         ocrQualityLabel: Self.ocrQualityLabel(for: match.similarity),
                         ocrProbeNotes: Self.mangaOCRProbeNotes(
                             text: block.text,
-                            bestGroundTruthText: matchIndex.map { groundTruth[$0] },
-                            similarity: match.similarity
+                            bestGroundTruthText: match.entry?.text,
+                            similarity: match.similarity,
+                            legacySimilarity: match.legacySimilarity,
+                            wordOrderPreserved: match.wordOrderPreserved,
+                            matchState: match.matchState
                         )
                     )
                 }
@@ -1296,7 +1304,11 @@ final class TranslationSessionStore: ObservableObject {
                             options: probeConfiguration.preprocessing
                         ) {
                             probeBlocks[index].afterPreprocessingOcrText = enhancedText
-                            probeBlocks[index].finalTextUsedForTranslation = probeBlocks[index].rawOcrText
+                            probeBlocks[index] = self.applyMangaOCRCandidateSelection(
+                                to: probeBlocks[index],
+                                enhancedText: enhancedText,
+                                groundTruth: groundTruth
+                            )
                         } else {
                             probeBlocks[index].finalTextUsedForTranslation = probeBlocks[index].rawOcrText
                         }
@@ -1374,6 +1386,10 @@ final class TranslationSessionStore: ObservableObject {
                     outputFiles: outputFiles,
                     outputDirectory: self.mangaOverlayOutputDirectory
                 )
+                let cleanTextDiagnostic = await self.runCleanTextDiagnostic(groundTruth: groundTruth)
+                let cleanDiagnosticURL = self.mangaOverlayOutputDirectory.appendingPathComponent("clean_text_diagnostic.json")
+                try Self.writeCleanTextDiagnostic(cleanTextDiagnostic, to: cleanDiagnosticURL)
+                outputFiles.cleanTextDiagnosticFile = cleanDiagnosticURL.path
 
                 let report = self.makeMangaOverlayProbeReport(
                     blocks: probeBlocks,
@@ -1382,6 +1398,7 @@ final class TranslationSessionStore: ObservableObject {
                     lexiconComparison: lexiconComparison,
                     visionAPIComparison: visionAPIComparison,
                     frameworkComparison: frameworkComparison,
+                    cleanTextDiagnostic: cleanTextDiagnostic,
                     outputCleanupRemovedItemCount: outputCleanupRemovedItemCount
                 )
                 let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
@@ -1801,6 +1818,127 @@ final class TranslationSessionStore: ObservableObject {
         return result.text
     }
 
+    private func applyMangaOCRCandidateSelection(
+        to block: MangaOverlayProbeBlock,
+        enhancedText: String,
+        groundTruth: [MangaGroundTruthEntry]
+    ) -> MangaOverlayProbeBlock {
+        let rawScore = Self.ocrCandidateQualityScore(block.rawOcrText)
+        let enhancedScore = Self.ocrCandidateQualityScore(enhancedText)
+        let enhancedPreservesRawWords = Self.enhancedOCRPreservesRawWords(
+            rawText: block.rawOcrText,
+            enhancedText: enhancedText
+        )
+        let selectedText = enhancedPreservesRawWords || enhancedScore > rawScore + 0.15 ? enhancedText : block.rawOcrText
+        let selectedSource = selectedText == enhancedText ? "afterPreprocessing" : "rawOCR"
+        let selectedMatch = MangaOverlayProbeService.bestGroundTruthMatch(text: selectedText, groundTruth: groundTruth)
+        let rawMatch = MangaOverlayProbeService.bestGroundTruthMatch(text: block.rawOcrText, groundTruth: groundTruth)
+        let enhancedMatch = MangaOverlayProbeService.bestGroundTruthMatch(text: enhancedText, groundTruth: groundTruth)
+        var notes = block.ocrProbeNotes
+        notes.append("candidateSelectionSource=\(selectedSource)")
+        notes.append("candidateSelectionRule=textQualityScoreWithoutGroundTruth")
+        notes.append("rawCandidateQuality=\(rawScore.formatted(.number.precision(.fractionLength(3))))")
+        notes.append("preprocessedCandidateQuality=\(enhancedScore.formatted(.number.precision(.fractionLength(3))))")
+        notes.append("preprocessedPreservesRawWords=\(enhancedPreservesRawWords)")
+        notes.append("rawTruthSimilarity=\(rawMatch.similarity.formatted(.number.precision(.fractionLength(3))))")
+        notes.append("preprocessedTruthSimilarity=\(enhancedMatch.similarity.formatted(.number.precision(.fractionLength(3))))")
+
+        return MangaOverlayProbeBlock(
+            id: block.id,
+            index: block.index,
+            bbox: block.bbox,
+            rotationAngleUsed: block.rotationAngleUsed,
+            ocrText: block.ocrText,
+            ocrConfidence: block.ocrConfidence,
+            rawOcrText: block.rawOcrText,
+            preprocessingEnabled: block.preprocessingEnabled,
+            afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+            correctionEnabled: block.correctionEnabled,
+            afterCorrectionText: block.afterCorrectionText,
+            correctionRejectedReason: block.correctionRejectedReason,
+            correctionPrompt: block.correctionPrompt,
+            correctionRawOutput: block.correctionRawOutput,
+            correctionErrorCode: block.correctionErrorCode,
+            deterministicCorrectionText: block.deterministicCorrectionText,
+            deterministicCorrectionAppliedRules: block.deterministicCorrectionAppliedRules,
+            deterministicCorrectionSimilarity: block.deterministicCorrectionSimilarity,
+            deterministicCorrectionTranslationCandidate: block.deterministicCorrectionTranslationCandidate,
+            deterministicCorrectionTranslationRawOutput: block.deterministicCorrectionTranslationRawOutput,
+            deterministicCorrectionTranslationPassed: block.deterministicCorrectionTranslationPassed,
+            deterministicCorrectionTranslationFailureDetail: block.deterministicCorrectionTranslationFailureDetail,
+            finalTextUsedForTranslation: selectedText,
+            bestGroundTruthIndex: selectedMatch.index,
+            bestGroundTruthText: selectedMatch.entry?.text,
+            bestGroundTruthType: selectedMatch.entry?.type,
+            groundTruthMatch: selectedMatch.matchState,
+            groundTruthMatchThreshold: MangaOverlayProbeService.groundTruthMatchThreshold,
+            ocrGroundTruthSimilarity: selectedMatch.similarity,
+            ocrLegacySimilarity: selectedMatch.legacySimilarity,
+            wordOrderPreserved: selectedMatch.wordOrderPreserved,
+            ocrQualityLabel: Self.ocrQualityLabel(for: selectedMatch.similarity),
+            translatedText: block.translatedText,
+            translationCandidate: block.translationCandidate,
+            rawOutputClassification: block.rawOutputClassification,
+            candidateClassification: block.candidateClassification,
+            failureCategory: block.failureCategory,
+            prompt: block.prompt,
+            rawOutput: block.rawOutput,
+            errorCode: block.errorCode,
+            checks: block.checks,
+            failureReasons: block.failureReasons,
+            qualityNotes: block.qualityNotes,
+            translationDecisionTrace: block.translationDecisionTrace,
+            translationFailureDetail: block.translationFailureDetail,
+            ocrProbeNotes: notes,
+            blockPassed: block.blockPassed
+        )
+    }
+
+    private static func ocrCandidateQualityScore(_ text: String) -> Double {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return 0 }
+        let words = clean
+            .components(separatedBy: CharacterSet.letters.inverted)
+            .filter { !$0.isEmpty }
+        let validWordRatio = Double(words.filter { $0.count >= 2 }.count) / Double(max(words.count, 1))
+        let latinRatio = Double(latinLetterCount(in: clean)) / Double(max(clean.count, 1))
+        let symbolRatio = Double(clean.filter { !$0.isLetter && !$0.isNumber && !$0.isWhitespace && !$0.isPunctuation }.count) / Double(max(clean.count, 1))
+        let knownErrorPenalty = Self.containsLikelyOCRError(in: clean) ? 0.08 : 0
+        let wordCountBonus = min(Double(words.count), 10) * 0.012
+        return max(0, validWordRatio * 0.45 + latinRatio * 0.35 + wordCountBonus - symbolRatio * 0.35 - knownErrorPenalty)
+    }
+
+    private static func enhancedOCRPreservesRawWords(rawText: String, enhancedText: String) -> Bool {
+        let rawWords = ocrCandidateWords(rawText)
+        let enhancedWords = ocrCandidateWords(enhancedText)
+        guard rawWords.count >= 3,
+              enhancedWords.count > rawWords.count,
+              enhancedWords.count <= rawWords.count + 2 else {
+            return false
+        }
+        var searchStart = enhancedWords.startIndex
+        var matchedEnhancedIndexes = Set<Int>()
+        for rawWord in rawWords {
+            guard let matchIndex = enhancedWords[searchStart...].firstIndex(of: rawWord) else {
+                return false
+            }
+            matchedEnhancedIndexes.insert(matchIndex)
+            searchStart = enhancedWords.index(after: matchIndex)
+        }
+        let insertedWords = enhancedWords.indices
+            .filter { !matchedEnhancedIndexes.contains($0) }
+            .map { enhancedWords[$0] }
+        return insertedWords.allSatisfy { word in
+            word.allSatisfy(\.isLetter) && rawWords.contains(word)
+        }
+    }
+
+    private static func ocrCandidateWords(_ text: String) -> [String] {
+        text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+    }
+
     private func correctMangaProbeBlock(
         _ block: MangaOverlayProbeBlock,
         options: MangaOverlayCorrectionOptions
@@ -1835,7 +1973,12 @@ final class TranslationSessionStore: ObservableObject {
                 finalTextUsedForTranslation: block.finalTextUsedForTranslation,
                 bestGroundTruthIndex: block.bestGroundTruthIndex,
                 bestGroundTruthText: block.bestGroundTruthText,
+                bestGroundTruthType: block.bestGroundTruthType,
+                groundTruthMatch: block.groundTruthMatch,
+                groundTruthMatchThreshold: block.groundTruthMatchThreshold,
                 ocrGroundTruthSimilarity: block.ocrGroundTruthSimilarity,
+                ocrLegacySimilarity: block.ocrLegacySimilarity,
+                wordOrderPreserved: block.wordOrderPreserved,
                 ocrQualityLabel: block.ocrQualityLabel,
                 translatedText: block.translatedText,
                 translationCandidate: block.translationCandidate,
@@ -1902,7 +2045,12 @@ final class TranslationSessionStore: ObservableObject {
             finalTextUsedForTranslation: acceptedText,
             bestGroundTruthIndex: block.bestGroundTruthIndex,
             bestGroundTruthText: block.bestGroundTruthText,
+            bestGroundTruthType: block.bestGroundTruthType,
+            groundTruthMatch: block.groundTruthMatch,
+            groundTruthMatchThreshold: block.groundTruthMatchThreshold,
             ocrGroundTruthSimilarity: block.ocrGroundTruthSimilarity,
+            ocrLegacySimilarity: block.ocrLegacySimilarity,
+            wordOrderPreserved: block.wordOrderPreserved,
             ocrQualityLabel: block.ocrQualityLabel,
             translatedText: block.translatedText,
             translationCandidate: block.translationCandidate,
@@ -1924,7 +2072,7 @@ final class TranslationSessionStore: ObservableObject {
 
     private func applyDeterministicMangaOCRCorrection(
         to block: MangaOverlayProbeBlock,
-        groundTruth: [String]
+        groundTruth: [MangaGroundTruthEntry]
     ) -> MangaOverlayProbeBlock {
         let original = block.finalTextUsedForTranslation
         let correction = Self.deterministicMangaOCRCorrection(for: original)
@@ -1964,7 +2112,12 @@ final class TranslationSessionStore: ObservableObject {
             finalTextUsedForTranslation: block.finalTextUsedForTranslation,
             bestGroundTruthIndex: block.bestGroundTruthIndex,
             bestGroundTruthText: block.bestGroundTruthText,
+            bestGroundTruthType: block.bestGroundTruthType,
+            groundTruthMatch: block.groundTruthMatch,
+            groundTruthMatchThreshold: block.groundTruthMatchThreshold,
             ocrGroundTruthSimilarity: block.ocrGroundTruthSimilarity,
+            ocrLegacySimilarity: block.ocrLegacySimilarity,
+            wordOrderPreserved: block.wordOrderPreserved,
             ocrQualityLabel: block.ocrQualityLabel,
             translatedText: block.translatedText,
             translationCandidate: block.translationCandidate,
@@ -2148,7 +2301,12 @@ final class TranslationSessionStore: ObservableObject {
             finalTextUsedForTranslation: block.finalTextUsedForTranslation,
             bestGroundTruthIndex: block.bestGroundTruthIndex,
             bestGroundTruthText: block.bestGroundTruthText,
+            bestGroundTruthType: block.bestGroundTruthType,
+            groundTruthMatch: block.groundTruthMatch,
+            groundTruthMatchThreshold: block.groundTruthMatchThreshold,
             ocrGroundTruthSimilarity: block.ocrGroundTruthSimilarity,
+            ocrLegacySimilarity: block.ocrLegacySimilarity,
+            wordOrderPreserved: block.wordOrderPreserved,
             ocrQualityLabel: block.ocrQualityLabel,
             translatedText: overlayText,
             translationCandidate: translationCandidate,
@@ -2269,7 +2427,12 @@ final class TranslationSessionStore: ObservableObject {
             finalTextUsedForTranslation: block.finalTextUsedForTranslation,
             bestGroundTruthIndex: block.bestGroundTruthIndex,
             bestGroundTruthText: block.bestGroundTruthText,
+            bestGroundTruthType: block.bestGroundTruthType,
+            groundTruthMatch: block.groundTruthMatch,
+            groundTruthMatchThreshold: block.groundTruthMatchThreshold,
             ocrGroundTruthSimilarity: block.ocrGroundTruthSimilarity,
+            ocrLegacySimilarity: block.ocrLegacySimilarity,
+            wordOrderPreserved: block.wordOrderPreserved,
             ocrQualityLabel: block.ocrQualityLabel,
             translatedText: block.translatedText,
             translationCandidate: block.translationCandidate,
@@ -2287,6 +2450,80 @@ final class TranslationSessionStore: ObservableObject {
             ocrProbeNotes: block.ocrProbeNotes,
             blockPassed: block.blockPassed
         )
+    }
+
+    private func runCleanTextDiagnostic(groundTruth: [MangaGroundTruthEntry]) async -> MangaCleanTextDiagnosticReport {
+        let cases = groundTruth.enumerated().filter { _, entry in
+            entry.type == MangaGroundTruthEntry.dialogueType
+        }.map { index, entry in
+            (index, entry)
+        }
+        var results: [MangaCleanTextDiagnosticCase] = []
+        for (index, entry) in cases {
+            let request = makeProbeRequest(
+                source: .englishUS,
+                target: .simplifiedChinese,
+                input: entry.text
+            )
+            let probe: RawModelProbeResult
+            if selectedEngine == .local {
+                probe = localService.rawTranslationProbe(for: request)
+            } else {
+                do {
+                    try await mockService.prepare()
+                    let result = try await mockService.generate(request)
+                    probe = RawModelProbeResult(prompt: debugPromptPreview(for: request), output: result.text, errorCode: nil)
+                } catch {
+                    probe = RawModelProbeResult(prompt: debugPromptPreview(for: request), output: "", errorCode: "\(type(of: error)): \(error.localizedDescription)")
+                }
+            }
+            let extraction = Self.extractMangaProbeTranslationCandidate(probe.output)
+            let candidate = extraction.candidate
+            let checks = mangaProbeChecks(original: entry.text, translation: candidate, errorCode: probe.errorCode)
+            let baseReasons = mangaProbeFailureReasons(
+                checks: checks,
+                errorCode: probe.errorCode,
+                original: entry.text,
+                translation: candidate
+            )
+            let checksPassed = Self.mangaProbeBlockPassed(checks, errorCode: probe.errorCode)
+            let qualityReason = checksPassed ? Self.mangaProbeTranslationLanguageQualityIssue(
+                original: entry.text,
+                candidate: candidate,
+                rawOutput: probe.output,
+                rawClassification: Self.classifyMangaProbeRawOutput(probe.output, original: entry.text)
+            ) : nil
+            let passed = checksPassed && qualityReason == nil
+            results.append(
+                MangaCleanTextDiagnosticCase(
+                    index: index,
+                    groundTruthType: entry.type,
+                    text: entry.text,
+                    prompt: probe.prompt,
+                    rawOutput: probe.output,
+                    translationCandidate: candidate,
+                    passed: passed,
+                    failureReasons: baseReasons + [qualityReason].compactMap { $0 }
+                )
+            )
+        }
+        let passedCount = results.filter(\.passed).count
+        return MangaCleanTextDiagnosticReport(
+            source: "test/1.ground_truth.json dialogue entries direct to current translation pipeline",
+            promptTemplate: "把以下翻译成中文：",
+            totalCases: results.count,
+            passedCases: passedCount,
+            failedCases: results.count - passedCount,
+            passRate: results.isEmpty ? 0 : Double(passedCount) / Double(results.count),
+            cases: results
+        )
+    }
+
+    private static func writeCleanTextDiagnostic(_ report: MangaCleanTextDiagnosticReport, to url: URL) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(report)
+        try data.write(to: url, options: .atomic)
     }
 
     private func mangaProbeChecks(
@@ -2922,6 +3159,7 @@ final class TranslationSessionStore: ObservableObject {
         lexiconComparison: MangaOverlayLexiconComparison? = nil,
         visionAPIComparison: MangaOverlayVisionAPIComparison? = nil,
         frameworkComparison: MangaOverlayFrameworkComparison? = nil,
+        cleanTextDiagnostic: MangaCleanTextDiagnosticReport? = nil,
         outputCleanupRemovedItemCount: Int = 0,
         extraWarnings: [String] = []
     ) -> MangaOverlayProbeReport {
@@ -2942,6 +3180,9 @@ final class TranslationSessionStore: ObservableObject {
             if !Self.fileIsNonEmpty(path: outputFiles.overlayImage) {
                 warnings.append("1_translated_overlay.png 为空或不存在")
             }
+        }
+        if let frameworkComparison, !frameworkComparison.consistencyPassed {
+            warnings.append(contentsOf: frameworkComparison.consistencyWarnings)
         }
 
         let allBlocksPassed = !blocks.isEmpty && blocks.allSatisfy(\.blockPassed)
@@ -2965,6 +3206,7 @@ final class TranslationSessionStore: ObservableObject {
             lexiconComparison: lexiconComparison,
             visionAPIComparison: visionAPIComparison,
             frameworkComparison: frameworkComparison,
+            cleanTextDiagnostic: cleanTextDiagnostic,
             overallPassed: allBlocksPassed && filesPresent,
             outputFiles: outputFiles,
             outputDirectoryCleaned: true,
@@ -2980,9 +3222,24 @@ final class TranslationSessionStore: ObservableObject {
         var diagnostics = MangaOverlayProbeDiagnostics.empty
         diagnostics.passedBlocks = blocks.filter(\.blockPassed).count
         diagnostics.failedBlocks = blocks.count - diagnostics.passedBlocks
-        let ocrSimilarities = blocks.compactMap(\.ocrGroundTruthSimilarity)
+        let matchedBlocks = blocks.filter { $0.groundTruthMatch == "matched" }
+        diagnostics.groundTruthMatchedBlocks = matchedBlocks.count
+        diagnostics.groundTruthUnmatchedBlocks = blocks.count - matchedBlocks.count
+        let ocrSimilarities = matchedBlocks.compactMap(\.ocrGroundTruthSimilarity)
         if !ocrSimilarities.isEmpty {
             diagnostics.averageOCRGroundTruthSimilarity = ocrSimilarities.reduce(0, +) / Double(ocrSimilarities.count)
+        }
+        let dialogueSimilarities = matchedBlocks
+            .filter { $0.bestGroundTruthType == MangaGroundTruthEntry.dialogueType }
+            .compactMap(\.ocrGroundTruthSimilarity)
+        if !dialogueSimilarities.isEmpty {
+            diagnostics.averageCoreDialogueOCRSimilarity = dialogueSimilarities.reduce(0, +) / Double(dialogueSimilarities.count)
+        }
+        let decorativeSimilarities = matchedBlocks
+            .filter { $0.bestGroundTruthType == MangaGroundTruthEntry.decorativeType }
+            .compactMap(\.ocrGroundTruthSimilarity)
+        if !decorativeSimilarities.isEmpty {
+            diagnostics.averageDecorativeOCRSimilarity = decorativeSimilarities.reduce(0, +) / Double(decorativeSimilarities.count)
         }
         let deterministicSimilarities = blocks.compactMap(\.deterministicCorrectionSimilarity)
         if !deterministicSimilarities.isEmpty {
@@ -3041,6 +3298,9 @@ final class TranslationSessionStore: ObservableObject {
             if let similarity = block.ocrGroundTruthSimilarity, similarity < 0.72 {
                 diagnostics.lowOCRSimilarityBlocks.append(block.index)
             }
+            if block.wordOrderPreserved == false {
+                diagnostics.wordOrderFailedBlocks.append(block.index)
+            }
             if block.qualityNotes.contains("likelyOCRIssue") || block.failureCategory == "ocrInputSuspect" {
                 diagnostics.likelyOCRIssueBlocks.append(block.index)
             }
@@ -3071,6 +3331,7 @@ final class TranslationSessionStore: ObservableObject {
             )
         }
         diagnostics.lowOCRSimilarityBlocks = Array(Set(diagnostics.lowOCRSimilarityBlocks)).sorted()
+        diagnostics.wordOrderFailedBlocks = Array(Set(diagnostics.wordOrderFailedBlocks)).sorted()
         diagnostics.likelyOCRIssueBlocks = Array(Set(diagnostics.likelyOCRIssueBlocks)).sorted()
         diagnostics.likelyRuleFalseFailureBlocks = Array(Set(diagnostics.likelyRuleFalseFailureBlocks)).sorted()
         diagnostics.passedButSuspiciousTranslationBlocks = Array(Set(diagnostics.passedButSuspiciousTranslationBlocks)).sorted()
@@ -3081,7 +3342,23 @@ final class TranslationSessionStore: ObservableObject {
         diagnostics.deterministicCorrectionTranslationTestedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationTestedBlocks)).sorted()
         diagnostics.deterministicCorrectionTranslationPassedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationPassedBlocks)).sorted()
         diagnostics.deterministicCorrectionTranslationFailedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationFailedBlocks)).sorted()
+        diagnostics.repeatedKeywordFailures = Self.repeatedKeywordFailures(in: blocks)
         return diagnostics
+    }
+
+    private static func repeatedKeywordFailures(in blocks: [MangaOverlayProbeBlock]) -> [String: Int] {
+        var failures: [String: Int] = [:]
+        let trackedWords = ["senpai", "senpai's", "city", "battler", "tournament"]
+        for word in trackedWords {
+            let affected = blocks.filter { block in
+                guard block.bestGroundTruthText?.lowercased().contains(word) == true else { return false }
+                return !block.finalTextUsedForTranslation.lowercased().contains(word)
+            }
+            if affected.count >= 2 {
+                failures[word] = affected.count
+            }
+        }
+        return failures
     }
 
     private static func cjkFailureDiagnosticKey(for block: MangaOverlayProbeBlock) -> String {
@@ -3133,6 +3410,7 @@ final class TranslationSessionStore: ObservableObject {
             outputFiles.bubbleSeedDebugImage,
             outputFiles.bubbleTextOverlayImage,
             outputFiles.probeContactSheetImage,
+            outputFiles.cleanTextDiagnosticFile,
             "probe_report.json"
         ]
             .compactMap { $0 }
@@ -3144,12 +3422,20 @@ final class TranslationSessionStore: ObservableObject {
     private static func mangaOCRProbeNotes(
         text: String,
         bestGroundTruthText: String?,
-        similarity: Double
+        similarity: Double,
+        legacySimilarity: Double,
+        wordOrderPreserved: Bool?,
+        matchState: String
     ) -> [String] {
         var notes: [String] = [
+            "groundTruthMatch=\(matchState)",
             "ocrSimilarity=\(similarity.formatted(.number.precision(.fractionLength(3))))",
+            "legacySimilarity=\(legacySimilarity.formatted(.number.precision(.fractionLength(3))))",
             "ocrQuality=\(ocrQualityLabel(for: similarity))"
         ]
+        if let wordOrderPreserved {
+            notes.append("wordOrderPreserved=\(wordOrderPreserved)")
+        }
         if containsLikelyOCRError(in: text) {
             notes.append("containsKnownOCRConfusion")
         }
@@ -3166,57 +3452,85 @@ final class TranslationSessionStore: ObservableObject {
         let similarityText = block.ocrGroundTruthSimilarity.map {
             $0.formatted(.number.precision(.fractionLength(3)))
         } ?? "n/a"
+        let legacyText = block.ocrLegacySimilarity.map {
+            $0.formatted(.number.precision(.fractionLength(3)))
+        } ?? "n/a"
         let label = block.ocrQualityLabel ?? "unknown"
         let text = block.finalTextUsedForTranslation.replacing("\n", with: " / ")
         if let truth = block.bestGroundTruthText {
-            return "#\(block.index) \(label) sim=\(similarityText) OCR=\"\(text)\" truth=\"\(truth)\""
+            return "#\(block.index) \(label) match=\(block.groundTruthMatch) sim=\(similarityText) legacy=\(legacyText) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "n/a") OCR=\"\(text)\" truth=\"\(truth)\""
         }
-        return "#\(block.index) \(label) sim=\(similarityText) OCR=\"\(text)\""
+        return "#\(block.index) \(label) match=\(block.groundTruthMatch) sim=\(similarityText) legacy=\(legacyText) OCR=\"\(text)\""
     }
 
-    private func loadMangaGroundTruth() -> [String] {
+    private func loadMangaGroundTruth() -> [MangaGroundTruthEntry] {
         guard let url = bundledTestDirectory?.appendingPathComponent("1.ground_truth.json"),
-              let data = try? Data(contentsOf: url),
-              let values = try? JSONDecoder().decode([String].self, from: data) else {
-            return [
-                "I've arrived at Senpai's house.",
-                "That's right, right now I'm-",
-                "The City Battler Tournament starts in a few days.",
-                "And that's why we're doing this special training.",
-                "Even though I said it's just special training and asked if we could just play online-",
-                "Or at least, that seems to be Senpai's logic.",
-                "The suggestion was overruled, and it was decided that I'd be staying over at Senpai's house.",
-                "Let's Battle!"
-            ]
+              let data = try? Data(contentsOf: url) else {
+            return Self.defaultMangaGroundTruth()
         }
-        return values
+        if let entries = try? JSONDecoder().decode([MangaGroundTruthEntry].self, from: data) {
+            return entries
+        }
+        if let legacyValues = try? JSONDecoder().decode([String].self, from: data) {
+            return legacyValues.map {
+                MangaGroundTruthEntry(text: $0, type: MangaGroundTruthEntry.dialogueType)
+            }
+        }
+        return Self.defaultMangaGroundTruth()
+    }
+
+    private static func defaultMangaGroundTruth() -> [MangaGroundTruthEntry] {
+        [
+            MangaGroundTruthEntry(text: "I've arrived at Senpai's house.", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "That's right, right now I'm-", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "The City Battler Tournament starts in a few days.", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "And that's why we're doing this special training.", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "This is an offline tournament. Doing it online would make it meaningless.", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "Even though I said it's just special training and asked if we could just play online-", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "Or at least, that seems to be Senpai's logic.", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "The suggestion was overruled, and it was decided that I'd be staying over at Senpai's house.", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "What are you even talking about?", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "We need to get results at this tournament to save the gaming club from being disbanded.", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "Let's Battle!", type: MangaGroundTruthEntry.dialogueType),
+            MangaGroundTruthEntry(text: "City Battler Offline Tournament 開催!!", type: MangaGroundTruthEntry.decorativeType)
+        ]
     }
 
     private func makeFrameworkComparison(
         wholePageBlocks: [MangaOverlayProbeBlock],
         wholePageProcessingTimeMs: Int,
         bubbleComparison: MangaOverlayFrameworkComparison,
-        groundTruth: [String]
+        groundTruth: [MangaGroundTruthEntry]
     ) -> MangaOverlayFrameworkComparison {
         let wholePageTexts = wholePageBlocks.map(\.finalTextUsedForTranslation)
         let bubbleTexts = bubbleComparison.bubbleResults.map(\.text)
         let wholePageMatched = MangaOverlayProbeService.matchedGroundTruthIndexes(texts: wholePageTexts, groundTruth: groundTruth)
         let bubbleMatched = MangaOverlayProbeService.matchedGroundTruthIndexes(texts: bubbleTexts, groundTruth: groundTruth)
         let both = wholePageMatched.intersection(bubbleMatched)
-        let onlyWholePage = wholePageMatched.subtracting(bubbleMatched).sorted().map { groundTruth[$0] }
-        let onlyBubble = bubbleMatched.subtracting(wholePageMatched).sorted().map { groundTruth[$0] }
+        let onlyWholePage = wholePageMatched.subtracting(bubbleMatched).sorted().map { groundTruth[$0].text }
+        let onlyBubble = bubbleMatched.subtracting(wholePageMatched).sorted().map { groundTruth[$0].text }
+        let union = wholePageMatched.union(bubbleMatched)
+        let expectedUnion = both.count + onlyWholePage.count + onlyBubble.count
+        var consistencyWarnings: [String] = []
+        if expectedUnion != union.count {
+            consistencyWarnings.append("framework union mismatch: both + onlyWhole + onlyBubble = \(expectedUnion), union = \(union.count)")
+        }
 
         return MangaOverlayFrameworkComparison(
             groundTruth: groundTruth,
-            wholePage: MangaOverlayFrameworkMetrics(
-                totalBlocksDetected: wholePageBlocks.count,
-                processingTimeMs: wholePageProcessingTimeMs,
-                accuracyVsGroundTruth: MangaOverlayProbeService.averageBestSimilarity(texts: wholePageTexts, groundTruth: groundTruth)
+            comparisonUnit: "trustedGroundTruthMatches",
+            wholePage: MangaOverlayProbeService.frameworkMetrics(
+                texts: wholePageTexts,
+                groundTruth: groundTruth,
+                processingTimeMs: wholePageProcessingTimeMs
             ),
             bubbleFirst: bubbleComparison.bubbleFirst,
             blocksOnlyInWholePage: onlyWholePage,
             blocksOnlyInBubbleFirst: onlyBubble,
             blocksFoundByBoth: both.count,
+            matchedGroundTruthUnionCount: union.count,
+            consistencyPassed: consistencyWarnings.isEmpty,
+            consistencyWarnings: consistencyWarnings,
             bubbleResults: bubbleComparison.bubbleResults,
             notes: bubbleComparison.notes
         )
