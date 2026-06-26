@@ -139,7 +139,7 @@ struct MangaOverlayProbeService: Sendable {
         bubbleTextOverlayImagePath: String? = nil
     ) async throws -> MangaOverlayProbeOutputFiles {
         try await Task.detached(priority: .userInitiated) {
-            try Self.recreateDirectory(outputDirectory)
+            _ = try Self.recreateDirectory(outputDirectory)
 
             let debugURL = outputDirectory.appendingPathComponent("1_debug_boxes.png")
             let overlayURL = outputDirectory.appendingPathComponent("1_translated_overlay.png")
@@ -187,12 +187,16 @@ struct MangaOverlayProbeService: Sendable {
         }.value
     }
 
-    static func recreateDirectory(_ url: URL) throws {
+    @discardableResult
+    static func recreateDirectory(_ url: URL) throws -> Int {
         let fileManager = FileManager.default
+        var removedItemCount = 0
         if fileManager.fileExists(atPath: url.path) {
+            removedItemCount = (try? fileManager.contentsOfDirectory(atPath: url.path).count) ?? 0
             try fileManager.removeItem(at: url)
         }
         try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+        return removedItemCount
     }
 
     static func writeReport(_ report: MangaOverlayProbeReport, to url: URL) throws {
@@ -200,6 +204,72 @@ struct MangaOverlayProbeService: Sendable {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(report)
         try data.write(to: url, options: .atomic)
+    }
+
+    static func renderContactSheet(outputFiles: MangaOverlayProbeOutputFiles, outputDirectory: URL) throws -> String? {
+        let entries: [(String, String?)] = [
+            ("whole-page OCR", outputFiles.ocrTextOverlayImage),
+            ("bubble-first OCR", outputFiles.bubbleTextOverlayImage),
+            ("bubble crops", outputFiles.bubbleCropsImage),
+            ("translated overlay", outputFiles.overlayImage),
+            ("deterministic OCR", outputFiles.deterministicCorrectionOverlayImage),
+            ("deterministic translation", outputFiles.deterministicTranslationOverlayImage)
+        ]
+        let images = entries.compactMap { title, path -> (String, CGImage)? in
+            guard let path,
+                  let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+                  let image = try? makeImage(from: data) else {
+                return nil
+            }
+            return (title, image)
+        }
+        guard !images.isEmpty else { return nil }
+
+        let columns = 2
+        let tileWidth: CGFloat = 520
+        let tileHeight: CGFloat = 680
+        let rows = Int(ceil(Double(images.count) / Double(columns)))
+        let canvasSize = CGSize(width: tileWidth * CGFloat(columns), height: tileHeight * CGFloat(rows))
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: canvasSize, format: format)
+        let rendered = renderer.image { rendererContext in
+            let context = rendererContext.cgContext
+            context.setFillColor(CGColor(red: 0.94, green: 0.95, blue: 0.96, alpha: 1))
+            context.fill(CGRect(origin: .zero, size: canvasSize))
+            for (index, entry) in images.enumerated() {
+                let column = index % columns
+                let row = index / columns
+                let tile = CGRect(
+                    x: CGFloat(column) * tileWidth + 10,
+                    y: CGFloat(row) * tileHeight + 10,
+                    width: tileWidth - 20,
+                    height: tileHeight - 20
+                )
+                context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+                context.fill(tile)
+                drawText(
+                    entry.0,
+                    in: CGRect(x: tile.minX, y: tile.minY, width: tile.width, height: 30),
+                    fontSize: 17,
+                    textColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1),
+                    backgroundColor: CGColor(red: 0.1, green: 0.16, blue: 0.24, alpha: 0.9),
+                    context: context
+                )
+                let imageRect = aspectFitRect(
+                    imageSize: CGSize(width: entry.1.width, height: entry.1.height),
+                    bounds: CGRect(x: tile.minX + 6, y: tile.minY + 38, width: tile.width - 12, height: tile.height - 44)
+                )
+                UIImage(cgImage: entry.1).draw(in: imageRect)
+            }
+        }
+        guard let image = rendered.cgImage else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        let url = outputDirectory.appendingPathComponent("1_probe_contact_sheet.png")
+        try writePNG(image, to: url)
+        return url.path
     }
 
     func compareCustomLexicon(
@@ -412,6 +482,8 @@ struct MangaOverlayProbeService: Sendable {
             failureCategory: \(block.failureCategory)
             failureReasons: \(block.failureReasons.joined(separator: " | "))
             translationFailureDetail: \(block.translationFailureDetail ?? "nil")
+            qualityNotes: \(block.qualityNotes.joined(separator: " | "))
+            decisionTrace: \(block.translationDecisionTrace.joined(separator: " | "))
             """
         }
         .joined(separator: "\n\n")
