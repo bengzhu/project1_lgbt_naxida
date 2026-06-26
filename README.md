@@ -155,9 +155,12 @@ test/
 - `diagnostics`：本轮整体排查汇总，统计通过/失败块、空候选、占位输出、复读原文、非中文输出、疑似 OCR 问题块、疑似规则误伤块。
 - `configuration.currentBlockSource`：记录当前块来源。当前是整图 OCR observations 的空间聚类/去重，即 (a)，不是图像层面的气泡连通域检测。
 - `configuration.preprocessing`：记录本轮预处理增强开关，包含灰度、对比亮度、自适应二值化、裁切放大、锐化和放大倍数。
+- `configuration.customLexiconEnabled` / `customLexicon`：记录 Vision `customWords` 是否启用和本轮词表。
 - `blocks[].rawOcrText` / `afterPreprocessingOcrText` / `finalTextUsedForTranslation`：记录原始 OCR、裁切预处理后二次 OCR、最终送翻译文本。当前预处理结果只用于对比展示，不替换整图 OCR 主流程。
 - `blocks[].correctionEnabled` / `afterCorrectionText` / `correctionRejectedReason` / `correctionPrompt` / `correctionRawOutput` / `correctionErrorCode`：记录 OCR 纠错后处理链路。护栏拒绝时 `afterCorrectionText` 保留原文，`correctionRejectedReason` 写明长度、词数、新词或空输出原因。
 - `correctionGuardrailTest`：固定构造 `XQZ 12 ///` -> `The City Battler Tournament starts in a few days.` 的过度纠错测试，用来证明护栏会拒绝模型瞎猜。
+- `lexiconComparison`：同图同参数下 Vision `customWords` 开/关对比，记录总块数和发生变化的块编号。
+- `visionAPIComparison`：旧 `VNRecognizeTextRequest` 与 iOS 18+ Swift 原生 `RecognizeTextRequest` 的 0° OCR 对比。当前只作为独立探针，不替换主流程。
 - `overallPassed`：至少 1 个块、所有块通过质量判定、两张 PNG 非空才为 `true`。
 
 探针验收重点：
@@ -304,6 +307,9 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v5 实测结论：当前失败不是规则太严。`cjkButFailedCandidates = 0`、`likelyRuleFalseFailureBlocks = []`，主要问题是模型 raw 输出空/英文/占位，以及 OCR 原句已经错，如 `THE CITY RATTLER`、`TRANINS SPECIAL`、`SUGSESTION`、`LOSIC`。
 - 本次未提交工作区 v6：新增 OCR 纠错后处理模块，默认在漫画探针中开启。纠错 prompt 使用简洁模板；Local 模式记录真实 `correctionPrompt`/`correctionRawOutput`，Mock 模式原样回传；护栏按长度变化、词数变化和无依据新词拒绝高风险改写。
 - 本次未提交工作区 v6 实测：iPhone 17 Pro 模拟器跑 `test/1.png`，12 个块均启用纠错；当前 Gemma 270M raw 纠错输出没有一条通过护栏，`finalTextUsedForTranslation` 全部保留原始 OCR。拒绝原因主要是长度变化超过 30% 或纠错输出为空。固定护栏测试 `XQZ 12 ///` -> `The City Battler Tournament starts in a few days.` 被拒绝，原因 `长度变化 390% 超过 30%`。结论：护栏生效，但当前小模型不能作为可靠 OCR 纠错器。
+- 本次未提交工作区 v7：Vision OCR 接入 `customWords` 自定义词表，当前默认词表为 `Senpai`、`City Battler`、`Tournament`、`Ren`、`Battler`；主流程启用词表，同时探针独立跑词表开/关对比，写入 `lexiconComparison`。
+- 本次未提交工作区 v7 实测：iPhone 17 Pro 模拟器跑 `test/1.png`，词表开/关最终合并块数均为 12，`changedBlockIndexes = []`。结论：本图里自定义词表没有改变最终块文本；它适合给专有名词/语言校正提供提示，不解决 `FEW`->`PEN`、`TOURNAMENT`->`TOUINAMENT` 这类常见词误识别。
+- 本次未提交工作区 v7：新增 iOS 18+ Swift 原生 `RecognizeTextRequest` 对比探针，用 `@available(iOS 18.0, *)` 隔离，不替换旧 `VNRecognizeTextRequest` 主流程。iOS 26.5 模拟器实测新 API 可用，0° OCR observation 数旧/新均为 82，样本序列一致，`changed = false`。
 
 ## 后续对话指引
 

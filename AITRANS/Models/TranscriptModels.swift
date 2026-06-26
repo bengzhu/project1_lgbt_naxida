@@ -304,6 +304,7 @@ struct MangaOverlayProbeConfiguration: Equatable, Codable, Sendable {
     var preprocessing: MangaOverlayPreprocessingOptions
     var correction: MangaOverlayCorrectionOptions
     var visionNewAPIStatus: String
+    var customLexiconEnabled: Bool
     var customLexicon: [String]
 
     static let defaultValue = MangaOverlayProbeConfiguration(
@@ -311,8 +312,9 @@ struct MangaOverlayProbeConfiguration: Equatable, Codable, Sendable {
         currentBlockSource: "a: whole-page OCR observations merged by spatial clustering/deduplication",
         preprocessing: .defaultValue,
         correction: .defaultValue,
-        visionNewAPIStatus: "deployment target is iOS 17.0; RecognizeTextRequest needs @available(iOS 18, *) and is not enabled in this partial step",
-        customLexicon: ["Senpai", "City Battler", "Tournament", "Ren"]
+        visionNewAPIStatus: "deployment target is iOS 17.0; RecognizeTextRequest needs @available guard and is not part of the main path",
+        customLexiconEnabled: true,
+        customLexicon: ["Senpai", "City Battler", "Tournament", "Ren", "Battler"]
     )
 }
 
@@ -461,6 +463,25 @@ struct MangaOverlayCorrectionGuardrailTest: Equatable, Codable, Sendable {
     var reason: String?
 }
 
+struct MangaOverlayLexiconComparison: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var customWords: [String]
+    var withoutLexiconTotalBlocks: Int
+    var withLexiconTotalBlocks: Int
+    var changedBlockIndexes: [Int]
+    var notes: [String]
+}
+
+struct MangaOverlayVisionAPIComparison: Equatable, Codable, Sendable {
+    var oldAPITotalObservations: Int
+    var newAPISupported: Bool
+    var newAPITotalObservations: Int?
+    var changed: Bool?
+    var oldAPISample: [String]
+    var newAPISample: [String]
+    var error: String?
+}
+
 struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var sourceImage: String
     var engineUsed: String
@@ -469,6 +490,8 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var blocks: [MangaOverlayProbeBlock]
     var diagnostics: MangaOverlayProbeDiagnostics
     var correctionGuardrailTest: MangaOverlayCorrectionGuardrailTest?
+    var lexiconComparison: MangaOverlayLexiconComparison?
+    var visionAPIComparison: MangaOverlayVisionAPIComparison?
     var overallPassed: Bool
     var outputFiles: MangaOverlayProbeOutputFiles
     var warnings: [String]

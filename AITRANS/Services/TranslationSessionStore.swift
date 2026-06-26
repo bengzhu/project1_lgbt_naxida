@@ -1246,8 +1246,20 @@ final class TranslationSessionStore: ObservableObject {
                 let data = try Data(contentsOf: url)
                 self.mangaOverlayProbeState = .recognizing
                 self.mangaOverlayProbeMessage = "正在用 0/90/180/270 多角度 Vision OCR"
-                let recognized = try await self.mangaOverlayProbeService.recognizeTextBlocks(in: data)
                 let probeConfiguration = MangaOverlayProbeConfiguration.defaultValue
+                let activeCustomWords = probeConfiguration.customLexiconEnabled ? probeConfiguration.customLexicon : []
+                let recognized = try await self.mangaOverlayProbeService.recognizeTextBlocks(
+                    in: data,
+                    customWords: activeCustomWords
+                )
+                let lexiconComparison = try await self.mangaOverlayProbeService.compareCustomLexicon(
+                    in: data,
+                    customWords: probeConfiguration.customLexicon
+                )
+                let visionAPIComparison = try await self.mangaOverlayProbeService.compareVisionAPIs(
+                    in: data,
+                    customWords: activeCustomWords
+                )
 
                 var probeBlocks = recognized.blocks.enumerated().map { index, block in
                     MangaOverlayProbeBlock(
@@ -1311,7 +1323,9 @@ final class TranslationSessionStore: ObservableObject {
                 let report = self.makeMangaOverlayProbeReport(
                     blocks: probeBlocks,
                     outputFiles: outputFiles,
-                    configuration: probeConfiguration
+                    configuration: probeConfiguration,
+                    lexiconComparison: lexiconComparison,
+                    visionAPIComparison: visionAPIComparison
                 )
                 let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
                 try MangaOverlayProbeService.writeReport(report, to: reportURL)
@@ -2199,6 +2213,8 @@ final class TranslationSessionStore: ObservableObject {
         blocks: [MangaOverlayProbeBlock],
         outputFiles: MangaOverlayProbeOutputFiles,
         configuration: MangaOverlayProbeConfiguration,
+        lexiconComparison: MangaOverlayLexiconComparison? = nil,
+        visionAPIComparison: MangaOverlayVisionAPIComparison? = nil,
         extraWarnings: [String] = []
     ) -> MangaOverlayProbeReport {
         var warnings = extraWarnings
@@ -2237,6 +2253,8 @@ final class TranslationSessionStore: ObservableObject {
             blocks: blocks,
             diagnostics: diagnostics,
             correctionGuardrailTest: correctionGuardrailTest,
+            lexiconComparison: lexiconComparison,
+            visionAPIComparison: visionAPIComparison,
             overallPassed: allBlocksPassed && filesPresent,
             outputFiles: outputFiles,
             warnings: warnings
