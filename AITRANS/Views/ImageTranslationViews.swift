@@ -127,7 +127,7 @@ private struct ImageTranslationPreview: View {
                         }
                     }
                 }
-                .frame(height: 300)
+                .frame(height: previewHeight(for: image.size))
                 .background(Color.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             } else {
                 VStack(spacing: 8) {
@@ -165,6 +165,15 @@ private struct ImageTranslationPreview: View {
 
         let scale = min(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
         return CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+    }
+
+    private func previewHeight(for imageSize: CGSize) -> CGFloat {
+        guard imageSize.width > 0, imageSize.height > 0 else {
+            return 300
+        }
+
+        let aspectRatio = imageSize.height / imageSize.width
+        return min(max(320 * aspectRatio, 260), 520)
     }
 }
 

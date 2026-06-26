@@ -8,56 +8,50 @@ private enum AppTab: Hashable {
     case model
     case pro
     case developer
+
+    var title: String {
+        switch self {
+        case .workspace: "工作台"
+        case .history: "历史"
+        case .prompts: "提示词"
+        case .model: "模型"
+        case .pro: "Pro"
+        case .developer: "开发"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .workspace: "waveform.and.mic"
+        case .history: "clock.arrow.circlepath"
+        case .prompts: "text.badge.star"
+        case .model: "memorychip"
+        case .pro: "crown.fill"
+        case .developer: "hammer.fill"
+        }
+    }
+}
+
+private enum AdaptiveLayout {
+    static let pageMaxWidth: CGFloat = 980
+    static let workspaceMaxWidth: CGFloat = 1180
+    static let workspaceSplitWidth: CGFloat = 900
+    static let compactHorizontalPadding: CGFloat = 18
+    static let regularHorizontalPadding: CGFloat = 28
 }
 
 struct ContentView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var selectedTab: AppTab = .workspace
 
     var body: some View {
-        ZStack {
-            AppBackground()
-
-            TabView(selection: $selectedTab) {
-                WorkspaceView(selectedTab: $selectedTab)
-                    .tag(AppTab.workspace)
-                    .tabItem {
-                        Label("工作台", systemImage: "waveform.and.mic")
-                    }
-
-                HistoryView(selectedTab: $selectedTab)
-                    .tag(AppTab.history)
-                    .tabItem {
-                        Label("历史", systemImage: "clock.arrow.circlepath")
-                    }
-
-                PromptLibraryView()
-                    .tag(AppTab.prompts)
-                    .tabItem {
-                        Label("提示词", systemImage: "text.badge.star")
-                    }
-
-                ModelSettingsView()
-                    .tag(AppTab.model)
-                    .tabItem {
-                        Label("模型", systemImage: "memorychip")
-                    }
-
-                ProMainView()
-                    .tag(AppTab.pro)
-                    .tabItem {
-                        Label("Pro", systemImage: "crown.fill")
-                    }
-
-                if store.isDeveloperModeEnabled {
-                    DeveloperConsoleView()
-                        .tag(AppTab.developer)
-                        .tabItem {
-                            Label("开发", systemImage: "hammer.fill")
-                        }
-                }
+        Group {
+            if usesSidebarNavigation {
+                TabletRootView(selectedTab: $selectedTab, tabs: availableTabs)
+            } else {
+                PhoneTabRootView(selectedTab: $selectedTab)
             }
-            .tint(Color.appAccent)
         }
         .onChange(of: store.isDeveloperModeEnabled) { _, isEnabled in
             if isEnabled {
@@ -68,6 +62,186 @@ struct ContentView: View {
         }
         .preferredColorScheme(.dark)
     }
+
+    private var usesSidebarNavigation: Bool {
+        horizontalSizeClass == .regular
+    }
+
+    private var availableTabs: [AppTab] {
+        var tabs: [AppTab] = [.workspace, .history, .prompts, .model, .pro]
+        if store.isDeveloperModeEnabled {
+            tabs.append(.developer)
+        }
+        return tabs
+    }
+}
+
+private struct PhoneTabRootView: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @Binding var selectedTab: AppTab
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+
+            TabView(selection: $selectedTab) {
+                WorkspaceView(selectedTab: $selectedTab)
+                    .tag(AppTab.workspace)
+                    .tabItem {
+                        Label(AppTab.workspace.title, systemImage: AppTab.workspace.systemImage)
+                    }
+
+                HistoryView(selectedTab: $selectedTab)
+                    .tag(AppTab.history)
+                    .tabItem {
+                        Label(AppTab.history.title, systemImage: AppTab.history.systemImage)
+                    }
+
+                PromptLibraryView()
+                    .tag(AppTab.prompts)
+                    .tabItem {
+                        Label(AppTab.prompts.title, systemImage: AppTab.prompts.systemImage)
+                    }
+
+                ModelSettingsView()
+                    .tag(AppTab.model)
+                    .tabItem {
+                        Label(AppTab.model.title, systemImage: AppTab.model.systemImage)
+                    }
+
+                ProMainView()
+                    .tag(AppTab.pro)
+                    .tabItem {
+                        Label(AppTab.pro.title, systemImage: AppTab.pro.systemImage)
+                    }
+
+                if store.isDeveloperModeEnabled {
+                    DeveloperConsoleView()
+                        .tag(AppTab.developer)
+                        .tabItem {
+                            Label(AppTab.developer.title, systemImage: AppTab.developer.systemImage)
+                        }
+                }
+            }
+            .tint(Color.appAccent)
+        }
+    }
+}
+
+private struct TabletRootView: View {
+    @Binding var selectedTab: AppTab
+    let tabs: [AppTab]
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+
+            NavigationSplitView {
+                List {
+                    Section("秒译") {
+                        ForEach(tabs, id: \.self) { tab in
+                            SidebarTabRow(tab: tab, isSelected: selectedTab == tab) {
+                                selectedTab = tab
+                            }
+                            .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        }
+                    }
+                }
+                .listStyle(.sidebar)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+                .navigationTitle("秒译")
+            } detail: {
+                TabContentRouter(tab: selectedTab, selectedTab: $selectedTab)
+                    .background(Color.clear)
+                    .navigationTitle(selectedTab.title)
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+            .navigationSplitViewStyle(.balanced)
+            .tint(Color.appAccent)
+        }
+    }
+}
+
+private struct SidebarTabRow: View {
+    let tab: AppTab
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(isSelected ? Color.appAccent.opacity(0.22) : Color.white.opacity(0.07))
+
+                    Image(systemName: tab.systemImage)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(isSelected ? Color.appAccent : .white.opacity(0.74))
+                }
+                .frame(width: 34, height: 34)
+
+                Text(tab.title)
+                    .font(.system(size: 15, weight: isSelected ? .heavy : .semibold))
+                    .foregroundStyle(isSelected ? .white : .white.opacity(0.82))
+
+                Spacer(minLength: 0)
+
+                if isSelected {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(Color.appAccent)
+                }
+            }
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+            .background(
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(isSelected ? Color.white.opacity(0.12) : Color.clear)
+
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(Color.appAccent)
+                            .frame(width: 4, height: 28)
+                            .padding(.leading, 1)
+                    }
+                }
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isSelected ? Color.white.opacity(0.13) : Color.clear, lineWidth: 1)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tab.title)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+}
+
+private struct TabContentRouter: View {
+    let tab: AppTab
+    @Binding var selectedTab: AppTab
+
+    var body: some View {
+        switch tab {
+        case .workspace:
+            WorkspaceView(selectedTab: $selectedTab)
+        case .history:
+            HistoryView(selectedTab: $selectedTab)
+        case .prompts:
+            PromptLibraryView()
+        case .model:
+            ModelSettingsView()
+        case .pro:
+            ProMainView()
+        case .developer:
+            DeveloperConsoleView()
+        }
+    }
 }
 
 private struct WorkspaceView: View {
@@ -75,15 +249,39 @@ private struct WorkspaceView: View {
     @Binding var selectedTab: AppTab
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
+        GeometryReader { geometry in
+            let isWide = geometry.size.width >= AdaptiveLayout.workspaceSplitWidth
+
+            ScrollView(showsIndicators: false) {
+                workspaceContent(isWide: isWide)
+                    .padding(.horizontal, isWide ? AdaptiveLayout.regularHorizontalPadding : AdaptiveLayout.compactHorizontalPadding)
+                    .padding(.top, 12)
+                    .padding(.bottom, 92)
+                    .frame(maxWidth: AdaptiveLayout.workspaceMaxWidth)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func workspaceContent(isWide: Bool) -> some View {
+        if isWide {
+            HStack(alignment: .top, spacing: 18) {
+                VStack(spacing: 16) {
+                    HeaderBar()
+                    MainTranslatorPanel(selectedTab: $selectedTab)
+                }
+                .frame(maxWidth: 700)
+
+                RecentTranslationPanel()
+                    .frame(maxWidth: 420)
+            }
+        } else {
             VStack(spacing: 16) {
                 HeaderBar()
                 MainTranslatorPanel(selectedTab: $selectedTab)
                 RecentTranslationPanel()
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 12)
-            .padding(.bottom, 92)
         }
     }
 }
@@ -182,7 +380,7 @@ private struct HistoryView: View {
                     }
                 }
             }
-            .padding(.horizontal, 18)
+            .adaptivePageFrame()
             .padding(.top, 12)
             .padding(.bottom, 92)
         }
@@ -280,7 +478,7 @@ private struct PromptLibraryView: View {
                     }
                 }
             }
-            .padding(.horizontal, 18)
+            .adaptivePageFrame()
             .padding(.top, 12)
             .padding(.bottom, 92)
         }
@@ -313,7 +511,7 @@ private struct ModelSettingsView: View {
                 SamplingPanel()
                 AdapterContractPanel()
             }
-            .padding(.horizontal, 18)
+            .adaptivePageFrame()
             .padding(.top, 12)
             .padding(.bottom, 92)
         }
@@ -336,7 +534,7 @@ private struct ProMainView: View {
                 ProLiveInterpreterPanel()
                 ProFeatureGrid()
             }
-            .padding(.horizontal, 18)
+            .adaptivePageFrame()
             .padding(.top, 12)
             .padding(.bottom, 92)
         }
@@ -415,7 +613,7 @@ private struct DeveloperConsoleView: View {
                     store.disableDeveloperMode()
                 }
             }
-            .padding(.horizontal, 18)
+            .adaptivePageFrame()
             .padding(.top, 12)
             .padding(.bottom, 92)
         }
@@ -629,37 +827,58 @@ private struct RawProbeSnippet: View {
 
 private struct AppBackground: View {
     var body: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.05, green: 0.07, blue: 0.08),
-                Color(red: 0.06, green: 0.11, blue: 0.13),
-                Color(red: 0.10, green: 0.08, blue: 0.11)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .overlay(alignment: .top) {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.10, green: 0.37, blue: 0.42).opacity(0.65),
-                    Color(red: 0.30, green: 0.18, blue: 0.33).opacity(0.35),
-                    .clear
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .frame(height: 260)
-        }
-        .overlay {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [.white.opacity(0.035), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
+        GeometryReader { proxy in
+            let size = proxy.size
+            let longestSide = max(size.width, size.height)
+            let glowHeight = min(max(longestSide * 0.42, 360), 680)
+
+            ZStack(alignment: .top) {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.05, green: 0.07, blue: 0.08),
+                                Color(red: 0.06, green: 0.11, blue: 0.13),
+                                Color(red: 0.10, green: 0.08, blue: 0.11)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.10, green: 0.37, blue: 0.42).opacity(0.62),
+                                Color(red: 0.30, green: 0.18, blue: 0.33).opacity(0.34),
+                                Color(red: 0.06, green: 0.11, blue: 0.13).opacity(0.16),
+                                .clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: size.width, height: glowHeight)
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                .white.opacity(0.035),
+                                .white.opacity(0.012),
+                                .clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            }
+            .frame(width: size.width, height: size.height)
         }
+        .background(
+            Color(red: 0.05, green: 0.07, blue: 0.08)
+        )
         .ignoresSafeArea()
     }
 }
@@ -2677,6 +2896,10 @@ private extension TextField {
 }
 
 extension View {
+    func adaptivePageFrame(maxWidth: CGFloat = AdaptiveLayout.pageMaxWidth) -> some View {
+        modifier(AdaptivePageFrame(maxWidth: maxWidth))
+    }
+
     func panelStyle(cornerRadius: CGFloat = 20) -> some View {
         self
             .padding(14)
@@ -2685,6 +2908,18 @@ extension View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(.white.opacity(0.10), lineWidth: 1)
             }
+    }
+}
+
+private struct AdaptivePageFrame: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    let maxWidth: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, horizontalSizeClass == .regular ? AdaptiveLayout.regularHorizontalPadding : AdaptiveLayout.compactHorizontalPadding)
+            .frame(maxWidth: maxWidth)
+            .frame(maxWidth: .infinity)
     }
 }
 

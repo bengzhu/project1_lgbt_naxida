@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -18,8 +18,8 @@
 		0A000001000000000000000A /* VisionOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001C /* VisionOCRService.swift */; };
 		0A000001000000000000000B /* ProFeatureViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001D /* ProFeatureViews.swift */; };
 		0A000001000000000000000C /* LlamaRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001E /* LlamaRuntime.swift */; };
-		0A000001000000000000000D /* llama.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001F /* llama.xcframework */; };
-		0A000001000000000000000E /* llama.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001F /* llama.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0A000001000000000000000D /* build-apple/llama.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001F /* build-apple/llama.xcframework */; };
+		0A000001000000000000000E /* build-apple/llama.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001F /* build-apple/llama.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		0A000001000000000000000F /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000021 /* Metal.framework */; };
 		0A0000010000000000000022 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000023 /* Accelerate.framework */; };
 		0A0000010000000000000025 /* LocalModelDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000026 /* LocalModelDownloadService.swift */; };
@@ -34,7 +34,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				0A000001000000000000000E /* llama.xcframework in Embed Frameworks */,
+				0A000001000000000000000E /* build-apple/llama.xcframework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -57,16 +57,13 @@
 		0A000001000000000000001C /* VisionOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionOCRService.swift; sourceTree = "<group>"; };
 		0A000001000000000000001D /* ProFeatureViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFeatureViews.swift; sourceTree = "<group>"; };
 		0A000001000000000000001E /* LlamaRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaRuntime.swift; sourceTree = "<group>"; };
-		0A000001000000000000001F /* llama.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = "build-apple/llama.xcframework"; sourceTree = SOURCE_ROOT; };
+		0A000001000000000000001F /* build-apple/llama.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = "build-apple/llama.xcframework"; sourceTree = SOURCE_ROOT; };
 		0A0000010000000000000021 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		0A0000010000000000000023 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		0A0000010000000000000026 /* LocalModelDownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelDownloadService.swift; sourceTree = "<group>"; };
 		0A0000010000000000000028 /* test */ = {isa = PBXFileReference; lastKnownFileType = folder; path = test; sourceTree = SOURCE_ROOT; };
 		0A000001000000000000002A /* MangaOverlayProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaOverlayProbeService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0A0000010000000000000020 /* Frameworks */ = {
@@ -75,7 +72,7 @@
 			files = (
 				0A000001000000000000000F /* Metal.framework in Frameworks */,
 				0A0000010000000000000022 /* Accelerate.framework in Frameworks */,
-				0A000001000000000000000D /* llama.xcframework in Frameworks */,
+				0A000001000000000000000D /* build-apple/llama.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -166,7 +163,7 @@
 		0A0000010000000000000038 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				0A000001000000000000001F /* llama.xcframework */,
+				0A000001000000000000001F /* build-apple/llama.xcframework */,
 				0A0000010000000000000021 /* Metal.framework */,
 				0A0000010000000000000023 /* Accelerate.framework */,
 			);
@@ -216,11 +213,10 @@
 			knownRegions = (
 				en,
 				Base,
-				zh-Hans,
+				"zh-Hans",
 			);
 			mainGroup = 0A0000010000000000000030;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			productRefGroup = 0A0000010000000000000032 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -398,9 +394,11 @@
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitrans;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -423,9 +421,11 @@
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitrans;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
