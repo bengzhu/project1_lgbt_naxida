@@ -635,6 +635,8 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var overallPassed: Bool
     var outputFiles: MangaOverlayProbeOutputFiles
     var outputDirectoryCleaned: Bool
+    var outputCleanupRemovedItemCount: Int
+    var outputFileCountAfterCleanup: Int
     var retainedOutputFiles: [String]
     var outputCleanupPolicy: String
     var warnings: [String]

@@ -1243,7 +1243,7 @@ final class TranslationSessionStore: ObservableObject {
 
             do {
                 let startedAt = Date.now
-                try MangaOverlayProbeService.recreateDirectory(self.mangaOverlayOutputDirectory)
+                let outputCleanupRemovedItemCount = try MangaOverlayProbeService.recreateDirectory(self.mangaOverlayOutputDirectory)
                 let data = try Data(contentsOf: url)
                 self.mangaOverlayProbeState = .recognizing
                 self.mangaOverlayProbeMessage = "正在用 0/90/180/270 多角度 Vision OCR"
@@ -1370,6 +1370,10 @@ final class TranslationSessionStore: ObservableObject {
                         groundTruth: groundTruth
                     )
                 }
+                outputFiles.probeContactSheetImage = try MangaOverlayProbeService.renderContactSheet(
+                    outputFiles: outputFiles,
+                    outputDirectory: self.mangaOverlayOutputDirectory
+                )
 
                 let report = self.makeMangaOverlayProbeReport(
                     blocks: probeBlocks,
@@ -1377,7 +1381,8 @@ final class TranslationSessionStore: ObservableObject {
                     configuration: probeConfiguration,
                     lexiconComparison: lexiconComparison,
                     visionAPIComparison: visionAPIComparison,
-                    frameworkComparison: frameworkComparison
+                    frameworkComparison: frameworkComparison,
+                    outputCleanupRemovedItemCount: outputCleanupRemovedItemCount
                 )
                 let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
                 try MangaOverlayProbeService.writeReport(report, to: reportURL)
@@ -2462,6 +2467,10 @@ final class TranslationSessionStore: ObservableObject {
             return "候选只是翻译标签，不是真实译文"
         }
 
+        if Self.isGenericLowInformationTranslation(cleanCandidate, original: cleanOriginal) {
+            return "多词原文只得到泛化短答复"
+        }
+
         if Self.rawOutputLeavesUntranslatedEnglish(rawOutput, candidate: cleanCandidate) {
             return "raw 输出仍保留未翻译英文"
         }
@@ -2482,6 +2491,25 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         return nil
+    }
+
+    private static func isGenericLowInformationTranslation(_ candidate: String, original: String) -> Bool {
+        let sourceWords = original
+            .components(separatedBy: CharacterSet.letters.inverted)
+            .filter { $0.count >= 3 }
+        guard sourceWords.count >= 3 else { return false }
+
+        let normalizedCandidate = candidate
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            .replacingOccurrences(of: " ", with: "")
+        let genericShortAnswers = [
+            "那是什么",
+            "这是什么",
+            "什么意思",
+            "谢谢",
+            "好的"
+        ]
+        return genericShortAnswers.contains { normalizedCandidate.localizedCaseInsensitiveCompare($0) == .orderedSame }
     }
 
     private static func mangaProbeOCRInputQualityIssue(_ block: MangaOverlayProbeBlock) -> String? {
@@ -2894,6 +2922,7 @@ final class TranslationSessionStore: ObservableObject {
         lexiconComparison: MangaOverlayLexiconComparison? = nil,
         visionAPIComparison: MangaOverlayVisionAPIComparison? = nil,
         frameworkComparison: MangaOverlayFrameworkComparison? = nil,
+        outputCleanupRemovedItemCount: Int = 0,
         extraWarnings: [String] = []
     ) -> MangaOverlayProbeReport {
         var warnings = extraWarnings
@@ -2939,6 +2968,8 @@ final class TranslationSessionStore: ObservableObject {
             overallPassed: allBlocksPassed && filesPresent,
             outputFiles: outputFiles,
             outputDirectoryCleaned: true,
+            outputCleanupRemovedItemCount: outputCleanupRemovedItemCount,
+            outputFileCountAfterCleanup: retainedFiles.count,
             retainedOutputFiles: retainedFiles,
             outputCleanupPolicy: "探针开始重建 App 沙盒 Output；renderOutputs 再次重建；export-probe-output.sh 重建项目根 output；只保留本轮 probe_report.json 和本轮 PNG。",
             warnings: warnings
@@ -3101,6 +3132,7 @@ final class TranslationSessionStore: ObservableObject {
             outputFiles.bubbleCropsImage,
             outputFiles.bubbleSeedDebugImage,
             outputFiles.bubbleTextOverlayImage,
+            outputFiles.probeContactSheetImage,
             "probe_report.json"
         ]
             .compactMap { $0 }
