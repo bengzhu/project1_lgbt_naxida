@@ -65,7 +65,8 @@ struct MangaOverlayProbeService: Sendable {
 
     func recognizeTextBlocks(
         in imageData: Data,
-        cropping: MangaOverlayProbeCropping = .defaultValue
+        cropping: MangaOverlayProbeCropping = .defaultValue,
+        customWords: [String] = []
     ) async throws -> (image: CGImage, blocks: [MangaOverlayOCRBlock]) {
         try await Task.detached(priority: .userInitiated) {
             let image = try Self.makeImage(from: imageData)
@@ -80,7 +81,8 @@ struct MangaOverlayProbeService: Sendable {
                     angle: angle,
                     scaledContentSize: CGSize(width: CGFloat(scaledImage.width), height: CGFloat(scaledImage.height)),
                     contentOrigin: contentRect.origin,
-                    scale: Self.ocrScale
+                    scale: Self.ocrScale,
+                    customWords: customWords
                 )
             }
             return (image, Self.mergeCandidatesIntoBlocks(candidates, imageSize: CGSize(width: image.width, height: image.height)))
@@ -103,7 +105,8 @@ struct MangaOverlayProbeService: Sendable {
                 angle: 0,
                 scaledContentSize: CGSize(width: CGFloat(prepared.width), height: CGFloat(prepared.height)),
                 contentOrigin: .zero,
-                scale: 1
+                scale: 1,
+                customWords: []
             )
             let text = candidates
                 .sorted {
@@ -176,17 +179,129 @@ struct MangaOverlayProbeService: Sendable {
         try data.write(to: url, options: .atomic)
     }
 
+    func compareCustomLexicon(
+        in imageData: Data,
+        customWords: [String],
+        cropping: MangaOverlayProbeCropping = .defaultValue
+    ) async throws -> MangaOverlayLexiconComparison {
+        let withoutLexicon = try await recognizeTextBlocks(in: imageData, cropping: cropping, customWords: [])
+        let withLexicon = try await recognizeTextBlocks(in: imageData, cropping: cropping, customWords: customWords)
+        let pairedCount = min(withoutLexicon.blocks.count, withLexicon.blocks.count)
+        var changedIndexes: [Int] = []
+        for index in 0..<pairedCount where withoutLexicon.blocks[index].text != withLexicon.blocks[index].text {
+            changedIndexes.append(index)
+        }
+        if withoutLexicon.blocks.count != withLexicon.blocks.count {
+            changedIndexes.append(contentsOf: pairedCount..<max(withoutLexicon.blocks.count, withLexicon.blocks.count))
+        }
+        let notes: [String] = changedIndexes.isEmpty
+            ? ["customWords did not change final merged block text in this run"]
+            : ["customWords changed \(changedIndexes.count) merged block(s); effect is lexicon/language-correction hinting, not general OCR repair"]
+        return MangaOverlayLexiconComparison(
+            enabled: !customWords.isEmpty,
+            customWords: customWords,
+            withoutLexiconTotalBlocks: withoutLexicon.blocks.count,
+            withLexiconTotalBlocks: withLexicon.blocks.count,
+            changedBlockIndexes: changedIndexes,
+            notes: notes
+        )
+    }
+
+    func compareVisionAPIs(
+        in imageData: Data,
+        customWords: [String],
+        cropping: MangaOverlayProbeCropping = .defaultValue
+    ) async throws -> MangaOverlayVisionAPIComparison {
+        try await Task.detached(priority: .userInitiated) {
+            let image = try Self.makeImage(from: imageData)
+            let contentRect = Self.contentCropRect(for: image, cropping: cropping)
+            let croppedImage = try Self.croppedImage(image, rect: contentRect)
+            let scaledImage = try Self.scaledImage(croppedImage, scale: Self.ocrScale)
+            let oldTexts = try Self.recognizeTextCandidates(
+                in: scaledImage,
+                angle: 0,
+                scaledContentSize: CGSize(width: CGFloat(scaledImage.width), height: CGFloat(scaledImage.height)),
+                contentOrigin: contentRect.origin,
+                scale: Self.ocrScale,
+                customWords: customWords
+            ).map(\.text)
+
+            if #available(iOS 18.0, *) {
+                do {
+                    let newTexts = try await Self.recognizeTextWithSwiftAPI(in: scaledImage, customWords: customWords)
+                    return MangaOverlayVisionAPIComparison(
+                        oldAPITotalObservations: oldTexts.count,
+                        newAPISupported: true,
+                        newAPITotalObservations: newTexts.count,
+                        changed: oldTexts != newTexts,
+                        oldAPISample: Array(oldTexts.prefix(20)),
+                        newAPISample: Array(newTexts.prefix(20)),
+                        error: nil
+                    )
+                } catch {
+                    return MangaOverlayVisionAPIComparison(
+                        oldAPITotalObservations: oldTexts.count,
+                        newAPISupported: true,
+                        newAPITotalObservations: nil,
+                        changed: nil,
+                        oldAPISample: Array(oldTexts.prefix(20)),
+                        newAPISample: [],
+                        error: "\(type(of: error)): \(error.localizedDescription)"
+                    )
+                }
+            } else {
+                return MangaOverlayVisionAPIComparison(
+                    oldAPITotalObservations: oldTexts.count,
+                    newAPISupported: false,
+                    newAPITotalObservations: nil,
+                    changed: nil,
+                    oldAPISample: Array(oldTexts.prefix(20)),
+                    newAPISample: [],
+                    error: "RecognizeTextRequest requires iOS 18+"
+                )
+            }
+        }.value
+    }
+
+    @available(iOS 18.0, *)
+    private static func recognizeTextWithSwiftAPI(in image: CGImage, customWords: [String]) async throws -> [String] {
+        var request = RecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+        request.automaticallyDetectsLanguage = false
+        let englishLanguages = request.supportedRecognitionLanguages.filter { language in
+            let identifier = language.minimalIdentifier
+            return identifier == "en" || identifier == "en-US"
+        }
+        if !englishLanguages.isEmpty {
+            request.recognitionLanguages = englishLanguages
+        }
+        if !customWords.isEmpty {
+            request.customWords = customWords
+        }
+        request.minimumTextHeightFraction = 0.006
+        let observations = try await request.perform(on: image)
+        return observations.compactMap { observation in
+            let text = observation.topCandidates(1).first?.string.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return text.isEmpty || Self.isNoise(text) ? nil : text
+        }
+    }
+
     private static func recognizeTextCandidates(
         in image: CGImage,
         angle: Int,
         scaledContentSize: CGSize,
         contentOrigin: CGPoint,
-        scale: CGFloat
+        scale: CGFloat,
+        customWords: [String]
     ) throws -> [MangaOverlayOCRCandidate] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
         request.automaticallyDetectsLanguage = false
+        if !customWords.isEmpty {
+            request.customWords = customWords
+        }
         let supportedLanguages = (try? request.supportedRecognitionLanguages()) ?? []
         let englishLanguages = ["en-US", "en"].filter { supportedLanguages.contains($0) }
         if !englishLanguages.isEmpty {
