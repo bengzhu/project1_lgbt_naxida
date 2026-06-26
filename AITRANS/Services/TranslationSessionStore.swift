@@ -1362,6 +1362,7 @@ final class TranslationSessionStore: ObservableObject {
                     outputFiles.bubbleDebugImage = bubbleProbe.debugPath
                     outputFiles.bubbleCropsImage = bubbleProbe.cropsPath
                     outputFiles.bubbleSeedDebugImage = bubbleProbe.seedDebugPath
+                    outputFiles.bubbleTextOverlayImage = bubbleProbe.textOverlayPath
                     frameworkComparison = self.makeFrameworkComparison(
                         wholePageBlocks: probeBlocks,
                         wholePageProcessingTimeMs: wholePageProcessingTimeMs,
@@ -3099,6 +3100,7 @@ final class TranslationSessionStore: ObservableObject {
             outputFiles.bubbleDebugImage,
             outputFiles.bubbleCropsImage,
             outputFiles.bubbleSeedDebugImage,
+            outputFiles.bubbleTextOverlayImage,
             "probe_report.json"
         ]
             .compactMap { $0 }
