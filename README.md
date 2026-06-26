@@ -177,7 +177,7 @@ test/
 - 每次运行会先清空 App 沙盒 `Application Support/AITRANS/Output/`，`scripts/export-probe-output.sh` 也会先清空项目根 `output/`，避免新旧 PNG / JSON 混在一起。
 - 输出图片包括 `1_debug_boxes.png`、`1_translated_overlay.png`、`1_ocr_text_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png`、`1_bubble_debug.png`、`1_bubble_seed_debug.png`、`1_bubble_crops.png`。其中 `1_block_crops.png` 是块裁切放大预处理拼图，用于目测二值化/锐化是否过激。
 - 翻译失败排查规范：先看 `failureCategory`，再看 `rawOutputClassification` 和 `candidateClassification`。如果 `failureCategory = ocrInputSuspect`，优先修 OCR/合并/裁切；如果是 `modelOutputFailure`，优先换模型、调采样或 prompt；如果是 `ruleFalseFailureSuspected`，才优先放宽判定规则。不要只看覆盖图猜测失败原因。
-- 翻译规则排查规范：如果 `likelyRuleFalseFailureBlocks = []` 且 `cjkButFailedCandidates = 0`，说明本轮没有发现“真实中文译文被规则误杀”；如果 `passedButSuspiciousTranslationBlocks` 非空，说明硬规则偏宽，需继续收紧“通过但语义明显差/解释型输出”的质量规则。
+- 翻译规则排查规范：如果 `likelyRuleFalseFailureBlocks = []` 且 `cjkButFailedCandidates = 0`，说明本轮没有发现“真实中文译文被规则误杀”。中文候选存在不等于通过；硬通过前还会检查低 OCR 相似度、已知 OCR 错词、解释/列表型输出、长原文短译文和中英混排。
 - OCR 质量排查规范：先按 `ocrGroundTruthSimilarity` 从低到高看 `blocks[].finalTextUsedForTranslation`。本探针用 `test/1.ground_truth.json` 做真值；换测试图时应同步更新真值文件，否则相似度只作参考。
 
 模拟器跑完后，把沙盒输出导出到项目根 `output/`：
@@ -334,6 +334,8 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v13：探针报告新增 `translationDecisionTrace`、`translationFailureDetail`、`ocrProbeNotes`、`diagnostics.translationFailureBreakdown`、`diagnostics.ocrQualityProbe`、`diagnostics.passedButSuspiciousTranslationBlocks`、`outputDirectoryCleaned`、`retainedOutputFiles` 和 `outputCleanupPolicy`。目的：直接证明每轮输出目录被清理，并把“翻译失败到底是规则太严、模型 raw 输出坏、候选抽取坏，还是 OCR 英文输入坏”拆开记录。
 - 本次未提交工作区 v13 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 并导出，项目根 `output/` 只保留 9 个本轮文件：`probe_report.json` 和 8 张 PNG。`probe_report.json` 显示 `totalBlocksDetected = 12`、`passedBlocks = 4`、`failedBlocks = 8`、`translationFailureBreakdown = { modelOutputFailure: 3, ocrInputSuspect: 5 }`、`likelyRuleFalseFailureBlocks = []`、`cjkButFailedCandidates = 0`、`passedButSuspiciousTranslationBlocks = [2, 9, 11]`、`averageOCRGroundTruthSimilarity = 0.6846`。结论：未发现“实际翻译成功但规则太严误杀”；相反，硬规则偏宽，部分中文候选虽然通过但语义明显差。
 - 本次未提交工作区 v13 OCR 原句排查：低相似/可疑输入仍集中在 `THE CITY RATTLER / STATE IN A PEN DAYS.`、`THIS IS AN / TOURNAMENT. DOING IT / WOULD MAKE WOLLD MAKE ONLINE`、`GET PESULTE / SAMING CLUE TO SAVE THE / POOM BENG`、`What Whet are / every you! / talking`、`City Battler / Offline. / Tournament`；高相似但模型失败包括 `THAT'S / RIGHT, / NOW / I'M-`、`IVE ARRIVED AT REN- SENPAI'S HOUSE.`、`LET'S / BATTLER!`。下一步应优先收紧通过质量规则，并继续改善 OCR 英文纠错/气泡路径降噪，而不是放宽中文判定。
+- 本次未提交工作区 v14：收紧漫画探针 `blockPassed` 质量门槛。中文候选只满足“含 CJK”不再足够；如果 OCR 真值相似度低于 `0.72`、OCR 含已知错词且相似度低于 `0.86`、输出像解释/列表、长原文只得到过短中文、或译文中英混排，都会标成失败并绘制 `翻译失败 + OCR 原文`。这是探针质量判定，不改变普通产品翻译链路。
+- 本次未提交工作区 v14 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后，`totalBlocksDetected = 12`、`passedBlocks = 1`、`failedBlocks = 11`、`translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 9 }`、`likelyRuleFalseFailureBlocks = []`、`passedButSuspiciousTranslationBlocks = []`、`averageOCRGroundTruthSimilarity = 0.6846`。结论：坏译文不再被标 PASS；剩余主要问题仍是 OCR 输入错误和当前 Gemma 270M raw 输出不稳定。输出目录仍只保留本轮 9 个文件，含全图 OCR 覆盖、翻译覆盖、块裁切、气泡候选和气泡 crop 调试图。
 
 ## 后续对话指引
 

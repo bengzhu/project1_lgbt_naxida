@@ -334,6 +334,9 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var correctionPrompt: String?
     var correctionRawOutput: String?
     var correctionErrorCode: String?
+    var deterministicCorrectionText: String?
+    var deterministicCorrectionAppliedRules: [String]
+    var deterministicCorrectionSimilarity: Double?
     var finalTextUsedForTranslation: String
     var bestGroundTruthIndex: Int?
     var bestGroundTruthText: String?
@@ -371,6 +374,9 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         correctionPrompt: String? = nil,
         correctionRawOutput: String? = nil,
         correctionErrorCode: String? = nil,
+        deterministicCorrectionText: String? = nil,
+        deterministicCorrectionAppliedRules: [String] = [],
+        deterministicCorrectionSimilarity: Double? = nil,
         finalTextUsedForTranslation: String? = nil,
         bestGroundTruthIndex: Int? = nil,
         bestGroundTruthText: String? = nil,
@@ -415,6 +421,9 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.correctionPrompt = correctionPrompt
         self.correctionRawOutput = correctionRawOutput
         self.correctionErrorCode = correctionErrorCode
+        self.deterministicCorrectionText = deterministicCorrectionText
+        self.deterministicCorrectionAppliedRules = deterministicCorrectionAppliedRules
+        self.deterministicCorrectionSimilarity = deterministicCorrectionSimilarity
         self.finalTextUsedForTranslation = finalTextUsedForTranslation ?? ocrText
         self.bestGroundTruthIndex = bestGroundTruthIndex
         self.bestGroundTruthText = bestGroundTruthText
@@ -490,6 +499,8 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
     var passedButSuspiciousTranslationBlocks: [Int]
     var translationFailureBreakdown: [String: Int]
     var ocrQualityProbe: [String]
+    var deterministicCorrectionImprovedBlocks: [Int]
+    var deterministicCorrectionAverageSimilarity: Double
 
     static let empty = MangaOverlayProbeDiagnostics(
         passedBlocks: 0,
@@ -511,7 +522,9 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
         likelyRuleFalseFailureBlocks: [],
         passedButSuspiciousTranslationBlocks: [],
         translationFailureBreakdown: [:],
-        ocrQualityProbe: []
+        ocrQualityProbe: [],
+        deterministicCorrectionImprovedBlocks: [],
+        deterministicCorrectionAverageSimilarity: 0
     )
 }
 
