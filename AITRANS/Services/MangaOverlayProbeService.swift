@@ -286,35 +286,25 @@ struct MangaOverlayProbeService: Sendable {
             let image = try Self.makeImage(from: imageData)
             let bubbles = try Self.detectBubbleCandidates(in: image, cropping: cropping, customWords: customWords)
             let seedDebugCandidates = try Self.rawBubbleSeedCandidates(in: image, cropping: cropping, customWords: customWords)
-            let results = try bubbles.map { bubble in
-                let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
-                let cropRect = Self.expand(bubble.boundingBox, by: 0.08, bounds: bounds).integral
-                let cropped = try Self.croppedImage(image, rect: cropRect)
-                let processed: CGImage
-                if preprocessing.enabled, bubble.source == "whiteComponent" {
-                    processed = try Self.preprocessedImage(cropped, options: preprocessing)
-                } else if bubble.source == "ocrSeed" {
-                    processed = try Self.scaledImage(cropped, scale: Self.ocrScale)
-                } else {
-                    processed = cropped
-                }
-                let candidates = try Self.recognizeTextCandidates(
-                    in: processed,
-                    angle: 0,
-                    scaledContentSize: CGSize(width: CGFloat(processed.width), height: CGFloat(processed.height)),
-                    contentOrigin: .zero,
-                    scale: 1,
-                    customWords: customWords
+            let results = try bubbles.flatMap { bubble in
+                try Self.bubbleResults(
+                    for: bubble,
+                    image: image,
+                    preprocessing: preprocessing,
+                    customWords: customWords,
+                    groundTruth: groundTruth
                 )
-                let text = Self.mergeText(from: Self.orderedCandidates(candidates))
-                let match = Self.bestGroundTruthMatch(text: text, groundTruth: groundTruth)
-                return MangaOverlayBubbleResult(
-                    index: bubble.index,
-                    bbox: [bubble.boundingBox.minX, bubble.boundingBox.minY, bubble.boundingBox.width, bubble.boundingBox.height].map(Double.init),
-                    source: bubble.source,
-                    text: text,
-                    bestGroundTruthIndex: match.index,
-                    bestSimilarity: match.similarity
+            }
+            .filter(Self.shouldKeepBubbleResult)
+            .enumerated()
+            .map { offset, result in
+                MangaOverlayBubbleResult(
+                    index: offset,
+                    bbox: result.bbox,
+                    source: result.source,
+                    text: result.text,
+                    bestGroundTruthIndex: result.bestGroundTruthIndex,
+                    bestSimilarity: result.bestSimilarity
                 )
             }
 
@@ -373,6 +363,95 @@ struct MangaOverlayProbeService: Sendable {
             let text = observation.topCandidates(1).first?.string.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return text.isEmpty || Self.isNoise(text) ? nil : text
         }
+    }
+
+    private static func bubbleResults(
+        for bubble: MangaOverlayBubbleCandidate,
+        image: CGImage,
+        preprocessing: MangaOverlayPreprocessingOptions,
+        customWords: [String],
+        groundTruth: [String]
+    ) throws -> [MangaOverlayBubbleResult] {
+        let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+        let cropRect = expand(bubble.boundingBox, by: 0.08, bounds: bounds).integral
+        let cropped = try croppedImage(image, rect: cropRect)
+        let processed: CGImage
+        let scale: CGFloat
+        if preprocessing.enabled, bubble.source == "whiteComponent" {
+            processed = try preprocessedImage(cropped, options: preprocessing)
+            scale = 1
+        } else if bubble.source == "ocrSeed" {
+            processed = try scaledImage(cropped, scale: ocrScale)
+            scale = ocrScale
+        } else {
+            processed = cropped
+            scale = 1
+        }
+        let candidates = try recognizeTextCandidates(
+            in: processed,
+            angle: 0,
+            scaledContentSize: CGSize(width: CGFloat(processed.width), height: CGFloat(processed.height)),
+            contentOrigin: .zero,
+            scale: 1,
+            customWords: customWords
+        )
+
+        let localBlocks: [MangaOverlayOCRBlock]
+        if bubble.source == "ocrSeed" {
+            localBlocks = mergeCandidatesIntoBlocks(
+                candidates,
+                imageSize: CGSize(width: CGFloat(processed.width), height: CGFloat(processed.height))
+            )
+        } else {
+            let text = mergeText(from: orderedCandidates(candidates))
+            let rect = candidates.map(\.boundingBox).reduce(CGRect.null) { $0.union($1) }
+            localBlocks = text.isEmpty ? [] : [
+                MangaOverlayOCRBlock(
+                    text: text,
+                    confidence: nil,
+                    boundingBox: rect.isNull ? CGRect(origin: .zero, size: CGSize(width: processed.width, height: processed.height)) : rect,
+                    rotationAngle: 0
+                )
+            ]
+        }
+
+        return localBlocks.map { block in
+            let globalRect = clamp(
+                CGRect(
+                    x: cropRect.minX + block.boundingBox.minX / scale,
+                    y: cropRect.minY + block.boundingBox.minY / scale,
+                    width: block.boundingBox.width / scale,
+                    height: block.boundingBox.height / scale
+                ).standardized,
+                to: bounds
+            )
+            let match = bestGroundTruthMatch(text: block.text, groundTruth: groundTruth)
+            return MangaOverlayBubbleResult(
+                index: bubble.index,
+                bbox: [globalRect.minX, globalRect.minY, globalRect.width, globalRect.height].map(Double.init),
+                source: "\(bubble.source):split",
+                text: block.text,
+                bestGroundTruthIndex: match.index,
+                bestSimilarity: match.similarity
+            )
+        }
+    }
+
+    private static func shouldKeepBubbleResult(_ result: MangaOverlayBubbleResult) -> Bool {
+        let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return false }
+        let normalized = normalizedOCRText(text)
+        guard normalized.count >= 8 || (normalized.count >= 5 && result.bestSimilarity >= 0.6) else { return false }
+        let rect = CGRect(
+            x: result.bbox.indices.contains(0) ? result.bbox[0] : 0,
+            y: result.bbox.indices.contains(1) ? result.bbox[1] : 0,
+            width: result.bbox.indices.contains(2) ? result.bbox[2] : 0,
+            height: result.bbox.indices.contains(3) ? result.bbox[3] : 0
+        )
+        if result.bestSimilarity < 0.45, (normalized.count < 18 || rect.width * rect.height < 1500) {
+            return false
+        }
+        return true
     }
 
     private static func recognizeTextCandidates(

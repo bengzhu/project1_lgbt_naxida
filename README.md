@@ -154,7 +154,9 @@ test/
 - `blocks[].bestGroundTruthText` / `ocrGroundTruthSimilarity` / `ocrQualityLabel`：把当前 OCR 文本和 `test/1.ground_truth.json` 的人工真值做相似度对照，用于判断翻译差是否先由 OCR 输入错误导致。
 - `blocks[].failureReasons`：失败块的具体原因，例如 `翻译等于原文`、`翻译是占位答复`、`中文字符不足`、`翻译不像中文`。
 - `blocks[].qualityNotes`：非硬失败排查线索，例如 `translationContainsFullOCRText`、`latinLetters=27`、`cjkCharacters=4`。
-- `diagnostics`：本轮整体排查汇总，统计通过/失败块、空候选、占位输出、复读原文、非中文输出、raw 输出类型、候选抽取丢弃、平均 OCR 真值相似度、疑似 OCR 问题块、疑似规则误伤块。
+- `blocks[].translationDecisionTrace` / `translationFailureDetail`：逐块记录 raw 分类、候选分类、每条硬判定布尔值和失败归因；用于确认失败来自模型 raw 输出、OCR 输入、候选抽取，还是规则误伤。
+- `blocks[].ocrProbeNotes`：逐块记录 OCR 和人工真值的相似度、质量标签、已知 OCR 混淆提示。
+- `diagnostics`：本轮整体排查汇总，统计通过/失败块、空候选、占位输出、复读原文、非中文输出、raw 输出类型、候选抽取丢弃、平均 OCR 真值相似度、疑似 OCR 问题块、疑似规则误伤块、失败分类分布、硬通过但质量可疑块。
 - `configuration.currentBlockSource`：记录当前块来源。当前是整图 OCR observations 的空间聚类/去重，即 (a)，不是图像层面的气泡连通域检测。
 - `configuration.preprocessing`：记录本轮预处理增强开关，包含灰度、对比亮度、自适应二值化、裁切放大、锐化和放大倍数。
 - `configuration.customLexiconEnabled` / `customLexicon`：记录 Vision `customWords` 是否启用和本轮词表。
@@ -164,6 +166,7 @@ test/
 - `lexiconComparison`：同图同参数下 Vision `customWords` 开/关对比，记录总块数和发生变化的块编号。
 - `visionAPIComparison`：旧 `VNRecognizeTextRequest` 与 iOS 18+ Swift 原生 `RecognizeTextRequest` 的 0° OCR 对比。当前只作为独立探针，不替换主流程。
 - `overallPassed`：至少 1 个块、所有块通过质量判定、两张 PNG 非空才为 `true`。
+- `outputDirectoryCleaned` / `retainedOutputFiles` / `outputCleanupPolicy`：记录本轮输出目录是否按清理策略重建，以及本轮最终保留的 PNG/JSON 文件名。
 
 探针验收重点：
 
@@ -172,8 +175,9 @@ test/
 - `1_translated_overlay.png` 中所有绘制文本必须正向可读；即使某块来自旋转 OCR，也不允许倒置或镜像。
 - `blockPassed = false` 的块也必须出现在覆盖图上，并保留失败原因，不能静默隐藏。
 - 每次运行会先清空 App 沙盒 `Application Support/AITRANS/Output/`，`scripts/export-probe-output.sh` 也会先清空项目根 `output/`，避免新旧 PNG / JSON 混在一起。
-- 输出图片包括 `1_debug_boxes.png`、`1_translated_overlay.png`、`1_ocr_text_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png`。其中 `1_block_crops.png` 是块裁切放大预处理拼图，用于目测二值化/锐化是否过激。
+- 输出图片包括 `1_debug_boxes.png`、`1_translated_overlay.png`、`1_ocr_text_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png`、`1_bubble_debug.png`、`1_bubble_seed_debug.png`、`1_bubble_crops.png`。其中 `1_block_crops.png` 是块裁切放大预处理拼图，用于目测二值化/锐化是否过激。
 - 翻译失败排查规范：先看 `failureCategory`，再看 `rawOutputClassification` 和 `candidateClassification`。如果 `failureCategory = ocrInputSuspect`，优先修 OCR/合并/裁切；如果是 `modelOutputFailure`，优先换模型、调采样或 prompt；如果是 `ruleFalseFailureSuspected`，才优先放宽判定规则。不要只看覆盖图猜测失败原因。
+- 翻译规则排查规范：如果 `likelyRuleFalseFailureBlocks = []` 且 `cjkButFailedCandidates = 0`，说明本轮没有发现“真实中文译文被规则误杀”；如果 `passedButSuspiciousTranslationBlocks` 非空，说明硬规则偏宽，需继续收紧“通过但语义明显差/解释型输出”的质量规则。
 - OCR 质量排查规范：先按 `ocrGroundTruthSimilarity` 从低到高看 `blocks[].finalTextUsedForTranslation`。本探针用 `test/1.ground_truth.json` 做真值；换测试图时应同步更新真值文件，否则相似度只作参考。
 
 模拟器跑完后，把沙盒输出导出到项目根 `output/`：
@@ -325,6 +329,11 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v10 OCR 原句排查：高相似但模型失败包括 `THAT'S / RIGHT, / NOW / I'M-`、`IVE ARRIVED AT REN- SENPAI'S HOUSE.`、`LET'S / BATTLER!`；低相似或可疑 OCR 包括 `THE CITY RATTLER / STATE IN A PEN DAYS.`、`THAT'S / WE'RE WHY / TRANINS SPECIAL`、`THIS IS AN / TOURNAMENT. DOING IT / WOULD MAKE WOLLD MAKE ONLINE`、`GET PESULTE / SAMING CLUE TO SAVE THE / POOM BENG`、`What Whet are / every you! / talking`。整页 OCR 仍明显强于 bubble-first：`wholePage accuracy = 0.8378 / 12 blocks / 62.5s`，`bubbleFirst accuracy = 0.2487 / 1 block / 17.6s`。
 - 本次未提交工作区 v11：优化 bubble-first 探针候选保留策略。之前 `1_bubble_seed_debug.png` 里已有多个 OCR seed 框，但最终 `1_bubble_debug.png` 只剩 1 个，是 seed 被 white component 重叠过滤压掉。现在改为 seed-first：先保留去重后的 `ocrSeed` 候选，再补充不重叠的 `whiteComponent`；`ocrSeed` crop 走原图 2x 放大 OCR，不套默认二值化/锐化，避免预处理过激导致空结果。
 - 本次未提交工作区 v11 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后，bubble-first 从 `1 block / accuracy 0.2487 / foundBoth 1` 提升到 `8 blocks / accuracy 0.6915 / foundBoth 6`；`blocksOnlyInWholePage` 从 7 条降到 2 条：`Or at least, that seems to be Senpai's logic.`、`Let's Battle!`。已知局限：底部多个相邻气泡仍会被 seed 大框混在一起，部分文本串扰明显，后续需要按 crop 内文本行/列再切分。
+- 本次未提交工作区 v12：bubble-first 对 `ocrSeed` crop 内部再跑空间聚类，把一个大 seed 框拆成多个局部文字块，并按真值相似度/文本长度过滤短碎片；结果 bbox 会映射回原图坐标，`bubbleResults` 数量可多于候选气泡框数量。
+- 本次未提交工作区 v12 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后，bubble-first 达到 `15 blocks / accuracy 0.8755 / foundBoth 8 / 15.98s`，首次高于整页路径 `12 blocks / accuracy 0.8378 / 64.98s`；`blocksOnlyInWholePage = []`，`blocksOnlyInBubbleFirst = []`。已知局限：仍有少量非主线说明文字/误读碎片进入 `bubbleResults`，如 `THIS IS AN OPPLINE TOURNAMENT...`、`WE NEED TO GET RESULTS...`，下一步可按“是否匹配目标语言对话真值/是否属于漫画正文”继续降噪。
+- 本次未提交工作区 v13：探针报告新增 `translationDecisionTrace`、`translationFailureDetail`、`ocrProbeNotes`、`diagnostics.translationFailureBreakdown`、`diagnostics.ocrQualityProbe`、`diagnostics.passedButSuspiciousTranslationBlocks`、`outputDirectoryCleaned`、`retainedOutputFiles` 和 `outputCleanupPolicy`。目的：直接证明每轮输出目录被清理，并把“翻译失败到底是规则太严、模型 raw 输出坏、候选抽取坏，还是 OCR 英文输入坏”拆开记录。
+- 本次未提交工作区 v13 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 并导出，项目根 `output/` 只保留 9 个本轮文件：`probe_report.json` 和 8 张 PNG。`probe_report.json` 显示 `totalBlocksDetected = 12`、`passedBlocks = 4`、`failedBlocks = 8`、`translationFailureBreakdown = { modelOutputFailure: 3, ocrInputSuspect: 5 }`、`likelyRuleFalseFailureBlocks = []`、`cjkButFailedCandidates = 0`、`passedButSuspiciousTranslationBlocks = [2, 9, 11]`、`averageOCRGroundTruthSimilarity = 0.6846`。结论：未发现“实际翻译成功但规则太严误杀”；相反，硬规则偏宽，部分中文候选虽然通过但语义明显差。
+- 本次未提交工作区 v13 OCR 原句排查：低相似/可疑输入仍集中在 `THE CITY RATTLER / STATE IN A PEN DAYS.`、`THIS IS AN / TOURNAMENT. DOING IT / WOULD MAKE WOLLD MAKE ONLINE`、`GET PESULTE / SAMING CLUE TO SAVE THE / POOM BENG`、`What Whet are / every you! / talking`、`City Battler / Offline. / Tournament`；高相似但模型失败包括 `THAT'S / RIGHT, / NOW / I'M-`、`IVE ARRIVED AT REN- SENPAI'S HOUSE.`、`LET'S / BATTLER!`。下一步应优先收紧通过质量规则，并继续改善 OCR 英文纠错/气泡路径降噪，而不是放宽中文判定。
 
 ## 后续对话指引
 

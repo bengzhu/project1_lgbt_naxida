@@ -1277,7 +1277,12 @@ final class TranslationSessionStore: ObservableObject {
                         bestGroundTruthIndex: matchIndex,
                         bestGroundTruthText: matchIndex.map { groundTruth[$0] },
                         ocrGroundTruthSimilarity: match.similarity,
-                        ocrQualityLabel: Self.ocrQualityLabel(for: match.similarity)
+                        ocrQualityLabel: Self.ocrQualityLabel(for: match.similarity),
+                        ocrProbeNotes: Self.mangaOCRProbeNotes(
+                            text: block.text,
+                            bestGroundTruthText: matchIndex.map { groundTruth[$0] },
+                            similarity: match.similarity
+                        )
                     )
                 }
                 self.mangaOverlayProbeBlocks = probeBlocks
@@ -1813,6 +1818,9 @@ final class TranslationSessionStore: ObservableObject {
                 checks: block.checks,
                 failureReasons: block.failureReasons,
                 qualityNotes: block.qualityNotes,
+                translationDecisionTrace: block.translationDecisionTrace,
+                translationFailureDetail: block.translationFailureDetail,
+                ocrProbeNotes: block.ocrProbeNotes,
                 blockPassed: block.blockPassed
             )
         }
@@ -1870,6 +1878,9 @@ final class TranslationSessionStore: ObservableObject {
             checks: block.checks,
             failureReasons: block.failureReasons,
             qualityNotes: block.qualityNotes,
+            translationDecisionTrace: block.translationDecisionTrace,
+            translationFailureDetail: block.translationFailureDetail,
+            ocrProbeNotes: block.ocrProbeNotes,
             blockPassed: block.blockPassed
         )
     }
@@ -1939,6 +1950,13 @@ final class TranslationSessionStore: ObservableObject {
             || Self.containsLikelyOCRError(in: block.finalTextUsedForTranslation)
             || (block.ocrGroundTruthSimilarity ?? 1) < 0.72
         let passed = Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
+        let decisionTrace = Self.mangaProbeTranslationDecisionTrace(
+            checks: checks,
+            errorCode: errorCode,
+            rawClassification: rawClassification,
+            candidateClassification: candidateClassification,
+            extraction: extraction
+        )
         let failureCategory = Self.mangaProbeFailureCategory(
             passed: passed,
             rawClassification: rawClassification,
@@ -1980,6 +1998,16 @@ final class TranslationSessionStore: ObservableObject {
             checks: checks,
             failureReasons: failureReasons,
             qualityNotes: qualityNotes,
+            translationDecisionTrace: decisionTrace,
+            translationFailureDetail: passed ? nil : Self.mangaProbeTranslationFailureDetail(
+                failureCategory: failureCategory,
+                rawClassification: rawClassification,
+                candidateClassification: candidateClassification,
+                failureReasons: failureReasons,
+                qualityNotes: qualityNotes,
+                hasLikelyOCRIssue: hasLikelyOCRIssue
+            ),
+            ocrProbeNotes: block.ocrProbeNotes,
             blockPassed: passed
         )
     }
@@ -2103,6 +2131,62 @@ final class TranslationSessionStore: ObservableObject {
             notes.append("cjkCandidateButFailed")
         }
         return notes
+    }
+
+    private static func mangaProbeTranslationDecisionTrace(
+        checks: MangaOverlayProbeChecks,
+        errorCode: String?,
+        rawClassification: String,
+        candidateClassification: String,
+        extraction: MangaProbeCandidateExtraction
+    ) -> [String] {
+        var trace = [
+            "rawOutputClassification=\(rawClassification)",
+            "candidateClassification=\(candidateClassification)",
+            "rawHadContent=\(extraction.rawHadContent)",
+            "rejectedPlaceholder=\(extraction.rejectedPlaceholder)",
+            "ocrNotEmpty=\(checks.ocrNotEmpty)",
+            "translationNotEmpty=\(checks.translationNotEmpty)",
+            "translationNotEqualOriginal=\(checks.translationNotEqualOriginal)",
+            "translationNotPlaceholder=\(checks.translationNotPlaceholder)",
+            "translationHasCJK=\(checks.translationHasEnoughChinese)",
+            "looksLikeChinese=\(checks.looksLikeChinese)"
+        ]
+        if let errorCode {
+            trace.append("errorCode=\(errorCode)")
+        }
+        return trace
+    }
+
+    private static func mangaProbeTranslationFailureDetail(
+        failureCategory: String,
+        rawClassification: String,
+        candidateClassification: String,
+        failureReasons: [String],
+        qualityNotes: [String],
+        hasLikelyOCRIssue: Bool
+    ) -> String {
+        let reasonText = failureReasons.isEmpty ? "未知原因" : failureReasons.joined(separator: "、")
+        let ocrHint = hasLikelyOCRIssue ? "；OCR 输入疑似有误" : ""
+        if failureCategory == "ruleFalseFailureSuspected" {
+            return "候选译文含中文但未过规则，需人工复核规则是否过严：\(reasonText)"
+        }
+        if qualityNotes.contains("candidateExtractorDroppedRawOutput") {
+            return "raw output 有内容但候选抽取为空，优先查候选抽取规则：\(reasonText)"
+        }
+        if rawClassification == "placeholder" || candidateClassification == "placeholderRejected" || candidateClassification == "placeholder" {
+            return "模型输出解释/占位文本，不是真实译文：\(reasonText)\(ocrHint)"
+        }
+        if rawClassification == "repeatedOriginal" || candidateClassification == "repeatedOriginal" {
+            return "模型复读原文，非规则误杀：\(reasonText)\(ocrHint)"
+        }
+        if rawClassification == "empty" || candidateClassification == "empty" {
+            return "模型 raw 输出或候选为空：\(reasonText)\(ocrHint)"
+        }
+        if rawClassification == "nonChinese" || candidateClassification == "nonChinese" || rawClassification == "symbolsOnly" {
+            return "模型输出非中文/符号，未达到英译中目标：\(reasonText)\(ocrHint)"
+        }
+        return "\(failureCategory)：\(reasonText)\(ocrHint)"
     }
 
     private static func classifyMangaProbeRawOutput(_ rawOutput: String, original: String) -> String {
@@ -2444,6 +2528,7 @@ final class TranslationSessionStore: ObservableObject {
         let filesPresent = Self.fileIsNonEmpty(path: outputFiles.debugBoxesImage)
             && Self.fileIsNonEmpty(path: outputFiles.overlayImage)
         let diagnostics = makeMangaOverlayProbeDiagnostics(blocks: blocks)
+        let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
             original: "XQZ 12 ///",
             proposed: "The City Battler Tournament starts in a few days.",
@@ -2462,6 +2547,9 @@ final class TranslationSessionStore: ObservableObject {
             frameworkComparison: frameworkComparison,
             overallPassed: allBlocksPassed && filesPresent,
             outputFiles: outputFiles,
+            outputDirectoryCleaned: true,
+            retainedOutputFiles: retainedFiles,
+            outputCleanupPolicy: "探针开始重建 App 沙盒 Output；renderOutputs 再次重建；export-probe-output.sh 重建项目根 output；只保留本轮 probe_report.json 和本轮 PNG。",
             warnings: warnings
         )
     }
@@ -2523,11 +2611,90 @@ final class TranslationSessionStore: ObservableObject {
             if block.failureCategory == "modelOutputFailure" {
                 diagnostics.likelyModelOutputFailures += 1
             }
+            if block.blockPassed, Self.mangaProbePassedTranslationLooksSuspicious(block) {
+                diagnostics.passedButSuspiciousTranslationBlocks.append(block.index)
+            }
+            if !block.blockPassed {
+                diagnostics.translationFailureBreakdown[block.failureCategory, default: 0] += 1
+            }
+            diagnostics.ocrQualityProbe.append(
+                Self.mangaOCRProbeSummaryLine(for: block)
+            )
         }
         diagnostics.lowOCRSimilarityBlocks = Array(Set(diagnostics.lowOCRSimilarityBlocks)).sorted()
         diagnostics.likelyOCRIssueBlocks = Array(Set(diagnostics.likelyOCRIssueBlocks)).sorted()
         diagnostics.likelyRuleFalseFailureBlocks = Array(Set(diagnostics.likelyRuleFalseFailureBlocks)).sorted()
+        diagnostics.passedButSuspiciousTranslationBlocks = Array(Set(diagnostics.passedButSuspiciousTranslationBlocks)).sorted()
         return diagnostics
+    }
+
+    private static func mangaProbePassedTranslationLooksSuspicious(_ block: MangaOverlayProbeBlock) -> Bool {
+        let candidate = block.translationCandidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sourceWords = block.finalTextUsedForTranslation
+            .components(separatedBy: CharacterSet.letters.inverted)
+            .filter { $0.count >= 3 }
+        let cjkCount = cjkCharacterCount(in: candidate)
+        if let similarity = block.ocrGroundTruthSimilarity, similarity < 0.72 {
+            return true
+        }
+        if sourceWords.count >= 5, cjkCount <= 4 {
+            return true
+        }
+        if containsLatinLetter(candidate), cjkCount > 0 {
+            return true
+        }
+        return false
+    }
+
+    private static func retainedProbeOutputFiles(from outputFiles: MangaOverlayProbeOutputFiles) -> [String] {
+        let fileNames = [
+            outputFiles.debugBoxesImage,
+            outputFiles.overlayImage,
+            outputFiles.ocrTextOverlayImage,
+            outputFiles.blockCropsImage,
+            outputFiles.preprocessedContentImage,
+            outputFiles.bubbleDebugImage,
+            outputFiles.bubbleCropsImage,
+            outputFiles.bubbleSeedDebugImage,
+            "probe_report.json"
+        ]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+            .map { URL(fileURLWithPath: $0).lastPathComponent }
+        return Array(Set(fileNames)).sorted()
+    }
+
+    private static func mangaOCRProbeNotes(
+        text: String,
+        bestGroundTruthText: String?,
+        similarity: Double
+    ) -> [String] {
+        var notes: [String] = [
+            "ocrSimilarity=\(similarity.formatted(.number.precision(.fractionLength(3))))",
+            "ocrQuality=\(ocrQualityLabel(for: similarity))"
+        ]
+        if containsLikelyOCRError(in: text) {
+            notes.append("containsKnownOCRConfusion")
+        }
+        if similarity < 0.72 {
+            notes.append("lowSimilarityAgainstGroundTruth")
+        }
+        if let bestGroundTruthText {
+            notes.append("bestGroundTruth=\(bestGroundTruthText)")
+        }
+        return notes
+    }
+
+    private static func mangaOCRProbeSummaryLine(for block: MangaOverlayProbeBlock) -> String {
+        let similarityText = block.ocrGroundTruthSimilarity.map {
+            $0.formatted(.number.precision(.fractionLength(3)))
+        } ?? "n/a"
+        let label = block.ocrQualityLabel ?? "unknown"
+        let text = block.finalTextUsedForTranslation.replacing("\n", with: " / ")
+        if let truth = block.bestGroundTruthText {
+            return "#\(block.index) \(label) sim=\(similarityText) OCR=\"\(text)\" truth=\"\(truth)\""
+        }
+        return "#\(block.index) \(label) sim=\(similarityText) OCR=\"\(text)\""
     }
 
     private func loadMangaGroundTruth() -> [String] {
