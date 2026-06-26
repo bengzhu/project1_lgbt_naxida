@@ -250,13 +250,74 @@ struct MangaOverlayProbeChecks: Equatable, Codable, Sendable {
     var looksLikeChinese: Bool
 }
 
+struct MangaOverlayPreprocessingOptions: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var grayscaleEnabled: Bool
+    var contrastBrightnessEnabled: Bool
+    var adaptiveThresholdEnabled: Bool
+    var cropUpscaleEnabled: Bool
+    var sharpenEnabled: Bool
+    var cropScale: Double
+
+    static let disabled = MangaOverlayPreprocessingOptions(
+        enabled: false,
+        grayscaleEnabled: false,
+        contrastBrightnessEnabled: false,
+        adaptiveThresholdEnabled: false,
+        cropUpscaleEnabled: false,
+        sharpenEnabled: false,
+        cropScale: 1
+    )
+
+    static let defaultValue = MangaOverlayPreprocessingOptions(
+        enabled: true,
+        grayscaleEnabled: true,
+        contrastBrightnessEnabled: true,
+        adaptiveThresholdEnabled: true,
+        cropUpscaleEnabled: true,
+        sharpenEnabled: true,
+        cropScale: 3
+    )
+}
+
+struct MangaOverlayCorrectionOptions: Equatable, Codable, Sendable {
+    var enabled: Bool
+
+    static let disabled = MangaOverlayCorrectionOptions(enabled: false)
+}
+
+struct MangaOverlayProbeConfiguration: Equatable, Codable, Sendable {
+    var status: String
+    var currentBlockSource: String
+    var preprocessing: MangaOverlayPreprocessingOptions
+    var correction: MangaOverlayCorrectionOptions
+    var visionNewAPIStatus: String
+    var customLexicon: [String]
+
+    static let defaultValue = MangaOverlayProbeConfiguration(
+        status: "current pipeline uses whole-page Vision OCR observations plus spatial clustering; no image-level bubble detection yet",
+        currentBlockSource: "a: whole-page OCR observations merged by spatial clustering/deduplication",
+        preprocessing: .defaultValue,
+        correction: .disabled,
+        visionNewAPIStatus: "deployment target is iOS 17.0; RecognizeTextRequest needs @available(iOS 18, *) and is not enabled in this partial step",
+        customLexicon: ["Senpai", "City Battler", "Tournament", "Ren"]
+    )
+}
+
 struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var id: UUID
     var index: Int
     var bbox: [Double]
     var rotationAngleUsed: Int
+    var rawOcrText: String
     var ocrText: String
     var ocrConfidence: Float?
+    var preprocessingEnabled: Bool
+    var afterPreprocessingOcrText: String?
+    var correctionEnabled: Bool
+    var afterCorrectionText: String?
+    var correctionRejectedReason: String?
+    var finalTextUsedForTranslation: String
     var translatedText: String
     var translationCandidate: String
     var prompt: String
@@ -274,6 +335,13 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         rotationAngleUsed: Int,
         ocrText: String,
         ocrConfidence: Float?,
+        rawOcrText: String? = nil,
+        preprocessingEnabled: Bool = false,
+        afterPreprocessingOcrText: String? = nil,
+        correctionEnabled: Bool = false,
+        afterCorrectionText: String? = nil,
+        correctionRejectedReason: String? = nil,
+        finalTextUsedForTranslation: String? = nil,
         translatedText: String = "",
         translationCandidate: String = "",
         prompt: String = "",
@@ -296,8 +364,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.index = index
         self.bbox = bbox
         self.rotationAngleUsed = rotationAngleUsed
+        self.rawOcrText = rawOcrText ?? ocrText
         self.ocrText = ocrText
         self.ocrConfidence = ocrConfidence
+        self.preprocessingEnabled = preprocessingEnabled
+        self.afterPreprocessingOcrText = afterPreprocessingOcrText
+        self.correctionEnabled = correctionEnabled
+        self.afterCorrectionText = afterCorrectionText
+        self.correctionRejectedReason = correctionRejectedReason
+        self.finalTextUsedForTranslation = finalTextUsedForTranslation ?? ocrText
         self.translatedText = translatedText
         self.translationCandidate = translationCandidate
         self.prompt = prompt
@@ -313,11 +388,29 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
 struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
     var debugBoxesImage: String
     var overlayImage: String
+    var ocrTextOverlayImage: String?
+    var blockCropsImage: String?
+    var preprocessedContentImage: String?
+
+    init(
+        debugBoxesImage: String,
+        overlayImage: String,
+        ocrTextOverlayImage: String? = nil,
+        blockCropsImage: String? = nil,
+        preprocessedContentImage: String? = nil
+    ) {
+        self.debugBoxesImage = debugBoxesImage
+        self.overlayImage = overlayImage
+        self.ocrTextOverlayImage = ocrTextOverlayImage
+        self.blockCropsImage = blockCropsImage
+        self.preprocessedContentImage = preprocessedContentImage
+    }
 }
 
 struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var sourceImage: String
     var engineUsed: String
+    var configuration: MangaOverlayProbeConfiguration
     var totalBlocksDetected: Int
     var blocks: [MangaOverlayProbeBlock]
     var overallPassed: Bool

@@ -1,6 +1,7 @@
 {
   "blocks" : [
     {
+      "afterPreprocessingOcrText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
       "bbox" : [
         499,
         328,
@@ -17,23 +18,28 @@
         "translationNotEqualOriginal" : true,
         "translationNotPlaceholder" : false
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
         "翻译是占位答复"
       ],
-      "id" : "AA22F952-B336-412A-8150-BB94FECAAC74",
+      "finalTextUsedForTranslation" : "THAT'S\nRIGHT,\nNOW\nI'M-",
+      "id" : "13258C9A-CDF9-4ECE-9D88-9294400D9229",
       "index" : 0,
       "ocrConfidence" : 1,
       "ocrText" : "THAT'S\nRIGHT,\nNOW\nI'M-",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT'S\nRIGHT,\nNOW\nI'M-\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
         "cjkCharacters=8"
       ],
-      "rawOutput" : "\n以下是翻译成中文：\n\n*   **THAT'S**\n*   **RIGHT**\n*   **NOW**\n*   **I'M**",
+      "rawOcrText" : "THAT'S\nRIGHT,\nNOW\nI'M-",
+      "rawOutput" : "\n以下是翻译成中文：\n\n**That's**\n**right**\n**now**\n**I'm**\n",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nTHAT'S\nRIGHT,\nNOW\nI'M-",
       "translationCandidate" : "以下是翻译成中文："
     },
     {
+      "afterPreprocessingOcrText" : "I'VE\nARRIVED\nJAT RENS\nSENPA'S\n* HOUSE",
       "bbox" : [
         112,
         353,
@@ -50,60 +56,71 @@
         "translationNotEqualOriginal" : false,
         "translationNotPlaceholder" : true
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
         "翻译等于原文",
         "翻译包含完整原文",
         "中文字符不足",
         "翻译不像中文"
       ],
-      "id" : "861C64AE-A239-4547-8680-4ECFFB2220DB",
+      "finalTextUsedForTranslation" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "id" : "B66E83BA-E249-407E-AF21-3FF15C5729AE",
       "index" : 1,
       "ocrConfidence" : 1,
       "ocrText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nIVE ARRIVED AT REN- SENPAI'S HOUSE.\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
         "translationContainsFullOCRText",
         "latinLetters=27"
       ],
+      "rawOcrText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
       "rawOutput" : "\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
       "translationCandidate" : "IVE ARRIVED AT REN- SENPAI'S HOUSE."
     },
     {
+      "afterPreprocessingOcrText" : "THe and\nGATTLEE\nTARIAN\n.ь. гкі",
       "bbox" : [
         493,
         557,
         54,
         44
       ],
-      "blockPassed" : true,
+      "blockPassed" : false,
       "checks" : {
-        "looksLikeChinese" : true,
+        "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : true,
+        "translationHasEnoughChinese" : false,
         "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
         "translationNotEqualOriginal" : true,
         "translationNotPlaceholder" : true
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
-
+        "中文字符不足",
+        "翻译不像中文"
       ],
-      "id" : "BD8D89A3-BE74-4865-9132-BB75463A1751",
+      "finalTextUsedForTranslation" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
+      "id" : "A06F9072-A5FB-4DBE-9A53-5D814C455B3C",
       "index" : 2,
       "ocrConfidence" : 1,
       "ocrText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHE CITY RATTLER\nSTATE IN A PEN DAYS.\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "cjkCharacters=4"
+        "latinLetters=15"
       ],
-      "rawOutput" : "\n**城市鼠狸**\n**州立鼠狸**\n",
+      "rawOcrText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
+      "rawOutput" : "\n**THE CITY RATTLER**\n**STATE IN A PEN DAYS.**\n",
       "rotationAngleUsed" : 0,
-      "translatedText" : "州立鼠狸",
-      "translationCandidate" : "州立鼠狸"
+      "translatedText" : "翻译失败\nTHE CITY RATTLER\nSTATE IN A PEN DAYS.",
+      "translationCandidate" : "STATE IN A PEN DAYS."
     },
     {
+      "afterPreprocessingOcrText" : "ANOT\nTHAT'A\n* WHYS\nWERE\nDONE\nA THIS!\nSPECIAL\nTRANINE",
       "bbox" : [
         65,
         677,
@@ -120,23 +137,28 @@
         "translationNotEqualOriginal" : true,
         "translationNotPlaceholder" : true
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
 
       ],
-      "id" : "5145DF6B-CC36-4A40-AC1B-C6526768246D",
+      "finalTextUsedForTranslation" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
+      "id" : "2E818175-5ACA-4061-B5F0-9CF8F76C9DC0",
       "index" : 3,
       "ocrConfidence" : 1,
       "ocrText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT'S\nWE'RE WHY\nTRANINS SPECIAL\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
         "cjkCharacters=4"
       ],
+      "rawOcrText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
       "rawOutput" : "\n那是什么？\n",
       "rotationAngleUsed" : 0,
       "translatedText" : "那是什么？",
       "translationCandidate" : "那是什么？"
     },
     {
+      "afterPreprocessingOcrText" : "F'EVEN®\nTHOLEŁ\nI SAID\n«T°Э฿\nFOUSTA\nSPECIAL\nTRANING\nBKAND\nASKED\nY WEN\nCOLD\n*UST\nKPLAYE\nONLINE",
       "bbox" : [
         235,
         861,
@@ -153,57 +175,72 @@
         "translationNotEqualOriginal" : true,
         "translationNotPlaceholder" : true
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
         "中文字符不足",
         "翻译不像中文"
       ],
-      "id" : "39556E6C-8F18-4ED0-9808-74B161168F33",
+      "finalTextUsedForTranslation" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
+      "id" : "CBABB442-63F1-4657-810F-6D719375D03C",
       "index" : 4,
       "ocrConfidence" : 1,
       "ocrText" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
         "latinLetters=10"
       ],
+      "rawOcrText" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
       "rawOutput" : " | THOUSH EVEN\n",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nTHOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
       "translationCandidate" : "THOUSH EVEN"
     },
     {
+      "afterPreprocessingOcrText" : "LET'S\nBATTLER!",
       "bbox" : [
         362,
         849,
         101,
         55
       ],
-      "blockPassed" : true,
+      "blockPassed" : false,
       "checks" : {
-        "looksLikeChinese" : true,
+        "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true,
-        "translationNotPlaceholder" : true
+        "translationHasEnoughChinese" : false,
+        "translationNotContainOriginal" : false,
+        "translationNotEmpty" : false,
+        "translationNotEqualOriginal" : false,
+        "translationNotPlaceholder" : false
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
-
+        "翻译为空",
+        "翻译等于原文",
+        "翻译包含完整原文",
+        "翻译是占位答复",
+        "中文字符不足",
+        "翻译不像中文"
       ],
-      "id" : "5F56AF18-3C59-44DE-90F8-B8E0E9C8606D",
+      "finalTextUsedForTranslation" : "LET'S\nBATTLER!",
+      "id" : "6345EB00-1D93-40C0-84E2-2B8B3DF11F2C",
       "index" : 5,
       "ocrConfidence" : 1,
       "ocrText" : "LET'S\nBATTLER!",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nLET'S\nBATTLER!\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "cjkCharacters=3"
+        "translationContainsFullOCRText"
       ],
-      "rawOutput" : "\n以下是翻译成中文：\n\n**让我们**\n**BATTLER!**\n",
+      "rawOcrText" : "LET'S\nBATTLER!",
+      "rawOutput" : " | \n",
       "rotationAngleUsed" : 0,
-      "translatedText" : "让我们",
-      "translationCandidate" : "让我们"
+      "translatedText" : "翻译失败\nLET'S\nBATTLER!",
+      "translationCandidate" : ""
     },
     {
+      "afterPreprocessingOcrText" : "T74S IS AN\n• OPPLINE:\nTOURNAMENT.\nDONe IT\n•ONLINE\nWORLD MAKE\n• If\nMEANIELESS.",
       "bbox" : [
         152,
         903,
@@ -220,6 +257,7 @@
         "translationNotEqualOriginal" : false,
         "translationNotPlaceholder" : false
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
         "翻译为空",
         "翻译等于原文",
@@ -228,20 +266,24 @@
         "中文字符不足",
         "翻译不像中文"
       ],
-      "id" : "0AA5B0BD-96C0-4652-A000-E1C3610364B7",
+      "finalTextUsedForTranslation" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
+      "id" : "AADDE714-464F-42BB-9188-C519AB57495C",
       "index" : 6,
       "ocrConfidence" : 1,
       "ocrText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
         "translationContainsFullOCRText"
       ],
+      "rawOcrText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
       "rawOutput" : " | \n",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nTHIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
       "translationCandidate" : ""
     },
     {
+      "afterPreprocessingOcrText" : "WEN TO TO\nGET PEGALTE\nAT THE\nTOLRNAMENT\nTO Save THe\nBAMONe QUO\nPISSANDRA,",
       "bbox" : [
         501,
         901,
@@ -258,23 +300,28 @@
         "translationNotEqualOriginal" : true,
         "translationNotPlaceholder" : false
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
         "翻译是占位答复"
       ],
-      "id" : "8EFE1500-AF15-4D7A-BAE2-65FAD6FF7322",
+      "finalTextUsedForTranslation" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
+      "id" : "63AEB9F8-5FEA-4C55-884F-48E637984DD0",
       "index" : 7,
       "ocrConfidence" : 1,
       "ocrText" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nGET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "cjkCharacters=12"
+        "cjkCharacters=2"
       ],
-      "rawOutput" : " | \n请提供您想翻译的中文句子。",
+      "rawOcrText" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
+      "rawOutput" : " | 谢谢！\n",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nGET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
-      "translationCandidate" : "请提供您想翻译的中文句子。"
+      "translationCandidate" : "谢谢！"
     },
     {
+      "afterPreprocessingOcrText" : "-THE\n\"BUSGESTION\nAWAST\nOVERRULED\nANO I'WAS\n¡DECIDEDU\nTHAT TO BE\n{STAYING]\nOVER AT RENA\n¡SENPAI'S t\nTHOUSEr",
       "bbox" : [
         44,
         963,
@@ -291,57 +338,72 @@
         "translationNotEqualOriginal" : true,
         "translationNotPlaceholder" : true
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
         "中文字符不足",
         "翻译不像中文"
       ],
-      "id" : "CC66F59E-1A4D-4F38-B702-0E16ED3C8CA4",
+      "finalTextUsedForTranslation" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
+      "id" : "B84E41D3-F68F-4988-9F0A-F68974E79E90",
       "index" : 8,
       "ocrConfidence" : 1,
       "ocrText" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nSUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
         "latinLetters=5"
       ],
+      "rawOcrText" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
       "rawOutput" : "\nSUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nSUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
       "translationCandidate" : "HOUSE."
     },
     {
+      "afterPreprocessingOcrText" : "Whart\nare\neven\n: talking\nabout?",
       "bbox" : [
         115,
         973,
         41,
         59
       ],
-      "blockPassed" : true,
+      "blockPassed" : false,
       "checks" : {
-        "looksLikeChinese" : true,
+        "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true,
-        "translationNotPlaceholder" : true
+        "translationHasEnoughChinese" : false,
+        "translationNotContainOriginal" : false,
+        "translationNotEmpty" : false,
+        "translationNotEqualOriginal" : false,
+        "translationNotPlaceholder" : false
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
-
+        "翻译为空",
+        "翻译等于原文",
+        "翻译包含完整原文",
+        "翻译是占位答复",
+        "中文字符不足",
+        "翻译不像中文"
       ],
-      "id" : "D0A71FB6-A201-46E1-8410-E91D361ED0B7",
+      "finalTextUsedForTranslation" : "What Whet are\nevery you!\ntalking",
+      "id" : "AF7BC8B7-70BA-4D09-AAB2-0B4D18F02140",
       "index" : 9,
       "ocrConfidence" : 1,
       "ocrText" : "What Whet are\nevery you!\ntalking",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWhat Whet are\nevery you!\ntalking\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "cjkCharacters=2"
+        "translationContainsFullOCRText"
       ],
-      "rawOutput" : "\n翻译成中文：\n\n**什么？**\n\n**every you!**\n\n**talking**\n",
+      "rawOcrText" : "What Whet are\nevery you!\ntalking",
+      "rawOutput" : " | \n",
       "rotationAngleUsed" : 0,
-      "translatedText" : "什么？",
-      "translationCandidate" : "什么？"
+      "translatedText" : "翻译失败\nWhat Whet are\nevery you!\ntalking",
+      "translationCandidate" : ""
     },
     {
+      "afterPreprocessingOcrText" : ": -OR AT\nLEAST.\nEmer\nI THAT.\nSEEMS:\nTO BE\n• SEN-\nSENDA'S\nLOSIC.::",
       "bbox" : [
         281,
         961,
@@ -358,24 +420,29 @@
         "translationNotEqualOriginal" : true,
         "translationNotPlaceholder" : true
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
         "中文字符不足",
         "翻译不像中文"
       ],
-      "id" : "74115403-218D-40FE-BADC-2EA25F7FF1CB",
+      "finalTextUsedForTranslation" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
+      "id" : "117529D6-C6C2-46A1-A843-7FD73FC56336",
       "index" : 10,
       "ocrConfidence" : 1,
       "ocrText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\n-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
         "latinLetters=19"
       ],
+      "rawOcrText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
       "rawOutput" : " | -O2 AT LEAST. -02 AT\nThat seems to be\nSENPAIS SENPArS LOSIC.\n",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\n-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
       "translationCandidate" : "SENPAIS SENPArS LOSIC."
     },
     {
+      "afterPreprocessingOcrText" : "12AT\nCity Battler\nOffline,\nTournament",
       "bbox" : [
         385,
         978,
@@ -392,27 +459,57 @@
         "translationNotEqualOriginal" : true,
         "translationNotPlaceholder" : true
       },
+      "correctionEnabled" : false,
       "failureReasons" : [
 
       ],
-      "id" : "B6BBB065-BD4D-4C4B-B880-B5648F8F4207",
+      "finalTextUsedForTranslation" : "City Battler\nOffline.\nTournament",
+      "id" : "86225A3F-E0A2-4685-B539-34E2B8C67A33",
       "index" : 11,
       "ocrConfidence" : 1,
       "ocrText" : "City Battler\nOffline.\nTournament",
+      "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nCity Battler\nOffline.\nTournament\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "cjkCharacters=4"
+        "cjkCharacters=2"
       ],
-      "rawOutput" : " | 城市战役\n",
+      "rawOcrText" : "City Battler\nOffline.\nTournament",
+      "rawOutput" : "\n城市战士\n无线。\n赛事。",
       "rotationAngleUsed" : 0,
-      "translatedText" : "城市战役",
-      "translationCandidate" : "城市战役"
+      "translatedText" : "赛事。",
+      "translationCandidate" : "赛事。"
     }
   ],
+  "configuration" : {
+    "correction" : {
+      "enabled" : false
+    },
+    "currentBlockSource" : "a: whole-page OCR observations merged by spatial clustering\/deduplication",
+    "customLexicon" : [
+      "Senpai",
+      "City Battler",
+      "Tournament",
+      "Ren"
+    ],
+    "preprocessing" : {
+      "adaptiveThresholdEnabled" : true,
+      "contrastBrightnessEnabled" : true,
+      "cropScale" : 3,
+      "cropUpscaleEnabled" : true,
+      "enabled" : true,
+      "grayscaleEnabled" : true,
+      "sharpenEnabled" : true
+    },
+    "status" : "current pipeline uses whole-page Vision OCR observations plus spatial clustering; no image-level bubble detection yet",
+    "visionNewAPIStatus" : "deployment target is iOS 17.0; RecognizeTextRequest needs @available(iOS 18, *) and is not enabled in this partial step"
+  },
   "engineUsed" : "Local GGUF",
   "outputFiles" : {
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/4F4EC2D9-B8A8-49DC-BE77-62EC644A4FB3\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/4F4EC2D9-B8A8-49DC-BE77-62EC644A4FB3\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/AFF45FBF-CB51-4216-94CC-419F3A038BB2\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/AFF45FBF-CB51-4216-94CC-419F3A038BB2\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/AFF45FBF-CB51-4216-94CC-419F3A038BB2\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/AFF45FBF-CB51-4216-94CC-419F3A038BB2\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/AFF45FBF-CB51-4216-94CC-419F3A038BB2\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png"
   },
   "overallPassed" : false,
   "sourceImage" : "test\/1.png",
@@ -420,10 +517,13 @@
   "warnings" : [
     "block 0 判定失败：翻译是占位答复",
     "block 1 判定失败：翻译等于原文、翻译包含完整原文、中文字符不足、翻译不像中文",
+    "block 2 判定失败：中文字符不足、翻译不像中文",
     "block 4 判定失败：中文字符不足、翻译不像中文",
+    "block 5 判定失败：翻译为空、翻译等于原文、翻译包含完整原文、翻译是占位答复、中文字符不足、翻译不像中文",
     "block 6 判定失败：翻译为空、翻译等于原文、翻译包含完整原文、翻译是占位答复、中文字符不足、翻译不像中文",
     "block 7 判定失败：翻译是占位答复",
     "block 8 判定失败：中文字符不足、翻译不像中文",
+    "block 9 判定失败：翻译为空、翻译等于原文、翻译包含完整原文、翻译是占位答复、中文字符不足、翻译不像中文",
     "block 10 判定失败：中文字符不足、翻译不像中文"
   ]
 }
