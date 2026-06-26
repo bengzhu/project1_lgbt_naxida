@@ -2,32 +2,29 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 private enum AppTab: Hashable {
-    case workspace
+    case text
+    case image
+    case audio
     case history
-    case prompts
-    case model
-    case pro
-    case developer
+    case settings
 
     var title: String {
         switch self {
-        case .workspace: "工作台"
+        case .text: "文本"
+        case .image: "图片"
+        case .audio: "音频"
         case .history: "历史"
-        case .prompts: "提示词"
-        case .model: "模型"
-        case .pro: "Pro"
-        case .developer: "开发"
+        case .settings: "设置"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .workspace: "waveform.and.mic"
+        case .text: "text.bubble.fill"
+        case .image: "photo.on.rectangle"
+        case .audio: "waveform.and.mic"
         case .history: "clock.arrow.circlepath"
-        case .prompts: "text.badge.star"
-        case .model: "memorychip"
-        case .pro: "crown.fill"
-        case .developer: "hammer.fill"
+        case .settings: "gearshape.fill"
         }
     }
 }
@@ -43,7 +40,7 @@ private enum AdaptiveLayout {
 struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var store: TranslationSessionStore
-    @State private var selectedTab: AppTab = .workspace
+    @State private var selectedTab: AppTab = .text
 
     var body: some View {
         Group {
@@ -54,10 +51,8 @@ struct ContentView: View {
             }
         }
         .onChange(of: store.isDeveloperModeEnabled) { _, isEnabled in
-            if isEnabled {
-                selectedTab = .developer
-            } else if selectedTab == .developer {
-                selectedTab = .model
+            if !isEnabled {
+                selectedTab = .settings
             }
         }
         .preferredColorScheme(.dark)
@@ -68,11 +63,7 @@ struct ContentView: View {
     }
 
     private var availableTabs: [AppTab] {
-        var tabs: [AppTab] = [.workspace, .history, .prompts, .model, .pro]
-        if store.isDeveloperModeEnabled {
-            tabs.append(.developer)
-        }
-        return tabs
+        [.text, .image, .audio, .history, .settings]
     }
 }
 
@@ -85,10 +76,22 @@ private struct PhoneTabRootView: View {
             AppBackground()
 
             TabView(selection: $selectedTab) {
-                WorkspaceView(selectedTab: $selectedTab)
-                    .tag(AppTab.workspace)
+                TextTranslationView(selectedTab: $selectedTab)
+                    .tag(AppTab.text)
                     .tabItem {
-                        Label(AppTab.workspace.title, systemImage: AppTab.workspace.systemImage)
+                        Label(AppTab.text.title, systemImage: AppTab.text.systemImage)
+                    }
+
+                ImageTranslationView()
+                    .tag(AppTab.image)
+                    .tabItem {
+                        Label(AppTab.image.title, systemImage: AppTab.image.systemImage)
+                    }
+
+                AudioTranslationView()
+                    .tag(AppTab.audio)
+                    .tabItem {
+                        Label(AppTab.audio.title, systemImage: AppTab.audio.systemImage)
                     }
 
                 HistoryView(selectedTab: $selectedTab)
@@ -97,31 +100,12 @@ private struct PhoneTabRootView: View {
                         Label(AppTab.history.title, systemImage: AppTab.history.systemImage)
                     }
 
-                PromptLibraryView()
-                    .tag(AppTab.prompts)
+                SettingsView(selectedTab: $selectedTab)
+                    .tag(AppTab.settings)
                     .tabItem {
-                        Label(AppTab.prompts.title, systemImage: AppTab.prompts.systemImage)
+                        Label(AppTab.settings.title, systemImage: AppTab.settings.systemImage)
                     }
 
-                ModelSettingsView()
-                    .tag(AppTab.model)
-                    .tabItem {
-                        Label(AppTab.model.title, systemImage: AppTab.model.systemImage)
-                    }
-
-                ProMainView()
-                    .tag(AppTab.pro)
-                    .tabItem {
-                        Label(AppTab.pro.title, systemImage: AppTab.pro.systemImage)
-                    }
-
-                if store.isDeveloperModeEnabled {
-                    DeveloperConsoleView()
-                        .tag(AppTab.developer)
-                        .tabItem {
-                            Label(AppTab.developer.title, systemImage: AppTab.developer.systemImage)
-                        }
-                }
             }
             .tint(Color.appAccent)
         }
@@ -228,23 +212,21 @@ private struct TabContentRouter: View {
 
     var body: some View {
         switch tab {
-        case .workspace:
-            WorkspaceView(selectedTab: $selectedTab)
+        case .text:
+            TextTranslationView(selectedTab: $selectedTab)
+        case .image:
+            ImageTranslationView()
+        case .audio:
+            AudioTranslationView()
         case .history:
             HistoryView(selectedTab: $selectedTab)
-        case .prompts:
-            PromptLibraryView()
-        case .model:
-            ModelSettingsView()
-        case .pro:
-            ProMainView()
-        case .developer:
-            DeveloperConsoleView()
+        case .settings:
+            SettingsView(selectedTab: $selectedTab)
         }
     }
 }
 
-private struct WorkspaceView: View {
+private struct TextTranslationView: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @Binding var selectedTab: AppTab
 
@@ -372,7 +354,7 @@ private struct HistoryView: View {
                         ForEach(filteredSessions) { record in
                             HistorySessionCard(record: record) {
                                 store.loadSession(record)
-                                selectedTab = .workspace
+                                selectedTab = .text
                             } onDelete: {
                                 store.deleteSession(record)
                             }
@@ -490,57 +472,241 @@ private struct PromptLibraryView: View {
     }
 }
 
-private struct ModelSettingsView: View {
-    @EnvironmentObject private var store: TranslationSessionStore
-    @State private var developerPassword = ""
-
+private struct ImageTranslationView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
                 PageHeader(
-                    title: "模型设置",
-                    subtitle: store.modelStatus.title,
-                    icon: "memorychip"
+                    title: "图片翻译",
+                    subtitle: "照片、截图与图片文件",
+                    icon: "photo.on.rectangle"
                 )
 
-                ModelStatusPanel()
-                DiagnosticsPanel()
-                LLMInterfaceSmokeTestPanel()
-                DeveloperModeUnlockPanel(password: $developerPassword)
-                EngineSelectorPanel()
-                SamplingPanel()
-                AdapterContractPanel()
+                ImageTranslationPanel()
             }
-            .adaptivePageFrame()
+            .adaptivePageFrame(maxWidth: 860)
             .padding(.top, 12)
             .padding(.bottom, 92)
         }
     }
 }
 
-private struct ProMainView: View {
-    @EnvironmentObject private var store: TranslationSessionStore
-
+private struct AudioTranslationView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
                 PageHeader(
-                    title: "Pro",
-                    subtitle: store.proPlan.displayPrice,
-                    icon: "crown.fill"
+                    title: "音频翻译",
+                    subtitle: "本机语音识别与离线翻译",
+                    icon: "waveform.and.mic"
                 )
 
-                ProAccountPanel()
                 ProLiveInterpreterPanel()
-                ProFeatureGrid()
+                AudioRecognitionWorkbenchPanel()
+            }
+            .adaptivePageFrame(maxWidth: 860)
+            .padding(.top, 12)
+            .padding(.bottom, 92)
+        }
+    }
+}
+
+private struct SettingsView: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @Binding var selectedTab: AppTab
+    @State private var developerPassword = ""
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    PageHeader(
+                        title: "设置",
+                        subtitle: store.isProUnlocked ? "Pro 已开通" : "免费模式",
+                        icon: "gearshape.fill"
+                    )
+
+                    ProAccountPanel()
+                    SettingsManagementPanel()
+                    CompactProBenefitsPanel(selectedTab: $selectedTab)
+                    DeveloperModeUnlockPanel(password: $developerPassword)
+                }
+                .adaptivePageFrame()
+                .padding(.top, 12)
+                .padding(.bottom, 92)
+            }
+            .navigationDestination(for: SettingsDestination.self) { destination in
+                switch destination {
+                case .prompts:
+                    PromptLibraryView()
+                case .model:
+                    ModelManagementView()
+                case .developer:
+                    DeveloperConsoleView()
+                }
+            }
+        }
+        .task {
+            store.loadProSubscriptionProduct()
+        }
+    }
+}
+
+private enum SettingsDestination: Hashable {
+    case prompts
+    case model
+    case developer
+}
+
+private struct SettingsManagementPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "管理", subtitle: "独立设置页", icon: "list.bullet.rectangle")
+
+            VStack(spacing: 8) {
+                NavigationLink(value: SettingsDestination.prompts) {
+                    SettingsNavigationRow(
+                        icon: "text.badge.star",
+                        title: "提示词管理",
+                        detail: "创建、编辑、选择翻译提示词"
+                    )
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink(value: SettingsDestination.model) {
+                    SettingsNavigationRow(
+                        icon: "memorychip",
+                        title: "模型管理",
+                        detail: "模型文件、推理引擎与生成参数"
+                    )
+                }
+                .buttonStyle(.plain)
+
+                if store.isDeveloperModeEnabled {
+                    NavigationLink(value: SettingsDestination.developer) {
+                        SettingsNavigationRow(
+                            icon: "hammer.fill",
+                            title: "开发者工具",
+                            detail: "测试、诊断与原始接口"
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .panelStyle()
+    }
+}
+
+private struct SettingsNavigationRow: View {
+    let icon: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color.appAccent)
+                .frame(width: 32, height: 32)
+                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.92))
+                Text(detail)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.48))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .heavy))
+                .foregroundStyle(.white.opacity(0.34))
+        }
+        .padding(10)
+        .background(Color.black.opacity(0.16), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct ModelManagementView: View {
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+                PageHeader(
+                    title: "模型管理",
+                    subtitle: "本地模型与生成参数",
+                    icon: "memorychip"
+                )
+
+                ModelStatusPanel()
+                EngineSelectorPanel()
+                SamplingPanel()
             }
             .adaptivePageFrame()
             .padding(.top, 12)
             .padding(.bottom, 92)
         }
-        .task {
-            store.loadProSubscriptionProduct()
+        .navigationTitle("模型管理")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct CompactProBenefitsPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @Binding var selectedTab: AppTab
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "Pro 权益", subtitle: store.isProUnlocked ? "已解锁" : "可升级", icon: "crown.fill")
+
+            VStack(spacing: 8) {
+                benefitRow(icon: "photo.on.rectangle", title: "图片翻译", detail: "OCR、翻译、覆盖图导出") {
+                    selectedTab = .image
+                }
+                benefitRow(icon: "waveform.and.mic", title: "音频翻译", detail: "本机识别与离线翻译") {
+                    selectedTab = .audio
+                }
+                benefitRow(icon: "globe.asia.australia.fill", title: "更多目标语言", detail: "扩展到 Pro 语言") {}
+            }
         }
+        .panelStyle()
+    }
+
+    private func benefitRow(icon: String, title: String, detail: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(store.isProUnlocked ? Color.appAccent : Color.warning)
+                    .frame(width: 30, height: 30)
+                    .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.90))
+                    Text(detail)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.48))
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: store.isProUnlocked ? "checkmark.circle.fill" : "lock.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(store.isProUnlocked ? Color.success : Color.warning)
+            }
+            .padding(10)
+            .background(Color.black.opacity(0.16), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -555,6 +721,11 @@ private struct DeveloperConsoleView: View {
                     subtitle: "原始模型输入输出",
                     icon: "hammer.fill"
                 )
+
+                DeveloperTestPanel()
+                DiagnosticsPanel()
+                LLMInterfaceSmokeTestPanel()
+                AdapterContractPanel()
 
                 VStack(alignment: .leading, spacing: 12) {
                     SectionTitle(title: "输入", subtitle: "\(store.sourceLanguage.shortName) -> \(store.targetLanguage.shortName)", icon: "keyboard")
@@ -617,6 +788,51 @@ private struct DeveloperConsoleView: View {
             .padding(.top, 12)
             .padding(.bottom, 92)
         }
+    }
+}
+
+private struct DeveloperTestPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "测试入口", subtitle: "仅开发者模式", icon: "testtube.2")
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    testButton(icon: "waveform.badge.magnifyingglass", title: "运行 test/ 音频") {
+                        store.runBundledAudioTest()
+                    }
+
+                    testButton(icon: "text.viewfinder", title: "运行 test/ OCR") {
+                        store.runBundledOCRImageTest()
+                    }
+                }
+
+                VStack(spacing: 10) {
+                    testButton(icon: "waveform.badge.magnifyingglass", title: "运行 test/ 音频") {
+                        store.runBundledAudioTest()
+                    }
+
+                    testButton(icon: "text.viewfinder", title: "运行 test/ OCR") {
+                        store.runBundledOCRImageTest()
+                    }
+                }
+            }
+        }
+        .panelStyle()
+    }
+
+    private func testButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -970,18 +1186,19 @@ private struct PageHeader: View {
     let icon: String
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             AppMark()
-                .frame(width: 52, height: 52)
+                .scaleEffect(0.78)
+                .frame(width: 44, height: 44)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 26, weight: .heavy, design: .rounded))
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
                 Label(subtitle, systemImage: icon)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.66))
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.58))
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
             }
@@ -1070,11 +1287,13 @@ private struct ProAccountPanel: View {
                     store.refreshProEntitlements()
                 }
 
-                SecondaryActionButton(icon: "wrench.and.screwdriver.fill", title: "开发解锁", tint: Color.warning) {
-                    store.activateProForDevelopment()
+                if store.isDeveloperModeEnabled {
+                    SecondaryActionButton(icon: "wrench.and.screwdriver.fill", title: "开发解锁", tint: Color.warning) {
+                        store.activateProForDevelopment()
+                    }
                 }
 
-                if store.isProUnlocked {
+                if store.isDeveloperModeEnabled && store.isProUnlocked {
                     SecondaryActionButton(icon: "person.crop.circle.badge.minus", title: "切回免费") {
                         store.restoreFreeModeForDevelopment()
                     }
@@ -1183,6 +1402,65 @@ private struct ProLiveInterpreterPanel: View {
     }
 }
 
+private struct AudioRecognitionWorkbenchPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @State private var showAudioImporter = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "音频文件", subtitle: audioStatusText, icon: "waveform.badge.magnifyingglass")
+
+            AudioRecognitionPanel()
+
+            HStack(spacing: 10) {
+                PrimaryActionButton(icon: "folder", title: "选择音频") {
+                    showAudioImporter = true
+                }
+                .disabled(isRunning)
+                .opacity(isRunning ? 0.55 : 1)
+
+                SecondaryActionButton(icon: "arrow.clockwise", title: "重试 test/ 音频", tint: Color.appAccent) {
+                    store.runBundledAudioTest()
+                }
+                .disabled(isRunning)
+                .opacity(isRunning ? 0.55 : 1)
+            }
+
+            SpeechCapabilityPanel()
+        }
+        .panelStyle()
+        .fileImporter(isPresented: $showAudioImporter, allowedContentTypes: [.audio]) { result in
+            switch result {
+            case .success(let url):
+                store.recognizeAudioFileAndTranslate(from: url)
+            case .failure(let error):
+                store.audioRecognitionState = .failed
+                store.audioRecognitionMessage = "音频文件选择失败：\(error.localizedDescription)"
+                store.dataTransferMessage = store.audioRecognitionMessage
+            }
+        }
+    }
+
+    private var isRunning: Bool {
+        switch store.audioRecognitionState {
+        case .checking, .recognizing:
+            true
+        case .idle, .translated, .failed:
+            false
+        }
+    }
+
+    private var audioStatusText: String {
+        switch store.audioRecognitionState {
+        case .idle: "待选择"
+        case .checking: "检查中"
+        case .recognizing: "识别中"
+        case .translated: "已完成"
+        case .failed: "失败"
+        }
+    }
+}
+
 private struct RawProbeBox: View {
     let title: String
     let icon: String
@@ -1260,7 +1538,7 @@ private struct MainTranslatorPanel: View {
                     Spacer(minLength: 0)
 
                     Button {
-                        selectedTab = .prompts
+                        selectedTab = .settings
                     } label: {
                         Image(systemName: "slider.horizontal.3")
                             .font(.system(size: 14, weight: .bold))
@@ -1424,22 +1702,59 @@ private struct TargetLanguageMenu: View {
 
 private struct RecentTranslationPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionTitle(title: "最近翻译", subtitle: "\(store.transcript.count) 条", icon: "clock.arrow.circlepath")
 
             if store.transcript.isEmpty {
-                EmptyStatePanel(icon: "text.bubble", title: "暂无记录", detail: "完成一次翻译后会自动保存到本地历史。")
+                EmptyStatePanel(icon: "text.bubble", title: "暂无记录", detail: "完成一次翻译后自动保存。")
             } else {
                 LazyVStack(spacing: 10) {
-                    ForEach(store.transcript.prefix(3)) { line in
-                        TranscriptCard(line: line)
+                    ForEach(store.transcript.prefix(itemLimit)) { line in
+                        if horizontalSizeClass == .regular {
+                            TranscriptCard(line: line)
+                        } else {
+                            CompactTranscriptRow(line: line)
+                        }
                     }
                 }
             }
         }
         .panelStyle()
+    }
+
+    private var itemLimit: Int {
+        horizontalSizeClass == .regular ? 3 : 1
+    }
+}
+
+private struct CompactTranscriptRow: View {
+    let line: TranscriptLine
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                Text(line.translation)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.90))
+                    .lineLimit(2)
+
+                Spacer(minLength: 0)
+
+                Text(line.time)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.42))
+            }
+
+            Text(line.original)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.48))
+                .lineLimit(1)
+        }
+        .padding(11)
+        .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -1473,10 +1788,10 @@ private struct HeroPanel: View {
                     selectedTab = .history
                 }
                 LinkButton(icon: "text.badge.star", title: store.selectedPrompt.title) {
-                    selectedTab = .prompts
+                    selectedTab = .settings
                 }
                 LinkButton(icon: "memorychip.fill", title: store.selectedEngine.rawValue) {
-                    selectedTab = .model
+                    selectedTab = .settings
                 }
             }
         }
@@ -2126,8 +2441,10 @@ private struct ModelStatusPanel: View {
                 Spacer(minLength: 0)
             }
 
-            InfoRow(icon: "folder.fill", title: "模型目录", detail: store.localModelPathDisplay)
-            InfoRow(icon: "shippingbox.fill", title: "模型文件", detail: "\(store.localModelFilename) / \(store.localModelSizeDisplay)")
+            if store.isDeveloperModeEnabled {
+                InfoRow(icon: "folder.fill", title: "模型目录", detail: store.localModelPathDisplay)
+                InfoRow(icon: "shippingbox.fill", title: "模型文件", detail: "\(store.localModelFilename) / \(store.localModelSizeDisplay)")
+            }
 
             BuiltInModelDownloadCard()
 

@@ -3,9 +3,7 @@ import UniformTypeIdentifiers
 
 struct ProFeatureGrid: View {
     @EnvironmentObject private var store: TranslationSessionStore
-    @State private var showAudioImporter = false
     @State private var showBackgroundPlan = false
-    @State private var showImageImporter = false
 
     private let columns = [
         GridItem(.adaptive(minimum: 142), spacing: 10)
@@ -22,11 +20,7 @@ struct ProFeatureGrid: View {
                     detail: "Vision OCR + 本地模型翻译",
                     isUnlocked: store.isProUnlocked
                 ) {
-                    if store.isProUnlocked {
-                        showImageImporter = true
-                    } else {
-                        store.dataTransferMessage = "图片翻译需要 Pro"
-                    }
+                    store.dataTransferMessage = store.isProUnlocked ? "请从图片页使用图片翻译" : "图片翻译需要 Pro"
                 }
 
                 ProFeatureCard(
@@ -35,11 +29,7 @@ struct ProFeatureGrid: View {
                     detail: "选择音频，断网本机识别后翻译",
                     isUnlocked: store.isProUnlocked
                 ) {
-                    if store.isProUnlocked {
-                        showAudioImporter = true
-                    } else {
-                        store.dataTransferMessage = "音频离线识别测试需要 Pro"
-                    }
+                    store.dataTransferMessage = store.isProUnlocked ? "请从音频页使用音频翻译" : "音频离线识别测试需要 Pro"
                 }
 
                 ProFeatureCard(
@@ -53,65 +43,14 @@ struct ProFeatureGrid: View {
                 }
             }
 
-            HStack(spacing: 10) {
-                ProTestActionButton(icon: "waveform.badge.magnifyingglass", title: "运行 test/ 音频") {
-                    store.runBundledAudioTest()
-                }
-
-                ProTestActionButton(icon: "text.viewfinder", title: "运行 test/ OCR") {
-                    store.runBundledOCRImageTest()
-                }
-            }
-
-            ImageTranslationPanel()
-            AudioRecognitionPanel()
             SpeechCapabilityPanel()
         }
         .panelStyle()
-        .fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image]) { result in
-            switch result {
-            case .success(let url):
-                store.translateImage(from: url)
-            case .failure(let error):
-                store.imageTranslationState = .failed
-                store.imageTranslationMessage = "图片文件选择失败：\(error.localizedDescription)"
-                store.dataTransferMessage = store.imageTranslationMessage
-            }
-        }
-        .fileImporter(isPresented: $showAudioImporter, allowedContentTypes: [.audio]) { result in
-            switch result {
-            case .success(let url):
-                store.recognizeAudioFileAndTranslate(from: url)
-            case .failure(let error):
-                store.audioRecognitionState = .failed
-                store.audioRecognitionMessage = "音频文件选择失败：\(error.localizedDescription)"
-                store.dataTransferMessage = store.audioRecognitionMessage
-            }
-        }
         .alert("后台一键翻译", isPresented: $showBackgroundPlan) {
             Button("知道了", role: .cancel) {}
         } message: {
             Text("iOS 普通 App 不能常驻覆盖其他 App 的任意悬浮窗。可行路线是 Share Extension 处理截图/文本，或 ReplayKit Broadcast Upload Extension 获取屏幕帧后做本地 OCR，但需要用户显式启动屏幕广播。")
         }
-    }
-}
-
-private struct ProTestActionButton: View {
-    let icon: String
-    let title: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Label(title, systemImage: icon)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-                .frame(maxWidth: .infinity, minHeight: 42)
-                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -155,7 +94,7 @@ private struct ProFeatureCard: View {
     }
 }
 
-private struct SpeechCapabilityPanel: View {
+struct SpeechCapabilityPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
 
     var body: some View {
@@ -193,7 +132,7 @@ private struct SpeechCapabilityPanel: View {
     }
 }
 
-private struct AudioRecognitionPanel: View {
+struct AudioRecognitionPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
 
     var body: some View {

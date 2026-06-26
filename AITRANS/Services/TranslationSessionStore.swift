@@ -1,8 +1,11 @@
 import Combine
 import AVFoundation
 import Foundation
+import ImageIO
 import Speech
 import StoreKit
+import UIKit
+import UniformTypeIdentifiers
 
 @MainActor
 final class TranslationSessionStore: ObservableObject {
@@ -98,6 +101,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var imageTranslationFilename = ""
     @Published var imageTranslationRevision = 0
     @Published var imageOverlayMode: ImageTranslationOverlayMode = .adjacent
+    @Published var imageTranslationExportURL: URL?
     @Published private(set) var speechRecognitionCapabilities: [SpeechRecognitionCapability] = []
 
     let localModelDirectory: URL
@@ -112,10 +116,13 @@ final class TranslationSessionStore: ObservableObject {
     private let mangaOverlayProbeService = MangaOverlayProbeService()
     private var ticker: Task<Void, Never>?
     private var modelDownloadTask: Task<Void, Never>?
+    private var imageTranslationTask: Task<Void, Never>?
+    private var imageTranslationTaskID = UUID()
     private var audioRecognitionTask: SFSpeechRecognitionTask?
     private var liveAudioEngine: AVAudioEngine?
     private var liveSpeechRecognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var proSubscriptionProduct: Product?
+    private var imageTranslationSourceURL: URL?
     private var activeSessionID = UUID()
     private var activeCreatedAt = Date()
     private var liveSampleIndex = 0
@@ -140,6 +147,7 @@ final class TranslationSessionStore: ObservableObject {
     deinit {
         ticker?.cancel()
         modelDownloadTask?.cancel()
+        imageTranslationTask?.cancel()
     }
 
     private func runLaunchLLMSmokeTestIfNeeded() {
@@ -254,6 +262,12 @@ final class TranslationSessionStore: ObservableObject {
         persistenceURL
             .deletingLastPathComponent()
             .appendingPathComponent("AudioTests", isDirectory: true)
+    }
+
+    private var imageTranslationDirectory: URL {
+        persistenceURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("ImageTranslations", isDirectory: true)
     }
 
     private var bundledTestDirectory: URL? {
@@ -612,8 +626,161 @@ final class TranslationSessionStore: ObservableObject {
         return destination
     }
 
+    private func copyImageFileIntoSandbox(_ url: URL) async throws -> URL {
+        let directory = imageTranslationDirectory
+        let destinationName = Self.sanitizedImageFilename(from: url)
+
+        let copiedURL = try await Task.detached(priority: .userInitiated) {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+            let destination = directory.appendingPathComponent(destinationName)
+            let didAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if didAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            if FileManager.default.fileExists(atPath: destination.path) {
+                try FileManager.default.removeItem(at: destination)
+            }
+
+            try FileManager.default.copyItem(at: url, to: destination)
+            return destination
+        }.value
+
+        imageTranslationSourceURL = copiedURL
+        imageTranslationFilename = copiedURL.lastPathComponent
+        return copiedURL
+    }
+
+    private func writeImageDataIntoSandbox(_ data: Data, filename: String) async throws -> URL {
+        let directory = imageTranslationDirectory
+        let destinationName = Self.sanitizedImageFilename(filename.isEmpty ? "photo-library-image.png" : filename)
+
+        return try await Task.detached(priority: .userInitiated) {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let destination = directory.appendingPathComponent(destinationName)
+            if FileManager.default.fileExists(atPath: destination.path) {
+                try FileManager.default.removeItem(at: destination)
+            }
+            try data.write(to: destination, options: .atomic)
+            return destination
+        }.value
+    }
+
+    private func beginImageTranslationTask(filename: String) -> UUID {
+        imageTranslationTask?.cancel()
+        let taskID = UUID()
+        imageTranslationTaskID = taskID
+        imageTranslationState = .loading
+        imageTranslationMessage = "正在载入图片"
+        imageTranslationBlocks = []
+        imageTranslationData = nil
+        imageTranslationExportURL = nil
+        imageTranslationRevision += 1
+        imageTranslationFilename = filename
+        isProcessing = true
+        return taskID
+    }
+
+    private func isCurrentImageTranslationTask(_ taskID: UUID) -> Bool {
+        imageTranslationTaskID == taskID && !Task.isCancelled
+    }
+
+    private func runImageTranslationPipeline(with data: Data, taskID: UUID) async throws {
+        guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+        imageTranslationData = data
+        imageTranslationRevision += 1
+        imageTranslationState = .recognizing
+        imageTranslationMessage = "正在用 Vision 本机 OCR 识别文字和位置"
+
+        let recognizedBlocks = try await visionOCRService.recognizeTextBlocks(
+            in: data,
+            sourceLanguage: sourceLanguage
+        )
+        try Task.checkCancellation()
+        guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+
+        guard !recognizedBlocks.isEmpty else {
+            imageTranslationState = .failed
+            imageTranslationMessage = "Vision OCR 没有识别到可翻译文字"
+            dataTransferMessage = imageTranslationMessage
+            isProcessing = false
+            return
+        }
+
+        imageTranslationBlocks = recognizedBlocks
+        imageTranslationState = .translating
+        imageTranslationMessage = "已识别 \(recognizedBlocks.count) 个文本块，正在交给本地模型翻译"
+
+        var translatedBlocks: [ImageTranslationBlock] = []
+        for (index, block) in recognizedBlocks.enumerated() {
+            try Task.checkCancellation()
+            guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+            var translatedBlock = block
+            translatedBlock.translation = try await translate(block.original)
+            guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+            translatedBlocks.append(translatedBlock)
+            imageTranslationBlocks = translatedBlocks + Array(recognizedBlocks.dropFirst(translatedBlocks.count))
+            imageTranslationMessage = "正在翻译 \(index + 1)/\(recognizedBlocks.count) 个文本块"
+        }
+
+        imageTranslationBlocks = translatedBlocks
+        imageTranslationExportURL = try? await Self.renderImageTranslationOverlay(
+            imageData: data,
+            blocks: translatedBlocks,
+            filename: imageTranslationFilename,
+            directory: imageTranslationDirectory
+        )
+        imageTranslationState = .translated
+        imageTranslationMessage = imageTranslationExportURL == nil
+            ? "已完成 Vision OCR、本地翻译和定位覆盖"
+            : "已完成 Vision OCR、本地翻译和覆盖图导出"
+        dataTransferMessage = imageTranslationMessage
+        appendImageTranslationTranscript(blocks: translatedBlocks)
+        isProcessing = false
+        persist()
+    }
+
+    private func finishImageTranslation(taskID: UUID, with error: Error) {
+        guard imageTranslationTaskID == taskID else { return }
+
+        if error is CancellationError {
+            imageTranslationState = .idle
+            imageTranslationMessage = "图片翻译已取消"
+            dataTransferMessage = imageTranslationMessage
+            isProcessing = false
+            imageTranslationTask = nil
+            return
+        }
+
+        imageTranslationState = .failed
+        imageTranslationMessage = "图片翻译失败：\(error.localizedDescription)"
+        dataTransferMessage = imageTranslationMessage
+        isProcessing = false
+        imageTranslationTask = nil
+        persist()
+    }
+
+    private func runImageTranslation(fromSandboxURL url: URL, taskID: UUID) {
+        imageTranslationTask = Task { [weak self] in
+            guard let self else { return }
+
+            do {
+                guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                let data = try await Self.loadSecurityScopedData(from: url)
+                try await self.runImageTranslationPipeline(with: data, taskID: taskID)
+            } catch {
+                self.finishImageTranslation(taskID: taskID, with: error)
+            }
+        }
+    }
+
     func translateImage(from url: URL) {
-        guard !isProcessing else { return }
+        guard imageTranslationState != .loading,
+              imageTranslationState != .recognizing,
+              imageTranslationState != .translating else { return }
         guard isProUnlocked else {
             imageTranslationState = .failed
             imageTranslationMessage = "图片翻译需要 Pro"
@@ -627,76 +794,100 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
-        imageTranslationState = .loading
-        imageTranslationMessage = "正在载入图片"
-        imageTranslationBlocks = []
-        imageTranslationData = nil
-        imageTranslationRevision += 1
-        imageTranslationFilename = url.lastPathComponent
-        isProcessing = true
+        let taskID = beginImageTranslationTask(filename: url.lastPathComponent)
 
-        Task { [weak self] in
+        imageTranslationTask = Task { [weak self] in
             guard let self else { return }
 
             do {
-                let data = try await Self.loadSecurityScopedData(from: url)
-                self.imageTranslationData = data
-                self.imageTranslationRevision += 1
-                self.imageTranslationState = .recognizing
-                self.imageTranslationMessage = "正在用 Vision 本机 OCR 识别文字和位置"
+                guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                let sandboxURL = try await self.copyImageFileIntoSandbox(url)
+                try Task.checkCancellation()
+                guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
 
-                let recognizedBlocks = try await self.visionOCRService.recognizeTextBlocks(
-                    in: data,
-                    sourceLanguage: self.sourceLanguage
-                )
-                guard !recognizedBlocks.isEmpty else {
-                    self.imageTranslationState = .failed
-                    self.imageTranslationMessage = "Vision OCR 没有识别到可翻译文字"
-                    self.dataTransferMessage = self.imageTranslationMessage
-                    self.isProcessing = false
-                    return
-                }
-
-                self.imageTranslationBlocks = recognizedBlocks
-                self.imageTranslationState = .translating
-                self.imageTranslationMessage = "已识别 \(recognizedBlocks.count) 个文本块，正在交给本地模型翻译"
-
-                var translatedBlocks: [ImageTranslationBlock] = []
-                for block in recognizedBlocks {
-                    var translatedBlock = block
-                    translatedBlock.translation = try await self.translate(block.original)
-                    translatedBlocks.append(translatedBlock)
-                    self.imageTranslationBlocks = translatedBlocks + Array(recognizedBlocks.dropFirst(translatedBlocks.count))
-                }
-
-                self.imageTranslationBlocks = translatedBlocks
-                self.imageTranslationState = .translated
-                self.imageTranslationMessage = "已完成 Vision OCR、本地翻译和定位覆盖"
-                self.dataTransferMessage = self.imageTranslationMessage
-                self.appendImageTranslationTranscript(blocks: translatedBlocks)
-                self.isProcessing = false
-                self.persist()
+                let data = try await Self.loadSecurityScopedData(from: sandboxURL)
+                try await self.runImageTranslationPipeline(with: data, taskID: taskID)
             } catch {
-                self.imageTranslationState = .failed
-                self.imageTranslationMessage = "图片翻译失败：\(error.localizedDescription)"
-                self.dataTransferMessage = self.imageTranslationMessage
-                self.isProcessing = false
-                self.persist()
+                self.finishImageTranslation(taskID: taskID, with: error)
+            }
+        }
+    }
+
+    func translateImageData(_ data: Data, filename: String) {
+        guard imageTranslationState != .loading,
+              imageTranslationState != .recognizing,
+              imageTranslationState != .translating else { return }
+        guard isProUnlocked else {
+            imageTranslationState = .failed
+            imageTranslationMessage = "图片翻译需要 Pro"
+            dataTransferMessage = imageTranslationMessage
+            return
+        }
+        guard canUseLanguage(targetLanguage) else {
+            imageTranslationState = .failed
+            imageTranslationMessage = "\(targetLanguage.rawValue) 图片翻译需要 Pro"
+            dataTransferMessage = imageTranslationMessage
+            return
+        }
+
+        let taskID = beginImageTranslationTask(filename: filename)
+
+        imageTranslationTask = Task { [weak self] in
+            guard let self else { return }
+
+            do {
+                guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                let sandboxURL = try await self.writeImageDataIntoSandbox(data, filename: filename)
+                guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                self.imageTranslationSourceURL = sandboxURL
+                self.imageTranslationFilename = sandboxURL.lastPathComponent
+                try await self.runImageTranslationPipeline(with: data, taskID: taskID)
+            } catch {
+                self.finishImageTranslation(taskID: taskID, with: error)
             }
         }
     }
 
     func clearImageTranslation() {
+        imageTranslationTask?.cancel()
+        imageTranslationTask = nil
+        imageTranslationTaskID = UUID()
         imageTranslationState = .idle
         imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
         imageTranslationBlocks = []
         imageTranslationData = nil
         imageTranslationFilename = ""
+        imageTranslationSourceURL = nil
+        imageTranslationExportURL = nil
         imageTranslationRevision += 1
+        isProcessing = false
     }
 
     func setImageOverlayMode(_ mode: ImageTranslationOverlayMode) {
         imageOverlayMode = mode
+    }
+
+    func cancelImageTranslation() {
+        imageTranslationTask?.cancel()
+        imageTranslationTask = nil
+        imageTranslationTaskID = UUID()
+        imageTranslationState = .idle
+        imageTranslationMessage = "图片翻译已取消"
+        dataTransferMessage = imageTranslationMessage
+        isProcessing = false
+    }
+
+    func retryImageTranslation() {
+        guard let url = imageTranslationSourceURL,
+              FileManager.default.fileExists(atPath: url.path) else {
+            imageTranslationMessage = "没有可重试的图片文件"
+            dataTransferMessage = imageTranslationMessage
+            return
+        }
+
+        let taskID = beginImageTranslationTask(filename: url.lastPathComponent)
+        imageTranslationSourceURL = url
+        runImageTranslation(fromSandboxURL: url, taskID: taskID)
     }
 
     func refreshSummary() async throws {
@@ -4150,6 +4341,105 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         return try await task.value
+    }
+
+    nonisolated private static func sanitizedImageFilename(from url: URL) -> String {
+        sanitizedImageFilename(url.lastPathComponent)
+    }
+
+    nonisolated private static func sanitizedImageFilename(_ filename: String) -> String {
+        let fallback = "image-input.png"
+        let rawName = filename.isEmpty ? fallback : filename
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._-"))
+        let sanitized = rawName.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" }
+        let name = String(sanitized).trimmingCharacters(in: CharacterSet(charactersIn: "._-"))
+        return name.isEmpty ? fallback : name
+    }
+
+    nonisolated private static func renderImageTranslationOverlay(
+        imageData: Data,
+        blocks: [ImageTranslationBlock],
+        filename: String,
+        directory: URL
+    ) async throws -> URL {
+        try await Task.detached(priority: .userInitiated) {
+            guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
+                  let image = CGImageSourceCreateImageAtIndex(source, 0, [
+                    kCGImageSourceShouldCacheImmediately: true
+                  ] as CFDictionary) else {
+                throw VisionOCRServiceError.imageDecodeFailed
+            }
+
+            let width = image.width
+            let height = image.height
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            guard let context = CGContext(
+                data: nil,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else {
+                throw VisionOCRServiceError.imageDecodeFailed
+            }
+
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+            for block in blocks {
+                let rect = CGRect(
+                    x: CGFloat(block.boundingBox.x) * CGFloat(width),
+                    y: CGFloat(block.boundingBox.y) * CGFloat(height),
+                    width: CGFloat(block.boundingBox.width) * CGFloat(width),
+                    height: CGFloat(block.boundingBox.height) * CGFloat(height)
+                ).insetBy(dx: -4, dy: -4)
+
+                context.setFillColor(UIColor.black.withAlphaComponent(0.72).cgColor)
+                context.fill(rect)
+                context.setStrokeColor(UIColor.systemTeal.cgColor)
+                context.setLineWidth(max(CGFloat(width) * 0.002, 2))
+                context.stroke(rect)
+
+                let text = (block.translation.isEmpty ? block.original : block.translation)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { continue }
+
+                let fontSize = max(min(rect.height * 0.42, 32), 11)
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
+                    .foregroundColor: UIColor.white
+                ]
+                let attributed = NSAttributedString(string: text, attributes: attributes)
+                let textRect = rect.insetBy(dx: 7, dy: 5)
+
+                UIGraphicsPushContext(context)
+                attributed.draw(with: textRect, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
+                UIGraphicsPopContext()
+            }
+
+            guard let outputImage = context.makeImage() else {
+                throw VisionOCRServiceError.imageDecodeFailed
+            }
+
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let baseName = filename.isEmpty ? "image-translation" : (filename as NSString).deletingPathExtension
+            let outputURL = directory.appendingPathComponent("\(baseName)-translated.png")
+            if FileManager.default.fileExists(atPath: outputURL.path) {
+                try FileManager.default.removeItem(at: outputURL)
+            }
+
+            guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, UTType.png.identifier as CFString, 1, nil) else {
+                throw VisionOCRServiceError.imageDecodeFailed
+            }
+
+            CGImageDestinationAddImage(destination, outputImage, nil)
+            guard CGImageDestinationFinalize(destination) else {
+                throw VisionOCRServiceError.imageDecodeFailed
+            }
+
+            return outputURL
+        }.value
     }
 
     private func currentSessionRecord() -> TranslationSessionRecord {
