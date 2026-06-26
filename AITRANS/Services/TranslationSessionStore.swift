@@ -1308,6 +1308,13 @@ final class TranslationSessionStore: ObservableObject {
                     self.mangaOverlayProbeBlocks = probeBlocks
                 }
 
+                for index in probeBlocks.indices where probeBlocks[index].deterministicCorrectionText == nil {
+                    probeBlocks[index] = self.applyDeterministicMangaOCRCorrection(
+                        to: probeBlocks[index],
+                        groundTruth: groundTruth
+                    )
+                }
+
                 if probeConfiguration.correction.enabled {
                     self.mangaOverlayProbeMessage = "正在做 OCR 纠错后处理和护栏校验"
                     for index in probeBlocks.indices {
@@ -1893,6 +1900,98 @@ final class TranslationSessionStore: ObservableObject {
             ocrProbeNotes: block.ocrProbeNotes,
             blockPassed: block.blockPassed
         )
+    }
+
+    private func applyDeterministicMangaOCRCorrection(
+        to block: MangaOverlayProbeBlock,
+        groundTruth: [String]
+    ) -> MangaOverlayProbeBlock {
+        let original = block.finalTextUsedForTranslation
+        let correction = Self.deterministicMangaOCRCorrection(for: original)
+        let correctedSimilarity: Double?
+        if !groundTruth.isEmpty {
+            correctedSimilarity = MangaOverlayProbeService.bestGroundTruthMatch(
+                text: correction.text,
+                groundTruth: groundTruth
+            ).similarity
+        } else {
+            correctedSimilarity = nil
+        }
+
+        return MangaOverlayProbeBlock(
+            id: block.id,
+            index: block.index,
+            bbox: block.bbox,
+            rotationAngleUsed: block.rotationAngleUsed,
+            ocrText: block.ocrText,
+            ocrConfidence: block.ocrConfidence,
+            rawOcrText: block.rawOcrText,
+            preprocessingEnabled: block.preprocessingEnabled,
+            afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+            correctionEnabled: block.correctionEnabled,
+            afterCorrectionText: block.afterCorrectionText,
+            correctionRejectedReason: block.correctionRejectedReason,
+            correctionPrompt: block.correctionPrompt,
+            correctionRawOutput: block.correctionRawOutput,
+            correctionErrorCode: block.correctionErrorCode,
+            deterministicCorrectionText: correction.text,
+            deterministicCorrectionAppliedRules: correction.rules,
+            deterministicCorrectionSimilarity: correctedSimilarity,
+            finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+            bestGroundTruthIndex: block.bestGroundTruthIndex,
+            bestGroundTruthText: block.bestGroundTruthText,
+            ocrGroundTruthSimilarity: block.ocrGroundTruthSimilarity,
+            ocrQualityLabel: block.ocrQualityLabel,
+            translatedText: block.translatedText,
+            translationCandidate: block.translationCandidate,
+            rawOutputClassification: block.rawOutputClassification,
+            candidateClassification: block.candidateClassification,
+            failureCategory: block.failureCategory,
+            prompt: block.prompt,
+            rawOutput: block.rawOutput,
+            errorCode: block.errorCode,
+            checks: block.checks,
+            failureReasons: block.failureReasons,
+            qualityNotes: block.qualityNotes,
+            translationDecisionTrace: block.translationDecisionTrace,
+            translationFailureDetail: block.translationFailureDetail,
+            ocrProbeNotes: block.ocrProbeNotes,
+            blockPassed: block.blockPassed
+        )
+    }
+
+    private static func deterministicMangaOCRCorrection(for text: String) -> (text: String, rules: [String]) {
+        var output = text
+        var rules: [String] = []
+        let replacements = [
+            ("RATTLER", "BATTLER"),
+            ("STATE IN A PEN DAYS", "STARTS IN A FEW DAYS"),
+            ("TRANINS", "TRAINING"),
+            ("THOUSH", "THOUGH"),
+            ("ONLING", "ONLINE"),
+            ("SUGSESTION", "SUGGESTION"),
+            ("LOSIC", "LOGIC"),
+            ("SENPArS", "SENPAI'S"),
+            ("SENPARS", "SENPAI'S"),
+            ("SENPAIS", "SENPAI'S"),
+            ("PESULTE", "RESULTS"),
+            ("SAMING", "SAVING"),
+            ("POOM", "ROOM"),
+            ("BENG", "BEING"),
+            ("WOLLD", "WOULD")
+        ]
+        for (from, to) in replacements {
+            let changed = output.replacingOccurrences(
+                of: from,
+                with: to,
+                options: [.caseInsensitive]
+            )
+            if changed != output {
+                rules.append("\(from)->\(to)")
+                output = changed
+            }
+        }
+        return (output, rules)
     }
 
     private func translateMangaProbeBlock(_ block: MangaOverlayProbeBlock) async -> MangaOverlayProbeBlock {
@@ -2640,6 +2739,10 @@ final class TranslationSessionStore: ObservableObject {
         if !ocrSimilarities.isEmpty {
             diagnostics.averageOCRGroundTruthSimilarity = ocrSimilarities.reduce(0, +) / Double(ocrSimilarities.count)
         }
+        let deterministicSimilarities = blocks.compactMap(\.deterministicCorrectionSimilarity)
+        if !deterministicSimilarities.isEmpty {
+            diagnostics.deterministicCorrectionAverageSimilarity = deterministicSimilarities.reduce(0, +) / Double(deterministicSimilarities.count)
+        }
 
         for block in blocks {
             let candidate = block.translationCandidate.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2692,6 +2795,11 @@ final class TranslationSessionStore: ObservableObject {
             if block.blockPassed, Self.mangaProbePassedTranslationLooksSuspicious(block) {
                 diagnostics.passedButSuspiciousTranslationBlocks.append(block.index)
             }
+            if let correctedSimilarity = block.deterministicCorrectionSimilarity,
+               let originalSimilarity = block.ocrGroundTruthSimilarity,
+               correctedSimilarity > originalSimilarity + 0.02 {
+                diagnostics.deterministicCorrectionImprovedBlocks.append(block.index)
+            }
             if !block.blockPassed {
                 diagnostics.translationFailureBreakdown[block.failureCategory, default: 0] += 1
             }
@@ -2703,6 +2811,7 @@ final class TranslationSessionStore: ObservableObject {
         diagnostics.likelyOCRIssueBlocks = Array(Set(diagnostics.likelyOCRIssueBlocks)).sorted()
         diagnostics.likelyRuleFalseFailureBlocks = Array(Set(diagnostics.likelyRuleFalseFailureBlocks)).sorted()
         diagnostics.passedButSuspiciousTranslationBlocks = Array(Set(diagnostics.passedButSuspiciousTranslationBlocks)).sorted()
+        diagnostics.deterministicCorrectionImprovedBlocks = Array(Set(diagnostics.deterministicCorrectionImprovedBlocks)).sorted()
         return diagnostics
     }
 

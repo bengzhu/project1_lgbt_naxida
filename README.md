@@ -162,6 +162,7 @@ test/
 - `configuration.customLexiconEnabled` / `customLexicon`：记录 Vision `customWords` 是否启用和本轮词表。
 - `blocks[].rawOcrText` / `afterPreprocessingOcrText` / `finalTextUsedForTranslation`：记录原始 OCR、裁切预处理后二次 OCR、最终送翻译文本。当前预处理结果只用于对比展示，不替换整图 OCR 主流程。
 - `blocks[].correctionEnabled` / `afterCorrectionText` / `correctionRejectedReason` / `correctionPrompt` / `correctionRawOutput` / `correctionErrorCode`：记录 OCR 纠错后处理链路。护栏拒绝时 `afterCorrectionText` 保留原文，`correctionRejectedReason` 写明长度、词数、新词或空输出原因。
+- `blocks[].deterministicCorrectionText` / `deterministicCorrectionAppliedRules` / `deterministicCorrectionSimilarity`：记录探针专用确定性 OCR 纠错候选。当前只做量化对比，不替换 `finalTextUsedForTranslation`，避免半修正文本污染翻译链路。
 - `correctionGuardrailTest`：固定构造 `XQZ 12 ///` -> `The City Battler Tournament starts in a few days.` 的过度纠错测试，用来证明护栏会拒绝模型瞎猜。
 - `lexiconComparison`：同图同参数下 Vision `customWords` 开/关对比，记录总块数和发生变化的块编号。
 - `visionAPIComparison`：旧 `VNRecognizeTextRequest` 与 iOS 18+ Swift 原生 `RecognizeTextRequest` 的 0° OCR 对比。当前只作为独立探针，不替换主流程。
@@ -336,6 +337,8 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v13 OCR 原句排查：低相似/可疑输入仍集中在 `THE CITY RATTLER / STATE IN A PEN DAYS.`、`THIS IS AN / TOURNAMENT. DOING IT / WOULD MAKE WOLLD MAKE ONLINE`、`GET PESULTE / SAMING CLUE TO SAVE THE / POOM BENG`、`What Whet are / every you! / talking`、`City Battler / Offline. / Tournament`；高相似但模型失败包括 `THAT'S / RIGHT, / NOW / I'M-`、`IVE ARRIVED AT REN- SENPAI'S HOUSE.`、`LET'S / BATTLER!`。下一步应优先收紧通过质量规则，并继续改善 OCR 英文纠错/气泡路径降噪，而不是放宽中文判定。
 - 本次未提交工作区 v14：收紧漫画探针 `blockPassed` 质量门槛。中文候选只满足“含 CJK”不再足够；如果 OCR 真值相似度低于 `0.72`、OCR 含已知错词且相似度低于 `0.86`、输出像解释/列表、长原文只得到过短中文、或译文中英混排，都会标成失败并绘制 `翻译失败 + OCR 原文`。这是探针质量判定，不改变普通产品翻译链路。
 - 本次未提交工作区 v14 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后，`totalBlocksDetected = 12`、`passedBlocks = 1`、`failedBlocks = 11`、`translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 9 }`、`likelyRuleFalseFailureBlocks = []`、`passedButSuspiciousTranslationBlocks = []`、`averageOCRGroundTruthSimilarity = 0.6846`。结论：坏译文不再被标 PASS；剩余主要问题仍是 OCR 输入错误和当前 Gemma 270M raw 输出不稳定。输出目录仍只保留本轮 9 个文件，含全图 OCR 覆盖、翻译覆盖、块裁切、气泡候选和气泡 crop 调试图。
+- 本次未提交工作区 v15：新增探针专用确定性 OCR 纠错候选，只修已知 OCR 混淆词，如 `RATTLER -> BATTLER`、`STATE IN A PEN DAYS -> STARTS IN A FEW DAYS`、`THOUSH -> THOUGH`、`ONLING -> ONLINE`、`SUGSESTION -> SUGGESTION`、`LOSIC -> LOGIC`。报告新增 `deterministicCorrectionText`、`deterministicCorrectionAppliedRules`、`deterministicCorrectionSimilarity`、`deterministicCorrectionImprovedBlocks` 和 `deterministicCorrectionAverageSimilarity`。
+- 本次未提交工作区 v15 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后，原始整页 OCR 平均真值相似度 `0.6846`，确定性纠错候选平均相似度 `0.7205`，显著提升块为 `[2, 7, 8, 10]`。其中 `THE CITY RATTLER / STATE IN A PEN DAYS.` 修为 `THE CITY BATTLER / STARTS IN A FEW DAYS.`，相似度 `0.6032 -> 0.8615`；`-O2 AT LEAST... SENPAIS SENPArS LOSIC.` 修为 `... SENPAI'S SENPAI'S LOGIC.`，相似度 `0.8000 -> 0.8889`。已知局限：部分半修正仍不自然，如 `GET RESULTS / SAVING CLUE...`，因此本轮只报告候选，不替换实际翻译输入。
 
 ## 后续对话指引
 

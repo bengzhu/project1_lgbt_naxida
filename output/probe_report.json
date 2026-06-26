@@ -11,12 +11,12 @@
       ],
       "bestGroundTruthIndex" : 1,
       "bestGroundTruthText" : "That's right, right now I'm-",
-      "blockPassed" : true,
-      "candidateClassification" : "chinese",
+      "blockPassed" : false,
+      "candidateClassification" : "nonChinese",
       "checks" : {
-        "looksLikeChinese" : true,
+        "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : true,
+        "translationHasEnoughChinese" : false,
         "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
         "translationNotEqualOriginal" : true,
@@ -26,12 +26,18 @@
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THAT'S\nRIGHT,\nNOW\nI'M-\n<end_of_turn>\n<start_of_turn>model",
       "correctionRawOutput" : "\nThat's right,\nNOW I'M\n",
       "correctionRejectedReason" : "长度变化 68% 超过 30%",
-      "failureCategory" : "passed",
-      "failureReasons" : [
+      "deterministicCorrectionAppliedRules" : [
 
       ],
+      "deterministicCorrectionSimilarity" : 0.9655172413793104,
+      "deterministicCorrectionText" : "THAT'S\nRIGHT,\nNOW\nI'M-",
+      "failureCategory" : "modelOutputFailure",
+      "failureReasons" : [
+        "中文字符不足",
+        "翻译不像中文"
+      ],
       "finalTextUsedForTranslation" : "THAT'S\nRIGHT,\nNOW\nI'M-",
-      "id" : "75A9387F-2B83-4999-BB34-EB6C3B30C29E",
+      "id" : "5BC2BE25-DF42-4A72-A994-1CA2D28EE946",
       "index" : 0,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.9655172413793104,
@@ -45,381 +51,18 @@
       "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT'S\nRIGHT,\nNOW\nI'M-\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "candidateLength=28",
-        "rawOutputLength=45",
-        "cjkCharacters=10",
-        "rawCJKCharacters=18"
-      ],
-      "rawOcrText" : "THAT'S\nRIGHT,\nNOW\nI'M-",
-      "rawOutput" : "\n以下是翻译成中文：\n\n*   **那**是**正确的**，**现在**我**很**想**。\n",
-      "rawOutputClassification" : "placeholder",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "那**是**正确的**，**现在**我**很**想**。",
-      "translationCandidate" : "那**是**正确的**，**现在**我**很**想**。",
-      "translationDecisionTrace" : [
-        "rawOutputClassification=placeholder",
-        "candidateClassification=chinese",
-        "rawHadContent=true",
-        "rejectedPlaceholder=false",
-        "ocrNotEmpty=true",
-        "translationNotEmpty=true",
-        "translationNotEqualOriginal=true",
-        "translationNotPlaceholder=true",
-        "translationHasCJK=true",
-        "looksLikeChinese=true"
-      ]
-    },
-    {
-      "afterCorrectionText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
-      "afterPreprocessingOcrText" : "I'VE\nARRIVED\nJAT RENS\nSENPA'S\n* HOUSE",
-      "bbox" : [
-        112,
-        353,
-        57,
-        60
-      ],
-      "bestGroundTruthIndex" : 0,
-      "bestGroundTruthText" : "I've arrived at Senpai's house.",
-      "blockPassed" : false,
-      "candidateClassification" : "repeatedOriginal",
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : false,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false,
-        "translationNotPlaceholder" : true
-      },
-      "correctionEnabled" : true,
-      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：IVE ARRIVED AT REN- SENPAI'S HOUSE.\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
-      "failureCategory" : "modelOutputFailure",
-      "failureReasons" : [
-        "翻译等于原文",
-        "中文字符不足",
-        "翻译不像中文"
-      ],
-      "finalTextUsedForTranslation" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
-      "id" : "22EEC879-2F12-4582-B21B-414B00961BC2",
-      "index" : 1,
-      "ocrConfidence" : 1,
-      "ocrGroundTruthSimilarity" : 0.9047619047619048,
-      "ocrProbeNotes" : [
-        "ocrSimilarity=0.905",
-        "ocrQuality=good",
-        "bestGroundTruth=I've arrived at Senpai's house."
-      ],
-      "ocrQualityLabel" : "good",
-      "ocrText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
-      "preprocessingEnabled" : true,
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nIVE ARRIVED AT REN- SENPAI'S HOUSE.\n<end_of_turn>\n<start_of_turn>model",
-      "qualityNotes" : [
-        "translationContainsFullOCRText",
-        "candidateLength=35",
-        "rawOutputLength=35",
-        "latinLetters=27",
-        "rawLatinLetters=27"
-      ],
-      "rawOcrText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
-      "rawOutput" : "\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
-      "rawOutputClassification" : "repeatedOriginal",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "翻译失败\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
-      "translationCandidate" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
-      "translationDecisionTrace" : [
-        "rawOutputClassification=repeatedOriginal",
-        "candidateClassification=repeatedOriginal",
-        "rawHadContent=true",
-        "rejectedPlaceholder=false",
-        "ocrNotEmpty=true",
-        "translationNotEmpty=true",
-        "translationNotEqualOriginal=false",
-        "translationNotPlaceholder=true",
-        "translationHasCJK=false",
-        "looksLikeChinese=false"
-      ],
-      "translationFailureDetail" : "模型复读原文，非规则误杀：翻译等于原文、中文字符不足、翻译不像中文"
-    },
-    {
-      "afterCorrectionText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
-      "afterPreprocessingOcrText" : "THe and\nGATTLEE\nTARIAN\n.ь. гкі",
-      "bbox" : [
-        493,
-        557,
-        54,
-        44
-      ],
-      "bestGroundTruthIndex" : 2,
-      "bestGroundTruthText" : "The City Battler Tournament starts in a few days.",
-      "blockPassed" : false,
-      "candidateClassification" : "nonChinese",
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : false,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true,
-        "translationNotPlaceholder" : true
-      },
-      "correctionEnabled" : true,
-      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THE CITY RATTLER\nSTATE IN A PEN DAYS.\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nTHE CITY RATTLER\n",
-      "correctionRejectedReason" : "长度变化 57% 超过 30%",
-      "failureCategory" : "ocrInputSuspect",
-      "failureReasons" : [
-        "中文字符不足",
-        "翻译不像中文"
-      ],
-      "finalTextUsedForTranslation" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
-      "id" : "3E5D8D8C-201A-4FA4-9F06-0DCBB7434D10",
-      "index" : 2,
-      "ocrConfidence" : 1,
-      "ocrGroundTruthSimilarity" : 0.6031746031746031,
-      "ocrProbeNotes" : [
-        "ocrSimilarity=0.603",
-        "ocrQuality=lowSimilarity",
-        "containsKnownOCRConfusion",
-        "lowSimilarityAgainstGroundTruth",
-        "bestGroundTruth=The City Battler Tournament starts in a few days."
-      ],
-      "ocrQualityLabel" : "lowSimilarity",
-      "ocrText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
-      "preprocessingEnabled" : true,
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHE CITY RATTLER\nSTATE IN A PEN DAYS.\n<end_of_turn>\n<start_of_turn>model",
-      "qualityNotes" : [
-        "candidateLength=20",
-        "rawOutputLength=45",
-        "latinLetters=15",
-        "rawLatinLetters=29",
-        "likelyOCRIssue"
-      ],
-      "rawOcrText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
-      "rawOutput" : "\n**THE CITY RATTLER**\n**STATE IN A PEN DAYS.**\n",
-      "rawOutputClassification" : "nonChinese",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "翻译失败\nTHE CITY RATTLER\nSTATE IN A PEN DAYS.",
-      "translationCandidate" : "STATE IN A PEN DAYS.",
-      "translationDecisionTrace" : [
-        "rawOutputClassification=nonChinese",
-        "candidateClassification=nonChinese",
-        "rawHadContent=true",
-        "rejectedPlaceholder=false",
-        "ocrNotEmpty=true",
-        "translationNotEmpty=true",
-        "translationNotEqualOriginal=true",
-        "translationNotPlaceholder=true",
-        "translationHasCJK=false",
-        "looksLikeChinese=false"
-      ],
-      "translationFailureDetail" : "模型输出非中文\/符号，未达到英译中目标：中文字符不足、翻译不像中文；OCR 输入疑似有误"
-    },
-    {
-      "afterCorrectionText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
-      "afterPreprocessingOcrText" : "ANOT\nTHAT'A\n* WHYS\nWERE\nDONE\nA THIS!\nSPECIAL\nTRANINE",
-      "bbox" : [
-        65,
-        677,
-        49,
-        65
-      ],
-      "bestGroundTruthIndex" : 3,
-      "bestGroundTruthText" : "And that's why we're doing this special training.",
-      "blockPassed" : false,
-      "candidateClassification" : "chinese",
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true,
-        "translationNotPlaceholder" : true
-      },
-      "correctionEnabled" : true,
-      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THAT'S\nWE'RE WHY\nTRANINS SPECIAL\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nThat's\nWe're\nWhy\nTRANINS SPECIAL",
-      "correctionRejectedReason" : "长度变化 53% 超过 30%",
-      "failureCategory" : "ocrInputSuspect",
-      "failureReasons" : [
-        "OCR 含已知错词且相似度不足 0.86"
-      ],
-      "finalTextUsedForTranslation" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
-      "id" : "FE35A27B-D53E-475E-9691-18D4E7E47F20",
-      "index" : 3,
-      "ocrConfidence" : 1,
-      "ocrGroundTruthSimilarity" : 0.7457627118644068,
-      "ocrProbeNotes" : [
-        "ocrSimilarity=0.746",
-        "ocrQuality=usable",
-        "containsKnownOCRConfusion",
-        "bestGroundTruth=And that's why we're doing this special training."
-      ],
-      "ocrQualityLabel" : "usable",
-      "ocrText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
-      "preprocessingEnabled" : true,
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT'S\nWE'RE WHY\nTRANINS SPECIAL\n<end_of_turn>\n<start_of_turn>model",
-      "qualityNotes" : [
-        "candidateLength=5",
-        "rawOutputLength=5",
-        "cjkCharacters=4",
-        "rawCJKCharacters=4",
-        "likelyOCRIssue",
-        "suspiciousTranslation=OCR 含已知错词且相似度不足 0.86"
-      ],
-      "rawOcrText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
-      "rawOutput" : "\n那是什么？\n",
-      "rawOutputClassification" : "chinese",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "翻译失败\nTHAT'S\nWE'RE WHY\nTRANINS SPECIAL",
-      "translationCandidate" : "那是什么？",
-      "translationDecisionTrace" : [
-        "rawOutputClassification=chinese",
-        "candidateClassification=chinese",
-        "rawHadContent=true",
-        "rejectedPlaceholder=false",
-        "ocrNotEmpty=true",
-        "translationNotEmpty=true",
-        "translationNotEqualOriginal=true",
-        "translationNotPlaceholder=true",
-        "translationHasCJK=true",
-        "looksLikeChinese=true",
-        "suspiciousTranslation=OCR 含已知错词且相似度不足 0.86"
-      ],
-      "translationFailureDetail" : "ocrInputSuspect：OCR 含已知错词且相似度不足 0.86；OCR 输入疑似有误"
-    },
-    {
-      "afterCorrectionText" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
-      "afterPreprocessingOcrText" : "F'EVEN®\nTHOLEŁ\nI SAID\n«T°Э฿\nFOUSTA\nSPECIAL\nTRANING\nBKAND\nASKED\nY WEN\nCOLD\n*UST\nKPLAYE\nONLINE",
-      "bbox" : [
-        235,
-        861,
-        56,
-        135
-      ],
-      "bestGroundTruthIndex" : 4,
-      "bestGroundTruthText" : "Even though I said it's just special training and asked if we could just play online-",
-      "blockPassed" : false,
-      "candidateClassification" : "nonChinese",
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : false,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true,
-        "translationNotPlaceholder" : true
-      },
-      "correctionEnabled" : true,
-      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : " | THOUSH EVEN\n",
-      "correctionRejectedReason" : "长度变化 88% 超过 30%",
-      "failureCategory" : "ocrInputSuspect",
-      "failureReasons" : [
-        "中文字符不足",
-        "翻译不像中文"
-      ],
-      "finalTextUsedForTranslation" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
-      "id" : "5BF056A3-9439-47F2-8BE6-5DA06A5D7492",
-      "index" : 4,
-      "ocrConfidence" : 1,
-      "ocrGroundTruthSimilarity" : 0.8849557522123894,
-      "ocrProbeNotes" : [
-        "ocrSimilarity=0.885",
-        "ocrQuality=usable",
-        "containsKnownOCRConfusion",
-        "bestGroundTruth=Even though I said it's just special training and asked if we could just play online-"
-      ],
-      "ocrQualityLabel" : "usable",
-      "ocrText" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
-      "preprocessingEnabled" : true,
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...\n<end_of_turn>\n<start_of_turn>model",
-      "qualityNotes" : [
-        "candidateLength=11",
-        "rawOutputLength=13",
-        "latinLetters=10",
-        "rawLatinLetters=10",
-        "likelyOCRIssue"
-      ],
-      "rawOcrText" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
-      "rawOutput" : " | THOUSH EVEN\n",
-      "rawOutputClassification" : "nonChinese",
-      "rotationAngleUsed" : 0,
-      "translatedText" : "翻译失败\nTHOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
-      "translationCandidate" : "THOUSH EVEN",
-      "translationDecisionTrace" : [
-        "rawOutputClassification=nonChinese",
-        "candidateClassification=nonChinese",
-        "rawHadContent=true",
-        "rejectedPlaceholder=false",
-        "ocrNotEmpty=true",
-        "translationNotEmpty=true",
-        "translationNotEqualOriginal=true",
-        "translationNotPlaceholder=true",
-        "translationHasCJK=false",
-        "looksLikeChinese=false"
-      ],
-      "translationFailureDetail" : "模型输出非中文\/符号，未达到英译中目标：中文字符不足、翻译不像中文；OCR 输入疑似有误"
-    },
-    {
-      "afterCorrectionText" : "LET'S\nBATTLER!",
-      "afterPreprocessingOcrText" : "LET'S\nBATTLER!",
-      "bbox" : [
-        362,
-        849,
-        101,
-        55
-      ],
-      "bestGroundTruthIndex" : 7,
-      "bestGroundTruthText" : "Let's Battle!",
-      "blockPassed" : false,
-      "candidateClassification" : "nonChinese",
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : false,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true,
-        "translationNotPlaceholder" : true
-      },
-      "correctionEnabled" : true,
-      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：LET'S\nBATTLER!\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nLET'S\n",
-      "correctionRejectedReason" : "长度变化 64% 超过 30%",
-      "failureCategory" : "modelOutputFailure",
-      "failureReasons" : [
-        "中文字符不足",
-        "翻译不像中文"
-      ],
-      "finalTextUsedForTranslation" : "LET'S\nBATTLER!",
-      "id" : "E72692F5-E833-4276-A830-E3E25E2F70B3",
-      "index" : 5,
-      "ocrConfidence" : 1,
-      "ocrGroundTruthSimilarity" : 0.9411764705882353,
-      "ocrProbeNotes" : [
-        "ocrSimilarity=0.941",
-        "ocrQuality=good",
-        "bestGroundTruth=Let's Battle!"
-      ],
-      "ocrQualityLabel" : "good",
-      "ocrText" : "LET'S\nBATTLER!",
-      "preprocessingEnabled" : true,
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nLET'S\nBATTLER!\n<end_of_turn>\n<start_of_turn>model",
-      "qualityNotes" : [
-        "candidateLength=8",
-        "rawOutputLength=30",
-        "latinLetters=7",
-        "rawLatinLetters=11",
+        "candidateLength=3",
+        "rawOutputLength=63",
+        "latinLetters=2",
+        "rawLatinLetters=15",
         "rawCJKCharacters=8"
       ],
-      "rawOcrText" : "LET'S\nBATTLER!",
-      "rawOutput" : "\n以下是翻译成中文：\n\n**LET'S**\n\nBATTLER!\n",
+      "rawOcrText" : "THAT'S\nRIGHT,\nNOW\nI'M-",
+      "rawOutput" : "\n以下是翻译成中文：\n\n*   **THAT'S**\n*   **RIGHT**\n*   **NOW**\n*   **I'M**",
       "rawOutputClassification" : "placeholder",
       "rotationAngleUsed" : 0,
-      "translatedText" : "翻译失败\nLET'S\nBATTLER!",
-      "translationCandidate" : "BATTLER!",
+      "translatedText" : "翻译失败\nTHAT'S\nRIGHT,\nNOW\nI'M-",
+      "translationCandidate" : "I'M",
       "translationDecisionTrace" : [
         "rawOutputClassification=placeholder",
         "candidateClassification=nonChinese",
@@ -435,16 +78,336 @@
       "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：中文字符不足、翻译不像中文"
     },
     {
-      "afterCorrectionText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
-      "afterPreprocessingOcrText" : "T74S IS AN\n• OPPLINE:\nTOURNAMENT.\nDONe IT\n•ONLINE\nWORLD MAKE\n• If\nMEANIELESS.",
+      "afterCorrectionText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "afterPreprocessingOcrText" : "I'VE\nARRIVED\nJAT RENS\nSENPA'S\n* HOUSE",
       "bbox" : [
-        152,
-        903,
-        68,
-        56
+        112,
+        353,
+        57,
+        60
+      ],
+      "bestGroundTruthIndex" : 0,
+      "bestGroundTruthText" : "I've arrived at Senpai's house.",
+      "blockPassed" : false,
+      "candidateClassification" : "mixedChineseAndEnglish",
+      "checks" : {
+        "looksLikeChinese" : true,
+        "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : true,
+        "translationNotContainOriginal" : true,
+        "translationNotEmpty" : true,
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
+      },
+      "correctionEnabled" : true,
+      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：IVE ARRIVED AT REN- SENPAI'S HOUSE.\n<end_of_turn>\n<start_of_turn>model",
+      "correctionRawOutput" : "\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "deterministicCorrectionAppliedRules" : [
+
+      ],
+      "deterministicCorrectionSimilarity" : 0.9047619047619048,
+      "deterministicCorrectionText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "failureCategory" : "ruleFalseFailureSuspected",
+      "failureReasons" : [
+        "长原文只得到过短中文候选"
+      ],
+      "finalTextUsedForTranslation" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "id" : "DF7CBA5C-423D-4724-9824-25885D83B9C1",
+      "index" : 1,
+      "ocrConfidence" : 1,
+      "ocrGroundTruthSimilarity" : 0.9047619047619048,
+      "ocrProbeNotes" : [
+        "ocrSimilarity=0.905",
+        "ocrQuality=good",
+        "bestGroundTruth=I've arrived at Senpai's house."
+      ],
+      "ocrQualityLabel" : "good",
+      "ocrText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "preprocessingEnabled" : true,
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nIVE ARRIVED AT REN- SENPAI'S HOUSE.\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "candidateLength=25",
+        "rawOutputLength=27",
+        "latinLetters=15",
+        "cjkCharacters=4",
+        "rawLatinLetters=15",
+        "rawCJKCharacters=4",
+        "suspiciousTranslation=长原文只得到过短中文候选"
+      ],
+      "rawOcrText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "rawOutput" : " | 已经到达 REN- SENPAI'S HOUSE.\n",
+      "rawOutputClassification" : "mixedChineseAndEnglish",
+      "rotationAngleUsed" : 0,
+      "translatedText" : "翻译失败\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "translationCandidate" : "已经到达 REN- SENPAI'S HOUSE.",
+      "translationDecisionTrace" : [
+        "rawOutputClassification=mixedChineseAndEnglish",
+        "candidateClassification=mixedChineseAndEnglish",
+        "rawHadContent=true",
+        "rejectedPlaceholder=false",
+        "ocrNotEmpty=true",
+        "translationNotEmpty=true",
+        "translationNotEqualOriginal=true",
+        "translationNotPlaceholder=true",
+        "translationHasCJK=true",
+        "looksLikeChinese=true",
+        "suspiciousTranslation=长原文只得到过短中文候选"
+      ],
+      "translationFailureDetail" : "候选译文含中文但未过规则，需人工复核规则是否过严：长原文只得到过短中文候选"
+    },
+    {
+      "afterCorrectionText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
+      "afterPreprocessingOcrText" : "THe and\nGATTLEE\nTARIAN\n.ь. гкі",
+      "bbox" : [
+        493,
+        557,
+        54,
+        44
+      ],
+      "bestGroundTruthIndex" : 2,
+      "bestGroundTruthText" : "The City Battler Tournament starts in a few days.",
+      "blockPassed" : false,
+      "candidateClassification" : "chinese",
+      "checks" : {
+        "looksLikeChinese" : true,
+        "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : true,
+        "translationNotContainOriginal" : true,
+        "translationNotEmpty" : true,
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
+      },
+      "correctionEnabled" : true,
+      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THE CITY RATTLER\nSTATE IN A PEN DAYS.\n<end_of_turn>\n<start_of_turn>model",
+      "correctionRawOutput" : " | 文本：THE CITY RATTLER\nSTATE IN A PEN DAYS.\n",
+      "correctionRejectedReason" : "长度变化 46% 超过 30%",
+      "deterministicCorrectionAppliedRules" : [
+        "RATTLER->BATTLER",
+        "STATE IN A PEN DAYS->STARTS IN A FEW DAYS"
+      ],
+      "deterministicCorrectionSimilarity" : 0.8615384615384616,
+      "deterministicCorrectionText" : "THE CITY BATTLER\nSTARTS IN A FEW DAYS.",
+      "failureCategory" : "ocrInputSuspect",
+      "failureReasons" : [
+        "OCR 相似度低于 0.72，译文不可作为通过结果"
+      ],
+      "finalTextUsedForTranslation" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
+      "id" : "162364BD-811F-4066-9C68-AB9610F88D89",
+      "index" : 2,
+      "ocrConfidence" : 1,
+      "ocrGroundTruthSimilarity" : 0.6031746031746031,
+      "ocrProbeNotes" : [
+        "ocrSimilarity=0.603",
+        "ocrQuality=lowSimilarity",
+        "containsKnownOCRConfusion",
+        "lowSimilarityAgainstGroundTruth",
+        "bestGroundTruth=The City Battler Tournament starts in a few days."
+      ],
+      "ocrQualityLabel" : "lowSimilarity",
+      "ocrText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
+      "preprocessingEnabled" : true,
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHE CITY RATTLER\nSTATE IN A PEN DAYS.\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "candidateLength=4",
+        "rawOutputLength=17",
+        "cjkCharacters=4",
+        "rawCJKCharacters=8",
+        "likelyOCRIssue",
+        "suspiciousTranslation=OCR 相似度低于 0.72，译文不可作为通过结果"
+      ],
+      "rawOcrText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
+      "rawOutput" : "\n**城市鼠狸**\n**州人鼠狸**\n",
+      "rawOutputClassification" : "chinese",
+      "rotationAngleUsed" : 0,
+      "translatedText" : "翻译失败\nTHE CITY RATTLER\nSTATE IN A PEN DAYS.",
+      "translationCandidate" : "州人鼠狸",
+      "translationDecisionTrace" : [
+        "rawOutputClassification=chinese",
+        "candidateClassification=chinese",
+        "rawHadContent=true",
+        "rejectedPlaceholder=false",
+        "ocrNotEmpty=true",
+        "translationNotEmpty=true",
+        "translationNotEqualOriginal=true",
+        "translationNotPlaceholder=true",
+        "translationHasCJK=true",
+        "looksLikeChinese=true",
+        "suspiciousTranslation=OCR 相似度低于 0.72，译文不可作为通过结果"
+      ],
+      "translationFailureDetail" : "ocrInputSuspect：OCR 相似度低于 0.72，译文不可作为通过结果；OCR 输入疑似有误"
+    },
+    {
+      "afterCorrectionText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
+      "afterPreprocessingOcrText" : "ANOT\nTHAT'A\n* WHYS\nWERE\nDONE\nA THIS!\nSPECIAL\nTRANINE",
+      "bbox" : [
+        65,
+        677,
+        49,
+        65
+      ],
+      "bestGroundTruthIndex" : 3,
+      "bestGroundTruthText" : "And that's why we're doing this special training.",
+      "blockPassed" : false,
+      "candidateClassification" : "placeholder",
+      "checks" : {
+        "looksLikeChinese" : true,
+        "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : true,
+        "translationNotContainOriginal" : true,
+        "translationNotEmpty" : true,
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : false
+      },
+      "correctionEnabled" : true,
+      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THAT'S\nWE'RE WHY\nTRANINS SPECIAL\n<end_of_turn>\n<start_of_turn>model",
+      "correctionRawOutput" : " | 翻译 | 解释 | 标点说明 | 文本 | 翻译 | 解释 | 标点说明 | 文本 | 翻译 | 解释 | 标点说明 | 文本 | 翻译 | 解释 | 标点说明 | 文本 | 翻译 | 解释 | 标点说明 | 文本 | 翻译 | 解释 | 标点说明 | 文本 | 翻译 | 解释 | 标点说明 |",
+      "correctionRejectedReason" : "长度变化 363% 超过 30%",
+      "deterministicCorrectionAppliedRules" : [
+        "TRANINS->TRAINING"
+      ],
+      "deterministicCorrectionSimilarity" : 0.7457627118644068,
+      "deterministicCorrectionText" : "THAT'S\nWE'RE WHY\nTRAINING SPECIAL",
+      "failureCategory" : "ocrInputSuspect",
+      "failureReasons" : [
+        "翻译是占位答复"
+      ],
+      "finalTextUsedForTranslation" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
+      "id" : "C1C3D0EB-9954-47CD-A2F8-E9F6088E267B",
+      "index" : 3,
+      "ocrConfidence" : 1,
+      "ocrGroundTruthSimilarity" : 0.7457627118644068,
+      "ocrProbeNotes" : [
+        "ocrSimilarity=0.746",
+        "ocrQuality=usable",
+        "containsKnownOCRConfusion",
+        "bestGroundTruth=And that's why we're doing this special training."
+      ],
+      "ocrQualityLabel" : "usable",
+      "ocrText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
+      "preprocessingEnabled" : true,
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT'S\nWE'RE WHY\nTRANINS SPECIAL\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "candidateRejectedAsPlaceholder",
+        "candidateLength=2",
+        "rawOutputLength=4",
+        "cjkCharacters=2",
+        "rawCJKCharacters=2",
+        "likelyOCRIssue",
+        "cjkCandidateButFailed"
+      ],
+      "rawOcrText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
+      "rawOutput" : " | 谢谢\n",
+      "rawOutputClassification" : "placeholder",
+      "rotationAngleUsed" : 0,
+      "translatedText" : "翻译失败\nTHAT'S\nWE'RE WHY\nTRANINS SPECIAL",
+      "translationCandidate" : "谢谢",
+      "translationDecisionTrace" : [
+        "rawOutputClassification=placeholder",
+        "candidateClassification=placeholder",
+        "rawHadContent=true",
+        "rejectedPlaceholder=true",
+        "ocrNotEmpty=true",
+        "translationNotEmpty=true",
+        "translationNotEqualOriginal=true",
+        "translationNotPlaceholder=false",
+        "translationHasCJK=true",
+        "looksLikeChinese=true"
+      ],
+      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：翻译是占位答复；OCR 输入疑似有误"
+    },
+    {
+      "afterCorrectionText" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
+      "afterPreprocessingOcrText" : "F'EVEN®\nTHOLEŁ\nI SAID\n«T°Э฿\nFOUSTA\nSPECIAL\nTRANING\nBKAND\nASKED\nY WEN\nCOLD\n*UST\nKPLAYE\nONLINE",
+      "bbox" : [
+        235,
+        861,
+        56,
+        135
       ],
       "bestGroundTruthIndex" : 4,
       "bestGroundTruthText" : "Even though I said it's just special training and asked if we could just play online-",
+      "blockPassed" : false,
+      "candidateClassification" : "mixedChineseAndEnglish",
+      "checks" : {
+        "looksLikeChinese" : true,
+        "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : true,
+        "translationNotContainOriginal" : true,
+        "translationNotEmpty" : true,
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
+      },
+      "correctionEnabled" : true,
+      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...\n<end_of_turn>\n<start_of_turn>model",
+      "correctionRawOutput" : "\nTHOUSH EVEN\n",
+      "correctionRejectedReason" : "长度变化 88% 超过 30%",
+      "deterministicCorrectionAppliedRules" : [
+        "THOUSH->THOUGH",
+        "ONLING->ONLINE"
+      ],
+      "deterministicCorrectionSimilarity" : 0.9026548672566371,
+      "deterministicCorrectionText" : "THOUGH THOUGH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLINE...",
+      "failureCategory" : "ocrInputSuspect",
+      "failureReasons" : [
+        "译文仍混入拉丁字母"
+      ],
+      "finalTextUsedForTranslation" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
+      "id" : "1F028D2C-4E4C-476B-AC40-E2EDD94131C0",
+      "index" : 4,
+      "ocrConfidence" : 1,
+      "ocrGroundTruthSimilarity" : 0.8849557522123894,
+      "ocrProbeNotes" : [
+        "ocrSimilarity=0.885",
+        "ocrQuality=usable",
+        "containsKnownOCRConfusion",
+        "bestGroundTruth=Even though I said it's just special training and asked if we could just play online-"
+      ],
+      "ocrQualityLabel" : "usable",
+      "ocrText" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
+      "preprocessingEnabled" : true,
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "candidateLength=36",
+        "rawOutputLength=61",
+        "latinLetters=10",
+        "cjkCharacters=20",
+        "rawLatinLetters=10",
+        "rawCJKCharacters=41",
+        "likelyOCRIssue",
+        "suspiciousTranslation=译文仍混入拉丁字母"
+      ],
+      "rawOcrText" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
+      "rawOutput" : "\n虽然，尽管你提到了“THOUSH EVEN”，我还是说它只是特别的训练。\n\n请你提供更多上下文，以便我能更好地理解和翻译。",
+      "rawOutputClassification" : "placeholder",
+      "rotationAngleUsed" : 0,
+      "translatedText" : "翻译失败\nTHOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\nPLAY ONLING...",
+      "translationCandidate" : "虽然，尽管你提到了“THOUSH EVEN”，我还是说它只是特别的训练。",
+      "translationDecisionTrace" : [
+        "rawOutputClassification=placeholder",
+        "candidateClassification=mixedChineseAndEnglish",
+        "rawHadContent=true",
+        "rejectedPlaceholder=false",
+        "ocrNotEmpty=true",
+        "translationNotEmpty=true",
+        "translationNotEqualOriginal=true",
+        "translationNotPlaceholder=true",
+        "translationHasCJK=true",
+        "looksLikeChinese=true",
+        "suspiciousTranslation=译文仍混入拉丁字母"
+      ],
+      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：译文仍混入拉丁字母；OCR 输入疑似有误"
+    },
+    {
+      "afterCorrectionText" : "LET'S\nBATTLER!",
+      "afterPreprocessingOcrText" : "LET'S\nBATTLER!",
+      "bbox" : [
+        362,
+        849,
+        101,
+        55
+      ],
+      "bestGroundTruthIndex" : 7,
+      "bestGroundTruthText" : "Let's Battle!",
       "blockPassed" : false,
       "candidateClassification" : "empty",
       "checks" : {
@@ -457,15 +420,94 @@
         "translationNotPlaceholder" : false
       },
       "correctionEnabled" : true,
-      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\n",
-      "correctionRejectedReason" : "纠错输出为空",
-      "failureCategory" : "ocrInputSuspect",
+      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：LET'S\nBATTLER!\n<end_of_turn>\n<start_of_turn>model",
+      "correctionRawOutput" : " | 文本\n",
+      "correctionRejectedReason" : "长度变化 86% 超过 30%",
+      "deterministicCorrectionAppliedRules" : [
+
+      ],
+      "deterministicCorrectionSimilarity" : 0.9411764705882353,
+      "deterministicCorrectionText" : "LET'S\nBATTLER!",
+      "failureCategory" : "modelOutputFailure",
       "failureReasons" : [
         "翻译为空"
       ],
+      "finalTextUsedForTranslation" : "LET'S\nBATTLER!",
+      "id" : "773B8283-3434-45A2-92F7-219694DC1085",
+      "index" : 5,
+      "ocrConfidence" : 1,
+      "ocrGroundTruthSimilarity" : 0.9411764705882353,
+      "ocrProbeNotes" : [
+        "ocrSimilarity=0.941",
+        "ocrQuality=good",
+        "bestGroundTruth=Let's Battle!"
+      ],
+      "ocrQualityLabel" : "good",
+      "ocrText" : "LET'S\nBATTLER!",
+      "preprocessingEnabled" : true,
+      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nLET'S\nBATTLER!\n<end_of_turn>\n<start_of_turn>model",
+      "qualityNotes" : [
+        "candidateEmpty",
+        "candidateLength=0",
+        "rawOutputLength=1"
+      ],
+      "rawOcrText" : "LET'S\nBATTLER!",
+      "rawOutput" : " | \n",
+      "rawOutputClassification" : "symbolsOnly",
+      "rotationAngleUsed" : 0,
+      "translatedText" : "翻译失败\nLET'S\nBATTLER!",
+      "translationCandidate" : "",
+      "translationDecisionTrace" : [
+        "rawOutputClassification=symbolsOnly",
+        "candidateClassification=empty",
+        "rawHadContent=false",
+        "rejectedPlaceholder=false",
+        "ocrNotEmpty=true",
+        "translationNotEmpty=false",
+        "translationNotEqualOriginal=false",
+        "translationNotPlaceholder=false",
+        "translationHasCJK=false",
+        "looksLikeChinese=false"
+      ],
+      "translationFailureDetail" : "模型 raw 输出或候选为空：翻译为空"
+    },
+    {
+      "afterCorrectionText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
+      "afterPreprocessingOcrText" : "T74S IS AN\n• OPPLINE:\nTOURNAMENT.\nDONe IT\n•ONLINE\nWORLD MAKE\n• If\nMEANIELESS.",
+      "bbox" : [
+        152,
+        903,
+        68,
+        56
+      ],
+      "bestGroundTruthIndex" : 4,
+      "bestGroundTruthText" : "Even though I said it's just special training and asked if we could just play online-",
+      "blockPassed" : false,
+      "candidateClassification" : "chinese",
+      "checks" : {
+        "looksLikeChinese" : true,
+        "ocrNotEmpty" : true,
+        "translationHasEnoughChinese" : true,
+        "translationNotContainOriginal" : true,
+        "translationNotEmpty" : true,
+        "translationNotEqualOriginal" : true,
+        "translationNotPlaceholder" : true
+      },
+      "correctionEnabled" : true,
+      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE\n<end_of_turn>\n<start_of_turn>model",
+      "correctionRawOutput" : " | 文本\n",
+      "correctionRejectedReason" : "长度变化 97% 超过 30%",
+      "deterministicCorrectionAppliedRules" : [
+        "WOLLD->WOULD"
+      ],
+      "deterministicCorrectionSimilarity" : 0.3888888888888889,
+      "deterministicCorrectionText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOULD MAKE ONLINE",
+      "failureCategory" : "ocrInputSuspect",
+      "failureReasons" : [
+        "OCR 相似度低于 0.72，译文不可作为通过结果"
+      ],
       "finalTextUsedForTranslation" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
-      "id" : "1356C41F-F685-4B5C-B04F-2124385C8ECC",
+      "id" : "78C803B9-B8FB-40FF-874D-E78B13CB9EF1",
       "index" : 6,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.37894736842105264,
@@ -481,30 +523,33 @@
       "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "candidateEmpty",
-        "candidateLength=0",
-        "rawOutputLength=1",
-        "likelyOCRIssue"
+        "candidateLength=2",
+        "rawOutputLength=294",
+        "cjkCharacters=2",
+        "rawCJKCharacters=82",
+        "likelyOCRIssue",
+        "suspiciousTranslation=OCR 相似度低于 0.72，译文不可作为通过结果"
       ],
       "rawOcrText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
-      "rawOutput" : " | \n",
-      "rawOutputClassification" : "symbolsOnly",
+      "rawOutput" : "\n以下是翻译成中文：\n\n**这是一个活动。**\n\n**做它**\n\n**会做**\n\n**做它**\n\n**会做**\n\n**做它**\n\n**会做**\n\n**做它**\n\n**会做**\n\n**做它**\n\n**会做**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**\n\n**信息**",
+      "rawOutputClassification" : "placeholder",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nTHIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
-      "translationCandidate" : "",
+      "translationCandidate" : "信息",
       "translationDecisionTrace" : [
-        "rawOutputClassification=symbolsOnly",
-        "candidateClassification=empty",
-        "rawHadContent=false",
+        "rawOutputClassification=placeholder",
+        "candidateClassification=chinese",
+        "rawHadContent=true",
         "rejectedPlaceholder=false",
         "ocrNotEmpty=true",
-        "translationNotEmpty=false",
-        "translationNotEqualOriginal=false",
-        "translationNotPlaceholder=false",
-        "translationHasCJK=false",
-        "looksLikeChinese=false"
+        "translationNotEmpty=true",
+        "translationNotEqualOriginal=true",
+        "translationNotPlaceholder=true",
+        "translationHasCJK=true",
+        "looksLikeChinese=true",
+        "suspiciousTranslation=OCR 相似度低于 0.72，译文不可作为通过结果"
       ],
-      "translationFailureDetail" : "模型 raw 输出或候选为空：翻译为空；OCR 输入疑似有误"
+      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：OCR 相似度低于 0.72，译文不可作为通过结果；OCR 输入疑似有误"
     },
     {
       "afterCorrectionText" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
@@ -518,26 +563,35 @@
       "bestGroundTruthIndex" : 6,
       "bestGroundTruthText" : "The suggestion was overruled, and it was decided that I'd be staying over at Senpai's house.",
       "blockPassed" : false,
-      "candidateClassification" : "placeholder",
+      "candidateClassification" : "nonChinese",
       "checks" : {
-        "looksLikeChinese" : true,
+        "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : true,
+        "translationHasEnoughChinese" : false,
         "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
         "translationNotEqualOriginal" : true,
-        "translationNotPlaceholder" : false
+        "translationNotPlaceholder" : true
       },
       "correctionEnabled" : true,
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : " | 文本\n",
-      "correctionRejectedReason" : "长度变化 96% 超过 30%",
+      "correctionRawOutput" : "\nGET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
+      "correctionRejectedReason" : "长度变化 80% 超过 30%",
+      "deterministicCorrectionAppliedRules" : [
+        "PESULTE->RESULTS",
+        "SAMING->SAVING",
+        "POOM->ROOM",
+        "BENG->BEING"
+      ],
+      "deterministicCorrectionSimilarity" : 0.27692307692307694,
+      "deterministicCorrectionText" : "GET RESULTS\nSAVING CLUE TO SAVE THE\nROOM BEING",
       "failureCategory" : "ocrInputSuspect",
       "failureReasons" : [
-        "翻译是占位答复"
+        "中文字符不足",
+        "翻译不像中文"
       ],
       "finalTextUsedForTranslation" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
-      "id" : "8B614B0C-2684-4BAF-902E-C4E54FBA5CB2",
+      "id" : "70A6BCE7-4758-46B8-B1A3-CDCD9988A017",
       "index" : 7,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.25,
@@ -553,33 +607,31 @@
       "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nGET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "candidateRejectedAsPlaceholder",
-        "candidateLength=3",
-        "rawOutputLength=5",
-        "cjkCharacters=2",
-        "rawCJKCharacters=2",
-        "likelyOCRIssue",
-        "cjkCandidateButFailed"
+        "candidateLength=9",
+        "rawOutputLength=45",
+        "latinLetters=8",
+        "rawLatinLetters=37",
+        "likelyOCRIssue"
       ],
       "rawOcrText" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
-      "rawOutput" : " | 谢谢！\n",
-      "rawOutputClassification" : "placeholder",
+      "rawOutput" : "\nGET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG\n",
+      "rawOutputClassification" : "repeatedOriginal",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nGET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
-      "translationCandidate" : "谢谢！",
+      "translationCandidate" : "POOM BENG",
       "translationDecisionTrace" : [
-        "rawOutputClassification=placeholder",
-        "candidateClassification=placeholder",
+        "rawOutputClassification=repeatedOriginal",
+        "candidateClassification=nonChinese",
         "rawHadContent=true",
-        "rejectedPlaceholder=true",
+        "rejectedPlaceholder=false",
         "ocrNotEmpty=true",
         "translationNotEmpty=true",
         "translationNotEqualOriginal=true",
-        "translationNotPlaceholder=false",
-        "translationHasCJK=true",
-        "looksLikeChinese=true"
+        "translationNotPlaceholder=true",
+        "translationHasCJK=false",
+        "looksLikeChinese=false"
       ],
-      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：翻译是占位答复；OCR 输入疑似有误"
+      "translationFailureDetail" : "模型复读原文，非规则误杀：中文字符不足、翻译不像中文；OCR 输入疑似有误"
     },
     {
       "afterCorrectionText" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
@@ -605,15 +657,20 @@
       },
       "correctionEnabled" : true,
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nSUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
-      "correctionRejectedReason" : "长度变化 93% 超过 30%",
+      "correctionRawOutput" : " | 文本\n",
+      "correctionRejectedReason" : "长度变化 98% 超过 30%",
+      "deterministicCorrectionAppliedRules" : [
+        "SUGSESTION->SUGGESTION"
+      ],
+      "deterministicCorrectionSimilarity" : 0.8545454545454545,
+      "deterministicCorrectionText" : "SUGGESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
       "failureCategory" : "ocrInputSuspect",
       "failureReasons" : [
         "中文字符不足",
         "翻译不像中文"
       ],
       "finalTextUsedForTranslation" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
-      "id" : "795F76F2-9694-49DE-8BB0-D7A420CB4230",
+      "id" : "7787AAB1-8C42-44B2-9CCD-94649A30F169",
       "index" : 8,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.8256880733944955,
@@ -629,13 +686,13 @@
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nSUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
         "candidateLength=6",
-        "rawOutputLength=83",
+        "rawOutputLength=85",
         "latinLetters=5",
         "rawLatinLetters=66",
         "likelyOCRIssue"
       ],
       "rawOcrText" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
-      "rawOutput" : "\nSUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
+      "rawOutput" : " | SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.\n",
       "rawOutputClassification" : "repeatedOriginal",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nSUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
@@ -666,27 +723,31 @@
       "bestGroundTruthIndex" : 3,
       "bestGroundTruthText" : "And that's why we're doing this special training.",
       "blockPassed" : false,
-      "candidateClassification" : "nonChinese",
+      "candidateClassification" : "empty",
       "checks" : {
         "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
         "translationHasEnoughChinese" : false,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true,
-        "translationNotPlaceholder" : true
+        "translationNotContainOriginal" : false,
+        "translationNotEmpty" : false,
+        "translationNotEqualOriginal" : false,
+        "translationNotPlaceholder" : false
       },
       "correctionEnabled" : true,
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：What Whet are\nevery you!\ntalking\n<end_of_turn>\n<start_of_turn>model",
       "correctionRawOutput" : "\n\"What Whet are\"\nevery you!\ntalking\n",
       "correctionRejectedReason" : "长度变化 78% 超过 30%",
+      "deterministicCorrectionAppliedRules" : [
+
+      ],
+      "deterministicCorrectionSimilarity" : 0.2807017543859649,
+      "deterministicCorrectionText" : "What Whet are\nevery you!\ntalking",
       "failureCategory" : "ocrInputSuspect",
       "failureReasons" : [
-        "中文字符不足",
-        "翻译不像中文"
+        "翻译为空"
       ],
       "finalTextUsedForTranslation" : "What Whet are\nevery you!\ntalking",
-      "id" : "6272D0F8-F6BF-46A8-8C12-4871894D4F21",
+      "id" : "0DACDB59-10F9-4156-A863-5DFF99EBC149",
       "index" : 9,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.2807017543859649,
@@ -701,31 +762,29 @@
       "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWhat Whet are\nevery you!\ntalking\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "candidateLength=7",
-        "rawOutputLength=50",
-        "latinLetters=7",
-        "rawLatinLetters=25",
-        "rawCJKCharacters=5"
+        "candidateEmpty",
+        "candidateLength=0",
+        "rawOutputLength=1"
       ],
       "rawOcrText" : "What Whet are\nevery you!\ntalking",
-      "rawOutput" : "\n翻译成中文：\n\n**What is Whet?**\n\nevery you!\n\n**Talking**\n",
-      "rawOutputClassification" : "placeholder",
+      "rawOutput" : " | \n",
+      "rawOutputClassification" : "symbolsOnly",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nWhat Whet are\nevery you!\ntalking",
-      "translationCandidate" : "Talking",
+      "translationCandidate" : "",
       "translationDecisionTrace" : [
-        "rawOutputClassification=placeholder",
-        "candidateClassification=nonChinese",
-        "rawHadContent=true",
+        "rawOutputClassification=symbolsOnly",
+        "candidateClassification=empty",
+        "rawHadContent=false",
         "rejectedPlaceholder=false",
         "ocrNotEmpty=true",
-        "translationNotEmpty=true",
-        "translationNotEqualOriginal=true",
-        "translationNotPlaceholder=true",
+        "translationNotEmpty=false",
+        "translationNotEqualOriginal=false",
+        "translationNotPlaceholder=false",
         "translationHasCJK=false",
         "looksLikeChinese=false"
       ],
-      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：中文字符不足、翻译不像中文；OCR 输入疑似有误"
+      "translationFailureDetail" : "模型 raw 输出或候选为空：翻译为空；OCR 输入疑似有误"
     },
     {
       "afterCorrectionText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
@@ -751,15 +810,22 @@
       },
       "correctionEnabled" : true,
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : " | 错误\n",
-      "correctionRejectedReason" : "长度变化 97% 超过 30%",
+      "correctionRawOutput" : " | 错误： 错误： 拼写错误。\n",
+      "correctionRejectedReason" : "长度变化 78% 超过 30%",
+      "deterministicCorrectionAppliedRules" : [
+        "LOSIC->LOGIC",
+        "SENPArS->SENPAI'S",
+        "SENPAIS->SENPAI'S"
+      ],
+      "deterministicCorrectionSimilarity" : 0.8888888888888888,
+      "deterministicCorrectionText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAI'S SENPAI'S LOGIC.",
       "failureCategory" : "ocrInputSuspect",
       "failureReasons" : [
         "中文字符不足",
         "翻译不像中文"
       ],
       "finalTextUsedForTranslation" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
-      "id" : "EF782860-B4DE-42D2-9995-667EEB312BF2",
+      "id" : "B65D5EFE-C5CF-4B1A-8C43-69FA46FAA8A0",
       "index" : 10,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.8,
@@ -826,12 +892,17 @@
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：City Battler\nOffline.\nTournament\n<end_of_turn>\n<start_of_turn>model",
       "correctionRawOutput" : "\nCity Battler\n",
       "correctionRejectedReason" : "长度变化 63% 超过 30%",
+      "deterministicCorrectionAppliedRules" : [
+
+      ],
+      "deterministicCorrectionSimilarity" : 0.6349206349206349,
+      "deterministicCorrectionText" : "City Battler\nOffline.\nTournament",
       "failureCategory" : "ocrInputSuspect",
       "failureReasons" : [
         "OCR 相似度低于 0.72，译文不可作为通过结果"
       ],
       "finalTextUsedForTranslation" : "City Battler\nOffline.\nTournament",
-      "id" : "4C5C3531-2321-4982-9C0A-6B15DB71B359",
+      "id" : "99207FAC-8A28-4C8E-95DA-A2C580952723",
       "index" : 11,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.6349206349206349,
@@ -846,18 +917,18 @@
       "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nCity Battler\nOffline.\nTournament\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "candidateLength=4",
-        "rawOutputLength=6",
-        "cjkCharacters=4",
-        "rawCJKCharacters=4",
+        "candidateLength=3",
+        "rawOutputLength=12",
+        "cjkCharacters=2",
+        "rawCJKCharacters=8",
         "suspiciousTranslation=OCR 相似度低于 0.72，译文不可作为通过结果"
       ],
       "rawOcrText" : "City Battler\nOffline.\nTournament",
-      "rawOutput" : " | 城市战役\n",
+      "rawOutput" : "\n城市战士\n无线。\n赛事。",
       "rawOutputClassification" : "chinese",
       "rotationAngleUsed" : 0,
       "translatedText" : "翻译失败\nCity Battler\nOffline.\nTournament",
-      "translationCandidate" : "城市战役",
+      "translationCandidate" : "赛事。",
       "translationDecisionTrace" : [
         "rawOutputClassification=chinese",
         "candidateClassification=chinese",
@@ -910,9 +981,16 @@
   "diagnostics" : {
     "averageOCRGroundTruthSimilarity" : 0.6846338762585832,
     "candidateExtractorDroppedRawOutputs" : 0,
-    "cjkButFailedCandidates" : 2,
-    "emptyTranslationCandidates" : 1,
-    "failedBlocks" : 11,
+    "cjkButFailedCandidates" : 5,
+    "deterministicCorrectionAverageSimilarity" : 0.7205233629951554,
+    "deterministicCorrectionImprovedBlocks" : [
+      2,
+      7,
+      8,
+      10
+    ],
+    "emptyTranslationCandidates" : 2,
+    "failedBlocks" : 12,
     "likelyModelOutputFailures" : 2,
     "likelyOCRIssueBlocks" : [
       2,
@@ -926,7 +1004,7 @@
       11
     ],
     "likelyRuleFalseFailureBlocks" : [
-
+      1
     ],
     "lowOCRSimilarityBlocks" : [
       2,
@@ -935,7 +1013,7 @@
       9,
       11
     ],
-    "nonChineseCandidates" : 7,
+    "nonChineseCandidates" : 4,
     "ocrQualityProbe" : [
       "#0 good sim=0.966 OCR=\"THAT'S \/ RIGHT, \/ NOW \/ I'M-\" truth=\"That's right, right now I'm-\"",
       "#1 good sim=0.905 OCR=\"IVE ARRIVED AT REN- SENPAI'S HOUSE.\" truth=\"I've arrived at Senpai's house.\"",
@@ -950,19 +1028,20 @@
       "#10 usable sim=0.800 OCR=\"-O2 AT LEAST. -02 AT \/ THAT SEEMS TO BE \/ SENPAIS SENPArS LOSIC.\" truth=\"Or at least, that seems to be Senpai's logic.\"",
       "#11 lowSimilarity sim=0.635 OCR=\"City Battler \/ Offline. \/ Tournament\" truth=\"The City Battler Tournament starts in a few days.\""
     ],
-    "passedBlocks" : 1,
+    "passedBlocks" : 0,
     "passedButSuspiciousTranslationBlocks" : [
 
     ],
     "placeholderTranslationCandidates" : 4,
     "rawOutputEmptyBlocks" : 0,
-    "rawOutputNonChineseBlocks" : 3,
+    "rawOutputNonChineseBlocks" : 2,
     "rawOutputPlaceholderBlocks" : 4,
     "rawOutputRepeatedOriginalBlocks" : 3,
-    "repeatedOriginalCandidates" : 1,
+    "repeatedOriginalCandidates" : 0,
     "translationFailureBreakdown" : {
       "modelOutputFailure" : 2,
-      "ocrInputSuspect" : 9
+      "ocrInputSuspect" : 9,
+      "ruleFalseFailureSuspected" : 1
     }
   },
   "engineUsed" : "Local GGUF",
@@ -976,7 +1055,7 @@
     ],
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.8755316851434679,
-      "processingTimeMs" : 16370,
+      "processingTimeMs" : 16340,
       "totalBlocksDetected" : 15
     },
     "bubbleResults" : [
@@ -1192,7 +1271,7 @@
     ],
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.837847848640172,
-      "processingTimeMs" : 60306,
+      "processingTimeMs" : 63794,
       "totalBlocksDetected" : 12
     }
   },
@@ -1217,14 +1296,14 @@
   "outputCleanupPolicy" : "探针开始重建 App 沙盒 Output；renderOutputs 再次重建；export-probe-output.sh 重建项目根 output；只保留本轮 probe_report.json 和本轮 PNG。",
   "outputDirectoryCleaned" : true,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/1EBE1B62-D1DC-4F24-B6EF-2E6AC7F3A29D\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/1EBE1B62-D1DC-4F24-B6EF-2E6AC7F3A29D\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/1EBE1B62-D1DC-4F24-B6EF-2E6AC7F3A29D\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/1EBE1B62-D1DC-4F24-B6EF-2E6AC7F3A29D\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/1EBE1B62-D1DC-4F24-B6EF-2E6AC7F3A29D\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/1EBE1B62-D1DC-4F24-B6EF-2E6AC7F3A29D\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/1EBE1B62-D1DC-4F24-B6EF-2E6AC7F3A29D\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/1EBE1B62-D1DC-4F24-B6EF-2E6AC7F3A29D\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/26F342DB-3AD8-42CC-9BE8-91A1862A7131\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/26F342DB-3AD8-42CC-9BE8-91A1862A7131\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/26F342DB-3AD8-42CC-9BE8-91A1862A7131\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/26F342DB-3AD8-42CC-9BE8-91A1862A7131\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/26F342DB-3AD8-42CC-9BE8-91A1862A7131\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/26F342DB-3AD8-42CC-9BE8-91A1862A7131\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/26F342DB-3AD8-42CC-9BE8-91A1862A7131\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/26F342DB-3AD8-42CC-9BE8-91A1862A7131\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png"
   },
   "overallPassed" : false,
   "retainedOutputFiles" : [
@@ -1291,15 +1370,16 @@
     "oldAPITotalObservations" : 82
   },
   "warnings" : [
-    "block 1 判定失败：翻译等于原文、中文字符不足、翻译不像中文",
-    "block 2 判定失败：中文字符不足、翻译不像中文",
-    "block 3 判定失败：OCR 含已知错词且相似度不足 0.86",
-    "block 4 判定失败：中文字符不足、翻译不像中文",
-    "block 5 判定失败：中文字符不足、翻译不像中文",
-    "block 6 判定失败：翻译为空",
-    "block 7 判定失败：翻译是占位答复",
+    "block 0 判定失败：中文字符不足、翻译不像中文",
+    "block 1 判定失败：长原文只得到过短中文候选",
+    "block 2 判定失败：OCR 相似度低于 0.72，译文不可作为通过结果",
+    "block 3 判定失败：翻译是占位答复",
+    "block 4 判定失败：译文仍混入拉丁字母",
+    "block 5 判定失败：翻译为空",
+    "block 6 判定失败：OCR 相似度低于 0.72，译文不可作为通过结果",
+    "block 7 判定失败：中文字符不足、翻译不像中文",
     "block 8 判定失败：中文字符不足、翻译不像中文",
-    "block 9 判定失败：中文字符不足、翻译不像中文",
+    "block 9 判定失败：翻译为空",
     "block 10 判定失败：中文字符不足、翻译不像中文",
     "block 11 判定失败：OCR 相似度低于 0.72，译文不可作为通过结果"
   ]
