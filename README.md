@@ -152,9 +152,12 @@ test/
 - `blocks[].translationCandidate`：从 raw output 中抽取出来用于质量判定和覆盖绘制的候选译文。
 - `blocks[].failureReasons`：失败块的具体原因，例如 `翻译等于原文`、`翻译是占位答复`、`中文字符不足`、`翻译不像中文`。
 - `blocks[].qualityNotes`：非硬失败排查线索，例如 `translationContainsFullOCRText`、`latinLetters=27`、`cjkCharacters=4`。
+- `diagnostics`：本轮整体排查汇总，统计通过/失败块、空候选、占位输出、复读原文、非中文输出、疑似 OCR 问题块、疑似规则误伤块。
 - `configuration.currentBlockSource`：记录当前块来源。当前是整图 OCR observations 的空间聚类/去重，即 (a)，不是图像层面的气泡连通域检测。
 - `configuration.preprocessing`：记录本轮预处理增强开关，包含灰度、对比亮度、自适应二值化、裁切放大、锐化和放大倍数。
 - `blocks[].rawOcrText` / `afterPreprocessingOcrText` / `finalTextUsedForTranslation`：记录原始 OCR、裁切预处理后二次 OCR、最终送翻译文本。当前预处理结果只用于对比展示，不替换整图 OCR 主流程。
+- `blocks[].correctionEnabled` / `afterCorrectionText` / `correctionRejectedReason` / `correctionPrompt` / `correctionRawOutput` / `correctionErrorCode`：记录 OCR 纠错后处理链路。护栏拒绝时 `afterCorrectionText` 保留原文，`correctionRejectedReason` 写明长度、词数、新词或空输出原因。
+- `correctionGuardrailTest`：固定构造 `XQZ 12 ///` -> `The City Battler Tournament starts in a few days.` 的过度纠错测试，用来证明护栏会拒绝模型瞎猜。
 - `overallPassed`：至少 1 个块、所有块通过质量判定、两张 PNG 非空才为 `true`。
 
 探针验收重点：
@@ -296,6 +299,11 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v4：新增预处理增强配置和报告链路字段。当前子步骤均有开关：灰度、对比/亮度、自适应二值化、裁切放大、锐化；每块报告 `rawOcrText`、`afterPreprocessingOcrText`、`finalTextUsedForTranslation`。
 - 本次未提交工作区 v4 实测：iPhone 17 Pro 模拟器跑 `test/1.png`，`totalBlocksDetected = 12`、预处理改变 11 个块、实际用于翻译 0 个预处理结果、`blockPassed = 2`、`overallPassed=false`。结论：当前默认预处理组合过激，二值化/锐化会把漫画网点和边框噪声放大，`1_block_crops.png` 中可见黑白块明显污染文字；因此本轮只把预处理结果作为对比证据，不替换主流程。
 - 本次未提交工作区 v4：新增 `1_ocr_text_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png` 三份结果图。部署目标仍是 iOS 17.0，`RecognizeTextRequest` 新 API 必须后续用 `@available(iOS 18, *)` 条件接入；本轮只记录该限制，尚未启用新 API/自定义词表对比/气泡优先路径。
+- 本次未提交工作区 v5：探针运行开始先重建 App 沙盒 `Output/`，渲染时再次重建，导出脚本继续重建项目根 `output/`；每轮只保留最新 `probe_report.json` 和 5 张 PNG，避免旧图缓存堆积。
+- 本次未提交工作区 v5：`probe_report.json` 新增 `diagnostics` 汇总，并收紧失败原因记录：空翻译不再连带标成“等于原文/占位/不像中文”；模板行如 `以下是翻译成中文：` 不再当有效候选。`qualityNotes` 记录 raw/candidate 长度、CJK/Latin 字数、疑似 OCR 错词和疑似规则误伤。
+- 本次未提交工作区 v5 实测结论：当前失败不是规则太严。`cjkButFailedCandidates = 0`、`likelyRuleFalseFailureBlocks = []`，主要问题是模型 raw 输出空/英文/占位，以及 OCR 原句已经错，如 `THE CITY RATTLER`、`TRANINS SPECIAL`、`SUGSESTION`、`LOSIC`。
+- 本次未提交工作区 v6：新增 OCR 纠错后处理模块，默认在漫画探针中开启。纠错 prompt 使用简洁模板；Local 模式记录真实 `correctionPrompt`/`correctionRawOutput`，Mock 模式原样回传；护栏按长度变化、词数变化和无依据新词拒绝高风险改写。
+- 本次未提交工作区 v6 实测：iPhone 17 Pro 模拟器跑 `test/1.png`，12 个块均启用纠错；当前 Gemma 270M raw 纠错输出没有一条通过护栏，`finalTextUsedForTranslation` 全部保留原始 OCR。拒绝原因主要是长度变化超过 30% 或纠错输出为空。固定护栏测试 `XQZ 12 ///` -> `The City Battler Tournament starts in a few days.` 被拒绝，原因 `长度变化 390% 超过 30%`。结论：护栏生效，但当前小模型不能作为可靠 OCR 纠错器。
 
 ## 后续对话指引
 

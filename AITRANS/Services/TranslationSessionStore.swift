@@ -1242,6 +1242,7 @@ final class TranslationSessionStore: ObservableObject {
             defer { self.isRunningMangaOverlayProbe = false }
 
             do {
+                try MangaOverlayProbeService.recreateDirectory(self.mangaOverlayOutputDirectory)
                 let data = try Data(contentsOf: url)
                 self.mangaOverlayProbeState = .recognizing
                 self.mangaOverlayProbeMessage = "正在用 0/90/180/270 多角度 Vision OCR"
@@ -1276,6 +1277,17 @@ final class TranslationSessionStore: ObservableObject {
                         }
                     }
                     self.mangaOverlayProbeBlocks = probeBlocks
+                }
+
+                if probeConfiguration.correction.enabled {
+                    self.mangaOverlayProbeMessage = "正在做 OCR 纠错后处理和护栏校验"
+                    for index in probeBlocks.indices {
+                        probeBlocks[index] = await self.correctMangaProbeBlock(
+                            probeBlocks[index],
+                            options: probeConfiguration.correction
+                        )
+                        self.mangaOverlayProbeBlocks = probeBlocks
+                    }
                 }
 
                 self.mangaOverlayProbeState = .translating
@@ -1718,6 +1730,84 @@ final class TranslationSessionStore: ObservableObject {
         return result.text
     }
 
+    private func correctMangaProbeBlock(
+        _ block: MangaOverlayProbeBlock,
+        options: MangaOverlayCorrectionOptions
+    ) async -> MangaOverlayProbeBlock {
+        guard options.enabled else { return block }
+
+        let original = block.finalTextUsedForTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !original.isEmpty else {
+            return MangaOverlayProbeBlock(
+                id: block.id,
+                index: block.index,
+                bbox: block.bbox,
+                rotationAngleUsed: block.rotationAngleUsed,
+                ocrText: block.ocrText,
+                ocrConfidence: block.ocrConfidence,
+                rawOcrText: block.rawOcrText,
+                preprocessingEnabled: block.preprocessingEnabled,
+                afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+                correctionEnabled: true,
+                afterCorrectionText: block.finalTextUsedForTranslation,
+                correctionRejectedReason: "OCR 为空，跳过纠错",
+                correctionPrompt: nil,
+                correctionRawOutput: nil,
+                correctionErrorCode: nil,
+                finalTextUsedForTranslation: block.finalTextUsedForTranslation
+            )
+        }
+
+        let prompt = Self.mangaCorrectionPrompt(for: original)
+        let rawOutput: String
+        let errorCode: String?
+        if selectedEngine == .local {
+            let probe = localService.rawProbe(prompt: prompt, maxTokens: 96)
+            rawOutput = probe.output
+            errorCode = probe.errorCode
+        } else {
+            rawOutput = original
+            errorCode = nil
+        }
+
+        let proposed = Self.cleanMangaCorrectionCandidate(rawOutput)
+        let guardrail = Self.evaluateMangaCorrectionGuardrail(
+            original: original,
+            proposed: proposed,
+            options: options
+        )
+        let acceptedText = guardrail.accepted ? proposed : original
+        let rejectedReason = guardrail.accepted ? nil : guardrail.reason
+
+        return MangaOverlayProbeBlock(
+            id: block.id,
+            index: block.index,
+            bbox: block.bbox,
+            rotationAngleUsed: block.rotationAngleUsed,
+            ocrText: block.ocrText,
+            ocrConfidence: block.ocrConfidence,
+            rawOcrText: block.rawOcrText,
+            preprocessingEnabled: block.preprocessingEnabled,
+            afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+            correctionEnabled: true,
+            afterCorrectionText: acceptedText,
+            correctionRejectedReason: rejectedReason,
+            correctionPrompt: prompt,
+            correctionRawOutput: rawOutput,
+            correctionErrorCode: errorCode,
+            finalTextUsedForTranslation: acceptedText,
+            translatedText: block.translatedText,
+            translationCandidate: block.translationCandidate,
+            prompt: block.prompt,
+            rawOutput: block.rawOutput,
+            errorCode: block.errorCode,
+            checks: block.checks,
+            failureReasons: block.failureReasons,
+            qualityNotes: block.qualityNotes,
+            blockPassed: block.blockPassed
+        )
+    }
+
     private func translateMangaProbeBlock(_ block: MangaOverlayProbeBlock) async -> MangaOverlayProbeBlock {
         let request = makeProbeRequest(
             source: .englishUS,
@@ -1756,8 +1846,18 @@ final class TranslationSessionStore: ObservableObject {
             translation: translationCandidate,
             errorCode: errorCode
         )
-        let failureReasons = mangaProbeFailureReasons(checks: checks, errorCode: errorCode)
-        let qualityNotes = mangaProbeQualityNotes(checks: checks, translation: translationCandidate)
+        let failureReasons = mangaProbeFailureReasons(
+            checks: checks,
+            errorCode: errorCode,
+            original: block.finalTextUsedForTranslation,
+            translation: translationCandidate
+        )
+        let qualityNotes = mangaProbeQualityNotes(
+            checks: checks,
+            original: block.finalTextUsedForTranslation,
+            rawOutput: rawOutput,
+            candidate: translationCandidate
+        )
         let passed = Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
         let overlayText = passed ? translationCandidate : "翻译失败\n\(block.finalTextUsedForTranslation)"
 
@@ -1774,6 +1874,9 @@ final class TranslationSessionStore: ObservableObject {
             correctionEnabled: block.correctionEnabled,
             afterCorrectionText: block.afterCorrectionText,
             correctionRejectedReason: block.correctionRejectedReason,
+            correctionPrompt: block.correctionPrompt,
+            correctionRawOutput: block.correctionRawOutput,
+            correctionErrorCode: block.correctionErrorCode,
             finalTextUsedForTranslation: block.finalTextUsedForTranslation,
             translatedText: overlayText,
             translationCandidate: translationCandidate,
@@ -1819,7 +1922,9 @@ final class TranslationSessionStore: ObservableObject {
 
     private func mangaProbeFailureReasons(
         checks: MangaOverlayProbeChecks,
-        errorCode: String?
+        errorCode: String?,
+        original: String,
+        translation: String
     ) -> [String] {
         var reasons: [String] = []
         if let errorCode {
@@ -1831,19 +1936,25 @@ final class TranslationSessionStore: ObservableObject {
         if !checks.translationNotEmpty {
             reasons.append("翻译为空")
         }
-        if !checks.translationNotEqualOriginal {
+        if checks.translationNotEmpty, !checks.translationNotEqualOriginal {
             reasons.append("翻译等于原文")
         }
-        if !checks.translationNotContainOriginal {
+        let cleanOriginal = original.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanTranslation = translation.trimmingCharacters(in: .whitespacesAndNewlines)
+        if checks.translationNotEmpty,
+           !checks.translationNotContainOriginal,
+           !cleanOriginal.isEmpty,
+           !cleanTranslation.isEmpty,
+           cleanTranslation.localizedCaseInsensitiveCompare(cleanOriginal) != .orderedSame {
             reasons.append("翻译包含完整原文")
         }
-        if !checks.translationNotPlaceholder {
+        if checks.translationNotEmpty, !checks.translationNotPlaceholder {
             reasons.append("翻译是占位答复")
         }
-        if !checks.translationHasEnoughChinese {
+        if checks.translationNotEmpty, !checks.translationHasEnoughChinese {
             reasons.append("中文字符不足")
         }
-        if !checks.looksLikeChinese {
+        if checks.translationNotEmpty, !checks.looksLikeChinese {
             reasons.append("翻译不像中文")
         }
         return reasons
@@ -1851,19 +1962,47 @@ final class TranslationSessionStore: ObservableObject {
 
     private func mangaProbeQualityNotes(
         checks: MangaOverlayProbeChecks,
-        translation: String
+        original: String,
+        rawOutput: String,
+        candidate: String
     ) -> [String] {
         var notes: [String] = []
-        if !checks.translationNotContainOriginal {
+        let cleanOriginal = original.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanCandidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleanCandidate.isEmpty {
+            notes.append("candidateEmpty")
+        }
+        if !rawOutput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, cleanCandidate.isEmpty {
+            notes.append("candidateExtractorDroppedRawOutput")
+        }
+        if !cleanOriginal.isEmpty,
+           !cleanCandidate.isEmpty,
+           cleanCandidate.localizedCaseInsensitiveContains(cleanOriginal) {
             notes.append("translationContainsFullOCRText")
         }
-        let latinCount = Self.latinLetterCount(in: translation)
-        let cjkCount = Self.cjkCharacterCount(in: translation)
+        let latinCount = Self.latinLetterCount(in: candidate)
+        let cjkCount = Self.cjkCharacterCount(in: candidate)
+        let rawLatinCount = Self.latinLetterCount(in: rawOutput)
+        let rawCJKCount = Self.cjkCharacterCount(in: rawOutput)
+        notes.append("candidateLength=\(cleanCandidate.count)")
+        notes.append("rawOutputLength=\(rawOutput.trimmingCharacters(in: .whitespacesAndNewlines).count)")
         if latinCount > 0 {
             notes.append("latinLetters=\(latinCount)")
         }
         if cjkCount > 0 {
             notes.append("cjkCharacters=\(cjkCount)")
+        }
+        if rawLatinCount > 0 {
+            notes.append("rawLatinLetters=\(rawLatinCount)")
+        }
+        if rawCJKCount > 0 {
+            notes.append("rawCJKCharacters=\(rawCJKCount)")
+        }
+        if Self.containsLikelyOCRError(in: original) {
+            notes.append("likelyOCRIssue")
+        }
+        if cjkCount > 0, !Self.mangaProbeBlockPassed(checks, errorCode: nil) {
+            notes.append("cjkCandidateButFailed")
         }
         return notes
     }
@@ -1874,7 +2013,7 @@ final class TranslationSessionStore: ObservableObject {
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .map { stripProbeFormatting($0) }
-            .filter { !$0.isEmpty && $0 != "|" }
+            .filter { !$0.isEmpty && $0 != "|" && !Self.isPlaceholderTranslationOutput($0) }
 
         if let lastChineseLine = lines.reversed().first(where: Self.containsCJK) {
             return lastChineseLine
@@ -1884,6 +2023,9 @@ final class TranslationSessionStore: ObservableObject {
 
     private static func stripProbeFormatting(_ text: String) -> String {
         var output = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        while output.hasPrefix("*") || output.hasPrefix("-") || output.hasPrefix("•") {
+            output = String(output.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         let wrappers = ["**", "__", "`", "\"", "'", "“", "”", "‘", "’"]
         var didStrip = true
         while didStrip {
@@ -1897,7 +2039,160 @@ final class TranslationSessionStore: ObservableObject {
         if output.hasPrefix("|") {
             output = String(output.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)
         }
+        for wrapper in wrappers {
+            while output.hasPrefix(wrapper), output.count > wrapper.count {
+                output = String(output.dropFirst(wrapper.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            while output.hasSuffix(wrapper), output.count > wrapper.count {
+                output = String(output.dropLast(wrapper.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
         return output
+    }
+
+    private static func mangaCorrectionPrompt(for text: String) -> String {
+        """
+        <start_of_turn>user
+        以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。
+        如果存在明显的拼写或字符错误，请修正为最合理的英文原文；
+        如果无法确定，原样输出。不要添加任何解释或标点说明。
+
+        文本：\(text)
+        <end_of_turn>
+        <start_of_turn>model
+        """
+    }
+
+    private static func cleanMangaCorrectionCandidate(_ output: String) -> String {
+        let lines = output
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { stripProbeFormatting(String($0)) }
+            .filter { line in
+                let cleanLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                return !cleanLine.isEmpty
+                    && cleanLine != "|"
+                    && !cleanLine.localizedCaseInsensitiveContains("文本：")
+                    && !cleanLine.localizedCaseInsensitiveContains("以下文本来自漫画")
+                    && !cleanLine.localizedCaseInsensitiveContains("<start_of_turn>")
+                    && !cleanLine.localizedCaseInsensitiveContains("<end_of_turn>")
+            }
+        return lines.last?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    private static func evaluateMangaCorrectionGuardrail(
+        original: String,
+        proposed: String,
+        options: MangaOverlayCorrectionOptions
+    ) -> MangaOverlayCorrectionGuardrailTest {
+        let cleanOriginal = normalizedCorrectionText(original)
+        let cleanProposed = normalizedCorrectionText(proposed)
+        guard !cleanOriginal.isEmpty else {
+            return MangaOverlayCorrectionGuardrailTest(
+                original: original,
+                proposed: proposed,
+                accepted: false,
+                reason: "原文为空"
+            )
+        }
+        guard !cleanProposed.isEmpty else {
+            return MangaOverlayCorrectionGuardrailTest(
+                original: original,
+                proposed: proposed,
+                accepted: false,
+                reason: "纠错输出为空"
+            )
+        }
+
+        let lengthDelta = abs(Double(cleanProposed.count - cleanOriginal.count)) / Double(max(cleanOriginal.count, 1))
+        if lengthDelta > options.maxLengthDeltaRatio {
+            return MangaOverlayCorrectionGuardrailTest(
+                original: original,
+                proposed: proposed,
+                accepted: false,
+                reason: "长度变化 \(Self.percentString(lengthDelta)) 超过 \(Self.percentString(options.maxLengthDeltaRatio))"
+            )
+        }
+
+        let originalWords = correctionWords(cleanOriginal)
+        let proposedWords = correctionWords(cleanProposed)
+        let wordDelta = abs(Double(proposedWords.count - originalWords.count)) / Double(max(originalWords.count, 1))
+        if wordDelta > options.maxWordCountDeltaRatio {
+            return MangaOverlayCorrectionGuardrailTest(
+                original: original,
+                proposed: proposed,
+                accepted: false,
+                reason: "词数变化 \(Self.percentString(wordDelta)) 超过 \(Self.percentString(options.maxWordCountDeltaRatio))"
+            )
+        }
+
+        let originalComparableWords = originalWords.filter { $0.count >= 4 }
+        let newWords = proposedWords
+            .filter { $0.count >= 4 }
+            .filter { proposedWord in
+                !originalComparableWords.contains { originalWord in
+                    correctionWordSimilarity(proposedWord, originalWord) >= 0.58
+                        || proposedWord.localizedCaseInsensitiveContains(originalWord)
+                        || originalWord.localizedCaseInsensitiveContains(proposedWord)
+                }
+            }
+        if !newWords.isEmpty {
+            let sampleNewWords = newWords.prefix(4).joined(separator: ", ")
+            return MangaOverlayCorrectionGuardrailTest(
+                original: original,
+                proposed: proposed,
+                accepted: false,
+                reason: "出现无相似依据新词：\(sampleNewWords)"
+            )
+        }
+
+        return MangaOverlayCorrectionGuardrailTest(
+            original: original,
+            proposed: proposed,
+            accepted: true,
+            reason: nil
+        )
+    }
+
+    private static func normalizedCorrectionText(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func correctionWords(_ text: String) -> [String] {
+        text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+    }
+
+    private static func correctionWordSimilarity(_ lhs: String, _ rhs: String) -> Double {
+        guard !lhs.isEmpty || !rhs.isEmpty else { return 1 }
+        let distance = levenshteinDistance(Array(lhs), Array(rhs))
+        return 1 - Double(distance) / Double(max(max(lhs.count, rhs.count), 1))
+    }
+
+    private static func levenshteinDistance<T: Equatable>(_ lhs: [T], _ rhs: [T]) -> Int {
+        if lhs.isEmpty { return rhs.count }
+        if rhs.isEmpty { return lhs.count }
+        var previous = Array(0...rhs.count)
+        var current = Array(repeating: 0, count: rhs.count + 1)
+        for lhsIndex in 1...lhs.count {
+            current[0] = lhsIndex
+            for rhsIndex in 1...rhs.count {
+                let cost = lhs[lhsIndex - 1] == rhs[rhsIndex - 1] ? 0 : 1
+                current[rhsIndex] = min(
+                    previous[rhsIndex] + 1,
+                    current[rhsIndex - 1] + 1,
+                    previous[rhsIndex - 1] + cost
+                )
+            }
+            swap(&previous, &current)
+        }
+        return previous[rhs.count]
+    }
+
+    private static func percentString(_ value: Double) -> String {
+        "\(Int((value * 100).rounded()))%"
     }
 
     private func makeMangaOverlayProbeReport(
@@ -1928,16 +2223,61 @@ final class TranslationSessionStore: ObservableObject {
         let allBlocksPassed = !blocks.isEmpty && blocks.allSatisfy(\.blockPassed)
         let filesPresent = Self.fileIsNonEmpty(path: outputFiles.debugBoxesImage)
             && Self.fileIsNonEmpty(path: outputFiles.overlayImage)
+        let diagnostics = makeMangaOverlayProbeDiagnostics(blocks: blocks)
+        let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
+            original: "XQZ 12 ///",
+            proposed: "The City Battler Tournament starts in a few days.",
+            options: configuration.correction
+        )
         return MangaOverlayProbeReport(
             sourceImage: "test/1.png",
             engineUsed: selectedAdapterMetadata.displayName,
             configuration: configuration,
             totalBlocksDetected: blocks.count,
             blocks: blocks,
+            diagnostics: diagnostics,
+            correctionGuardrailTest: correctionGuardrailTest,
             overallPassed: allBlocksPassed && filesPresent,
             outputFiles: outputFiles,
             warnings: warnings
         )
+    }
+
+    private func makeMangaOverlayProbeDiagnostics(blocks: [MangaOverlayProbeBlock]) -> MangaOverlayProbeDiagnostics {
+        var diagnostics = MangaOverlayProbeDiagnostics.empty
+        diagnostics.passedBlocks = blocks.filter(\.blockPassed).count
+        diagnostics.failedBlocks = blocks.count - diagnostics.passedBlocks
+
+        for block in blocks {
+            let candidate = block.translationCandidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            let rawOutput = block.rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+            if candidate.isEmpty {
+                diagnostics.emptyTranslationCandidates += 1
+            }
+            if Self.isPlaceholderTranslationOutput(candidate) || Self.isPlaceholderTranslationOutput(rawOutput) {
+                diagnostics.placeholderTranslationCandidates += 1
+            }
+            if !candidate.isEmpty,
+               candidate.localizedCaseInsensitiveCompare(block.finalTextUsedForTranslation.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame {
+                diagnostics.repeatedOriginalCandidates += 1
+            }
+            if !candidate.isEmpty, !Self.containsCJK(candidate) {
+                diagnostics.nonChineseCandidates += 1
+            }
+            if block.qualityNotes.contains("cjkCandidateButFailed") {
+                diagnostics.cjkButFailedCandidates += 1
+                diagnostics.likelyRuleFalseFailureBlocks.append(block.index)
+            }
+            if block.qualityNotes.contains("likelyOCRIssue") {
+                diagnostics.likelyOCRIssueBlocks.append(block.index)
+            }
+            if !block.blockPassed,
+               block.errorCode == nil,
+               (candidate.isEmpty || Self.isPlaceholderTranslationOutput(candidate) || !Self.containsCJK(candidate)) {
+                diagnostics.likelyModelOutputFailures += 1
+            }
+        }
+        return diagnostics
     }
 
     private func summarize() async throws -> AISummary {
@@ -2843,6 +3183,43 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
+    private static func containsLikelyOCRError(in text: String) -> Bool {
+        let upper = text.uppercased()
+        let suspiciousTokens = [
+            "RATTLER",
+            "PEN DAYS",
+            "TRANINS",
+            "WOLLD",
+            "ONLING",
+            "PESULTE",
+            "SAMING",
+            "POOM",
+            "BENG",
+            "SUGSESTION",
+            "LOSIC",
+            "THOUSH",
+            "SENPARS",
+            "-O2",
+            "02 AT"
+        ]
+        if suspiciousTokens.contains(where: { upper.contains($0) }) {
+            return true
+        }
+
+        let words = upper
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { $0.count >= 3 }
+        guard words.count >= 4 else { return false }
+
+        let repeatedWords = zip(words, words.dropFirst()).filter { $0 == $1 }.count
+        if repeatedWords > 0 {
+            return true
+        }
+
+        let veryShortWords = words.filter { $0.count <= 2 }.count
+        return words.count >= 8 && veryShortWords >= words.count / 3
+    }
+
     private static func isPlaceholderTranslationOutput(_ output: String) -> Bool {
         let markers = [
             "请您提供",
@@ -2851,8 +3228,15 @@ final class TranslationSessionStore: ObservableObject {
             "需要翻译的文本",
             "请将以下翻译成中文",
             "请将以上翻译成中文",
+            "请将以下翻译转换成中文",
+            "请将以上翻译转换成中文",
+            "翻译转换成中文",
             "以下是翻译成中文",
             "把以下翻译成中文",
+            "最合适的翻译",
+            "这句话的意思",
+            "意思是：",
+            "翻译是：",
             "translation:",
             "translate the following",
             "谢谢",

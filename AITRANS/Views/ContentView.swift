@@ -514,6 +514,12 @@ private struct MangaOverlayProbeBlockCard: View {
             if let afterPreprocessing = block.afterPreprocessingOcrText, !afterPreprocessing.isEmpty {
                 RawProbeSnippet(title: "preprocessed ocr", text: afterPreprocessing)
             }
+            if let afterCorrection = block.afterCorrectionText, !afterCorrection.isEmpty {
+                RawProbeSnippet(title: "corrected ocr", text: afterCorrection)
+            }
+            if let rejectedReason = block.correctionRejectedReason, !rejectedReason.isEmpty {
+                RawProbeSnippet(title: "correction rejected", text: rejectedReason)
+            }
             if block.finalTextUsedForTranslation != block.ocrText {
                 RawProbeSnippet(title: "final text", text: block.finalTextUsedForTranslation)
             }
@@ -532,6 +538,14 @@ private struct MangaOverlayProbeBlockCard: View {
             if !block.prompt.isEmpty {
                 RawProbeSnippet(title: "prompt", text: block.prompt)
             }
+            if let correctionPrompt = block.correctionPrompt, !correctionPrompt.isEmpty {
+                RawProbeSnippet(title: "correction prompt", text: correctionPrompt)
+            }
+            if let correctionErrorCode = block.correctionErrorCode, !correctionErrorCode.isEmpty {
+                RawProbeSnippet(title: "correction error", text: correctionErrorCode)
+            } else if let correctionRawOutput = block.correctionRawOutput, !correctionRawOutput.isEmpty {
+                RawProbeSnippet(title: "correction raw", text: correctionRawOutput)
+            }
             if let errorCode = block.errorCode, !errorCode.isEmpty {
                 RawProbeSnippet(title: "error", text: errorCode)
             } else if !block.rawOutput.isEmpty {
@@ -545,7 +559,7 @@ private struct MangaOverlayProbeBlockCard: View {
     private var metadataText: String {
         let bbox = block.bbox.map { String(Int($0)) }.joined(separator: ",")
         let confidence = block.ocrConfidence.map { String(Double($0)) } ?? "null"
-        return "bbox=\(bbox) confidence=\(confidence) pre=\(block.preprocessingEnabled)"
+        return "bbox=\(bbox) confidence=\(confidence) pre=\(block.preprocessingEnabled) corr=\(block.correctionEnabled)"
     }
 }
 

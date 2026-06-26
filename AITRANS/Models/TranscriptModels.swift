@@ -282,8 +282,20 @@ struct MangaOverlayPreprocessingOptions: Equatable, Codable, Sendable {
 
 struct MangaOverlayCorrectionOptions: Equatable, Codable, Sendable {
     var enabled: Bool
+    var maxLengthDeltaRatio: Double
+    var maxWordCountDeltaRatio: Double
 
-    static let disabled = MangaOverlayCorrectionOptions(enabled: false)
+    static let disabled = MangaOverlayCorrectionOptions(
+        enabled: false,
+        maxLengthDeltaRatio: 0.3,
+        maxWordCountDeltaRatio: 0.35
+    )
+
+    static let defaultValue = MangaOverlayCorrectionOptions(
+        enabled: true,
+        maxLengthDeltaRatio: 0.3,
+        maxWordCountDeltaRatio: 0.35
+    )
 }
 
 struct MangaOverlayProbeConfiguration: Equatable, Codable, Sendable {
@@ -298,7 +310,7 @@ struct MangaOverlayProbeConfiguration: Equatable, Codable, Sendable {
         status: "current pipeline uses whole-page Vision OCR observations plus spatial clustering; no image-level bubble detection yet",
         currentBlockSource: "a: whole-page OCR observations merged by spatial clustering/deduplication",
         preprocessing: .defaultValue,
-        correction: .disabled,
+        correction: .defaultValue,
         visionNewAPIStatus: "deployment target is iOS 17.0; RecognizeTextRequest needs @available(iOS 18, *) and is not enabled in this partial step",
         customLexicon: ["Senpai", "City Battler", "Tournament", "Ren"]
     )
@@ -317,6 +329,9 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var correctionEnabled: Bool
     var afterCorrectionText: String?
     var correctionRejectedReason: String?
+    var correctionPrompt: String?
+    var correctionRawOutput: String?
+    var correctionErrorCode: String?
     var finalTextUsedForTranslation: String
     var translatedText: String
     var translationCandidate: String
@@ -341,6 +356,9 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         correctionEnabled: Bool = false,
         afterCorrectionText: String? = nil,
         correctionRejectedReason: String? = nil,
+        correctionPrompt: String? = nil,
+        correctionRawOutput: String? = nil,
+        correctionErrorCode: String? = nil,
         finalTextUsedForTranslation: String? = nil,
         translatedText: String = "",
         translationCandidate: String = "",
@@ -372,6 +390,9 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.correctionEnabled = correctionEnabled
         self.afterCorrectionText = afterCorrectionText
         self.correctionRejectedReason = correctionRejectedReason
+        self.correctionPrompt = correctionPrompt
+        self.correctionRawOutput = correctionRawOutput
+        self.correctionErrorCode = correctionErrorCode
         self.finalTextUsedForTranslation = finalTextUsedForTranslation ?? ocrText
         self.translatedText = translatedText
         self.translationCandidate = translationCandidate
@@ -407,12 +428,47 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
     }
 }
 
+struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
+    var passedBlocks: Int
+    var failedBlocks: Int
+    var emptyTranslationCandidates: Int
+    var placeholderTranslationCandidates: Int
+    var repeatedOriginalCandidates: Int
+    var nonChineseCandidates: Int
+    var cjkButFailedCandidates: Int
+    var likelyModelOutputFailures: Int
+    var likelyOCRIssueBlocks: [Int]
+    var likelyRuleFalseFailureBlocks: [Int]
+
+    static let empty = MangaOverlayProbeDiagnostics(
+        passedBlocks: 0,
+        failedBlocks: 0,
+        emptyTranslationCandidates: 0,
+        placeholderTranslationCandidates: 0,
+        repeatedOriginalCandidates: 0,
+        nonChineseCandidates: 0,
+        cjkButFailedCandidates: 0,
+        likelyModelOutputFailures: 0,
+        likelyOCRIssueBlocks: [],
+        likelyRuleFalseFailureBlocks: []
+    )
+}
+
+struct MangaOverlayCorrectionGuardrailTest: Equatable, Codable, Sendable {
+    var original: String
+    var proposed: String
+    var accepted: Bool
+    var reason: String?
+}
+
 struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var sourceImage: String
     var engineUsed: String
     var configuration: MangaOverlayProbeConfiguration
     var totalBlocksDetected: Int
     var blocks: [MangaOverlayProbeBlock]
+    var diagnostics: MangaOverlayProbeDiagnostics
+    var correctionGuardrailTest: MangaOverlayCorrectionGuardrailTest?
     var overallPassed: Bool
     var outputFiles: MangaOverlayProbeOutputFiles
     var warnings: [String]
