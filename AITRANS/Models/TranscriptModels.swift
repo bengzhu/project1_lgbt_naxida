@@ -350,6 +350,9 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var checks: MangaOverlayProbeChecks
     var failureReasons: [String]
     var qualityNotes: [String]
+    var translationDecisionTrace: [String]
+    var translationFailureDetail: String?
+    var ocrProbeNotes: [String]
     var blockPassed: Bool
 
     init(
@@ -392,6 +395,9 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         ),
         failureReasons: [String] = [],
         qualityNotes: [String] = [],
+        translationDecisionTrace: [String] = [],
+        translationFailureDetail: String? = nil,
+        ocrProbeNotes: [String] = [],
         blockPassed: Bool = false
     ) {
         self.id = id
@@ -425,6 +431,9 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.checks = checks
         self.failureReasons = failureReasons
         self.qualityNotes = qualityNotes
+        self.translationDecisionTrace = translationDecisionTrace
+        self.translationFailureDetail = translationFailureDetail
+        self.ocrProbeNotes = ocrProbeNotes
         self.blockPassed = blockPassed
     }
 }
@@ -478,6 +487,9 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
     var lowOCRSimilarityBlocks: [Int]
     var likelyOCRIssueBlocks: [Int]
     var likelyRuleFalseFailureBlocks: [Int]
+    var passedButSuspiciousTranslationBlocks: [Int]
+    var translationFailureBreakdown: [String: Int]
+    var ocrQualityProbe: [String]
 
     static let empty = MangaOverlayProbeDiagnostics(
         passedBlocks: 0,
@@ -496,7 +508,10 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
         averageOCRGroundTruthSimilarity: 0,
         lowOCRSimilarityBlocks: [],
         likelyOCRIssueBlocks: [],
-        likelyRuleFalseFailureBlocks: []
+        likelyRuleFalseFailureBlocks: [],
+        passedButSuspiciousTranslationBlocks: [],
+        translationFailureBreakdown: [:],
+        ocrQualityProbe: []
     )
 }
 
@@ -565,6 +580,9 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var frameworkComparison: MangaOverlayFrameworkComparison?
     var overallPassed: Bool
     var outputFiles: MangaOverlayProbeOutputFiles
+    var outputDirectoryCleaned: Bool
+    var retainedOutputFiles: [String]
+    var outputCleanupPolicy: String
     var warnings: [String]
 }
 
