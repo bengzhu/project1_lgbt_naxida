@@ -290,9 +290,14 @@ struct MangaOverlayProbeService: Sendable {
                 let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
                 let cropRect = Self.expand(bubble.boundingBox, by: 0.08, bounds: bounds).integral
                 let cropped = try Self.croppedImage(image, rect: cropRect)
-                let processed = preprocessing.enabled && bubble.source == "whiteComponent"
-                    ? try Self.preprocessedImage(cropped, options: preprocessing)
-                    : cropped
+                let processed: CGImage
+                if preprocessing.enabled, bubble.source == "whiteComponent" {
+                    processed = try Self.preprocessedImage(cropped, options: preprocessing)
+                } else if bubble.source == "ocrSeed" {
+                    processed = try Self.scaledImage(cropped, scale: Self.ocrScale)
+                } else {
+                    processed = cropped
+                }
                 let candidates = try Self.recognizeTextCandidates(
                     in: processed,
                     angle: 0,
