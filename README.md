@@ -176,7 +176,7 @@ test/
 - `1_translated_overlay.png` 中所有绘制文本必须正向可读；即使某块来自旋转 OCR，也不允许倒置或镜像。
 - `blockPassed = false` 的块也必须出现在覆盖图上，并保留失败原因，不能静默隐藏。
 - 每次运行会先清空 App 沙盒 `Application Support/AITRANS/Output/`，`scripts/export-probe-output.sh` 也会先清空项目根 `output/`，避免新旧 PNG / JSON 混在一起。
-- 输出图片包括 `1_debug_boxes.png`、`1_translated_overlay.png`、`1_ocr_text_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png`、`1_bubble_debug.png`、`1_bubble_seed_debug.png`、`1_bubble_crops.png`。其中 `1_block_crops.png` 是块裁切放大预处理拼图，用于目测二值化/锐化是否过激。
+- 输出图片包括 `1_debug_boxes.png`、`1_translated_overlay.png`、`1_ocr_text_overlay.png`、`1_deterministic_correction_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png`、`1_bubble_debug.png`、`1_bubble_seed_debug.png`、`1_bubble_crops.png`。其中 `1_block_crops.png` 是块裁切放大预处理拼图，用于目测二值化/锐化是否过激；`1_deterministic_correction_overlay.png` 用于直接对比原 OCR 和确定性纠错候选。
 - 翻译失败排查规范：先看 `failureCategory`，再看 `rawOutputClassification` 和 `candidateClassification`。如果 `failureCategory = ocrInputSuspect`，优先修 OCR/合并/裁切；如果是 `modelOutputFailure`，优先换模型、调采样或 prompt；如果是 `ruleFalseFailureSuspected`，才优先放宽判定规则。不要只看覆盖图猜测失败原因。
 - 翻译规则排查规范：如果 `likelyRuleFalseFailureBlocks = []` 且 `cjkButFailedCandidates = 0`，说明本轮没有发现“真实中文译文被规则误杀”。中文候选存在不等于通过；硬通过前还会检查低 OCR 相似度、已知 OCR 错词、解释/列表型输出、长原文短译文和中英混排。
 - OCR 质量排查规范：先按 `ocrGroundTruthSimilarity` 从低到高看 `blocks[].finalTextUsedForTranslation`。本探针用 `test/1.ground_truth.json` 做真值；换测试图时应同步更新真值文件，否则相似度只作参考。
@@ -339,6 +339,8 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v14 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后，`totalBlocksDetected = 12`、`passedBlocks = 1`、`failedBlocks = 11`、`translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 9 }`、`likelyRuleFalseFailureBlocks = []`、`passedButSuspiciousTranslationBlocks = []`、`averageOCRGroundTruthSimilarity = 0.6846`。结论：坏译文不再被标 PASS；剩余主要问题仍是 OCR 输入错误和当前 Gemma 270M raw 输出不稳定。输出目录仍只保留本轮 9 个文件，含全图 OCR 覆盖、翻译覆盖、块裁切、气泡候选和气泡 crop 调试图。
 - 本次未提交工作区 v15：新增探针专用确定性 OCR 纠错候选，只修已知 OCR 混淆词，如 `RATTLER -> BATTLER`、`STATE IN A PEN DAYS -> STARTS IN A FEW DAYS`、`THOUSH -> THOUGH`、`ONLING -> ONLINE`、`SUGSESTION -> SUGGESTION`、`LOSIC -> LOGIC`。报告新增 `deterministicCorrectionText`、`deterministicCorrectionAppliedRules`、`deterministicCorrectionSimilarity`、`deterministicCorrectionImprovedBlocks` 和 `deterministicCorrectionAverageSimilarity`。
 - 本次未提交工作区 v15 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后，原始整页 OCR 平均真值相似度 `0.6846`，确定性纠错候选平均相似度 `0.7205`，显著提升块为 `[2, 7, 8, 10]`。其中 `THE CITY RATTLER / STATE IN A PEN DAYS.` 修为 `THE CITY BATTLER / STARTS IN A FEW DAYS.`，相似度 `0.6032 -> 0.8615`；`-O2 AT LEAST... SENPAIS SENPArS LOSIC.` 修为 `... SENPAI'S SENPAI'S LOGIC.`，相似度 `0.8000 -> 0.8889`。已知局限：部分半修正仍不自然，如 `GET RESULTS / SAVING CLUE...`，因此本轮只报告候选，不替换实际翻译输入。
+- 本次未提交工作区 v16：新增 `1_deterministic_correction_overlay.png`。该图在原图上显示每个块的原 OCR、确定性纠错候选、相似度变化和命中的规则；紫色框表示有规则纠错，灰色框表示无变化。用于和 `1_ocr_text_overlay.png`、`1_translated_overlay.png`、`1_bubble_crops.png` 并排检查。
+- 本次未提交工作区 v16 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 并导出后，`output/` 只保留本轮 10 个文件，新增 `1_deterministic_correction_overlay.png` 已写入 `retainedOutputFiles` 和 `outputFiles.deterministicCorrectionOverlayImage`。确定性纠错候选平均相似度仍为 `0.7205`，高于原始整页 OCR 的 `0.6846`；显著提升块仍为 `[2, 7, 8, 10]`。
 
 ## 后续对话指引
 

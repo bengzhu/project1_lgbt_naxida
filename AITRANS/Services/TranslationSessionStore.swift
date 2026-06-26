@@ -2838,6 +2838,7 @@ final class TranslationSessionStore: ObservableObject {
             outputFiles.debugBoxesImage,
             outputFiles.overlayImage,
             outputFiles.ocrTextOverlayImage,
+            outputFiles.deterministicCorrectionOverlayImage,
             outputFiles.blockCropsImage,
             outputFiles.preprocessedContentImage,
             outputFiles.bubbleDebugImage,

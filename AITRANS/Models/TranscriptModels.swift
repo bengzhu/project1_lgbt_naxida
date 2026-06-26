@@ -451,6 +451,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
     var debugBoxesImage: String
     var overlayImage: String
     var ocrTextOverlayImage: String?
+    var deterministicCorrectionOverlayImage: String?
     var blockCropsImage: String?
     var preprocessedContentImage: String?
     var bubbleDebugImage: String?
@@ -461,6 +462,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
         debugBoxesImage: String,
         overlayImage: String,
         ocrTextOverlayImage: String? = nil,
+        deterministicCorrectionOverlayImage: String? = nil,
         blockCropsImage: String? = nil,
         preprocessedContentImage: String? = nil,
         bubbleDebugImage: String? = nil,
@@ -470,6 +472,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
         self.debugBoxesImage = debugBoxesImage
         self.overlayImage = overlayImage
         self.ocrTextOverlayImage = ocrTextOverlayImage
+        self.deterministicCorrectionOverlayImage = deterministicCorrectionOverlayImage
         self.blockCropsImage = blockCropsImage
         self.preprocessedContentImage = preprocessedContentImage
         self.bubbleDebugImage = bubbleDebugImage
