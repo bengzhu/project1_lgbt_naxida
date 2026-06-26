@@ -144,6 +144,7 @@ struct MangaOverlayProbeService: Sendable {
             let overlayURL = outputDirectory.appendingPathComponent("1_translated_overlay.png")
             let ocrTextURL = outputDirectory.appendingPathComponent("1_ocr_text_overlay.png")
             let deterministicCorrectionURL = outputDirectory.appendingPathComponent("1_deterministic_correction_overlay.png")
+            let ocrProbeTextURL = outputDirectory.appendingPathComponent("1_ocr_probe_text.txt")
             let cropsURL = outputDirectory.appendingPathComponent("1_block_crops.png")
             let preprocessedURL = outputDirectory.appendingPathComponent("1_preprocessed_content.png")
             let debugImage = try Self.drawDebugBoxes(on: image, blocks: blocks)
@@ -156,6 +157,7 @@ struct MangaOverlayProbeService: Sendable {
             try Self.writePNG(ocrTextImage, to: ocrTextURL)
             try Self.writePNG(deterministicCorrectionImage, to: deterministicCorrectionURL)
             try Self.writePNG(cropsImage, to: cropsURL)
+            try Self.writeOCRProbeText(blocks: blocks, to: ocrProbeTextURL)
 
             var preprocessedPath: String?
             if preprocessing.enabled {
@@ -170,6 +172,7 @@ struct MangaOverlayProbeService: Sendable {
                 overlayImage: overlayURL.path,
                 ocrTextOverlayImage: ocrTextURL.path,
                 deterministicCorrectionOverlayImage: deterministicCorrectionURL.path,
+                ocrProbeTextFile: ocrProbeTextURL.path,
                 blockCropsImage: cropsURL.path,
                 preprocessedContentImage: preprocessedPath,
                 bubbleDebugImage: bubbleDebugImagePath,
@@ -367,6 +370,37 @@ struct MangaOverlayProbeService: Sendable {
             let text = observation.topCandidates(1).first?.string.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return text.isEmpty || Self.isNoise(text) ? nil : text
         }
+    }
+
+    private static func writeOCRProbeText(blocks: [MangaOverlayProbeBlock], to url: URL) throws {
+        let content = blocks.map { block in
+            let bbox = block.bbox.map { String(Int($0.rounded())) }.joined(separator: ",")
+            let raw = block.rawOcrText.replacing("\n", with: " / ")
+            let preprocessed = block.afterPreprocessingOcrText?.replacing("\n", with: " / ") ?? "nil"
+            let final = block.finalTextUsedForTranslation.replacing("\n", with: " / ")
+            let deterministic = block.deterministicCorrectionText?.replacing("\n", with: " / ") ?? "nil"
+            let truth = block.bestGroundTruthText ?? "nil"
+            let similarity = block.ocrGroundTruthSimilarity.map {
+                $0.formatted(.number.precision(.fractionLength(3)))
+            } ?? "nil"
+            let translation = block.translationCandidate.replacing("\n", with: " / ")
+            let rawOutput = block.rawOutput.replacing("\n", with: " / ")
+            return """
+            #\(block.index) bbox=[\(bbox)] angle=\(block.rotationAngleUsed) ocrSimilarity=\(similarity) blockPassed=\(block.blockPassed)
+            rawOCR: \(raw)
+            afterPreprocessing: \(preprocessed)
+            finalForTranslation: \(final)
+            deterministicCorrection: \(deterministic)
+            bestGroundTruth: \(truth)
+            translationCandidate: \(translation)
+            rawOutput: \(rawOutput)
+            failureCategory: \(block.failureCategory)
+            failureReasons: \(block.failureReasons.joined(separator: " | "))
+            translationFailureDetail: \(block.translationFailureDetail ?? "nil")
+            """
+        }
+        .joined(separator: "\n\n")
+        try content.write(to: url, atomically: true, encoding: .utf8)
     }
 
     private static func bubbleResults(
