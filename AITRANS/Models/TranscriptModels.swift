@@ -452,6 +452,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
     var overlayImage: String
     var ocrTextOverlayImage: String?
     var deterministicCorrectionOverlayImage: String?
+    var ocrProbeTextFile: String?
     var blockCropsImage: String?
     var preprocessedContentImage: String?
     var bubbleDebugImage: String?
@@ -463,6 +464,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
         overlayImage: String,
         ocrTextOverlayImage: String? = nil,
         deterministicCorrectionOverlayImage: String? = nil,
+        ocrProbeTextFile: String? = nil,
         blockCropsImage: String? = nil,
         preprocessedContentImage: String? = nil,
         bubbleDebugImage: String? = nil,
@@ -473,6 +475,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
         self.overlayImage = overlayImage
         self.ocrTextOverlayImage = ocrTextOverlayImage
         self.deterministicCorrectionOverlayImage = deterministicCorrectionOverlayImage
+        self.ocrProbeTextFile = ocrProbeTextFile
         self.blockCropsImage = blockCropsImage
         self.preprocessedContentImage = preprocessedContentImage
         self.bubbleDebugImage = bubbleDebugImage
@@ -501,6 +504,10 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
     var likelyRuleFalseFailureBlocks: [Int]
     var passedButSuspiciousTranslationBlocks: [Int]
     var translationFailureBreakdown: [String: Int]
+    var cjkFailureBreakdown: [String: Int]
+    var translationLanguageQualityPassedBlocks: [Int]
+    var translationLanguageQualityFailedBlocks: [Int]
+    var translationUsableButOCRSuspectBlocks: [Int]
     var ocrQualityProbe: [String]
     var deterministicCorrectionImprovedBlocks: [Int]
     var deterministicCorrectionAverageSimilarity: Double
@@ -525,6 +532,10 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
         likelyRuleFalseFailureBlocks: [],
         passedButSuspiciousTranslationBlocks: [],
         translationFailureBreakdown: [:],
+        cjkFailureBreakdown: [:],
+        translationLanguageQualityPassedBlocks: [],
+        translationLanguageQualityFailedBlocks: [],
+        translationUsableButOCRSuspectBlocks: [],
         ocrQualityProbe: [],
         deterministicCorrectionImprovedBlocks: [],
         deterministicCorrectionAverageSimilarity: 0

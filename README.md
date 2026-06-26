@@ -156,7 +156,7 @@ test/
 - `blocks[].qualityNotes`：非硬失败排查线索，例如 `translationContainsFullOCRText`、`latinLetters=27`、`cjkCharacters=4`。
 - `blocks[].translationDecisionTrace` / `translationFailureDetail`：逐块记录 raw 分类、候选分类、每条硬判定布尔值和失败归因；用于确认失败来自模型 raw 输出、OCR 输入、候选抽取，还是规则误伤。
 - `blocks[].ocrProbeNotes`：逐块记录 OCR 和人工真值的相似度、质量标签、已知 OCR 混淆提示。
-- `diagnostics`：本轮整体排查汇总，统计通过/失败块、空候选、占位输出、复读原文、非中文输出、raw 输出类型、候选抽取丢弃、平均 OCR 真值相似度、疑似 OCR 问题块、疑似规则误伤块、失败分类分布、硬通过但质量可疑块。
+- `diagnostics`：本轮整体排查汇总，统计通过/失败块、空候选、占位输出、复读原文、非中文输出、raw 输出类型、候选抽取丢弃、平均 OCR 真值相似度、疑似 OCR 问题块、疑似规则误伤块、失败分类分布、中文候选失败原因分布、翻译语言质量通过/失败块、硬通过但质量可疑块。
 - `configuration.currentBlockSource`：记录当前块来源。当前是整图 OCR observations 的空间聚类/去重，即 (a)，不是图像层面的气泡连通域检测。
 - `configuration.preprocessing`：记录本轮预处理增强开关，包含灰度、对比亮度、自适应二值化、裁切放大、锐化和放大倍数。
 - `configuration.customLexiconEnabled` / `customLexicon`：记录 Vision `customWords` 是否启用和本轮词表。
@@ -176,9 +176,9 @@ test/
 - `1_translated_overlay.png` 中所有绘制文本必须正向可读；即使某块来自旋转 OCR，也不允许倒置或镜像。
 - `blockPassed = false` 的块也必须出现在覆盖图上，并保留失败原因，不能静默隐藏。
 - 每次运行会先清空 App 沙盒 `Application Support/AITRANS/Output/`，`scripts/export-probe-output.sh` 也会先清空项目根 `output/`，避免新旧 PNG / JSON 混在一起。
-- 输出图片包括 `1_debug_boxes.png`、`1_translated_overlay.png`、`1_ocr_text_overlay.png`、`1_deterministic_correction_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png`、`1_bubble_debug.png`、`1_bubble_seed_debug.png`、`1_bubble_crops.png`。其中 `1_block_crops.png` 是块裁切放大预处理拼图，用于目测二值化/锐化是否过激；`1_deterministic_correction_overlay.png` 用于直接对比原 OCR 和确定性纠错候选。
-- 翻译失败排查规范：先看 `failureCategory`，再看 `rawOutputClassification` 和 `candidateClassification`。如果 `failureCategory = ocrInputSuspect`，优先修 OCR/合并/裁切；如果是 `modelOutputFailure`，优先换模型、调采样或 prompt；如果是 `ruleFalseFailureSuspected`，才优先放宽判定规则。不要只看覆盖图猜测失败原因。
-- 翻译规则排查规范：如果 `likelyRuleFalseFailureBlocks = []` 且 `cjkButFailedCandidates = 0`，说明本轮没有发现“真实中文译文被规则误杀”。中文候选存在不等于通过；硬通过前还会检查低 OCR 相似度、已知 OCR 错词、解释/列表型输出、长原文短译文和中英混排。
+- 输出包括 `1_debug_boxes.png`、`1_translated_overlay.png`、`1_ocr_text_overlay.png`、`1_deterministic_correction_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png`、`1_bubble_debug.png`、`1_bubble_seed_debug.png`、`1_bubble_crops.png`、`1_ocr_probe_text.txt`。其中 `1_block_crops.png` 是块裁切放大预处理拼图，用于目测二值化/锐化是否过激；`1_deterministic_correction_overlay.png` 用于直接对比原 OCR 和确定性纠错候选；`1_ocr_probe_text.txt` 是每块 OCR、纠错候选、raw output、候选译文和失败原因的纯文本快照，便于不用 `jq` 也能排查 OCR 原句。
+- 翻译失败排查规范：先看 `failureCategory`，再看 `rawOutputClassification` 和 `candidateClassification`。如果 `failureCategory = ocrInputSuspect`，优先修 OCR/合并/裁切；如果是 `modelOutputFailure`，优先换模型、调采样或 prompt；如果是 `translationLanguageQualityFailure`，说明模型给了中文或半中文，但候选本身过短、混入未翻译英文或像解释文本；如果是 `ruleFalseFailureSuspected`，才优先放宽判定规则。不要只看覆盖图猜测失败原因。
+- 翻译规则排查规范：如果 `likelyRuleFalseFailureBlocks = []`，说明本轮没有发现“真实中文译文被规则误杀”。`cjkButFailedCandidates` 只表示“候选含中文但未过端到端质量门”，需继续看 `cjkFailureBreakdown`；中文候选存在不等于通过，硬通过前还会检查解释/列表型输出、长原文短译文、中英混排和 OCR 输入质量。
 - OCR 质量排查规范：先按 `ocrGroundTruthSimilarity` 从低到高看 `blocks[].finalTextUsedForTranslation`。本探针用 `test/1.ground_truth.json` 做真值；换测试图时应同步更新真值文件，否则相似度只作参考。
 
 模拟器跑完后，把沙盒输出导出到项目根 `output/`：
@@ -341,6 +341,9 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v15 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后，原始整页 OCR 平均真值相似度 `0.6846`，确定性纠错候选平均相似度 `0.7205`，显著提升块为 `[2, 7, 8, 10]`。其中 `THE CITY RATTLER / STATE IN A PEN DAYS.` 修为 `THE CITY BATTLER / STARTS IN A FEW DAYS.`，相似度 `0.6032 -> 0.8615`；`-O2 AT LEAST... SENPAIS SENPArS LOSIC.` 修为 `... SENPAI'S SENPAI'S LOGIC.`，相似度 `0.8000 -> 0.8889`。已知局限：部分半修正仍不自然，如 `GET RESULTS / SAVING CLUE...`，因此本轮只报告候选，不替换实际翻译输入。
 - 本次未提交工作区 v16：新增 `1_deterministic_correction_overlay.png`。该图在原图上显示每个块的原 OCR、确定性纠错候选、相似度变化和命中的规则；紫色框表示有规则纠错，灰色框表示无变化。用于和 `1_ocr_text_overlay.png`、`1_translated_overlay.png`、`1_bubble_crops.png` 并排检查。
 - 本次未提交工作区 v16 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 并导出后，`output/` 只保留本轮 10 个文件，新增 `1_deterministic_correction_overlay.png` 已写入 `retainedOutputFiles` 和 `outputFiles.deterministicCorrectionOverlayImage`。确定性纠错候选平均相似度仍为 `0.7205`，高于原始整页 OCR 的 `0.6846`；显著提升块仍为 `[2, 7, 8, 10]`。
+- 本次未提交工作区 v17：新增 `1_ocr_probe_text.txt`，每轮随 PNG 一起重写，逐块记录 `rawOCR`、`afterPreprocessing`、`finalForTranslation`、确定性纠错候选、真值匹配、模型 `rawOutput`、抽取候选和失败原因。探针开始会清空 App 沙盒 `Output/`，导出脚本会清空项目根 `output/`；实测中间态导出会得到空目录或半成品目录，最终完整导出只保留本轮 11 个文件，不再堆积旧图。
+- 本次未提交工作区 v17：翻译判定拆成两层：`translationLanguageQualityPassed` 先判断候选译文本身是否像可用中文，再用 OCR 输入质量决定端到端 `blockPassed`。报告新增 `diagnostics.cjkFailureBreakdown`、`translationLanguageQualityPassedBlocks`、`translationLanguageQualityFailedBlocks`、`translationUsableButOCRSuspectBlocks`，并新增 `translationLanguageQualityFailure` 分类，避免把模型输出差/OCR 差误叫成规则误杀。
+- 本次未提交工作区 v17 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后，`totalBlocksDetected = 12`、`passedBlocks = 1`、`failedBlocks = 11`、`translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 2 }`、`likelyRuleFalseFailureBlocks = []`、`cjkFailureBreakdown = { mixedOrUntranslatedEnglish: 1, tooShort: 1 }`、`averageOCRGroundTruthSimilarity = 0.6846`、`deterministicCorrectionAverageSimilarity = 0.7205`。结论：没有发现“实际翻译成功但规则太严误杀”；翻译差主要来自当前 Local 模型 raw 输出不稳，以及 OCR 输入里仍有 `RATTLER`、`PEN DAYS`、`TRANINS`、`SUGSESTION`、`LOSIC` 等错词。
 
 ## 后续对话指引
 
