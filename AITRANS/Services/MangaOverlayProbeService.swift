@@ -3,6 +3,7 @@ import CoreText
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
+import UIKit
 import Vision
 
 enum MangaOverlayProbeServiceError: LocalizedError {
@@ -30,15 +31,59 @@ struct MangaOverlayOCRBlock: Identifiable, Equatable, Sendable {
     var rotationAngle: Int
 }
 
+struct MangaOverlayProbeCropping: Equatable, Sendable {
+    var topRatio: CGFloat
+    var bottomRatio: CGFloat
+    var sideInsetRatio: CGFloat
+
+    static let defaultValue = MangaOverlayProbeCropping(
+        topRatio: 0.235,
+        bottomRatio: 0.14,
+        sideInsetRatio: 0
+    )
+}
+
+private struct MangaOverlayOCRCandidate: Equatable, Sendable {
+    var text: String
+    var confidence: Float?
+    var boundingBox: CGRect
+    var rotationAngle: Int
+}
+
+private struct MangaOverlayOCRCluster {
+    var candidates: [MangaOverlayOCRCandidate]
+
+    var boundingBox: CGRect {
+        candidates.map(\.boundingBox).reduce(.null) { partial, rect in
+            partial.union(rect)
+        }
+    }
+}
+
 struct MangaOverlayProbeService: Sendable {
-    func recognizeTextBlocks(in imageData: Data) async throws -> (image: CGImage, blocks: [MangaOverlayOCRBlock]) {
+    private static let ocrScale: CGFloat = 2
+
+    func recognizeTextBlocks(
+        in imageData: Data,
+        cropping: MangaOverlayProbeCropping = .defaultValue
+    ) async throws -> (image: CGImage, blocks: [MangaOverlayOCRBlock]) {
         try await Task.detached(priority: .userInitiated) {
             let image = try Self.makeImage(from: imageData)
-            let blocksByAngle = try [0, 90, 180, 270].flatMap { angle in
-                let rotatedImage = try Self.rotatedImage(image, angle: angle)
-                return try Self.recognizeTextBlocks(in: rotatedImage, angle: angle, originalImage: image)
+            let contentRect = Self.contentCropRect(for: image, cropping: cropping)
+            let croppedImage = try Self.croppedImage(image, rect: contentRect)
+            let scaledImage = try Self.scaledImage(croppedImage, scale: Self.ocrScale)
+
+            let candidates = try [0, 90, 180, 270].flatMap { angle in
+                let rotatedImage = try Self.rotatedImage(scaledImage, angle: angle)
+                return try Self.recognizeTextCandidates(
+                    in: rotatedImage,
+                    angle: angle,
+                    scaledContentSize: CGSize(width: CGFloat(scaledImage.width), height: CGFloat(scaledImage.height)),
+                    contentOrigin: contentRect.origin,
+                    scale: Self.ocrScale
+                )
             }
-            return (image, Self.mergeDuplicateBlocks(blocksByAngle))
+            return (image, Self.mergeCandidatesIntoBlocks(candidates, imageSize: CGSize(width: image.width, height: image.height)))
         }.value
     }
 
@@ -48,7 +93,7 @@ struct MangaOverlayProbeService: Sendable {
         outputDirectory: URL
     ) async throws -> MangaOverlayProbeOutputFiles {
         try await Task.detached(priority: .userInitiated) {
-            try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+            try Self.recreateDirectory(outputDirectory)
 
             let debugURL = outputDirectory.appendingPathComponent("1_debug_boxes.png")
             let overlayURL = outputDirectory.appendingPathComponent("1_translated_overlay.png")
@@ -63,6 +108,14 @@ struct MangaOverlayProbeService: Sendable {
         }.value
     }
 
+    static func recreateDirectory(_ url: URL) throws {
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: url.path) {
+            try fileManager.removeItem(at: url)
+        }
+        try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+    }
+
     static func writeReport(_ report: MangaOverlayProbeReport, to url: URL) throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -70,11 +123,13 @@ struct MangaOverlayProbeService: Sendable {
         try data.write(to: url, options: .atomic)
     }
 
-    private static func recognizeTextBlocks(
+    private static func recognizeTextCandidates(
         in image: CGImage,
         angle: Int,
-        originalImage: CGImage
-    ) throws -> [MangaOverlayOCRBlock] {
+        scaledContentSize: CGSize,
+        contentOrigin: CGPoint,
+        scale: CGFloat
+    ) throws -> [MangaOverlayOCRCandidate] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
@@ -98,15 +153,20 @@ struct MangaOverlayProbeService: Sendable {
                 from: observation.boundingBox,
                 imageSize: CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
             )
-            let originalBox = Self.mapRectToOriginal(
+            let scaledContentBox = Self.mapRectToOriginal(
                 pixelBox,
                 angle: angle,
                 rotatedSize: CGSize(width: CGFloat(image.width), height: CGFloat(image.height)),
-                originalSize: CGSize(width: CGFloat(originalImage.width), height: CGFloat(originalImage.height))
+                originalSize: scaledContentSize
             )
-            guard !Self.isBrowserChrome(originalBox, imageHeight: CGFloat(originalImage.height)) else { return nil }
+            let originalBox = CGRect(
+                x: contentOrigin.x + scaledContentBox.minX / scale,
+                y: contentOrigin.y + scaledContentBox.minY / scale,
+                width: scaledContentBox.width / scale,
+                height: scaledContentBox.height / scale
+            ).standardized
 
-            return MangaOverlayOCRBlock(
+            return MangaOverlayOCRCandidate(
                 text: text,
                 confidence: candidate.confidence,
                 boundingBox: originalBox,
@@ -124,6 +184,50 @@ struct MangaOverlayProbeService: Sendable {
             throw MangaOverlayProbeServiceError.imageDecodeFailed
         }
         return image
+    }
+
+    private static func contentCropRect(for image: CGImage, cropping: MangaOverlayProbeCropping) -> CGRect {
+        let width = CGFloat(image.width)
+        let height = CGFloat(image.height)
+        let x = width * cropping.sideInsetRatio
+        let y = height * cropping.topRatio
+        let bottom = height * cropping.bottomRatio
+        return CGRect(
+            x: x,
+            y: y,
+            width: width - x * 2,
+            height: max(1, height - y - bottom)
+        ).integral
+    }
+
+    private static func croppedImage(_ image: CGImage, rect: CGRect) throws -> CGImage {
+        guard let cropped = image.cropping(to: rect) else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        return cropped
+    }
+
+    private static func scaledImage(_ image: CGImage, scale: CGFloat) throws -> CGImage {
+        guard scale != 1 else { return image }
+        let width = Int(CGFloat(image.width) * scale)
+        let height = Int(CGFloat(image.height) * scale)
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+        guard let scaled = context.makeImage() else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        return scaled
     }
 
     private static func rotatedImage(_ image: CGImage, angle: Int) throws -> CGImage {
@@ -222,34 +326,211 @@ struct MangaOverlayProbeService: Sendable {
         }
     }
 
-    private static func mergeDuplicateBlocks(_ blocks: [MangaOverlayOCRBlock]) -> [MangaOverlayOCRBlock] {
-        var merged: [MangaOverlayOCRBlock] = []
-        for block in blocks.sorted(by: isBetterBlock) {
-            guard !merged.contains(where: { shouldMerge($0, block) }) else { continue }
-            merged.append(block)
+    private static func mergeCandidatesIntoBlocks(
+        _ candidates: [MangaOverlayOCRCandidate],
+        imageSize: CGSize
+    ) -> [MangaOverlayOCRBlock] {
+        let cleanCandidates = deduplicateCandidates(candidates)
+            .filter { $0.boundingBox.width >= 14 && $0.boundingBox.height >= 7 }
+            .sorted { lhs, rhs in
+                if abs(lhs.boundingBox.minY - rhs.boundingBox.minY) > 18 {
+                    return lhs.boundingBox.minY < rhs.boundingBox.minY
+                }
+                return lhs.boundingBox.minX < rhs.boundingBox.minX
+            }
+
+        var clusters: [MangaOverlayOCRCluster] = []
+        for candidate in cleanCandidates {
+            if let index = clusters.firstIndex(where: { shouldCluster(candidate, with: $0) }) {
+                clusters[index].candidates.append(candidate)
+            } else {
+                clusters.append(MangaOverlayOCRCluster(candidates: [candidate]))
+            }
         }
 
-        return merged.sorted {
-            let yDelta = abs($0.boundingBox.minY - $1.boundingBox.minY)
-            if yDelta > 14 {
+        return mergeOverlappingClusters(clusters)
+            .map { cluster in
+                let ordered = orderedCandidates(cluster.candidates)
+                let text = mergeText(from: ordered)
+                let confidenceValues = ordered.compactMap(\.confidence)
+                let confidence = confidenceValues.isEmpty
+                    ? nil
+                    : confidenceValues.reduce(0, +) / Float(confidenceValues.count)
+                let angle = dominantAngle(in: ordered)
+                return MangaOverlayOCRBlock(
+                    text: text,
+                    confidence: confidence,
+                    boundingBox: clamp(cluster.boundingBox.insetBy(dx: -6, dy: -6), to: CGRect(origin: .zero, size: imageSize)),
+                    rotationAngle: angle
+                )
+            }
+            .filter { !$0.text.isEmpty }
+            .sorted {
+                if abs($0.boundingBox.minY - $1.boundingBox.minY) > 20 {
+                    return $0.boundingBox.minY < $1.boundingBox.minY
+                }
+                return $0.boundingBox.minX < $1.boundingBox.minX
+            }
+    }
+
+    private static func shouldCluster(_ candidate: MangaOverlayOCRCandidate, with cluster: MangaOverlayOCRCluster) -> Bool {
+        let candidateBox = candidate.boundingBox
+        let clusterBox = cluster.boundingBox
+        if overlapRatio(candidateBox, clusterBox) > 0.18 {
+            return true
+        }
+
+        let verticalGap = max(0, max(candidateBox.minY - clusterBox.maxY, clusterBox.minY - candidateBox.maxY))
+        let horizontalIntersection = max(0, min(candidateBox.maxX, clusterBox.maxX) - max(candidateBox.minX, clusterBox.minX))
+        let horizontalOverlap = horizontalIntersection / max(1, min(candidateBox.width, clusterBox.width))
+        let centerDeltaX = abs(candidateBox.midX - clusterBox.midX)
+
+        let sameColumn = horizontalOverlap > 0.18 || centerDeltaX < max(24, clusterBox.width * 0.28)
+        let nearbyLine = verticalGap < max(18, min(candidateBox.height, clusterBox.height) * 1.4)
+        return sameColumn && nearbyLine
+    }
+
+    private static func mergeOverlappingClusters(_ input: [MangaOverlayOCRCluster]) -> [MangaOverlayOCRCluster] {
+        var clusters = input
+        var didMerge = true
+
+        while didMerge {
+            didMerge = false
+            outer: for leftIndex in clusters.indices {
+                for rightIndex in clusters.indices where rightIndex > leftIndex {
+                    guard shouldMergeClusters(clusters[leftIndex], clusters[rightIndex]) else { continue }
+                    clusters[leftIndex].candidates.append(contentsOf: clusters[rightIndex].candidates)
+                    clusters.remove(at: rightIndex)
+                    didMerge = true
+                    break outer
+                }
+            }
+        }
+
+        return clusters
+    }
+
+    private static func shouldMergeClusters(_ lhs: MangaOverlayOCRCluster, _ rhs: MangaOverlayOCRCluster) -> Bool {
+        let lhsBox = lhs.boundingBox
+        let rhsBox = rhs.boundingBox
+        if overlapRatio(lhsBox, rhsBox) > 0.12 {
+            return true
+        }
+
+        let verticalGap = max(0, max(lhsBox.minY - rhsBox.maxY, rhsBox.minY - lhsBox.maxY))
+        let horizontalIntersection = max(0, min(lhsBox.maxX, rhsBox.maxX) - max(lhsBox.minX, rhsBox.minX))
+        let horizontalOverlap = horizontalIntersection / max(1, min(lhsBox.width, rhsBox.width))
+        let centerDeltaX = abs(lhsBox.midX - rhsBox.midX)
+        return verticalGap < 12
+            && (horizontalOverlap > 0.45 || centerDeltaX < min(lhsBox.width, rhsBox.width) * 0.35)
+    }
+
+    private static func deduplicateCandidates(_ candidates: [MangaOverlayOCRCandidate]) -> [MangaOverlayOCRCandidate] {
+        var result: [MangaOverlayOCRCandidate] = []
+        for candidate in candidates.sorted(by: isBetterCandidate) {
+            guard !result.contains(where: { isDuplicateCandidate(candidate, of: $0) }) else { continue }
+            result.append(candidate)
+        }
+        return result
+    }
+
+    private static func isBetterCandidate(_ lhs: MangaOverlayOCRCandidate, _ rhs: MangaOverlayOCRCandidate) -> Bool {
+        let lhsScore = Double(lhs.text.count) + Double(lhs.confidence ?? 0) * 8 - Double(lhs.rotationAngle == 0 ? 0 : 1)
+        let rhsScore = Double(rhs.text.count) + Double(rhs.confidence ?? 0) * 8 - Double(rhs.rotationAngle == 0 ? 0 : 1)
+        return lhsScore > rhsScore
+    }
+
+    private static func isDuplicateCandidate(_ candidate: MangaOverlayOCRCandidate, of existing: MangaOverlayOCRCandidate) -> Bool {
+        guard overlapRatio(candidate.boundingBox, existing.boundingBox) > 0.48 else { return false }
+        let lhs = normalizedOCRText(candidate.text)
+        let rhs = normalizedOCRText(existing.text)
+        return lhs == rhs || lhs.contains(rhs) || rhs.contains(lhs) || textSimilarity(lhs, rhs) > 0.76
+    }
+
+    private static func normalizedOCRText(_ text: String) -> String {
+        text
+            .lowercased()
+            .filter { $0.isLetter || $0.isNumber }
+    }
+
+    private static func textSimilarity(_ lhs: String, _ rhs: String) -> Double {
+        guard !lhs.isEmpty, !rhs.isEmpty else { return 0 }
+        let lhsBigrams = bigrams(lhs)
+        let rhsBigrams = bigrams(rhs)
+        guard !lhsBigrams.isEmpty, !rhsBigrams.isEmpty else {
+            return lhs == rhs ? 1 : 0
+        }
+        let commonCount = lhsBigrams.intersection(rhsBigrams).count
+        return Double(commonCount * 2) / Double(lhsBigrams.count + rhsBigrams.count)
+    }
+
+    private static func bigrams(_ text: String) -> Set<String> {
+        let characters = Array(text)
+        guard characters.count > 1 else { return Set(characters.map(String.init)) }
+        return Set(characters.indices.dropLast().map { index in
+            String(characters[index]) + String(characters[characters.index(after: index)])
+        })
+    }
+
+    private static func orderedCandidates(_ candidates: [MangaOverlayOCRCandidate]) -> [MangaOverlayOCRCandidate] {
+        candidates.sorted {
+            if abs($0.boundingBox.minY - $1.boundingBox.minY) > max(8, min($0.boundingBox.height, $1.boundingBox.height) * 0.7) {
                 return $0.boundingBox.minY < $1.boundingBox.minY
             }
             return $0.boundingBox.minX < $1.boundingBox.minX
         }
     }
 
-    private static func isBetterBlock(_ lhs: MangaOverlayOCRBlock, _ rhs: MangaOverlayOCRBlock) -> Bool {
-        let lhsScore = Double(lhs.text.count) + Double(lhs.confidence ?? 0) * 8
-        let rhsScore = Double(rhs.text.count) + Double(rhs.confidence ?? 0) * 8
-        return lhsScore > rhsScore
+    private static func mergeText(from candidates: [MangaOverlayOCRCandidate]) -> String {
+        var lines: [String] = []
+        var currentLine: [MangaOverlayOCRCandidate] = []
+
+        for candidate in deduplicateLineText(candidates) {
+            if let last = currentLine.last,
+               abs(candidate.boundingBox.midY - last.boundingBox.midY) > max(10, last.boundingBox.height * 0.75) {
+                lines.append(currentLine.map(\.text).joined(separator: " "))
+                currentLine = [candidate]
+            } else {
+                currentLine.append(candidate)
+            }
+        }
+        if !currentLine.isEmpty {
+            lines.append(currentLine.map(\.text).joined(separator: " "))
+        }
+
+        return lines
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
     }
 
-    private static func shouldMerge(_ lhs: MangaOverlayOCRBlock, _ rhs: MangaOverlayOCRBlock) -> Bool {
-        let intersection = lhs.boundingBox.intersection(rhs.boundingBox)
-        guard !intersection.isNull else { return false }
-        let minArea = max(1, min(lhs.boundingBox.width * lhs.boundingBox.height, rhs.boundingBox.width * rhs.boundingBox.height))
-        let overlap = (intersection.width * intersection.height) / minArea
-        return overlap > 0.35 || lhs.text.localizedCaseInsensitiveCompare(rhs.text) == .orderedSame
+    private static func deduplicateLineText(_ candidates: [MangaOverlayOCRCandidate]) -> [MangaOverlayOCRCandidate] {
+        var seen = Set<String>()
+        var output: [MangaOverlayOCRCandidate] = []
+        for candidate in candidates {
+            let key = normalizedOCRText(candidate.text)
+            guard !key.isEmpty, !seen.contains(key) else { continue }
+            seen.insert(key)
+            output.append(candidate)
+        }
+        return output
+    }
+
+    private static func dominantAngle(in candidates: [MangaOverlayOCRCandidate]) -> Int {
+        let grouped = Dictionary(grouping: candidates, by: \.rotationAngle)
+        return grouped.max { lhs, rhs in
+            let lhsScore = lhs.value.reduce(0) { $0 + $1.text.count }
+            let rhsScore = rhs.value.reduce(0) { $0 + $1.text.count }
+            return lhsScore < rhsScore
+        }?.key ?? 0
+    }
+
+    private static func overlapRatio(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+        let intersection = lhs.intersection(rhs)
+        guard !intersection.isNull else { return 0 }
+        let intersectionArea = intersection.width * intersection.height
+        let minArea = max(1, min(lhs.width * lhs.height, rhs.width * rhs.height))
+        return intersectionArea / minArea
     }
 
     private static func drawDebugBoxes(on image: CGImage, blocks: [MangaOverlayProbeBlock]) throws -> CGImage {
@@ -299,21 +580,24 @@ struct MangaOverlayProbeService: Sendable {
         actions: (CGContext, CGSize) throws -> Void
     ) throws -> CGImage {
         let size = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
-        guard let context = CGContext(
-            data: nil,
-            width: image.width,
-            height: image.height,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
-            throw MangaOverlayProbeServiceError.imageRenderFailed
-        }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
 
-        context.draw(image, in: CGRect(origin: .zero, size: size))
-        try actions(context, size)
-        guard let output = context.makeImage() else {
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        var renderError: Error?
+        let rendered = renderer.image { rendererContext in
+            UIImage(cgImage: image).draw(in: CGRect(origin: .zero, size: size))
+            do {
+                try actions(rendererContext.cgContext, size)
+            } catch {
+                renderError = error
+            }
+        }
+        if let renderError {
+            throw renderError
+        }
+        guard let output = rendered.cgImage else {
             throw MangaOverlayProbeServiceError.imageRenderFailed
         }
         return output
@@ -374,18 +658,10 @@ struct MangaOverlayProbeService: Sendable {
         }
 
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: CTFontCreateWithName("Helvetica-Bold" as CFString, fontSize, nil),
-            .foregroundColor: textColor
+            .font: UIFont.boldSystemFont(ofSize: fontSize),
+            .foregroundColor: UIColor(cgColor: textColor)
         ]
-        let attributed = NSAttributedString(string: text, attributes: attributes)
-        let line = CTLineCreateWithAttributedString(attributed)
-        context.saveGState()
-        context.textMatrix = .identity
-        context.translateBy(x: 0, y: CGFloat(context.height))
-        context.scaleBy(x: 1, y: -1)
-        context.textPosition = CGPoint(x: rect.minX + 3, y: CGFloat(context.height) - rect.maxY + (rect.height - fontSize) / 2)
-        CTLineDraw(line, context)
-        context.restoreGState()
+        (text as NSString).draw(in: rect.insetBy(dx: 3, dy: 0), withAttributes: attributes)
     }
 
     private static func wrappedLines(_ text: String, fontSize: CGFloat, maxWidth: CGFloat) -> [String] {
@@ -484,8 +760,12 @@ struct MangaOverlayProbeService: Sendable {
         let lettersOrNumbers = trimmed.unicodeScalars.filter {
             CharacterSet.alphanumerics.contains($0)
         }
+        let letters = trimmed.unicodeScalars.filter {
+            CharacterSet.letters.contains($0)
+        }
         return trimmed.count <= 1 && lettersOrNumbers.isEmpty
             || lettersOrNumbers.isEmpty
+            || letters.count < 2
             || trimmed.localizedCaseInsensitiveContains("nhentai.net")
             || trimmed.localizedCaseInsensitiveContains("of 36")
             || trimmed.range(of: #"^\d{1,2}:\d{2}$"#, options: .regularExpression) != nil

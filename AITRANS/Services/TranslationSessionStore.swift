@@ -1700,14 +1700,14 @@ final class TranslationSessionStore: ObservableObject {
         )
         let prompt: String
         let rawOutput: String
-        let translatedText: String
+        let rawTranslatedText: String
         let errorCode: String?
 
         if selectedEngine == .local {
             let probe = localService.rawTranslationProbe(for: request)
             prompt = probe.prompt
             rawOutput = probe.output
-            translatedText = probe.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            rawTranslatedText = probe.output.trimmingCharacters(in: .whitespacesAndNewlines)
             errorCode = probe.errorCode
         } else {
             prompt = debugPromptPreview(for: request) + "\n\n注意：Mock 模式为模拟输出，不是真实模型 raw prompt。"
@@ -1715,20 +1715,25 @@ final class TranslationSessionStore: ObservableObject {
                 try await mockService.prepare()
                 let result = try await mockService.generate(request)
                 rawOutput = result.text
-                translatedText = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                rawTranslatedText = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 errorCode = nil
             } catch {
                 rawOutput = ""
-                translatedText = ""
+                rawTranslatedText = ""
                 errorCode = "\(type(of: error)): \(error.localizedDescription)"
             }
         }
 
+        let translationCandidate = Self.cleanMangaProbeTranslationCandidate(rawTranslatedText)
         let checks = mangaProbeChecks(
             original: block.ocrText,
-            translation: translatedText,
+            translation: translationCandidate,
             errorCode: errorCode
         )
+        let failureReasons = mangaProbeFailureReasons(checks: checks, errorCode: errorCode)
+        let qualityNotes = mangaProbeQualityNotes(checks: checks, translation: translationCandidate)
+        let passed = Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
+        let overlayText = passed ? translationCandidate : "翻译失败\n\(block.ocrText)"
 
         return MangaOverlayProbeBlock(
             id: block.id,
@@ -1737,12 +1742,15 @@ final class TranslationSessionStore: ObservableObject {
             rotationAngleUsed: block.rotationAngleUsed,
             ocrText: block.ocrText,
             ocrConfidence: block.ocrConfidence,
-            translatedText: translatedText,
+            translatedText: overlayText,
+            translationCandidate: translationCandidate,
             prompt: prompt,
             rawOutput: rawOutput,
             errorCode: errorCode,
             checks: checks,
-            blockPassed: Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
+            failureReasons: failureReasons,
+            qualityNotes: qualityNotes,
+            blockPassed: passed
         )
     }
 
@@ -1760,6 +1768,8 @@ final class TranslationSessionStore: ObservableObject {
             translationNotEmpty: translationNotEmpty,
             translationNotEqualOriginal: translationNotEmpty && cleanTranslation.localizedCaseInsensitiveCompare(cleanOriginal) != .orderedSame,
             translationNotContainOriginal: translationNotEmpty && !cleanTranslation.localizedCaseInsensitiveContains(cleanOriginal),
+            translationNotPlaceholder: translationNotEmpty && !Self.isPlaceholderTranslationOutput(cleanTranslation),
+            translationHasEnoughChinese: translationNotEmpty && Self.cjkCharacterCount(in: cleanTranslation) >= 2,
             looksLikeChinese: translationNotEmpty && Self.containsCJK(cleanTranslation)
         )
     }
@@ -1769,8 +1779,92 @@ final class TranslationSessionStore: ObservableObject {
             && checks.ocrNotEmpty
             && checks.translationNotEmpty
             && checks.translationNotEqualOriginal
-            && checks.translationNotContainOriginal
+            && checks.translationNotPlaceholder
+            && checks.translationHasEnoughChinese
             && checks.looksLikeChinese
+    }
+
+    private func mangaProbeFailureReasons(
+        checks: MangaOverlayProbeChecks,
+        errorCode: String?
+    ) -> [String] {
+        var reasons: [String] = []
+        if let errorCode {
+            reasons.append(errorCode)
+        }
+        if !checks.ocrNotEmpty {
+            reasons.append("OCR 为空")
+        }
+        if !checks.translationNotEmpty {
+            reasons.append("翻译为空")
+        }
+        if !checks.translationNotEqualOriginal {
+            reasons.append("翻译等于原文")
+        }
+        if !checks.translationNotContainOriginal {
+            reasons.append("翻译包含完整原文")
+        }
+        if !checks.translationNotPlaceholder {
+            reasons.append("翻译是占位答复")
+        }
+        if !checks.translationHasEnoughChinese {
+            reasons.append("中文字符不足")
+        }
+        if !checks.looksLikeChinese {
+            reasons.append("翻译不像中文")
+        }
+        return reasons
+    }
+
+    private func mangaProbeQualityNotes(
+        checks: MangaOverlayProbeChecks,
+        translation: String
+    ) -> [String] {
+        var notes: [String] = []
+        if !checks.translationNotContainOriginal {
+            notes.append("translationContainsFullOCRText")
+        }
+        let latinCount = Self.latinLetterCount(in: translation)
+        let cjkCount = Self.cjkCharacterCount(in: translation)
+        if latinCount > 0 {
+            notes.append("latinLetters=\(latinCount)")
+        }
+        if cjkCount > 0 {
+            notes.append("cjkCharacters=\(cjkCount)")
+        }
+        return notes
+    }
+
+    private static func cleanMangaProbeTranslationCandidate(_ output: String) -> String {
+        let lines = output
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .map { stripProbeFormatting($0) }
+            .filter { !$0.isEmpty && $0 != "|" }
+
+        if let lastChineseLine = lines.reversed().first(where: Self.containsCJK) {
+            return lastChineseLine
+        }
+        return lines.last ?? ""
+    }
+
+    private static func stripProbeFormatting(_ text: String) -> String {
+        var output = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let wrappers = ["**", "__", "`", "\"", "'", "“", "”", "‘", "’"]
+        var didStrip = true
+        while didStrip {
+            didStrip = false
+            for wrapper in wrappers where output.hasPrefix(wrapper) && output.hasSuffix(wrapper) && output.count > wrapper.count * 2 {
+                output = String(output.dropFirst(wrapper.count).dropLast(wrapper.count))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                didStrip = true
+            }
+        }
+        if output.hasPrefix("|") {
+            output = String(output.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return output
     }
 
     private func makeMangaOverlayProbeReport(
@@ -1783,7 +1877,8 @@ final class TranslationSessionStore: ObservableObject {
             warnings.append("检测到 0 个文字块")
         }
         for block in blocks where !block.blockPassed {
-            warnings.append("block \(block.index) 判定失败")
+            let reason = block.failureReasons.isEmpty ? "未知原因" : block.failureReasons.joined(separator: "、")
+            warnings.append("block \(block.index) 判定失败：\(reason)")
         }
         if outputFiles.debugBoxesImage.isEmpty || outputFiles.overlayImage.isEmpty {
             warnings.append("输出图片未生成")
@@ -2695,8 +2790,20 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
+    private static func cjkCharacterCount(in text: String) -> Int {
+        text.unicodeScalars.count { scalar in
+            (0x4E00...0x9FFF).contains(Int(scalar.value))
+        }
+    }
+
     private static func containsLatinLetter(_ text: String) -> Bool {
         text.unicodeScalars.contains { scalar in
+            (0x41...0x5A).contains(Int(scalar.value)) || (0x61...0x7A).contains(Int(scalar.value))
+        }
+    }
+
+    private static func latinLetterCount(in text: String) -> Int {
+        text.unicodeScalars.count { scalar in
             (0x41...0x5A).contains(Int(scalar.value)) || (0x61...0x7A).contains(Int(scalar.value))
         }
     }
@@ -2707,6 +2814,14 @@ final class TranslationSessionStore: ObservableObject {
             "请提供",
             "想要翻译的文本",
             "需要翻译的文本",
+            "请将以下翻译成中文",
+            "请将以上翻译成中文",
+            "以下是翻译成中文",
+            "把以下翻译成中文",
+            "translation:",
+            "translate the following",
+            "谢谢",
+            "thank you",
             "无法翻译",
             "cannot translate",
             "please provide",

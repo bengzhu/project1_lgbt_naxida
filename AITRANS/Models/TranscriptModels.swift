@@ -245,6 +245,8 @@ struct MangaOverlayProbeChecks: Equatable, Codable, Sendable {
     var translationNotEmpty: Bool
     var translationNotEqualOriginal: Bool
     var translationNotContainOriginal: Bool
+    var translationNotPlaceholder: Bool
+    var translationHasEnoughChinese: Bool
     var looksLikeChinese: Bool
 }
 
@@ -256,10 +258,13 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var ocrText: String
     var ocrConfidence: Float?
     var translatedText: String
+    var translationCandidate: String
     var prompt: String
     var rawOutput: String
     var errorCode: String?
     var checks: MangaOverlayProbeChecks
+    var failureReasons: [String]
+    var qualityNotes: [String]
     var blockPassed: Bool
 
     init(
@@ -270,6 +275,7 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         ocrText: String,
         ocrConfidence: Float?,
         translatedText: String = "",
+        translationCandidate: String = "",
         prompt: String = "",
         rawOutput: String = "",
         errorCode: String? = nil,
@@ -278,8 +284,12 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
             translationNotEmpty: false,
             translationNotEqualOriginal: false,
             translationNotContainOriginal: false,
+            translationNotPlaceholder: false,
+            translationHasEnoughChinese: false,
             looksLikeChinese: false
         ),
+        failureReasons: [String] = [],
+        qualityNotes: [String] = [],
         blockPassed: Bool = false
     ) {
         self.id = id
@@ -289,10 +299,13 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.ocrText = ocrText
         self.ocrConfidence = ocrConfidence
         self.translatedText = translatedText
+        self.translationCandidate = translationCandidate
         self.prompt = prompt
         self.rawOutput = rawOutput
         self.errorCode = errorCode
         self.checks = checks
+        self.failureReasons = failureReasons
+        self.qualityNotes = qualityNotes
         self.blockPassed = blockPassed
     }
 }
