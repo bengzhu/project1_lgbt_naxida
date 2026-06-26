@@ -136,6 +136,7 @@ struct MangaOverlayProbeService: Sendable {
         cropping: MangaOverlayProbeCropping = .defaultValue,
         bubbleDebugImagePath: String? = nil,
         bubbleCropsImagePath: String? = nil
+        bubbleTextOverlayImagePath: String? = nil
     ) async throws -> MangaOverlayProbeOutputFiles {
         try await Task.detached(priority: .userInitiated) {
             try Self.recreateDirectory(outputDirectory)
@@ -144,6 +145,7 @@ struct MangaOverlayProbeService: Sendable {
             let overlayURL = outputDirectory.appendingPathComponent("1_translated_overlay.png")
             let ocrTextURL = outputDirectory.appendingPathComponent("1_ocr_text_overlay.png")
             let deterministicCorrectionURL = outputDirectory.appendingPathComponent("1_deterministic_correction_overlay.png")
+            let deterministicTranslationURL = outputDirectory.appendingPathComponent("1_deterministic_translation_overlay.png")
             let ocrProbeTextURL = outputDirectory.appendingPathComponent("1_ocr_probe_text.txt")
             let cropsURL = outputDirectory.appendingPathComponent("1_block_crops.png")
             let preprocessedURL = outputDirectory.appendingPathComponent("1_preprocessed_content.png")
@@ -151,11 +153,13 @@ struct MangaOverlayProbeService: Sendable {
             let overlayImage = try Self.drawTranslatedOverlay(on: image, blocks: blocks)
             let ocrTextImage = try Self.drawOCRTextOverlay(on: image, blocks: blocks)
             let deterministicCorrectionImage = try Self.drawDeterministicCorrectionOverlay(on: image, blocks: blocks)
+            let deterministicTranslationImage = try Self.drawDeterministicTranslationOverlay(on: image, blocks: blocks)
             let cropsImage = try Self.drawBlockCrops(from: image, blocks: blocks, preprocessing: preprocessing)
             try Self.writePNG(debugImage, to: debugURL)
             try Self.writePNG(overlayImage, to: overlayURL)
             try Self.writePNG(ocrTextImage, to: ocrTextURL)
             try Self.writePNG(deterministicCorrectionImage, to: deterministicCorrectionURL)
+            try Self.writePNG(deterministicTranslationImage, to: deterministicTranslationURL)
             try Self.writePNG(cropsImage, to: cropsURL)
             try Self.writeOCRProbeText(blocks: blocks, to: ocrProbeTextURL)
 
@@ -172,11 +176,13 @@ struct MangaOverlayProbeService: Sendable {
                 overlayImage: overlayURL.path,
                 ocrTextOverlayImage: ocrTextURL.path,
                 deterministicCorrectionOverlayImage: deterministicCorrectionURL.path,
+                deterministicTranslationOverlayImage: deterministicTranslationURL.path,
                 ocrProbeTextFile: ocrProbeTextURL.path,
                 blockCropsImage: cropsURL.path,
                 preprocessedContentImage: preprocessedPath,
                 bubbleDebugImage: bubbleDebugImagePath,
-                bubbleCropsImage: bubbleCropsImagePath
+                bubbleCropsImage: bubbleCropsImagePath,
+                bubbleTextOverlayImage: bubbleTextOverlayImagePath
             )
         }.value
     }
@@ -385,6 +391,8 @@ struct MangaOverlayProbeService: Sendable {
             } ?? "nil"
             let translation = block.translationCandidate.replacing("\n", with: " / ")
             let rawOutput = block.rawOutput.replacing("\n", with: " / ")
+            let deterministicTranslation = block.deterministicCorrectionTranslationCandidate?.replacing("\n", with: " / ") ?? "nil"
+            let deterministicTranslationRaw = block.deterministicCorrectionTranslationRawOutput?.replacing("\n", with: " / ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] angle=\(block.rotationAngleUsed) ocrSimilarity=\(similarity) blockPassed=\(block.blockPassed)
             rawOCR: \(raw)
@@ -394,13 +402,21 @@ struct MangaOverlayProbeService: Sendable {
             bestGroundTruth: \(truth)
             translationCandidate: \(translation)
             rawOutput: \(rawOutput)
+            deterministicCorrectionTranslationPassed: \(block.deterministicCorrectionTranslationPassed.map(String.init) ?? "nil")
+            deterministicCorrectionTranslationCandidate: \(deterministicTranslation)
+            deterministicCorrectionTranslationRawOutput: \(deterministicTranslationRaw)
+            deterministicCorrectionTranslationFailureDetail: \(block.deterministicCorrectionTranslationFailureDetail ?? "nil")
             failureCategory: \(block.failureCategory)
             failureReasons: \(block.failureReasons.joined(separator: " | "))
             translationFailureDetail: \(block.translationFailureDetail ?? "nil")
             """
         }
         .joined(separator: "\n\n")
-        try content.write(to: url, atomically: true, encoding: .utf8)
+        let cleanContent = content
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+            .joined(separator: "\n")
+        try cleanContent.write(to: url, atomically: true, encoding: .utf8)
     }
 
     private static func bubbleResults(
@@ -1460,6 +1476,35 @@ struct MangaOverlayProbeService: Sendable {
                 context.setFillColor(changed
                     ? CGColor(red: 0.97, green: 0.92, blue: 1, alpha: 0.9)
                     : CGColor(red: 1, green: 1, blue: 1, alpha: 0.8)
+                )
+                context.fill(textRect)
+                drawFittingText(text, in: textRect.insetBy(dx: 4, dy: 4), context: context)
+            }
+        }
+    }
+
+    private static func drawDeterministicTranslationOverlay(on image: CGImage, blocks: [MangaOverlayProbeBlock]) throws -> CGImage {
+        try draw(on: image) { context, _ in
+            let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            for block in blocks {
+                guard block.deterministicCorrectionTranslationPassed != nil else { continue }
+                let rect = rect(from: block.bbox)
+                let passed = block.deterministicCorrectionTranslationPassed == true
+                context.setStrokeColor(passed
+                    ? CGColor(red: 0.05, green: 0.55, blue: 0.25, alpha: 0.95)
+                    : CGColor(red: 0.85, green: 0.16, blue: 0.18, alpha: 0.95)
+                )
+                context.setLineWidth(2.5)
+                context.stroke(rect)
+
+                let correctedText = block.deterministicCorrectionText ?? ""
+                let candidate = block.deterministicCorrectionTranslationCandidate ?? ""
+                let failure = block.deterministicCorrectionTranslationFailureDetail ?? "passed"
+                let text = "#\(block.index) deterministic translation\nfix:\n\(correctedText)\ntranslation:\n\(candidate)\n\(failure)"
+                let textRect = expand(rect, by: 0.34, bounds: bounds)
+                context.setFillColor(passed
+                    ? CGColor(red: 0.9, green: 1, blue: 0.93, alpha: 0.9)
+                    : CGColor(red: 1, green: 0.92, blue: 0.92, alpha: 0.9)
                 )
                 context.fill(textRect)
                 drawFittingText(text, in: textRect.insetBy(dx: 4, dy: 4), context: context)

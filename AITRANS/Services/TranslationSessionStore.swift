@@ -1335,6 +1335,12 @@ final class TranslationSessionStore: ObservableObject {
                     self.mangaOverlayProbeBlocks = probeBlocks
                 }
 
+                self.mangaOverlayProbeMessage = "正在对确定性 OCR 纠错候选做翻译对照"
+                for index in probeBlocks.indices where Self.shouldProbeDeterministicCorrectionTranslation(probeBlocks[index]) {
+                    probeBlocks[index] = await self.translateDeterministicCorrectionCandidate(probeBlocks[index])
+                    self.mangaOverlayProbeBlocks = probeBlocks
+                }
+
                 self.mangaOverlayProbeState = .rendering
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
                 var outputFiles = try await self.mangaOverlayProbeService.renderOutputs(
@@ -1816,6 +1822,10 @@ final class TranslationSessionStore: ObservableObject {
                 deterministicCorrectionText: block.deterministicCorrectionText,
                 deterministicCorrectionAppliedRules: block.deterministicCorrectionAppliedRules,
                 deterministicCorrectionSimilarity: block.deterministicCorrectionSimilarity,
+                deterministicCorrectionTranslationCandidate: block.deterministicCorrectionTranslationCandidate,
+                deterministicCorrectionTranslationRawOutput: block.deterministicCorrectionTranslationRawOutput,
+                deterministicCorrectionTranslationPassed: block.deterministicCorrectionTranslationPassed,
+                deterministicCorrectionTranslationFailureDetail: block.deterministicCorrectionTranslationFailureDetail,
                 finalTextUsedForTranslation: block.finalTextUsedForTranslation,
                 bestGroundTruthIndex: block.bestGroundTruthIndex,
                 bestGroundTruthText: block.bestGroundTruthText,
@@ -1879,6 +1889,10 @@ final class TranslationSessionStore: ObservableObject {
             deterministicCorrectionText: block.deterministicCorrectionText,
             deterministicCorrectionAppliedRules: block.deterministicCorrectionAppliedRules,
             deterministicCorrectionSimilarity: block.deterministicCorrectionSimilarity,
+            deterministicCorrectionTranslationCandidate: block.deterministicCorrectionTranslationCandidate,
+            deterministicCorrectionTranslationRawOutput: block.deterministicCorrectionTranslationRawOutput,
+            deterministicCorrectionTranslationPassed: block.deterministicCorrectionTranslationPassed,
+            deterministicCorrectionTranslationFailureDetail: block.deterministicCorrectionTranslationFailureDetail,
             finalTextUsedForTranslation: acceptedText,
             bestGroundTruthIndex: block.bestGroundTruthIndex,
             bestGroundTruthText: block.bestGroundTruthText,
@@ -1937,6 +1951,10 @@ final class TranslationSessionStore: ObservableObject {
             deterministicCorrectionText: correction.text,
             deterministicCorrectionAppliedRules: correction.rules,
             deterministicCorrectionSimilarity: correctedSimilarity,
+            deterministicCorrectionTranslationCandidate: block.deterministicCorrectionTranslationCandidate,
+            deterministicCorrectionTranslationRawOutput: block.deterministicCorrectionTranslationRawOutput,
+            deterministicCorrectionTranslationPassed: block.deterministicCorrectionTranslationPassed,
+            deterministicCorrectionTranslationFailureDetail: block.deterministicCorrectionTranslationFailureDetail,
             finalTextUsedForTranslation: block.finalTextUsedForTranslation,
             bestGroundTruthIndex: block.bestGroundTruthIndex,
             bestGroundTruthText: block.bestGroundTruthText,
@@ -2117,6 +2135,10 @@ final class TranslationSessionStore: ObservableObject {
             deterministicCorrectionText: block.deterministicCorrectionText,
             deterministicCorrectionAppliedRules: block.deterministicCorrectionAppliedRules,
             deterministicCorrectionSimilarity: block.deterministicCorrectionSimilarity,
+            deterministicCorrectionTranslationCandidate: block.deterministicCorrectionTranslationCandidate,
+            deterministicCorrectionTranslationRawOutput: block.deterministicCorrectionTranslationRawOutput,
+            deterministicCorrectionTranslationPassed: block.deterministicCorrectionTranslationPassed,
+            deterministicCorrectionTranslationFailureDetail: block.deterministicCorrectionTranslationFailureDetail,
             finalTextUsedForTranslation: block.finalTextUsedForTranslation,
             bestGroundTruthIndex: block.bestGroundTruthIndex,
             bestGroundTruthText: block.bestGroundTruthText,
@@ -2144,6 +2166,120 @@ final class TranslationSessionStore: ObservableObject {
             ),
             ocrProbeNotes: block.ocrProbeNotes,
             blockPassed: passed
+        )
+    }
+
+    private static func shouldProbeDeterministicCorrectionTranslation(_ block: MangaOverlayProbeBlock) -> Bool {
+        guard let corrected = block.deterministicCorrectionText?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !corrected.isEmpty,
+              corrected != block.finalTextUsedForTranslation.trimmingCharacters(in: .whitespacesAndNewlines),
+              let correctedSimilarity = block.deterministicCorrectionSimilarity,
+              let originalSimilarity = block.ocrGroundTruthSimilarity else {
+            return false
+        }
+        return correctedSimilarity > originalSimilarity + 0.02
+    }
+
+    private func translateDeterministicCorrectionCandidate(_ block: MangaOverlayProbeBlock) async -> MangaOverlayProbeBlock {
+        guard let correctedText = block.deterministicCorrectionText,
+              Self.shouldProbeDeterministicCorrectionTranslation(block) else {
+            return block
+        }
+
+        let request = makeProbeRequest(
+            source: .englishUS,
+            target: .simplifiedChinese,
+            input: correctedText
+        )
+        let rawOutput: String
+        let rawTranslatedText: String
+        let errorCode: String?
+
+        if selectedEngine == .local {
+            let probe = localService.rawTranslationProbe(for: request)
+            rawOutput = probe.output
+            rawTranslatedText = probe.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            errorCode = probe.errorCode
+        } else {
+            do {
+                try await mockService.prepare()
+                let result = try await mockService.generate(request)
+                rawOutput = result.text
+                rawTranslatedText = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                errorCode = nil
+            } catch {
+                rawOutput = ""
+                rawTranslatedText = ""
+                errorCode = "\(type(of: error)): \(error.localizedDescription)"
+            }
+        }
+
+        let extraction = Self.extractMangaProbeTranslationCandidate(rawTranslatedText)
+        let candidate = extraction.candidate
+        let rawClassification = Self.classifyMangaProbeRawOutput(rawOutput, original: correctedText)
+        let checks = mangaProbeChecks(original: correctedText, translation: candidate, errorCode: errorCode)
+        let baseFailureReasons = mangaProbeFailureReasons(
+            checks: checks,
+            errorCode: errorCode,
+            original: correctedText,
+            translation: candidate
+        )
+        let translationChecksPassed = Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
+        let languageQualityReason = translationChecksPassed ? Self.mangaProbeTranslationLanguageQualityIssue(
+            original: correctedText,
+            candidate: candidate,
+            rawOutput: rawOutput,
+            rawClassification: rawClassification
+        ) : nil
+        let passed = translationChecksPassed && languageQualityReason == nil
+        let failureReasons = baseFailureReasons + [languageQualityReason].compactMap { $0 }
+        let failureDetail = passed
+            ? nil
+            : "deterministicCorrectionTranslationFailure：\(failureReasons.isEmpty ? "未知原因" : failureReasons.joined(separator: "、"))"
+
+        return MangaOverlayProbeBlock(
+            id: block.id,
+            index: block.index,
+            bbox: block.bbox,
+            rotationAngleUsed: block.rotationAngleUsed,
+            ocrText: block.ocrText,
+            ocrConfidence: block.ocrConfidence,
+            rawOcrText: block.rawOcrText,
+            preprocessingEnabled: block.preprocessingEnabled,
+            afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+            correctionEnabled: block.correctionEnabled,
+            afterCorrectionText: block.afterCorrectionText,
+            correctionRejectedReason: block.correctionRejectedReason,
+            correctionPrompt: block.correctionPrompt,
+            correctionRawOutput: block.correctionRawOutput,
+            correctionErrorCode: block.correctionErrorCode,
+            deterministicCorrectionText: block.deterministicCorrectionText,
+            deterministicCorrectionAppliedRules: block.deterministicCorrectionAppliedRules,
+            deterministicCorrectionSimilarity: block.deterministicCorrectionSimilarity,
+            deterministicCorrectionTranslationCandidate: candidate,
+            deterministicCorrectionTranslationRawOutput: rawOutput,
+            deterministicCorrectionTranslationPassed: passed,
+            deterministicCorrectionTranslationFailureDetail: failureDetail,
+            finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+            bestGroundTruthIndex: block.bestGroundTruthIndex,
+            bestGroundTruthText: block.bestGroundTruthText,
+            ocrGroundTruthSimilarity: block.ocrGroundTruthSimilarity,
+            ocrQualityLabel: block.ocrQualityLabel,
+            translatedText: block.translatedText,
+            translationCandidate: block.translationCandidate,
+            rawOutputClassification: block.rawOutputClassification,
+            candidateClassification: block.candidateClassification,
+            failureCategory: block.failureCategory,
+            prompt: block.prompt,
+            rawOutput: block.rawOutput,
+            errorCode: block.errorCode,
+            checks: block.checks,
+            failureReasons: block.failureReasons,
+            qualityNotes: block.qualityNotes,
+            translationDecisionTrace: block.translationDecisionTrace,
+            translationFailureDetail: block.translationFailureDetail,
+            ocrProbeNotes: block.ocrProbeNotes,
+            blockPassed: block.blockPassed
         )
     }
 
@@ -2325,7 +2461,7 @@ final class TranslationSessionStore: ObservableObject {
             return "候选只是翻译标签，不是真实译文"
         }
 
-        if rawClassification == "mixedChineseAndEnglish", Self.rawOutputLeavesUntranslatedEnglish(rawOutput, candidate: cleanCandidate) {
+        if Self.rawOutputLeavesUntranslatedEnglish(rawOutput, candidate: cleanCandidate) {
             return "raw 输出仍保留未翻译英文"
         }
 
@@ -2887,6 +3023,14 @@ final class TranslationSessionStore: ObservableObject {
                correctedSimilarity > originalSimilarity + 0.02 {
                 diagnostics.deterministicCorrectionImprovedBlocks.append(block.index)
             }
+            if let correctionTranslationPassed = block.deterministicCorrectionTranslationPassed {
+                diagnostics.deterministicCorrectionTranslationTestedBlocks.append(block.index)
+                if correctionTranslationPassed {
+                    diagnostics.deterministicCorrectionTranslationPassedBlocks.append(block.index)
+                } else {
+                    diagnostics.deterministicCorrectionTranslationFailedBlocks.append(block.index)
+                }
+            }
             if !block.blockPassed {
                 diagnostics.translationFailureBreakdown[block.failureCategory, default: 0] += 1
             }
@@ -2902,6 +3046,9 @@ final class TranslationSessionStore: ObservableObject {
         diagnostics.translationLanguageQualityFailedBlocks = Array(Set(diagnostics.translationLanguageQualityFailedBlocks)).sorted()
         diagnostics.translationUsableButOCRSuspectBlocks = Array(Set(diagnostics.translationUsableButOCRSuspectBlocks)).sorted()
         diagnostics.deterministicCorrectionImprovedBlocks = Array(Set(diagnostics.deterministicCorrectionImprovedBlocks)).sorted()
+        diagnostics.deterministicCorrectionTranslationTestedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationTestedBlocks)).sorted()
+        diagnostics.deterministicCorrectionTranslationPassedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationPassedBlocks)).sorted()
+        diagnostics.deterministicCorrectionTranslationFailedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationFailedBlocks)).sorted()
         return diagnostics
     }
 
@@ -2945,6 +3092,7 @@ final class TranslationSessionStore: ObservableObject {
             outputFiles.overlayImage,
             outputFiles.ocrTextOverlayImage,
             outputFiles.deterministicCorrectionOverlayImage,
+            outputFiles.deterministicTranslationOverlayImage,
             outputFiles.ocrProbeTextFile,
             outputFiles.blockCropsImage,
             outputFiles.preprocessedContentImage,
