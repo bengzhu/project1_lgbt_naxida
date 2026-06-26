@@ -437,6 +437,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
     var preprocessedContentImage: String?
     var bubbleDebugImage: String?
     var bubbleCropsImage: String?
+    var bubbleSeedDebugImage: String?
 
     init(
         debugBoxesImage: String,
@@ -445,7 +446,8 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
         blockCropsImage: String? = nil,
         preprocessedContentImage: String? = nil,
         bubbleDebugImage: String? = nil,
-        bubbleCropsImage: String? = nil
+        bubbleCropsImage: String? = nil,
+        bubbleSeedDebugImage: String? = nil
     ) {
         self.debugBoxesImage = debugBoxesImage
         self.overlayImage = overlayImage
@@ -454,6 +456,7 @@ struct MangaOverlayProbeOutputFiles: Equatable, Codable, Sendable {
         self.preprocessedContentImage = preprocessedContentImage
         self.bubbleDebugImage = bubbleDebugImage
         self.bubbleCropsImage = bubbleCropsImage
+        self.bubbleSeedDebugImage = bubbleSeedDebugImage
     }
 }
 
@@ -532,6 +535,7 @@ struct MangaOverlayFrameworkMetrics: Equatable, Codable, Sendable {
 struct MangaOverlayBubbleResult: Equatable, Codable, Sendable {
     var index: Int
     var bbox: [Double]
+    var source: String
     var text: String
     var bestGroundTruthIndex: Int?
     var bestSimilarity: Double

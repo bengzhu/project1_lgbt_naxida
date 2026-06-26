@@ -63,6 +63,7 @@ private struct MangaOverlayOCRCluster {
 private struct MangaOverlayBubbleCandidate: Equatable, Sendable {
     var index: Int
     var boundingBox: CGRect
+    var source: String
 }
 
 struct MangaOverlayProbeService: Sendable {
@@ -279,16 +280,19 @@ struct MangaOverlayProbeService: Sendable {
         customWords: [String],
         outputDirectory: URL,
         cropping: MangaOverlayProbeCropping = .defaultValue
-    ) async throws -> (comparison: MangaOverlayFrameworkComparison, debugPath: String, cropsPath: String) {
+    ) async throws -> (comparison: MangaOverlayFrameworkComparison, debugPath: String, cropsPath: String, seedDebugPath: String) {
         let start = Date.now
         return try await Task.detached(priority: .userInitiated) {
             let image = try Self.makeImage(from: imageData)
-            let bubbles = try Self.detectBubbleCandidates(in: image, cropping: cropping)
+            let bubbles = try Self.detectBubbleCandidates(in: image, cropping: cropping, customWords: customWords)
+            let seedDebugCandidates = try Self.rawBubbleSeedCandidates(in: image, cropping: cropping, customWords: customWords)
             let results = try bubbles.map { bubble in
                 let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
                 let cropRect = Self.expand(bubble.boundingBox, by: 0.08, bounds: bounds).integral
                 let cropped = try Self.croppedImage(image, rect: cropRect)
-                let processed = preprocessing.enabled ? try Self.preprocessedImage(cropped, options: preprocessing) : cropped
+                let processed = preprocessing.enabled && bubble.source == "whiteComponent"
+                    ? try Self.preprocessedImage(cropped, options: preprocessing)
+                    : cropped
                 let candidates = try Self.recognizeTextCandidates(
                     in: processed,
                     angle: 0,
@@ -302,6 +306,7 @@ struct MangaOverlayProbeService: Sendable {
                 return MangaOverlayBubbleResult(
                     index: bubble.index,
                     bbox: [bubble.boundingBox.minX, bubble.boundingBox.minY, bubble.boundingBox.width, bubble.boundingBox.height].map(Double.init),
+                    source: bubble.source,
                     text: text,
                     bestGroundTruthIndex: match.index,
                     bestSimilarity: match.similarity
@@ -313,10 +318,13 @@ struct MangaOverlayProbeService: Sendable {
             let processingTime = Int(Date.now.timeIntervalSince(start) * 1000)
             let debugURL = outputDirectory.appendingPathComponent("1_bubble_debug.png")
             let cropsURL = outputDirectory.appendingPathComponent("1_bubble_crops.png")
+            let seedDebugURL = outputDirectory.appendingPathComponent("1_bubble_seed_debug.png")
             let debugImage = try Self.drawBubbleDebug(on: image, bubbles: bubbles)
             let cropsImage = try Self.drawBubbleCrops(from: image, bubbles: bubbles, results: results, preprocessing: preprocessing)
+            let seedDebugImage = try Self.drawBubbleDebug(on: image, bubbles: seedDebugCandidates)
             try Self.writePNG(debugImage, to: debugURL)
             try Self.writePNG(cropsImage, to: cropsURL)
+            try Self.writePNG(seedDebugImage, to: seedDebugURL)
             let comparison = MangaOverlayFrameworkComparison(
                 groundTruth: groundTruth,
                 wholePage: MangaOverlayFrameworkMetrics(totalBlocksDetected: 0, processingTimeMs: 0, accuracyVsGroundTruth: 0),
@@ -334,7 +342,7 @@ struct MangaOverlayProbeService: Sendable {
                     "bubble detection uses near-white connected components, so non-white narration/effect text can be missed"
                 ]
             )
-            return (comparison, debugURL.path, cropsURL.path)
+            return (comparison, debugURL.path, cropsURL.path, seedDebugURL.path)
         }.value
     }
 
@@ -916,7 +924,8 @@ struct MangaOverlayProbeService: Sendable {
 
     private static func detectBubbleCandidates(
         in image: CGImage,
-        cropping: MangaOverlayProbeCropping
+        cropping: MangaOverlayProbeCropping,
+        customWords: [String]
     ) throws -> [MangaOverlayBubbleCandidate] {
         let contentRect = contentCropRect(for: image, cropping: cropping)
         let width = image.width
@@ -958,7 +967,8 @@ struct MangaOverlayProbeService: Sendable {
         var visited = [Bool](repeating: false, count: width * height)
         var rects: [CGRect] = []
         let minArea = max(280, Int(CGFloat(width * height) * 0.00035))
-        let maxArea = Int(CGFloat(width * height) * 0.11)
+        let maxArea = Int(CGFloat(width * height) * 0.055)
+        let imageArea = CGFloat(width * height)
         for y in minY...maxY {
             for x in minX...maxX {
                 let startIndex = y * width + x
@@ -996,8 +1006,13 @@ struct MangaOverlayProbeService: Sendable {
                 )
                 let fillRatio = CGFloat(area) / max(1, rect.width * rect.height)
                 let aspectRatio = rect.width / max(1, rect.height)
+                let rectArea = rect.width * rect.height
+                let isPageSized = rect.width > CGFloat(width) * 0.72
+                    || rect.height > contentRect.height * 0.45
+                    || rectArea > imageArea * 0.08
                 guard area >= minArea,
                       area <= maxArea,
+                      !isPageSized,
                       rect.width >= 24,
                       rect.height >= 18,
                       aspectRatio >= 0.22,
@@ -1007,9 +1022,89 @@ struct MangaOverlayProbeService: Sendable {
             }
         }
 
-        let merged = mergeBubbleRects(rects)
-        return merged.enumerated().map { index, rect in
-            MangaOverlayBubbleCandidate(index: index, boundingBox: rect)
+        let seedRects = try ocrSeedBubbleRects(
+            in: image,
+            contentRect: contentRect,
+            customWords: customWords
+        )
+        let seedOnlyRects = deduplicateSeedBubbleRects(seedRects)
+        let whiteOnlyRects = mergeBubbleRects(rects).filter { white in
+            !seedOnlyRects.contains { seed in
+                overlapRatio(seed, white) > 0.62
+            }
+        }
+        let candidates = seedOnlyRects.map { rect in
+            (rect: rect, source: "ocrSeed")
+        } + whiteOnlyRects.map { rect in
+            (rect: rect, source: "whiteComponent")
+        }
+        return candidates
+            .filter { item in
+                item.rect.width >= 34
+                    && item.rect.height >= 28
+                    && item.rect.width <= CGFloat(width) * 0.58
+                    && item.rect.height <= contentRect.height * 0.4
+            }
+            .sorted {
+                if abs($0.rect.minY - $1.rect.minY) > 20 {
+                    return $0.rect.minY < $1.rect.minY
+                }
+                return $0.rect.minX < $1.rect.minX
+            }
+            .enumerated()
+            .map { index, item in
+                MangaOverlayBubbleCandidate(index: index, boundingBox: item.rect, source: item.source)
+        }
+    }
+
+    private static func ocrSeedBubbleRects(
+        in image: CGImage,
+        contentRect: CGRect,
+        customWords: [String]
+    ) throws -> [CGRect] {
+        let croppedImage = try croppedImage(image, rect: contentRect)
+        let scaledImage = try scaledImage(croppedImage, scale: ocrScale)
+        let candidates = try [0, 90, 180, 270].flatMap { angle in
+            let rotatedImage = try rotatedImage(scaledImage, angle: angle)
+            return try recognizeTextCandidates(
+                in: rotatedImage,
+                angle: angle,
+                scaledContentSize: CGSize(width: CGFloat(scaledImage.width), height: CGFloat(scaledImage.height)),
+                contentOrigin: contentRect.origin,
+                scale: ocrScale,
+                customWords: customWords
+            )
+        }
+        let blocks = mergeCandidatesIntoBlocks(
+            candidates,
+            imageSize: CGSize(width: image.width, height: image.height)
+        )
+        let bounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)
+        return blocks
+            .map { block -> CGRect in
+                let rect = block.boundingBox
+                let longText = block.text.count > 34
+                let widthPad = max(18, rect.width * (longText ? 1.25 : 1.85))
+                let heightPad = max(20, rect.height * 0.8)
+                return clamp(rect.insetBy(dx: -widthPad, dy: -heightPad), to: bounds).integral
+            }
+            .filter { rect in
+                rect.width >= 42
+                    && rect.height >= 34
+                    && rect.width <= CGFloat(image.width) * 0.62
+                    && rect.height <= contentRect.height * 0.42
+            }
+    }
+
+    private static func rawBubbleSeedCandidates(
+        in image: CGImage,
+        cropping: MangaOverlayProbeCropping,
+        customWords: [String]
+    ) throws -> [MangaOverlayBubbleCandidate] {
+        let contentRect = contentCropRect(for: image, cropping: cropping)
+        let seedRects = try ocrSeedBubbleRects(in: image, contentRect: contentRect, customWords: customWords)
+        return seedRects.enumerated().map { index, rect in
+            MangaOverlayBubbleCandidate(index: index, boundingBox: rect, source: "ocrSeedRaw")
         }
     }
 
@@ -1017,6 +1112,23 @@ struct MangaOverlayProbeService: Sendable {
         var output: [CGRect] = []
         for rect in rects.sorted(by: { $0.minY == $1.minY ? $0.minX < $1.minX : $0.minY < $1.minY }) {
             if let index = output.firstIndex(where: { overlapRatio($0, rect) > 0.2 || $0.insetBy(dx: -8, dy: -8).intersects(rect) }) {
+                output[index] = output[index].union(rect)
+            } else {
+                output.append(rect)
+            }
+        }
+        return output.sorted {
+            if abs($0.minY - $1.minY) > 20 {
+                return $0.minY < $1.minY
+            }
+            return $0.minX < $1.minX
+        }
+    }
+
+    private static func deduplicateSeedBubbleRects(_ rects: [CGRect]) -> [CGRect] {
+        var output: [CGRect] = []
+        for rect in rects.sorted(by: { ($0.width * $0.height) > ($1.width * $1.height) }) {
+            if let index = output.firstIndex(where: { overlapRatio($0, rect) > 0.78 }) {
                 output[index] = output[index].union(rect)
             } else {
                 output.append(rect)
@@ -1066,16 +1178,23 @@ struct MangaOverlayProbeService: Sendable {
 
     private static func drawBubbleDebug(on image: CGImage, bubbles: [MangaOverlayBubbleCandidate]) throws -> CGImage {
         try draw(on: image) { context, _ in
-            context.setStrokeColor(CGColor(red: 0.1, green: 0.72, blue: 0.25, alpha: 1))
             context.setLineWidth(max(3, CGFloat(image.width) * 0.006))
             for bubble in bubbles {
+                let isSeed = bubble.source.hasPrefix("ocrSeed")
+                let strokeColor = isSeed
+                    ? CGColor(red: 0.12, green: 0.45, blue: 1, alpha: 1)
+                    : CGColor(red: 0.1, green: 0.72, blue: 0.25, alpha: 1)
+                let labelColor = isSeed
+                    ? CGColor(red: 0.1, green: 0.34, blue: 0.86, alpha: 0.9)
+                    : CGColor(red: 0.1, green: 0.65, blue: 0.22, alpha: 0.9)
+                context.setStrokeColor(strokeColor)
                 context.stroke(bubble.boundingBox)
                 drawText(
-                    "B\(bubble.index)",
-                    in: CGRect(x: bubble.boundingBox.minX, y: max(0, bubble.boundingBox.minY - 28), width: 80, height: 26),
+                    "B\(bubble.index) \(isSeed ? "seed" : "white")",
+                    in: CGRect(x: bubble.boundingBox.minX, y: max(0, bubble.boundingBox.minY - 28), width: 128, height: 26),
                     fontSize: 18,
                     textColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1),
-                    backgroundColor: CGColor(red: 0.1, green: 0.65, blue: 0.22, alpha: 0.9),
+                    backgroundColor: labelColor,
                     context: context
                 )
             }
@@ -1112,9 +1231,11 @@ struct MangaOverlayProbeService: Sendable {
                     let processed = preprocessing.enabled ? try preprocessedImage(cropped, options: preprocessing) : cropped
                     context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
                     context.fill(tileRect)
-                    drawText("B\(bubble.index)", in: CGRect(x: tileRect.minX, y: tileRect.minY, width: 70, height: 23), fontSize: 15, textColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1), backgroundColor: CGColor(red: 0.1, green: 0.65, blue: 0.22, alpha: 0.9), context: context)
+                    let result = results.first(where: { $0.index == bubble.index })
+                    let header = "B\(bubble.index) \(bubble.source) sim \(Int(((result?.bestSimilarity ?? 0) * 100).rounded()))%"
+                    drawText(header, in: CGRect(x: tileRect.minX, y: tileRect.minY, width: tileRect.width, height: 23), fontSize: 13, textColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1), backgroundColor: CGColor(red: 0.1, green: 0.36, blue: 0.74, alpha: 0.9), context: context)
                     UIImage(cgImage: processed).draw(in: aspectFitRect(imageSize: CGSize(width: processed.width, height: processed.height), bounds: CGRect(x: tileRect.minX, y: tileRect.minY + 26, width: tileRect.width, height: tileRect.height - 76)))
-                    let text = results.first(where: { $0.index == bubble.index })?.text ?? ""
+                    let text = result?.text ?? ""
                     drawText(text.isEmpty ? "<no OCR>" : text, in: CGRect(x: tileRect.minX, y: tileRect.maxY - 48, width: tileRect.width, height: 46), fontSize: 10, textColor: CGColor(red: 0, green: 0, blue: 0, alpha: 1), backgroundColor: CGColor(red: 1, green: 1, blue: 1, alpha: 0.84), context: context)
                 } catch {
                     renderError = error
