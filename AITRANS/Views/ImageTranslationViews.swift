@@ -1,7 +1,12 @@
 import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
 
 struct ImageTranslationPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @State private var showImageImporter = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var shareURL: URL?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -21,6 +26,8 @@ struct ImageTranslationPanel: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.58))
                 .fixedSize(horizontal: false, vertical: true)
+
+            actionBar
 
             if store.imageTranslationData != nil {
                 HStack(spacing: 8) {
@@ -71,6 +78,132 @@ struct ImageTranslationPanel: View {
         }
         .padding(12)
         .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image]) { result in
+            switch result {
+            case .success(let url):
+                store.translateImage(from: url)
+            case .failure(let error):
+                store.imageTranslationState = .failed
+                store.imageTranslationMessage = "图片文件选择失败：\(error.localizedDescription)"
+                store.dataTransferMessage = store.imageTranslationMessage
+            }
+        }
+        .onChange(of: selectedPhotoItem) { _, item in
+            guard let item else { return }
+            Task {
+                do {
+                    if let data = try await item.loadTransferable(type: Data.self) {
+                        await MainActor.run {
+                            store.translateImageData(data, filename: item.itemIdentifier ?? "photo-library-image.png")
+                            selectedPhotoItem = nil
+                        }
+                    }
+                } catch {
+                    await MainActor.run {
+                        store.imageTranslationState = .failed
+                        store.imageTranslationMessage = "照片读取失败：\(error.localizedDescription)"
+                        store.dataTransferMessage = store.imageTranslationMessage
+                        selectedPhotoItem = nil
+                    }
+                }
+            }
+        }
+        .sheet(item: $shareURL) { url in
+            ShareSheet(activityItems: [url])
+        }
+    }
+
+    private var actionBar: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                actionButtons
+            }
+
+            VStack(spacing: 8) {
+                actionButtons
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        photoPickerButton(title: store.imageTranslationData == nil ? "选择照片" : "换照片")
+
+        Button {
+            showImageImporter = true
+        } label: {
+            Label("文件", systemImage: "folder")
+                .font(.system(size: 12, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .frame(height: 38)
+                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .disabled(isRunning)
+        .opacity(isRunning ? 0.55 : 1)
+
+        if isRunning {
+            Button {
+                store.cancelImageTranslation()
+            } label: {
+                Label("取消", systemImage: "xmark.circle.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 38)
+                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.warning)
+        } else if store.imageTranslationState == .failed {
+            Button {
+                store.retryImageTranslation()
+            } label: {
+                Label("重试", systemImage: "arrow.clockwise")
+                    .font(.system(size: 12, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 38)
+                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+        }
+
+        if let exportURL = store.imageTranslationExportURL {
+            Button {
+                shareURL = exportURL
+            } label: {
+                Label("分享结果", systemImage: "square.and.arrow.up")
+                    .font(.system(size: 12, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 38)
+                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+        }
+    }
+
+    private var isRunning: Bool {
+        switch store.imageTranslationState {
+        case .loading, .recognizing, .translating:
+            true
+        case .idle, .translated, .failed:
+            false
+        }
+    }
+
+    private func photoPickerButton(title: String) -> some View {
+        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+            Label(title, systemImage: "photo.on.rectangle")
+                .font(.system(size: 12, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .frame(height: 38)
+                .background(Color.appAccent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .foregroundStyle(.white)
+        .disabled(isRunning)
+        .opacity(isRunning ? 0.55 : 1)
     }
 
     private var icon: String {
@@ -276,4 +409,18 @@ private struct ImageTranslationBlockRow: View {
         .padding(9)
         .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
+}
+
+private struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+extension URL: @retroactive Identifiable {
+    public var id: String { absoluteString }
 }
