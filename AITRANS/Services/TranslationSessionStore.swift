@@ -1339,6 +1339,7 @@ final class TranslationSessionStore: ObservableObject {
                     )
                     outputFiles.bubbleDebugImage = bubbleProbe.debugPath
                     outputFiles.bubbleCropsImage = bubbleProbe.cropsPath
+                    outputFiles.bubbleSeedDebugImage = bubbleProbe.seedDebugPath
                     frameworkComparison = self.makeFrameworkComparison(
                         wholePageBlocks: probeBlocks,
                         wholePageProcessingTimeMs: wholePageProcessingTimeMs,
@@ -1938,12 +1939,11 @@ final class TranslationSessionStore: ObservableObject {
             || Self.containsLikelyOCRError(in: block.finalTextUsedForTranslation)
             || (block.ocrGroundTruthSimilarity ?? 1) < 0.72
         let passed = Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
-            && !hasLikelyOCRIssue
-            && rawClassification != "placeholder"
         let failureCategory = Self.mangaProbeFailureCategory(
             passed: passed,
             rawClassification: rawClassification,
             candidateClassification: candidateClassification,
+            translationChecksPassed: Self.mangaProbeBlockPassed(checks, errorCode: errorCode),
             hasLikelyOCRIssue: hasLikelyOCRIssue
         )
         let overlayText = passed ? translationCandidate : "翻译失败\n\(block.finalTextUsedForTranslation)"
@@ -2169,16 +2169,20 @@ final class TranslationSessionStore: ObservableObject {
         passed: Bool,
         rawClassification: String,
         candidateClassification: String,
+        translationChecksPassed: Bool,
         hasLikelyOCRIssue: Bool
     ) -> String {
         if passed {
             return "passed"
         }
-        if hasLikelyOCRIssue {
+        if hasLikelyOCRIssue, translationChecksPassed {
             return "ocrInputSuspect"
         }
         if candidateClassification == "chinese" || candidateClassification == "mixedChineseAndEnglish" {
             return "ruleFalseFailureSuspected"
+        }
+        if hasLikelyOCRIssue {
+            return "ocrInputSuspect"
         }
         if rawClassification == "chinese" || rawClassification == "mixedChineseAndEnglish" {
             return "candidateExtractionOrRule"
@@ -2502,8 +2506,12 @@ final class TranslationSessionStore: ObservableObject {
             if !candidate.isEmpty, !Self.containsCJK(candidate) {
                 diagnostics.nonChineseCandidates += 1
             }
-            if block.failureCategory == "ruleFalseFailureSuspected" {
+            let candidateHasUsableCJK = block.candidateClassification == "chinese"
+                || block.candidateClassification == "mixedChineseAndEnglish"
+            if candidateHasUsableCJK, !block.blockPassed {
                 diagnostics.cjkButFailedCandidates += 1
+            }
+            if block.failureCategory == "ruleFalseFailureSuspected" {
                 diagnostics.likelyRuleFalseFailureBlocks.append(block.index)
             }
             if let similarity = block.ocrGroundTruthSimilarity, similarity < 0.72 {
@@ -3527,8 +3535,11 @@ final class TranslationSessionStore: ObservableObject {
         let markers = [
             "请您提供",
             "请提供",
+            "请你提供",
             "想要翻译的文本",
             "需要翻译的文本",
+            "更多上下文",
+            "更好地理解",
             "请将以下翻译成中文",
             "请将以上翻译成中文",
             "请将以下翻译转换成中文",
