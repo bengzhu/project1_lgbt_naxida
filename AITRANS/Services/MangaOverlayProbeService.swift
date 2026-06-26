@@ -60,6 +60,11 @@ private struct MangaOverlayOCRCluster {
     }
 }
 
+private struct MangaOverlayBubbleCandidate: Equatable, Sendable {
+    var index: Int
+    var boundingBox: CGRect
+}
+
 struct MangaOverlayProbeService: Sendable {
     private static let ocrScale: CGFloat = 2
 
@@ -127,7 +132,9 @@ struct MangaOverlayProbeService: Sendable {
         blocks: [MangaOverlayProbeBlock],
         outputDirectory: URL,
         preprocessing: MangaOverlayPreprocessingOptions = .defaultValue,
-        cropping: MangaOverlayProbeCropping = .defaultValue
+        cropping: MangaOverlayProbeCropping = .defaultValue,
+        bubbleDebugImagePath: String? = nil,
+        bubbleCropsImagePath: String? = nil
     ) async throws -> MangaOverlayProbeOutputFiles {
         try await Task.detached(priority: .userInitiated) {
             try Self.recreateDirectory(outputDirectory)
@@ -159,7 +166,9 @@ struct MangaOverlayProbeService: Sendable {
                 overlayImage: overlayURL.path,
                 ocrTextOverlayImage: ocrTextURL.path,
                 blockCropsImage: cropsURL.path,
-                preprocessedContentImage: preprocessedPath
+                preprocessedContentImage: preprocessedPath,
+                bubbleDebugImage: bubbleDebugImagePath,
+                bubbleCropsImage: bubbleCropsImagePath
             )
         }.value
     }
@@ -260,6 +269,72 @@ struct MangaOverlayProbeService: Sendable {
                     error: "RecognizeTextRequest requires iOS 18+"
                 )
             }
+        }.value
+    }
+
+    func runBubbleFirstProbe(
+        imageData: Data,
+        groundTruth: [String],
+        preprocessing: MangaOverlayPreprocessingOptions,
+        customWords: [String],
+        outputDirectory: URL,
+        cropping: MangaOverlayProbeCropping = .defaultValue
+    ) async throws -> (comparison: MangaOverlayFrameworkComparison, debugPath: String, cropsPath: String) {
+        let start = Date.now
+        return try await Task.detached(priority: .userInitiated) {
+            let image = try Self.makeImage(from: imageData)
+            let bubbles = try Self.detectBubbleCandidates(in: image, cropping: cropping)
+            let results = try bubbles.map { bubble in
+                let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+                let cropRect = Self.expand(bubble.boundingBox, by: 0.08, bounds: bounds).integral
+                let cropped = try Self.croppedImage(image, rect: cropRect)
+                let processed = preprocessing.enabled ? try Self.preprocessedImage(cropped, options: preprocessing) : cropped
+                let candidates = try Self.recognizeTextCandidates(
+                    in: processed,
+                    angle: 0,
+                    scaledContentSize: CGSize(width: CGFloat(processed.width), height: CGFloat(processed.height)),
+                    contentOrigin: .zero,
+                    scale: 1,
+                    customWords: customWords
+                )
+                let text = Self.mergeText(from: Self.orderedCandidates(candidates))
+                let match = Self.bestGroundTruthMatch(text: text, groundTruth: groundTruth)
+                return MangaOverlayBubbleResult(
+                    index: bubble.index,
+                    bbox: [bubble.boundingBox.minX, bubble.boundingBox.minY, bubble.boundingBox.width, bubble.boundingBox.height].map(Double.init),
+                    text: text,
+                    bestGroundTruthIndex: match.index,
+                    bestSimilarity: match.similarity
+                )
+            }
+
+            let bubbleTexts = results.map(\.text).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            let bubbleAccuracy = Self.averageBestSimilarity(texts: bubbleTexts, groundTruth: groundTruth)
+            let processingTime = Int(Date.now.timeIntervalSince(start) * 1000)
+            let debugURL = outputDirectory.appendingPathComponent("1_bubble_debug.png")
+            let cropsURL = outputDirectory.appendingPathComponent("1_bubble_crops.png")
+            let debugImage = try Self.drawBubbleDebug(on: image, bubbles: bubbles)
+            let cropsImage = try Self.drawBubbleCrops(from: image, bubbles: bubbles, results: results, preprocessing: preprocessing)
+            try Self.writePNG(debugImage, to: debugURL)
+            try Self.writePNG(cropsImage, to: cropsURL)
+            let comparison = MangaOverlayFrameworkComparison(
+                groundTruth: groundTruth,
+                wholePage: MangaOverlayFrameworkMetrics(totalBlocksDetected: 0, processingTimeMs: 0, accuracyVsGroundTruth: 0),
+                bubbleFirst: MangaOverlayFrameworkMetrics(
+                    totalBlocksDetected: results.count,
+                    processingTimeMs: processingTime,
+                    accuracyVsGroundTruth: bubbleAccuracy
+                ),
+                blocksOnlyInWholePage: [],
+                blocksOnlyInBubbleFirst: [],
+                blocksFoundByBoth: 0,
+                bubbleResults: results,
+                notes: [
+                    "bubble-first is independent probe path; it does not replace whole-page OCR",
+                    "bubble detection uses near-white connected components, so non-white narration/effect text can be missed"
+                ]
+            )
+            return (comparison, debugURL.path, cropsURL.path)
         }.value
     }
 
@@ -837,6 +912,222 @@ struct MangaOverlayProbeService: Sendable {
         let intersectionArea = intersection.width * intersection.height
         let minArea = max(1, min(lhs.width * lhs.height, rhs.width * rhs.height))
         return intersectionArea / minArea
+    }
+
+    private static func detectBubbleCandidates(
+        in image: CGImage,
+        cropping: MangaOverlayProbeCropping
+    ) throws -> [MangaOverlayBubbleCandidate] {
+        let contentRect = contentCropRect(for: image, cropping: cropping)
+        let width = image.width
+        let height = image.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+        var pixels = [UInt8](repeating: 255, count: height * bytesPerRow)
+        guard let context = CGContext(
+            data: &pixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+
+        var mask = [Bool](repeating: false, count: width * height)
+        let minX = max(0, Int(contentRect.minX))
+        let maxX = min(width - 1, Int(contentRect.maxX))
+        let minY = max(0, Int(contentRect.minY))
+        let maxY = min(height - 1, Int(contentRect.maxY))
+        for y in minY...maxY {
+            for x in minX...maxX {
+                let offset = y * bytesPerRow + x * bytesPerPixel
+                let red = Int(pixels[offset])
+                let green = Int(pixels[offset + 1])
+                let blue = Int(pixels[offset + 2])
+                let maxChannel = max(red, max(green, blue))
+                let minChannel = min(red, min(green, blue))
+                let luminance = (red * 299 + green * 587 + blue * 114) / 1000
+                mask[y * width + x] = luminance > 218 && (maxChannel - minChannel) < 34
+            }
+        }
+
+        var visited = [Bool](repeating: false, count: width * height)
+        var rects: [CGRect] = []
+        let minArea = max(280, Int(CGFloat(width * height) * 0.00035))
+        let maxArea = Int(CGFloat(width * height) * 0.11)
+        for y in minY...maxY {
+            for x in minX...maxX {
+                let startIndex = y * width + x
+                guard mask[startIndex], !visited[startIndex] else { continue }
+                var queue = [(x, y)]
+                visited[startIndex] = true
+                var cursor = 0
+                var componentMinX = x
+                var componentMaxX = x
+                var componentMinY = y
+                var componentMaxY = y
+                var area = 0
+                while cursor < queue.count {
+                    let (currentX, currentY) = queue[cursor]
+                    cursor += 1
+                    area += 1
+                    componentMinX = min(componentMinX, currentX)
+                    componentMaxX = max(componentMaxX, currentX)
+                    componentMinY = min(componentMinY, currentY)
+                    componentMaxY = max(componentMaxY, currentY)
+                    for (nextX, nextY) in [(currentX + 1, currentY), (currentX - 1, currentY), (currentX, currentY + 1), (currentX, currentY - 1)] {
+                        guard nextX >= minX, nextX <= maxX, nextY >= minY, nextY <= maxY else { continue }
+                        let nextIndex = nextY * width + nextX
+                        guard mask[nextIndex], !visited[nextIndex] else { continue }
+                        visited[nextIndex] = true
+                        queue.append((nextX, nextY))
+                    }
+                }
+
+                let rect = CGRect(
+                    x: componentMinX,
+                    y: componentMinY,
+                    width: max(1, componentMaxX - componentMinX + 1),
+                    height: max(1, componentMaxY - componentMinY + 1)
+                )
+                let fillRatio = CGFloat(area) / max(1, rect.width * rect.height)
+                let aspectRatio = rect.width / max(1, rect.height)
+                guard area >= minArea,
+                      area <= maxArea,
+                      rect.width >= 24,
+                      rect.height >= 18,
+                      aspectRatio >= 0.22,
+                      aspectRatio <= 6.2,
+                      fillRatio >= 0.28 else { continue }
+                rects.append(expand(rect, by: 0.1, bounds: CGRect(x: 0, y: 0, width: width, height: height)))
+            }
+        }
+
+        let merged = mergeBubbleRects(rects)
+        return merged.enumerated().map { index, rect in
+            MangaOverlayBubbleCandidate(index: index, boundingBox: rect)
+        }
+    }
+
+    private static func mergeBubbleRects(_ rects: [CGRect]) -> [CGRect] {
+        var output: [CGRect] = []
+        for rect in rects.sorted(by: { $0.minY == $1.minY ? $0.minX < $1.minX : $0.minY < $1.minY }) {
+            if let index = output.firstIndex(where: { overlapRatio($0, rect) > 0.2 || $0.insetBy(dx: -8, dy: -8).intersects(rect) }) {
+                output[index] = output[index].union(rect)
+            } else {
+                output.append(rect)
+            }
+        }
+        return output.sorted {
+            if abs($0.minY - $1.minY) > 20 {
+                return $0.minY < $1.minY
+            }
+            return $0.minX < $1.minX
+        }
+    }
+
+    static func bestGroundTruthMatch(text: String, groundTruth: [String]) -> (index: Int?, similarity: Double) {
+        let normalizedText = normalizedOCRText(text)
+        guard !normalizedText.isEmpty else { return (nil, 0) }
+        var bestIndex: Int?
+        var bestScore = 0.0
+        for (index, truth) in groundTruth.enumerated() {
+            let score = textSimilarity(normalizedText, normalizedOCRText(truth))
+            if score > bestScore {
+                bestScore = score
+                bestIndex = index
+            }
+        }
+        return (bestIndex, bestScore)
+    }
+
+    static func averageBestSimilarity(texts: [String], groundTruth: [String]) -> Double {
+        guard !groundTruth.isEmpty else { return 0 }
+        let scores = groundTruth.map { truth in
+            texts.map { textSimilarity(normalizedOCRText($0), normalizedOCRText(truth)) }.max() ?? 0
+        }
+        return scores.reduce(0, +) / Double(scores.count)
+    }
+
+    static func matchedGroundTruthIndexes(texts: [String], groundTruth: [String], threshold: Double = 0.55) -> Set<Int> {
+        var matched = Set<Int>()
+        for text in texts {
+            let match = bestGroundTruthMatch(text: text, groundTruth: groundTruth)
+            if let index = match.index, match.similarity >= threshold {
+                matched.insert(index)
+            }
+        }
+        return matched
+    }
+
+    private static func drawBubbleDebug(on image: CGImage, bubbles: [MangaOverlayBubbleCandidate]) throws -> CGImage {
+        try draw(on: image) { context, _ in
+            context.setStrokeColor(CGColor(red: 0.1, green: 0.72, blue: 0.25, alpha: 1))
+            context.setLineWidth(max(3, CGFloat(image.width) * 0.006))
+            for bubble in bubbles {
+                context.stroke(bubble.boundingBox)
+                drawText(
+                    "B\(bubble.index)",
+                    in: CGRect(x: bubble.boundingBox.minX, y: max(0, bubble.boundingBox.minY - 28), width: 80, height: 26),
+                    fontSize: 18,
+                    textColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1),
+                    backgroundColor: CGColor(red: 0.1, green: 0.65, blue: 0.22, alpha: 0.9),
+                    context: context
+                )
+            }
+        }
+    }
+
+    private static func drawBubbleCrops(
+        from image: CGImage,
+        bubbles: [MangaOverlayBubbleCandidate],
+        results: [MangaOverlayBubbleResult],
+        preprocessing: MangaOverlayPreprocessingOptions
+    ) throws -> CGImage {
+        let tileWidth: CGFloat = 280
+        let tileHeight: CGFloat = 210
+        let columns = 2
+        let rows = max(1, Int(ceil(Double(max(bubbles.count, 1)) / Double(columns))))
+        let canvasSize = CGSize(width: tileWidth * CGFloat(columns), height: tileHeight * CGFloat(rows))
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: canvasSize, format: format)
+        var renderError: Error?
+        let rendered = renderer.image { rendererContext in
+            let context = rendererContext.cgContext
+            context.setFillColor(CGColor(red: 0.94, green: 0.95, blue: 0.94, alpha: 1))
+            context.fill(CGRect(origin: .zero, size: canvasSize))
+            for bubble in bubbles {
+                let column = bubble.index % columns
+                let row = bubble.index / columns
+                let tileRect = CGRect(x: CGFloat(column) * tileWidth + 8, y: CGFloat(row) * tileHeight + 8, width: tileWidth - 16, height: tileHeight - 16)
+                do {
+                    let cropRect = expand(bubble.boundingBox, by: 0.08, bounds: CGRect(x: 0, y: 0, width: image.width, height: image.height)).integral
+                    let cropped = try croppedImage(image, rect: cropRect)
+                    let processed = preprocessing.enabled ? try preprocessedImage(cropped, options: preprocessing) : cropped
+                    context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+                    context.fill(tileRect)
+                    drawText("B\(bubble.index)", in: CGRect(x: tileRect.minX, y: tileRect.minY, width: 70, height: 23), fontSize: 15, textColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1), backgroundColor: CGColor(red: 0.1, green: 0.65, blue: 0.22, alpha: 0.9), context: context)
+                    UIImage(cgImage: processed).draw(in: aspectFitRect(imageSize: CGSize(width: processed.width, height: processed.height), bounds: CGRect(x: tileRect.minX, y: tileRect.minY + 26, width: tileRect.width, height: tileRect.height - 76)))
+                    let text = results.first(where: { $0.index == bubble.index })?.text ?? ""
+                    drawText(text.isEmpty ? "<no OCR>" : text, in: CGRect(x: tileRect.minX, y: tileRect.maxY - 48, width: tileRect.width, height: 46), fontSize: 10, textColor: CGColor(red: 0, green: 0, blue: 0, alpha: 1), backgroundColor: CGColor(red: 1, green: 1, blue: 1, alpha: 0.84), context: context)
+                } catch {
+                    renderError = error
+                }
+            }
+        }
+        if let renderError {
+            throw renderError
+        }
+        guard let output = rendered.cgImage else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        return output
     }
 
     private static func drawDebugBoxes(on image: CGImage, blocks: [MangaOverlayProbeBlock]) throws -> CGImage {

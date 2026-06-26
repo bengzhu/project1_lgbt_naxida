@@ -150,9 +150,11 @@ test/
 - `blocks[].prompt` / `rawOutput` / `errorCode`：真实输入输出或错误。
 - `blocks[].checks`：`ocrNotEmpty`、`translationNotEmpty`、`translationNotEqualOriginal`、`translationNotContainOriginal`、`looksLikeChinese`。
 - `blocks[].translationCandidate`：从 raw output 中抽取出来用于质量判定和覆盖绘制的候选译文。
+- `blocks[].rawOutputClassification` / `candidateClassification` / `failureCategory`：分别记录模型 raw 输出类型、候选译文类型和失败归因。常见值包括 `chinese`、`nonChinese`、`placeholder`、`repeatedOriginal`、`symbolsOnly`、`modelOutputFailure`、`ocrInputSuspect`、`ruleFalseFailureSuspected`。
+- `blocks[].bestGroundTruthText` / `ocrGroundTruthSimilarity` / `ocrQualityLabel`：把当前 OCR 文本和 `test/1.ground_truth.json` 的人工真值做相似度对照，用于判断翻译差是否先由 OCR 输入错误导致。
 - `blocks[].failureReasons`：失败块的具体原因，例如 `翻译等于原文`、`翻译是占位答复`、`中文字符不足`、`翻译不像中文`。
 - `blocks[].qualityNotes`：非硬失败排查线索，例如 `translationContainsFullOCRText`、`latinLetters=27`、`cjkCharacters=4`。
-- `diagnostics`：本轮整体排查汇总，统计通过/失败块、空候选、占位输出、复读原文、非中文输出、疑似 OCR 问题块、疑似规则误伤块。
+- `diagnostics`：本轮整体排查汇总，统计通过/失败块、空候选、占位输出、复读原文、非中文输出、raw 输出类型、候选抽取丢弃、平均 OCR 真值相似度、疑似 OCR 问题块、疑似规则误伤块。
 - `configuration.currentBlockSource`：记录当前块来源。当前是整图 OCR observations 的空间聚类/去重，即 (a)，不是图像层面的气泡连通域检测。
 - `configuration.preprocessing`：记录本轮预处理增强开关，包含灰度、对比亮度、自适应二值化、裁切放大、锐化和放大倍数。
 - `configuration.customLexiconEnabled` / `customLexicon`：记录 Vision `customWords` 是否启用和本轮词表。
@@ -171,6 +173,8 @@ test/
 - `blockPassed = false` 的块也必须出现在覆盖图上，并保留失败原因，不能静默隐藏。
 - 每次运行会先清空 App 沙盒 `Application Support/AITRANS/Output/`，`scripts/export-probe-output.sh` 也会先清空项目根 `output/`，避免新旧 PNG / JSON 混在一起。
 - 输出图片包括 `1_debug_boxes.png`、`1_translated_overlay.png`、`1_ocr_text_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png`。其中 `1_block_crops.png` 是块裁切放大预处理拼图，用于目测二值化/锐化是否过激。
+- 翻译失败排查规范：先看 `failureCategory`，再看 `rawOutputClassification` 和 `candidateClassification`。如果 `failureCategory = ocrInputSuspect`，优先修 OCR/合并/裁切；如果是 `modelOutputFailure`，优先换模型、调采样或 prompt；如果是 `ruleFalseFailureSuspected`，才优先放宽判定规则。不要只看覆盖图猜测失败原因。
+- OCR 质量排查规范：先按 `ocrGroundTruthSimilarity` 从低到高看 `blocks[].finalTextUsedForTranslation`。本探针用 `test/1.ground_truth.json` 做真值；换测试图时应同步更新真值文件，否则相似度只作参考。
 
 模拟器跑完后，把沙盒输出导出到项目根 `output/`：
 
@@ -310,6 +314,12 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v7：Vision OCR 接入 `customWords` 自定义词表，当前默认词表为 `Senpai`、`City Battler`、`Tournament`、`Ren`、`Battler`；主流程启用词表，同时探针独立跑词表开/关对比，写入 `lexiconComparison`。
 - 本次未提交工作区 v7 实测：iPhone 17 Pro 模拟器跑 `test/1.png`，词表开/关最终合并块数均为 12，`changedBlockIndexes = []`。结论：本图里自定义词表没有改变最终块文本；它适合给专有名词/语言校正提供提示，不解决 `FEW`->`PEN`、`TOURNAMENT`->`TOUINAMENT` 这类常见词误识别。
 - 本次未提交工作区 v7：新增 iOS 18+ Swift 原生 `RecognizeTextRequest` 对比探针，用 `@available(iOS 18.0, *)` 隔离，不替换旧 `VNRecognizeTextRequest` 主流程。iOS 26.5 模拟器实测新 API 可用，0° OCR observation 数旧/新均为 82，样本序列一致，`changed = false`。
+- 本次未提交工作区 v8：新增 `test/1.ground_truth.json`，并把 `test/1.png` 的整页 OCR 与独立 bubble-first 近白连通域探针做框架对比。整页路径仍是主流程；bubble-first 当前只作对照，不替换主路径。
+- 本次未提交工作区 v8 实测：整页路径 `totalBlocksDetected = 12`、`accuracyVsGroundTruth = 0.8378`、耗时约 65s；bubble-first 只检测到 2 块、`accuracyVsGroundTruth = 0.3857`、耗时约 31s。结论：现阶段真正气泡检测仍不成熟，近白连通域会把大面积页面合成一个巨大块，后续需要更强的气泡边界检测。
+- 本次未提交工作区 v9：确认输出清理链路：探针开始重建 App 沙盒 `Output/`，渲染时再次重建，导出脚本重建项目根 `output/`；本轮导出后 `output/` 只有 8 个最新文件：`probe_report.json`、`1_debug_boxes.png`、`1_translated_overlay.png`、`1_ocr_text_overlay.png`、`1_block_crops.png`、`1_preprocessed_content.png`、`1_bubble_debug.png`、`1_bubble_crops.png`。
+- 本次未提交工作区 v9：`probe_report.json` 增加 `rawOutputClassification`、`candidateClassification`、`failureCategory`、`bestGroundTruthText`、`ocrGroundTruthSimilarity`、`ocrQualityLabel`，并在 `diagnostics` 汇总 raw 输出失败、候选抽取、平均 OCR 相似度和低相似度块。候选抽取修复 `| 谢谢！` 这类管道前缀输出被错误抽空的问题；占位规则补充 `翻译成中文`、`最常用的翻译`、`我个人觉得` 等解释型输出。
+- 本次未提交工作区 v9 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 后 `totalBlocksDetected = 12`、`passedBlocks = 3`、`failedBlocks = 9`、`averageOCRGroundTruthSimilarity = 0.6846`、`likelyRuleFalseFailureBlocks = []`、`candidateExtractorDroppedRawOutputs = 0`。结论：本轮未发现“真实翻译成功但规则太严误杀”的块；主要问题是 OCR 输入错误和当前 Gemma 270M raw 输出不稳定。
+- 本次未提交工作区 v9 OCR 排查结果：低相似/可疑块集中在 `THE CITY RATTLER / STATE IN A PEN DAYS.`、`GET PESULTE / SAMING CLUE TO SAVE THE / POOM BENG`、`What Whet are / every you! / talking`、`City Battler / Offline. / Tournament` 等。即使 OCR 基本找到了位置，部分英文文本本身已经错到会误导翻译，因此翻译质量差不能只靠放宽中文判定解决。
 
 ## 后续对话指引
 
