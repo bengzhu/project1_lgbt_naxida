@@ -409,6 +409,8 @@ private struct DeveloperConsoleView: View {
                         : store.developerProbeError
                 )
 
+                MangaOverlayProbePanel()
+
                 SecondaryActionButton(icon: "lock.fill", title: "关闭开发者模式", tint: Color.warning) {
                     store.disableDeveloperMode()
                 }
@@ -417,6 +419,115 @@ private struct DeveloperConsoleView: View {
             .padding(.top, 12)
             .padding(.bottom, 92)
         }
+    }
+}
+
+private struct MangaOverlayProbePanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(
+                title: "漫画覆盖翻译探针",
+                subtitle: "test/1.png -> Output",
+                icon: "rectangle.3.group.bubble.left.fill"
+            )
+
+            HStack(spacing: 10) {
+                PrimaryActionButton(
+                    icon: store.isRunningMangaOverlayProbe ? "hourglass" : "photo.badge.checkmark",
+                    title: store.isRunningMangaOverlayProbe ? "运行中" : "运行漫画覆盖翻译探针"
+                ) {
+                    store.runMangaOverlayProbe()
+                }
+                .disabled(store.isRunningMangaOverlayProbe)
+                .opacity(store.isRunningMangaOverlayProbe ? 0.62 : 1)
+            }
+
+            Text(store.mangaOverlayProbeMessage)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(statusTint)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let report = store.mangaOverlayProbeReport {
+                RawProbeSnippet(
+                    title: "report",
+                    text: "source=\(report.sourceImage)\nengine=\(report.engineUsed)\nblocks=\(report.totalBlocksDetected)\noverallPassed=\(report.overallPassed)\ndebug=\(report.outputFiles.debugBoxesImage)\noverlay=\(report.outputFiles.overlayImage)\nwarnings=\(report.warnings.joined(separator: " | "))"
+                )
+            }
+
+            LazyVStack(spacing: 10) {
+                ForEach(store.mangaOverlayProbeBlocks) { block in
+                    MangaOverlayProbeBlockCard(block: block)
+                }
+            }
+        }
+        .panelStyle()
+    }
+
+    private var statusTint: Color {
+        switch store.mangaOverlayProbeState {
+        case .completed:
+            Color.success
+        case .failed:
+            Color.danger
+        case .loading, .recognizing, .translating, .rendering:
+            Color.warning
+        case .idle:
+            .white.opacity(0.58)
+        }
+    }
+}
+
+private struct MangaOverlayProbeBlockCard: View {
+    let block: MangaOverlayProbeBlock
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("#\(block.index) · \(block.rotationAngleUsed) deg")
+                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    Text(block.ocrText)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Text(block.blockPassed ? "PASS" : "FAIL")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(block.blockPassed ? Color.success : Color.danger)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.white.opacity(0.07), in: Capsule())
+            }
+
+            Text(metadataText)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.46))
+
+            if !block.translatedText.isEmpty {
+                RawProbeSnippet(title: "translation", text: block.translatedText)
+            }
+            if !block.prompt.isEmpty {
+                RawProbeSnippet(title: "prompt", text: block.prompt)
+            }
+            if let errorCode = block.errorCode, !errorCode.isEmpty {
+                RawProbeSnippet(title: "error", text: errorCode)
+            } else if !block.rawOutput.isEmpty {
+                RawProbeSnippet(title: "raw output", text: block.rawOutput)
+            }
+        }
+        .padding(12)
+        .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var metadataText: String {
+        let bbox = block.bbox.map { String(Int($0)) }.joined(separator: ",")
+        let confidence = block.ocrConfidence.map { String(Double($0)) } ?? "null"
+        return "bbox=\(bbox) confidence=\(confidence)"
     }
 }
 

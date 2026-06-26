@@ -127,6 +127,46 @@ test/
 5. 音频会走 `SFSpeechURLRecognitionRequest` + `requiresOnDeviceRecognition = true`，识别文本再交给当前 Mock/Local 翻译接口。
 6. 图片会走 `VNRecognizeTextRequest`，识别文字块和 `boundingBox` 后逐块翻译。
 
+### 漫画覆盖翻译探针
+
+开发页新增 `运行漫画覆盖翻译探针`，固定读取 bundle 内 `test/1.png`，不污染当前会话、历史或普通图片翻译状态。流程：
+
+1. 读取 `test/1.png`。
+2. 对原图做 0°、90°、180°、270° 四次 Apple Vision OCR，识别英文文字块。
+3. 将旋转图坐标还原成原图像素 bbox，坐标约定为左上角原点 `[x, y, width, height]`。
+4. 对重复文本块按 bbox 重叠和文本相似度合并，保留置信度/文本长度更好的结果。
+5. 对每个块复用当前英译中提示词和当前引擎翻译；Local 模式记录真实 `llama.cpp` prompt/raw output，Mock 模式标记为模拟。
+6. 生成 `Application Support/AITRANS/Output/1_debug_boxes.png`、`1_translated_overlay.png` 和 `probe_report.json`。
+
+探针报告字段：
+
+- `sourceImage`：固定 `test/1.png`。
+- `engineUsed`：实际适配器显示名。
+- `totalBlocksDetected`：最终保留文本块数。
+- `blocks[].bbox`：原图像素坐标，左上角原点。
+- `blocks[].rotationAngleUsed`：该块来自 0/90/180/270 哪个 OCR 角度。
+- `blocks[].prompt` / `rawOutput` / `errorCode`：真实输入输出或错误。
+- `blocks[].checks`：`ocrNotEmpty`、`translationNotEmpty`、`translationNotEqualOriginal`、`translationNotContainOriginal`、`looksLikeChinese`。
+- `overallPassed`：至少 1 个块、所有块通过质量判定、两张 PNG 非空才为 `true`。
+
+模拟器跑完后，把沙盒输出导出到项目根 `output/`：
+
+```sh
+scripts/export-probe-output.sh
+```
+
+如需指定设备：
+
+```sh
+scripts/export-probe-output.sh booted
+```
+
+也可用 DEBUG 环境变量自动触发，适合命令行探针：
+
+```sh
+AITRANS_RUN_MANGA_PROBE=1
+```
+
 空目录预期结果：
 
 - `运行 test/ 音频`：显示 `test/ 未找到可测试音频`。
@@ -228,6 +268,9 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区：提示词拆成 `英译中` / `中译英` 两套方向指令，默认提示词改为极简 `把以下翻译成中文：` / `Translate the following into English:`；Local prompt 改为只拼当前方向指令和输入。
 - 本次未提交工作区：开发页新增 5 句批量 raw 探针。Local 模式展示真实 `llama.cpp` prompt/raw output；Mock 模式明确标记为模拟输出，不能当作真实模型质量判断。
 - 本次未提交工作区：项目根 `test/` 已打进 App bundle，Pro 页新增 `运行 test/ 音频` 和 `运行 test/ OCR` 测试入口。当前 `test/` 为空，空目录预期会显示未找到可测试文件。
+- 本次未提交工作区：开发页新增 `test/1.png` 漫画覆盖翻译探针。实现多角度 Vision OCR、bbox 像素坐标还原、逐块英译中 raw prompt/raw output 报告、`1_debug_boxes.png`、`1_translated_overlay.png` 和 `probe_report.json` 沙盒输出。
+- 本次未提交工作区：新增 `scripts/export-probe-output.sh`，用 `xcrun simctl get_app_container` 从模拟器沙盒导出 `Application Support/AITRANS/Output/` 到项目根 `output/`。已知限制：导出依赖手动脚本；背景色采样优先可读性，不追求完美还原气泡。
+- 本次未提交工作区实测：用模拟器自动探针 `AITRANS_RUN_MANGA_PROBE=1` 跑 `test/1.png`，导出到 `output/`。本次 Local GGUF 识别 57 个文字块，25 个块通过翻译判定，`overallPassed=false`；失败主要来自 Gemma 270M raw 输出复读英文/数字、Vision 把部分 UI/装饰文字识别成文本块、多角度 OCR 仍有重复或偏移。
 
 ## 后续对话指引
 
@@ -246,3 +289,4 @@ bash Tools/build-llama-ios-xcframework.sh
 - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild ... generic/platform=iOS ... CODE_SIGNING_ALLOWED=NO build` 通过。
 - 已确认 Debug iOS Simulator app bundle 内嵌 `llama.framework`。
 - `git diff --check` 通过。
+- `test/1.png` 漫画覆盖探针已在 iPhone 17 Pro 模拟器运行并导出：`output/probe_report.json`、`output/1_debug_boxes.png`、`output/1_translated_overlay.png` 均非空。调试图框线明显；覆盖图能盖住部分原文并绘制译文，但受 OCR 小块切分和当前 Local GGUF 翻译质量影响，结果仍不适合作为最终产品效果。
