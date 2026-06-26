@@ -47,13 +47,18 @@ struct GemmaLocalService: LocalLanguageModeling {
 
     func rawTranslationProbe(for request: ModelGenerationRequest) -> RawModelProbeResult {
         let prompt = translationPrompts(for: request).first ?? ""
+        return rawProbe(prompt: prompt, maxTokens: min(request.sampling.maxTokens, 160))
+    }
+
+    func rawProbe(prompt: String, maxTokens: Int = 160) -> RawModelProbeResult {
+        let limitedMaxTokens = max(1, min(maxTokens, 220))
 
         do {
             let modelURL = try modelURL()
             try Self.runtime.loadModelIfNeeded(at: modelURL.path)
             let output = try Self.runtime.generateRaw(
                 prompt: prompt,
-                maxTokens: min(request.sampling.maxTokens, 160)
+                maxTokens: limitedMaxTokens
             )
             return RawModelProbeResult(prompt: prompt, output: output, errorCode: nil)
         } catch {
