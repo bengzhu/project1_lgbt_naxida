@@ -370,6 +370,9 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 Agent 2：新增长图竖向 slice OCR 诊断链路。内容区长宽比超过阈值时按竖向切片 OCR，切片间保留 20% 重叠，并把识别 bbox 还原回原图坐标；重叠区重复候选用 IoU/包含关系/文本相似度/`bubbleID` 去重，不使用人工真值。报告新增 `sliceOCR`、`syntheticSliceOCR`、块级 `sliceIndex` 和 `sliceOverlapDeduped`。
 - 本次未提交工作区 Agent 2 实测：`test/1.png` 内容区长宽比 `1.39 <= 2.85`，默认不触发 slice，所有主流程块均为 `sliceIndex = null`、`sliceOverlapDeduped = false`，主图结果保持 `totalBlocksDetected = 14`、可信匹配 10 块、未匹配 4 块、核心对话 OCR 相似度 `0.6131`、装饰标题 `0.8000`、`frameworkComparison.consistencyPassed = true`、`cleanTextDiagnostic.passRate = 0.4545`。
 - 本次未提交工作区 Agent 2 合成验收：在内存中把 `test/1.png` 裁切后的漫画内容纵向拼接 3 次，只作为 `synthetic:test/1.png-content-x3` 机制测试，不进入生产候选选择和翻译主流程。合成长图长宽比 `4.17 > 2.85`，触发 3 个竖向切片，raw 候选 `667`、去重后 `659`、重叠去重 `8`、`residualOverlapDuplicateCount = 0`；坐标还原和重叠去重链路跑通，未发现同一段文字被保留成两个不同块。
+- 本次未提交工作区 Agent 3：预处理二次 OCR crop 从固定比例扩张改为自适应 padding。短边估算字号；横排文本 y padding 大于 x padding，竖排反过来；自适应 crop 仍 clamp 在所属 `bubbleID` 的 bbox 内。报告新增块级 `cropPaddingX`、`cropPaddingY`、`cropClampedByBubble`、`cropCandidatePreservesRawWords`、`adaptivePreprocessingOcrText`、`fixedPreprocessingOcrText`、`cropFallbackTriggered`、`cropFallbackReason` 和 `cropStrategyUsed`。
+- 本次未提交工作区 Agent 3 实测：iPhone 17 Pro 模拟器跑 `test/1.png` 并导出，主图仍为 `totalBlocksDetected = 14`、可信匹配 10 块、未匹配 4 块、核心对话 OCR 相似度 `0.6131`、装饰标题 `0.8000`，`frameworkComparison.consistencyPassed = true`，`cleanTextDiagnostic.passRate = 0.5455`，`translationFailureBreakdown = { ocrInputSuspect: 9, translationLanguageQualityFailure: 2, translationUsableButOCRSuspect: 1 }`。`cropClampedByBubble` 出现在块 `[4, 7]`，说明气泡 bbox clamp 仍生效。
+- 本次未提交工作区 Agent 3 对比与风险：固定 crop vs 自适应 crop 的真值对照只用于验证，不参与生产选择。自适应相对固定更好的块为 `[1, 6, 8]`，更差的块为 `[2, 3, 5, 12]`，接近持平 `[0, 4, 13]`；主流程没有为了分数强行替换为真值最优候选。人为超窄 crop 自测 `cropFallbackSelfTest.triggered = true`，证明丢词回退链路能触发；本轮真实块未触发回退，后续需要继续调 padding 阈值，尤其是底部串扰和小装饰字。
 
 ## 后续对话指引
 
