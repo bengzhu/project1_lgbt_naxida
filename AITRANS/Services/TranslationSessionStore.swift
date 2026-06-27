@@ -1452,6 +1452,10 @@ final class TranslationSessionStore: ObservableObject {
                     in: data,
                     customWords: activeCustomWords
                 )
+                let syntheticSliceOCR = try await self.mangaOverlayProbeService.runSyntheticLongImageSliceProbe(
+                    imageData: data,
+                    customWords: activeCustomWords
+                )
 
                 let groundTruth = self.loadMangaGroundTruth()
                 var probeBlocks = recognized.blocks.enumerated().map { index, block in
@@ -1460,6 +1464,11 @@ final class TranslationSessionStore: ObservableObject {
                     return MangaOverlayProbeBlock(
                         index: index,
                         bbox: Self.bboxArray(from: block.boundingBox),
+                        bubbleID: block.bubbleID,
+                        bubbleAssignmentMethod: block.bubbleAssignmentMethod,
+                        crossBubbleMergeRejected: block.crossBubbleMergeRejected,
+                        sliceIndex: block.sliceIndex,
+                        sliceOverlapDeduped: block.sliceOverlapDeduped,
                         rotationAngleUsed: block.rotationAngle,
                         ocrText: block.text,
                         ocrConfidence: block.confidence,
@@ -1480,7 +1489,12 @@ final class TranslationSessionStore: ObservableObject {
                             similarity: match.similarity,
                             legacySimilarity: match.legacySimilarity,
                             wordOrderPreserved: match.wordOrderPreserved,
-                            matchState: match.matchState
+                            matchState: match.matchState,
+                            bubbleID: block.bubbleID,
+                            bubbleAssignmentMethod: block.bubbleAssignmentMethod,
+                            crossBubbleMergeRejected: block.crossBubbleMergeRejected,
+                            sliceIndex: block.sliceIndex,
+                            sliceOverlapDeduped: block.sliceOverlapDeduped
                         )
                     )
                 }
@@ -1586,6 +1600,9 @@ final class TranslationSessionStore: ObservableObject {
                     blocks: probeBlocks,
                     outputFiles: outputFiles,
                     configuration: probeConfiguration,
+                    bubbleGeometry: recognized.bubbleGeometry,
+                    sliceOCR: recognized.sliceOCR,
+                    syntheticSliceOCR: syntheticSliceOCR,
                     lexiconComparison: lexiconComparison,
                     visionAPIComparison: visionAPIComparison,
                     frameworkComparison: frameworkComparison,
@@ -1606,6 +1623,7 @@ final class TranslationSessionStore: ObservableObject {
                     blocks: self.mangaOverlayProbeBlocks,
                     outputFiles: outputFiles,
                     configuration: .defaultValue,
+                    bubbleGeometry: nil,
                     extraWarnings: ["运行错误：\(type(of: error)): \(error.localizedDescription)"]
                 )
                 let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
@@ -2038,6 +2056,11 @@ final class TranslationSessionStore: ObservableObject {
             id: block.id,
             index: block.index,
             bbox: block.bbox,
+            bubbleID: block.bubbleID,
+            bubbleAssignmentMethod: block.bubbleAssignmentMethod,
+            crossBubbleMergeRejected: block.crossBubbleMergeRejected,
+            sliceIndex: block.sliceIndex,
+            sliceOverlapDeduped: block.sliceOverlapDeduped,
             rotationAngleUsed: block.rotationAngleUsed,
             ocrText: block.ocrText,
             ocrConfidence: block.ocrConfidence,
@@ -2142,6 +2165,11 @@ final class TranslationSessionStore: ObservableObject {
                 id: block.id,
                 index: block.index,
                 bbox: block.bbox,
+                bubbleID: block.bubbleID,
+                bubbleAssignmentMethod: block.bubbleAssignmentMethod,
+                crossBubbleMergeRejected: block.crossBubbleMergeRejected,
+                sliceIndex: block.sliceIndex,
+                sliceOverlapDeduped: block.sliceOverlapDeduped,
                 rotationAngleUsed: block.rotationAngleUsed,
                 ocrText: block.ocrText,
                 ocrConfidence: block.ocrConfidence,
@@ -2214,6 +2242,11 @@ final class TranslationSessionStore: ObservableObject {
             id: block.id,
             index: block.index,
             bbox: block.bbox,
+            bubbleID: block.bubbleID,
+            bubbleAssignmentMethod: block.bubbleAssignmentMethod,
+            crossBubbleMergeRejected: block.crossBubbleMergeRejected,
+            sliceIndex: block.sliceIndex,
+            sliceOverlapDeduped: block.sliceOverlapDeduped,
             rotationAngleUsed: block.rotationAngleUsed,
             ocrText: block.ocrText,
             ocrConfidence: block.ocrConfidence,
@@ -2281,6 +2314,11 @@ final class TranslationSessionStore: ObservableObject {
             id: block.id,
             index: block.index,
             bbox: block.bbox,
+            bubbleID: block.bubbleID,
+            bubbleAssignmentMethod: block.bubbleAssignmentMethod,
+            crossBubbleMergeRejected: block.crossBubbleMergeRejected,
+            sliceIndex: block.sliceIndex,
+            sliceOverlapDeduped: block.sliceOverlapDeduped,
             rotationAngleUsed: block.rotationAngleUsed,
             ocrText: block.ocrText,
             ocrConfidence: block.ocrConfidence,
@@ -2470,6 +2508,11 @@ final class TranslationSessionStore: ObservableObject {
             id: block.id,
             index: block.index,
             bbox: block.bbox,
+            bubbleID: block.bubbleID,
+            bubbleAssignmentMethod: block.bubbleAssignmentMethod,
+            crossBubbleMergeRejected: block.crossBubbleMergeRejected,
+            sliceIndex: block.sliceIndex,
+            sliceOverlapDeduped: block.sliceOverlapDeduped,
             rotationAngleUsed: block.rotationAngleUsed,
             ocrText: block.ocrText,
             ocrConfidence: block.ocrConfidence,
@@ -2596,6 +2639,11 @@ final class TranslationSessionStore: ObservableObject {
             id: block.id,
             index: block.index,
             bbox: block.bbox,
+            bubbleID: block.bubbleID,
+            bubbleAssignmentMethod: block.bubbleAssignmentMethod,
+            crossBubbleMergeRejected: block.crossBubbleMergeRejected,
+            sliceIndex: block.sliceIndex,
+            sliceOverlapDeduped: block.sliceOverlapDeduped,
             rotationAngleUsed: block.rotationAngleUsed,
             ocrText: block.ocrText,
             ocrConfidence: block.ocrConfidence,
@@ -3347,6 +3395,9 @@ final class TranslationSessionStore: ObservableObject {
         blocks: [MangaOverlayProbeBlock],
         outputFiles: MangaOverlayProbeOutputFiles,
         configuration: MangaOverlayProbeConfiguration,
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics? = nil,
+        sliceOCR: MangaOverlaySliceOCRDiagnostics? = nil,
+        syntheticSliceOCR: MangaOverlaySliceOCRDiagnostics? = nil,
         lexiconComparison: MangaOverlayLexiconComparison? = nil,
         visionAPIComparison: MangaOverlayVisionAPIComparison? = nil,
         frameworkComparison: MangaOverlayFrameworkComparison? = nil,
@@ -3398,6 +3449,9 @@ final class TranslationSessionStore: ObservableObject {
             visionAPIComparison: visionAPIComparison,
             frameworkComparison: frameworkComparison,
             cleanTextDiagnostic: cleanTextDiagnostic,
+            bubbleGeometry: bubbleGeometry,
+            sliceOCR: sliceOCR,
+            syntheticSliceOCR: syntheticSliceOCR,
             overallPassed: allBlocksPassed && filesPresent,
             outputFiles: outputFiles,
             outputDirectoryCleaned: true,
@@ -3413,6 +3467,8 @@ final class TranslationSessionStore: ObservableObject {
         var diagnostics = MangaOverlayProbeDiagnostics.empty
         diagnostics.passedBlocks = blocks.filter(\.blockPassed).count
         diagnostics.failedBlocks = blocks.count - diagnostics.passedBlocks
+        diagnostics.bubbleAssignedBlocks = blocks.filter { $0.bubbleID != nil }.count
+        diagnostics.bubbleUnassignedBlocks = blocks.count - diagnostics.bubbleAssignedBlocks
         let matchedBlocks = blocks.filter { $0.groundTruthMatch == "matched" }
         diagnostics.groundTruthMatchedBlocks = matchedBlocks.count
         diagnostics.groundTruthUnmatchedBlocks = blocks.count - matchedBlocks.count
@@ -3498,6 +3554,9 @@ final class TranslationSessionStore: ObservableObject {
             if block.failureCategory == "modelOutputFailure" {
                 diagnostics.likelyModelOutputFailures += 1
             }
+            if block.crossBubbleMergeRejected {
+                diagnostics.crossBubbleMergeRejectedBlocks.append(block.index)
+            }
             if block.blockPassed, Self.mangaProbePassedTranslationLooksSuspicious(block) {
                 diagnostics.passedButSuspiciousTranslationBlocks.append(block.index)
             }
@@ -3533,6 +3592,7 @@ final class TranslationSessionStore: ObservableObject {
         diagnostics.deterministicCorrectionTranslationTestedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationTestedBlocks)).sorted()
         diagnostics.deterministicCorrectionTranslationPassedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationPassedBlocks)).sorted()
         diagnostics.deterministicCorrectionTranslationFailedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationFailedBlocks)).sorted()
+        diagnostics.crossBubbleMergeRejectedBlocks = Array(Set(diagnostics.crossBubbleMergeRejectedBlocks)).sorted()
         diagnostics.repeatedKeywordFailures = Self.repeatedKeywordFailures(in: blocks)
         return diagnostics
     }
@@ -3616,13 +3676,23 @@ final class TranslationSessionStore: ObservableObject {
         similarity: Double,
         legacySimilarity: Double,
         wordOrderPreserved: Bool?,
-        matchState: String
+        matchState: String,
+        bubbleID: Int?,
+        bubbleAssignmentMethod: String,
+        crossBubbleMergeRejected: Bool,
+        sliceIndex: Int?,
+        sliceOverlapDeduped: Bool
     ) -> [String] {
         var notes: [String] = [
             "groundTruthMatch=\(matchState)",
             "ocrSimilarity=\(similarity.formatted(.number.precision(.fractionLength(3))))",
             "legacySimilarity=\(legacySimilarity.formatted(.number.precision(.fractionLength(3))))",
-            "ocrQuality=\(ocrQualityLabel(for: similarity))"
+            "ocrQuality=\(ocrQualityLabel(for: similarity))",
+            "bubbleID=\(bubbleID.map(String.init) ?? "nil")",
+            "bubbleAssignmentMethod=\(bubbleAssignmentMethod)",
+            "crossBubbleMergeRejected=\(crossBubbleMergeRejected)",
+            "sliceIndex=\(sliceIndex.map(String.init) ?? "nil")",
+            "sliceOverlapDeduped=\(sliceOverlapDeduped)"
         ]
         if let wordOrderPreserved {
             notes.append("wordOrderPreserved=\(wordOrderPreserved)")
@@ -3648,10 +3718,11 @@ final class TranslationSessionStore: ObservableObject {
         } ?? "n/a"
         let label = block.ocrQualityLabel ?? "unknown"
         let text = block.finalTextUsedForTranslation.replacing("\n", with: " / ")
+        let bubble = "bubbleID=\(block.bubbleID.map(String.init) ?? "nil") assignment=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected)"
         if let truth = block.bestGroundTruthText {
-            return "#\(block.index) \(label) match=\(block.groundTruthMatch) sim=\(similarityText) legacy=\(legacyText) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "n/a") OCR=\"\(text)\" truth=\"\(truth)\""
+            return "#\(block.index) \(label) \(bubble) match=\(block.groundTruthMatch) sim=\(similarityText) legacy=\(legacyText) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "n/a") OCR=\"\(text)\" truth=\"\(truth)\""
         }
-        return "#\(block.index) \(label) match=\(block.groundTruthMatch) sim=\(similarityText) legacy=\(legacyText) OCR=\"\(text)\""
+        return "#\(block.index) \(label) \(bubble) match=\(block.groundTruthMatch) sim=\(similarityText) legacy=\(legacyText) OCR=\"\(text)\""
     }
 
     private func loadMangaGroundTruth() -> [MangaGroundTruthEntry] {

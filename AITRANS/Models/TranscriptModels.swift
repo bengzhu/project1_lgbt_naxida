@@ -316,8 +316,8 @@ struct MangaOverlayProbeConfiguration: Equatable, Codable, Sendable {
     var customLexicon: [String]
 
     static let defaultValue = MangaOverlayProbeConfiguration(
-        status: "current pipeline uses whole-page Vision OCR observations plus spatial clustering; no image-level bubble detection yet",
-        currentBlockSource: "a: whole-page OCR observations merged by spatial clustering/deduplication",
+        status: "current pipeline uses bubble geometry as primary merge boundary for whole-page Vision OCR observations",
+        currentBlockSource: "bubble-constrained whole-page OCR observations merged only within assigned bubble ID",
         preprocessing: .defaultValue,
         correction: .defaultValue,
         visionNewAPIStatus: "deployment target is iOS 17.0; RecognizeTextRequest needs @available guard and is not part of the main path",
@@ -330,6 +330,11 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var id: UUID
     var index: Int
     var bbox: [Double]
+    var bubbleID: Int?
+    var bubbleAssignmentMethod: String
+    var crossBubbleMergeRejected: Bool
+    var sliceIndex: Int?
+    var sliceOverlapDeduped: Bool
     var rotationAngleUsed: Int
     var rawOcrText: String
     var ocrText: String
@@ -375,10 +380,70 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var ocrProbeNotes: [String]
     var blockPassed: Bool
 
+    enum CodingKeys: String, CodingKey {
+        case id
+        case index
+        case bbox
+        case bubbleID
+        case bubbleAssignmentMethod
+        case crossBubbleMergeRejected
+        case sliceIndex
+        case sliceOverlapDeduped
+        case rotationAngleUsed
+        case rawOcrText
+        case ocrText
+        case ocrConfidence
+        case preprocessingEnabled
+        case afterPreprocessingOcrText
+        case correctionEnabled
+        case afterCorrectionText
+        case correctionRejectedReason
+        case correctionPrompt
+        case correctionRawOutput
+        case correctionErrorCode
+        case deterministicCorrectionText
+        case deterministicCorrectionAppliedRules
+        case deterministicCorrectionSimilarity
+        case deterministicCorrectionTranslationCandidate
+        case deterministicCorrectionTranslationRawOutput
+        case deterministicCorrectionTranslationPassed
+        case deterministicCorrectionTranslationFailureDetail
+        case finalTextUsedForTranslation
+        case bestGroundTruthIndex
+        case bestGroundTruthText
+        case bestGroundTruthType
+        case groundTruthMatch
+        case groundTruthMatchThreshold
+        case ocrGroundTruthSimilarity
+        case ocrLegacySimilarity
+        case wordOrderPreserved
+        case ocrQualityLabel
+        case translatedText
+        case translationCandidate
+        case rawOutputClassification
+        case candidateClassification
+        case failureCategory
+        case prompt
+        case rawOutput
+        case errorCode
+        case checks
+        case failureReasons
+        case qualityNotes
+        case translationDecisionTrace
+        case translationFailureDetail
+        case ocrProbeNotes
+        case blockPassed
+    }
+
     init(
         id: UUID = UUID(),
         index: Int,
         bbox: [Double],
+        bubbleID: Int? = nil,
+        bubbleAssignmentMethod: String = "unassigned",
+        crossBubbleMergeRejected: Bool = false,
+        sliceIndex: Int? = nil,
+        sliceOverlapDeduped: Bool = false,
         rotationAngleUsed: Int,
         ocrText: String,
         ocrConfidence: Float?,
@@ -435,6 +500,11 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.id = id
         self.index = index
         self.bbox = bbox
+        self.bubbleID = bubbleID
+        self.bubbleAssignmentMethod = bubbleAssignmentMethod
+        self.crossBubbleMergeRejected = crossBubbleMergeRejected
+        self.sliceIndex = sliceIndex
+        self.sliceOverlapDeduped = sliceOverlapDeduped
         self.rotationAngleUsed = rotationAngleUsed
         self.rawOcrText = rawOcrText ?? ocrText
         self.ocrText = ocrText
@@ -479,6 +549,62 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.translationFailureDetail = translationFailureDetail
         self.ocrProbeNotes = ocrProbeNotes
         self.blockPassed = blockPassed
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(index, forKey: .index)
+        try container.encode(bbox, forKey: .bbox)
+        try container.encode(bubbleID, forKey: .bubbleID)
+        try container.encode(bubbleAssignmentMethod, forKey: .bubbleAssignmentMethod)
+        try container.encode(crossBubbleMergeRejected, forKey: .crossBubbleMergeRejected)
+        try container.encode(sliceIndex, forKey: .sliceIndex)
+        try container.encode(sliceOverlapDeduped, forKey: .sliceOverlapDeduped)
+        try container.encode(rotationAngleUsed, forKey: .rotationAngleUsed)
+        try container.encode(rawOcrText, forKey: .rawOcrText)
+        try container.encode(ocrText, forKey: .ocrText)
+        try container.encodeIfPresent(ocrConfidence, forKey: .ocrConfidence)
+        try container.encode(preprocessingEnabled, forKey: .preprocessingEnabled)
+        try container.encodeIfPresent(afterPreprocessingOcrText, forKey: .afterPreprocessingOcrText)
+        try container.encode(correctionEnabled, forKey: .correctionEnabled)
+        try container.encodeIfPresent(afterCorrectionText, forKey: .afterCorrectionText)
+        try container.encodeIfPresent(correctionRejectedReason, forKey: .correctionRejectedReason)
+        try container.encodeIfPresent(correctionPrompt, forKey: .correctionPrompt)
+        try container.encodeIfPresent(correctionRawOutput, forKey: .correctionRawOutput)
+        try container.encodeIfPresent(correctionErrorCode, forKey: .correctionErrorCode)
+        try container.encodeIfPresent(deterministicCorrectionText, forKey: .deterministicCorrectionText)
+        try container.encode(deterministicCorrectionAppliedRules, forKey: .deterministicCorrectionAppliedRules)
+        try container.encodeIfPresent(deterministicCorrectionSimilarity, forKey: .deterministicCorrectionSimilarity)
+        try container.encodeIfPresent(deterministicCorrectionTranslationCandidate, forKey: .deterministicCorrectionTranslationCandidate)
+        try container.encodeIfPresent(deterministicCorrectionTranslationRawOutput, forKey: .deterministicCorrectionTranslationRawOutput)
+        try container.encodeIfPresent(deterministicCorrectionTranslationPassed, forKey: .deterministicCorrectionTranslationPassed)
+        try container.encodeIfPresent(deterministicCorrectionTranslationFailureDetail, forKey: .deterministicCorrectionTranslationFailureDetail)
+        try container.encode(finalTextUsedForTranslation, forKey: .finalTextUsedForTranslation)
+        try container.encodeIfPresent(bestGroundTruthIndex, forKey: .bestGroundTruthIndex)
+        try container.encodeIfPresent(bestGroundTruthText, forKey: .bestGroundTruthText)
+        try container.encodeIfPresent(bestGroundTruthType, forKey: .bestGroundTruthType)
+        try container.encode(groundTruthMatch, forKey: .groundTruthMatch)
+        try container.encode(groundTruthMatchThreshold, forKey: .groundTruthMatchThreshold)
+        try container.encodeIfPresent(ocrGroundTruthSimilarity, forKey: .ocrGroundTruthSimilarity)
+        try container.encodeIfPresent(ocrLegacySimilarity, forKey: .ocrLegacySimilarity)
+        try container.encodeIfPresent(wordOrderPreserved, forKey: .wordOrderPreserved)
+        try container.encodeIfPresent(ocrQualityLabel, forKey: .ocrQualityLabel)
+        try container.encode(translatedText, forKey: .translatedText)
+        try container.encode(translationCandidate, forKey: .translationCandidate)
+        try container.encode(rawOutputClassification, forKey: .rawOutputClassification)
+        try container.encode(candidateClassification, forKey: .candidateClassification)
+        try container.encode(failureCategory, forKey: .failureCategory)
+        try container.encode(prompt, forKey: .prompt)
+        try container.encode(rawOutput, forKey: .rawOutput)
+        try container.encodeIfPresent(errorCode, forKey: .errorCode)
+        try container.encode(checks, forKey: .checks)
+        try container.encode(failureReasons, forKey: .failureReasons)
+        try container.encode(qualityNotes, forKey: .qualityNotes)
+        try container.encode(translationDecisionTrace, forKey: .translationDecisionTrace)
+        try container.encodeIfPresent(translationFailureDetail, forKey: .translationFailureDetail)
+        try container.encode(ocrProbeNotes, forKey: .ocrProbeNotes)
+        try container.encode(blockPassed, forKey: .blockPassed)
     }
 }
 
@@ -567,6 +693,9 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
     var deterministicCorrectionTranslationPassedBlocks: [Int]
     var deterministicCorrectionTranslationFailedBlocks: [Int]
     var repeatedKeywordFailures: [String: Int]
+    var crossBubbleMergeRejectedBlocks: [Int]
+    var bubbleAssignedBlocks: Int
+    var bubbleUnassignedBlocks: Int
 
     static let empty = MangaOverlayProbeDiagnostics(
         passedBlocks: 0,
@@ -603,7 +732,10 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
         deterministicCorrectionTranslationTestedBlocks: [],
         deterministicCorrectionTranslationPassedBlocks: [],
         deterministicCorrectionTranslationFailedBlocks: [],
-        repeatedKeywordFailures: [:]
+        repeatedKeywordFailures: [:],
+        crossBubbleMergeRejectedBlocks: [],
+        bubbleAssignedBlocks: 0,
+        bubbleUnassignedBlocks: 0
     )
 }
 
@@ -702,6 +834,9 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var visionAPIComparison: MangaOverlayVisionAPIComparison?
     var frameworkComparison: MangaOverlayFrameworkComparison?
     var cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
+    var bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics?
+    var sliceOCR: MangaOverlaySliceOCRDiagnostics?
+    var syntheticSliceOCR: MangaOverlaySliceOCRDiagnostics?
     var overallPassed: Bool
     var outputFiles: MangaOverlayProbeOutputFiles
     var outputDirectoryCleaned: Bool
