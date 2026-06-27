@@ -350,6 +350,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var cropFallbackTriggered: Bool
     var cropFallbackReason: String?
     var cropStrategyUsed: String?
+    var safeLayoutRect: [Double]?
+    var safeLayoutSource: String?
+    var renderCollisionChecked: Bool
+    var renderCollisionInitialOverflow: Bool
+    var renderCollisionResolved: Bool
+    var renderFontSize: Double?
+    var renderMinFontSizeReached: Bool
+    var renderTextTruncated: Bool
+    var renderNonTransparentBounds: [Double]?
     var correctionEnabled: Bool
     var afterCorrectionText: String?
     var correctionRejectedReason: String?
@@ -413,6 +422,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         case cropFallbackTriggered
         case cropFallbackReason
         case cropStrategyUsed
+        case safeLayoutRect
+        case safeLayoutSource
+        case renderCollisionChecked
+        case renderCollisionInitialOverflow
+        case renderCollisionResolved
+        case renderFontSize
+        case renderMinFontSizeReached
+        case renderTextTruncated
+        case renderNonTransparentBounds
         case correctionEnabled
         case afterCorrectionText
         case correctionRejectedReason
@@ -477,6 +495,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         cropFallbackTriggered: Bool = false,
         cropFallbackReason: String? = nil,
         cropStrategyUsed: String? = nil,
+        safeLayoutRect: [Double]? = nil,
+        safeLayoutSource: String? = nil,
+        renderCollisionChecked: Bool = false,
+        renderCollisionInitialOverflow: Bool = false,
+        renderCollisionResolved: Bool = false,
+        renderFontSize: Double? = nil,
+        renderMinFontSizeReached: Bool = false,
+        renderTextTruncated: Bool = false,
+        renderNonTransparentBounds: [Double]? = nil,
         correctionEnabled: Bool = false,
         afterCorrectionText: String? = nil,
         correctionRejectedReason: String? = nil,
@@ -547,6 +574,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.cropFallbackTriggered = cropFallbackTriggered
         self.cropFallbackReason = cropFallbackReason
         self.cropStrategyUsed = cropStrategyUsed
+        self.safeLayoutRect = safeLayoutRect
+        self.safeLayoutSource = safeLayoutSource
+        self.renderCollisionChecked = renderCollisionChecked
+        self.renderCollisionInitialOverflow = renderCollisionInitialOverflow
+        self.renderCollisionResolved = renderCollisionResolved
+        self.renderFontSize = renderFontSize
+        self.renderMinFontSizeReached = renderMinFontSizeReached
+        self.renderTextTruncated = renderTextTruncated
+        self.renderNonTransparentBounds = renderNonTransparentBounds
         self.correctionEnabled = correctionEnabled
         self.afterCorrectionText = afterCorrectionText
         self.correctionRejectedReason = correctionRejectedReason
@@ -612,6 +648,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         try container.encode(cropFallbackTriggered, forKey: .cropFallbackTriggered)
         try container.encodeIfPresent(cropFallbackReason, forKey: .cropFallbackReason)
         try container.encodeIfPresent(cropStrategyUsed, forKey: .cropStrategyUsed)
+        try container.encodeIfPresent(safeLayoutRect, forKey: .safeLayoutRect)
+        try container.encodeIfPresent(safeLayoutSource, forKey: .safeLayoutSource)
+        try container.encode(renderCollisionChecked, forKey: .renderCollisionChecked)
+        try container.encode(renderCollisionInitialOverflow, forKey: .renderCollisionInitialOverflow)
+        try container.encode(renderCollisionResolved, forKey: .renderCollisionResolved)
+        try container.encodeIfPresent(renderFontSize, forKey: .renderFontSize)
+        try container.encode(renderMinFontSizeReached, forKey: .renderMinFontSizeReached)
+        try container.encode(renderTextTruncated, forKey: .renderTextTruncated)
+        try container.encodeIfPresent(renderNonTransparentBounds, forKey: .renderNonTransparentBounds)
         try container.encode(correctionEnabled, forKey: .correctionEnabled)
         try container.encodeIfPresent(afterCorrectionText, forKey: .afterCorrectionText)
         try container.encodeIfPresent(correctionRejectedReason, forKey: .correctionRejectedReason)
@@ -741,6 +786,13 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
     var crossBubbleMergeRejectedBlocks: [Int]
     var bubbleAssignedBlocks: Int
     var bubbleUnassignedBlocks: Int
+    var safeLayoutRectBlocks: Int
+    var renderCollisionCheckedBlocks: Int
+    var renderCollisionInitialOverflowBlocks: [Int]
+    var renderCollisionResolvedBlocks: [Int]
+    var renderCollisionUnresolvedBlocks: [Int]
+    var renderMinFontSizeReachedBlocks: [Int]
+    var renderTextTruncatedBlocks: [Int]
 
     static let empty = MangaOverlayProbeDiagnostics(
         passedBlocks: 0,
@@ -780,7 +832,14 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
         repeatedKeywordFailures: [:],
         crossBubbleMergeRejectedBlocks: [],
         bubbleAssignedBlocks: 0,
-        bubbleUnassignedBlocks: 0
+        bubbleUnassignedBlocks: 0,
+        safeLayoutRectBlocks: 0,
+        renderCollisionCheckedBlocks: 0,
+        renderCollisionInitialOverflowBlocks: [],
+        renderCollisionResolvedBlocks: [],
+        renderCollisionUnresolvedBlocks: [],
+        renderMinFontSizeReachedBlocks: [],
+        renderTextTruncatedBlocks: []
     )
 }
 
