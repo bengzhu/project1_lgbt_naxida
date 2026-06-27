@@ -194,6 +194,22 @@ struct RawModelProbeResult: Equatable, Sendable {
     var prompt: String
     var output: String
     var errorCode: String?
+    var decodingMode: String
+    var decodingSeed: UInt32?
+
+    init(
+        prompt: String,
+        output: String,
+        errorCode: String?,
+        decodingMode: String = ModelDecodingProfile.sampled.mode,
+        decodingSeed: UInt32? = nil
+    ) {
+        self.prompt = prompt
+        self.output = output
+        self.errorCode = errorCode
+        self.decodingMode = decodingMode
+        self.decodingSeed = decodingSeed
+    }
 }
 
 struct DeveloperRawProbeCase: Identifiable, Equatable, Sendable {
@@ -311,6 +327,10 @@ struct MangaOverlayProbeConfiguration: Equatable, Codable, Sendable {
     var currentBlockSource: String
     var preprocessing: MangaOverlayPreprocessingOptions
     var correction: MangaOverlayCorrectionOptions
+    var diagnosticDecodingMode: String
+    var diagnosticDecodingSeed: UInt32?
+    var productionDecodingMode: String
+    var productionDecodingSeed: UInt32?
     var visionNewAPIStatus: String
     var customLexiconEnabled: Bool
     var customLexicon: [String]
@@ -320,6 +340,10 @@ struct MangaOverlayProbeConfiguration: Equatable, Codable, Sendable {
         currentBlockSource: "bubble-constrained whole-page OCR observations merged only within assigned bubble ID",
         preprocessing: .defaultValue,
         correction: .defaultValue,
+        diagnosticDecodingMode: ModelDecodingProfile.deterministic.mode,
+        diagnosticDecodingSeed: ModelDecodingProfile.deterministic.seed,
+        productionDecodingMode: ModelDecodingProfile.sampled.mode,
+        productionDecodingSeed: nil,
         visionNewAPIStatus: "deployment target is iOS 17.0; RecognizeTextRequest needs @available guard and is not part of the main path",
         customLexiconEnabled: true,
         customLexicon: ["Senpai", "City Battler", "Tournament", "Ren", "Battler"]
@@ -955,6 +979,8 @@ struct MangaCleanTextDiagnosticCase: Equatable, Codable, Sendable {
 struct MangaCleanTextDiagnosticReport: Equatable, Codable, Sendable {
     var source: String
     var promptTemplate: String
+    var decodingMode: String
+    var decodingSeed: UInt32?
     var totalCases: Int
     var passedCases: Int
     var failedCases: Int
@@ -976,6 +1002,8 @@ struct MangaBatchTranslationCase: Equatable, Codable, Sendable {
 
 struct MangaBatchTranslationComparison: Equatable, Codable, Sendable {
     var enabled: Bool
+    var decodingMode: String
+    var decodingSeed: UInt32?
     var prompt: String
     var rawOutput: String
     var errorCode: String?
@@ -994,9 +1022,23 @@ struct MangaBatchTranslationComparison: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaDeterministicDecodingCheck: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var decodingMode: String
+    var decodingSeed: UInt32?
+    var input: String
+    var firstOutput: String
+    var secondOutput: String
+    var firstErrorCode: String?
+    var secondErrorCode: String?
+    var outputsIdentical: Bool
+}
+
 struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var sourceImage: String
     var engineUsed: String
+    var decodingMode: String
+    var decodingSeed: UInt32?
     var configuration: MangaOverlayProbeConfiguration
     var totalBlocksDetected: Int
     var blocks: [MangaOverlayProbeBlock]
@@ -1007,6 +1049,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var frameworkComparison: MangaOverlayFrameworkComparison?
     var cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
     var batchTranslationComparison: MangaBatchTranslationComparison?
+    var deterministicDecodingCheck: MangaDeterministicDecodingCheck?
     var bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics?
     var sliceOCR: MangaOverlaySliceOCRDiagnostics?
     var syntheticSliceOCR: MangaOverlaySliceOCRDiagnostics?
@@ -1274,6 +1317,33 @@ struct GenerationSampling: Equatable, Codable, Sendable {
     var maxTokens: Int
 
     static let defaultValue = GenerationSampling(temperature: 0.55, maxTokens: 512)
+}
+
+struct ModelDecodingProfile: Equatable, Sendable {
+    var mode: String
+    var seed: UInt32?
+    var temperature: Double
+    var topK: Int32?
+    var topP: Double?
+    var minP: Double?
+
+    static let deterministic = ModelDecodingProfile(
+        mode: "deterministic",
+        seed: 42,
+        temperature: 0,
+        topK: nil,
+        topP: nil,
+        minP: nil
+    )
+
+    static let sampled = ModelDecodingProfile(
+        mode: "sampled",
+        seed: nil,
+        temperature: 0.2,
+        topK: 40,
+        topP: 0.90,
+        minP: 0.05
+    )
 }
 
 enum ModelTask: String, Codable, Sendable {

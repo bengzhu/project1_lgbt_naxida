@@ -47,10 +47,18 @@ struct GemmaLocalService: LocalLanguageModeling {
 
     func rawTranslationProbe(for request: ModelGenerationRequest) -> RawModelProbeResult {
         let prompt = translationPrompts(for: request).first ?? ""
-        return rawProbe(prompt: prompt, maxTokens: min(request.sampling.maxTokens, 160))
+        return rawProbe(
+            prompt: prompt,
+            maxTokens: min(request.sampling.maxTokens, 160),
+            decodingProfile: .deterministic
+        )
     }
 
-    func rawProbe(prompt: String, maxTokens: Int = 160) -> RawModelProbeResult {
+    func rawProbe(
+        prompt: String,
+        maxTokens: Int = 160,
+        decodingProfile: ModelDecodingProfile = .deterministic
+    ) -> RawModelProbeResult {
         let limitedMaxTokens = max(1, min(maxTokens, 220))
 
         do {
@@ -58,14 +66,23 @@ struct GemmaLocalService: LocalLanguageModeling {
             try Self.runtime.loadModelIfNeeded(at: modelURL.path)
             let output = try Self.runtime.generateRaw(
                 prompt: prompt,
-                maxTokens: limitedMaxTokens
+                maxTokens: limitedMaxTokens,
+                decodingProfile: decodingProfile
             )
-            return RawModelProbeResult(prompt: prompt, output: output, errorCode: nil)
+            return RawModelProbeResult(
+                prompt: prompt,
+                output: output,
+                errorCode: nil,
+                decodingMode: decodingProfile.mode,
+                decodingSeed: decodingProfile.seed
+            )
         } catch {
             return RawModelProbeResult(
                 prompt: prompt,
                 output: "",
-                errorCode: "\(type(of: error)): \(error.localizedDescription)"
+                errorCode: "\(type(of: error)): \(error.localizedDescription)",
+                decodingMode: decodingProfile.mode,
+                decodingSeed: decodingProfile.seed
             )
         }
     }
@@ -89,7 +106,8 @@ struct GemmaLocalService: LocalLanguageModeling {
         case .summary:
             let output = try Self.runtime.generate(
                 prompt: summaryPrompt(for: request),
-                maxTokens: min(request.sampling.maxTokens, 220)
+                maxTokens: min(request.sampling.maxTokens, 220),
+                decodingProfile: .sampled
             )
             let summary = AISummary(
                 bullets: output
@@ -122,7 +140,8 @@ struct GemmaLocalService: LocalLanguageModeling {
                 )
                 let output = try Self.runtime.generate(
                     prompt: prompt,
-                    maxTokens: min(request.sampling.maxTokens, 160)
+                    maxTokens: min(request.sampling.maxTokens, 160),
+                    decodingProfile: .sampled
                 )
                 Self.writeTranslationProbeLog(
                     "local-attempt-raw index=\(index + 1) output=\(Self.probeField(output))"

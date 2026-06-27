@@ -188,6 +188,8 @@ test/
 - OCR 质量排查规范：先按 `ocrGroundTruthSimilarity` 从低到高看 `blocks[].finalTextUsedForTranslation`。本探针用 `test/1.ground_truth.json` 做真值；换测试图时应同步更新真值文件，否则相似度只作参考。
 - 可信准确率规范：只看 `groundTruthMatch = matched` 的块；核心对话和 `decorative` 装饰标题分开统计。`unmatched` 块必须保留在明细里，但不能混进平均准确率。旧版 `accuracyVsGroundTruth = 0.8378 / 0.8755` 使用了不完整真值和过宽相似度，只能作为历史对照，不能再作为验收数字。
 - 干净文本诊断规范：如果 `cleanTextDiagnostic.passRate` 仍低，说明即使没有 OCR 噪声，当前翻译模型/输出风格也不稳定；这时不要只调 OCR 或放宽质量规则。
+- 解码规范：用户实际翻译仍使用 `sampled` 路径，llama.cpp 采样链为 top-k/top-p/min-p + `temperature = 0.2` + 随机 seed；漫画探针、`clean_text_diagnostic`、逐块 raw 翻译、确定性纠错翻译对照和 tagged batch 诊断使用 `deterministic` 路径，固定 `seed = 42` 并走 `temperature = 0` + greedy 解码。`probe_report.json` 顶层、`configuration`、`cleanTextDiagnostic` 和 `batchTranslationComparison` 会记录 `decodingMode` / `decodingSeed`。
+- 跨版本指标规范：每次更新 README 的“近期优化记录”时，必须同时给 `metrics/version_history.csv` 追加一行。推荐先跑完整探针并导出 `output/`，再执行 `python3 scripts/append-version-metrics.py --version vN --notes "..."`。这个 CSV 不放在 `output/`，不会被 `scripts/export-probe-output.sh` 清理；不要覆盖或删除历史行。
 
 模拟器跑完后，把沙盒输出导出到项目根 `output/`：
 
@@ -384,6 +386,10 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 Agent 8 实测：当前 Gemma 270M 对 tagged 批量格式不稳定，`totalCases = 14`、`parsedCases = 0`、`missingTags = [0...13]`、`unexpectedTags = [14...24]`、`duplicateTags = []`、`outOfOrderTags = []`。逐块主流程 `sequentialPassedCases = 1`、`sequentialPassRate = 0.0714`，批量分支 `batchPassedCases = 0`、`batchPassRate = 0`、`batchBetterBy = -0.0714`。结论：批量上下文没有改善当前小模型，反而格式崩掉；继续保留逐块翻译为主流程。
 - 本次未提交工作区 Agent 9 汇总：最终完整链路已重新跑 `test/1.png` 和 Agent 2 合成长图机制测试。几何/OCR 指标：`totalBlocksDetected = 14`、可信匹配 `10`、未匹配 `4`、核心对话 OCR 相似度 `0.6131`、装饰标题 `0.8000`、`frameworkComparison.consistencyPassed = true`；bubble-first 对照核心准确率仍高于整页，`bubbleFirst.accuracyVsGroundTruth = 0.7397`、`wholePage.accuracyVsGroundTruth = 0.6131`。渲染指标单独记录：`safeLayoutRectBlocks = 14`、`renderCollisionCheckedBlocks = 14`、`renderCollisionUnresolvedBlocks = []`、`renderTextTruncatedBlocks = []`、`glyphMaskBlocks = 11`、纯色填充块 `[2,4,6,7]`。合成长图 `syntheticSliceOCR` 触发 3 个竖向切片，20% 重叠，`rawCandidateCount = 667`、`dedupedCandidateCount = 8`、`residualOverlapDuplicateCount = 0`。
 - 本次未提交工作区 Agent 9 重点案例：`GET PESULTE / SAMING CLUE TO SAVE THE / POOM BENG` 仍是未匹配低质量 OCR，但有独立 `bubbleID = 5`、纯色 glyph 填充生效，未再与相邻块强行合并；相邻 `What Whet are / every you! / talking` 仍未修正，bubble-first 对照能找到真值 `What are you even talking about?`，说明几何路径有方向但整页主 OCR 仍差。`THE CITY RATTLER / STATE IN A PEN DAYS.` 主 OCR 仍错，确定性候选可修为 `THE CITY BATTLER / STARTS IN A FEW DAYS.`，但不替换主流程。`SUGSESTION THE / OVERRULED...` 只修到 `SUGGESTION...`，背景复杂所以不做纯色填充。`SENPAIS / SENPArS / LOSIC` 仍存在，确定性候选可修 `SENPAI'S ... LOGIC`，但几何约束不能根治专有名词损坏，后续仍需要词表/OCR/模型层解决。
+- 本次未提交工作区 v6：修复诊断测量随机性。`LlamaRuntime` 支持按调用切换解码策略；用户实际翻译和 summary 仍走原 `sampled` 采样链，raw 诊断/漫画探针/clean text/tagged batch/纠错翻译对照走 `deterministic`，固定 `seed = 42` 且使用 `temperature = 0` + greedy。报告新增顶层 `decodingMode`/`decodingSeed`、`configuration.diagnosticDecodingMode`/`productionDecodingMode`、`cleanTextDiagnostic.decodingMode`、`batchTranslationComparison.decodingMode` 和 `deterministicDecodingCheck`，用于连续两次同 prompt 字符级一致性验收。
+- 本次未提交工作区 v6：建立长期跨版本指标表 `metrics/version_history.csv` 和追加脚本 `scripts/append-version-metrics.py`。已核对并回填 v4/v5 两行；LLM 相关历史行标为 `sampled`，v4 缺独立 `wholePageAccuracyVsGroundTruth` 和完整逐块 OCR 快照，所以留空不编造。后续每版收尾必须在 README 更新同时 append CSV；`scripts/export-probe-output.sh` 只重建 `output/`，不会触碰 `metrics/`。
+- 本次未提交工作区 v6 追溯结论：无法对 v4 的 10 个匹配块做字符级回溯比对。git 历史没有提交 v4 `probe_report.json` 或 v4 `1_ocr_probe_text.txt`，README/v5 总结也只记录汇总指标和少量案例，不包含 10 个匹配块完整 OCR 文本。因此 `0.6196 -> 0.6131` 只能明确为 v5 几何分组后统计口径下的结果变化，不能再追溯判定是 OCR 文本逐块变化还是匹配变化；这正是本轮新增 CSV/快照流程要避免的问题。
+- 本次未提交工作区 v6 实测：iPhone 17 Pro 模拟器重新跑 `test/1.png` 并导出，`decodingMode = deterministic`、`decodingSeed = 42`，`deterministicDecodingCheck.outputsIdentical = true`，同一 prompt 连续两次 raw output 字符级一致。关键数字：`totalBlocksDetected = 14`、可信匹配 `10`、未匹配 `4`、核心对话 OCR 相似度 `0.6131`、装饰标题 `0.8000`、`wholePage.accuracyVsGroundTruth = 0.6131`、`bubbleFirst.accuracyVsGroundTruth = 0.7397`、`frameworkComparison.consistencyPassed = true`、`cleanTextDiagnostic.passRate = 0.4545`、`passedBlocks = 1`、`failedBlocks = 13`、`translationFailureBreakdown = { ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`、`likelyRuleFalseFailureBlocks = []`。已把 v6 行 append 到 `metrics/version_history.csv`；一次中间态导出清空了 `output/`，但 `metrics/version_history.csv` 仍存在，确认导出脚本不会误删指标历史。
 
 ## 后续对话指引
 
@@ -392,7 +398,7 @@ bash Tools/build-llama-ios-xcframework.sh
 - 英译中优先用这些探针句测试：`The meeting starts at 9:30 tomorrow.`、`Keep the model on device.`、`Save the transcript locally.`。
 - 中译英优先用这些探针句测试：`请把会议记录保存在本地。`、`明天九点半开始会议。`。
 - 当前内置 Gemma 270M 适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准；质量验证优先换 `Qwen2.5-0.5B-Instruct-GGUF` 的 `q4_k_m`。
-- 每次功能更新或 bug 修复后，都要在本 README 的“近期优化记录”追加 1-3 条简短记录，写清改了什么、验证了什么、还有什么风险，便于后续对话继承上下文。
+- 每次功能更新或 bug 修复后，都要在本 README 的“近期优化记录”追加 1-3 条简短记录，写清改了什么、验证了什么、还有什么风险；同一次收尾必须 append-only 追加 `metrics/version_history.csv`，便于后续对话继承上下文和画趋势。
 
 ## 当前验证
 

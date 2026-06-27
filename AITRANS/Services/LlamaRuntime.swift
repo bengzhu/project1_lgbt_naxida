@@ -29,6 +29,7 @@ final class LlamaRuntime: @unchecked Sendable {
     private var context: OpaquePointer?
     private var vocabulary: OpaquePointer?
     private var sampler: UnsafeMutablePointer<llama_sampler>?
+    private var samplerProfile: ModelDecodingProfile = .sampled
     private var batch: llama_batch?
     private var loadedModelPath = ""
     private var temporaryInvalidBytes: [CChar] = []
@@ -65,16 +66,16 @@ final class LlamaRuntime: @unchecked Sendable {
         try loadModelIfNeededLocked(at: path)
     }
 
-    func generate(prompt: String, maxTokens: Int) throws -> String {
+    func generate(prompt: String, maxTokens: Int, decodingProfile: ModelDecodingProfile = .sampled) throws -> String {
         lock.lock()
         defer { lock.unlock() }
-        return try generateLocked(prompt: prompt, maxTokens: maxTokens, trimsOutput: true)
+        return try generateLocked(prompt: prompt, maxTokens: maxTokens, trimsOutput: true, decodingProfile: decodingProfile)
     }
 
-    func generateRaw(prompt: String, maxTokens: Int) throws -> String {
+    func generateRaw(prompt: String, maxTokens: Int, decodingProfile: ModelDecodingProfile = .deterministic) throws -> String {
         lock.lock()
         defer { lock.unlock() }
-        return try generateLocked(prompt: prompt, maxTokens: maxTokens, trimsOutput: false)
+        return try generateLocked(prompt: prompt, maxTokens: maxTokens, trimsOutput: false, decodingProfile: decodingProfile)
     }
 
     private func loadModelIfNeededLocked(at path: String) throws {
@@ -105,23 +106,21 @@ final class LlamaRuntime: @unchecked Sendable {
             throw LlamaRuntimeError.couldNotCreateContext
         }
 
-        let samplingParameters = llama_sampler_chain_default_params()
-        let samplingChain = llama_sampler_chain_init(samplingParameters)
-        llama_sampler_chain_add(samplingChain, llama_sampler_init_top_k(40))
-        llama_sampler_chain_add(samplingChain, llama_sampler_init_top_p(0.90, 1))
-        llama_sampler_chain_add(samplingChain, llama_sampler_init_min_p(0.05, 1))
-        llama_sampler_chain_add(samplingChain, llama_sampler_init_temp(0.2))
-        llama_sampler_chain_add(samplingChain, llama_sampler_init_dist(UInt32.random(in: 1...UInt32.max)))
-
         model = loadedModel
         context = loadedContext
         vocabulary = llama_model_get_vocab(loadedModel)
-        sampler = samplingChain
+        sampler = Self.makeSampler(for: samplerProfile)
         batch = llama_batch_init(512, 0, 1)
         loadedModelPath = path
     }
 
-    private func generateLocked(prompt: String, maxTokens: Int, trimsOutput: Bool) throws -> String {
+    private func generateLocked(
+        prompt: String,
+        maxTokens: Int,
+        trimsOutput: Bool,
+        decodingProfile: ModelDecodingProfile
+    ) throws -> String {
+        try ensureSamplerProfile(decodingProfile)
         guard let context, let vocabulary, let sampler, var currentBatch = batch else {
             throw LlamaRuntimeError.couldNotCreateContext
         }
@@ -202,6 +201,42 @@ final class LlamaRuntime: @unchecked Sendable {
         batch = nil
         loadedModelPath = ""
         temporaryInvalidBytes.removeAll()
+    }
+
+    private func ensureSamplerProfile(_ profile: ModelDecodingProfile) throws {
+        guard sampler != nil else {
+            samplerProfile = profile
+            sampler = Self.makeSampler(for: profile)
+            return
+        }
+        guard samplerProfile != profile else { return }
+        if let sampler {
+            llama_sampler_free(sampler)
+        }
+        samplerProfile = profile
+        sampler = Self.makeSampler(for: profile)
+    }
+
+    private static func makeSampler(for profile: ModelDecodingProfile) -> UnsafeMutablePointer<llama_sampler>? {
+        let samplingParameters = llama_sampler_chain_default_params()
+        let samplingChain = llama_sampler_chain_init(samplingParameters)
+        if profile.mode == ModelDecodingProfile.deterministic.mode {
+            llama_sampler_chain_add(samplingChain, llama_sampler_init_temp(0))
+            llama_sampler_chain_add(samplingChain, llama_sampler_init_greedy())
+            return samplingChain
+        }
+        if let topK = profile.topK {
+            llama_sampler_chain_add(samplingChain, llama_sampler_init_top_k(topK))
+        }
+        if let topP = profile.topP {
+            llama_sampler_chain_add(samplingChain, llama_sampler_init_top_p(Float(topP), 1))
+        }
+        if let minP = profile.minP {
+            llama_sampler_chain_add(samplingChain, llama_sampler_init_min_p(Float(minP), 1))
+        }
+        llama_sampler_chain_add(samplingChain, llama_sampler_init_temp(Float(profile.temperature)))
+        llama_sampler_chain_add(samplingChain, llama_sampler_init_dist(profile.seed ?? UInt32.random(in: 1...UInt32.max)))
+        return samplingChain
     }
 
     private func tokenize(_ text: String, addBOS: Bool) throws -> [llama_token] {
