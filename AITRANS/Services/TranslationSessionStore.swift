@@ -3666,6 +3666,14 @@ final class TranslationSessionStore: ObservableObject {
                     diagnostics.renderTextTruncatedBlocks.append(block.index)
                 }
             }
+            if block.glyphMaskPixelCount > 0 {
+                diagnostics.glyphMaskBlocks += 1
+            }
+            if block.backgroundFillApplied {
+                diagnostics.backgroundFillAppliedBlocks.append(block.index)
+            } else if block.glyphMaskPixelCount > 0 {
+                diagnostics.backgroundFillSkippedBlocks.append(block.index)
+            }
             if block.blockPassed, Self.mangaProbePassedTranslationLooksSuspicious(block) {
                 diagnostics.passedButSuspiciousTranslationBlocks.append(block.index)
             }
@@ -3702,6 +3710,8 @@ final class TranslationSessionStore: ObservableObject {
         diagnostics.deterministicCorrectionTranslationPassedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationPassedBlocks)).sorted()
         diagnostics.deterministicCorrectionTranslationFailedBlocks = Array(Set(diagnostics.deterministicCorrectionTranslationFailedBlocks)).sorted()
         diagnostics.crossBubbleMergeRejectedBlocks = Array(Set(diagnostics.crossBubbleMergeRejectedBlocks)).sorted()
+        diagnostics.backgroundFillAppliedBlocks = Array(Set(diagnostics.backgroundFillAppliedBlocks)).sorted()
+        diagnostics.backgroundFillSkippedBlocks = Array(Set(diagnostics.backgroundFillSkippedBlocks)).sorted()
         diagnostics.repeatedKeywordFailures = Self.repeatedKeywordFailures(in: blocks)
         return diagnostics
     }

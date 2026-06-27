@@ -59,9 +59,9 @@
       "index" : 4,
       "passed" : false,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nThis is an offline tournament. Doing it online would make it meaningless.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n这是一种在线的比赛。在网上进行这项比赛会显得很 meaningless。",
+      "rawOutput" : "\n这是一种在线的 турниры。通过在线进行，它会显得很 meaningless。",
       "text" : "This is an offline tournament. Doing it online would make it meaningless.",
-      "translationCandidate" : "这是一种在线的比赛。在网上进行这项比赛会显得很 meaningless。"
+      "translationCandidate" : "这是一种在线的 турниры。通过在线进行，它会显得很 meaningless。"
     },
     {
       "failureReasons" : [
@@ -83,9 +83,9 @@
       "index" : 6,
       "passed" : false,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nOr at least, that seems to be Senpai's logic.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n或者，至少，这看起来像是Senpai的逻辑。",
+      "rawOutput" : "\n或者，至少，他似乎是Senpai的逻辑。",
       "text" : "Or at least, that seems to be Senpai's logic.",
-      "translationCandidate" : "或者，至少，这看起来像是Senpai的逻辑。"
+      "translationCandidate" : "或者，至少，他似乎是Senpai的逻辑。"
     },
     {
       "failureReasons" : [
@@ -107,9 +107,9 @@
       "index" : 8,
       "passed" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWhat are you even talking about?\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n翻译成中文：\n\n**你有什么说？**\n",
+      "rawOutput" : "\n翻译成中文：\n你指的是什么？\n",
       "text" : "What are you even talking about?",
-      "translationCandidate" : "你有什么说？"
+      "translationCandidate" : "你指的是什么？"
     },
     {
       "failureReasons" : [
@@ -119,9 +119,9 @@
       "index" : 9,
       "passed" : false,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWe need to get results at this tournament to save the gaming club from being disbanded.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n我们需要获得比赛结果，以节省游戏俱乐部被 disbanded。",
+      "rawOutput" : "\n我们需要获得比赛结果，以便游戏俱乐部得以被 disbanded。",
       "text" : "We need to get results at this tournament to save the gaming club from being disbanded.",
-      "translationCandidate" : "我们需要获得比赛结果，以节省游戏俱乐部被 disbanded。"
+      "translationCandidate" : "我们需要获得比赛结果，以便游戏俱乐部得以被 disbanded。"
     },
     {
       "failureReasons" : [
