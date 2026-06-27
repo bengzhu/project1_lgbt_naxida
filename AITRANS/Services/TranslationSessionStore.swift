@@ -1500,14 +1500,25 @@ final class TranslationSessionStore: ObservableObject {
                 }
                 self.mangaOverlayProbeBlocks = probeBlocks
 
+                var cropFallbackSelfTest: MangaOverlayCropFallbackSelfTest?
                 if probeConfiguration.preprocessing.enabled {
                     self.mangaOverlayProbeMessage = "正在对 \(probeBlocks.count) 个文本块做裁切放大预处理 OCR"
                     for index in probeBlocks.indices {
-                        if let enhancedText = try await self.mangaOverlayProbeService.recognizePreprocessedText(
+                        let cropResult = try await self.mangaOverlayProbeService.recognizePreprocessedText(
                             in: recognized.image,
                             block: recognized.blocks[index],
                             options: probeConfiguration.preprocessing
-                        ) {
+                        )
+                        probeBlocks[index].adaptivePreprocessingOcrText = cropResult.adaptiveText
+                        probeBlocks[index].fixedPreprocessingOcrText = cropResult.fixedText
+                        probeBlocks[index].cropPaddingX = cropResult.cropPaddingX
+                        probeBlocks[index].cropPaddingY = cropResult.cropPaddingY
+                        probeBlocks[index].cropClampedByBubble = cropResult.cropClampedByBubble
+                        probeBlocks[index].cropCandidatePreservesRawWords = cropResult.cropCandidatePreservesRawWords
+                        probeBlocks[index].cropFallbackTriggered = cropResult.cropFallbackTriggered
+                        probeBlocks[index].cropFallbackReason = cropResult.cropFallbackReason
+                        probeBlocks[index].cropStrategyUsed = cropResult.cropStrategyUsed
+                        if let enhancedText = cropResult.selectedText {
                             probeBlocks[index].afterPreprocessingOcrText = enhancedText
                             probeBlocks[index] = self.applyMangaOCRCandidateSelection(
                                 to: probeBlocks[index],
@@ -1522,6 +1533,12 @@ final class TranslationSessionStore: ObservableObject {
                             groundTruth: groundTruth
                         )
                     }
+                    cropFallbackSelfTest = try await self.mangaOverlayProbeService.runCropFallbackSelfTest(
+                        in: recognized.image,
+                        block: recognized.blocks.first,
+                        blockIndex: recognized.blocks.indices.first,
+                        options: probeConfiguration.preprocessing
+                    )
                     self.mangaOverlayProbeBlocks = probeBlocks
                 }
 
@@ -1603,6 +1620,7 @@ final class TranslationSessionStore: ObservableObject {
                     bubbleGeometry: recognized.bubbleGeometry,
                     sliceOCR: recognized.sliceOCR,
                     syntheticSliceOCR: syntheticSliceOCR,
+                    cropFallbackSelfTest: cropFallbackSelfTest,
                     lexiconComparison: lexiconComparison,
                     visionAPIComparison: visionAPIComparison,
                     frameworkComparison: frameworkComparison,
@@ -2049,6 +2067,13 @@ final class TranslationSessionStore: ObservableObject {
         notes.append("rawCandidateQuality=\(rawScore.formatted(.number.precision(.fractionLength(3))))")
         notes.append("preprocessedCandidateQuality=\(enhancedScore.formatted(.number.precision(.fractionLength(3))))")
         notes.append("preprocessedPreservesRawWords=\(enhancedPreservesRawWords)")
+        notes.append("cropPaddingX=\(block.cropPaddingX?.formatted(.number.precision(.fractionLength(1))) ?? "nil")")
+        notes.append("cropPaddingY=\(block.cropPaddingY?.formatted(.number.precision(.fractionLength(1))) ?? "nil")")
+        notes.append("cropClampedByBubble=\(block.cropClampedByBubble)")
+        notes.append("cropCandidatePreservesRawWords=\(block.cropCandidatePreservesRawWords)")
+        notes.append("cropFallbackTriggered=\(block.cropFallbackTriggered)")
+        notes.append("cropFallbackReason=\(block.cropFallbackReason ?? "nil")")
+        notes.append("cropStrategyUsed=\(block.cropStrategyUsed ?? "nil")")
         notes.append("rawTruthSimilarity=\(rawMatch.similarity.formatted(.number.precision(.fractionLength(3))))")
         notes.append("preprocessedTruthSimilarity=\(enhancedMatch.similarity.formatted(.number.precision(.fractionLength(3))))")
 
@@ -2067,6 +2092,15 @@ final class TranslationSessionStore: ObservableObject {
             rawOcrText: block.rawOcrText,
             preprocessingEnabled: block.preprocessingEnabled,
             afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+            adaptivePreprocessingOcrText: block.adaptivePreprocessingOcrText,
+            fixedPreprocessingOcrText: block.fixedPreprocessingOcrText,
+            cropPaddingX: block.cropPaddingX,
+            cropPaddingY: block.cropPaddingY,
+            cropClampedByBubble: block.cropClampedByBubble,
+            cropCandidatePreservesRawWords: block.cropCandidatePreservesRawWords,
+            cropFallbackTriggered: block.cropFallbackTriggered,
+            cropFallbackReason: block.cropFallbackReason,
+            cropStrategyUsed: block.cropStrategyUsed,
             correctionEnabled: block.correctionEnabled,
             afterCorrectionText: block.afterCorrectionText,
             correctionRejectedReason: block.correctionRejectedReason,
@@ -2176,6 +2210,15 @@ final class TranslationSessionStore: ObservableObject {
                 rawOcrText: block.rawOcrText,
                 preprocessingEnabled: block.preprocessingEnabled,
                 afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+                adaptivePreprocessingOcrText: block.adaptivePreprocessingOcrText,
+                fixedPreprocessingOcrText: block.fixedPreprocessingOcrText,
+                cropPaddingX: block.cropPaddingX,
+                cropPaddingY: block.cropPaddingY,
+                cropClampedByBubble: block.cropClampedByBubble,
+                cropCandidatePreservesRawWords: block.cropCandidatePreservesRawWords,
+                cropFallbackTriggered: block.cropFallbackTriggered,
+                cropFallbackReason: block.cropFallbackReason,
+                cropStrategyUsed: block.cropStrategyUsed,
                 correctionEnabled: true,
                 afterCorrectionText: block.finalTextUsedForTranslation,
                 correctionRejectedReason: "OCR 为空，跳过纠错",
@@ -2253,6 +2296,15 @@ final class TranslationSessionStore: ObservableObject {
             rawOcrText: block.rawOcrText,
             preprocessingEnabled: block.preprocessingEnabled,
             afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+            adaptivePreprocessingOcrText: block.adaptivePreprocessingOcrText,
+            fixedPreprocessingOcrText: block.fixedPreprocessingOcrText,
+            cropPaddingX: block.cropPaddingX,
+            cropPaddingY: block.cropPaddingY,
+            cropClampedByBubble: block.cropClampedByBubble,
+            cropCandidatePreservesRawWords: block.cropCandidatePreservesRawWords,
+            cropFallbackTriggered: block.cropFallbackTriggered,
+            cropFallbackReason: block.cropFallbackReason,
+            cropStrategyUsed: block.cropStrategyUsed,
             correctionEnabled: true,
             afterCorrectionText: acceptedText,
             correctionRejectedReason: rejectedReason,
@@ -2325,6 +2377,15 @@ final class TranslationSessionStore: ObservableObject {
             rawOcrText: block.rawOcrText,
             preprocessingEnabled: block.preprocessingEnabled,
             afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+            adaptivePreprocessingOcrText: block.adaptivePreprocessingOcrText,
+            fixedPreprocessingOcrText: block.fixedPreprocessingOcrText,
+            cropPaddingX: block.cropPaddingX,
+            cropPaddingY: block.cropPaddingY,
+            cropClampedByBubble: block.cropClampedByBubble,
+            cropCandidatePreservesRawWords: block.cropCandidatePreservesRawWords,
+            cropFallbackTriggered: block.cropFallbackTriggered,
+            cropFallbackReason: block.cropFallbackReason,
+            cropStrategyUsed: block.cropStrategyUsed,
             correctionEnabled: block.correctionEnabled,
             afterCorrectionText: block.afterCorrectionText,
             correctionRejectedReason: block.correctionRejectedReason,
@@ -2519,6 +2580,15 @@ final class TranslationSessionStore: ObservableObject {
             rawOcrText: block.rawOcrText,
             preprocessingEnabled: block.preprocessingEnabled,
             afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+            adaptivePreprocessingOcrText: block.adaptivePreprocessingOcrText,
+            fixedPreprocessingOcrText: block.fixedPreprocessingOcrText,
+            cropPaddingX: block.cropPaddingX,
+            cropPaddingY: block.cropPaddingY,
+            cropClampedByBubble: block.cropClampedByBubble,
+            cropCandidatePreservesRawWords: block.cropCandidatePreservesRawWords,
+            cropFallbackTriggered: block.cropFallbackTriggered,
+            cropFallbackReason: block.cropFallbackReason,
+            cropStrategyUsed: block.cropStrategyUsed,
             correctionEnabled: block.correctionEnabled,
             afterCorrectionText: block.afterCorrectionText,
             correctionRejectedReason: block.correctionRejectedReason,
@@ -2650,6 +2720,15 @@ final class TranslationSessionStore: ObservableObject {
             rawOcrText: block.rawOcrText,
             preprocessingEnabled: block.preprocessingEnabled,
             afterPreprocessingOcrText: block.afterPreprocessingOcrText,
+            adaptivePreprocessingOcrText: block.adaptivePreprocessingOcrText,
+            fixedPreprocessingOcrText: block.fixedPreprocessingOcrText,
+            cropPaddingX: block.cropPaddingX,
+            cropPaddingY: block.cropPaddingY,
+            cropClampedByBubble: block.cropClampedByBubble,
+            cropCandidatePreservesRawWords: block.cropCandidatePreservesRawWords,
+            cropFallbackTriggered: block.cropFallbackTriggered,
+            cropFallbackReason: block.cropFallbackReason,
+            cropStrategyUsed: block.cropStrategyUsed,
             correctionEnabled: block.correctionEnabled,
             afterCorrectionText: block.afterCorrectionText,
             correctionRejectedReason: block.correctionRejectedReason,
@@ -3398,6 +3477,7 @@ final class TranslationSessionStore: ObservableObject {
         bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics? = nil,
         sliceOCR: MangaOverlaySliceOCRDiagnostics? = nil,
         syntheticSliceOCR: MangaOverlaySliceOCRDiagnostics? = nil,
+        cropFallbackSelfTest: MangaOverlayCropFallbackSelfTest? = nil,
         lexiconComparison: MangaOverlayLexiconComparison? = nil,
         visionAPIComparison: MangaOverlayVisionAPIComparison? = nil,
         frameworkComparison: MangaOverlayFrameworkComparison? = nil,
@@ -3452,6 +3532,7 @@ final class TranslationSessionStore: ObservableObject {
             bubbleGeometry: bubbleGeometry,
             sliceOCR: sliceOCR,
             syntheticSliceOCR: syntheticSliceOCR,
+            cropFallbackSelfTest: cropFallbackSelfTest,
             overallPassed: allBlocksPassed && filesPresent,
             outputFiles: outputFiles,
             outputDirectoryCleaned: true,

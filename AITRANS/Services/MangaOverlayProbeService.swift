@@ -208,6 +208,30 @@ struct MangaOverlaySliceOCRDiagnostics: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaOverlayPreprocessedOCRResult: Equatable, Sendable {
+    var selectedText: String?
+    var adaptiveText: String?
+    var fixedText: String?
+    var cropPaddingX: Double
+    var cropPaddingY: Double
+    var cropClampedByBubble: Bool
+    var cropCandidatePreservesRawWords: Bool
+    var cropFallbackTriggered: Bool
+    var cropFallbackReason: String?
+    var cropStrategyUsed: String
+}
+
+struct MangaOverlayCropFallbackSelfTest: Equatable, Codable, Sendable {
+    var triggered: Bool
+    var blockIndex: Int?
+    var rawText: String
+    var tightCropText: String?
+    var fallbackText: String?
+    var tightCropPreservesRawWords: Bool
+    var fallbackPreservesRawWords: Bool
+    var reason: String
+}
+
 struct MangaOverlayProbeService: Sendable {
     private static let ocrScale: CGFloat = 2
     private static let sliceAspectRatioThreshold: CGFloat = 2.85
@@ -296,35 +320,161 @@ struct MangaOverlayProbeService: Sendable {
         in image: CGImage,
         block: MangaOverlayOCRBlock,
         options: MangaOverlayPreprocessingOptions = .defaultValue
-    ) async throws -> String? {
+    ) async throws -> MangaOverlayPreprocessedOCRResult {
         try await Task.detached(priority: .userInitiated) {
-            guard options.enabled else { return nil }
+            guard options.enabled else {
+                return MangaOverlayPreprocessedOCRResult(
+                    selectedText: nil,
+                    adaptiveText: nil,
+                    fixedText: nil,
+                    cropPaddingX: 0,
+                    cropPaddingY: 0,
+                    cropClampedByBubble: false,
+                    cropCandidatePreservesRawWords: false,
+                    cropFallbackTriggered: false,
+                    cropFallbackReason: "preprocessing disabled",
+                    cropStrategyUsed: "disabled"
+                )
+            }
             let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
             let cropBounds = block.bubbleBoundingBox.map { $0.intersection(bounds) } ?? bounds
-            let expanded = Self.expand(block.boundingBox, by: 0.18, bounds: bounds)
-            let cropRect = Self.clamp(expanded, to: cropBounds).integral
-            let cropped = try Self.croppedImage(image, rect: cropRect)
-            let prepared = try Self.preprocessedImage(cropped, options: options)
-            let candidates = try Self.recognizeTextCandidates(
-                in: prepared,
-                angle: 0,
-                scaledContentSize: CGSize(width: CGFloat(prepared.width), height: CGFloat(prepared.height)),
-                contentOrigin: .zero,
-                scale: 1,
-                customWords: []
+            let adaptivePadding = Self.adaptiveCropPadding(for: block.boundingBox)
+            let adaptiveExpanded = block.boundingBox.insetBy(dx: -adaptivePadding.x, dy: -adaptivePadding.y)
+            let adaptiveCropRect = Self.clamp(adaptiveExpanded, to: cropBounds).integral
+            let fixedExpanded = Self.expand(block.boundingBox, by: 0.18, bounds: bounds)
+            let fixedCropRect = Self.clamp(fixedExpanded, to: cropBounds).integral
+
+            let adaptiveText = try Self.recognizePreprocessedText(in: image, cropRect: adaptiveCropRect, options: options)
+            let fixedText = try Self.recognizePreprocessedText(in: image, cropRect: fixedCropRect, options: options)
+            let adaptivePreservesRawWords = Self.cropCandidatePreservesRawWords(
+                rawText: block.text,
+                candidateText: adaptiveText
             )
-            let text = candidates
-                .sorted {
-                    if abs($0.boundingBox.minY - $1.boundingBox.minY) > 8 {
-                        return $0.boundingBox.minY < $1.boundingBox.minY
-                    }
-                    return $0.boundingBox.minX < $1.boundingBox.minX
-                }
-                .map(\.text)
-                .joined(separator: "\n")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            return text.isEmpty ? nil : text
+            let fixedPreservesRawWords = Self.cropCandidatePreservesRawWords(
+                rawText: block.text,
+                candidateText: fixedText
+            )
+            let fallbackTriggered = !adaptivePreservesRawWords && fixedPreservesRawWords
+            let selectedText = fallbackTriggered ? fixedText : adaptiveText
+            let fallbackReason = fallbackTriggered
+                ? "adaptive crop lost raw OCR words; fell back to fixed 18% crop"
+                : nil
+
+            return MangaOverlayPreprocessedOCRResult(
+                selectedText: selectedText,
+                adaptiveText: adaptiveText,
+                fixedText: fixedText,
+                cropPaddingX: Double(adaptivePadding.x),
+                cropPaddingY: Double(adaptivePadding.y),
+                cropClampedByBubble: block.bubbleBoundingBox != nil && !adaptiveExpanded.integral.equalTo(adaptiveCropRect),
+                cropCandidatePreservesRawWords: fallbackTriggered ? fixedPreservesRawWords : adaptivePreservesRawWords,
+                cropFallbackTriggered: fallbackTriggered,
+                cropFallbackReason: fallbackReason,
+                cropStrategyUsed: fallbackTriggered ? "fixedFallback" : "adaptive"
+            )
         }.value
+    }
+
+    func runCropFallbackSelfTest(
+        in image: CGImage,
+        block: MangaOverlayOCRBlock?,
+        blockIndex: Int?,
+        options: MangaOverlayPreprocessingOptions = .defaultValue
+    ) async throws -> MangaOverlayCropFallbackSelfTest {
+        try await Task.detached(priority: .userInitiated) {
+            guard options.enabled, let block else {
+                return MangaOverlayCropFallbackSelfTest(
+                    triggered: false,
+                    blockIndex: nil,
+                    rawText: "",
+                    tightCropText: nil,
+                    fallbackText: nil,
+                    tightCropPreservesRawWords: false,
+                    fallbackPreservesRawWords: false,
+                    reason: "preprocessing disabled or no block available"
+                )
+            }
+            let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            let cropBounds = block.bubbleBoundingBox.map { $0.intersection(bounds) } ?? bounds
+            let tightRect = Self.clamp(
+                block.boundingBox.insetBy(dx: block.boundingBox.width * 0.48, dy: block.boundingBox.height * 0.48),
+                to: cropBounds
+            ).integral
+            let fallbackRect = Self.clamp(Self.expand(block.boundingBox, by: 0.18, bounds: bounds), to: cropBounds).integral
+            let tightText = try Self.recognizePreprocessedText(in: image, cropRect: tightRect, options: options)
+            let fallbackText = try Self.recognizePreprocessedText(in: image, cropRect: fallbackRect, options: options)
+            let tightPreserves = Self.cropCandidatePreservesRawWords(rawText: block.text, candidateText: tightText)
+            let fallbackPreserves = Self.cropCandidatePreservesRawWords(rawText: block.text, candidateText: fallbackText)
+            let triggered = !tightPreserves && fallbackPreserves
+            return MangaOverlayCropFallbackSelfTest(
+                triggered: triggered,
+                blockIndex: blockIndex,
+                rawText: block.text,
+                tightCropText: tightText,
+                fallbackText: fallbackText,
+                tightCropPreservesRawWords: tightPreserves,
+                fallbackPreservesRawWords: fallbackPreserves,
+                reason: triggered
+                    ? "synthetic tight crop lost raw words and fixed crop preserved them"
+                    : "synthetic tight crop did not prove fallback; inspect tight/fallback OCR text"
+            )
+        }.value
+    }
+
+    private static func recognizePreprocessedText(
+        in image: CGImage,
+        cropRect: CGRect,
+        options: MangaOverlayPreprocessingOptions
+    ) throws -> String? {
+        guard cropRect.width >= 2, cropRect.height >= 2 else { return nil }
+        let cropped = try croppedImage(image, rect: cropRect)
+        let prepared = try preprocessedImage(cropped, options: options)
+        let candidates = try recognizeTextCandidates(
+            in: prepared,
+            angle: 0,
+            scaledContentSize: CGSize(width: CGFloat(prepared.width), height: CGFloat(prepared.height)),
+            contentOrigin: .zero,
+            scale: 1,
+            customWords: []
+        )
+        let text = candidates
+            .sorted {
+                if abs($0.boundingBox.minY - $1.boundingBox.minY) > 8 {
+                    return $0.boundingBox.minY < $1.boundingBox.minY
+                }
+                return $0.boundingBox.minX < $1.boundingBox.minX
+            }
+            .map(\.text)
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : text
+    }
+
+    private static func adaptiveCropPadding(for rect: CGRect) -> CGPoint {
+        let estimatedFontSize = max(6, min(rect.width, rect.height))
+        let isVerticalText = rect.height > rect.width * 1.35
+        let horizontalPadding = isVerticalText ? estimatedFontSize * 0.75 : estimatedFontSize * 0.45
+        let verticalPadding = isVerticalText ? estimatedFontSize * 0.45 : estimatedFontSize * 0.75
+        return CGPoint(
+            x: max(4, min(horizontalPadding, rect.width * 0.45)),
+            y: max(4, min(verticalPadding, rect.height * 0.55))
+        )
+    }
+
+    static func cropCandidatePreservesRawWords(rawText: String, candidateText: String?) -> Bool {
+        let rawWords = ocrWords(rawText)
+        guard !rawWords.isEmpty, let candidateText else { return false }
+        let candidateWords = Set(ocrWords(candidateText))
+        guard !candidateWords.isEmpty else { return false }
+        let required = rawWords.count <= 2 ? rawWords.count : Int(ceil(Double(rawWords.count) * 0.7))
+        let preservedCount = rawWords.filter { candidateWords.contains($0) }.count
+        return preservedCount >= max(1, required)
+    }
+
+    private static func ocrWords(_ text: String) -> [String] {
+        text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { $0.count >= 2 }
     }
 
     func renderOutputs(
@@ -667,6 +817,8 @@ struct MangaOverlayProbeService: Sendable {
             let bbox = block.bbox.map { String(Int($0.rounded())) }.joined(separator: ",")
             let raw = block.rawOcrText.replacing("\n", with: " / ")
             let preprocessed = block.afterPreprocessingOcrText?.replacing("\n", with: " / ") ?? "nil"
+            let adaptivePreprocessed = block.adaptivePreprocessingOcrText?.replacing("\n", with: " / ") ?? "nil"
+            let fixedPreprocessed = block.fixedPreprocessingOcrText?.replacing("\n", with: " / ") ?? "nil"
             let final = block.finalTextUsedForTranslation.replacing("\n", with: " / ")
             let deterministic = block.deterministicCorrectionText?.replacing("\n", with: " / ") ?? "nil"
             let truth = block.bestGroundTruthText ?? "nil"
@@ -686,6 +838,15 @@ struct MangaOverlayProbeService: Sendable {
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
             rawOCR: \(raw)
             afterPreprocessing: \(preprocessed)
+            adaptivePreprocessing: \(adaptivePreprocessed)
+            fixedPreprocessing: \(fixedPreprocessed)
+            cropPaddingX: \(block.cropPaddingX?.formatted(.number.precision(.fractionLength(1))) ?? "nil")
+            cropPaddingY: \(block.cropPaddingY?.formatted(.number.precision(.fractionLength(1))) ?? "nil")
+            cropClampedByBubble: \(block.cropClampedByBubble)
+            cropCandidatePreservesRawWords: \(block.cropCandidatePreservesRawWords)
+            cropFallbackTriggered: \(block.cropFallbackTriggered)
+            cropFallbackReason: \(block.cropFallbackReason ?? "nil")
+            cropStrategyUsed: \(block.cropStrategyUsed ?? "nil")
             finalForTranslation: \(final)
             deterministicCorrection: \(deterministic)
             bestGroundTruth: \(truth)
@@ -2509,14 +2670,17 @@ struct MangaOverlayProbeService: Sendable {
                 let tileRect = CGRect(x: origin.x + 8, y: origin.y + 8, width: tileWidth - 16, height: tileHeight - 16)
                 do {
                     let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
-                    let cropRect = expand(rect(from: block.bbox), by: 0.25, bounds: bounds).integral
+                    let rect = rect(from: block.bbox)
+                    let paddingX = CGFloat(block.cropPaddingX ?? max(5, rect.width * 0.18))
+                    let paddingY = CGFloat(block.cropPaddingY ?? max(5, rect.height * 0.18))
+                    let cropRect = clamp(rect.insetBy(dx: -paddingX, dy: -paddingY), to: bounds).integral
                     let cropped = try croppedImage(image, rect: cropRect)
                     let processed = preprocessing.enabled ? try preprocessedImage(cropped, options: preprocessing) : cropped
                     let cropImage = UIImage(cgImage: processed)
                     let imageRect = CGRect(x: tileRect.minX, y: tileRect.minY + 28, width: tileRect.width, height: tileRect.height - 62)
                     context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
                     context.fill(tileRect)
-                    drawText("#\(block.index)", in: CGRect(x: tileRect.minX, y: tileRect.minY, width: 80, height: 24), fontSize: 16, textColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1), backgroundColor: CGColor(red: 1, green: 0.08, blue: 0.18, alpha: 0.88), context: context)
+                    drawText("#\(block.index) \(block.cropStrategyUsed ?? "crop")", in: CGRect(x: tileRect.minX, y: tileRect.minY, width: 150, height: 24), fontSize: 14, textColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1), backgroundColor: CGColor(red: 1, green: 0.08, blue: 0.18, alpha: 0.88), context: context)
                     cropImage.draw(in: aspectFitRect(imageSize: CGSize(width: processed.width, height: processed.height), bounds: imageRect))
                     drawText(block.afterPreprocessingOcrText ?? block.rawOcrText, in: CGRect(x: tileRect.minX, y: tileRect.maxY - 32, width: tileRect.width, height: 30), fontSize: 11, textColor: CGColor(red: 0, green: 0, blue: 0, alpha: 1), backgroundColor: CGColor(red: 1, green: 1, blue: 1, alpha: 0.82), context: context)
                 } catch {

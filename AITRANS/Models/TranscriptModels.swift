@@ -341,6 +341,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var ocrConfidence: Float?
     var preprocessingEnabled: Bool
     var afterPreprocessingOcrText: String?
+    var adaptivePreprocessingOcrText: String?
+    var fixedPreprocessingOcrText: String?
+    var cropPaddingX: Double?
+    var cropPaddingY: Double?
+    var cropClampedByBubble: Bool
+    var cropCandidatePreservesRawWords: Bool
+    var cropFallbackTriggered: Bool
+    var cropFallbackReason: String?
+    var cropStrategyUsed: String?
     var correctionEnabled: Bool
     var afterCorrectionText: String?
     var correctionRejectedReason: String?
@@ -395,6 +404,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         case ocrConfidence
         case preprocessingEnabled
         case afterPreprocessingOcrText
+        case adaptivePreprocessingOcrText
+        case fixedPreprocessingOcrText
+        case cropPaddingX
+        case cropPaddingY
+        case cropClampedByBubble
+        case cropCandidatePreservesRawWords
+        case cropFallbackTriggered
+        case cropFallbackReason
+        case cropStrategyUsed
         case correctionEnabled
         case afterCorrectionText
         case correctionRejectedReason
@@ -450,6 +468,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         rawOcrText: String? = nil,
         preprocessingEnabled: Bool = false,
         afterPreprocessingOcrText: String? = nil,
+        adaptivePreprocessingOcrText: String? = nil,
+        fixedPreprocessingOcrText: String? = nil,
+        cropPaddingX: Double? = nil,
+        cropPaddingY: Double? = nil,
+        cropClampedByBubble: Bool = false,
+        cropCandidatePreservesRawWords: Bool = false,
+        cropFallbackTriggered: Bool = false,
+        cropFallbackReason: String? = nil,
+        cropStrategyUsed: String? = nil,
         correctionEnabled: Bool = false,
         afterCorrectionText: String? = nil,
         correctionRejectedReason: String? = nil,
@@ -511,6 +538,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.ocrConfidence = ocrConfidence
         self.preprocessingEnabled = preprocessingEnabled
         self.afterPreprocessingOcrText = afterPreprocessingOcrText
+        self.adaptivePreprocessingOcrText = adaptivePreprocessingOcrText
+        self.fixedPreprocessingOcrText = fixedPreprocessingOcrText
+        self.cropPaddingX = cropPaddingX
+        self.cropPaddingY = cropPaddingY
+        self.cropClampedByBubble = cropClampedByBubble
+        self.cropCandidatePreservesRawWords = cropCandidatePreservesRawWords
+        self.cropFallbackTriggered = cropFallbackTriggered
+        self.cropFallbackReason = cropFallbackReason
+        self.cropStrategyUsed = cropStrategyUsed
         self.correctionEnabled = correctionEnabled
         self.afterCorrectionText = afterCorrectionText
         self.correctionRejectedReason = correctionRejectedReason
@@ -567,6 +603,15 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         try container.encodeIfPresent(ocrConfidence, forKey: .ocrConfidence)
         try container.encode(preprocessingEnabled, forKey: .preprocessingEnabled)
         try container.encodeIfPresent(afterPreprocessingOcrText, forKey: .afterPreprocessingOcrText)
+        try container.encodeIfPresent(adaptivePreprocessingOcrText, forKey: .adaptivePreprocessingOcrText)
+        try container.encodeIfPresent(fixedPreprocessingOcrText, forKey: .fixedPreprocessingOcrText)
+        try container.encodeIfPresent(cropPaddingX, forKey: .cropPaddingX)
+        try container.encodeIfPresent(cropPaddingY, forKey: .cropPaddingY)
+        try container.encode(cropClampedByBubble, forKey: .cropClampedByBubble)
+        try container.encode(cropCandidatePreservesRawWords, forKey: .cropCandidatePreservesRawWords)
+        try container.encode(cropFallbackTriggered, forKey: .cropFallbackTriggered)
+        try container.encodeIfPresent(cropFallbackReason, forKey: .cropFallbackReason)
+        try container.encodeIfPresent(cropStrategyUsed, forKey: .cropStrategyUsed)
         try container.encode(correctionEnabled, forKey: .correctionEnabled)
         try container.encodeIfPresent(afterCorrectionText, forKey: .afterCorrectionText)
         try container.encodeIfPresent(correctionRejectedReason, forKey: .correctionRejectedReason)
@@ -837,6 +882,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics?
     var sliceOCR: MangaOverlaySliceOCRDiagnostics?
     var syntheticSliceOCR: MangaOverlaySliceOCRDiagnostics?
+    var cropFallbackSelfTest: MangaOverlayCropFallbackSelfTest?
     var overallPassed: Bool
     var outputFiles: MangaOverlayProbeOutputFiles
     var outputDirectoryCleaned: Bool
