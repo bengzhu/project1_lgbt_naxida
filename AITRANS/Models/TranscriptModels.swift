@@ -962,6 +962,38 @@ struct MangaCleanTextDiagnosticReport: Equatable, Codable, Sendable {
     var cases: [MangaCleanTextDiagnosticCase]
 }
 
+struct MangaBatchTranslationCase: Equatable, Codable, Sendable {
+    var index: Int
+    var tag: String
+    var sourceText: String
+    var parsedText: String?
+    var rawOutputClassification: String
+    var candidateClassification: String
+    var passed: Bool
+    var sequentialBlockPassed: Bool
+    var failureReasons: [String]
+}
+
+struct MangaBatchTranslationComparison: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var prompt: String
+    var rawOutput: String
+    var errorCode: String?
+    var totalCases: Int
+    var parsedCases: Int
+    var missingTags: [String]
+    var duplicateTags: [String]
+    var outOfOrderTags: [String]
+    var sequentialPassedCases: Int
+    var batchPassedCases: Int
+    var sequentialPassRate: Double
+    var batchPassRate: Double
+    var batchBetterBy: Double
+    var parseFailureReasons: [String]
+    var cases: [MangaBatchTranslationCase]
+    var notes: [String]
+}
+
 struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var sourceImage: String
     var engineUsed: String
@@ -974,6 +1006,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var visionAPIComparison: MangaOverlayVisionAPIComparison?
     var frameworkComparison: MangaOverlayFrameworkComparison?
     var cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
+    var batchTranslationComparison: MangaBatchTranslationComparison?
     var bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics?
     var sliceOCR: MangaOverlaySliceOCRDiagnostics?
     var syntheticSliceOCR: MangaOverlaySliceOCRDiagnostics?

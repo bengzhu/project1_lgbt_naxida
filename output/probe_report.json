@@ -1,4 +1,231 @@
 {
+  "batchTranslationComparison" : {
+    "batchBetterBy" : -0.07142857142857142,
+    "batchPassRate" : 0,
+    "batchPassedCases" : 0,
+    "cases" : [
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 0,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
+        "tag" : "[0]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 1,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
+        "tag" : "[1]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 2,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
+        "tag" : "[2]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 3,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL",
+        "tag" : "[3]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 4,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD",
+        "tag" : "[4]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 5,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "LET'S\nBATTLER!",
+        "tag" : "[5]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 6,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE",
+        "tag" : "[6]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 7,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
+        "tag" : "[7]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 8,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
+        "tag" : "[8]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 9,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "What Whet are\nevery you!\ntalking",
+        "tag" : "[9]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 10,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "PLAY ONLING...",
+        "tag" : "[10]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 11,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "JUST",
+        "tag" : "[11]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 12,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : false,
+        "sourceText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
+        "tag" : "[12]"
+      },
+      {
+        "candidateClassification" : "empty",
+        "failureReasons" : [
+          "翻译为空",
+          "tagMissing"
+        ],
+        "index" : 13,
+        "passed" : false,
+        "rawOutputClassification" : "empty",
+        "sequentialBlockPassed" : true,
+        "sourceText" : "City Battler\nOffline.\nTournament",
+        "tag" : "[13]"
+      }
+    ],
+    "duplicateTags" : [
+
+    ],
+    "enabled" : true,
+    "missingTags" : [
+      "[0]",
+      "[1]",
+      "[2]",
+      "[3]",
+      "[4]",
+      "[5]",
+      "[6]",
+      "[7]",
+      "[8]",
+      "[9]",
+      "[10]",
+      "[11]",
+      "[12]",
+      "[13]"
+    ],
+    "notes" : [
+      "diagnosticOnly=true; sequential per-block translation remains the primary flow",
+      "batch output is parsed by bracketed block index tags; missing\/duplicate\/out-of-order tags fail the batch case",
+      "batchWorseThanSequential"
+    ],
+    "outOfOrderTags" : [
+
+    ],
+    "parseFailureReasons" : [
+      "missingTags=[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13]",
+      "unexpectedTags=[14],[15],[16],[17],[18],[19],[20],[21],[22],[23],[24]"
+    ],
+    "parsedCases" : 0,
+    "prompt" : "把以下英文漫画台词翻译成中文。\n严格保留每一行开头的编号标签，例如 [0]。\n不要合并编号，不要拆分编号，不要解释，不要添加列表符号。\n每个输入编号必须输出且只输出一行对应中文。\n\n[0] THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-\n[1] IVE ARRIVED AT REN- SENPAI'S HOUSE.\n[2] THE CITY RATTLER\nSTATE IN A PEN DAYS.\n[3] THAT'S\nWE'RE WHY\nTRANINS SPECIAL\n[4] THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD\n[5] LET'S\nBATTLER!\n[6] THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE\n[7] GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG\n[8] SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.\n[9] What Whet are\nevery you!\ntalking\n[10] PLAY ONLING...\n[11] JUST\n[12] -O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.\n[13] City Battler\nOffline.\nTournament",
+    "rawOutput" : ".\n[14] THE CITY RATTLER\nSTATE IN A PEN DAYS.\n[15] THAT'S\nWE'RE WHY\nTRANINS SPECIAL\n[16] THOUGH THOUSH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\n[17] LET'S\nBATTLER!\n[18] THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE\n[19] GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG\n[20] SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.\n[21] What Whet are\nevery you!\ntalking\n[22] PLAY ONLING...\n[23] JUST\n[24] -O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.\n[25",
+    "sequentialPassRate" : 0.07142857142857142,
+    "sequentialPassedCases" : 1,
+    "totalCases" : 14
+  },
   "blocks" : [
     {
       "adaptivePreprocessingOcrText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
@@ -35,8 +262,8 @@
       },
       "correctionEnabled" : true,
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nThat's right.\n",
-      "correctionRejectedReason" : "长度变化 54% 超过 30%",
+      "correctionRawOutput" : "\nThat's right,\nThat's right\nNOW\nI'M\n",
+      "correctionRejectedReason" : "长度变化 89% 超过 30%",
       "cropCandidatePreservesRawWords" : true,
       "cropClampedByBubble" : false,
       "cropFallbackTriggered" : false,
@@ -4345,7 +4572,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "FE8F91CF-BE4B-4350-B0B0-952808F580FC",
+      "id" : "9C57FC0B-0B6A-4CCB-AAAD-20B3155BAB4D",
       "index" : 0,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 1,
@@ -4383,15 +4610,14 @@
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
         "candidateLength=3",
-        "rawOutputLength=63",
+        "rawOutputLength=36",
         "latinLetters=2",
         "rawLatinLetters=15",
-        "rawCJKCharacters=8",
         "likelyOCRIssue"
       ],
       "rawOcrText" : "THAT'S\nRIGHT,\nNOW\nI'M-",
-      "rawOutput" : "\n以下是翻译成中文：\n\n*   **THAT'S**\n*   **RIGHT**\n*   **NOW**\n*   **I'M**",
-      "rawOutputClassification" : "placeholder",
+      "rawOutput" : "\n**That's**\n**Right**\n**NOW**\n**I'M**\n",
+      "rawOutputClassification" : "nonChinese",
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
@@ -4417,7 +4643,7 @@
       "translatedText" : "翻译失败\nTHAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
       "translationCandidate" : "I'M",
       "translationDecisionTrace" : [
-        "rawOutputClassification=placeholder",
+        "rawOutputClassification=nonChinese",
         "candidateClassification=nonChinese",
         "rawHadContent=true",
         "rejectedPlaceholder=false",
@@ -4429,7 +4655,7 @@
         "looksLikeChinese=false",
         "translationLanguageQualityPassed=false"
       ],
-      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：中文字符不足、翻译不像中文；OCR 输入疑似有误",
+      "translationFailureDetail" : "模型输出非中文\/符号，未达到英译中目标：中文字符不足、翻译不像中文；OCR 输入疑似有误",
       "wordOrderPreserved" : true
     },
     {
@@ -4455,14 +4681,14 @@
       "blockPassed" : false,
       "bubbleAssignmentMethod" : "overlapArea",
       "bubbleID" : 1,
-      "candidateClassification" : "nonChinese",
+      "candidateClassification" : "repeatedOriginal",
       "checks" : {
         "looksLikeChinese" : false,
         "ocrNotEmpty" : true,
         "translationHasEnoughChinese" : false,
-        "translationNotContainOriginal" : true,
+        "translationNotContainOriginal" : false,
         "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true,
+        "translationNotEqualOriginal" : false,
         "translationNotPlaceholder" : true
       },
       "correctionEnabled" : true,
@@ -4482,6 +4708,7 @@
       "deterministicCorrectionText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
       "failureCategory" : "ocrInputSuspect",
       "failureReasons" : [
+        "翻译等于原文",
         "中文字符不足",
         "翻译不像中文"
       ],
@@ -7090,7 +7317,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "D76B6A3C-3CD4-48F7-BB5E-A53E7007A9DE",
+      "id" : "1E6A8088-F979-41D6-80FA-FD5494B5FB96",
       "index" : 1,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.5714285714285714,
@@ -7128,14 +7355,15 @@
       "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nIVE ARRIVED AT REN- SENPAI'S HOUSE.\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "candidateLength=38",
-        "rawOutputLength=38",
-        "latinLetters=26",
-        "rawLatinLetters=26"
+        "translationContainsFullOCRText",
+        "candidateLength=35",
+        "rawOutputLength=35",
+        "latinLetters=27",
+        "rawLatinLetters=27"
       ],
       "rawOcrText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
-      "rawOutput" : "\nIVE  arrivé tại nhà Ren-Senpa's House.",
-      "rawOutputClassification" : "nonChinese",
+      "rawOutput" : "\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
+      "rawOutputClassification" : "repeatedOriginal",
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
@@ -7159,21 +7387,21 @@
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nIVE ARRIVED AT REN- SENPAI'S HOUSE.",
-      "translationCandidate" : "IVE  arrivé tại nhà Ren-Senpa's House.",
+      "translationCandidate" : "IVE ARRIVED AT REN- SENPAI'S HOUSE.",
       "translationDecisionTrace" : [
-        "rawOutputClassification=nonChinese",
-        "candidateClassification=nonChinese",
+        "rawOutputClassification=repeatedOriginal",
+        "candidateClassification=repeatedOriginal",
         "rawHadContent=true",
         "rejectedPlaceholder=false",
         "ocrNotEmpty=true",
         "translationNotEmpty=true",
-        "translationNotEqualOriginal=true",
+        "translationNotEqualOriginal=false",
         "translationNotPlaceholder=true",
         "translationHasCJK=false",
         "looksLikeChinese=false",
         "translationLanguageQualityPassed=false"
       ],
-      "translationFailureDetail" : "模型输出非中文\/符号，未达到英译中目标：中文字符不足、翻译不像中文；OCR 输入疑似有误",
+      "translationFailureDetail" : "模型复读原文，非规则误杀：翻译等于原文、中文字符不足、翻译不像中文；OCR 输入疑似有误",
       "wordOrderPreserved" : true
     },
     {
@@ -7209,8 +7437,8 @@
       },
       "correctionEnabled" : true,
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THE CITY RATTLER\nSTATE IN A PEN DAYS.\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nThe City Ratler\n",
-      "correctionRejectedReason" : "长度变化 59% 超过 30%",
+      "correctionRawOutput" : "\nTHE CITY RATTLER\n",
+      "correctionRejectedReason" : "长度变化 57% 超过 30%",
       "cropCandidatePreservesRawWords" : false,
       "cropClampedByBubble" : false,
       "cropFallbackTriggered" : false,
@@ -7226,7 +7454,7 @@
       "deterministicCorrectionText" : "THE CITY BATTLER\nSTARTS IN A FEW DAYS.",
       "deterministicCorrectionTranslationCandidate" : "开始在几周内。",
       "deterministicCorrectionTranslationPassed" : true,
-      "deterministicCorrectionTranslationRawOutput" : "\n**城市枪手**\n**开始在几周内。**\n",
+      "deterministicCorrectionTranslationRawOutput" : "\n**城市捕手**\n**开始在几周内。**\n",
       "failureCategory" : "translationLanguageQualityFailure",
       "failureReasons" : [
         "长原文只得到过短中文候选"
@@ -9440,7 +9668,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "3E9ACA05-7BA4-44A4-8113-489E711F938D",
+      "id" : "59A42818-DBCC-4CB3-80A8-27BB36F98CAB",
       "index" : 2,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.5555555555555556,
@@ -9473,7 +9701,7 @@
         "translationLanguageQualityIssue=长原文只得到过短中文候选"
       ],
       "rawOcrText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS.",
-      "rawOutput" : "\n**城市鼠狸**\n**州立鼠狸**\n",
+      "rawOutput" : "\n**城市鼠狸**\n**州人鼠狸**\n",
       "rawOutputClassification" : "chinese",
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
@@ -9498,7 +9726,7 @@
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nTHE CITY RATTLER\nSTATE IN A PEN DAYS.",
-      "translationCandidate" : "州立鼠狸",
+      "translationCandidate" : "州人鼠狸",
       "translationDecisionTrace" : [
         "rawOutputClassification=chinese",
         "candidateClassification=chinese",
@@ -14320,7 +14548,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "0492E0F9-B96A-418C-B254-4C9512A520FA",
+      "id" : "2B2BBEB4-0ED2-4302-A818-35AC6E5EA91F",
       "index" : 3,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.5,
@@ -14445,9 +14673,9 @@
       ],
       "deterministicCorrectionSimilarity" : 0.5882352941176471,
       "deterministicCorrectionText" : "THOUGH THOUGH EVEN\nI SAID IT'S JUST SPECIAL TRAINING\nASKED IF AND\nWE COULD",
-      "deterministicCorrectionTranslationCandidate" : "虽然虽然我说了它只是特别训练，请问你是否和我一样感到？",
+      "deterministicCorrectionTranslationCandidate" : "虽然虽然你提到了“却是特别的训练”，请问你指的是什么？",
       "deterministicCorrectionTranslationPassed" : true,
-      "deterministicCorrectionTranslationRawOutput" : "\n虽然虽然我说了它只是特别训练，请问你是否和我一样感到？\n",
+      "deterministicCorrectionTranslationRawOutput" : "\n虽然虽然你提到了“却是特别的训练”，请问你指的是什么？\n",
       "failureCategory" : "ocrInputSuspect",
       "failureReasons" : [
         "中文字符不足",
@@ -19104,7 +19332,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "542760F4-CCE8-4B9F-8C1A-7D24714E5235",
+      "id" : "6262ED2C-53BF-41A9-933E-61C9B7E08F14",
       "index" : 4,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.5294117647058824,
@@ -19209,11 +19437,11 @@
       "blockPassed" : false,
       "bubbleAssignmentMethod" : "unassigned",
       "bubbleID" : null,
-      "candidateClassification" : "nonChinese",
+      "candidateClassification" : "chinese",
       "checks" : {
-        "looksLikeChinese" : false,
+        "looksLikeChinese" : true,
         "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : false,
+        "translationHasEnoughChinese" : true,
         "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
         "translationNotEqualOriginal" : true,
@@ -19235,10 +19463,9 @@
       ],
       "deterministicCorrectionSimilarity" : 0.6666666666666667,
       "deterministicCorrectionText" : "LET'S\nBATTLER!",
-      "failureCategory" : "ocrInputSuspect",
+      "failureCategory" : "translationLanguageQualityFailure",
       "failureReasons" : [
-        "中文字符不足",
-        "翻译不像中文"
+        "raw 输出仍保留未翻译英文"
       ],
       "finalTextUsedForTranslation" : "LET'S\nBATTLER!",
       "fixedPreprocessingOcrText" : "LET'S\nBATTLER!",
@@ -19248,7 +19475,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "3022EC8A-72A9-4CF2-A882-865900243C28",
+      "id" : "945F186B-A9A4-4905-ACFF-680785623642",
       "index" : 5,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.6666666666666667,
@@ -19286,14 +19513,15 @@
       "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nLET'S\nBATTLER!\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "candidateLength=8",
-        "rawOutputLength=34",
-        "latinLetters=7",
-        "rawLatinLetters=11",
-        "rawCJKCharacters=9"
+        "candidateLength=3",
+        "rawOutputLength=31",
+        "cjkCharacters=3",
+        "rawLatinLetters=7",
+        "rawCJKCharacters=11",
+        "translationLanguageQualityIssue=raw 输出仍保留未翻译英文"
       ],
       "rawOcrText" : "LET'S\nBATTLER!",
-      "rawOutput" : "\n请将以下翻译成中文：\n\n*   LET'S\n*   BATTLER!\n",
+      "rawOutput" : "\n以下是翻译成中文：\n\n**让我们**\n**BATTLER!**\n",
       "rawOutputClassification" : "placeholder",
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
@@ -19318,21 +19546,22 @@
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nLET'S\nBATTLER!",
-      "translationCandidate" : "BATTLER!",
+      "translationCandidate" : "让我们",
       "translationDecisionTrace" : [
         "rawOutputClassification=placeholder",
-        "candidateClassification=nonChinese",
+        "candidateClassification=chinese",
         "rawHadContent=true",
         "rejectedPlaceholder=false",
         "ocrNotEmpty=true",
         "translationNotEmpty=true",
         "translationNotEqualOriginal=true",
         "translationNotPlaceholder=true",
-        "translationHasCJK=false",
-        "looksLikeChinese=false",
-        "translationLanguageQualityPassed=false"
+        "translationHasCJK=true",
+        "looksLikeChinese=true",
+        "translationLanguageQualityPassed=false",
+        "translationLanguageQualityIssue=raw 输出仍保留未翻译英文"
       ],
-      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：中文字符不足、翻译不像中文；OCR 输入疑似有误",
+      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：raw 输出仍保留未翻译英文；OCR 输入疑似有误",
       "wordOrderPreserved" : true
     },
     {
@@ -23535,7 +23764,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "48E2D3F4-9599-428A-AE0D-D4C0CC6C2AF9",
+      "id" : "6D167BC1-8B64-41A7-9499-1F17142CBB89",
       "index" : 6,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.5833333333333333,
@@ -23642,20 +23871,20 @@
       "blockPassed" : false,
       "bubbleAssignmentMethod" : "overlapArea",
       "bubbleID" : 5,
-      "candidateClassification" : "empty",
+      "candidateClassification" : "placeholder",
       "checks" : {
-        "looksLikeChinese" : false,
+        "looksLikeChinese" : true,
         "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : false,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : false,
-        "translationNotEqualOriginal" : false,
+        "translationHasEnoughChinese" : true,
+        "translationNotContainOriginal" : true,
+        "translationNotEmpty" : true,
+        "translationNotEqualOriginal" : true,
         "translationNotPlaceholder" : false
       },
       "correctionEnabled" : true,
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : " | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容 | 文本内容",
-      "correctionRejectedReason" : "长度变化 267% 超过 30%",
+      "correctionRawOutput" : " | 文本\n",
+      "correctionRejectedReason" : "长度变化 96% 超过 30%",
       "cropCandidatePreservesRawWords" : false,
       "cropClampedByBubble" : true,
       "cropFallbackTriggered" : false,
@@ -23671,13 +23900,13 @@
       ],
       "deterministicCorrectionSimilarity" : 0.375,
       "deterministicCorrectionText" : "GET RESULTS\nSAVING CLUE TO SAVE THE\nROOM BEING",
-      "deterministicCorrectionTranslationCandidate" : "SAVING CLUE TO SAVE THE ROOM",
+      "deterministicCorrectionTranslationCandidate" : "ROOM BEING",
       "deterministicCorrectionTranslationFailureDetail" : "deterministicCorrectionTranslationFailure：中文字符不足、翻译不像中文",
       "deterministicCorrectionTranslationPassed" : false,
-      "deterministicCorrectionTranslationRawOutput" : "\nGET RESULTS\nSAVING CLUE TO SAVE THE ROOM\n",
+      "deterministicCorrectionTranslationRawOutput" : "\nGET RESULTS\nSAVING CLUE TO SAVE THE\nROOM BEING",
       "failureCategory" : "ocrInputSuspect",
       "failureReasons" : [
-        "翻译为空"
+        "翻译是占位答复"
       ],
       "finalTextUsedForTranslation" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
       "fixedPreprocessingOcrText" : "WEN TO TO\nGET PEGALTE\nAT THE\nTOLRNAMENT\nTO Save THe\nBAMONe QUO\nPISSANDRA,",
@@ -26164,7 +26393,7 @@
       ],
       "groundTruthMatch" : "unmatched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "1590D972-14CF-45B9-A61E-4D545A64909A",
+      "id" : "63CE4482-9ACB-44AE-980E-8964B90E6AF8",
       "index" : 7,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.25,
@@ -26202,14 +26431,17 @@
       "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nGET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "candidateEmpty",
-        "candidateLength=0",
-        "rawOutputLength=1",
-        "likelyOCRIssue"
+        "candidateRejectedAsPlaceholder",
+        "candidateLength=12",
+        "rawOutputLength=15",
+        "cjkCharacters=11",
+        "rawCJKCharacters=11",
+        "likelyOCRIssue",
+        "cjkCandidateButFailed"
       ],
       "rawOcrText" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
-      "rawOutput" : " | \n",
-      "rawOutputClassification" : "symbolsOnly",
+      "rawOutput" : " | \n请将以上翻译转换成中文。",
+      "rawOutputClassification" : "placeholder",
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
@@ -26233,21 +26465,21 @@
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nGET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG",
-      "translationCandidate" : "",
+      "translationCandidate" : "请将以上翻译转换成中文。",
       "translationDecisionTrace" : [
-        "rawOutputClassification=symbolsOnly",
-        "candidateClassification=empty",
-        "rawHadContent=false",
-        "rejectedPlaceholder=false",
+        "rawOutputClassification=placeholder",
+        "candidateClassification=placeholder",
+        "rawHadContent=true",
+        "rejectedPlaceholder=true",
         "ocrNotEmpty=true",
-        "translationNotEmpty=false",
-        "translationNotEqualOriginal=false",
+        "translationNotEmpty=true",
+        "translationNotEqualOriginal=true",
         "translationNotPlaceholder=false",
-        "translationHasCJK=false",
-        "looksLikeChinese=false",
+        "translationHasCJK=true",
+        "looksLikeChinese=true",
         "translationLanguageQualityPassed=false"
       ],
-      "translationFailureDetail" : "模型 raw 输出或候选为空：翻译为空；OCR 输入疑似有误",
+      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：翻译是占位答复；OCR 输入疑似有误",
       "wordOrderPreserved" : false
     },
     {
@@ -26299,10 +26531,10 @@
       ],
       "deterministicCorrectionSimilarity" : 0.6666666666666667,
       "deterministicCorrectionText" : "SUGGESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.",
-      "deterministicCorrectionTranslationCandidate" : "建议：",
-      "deterministicCorrectionTranslationFailureDetail" : "deterministicCorrectionTranslationFailure：raw 输出仍保留未翻译英文",
+      "deterministicCorrectionTranslationCandidate" : "HOUSE.",
+      "deterministicCorrectionTranslationFailureDetail" : "deterministicCorrectionTranslationFailure：中文字符不足、翻译不像中文",
       "deterministicCorrectionTranslationPassed" : false,
-      "deterministicCorrectionTranslationRawOutput" : " | 建议：\n**SUGGESTION THE**\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.\n",
+      "deterministicCorrectionTranslationRawOutput" : " | SUGGESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE.\n",
       "failureCategory" : "ocrInputSuspect",
       "failureReasons" : [
         "中文字符不足",
@@ -34055,7 +34287,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "EAD0D79C-E5B6-4A07-8394-758B2F6E3D3A",
+      "id" : "38D725A2-07E5-4392-90F1-0CEA423DAD0F",
       "index" : 8,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.6111111111111112,
@@ -34163,11 +34395,11 @@
       "blockPassed" : false,
       "bubbleAssignmentMethod" : "overlapArea",
       "bubbleID" : 6,
-      "candidateClassification" : "nonChinese",
+      "candidateClassification" : "chinese",
       "checks" : {
-        "looksLikeChinese" : false,
+        "looksLikeChinese" : true,
         "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : false,
+        "translationHasEnoughChinese" : true,
         "translationNotContainOriginal" : true,
         "translationNotEmpty" : true,
         "translationNotEqualOriginal" : true,
@@ -34175,7 +34407,7 @@
       },
       "correctionEnabled" : true,
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：What Whet are\nevery you!\ntalking\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nWhat Whet are\nevery you!\ntalking\n",
+      "correctionRawOutput" : "\n\"What Whet are\"\nevery you!\ntalking",
       "correctionRejectedReason" : "长度变化 78% 超过 30%",
       "cropCandidatePreservesRawWords" : false,
       "cropClampedByBubble" : false,
@@ -34189,10 +34421,9 @@
       ],
       "deterministicCorrectionSimilarity" : 0.33333333333333337,
       "deterministicCorrectionText" : "What Whet are\nevery you!\ntalking",
-      "failureCategory" : "ocrInputSuspect",
+      "failureCategory" : "translationLanguageQualityFailure",
       "failureReasons" : [
-        "中文字符不足",
-        "翻译不像中文"
+        "raw 输出仍保留未翻译英文"
       ],
       "finalTextUsedForTranslation" : "What Whet are\nevery you!\ntalking",
       "fixedPreprocessingOcrText" : "Whart\nare\neven\n: talking\nabout?",
@@ -41425,7 +41656,7 @@
       ],
       "groundTruthMatch" : "unmatched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "ECB32332-D662-4945-85F2-F4C3D7E211DE",
+      "id" : "62CDF3F7-222E-4D9B-A082-FAED17944C5D",
       "index" : 9,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.33333333333333337,
@@ -41462,14 +41693,15 @@
       "preprocessingEnabled" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWhat Whet are\nevery you!\ntalking\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
-        "candidateLength=7",
-        "rawOutputLength=55",
-        "latinLetters=7",
-        "rawLatinLetters=26",
-        "rawCJKCharacters=8"
+        "candidateLength=3",
+        "rawOutputLength=44",
+        "cjkCharacters=2",
+        "rawLatinLetters=15",
+        "rawCJKCharacters=7",
+        "translationLanguageQualityIssue=raw 输出仍保留未翻译英文"
       ],
       "rawOcrText" : "What Whet are\nevery you!\ntalking",
-      "rawOutput" : "\n以下是翻译成中文：\n\n*   What Whet are\n*   every you!\n*   talking\n",
+      "rawOutput" : "\n翻译成中文：\n\n**什么？**\n\n**every you!**\n\n**talking**\n",
       "rawOutputClassification" : "placeholder",
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
@@ -41494,21 +41726,22 @@
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nWhat Whet are\nevery you!\ntalking",
-      "translationCandidate" : "talking",
+      "translationCandidate" : "什么？",
       "translationDecisionTrace" : [
         "rawOutputClassification=placeholder",
-        "candidateClassification=nonChinese",
+        "candidateClassification=chinese",
         "rawHadContent=true",
         "rejectedPlaceholder=false",
         "ocrNotEmpty=true",
         "translationNotEmpty=true",
         "translationNotEqualOriginal=true",
         "translationNotPlaceholder=true",
-        "translationHasCJK=false",
-        "looksLikeChinese=false",
-        "translationLanguageQualityPassed=false"
+        "translationHasCJK=true",
+        "looksLikeChinese=true",
+        "translationLanguageQualityPassed=false",
+        "translationLanguageQualityIssue=raw 输出仍保留未翻译英文"
       ],
-      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：中文字符不足、翻译不像中文；OCR 输入疑似有误",
+      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：raw 输出仍保留未翻译英文；OCR 输入疑似有误",
       "wordOrderPreserved" : true
     },
     {
@@ -41541,7 +41774,7 @@
       },
       "correctionEnabled" : true,
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：PLAY ONLING...\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nPLAY ONLING...",
+      "correctionRawOutput" : "\nPLAY ONLING...\n",
       "cropCandidatePreservesRawWords" : false,
       "cropClampedByBubble" : false,
       "cropFallbackTriggered" : false,
@@ -46106,7 +46339,7 @@
       ],
       "groundTruthMatch" : "unmatched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "88D759AB-3AB5-425E-9E38-E8CB6920F8FE",
+      "id" : "0A4DB2AD-6B27-47B7-B7C8-7F3C6745E1F7",
       "index" : 10,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.05882352941176472,
@@ -46229,7 +46462,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "unmatched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "385B92CC-7CA1-4ABC-B68A-3876181E9445",
+      "id" : "9ED2EFDB-B288-4A0D-BDD3-DFB9E42E48BF",
       "index" : 11,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.05882352941176472,
@@ -46266,14 +46499,14 @@
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nJUST\n<end_of_turn>\n<start_of_turn>model",
       "qualityNotes" : [
         "candidateRejectedAsPlaceholder",
-        "candidateLength=31",
-        "rawOutputLength=31",
-        "cjkCharacters=29",
-        "rawCJKCharacters=29",
+        "candidateLength=14",
+        "rawOutputLength=14",
+        "cjkCharacters=13",
+        "rawCJKCharacters=13",
         "cjkCandidateButFailed"
       ],
       "rawOcrText" : "JUST",
-      "rawOutput" : "\n请提供您想要翻译的句子。我将尽力为您提供准确和流畅的中文翻译。",
+      "rawOutput" : "\n请提供您想要翻译的中文句子。",
       "rawOutputClassification" : "placeholder",
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : false,
@@ -46298,7 +46531,7 @@
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nJUST",
-      "translationCandidate" : "请提供您想要翻译的句子。我将尽力为您提供准确和流畅的中文翻译。",
+      "translationCandidate" : "请提供您想要翻译的中文句子。",
       "translationDecisionTrace" : [
         "rawOutputClassification=placeholder",
         "candidateClassification=placeholder",
@@ -46349,8 +46582,8 @@
       },
       "correctionEnabled" : true,
       "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : " | 错误： 错误： 拼写错误。\n",
-      "correctionRejectedReason" : "长度变化 78% 超过 30%",
+      "correctionRawOutput" : " | \n",
+      "correctionRejectedReason" : "纠错输出为空",
       "cropCandidatePreservesRawWords" : false,
       "cropClampedByBubble" : false,
       "cropFallbackTriggered" : false,
@@ -46368,7 +46601,7 @@
       "deterministicCorrectionTranslationCandidate" : "SENPAI'S SENPAI'S LOGIC.",
       "deterministicCorrectionTranslationFailureDetail" : "deterministicCorrectionTranslationFailure：中文字符不足、翻译不像中文",
       "deterministicCorrectionTranslationPassed" : false,
-      "deterministicCorrectionTranslationRawOutput" : " | -O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAI'S SENPAI'S LOGIC.\n",
+      "deterministicCorrectionTranslationRawOutput" : " | -O2 AT LEAST. -02 AT\nThat seems to be\nSENPAI'S SENPAI'S LOGIC.\n",
       "failureCategory" : "ocrInputSuspect",
       "failureReasons" : [
         "中文字符不足",
@@ -51445,7 +51678,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "DD2E0B8F-36E0-4843-8D5E-07A5DD822F5A",
+      "id" : "7A2301DE-6889-4C1C-9F44-61F04E63A6AF",
       "index" : 12,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.5,
@@ -51491,7 +51724,7 @@
         "likelyOCRIssue"
       ],
       "rawOcrText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
-      "rawOutput" : " | -O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.\n",
+      "rawOutput" : " | -O2 AT LEAST. -02 AT\nThat seems to be\nSENPAIS SENPArS LOSIC.\n",
       "rawOutputClassification" : "repeatedOriginal",
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
@@ -51588,7 +51821,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "914578BB-6165-49A6-9495-734B5370AABD",
+      "id" : "EFD2DA16-26A0-4A60-B16F-2501EC63AE2B",
       "index" : 13,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.8,
@@ -55573,14 +55806,13 @@
         "index" : 0,
         "passed" : false,
         "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nI've arrived at Senpai's house.\n<end_of_turn>\n<start_of_turn>model",
-        "rawOutput" : "\n我抵达 Senpai's house。",
+        "rawOutput" : "\n我抵达Senpai's house。",
         "text" : "I've arrived at Senpai's house.",
-        "translationCandidate" : "我抵达 Senpai's house。"
+        "translationCandidate" : "我抵达Senpai's house。"
       },
       {
         "failureReasons" : [
           "翻译等于原文",
-          "翻译包含完整原文",
           "中文字符不足",
           "翻译不像中文"
         ],
@@ -55588,9 +55820,9 @@
         "index" : 1,
         "passed" : false,
         "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nThat's right, right now I'm-\n<end_of_turn>\n<start_of_turn>model",
-        "rawOutput" : "\nThat's right, right now I'm.",
+        "rawOutput" : "\nThat's right, right now I'm-\n",
         "text" : "That's right, right now I'm-",
-        "translationCandidate" : "That's right, right now I'm."
+        "translationCandidate" : "That's right, right now I'm-"
       },
       {
         "failureReasons" : [
@@ -55606,15 +55838,15 @@
       },
       {
         "failureReasons" : [
-
+          "长原文只得到过短中文候选"
         ],
         "groundTruthType" : "dialogue",
         "index" : 3,
-        "passed" : true,
+        "passed" : false,
         "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nAnd that's why we're doing this special training.\n<end_of_turn>\n<start_of_turn>model",
-        "rawOutput" : "\n翻译成中文：\n\n**因为我们做出了特别的训练。**\n\n或者，更简洁的翻译：\n\n**我们做出了特别的训练。**\n\n这两个翻译都很好，表达了相同的含义。",
+        "rawOutput" : "\n以下是几种可能的翻译：\n\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n\n我个人觉得最合适的翻译是：\n\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n\n**其他可能的翻译：**\n\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n\n所以，我个人觉得最合适的翻译是：\n\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n*   因为我们",
         "text" : "And that's why we're doing this special training.",
-        "translationCandidate" : "这两个翻译都很好，表达了相同的含义。"
+        "translationCandidate" : "因为我们"
       },
       {
         "failureReasons" : [
@@ -55624,9 +55856,9 @@
         "index" : 4,
         "passed" : false,
         "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nThis is an offline tournament. Doing it online would make it meaningless.\n<end_of_turn>\n<start_of_turn>model",
-        "rawOutput" : "\n这是一种在线的 турниры。通过在线进行，它会显得很 meaningless。",
+        "rawOutput" : "\n这是一种非在线的比赛。在网上进行这项比赛会显得很 meaningless。",
         "text" : "This is an offline tournament. Doing it online would make it meaningless.",
-        "translationCandidate" : "这是一种在线的 турниры。通过在线进行，它会显得很 meaningless。"
+        "translationCandidate" : "这是一种非在线的比赛。在网上进行这项比赛会显得很 meaningless。"
       },
       {
         "failureReasons" : [
@@ -55636,9 +55868,9 @@
         "index" : 5,
         "passed" : true,
         "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nEven though I said it's just special training and asked if we could just play online-\n<end_of_turn>\n<start_of_turn>model",
-        "rawOutput" : "\n虽然我说了它只是特殊训练，并询问我们是否可以玩在线游戏。",
+        "rawOutput" : "\n尽管我说了它只是特别训练，并问我们是否可以玩在线游戏\n",
         "text" : "Even though I said it's just special training and asked if we could just play online-",
-        "translationCandidate" : "虽然我说了它只是特殊训练，并询问我们是否可以玩在线游戏。"
+        "translationCandidate" : "尽管我说了它只是特别训练，并问我们是否可以玩在线游戏"
       },
       {
         "failureReasons" : [
@@ -55648,9 +55880,9 @@
         "index" : 6,
         "passed" : false,
         "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nOr at least, that seems to be Senpai's logic.\n<end_of_turn>\n<start_of_turn>model",
-        "rawOutput" : "\n或者，至少，他似乎是Senpai的逻辑。",
+        "rawOutput" : "\n或者，至少，这看起来像是Senpai的逻辑。",
         "text" : "Or at least, that seems to be Senpai's logic.",
-        "translationCandidate" : "或者，至少，他似乎是Senpai的逻辑。"
+        "translationCandidate" : "或者，至少，这看起来像是Senpai的逻辑。"
       },
       {
         "failureReasons" : [
@@ -55672,9 +55904,9 @@
         "index" : 8,
         "passed" : true,
         "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWhat are you even talking about?\n<end_of_turn>\n<start_of_turn>model",
-        "rawOutput" : "\n翻译成中文：\n你指的是什么？\n",
+        "rawOutput" : "\n你说的什么？\n",
         "text" : "What are you even talking about?",
-        "translationCandidate" : "你指的是什么？"
+        "translationCandidate" : "你说的什么？"
       },
       {
         "failureReasons" : [
@@ -55684,9 +55916,9 @@
         "index" : 9,
         "passed" : false,
         "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWe need to get results at this tournament to save the gaming club from being disbanded.\n<end_of_turn>\n<start_of_turn>model",
-        "rawOutput" : "\n我们需要获得比赛结果，以便游戏俱乐部得以被 disbanded。",
+        "rawOutput" : "\n我们需要取得比赛结果，以节省游戏俱乐部从 disbanded 退出。",
         "text" : "We need to get results at this tournament to save the gaming club from being disbanded.",
-        "translationCandidate" : "我们需要获得比赛结果，以便游戏俱乐部得以被 disbanded。"
+        "translationCandidate" : "我们需要取得比赛结果，以节省游戏俱乐部从 disbanded 退出。"
       },
       {
         "failureReasons" : [
@@ -55696,14 +55928,14 @@
         "index" : 10,
         "passed" : true,
         "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nLet's Battle!\n<end_of_turn>\n<start_of_turn>model",
-        "rawOutput" : "\n让我们战！\n",
+        "rawOutput" : "\n让我们战！",
         "text" : "Let's Battle!",
         "translationCandidate" : "让我们战！"
       }
     ],
-    "failedCases" : 6,
-    "passRate" : 0.45454545454545453,
-    "passedCases" : 5,
+    "failedCases" : 7,
+    "passRate" : 0.36363636363636365,
+    "passedCases" : 4,
     "promptTemplate" : "把以下翻译成中文：",
     "source" : "test\/1.ground_truth.json dialogue entries direct to current translation pipeline",
     "totalCases" : 11
@@ -55772,8 +56004,9 @@
     "bubbleAssignedBlocks" : 11,
     "bubbleUnassignedBlocks" : 3,
     "candidateExtractorDroppedRawOutputs" : 0,
-    "cjkButFailedCandidates" : 2,
+    "cjkButFailedCandidates" : 4,
     "cjkFailureBreakdown" : {
+      "mixedOrUntranslatedEnglish" : 2,
       "tooShort" : 1,
       "translationLanguageQualityFailure" : 1
     },
@@ -55813,7 +56046,7 @@
       10,
       12
     ],
-    "emptyTranslationCandidates" : 2,
+    "emptyTranslationCandidates" : 1,
     "failedBlocks" : 13,
     "glyphMaskBlocks" : 11,
     "groundTruthMatchedBlocks" : 10,
@@ -55825,11 +56058,9 @@
       2,
       3,
       4,
-      5,
       6,
       7,
       8,
-      9,
       10,
       11,
       12
@@ -55851,7 +56082,7 @@
       11,
       12
     ],
-    "nonChineseCandidates" : 8,
+    "nonChineseCandidates" : 6,
     "ocrQualityProbe" : [
       "#0 good bubbleID=0 assignment=overlapArea crossBubbleMergeRejected=false match=matched sim=1.000 legacy=1.000 wordOrder=true OCR=\"THAT'S \/ RIGHT, \/ RIGHT \/ NOW \/ I'M-\" truth=\"That's right, right now I'm-\"",
       "#1 lowSimilarity bubbleID=1 assignment=overlapArea crossBubbleMergeRejected=false match=matched sim=0.571 legacy=0.905 wordOrder=true OCR=\"IVE ARRIVED AT REN- SENPAI'S HOUSE.\" truth=\"I've arrived at Senpai's house.\"",
@@ -55874,9 +56105,9 @@
     ],
     "placeholderTranslationCandidates" : 4,
     "rawOutputEmptyBlocks" : 0,
-    "rawOutputNonChineseBlocks" : 4,
+    "rawOutputNonChineseBlocks" : 3,
     "rawOutputPlaceholderBlocks" : 4,
-    "rawOutputRepeatedOriginalBlocks" : 3,
+    "rawOutputRepeatedOriginalBlocks" : 4,
     "renderCollisionCheckedBlocks" : 14,
     "renderCollisionInitialOverflowBlocks" : [
       0,
@@ -55920,11 +56151,11 @@
     "repeatedKeywordFailures" : {
       "senpai's" : 2
     },
-    "repeatedOriginalCandidates" : 1,
+    "repeatedOriginalCandidates" : 2,
     "safeLayoutRectBlocks" : 14,
     "translationFailureBreakdown" : {
-      "ocrInputSuspect" : 11,
-      "translationLanguageQualityFailure" : 2
+      "ocrInputSuspect" : 9,
+      "translationLanguageQualityFailure" : 4
     },
     "translationLanguageQualityFailedBlocks" : [
       0,
@@ -55969,7 +56200,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7397454325859899,
       "matchedGroundTruthCount" : 13,
-      "processingTimeMs" : 15882,
+      "processingTimeMs" : 16008,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 1
     },
@@ -56274,7 +56505,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.6130563336445688,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 123192,
+      "processingTimeMs" : 123525,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -56302,20 +56533,20 @@
   "outputDirectoryCleaned" : true,
   "outputFileCountAfterCleanup" : 15,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
-    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
-    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
-    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
-    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/EA49E209-12F6-46CB-AF13-7B4FF6E41490\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
+    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
+    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
+    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
+    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3A506685-347C-42D3-9425-350E2F1FD7F5\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
   },
   "overallPassed" : false,
   "retainedOutputFiles" : [
@@ -72060,15 +72291,15 @@
   },
   "warnings" : [
     "block 0 判定失败：中文字符不足、翻译不像中文",
-    "block 1 判定失败：中文字符不足、翻译不像中文",
+    "block 1 判定失败：翻译等于原文、中文字符不足、翻译不像中文",
     "block 2 判定失败：长原文只得到过短中文候选",
     "block 3 判定失败：多词原文只得到泛化短答复",
     "block 4 判定失败：中文字符不足、翻译不像中文",
-    "block 5 判定失败：中文字符不足、翻译不像中文",
+    "block 5 判定失败：raw 输出仍保留未翻译英文",
     "block 6 判定失败：翻译为空",
-    "block 7 判定失败：翻译为空",
+    "block 7 判定失败：翻译是占位答复",
     "block 8 判定失败：中文字符不足、翻译不像中文",
-    "block 9 判定失败：中文字符不足、翻译不像中文",
+    "block 9 判定失败：raw 输出仍保留未翻译英文",
     "block 10 判定失败：翻译等于原文、中文字符不足、翻译不像中文",
     "block 11 判定失败：翻译是占位答复",
     "block 12 判定失败：中文字符不足、翻译不像中文"

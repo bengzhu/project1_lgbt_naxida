@@ -19,16 +19,16 @@ finalForTranslation: THAT'S / RIGHT, / RIGHT / NOW / I'M-
 deterministicCorrection: THAT'S / RIGHT, / RIGHT / NOW / I'M-
 bestGroundTruth: That's right, right now I'm-
 translationCandidate: I'M
-rawOutput:  / 以下是翻译成中文： /  / *   **THAT'S** / *   **RIGHT** / *   **NOW** / *   **I'M**
+rawOutput:  / **That's** / **Right** / **NOW** / **I'M** /
 deterministicCorrectionTranslationPassed: nil
 deterministicCorrectionTranslationCandidate: nil
 deterministicCorrectionTranslationRawOutput: nil
 deterministicCorrectionTranslationFailureDetail: nil
 failureCategory: ocrInputSuspect
 failureReasons: 中文字符不足 | 翻译不像中文
-translationFailureDetail: 模型输出解释/占位文本，不是真实译文：中文字符不足、翻译不像中文；OCR 输入疑似有误
-qualityNotes: candidateLength=3 | rawOutputLength=63 | latinLetters=2 | rawLatinLetters=15 | rawCJKCharacters=8 | likelyOCRIssue
-decisionTrace: rawOutputClassification=placeholder | candidateClassification=nonChinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
+translationFailureDetail: 模型输出非中文/符号，未达到英译中目标：中文字符不足、翻译不像中文；OCR 输入疑似有误
+qualityNotes: candidateLength=3 | rawOutputLength=36 | latinLetters=2 | rawLatinLetters=15 | likelyOCRIssue
+decisionTrace: rawOutputClassification=nonChinese | candidateClassification=nonChinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
 
 #1 bbox=[112,353,57,60] bubbleID=1 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.571 legacySimilarity=0.905 wordOrder=true blockPassed=false
 rawOCR: IVE ARRIVED AT REN- SENPAI'S HOUSE.
@@ -50,17 +50,17 @@ backgroundFill: applied=false stdDev=52.93
 finalForTranslation: IVE ARRIVED AT REN- SENPAI'S HOUSE.
 deterministicCorrection: IVE ARRIVED AT REN- SENPAI'S HOUSE.
 bestGroundTruth: I've arrived at Senpai's house.
-translationCandidate: IVE  arrivé tại nhà Ren-Senpa's House.
-rawOutput:  / IVE  arrivé tại nhà Ren-Senpa's House.
+translationCandidate: IVE ARRIVED AT REN- SENPAI'S HOUSE.
+rawOutput:  / IVE ARRIVED AT REN- SENPAI'S HOUSE.
 deterministicCorrectionTranslationPassed: nil
 deterministicCorrectionTranslationCandidate: nil
 deterministicCorrectionTranslationRawOutput: nil
 deterministicCorrectionTranslationFailureDetail: nil
 failureCategory: ocrInputSuspect
-failureReasons: 中文字符不足 | 翻译不像中文
-translationFailureDetail: 模型输出非中文/符号，未达到英译中目标：中文字符不足、翻译不像中文；OCR 输入疑似有误
-qualityNotes: candidateLength=38 | rawOutputLength=38 | latinLetters=26 | rawLatinLetters=26
-decisionTrace: rawOutputClassification=nonChinese | candidateClassification=nonChinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
+failureReasons: 翻译等于原文 | 中文字符不足 | 翻译不像中文
+translationFailureDetail: 模型复读原文，非规则误杀：翻译等于原文、中文字符不足、翻译不像中文；OCR 输入疑似有误
+qualityNotes: translationContainsFullOCRText | candidateLength=35 | rawOutputLength=35 | latinLetters=27 | rawLatinLetters=27
+decisionTrace: rawOutputClassification=repeatedOriginal | candidateClassification=repeatedOriginal | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=false | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
 
 #2 bbox=[493,557,54,44] bubbleID=2 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.556 legacySimilarity=0.603 wordOrder=true blockPassed=false
 rawOCR: THE CITY RATTLER / STATE IN A PEN DAYS.
@@ -82,11 +82,11 @@ backgroundFill: applied=true stdDev=33.14
 finalForTranslation: THE CITY RATTLER / STATE IN A PEN DAYS.
 deterministicCorrection: THE CITY BATTLER / STARTS IN A FEW DAYS.
 bestGroundTruth: The City Battler Tournament starts in a few days.
-translationCandidate: 州立鼠狸
-rawOutput:  / **城市鼠狸** / **州立鼠狸** /
+translationCandidate: 州人鼠狸
+rawOutput:  / **城市鼠狸** / **州人鼠狸** /
 deterministicCorrectionTranslationPassed: true
 deterministicCorrectionTranslationCandidate: 开始在几周内。
-deterministicCorrectionTranslationRawOutput:  / **城市枪手** / **开始在几周内。** /
+deterministicCorrectionTranslationRawOutput:  / **城市捕手** / **开始在几周内。** /
 deterministicCorrectionTranslationFailureDetail: nil
 failureCategory: translationLanguageQualityFailure
 failureReasons: 长原文只得到过短中文候选
@@ -149,8 +149,8 @@ bestGroundTruth: Even though I said it's just special training and asked if we c
 translationCandidate: THOUSH EVEN
 rawOutput:  | THOUSH EVEN /
 deterministicCorrectionTranslationPassed: true
-deterministicCorrectionTranslationCandidate: 虽然虽然我说了它只是特别训练，请问你是否和我一样感到？
-deterministicCorrectionTranslationRawOutput:  / 虽然虽然我说了它只是特别训练，请问你是否和我一样感到？ /
+deterministicCorrectionTranslationCandidate: 虽然虽然你提到了“却是特别的训练”，请问你指的是什么？
+deterministicCorrectionTranslationRawOutput:  / 虽然虽然你提到了“却是特别的训练”，请问你指的是什么？ /
 deterministicCorrectionTranslationFailureDetail: nil
 failureCategory: ocrInputSuspect
 failureReasons: 中文字符不足 | 翻译不像中文
@@ -178,17 +178,17 @@ backgroundFill: applied=false stdDev=nil
 finalForTranslation: LET'S / BATTLER!
 deterministicCorrection: LET'S / BATTLER!
 bestGroundTruth: Let's Battle!
-translationCandidate: BATTLER!
-rawOutput:  / 请将以下翻译成中文： /  / *   LET'S / *   BATTLER! /
+translationCandidate: 让我们
+rawOutput:  / 以下是翻译成中文： /  / **让我们** / **BATTLER!** /
 deterministicCorrectionTranslationPassed: nil
 deterministicCorrectionTranslationCandidate: nil
 deterministicCorrectionTranslationRawOutput: nil
 deterministicCorrectionTranslationFailureDetail: nil
-failureCategory: ocrInputSuspect
-failureReasons: 中文字符不足 | 翻译不像中文
-translationFailureDetail: 模型输出解释/占位文本，不是真实译文：中文字符不足、翻译不像中文；OCR 输入疑似有误
-qualityNotes: candidateLength=8 | rawOutputLength=34 | latinLetters=7 | rawLatinLetters=11 | rawCJKCharacters=9
-decisionTrace: rawOutputClassification=placeholder | candidateClassification=nonChinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
+failureCategory: translationLanguageQualityFailure
+failureReasons: raw 输出仍保留未翻译英文
+translationFailureDetail: 模型输出解释/占位文本，不是真实译文：raw 输出仍保留未翻译英文；OCR 输入疑似有误
+qualityNotes: candidateLength=3 | rawOutputLength=31 | cjkCharacters=3 | rawLatinLetters=7 | rawCJKCharacters=11 | translationLanguageQualityIssue=raw 输出仍保留未翻译英文
+decisionTrace: rawOutputClassification=placeholder | candidateClassification=chinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=true | looksLikeChinese=true | translationLanguageQualityPassed=false | translationLanguageQualityIssue=raw 输出仍保留未翻译英文
 
 #6 bbox=[152,903,68,56] bubbleID=4 bubbleAssignmentMethod=centerPoint crossBubbleMergeRejected=true sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.583 legacySimilarity=0.800 wordOrder=false blockPassed=false
 rawOCR: THIS IS AN / TOURNAMENT. DOING IT / WOULD MAKE WOLLD MAKE ONLINE
@@ -242,17 +242,17 @@ backgroundFill: applied=true stdDev=32.96
 finalForTranslation: GET PESULTE / SAMING CLUE TO SAVE THE / POOM BENG
 deterministicCorrection: GET RESULTS / SAVING CLUE TO SAVE THE / ROOM BEING
 bestGroundTruth: nil
-translationCandidate:
-rawOutput:  |  /
+translationCandidate: 请将以上翻译转换成中文。
+rawOutput:  |  / 请将以上翻译转换成中文。
 deterministicCorrectionTranslationPassed: false
-deterministicCorrectionTranslationCandidate: SAVING CLUE TO SAVE THE ROOM
-deterministicCorrectionTranslationRawOutput:  / GET RESULTS / SAVING CLUE TO SAVE THE ROOM /
+deterministicCorrectionTranslationCandidate: ROOM BEING
+deterministicCorrectionTranslationRawOutput:  / GET RESULTS / SAVING CLUE TO SAVE THE / ROOM BEING
 deterministicCorrectionTranslationFailureDetail: deterministicCorrectionTranslationFailure：中文字符不足、翻译不像中文
 failureCategory: ocrInputSuspect
-failureReasons: 翻译为空
-translationFailureDetail: 模型 raw 输出或候选为空：翻译为空；OCR 输入疑似有误
-qualityNotes: candidateEmpty | candidateLength=0 | rawOutputLength=1 | likelyOCRIssue
-decisionTrace: rawOutputClassification=symbolsOnly | candidateClassification=empty | rawHadContent=false | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=false | translationNotEqualOriginal=false | translationNotPlaceholder=false | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
+failureReasons: 翻译是占位答复
+translationFailureDetail: 模型输出解释/占位文本，不是真实译文：翻译是占位答复；OCR 输入疑似有误
+qualityNotes: candidateRejectedAsPlaceholder | candidateLength=12 | rawOutputLength=15 | cjkCharacters=11 | rawCJKCharacters=11 | likelyOCRIssue | cjkCandidateButFailed
+decisionTrace: rawOutputClassification=placeholder | candidateClassification=placeholder | rawHadContent=true | rejectedPlaceholder=true | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=false | translationHasCJK=true | looksLikeChinese=true | translationLanguageQualityPassed=false
 
 #8 bbox=[44,963,73,100] bubbleID=6 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.611 legacySimilarity=0.826 wordOrder=false blockPassed=false
 rawOCR: SUGSESTION THE / OVERRULED AND IT WAS / THAT I'D BE DECIDED / STAYING OVER AT REN- / HOUSE.
@@ -277,9 +277,9 @@ bestGroundTruth: The suggestion was overruled, and it was decided that I'd be st
 translationCandidate: HOUSE.
 rawOutput:  / SUGSESTION THE / OVERRULED AND IT WAS / THAT I'D BE DECIDED / STAYING OVER AT REN- / HOUSE.
 deterministicCorrectionTranslationPassed: false
-deterministicCorrectionTranslationCandidate: 建议：
-deterministicCorrectionTranslationRawOutput:  | 建议： / **SUGGESTION THE** / OVERRULED AND IT WAS / THAT I'D BE DECIDED / STAYING OVER AT REN- / HOUSE. /
-deterministicCorrectionTranslationFailureDetail: deterministicCorrectionTranslationFailure：raw 输出仍保留未翻译英文
+deterministicCorrectionTranslationCandidate: HOUSE.
+deterministicCorrectionTranslationRawOutput:  | SUGGESTION THE / OVERRULED AND IT WAS / THAT I'D BE DECIDED / STAYING OVER AT REN- / HOUSE. /
+deterministicCorrectionTranslationFailureDetail: deterministicCorrectionTranslationFailure：中文字符不足、翻译不像中文
 failureCategory: ocrInputSuspect
 failureReasons: 中文字符不足 | 翻译不像中文
 translationFailureDetail: 模型复读原文，非规则误杀：中文字符不足、翻译不像中文；OCR 输入疑似有误
@@ -306,17 +306,17 @@ backgroundFill: applied=false stdDev=69.41
 finalForTranslation: What Whet are / every you! / talking
 deterministicCorrection: What Whet are / every you! / talking
 bestGroundTruth: nil
-translationCandidate: talking
-rawOutput:  / 以下是翻译成中文： /  / *   What Whet are / *   every you! / *   talking /
+translationCandidate: 什么？
+rawOutput:  / 翻译成中文： /  / **什么？** /  / **every you!** /  / **talking** /
 deterministicCorrectionTranslationPassed: nil
 deterministicCorrectionTranslationCandidate: nil
 deterministicCorrectionTranslationRawOutput: nil
 deterministicCorrectionTranslationFailureDetail: nil
-failureCategory: ocrInputSuspect
-failureReasons: 中文字符不足 | 翻译不像中文
-translationFailureDetail: 模型输出解释/占位文本，不是真实译文：中文字符不足、翻译不像中文；OCR 输入疑似有误
-qualityNotes: candidateLength=7 | rawOutputLength=55 | latinLetters=7 | rawLatinLetters=26 | rawCJKCharacters=8
-decisionTrace: rawOutputClassification=placeholder | candidateClassification=nonChinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
+failureCategory: translationLanguageQualityFailure
+failureReasons: raw 输出仍保留未翻译英文
+translationFailureDetail: 模型输出解释/占位文本，不是真实译文：raw 输出仍保留未翻译英文；OCR 输入疑似有误
+qualityNotes: candidateLength=3 | rawOutputLength=44 | cjkCharacters=2 | rawLatinLetters=15 | rawCJKCharacters=7 | translationLanguageQualityIssue=raw 输出仍保留未翻译英文
+decisionTrace: rawOutputClassification=placeholder | candidateClassification=chinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=true | looksLikeChinese=true | translationLanguageQualityPassed=false | translationLanguageQualityIssue=raw 输出仍保留未翻译英文
 
 #10 bbox=[237,965,54,31] bubbleID=7 bubbleAssignmentMethod=centerPoint crossBubbleMergeRejected=true sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=unmatched ocrSimilarity=0.059 legacySimilarity=0.273 wordOrder=nil blockPassed=false
 rawOCR: PLAY ONLING...
@@ -370,8 +370,8 @@ backgroundFill: applied=false stdDev=nil
 finalForTranslation: JUST
 deterministicCorrection: JUST
 bestGroundTruth: nil
-translationCandidate: 请提供您想要翻译的句子。我将尽力为您提供准确和流畅的中文翻译。
-rawOutput:  / 请提供您想要翻译的句子。我将尽力为您提供准确和流畅的中文翻译。
+translationCandidate: 请提供您想要翻译的中文句子。
+rawOutput:  / 请提供您想要翻译的中文句子。
 deterministicCorrectionTranslationPassed: nil
 deterministicCorrectionTranslationCandidate: nil
 deterministicCorrectionTranslationRawOutput: nil
@@ -379,7 +379,7 @@ deterministicCorrectionTranslationFailureDetail: nil
 failureCategory: ocrInputSuspect
 failureReasons: 翻译是占位答复
 translationFailureDetail: 模型输出解释/占位文本，不是真实译文：翻译是占位答复；OCR 输入疑似有误
-qualityNotes: candidateRejectedAsPlaceholder | candidateLength=31 | rawOutputLength=31 | cjkCharacters=29 | rawCJKCharacters=29 | cjkCandidateButFailed
+qualityNotes: candidateRejectedAsPlaceholder | candidateLength=14 | rawOutputLength=14 | cjkCharacters=13 | rawCJKCharacters=13 | cjkCandidateButFailed
 decisionTrace: rawOutputClassification=placeholder | candidateClassification=placeholder | rawHadContent=true | rejectedPlaceholder=true | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=false | translationHasCJK=true | looksLikeChinese=true | translationLanguageQualityPassed=false
 
 #12 bbox=[281,961,54,76] bubbleID=7 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=true sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.500 legacySimilarity=0.800 wordOrder=false blockPassed=false
@@ -403,10 +403,10 @@ finalForTranslation: -O2 AT LEAST. -02 AT / THAT SEEMS TO BE / SENPAIS SENPArS L
 deterministicCorrection: -O2 AT LEAST. -02 AT / THAT SEEMS TO BE / SENPAI'S SENPAI'S LOGIC.
 bestGroundTruth: Or at least, that seems to be Senpai's logic.
 translationCandidate: SENPAIS SENPArS LOSIC.
-rawOutput:  | -O2 AT LEAST. -02 AT / THAT SEEMS TO BE / SENPAIS SENPArS LOSIC. /
+rawOutput:  | -O2 AT LEAST. -02 AT / That seems to be / SENPAIS SENPArS LOSIC. /
 deterministicCorrectionTranslationPassed: false
 deterministicCorrectionTranslationCandidate: SENPAI'S SENPAI'S LOGIC.
-deterministicCorrectionTranslationRawOutput:  | -O2 AT LEAST. -02 AT / THAT SEEMS TO BE / SENPAI'S SENPAI'S LOGIC. /
+deterministicCorrectionTranslationRawOutput:  | -O2 AT LEAST. -02 AT / That seems to be / SENPAI'S SENPAI'S LOGIC. /
 deterministicCorrectionTranslationFailureDetail: deterministicCorrectionTranslationFailure：中文字符不足、翻译不像中文
 failureCategory: ocrInputSuspect
 failureReasons: 中文字符不足 | 翻译不像中文
