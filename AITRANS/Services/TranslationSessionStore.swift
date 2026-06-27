@@ -1576,6 +1576,14 @@ final class TranslationSessionStore: ObservableObject {
                 }
 
                 self.mangaOverlayProbeState = .rendering
+                self.mangaOverlayProbeMessage = "正在计算气泡安全区并做离屏渲染碰撞检查"
+                probeBlocks = await self.mangaOverlayProbeService.applySafeLayoutAndRenderingDiagnostics(
+                    image: recognized.image,
+                    blocks: probeBlocks,
+                    bubbleGeometry: recognized.bubbleGeometry
+                )
+                self.mangaOverlayProbeBlocks = probeBlocks
+
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
                 var outputFiles = try await self.mangaOverlayProbeService.renderOutputs(
                     image: recognized.image,
@@ -3637,6 +3645,26 @@ final class TranslationSessionStore: ObservableObject {
             }
             if block.crossBubbleMergeRejected {
                 diagnostics.crossBubbleMergeRejectedBlocks.append(block.index)
+            }
+            if block.safeLayoutRect != nil {
+                diagnostics.safeLayoutRectBlocks += 1
+            }
+            if block.renderCollisionChecked {
+                diagnostics.renderCollisionCheckedBlocks += 1
+                if block.renderCollisionInitialOverflow {
+                    diagnostics.renderCollisionInitialOverflowBlocks.append(block.index)
+                }
+                if block.renderCollisionResolved {
+                    diagnostics.renderCollisionResolvedBlocks.append(block.index)
+                } else {
+                    diagnostics.renderCollisionUnresolvedBlocks.append(block.index)
+                }
+                if block.renderMinFontSizeReached {
+                    diagnostics.renderMinFontSizeReachedBlocks.append(block.index)
+                }
+                if block.renderTextTruncated {
+                    diagnostics.renderTextTruncatedBlocks.append(block.index)
+                }
             }
             if block.blockPassed, Self.mangaProbePassedTranslationLooksSuspicious(block) {
                 diagnostics.passedButSuspiciousTranslationBlocks.append(block.index)

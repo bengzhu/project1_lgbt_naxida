@@ -232,11 +232,23 @@ struct MangaOverlayCropFallbackSelfTest: Equatable, Codable, Sendable {
     var reason: String
 }
 
+private struct MangaOverlayRenderTextPlan: Equatable, Sendable {
+    var fontSize: CGFloat
+    var lineHeight: CGFloat
+    var lines: [String]
+    var initialOverflow: Bool
+    var minFontSizeReached: Bool
+    var textTruncated: Bool
+    var nonTransparentBounds: CGRect?
+    var resolved: Bool
+}
+
 struct MangaOverlayProbeService: Sendable {
     private static let ocrScale: CGFloat = 2
     private static let sliceAspectRatioThreshold: CGFloat = 2.85
     private static let sliceOverlapRatio: CGFloat = 0.2
     private static let targetSliceAspectRatio: CGFloat = 2.05
+    private static let minimumOverlayFontSize: CGFloat = 8
 
     func recognizeTextBlocks(
         in imageData: Data,
@@ -533,6 +545,86 @@ struct MangaOverlayProbeService: Sendable {
                 bubbleCropsImage: bubbleCropsImagePath,
                 bubbleTextOverlayImage: bubbleTextOverlayImagePath
             )
+        }.value
+    }
+
+    func applySafeLayoutAndRenderingDiagnostics(
+        image: CGImage,
+        blocks: [MangaOverlayProbeBlock],
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics
+    ) async -> [MangaOverlayProbeBlock] {
+        await Task.detached(priority: .userInitiated) {
+            let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            let bubbleRects = Dictionary(
+                uniqueKeysWithValues: bubbleGeometry.bubbles.map { bubble in
+                    (bubble.id, Self.clamp(Self.rect(from: bubble.bbox), to: imageBounds))
+                }
+            )
+            let groupedByBubble = Dictionary(grouping: blocks) { block in
+                block.bubbleID
+            }
+            var safeRectsByBlockID: [UUID: (rect: CGRect, source: String)] = [:]
+
+            for (bubbleID, group) in groupedByBubble {
+                guard let bubbleID, let bubbleRect = bubbleRects[bubbleID] else {
+                    for block in group {
+                        let blockRect = Self.rect(from: block.bbox)
+                        let safeRect = Self.clamp(Self.expand(blockRect, by: 0.14, bounds: imageBounds), to: imageBounds)
+                        safeRectsByBlockID[block.id] = (safeRect, "blockFallbackNoBubble")
+                    }
+                    continue
+                }
+
+                let insetBubble = Self.safeBubbleRect(for: bubbleRect, representativeBlocks: group)
+                if group.count == 1 {
+                    if let block = group.first {
+                        safeRectsByBlockID[block.id] = (insetBubble, "bubbleInsetSingle")
+                    }
+                } else {
+                    for block in group {
+                        let partition = Self.partitionedSafeRect(
+                            for: block,
+                            in: group,
+                            bubbleSafeRect: insetBubble
+                        )
+                        safeRectsByBlockID[block.id] = (partition, "bubbleInsetPartitioned")
+                    }
+                }
+            }
+
+            return blocks.map { block in
+                var updated = block
+                let blockRect = Self.rect(from: block.bbox)
+                let fallbackRect = Self.clamp(Self.expand(blockRect, by: 0.14, bounds: imageBounds), to: imageBounds)
+                let safeEntry = safeRectsByBlockID[block.id] ?? (fallbackRect, "blockFallbackNoSafeRect")
+                let safeRect = Self.ensureMinimumRect(safeEntry.rect, fallback: fallbackRect, bounds: imageBounds)
+                let text = block.translatedText.trimmingCharacters(in: .whitespacesAndNewlines)
+                updated.safeLayoutRect = Self.bboxArray(from: safeRect)
+                updated.safeLayoutSource = safeEntry.source
+
+                if text.isEmpty {
+                    updated.renderCollisionChecked = false
+                    return updated
+                }
+
+                let plan = Self.makeRenderTextPlan(
+                    text,
+                    in: safeRect,
+                    minFontSize: Self.minimumOverlayFontSize
+                )
+                updated.renderCollisionChecked = true
+                updated.renderCollisionInitialOverflow = plan.initialOverflow
+                updated.renderCollisionResolved = plan.resolved
+                updated.renderFontSize = Double(plan.fontSize)
+                updated.renderMinFontSizeReached = plan.minFontSizeReached
+                updated.renderTextTruncated = plan.textTruncated
+                if let bounds = plan.nonTransparentBounds {
+                    updated.renderNonTransparentBounds = Self.bboxArray(from: bounds.offsetBy(dx: safeRect.minX, dy: safeRect.minY))
+                } else {
+                    updated.renderNonTransparentBounds = nil
+                }
+                return updated
+            }
         }.value
     }
 
@@ -834,6 +926,8 @@ struct MangaOverlayProbeService: Sendable {
             let deterministicTranslation = block.deterministicCorrectionTranslationCandidate?.replacing("\n", with: " / ") ?? "nil"
             let deterministicTranslationRaw = block.deterministicCorrectionTranslationRawOutput?.replacing("\n", with: " / ") ?? "nil"
             let sliceIndex = block.sliceIndex.map(String.init) ?? "nil"
+            let safeLayout = block.safeLayoutRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let renderBounds = block.renderNonTransparentBounds?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
             rawOCR: \(raw)
@@ -847,6 +941,9 @@ struct MangaOverlayProbeService: Sendable {
             cropFallbackTriggered: \(block.cropFallbackTriggered)
             cropFallbackReason: \(block.cropFallbackReason ?? "nil")
             cropStrategyUsed: \(block.cropStrategyUsed ?? "nil")
+            safeLayoutRect: [\(safeLayout)]
+            safeLayoutSource: \(block.safeLayoutSource ?? "nil")
+            renderCollision: checked=\(block.renderCollisionChecked) initialOverflow=\(block.renderCollisionInitialOverflow) resolved=\(block.renderCollisionResolved) fontSize=\(block.renderFontSize?.formatted(.number.precision(.fractionLength(1))) ?? "nil") minFont=\(block.renderMinFontSizeReached) truncated=\(block.renderTextTruncated) nonTransparentBounds=[\(renderBounds)]
             finalForTranslation: \(final)
             deterministicCorrection: \(deterministic)
             bestGroundTruth: \(truth)
@@ -2543,7 +2640,9 @@ struct MangaOverlayProbeService: Sendable {
     private static func drawTranslatedOverlay(on image: CGImage, blocks: [MangaOverlayProbeBlock]) throws -> CGImage {
         try draw(on: image) { context, _ in
             for block in blocks where !block.translatedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                let expanded = expand(rect(from: block.bbox), by: 0.14, bounds: CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
+                let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+                let layoutRect = block.safeLayoutRect.map { rect(from: $0) }
+                let expanded = clamp(layoutRect ?? expand(rect(from: block.bbox), by: 0.14, bounds: bounds), to: bounds)
                 let background = sampleBackgroundColor(image: image, near: expanded)
                 context.setFillColor(background)
                 context.fill(expanded)
@@ -2551,11 +2650,9 @@ struct MangaOverlayProbeService: Sendable {
                 context.setLineWidth(1.5)
                 context.stroke(expanded)
 
-                let inset = max(4, min(expanded.width, expanded.height) * 0.08)
-                let textRect = expanded.insetBy(dx: inset, dy: inset)
-                drawFittingText(
+                drawCollisionCheckedText(
                     block.translatedText,
-                    in: textRect,
+                    in: expanded,
                     context: context
                 )
             }
@@ -2710,6 +2807,67 @@ struct MangaOverlayProbeService: Sendable {
         )
     }
 
+    private static func safeBubbleRect(
+        for bubbleRect: CGRect,
+        representativeBlocks: [MangaOverlayProbeBlock]
+    ) -> CGRect {
+        let verticalCount = representativeBlocks.filter { block in
+            let blockRect = Self.rect(from: block.bbox)
+            return blockRect.height > blockRect.width * 1.18
+        }.count
+        let verticalDominant = verticalCount > representativeBlocks.count / 2
+        let insetRatio: CGFloat = verticalDominant ? 0.20 : 0.12
+        let shortSide = max(1, min(bubbleRect.width, bubbleRect.height))
+        let inset = max(4, shortSide * insetRatio)
+        let insetRect = bubbleRect.insetBy(dx: inset, dy: inset)
+        guard insetRect.width >= 12, insetRect.height >= 12 else {
+            return bubbleRect.insetBy(dx: min(4, bubbleRect.width * 0.08), dy: min(4, bubbleRect.height * 0.08))
+        }
+        return insetRect
+    }
+
+    private static func partitionedSafeRect(
+        for block: MangaOverlayProbeBlock,
+        in group: [MangaOverlayProbeBlock],
+        bubbleSafeRect: CGRect
+    ) -> CGRect {
+        let blockRects = group.map { (id: $0.id, rect: Self.rect(from: $0.bbox)) }
+        let verticalSpread = blockRects.map(\.1.midY).max().map { maxY in
+            maxY - (blockRects.map(\.1.midY).min() ?? maxY)
+        } ?? 0
+        let horizontalSpread = blockRects.map(\.1.midX).max().map { maxX in
+            maxX - (blockRects.map(\.1.midX).min() ?? maxX)
+        } ?? 0
+        let sortByY = verticalSpread >= horizontalSpread
+        let sorted = blockRects.sorted { lhs, rhs in
+            sortByY ? lhs.rect.midY < rhs.rect.midY : lhs.rect.midX < rhs.rect.midX
+        }
+        guard let position = sorted.firstIndex(where: { $0.id == block.id }) else {
+            return bubbleSafeRect
+        }
+
+        let current = sorted[position].rect
+        var partition = bubbleSafeRect
+        if sortByY {
+            let partitionMinY: CGFloat = position > 0 ? (sorted[position - 1].rect.midY + current.midY) / 2 : bubbleSafeRect.minY
+            let partitionMaxY: CGFloat = position < sorted.count - 1 ? (current.midY + sorted[position + 1].rect.midY) / 2 : bubbleSafeRect.maxY
+            partition = CGRect(x: bubbleSafeRect.minX, y: partitionMinY, width: bubbleSafeRect.width, height: partitionMaxY - partitionMinY)
+        } else {
+            let partitionMinX: CGFloat = position > 0 ? (sorted[position - 1].rect.midX + current.midX) / 2 : bubbleSafeRect.minX
+            let partitionMaxX: CGFloat = position < sorted.count - 1 ? (current.midX + sorted[position + 1].rect.midX) / 2 : bubbleSafeRect.maxX
+            partition = CGRect(x: partitionMinX, y: bubbleSafeRect.minY, width: partitionMaxX - partitionMinX, height: bubbleSafeRect.height)
+        }
+
+        let localInset = max(2, min(partition.width, partition.height) * 0.04)
+        let candidate = partition.insetBy(dx: localInset, dy: localInset)
+        return ensureMinimumRect(candidate, fallback: partition, bounds: bubbleSafeRect)
+    }
+
+    private static func ensureMinimumRect(_ rect: CGRect, fallback: CGRect, bounds: CGRect) -> CGRect {
+        let candidate = rect.width >= 8 && rect.height >= 8 ? rect : fallback
+        return clamp(candidate, to: bounds)
+    }
+
     private static func draw(
         on image: CGImage,
         actions: (CGContext, CGSize) throws -> Void
@@ -2738,6 +2896,13 @@ struct MangaOverlayProbeService: Sendable {
         return output
     }
 
+    private static func drawCollisionCheckedText(_ text: String, in rect: CGRect, context: CGContext) {
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanText.isEmpty else { return }
+        let plan = makeRenderTextPlan(cleanText, in: rect, minFontSize: minimumOverlayFontSize)
+        drawLines(plan.lines, in: rect, fontSize: plan.fontSize, lineHeight: plan.lineHeight, context: context)
+    }
+
     private static func drawFittingText(_ text: String, in rect: CGRect, context: CGContext) {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else { return }
@@ -2755,6 +2920,129 @@ struct MangaOverlayProbeService: Sendable {
 
         let lines = wrappedLines(cleanText, fontSize: fontSize, maxWidth: rect.width)
         drawLines(Array(lines.prefix(max(1, Int(rect.height / (fontSize * 1.18))))), in: rect, fontSize: fontSize, lineHeight: fontSize * 1.18, context: context)
+    }
+
+    private static func makeRenderTextPlan(
+        _ text: String,
+        in rect: CGRect,
+        minFontSize: CGFloat
+    ) -> MangaOverlayRenderTextPlan {
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let maxFontSize = min(max(10, rect.height * 0.38), 30)
+        let initialLines = wrappedLines(cleanText, fontSize: maxFontSize, maxWidth: rect.width)
+        let initialBounds = renderedTextBounds(
+            lines: initialLines,
+            fontSize: maxFontSize,
+            lineHeight: maxFontSize * 1.18,
+            rect: rect
+        )
+        let initialOverflow = initialBounds.map { !rect.insetBy(dx: -0.5, dy: -0.5).contains($0) } ?? false
+
+        var fontSize = maxFontSize
+        var selectedLines = initialLines
+        var selectedBounds = initialBounds
+        var minReached = false
+        var truncated = false
+        var resolved = !initialOverflow
+
+        while fontSize >= minFontSize {
+            let lines = wrappedLines(cleanText, fontSize: fontSize, maxWidth: rect.width)
+            let lineHeight = fontSize * 1.18
+            let bounds = renderedTextBounds(lines: lines, fontSize: fontSize, lineHeight: lineHeight, rect: rect)
+            let fits = bounds.map { rect.insetBy(dx: -0.5, dy: -0.5).contains($0) } ?? true
+            selectedLines = lines
+            selectedBounds = bounds
+            if fits {
+                resolved = true
+                break
+            }
+            fontSize -= 1
+        }
+
+        if fontSize < minFontSize {
+            fontSize = minFontSize
+            minReached = true
+            let lineHeight = fontSize * 1.18
+            let lines = wrappedLines(cleanText, fontSize: fontSize, maxWidth: rect.width)
+            let maxLines = max(1, Int(floor(rect.height / lineHeight)))
+            if lines.count > maxLines {
+                selectedLines = Array(lines.prefix(maxLines))
+                truncated = true
+            } else {
+                selectedLines = lines
+            }
+            selectedBounds = renderedTextBounds(lines: selectedLines, fontSize: fontSize, lineHeight: lineHeight, rect: rect)
+            resolved = selectedBounds.map { rect.insetBy(dx: -0.5, dy: -0.5).contains($0) } ?? true
+        }
+
+        return MangaOverlayRenderTextPlan(
+            fontSize: fontSize,
+            lineHeight: fontSize * 1.18,
+            lines: selectedLines,
+            initialOverflow: initialOverflow,
+            minFontSizeReached: minReached,
+            textTruncated: truncated,
+            nonTransparentBounds: selectedBounds?.offsetBy(dx: -rect.minX, dy: -rect.minY),
+            resolved: resolved
+        )
+    }
+
+    private static func renderedTextBounds(
+        lines: [String],
+        fontSize: CGFloat,
+        lineHeight: CGFloat,
+        rect: CGRect
+    ) -> CGRect? {
+        guard !lines.isEmpty else { return nil }
+        let width = max(1, Int(ceil(rect.width)))
+        let height = max(1, Int(ceil(max(rect.height, CGFloat(lines.count) * lineHeight))))
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+        var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+        guard let context = CGContext(
+            data: &pixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+
+        UIGraphicsPushContext(context)
+        drawLines(
+            lines,
+            in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)),
+            fontSize: fontSize,
+            lineHeight: lineHeight,
+            context: context
+        )
+        UIGraphicsPopContext()
+
+        var minX = width
+        var minY = height
+        var maxX = -1
+        var maxY = -1
+        for y in 0..<height {
+            for x in 0..<width {
+                let alpha = pixels[y * bytesPerRow + x * bytesPerPixel + 3]
+                guard alpha > 0 else { continue }
+                minX = min(minX, x)
+                minY = min(minY, y)
+                maxX = max(maxX, x)
+                maxY = max(maxY, y)
+            }
+        }
+
+        guard maxX >= minX, maxY >= minY else { return nil }
+        return CGRect(
+            x: rect.minX + CGFloat(minX),
+            y: rect.minY + CGFloat(minY),
+            width: CGFloat(maxX - minX + 1),
+            height: CGFloat(maxY - minY + 1)
+        )
     }
 
     private static func drawLines(
@@ -2863,6 +3151,15 @@ struct MangaOverlayProbeService: Sendable {
     private static func rect(from bbox: [Double]) -> CGRect {
         guard bbox.count == 4 else { return .zero }
         return CGRect(x: bbox[0], y: bbox[1], width: bbox[2], height: bbox[3]).standardized
+    }
+
+    private static func bboxArray(from rect: CGRect) -> [Double] {
+        [
+            Double(rect.minX.rounded()),
+            Double(rect.minY.rounded()),
+            Double(rect.width.rounded()),
+            Double(rect.height.rounded())
+        ]
     }
 
     private static func expand(_ rect: CGRect, by fraction: Double, bounds: CGRect) -> CGRect {
