@@ -109,6 +109,16 @@ private struct MangaOverlayBubbleCandidate: Equatable, Sendable {
     var confidence: Float
 }
 
+private struct MangaOverlayGlyphMaskPlan: Equatable, Sendable {
+    var maskRect: CGRect
+    var dilatedPixelOffsets: Set<Int>
+    var pixelCount: Int
+    var fillRects: [[Double]]
+    var backgroundColor: [Double]?
+    var backgroundStdDev: Double?
+    var backgroundFillApplied: Bool
+}
+
 struct MangaOverlayProbeBubble: Equatable, Codable, Sendable {
     var id: Int
     var bbox: [Double]
@@ -601,6 +611,17 @@ struct MangaOverlayProbeService: Sendable {
                 let text = block.translatedText.trimmingCharacters(in: .whitespacesAndNewlines)
                 updated.safeLayoutRect = Self.bboxArray(from: safeRect)
                 updated.safeLayoutSource = safeEntry.source
+                let glyphPlan = Self.makeGlyphMaskPlan(
+                    image: image,
+                    blockRect: blockRect,
+                    bubbleRect: block.bubbleID.flatMap { bubbleRects[$0] }
+                )
+                updated.glyphMaskPixelCount = glyphPlan?.pixelCount ?? 0
+                updated.glyphMaskRect = glyphPlan.map { Self.bboxArray(from: $0.maskRect) }
+                updated.glyphMaskFillRects = glyphPlan?.fillRects ?? []
+                updated.backgroundFillApplied = glyphPlan?.backgroundFillApplied ?? false
+                updated.backgroundColorStdDev = glyphPlan?.backgroundStdDev
+                updated.backgroundFillColor = glyphPlan?.backgroundColor
 
                 if text.isEmpty {
                     updated.renderCollisionChecked = false
@@ -928,6 +949,8 @@ struct MangaOverlayProbeService: Sendable {
             let sliceIndex = block.sliceIndex.map(String.init) ?? "nil"
             let safeLayout = block.safeLayoutRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
             let renderBounds = block.renderNonTransparentBounds?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let glyphRect = block.glyphMaskRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let backgroundStdDev = block.backgroundColorStdDev?.formatted(.number.precision(.fractionLength(2))) ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
             rawOCR: \(raw)
@@ -944,6 +967,8 @@ struct MangaOverlayProbeService: Sendable {
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
             renderCollision: checked=\(block.renderCollisionChecked) initialOverflow=\(block.renderCollisionInitialOverflow) resolved=\(block.renderCollisionResolved) fontSize=\(block.renderFontSize?.formatted(.number.precision(.fractionLength(1))) ?? "nil") minFont=\(block.renderMinFontSizeReached) truncated=\(block.renderTextTruncated) nonTransparentBounds=[\(renderBounds)]
+            glyphMask: pixels=\(block.glyphMaskPixelCount) rect=[\(glyphRect)] fillRects=\(block.glyphMaskFillRects.count)
+            backgroundFill: applied=\(block.backgroundFillApplied) stdDev=\(backgroundStdDev)
             finalForTranslation: \(final)
             deterministicCorrection: \(deterministic)
             bestGroundTruth: \(truth)
@@ -2643,9 +2668,25 @@ struct MangaOverlayProbeService: Sendable {
                 let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
                 let layoutRect = block.safeLayoutRect.map { rect(from: $0) }
                 let expanded = clamp(layoutRect ?? expand(rect(from: block.bbox), by: 0.14, bounds: bounds), to: bounds)
-                let background = sampleBackgroundColor(image: image, near: expanded)
-                context.setFillColor(background)
-                context.fill(expanded)
+                if block.backgroundFillApplied,
+                   let colorComponents = block.backgroundFillColor,
+                   colorComponents.count == 3,
+                   !block.glyphMaskFillRects.isEmpty {
+                    let background = CGColor(
+                        red: colorComponents[0],
+                        green: colorComponents[1],
+                        blue: colorComponents[2],
+                        alpha: 0.98
+                    )
+                    context.setFillColor(background)
+                    for fillRect in block.glyphMaskFillRects {
+                        context.fill(clamp(rect(from: fillRect), to: bounds))
+                    }
+                } else {
+                    let background = sampleBackgroundColor(image: image, near: expanded)
+                    context.setFillColor(background)
+                    context.fill(expanded)
+                }
                 context.setStrokeColor(CGColor(red: 0.12, green: 0.12, blue: 0.12, alpha: 0.25))
                 context.setLineWidth(1.5)
                 context.stroke(expanded)
@@ -3146,6 +3187,338 @@ struct MangaOverlayProbeService: Sendable {
             blue: Double(picked.2) / 255,
             alpha: 0.96
         )
+    }
+
+    private static func makeGlyphMaskPlan(
+        image: CGImage,
+        blockRect: CGRect,
+        bubbleRect: CGRect?
+    ) -> MangaOverlayGlyphMaskPlan? {
+        guard let bubbleRect else { return nil }
+        guard let providerData = image.dataProvider?.data,
+              let bytes = CFDataGetBytePtr(providerData),
+              image.bitsPerPixel == 32 else {
+            return nil
+        }
+
+        let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+        let bubbleBounds = clamp(bubbleRect.integral, to: imageBounds)
+        let ocrBounds = clamp(expand(blockRect, by: 0.08, bounds: imageBounds).integral, to: bubbleBounds)
+        guard bubbleBounds.width >= 4, bubbleBounds.height >= 4, ocrBounds.width >= 2, ocrBounds.height >= 2 else {
+            return nil
+        }
+
+        let width = Int(bubbleBounds.width)
+        let height = Int(bubbleBounds.height)
+        guard width > 0, height > 0 else { return nil }
+
+        let bytesPerRow = image.bytesPerRow
+        var gray = [UInt8](repeating: 255, count: width * height)
+        for localY in 0..<height {
+            let y = Int(bubbleBounds.minY) + localY
+            for localX in 0..<width {
+                let x = Int(bubbleBounds.minX) + localX
+                guard x >= 0, y >= 0, x < image.width, y < image.height else { continue }
+                let offset = y * bytesPerRow + x * 4
+                let red = Double(bytes[offset])
+                let green = Double(bytes[offset + 1])
+                let blue = Double(bytes[offset + 2])
+                gray[localY * width + localX] = UInt8(max(0, min(255, (0.299 * red + 0.587 * green + 0.114 * blue).rounded())))
+            }
+        }
+
+        let integralWidth = width + 1
+        var integral = [Int](repeating: 0, count: integralWidth * (height + 1))
+        for y in 0..<height {
+            var rowSum = 0
+            for x in 0..<width {
+                rowSum += Int(gray[y * width + x])
+                integral[(y + 1) * integralWidth + x + 1] = integral[y * integralWidth + x + 1] + rowSum
+            }
+        }
+
+        var foreground = [Bool](repeating: false, count: width * height)
+        let radius = max(4, min(12, Int(min(bubbleBounds.width, bubbleBounds.height) / 6)))
+        for y in 0..<height {
+            for x in 0..<width {
+                let minY = max(0, y - radius)
+                let maxY = min(height - 1, y + radius)
+                let minX = max(0, x - radius)
+                let maxX = min(width - 1, x + radius)
+                let sum = integral[(maxY + 1) * integralWidth + maxX + 1]
+                    - integral[minY * integralWidth + maxX + 1]
+                    - integral[(maxY + 1) * integralWidth + minX]
+                    + integral[minY * integralWidth + minX]
+                let count = (maxY - minY + 1) * (maxX - minX + 1)
+                let localMean = count > 0 ? Double(sum) / Double(count) : 255
+                let value = Double(gray[y * width + x])
+                foreground[y * width + x] = value < localMean - 22 && value < 205
+            }
+        }
+
+        let minComponentArea = max(3, Int(min(blockRect.width, blockRect.height) * 0.08))
+        let maxComponentArea = max(minComponentArea + 1, Int(bubbleBounds.width * bubbleBounds.height * 0.18))
+        let ocrLocalRect = ocrBounds.offsetBy(dx: -bubbleBounds.minX, dy: -bubbleBounds.minY)
+        var visited = [Bool](repeating: false, count: width * height)
+        var acceptedOffsets = Set<Int>()
+
+        for startY in 0..<height {
+            for startX in 0..<width {
+                let startOffset = startY * width + startX
+                guard foreground[startOffset], !visited[startOffset] else { continue }
+
+                var queue = [startOffset]
+                visited[startOffset] = true
+                var cursor = 0
+                var component: [Int] = []
+                var minX = startX
+                var maxX = startX
+                var minY = startY
+                var maxY = startY
+                while cursor < queue.count {
+                    let offset = queue[cursor]
+                    cursor += 1
+                    component.append(offset)
+                    let y = offset / width
+                    let x = offset % width
+                    minX = min(minX, x)
+                    maxX = max(maxX, x)
+                    minY = min(minY, y)
+                    maxY = max(maxY, y)
+                    for neighbor in glyphNeighborOffsets(x: x, y: y, width: width, height: height) {
+                        if foreground[neighbor], !visited[neighbor] {
+                            visited[neighbor] = true
+                            queue.append(neighbor)
+                        }
+                    }
+                }
+
+                let area = component.count
+                guard area >= minComponentArea, area <= maxComponentArea else { continue }
+                let componentRect = CGRect(
+                    x: CGFloat(minX),
+                    y: CGFloat(minY),
+                    width: CGFloat(maxX - minX + 1),
+                    height: CGFloat(maxY - minY + 1)
+                )
+                guard componentRect.intersects(ocrLocalRect) else { continue }
+
+                let longSide = max(componentRect.width, componentRect.height)
+                let shortSide = max(1, min(componentRect.width, componentRect.height))
+                guard longSide / shortSide <= 16 else { continue }
+                acceptedOffsets.formUnion(component)
+            }
+        }
+
+        guard !acceptedOffsets.isEmpty else { return nil }
+        let dilatedOffsets = dilateGlyphOffsets(
+            acceptedOffsets,
+            width: width,
+            height: height,
+            radius: 2
+        )
+        let fillRects = glyphFillRects(
+            offsets: dilatedOffsets,
+            width: width,
+            origin: bubbleBounds.origin,
+            maxRects: 5_000
+        )
+        let background = glyphBackgroundEstimate(
+            image: image,
+            bytes: bytes,
+            bubbleBounds: bubbleBounds,
+            excludedOffsets: dilatedOffsets
+        )
+        let stdDevThreshold = 45.0
+        return MangaOverlayGlyphMaskPlan(
+            maskRect: boundingRect(for: dilatedOffsets, width: width).offsetBy(dx: bubbleBounds.minX, dy: bubbleBounds.minY),
+            dilatedPixelOffsets: dilatedOffsets,
+            pixelCount: dilatedOffsets.count,
+            fillRects: fillRects,
+            backgroundColor: background?.color,
+            backgroundStdDev: background?.stdDev,
+            backgroundFillApplied: (background?.stdDev ?? .greatestFiniteMagnitude) <= stdDevThreshold
+        )
+    }
+
+    private static func glyphNeighborOffsets(x: Int, y: Int, width: Int, height: Int) -> [Int] {
+        var offsets: [Int] = []
+        if x > 0 { offsets.append(y * width + x - 1) }
+        if x + 1 < width { offsets.append(y * width + x + 1) }
+        if y > 0 { offsets.append((y - 1) * width + x) }
+        if y + 1 < height { offsets.append((y + 1) * width + x) }
+        return offsets
+    }
+
+    private static func dilateGlyphOffsets(
+        _ offsets: Set<Int>,
+        width: Int,
+        height: Int,
+        radius: Int
+    ) -> Set<Int> {
+        var result = offsets
+        for offset in offsets {
+            let y = offset / width
+            let x = offset % width
+            for dy in -radius...radius {
+                for dx in -radius...radius where dx * dx + dy * dy <= radius * radius {
+                    let nx = x + dx
+                    let ny = y + dy
+                    if nx >= 0, ny >= 0, nx < width, ny < height {
+                        result.insert(ny * width + nx)
+                    }
+                }
+            }
+        }
+        return result
+    }
+
+    private static func boundingRect(for offsets: Set<Int>, width: Int) -> CGRect {
+        guard let first = offsets.first else { return .zero }
+        var minX = first % width
+        var maxX = minX
+        var minY = first / width
+        var maxY = minY
+        for offset in offsets {
+            let y = offset / width
+            let x = offset % width
+            minX = min(minX, x)
+            maxX = max(maxX, x)
+            minY = min(minY, y)
+            maxY = max(maxY, y)
+        }
+        return CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+    }
+
+    private static func glyphFillRects(
+        offsets: Set<Int>,
+        width: Int,
+        origin: CGPoint,
+        maxRects: Int
+    ) -> [[Double]] {
+        let groupedByY = Dictionary(grouping: offsets) { $0 / width }
+        var rects: [[Double]] = []
+        for y in groupedByY.keys.sorted() {
+            let xs = groupedByY[y, default: []].map { $0 % width }.sorted()
+            guard var runStart = xs.first else { continue }
+            var previous = runStart
+            for x in xs.dropFirst() {
+                if x == previous + 1 {
+                    previous = x
+                    continue
+                }
+                rects.append([
+                    Double(origin.x + CGFloat(runStart)),
+                    Double(origin.y + CGFloat(y)),
+                    Double(previous - runStart + 1),
+                    1
+                ])
+                runStart = x
+                previous = x
+            }
+            rects.append([
+                Double(origin.x + CGFloat(runStart)),
+                Double(origin.y + CGFloat(y)),
+                Double(previous - runStart + 1),
+                1
+            ])
+        }
+        if rects.count <= maxRects {
+            return rects
+        }
+        let bucket = Int(ceil(Double(rects.count) / Double(maxRects)))
+        return stride(from: 0, to: rects.count, by: bucket).map { start in
+            let slice = rects[start..<min(rects.count, start + bucket)]
+            let minX = slice.map { $0[0] }.min() ?? 0
+            let minY = slice.map { $0[1] }.min() ?? 0
+            let maxX = slice.map { $0[0] + $0[2] }.max() ?? minX
+            let maxY = slice.map { $0[1] + $0[3] }.max() ?? minY
+            return [minX, minY, maxX - minX, maxY - minY]
+        }
+    }
+
+    private static func glyphBackgroundEstimate(
+        image: CGImage,
+        bytes: UnsafePointer<UInt8>,
+        bubbleBounds: CGRect,
+        excludedOffsets: Set<Int>
+    ) -> (color: [Double], stdDev: Double)? {
+        let width = Int(bubbleBounds.width)
+        let height = Int(bubbleBounds.height)
+        guard width > 0, height > 0 else { return nil }
+
+        let bytesPerRow = image.bytesPerRow
+        var redValues: [Int] = []
+        var greenValues: [Int] = []
+        var blueValues: [Int] = []
+        var sampleOffsets = Set<Int>()
+        for glyphOffset in excludedOffsets {
+            let glyphY = glyphOffset / width
+            let glyphX = glyphOffset % width
+            for dy in -7...7 {
+                for dx in -7...7 {
+                    let distanceSquared = dx * dx + dy * dy
+                    guard distanceSquared >= 16, distanceSquared <= 49 else { continue }
+                    let nx = glyphX + dx
+                    let ny = glyphY + dy
+                    guard nx >= 0, ny >= 0, nx < width, ny < height else { continue }
+                    let offset = ny * width + nx
+                    if !excludedOffsets.contains(offset) {
+                        sampleOffsets.insert(offset)
+                    }
+                }
+            }
+        }
+
+        let maxSamples = 1800
+        let orderedOffsets: [Int]
+        if sampleOffsets.count > maxSamples {
+            let sorted = sampleOffsets.sorted()
+            let strideSize = max(1, sorted.count / maxSamples)
+            orderedOffsets = stride(from: 0, to: sorted.count, by: strideSize).map { sorted[$0] }
+        } else {
+            orderedOffsets = Array(sampleOffsets)
+        }
+
+        for localOffset in orderedOffsets {
+            let localY = localOffset / width
+            let localX = localOffset % width
+            let y = Int(bubbleBounds.minY) + localY
+            let x = Int(bubbleBounds.minX) + localX
+            guard x >= 0, y >= 0, x < image.width, y < image.height else { continue }
+            let offset = y * bytesPerRow + x * 4
+            redValues.append(Int(bytes[offset]))
+            greenValues.append(Int(bytes[offset + 1]))
+            blueValues.append(Int(bytes[offset + 2]))
+        }
+        guard redValues.count >= 12 else { return nil }
+        let medians = [
+            median(redValues),
+            median(greenValues),
+            median(blueValues)
+        ]
+        var squaredError = 0.0
+        let count = redValues.count
+        for index in 0..<count {
+            squaredError += pow(Double(redValues[index]) - medians[0], 2)
+            squaredError += pow(Double(greenValues[index]) - medians[1], 2)
+            squaredError += pow(Double(blueValues[index]) - medians[2], 2)
+        }
+        let stdDev = sqrt(squaredError / Double(count * 3))
+        return (
+            color: medians.map { max(0, min(1, $0 / 255)) },
+            stdDev: stdDev
+        )
+    }
+
+    private static func median(_ values: [Int]) -> Double {
+        guard !values.isEmpty else { return 0 }
+        let sorted = values.sorted()
+        let middle = sorted.count / 2
+        if sorted.count.isMultiple(of: 2) {
+            return Double(sorted[middle - 1] + sorted[middle]) / 2
+        }
+        return Double(sorted[middle])
     }
 
     private static func rect(from bbox: [Double]) -> CGRect {

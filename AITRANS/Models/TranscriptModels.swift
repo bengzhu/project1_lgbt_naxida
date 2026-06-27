@@ -359,6 +359,12 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var renderMinFontSizeReached: Bool
     var renderTextTruncated: Bool
     var renderNonTransparentBounds: [Double]?
+    var glyphMaskRect: [Double]?
+    var glyphMaskPixelCount: Int
+    var glyphMaskFillRects: [[Double]]
+    var backgroundFillApplied: Bool
+    var backgroundFillColor: [Double]?
+    var backgroundColorStdDev: Double?
     var correctionEnabled: Bool
     var afterCorrectionText: String?
     var correctionRejectedReason: String?
@@ -431,6 +437,12 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         case renderMinFontSizeReached
         case renderTextTruncated
         case renderNonTransparentBounds
+        case glyphMaskRect
+        case glyphMaskPixelCount
+        case glyphMaskFillRects
+        case backgroundFillApplied
+        case backgroundFillColor
+        case backgroundColorStdDev
         case correctionEnabled
         case afterCorrectionText
         case correctionRejectedReason
@@ -504,6 +516,12 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         renderMinFontSizeReached: Bool = false,
         renderTextTruncated: Bool = false,
         renderNonTransparentBounds: [Double]? = nil,
+        glyphMaskRect: [Double]? = nil,
+        glyphMaskPixelCount: Int = 0,
+        glyphMaskFillRects: [[Double]] = [],
+        backgroundFillApplied: Bool = false,
+        backgroundFillColor: [Double]? = nil,
+        backgroundColorStdDev: Double? = nil,
         correctionEnabled: Bool = false,
         afterCorrectionText: String? = nil,
         correctionRejectedReason: String? = nil,
@@ -583,6 +601,12 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.renderMinFontSizeReached = renderMinFontSizeReached
         self.renderTextTruncated = renderTextTruncated
         self.renderNonTransparentBounds = renderNonTransparentBounds
+        self.glyphMaskRect = glyphMaskRect
+        self.glyphMaskPixelCount = glyphMaskPixelCount
+        self.glyphMaskFillRects = glyphMaskFillRects
+        self.backgroundFillApplied = backgroundFillApplied
+        self.backgroundFillColor = backgroundFillColor
+        self.backgroundColorStdDev = backgroundColorStdDev
         self.correctionEnabled = correctionEnabled
         self.afterCorrectionText = afterCorrectionText
         self.correctionRejectedReason = correctionRejectedReason
@@ -657,6 +681,12 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         try container.encode(renderMinFontSizeReached, forKey: .renderMinFontSizeReached)
         try container.encode(renderTextTruncated, forKey: .renderTextTruncated)
         try container.encodeIfPresent(renderNonTransparentBounds, forKey: .renderNonTransparentBounds)
+        try container.encodeIfPresent(glyphMaskRect, forKey: .glyphMaskRect)
+        try container.encode(glyphMaskPixelCount, forKey: .glyphMaskPixelCount)
+        try container.encode(glyphMaskFillRects, forKey: .glyphMaskFillRects)
+        try container.encode(backgroundFillApplied, forKey: .backgroundFillApplied)
+        try container.encodeIfPresent(backgroundFillColor, forKey: .backgroundFillColor)
+        try container.encodeIfPresent(backgroundColorStdDev, forKey: .backgroundColorStdDev)
         try container.encode(correctionEnabled, forKey: .correctionEnabled)
         try container.encodeIfPresent(afterCorrectionText, forKey: .afterCorrectionText)
         try container.encodeIfPresent(correctionRejectedReason, forKey: .correctionRejectedReason)
@@ -793,6 +823,9 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
     var renderCollisionUnresolvedBlocks: [Int]
     var renderMinFontSizeReachedBlocks: [Int]
     var renderTextTruncatedBlocks: [Int]
+    var glyphMaskBlocks: Int
+    var backgroundFillAppliedBlocks: [Int]
+    var backgroundFillSkippedBlocks: [Int]
 
     static let empty = MangaOverlayProbeDiagnostics(
         passedBlocks: 0,
@@ -839,7 +872,10 @@ struct MangaOverlayProbeDiagnostics: Equatable, Codable, Sendable {
         renderCollisionResolvedBlocks: [],
         renderCollisionUnresolvedBlocks: [],
         renderMinFontSizeReachedBlocks: [],
-        renderTextTruncatedBlocks: []
+        renderTextTruncatedBlocks: [],
+        glyphMaskBlocks: 0,
+        backgroundFillAppliedBlocks: [],
+        backgroundFillSkippedBlocks: []
     )
 }
 
