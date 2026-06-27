@@ -224,12 +224,12 @@ decisionTrace: rawOutputClassification=symbolsOnly | candidateClassification=emp
 
 #7 bbox=[501,901,57,50] bubbleID=5 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=unmatched ocrSimilarity=0.250 legacySimilarity=0.539 wordOrder=false blockPassed=false
 rawOCR: GET PESULTE / SAMING CLUE TO SAVE THE / POOM BENG
-afterPreprocessing: TO / GET PRELLTE / ДТ THS / TOLRNANENT / TO saVe THI / O0M 00 / DISBANDI
-adaptivePreprocessing: TO / GET PRELLTE / ДТ THS / TOLRNANENT / TO saVe THI / O0M 00 / DISBANDI
+afterPreprocessing: ER! / ME NITO TO / SET PESULTE / TOLENANENT / BAMNIS CLA / PODA CENG / DISGANORD
+adaptivePreprocessing: ER! / ME NITO TO / SET PESULTE / TOLENANENT / BAMNIS CLA / PODA CENG / DISGANORD
 fixedPreprocessing: WEN TO TO / GET PEGALTE / AT THE / TOLRNAMENT / TO Save THe / BAMONe QUO / PISSANDRA,
 cropPaddingX: 22.7
 cropPaddingY: 27.8
-cropClampedByBubble: true
+cropClampedByBubble: false
 cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
@@ -256,13 +256,13 @@ decisionTrace: rawOutputClassification=placeholder | candidateClassification=pla
 
 #8 bbox=[44,963,73,100] bubbleID=6 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.611 legacySimilarity=0.826 wordOrder=false blockPassed=false
 rawOCR: SUGSESTION THE / OVERRULED AND IT WAS / THAT I'D BE DECIDED / STAYING OVER AT REN- / HOUSE.
-afterPreprocessing: THEI / SUSGESTION / OVERRULED) / ANO IT:WAS / DECIDED L / THAT TO BE / ‹STAYING / OVER AT RENE / *SENPAI'SI / Houser
-adaptivePreprocessing: THEI / SUSGESTION / OVERRULED) / ANO IT:WAS / DECIDED L / THAT TO BE / ‹STAYING / OVER AT RENE / *SENPAI'SI / Houser
+afterPreprocessing: INS IS AN / OPPLNE / TOLONAMENT, / DOING M / ONLINE / WORLD AILKE / iT / NEANINELESS / THE / SUGEESTION / Vitai / WAS / OVERELLED, / AND IT WAS / yo / DECIDED / even / THAT I'D BE / talking / STAYING / about / OVER AT GEN- / SENPAI'S / HOLISE.
+adaptivePreprocessing: INS IS AN / OPPLNE / TOLONAMENT, / DOING M / ONLINE / WORLD AILKE / iT / NEANINELESS / THE / SUGEESTION / Vitai / WAS / OVERELLED, / AND IT WAS / yo / DECIDED / even / THAT I'D BE / talking / STAYING / about / OVER AT GEN- / SENPAI'S / HOLISE.
 fixedPreprocessing: -THE / "BUSGESTION / AWAST / OVERRULED / ANO I'WAS / ¡DECIDEDU / THAT TO BE / {STAYING] / OVER AT RENA / ¡SENPAI'S t / THOUSEr
 cropPaddingX: 32.6
 cropPaddingY: 32.6
 cropClampedByBubble: false
-cropCandidatePreservesRawWords: false
+cropCandidatePreservesRawWords: true
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive

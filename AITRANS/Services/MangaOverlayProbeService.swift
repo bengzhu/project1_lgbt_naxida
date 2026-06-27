@@ -361,7 +361,13 @@ struct MangaOverlayProbeService: Sendable {
             let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
             let cropBounds = block.bubbleBoundingBox.map { $0.intersection(bounds) } ?? bounds
             let adaptivePadding = Self.adaptiveCropPadding(for: block.boundingBox)
-            let adaptiveExpanded = block.boundingBox.insetBy(dx: -adaptivePadding.x, dy: -adaptivePadding.y)
+            let adaptiveExpanded: CGRect
+            if let bubbleBounds = block.bubbleBoundingBox?.intersection(bounds),
+               Self.shouldUseBubbleWideCrop(for: block.boundingBox, bubbleBounds: bubbleBounds) {
+                adaptiveExpanded = bubbleBounds
+            } else {
+                adaptiveExpanded = block.boundingBox.insetBy(dx: -adaptivePadding.x, dy: -adaptivePadding.y)
+            }
             let adaptiveCropRect = Self.clamp(adaptiveExpanded, to: cropBounds).integral
             let fixedExpanded = Self.expand(block.boundingBox, by: 0.18, bounds: bounds)
             let fixedCropRect = Self.clamp(fixedExpanded, to: cropBounds).integral
@@ -481,6 +487,18 @@ struct MangaOverlayProbeService: Sendable {
             x: max(4, min(horizontalPadding, rect.width * 0.45)),
             y: max(4, min(verticalPadding, rect.height * 0.55))
         )
+    }
+
+    private static func shouldUseBubbleWideCrop(for blockRect: CGRect, bubbleBounds: CGRect) -> Bool {
+        guard bubbleBounds.width > 0, bubbleBounds.height > 0 else { return false }
+        let widthCoverage = blockRect.width / bubbleBounds.width
+        let heightCoverage = blockRect.height / bubbleBounds.height
+        let blockArea = blockRect.width * blockRect.height
+        let bubbleArea = bubbleBounds.width * bubbleBounds.height
+        let blockLooksPartial = widthCoverage < 0.55 || heightCoverage < 0.52 || blockArea < bubbleArea * 0.36
+        let bubbleIsReasonableOCRCrop = bubbleBounds.width <= blockRect.width * 3.2
+            && bubbleBounds.height <= blockRect.height * 3.2
+        return blockLooksPartial && bubbleIsReasonableOCRCrop
     }
 
     static func cropCandidatePreservesRawWords(rawText: String, candidateText: String?) -> Bool {
