@@ -29,6 +29,13 @@ struct MangaOverlayOCRBlock: Identifiable, Equatable, Sendable {
     var confidence: Float?
     var boundingBox: CGRect
     var rotationAngle: Int
+    var bubbleID: Int?
+    var bubbleAssignmentMethod: String
+    var bubbleBoundingBox: CGRect?
+    var source: String
+    var crossBubbleMergeRejected: Bool
+    var sliceIndex: Int?
+    var sliceOverlapDeduped: Bool
 }
 
 struct MangaOverlayProbeCropping: Equatable, Sendable {
@@ -48,6 +55,12 @@ private struct MangaOverlayOCRCandidate: Equatable, Sendable {
     var confidence: Float?
     var boundingBox: CGRect
     var rotationAngle: Int
+    var bubbleID: Int?
+    var bubbleAssignmentMethod: String
+    var bubbleBoundingBox: CGRect?
+    var source: String
+    var sliceIndex: Int?
+    var sliceOverlapDeduped: Bool
 }
 
 private struct MangaOverlayOCRCluster {
@@ -58,40 +71,224 @@ private struct MangaOverlayOCRCluster {
             partial.union(rect)
         }
     }
+
+    var bubbleID: Int? {
+        candidates.first?.bubbleID
+    }
+
+    var bubbleAssignmentMethod: String {
+        let methods = candidates.map(\.bubbleAssignmentMethod)
+        if methods.contains("unassigned") {
+            return "unassigned"
+        }
+        if methods.contains("overlapArea") {
+            return "overlapArea"
+        }
+        return methods.first ?? "unknown"
+    }
+
+    var bubbleBoundingBox: CGRect? {
+        candidates.first?.bubbleBoundingBox
+    }
+
+    var sliceIndex: Int? {
+        let indexes = Set(candidates.compactMap(\.sliceIndex))
+        return indexes.count == 1 ? indexes.first : nil
+    }
+
+    var sliceOverlapDeduped: Bool {
+        candidates.contains { $0.sliceOverlapDeduped }
+    }
 }
 
 private struct MangaOverlayBubbleCandidate: Equatable, Sendable {
     var index: Int
     var boundingBox: CGRect
     var source: String
+    var area: CGFloat
+    var confidence: Float
+}
+
+struct MangaOverlayProbeBubble: Equatable, Codable, Sendable {
+    var id: Int
+    var bbox: [Double]
+    var source: String
+    var area: Double
+    var confidence: Float
+}
+
+struct MangaOverlayTextRegion: Equatable, Codable, Sendable {
+    var bbox: [Double]
+    var bubbleID: Int?
+    var source: String
+    var confidence: Float?
+    var assignmentMethod: String
+
+    enum CodingKeys: String, CodingKey {
+        case bbox
+        case bubbleID
+        case source
+        case confidence
+        case assignmentMethod
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(bbox, forKey: .bbox)
+        try container.encode(bubbleID, forKey: .bubbleID)
+        try container.encode(source, forKey: .source)
+        try container.encodeIfPresent(confidence, forKey: .confidence)
+        try container.encode(assignmentMethod, forKey: .assignmentMethod)
+    }
+}
+
+struct MangaOverlayBubbleGeometryDiagnostics: Equatable, Codable, Sendable {
+    var bubbles: [MangaOverlayProbeBubble]
+    var textRegions: [MangaOverlayTextRegion]
+    var assignedTextRegionCount: Int
+    var unassignedTextRegionCount: Int
+    var crossBubbleMergeRejectedCount: Int
+    var notes: [String]
+}
+
+struct MangaOverlaySliceOCRSlice: Equatable, Codable, Sendable {
+    var index: Int
+    var bbox: [Double]
+    var overlapRatio: Double
+    var rawObservationCount: Int
+}
+
+struct MangaOverlaySliceOCRCandidateSummary: Equatable, Codable, Sendable {
+    var text: String
+    var bbox: [Double]
+    var sliceIndex: Int?
+    var dedupedFromSliceIndexes: [Int]
+    var bubbleID: Int?
+    var source: String
+    var sliceOverlapDeduped: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case text
+        case bbox
+        case sliceIndex
+        case dedupedFromSliceIndexes
+        case bubbleID
+        case source
+        case sliceOverlapDeduped
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(text, forKey: .text)
+        try container.encode(bbox, forKey: .bbox)
+        try container.encode(sliceIndex, forKey: .sliceIndex)
+        try container.encode(dedupedFromSliceIndexes, forKey: .dedupedFromSliceIndexes)
+        try container.encode(bubbleID, forKey: .bubbleID)
+        try container.encode(source, forKey: .source)
+        try container.encode(sliceOverlapDeduped, forKey: .sliceOverlapDeduped)
+    }
+}
+
+struct MangaOverlaySliceOCRDiagnostics: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var reason: String
+    var sourceImage: String
+    var imageWidth: Int
+    var imageHeight: Int
+    var aspectRatio: Double
+    var thresholdAspectRatio: Double
+    var overlapRatio: Double
+    var slices: [MangaOverlaySliceOCRSlice]
+    var rawCandidateCount: Int
+    var finalCandidateCount: Int
+    var dedupedCandidateCount: Int
+    var duplicateGroupCount: Int
+    var residualOverlapDuplicateCount: Int
+    var candidates: [MangaOverlaySliceOCRCandidateSummary]
+    var notes: [String]
 }
 
 struct MangaOverlayProbeService: Sendable {
     private static let ocrScale: CGFloat = 2
+    private static let sliceAspectRatioThreshold: CGFloat = 2.85
+    private static let sliceOverlapRatio: CGFloat = 0.2
+    private static let targetSliceAspectRatio: CGFloat = 2.05
 
     func recognizeTextBlocks(
         in imageData: Data,
         cropping: MangaOverlayProbeCropping = .defaultValue,
         customWords: [String] = []
-    ) async throws -> (image: CGImage, blocks: [MangaOverlayOCRBlock]) {
+    ) async throws -> (
+        image: CGImage,
+        blocks: [MangaOverlayOCRBlock],
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        sliceOCR: MangaOverlaySliceOCRDiagnostics
+    ) {
         try await Task.detached(priority: .userInitiated) {
             let image = try Self.makeImage(from: imageData)
             let contentRect = Self.contentCropRect(for: image, cropping: cropping)
-            let croppedImage = try Self.croppedImage(image, rect: contentRect)
-            let scaledImage = try Self.scaledImage(croppedImage, scale: Self.ocrScale)
+            let bubbles = try Self.detectBubbleCandidates(in: image, cropping: cropping, customWords: customWords)
+            let sliceResult = try Self.recognizeRawCandidates(
+                in: image,
+                contentRect: contentRect,
+                customWords: customWords,
+                sourceImage: "test/1.png"
+            )
+            let rawCandidates = sliceResult.candidates
+            let candidates = rawCandidates.map { Self.assignBubble(to: $0, bubbles: bubbles) }
+            let mergeResult = Self.mergeCandidatesIntoBlocks(
+                candidates,
+                imageSize: CGSize(width: image.width, height: image.height)
+            )
+            let geometry = Self.bubbleGeometryDiagnostics(
+                bubbles: bubbles,
+                candidates: candidates,
+                blocks: mergeResult.blocks,
+                crossBubbleMergeRejectedCount: mergeResult.crossBubbleMergeRejectedCount
+            )
+            let sliceOCR = Self.sliceDiagnostics(
+                from: sliceResult,
+                assignedCandidates: candidates,
+                sourceImage: "test/1.png",
+                image: image
+            )
+            return (image, mergeResult.blocks, geometry, sliceOCR)
+        }.value
+    }
 
-            let candidates = try [0, 90, 180, 270].flatMap { angle in
-                let rotatedImage = try Self.rotatedImage(scaledImage, angle: angle)
-                return try Self.recognizeTextCandidates(
-                    in: rotatedImage,
-                    angle: angle,
-                    scaledContentSize: CGSize(width: CGFloat(scaledImage.width), height: CGFloat(scaledImage.height)),
-                    contentOrigin: contentRect.origin,
-                    scale: Self.ocrScale,
-                    customWords: customWords
-                )
+    func runSyntheticLongImageSliceProbe(
+        imageData: Data,
+        cropping: MangaOverlayProbeCropping = .defaultValue,
+        customWords: [String] = []
+    ) async throws -> MangaOverlaySliceOCRDiagnostics {
+        try await Task.detached(priority: .userInitiated) {
+            let image = try Self.makeImage(from: imageData)
+            let contentRect = Self.contentCropRect(for: image, cropping: cropping)
+            let contentImage = try Self.croppedImage(image, rect: contentRect)
+            let syntheticImage = try Self.verticallyStackedImage(contentImage, copies: 3)
+            let syntheticRect = CGRect(
+                x: 0,
+                y: 0,
+                width: CGFloat(syntheticImage.width),
+                height: CGFloat(syntheticImage.height)
+            )
+            let raw = try Self.recognizeRawCandidates(
+                in: syntheticImage,
+                contentRect: syntheticRect,
+                customWords: customWords,
+                sourceImage: "synthetic:test/1.png-content-x3"
+            )
+            let candidates = raw.candidates.map { candidate in
+                var updated = candidate
+                updated.source = "syntheticSliceOCR"
+                return updated
             }
-            return (image, Self.mergeCandidatesIntoBlocks(candidates, imageSize: CGSize(width: image.width, height: image.height)))
+            return Self.sliceDiagnostics(
+                from: raw,
+                assignedCandidates: candidates,
+                sourceImage: "synthetic:test/1.png-content-x3",
+                image: syntheticImage
+            )
         }.value
     }
 
@@ -103,7 +300,9 @@ struct MangaOverlayProbeService: Sendable {
         try await Task.detached(priority: .userInitiated) {
             guard options.enabled else { return nil }
             let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
-            let cropRect = Self.expand(block.boundingBox, by: 0.18, bounds: bounds).integral
+            let cropBounds = block.bubbleBoundingBox.map { $0.intersection(bounds) } ?? bounds
+            let expanded = Self.expand(block.boundingBox, by: 0.18, bounds: bounds)
+            let cropRect = Self.clamp(expanded, to: cropBounds).integral
             let cropped = try Self.croppedImage(image, rect: cropRect)
             let prepared = try Self.preprocessedImage(cropped, options: options)
             let candidates = try Self.recognizeTextCandidates(
@@ -471,6 +670,7 @@ struct MangaOverlayProbeService: Sendable {
             let final = block.finalTextUsedForTranslation.replacing("\n", with: " / ")
             let deterministic = block.deterministicCorrectionText?.replacing("\n", with: " / ") ?? "nil"
             let truth = block.bestGroundTruthText ?? "nil"
+            let bubbleID = block.bubbleID.map(String.init) ?? "nil"
             let similarity = block.ocrGroundTruthSimilarity.map {
                 $0.formatted(.number.precision(.fractionLength(3)))
             } ?? "nil"
@@ -481,8 +681,9 @@ struct MangaOverlayProbeService: Sendable {
             let rawOutput = block.rawOutput.replacing("\n", with: " / ")
             let deterministicTranslation = block.deterministicCorrectionTranslationCandidate?.replacing("\n", with: " / ") ?? "nil"
             let deterministicTranslationRaw = block.deterministicCorrectionTranslationRawOutput?.replacing("\n", with: " / ") ?? "nil"
+            let sliceIndex = block.sliceIndex.map(String.init) ?? "nil"
             return """
-            #\(block.index) bbox=[\(bbox)] angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
+            #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
             rawOCR: \(raw)
             afterPreprocessing: \(preprocessed)
             finalForTranslation: \(final)
@@ -545,7 +746,7 @@ struct MangaOverlayProbeService: Sendable {
             localBlocks = mergeCandidatesIntoBlocks(
                 candidates,
                 imageSize: CGSize(width: CGFloat(processed.width), height: CGFloat(processed.height))
-            )
+            ).blocks
         } else {
             let text = mergeText(from: orderedCandidates(candidates))
             let rect = candidates.map(\.boundingBox).reduce(CGRect.null) { $0.union($1) }
@@ -554,7 +755,14 @@ struct MangaOverlayProbeService: Sendable {
                     text: text,
                     confidence: nil,
                     boundingBox: rect.isNull ? CGRect(origin: .zero, size: CGSize(width: processed.width, height: processed.height)) : rect,
-                    rotationAngle: 0
+                    rotationAngle: 0,
+                    bubbleID: bubble.index,
+                    bubbleAssignmentMethod: "bubbleCrop",
+                    bubbleBoundingBox: bubble.boundingBox,
+                    source: "bubbleFirst",
+                    crossBubbleMergeRejected: false,
+                    sliceIndex: nil,
+                    sliceOverlapDeduped: false
                 )
             ]
         }
@@ -608,7 +816,9 @@ struct MangaOverlayProbeService: Sendable {
         scaledContentSize: CGSize,
         contentOrigin: CGPoint,
         scale: CGFloat,
-        customWords: [String]
+        customWords: [String],
+        source: String = "wholePageOCR",
+        sliceIndex: Int? = nil
     ) throws -> [MangaOverlayOCRCandidate] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
@@ -653,7 +863,13 @@ struct MangaOverlayProbeService: Sendable {
                 text: text,
                 confidence: candidate.confidence,
                 boundingBox: originalBox,
-                rotationAngle: angle
+                rotationAngle: angle,
+                bubbleID: nil,
+                bubbleAssignmentMethod: "unassigned",
+                bubbleBoundingBox: nil,
+                source: source,
+                sliceIndex: sliceIndex,
+                sliceOverlapDeduped: false
             )
         }
     }
@@ -711,6 +927,42 @@ struct MangaOverlayProbeService: Sendable {
             throw MangaOverlayProbeServiceError.imageRenderFailed
         }
         return scaled
+    }
+
+    private static func verticallyStackedImage(_ image: CGImage, copies: Int) throws -> CGImage {
+        let copies = max(1, copies)
+        let width = image.width
+        let height = image.height * copies
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        for index in 0..<copies {
+            context.draw(
+                image,
+                in: CGRect(
+                    x: 0,
+                    y: CGFloat(index * image.height),
+                    width: CGFloat(width),
+                    height: CGFloat(image.height)
+                )
+            )
+        }
+        guard let stacked = context.makeImage() else {
+            throw MangaOverlayProbeServiceError.imageRenderFailed
+        }
+        return stacked
+    }
+
+    private static func formatRatio(_ value: CGFloat) -> String {
+        Double(value).formatted(.number.precision(.fractionLength(2)))
     }
 
     private static func preprocessedImage(_ image: CGImage, options: MangaOverlayPreprocessingOptions) throws -> CGImage {
@@ -947,10 +1199,239 @@ struct MangaOverlayProbeService: Sendable {
         }
     }
 
+    private struct MergeCandidatesResult {
+        var blocks: [MangaOverlayOCRBlock]
+        var crossBubbleMergeRejectedCount: Int
+        var rejectedBubbleIDs: Set<Int>
+        var rejectedUnassignedMerge: Bool
+    }
+
+    private struct BubbleAssignmentScore {
+        var bubble: MangaOverlayBubbleCandidate
+        var overlap: CGFloat
+        var containsCenter: Bool
+        var centerContainment: CGFloat
+        var score: CGFloat
+    }
+
+    private struct SliceDefinition {
+        var index: Int
+        var rect: CGRect
+        var overlapRatio: CGFloat
+    }
+
+    private struct SliceRawCandidateResult {
+        var enabled: Bool
+        var reason: String
+        var contentRect: CGRect
+        var thresholdAspectRatio: CGFloat
+        var overlapRatio: CGFloat
+        var slices: [SliceDefinition]
+        var rawCandidates: [MangaOverlayOCRCandidate]
+        var candidates: [MangaOverlayOCRCandidate]
+        var duplicateGroups: [[MangaOverlayOCRCandidate]]
+    }
+
+    private static func recognizeRawCandidates(
+        in image: CGImage,
+        contentRect: CGRect,
+        customWords: [String],
+        sourceImage: String
+    ) throws -> SliceRawCandidateResult {
+        let aspectRatio = contentRect.height / max(1, contentRect.width)
+        guard aspectRatio > sliceAspectRatioThreshold else {
+            let croppedImage = try croppedImage(image, rect: contentRect)
+            let scaledImage = try scaledImage(croppedImage, scale: ocrScale)
+            let candidates = try [0, 90, 180, 270].flatMap { angle in
+                let rotatedImage = try rotatedImage(scaledImage, angle: angle)
+                return try recognizeTextCandidates(
+                    in: rotatedImage,
+                    angle: angle,
+                    scaledContentSize: CGSize(width: CGFloat(scaledImage.width), height: CGFloat(scaledImage.height)),
+                    contentOrigin: contentRect.origin,
+                    scale: ocrScale,
+                    customWords: customWords,
+                    source: "wholePageOCR",
+                    sliceIndex: nil
+                )
+            }
+            return SliceRawCandidateResult(
+                enabled: false,
+                reason: "\(sourceImage) aspectRatio \(formatRatio(aspectRatio)) <= threshold \(formatRatio(sliceAspectRatioThreshold)); using whole-page OCR",
+                contentRect: contentRect,
+                thresholdAspectRatio: sliceAspectRatioThreshold,
+                overlapRatio: sliceOverlapRatio,
+                slices: [],
+                rawCandidates: candidates,
+                candidates: candidates,
+                duplicateGroups: []
+            )
+        }
+
+        let slices = verticalSlices(for: contentRect)
+        let rawCandidates = try slices.flatMap { slice in
+            let croppedImage = try croppedImage(image, rect: slice.rect)
+            let scaledImage = try scaledImage(croppedImage, scale: ocrScale)
+            return try [0, 90, 180, 270].flatMap { angle in
+                let rotatedImage = try rotatedImage(scaledImage, angle: angle)
+                return try recognizeTextCandidates(
+                    in: rotatedImage,
+                    angle: angle,
+                    scaledContentSize: CGSize(width: CGFloat(scaledImage.width), height: CGFloat(scaledImage.height)),
+                    contentOrigin: slice.rect.origin,
+                    scale: ocrScale,
+                    customWords: customWords,
+                    source: "sliceOCR",
+                    sliceIndex: slice.index
+                )
+            }
+        }
+        let deduped = deduplicateSliceCandidates(rawCandidates)
+        return SliceRawCandidateResult(
+            enabled: true,
+            reason: "\(sourceImage) aspectRatio \(formatRatio(aspectRatio)) > threshold \(formatRatio(sliceAspectRatioThreshold)); using vertical slice OCR",
+            contentRect: contentRect,
+            thresholdAspectRatio: sliceAspectRatioThreshold,
+            overlapRatio: sliceOverlapRatio,
+            slices: slices,
+            rawCandidates: rawCandidates,
+            candidates: deduped.candidates,
+            duplicateGroups: deduped.duplicateGroups
+        )
+    }
+
+    private static func verticalSlices(for contentRect: CGRect) -> [SliceDefinition] {
+        let targetHeight = max(contentRect.width * targetSliceAspectRatio, contentRect.height / 3)
+        let sliceHeight = min(contentRect.height, max(contentRect.width * 1.25, targetHeight))
+        let step = max(1, sliceHeight * (1 - sliceOverlapRatio))
+        var slices: [SliceDefinition] = []
+        var minY = contentRect.minY
+        var index = 0
+        while minY < contentRect.maxY {
+            let adjustedY = minY
+            let rect = CGRect(
+                x: contentRect.minX,
+                y: adjustedY,
+                width: contentRect.width,
+                height: min(sliceHeight, contentRect.maxY - adjustedY)
+            ).integral
+            slices.append(SliceDefinition(index: index, rect: rect, overlapRatio: sliceOverlapRatio))
+            index += 1
+            if rect.maxY >= contentRect.maxY { break }
+            minY += step
+        }
+        return slices
+    }
+
+    private static func deduplicateSliceCandidates(
+        _ candidates: [MangaOverlayOCRCandidate]
+    ) -> (candidates: [MangaOverlayOCRCandidate], duplicateGroups: [[MangaOverlayOCRCandidate]]) {
+        var survivors: [MangaOverlayOCRCandidate] = []
+        var duplicateGroups: [[MangaOverlayOCRCandidate]] = []
+        for candidate in candidates.sorted(by: isBetterCandidate) {
+            guard let index = survivors.firstIndex(where: { isSliceDuplicate(candidate, of: $0) }) else {
+                survivors.append(candidate)
+                continue
+            }
+            let existing = survivors[index]
+            let best = isBetterCandidate(candidate, existing) ? candidate : existing
+            var marked = best
+            marked.sliceOverlapDeduped = true
+            survivors[index] = marked
+            duplicateGroups.append([existing, candidate])
+        }
+        return (survivors, duplicateGroups)
+    }
+
+    private static func isSliceDuplicate(_ candidate: MangaOverlayOCRCandidate, of existing: MangaOverlayOCRCandidate) -> Bool {
+        guard candidate.sliceIndex != existing.sliceIndex else { return false }
+        let iou = intersectionOverUnion(candidate.boundingBox, existing.boundingBox)
+        let containment = overlapRatio(candidate.boundingBox, existing.boundingBox)
+        let textA = normalizedOCRText(candidate.text)
+        let textB = normalizedOCRText(existing.text)
+        let similarText = textA == textB
+            || textA.contains(textB)
+            || textB.contains(textA)
+            || textSimilarity(textA, textB) >= 0.72
+        guard similarText else { return false }
+        return iou >= 0.38 || containment >= 0.72
+    }
+
+    private static func intersectionOverUnion(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+        let intersection = lhs.intersection(rhs)
+        guard !intersection.isNull else { return 0 }
+        let intersectionArea = intersection.width * intersection.height
+        let unionArea = lhs.width * lhs.height + rhs.width * rhs.height - intersectionArea
+        return intersectionArea / max(1, unionArea)
+    }
+
+    private static func sliceDiagnostics(
+        from result: SliceRawCandidateResult,
+        assignedCandidates: [MangaOverlayOCRCandidate],
+        sourceImage: String,
+        image: CGImage
+    ) -> MangaOverlaySliceOCRDiagnostics {
+        let dedupedSliceIDs = Set(result.duplicateGroups.flatMap { group in
+            group.compactMap(\.sliceIndex)
+        })
+        let candidateSummaries = assignedCandidates.map { candidate in
+            MangaOverlaySliceOCRCandidateSummary(
+                text: candidate.text,
+                bbox: rectArray(candidate.boundingBox),
+                sliceIndex: candidate.sliceIndex,
+                dedupedFromSliceIndexes: candidate.sliceOverlapDeduped ? Array(dedupedSliceIDs).sorted() : [],
+                bubbleID: candidate.bubbleID,
+                source: candidate.source,
+                sliceOverlapDeduped: candidate.sliceOverlapDeduped
+            )
+        }
+        return MangaOverlaySliceOCRDiagnostics(
+            enabled: result.enabled,
+            reason: result.reason,
+            sourceImage: sourceImage,
+            imageWidth: image.width,
+            imageHeight: image.height,
+            aspectRatio: Double(result.contentRect.height / max(1, result.contentRect.width)),
+            thresholdAspectRatio: Double(result.thresholdAspectRatio),
+            overlapRatio: Double(result.overlapRatio),
+            slices: result.slices.map { slice in
+                MangaOverlaySliceOCRSlice(
+                    index: slice.index,
+                    bbox: rectArray(slice.rect),
+                    overlapRatio: Double(slice.overlapRatio),
+                    rawObservationCount: result.rawCandidates.filter { $0.sliceIndex == slice.index }.count
+                )
+            },
+            rawCandidateCount: result.rawCandidates.count,
+            finalCandidateCount: assignedCandidates.count,
+            dedupedCandidateCount: result.rawCandidates.count - assignedCandidates.count,
+            duplicateGroupCount: result.duplicateGroups.count,
+            residualOverlapDuplicateCount: residualSliceDuplicateCount(in: assignedCandidates),
+            candidates: candidateSummaries,
+            notes: [
+                "slice OCR is enabled only when content aspect ratio exceeds threshold",
+                "overlap dedupe uses bbox IoU/containment plus text similarity and never uses ground truth",
+                "slice bbox y values are restored into the original image coordinate system before bubble assignment"
+            ]
+        )
+    }
+
+    private static func residualSliceDuplicateCount(in candidates: [MangaOverlayOCRCandidate]) -> Int {
+        var count = 0
+        for leftIndex in candidates.indices {
+            for rightIndex in candidates.indices where rightIndex > leftIndex {
+                if isSliceDuplicate(candidates[leftIndex], of: candidates[rightIndex]) {
+                    count += 1
+                }
+            }
+        }
+        return count
+    }
+
     private static func mergeCandidatesIntoBlocks(
         _ candidates: [MangaOverlayOCRCandidate],
         imageSize: CGSize
-    ) -> [MangaOverlayOCRBlock] {
+    ) -> MergeCandidatesResult {
         let cleanCandidates = deduplicateCandidates(candidates)
             .filter { $0.boundingBox.width >= 14 && $0.boundingBox.height >= 7 }
             .sorted { lhs, rhs in
@@ -961,15 +1442,31 @@ struct MangaOverlayProbeService: Sendable {
             }
 
         var clusters: [MangaOverlayOCRCluster] = []
+        var crossBubbleMergeRejectedCount = 0
+        var rejectedBubbleIDs = Set<Int>()
+        var rejectedUnassignedMerge = false
         for candidate in cleanCandidates {
-            if let index = clusters.firstIndex(where: { shouldCluster(candidate, with: $0) }) {
+            let spatialMatches = clusters.indices.filter { shouldCluster(candidate, with: clusters[$0]) }
+            if spatialMatches.contains(where: { !sameBubble(candidate, clusters[$0]) }) {
+                crossBubbleMergeRejectedCount += 1
+                recordRejectedBubbleID(candidate.bubbleID, rejectedBubbleIDs: &rejectedBubbleIDs, rejectedUnassignedMerge: &rejectedUnassignedMerge)
+                for index in spatialMatches where !sameBubble(candidate, clusters[index]) {
+                    recordRejectedBubbleID(clusters[index].bubbleID, rejectedBubbleIDs: &rejectedBubbleIDs, rejectedUnassignedMerge: &rejectedUnassignedMerge)
+                }
+            }
+            if let index = spatialMatches.first(where: { sameBubble(candidate, clusters[$0]) }) {
                 clusters[index].candidates.append(candidate)
             } else {
                 clusters.append(MangaOverlayOCRCluster(candidates: [candidate]))
             }
         }
 
-        return mergeOverlappingClusters(clusters)
+        let merged = mergeOverlappingClusters(
+            clusters,
+            rejectedCount: &crossBubbleMergeRejectedCount,
+            rejectedBubbleIDs: &rejectedBubbleIDs,
+            rejectedUnassignedMerge: &rejectedUnassignedMerge
+        )
             .map { cluster in
                 let ordered = orderedCandidates(cluster.candidates)
                 let text = mergeText(from: ordered)
@@ -982,7 +1479,14 @@ struct MangaOverlayProbeService: Sendable {
                     text: text,
                     confidence: confidence,
                     boundingBox: clamp(cluster.boundingBox.insetBy(dx: -6, dy: -6), to: CGRect(origin: .zero, size: imageSize)),
-                    rotationAngle: angle
+                    rotationAngle: angle,
+                    bubbleID: cluster.bubbleID,
+                    bubbleAssignmentMethod: cluster.bubbleAssignmentMethod,
+                    bubbleBoundingBox: cluster.bubbleBoundingBox,
+                    source: "wholePageOCR",
+                    crossBubbleMergeRejected: false,
+                    sliceIndex: cluster.sliceIndex,
+                    sliceOverlapDeduped: cluster.sliceOverlapDeduped
                 )
             }
             .filter { !$0.text.isEmpty }
@@ -992,6 +1496,32 @@ struct MangaOverlayProbeService: Sendable {
                 }
                 return $0.boundingBox.minX < $1.boundingBox.minX
             }
+        return MergeCandidatesResult(
+            blocks: merged.map { block in
+                var updated = block
+                updated.crossBubbleMergeRejected = block.bubbleID.map { rejectedBubbleIDs.contains($0) } ?? rejectedUnassignedMerge
+                return updated
+            },
+            crossBubbleMergeRejectedCount: crossBubbleMergeRejectedCount,
+            rejectedBubbleIDs: rejectedBubbleIDs,
+            rejectedUnassignedMerge: rejectedUnassignedMerge
+        )
+    }
+
+    private static func sameBubble(_ candidate: MangaOverlayOCRCandidate, _ cluster: MangaOverlayOCRCluster) -> Bool {
+        candidate.bubbleID == cluster.bubbleID
+    }
+
+    private static func recordRejectedBubbleID(
+        _ bubbleID: Int?,
+        rejectedBubbleIDs: inout Set<Int>,
+        rejectedUnassignedMerge: inout Bool
+    ) {
+        if let bubbleID {
+            rejectedBubbleIDs.insert(bubbleID)
+        } else {
+            rejectedUnassignedMerge = true
+        }
     }
 
     private static func shouldCluster(_ candidate: MangaOverlayOCRCandidate, with cluster: MangaOverlayOCRCluster) -> Bool {
@@ -1011,7 +1541,12 @@ struct MangaOverlayProbeService: Sendable {
         return sameColumn && nearbyLine
     }
 
-    private static func mergeOverlappingClusters(_ input: [MangaOverlayOCRCluster]) -> [MangaOverlayOCRCluster] {
+    private static func mergeOverlappingClusters(
+        _ input: [MangaOverlayOCRCluster],
+        rejectedCount: inout Int,
+        rejectedBubbleIDs: inout Set<Int>,
+        rejectedUnassignedMerge: inout Bool
+    ) -> [MangaOverlayOCRCluster] {
         var clusters = input
         var didMerge = true
 
@@ -1020,6 +1555,12 @@ struct MangaOverlayProbeService: Sendable {
             outer: for leftIndex in clusters.indices {
                 for rightIndex in clusters.indices where rightIndex > leftIndex {
                     guard shouldMergeClusters(clusters[leftIndex], clusters[rightIndex]) else { continue }
+                    guard clusters[leftIndex].bubbleID == clusters[rightIndex].bubbleID else {
+                        rejectedCount += 1
+                        recordRejectedBubbleID(clusters[leftIndex].bubbleID, rejectedBubbleIDs: &rejectedBubbleIDs, rejectedUnassignedMerge: &rejectedUnassignedMerge)
+                        recordRejectedBubbleID(clusters[rightIndex].bubbleID, rejectedBubbleIDs: &rejectedBubbleIDs, rejectedUnassignedMerge: &rejectedUnassignedMerge)
+                        continue
+                    }
                     clusters[leftIndex].candidates.append(contentsOf: clusters[rightIndex].candidates)
                     clusters.remove(at: rightIndex)
                     didMerge = true
@@ -1154,6 +1695,205 @@ struct MangaOverlayProbeService: Sendable {
         return intersectionArea / minArea
     }
 
+    private static func candidateOverlapRatio(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+        let intersection = lhs.intersection(rhs)
+        guard !intersection.isNull else { return 0 }
+        let intersectionArea = intersection.width * intersection.height
+        return intersectionArea / max(1, lhs.width * lhs.height)
+    }
+
+    private static func assignBubble(
+        to candidate: MangaOverlayOCRCandidate,
+        bubbles: [MangaOverlayBubbleCandidate]
+    ) -> MangaOverlayOCRCandidate {
+        guard !bubbles.isEmpty else {
+            return MangaOverlayOCRCandidate(
+                text: candidate.text,
+                confidence: candidate.confidence,
+                boundingBox: candidate.boundingBox,
+                rotationAngle: candidate.rotationAngle,
+                bubbleID: nil,
+                bubbleAssignmentMethod: "unassigned",
+                bubbleBoundingBox: nil,
+                source: candidate.source,
+                sliceIndex: candidate.sliceIndex,
+                sliceOverlapDeduped: candidate.sliceOverlapDeduped
+            )
+        }
+
+        let center = CGPoint(x: candidate.boundingBox.midX, y: candidate.boundingBox.midY)
+        let ranked: [BubbleAssignmentScore] = bubbles.map { bubble in
+            let overlap = candidateOverlapRatio(candidate.boundingBox, bubble.boundingBox)
+            let centerContainment = centerContainmentScore(center, in: bubble.boundingBox)
+            return BubbleAssignmentScore(
+                bubble: bubble,
+                overlap: overlap,
+                containsCenter: bubble.boundingBox.contains(center),
+                centerContainment: centerContainment,
+                score: overlap * 0.45 + centerContainment * 0.55
+            )
+        }
+        .sorted {
+            if $0.score != $1.score {
+                return $0.score > $1.score
+            }
+            return $0.bubble.area < $1.bubble.area
+        }
+
+        let centerMatches = ranked.filter { $0.containsCenter }
+        if centerMatches.count > 1,
+           let selected = selectedCenterMatch(centerMatches, center: center) {
+            return MangaOverlayOCRCandidate(
+                text: candidate.text,
+                confidence: candidate.confidence,
+                boundingBox: candidate.boundingBox,
+                rotationAngle: candidate.rotationAngle,
+                bubbleID: selected.bubble.index,
+                bubbleAssignmentMethod: "centerPoint",
+                bubbleBoundingBox: selected.bubble.boundingBox,
+                source: candidate.source,
+                sliceIndex: candidate.sliceIndex,
+                sliceOverlapDeduped: candidate.sliceOverlapDeduped
+            )
+        } else if centerMatches.count > 1 {
+            return unassignedBubbleCandidate(from: candidate)
+        }
+
+        if let best = ranked.first,
+           best.overlap >= 0.18,
+           best.centerContainment >= 0.18,
+           (ranked.count < 2 || best.score - ranked[1].score >= 0.08) {
+            return MangaOverlayOCRCandidate(
+                text: candidate.text,
+                confidence: candidate.confidence,
+                boundingBox: candidate.boundingBox,
+                rotationAngle: candidate.rotationAngle,
+                bubbleID: best.bubble.index,
+                bubbleAssignmentMethod: "overlapArea",
+                bubbleBoundingBox: best.bubble.boundingBox,
+                source: candidate.source,
+                sliceIndex: candidate.sliceIndex,
+                sliceOverlapDeduped: candidate.sliceOverlapDeduped
+            )
+        }
+
+        if let best = centerMatches.first,
+           best.overlap >= 0.04,
+           best.centerContainment >= 0.32,
+           (centerMatches.count < 2 || best.centerContainment - centerMatches[1].centerContainment >= 0.14) {
+            return MangaOverlayOCRCandidate(
+                text: candidate.text,
+                confidence: candidate.confidence,
+                boundingBox: candidate.boundingBox,
+                rotationAngle: candidate.rotationAngle,
+                bubbleID: best.bubble.index,
+                bubbleAssignmentMethod: "centerPoint",
+                bubbleBoundingBox: best.bubble.boundingBox,
+                source: candidate.source,
+                sliceIndex: candidate.sliceIndex,
+                sliceOverlapDeduped: candidate.sliceOverlapDeduped
+            )
+        }
+
+        return unassignedBubbleCandidate(from: candidate)
+    }
+
+    private static func unassignedBubbleCandidate(from candidate: MangaOverlayOCRCandidate) -> MangaOverlayOCRCandidate {
+        MangaOverlayOCRCandidate(
+            text: candidate.text,
+            confidence: candidate.confidence,
+            boundingBox: candidate.boundingBox,
+            rotationAngle: candidate.rotationAngle,
+            bubbleID: nil,
+            bubbleAssignmentMethod: "unassigned",
+            bubbleBoundingBox: nil,
+            source: candidate.source,
+            sliceIndex: candidate.sliceIndex,
+            sliceOverlapDeduped: candidate.sliceOverlapDeduped
+        )
+    }
+
+    private static func selectedCenterMatch(
+        _ matches: [BubbleAssignmentScore],
+        center: CGPoint
+    ) -> BubbleAssignmentScore? {
+        let verticallyRanked = matches.sorted { lhs, rhs in
+            let lhsDistance = abs(center.y - lhs.bubble.boundingBox.midY)
+            let rhsDistance = abs(center.y - rhs.bubble.boundingBox.midY)
+            if lhsDistance != rhsDistance {
+                return lhsDistance < rhsDistance
+            }
+            if lhs.score != rhs.score {
+                return lhs.score > rhs.score
+            }
+            return lhs.bubble.area < rhs.bubble.area
+        }
+        guard let best = verticallyRanked.first else { return nil }
+        guard best.overlap >= 0.04, best.centerContainment >= 0.12 else { return nil }
+        guard verticallyRanked.count > 1 else { return best }
+
+        let bestDistance = abs(center.y - best.bubble.boundingBox.midY)
+        let secondDistance = abs(center.y - verticallyRanked[1].bubble.boundingBox.midY)
+        if secondDistance - bestDistance >= 12 {
+            return best
+        }
+        if best.score - verticallyRanked[1].score >= 0.12 {
+            return best
+        }
+        return nil
+    }
+
+    private static func centerContainmentScore(_ point: CGPoint, in rect: CGRect) -> CGFloat {
+        guard rect.contains(point), rect.width > 0, rect.height > 0 else { return 0 }
+        let horizontal = min(point.x - rect.minX, rect.maxX - point.x) / max(1, rect.width / 2)
+        let vertical = min(point.y - rect.minY, rect.maxY - point.y) / max(1, rect.height / 2)
+        return max(0, min(1, min(horizontal, vertical)))
+    }
+
+    private static func bubbleGeometryDiagnostics(
+        bubbles: [MangaOverlayBubbleCandidate],
+        candidates: [MangaOverlayOCRCandidate],
+        blocks: [MangaOverlayOCRBlock],
+        crossBubbleMergeRejectedCount: Int
+    ) -> MangaOverlayBubbleGeometryDiagnostics {
+        let probeBubbles = bubbles.map { bubble in
+            MangaOverlayProbeBubble(
+                id: bubble.index,
+                bbox: rectArray(bubble.boundingBox),
+                source: bubble.source,
+                area: Double(bubble.area),
+                confidence: bubble.confidence
+            )
+        }
+        let regions = candidates.map { candidate in
+            MangaOverlayTextRegion(
+                bbox: rectArray(candidate.boundingBox),
+                bubbleID: candidate.bubbleID,
+                source: candidate.source,
+                confidence: candidate.confidence,
+                assignmentMethod: candidate.bubbleAssignmentMethod
+            )
+        }
+        let assigned = regions.filter { $0.bubbleID != nil }.count
+        let notes = [
+            "bubble geometry is used as the primary merge boundary for whole-page OCR",
+            "unassigned OCR observations are kept but only merge with other unassigned observations",
+            "preprocessed OCR crops are clamped to the assigned bubble bbox when present"
+        ]
+        return MangaOverlayBubbleGeometryDiagnostics(
+            bubbles: probeBubbles,
+            textRegions: regions,
+            assignedTextRegionCount: assigned,
+            unassignedTextRegionCount: regions.count - assigned,
+            crossBubbleMergeRejectedCount: crossBubbleMergeRejectedCount,
+            notes: notes
+        )
+    }
+
+    private static func rectArray(_ rect: CGRect) -> [Double] {
+        [rect.minX, rect.minY, rect.width, rect.height].map(Double.init)
+    }
+
     private static func detectBubbleCandidates(
         in image: CGImage,
         cropping: MangaOverlayProbeCropping,
@@ -1285,7 +2025,13 @@ struct MangaOverlayProbeService: Sendable {
             }
             .enumerated()
             .map { index, item in
-                MangaOverlayBubbleCandidate(index: index, boundingBox: item.rect, source: item.source)
+                MangaOverlayBubbleCandidate(
+                    index: index,
+                    boundingBox: item.rect,
+                    source: item.source,
+                    area: item.rect.width * item.rect.height,
+                    confidence: item.source == "ocrSeed" ? 0.82 : 0.68
+                )
         }
     }
 
@@ -1310,7 +2056,7 @@ struct MangaOverlayProbeService: Sendable {
         let blocks = mergeCandidatesIntoBlocks(
             candidates,
             imageSize: CGSize(width: image.width, height: image.height)
-        )
+        ).blocks
         let bounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)
         return blocks
             .map { block -> CGRect in
@@ -1336,7 +2082,13 @@ struct MangaOverlayProbeService: Sendable {
         let contentRect = contentCropRect(for: image, cropping: cropping)
         let seedRects = try ocrSeedBubbleRects(in: image, contentRect: contentRect, customWords: customWords)
         return seedRects.enumerated().map { index, rect in
-            MangaOverlayBubbleCandidate(index: index, boundingBox: rect, source: "ocrSeedRaw")
+            MangaOverlayBubbleCandidate(
+                index: index,
+                boundingBox: rect,
+                source: "ocrSeedRaw",
+                area: rect.width * rect.height,
+                confidence: 0.72
+            )
         }
     }
 
@@ -1616,9 +2368,9 @@ struct MangaOverlayProbeService: Sendable {
                 let rect = rect(from: block.bbox)
                 context.stroke(rect)
                 drawText(
-                    "#\(block.index)",
-                    in: CGRect(x: rect.minX, y: max(0, rect.minY - 30), width: 80, height: 28),
-                    fontSize: 22,
+                    "#\(block.index) B\(block.bubbleID.map(String.init) ?? "-")",
+                    in: CGRect(x: rect.minX, y: max(0, rect.minY - 30), width: 120, height: 28),
+                    fontSize: 18,
                     textColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1),
                     backgroundColor: CGColor(red: 1, green: 0.08, blue: 0.18, alpha: 0.88),
                     context: context
