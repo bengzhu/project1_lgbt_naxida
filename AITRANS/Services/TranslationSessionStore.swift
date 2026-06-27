@@ -1623,6 +1623,7 @@ final class TranslationSessionStore: ObservableObject {
                 let cleanDiagnosticURL = self.mangaOverlayOutputDirectory.appendingPathComponent("clean_text_diagnostic.json")
                 try Self.writeCleanTextDiagnostic(cleanTextDiagnostic, to: cleanDiagnosticURL)
                 outputFiles.cleanTextDiagnosticFile = cleanDiagnosticURL.path
+                let deterministicDecodingCheck = await self.runDeterministicDecodingCheck(groundTruth: groundTruth)
 
                 let report = self.makeMangaOverlayProbeReport(
                     blocks: probeBlocks,
@@ -1637,6 +1638,7 @@ final class TranslationSessionStore: ObservableObject {
                     frameworkComparison: frameworkComparison,
                     cleanTextDiagnostic: cleanTextDiagnostic,
                     batchTranslationComparison: batchTranslationComparison,
+                    deterministicDecodingCheck: deterministicDecodingCheck,
                     outputCleanupRemovedItemCount: outputCleanupRemovedItemCount
                 )
                 let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
@@ -2782,6 +2784,8 @@ final class TranslationSessionStore: ObservableObject {
 
         return MangaBatchTranslationComparison(
             enabled: true,
+            decodingMode: selectedEngine == .local ? ModelDecodingProfile.deterministic.mode : "mock",
+            decodingSeed: selectedEngine == .local ? ModelDecodingProfile.deterministic.seed : nil,
             prompt: prompt,
             rawOutput: rawOutput,
             errorCode: errorCode,
@@ -3056,12 +3060,70 @@ final class TranslationSessionStore: ObservableObject {
         return MangaCleanTextDiagnosticReport(
             source: "test/1.ground_truth.json dialogue entries direct to current translation pipeline",
             promptTemplate: "把以下翻译成中文：",
+            decodingMode: selectedEngine == .local ? ModelDecodingProfile.deterministic.mode : "mock",
+            decodingSeed: selectedEngine == .local ? ModelDecodingProfile.deterministic.seed : nil,
             totalCases: results.count,
             passedCases: passedCount,
             failedCases: results.count - passedCount,
             passRate: results.isEmpty ? 0 : Double(passedCount) / Double(results.count),
             cases: results
         )
+    }
+
+    private func runDeterministicDecodingCheck(groundTruth: [MangaGroundTruthEntry]) async -> MangaDeterministicDecodingCheck {
+        let input = groundTruth.first { $0.type == MangaGroundTruthEntry.dialogueType }?.text
+            ?? "The City Battler Tournament starts in a few days."
+        let request = makeProbeRequest(
+            source: .englishUS,
+            target: .simplifiedChinese,
+            input: input
+        )
+
+        if selectedEngine == .local {
+            let first = localService.rawTranslationProbe(for: request)
+            let second = localService.rawTranslationProbe(for: request)
+            return MangaDeterministicDecodingCheck(
+                enabled: true,
+                decodingMode: first.decodingMode,
+                decodingSeed: first.decodingSeed,
+                input: input,
+                firstOutput: first.output,
+                secondOutput: second.output,
+                firstErrorCode: first.errorCode,
+                secondErrorCode: second.errorCode,
+                outputsIdentical: first.output == second.output && first.errorCode == second.errorCode
+            )
+        }
+
+        do {
+            try await mockService.prepare()
+            let first = try await mockService.generate(request)
+            let second = try await mockService.generate(request)
+            return MangaDeterministicDecodingCheck(
+                enabled: true,
+                decodingMode: "mock",
+                decodingSeed: nil,
+                input: input,
+                firstOutput: first.text,
+                secondOutput: second.text,
+                firstErrorCode: nil,
+                secondErrorCode: nil,
+                outputsIdentical: first.text == second.text
+            )
+        } catch {
+            let errorCode = "\(type(of: error)): \(error.localizedDescription)"
+            return MangaDeterministicDecodingCheck(
+                enabled: true,
+                decodingMode: "mock",
+                decodingSeed: nil,
+                input: input,
+                firstOutput: "",
+                secondOutput: "",
+                firstErrorCode: errorCode,
+                secondErrorCode: errorCode,
+                outputsIdentical: true
+            )
+        }
     }
 
     private static func writeCleanTextDiagnostic(_ report: MangaCleanTextDiagnosticReport, to url: URL) throws {
@@ -3710,6 +3772,7 @@ final class TranslationSessionStore: ObservableObject {
         frameworkComparison: MangaOverlayFrameworkComparison? = nil,
         cleanTextDiagnostic: MangaCleanTextDiagnosticReport? = nil,
         batchTranslationComparison: MangaBatchTranslationComparison? = nil,
+        deterministicDecodingCheck: MangaDeterministicDecodingCheck? = nil,
         outputCleanupRemovedItemCount: Int = 0,
         extraWarnings: [String] = []
     ) -> MangaOverlayProbeReport {
@@ -3748,6 +3811,8 @@ final class TranslationSessionStore: ObservableObject {
         return MangaOverlayProbeReport(
             sourceImage: "test/1.png",
             engineUsed: selectedAdapterMetadata.displayName,
+            decodingMode: selectedEngine == .local ? ModelDecodingProfile.deterministic.mode : "mock",
+            decodingSeed: selectedEngine == .local ? ModelDecodingProfile.deterministic.seed : nil,
             configuration: configuration,
             totalBlocksDetected: blocks.count,
             blocks: blocks,
@@ -3758,6 +3823,7 @@ final class TranslationSessionStore: ObservableObject {
             frameworkComparison: frameworkComparison,
             cleanTextDiagnostic: cleanTextDiagnostic,
             batchTranslationComparison: batchTranslationComparison,
+            deterministicDecodingCheck: deterministicDecodingCheck,
             bubbleGeometry: bubbleGeometry,
             sliceOCR: sliceOCR,
             syntheticSliceOCR: syntheticSliceOCR,

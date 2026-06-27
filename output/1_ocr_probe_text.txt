@@ -82,17 +82,17 @@ backgroundFill: applied=true stdDev=33.14
 finalForTranslation: THE CITY RATTLER / STATE IN A PEN DAYS.
 deterministicCorrection: THE CITY BATTLER / STARTS IN A FEW DAYS.
 bestGroundTruth: The City Battler Tournament starts in a few days.
-translationCandidate: 州人鼠狸
-rawOutput:  / **城市鼠狸** / **州人鼠狸** /
+translationCandidate: STATE IN A PEN DAYS.
+rawOutput:  / **THE CITY RATTLER** / **STATE IN A PEN DAYS.** /
 deterministicCorrectionTranslationPassed: true
 deterministicCorrectionTranslationCandidate: 开始在几周内。
 deterministicCorrectionTranslationRawOutput:  / **城市捕手** / **开始在几周内。** /
 deterministicCorrectionTranslationFailureDetail: nil
-failureCategory: translationLanguageQualityFailure
-failureReasons: 长原文只得到过短中文候选
-translationFailureDetail: translationLanguageQualityFailure：长原文只得到过短中文候选；OCR 输入疑似有误
-qualityNotes: candidateLength=4 | rawOutputLength=17 | cjkCharacters=4 | rawCJKCharacters=8 | likelyOCRIssue | translationLanguageQualityIssue=长原文只得到过短中文候选
-decisionTrace: rawOutputClassification=chinese | candidateClassification=chinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=true | looksLikeChinese=true | translationLanguageQualityPassed=false | translationLanguageQualityIssue=长原文只得到过短中文候选
+failureCategory: ocrInputSuspect
+failureReasons: 中文字符不足 | 翻译不像中文
+translationFailureDetail: 模型输出非中文/符号，未达到英译中目标：中文字符不足、翻译不像中文；OCR 输入疑似有误
+qualityNotes: candidateLength=20 | rawOutputLength=45 | latinLetters=15 | rawLatinLetters=29 | likelyOCRIssue
+decisionTrace: rawOutputClassification=nonChinese | candidateClassification=nonChinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
 
 #3 bbox=[65,677,49,65] bubbleID=3 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.500 legacySimilarity=0.746 wordOrder=false blockPassed=false
 rawOCR: THAT'S / WE'RE WHY / TRANINS SPECIAL
@@ -242,16 +242,16 @@ backgroundFill: applied=true stdDev=32.96
 finalForTranslation: GET PESULTE / SAMING CLUE TO SAVE THE / POOM BENG
 deterministicCorrection: GET RESULTS / SAVING CLUE TO SAVE THE / ROOM BEING
 bestGroundTruth: nil
-translationCandidate: 请将以上翻译转换成中文。
-rawOutput:  |  / 请将以上翻译转换成中文。
+translationCandidate: 谢谢！
+rawOutput:  | 谢谢！ /
 deterministicCorrectionTranslationPassed: false
 deterministicCorrectionTranslationCandidate: ROOM BEING
-deterministicCorrectionTranslationRawOutput:  / GET RESULTS / SAVING CLUE TO SAVE THE / ROOM BEING
+deterministicCorrectionTranslationRawOutput:  / GET RESULTS / SAVING CLUE TO SAVE THE / ROOM BEING /
 deterministicCorrectionTranslationFailureDetail: deterministicCorrectionTranslationFailure：中文字符不足、翻译不像中文
 failureCategory: ocrInputSuspect
 failureReasons: 翻译是占位答复
 translationFailureDetail: 模型输出解释/占位文本，不是真实译文：翻译是占位答复；OCR 输入疑似有误
-qualityNotes: candidateRejectedAsPlaceholder | candidateLength=12 | rawOutputLength=15 | cjkCharacters=11 | rawCJKCharacters=11 | likelyOCRIssue | cjkCandidateButFailed
+qualityNotes: candidateRejectedAsPlaceholder | candidateLength=3 | rawOutputLength=5 | cjkCharacters=2 | rawCJKCharacters=2 | likelyOCRIssue | cjkCandidateButFailed
 decisionTrace: rawOutputClassification=placeholder | candidateClassification=placeholder | rawHadContent=true | rejectedPlaceholder=true | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=false | translationHasCJK=true | looksLikeChinese=true | translationLanguageQualityPassed=false
 
 #8 bbox=[44,963,73,100] bubbleID=6 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.611 legacySimilarity=0.826 wordOrder=false blockPassed=false

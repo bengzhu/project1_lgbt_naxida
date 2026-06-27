@@ -8,13 +8,14 @@
       "index" : 0,
       "passed" : false,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nI've arrived at Senpai's house.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n我抵达Senpai's house。",
+      "rawOutput" : "\n我抵达 Senpai's house。",
       "text" : "I've arrived at Senpai's house.",
-      "translationCandidate" : "我抵达Senpai's house。"
+      "translationCandidate" : "我抵达 Senpai's house。"
     },
     {
       "failureReasons" : [
         "翻译等于原文",
+        "翻译包含完整原文",
         "中文字符不足",
         "翻译不像中文"
       ],
@@ -22,9 +23,9 @@
       "index" : 1,
       "passed" : false,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nThat's right, right now I'm-\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\nThat's right, right now I'm-\n",
+      "rawOutput" : "\nThat's right, right now I'm.\n",
       "text" : "That's right, right now I'm-",
-      "translationCandidate" : "That's right, right now I'm-"
+      "translationCandidate" : "That's right, right now I'm."
     },
     {
       "failureReasons" : [
@@ -40,15 +41,15 @@
     },
     {
       "failureReasons" : [
-        "长原文只得到过短中文候选"
+
       ],
       "groundTruthType" : "dialogue",
       "index" : 3,
-      "passed" : false,
+      "passed" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nAnd that's why we're doing this special training.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n以下是几种可能的翻译：\n\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n\n我个人觉得最合适的翻译是：\n\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n\n**其他可能的翻译：**\n\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n\n所以，我个人觉得最合适的翻译是：\n\n*   因为我们做好了特别的训练。\n*   因为我们做好了特别的训练。\n*   因为我们",
+      "rawOutput" : "\n以下是翻译成中文：\n\n*   因为我们做这个特别的训练。\n",
       "text" : "And that's why we're doing this special training.",
-      "translationCandidate" : "因为我们"
+      "translationCandidate" : "因为我们做这个特别的训练。"
     },
     {
       "failureReasons" : [
@@ -58,9 +59,9 @@
       "index" : 4,
       "passed" : false,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nThis is an offline tournament. Doing it online would make it meaningless.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n这是一种非在线的比赛。在网上进行这项比赛会显得很 meaningless。",
+      "rawOutput" : "\n这是一种非联网的比赛。在网上进行这项比赛会显得很 meaningless。",
       "text" : "This is an offline tournament. Doing it online would make it meaningless.",
-      "translationCandidate" : "这是一种非在线的比赛。在网上进行这项比赛会显得很 meaningless。"
+      "translationCandidate" : "这是一种非联网的比赛。在网上进行这项比赛会显得很 meaningless。"
     },
     {
       "failureReasons" : [
@@ -70,9 +71,9 @@
       "index" : 5,
       "passed" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nEven though I said it's just special training and asked if we could just play online-\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n尽管我说了它只是特别训练，并问我们是否可以玩在线游戏\n",
+      "rawOutput" : "\n尽管我说了它只是特殊训练，并询问我们是否可以玩在线游戏\n",
       "text" : "Even though I said it's just special training and asked if we could just play online-",
-      "translationCandidate" : "尽管我说了它只是特别训练，并问我们是否可以玩在线游戏"
+      "translationCandidate" : "尽管我说了它只是特殊训练，并询问我们是否可以玩在线游戏"
     },
     {
       "failureReasons" : [
@@ -118,9 +119,9 @@
       "index" : 9,
       "passed" : false,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nWe need to get results at this tournament to save the gaming club from being disbanded.\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n我们需要取得比赛结果，以节省游戏俱乐部从 disbanded 退出。",
+      "rawOutput" : "\n我们需要获得比赛结果，以节省游戏俱乐部从 disbanded 退出。",
       "text" : "We need to get results at this tournament to save the gaming club from being disbanded.",
-      "translationCandidate" : "我们需要取得比赛结果，以节省游戏俱乐部从 disbanded 退出。"
+      "translationCandidate" : "我们需要获得比赛结果，以节省游戏俱乐部从 disbanded 退出。"
     },
     {
       "failureReasons" : [
@@ -130,14 +131,16 @@
       "index" : 10,
       "passed" : true,
       "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nLet's Battle!\n<end_of_turn>\n<start_of_turn>model",
-      "rawOutput" : "\n让我们战！",
+      "rawOutput" : "\n让我们战！\n",
       "text" : "Let's Battle!",
       "translationCandidate" : "让我们战！"
     }
   ],
-  "failedCases" : 7,
-  "passRate" : 0.36363636363636365,
-  "passedCases" : 4,
+  "decodingMode" : "deterministic",
+  "decodingSeed" : 42,
+  "failedCases" : 6,
+  "passRate" : 0.45454545454545453,
+  "passedCases" : 5,
   "promptTemplate" : "把以下翻译成中文：",
   "source" : "test\/1.ground_truth.json dialogue entries direct to current translation pipeline",
   "totalCases" : 11
