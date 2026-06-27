@@ -1575,6 +1575,9 @@ final class TranslationSessionStore: ObservableObject {
                     self.mangaOverlayProbeBlocks = probeBlocks
                 }
 
+                self.mangaOverlayProbeMessage = "正在运行 tagged 批量翻译诊断分支"
+                let batchTranslationComparison = await self.runTaggedBatchTranslationComparison(blocks: probeBlocks)
+
                 self.mangaOverlayProbeState = .rendering
                 self.mangaOverlayProbeMessage = "正在计算气泡安全区并做离屏渲染碰撞检查"
                 probeBlocks = await self.mangaOverlayProbeService.applySafeLayoutAndRenderingDiagnostics(
@@ -1633,6 +1636,7 @@ final class TranslationSessionStore: ObservableObject {
                     visionAPIComparison: visionAPIComparison,
                     frameworkComparison: frameworkComparison,
                     cleanTextDiagnostic: cleanTextDiagnostic,
+                    batchTranslationComparison: batchTranslationComparison,
                     outputCleanupRemovedItemCount: outputCleanupRemovedItemCount
                 )
                 let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
@@ -2656,6 +2660,221 @@ final class TranslationSessionStore: ObservableObject {
         return correctedSimilarity > originalSimilarity + 0.02
     }
 
+    private func runTaggedBatchTranslationComparison(blocks: [MangaOverlayProbeBlock]) async -> MangaBatchTranslationComparison {
+        let cases = blocks
+            .filter { !$0.finalTextUsedForTranslation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .map { block in
+                (block: block, tag: "[\(block.index)]")
+            }
+        let prompt = Self.taggedBatchTranslationPrompt(for: cases.map { ($0.tag, $0.block.finalTextUsedForTranslation) })
+
+        let rawOutput: String
+        let errorCode: String?
+        if selectedEngine == .local {
+            let probe = localService.rawProbe(prompt: prompt, maxTokens: min(max(96, cases.count * 42), 220))
+            rawOutput = probe.output
+            errorCode = probe.errorCode
+        } else {
+            let request = makeProbeRequest(source: .englishUS, target: .simplifiedChinese, input: prompt)
+            do {
+                try await mockService.prepare()
+                let result = try await mockService.generate(request)
+                rawOutput = result.text
+                errorCode = nil
+            } catch {
+                rawOutput = ""
+                errorCode = "\(type(of: error)): \(error.localizedDescription)"
+            }
+        }
+
+        let parsed = Self.parseTaggedBatchTranslation(rawOutput, expectedTags: cases.map(\.tag))
+        let expectedTagSet = Set(cases.map(\.tag))
+        let seenUnexpectedTags = parsed.orderedTags.filter { !expectedTagSet.contains($0) }
+        var comparisonCases: [MangaBatchTranslationCase] = []
+        for item in cases {
+            let parsedText = parsed.values[item.tag]?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let candidate = parsedText ?? ""
+            let extraction = MangaProbeCandidateExtraction(
+                candidate: candidate,
+                rejectedPlaceholder: Self.isPlaceholderTranslationOutput(candidate),
+                rawHadContent: !candidate.isEmpty
+            )
+            let rawClassification = Self.classifyMangaProbeRawOutput(candidate, original: item.block.finalTextUsedForTranslation)
+            let candidateClassification = Self.classifyMangaProbeCandidate(
+                candidate,
+                original: item.block.finalTextUsedForTranslation,
+                rejectedPlaceholder: extraction.rejectedPlaceholder
+            )
+            let checks = mangaProbeChecks(
+                original: item.block.finalTextUsedForTranslation,
+                translation: candidate,
+                errorCode: errorCode
+            )
+            let baseFailureReasons = mangaProbeFailureReasons(
+                checks: checks,
+                errorCode: errorCode,
+                original: item.block.finalTextUsedForTranslation,
+                translation: candidate
+            )
+            let translationChecksPassed = Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
+            let languageQualityReason = translationChecksPassed ? Self.mangaProbeTranslationLanguageQualityIssue(
+                original: item.block.finalTextUsedForTranslation,
+                candidate: candidate,
+                rawOutput: candidate,
+                rawClassification: rawClassification
+            ) : nil
+            var failureReasons = baseFailureReasons + [languageQualityReason].compactMap { $0 }
+            if parsedText == nil {
+                failureReasons.append("tagMissing")
+            }
+            if parsed.duplicateTags.contains(item.tag) {
+                failureReasons.append("tagDuplicated")
+            }
+            if parsed.outOfOrderTags.contains(item.tag) {
+                failureReasons.append("tagOutOfOrder")
+            }
+            let passed = parsedText != nil
+                && !parsed.duplicateTags.contains(item.tag)
+                && translationChecksPassed
+                && languageQualityReason == nil
+            comparisonCases.append(
+                MangaBatchTranslationCase(
+                    index: item.block.index,
+                    tag: item.tag,
+                    sourceText: item.block.finalTextUsedForTranslation,
+                    parsedText: parsedText,
+                    rawOutputClassification: rawClassification,
+                    candidateClassification: candidateClassification,
+                    passed: passed,
+                    sequentialBlockPassed: item.block.blockPassed,
+                    failureReasons: failureReasons
+                )
+            )
+        }
+
+        var parseFailureReasons: [String] = []
+        if !parsed.missingTags.isEmpty {
+            parseFailureReasons.append("missingTags=\(parsed.missingTags.joined(separator: ","))")
+        }
+        if !parsed.duplicateTags.isEmpty {
+            parseFailureReasons.append("duplicateTags=\(parsed.duplicateTags.joined(separator: ","))")
+        }
+        if !parsed.outOfOrderTags.isEmpty {
+            parseFailureReasons.append("outOfOrderTags=\(parsed.outOfOrderTags.joined(separator: ","))")
+        }
+        if !seenUnexpectedTags.isEmpty {
+            parseFailureReasons.append("unexpectedTags=\(seenUnexpectedTags.joined(separator: ","))")
+        }
+        if let errorCode {
+            parseFailureReasons.append("errorCode=\(errorCode)")
+        }
+
+        let totalCases = comparisonCases.count
+        let sequentialPassedCases = comparisonCases.filter(\.sequentialBlockPassed).count
+        let batchPassedCases = comparisonCases.filter(\.passed).count
+        let sequentialPassRate = totalCases > 0 ? Double(sequentialPassedCases) / Double(totalCases) : 0
+        let batchPassRate = totalCases > 0 ? Double(batchPassedCases) / Double(totalCases) : 0
+        let notes = [
+            "diagnosticOnly=true; sequential per-block translation remains the primary flow",
+            "batch output is parsed by bracketed block index tags; missing/duplicate/out-of-order tags fail the batch case",
+            batchPassRate >= sequentialPassRate ? "batchNotWorseOrBetter" : "batchWorseThanSequential"
+        ]
+
+        return MangaBatchTranslationComparison(
+            enabled: true,
+            prompt: prompt,
+            rawOutput: rawOutput,
+            errorCode: errorCode,
+            totalCases: totalCases,
+            parsedCases: totalCases - parsed.missingTags.count,
+            missingTags: parsed.missingTags,
+            duplicateTags: parsed.duplicateTags,
+            outOfOrderTags: parsed.outOfOrderTags,
+            sequentialPassedCases: sequentialPassedCases,
+            batchPassedCases: batchPassedCases,
+            sequentialPassRate: sequentialPassRate,
+            batchPassRate: batchPassRate,
+            batchBetterBy: batchPassRate - sequentialPassRate,
+            parseFailureReasons: parseFailureReasons,
+            cases: comparisonCases,
+            notes: notes
+        )
+    }
+
+    private static func taggedBatchTranslationPrompt(for items: [(tag: String, text: String)]) -> String {
+        let body = items
+            .map { item in
+                "\(item.tag) \(item.text.trimmingCharacters(in: .whitespacesAndNewlines))"
+            }
+            .joined(separator: "\n")
+        return """
+        把以下英文漫画台词翻译成中文。
+        严格保留每一行开头的编号标签，例如 [0]。
+        不要合并编号，不要拆分编号，不要解释，不要添加列表符号。
+        每个输入编号必须输出且只输出一行对应中文。
+
+        \(body)
+        """
+    }
+
+    private static func parseTaggedBatchTranslation(
+        _ rawOutput: String,
+        expectedTags: [String]
+    ) -> (values: [String: String], orderedTags: [String], missingTags: [String], duplicateTags: [String], outOfOrderTags: [String]) {
+        var values: [String: String] = [:]
+        var orderedTags: [String] = []
+        var duplicateTags: [String] = []
+        let expectedSet = Set(expectedTags)
+        let pattern = #"^\s*(\[\d+\])\s*[:：\-–—.]?\s*(.*)$"#
+        let regex = try? NSRegularExpression(pattern: pattern)
+        for rawLine in rawOutput.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(rawLine)
+            let range = NSRange(line.startIndex..<line.endIndex, in: line)
+            guard let match = regex?.firstMatch(in: line, range: range),
+                  match.numberOfRanges >= 3,
+                  let tagRange = Range(match.range(at: 1), in: line),
+                  let textRange = Range(match.range(at: 2), in: line) else {
+                continue
+            }
+            let tag = String(line[tagRange])
+            guard expectedSet.contains(tag) else {
+                orderedTags.append(tag)
+                continue
+            }
+            let text = String(line[textRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+            if values[tag] != nil {
+                duplicateTags.append(tag)
+                values[tag] = [values[tag], text]
+                    .compactMap { $0 }
+                    .filter { !$0.isEmpty }
+                    .joined(separator: "\n")
+            } else {
+                values[tag] = text
+            }
+            orderedTags.append(tag)
+        }
+
+        let missingTags = expectedTags.filter { values[$0] == nil }
+        let expectedPositions = Dictionary(uniqueKeysWithValues: expectedTags.enumerated().map { ($0.element, $0.offset) })
+        var lastPosition = -1
+        var outOfOrderTags: [String] = []
+        for tag in orderedTags where expectedSet.contains(tag) {
+            guard let position = expectedPositions[tag] else { continue }
+            if position < lastPosition {
+                outOfOrderTags.append(tag)
+            } else {
+                lastPosition = position
+            }
+        }
+        return (
+            values,
+            orderedTags,
+            missingTags,
+            Array(Set(duplicateTags)).sorted(),
+            Array(Set(outOfOrderTags)).sorted()
+        )
+    }
+
     private func translateDeterministicCorrectionCandidate(_ block: MangaOverlayProbeBlock) async -> MangaOverlayProbeBlock {
         guard let correctedText = block.deterministicCorrectionText,
               Self.shouldProbeDeterministicCorrectionTranslation(block) else {
@@ -3490,6 +3709,7 @@ final class TranslationSessionStore: ObservableObject {
         visionAPIComparison: MangaOverlayVisionAPIComparison? = nil,
         frameworkComparison: MangaOverlayFrameworkComparison? = nil,
         cleanTextDiagnostic: MangaCleanTextDiagnosticReport? = nil,
+        batchTranslationComparison: MangaBatchTranslationComparison? = nil,
         outputCleanupRemovedItemCount: Int = 0,
         extraWarnings: [String] = []
     ) -> MangaOverlayProbeReport {
@@ -3537,6 +3757,7 @@ final class TranslationSessionStore: ObservableObject {
             visionAPIComparison: visionAPIComparison,
             frameworkComparison: frameworkComparison,
             cleanTextDiagnostic: cleanTextDiagnostic,
+            batchTranslationComparison: batchTranslationComparison,
             bubbleGeometry: bubbleGeometry,
             sliceOCR: sliceOCR,
             syntheticSliceOCR: syntheticSliceOCR,
