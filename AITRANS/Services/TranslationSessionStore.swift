@@ -1648,7 +1648,8 @@ final class TranslationSessionStore: ObservableObject {
                     image: recognized.image,
                     blocks: probeBlocks,
                     outputDirectory: self.mangaOverlayOutputDirectory,
-                    preprocessing: probeConfiguration.preprocessing
+                    preprocessing: probeConfiguration.preprocessing,
+                    textRegionCropReport: textRegionCropReport
                 )
                 outputFiles.debugBoxesImage = renderedOutputFiles.debugBoxesImage
                 outputFiles.overlayImage = renderedOutputFiles.overlayImage
@@ -2218,6 +2219,218 @@ final class TranslationSessionStore: ObservableObject {
             ocrProbeNotes: notes,
             blockPassed: block.blockPassed
         )
+    }
+
+    private func applyTextRegionCropCandidates(
+        to blocks: [MangaOverlayProbeBlock],
+        image: CGImage,
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        recognizedBlocks: [MangaOverlayOCRBlock],
+        groundTruth: [MangaGroundTruthEntry],
+        preprocessing: MangaOverlayPreprocessingOptions
+    ) async throws -> (blocks: [MangaOverlayProbeBlock], report: MangaOverlayTextRegionCropReport) {
+        let bubbleBBoxes = Dictionary(uniqueKeysWithValues: bubbleGeometry.bubbles.map { ($0.id, $0.bbox) })
+        var updatedBlocks: [MangaOverlayProbeBlock] = []
+        var diagnostics: [MangaOverlayTextRegionCropDiagnostic] = []
+
+        for block in blocks {
+            let source = Self.textRegionSource(for: block)
+            let sourceIndex = Self.wholePageSourceIndex(for: block)
+            let wholePageText = sourceIndex.flatMap { recognizedBlocks.indices.contains($0) ? recognizedBlocks[$0].text : nil }
+                ?? block.rawOcrText
+            let crop = try await mangaOverlayProbeService.recognizeTextRegionCrop(
+                in: image,
+                seedBBox: block.bbox,
+                bubbleBBox: block.bubbleID.flatMap { bubbleBBoxes[$0] },
+                options: preprocessing
+            )
+            let decision = Self.evaluateTextRegionCropSelection(
+                originalText: block.finalTextUsedForTranslation,
+                cropText: crop.text,
+                cropClampedByBubble: crop.cropClampedByBubble
+            )
+
+            var updated = block
+            var notes = updated.ocrProbeNotes
+            notes.append("textRegionCropSource=\(source)")
+            notes.append("textRegionCropText=\(crop.text?.replacing("\n", with: " / ") ?? "nil")")
+            notes.append("textRegionCropSelected=\(decision.adopted)")
+            notes.append("textRegionCropSelectionReason=\(decision.selectionReason)")
+            if !decision.rejectionReasons.isEmpty {
+                notes.append("textRegionCropRejections=\(decision.rejectionReasons.joined(separator: ","))")
+            }
+
+            if decision.adopted {
+                let selectedMatch = MangaOverlayProbeService.bestGroundTruthMatch(
+                    text: decision.selectedText,
+                    groundTruth: groundTruth
+                )
+                updated.finalTextUsedForTranslation = decision.selectedText
+                updated.bestGroundTruthIndex = selectedMatch.index
+                updated.bestGroundTruthText = selectedMatch.entry?.text
+                updated.bestGroundTruthType = selectedMatch.entry?.type
+                updated.groundTruthMatch = selectedMatch.matchState
+                updated.groundTruthMatchThreshold = MangaOverlayProbeService.groundTruthMatchThreshold
+                updated.ocrGroundTruthSimilarity = selectedMatch.similarity
+                updated.ocrLegacySimilarity = selectedMatch.legacySimilarity
+                updated.wordOrderPreserved = selectedMatch.wordOrderPreserved
+                updated.ocrQualityLabel = Self.ocrQualityLabel(for: selectedMatch.similarity)
+            }
+            updated.ocrProbeNotes = notes
+            updatedBlocks.append(updated)
+
+            diagnostics.append(
+                MangaOverlayTextRegionCropDiagnostic(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    source: source,
+                    seedBBox: block.bbox,
+                    regionBBox: crop.regionBBox,
+                    cropBBox: crop.cropBBox,
+                    cropClampedByBubble: crop.cropClampedByBubble,
+                    paddingX: crop.paddingX,
+                    paddingY: crop.paddingY,
+                    orientationHint: crop.orientationHint,
+                    wholePageText: wholePageText,
+                    fusedTextBeforeCrop: block.finalTextUsedForTranslation,
+                    adaptiveCropText: block.afterPreprocessingOcrText,
+                    textRegionCropText: crop.text,
+                    selectedText: decision.selectedText,
+                    adopted: decision.adopted,
+                    selectionReason: decision.selectionReason,
+                    rejectionReasons: decision.rejectionReasons,
+                    rawWordPreservationRatio: decision.rawWordPreservationRatio,
+                    candidateQualityScore: decision.candidateQualityScore,
+                    originalQualityScore: decision.originalQualityScore
+                )
+            )
+        }
+
+        let succeeded = diagnostics.filter { ($0.textRegionCropText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }.count
+        let adoptedIndexes = diagnostics.filter(\.adopted).map(\.blockIndex)
+        let rejectedIndexes = diagnostics.filter { !$0.adopted }.map(\.blockIndex)
+        var rejectionCounts: [String: Int] = [:]
+        for reason in diagnostics.flatMap(\.rejectionReasons) {
+            rejectionCounts[reason, default: 0] += 1
+        }
+        let report = MangaOverlayTextRegionCropReport(
+            totalRegions: diagnostics.count,
+            cropSucceededCount: succeeded,
+            adoptedCount: adoptedIndexes.count,
+            rejectedCount: rejectedIndexes.count,
+            adoptedBlockIndexes: adoptedIndexes,
+            rejectedBlockIndexes: rejectedIndexes,
+            mainRejectionReasons: rejectionCounts,
+            diagnostics: diagnostics,
+            notes: [
+                "TextRegion crop OCR uses post-fusion block bbox as seed and clamps to assigned bubble bbox or content rect",
+                "selection uses word preservation, text similarity, word count, Latin/symbol ratios, OCR error heuristics, and crop clamp signals only",
+                "ground truth is used only after selection to refresh evaluation metrics"
+            ]
+        )
+        return (updatedBlocks, report)
+    }
+
+    private static func evaluateTextRegionCropSelection(
+        originalText: String,
+        cropText: String?,
+        cropClampedByBubble: Bool
+    ) -> (
+        adopted: Bool,
+        selectedText: String,
+        selectionReason: String,
+        rejectionReasons: [String],
+        rawWordPreservationRatio: Double,
+        candidateQualityScore: Double,
+        originalQualityScore: Double
+    ) {
+        let original = originalText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let originalWords = ocrCandidateWords(original)
+        let originalScore = ocrCandidateQualityScore(original)
+        guard let cropText else {
+            return (false, original, "fallbackToFusedText", ["emptyCropText"], 0, 0, originalScore)
+        }
+        let candidate = cropText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !candidate.isEmpty else {
+            return (false, original, "fallbackToFusedText", ["emptyCropText"], 0, 0, originalScore)
+        }
+
+        let candidateWords = ocrCandidateWords(candidate)
+        let preservation = wordPreservationRatio(sourceWords: originalWords, candidateWords: candidateWords)
+        let similarity = normalizedTextSimilarity(original, candidate)
+        let candidateScore = ocrCandidateQualityScore(candidate)
+        let latinRatio = Double(latinLetterCount(in: candidate)) / Double(max(candidate.count, 1))
+        let symbolRatio = Double(candidate.filter { !$0.isLetter && !$0.isNumber && !$0.isWhitespace && !$0.isPunctuation }.count) / Double(max(candidate.count, 1))
+        var rejections: [String] = []
+
+        if candidateWords.isEmpty {
+            rejections.append("noCandidateWords")
+        }
+        if originalWords.count >= 2, candidateWords.count < max(2, Int(ceil(Double(originalWords.count) * 0.55))) {
+            rejections.append("wordCountRegression")
+        }
+        if originalWords.count >= 3, preservation < 0.55, similarity < 0.42 {
+            rejections.append("rawWordsLost")
+        }
+        if latinRatio < 0.42 {
+            rejections.append("lowLatinRatio")
+        }
+        if symbolRatio > 0.16 {
+            rejections.append("symbolHeavy")
+        }
+        if containsLikelyOCRError(in: candidate), !containsLikelyOCRError(in: original), candidateScore <= originalScore + 0.08 {
+            rejections.append("introducedLikelyOCRError")
+        }
+        if cropClampedByBubble, candidateWords.count > originalWords.count + 8, similarity < 0.45 {
+            rejections.append("clampedCropPossibleCrossTalk")
+        }
+        if ocrCandidateWords(candidate).joined(separator: " ") == ocrCandidateWords(original).joined(separator: " ") {
+            rejections.append("sameAsFusedText")
+        }
+
+        let improvesQuality = candidateScore >= originalScore + 0.10
+        let preservesAndExtends = preservation >= 0.68
+            && candidateWords.count >= originalWords.count
+            && candidateScore >= originalScore - 0.02
+        let fixesLikelyError = containsLikelyOCRError(in: original)
+            && !containsLikelyOCRError(in: candidate)
+            && preservation >= 0.48
+            && candidateScore >= originalScore + 0.04
+        let adopted = rejections.isEmpty && (improvesQuality || preservesAndExtends || fixesLikelyError)
+        let selected = adopted ? candidate : original
+        let reason: String
+        if adopted {
+            if fixesLikelyError {
+                reason = "adoptedFixesLikelyOCRError"
+            } else if improvesQuality {
+                reason = "adoptedHigherGroundTruthFreeQuality"
+            } else {
+                reason = "adoptedPreservesAndExtendsWords"
+            }
+        } else {
+            reason = "fallbackToFusedText"
+            if rejections.isEmpty {
+                rejections.append("insufficientQualityGain")
+            }
+        }
+        return (adopted, selected, reason, rejections, preservation, candidateScore, originalScore)
+    }
+
+    private static func wordPreservationRatio(sourceWords: [String], candidateWords: [String]) -> Double {
+        guard !sourceWords.isEmpty else { return candidateWords.isEmpty ? 0 : 1 }
+        let candidateSet = Set(candidateWords)
+        let preserved = sourceWords.filter { candidateSet.contains($0) }.count
+        return Double(preserved) / Double(sourceWords.count)
+    }
+
+    private static func textRegionSource(for block: MangaOverlayProbeBlock) -> String {
+        if block.ocrProbeNotes.contains("fusionSource=bubbleFirst") {
+            return "bubbleFirst"
+        }
+        if block.ocrProbeNotes.contains("fusionSource=wholePageOCR") {
+            return "wholePageOCR"
+        }
+        return block.bubbleAssignmentMethod
     }
 
     private static func ocrCandidateQualityScore(_ text: String) -> Double {

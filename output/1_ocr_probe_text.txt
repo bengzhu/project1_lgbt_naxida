@@ -10,6 +10,14 @@ cropCandidatePreservesRawWords: true
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: THAT'S / RIGHT, / RIGHT / NOW / I'M-
+textRegionSelected: THAT'S / RIGHT, / RIGHT / NOW / I'M-
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: sameAsFusedText
+textRegionCropBBox: [478,300,95,143]
+textRegionWordPreservation: 1.000
+textRegionQualityScore: 0.511 -> 0.511
 safeLayoutRect: [436,308,105,108]
 safeLayoutSource: bubbleInsetSingle
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=20.0 minFont=false truncated=false nonTransparentBounds=[439,339,76,68]
@@ -42,6 +50,14 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: I'VE / ARRIVED / AT REN- / SENPArS / • HOUSE.
+textRegionSelected: IVE / ARRIVED / AT REN- / SENPAI'S / HOUSE.
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: introducedLikelyOCRError
+textRegionCropBBox: [95,319,91,128]
+textRegionWordPreservation: 0.571
+textRegionQualityScore: 0.740 -> 0.645
 safeLayoutRect: [58,324,164,119]
 safeLayoutSource: bubbleInsetSingle
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=25.0 minFont=false truncated=false nonTransparentBounds=[61,330,94,110]
@@ -74,6 +90,14 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: nil
+textRegionSelected: THE CITY / HATTLER / TOUPNAMENT / STARTS IN A / PEW DAYS.
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: emptyCropText
+textRegionCropBBox: [480,532,81,94]
+textRegionWordPreservation: 0.000
+textRegionQualityScore: 0.794 -> 0.000
 safeLayoutRect: [439,536,124,87]
 safeLayoutSource: bubbleInsetSingle
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=15.0 minFont=false truncated=false nonTransparentBounds=[442,539,74,84]
@@ -106,6 +130,14 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: TRANIE
+textRegionSelected: ANP / THAT'S / WHY / WE'RE / DONS / THIS / SPECIAL / TRAININS
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: wordCountRegression | rawWordsLost
+textRegionCropBBox: [45,654,90,105]
+textRegionWordPreservation: 0.000
+textRegionQualityScore: 0.808 -> 0.812
 safeLayoutRect: [34,658,138,102]
 safeLayoutSource: bubbleInsetSingle
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=17.0 minFont=false truncated=false nonTransparentBounds=[37,662,69,95]
@@ -138,6 +170,14 @@ cropCandidatePreservesRawWords: true
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: LET'S / BATTLERK
+textRegionSelected: LET'S / BATTLER!
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: insufficientQualityGain
+textRegionCropBBox: [341,809,143,135]
+textRegionWordPreservation: 0.667
+textRegionQualityScore: 0.611 -> 0.636
 safeLayoutRect: [348,841,129,70]
 safeLayoutSource: blockFallbackNoBubble
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=19.8 minFont=false truncated=false nonTransparentBounds=[351,857,77,40]
@@ -170,6 +210,14 @@ cropCandidatePreservesRawWords: true
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: JUSTIN / SPECIAL / TRAINING / RAND / ASKEO IP / →WE / COLD / JUST / PLAY. / tas / ONUNE / THA / bICN / To e / peal
+textRegionSelected: I SAID / IT'S / JUST / SPECIAL / TRAINING / AND / ASKED IF / WE / COULD / PLAY / ONLINE...
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: rawWordsLost
+textRegionCropBBox: [213,900,103,114]
+textRegionWordPreservation: 0.357
+textRegionQualityScore: 0.776 -> 0.816
 safeLayoutRect: [253,940,110,26]
 safeLayoutSource: bubbleInsetPartitioned
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=8.0 minFont=true truncated=true nonTransparentBounds=[256,946,32,17]
@@ -202,6 +250,14 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: THS IS AN / OFFLINE / TOLENAMENT, / ONLINE / WOLLO MAKE / MEANWELESS / Whart / are
+textRegionSelected: THIS IS AN / OPPLINE / TOURNAMENT. / DOING IT / ONLINE / WOULD MAKE / IT / MEANINGLESS
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: rawWordsLost
+textRegionCropBBox: [130,857,111,148]
+textRegionWordPreservation: 0.333
+textRegionQualityScore: 0.862 -> 0.863
 safeLayoutRect: [89,879,152,103]
 safeLayoutSource: bubbleInsetPartitioned
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=16.0 minFont=false truncated=false nonTransparentBounds=[92,888,63,88]
@@ -234,6 +290,14 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: nil
+textRegionSelected: WE NEED TO / GET RESULTS / AT THS / TOURNAMENT / TO SAVE THE / SAMNG CLUR / POOM RENG / DISBANDED.
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: emptyCropText
+textRegionCropBBox: [485,860,91,132]
+textRegionWordPreservation: 0.000
+textRegionQualityScore: 0.773 -> 0.000
 safeLayoutRect: [445,876,115,100]
 safeLayoutSource: bubbleInsetSingle
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=12.0 minFont=false truncated=false nonTransparentBounds=[448,886,54,82]
@@ -266,6 +330,14 @@ cropCandidatePreservesRawWords: true
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: * THE / SUGGESTION / OVERRULED, / ANO IT WAS / THAT TO BE / 'STAYNGY / OVER AT RENA / ESENPAI'S / THouser
+textRegionSelected: THE / SUGGESTION / WAS / OVERRULED. AND IT WAS / DECIDED / THAT I'O BE / STAYING / OVER AT REN- / SENPAI'S / HOUSE.
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: insufficientQualityGain
+textRegionCropBBox: [10,936,141,156]
+textRegionWordPreservation: 0.579
+textRegionQualityScore: 0.773 -> 0.817
 safeLayoutRect: [49,932,57,165]
 safeLayoutSource: bubbleInsetPartitioned
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=10.0 minFont=false truncated=false nonTransparentBounds=[52,945,48,139]
@@ -298,6 +370,14 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: NEA / eve / : talkin
+textRegionSelected: What / are / yOuL / ever talking abodi?
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: wordCountRegression | rawWordsLost
+textRegionCropBBox: [97,959,79,96]
+textRegionWordPreservation: 0.000
+textRegionQualityScore: 0.808 -> 0.748
 safeLayoutRect: [112,932,70,163]
 safeLayoutSource: bubbleInsetPartitioned
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=20.0 minFont=false truncated=false nonTransparentBounds=[115,947,63,135]
@@ -330,6 +410,14 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: KED IP / WE / OLD / JIST / -ОЕ ДТ / LEAST. / NLINE.. / • THAT / SEEMS / TO BE / PEN- / LOGIC.
+textRegionSelected: -O2 AT LEAST. -02 AT / THAT SEEMS TO BE / SENPAIS SENPArS LOSIC.
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: rawWordsLost
+textRegionCropBBox: [251,936,114,126]
+textRegionWordPreservation: 0.417
+textRegionQualityScore: 0.694 -> 0.792
 safeLayoutRect: [255,972,107,85]
 safeLayoutSource: bubbleInsetPartitioned
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=13.0 minFont=false truncated=false nonTransparentBounds=[258,979,94,73]
@@ -362,6 +450,14 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: nil
+textRegionSelected: -02 AT / LEAST, / THAT / SEEMS / TO BE / 2EN-
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: emptyCropText
+textRegionCropBBox: [269,948,36,57]
+textRegionWordPreservation: 0.000
+textRegionQualityScore: 0.674 -> 0.000
 safeLayoutRect: [248,877,37,108]
 safeLayoutSource: bubbleInsetPartitioned
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=10.0 minFont=false truncated=false nonTransparentBounds=[251,887,29,91]
@@ -394,6 +490,14 @@ cropCandidatePreservesRawWords: true
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
+textRegionCrop: City Battler / Offline: / Tournament
+textRegionSelected: City Battler / Offline. / Tournament
+textRegionAdopted: false
+textRegionSelectionReason: fallbackToFusedText
+textRegionRejectionReasons: sameAsFusedText
+textRegionCropBBox: [360,931,156,158]
+textRegionWordPreservation: 1.000
+textRegionQualityScore: 0.804 -> 0.804
 safeLayoutRect: [370,969,136,82]
 safeLayoutSource: blockFallbackNoBubble
 renderCollision: checked=true initialOverflow=false resolved=true fontSize=30.0 minFont=false truncated=false nonTransparentBounds=[373,996,113,28]
