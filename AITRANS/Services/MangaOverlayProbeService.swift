@@ -305,6 +305,8 @@ struct MangaOverlayTextRegionCropResult: Equatable, Sendable {
     var regionBBox: [Double]
     var cropBBox: [Double]
     var clampSource: String
+    var cropBBoxBeforeAssignmentCorrection: [Double]?
+    var cropBBoxAfterAssignmentCorrection: [Double]?
     var cropBBoxBeforeSubRegionClamp: [Double]
     var cropBBoxAfterSubRegionClamp: [Double]
     var cropClampedByBubble: Bool
@@ -489,6 +491,8 @@ struct MangaOverlayProbeService: Sendable {
         in image: CGImage,
         seedBBox: [Double],
         bubbleBBox: [Double]?,
+        correctedBubbleBBox: [Double]? = nil,
+        splitCandidateBBox: [Double]? = nil,
         subRegionBBox: [Double]? = nil,
         options: MangaOverlayPreprocessingOptions = .defaultValue,
         cropping: MangaOverlayProbeCropping = .defaultValue
@@ -503,6 +507,8 @@ struct MangaOverlayProbeService: Sendable {
                     regionBBox: seedBBox,
                     cropBBox: Self.bboxArray(from: seedRect),
                     clampSource: "contentRect",
+                    cropBBoxBeforeAssignmentCorrection: nil,
+                    cropBBoxAfterAssignmentCorrection: nil,
                     cropBBoxBeforeSubRegionClamp: Self.bboxArray(from: seedRect),
                     cropBBoxAfterSubRegionClamp: Self.bboxArray(from: seedRect),
                     cropClampedByBubble: false,
@@ -537,10 +543,28 @@ struct MangaOverlayProbeService: Sendable {
             } else {
                 subRegionLimit = nil
             }
-            let cropLimit = subRegionLimit ?? fallbackLimit
+            let correctedLimit: CGRect?
+            if let correctedBubbleBBox {
+                let rect = Self.rect(from: correctedBubbleBBox).intersection(contentBounds)
+                correctedLimit = rect.isNull || rect.width < 2 || rect.height < 2 ? nil : rect
+            } else {
+                correctedLimit = nil
+            }
+            let splitLimit: CGRect?
+            if let splitCandidateBBox {
+                let rect = Self.rect(from: splitCandidateBBox).intersection(contentBounds)
+                splitLimit = rect.isNull || rect.width < 2 || rect.height < 2 ? nil : rect
+            } else {
+                splitLimit = nil
+            }
+            let cropLimit = splitLimit ?? correctedLimit ?? subRegionLimit ?? fallbackLimit
             let cropRect = Self.clamp(regionRect, to: cropLimit).integral
             let clampSource: String
-            if subRegionLimit != nil {
+            if splitLimit != nil {
+                clampSource = "splitCandidate"
+            } else if correctedLimit != nil {
+                clampSource = "correctedBubbleMask"
+            } else if subRegionLimit != nil {
                 clampSource = "subRegion"
             } else if bubbleBBox != nil {
                 clampSource = "bubbleBBox"
@@ -555,6 +579,8 @@ struct MangaOverlayProbeService: Sendable {
                 regionBBox: Self.bboxArray(from: Self.clamp(regionRect, to: contentBounds).integral),
                 cropBBox: Self.bboxArray(from: cropRect),
                 clampSource: clampSource,
+                cropBBoxBeforeAssignmentCorrection: (splitLimit != nil || correctedLimit != nil) ? Self.bboxArray(from: fallbackCropRect) : nil,
+                cropBBoxAfterAssignmentCorrection: (splitLimit != nil || correctedLimit != nil) ? Self.bboxArray(from: cropRect) : nil,
                 cropBBoxBeforeSubRegionClamp: Self.bboxArray(from: fallbackCropRect),
                 cropBBoxAfterSubRegionClamp: Self.bboxArray(from: cropRect),
                 cropClampedByBubble: clampedByBubble,
@@ -687,6 +713,8 @@ struct MangaOverlayProbeService: Sendable {
         cropping: MangaOverlayProbeCropping = .defaultValue,
         textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
         bubbleDebugImagePath: String? = nil,
         bubbleCropsImagePath: String? = nil,
         bubbleTextOverlayImagePath: String? = nil
@@ -718,6 +746,8 @@ struct MangaOverlayProbeService: Sendable {
                 blocks: blocks,
                 textRegionCropReport: textRegionCropReport,
                 bubbleMaskReport: bubbleMaskReport,
+                bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                bubbleSplitCandidateReport: bubbleSplitCandidateReport,
                 to: ocrProbeTextURL
             )
 
@@ -1362,6 +1392,8 @@ struct MangaOverlayProbeService: Sendable {
         blocks: [MangaOverlayProbeBlock],
         textRegionCropReport: MangaOverlayTextRegionCropReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
         to url: URL
     ) throws {
         let textRegionByBlock = Dictionary(
@@ -1370,6 +1402,15 @@ struct MangaOverlayProbeService: Sendable {
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
         )
+        let correctionByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleAssignmentCorrectionReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        var splitByBlock: [Int: MangaOverlayBubbleSplitCandidateDiagnostic] = [:]
+        for diagnostic in bubbleSplitCandidateReport?.diagnostics ?? [] {
+            for index in diagnostic.seedBlockIndexes where splitByBlock[index] == nil {
+                splitByBlock[index] = diagnostic
+            }
+        }
         let content = blocks.map { block in
             let bbox = block.bbox.map { String(Int($0.rounded())) }.joined(separator: ",")
             let raw = block.rawOcrText.replacing("\n", with: " / ")
@@ -1406,8 +1447,16 @@ struct MangaOverlayProbeService: Sendable {
             let textRegionSubRegionRejected = textRegion?.subRegionRejectedReason ?? "nil"
             let textRegionCropBeforeSubRegion = textRegion?.cropBBoxBeforeSubRegionClamp.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
             let textRegionCropAfterSubRegion = textRegion?.cropBBoxAfterSubRegionClamp.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let textRegionCropBeforeAssignment = textRegion?.cropBBoxBeforeAssignmentCorrection?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let textRegionCropAfterAssignment = textRegion?.cropBBoxAfterAssignmentCorrection?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
             let textRegionCropMaskCoverage = textRegion?.cropMaskCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let textRegionCropMaskCoverageBefore = textRegion?.cropMaskCoverageBefore?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let textRegionCropMaskCoverageAfter = textRegion?.cropMaskCoverageAfter?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let textRegionCropMaskRejected = textRegion?.cropMaskRejectedReason ?? "nil"
+            let textRegionCorrectedBubbleID = textRegion?.correctedBubbleID.map(String.init) ?? "nil"
+            let textRegionSplitCandidateID = textRegion?.splitCandidateID.map(String.init) ?? "nil"
+            let textRegionAssignmentRejected = textRegion?.assignmentCorrectionRejectedReason ?? "nil"
+            let textRegionSplitRejected = textRegion?.splitCandidateRejectedReason ?? "nil"
             let textRegionReasons = textRegion?.rejectionReasons.joined(separator: " | ") ?? "nil"
             let textRegionPreservation = textRegion?.rawWordPreservationRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let textRegionQuality = textRegion.map {
@@ -1417,6 +1466,12 @@ struct MangaOverlayProbeService: Sendable {
             let maskDominantID = mask?.maskDominantBubbleID.map(String.init) ?? "nil"
             let maskDominantCoverage = mask?.maskDominantCoverageRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let maskSafeRect = mask?.maskSafeRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let correction = correctionByBlock[block.index]
+            let correctionReasons = correction?.rejectionReasons.joined(separator: " | ") ?? "nil"
+            let correctionRisks = correction?.riskFlags.joined(separator: " | ") ?? "nil"
+            let split = splitByBlock[block.index]
+            let splitReasons = split?.rejectionReasons.joined(separator: " | ") ?? "nil"
+            let splitBBox = split?.bbox.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
             rawOCR: \(raw)
@@ -1443,8 +1498,16 @@ struct MangaOverlayProbeService: Sendable {
             textRegionSubRegionRejectedReason: \(textRegionSubRegionRejected)
             textRegionCropBBoxBeforeSubRegionClamp: [\(textRegionCropBeforeSubRegion)]
             textRegionCropBBoxAfterSubRegionClamp: [\(textRegionCropAfterSubRegion)]
+            textRegionCorrectedBubbleID: \(textRegionCorrectedBubbleID)
+            textRegionSplitCandidateID: \(textRegionSplitCandidateID)
+            textRegionCropBBoxBeforeAssignmentCorrection: [\(textRegionCropBeforeAssignment)]
+            textRegionCropBBoxAfterAssignmentCorrection: [\(textRegionCropAfterAssignment)]
             textRegionCropMaskCoverage: \(textRegionCropMaskCoverage)
+            textRegionCropMaskCoverageBefore: \(textRegionCropMaskCoverageBefore)
+            textRegionCropMaskCoverageAfter: \(textRegionCropMaskCoverageAfter)
             textRegionCropMaskRejectedReason: \(textRegionCropMaskRejected)
+            textRegionAssignmentCorrectionRejectedReason: \(textRegionAssignmentRejected)
+            textRegionSplitCandidateRejectedReason: \(textRegionSplitRejected)
             textRegionWordPreservation: \(textRegionPreservation)
             textRegionQualityScore: \(textRegionQuality)
             safeLayoutRect: [\(safeLayout)]
@@ -1453,6 +1516,8 @@ struct MangaOverlayProbeService: Sendable {
             maskDominantCoverage: \(maskDominantCoverage)
             maskSafeRect: [\(maskSafeRect)]
             maskBubbleIDConsistent: \(mask.map { String($0.bubbleIDConsistent) } ?? "nil")
+            bubbleAssignmentCorrection: decision=\(correction?.decision ?? "nil") recommended=\(correction.map { String($0.correctionRecommended) } ?? "nil") correctedBubbleID=\(correction?.correctedBubbleID.map(String.init) ?? "nil") appliedToCropClamp=\(correction.map { String($0.correctionAppliedToCropClamp) } ?? "nil") rejections=\(correctionReasons) risks=\(correctionRisks)
+            bubbleSplitCandidate: id=\(split.map { String($0.id) } ?? "nil") parentBubbleID=\(split.map { String($0.parentBubbleID) } ?? "nil") bbox=[\(splitBBox)] clampEligible=\(split.map { String($0.clampEligible) } ?? "nil") rejections=\(splitReasons)
             renderMaskCollision: checked=\(block.renderMaskCollisionChecked) resolved=\(block.renderMaskCollisionResolved) overflowPixels=\(block.renderMaskOverflowPixelCount)
             renderCollision: checked=\(block.renderCollisionChecked) initialOverflow=\(block.renderCollisionInitialOverflow) resolved=\(block.renderCollisionResolved) fontSize=\(block.renderFontSize?.formatted(.number.precision(.fractionLength(1))) ?? "nil") minFont=\(block.renderMinFontSizeReached) truncated=\(block.renderTextTruncated) nonTransparentBounds=[\(renderBounds)]
             glyphMask: pixels=\(block.glyphMaskPixelCount) rect=[\(glyphRect)] fillRects=\(block.glyphMaskFillRects.count)

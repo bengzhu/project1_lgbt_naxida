@@ -150,6 +150,13 @@ python3 -m json.tool test/1.ground_truth.json
 - `bubbleMaskReport.inconsistentBubbleAssignmentBlocks = [4, 5, 11, 12]`
 - `bubbleMaskReport.renderMaskOverflowBlocks = []`
 - `cropMaskCoverage` 低的块 `[4, 5, 9, 12]`
+- `bubbleAssignmentCorrectionReport.recommendedCorrectionBlocks = [5, 11]`
+- `bubbleAssignmentCorrectionReport.appliedToCropClampBlocks = [5]`
+- `bubbleAssignmentCorrectionReport.rejectedCorrectionBlocks = [4, 11, 12]`
+- `bubbleSplitCandidateReport.parentBubbleIDs = [4, 6, 7]`
+- `bubbleSplitCandidateReport.candidateCount = 6`
+- `bubbleSplitCandidateReport.clampEligibleCount = 3`
+- `bubbleSplitCandidateReport.appliedToCropClampBlocks = [5, 9, 10]`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
 - `failedBlocks = 12`

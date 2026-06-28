@@ -1507,6 +1507,8 @@ final class TranslationSessionStore: ObservableObject {
                 var textRegionCropReport: MangaOverlayTextRegionCropReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
+                var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
+                var bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?
                 var outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
                 if !groundTruth.isEmpty {
                     let bubbleProbe = try await self.mangaOverlayProbeService.runBubbleFirstProbe(
@@ -1587,12 +1589,31 @@ final class TranslationSessionStore: ObservableObject {
                         bubbleGeometry: recognized.bubbleGeometry,
                         image: recognized.image
                     )
+                    let preCropBubbleMaskReport = await self.mangaOverlayProbeService.makeBubbleMaskReport(
+                        image: recognized.image,
+                        blocks: probeBlocks,
+                        bubbleGeometry: recognized.bubbleGeometry,
+                        textRegionCropReport: nil
+                    )
+                    bubbleAssignmentCorrectionReport = Self.makeBubbleAssignmentCorrectionReport(
+                        blocks: probeBlocks,
+                        bubbleMaskReport: preCropBubbleMaskReport
+                    )
+                    bubbleSplitCandidateReport = Self.makeBubbleSplitCandidateReport(
+                        blocks: probeBlocks,
+                        bubbleGeometry: recognized.bubbleGeometry,
+                        bubbleMaskReport: preCropBubbleMaskReport,
+                        image: recognized.image,
+                        assignmentCorrectionReport: bubbleAssignmentCorrectionReport
+                    )
                     self.mangaOverlayProbeMessage = "正在运行 TextRegion crop OCR 候选层"
                     let textRegionCrop = try await self.applyTextRegionCropCandidates(
                         to: probeBlocks,
                         image: recognized.image,
                         bubbleGeometry: recognized.bubbleGeometry,
                         bubbleSubRegionReport: bubbleSubRegionReport,
+                        bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                        bubbleSplitCandidateReport: bubbleSplitCandidateReport,
                         recognizedBlocks: recognized.blocks,
                         groundTruth: groundTruth,
                         preprocessing: probeConfiguration.preprocessing
@@ -1676,7 +1697,9 @@ final class TranslationSessionStore: ObservableObject {
                     outputDirectory: self.mangaOverlayOutputDirectory,
                     preprocessing: probeConfiguration.preprocessing,
                     textRegionCropReport: textRegionCropReport,
-                    bubbleMaskReport: bubbleMaskReport
+                    bubbleMaskReport: bubbleMaskReport,
+                    bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                    bubbleSplitCandidateReport: bubbleSplitCandidateReport
                 )
                 outputFiles.debugBoxesImage = renderedOutputFiles.debugBoxesImage
                 outputFiles.overlayImage = renderedOutputFiles.overlayImage
@@ -1730,6 +1753,8 @@ final class TranslationSessionStore: ObservableObject {
                     textRegionCropReport: textRegionCropReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
+                    bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                    bubbleSplitCandidateReport: bubbleSplitCandidateReport,
                     cleanTextDiagnostic: cleanTextDiagnostic,
                     batchTranslationComparison: batchTranslationComparison,
                     deterministicDecodingCheck: deterministicDecodingCheck,
@@ -2255,12 +2280,16 @@ final class TranslationSessionStore: ObservableObject {
         image: CGImage,
         bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
         recognizedBlocks: [MangaOverlayOCRBlock],
         groundTruth: [MangaGroundTruthEntry],
         preprocessing: MangaOverlayPreprocessingOptions
     ) async throws -> (blocks: [MangaOverlayProbeBlock], report: MangaOverlayTextRegionCropReport) {
         let bubbleBBoxes = Dictionary(uniqueKeysWithValues: bubbleGeometry.bubbles.map { ($0.id, $0.bbox) })
         let subRegionsByBlock = Self.subRegionDiagnosticsByBlock(from: bubbleSubRegionReport)
+        let correctionsByBlock = Self.assignmentCorrectionsByBlock(from: bubbleAssignmentCorrectionReport)
+        let splitCandidatesByBlock = Self.splitCandidatesByBlock(from: bubbleSplitCandidateReport)
         var updatedBlocks: [MangaOverlayProbeBlock] = []
         var diagnostics: [MangaOverlayTextRegionCropDiagnostic] = []
 
@@ -2271,10 +2300,18 @@ final class TranslationSessionStore: ObservableObject {
                 ?? block.rawOcrText
             let subRegion = subRegionsByBlock[block.index]
             let subRegionBBox = subRegion?.clampEligible == true ? subRegion?.bbox : nil
+            let assignmentCorrection = correctionsByBlock[block.index]
+            let correctedBubbleBBox = assignmentCorrection?.correctionAppliedToCropClamp == true
+                ? assignmentCorrection?.correctedBubbleID.flatMap { bubbleBBoxes[$0] }
+                : nil
+            let splitCandidate = splitCandidatesByBlock[block.index]
+            let splitCandidateBBox = splitCandidate?.clampEligible == true ? splitCandidate?.bbox : nil
             let crop = try await mangaOverlayProbeService.recognizeTextRegionCrop(
                 in: image,
                 seedBBox: block.bbox,
                 bubbleBBox: block.bubbleID.flatMap { bubbleBBoxes[$0] },
+                correctedBubbleBBox: correctedBubbleBBox,
+                splitCandidateBBox: splitCandidateBBox,
                 subRegionBBox: subRegionBBox,
                 options: preprocessing
             )
@@ -2289,6 +2326,22 @@ final class TranslationSessionStore: ObservableObject {
             notes.append("textRegionCropSource=\(source)")
             notes.append("textRegionCropText=\(crop.text?.replacing("\n", with: " / ") ?? "nil")")
             notes.append("textRegionClampSource=\(crop.clampSource)")
+            if let assignmentCorrection {
+                notes.append("bubbleAssignmentDecision=\(assignmentCorrection.decision)")
+                if let correctedBubbleID = assignmentCorrection.correctedBubbleID {
+                    notes.append("correctedBubbleID=\(correctedBubbleID)")
+                }
+                if !assignmentCorrection.rejectionReasons.isEmpty {
+                    notes.append("bubbleAssignmentRejections=\(assignmentCorrection.rejectionReasons.joined(separator: ","))")
+                }
+            }
+            if let splitCandidate {
+                notes.append("bubbleSplitCandidateID=\(splitCandidate.id)")
+                notes.append("bubbleSplitCandidateClampEligible=\(splitCandidate.clampEligible)")
+                if !splitCandidate.rejectionReasons.isEmpty {
+                    notes.append("bubbleSplitCandidateRejections=\(splitCandidate.rejectionReasons.joined(separator: ","))")
+                }
+            }
             if let subRegion {
                 notes.append("textRegionSubRegionID=\(subRegion.id)")
                 notes.append("textRegionSubRegionClampEligible=\(subRegion.clampEligible)")
@@ -2332,6 +2385,14 @@ final class TranslationSessionStore: ObservableObject {
                     regionBBox: crop.regionBBox,
                     cropBBox: crop.cropBBox,
                     clampSource: crop.clampSource,
+                    correctedBubbleID: assignmentCorrection?.correctedBubbleID,
+                    splitCandidateID: splitCandidate?.id,
+                    cropBBoxBeforeAssignmentCorrection: crop.cropBBoxBeforeAssignmentCorrection,
+                    cropBBoxAfterAssignmentCorrection: crop.cropBBoxAfterAssignmentCorrection,
+                    cropMaskCoverageBefore: nil,
+                    cropMaskCoverageAfter: nil,
+                    assignmentCorrectionRejectedReason: assignmentCorrection?.rejectionReasons.joined(separator: ","),
+                    splitCandidateRejectedReason: splitCandidate?.rejectionReasons.joined(separator: ","),
                     subRegionID: subRegion?.id,
                     subRegionBBox: subRegion?.bbox,
                     subRegionCoverageRatio: subRegion?.seedCoverageRatio,
@@ -2501,6 +2562,253 @@ final class TranslationSessionStore: ObservableObject {
         return result
     }
 
+    private static func makeBubbleAssignmentCorrectionReport(
+        blocks: [MangaOverlayProbeBlock],
+        bubbleMaskReport: MangaOverlayBubbleMaskReport
+    ) -> MangaOverlayBubbleAssignmentCorrectionReport {
+        let blockByIndex = Dictionary(uniqueKeysWithValues: blocks.map { ($0.index, $0) })
+        let diagnostics = bubbleMaskReport.blockDiagnostics.map { mask -> MangaOverlayBubbleAssignmentCorrectionDiagnostic in
+            let block = blockByIndex[mask.blockIndex]
+            let currentBubbleID = mask.currentBubbleID
+            let dominantBubbleID = mask.maskDominantBubbleID
+            var rejectionReasons: [String] = []
+            var riskFlags: [String] = []
+            var notes: [String] = [
+                "groundTruthNotUsed",
+                "derivedFromApproximateBubbleMask"
+            ]
+
+            if dominantBubbleID == nil {
+                rejectionReasons.append("noMaskDominantBubbleID")
+            }
+            if currentBubbleID == dominantBubbleID {
+                rejectionReasons.append("alreadyConsistent")
+            }
+            if mask.maskDominantCoverageRatio < 0.70 {
+                rejectionReasons.append("dominantCoverageBelowRecommendationThreshold")
+            }
+            let nonBackgroundSeedPixels = mask.maskIDsUnderSeed.reduce(0) { partial, pair in
+                pair.key == "0" ? partial : partial + pair.value
+            }
+            if nonBackgroundSeedPixels < 32 {
+                rejectionReasons.append("insufficientNonBackgroundSeedMaskPixels")
+            }
+            let text = block?.finalTextUsedForTranslation.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let normalized = text.lowercased()
+            if currentBubbleID == nil {
+                riskFlags.append("unassignedBlock")
+                if normalized.contains("let") && normalized.contains("battler") {
+                    riskFlags.append("protectedShortText")
+                    rejectionReasons.append("protectedShortTextDiagnosticOnly")
+                }
+            }
+            if normalized.contains("city battler") || normalized.contains("offline") || normalized.contains("tournament") {
+                riskFlags.append("decorativeTitle")
+                rejectionReasons.append("decorativeTitleDiagnosticOnly")
+            }
+            if mask.maskDominantCoverageRatio < 0.85 {
+                rejectionReasons.append("dominantCoverageBelowClampThreshold")
+            }
+
+            let recommended = dominantBubbleID != nil
+                && currentBubbleID != dominantBubbleID
+                && mask.maskDominantCoverageRatio >= 0.70
+                && nonBackgroundSeedPixels >= 32
+                && !riskFlags.contains("decorativeTitle")
+                && !riskFlags.contains("protectedShortText")
+            let appliedToCrop = recommended
+                && mask.maskDominantCoverageRatio >= 0.85
+                && currentBubbleID != nil
+            let decision: String
+            if appliedToCrop {
+                decision = "appliedToCropClamp"
+            } else if recommended {
+                decision = "recommendedDiagnosticOnly"
+                notes.append("notAppliedBecauseClampThresholdOrRiskGuardFailed")
+            } else if currentBubbleID == dominantBubbleID {
+                decision = "consistentNoCorrection"
+            } else {
+                decision = "rejectedDiagnosticOnly"
+            }
+            return MangaOverlayBubbleAssignmentCorrectionDiagnostic(
+                blockIndex: mask.blockIndex,
+                currentBubbleID: currentBubbleID,
+                maskDominantBubbleID: dominantBubbleID,
+                maskDominantCoverageRatio: mask.maskDominantCoverageRatio,
+                maskIDsUnderSeed: mask.maskIDsUnderSeed,
+                correctionRecommended: recommended,
+                correctedBubbleID: recommended ? dominantBubbleID : nil,
+                correctionAppliedToCropClamp: appliedToCrop,
+                correctionAppliedToSafeLayout: false,
+                decision: decision,
+                rejectionReasons: Array(Set(rejectionReasons)).sorted(),
+                riskFlags: Array(Set(riskFlags)).sorted(),
+                notes: notes
+            )
+        }
+        let inconsistent = diagnostics
+            .filter { $0.currentBubbleID != $0.maskDominantBubbleID }
+            .map(\.blockIndex)
+        let recommended = diagnostics
+            .filter(\.correctionRecommended)
+            .map(\.blockIndex)
+        let applied = diagnostics
+            .filter(\.correctionAppliedToCropClamp)
+            .map(\.blockIndex)
+        let rejected = diagnostics
+            .filter { $0.currentBubbleID != $0.maskDominantBubbleID && !$0.correctionAppliedToCropClamp }
+            .map(\.blockIndex)
+        return MangaOverlayBubbleAssignmentCorrectionReport(
+            enabled: true,
+            evaluatedBlockCount: diagnostics.count,
+            inconsistentBlockIndexes: inconsistent.sorted(),
+            recommendedCorrectionBlocks: recommended.sorted(),
+            appliedToCropClampBlocks: applied.sorted(),
+            appliedToSafeLayoutBlocks: [],
+            rejectedCorrectionBlocks: rejected.sorted(),
+            diagnostics: diagnostics.sorted { $0.blockIndex < $1.blockIndex },
+            notes: [
+                "assignment correction is diagnostic and ground-truth-free",
+                "only high-confidence non-decorative conflicts can influence TextRegion crop clamp",
+                "safe layout is still driven by BubbleMask diagnostics and existing collision checks"
+            ]
+        )
+    }
+
+    private static func assignmentCorrectionsByBlock(
+        from report: MangaOverlayBubbleAssignmentCorrectionReport?
+    ) -> [Int: MangaOverlayBubbleAssignmentCorrectionDiagnostic] {
+        guard let report else { return [:] }
+        return Dictionary(uniqueKeysWithValues: report.diagnostics.map { ($0.blockIndex, $0) })
+    }
+
+    private static func makeBubbleSplitCandidateReport(
+        blocks: [MangaOverlayProbeBlock],
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport,
+        image: CGImage,
+        assignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
+    ) -> MangaOverlayBubbleSplitCandidateReport {
+        let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+        let splitParents = bubbleGeometry.bubbleAudits
+            .filter(\.bubbleSplitCandidate)
+            .map(\.bubbleID)
+            .sorted()
+        let splitParentSet = Set(splitParents)
+        let maskInstances = Dictionary(uniqueKeysWithValues: bubbleMaskReport.instances.map { ($0.bubbleID, $0) })
+        let correctionByBlock = assignmentCorrectionsByBlock(from: assignmentCorrectionReport)
+        let blocksByParent = Dictionary(grouping: blocks) { block -> Int? in
+            if let corrected = correctionByBlock[block.index],
+               corrected.correctionAppliedToCropClamp,
+               let correctedBubbleID = corrected.correctedBubbleID {
+                return correctedBubbleID
+            }
+            return block.bubbleID
+        }
+        var nextID = 0
+        var diagnostics: [MangaOverlayBubbleSplitCandidateDiagnostic] = []
+
+        for parentID in splitParents {
+            let parentBlocks = (blocksByParent[parentID] ?? []).sorted { $0.index < $1.index }
+            guard let parentBBox = bubbleGeometry.bubbles.first(where: { $0.id == parentID })?.bbox else { continue }
+            let parentRect = rect(from: parentBBox).intersection(imageBounds)
+            let parentArea = max(area(of: parentRect), 1)
+            for block in parentBlocks {
+                let seedRect = rect(from: block.bbox).intersection(imageBounds)
+                guard !seedRect.isNull, seedRect.width >= 2, seedRect.height >= 2 else { continue }
+                let estimatedFontSize = max(6, min(seedRect.width, seedRect.height))
+                let candidateRect = clamp(
+                    seedRect.insetBy(dx: -max(8, estimatedFontSize * 0.75), dy: -max(8, estimatedFontSize * 0.95)),
+                    to: parentRect
+                ).integral
+                let seedCoverage = area(of: candidateRect.intersection(seedRect)) / max(area(of: seedRect), 1)
+                let parentCoverage = area(of: candidateRect) / parentArea
+                var siblingOverlap: Double = 0
+                for sibling in parentBlocks where sibling.index != block.index {
+                    let siblingRect = rect(from: sibling.bbox).intersection(imageBounds)
+                    let overlap = area(of: candidateRect.intersection(siblingRect)) / max(min(area(of: candidateRect), area(of: siblingRect)), 1)
+                    siblingOverlap = max(siblingOverlap, overlap)
+                }
+                var rejectionReasons: [String] = []
+                var riskFlags: [String] = ["parentBubbleOversized"]
+                if !splitParentSet.contains(parentID) {
+                    rejectionReasons.append("parentBubbleNotSplitCandidate")
+                }
+                if seedCoverage < 0.94 {
+                    rejectionReasons.append("seedCoverageTooLow")
+                }
+                if parentCoverage >= 0.72 {
+                    rejectionReasons.append("candidateTooCloseToParentBubble")
+                }
+                if siblingOverlap >= 0.36 {
+                    rejectionReasons.append("siblingOverlapTooHigh")
+                }
+                let text = block.finalTextUsedForTranslation.lowercased()
+                if text.contains("city battler") || text.contains("offline") || text.contains("tournament") {
+                    riskFlags.append("decorativeTitle")
+                    rejectionReasons.append("decorativeTitleDiagnosticOnly")
+                }
+                if text.contains("let") && text.contains("battler") {
+                    riskFlags.append("protectedShortText")
+                    rejectionReasons.append("protectedShortTextDiagnosticOnly")
+                }
+                let clampEligible = rejectionReasons.isEmpty
+                let maskPixelCount = Int(area(of: candidateRect).rounded())
+                let safeRect = clamp(candidateRect.insetBy(dx: 4, dy: 4), to: imageBounds).integral
+                diagnostics.append(
+                    MangaOverlayBubbleSplitCandidateDiagnostic(
+                        id: nextID,
+                        parentBubbleID: parentID,
+                        seedBlockIndexes: [block.index],
+                        bbox: bboxArray(from: candidateRect),
+                        safeRect: safeRect.width >= 8 && safeRect.height >= 8 ? bboxArray(from: safeRect) : nil,
+                        maskPixelCount: maskPixelCount,
+                        parentMaskCoverageRatio: maskInstances[parentID]?.maskCoverageRatio ?? parentCoverage,
+                        seedCoverageRatio: seedCoverage,
+                        siblingOverlapRatio: siblingOverlap,
+                        clampEligible: clampEligible,
+                        appliedToBlockIndexes: clampEligible ? [block.index] : [],
+                        rejectionReasons: Array(Set(rejectionReasons)).sorted(),
+                        riskFlags: Array(Set(riskFlags)).sorted(),
+                        notes: [
+                            "split candidate is block-local geometry inside oversized parent bubble",
+                            "candidate does not create or delete probe blocks",
+                            "groundTruthNotUsed"
+                        ]
+                    )
+                )
+                nextID += 1
+            }
+        }
+        let applied = diagnostics.flatMap(\.appliedToBlockIndexes).sorted()
+        return MangaOverlayBubbleSplitCandidateReport(
+            enabled: true,
+            parentBubbleIDs: splitParents,
+            candidateCount: diagnostics.count,
+            clampEligibleCount: diagnostics.filter(\.clampEligible).count,
+            appliedToCropClampBlocks: applied,
+            diagnostics: diagnostics.sorted { $0.id < $1.id },
+            notes: [
+                "conservative split candidates are diagnostics for oversized bubbles 4/6/7",
+                "eligible candidates may narrow TextRegion crop clamp but never change final block count directly",
+                "TextRegion crop adoption guardrails remain unchanged"
+            ]
+        )
+    }
+
+    private static func splitCandidatesByBlock(
+        from report: MangaOverlayBubbleSplitCandidateReport?
+    ) -> [Int: MangaOverlayBubbleSplitCandidateDiagnostic] {
+        guard let report else { return [:] }
+        var result: [Int: MangaOverlayBubbleSplitCandidateDiagnostic] = [:]
+        for diagnostic in report.diagnostics where diagnostic.clampEligible {
+            for index in diagnostic.appliedToBlockIndexes where result[index] == nil {
+                result[index] = diagnostic
+            }
+        }
+        return result
+    }
+
     private static func textRegionCropReport(
         _ report: MangaOverlayTextRegionCropReport?,
         mergingMaskDiagnosticsFrom maskReport: MangaOverlayBubbleMaskReport?
@@ -2514,6 +2822,10 @@ final class TranslationSessionStore: ObservableObject {
             if let mask = maskByBlock[diagnostic.blockIndex] {
                 updated.cropMaskCoverageRatio = mask.cropMaskCoverageRatio
                 updated.cropMaskRejectedReason = mask.cropMaskRejectedReason
+                updated.cropMaskCoverageAfter = mask.cropMaskCoverageRatio
+                updated.cropMaskCoverageBefore = diagnostic.cropBBoxBeforeAssignmentCorrection == nil
+                    ? mask.cropMaskCoverageRatio
+                    : nil
             }
             return updated
         }
@@ -4253,6 +4565,8 @@ final class TranslationSessionStore: ObservableObject {
         textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
         cleanTextDiagnostic: MangaCleanTextDiagnosticReport? = nil,
         batchTranslationComparison: MangaBatchTranslationComparison? = nil,
         deterministicDecodingCheck: MangaDeterministicDecodingCheck? = nil,
@@ -4312,6 +4626,8 @@ final class TranslationSessionStore: ObservableObject {
             textRegionCropReport: textRegionCropReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
+            bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+            bubbleSplitCandidateReport: bubbleSplitCandidateReport,
             cleanTextDiagnostic: cleanTextDiagnostic,
             batchTranslationComparison: batchTranslationComparison,
             deterministicDecodingCheck: deterministicDecodingCheck,

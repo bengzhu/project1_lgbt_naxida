@@ -23,8 +23,16 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: parentBubbleNotOversized
 textRegionCropBBoxBeforeSubRegionClamp: [478,300,95,143]
 textRegionCropBBoxAfterSubRegionClamp: [478,300,95,143]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: nil
+textRegionCropBBoxBeforeAssignmentCorrection: [nil]
+textRegionCropBBoxAfterAssignmentCorrection: [nil]
 textRegionCropMaskCoverage: 0.998
+textRegionCropMaskCoverageBefore: 0.998
+textRegionCropMaskCoverageAfter: 0.998
 textRegionCropMaskRejectedReason: nil
+textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,insufficientNonBackgroundSeedMaskPixels
+textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 1.000
 textRegionQualityScore: 0.511 -> 0.511
 safeLayoutRect: [425,297,127,130]
@@ -33,6 +41,8 @@ maskDominantBubbleID: 0
 maskDominantCoverage: 1.000
 maskSafeRect: [425,297,127,130]
 maskBubbleIDConsistent: true
+bubbleAssignmentCorrection: decision=consistentNoCorrection recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=alreadyConsistent | insufficientNonBackgroundSeedMaskPixels risks=
+bubbleSplitCandidate: id=nil parentBubbleID=nil bbox=[nil] clampEligible=nil rejections=nil
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=24.0 minFont=false truncated=false nonTransparentBounds=[428,336,91,79]
 glyphMask: pixels=11455 rect=[401,286,175,165] fillRects=713
@@ -77,8 +87,16 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: parentBubbleNotOversized
 textRegionCropBBoxBeforeSubRegionClamp: [95,319,91,128]
 textRegionCropBBoxAfterSubRegionClamp: [95,319,91,128]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: nil
+textRegionCropBBoxBeforeAssignmentCorrection: [nil]
+textRegionCropBBoxAfterAssignmentCorrection: [nil]
 textRegionCropMaskCoverage: 1.000
+textRegionCropMaskCoverageBefore: 1.000
+textRegionCropMaskCoverageAfter: 1.000
 textRegionCropMaskRejectedReason: nil
+textRegionAssignmentCorrectionRejectedReason: alreadyConsistent
+textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.571
 textRegionQualityScore: 0.740 -> 0.645
 safeLayoutRect: [60,326,160,115]
@@ -87,6 +105,8 @@ maskDominantBubbleID: 1
 maskDominantCoverage: 1.000
 maskSafeRect: [60,326,160,115]
 maskBubbleIDConsistent: true
+bubbleAssignmentCorrection: decision=consistentNoCorrection recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=alreadyConsistent risks=
+bubbleSplitCandidate: id=nil parentBubbleID=nil bbox=[nil] clampEligible=nil rejections=nil
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=25.0 minFont=false truncated=false nonTransparentBounds=[63,331,94,110]
 glyphMask: pixels=6270 rect=[93,323,103,139] fillRects=432
@@ -131,8 +151,16 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: parentBubbleNotOversized
 textRegionCropBBoxBeforeSubRegionClamp: [480,532,81,94]
 textRegionCropBBoxAfterSubRegionClamp: [480,532,81,94]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: nil
+textRegionCropBBoxBeforeAssignmentCorrection: [nil]
+textRegionCropBBoxAfterAssignmentCorrection: [nil]
 textRegionCropMaskCoverage: 1.000
+textRegionCropMaskCoverageBefore: 1.000
+textRegionCropMaskCoverageAfter: 1.000
 textRegionCropMaskRejectedReason: nil
+textRegionAssignmentCorrectionRejectedReason: alreadyConsistent
+textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.794 -> 0.000
 safeLayoutRect: [440,537,121,84]
@@ -141,6 +169,8 @@ maskDominantBubbleID: 2
 maskDominantCoverage: 1.000
 maskSafeRect: [440,537,121,84]
 maskBubbleIDConsistent: true
+bubbleAssignmentCorrection: decision=consistentNoCorrection recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=alreadyConsistent risks=
+bubbleSplitCandidate: id=nil parentBubbleID=nil bbox=[nil] clampEligible=nil rejections=nil
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=14.0 minFont=false truncated=false nonTransparentBounds=[443,540,69,79]
 glyphMask: pixels=1182 rect=[497,562,47,34] fillRects=62
@@ -185,8 +215,16 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: parentBubbleNotOversized
 textRegionCropBBoxBeforeSubRegionClamp: [45,654,90,105]
 textRegionCropBBoxAfterSubRegionClamp: [45,654,90,105]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: nil
+textRegionCropBBoxBeforeAssignmentCorrection: [nil]
+textRegionCropBBoxAfterAssignmentCorrection: [nil]
 textRegionCropMaskCoverage: 1.000
+textRegionCropMaskCoverageBefore: 1.000
+textRegionCropMaskCoverageAfter: 1.000
 textRegionCropMaskRejectedReason: nil
+textRegionAssignmentCorrectionRejectedReason: alreadyConsistent
+textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.808 -> 0.812
 safeLayoutRect: [23,647,160,124]
@@ -195,6 +233,8 @@ maskDominantBubbleID: 3
 maskDominantCoverage: 1.000
 maskSafeRect: [23,647,160,124]
 maskBubbleIDConsistent: true
+bubbleAssignmentCorrection: decision=consistentNoCorrection recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=alreadyConsistent risks=
+bubbleSplitCandidate: id=nil parentBubbleID=nil bbox=[nil] clampEligible=nil rejections=nil
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=21.0 minFont=false truncated=false nonTransparentBounds=[26,651,84,117]
 glyphMask: pixels=9907 rect=[0,624,206,170] fillRects=790
@@ -239,8 +279,16 @@ textRegionSubRegionCoverage: nil
 textRegionSubRegionRejectedReason: noSubRegion
 textRegionCropBBoxBeforeSubRegionClamp: [341,809,143,135]
 textRegionCropBBoxAfterSubRegionClamp: [341,809,143,135]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: nil
+textRegionCropBBoxBeforeAssignmentCorrection: [nil]
+textRegionCropBBoxAfterAssignmentCorrection: [nil]
 textRegionCropMaskCoverage: 0.233
+textRegionCropMaskCoverageBefore: 0.233
+textRegionCropMaskCoverageAfter: 0.233
 textRegionCropMaskRejectedReason: lowMaskCoverage
+textRegionAssignmentCorrectionRejectedReason: protectedShortTextDiagnosticOnly
+textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.667
 textRegionQualityScore: 0.611 -> 0.636
 safeLayoutRect: [450,881,106,60]
@@ -249,6 +297,8 @@ maskDominantBubbleID: 5
 maskDominantCoverage: 0.950
 maskSafeRect: [447,878,111,96]
 maskBubbleIDConsistent: false
+bubbleAssignmentCorrection: decision=rejectedDiagnosticOnly recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=protectedShortTextDiagnosticOnly risks=protectedShortText | unassignedBlock
+bubbleSplitCandidate: id=nil parentBubbleID=nil bbox=[nil] clampEligible=nil rejections=nil
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=16.8 minFont=false truncated=false nonTransparentBounds=[453,885,66,55]
 glyphMask: pixels=0 rect=[nil] fillRects=0
@@ -280,29 +330,39 @@ cropCandidatePreservesRawWords: true
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
-textRegionCrop: JUSTIN / SPECIAL / TRAINING / RAND / ASKEO IP / →WE / COLD / JUST / PLAY. / tas / ONUNE / THA / bICN / To e / peal
+textRegionCrop: EVEN 5 / THOUSH / I SAID / JUSTE / SPECIAL / TRAINING / HAND / ASKEO I / • WE: / COLLO / JIST / PLAY / ONLINE
 textRegionSelected: I SAID / IT'S / JUST / SPECIAL / TRAINING / AND / ASKED IF / WE / COULD / PLAY / ONLINE...
 textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
-textRegionRejectionReasons: rawWordsLost
-textRegionCropBBox: [213,900,103,114]
-textRegionClampSource: bubbleBBox
+textRegionRejectionReasons: rawWordsLost | introducedLikelyOCRError
+textRegionCropBBox: [210,861,95,144]
+textRegionClampSource: splitCandidate
 textRegionSubRegionID: 4
 textRegionSubRegionBBox: [213,900,118,151]
 textRegionSubRegionCoverage: 0.850
 textRegionSubRegionRejectedReason: seedCoverageTooLow
 textRegionCropBBoxBeforeSubRegionClamp: [213,900,103,114]
-textRegionCropBBoxAfterSubRegionClamp: [213,900,103,114]
-textRegionCropMaskCoverage: 0.190
+textRegionCropBBoxAfterSubRegionClamp: [210,861,95,144]
+textRegionCorrectedBubbleID: 4
+textRegionSplitCandidateID: 0
+textRegionCropBBoxBeforeAssignmentCorrection: [213,900,103,114]
+textRegionCropBBoxAfterAssignmentCorrection: [210,861,95,144]
+textRegionCropMaskCoverage: 0.011
+textRegionCropMaskCoverageBefore: nil
+textRegionCropMaskCoverageAfter: 0.011
 textRegionCropMaskRejectedReason: lowMaskCoverage
-textRegionWordPreservation: 0.357
-textRegionQualityScore: 0.776 -> 0.816
+textRegionAssignmentCorrectionRejectedReason:
+textRegionSplitCandidateRejectedReason:
+textRegionWordPreservation: 0.500
+textRegionQualityScore: 0.776 -> 0.702
 safeLayoutRect: [91,881,191,84]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 4
 maskDominantCoverage: 1.000
 maskSafeRect: [87,877,198,108]
 maskBubbleIDConsistent: false
+bubbleAssignmentCorrection: decision=appliedToCropClamp recommended=true correctedBubbleID=4 appliedToCropClamp=true rejections= risks=
+bubbleSplitCandidate: id=0 parentBubbleID=4 bbox=[200,857,105,148] clampEligible=true rejections=
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=16.0 minFont=false truncated=false nonTransparentBounds=[94,888,63,71]
 glyphMask: pixels=9972 rect=[213,900,172,199] fillRects=835
@@ -347,8 +407,16 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason:
 textRegionCropBBoxBeforeSubRegionClamp: [130,857,111,148]
 textRegionCropBBoxAfterSubRegionClamp: [130,858,111,147]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: nil
+textRegionCropBBoxBeforeAssignmentCorrection: [nil]
+textRegionCropBBoxAfterAssignmentCorrection: [nil]
 textRegionCropMaskCoverage: 1.000
+textRegionCropMaskCoverageBefore: 1.000
+textRegionCropMaskCoverageAfter: 1.000
 textRegionCropMaskRejectedReason: nil
+textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,decorativeTitleDiagnosticOnly
+textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.333
 textRegionQualityScore: 0.862 -> 0.785
 safeLayoutRect: [91,881,151,99]
@@ -357,6 +425,8 @@ maskDominantBubbleID: 4
 maskDominantCoverage: 1.000
 maskSafeRect: [87,877,198,108]
 maskBubbleIDConsistent: true
+bubbleAssignmentCorrection: decision=consistentNoCorrection recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=alreadyConsistent | decorativeTitleDiagnosticOnly risks=decorativeTitle
+bubbleSplitCandidate: id=1 parentBubbleID=4 bbox=[106,857,159,148] clampEligible=false rejections=decorativeTitleDiagnosticOnly | siblingOverlapTooHigh
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=16.0 minFont=false truncated=false nonTransparentBounds=[94,888,63,88]
 glyphMask: pixels=8879 rect=[67,857,166,148] fillRects=705
@@ -401,8 +471,16 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: parentBubbleNotOversized
 textRegionCropBBoxBeforeSubRegionClamp: [485,860,91,132]
 textRegionCropBBoxAfterSubRegionClamp: [485,860,91,132]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: nil
+textRegionCropBBoxBeforeAssignmentCorrection: [nil]
+textRegionCropBBoxAfterAssignmentCorrection: [nil]
 textRegionCropMaskCoverage: 0.980
+textRegionCropMaskCoverageBefore: 0.980
+textRegionCropMaskCoverageAfter: 0.980
 textRegionCropMaskRejectedReason: nil
+textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,decorativeTitleDiagnosticOnly
+textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.773 -> 0.000
 safeLayoutRect: [447,878,111,96]
@@ -411,6 +489,8 @@ maskDominantBubbleID: 5
 maskDominantCoverage: 1.000
 maskSafeRect: [447,878,111,96]
 maskBubbleIDConsistent: true
+bubbleAssignmentCorrection: decision=consistentNoCorrection recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=alreadyConsistent | decorativeTitleDiagnosticOnly risks=decorativeTitle
+bubbleSplitCandidate: id=nil parentBubbleID=nil bbox=[nil] clampEligible=nil rejections=nil
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=11.0 minFont=false truncated=false nonTransparentBounds=[450,889,57,75]
 glyphMask: pixels=3134 rect=[507,860,69,132] fillRects=259
@@ -455,8 +535,16 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason:
 textRegionCropBBoxBeforeSubRegionClamp: [10,936,141,156]
 textRegionCropBBoxAfterSubRegionClamp: [10,936,141,156]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: nil
+textRegionCropBBoxBeforeAssignmentCorrection: [nil]
+textRegionCropBBoxAfterAssignmentCorrection: [nil]
 textRegionCropMaskCoverage: 0.743
+textRegionCropMaskCoverageBefore: 0.743
+textRegionCropMaskCoverageAfter: 0.743
 textRegionCropMaskRejectedReason: nil
+textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,dominantCoverageBelowClampThreshold
+textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.579
 textRegionQualityScore: 0.773 -> 0.817
 safeLayoutRect: [35,918,70,192]
@@ -465,6 +553,8 @@ maskDominantBubbleID: 6
 maskDominantCoverage: 0.740
 maskSafeRect: [32,915,167,198]
 maskBubbleIDConsistent: true
+bubbleAssignmentCorrection: decision=consistentNoCorrection recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=alreadyConsistent | dominantCoverageBelowClampThreshold risks=
+bubbleSplitCandidate: id=3 parentBubbleID=6 bbox=[0,903,165,222] clampEligible=false rejections=siblingOverlapTooHigh
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=13.0 minFont=false truncated=false nonTransparentBounds=[38,924,61,181]
 glyphMask: pixels=16597 rect=[0,883,231,244] fillRects=1289
@@ -502,15 +592,23 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: wordCountRegression | rawWordsLost
 textRegionCropBBox: [97,959,79,96]
-textRegionClampSource: bubbleBBox
+textRegionClampSource: splitCandidate
 textRegionSubRegionID: 8
 textRegionSubRegionBBox: [86,935,101,144]
 textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: overlapsSiblingSubRegion
 textRegionCropBBoxBeforeSubRegionClamp: [97,959,79,96]
 textRegionCropBBoxAfterSubRegionClamp: [97,959,79,96]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: 4
+textRegionCropBBoxBeforeAssignmentCorrection: [97,959,79,96]
+textRegionCropBBoxAfterAssignmentCorrection: [97,959,79,96]
 textRegionCropMaskCoverage: 0.521
+textRegionCropMaskCoverageBefore: nil
+textRegionCropMaskCoverageAfter: 0.521
 textRegionCropMaskRejectedReason: lowMaskCoverage
+textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,dominantCoverageBelowClampThreshold,dominantCoverageBelowRecommendationThreshold
+textRegionSplitCandidateRejectedReason:
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.808 -> 0.748
 safeLayoutRect: [112,919,83,191]
@@ -519,6 +617,8 @@ maskDominantBubbleID: 6
 maskDominantCoverage: 0.533
 maskSafeRect: [32,915,167,198]
 maskBubbleIDConsistent: true
+bubbleAssignmentCorrection: decision=consistentNoCorrection recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=alreadyConsistent | dominantCoverageBelowClampThreshold | dominantCoverageBelowRecommendationThreshold risks=
+bubbleSplitCandidate: id=4 parentBubbleID=6 bbox=[90,941,93,132] clampEligible=true rejections=
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=23.0 minFont=false truncated=false nonTransparentBounds=[115,938,72,155]
 glyphMask: pixels=14901 rect=[0,883,231,244] fillRects=1224
@@ -556,15 +656,23 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: rawWordsLost
 textRegionCropBBox: [251,936,114,126]
-textRegionClampSource: bubbleBBox
+textRegionClampSource: splitCandidate
 textRegionSubRegionID: 9
 textRegionSubRegionBBox: [235,907,146,184]
 textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: overlapsSiblingSubRegion
 textRegionCropBBoxBeforeSubRegionClamp: [251,936,114,126]
 textRegionCropBBoxAfterSubRegionClamp: [251,936,114,126]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: 5
+textRegionCropBBoxBeforeAssignmentCorrection: [251,936,114,126]
+textRegionCropBBoxAfterAssignmentCorrection: [251,936,114,126]
 textRegionCropMaskCoverage: 0.751
+textRegionCropMaskCoverageBefore: nil
+textRegionCropMaskCoverageAfter: 0.751
 textRegionCropMaskRejectedReason: nil
+textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,dominantCoverageBelowClampThreshold
+textRegionSplitCandidateRejectedReason:
 textRegionWordPreservation: 0.417
 textRegionQualityScore: 0.694 -> 0.792
 safeLayoutRect: [243,972,130,96]
@@ -573,6 +681,8 @@ maskDominantBubbleID: 7
 maskDominantCoverage: 0.779
 maskSafeRect: [239,926,138,147]
 maskBubbleIDConsistent: true
+bubbleAssignmentCorrection: decision=consistentNoCorrection recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=alreadyConsistent | dominantCoverageBelowClampThreshold risks=
+bubbleSplitCandidate: id=5 parentBubbleID=7 bbox=[240,909,136,180] clampEligible=true rejections=
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=15.0 minFont=false truncated=false nonTransparentBounds=[246,979,107,84]
 glyphMask: pixels=10134 rect=[213,900,172,199] fillRects=843
@@ -617,8 +727,16 @@ textRegionSubRegionCoverage: 0.342
 textRegionSubRegionRejectedReason: seedCoverageTooLow
 textRegionCropBBoxBeforeSubRegionClamp: [269,948,36,57]
 textRegionCropBBoxAfterSubRegionClamp: [269,948,36,57]
+textRegionCorrectedBubbleID: 7
+textRegionSplitCandidateID: nil
+textRegionCropBBoxBeforeAssignmentCorrection: [nil]
+textRegionCropBBoxAfterAssignmentCorrection: [nil]
 textRegionCropMaskCoverage: 0.927
+textRegionCropMaskCoverageBefore: 0.927
+textRegionCropMaskCoverageAfter: 0.927
 textRegionCropMaskRejectedReason: nil
+textRegionAssignmentCorrectionRejectedReason: dominantCoverageBelowClampThreshold
+textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.674 -> 0.000
 safeLayoutRect: [251,931,120,137]
@@ -627,6 +745,8 @@ maskDominantBubbleID: 7
 maskDominantCoverage: 0.734
 maskSafeRect: [239,926,138,147]
 maskBubbleIDConsistent: false
+bubbleAssignmentCorrection: decision=recommendedDiagnosticOnly recommended=true correctedBubbleID=7 appliedToCropClamp=false rejections=dominantCoverageBelowClampThreshold risks=
+bubbleSplitCandidate: id=2 parentBubbleID=4 bbox=[262,930,43,75] clampEligible=false rejections=seedCoverageTooLow | siblingOverlapTooHigh
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=23.0 minFont=false truncated=false nonTransparentBounds=[254,937,87,127]
 glyphMask: pixels=396 rect=[291,966,14,39] fillRects=44
@@ -671,8 +791,16 @@ textRegionSubRegionCoverage: nil
 textRegionSubRegionRejectedReason: noSubRegion
 textRegionCropBBoxBeforeSubRegionClamp: [360,931,156,158]
 textRegionCropBBoxAfterSubRegionClamp: [360,931,156,158]
+textRegionCorrectedBubbleID: nil
+textRegionSplitCandidateID: nil
+textRegionCropBBoxBeforeAssignmentCorrection: [nil]
+textRegionCropBBoxAfterAssignmentCorrection: [nil]
 textRegionCropMaskCoverage: 0.273
+textRegionCropMaskCoverageBefore: 0.273
+textRegionCropMaskCoverageAfter: 0.273
 textRegionCropMaskRejectedReason: lowMaskCoverage
+textRegionAssignmentCorrectionRejectedReason: decorativeTitleDiagnosticOnly,dominantCoverageBelowClampThreshold,dominantCoverageBelowRecommendationThreshold
+textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 1.000
 textRegionQualityScore: 0.804 -> 0.804
 safeLayoutRect: [244,948,128,119]
@@ -681,6 +809,8 @@ maskDominantBubbleID: 7
 maskDominantCoverage: 0.604
 maskSafeRect: [239,926,138,147]
 maskBubbleIDConsistent: false
+bubbleAssignmentCorrection: decision=rejectedDiagnosticOnly recommended=false correctedBubbleID=nil appliedToCropClamp=false rejections=decorativeTitleDiagnosticOnly | dominantCoverageBelowClampThreshold | dominantCoverageBelowRecommendationThreshold risks=decorativeTitle | unassignedBlock
+bubbleSplitCandidate: id=nil parentBubbleID=nil bbox=[nil] clampEligible=nil rejections=nil
 renderMaskCollision: checked=true resolved=true overflowPixels=0
 renderCollision: checked=true initialOverflow=false resolved=true fontSize=30.0 minFont=false truncated=false nonTransparentBounds=[247,994,113,28]
 glyphMask: pixels=0 rect=[nil] fillRects=0
