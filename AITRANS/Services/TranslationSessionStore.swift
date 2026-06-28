@@ -1504,6 +1504,7 @@ final class TranslationSessionStore: ObservableObject {
                 var fusionComparison: MangaOverlayFusionComparison?
                 var fusionResults: [MangaOverlayFusionResult] = []
                 var postFusionCleanup: MangaOverlayPostFusionCleanupReport?
+                var textRegionCropReport: MangaOverlayTextRegionCropReport?
                 var outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
                 if !groundTruth.isEmpty {
                     let bubbleProbe = try await self.mangaOverlayProbeService.runBubbleFirstProbe(
@@ -1579,6 +1580,21 @@ final class TranslationSessionStore: ObservableObject {
                         blockIndex: recognized.blocks.indices.first,
                         options: probeConfiguration.preprocessing
                     )
+                    self.mangaOverlayProbeMessage = "正在运行 TextRegion crop OCR 候选层"
+                    let textRegionCrop = try await self.applyTextRegionCropCandidates(
+                        to: probeBlocks,
+                        image: recognized.image,
+                        bubbleGeometry: recognized.bubbleGeometry,
+                        recognizedBlocks: recognized.blocks,
+                        groundTruth: groundTruth,
+                        preprocessing: probeConfiguration.preprocessing
+                    )
+                    probeBlocks = textRegionCrop.blocks
+                    textRegionCropReport = textRegionCrop.report
+                    probeConfiguration.status = "current pipeline uses fused whole-page and bubble-first OCR with post-fusion cleanup plus guarded TextRegion crop OCR candidates"
+                    probeConfiguration.currentBlockSource = textRegionCrop.report.adoptedCount > 0
+                        ? "fusedWholePageBubbleTextRegionCrop"
+                        : "fusedWholePageBubble"
                     self.mangaOverlayProbeBlocks = probeBlocks
                 }
 
@@ -1683,6 +1699,7 @@ final class TranslationSessionStore: ObservableObject {
                     frameworkComparison: frameworkComparison,
                     fusionComparison: fusionComparison,
                     fusionResults: fusionResults,
+                    textRegionCropReport: textRegionCropReport,
                     cleanTextDiagnostic: cleanTextDiagnostic,
                     batchTranslationComparison: batchTranslationComparison,
                     deterministicDecodingCheck: deterministicDecodingCheck,
@@ -3819,6 +3836,7 @@ final class TranslationSessionStore: ObservableObject {
         frameworkComparison: MangaOverlayFrameworkComparison? = nil,
         fusionComparison: MangaOverlayFusionComparison? = nil,
         fusionResults: [MangaOverlayFusionResult] = [],
+        textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
         cleanTextDiagnostic: MangaCleanTextDiagnosticReport? = nil,
         batchTranslationComparison: MangaBatchTranslationComparison? = nil,
         deterministicDecodingCheck: MangaDeterministicDecodingCheck? = nil,
@@ -3875,6 +3893,7 @@ final class TranslationSessionStore: ObservableObject {
             frameworkComparison: frameworkComparison,
             fusionComparison: fusionComparison,
             fusionResults: fusionResults,
+            textRegionCropReport: textRegionCropReport,
             cleanTextDiagnostic: cleanTextDiagnostic,
             batchTranslationComparison: batchTranslationComparison,
             deterministicDecodingCheck: deterministicDecodingCheck,
