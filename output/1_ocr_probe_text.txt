@@ -16,6 +16,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: sameAsFusedText
 textRegionCropBBox: [478,300,95,143]
+textRegionClampSource: bubbleBBox
+textRegionSubRegionID: 0
+textRegionSubRegionBBox: [475,293,101,138]
+textRegionSubRegionCoverage: 1.000
+textRegionSubRegionRejectedReason: parentBubbleNotOversized
+textRegionCropBBoxBeforeSubRegionClamp: [478,300,95,143]
+textRegionCropBBoxAfterSubRegionClamp: [478,300,95,143]
 textRegionWordPreservation: 1.000
 textRegionQualityScore: 0.511 -> 0.511
 safeLayoutRect: [436,308,105,108]
@@ -56,6 +63,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: introducedLikelyOCRError
 textRegionCropBBox: [95,319,91,128]
+textRegionClampSource: bubbleBBox
+textRegionSubRegionID: 1
+textRegionSubRegionBBox: [92,328,97,110]
+textRegionSubRegionCoverage: 1.000
+textRegionSubRegionRejectedReason: parentBubbleNotOversized
+textRegionCropBBoxBeforeSubRegionClamp: [95,319,91,128]
+textRegionCropBBoxAfterSubRegionClamp: [95,319,91,128]
 textRegionWordPreservation: 0.571
 textRegionQualityScore: 0.740 -> 0.645
 safeLayoutRect: [58,324,164,119]
@@ -96,6 +110,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: emptyCropText
 textRegionCropBBox: [480,532,81,94]
+textRegionClampSource: bubbleBBox
+textRegionSubRegionID: 2
+textRegionSubRegionBBox: [477,539,87,80]
+textRegionSubRegionCoverage: 1.000
+textRegionSubRegionRejectedReason: parentBubbleNotOversized
+textRegionCropBBoxBeforeSubRegionClamp: [480,532,81,94]
+textRegionCropBBoxAfterSubRegionClamp: [480,532,81,94]
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.794 -> 0.000
 safeLayoutRect: [439,536,124,87]
@@ -136,6 +157,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: wordCountRegression | rawWordsLost
 textRegionCropBBox: [45,654,90,105]
+textRegionClampSource: bubbleBBox
+textRegionSubRegionID: 3
+textRegionSubRegionBBox: [50,646,80,121]
+textRegionSubRegionCoverage: 1.000
+textRegionSubRegionRejectedReason: parentBubbleNotOversized
+textRegionCropBBoxBeforeSubRegionClamp: [45,654,90,105]
+textRegionCropBBoxAfterSubRegionClamp: [45,654,90,105]
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.808 -> 0.812
 safeLayoutRect: [34,658,138,102]
@@ -176,6 +204,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: insufficientQualityGain
 textRegionCropBBox: [341,809,143,135]
+textRegionClampSource: contentRect
+textRegionSubRegionID: nil
+textRegionSubRegionBBox: [nil]
+textRegionSubRegionCoverage: nil
+textRegionSubRegionRejectedReason: noSubRegion
+textRegionCropBBoxBeforeSubRegionClamp: [341,809,143,135]
+textRegionCropBBoxAfterSubRegionClamp: [341,809,143,135]
 textRegionWordPreservation: 0.667
 textRegionQualityScore: 0.611 -> 0.636
 safeLayoutRect: [348,841,129,70]
@@ -216,6 +251,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: rawWordsLost
 textRegionCropBBox: [213,900,103,114]
+textRegionClampSource: bubbleBBox
+textRegionSubRegionID: 4
+textRegionSubRegionBBox: [213,900,118,151]
+textRegionSubRegionCoverage: 0.850
+textRegionSubRegionRejectedReason: seedCoverageTooLow
+textRegionCropBBoxBeforeSubRegionClamp: [213,900,103,114]
+textRegionCropBBoxAfterSubRegionClamp: [213,900,103,114]
 textRegionWordPreservation: 0.357
 textRegionQualityScore: 0.776 -> 0.816
 safeLayoutRect: [253,940,110,26]
@@ -250,14 +292,21 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
-textRegionCrop: THS IS AN / OFFLINE / TOLENAMENT, / ONLINE / WOLLO MAKE / MEANWELESS / Whart / are
+textRegionCrop: THS I5 AN / OPPLINE / TOLENANENT. / DONG I / ONLINE / WOLLO MAKE / MEANMELESS / Vhwit / are
 textRegionSelected: THIS IS AN / OPPLINE / TOURNAMENT. / DOING IT / ONLINE / WOULD MAKE / IT / MEANINGLESS
 textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: rawWordsLost
-textRegionCropBBox: [130,857,111,148]
+textRegionCropBBox: [130,858,111,147]
+textRegionClampSource: subRegion
+textRegionSubRegionID: 5
+textRegionSubRegionBBox: [100,858,171,147]
+textRegionSubRegionCoverage: 1.000
+textRegionSubRegionRejectedReason:
+textRegionCropBBoxBeforeSubRegionClamp: [130,857,111,148]
+textRegionCropBBoxAfterSubRegionClamp: [130,858,111,147]
 textRegionWordPreservation: 0.333
-textRegionQualityScore: 0.862 -> 0.863
+textRegionQualityScore: 0.862 -> 0.785
 safeLayoutRect: [89,879,152,103]
 safeLayoutSource: bubbleInsetPartitioned
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=16.0 minFont=false truncated=false nonTransparentBounds=[92,888,63,88]
@@ -296,6 +345,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: emptyCropText
 textRegionCropBBox: [485,860,91,132]
+textRegionClampSource: bubbleBBox
+textRegionSubRegionID: 6
+textRegionSubRegionBBox: [482,866,94,121]
+textRegionSubRegionCoverage: 1.000
+textRegionSubRegionRejectedReason: parentBubbleNotOversized
+textRegionCropBBoxBeforeSubRegionClamp: [485,860,91,132]
+textRegionCropBBoxAfterSubRegionClamp: [485,860,91,132]
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.773 -> 0.000
 safeLayoutRect: [445,876,115,100]
@@ -336,6 +392,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: insufficientQualityGain
 textRegionCropBBox: [10,936,141,156]
+textRegionClampSource: subRegion
+textRegionSubRegionID: 7
+textRegionSubRegionBBox: [0,901,171,226]
+textRegionSubRegionCoverage: 1.000
+textRegionSubRegionRejectedReason:
+textRegionCropBBoxBeforeSubRegionClamp: [10,936,141,156]
+textRegionCropBBoxAfterSubRegionClamp: [10,936,141,156]
 textRegionWordPreservation: 0.579
 textRegionQualityScore: 0.773 -> 0.817
 safeLayoutRect: [49,932,57,165]
@@ -376,6 +439,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: wordCountRegression | rawWordsLost
 textRegionCropBBox: [97,959,79,96]
+textRegionClampSource: bubbleBBox
+textRegionSubRegionID: 8
+textRegionSubRegionBBox: [86,935,101,144]
+textRegionSubRegionCoverage: 1.000
+textRegionSubRegionRejectedReason: overlapsSiblingSubRegion
+textRegionCropBBoxBeforeSubRegionClamp: [97,959,79,96]
+textRegionCropBBoxAfterSubRegionClamp: [97,959,79,96]
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.808 -> 0.748
 safeLayoutRect: [112,932,70,163]
@@ -416,6 +486,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: rawWordsLost
 textRegionCropBBox: [251,936,114,126]
+textRegionClampSource: bubbleBBox
+textRegionSubRegionID: 9
+textRegionSubRegionBBox: [235,907,146,184]
+textRegionSubRegionCoverage: 1.000
+textRegionSubRegionRejectedReason: overlapsSiblingSubRegion
+textRegionCropBBoxBeforeSubRegionClamp: [251,936,114,126]
+textRegionCropBBoxAfterSubRegionClamp: [251,936,114,126]
 textRegionWordPreservation: 0.417
 textRegionQualityScore: 0.694 -> 0.792
 safeLayoutRect: [255,972,107,85]
@@ -456,6 +533,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: emptyCropText
 textRegionCropBBox: [269,948,36,57]
+textRegionClampSource: bubbleBBox
+textRegionSubRegionID: 10
+textRegionSubRegionBBox: [258,928,47,77]
+textRegionSubRegionCoverage: 0.342
+textRegionSubRegionRejectedReason: seedCoverageTooLow
+textRegionCropBBoxBeforeSubRegionClamp: [269,948,36,57]
+textRegionCropBBoxAfterSubRegionClamp: [269,948,36,57]
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.674 -> 0.000
 safeLayoutRect: [248,877,37,108]
@@ -496,6 +580,13 @@ textRegionAdopted: false
 textRegionSelectionReason: fallbackToFusedText
 textRegionRejectionReasons: sameAsFusedText
 textRegionCropBBox: [360,931,156,158]
+textRegionClampSource: contentRect
+textRegionSubRegionID: nil
+textRegionSubRegionBBox: [nil]
+textRegionSubRegionCoverage: nil
+textRegionSubRegionRejectedReason: noSubRegion
+textRegionCropBBoxBeforeSubRegionClamp: [360,931,156,158]
+textRegionCropBBoxAfterSubRegionClamp: [360,931,156,158]
 textRegionWordPreservation: 1.000
 textRegionQualityScore: 0.804 -> 0.804
 safeLayoutRect: [370,969,136,82]

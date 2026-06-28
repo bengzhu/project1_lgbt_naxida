@@ -1505,6 +1505,7 @@ final class TranslationSessionStore: ObservableObject {
                 var fusionResults: [MangaOverlayFusionResult] = []
                 var postFusionCleanup: MangaOverlayPostFusionCleanupReport?
                 var textRegionCropReport: MangaOverlayTextRegionCropReport?
+                var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
                 if !groundTruth.isEmpty {
                     let bubbleProbe = try await self.mangaOverlayProbeService.runBubbleFirstProbe(
@@ -1580,11 +1581,17 @@ final class TranslationSessionStore: ObservableObject {
                         blockIndex: recognized.blocks.indices.first,
                         options: probeConfiguration.preprocessing
                     )
+                    bubbleSubRegionReport = Self.makeBubbleSubRegionReport(
+                        blocks: probeBlocks,
+                        bubbleGeometry: recognized.bubbleGeometry,
+                        image: recognized.image
+                    )
                     self.mangaOverlayProbeMessage = "正在运行 TextRegion crop OCR 候选层"
                     let textRegionCrop = try await self.applyTextRegionCropCandidates(
                         to: probeBlocks,
                         image: recognized.image,
                         bubbleGeometry: recognized.bubbleGeometry,
+                        bubbleSubRegionReport: bubbleSubRegionReport,
                         recognizedBlocks: recognized.blocks,
                         groundTruth: groundTruth,
                         preprocessing: probeConfiguration.preprocessing
@@ -1701,6 +1708,7 @@ final class TranslationSessionStore: ObservableObject {
                     fusionComparison: fusionComparison,
                     fusionResults: fusionResults,
                     textRegionCropReport: textRegionCropReport,
+                    bubbleSubRegionReport: bubbleSubRegionReport,
                     cleanTextDiagnostic: cleanTextDiagnostic,
                     batchTranslationComparison: batchTranslationComparison,
                     deterministicDecodingCheck: deterministicDecodingCheck,
@@ -2225,11 +2233,13 @@ final class TranslationSessionStore: ObservableObject {
         to blocks: [MangaOverlayProbeBlock],
         image: CGImage,
         bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?,
         recognizedBlocks: [MangaOverlayOCRBlock],
         groundTruth: [MangaGroundTruthEntry],
         preprocessing: MangaOverlayPreprocessingOptions
     ) async throws -> (blocks: [MangaOverlayProbeBlock], report: MangaOverlayTextRegionCropReport) {
         let bubbleBBoxes = Dictionary(uniqueKeysWithValues: bubbleGeometry.bubbles.map { ($0.id, $0.bbox) })
+        let subRegionsByBlock = Self.subRegionDiagnosticsByBlock(from: bubbleSubRegionReport)
         var updatedBlocks: [MangaOverlayProbeBlock] = []
         var diagnostics: [MangaOverlayTextRegionCropDiagnostic] = []
 
@@ -2238,10 +2248,13 @@ final class TranslationSessionStore: ObservableObject {
             let sourceIndex = Self.wholePageSourceIndex(for: block)
             let wholePageText = sourceIndex.flatMap { recognizedBlocks.indices.contains($0) ? recognizedBlocks[$0].text : nil }
                 ?? block.rawOcrText
+            let subRegion = subRegionsByBlock[block.index]
+            let subRegionBBox = subRegion?.clampEligible == true ? subRegion?.bbox : nil
             let crop = try await mangaOverlayProbeService.recognizeTextRegionCrop(
                 in: image,
                 seedBBox: block.bbox,
                 bubbleBBox: block.bubbleID.flatMap { bubbleBBoxes[$0] },
+                subRegionBBox: subRegionBBox,
                 options: preprocessing
             )
             let decision = Self.evaluateTextRegionCropSelection(
@@ -2254,6 +2267,16 @@ final class TranslationSessionStore: ObservableObject {
             var notes = updated.ocrProbeNotes
             notes.append("textRegionCropSource=\(source)")
             notes.append("textRegionCropText=\(crop.text?.replacing("\n", with: " / ") ?? "nil")")
+            notes.append("textRegionClampSource=\(crop.clampSource)")
+            if let subRegion {
+                notes.append("textRegionSubRegionID=\(subRegion.id)")
+                notes.append("textRegionSubRegionClampEligible=\(subRegion.clampEligible)")
+                if !subRegion.rejectionReasons.isEmpty {
+                    notes.append("textRegionSubRegionRejections=\(subRegion.rejectionReasons.joined(separator: ","))")
+                }
+            } else {
+                notes.append("textRegionSubRegionRejected=noSubRegion")
+            }
             notes.append("textRegionCropSelected=\(decision.adopted)")
             notes.append("textRegionCropSelectionReason=\(decision.selectionReason)")
             if !decision.rejectionReasons.isEmpty {
@@ -2287,6 +2310,13 @@ final class TranslationSessionStore: ObservableObject {
                     seedBBox: block.bbox,
                     regionBBox: crop.regionBBox,
                     cropBBox: crop.cropBBox,
+                    clampSource: crop.clampSource,
+                    subRegionID: subRegion?.id,
+                    subRegionBBox: subRegion?.bbox,
+                    subRegionCoverageRatio: subRegion?.seedCoverageRatio,
+                    subRegionRejectedReason: subRegion?.rejectionReasons.joined(separator: ",") ?? (subRegion == nil ? "noSubRegion" : nil),
+                    cropBBoxBeforeSubRegionClamp: crop.cropBBoxBeforeSubRegionClamp,
+                    cropBBoxAfterSubRegionClamp: crop.cropBBoxAfterSubRegionClamp,
                     cropClampedByBubble: crop.cropClampedByBubble,
                     paddingX: crop.paddingX,
                     paddingY: crop.paddingY,
@@ -2323,12 +2353,131 @@ final class TranslationSessionStore: ObservableObject {
             mainRejectionReasons: rejectionCounts,
             diagnostics: diagnostics,
             notes: [
-                "TextRegion crop OCR uses post-fusion block bbox as seed and clamps to assigned bubble bbox or content rect",
+                "TextRegion crop OCR uses post-fusion block bbox as seed and clamps to block-local subregion when eligible, otherwise assigned bubble bbox or content rect",
                 "selection uses word preservation, text similarity, word count, Latin/symbol ratios, OCR error heuristics, and crop clamp signals only",
-                "ground truth is used only after selection to refresh evaluation metrics"
+                "ground truth is used only after selection to refresh evaluation metrics",
+                "subregion clamp does not loosen crop adoption guardrails"
             ]
         )
         return (updatedBlocks, report)
+    }
+
+    private static func makeBubbleSubRegionReport(
+        blocks: [MangaOverlayProbeBlock],
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        image: CGImage
+    ) -> MangaOverlayBubbleSubRegionReport {
+        let bubbleBBoxes = Dictionary(uniqueKeysWithValues: bubbleGeometry.bubbles.map { ($0.id, $0.bbox) })
+        let oversizedBubbleIDs = bubbleGeometry.bubbleAudits
+            .filter(\.bubbleSplitCandidate)
+            .map(\.bubbleID)
+            .sorted()
+        let oversizedSet = Set(oversizedBubbleIDs)
+        let contentRect = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+        var nextID = 0
+        var diagnostics: [MangaOverlayBubbleSubRegionDiagnostic] = []
+
+        for block in blocks {
+            guard let bubbleID = block.bubbleID,
+                  let parentBBox = bubbleBBoxes[bubbleID] else { continue }
+            let parentRect = rect(from: parentBBox).intersection(contentRect)
+            let seedRect = rect(from: block.bbox).intersection(contentRect)
+            guard !parentRect.isNull, !seedRect.isNull, parentRect.width >= 2, parentRect.height >= 2 else { continue }
+
+            let isOversized = oversizedSet.contains(bubbleID)
+            let estimatedFontSize = max(6, min(seedRect.width, seedRect.height))
+            let horizontalPadding = isOversized
+                ? max(8, min(estimatedFontSize * 0.95, seedRect.width * 0.85))
+                : max(5, min(estimatedFontSize * 0.45, seedRect.width * 0.45))
+            let verticalPadding = isOversized
+                ? max(8, min(estimatedFontSize * 1.20, seedRect.height * 0.70))
+                : max(6, min(estimatedFontSize * 0.65, seedRect.height * 0.55))
+            let expandedSeed = seedRect.insetBy(dx: -horizontalPadding, dy: -verticalPadding)
+            let subRect = clamp(expandedSeed, to: parentRect).intersection(contentRect).integral
+            let seedIntersection = subRect.intersection(seedRect)
+            let seedCoverage = area(of: seedIntersection) / max(area(of: seedRect), 1)
+            let parentCoverage = area(of: subRect) / max(area(of: parentRect), 1)
+
+            var rejectionReasons: [String] = []
+            if !isOversized {
+                rejectionReasons.append("parentBubbleNotOversized")
+            }
+            if subRect.width < max(12, seedRect.width * 0.72) || subRect.height < max(12, seedRect.height * 0.72) {
+                rejectionReasons.append("subRegionTooSmall")
+            }
+            if seedCoverage < 0.92 {
+                rejectionReasons.append("seedCoverageTooLow")
+            }
+            if parentCoverage >= 0.88 {
+                rejectionReasons.append("subRegionTooCloseToParentBubble")
+            }
+            if seedRect.width / max(seedRect.height, 1) > 8 || seedRect.height / max(seedRect.width, 1) > 8 {
+                rejectionReasons.append("seedAspectExtreme")
+            }
+
+            let overlapsSibling = diagnostics.contains { existing in
+                existing.parentBubbleID == bubbleID
+                    && rect(from: existing.bbox).intersection(subRect).isNull == false
+                    && area(of: rect(from: existing.bbox).intersection(subRect)) / max(min(area(of: rect(from: existing.bbox)), area(of: subRect)), 1) > 0.62
+            }
+            if overlapsSibling {
+                rejectionReasons.append("overlapsSiblingSubRegion")
+            }
+
+            let clampEligible = rejectionReasons.isEmpty
+            var notes = [
+                "generatedFromFusedBlockSeedBBox",
+                isOversized ? "oversizedParentBubble" : "diagnosticOnlyParentBubble"
+            ]
+            if !clampEligible {
+                notes.append("notUsedForClamp")
+            }
+
+            diagnostics.append(
+                MangaOverlayBubbleSubRegionDiagnostic(
+                    id: nextID,
+                    parentBubbleID: bubbleID,
+                    bbox: bboxArray(from: subRect),
+                    seedBlockIndexes: [block.index],
+                    seedTextRegionIndexes: [],
+                    source: isOversized ? "oversizedBubbleBlockSeed" : "blockSeedDiagnostic",
+                    area: area(of: subRect),
+                    parentCoverageRatio: parentCoverage,
+                    seedCoverageRatio: seedCoverage,
+                    confidence: clampEligible ? 0.72 : 0.38,
+                    clampEligible: clampEligible,
+                    rejectionReasons: rejectionReasons,
+                    notes: notes
+                )
+            )
+            nextID += 1
+        }
+
+        return MangaOverlayBubbleSubRegionReport(
+            enabled: true,
+            totalSubRegions: diagnostics.count,
+            clampEligibleCount: diagnostics.filter(\.clampEligible).count,
+            oversizedBubbleIDs: oversizedBubbleIDs,
+            diagnostics: diagnostics,
+            notes: [
+                "lightweight BubbleMask approximation derived from fused block seed bbox and parent bubble bbox",
+                "only oversized bubble subregions with enough seed coverage and smaller-than-parent area are eligible for TextRegion crop clamp",
+                "ground truth is not used to generate, rank, reject, or adopt subregions"
+            ]
+        )
+    }
+
+    private static func subRegionDiagnosticsByBlock(
+        from report: MangaOverlayBubbleSubRegionReport?
+    ) -> [Int: MangaOverlayBubbleSubRegionDiagnostic] {
+        guard let report else { return [:] }
+        var result: [Int: MangaOverlayBubbleSubRegionDiagnostic] = [:]
+        for diagnostic in report.diagnostics {
+            for index in diagnostic.seedBlockIndexes where result[index] == nil {
+                result[index] = diagnostic
+            }
+        }
+        return result
     }
 
     private static func evaluateTextRegionCropSelection(
@@ -4050,6 +4199,7 @@ final class TranslationSessionStore: ObservableObject {
         fusionComparison: MangaOverlayFusionComparison? = nil,
         fusionResults: [MangaOverlayFusionResult] = [],
         textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
+        bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         cleanTextDiagnostic: MangaCleanTextDiagnosticReport? = nil,
         batchTranslationComparison: MangaBatchTranslationComparison? = nil,
         deterministicDecodingCheck: MangaDeterministicDecodingCheck? = nil,
@@ -4107,6 +4257,7 @@ final class TranslationSessionStore: ObservableObject {
             fusionComparison: fusionComparison,
             fusionResults: fusionResults,
             textRegionCropReport: textRegionCropReport,
+            bubbleSubRegionReport: bubbleSubRegionReport,
             cleanTextDiagnostic: cleanTextDiagnostic,
             batchTranslationComparison: batchTranslationComparison,
             deterministicDecodingCheck: deterministicDecodingCheck,
@@ -5067,6 +5218,22 @@ final class TranslationSessionStore: ObservableObject {
     private static func rect(from bbox: [Double]) -> CGRect {
         guard bbox.count == 4 else { return .zero }
         return CGRect(x: bbox[0], y: bbox[1], width: bbox[2], height: bbox[3]).standardized
+    }
+
+    private static func clamp(_ rect: CGRect, to bounds: CGRect) -> CGRect {
+        let minX = max(bounds.minX, rect.minX)
+        let minY = max(bounds.minY, rect.minY)
+        let maxX = min(bounds.maxX, rect.maxX)
+        let maxY = min(bounds.maxY, rect.maxY)
+        guard maxX >= minX, maxY >= minY else {
+            return .zero
+        }
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
+    private static func area(of rect: CGRect) -> Double {
+        guard !rect.isNull, rect.width > 0, rect.height > 0 else { return 0 }
+        return Double(rect.width * rect.height)
     }
 
     private static func rectIoU(_ lhs: CGRect, _ rhs: CGRect) -> Double {

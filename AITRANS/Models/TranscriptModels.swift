@@ -1045,6 +1045,13 @@ struct MangaOverlayTextRegionCropDiagnostic: Equatable, Codable, Sendable {
     var seedBBox: [Double]
     var regionBBox: [Double]
     var cropBBox: [Double]
+    var clampSource: String
+    var subRegionID: Int?
+    var subRegionBBox: [Double]?
+    var subRegionCoverageRatio: Double?
+    var subRegionRejectedReason: String?
+    var cropBBoxBeforeSubRegionClamp: [Double]
+    var cropBBoxAfterSubRegionClamp: [Double]
     var cropClampedByBubble: Bool
     var paddingX: Double
     var paddingY: Double
@@ -1071,6 +1078,31 @@ struct MangaOverlayTextRegionCropReport: Equatable, Codable, Sendable {
     var rejectedBlockIndexes: [Int]
     var mainRejectionReasons: [String: Int]
     var diagnostics: [MangaOverlayTextRegionCropDiagnostic]
+    var notes: [String]
+}
+
+struct MangaOverlayBubbleSubRegionDiagnostic: Equatable, Codable, Sendable {
+    var id: Int
+    var parentBubbleID: Int
+    var bbox: [Double]
+    var seedBlockIndexes: [Int]
+    var seedTextRegionIndexes: [Int]
+    var source: String
+    var area: Double
+    var parentCoverageRatio: Double
+    var seedCoverageRatio: Double
+    var confidence: Double
+    var clampEligible: Bool
+    var rejectionReasons: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayBubbleSubRegionReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var totalSubRegions: Int
+    var clampEligibleCount: Int
+    var oversizedBubbleIDs: [Int]
+    var diagnostics: [MangaOverlayBubbleSubRegionDiagnostic]
     var notes: [String]
 }
 
@@ -1159,6 +1191,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var fusionComparison: MangaOverlayFusionComparison?
     var fusionResults: [MangaOverlayFusionResult]
     var textRegionCropReport: MangaOverlayTextRegionCropReport?
+    var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
     var batchTranslationComparison: MangaBatchTranslationComparison?
     var deterministicDecodingCheck: MangaDeterministicDecodingCheck?

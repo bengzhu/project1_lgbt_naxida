@@ -139,6 +139,11 @@ python3 -m json.tool test/1.ground_truth.json
 - `textRegionCropReport.cropSucceededCount = 10`
 - `textRegionCropReport.adoptedCount = 0`
 - `textRegionCropReport.rejectedCount = 13`
+- `bubbleSubRegionReport.totalSubRegions = 11`
+- `bubbleSubRegionReport.clampEligibleCount = 2`
+- `bubbleSubRegionReport.oversizedBubbleIDs = [4, 6, 7]`
+- `textRegionCropReport.clampSources = { bubbleBBox: 9, contentRect: 2, subRegion: 2 }`
+- `subRegion` clamp 实际用于块 `[6, 8]`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
 - `failedBlocks = 12`

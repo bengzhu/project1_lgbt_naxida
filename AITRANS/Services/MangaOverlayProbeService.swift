@@ -252,6 +252,9 @@ struct MangaOverlayTextRegionCropResult: Equatable, Sendable {
     var text: String?
     var regionBBox: [Double]
     var cropBBox: [Double]
+    var clampSource: String
+    var cropBBoxBeforeSubRegionClamp: [Double]
+    var cropBBoxAfterSubRegionClamp: [Double]
     var cropClampedByBubble: Bool
     var paddingX: Double
     var paddingY: Double
@@ -434,6 +437,7 @@ struct MangaOverlayProbeService: Sendable {
         in image: CGImage,
         seedBBox: [Double],
         bubbleBBox: [Double]?,
+        subRegionBBox: [Double]? = nil,
         options: MangaOverlayPreprocessingOptions = .defaultValue,
         cropping: MangaOverlayProbeCropping = .defaultValue
     ) async throws -> MangaOverlayTextRegionCropResult {
@@ -446,6 +450,9 @@ struct MangaOverlayProbeService: Sendable {
                     text: nil,
                     regionBBox: seedBBox,
                     cropBBox: Self.bboxArray(from: seedRect),
+                    clampSource: "contentRect",
+                    cropBBoxBeforeSubRegionClamp: Self.bboxArray(from: seedRect),
+                    cropBBoxAfterSubRegionClamp: Self.bboxArray(from: seedRect),
                     cropClampedByBubble: false,
                     paddingX: 0,
                     paddingY: 0,
@@ -463,21 +470,41 @@ struct MangaOverlayProbeService: Sendable {
                 : max(7, min(estimatedFontSize * 0.88, seedRect.height * 0.72))
             let regionRect = seedRect.insetBy(dx: -paddingX, dy: -paddingY)
 
-            let cropLimit: CGRect
+            let fallbackLimit: CGRect
             if let bubbleBBox {
                 let bubbleRect = Self.rect(from: bubbleBBox).intersection(bounds)
-                cropLimit = bubbleRect.isNull ? contentBounds : bubbleRect.intersection(contentBounds)
+                fallbackLimit = bubbleRect.isNull ? contentBounds : bubbleRect.intersection(contentBounds)
             } else {
-                cropLimit = contentBounds
+                fallbackLimit = contentBounds
             }
+            let fallbackCropRect = Self.clamp(regionRect, to: fallbackLimit).integral
+            let subRegionLimit: CGRect?
+            if let subRegionBBox {
+                let rect = Self.rect(from: subRegionBBox).intersection(contentBounds)
+                subRegionLimit = rect.isNull || rect.width < 2 || rect.height < 2 ? nil : rect
+            } else {
+                subRegionLimit = nil
+            }
+            let cropLimit = subRegionLimit ?? fallbackLimit
             let cropRect = Self.clamp(regionRect, to: cropLimit).integral
-            let clampedByBubble = bubbleBBox != nil && !regionRect.integral.equalTo(cropRect)
+            let clampSource: String
+            if subRegionLimit != nil {
+                clampSource = "subRegion"
+            } else if bubbleBBox != nil {
+                clampSource = "bubbleBBox"
+            } else {
+                clampSource = "contentRect"
+            }
+            let clampedByBubble = clampSource != "contentRect" && !regionRect.integral.equalTo(cropRect)
             let text = try Self.recognizePreprocessedText(in: image, cropRect: cropRect, options: options)
 
             return MangaOverlayTextRegionCropResult(
                 text: text,
                 regionBBox: Self.bboxArray(from: Self.clamp(regionRect, to: contentBounds).integral),
                 cropBBox: Self.bboxArray(from: cropRect),
+                clampSource: clampSource,
+                cropBBoxBeforeSubRegionClamp: Self.bboxArray(from: fallbackCropRect),
+                cropBBoxAfterSubRegionClamp: Self.bboxArray(from: cropRect),
                 cropClampedByBubble: clampedByBubble,
                 paddingX: Double(paddingX),
                 paddingY: Double(paddingY),
@@ -1065,6 +1092,13 @@ struct MangaOverlayProbeService: Sendable {
             let textRegionCrop = textRegion?.textRegionCropText?.replacing("\n", with: " / ") ?? "nil"
             let textRegionSelected = textRegion?.selectedText.replacing("\n", with: " / ") ?? "nil"
             let textRegionCropBBox = textRegion?.cropBBox.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let textRegionClampSource = textRegion?.clampSource ?? "nil"
+            let textRegionSubRegionID = textRegion?.subRegionID.map(String.init) ?? "nil"
+            let textRegionSubRegionBBox = textRegion?.subRegionBBox?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let textRegionSubRegionCoverage = textRegion?.subRegionCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let textRegionSubRegionRejected = textRegion?.subRegionRejectedReason ?? "nil"
+            let textRegionCropBeforeSubRegion = textRegion?.cropBBoxBeforeSubRegionClamp.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let textRegionCropAfterSubRegion = textRegion?.cropBBoxAfterSubRegionClamp.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
             let textRegionReasons = textRegion?.rejectionReasons.joined(separator: " | ") ?? "nil"
             let textRegionPreservation = textRegion?.rawWordPreservationRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let textRegionQuality = textRegion.map {
@@ -1089,6 +1123,13 @@ struct MangaOverlayProbeService: Sendable {
             textRegionSelectionReason: \(textRegion?.selectionReason ?? "nil")
             textRegionRejectionReasons: \(textRegionReasons)
             textRegionCropBBox: [\(textRegionCropBBox)]
+            textRegionClampSource: \(textRegionClampSource)
+            textRegionSubRegionID: \(textRegionSubRegionID)
+            textRegionSubRegionBBox: [\(textRegionSubRegionBBox)]
+            textRegionSubRegionCoverage: \(textRegionSubRegionCoverage)
+            textRegionSubRegionRejectedReason: \(textRegionSubRegionRejected)
+            textRegionCropBBoxBeforeSubRegionClamp: [\(textRegionCropBeforeSubRegion)]
+            textRegionCropBBoxAfterSubRegionClamp: [\(textRegionCropAfterSubRegion)]
             textRegionWordPreservation: \(textRegionPreservation)
             textRegionQualityScore: \(textRegionQuality)
             safeLayoutRect: [\(safeLayout)]
