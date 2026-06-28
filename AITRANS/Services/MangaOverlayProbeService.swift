@@ -528,7 +528,7 @@ struct MangaOverlayProbeService: Sendable {
         bubbleTextOverlayImagePath: String? = nil
     ) async throws -> MangaOverlayProbeOutputFiles {
         try await Task.detached(priority: .userInitiated) {
-            _ = try Self.recreateDirectory(outputDirectory)
+            try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
 
             let debugURL = outputDirectory.appendingPathComponent("1_debug_boxes.png")
             let overlayURL = outputDirectory.appendingPathComponent("1_translated_overlay.png")
@@ -864,6 +864,7 @@ struct MangaOverlayProbeService: Sendable {
                 MangaOverlayBubbleResult(
                     index: offset,
                     bbox: result.bbox,
+                    bubbleID: result.bubbleID,
                     source: result.source,
                     text: result.text,
                     bestGroundTruthIndex: result.bestGroundTruthIndex,
@@ -1082,6 +1083,7 @@ struct MangaOverlayProbeService: Sendable {
             return MangaOverlayBubbleResult(
                 index: bubble.index,
                 bbox: [globalRect.minX, globalRect.minY, globalRect.width, globalRect.height].map(Double.init),
+                bubbleID: bubble.index,
                 source: "\(bubble.source):split",
                 text: block.text,
                 bestGroundTruthIndex: match.index,
@@ -1098,14 +1100,23 @@ struct MangaOverlayProbeService: Sendable {
         let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return false }
         let normalized = normalizedOCRText(text)
-        guard normalized.count >= 8 || (normalized.count >= 5 && result.bestSimilarity >= 0.6) else { return false }
+        let words = normalized
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+        let latinLetters = normalized.unicodeScalars.count { scalar in
+            (0x41...0x5A).contains(Int(scalar.value)) || (0x61...0x7A).contains(Int(scalar.value))
+        }
+        guard normalized.count >= 8 || (normalized.count >= 5 && words.count >= 2) else { return false }
         let rect = CGRect(
             x: result.bbox.indices.contains(0) ? result.bbox[0] : 0,
             y: result.bbox.indices.contains(1) ? result.bbox[1] : 0,
             width: result.bbox.indices.contains(2) ? result.bbox[2] : 0,
             height: result.bbox.indices.contains(3) ? result.bbox[3] : 0
         )
-        if result.bestSimilarity < 0.45, (normalized.count < 18 || rect.width * rect.height < 1500) {
+        if latinLetters == 0 {
+            return false
+        }
+        if words.count < 2, (normalized.count < 18 || rect.width * rect.height < 1500) {
             return false
         }
         return true

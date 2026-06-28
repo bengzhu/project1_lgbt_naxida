@@ -171,6 +171,7 @@ test/
 - `lexiconComparison`：同图同参数下 Vision `customWords` 开/关对比，记录总块数和发生变化的块编号。
 - `visionAPIComparison`：旧 `VNRecognizeTextRequest` 与 iOS 18+ Swift 原生 `RecognizeTextRequest` 的 0° OCR 对比。当前只作为独立探针，不替换主流程。
 - `frameworkComparison`：整页 OCR 与 bubble-first 对照。差集列表、交集数量和汇总准确率都从最终明细现场计算，`consistencyPassed` 必须为 `true`；如果计数和列表不一致，会写入 `consistencyWarnings`。
+- `fusionComparison` / `fusionResults`：whole-page 与 bubble-first 的融合主流程审计。候选选择只用 bbox、bubbleID、文本相似度、OCR 置信度和文本质量等无真值信号；ground truth 只用于事后评估。报告会记录被选来源、竞争候选、替换原因和拒绝原因。
 - `cleanTextDiagnostic` / `output/clean_text_diagnostic.json`：跳过 OCR，直接把 `test/1.ground_truth.json` 中的 dialogue 真值送入当前翻译链路，用于判断失败来自 OCR 噪声还是当前 Local 模型/判定链路。
 - `overallPassed`：至少 1 个块、所有块通过质量判定、两张 PNG 非空才为 `true`。
 - `outputDirectoryCleaned` / `retainedOutputFiles` / `outputCleanupPolicy`：记录本轮输出目录是否按清理策略重建，以及本轮最终保留的 PNG/JSON 文件名。
@@ -400,6 +401,8 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v9 词表重测：当前完整流程默认词表为 `Senpai`、`City Battler`、`Tournament`、`Ren`、`Battler`，本轮 `lexiconComparison` 显示开/关词表总块数均为 14，`changedBlockIndexes = []`。因此涉及 `IVE ARRIVED AT REN- SENPAI'S HOUSE.`、`THE CITY RATTLER / STATE IN A PEN DAYS.`、`LET'S / BATTLER!`、`THIS IS AN / TOURNAMENT...`、`SUGSESTION... REN- / HOUSE.`、`SENPAIS SENPArS LOSIC.` 的最终合并 OCR 文本在开/关词表下没有变化；这条路在当前流程再次确认基本无效。
 - 本次未提交工作区 v9 决策：不把确定性 OCR 纠错候选纳入主流程。本轮确定性候选改善块为 `[2,4,7,8,10,12]`，但真正明显修对且可翻译通过的只有 `[2,4]`；`#7 GET RESULTS / SAVING CLUE...`、`#10 PLAY ONLINE...` 仍是碎片或低相似，`#12` 会把 `SENPAIS SENPArS` 双重修成 `SENPAI'S SENPAI'S`，仍不是干净原文。LLM 纠错护栏反例 `XQZ 12 /// -> The City Battler Tournament starts in a few days.` 仍被拒绝，原因 `长度变化 390% 超过 30%`，但确定性规则本身缺少独立长度/词数护栏。因此本轮属于诊断为主，只保留对照，不替换 `finalTextUsedForTranslation`。
 - 本次未提交工作区 v9 实测指标：`totalBlocksDetected = 14`、可信匹配 `10`、未匹配 `4`、核心对话 OCR 相似度 `0.6131`、装饰标题 `0.8000`、`wholePage.accuracyVsGroundTruth = 0.6131`、`bubbleFirst.accuracyVsGroundTruth = 0.7397`、`frameworkComparison.consistencyPassed = true`、`cleanTextDiagnostic.passRate = 0.4545`、`passedBlocks = 1`、`failedBlocks = 13`、`translationFailureBreakdown = { ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`、`likelyRuleFalseFailureBlocks = []`。已导出最新 `output/`，并把 v9 追加到 `metrics/version_history.csv`。
+- 本次未提交工作区 v10：实现 whole-page + bubble-first 融合主流程。融合保留 whole-page 独有 `Let's Battle!`，同时纳入 bubble-first 独有的 `What are you even talking about?` 和 `We need to get results at this tournament to save the gaming club from being disbanded.`；`probe_report.json` 新增 `fusionComparison` 和 `fusionResults`，可审计每块来源、竞争候选和拒绝原因。选择逻辑不使用 ground truth。
+- 本次未提交工作区 v10 实测指标：iPhone 17 Pro 模拟器重新跑 `test/1.png` 并导出，`configuration.currentBlockSource = fusedWholePageBubble`，`totalBlocksDetected = 16`、可信匹配 `13`、未匹配 `3`、核心对话 OCR 相似度 `0.7106`、装饰标题 `0.8000`、`frameworkComparison.consistencyPassed = true`、`fusionComparison.consistencyPassed = true`、`fusion.fused.accuracyVsGroundTruth = 0.7384`、`cleanTextDiagnostic.passRate = 0.4545`、`passedBlocks = 1`、`failedBlocks = 15`、`translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`、`likelyRuleFalseFailureBlocks = []`。块数从 14 到 16 是融合纳入真实 bubble-only 内容导致，不是无解释暴涨。
 
 ## 后续对话指引
 

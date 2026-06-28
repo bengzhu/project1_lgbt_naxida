@@ -1438,7 +1438,7 @@ final class TranslationSessionStore: ObservableObject {
                 let data = try Data(contentsOf: url)
                 self.mangaOverlayProbeState = .recognizing
                 self.mangaOverlayProbeMessage = "正在用 0/90/180/270 多角度 Vision OCR"
-                let probeConfiguration = MangaOverlayProbeConfiguration.defaultValue
+                var probeConfiguration = MangaOverlayProbeConfiguration.defaultValue
                 let activeCustomWords = probeConfiguration.customLexiconEnabled ? probeConfiguration.customLexicon : []
                 let recognized = try await self.mangaOverlayProbeService.recognizeTextBlocks(
                     in: data,
@@ -1458,7 +1458,7 @@ final class TranslationSessionStore: ObservableObject {
                 )
 
                 let groundTruth = self.loadMangaGroundTruth()
-                var probeBlocks = recognized.blocks.enumerated().map { index, block in
+                let rawWholePageBlocks = recognized.blocks.enumerated().map { index, block in
                     let match = MangaOverlayProbeService.bestGroundTruthMatch(text: block.text, groundTruth: groundTruth)
                     let matchIndex = match.index
                     return MangaOverlayProbeBlock(
@@ -1498,15 +1498,53 @@ final class TranslationSessionStore: ObservableObject {
                         )
                     )
                 }
+                var probeBlocks = rawWholePageBlocks
+                var rawBubbleComparison: MangaOverlayFrameworkComparison?
+                var frameworkComparison: MangaOverlayFrameworkComparison?
+                var fusionComparison: MangaOverlayFusionComparison?
+                var fusionResults: [MangaOverlayFusionResult] = []
+                var outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
+                if !groundTruth.isEmpty {
+                    let bubbleProbe = try await self.mangaOverlayProbeService.runBubbleFirstProbe(
+                        imageData: data,
+                        groundTruth: groundTruth,
+                        preprocessing: probeConfiguration.preprocessing,
+                        customWords: activeCustomWords,
+                        outputDirectory: self.mangaOverlayOutputDirectory
+                    )
+                    outputFiles.bubbleDebugImage = bubbleProbe.debugPath
+                    outputFiles.bubbleCropsImage = bubbleProbe.cropsPath
+                    outputFiles.bubbleSeedDebugImage = bubbleProbe.seedDebugPath
+                    outputFiles.bubbleTextOverlayImage = bubbleProbe.textOverlayPath
+                    rawBubbleComparison = bubbleProbe.comparison
+                    let fusion = self.fuseMangaProbeBlocks(
+                        wholePageBlocks: rawWholePageBlocks,
+                        bubbleResults: bubbleProbe.comparison.bubbleResults,
+                        groundTruth: groundTruth
+                    )
+                    probeBlocks = fusion.blocks
+                    fusionResults = fusion.results
+                    probeConfiguration.status = "current pipeline uses fused whole-page Vision OCR and bubble-first OCR candidates with ground-truth-free selection"
+                    probeConfiguration.currentBlockSource = "fusedWholePageBubble"
+                }
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 var cropFallbackSelfTest: MangaOverlayCropFallbackSelfTest?
                 if probeConfiguration.preprocessing.enabled {
                     self.mangaOverlayProbeMessage = "正在对 \(probeBlocks.count) 个文本块做裁切放大预处理 OCR"
                     for index in probeBlocks.indices {
+                        guard let sourceIndex = Self.wholePageSourceIndex(for: probeBlocks[index]),
+                              recognized.blocks.indices.contains(sourceIndex) else {
+                            probeBlocks[index].finalTextUsedForTranslation = probeBlocks[index].rawOcrText
+                            probeBlocks[index] = self.applyDeterministicMangaOCRCorrection(
+                                to: probeBlocks[index],
+                                groundTruth: groundTruth
+                            )
+                            continue
+                        }
                         let cropResult = try await self.mangaOverlayProbeService.recognizePreprocessedText(
                             in: recognized.image,
-                            block: recognized.blocks[index],
+                            block: recognized.blocks[sourceIndex],
                             options: probeConfiguration.preprocessing
                         )
                         probeBlocks[index].adaptivePreprocessingOcrText = cropResult.adaptiveText
@@ -1588,30 +1626,34 @@ final class TranslationSessionStore: ObservableObject {
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
-                var outputFiles = try await self.mangaOverlayProbeService.renderOutputs(
+                let renderedOutputFiles = try await self.mangaOverlayProbeService.renderOutputs(
                     image: recognized.image,
                     blocks: probeBlocks,
                     outputDirectory: self.mangaOverlayOutputDirectory,
                     preprocessing: probeConfiguration.preprocessing
                 )
+                outputFiles.debugBoxesImage = renderedOutputFiles.debugBoxesImage
+                outputFiles.overlayImage = renderedOutputFiles.overlayImage
+                outputFiles.ocrTextOverlayImage = renderedOutputFiles.ocrTextOverlayImage
+                outputFiles.deterministicCorrectionOverlayImage = renderedOutputFiles.deterministicCorrectionOverlayImage
+                outputFiles.deterministicTranslationOverlayImage = renderedOutputFiles.deterministicTranslationOverlayImage
+                outputFiles.blockCropsImage = renderedOutputFiles.blockCropsImage
+                outputFiles.preprocessedContentImage = renderedOutputFiles.preprocessedContentImage
+                outputFiles.ocrProbeTextFile = renderedOutputFiles.ocrProbeTextFile
                 let wholePageProcessingTimeMs = Int(Date.now.timeIntervalSince(startedAt) * 1000)
-                var frameworkComparison: MangaOverlayFrameworkComparison?
-                if !groundTruth.isEmpty {
-                    let bubbleProbe = try await self.mangaOverlayProbeService.runBubbleFirstProbe(
-                        imageData: data,
-                        groundTruth: groundTruth,
-                        preprocessing: probeConfiguration.preprocessing,
-                        customWords: activeCustomWords,
-                        outputDirectory: self.mangaOverlayOutputDirectory
-                    )
-                    outputFiles.bubbleDebugImage = bubbleProbe.debugPath
-                    outputFiles.bubbleCropsImage = bubbleProbe.cropsPath
-                    outputFiles.bubbleSeedDebugImage = bubbleProbe.seedDebugPath
-                    outputFiles.bubbleTextOverlayImage = bubbleProbe.textOverlayPath
+                if let rawBubbleComparison {
                     frameworkComparison = self.makeFrameworkComparison(
-                        wholePageBlocks: probeBlocks,
+                        wholePageBlocks: rawWholePageBlocks,
                         wholePageProcessingTimeMs: wholePageProcessingTimeMs,
-                        bubbleComparison: bubbleProbe.comparison,
+                        bubbleComparison: rawBubbleComparison,
+                        groundTruth: groundTruth
+                    )
+                    fusionComparison = self.makeFusionComparison(
+                        wholePageBlocks: rawWholePageBlocks,
+                        bubbleComparison: rawBubbleComparison,
+                        fusedBlocks: probeBlocks,
+                        fusionResults: fusionResults,
+                        wholePageProcessingTimeMs: wholePageProcessingTimeMs,
                         groundTruth: groundTruth
                     )
                 }
@@ -1636,6 +1678,8 @@ final class TranslationSessionStore: ObservableObject {
                     lexiconComparison: lexiconComparison,
                     visionAPIComparison: visionAPIComparison,
                     frameworkComparison: frameworkComparison,
+                    fusionComparison: fusionComparison,
+                    fusionResults: fusionResults,
                     cleanTextDiagnostic: cleanTextDiagnostic,
                     batchTranslationComparison: batchTranslationComparison,
                     deterministicDecodingCheck: deterministicDecodingCheck,
@@ -3770,6 +3814,8 @@ final class TranslationSessionStore: ObservableObject {
         lexiconComparison: MangaOverlayLexiconComparison? = nil,
         visionAPIComparison: MangaOverlayVisionAPIComparison? = nil,
         frameworkComparison: MangaOverlayFrameworkComparison? = nil,
+        fusionComparison: MangaOverlayFusionComparison? = nil,
+        fusionResults: [MangaOverlayFusionResult] = [],
         cleanTextDiagnostic: MangaCleanTextDiagnosticReport? = nil,
         batchTranslationComparison: MangaBatchTranslationComparison? = nil,
         deterministicDecodingCheck: MangaDeterministicDecodingCheck? = nil,
@@ -3797,6 +3843,9 @@ final class TranslationSessionStore: ObservableObject {
         if let frameworkComparison, !frameworkComparison.consistencyPassed {
             warnings.append(contentsOf: frameworkComparison.consistencyWarnings)
         }
+        if let fusionComparison, !fusionComparison.consistencyPassed {
+            warnings.append(contentsOf: fusionComparison.consistencyWarnings)
+        }
 
         let allBlocksPassed = !blocks.isEmpty && blocks.allSatisfy(\.blockPassed)
         let filesPresent = Self.fileIsNonEmpty(path: outputFiles.debugBoxesImage)
@@ -3821,6 +3870,8 @@ final class TranslationSessionStore: ObservableObject {
             lexiconComparison: lexiconComparison,
             visionAPIComparison: visionAPIComparison,
             frameworkComparison: frameworkComparison,
+            fusionComparison: fusionComparison,
+            fusionResults: fusionResults,
             cleanTextDiagnostic: cleanTextDiagnostic,
             batchTranslationComparison: batchTranslationComparison,
             deterministicDecodingCheck: deterministicDecodingCheck,
@@ -3834,7 +3885,7 @@ final class TranslationSessionStore: ObservableObject {
             outputCleanupRemovedItemCount: outputCleanupRemovedItemCount,
             outputFileCountAfterCleanup: retainedFiles.count,
             retainedOutputFiles: retainedFiles,
-            outputCleanupPolicy: "探针开始重建 App 沙盒 Output；renderOutputs 再次重建；export-probe-output.sh 重建项目根 output；只保留本轮 probe_report.json 和本轮 PNG。",
+            outputCleanupPolicy: "探针开始重建 App 沙盒 Output；renderOutputs 只写入本轮文件；export-probe-output.sh 重建项目根 output；只保留本轮 probe_report.json 和本轮 PNG/TXT/JSON。",
             warnings: warnings
         )
     }
@@ -4147,6 +4198,389 @@ final class TranslationSessionStore: ObservableObject {
         return Self.defaultMangaGroundTruth()
     }
 
+    private struct MangaFusionCandidateWork {
+        var source: String
+        var sourceIndex: Int
+        var text: String
+        var bbox: CGRect
+        var bubbleID: Int?
+        var confidence: Float?
+        var qualityScore: Double
+        var block: MangaOverlayProbeBlock?
+        var bubbleResult: MangaOverlayBubbleResult?
+    }
+
+    private func fuseMangaProbeBlocks(
+        wholePageBlocks: [MangaOverlayProbeBlock],
+        bubbleResults: [MangaOverlayBubbleResult],
+        groundTruth: [MangaGroundTruthEntry]
+    ) -> (blocks: [MangaOverlayProbeBlock], results: [MangaOverlayFusionResult]) {
+        var clusters = wholePageBlocks.map { block in
+            [Self.fusionCandidate(from: block)]
+        }
+
+        for result in bubbleResults {
+            let candidate = Self.fusionCandidate(from: result)
+            if Self.fusionRejectReason(for: candidate) != nil {
+                clusters.append([candidate])
+                clusters[clusters.count - 1][0].qualityScore = -1
+                continue
+            }
+
+            if let index = clusters.firstIndex(where: { cluster in
+                cluster.contains { Self.shouldClusterFusionCandidates($0, candidate) }
+            }) {
+                clusters[index].append(candidate)
+            } else {
+                clusters.append([candidate])
+            }
+        }
+
+        var fusedPairs: [(MangaOverlayProbeBlock, MangaOverlayFusionResult)] = []
+        var rejectedOnlyResults: [MangaOverlayFusionResult] = []
+        for cluster in clusters {
+            if cluster.count == 1, cluster[0].qualityScore < 0 {
+                rejectedOnlyResults.append(
+                    MangaOverlayFusionResult(
+                        fusedBlockIndex: -1,
+                        selectedSource: "rejected",
+                        selectedText: cluster[0].text,
+                        selectedBBox: Self.bboxArray(from: cluster[0].bbox),
+                        selectedBubbleID: cluster[0].bubbleID,
+                        sourceBlockIndex: nil,
+                        bubbleResultIndex: cluster[0].sourceIndex,
+                        competingCandidates: [Self.fusionReportCandidate(cluster[0], selected: false, rejectionReason: "lowInformationBubbleOnly")],
+                        dedupeReason: "rejectedBeforeClustering",
+                        replacementReason: nil,
+                        rejectedCandidates: [Self.fusionReportCandidate(cluster[0], selected: false, rejectionReason: "lowInformationBubbleOnly")]
+                    )
+                )
+                continue
+            }
+
+            let selected = Self.selectFusionCandidate(from: cluster)
+            let rejected = cluster.filter {
+                !($0.source == selected.source && $0.sourceIndex == selected.sourceIndex)
+            }
+            let selectedBlock = Self.fusedBlock(
+                selected: selected,
+                fallbackIndex: fusedPairs.count,
+                groundTruth: groundTruth,
+                rejectedCandidates: rejected
+            )
+
+            let dedupeReason = Self.fusionDedupeReason(for: cluster)
+            let replacementReason = Self.fusionReplacementReason(selected: selected, cluster: cluster)
+            let competing = cluster.map {
+                Self.fusionReportCandidate(
+                    $0,
+                    selected: $0.source == selected.source && $0.sourceIndex == selected.sourceIndex,
+                    rejectionReason: $0.source == selected.source && $0.sourceIndex == selected.sourceIndex
+                        ? nil
+                        : Self.fusionCandidateRejectionReason($0, selected: selected)
+                )
+            }
+            let selectedResult = MangaOverlayFusionResult(
+                fusedBlockIndex: selectedBlock.index,
+                selectedSource: Self.fusionSelectedSource(selected: selected, cluster: cluster),
+                selectedText: selected.text,
+                selectedBBox: Self.bboxArray(from: selected.bbox),
+                selectedBubbleID: selected.bubbleID,
+                sourceBlockIndex: selected.block?.index,
+                bubbleResultIndex: selected.bubbleResult?.index,
+                competingCandidates: competing,
+                dedupeReason: dedupeReason,
+                replacementReason: replacementReason,
+                rejectedCandidates: competing.filter { !$0.selected }
+            )
+            fusedPairs.append((selectedBlock, selectedResult))
+        }
+
+        let sorted = fusedPairs
+            .sorted { lhs, rhs in
+                let left = Self.rect(from: lhs.0.bbox)
+                let right = Self.rect(from: rhs.0.bbox)
+                if abs(left.minY - right.minY) > 18 {
+                    return left.minY < right.minY
+                }
+                return left.minX < right.minX
+            }
+        let reindexedBlocks = sorted.enumerated().map { offset, pair in
+            Self.reindexedMangaBlock(pair.0, index: offset)
+        }
+        let reindexedResults = sorted.enumerated().map { offset, pair in
+            var result = pair.1
+            result.fusedBlockIndex = offset
+            return result
+        }
+        return (reindexedBlocks, reindexedResults + rejectedOnlyResults)
+    }
+
+    private static func fusionCandidate(from block: MangaOverlayProbeBlock) -> MangaFusionCandidateWork {
+        MangaFusionCandidateWork(
+            source: "wholePageOCR",
+            sourceIndex: block.index,
+            text: block.finalTextUsedForTranslation,
+            bbox: rect(from: block.bbox),
+            bubbleID: block.bubbleID,
+            confidence: block.ocrConfidence,
+            qualityScore: ocrCandidateQualityScore(block.finalTextUsedForTranslation),
+            block: block,
+            bubbleResult: nil
+        )
+    }
+
+    private static func fusionCandidate(from result: MangaOverlayBubbleResult) -> MangaFusionCandidateWork {
+        MangaFusionCandidateWork(
+            source: "bubbleFirst",
+            sourceIndex: result.index,
+            text: result.text,
+            bbox: rect(from: result.bbox),
+            bubbleID: result.bubbleID,
+            confidence: nil,
+            qualityScore: ocrCandidateQualityScore(result.text),
+            block: nil,
+            bubbleResult: result
+        )
+    }
+
+    private static func shouldClusterFusionCandidates(
+        _ lhs: MangaFusionCandidateWork,
+        _ rhs: MangaFusionCandidateWork
+    ) -> Bool {
+        if let leftBubble = lhs.bubbleID,
+           let rightBubble = rhs.bubbleID,
+           leftBubble != rightBubble {
+            return lhs.source == "bubbleFirst"
+                && rhs.source == "bubbleFirst"
+                && normalizedTextSimilarity(lhs.text, rhs.text) >= 0.82
+        }
+        let iou = rectIoU(lhs.bbox, rhs.bbox)
+        if iou >= 0.18 {
+            return true
+        }
+        let centerDistance = hypot(lhs.bbox.midX - rhs.bbox.midX, lhs.bbox.midY - rhs.bbox.midY)
+        let nearThreshold = max(lhs.bbox.width, lhs.bbox.height, rhs.bbox.width, rhs.bbox.height) * 0.75
+        if centerDistance <= nearThreshold, normalizedTextSimilarity(lhs.text, rhs.text) >= 0.36 {
+            return true
+        }
+        return false
+    }
+
+    private static func fusionRejectReason(for candidate: MangaFusionCandidateWork) -> String? {
+        guard candidate.source == "bubbleFirst" else { return nil }
+        let clean = candidate.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean.isEmpty {
+            return "emptyBubbleText"
+        }
+        let words = ocrCandidateWords(clean)
+        if words.count < 2, clean.count < 8 {
+            return "lowInformationBubbleText"
+        }
+        if clean.count < 10, candidate.bbox.width * candidate.bbox.height < 1200 {
+            return "smallShortBubbleText"
+        }
+        let letters = latinLetterCount(in: clean)
+        if letters == 0 {
+            return "noLatinOCRText"
+        }
+        return nil
+    }
+
+    private static func selectFusionCandidate(from cluster: [MangaFusionCandidateWork]) -> MangaFusionCandidateWork {
+        guard cluster.count > 1 else { return cluster[0] }
+        if let bestWhole = cluster
+            .filter({ $0.source == "wholePageOCR" })
+            .max(by: { fusionSelectionScore($0, cluster: cluster) < fusionSelectionScore($1, cluster: cluster) }),
+           let bestBubble = cluster
+            .filter({ $0.source == "bubbleFirst" })
+            .max(by: { fusionSelectionScore($0, cluster: cluster) < fusionSelectionScore($1, cluster: cluster) }) {
+            let wholeWords = ocrCandidateWords(bestWhole.text).count
+            let bubbleWords = ocrCandidateWords(bestBubble.text).count
+            let bubbleIsNotShorter = bubbleWords >= wholeWords
+                || bestBubble.text.count >= Int(Double(bestWhole.text.count) * 0.9)
+            if bubbleIsNotShorter,
+               bestBubble.qualityScore >= bestWhole.qualityScore - 0.03 {
+                return bestBubble
+            }
+        }
+        return cluster.max { lhs, rhs in
+            fusionSelectionScore(lhs, cluster: cluster) < fusionSelectionScore(rhs, cluster: cluster)
+        } ?? cluster[0]
+    }
+
+    private static func fusionSelectionScore(
+        _ candidate: MangaFusionCandidateWork,
+        cluster: [MangaFusionCandidateWork]
+    ) -> Double {
+        let words = ocrCandidateWords(candidate.text)
+        let sourceBonus = candidate.source == "wholePageOCR" ? 0.03 : 0
+        let bubbleBonus = candidate.source == "bubbleFirst" && cluster.contains { $0.source == "wholePageOCR" } ? 0.08 : 0
+        let lengthBonus = min(Double(words.count), 18) * 0.018
+        let confidenceBonus = Double(candidate.confidence ?? 0) * 0.02
+        let errorPenalty = containsLikelyOCRError(in: candidate.text) ? 0.09 : 0
+        return candidate.qualityScore + sourceBonus + bubbleBonus + lengthBonus + confidenceBonus - errorPenalty
+    }
+
+    private static func fusedBlock(
+        selected: MangaFusionCandidateWork,
+        fallbackIndex: Int,
+        groundTruth: [MangaGroundTruthEntry],
+        rejectedCandidates: [MangaFusionCandidateWork]
+    ) -> MangaOverlayProbeBlock {
+        let match = MangaOverlayProbeService.bestGroundTruthMatch(text: selected.text, groundTruth: groundTruth)
+        var block = selected.block ?? MangaOverlayProbeBlock(
+            index: fallbackIndex,
+            bbox: bboxArray(from: selected.bbox),
+            bubbleID: selected.bubbleID,
+            bubbleAssignmentMethod: selected.source == "bubbleFirst" ? "bubbleFirstFusion" : "unassigned",
+            rotationAngleUsed: 0,
+            ocrText: selected.text,
+            ocrConfidence: selected.confidence,
+            rawOcrText: selected.text,
+            preprocessingEnabled: false
+        )
+        block.index = fallbackIndex
+        block.bbox = bboxArray(from: selected.bbox)
+        block.bubbleID = selected.bubbleID
+        if selected.source == "bubbleFirst", block.bubbleAssignmentMethod == "unassigned" {
+            block.bubbleAssignmentMethod = "bubbleFirstFusion"
+        }
+        block.rawOcrText = selected.text
+        block.ocrText = selected.text
+        block.finalTextUsedForTranslation = selected.text
+        block.bestGroundTruthIndex = match.index
+        block.bestGroundTruthText = match.entry?.text
+        block.bestGroundTruthType = match.entry?.type
+        block.groundTruthMatch = match.matchState
+        block.groundTruthMatchThreshold = MangaOverlayProbeService.groundTruthMatchThreshold
+        block.ocrGroundTruthSimilarity = match.similarity
+        block.ocrLegacySimilarity = match.legacySimilarity
+        block.wordOrderPreserved = match.wordOrderPreserved
+        block.ocrQualityLabel = ocrQualityLabel(for: match.similarity)
+        block.ocrProbeNotes = mangaOCRProbeNotes(
+            text: selected.text,
+            bestGroundTruthText: match.entry?.text,
+            similarity: match.similarity,
+            legacySimilarity: match.legacySimilarity,
+            wordOrderPreserved: match.wordOrderPreserved,
+            matchState: match.matchState,
+            bubbleID: selected.bubbleID,
+            bubbleAssignmentMethod: block.bubbleAssignmentMethod,
+            crossBubbleMergeRejected: block.crossBubbleMergeRejected,
+            sliceIndex: block.sliceIndex,
+            sliceOverlapDeduped: block.sliceOverlapDeduped
+        )
+        block.ocrProbeNotes.append("fusionSource=\(selected.source)")
+        block.ocrProbeNotes.append("fusionSourceIndex=\(selected.sourceIndex)")
+        block.ocrProbeNotes.append("fusionSelectionRule=groundTruthFreeBBoxTextQuality")
+        for rejected in rejectedCandidates {
+            block.ocrProbeNotes.append(
+                "fusionRejected \(rejected.source)#\(rejected.sourceIndex): \(fusionCandidateRejectionReason(rejected, selected: selected))"
+            )
+        }
+        return block
+    }
+
+    private static func reindexedMangaBlock(_ block: MangaOverlayProbeBlock, index: Int) -> MangaOverlayProbeBlock {
+        var result = block
+        result.index = index
+        return result
+    }
+
+    private static func fusionReportCandidate(
+        _ candidate: MangaFusionCandidateWork,
+        selected: Bool,
+        rejectionReason: String?
+    ) -> MangaOverlayFusionCandidate {
+        MangaOverlayFusionCandidate(
+            source: candidate.source,
+            sourceIndex: candidate.sourceIndex,
+            text: candidate.text,
+            bbox: bboxArray(from: candidate.bbox),
+            bubbleID: candidate.bubbleID,
+            confidence: candidate.confidence,
+            qualityScore: candidate.qualityScore,
+            selected: selected,
+            rejectionReason: rejectionReason
+        )
+    }
+
+    private static func fusionDedupeReason(for cluster: [MangaFusionCandidateWork]) -> String {
+        guard cluster.count > 1 else { return "sourceOnlyCandidate" }
+        return "bboxIoUOrCenterDistanceAndTextSimilarity"
+    }
+
+    private static func fusionSelectedSource(
+        selected: MangaFusionCandidateWork,
+        cluster: [MangaFusionCandidateWork]
+    ) -> String {
+        if selected.source == "wholePageOCR", cluster.count > 1 {
+            return "wholePagePreferred"
+        }
+        if selected.source == "bubbleFirst", cluster.count > 1 {
+            return "bubblePreferred"
+        }
+        return selected.source
+    }
+
+    private static func fusionReplacementReason(
+        selected: MangaFusionCandidateWork,
+        cluster: [MangaFusionCandidateWork]
+    ) -> String? {
+        guard cluster.count > 1 else { return nil }
+        return "selectedScore=\(fusionSelectionScore(selected, cluster: cluster).formatted(.number.precision(.fractionLength(3))))"
+    }
+
+    private static func fusionCandidateRejectionReason(
+        _ candidate: MangaFusionCandidateWork,
+        selected: MangaFusionCandidateWork
+    ) -> String {
+        if let reason = fusionRejectReason(for: candidate) {
+            return reason
+        }
+        if candidate.source == selected.source && candidate.sourceIndex == selected.sourceIndex {
+            return "selected"
+        }
+        return "lowerGroundTruthFreeQualityScore"
+    }
+
+    private static func wholePageSourceIndex(for block: MangaOverlayProbeBlock) -> Int? {
+        for note in block.ocrProbeNotes {
+            guard note.hasPrefix("fusionSourceIndex="),
+                  block.ocrProbeNotes.contains("fusionSource=wholePageOCR") else {
+                continue
+            }
+            return Int(note.replacingOccurrences(of: "fusionSourceIndex=", with: ""))
+        }
+        return block.index
+    }
+
+    private static func rect(from bbox: [Double]) -> CGRect {
+        guard bbox.count == 4 else { return .zero }
+        return CGRect(x: bbox[0], y: bbox[1], width: bbox[2], height: bbox[3]).standardized
+    }
+
+    private static func rectIoU(_ lhs: CGRect, _ rhs: CGRect) -> Double {
+        let intersection = lhs.intersection(rhs)
+        guard !intersection.isNull, intersection.width > 0, intersection.height > 0 else { return 0 }
+        let intersectionArea = intersection.width * intersection.height
+        let unionArea = lhs.width * lhs.height + rhs.width * rhs.height - intersectionArea
+        guard unionArea > 0 else { return 0 }
+        return Double(intersectionArea / unionArea)
+    }
+
+    private static func normalizedTextSimilarity(_ lhs: String, _ rhs: String) -> Double {
+        let left = ocrCandidateWords(lhs)
+        let right = ocrCandidateWords(rhs)
+        guard !left.isEmpty, !right.isEmpty else { return 0 }
+        let leftSet = Set(left)
+        let rightSet = Set(right)
+        let intersection = leftSet.intersection(rightSet).count
+        let union = leftSet.union(rightSet).count
+        return Double(intersection) / Double(max(union, 1))
+    }
+
     private static func defaultMangaGroundTruth() -> [MangaGroundTruthEntry] {
         [
             MangaGroundTruthEntry(text: "I've arrived at Senpai's house.", type: MangaGroundTruthEntry.dialogueType),
@@ -4201,6 +4635,80 @@ final class TranslationSessionStore: ObservableObject {
             consistencyWarnings: consistencyWarnings,
             bubbleResults: bubbleComparison.bubbleResults,
             notes: bubbleComparison.notes
+        )
+    }
+
+    private func makeFusionComparison(
+        wholePageBlocks: [MangaOverlayProbeBlock],
+        bubbleComparison: MangaOverlayFrameworkComparison,
+        fusedBlocks: [MangaOverlayProbeBlock],
+        fusionResults: [MangaOverlayFusionResult],
+        wholePageProcessingTimeMs: Int,
+        groundTruth: [MangaGroundTruthEntry]
+    ) -> MangaOverlayFusionComparison {
+        let wholePageTexts = wholePageBlocks.map(\.finalTextUsedForTranslation)
+        let bubbleTexts = bubbleComparison.bubbleResults.map(\.text)
+        let fusedTexts = fusedBlocks.map(\.finalTextUsedForTranslation)
+        let wholePageMatched = MangaOverlayProbeService.matchedGroundTruthIndexes(texts: wholePageTexts, groundTruth: groundTruth)
+        let bubbleMatched = MangaOverlayProbeService.matchedGroundTruthIndexes(texts: bubbleTexts, groundTruth: groundTruth)
+        let fusedMatched = MangaOverlayProbeService.matchedGroundTruthIndexes(texts: fusedTexts, groundTruth: groundTruth)
+        let allThree = wholePageMatched.intersection(bubbleMatched).intersection(fusedMatched)
+        let onlyWholePage = wholePageMatched.subtracting(bubbleMatched).subtracting(fusedMatched).sorted().map { groundTruth[$0].text }
+        let onlyBubble = bubbleMatched.subtracting(wholePageMatched).subtracting(fusedMatched).sorted().map { groundTruth[$0].text }
+        let onlyFused = fusedMatched.subtracting(wholePageMatched).subtracting(bubbleMatched).sorted().map { groundTruth[$0].text }
+        let union = wholePageMatched.union(bubbleMatched).union(fusedMatched)
+        var warnings: [String] = []
+        if !wholePageMatched.subtracting(fusedMatched).isEmpty {
+            let lost = wholePageMatched.subtracting(fusedMatched).sorted().map { groundTruth[$0].text }.joined(separator: " | ")
+            warnings.append("fusion lost whole-page trusted matches: \(lost)")
+        }
+        if !bubbleMatched.subtracting(fusedMatched).isEmpty {
+            let lost = bubbleMatched.subtracting(fusedMatched).sorted().map { groundTruth[$0].text }.joined(separator: " | ")
+            warnings.append("fusion did not include bubble-first trusted matches: \(lost)")
+        }
+        if fusedMatched.count < wholePageMatched.count {
+            warnings.append("fused matched count \(fusedMatched.count) is lower than whole-page \(wholePageMatched.count)")
+        }
+        if fusedMatched.count > union.count {
+            warnings.append("fusion matched count exceeds union; check duplicate accounting")
+        }
+
+        let selectedResults = fusionResults.filter { $0.fusedBlockIndex >= 0 }
+        let selectedWhole = selectedResults.filter { $0.selectedSource == "wholePageOCR" || $0.selectedSource == "wholePagePreferred" }.count
+        let selectedBubble = selectedResults.filter { $0.selectedSource == "bubbleFirst" || $0.selectedSource == "bubblePreferred" }.count
+        let addedBubbleOnly = selectedResults.filter { $0.selectedSource == "bubbleFirst" }.count
+        let retainedWholeOnly = selectedResults.filter { $0.selectedSource == "wholePageOCR" }.count
+        let rejectedCount = fusionResults.reduce(0) { $0 + $1.rejectedCandidates.count }
+
+        return MangaOverlayFusionComparison(
+            comparisonUnit: "trustedGroundTruthMatchesForEvaluationOnly",
+            wholePage: MangaOverlayProbeService.frameworkMetrics(
+                texts: wholePageTexts,
+                groundTruth: groundTruth,
+                processingTimeMs: wholePageProcessingTimeMs
+            ),
+            bubbleFirst: bubbleComparison.bubbleFirst,
+            fused: MangaOverlayProbeService.frameworkMetrics(
+                texts: fusedTexts,
+                groundTruth: groundTruth,
+                processingTimeMs: wholePageProcessingTimeMs
+            ),
+            blocksFoundByAll: allThree.count,
+            blocksOnlyInWholePage: onlyWholePage,
+            blocksOnlyInBubbleFirst: onlyBubble,
+            blocksOnlyInFused: onlyFused,
+            fusedFromWholePageCount: selectedWhole,
+            fusedFromBubbleFirstCount: selectedBubble,
+            fusedAddedBubbleOnlyCount: addedBubbleOnly,
+            fusedRetainedWholePageOnlyCount: retainedWholeOnly,
+            fusedRejectedCandidateCount: rejectedCount,
+            consistencyPassed: warnings.isEmpty,
+            consistencyWarnings: warnings,
+            notes: [
+                "fusion selection uses bbox, bubbleID, OCR text quality, confidence, and text overlap only",
+                "ground truth is used only for these evaluation metrics",
+                "whole-page and bubble-first raw comparisons remain available for rollback audit"
+            ]
         )
     }
 

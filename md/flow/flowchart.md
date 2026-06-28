@@ -50,17 +50,20 @@ flowchart TD
   %% 输入：固定 bundle 素材
   A["test/1.png<br/>固定漫画截图"] --> B["裁切内容区<br/>去掉浏览器 UI、广告、底部导航"]
 
-  %% OCR：整页主路径
+  %% OCR：整页与气泡候选
   B --> C["2x 放大 + 0/90/180/270 Vision OCR<br/>生成 OCR candidates"]
   C --> D["气泡候选检测<br/>white component + OCR seed"]
   D --> E["bubbleID 归属<br/>unassigned 块保留"]
   E --> F["同 bubble 合并<br/>跨 bubble 合并拒绝"]
-  F --> G["final OCR blocks<br/>当前主翻译输入"]
+  F --> W["whole-page OCR blocks<br/>保留原始对照"]
+  D --> J["bubble-first OCR candidates<br/>气泡 crop 内识别和拆块"]
+  W --> G["fused OCR blocks<br/>当前主翻译输入"]
+  J --> G
+  G --> X["fusionComparison / fusionResults<br/>选择、替换、拒绝可审计"]
 
   %% 诊断旁路：不替代主流程
   G --> H["自适应 crop 二次 OCR<br/>诊断和候选对照"]
   G --> I["确定性 OCR 纠错候选<br/>只做对照"]
-  G --> J["bubble-first 对照<br/>不独占主流程"]
   G --> K["slice OCR 对照<br/>长图触发"]
 
   %% 翻译：逐块主路径
@@ -73,6 +76,7 @@ flowchart TD
   O --> P["glyph mask + 背景估计<br/>纯色块才填充"]
   P --> Q["覆盖图 / OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
+  X --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
   M --> T["1_ocr_probe_text.txt<br/>逐块文本快照"]
 ```
