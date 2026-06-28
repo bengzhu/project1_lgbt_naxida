@@ -175,11 +175,14 @@ test/1.png
   -> OCR candidates
   -> 气泡候选检测和 bubbleID 归属
   -> 同 bubble 合并，跨 bubble 拒绝
-  -> final OCR blocks
+  -> whole-page OCR blocks
+  -> bubble-first OCR candidates
+  -> ground-truth-free 融合选择和去重
+  -> fused OCR blocks
   -> 自适应 crop 二次 OCR 诊断
   -> 确定性 OCR 纠错对照
   -> 逐块 Local/Mock 翻译
-  -> clean text / batch / bubble-first / slice OCR 对照
+  -> clean text / batch / whole-page / bubble-first / slice OCR 对照
   -> glyph mask / 背景估计 / 安全布局 / 离屏碰撞检查
   -> JSON / TXT / PNG 输出
 ```
@@ -188,7 +191,8 @@ test/1.png
 
 - 不要失败就跳过绘制。
 - 不要让浏览器 UI、广告、底部导航进入 OCR。
-- 不要把 bubble-first 或确定性纠错直接切主流程。
+- 不要把 ground truth 用于融合候选选择。
+- 不要把确定性纠错直接切主流程。
 - 不要把 `accuracyVsGroundTruth = 0.8378 / 0.8755` 当新基线。
 
 ### 1.7 持久化和输出
@@ -245,6 +249,8 @@ test/1.png
 开发页运行漫画覆盖翻译探针
   -> TranslationSessionStore.runMangaOverlayProbe
   -> MangaOverlayProbeService.recognizeTextBlocks
+  -> MangaOverlayProbeService.runBubbleFirstProbe
+  -> fuse whole-page + bubble-first candidates
   -> TranslationSessionStore.translateMangaProbeBlock
   -> makeMangaOverlayProbeDiagnostics
   -> render overlays / contact sheet
@@ -268,31 +274,34 @@ test/1.png
 - 核心对话和装饰标题分开统计。
 - 词级 Levenshtein 是当前可信 OCR 相似度口径。
 - clean text 失败时优先怀疑模型质量，不继续盲调 OCR。
-- bubble-first 当前是对照路径，不是主流程替代。
+- bubble-first 当前参与融合主流程；whole-page 原始块和 bubble-first 原始候选仍保留为对照和回退审计。
 - 确定性纠错当前是对照路径，不替换 `finalTextUsedForTranslation`。
 - tagged batch 当前是负面诊断，不替换逐块翻译。
 
 ## 5. 当前关键基线
 来自最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json`：
 
-- `totalBlocksDetected = 14`
-- `groundTruthMatchedBlocks = 10`
-- `groundTruthUnmatchedBlocks = 4`
-- `averageCoreDialogueOCRSimilarity = 0.6131`
+- `configuration.currentBlockSource = fusedWholePageBubble`
+- `totalBlocksDetected = 16`
+- `groundTruthMatchedBlocks = 13`
+- `groundTruthUnmatchedBlocks = 3`
+- `averageCoreDialogueOCRSimilarity = 0.7106`
 - `averageDecorativeOCRSimilarity = 0.8000`
-- `wholePageAccuracyVsGroundTruth = 0.6131`
-- `bubbleFirstAccuracyVsGroundTruth = 0.7397`
+- `wholePageAccuracyVsGroundTruth = 0.5972`
+- `bubbleFirstAccuracyVsGroundTruth = 0.7300`
+- `fusionFusedAccuracyVsGroundTruth = 0.7384`
 - `frameworkComparison.consistencyPassed = true`
+- `fusionComparison.consistencyPassed = true`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
-- `failedBlocks = 13`
-- `translationFailureBreakdown = { ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`
+- `failedBlocks = 15`
+- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`
 - `likelyRuleFalseFailureBlocks = []`
 
 ## 6. 未来扩展点
 - 更强小模型对比，优先 Qwen2.5-0.5B-Instruct-GGUF q4_k_m。
-- bubble-first 主候选与 whole-page 真实内容兜底的融合架构。
-- 更稳的气泡候选分割，尤其底部相邻气泡。
+- 继续压融合后的重复/碎片块，尤其底部相邻气泡。
+- 更稳的气泡候选分割。
 - 更强 OCR/纠错护栏，替换主流程前必须用探针证明收益。
 - Share Extension 或 ReplayKit 路线，但当前不是优先级。
 

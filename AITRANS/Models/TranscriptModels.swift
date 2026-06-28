@@ -940,6 +940,7 @@ struct MangaOverlayFrameworkMetrics: Equatable, Codable, Sendable {
 struct MangaOverlayBubbleResult: Equatable, Codable, Sendable {
     var index: Int
     var bbox: [Double]
+    var bubbleID: Int?
     var source: String
     var text: String
     var bestGroundTruthIndex: Int?
@@ -962,6 +963,51 @@ struct MangaOverlayFrameworkComparison: Equatable, Codable, Sendable {
     var consistencyPassed: Bool
     var consistencyWarnings: [String]
     var bubbleResults: [MangaOverlayBubbleResult]
+    var notes: [String]
+}
+
+struct MangaOverlayFusionCandidate: Equatable, Codable, Sendable {
+    var source: String
+    var sourceIndex: Int
+    var text: String
+    var bbox: [Double]
+    var bubbleID: Int?
+    var confidence: Float?
+    var qualityScore: Double
+    var selected: Bool
+    var rejectionReason: String?
+}
+
+struct MangaOverlayFusionResult: Equatable, Codable, Sendable {
+    var fusedBlockIndex: Int
+    var selectedSource: String
+    var selectedText: String
+    var selectedBBox: [Double]
+    var selectedBubbleID: Int?
+    var sourceBlockIndex: Int?
+    var bubbleResultIndex: Int?
+    var competingCandidates: [MangaOverlayFusionCandidate]
+    var dedupeReason: String
+    var replacementReason: String?
+    var rejectedCandidates: [MangaOverlayFusionCandidate]
+}
+
+struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
+    var comparisonUnit: String
+    var wholePage: MangaOverlayFrameworkMetrics
+    var bubbleFirst: MangaOverlayFrameworkMetrics
+    var fused: MangaOverlayFrameworkMetrics
+    var blocksFoundByAll: Int
+    var blocksOnlyInWholePage: [String]
+    var blocksOnlyInBubbleFirst: [String]
+    var blocksOnlyInFused: [String]
+    var fusedFromWholePageCount: Int
+    var fusedFromBubbleFirstCount: Int
+    var fusedAddedBubbleOnlyCount: Int
+    var fusedRetainedWholePageOnlyCount: Int
+    var fusedRejectedCandidateCount: Int
+    var consistencyPassed: Bool
+    var consistencyWarnings: [String]
     var notes: [String]
 }
 
@@ -1047,6 +1093,8 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var lexiconComparison: MangaOverlayLexiconComparison?
     var visionAPIComparison: MangaOverlayVisionAPIComparison?
     var frameworkComparison: MangaOverlayFrameworkComparison?
+    var fusionComparison: MangaOverlayFusionComparison?
+    var fusionResults: [MangaOverlayFusionResult]
     var cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
     var batchTranslationComparison: MangaBatchTranslationComparison?
     var deterministicDecodingCheck: MangaDeterministicDecodingCheck?

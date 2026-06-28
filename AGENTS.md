@@ -76,20 +76,23 @@ test/1.png
 - 不要在未证明收益前把 deterministic correction、bubble-first 或 batch translation 替换为主流程。
 
 ## 5. 当前真实基线
-当前可信基线以最新 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 为准。最近记录的 v9 / 当前输出基线是：
+当前可信基线以最新 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 为准。最近记录的 v10 / 当前输出基线是：
 
-- `totalBlocksDetected = 14`
-- `groundTruthMatchedBlocks = 10`
-- `groundTruthUnmatchedBlocks = 4`
-- `averageCoreDialogueOCRSimilarity = 0.6131`
+- `configuration.currentBlockSource = fusedWholePageBubble`
+- `totalBlocksDetected = 16`
+- `groundTruthMatchedBlocks = 13`
+- `groundTruthUnmatchedBlocks = 3`
+- `averageCoreDialogueOCRSimilarity = 0.7106`
 - `averageDecorativeOCRSimilarity = 0.8000`
-- `wholePageAccuracyVsGroundTruth = 0.6131`
-- `bubbleFirstAccuracyVsGroundTruth = 0.7397`
+- `wholePageAccuracyVsGroundTruth = 0.5972`
+- `bubbleFirstAccuracyVsGroundTruth = 0.7300`
 - `frameworkComparison.consistencyPassed = true`
+- `fusionComparison.consistencyPassed = true`
+- `fusion.fused.accuracyVsGroundTruth = 0.7384`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
-- `failedBlocks = 13`
-- `translationFailureBreakdown = { ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`
+- `failedBlocks = 15`
+- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`
 - `likelyRuleFalseFailureBlocks = []`
 
 当前结论：
@@ -97,7 +100,8 @@ test/1.png
 - 主要瓶颈是 OCR 文本质量和 Gemma 270M 翻译能力，不是覆盖绘制，也不是规则过严。
 - Vision `customWords` 对当前图最终合并文本无明显改变。
 - deterministic correction 只做探针对照，不替换主翻译输入。
-- bubble-first 比整页 OCR 可信核心准确率高，但会漏掉整页路径独有真实内容 `Let's Battle!`，不能直接独占主流程。
+- 主流程已切到 whole-page + bubble-first 融合；`Let's Battle!` 没丢，bubble-first 独有的两条真实内容也进入融合结果。
+- `totalBlocksDetected` 从 14 到 16 是纳入真实 bubble-only 内容后的结果；后续仍需继续压重复/碎片块。
 - tagged batch translation 当前格式崩坏，只保留诊断分支。
 
 ## 6. 翻译失败排查顺序
