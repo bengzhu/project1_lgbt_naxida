@@ -1506,6 +1506,7 @@ final class TranslationSessionStore: ObservableObject {
                 var postFusionCleanup: MangaOverlayPostFusionCleanupReport?
                 var textRegionCropReport: MangaOverlayTextRegionCropReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
+                var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
                 if !groundTruth.isEmpty {
                     let bubbleProbe = try await self.mangaOverlayProbeService.runBubbleFirstProbe(
@@ -1642,11 +1643,29 @@ final class TranslationSessionStore: ObservableObject {
                 let batchTranslationComparison = await self.runTaggedBatchTranslationComparison(blocks: probeBlocks)
 
                 self.mangaOverlayProbeState = .rendering
+                self.mangaOverlayProbeMessage = "正在生成 BubbleMask 实例 ID 近似和 mask-safe layout 诊断"
+                let preliminaryBubbleMaskReport = await self.mangaOverlayProbeService.makeBubbleMaskReport(
+                    image: recognized.image,
+                    blocks: probeBlocks,
+                    bubbleGeometry: recognized.bubbleGeometry,
+                    textRegionCropReport: textRegionCropReport
+                )
                 self.mangaOverlayProbeMessage = "正在计算气泡安全区并做离屏渲染碰撞检查"
                 probeBlocks = await self.mangaOverlayProbeService.applySafeLayoutAndRenderingDiagnostics(
                     image: recognized.image,
                     blocks: probeBlocks,
-                    bubbleGeometry: recognized.bubbleGeometry
+                    bubbleGeometry: recognized.bubbleGeometry,
+                    bubbleMaskReport: preliminaryBubbleMaskReport
+                )
+                bubbleMaskReport = await self.mangaOverlayProbeService.makeBubbleMaskReport(
+                    image: recognized.image,
+                    blocks: probeBlocks,
+                    bubbleGeometry: recognized.bubbleGeometry,
+                    textRegionCropReport: textRegionCropReport
+                )
+                textRegionCropReport = Self.textRegionCropReport(
+                    textRegionCropReport,
+                    mergingMaskDiagnosticsFrom: bubbleMaskReport
                 )
                 self.mangaOverlayProbeBlocks = probeBlocks
 
@@ -1656,7 +1675,8 @@ final class TranslationSessionStore: ObservableObject {
                     blocks: probeBlocks,
                     outputDirectory: self.mangaOverlayOutputDirectory,
                     preprocessing: probeConfiguration.preprocessing,
-                    textRegionCropReport: textRegionCropReport
+                    textRegionCropReport: textRegionCropReport,
+                    bubbleMaskReport: bubbleMaskReport
                 )
                 outputFiles.debugBoxesImage = renderedOutputFiles.debugBoxesImage
                 outputFiles.overlayImage = renderedOutputFiles.overlayImage
@@ -1709,6 +1729,7 @@ final class TranslationSessionStore: ObservableObject {
                     fusionResults: fusionResults,
                     textRegionCropReport: textRegionCropReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
+                    bubbleMaskReport: bubbleMaskReport,
                     cleanTextDiagnostic: cleanTextDiagnostic,
                     batchTranslationComparison: batchTranslationComparison,
                     deterministicDecodingCheck: deterministicDecodingCheck,
@@ -2478,6 +2499,37 @@ final class TranslationSessionStore: ObservableObject {
             }
         }
         return result
+    }
+
+    private static func textRegionCropReport(
+        _ report: MangaOverlayTextRegionCropReport?,
+        mergingMaskDiagnosticsFrom maskReport: MangaOverlayBubbleMaskReport?
+    ) -> MangaOverlayTextRegionCropReport? {
+        guard let report, let maskReport else { return report }
+        let maskByBlock = Dictionary(
+            uniqueKeysWithValues: maskReport.blockDiagnostics.map { ($0.blockIndex, $0) }
+        )
+        let diagnostics = report.diagnostics.map { diagnostic in
+            var updated = diagnostic
+            if let mask = maskByBlock[diagnostic.blockIndex] {
+                updated.cropMaskCoverageRatio = mask.cropMaskCoverageRatio
+                updated.cropMaskRejectedReason = mask.cropMaskRejectedReason
+            }
+            return updated
+        }
+        var notes = report.notes
+        notes.append("BubbleMask coverage is diagnostic only and does not loosen TextRegion crop adoption guardrails")
+        return MangaOverlayTextRegionCropReport(
+            totalRegions: report.totalRegions,
+            cropSucceededCount: report.cropSucceededCount,
+            adoptedCount: report.adoptedCount,
+            rejectedCount: report.rejectedCount,
+            adoptedBlockIndexes: report.adoptedBlockIndexes,
+            rejectedBlockIndexes: report.rejectedBlockIndexes,
+            mainRejectionReasons: report.mainRejectionReasons,
+            diagnostics: diagnostics,
+            notes: notes
+        )
     }
 
     private static func evaluateTextRegionCropSelection(
@@ -4200,6 +4252,7 @@ final class TranslationSessionStore: ObservableObject {
         fusionResults: [MangaOverlayFusionResult] = [],
         textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         cleanTextDiagnostic: MangaCleanTextDiagnosticReport? = nil,
         batchTranslationComparison: MangaBatchTranslationComparison? = nil,
         deterministicDecodingCheck: MangaDeterministicDecodingCheck? = nil,
@@ -4258,6 +4311,7 @@ final class TranslationSessionStore: ObservableObject {
             fusionResults: fusionResults,
             textRegionCropReport: textRegionCropReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
+            bubbleMaskReport: bubbleMaskReport,
             cleanTextDiagnostic: cleanTextDiagnostic,
             batchTranslationComparison: batchTranslationComparison,
             deterministicDecodingCheck: deterministicDecodingCheck,

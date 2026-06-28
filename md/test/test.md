@@ -144,6 +144,12 @@ python3 -m json.tool test/1.ground_truth.json
 - `bubbleSubRegionReport.oversizedBubbleIDs = [4, 6, 7]`
 - `textRegionCropReport.clampSources = { bubbleBBox: 9, contentRect: 2, subRegion: 2 }`
 - `subRegion` clamp 实际用于块 `[6, 8]`
+- `bubbleMaskReport.instanceCount = 8`
+- `bubbleMaskReport.maskSafeLayoutBlocks = 13`
+- `bubbleMaskReport.bboxFallbackBlocks = 0`
+- `bubbleMaskReport.inconsistentBubbleAssignmentBlocks = [4, 5, 11, 12]`
+- `bubbleMaskReport.renderMaskOverflowBlocks = []`
+- `cropMaskCoverage` 低的块 `[4, 5, 9, 12]`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
 - `failedBlocks = 12`

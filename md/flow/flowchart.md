@@ -62,7 +62,8 @@ flowchart TD
   G --> X["fusionComparison / fusionResults<br/>选择、替换、拒绝可审计"]
   X --> Y["post-fusion cleanup<br/>重复 / 碎片 / 低信息块拒绝"]
   Y --> U["BubbleMask 子区域诊断<br/>block-local subregion"]
-  U --> V["TextRegion crop OCR<br/>subregion / bubble / content clamp + 护栏回退"]
+  U --> BM["BubbleMask 实例 ID 近似<br/>mask-safe layout / collision / crop coverage"]
+  BM --> V["TextRegion crop OCR<br/>subregion / bubble / content clamp + mask coverage + 护栏回退"]
   D --> Z["bubbleAudits<br/>过大气泡和分割候选诊断"]
   Z --> U
 
