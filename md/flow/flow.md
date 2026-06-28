@@ -181,6 +181,7 @@ test/1.png
   -> fused OCR blocks
   -> post-fusion 重复/碎片清理
   -> bubble 分割审计诊断
+  -> TextRegion crop OCR 候选诊断和护栏选择
   -> 自适应 crop 二次 OCR 诊断
   -> 确定性 OCR 纠错对照
   -> 逐块 Local/Mock 翻译
@@ -254,6 +255,7 @@ test/1.png
   -> MangaOverlayProbeService.runBubbleFirstProbe
   -> fuse whole-page + bubble-first candidates
   -> post-fusion cleanup / bubbleAudits
+  -> TextRegion crop OCR 候选诊断和护栏选择
   -> TranslationSessionStore.translateMangaProbeBlock
   -> makeMangaOverlayProbeDiagnostics
   -> render overlays / contact sheet
@@ -278,6 +280,7 @@ test/1.png
 - 词级 Levenshtein 是当前可信 OCR 相似度口径。
 - clean text 失败时优先怀疑模型质量，不继续盲调 OCR。
 - bubble-first 当前参与融合主流程；whole-page 原始块和 bubble-first 原始候选仍保留为对照和回退审计。
+- TextRegion crop 当前是结构化候选层；只有通过 ground-truth-free 护栏才可替换主翻译输入，v12 本轮 0 块采用。
 - 确定性纠错当前是对照路径，不替换 `finalTextUsedForTranslation`。
 - tagged batch 当前是负面诊断，不替换逐块翻译。
 
@@ -299,6 +302,10 @@ test/1.png
 - `frameworkComparison.consistencyPassed = true`
 - `fusionComparison.consistencyPassed = true`
 - `cleanTextDiagnostic.passRate = 0.4545`
+- `textRegionCropReport.totalRegions = 13`
+- `textRegionCropReport.cropSucceededCount = 10`
+- `textRegionCropReport.adoptedCount = 0`
+- `textRegionCropReport.rejectedCount = 13`
 - `passedBlocks = 1`
 - `failedBlocks = 12`
 - `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`

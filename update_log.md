@@ -11,7 +11,7 @@
 ## 当前状态
 日期：2026-06-28
 
-当前项目是 SwiftUI iOS 本地翻译原型，主线已从普通翻译 UI 转到漫画截图 OCR、本地翻译、覆盖合成和探针诊断。最新可用基线来自当前 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 的 v11 行：
+当前项目是 SwiftUI iOS 本地翻译原型，主线已从普通翻译 UI 转到漫画截图 OCR、本地翻译、覆盖合成和探针诊断。最新可用基线来自当前 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 的 v12 行：
 
 - `sourceImage = test/1.png`
 - `engineUsed = Local GGUF`
@@ -32,6 +32,10 @@
 - `fusionComparison.consistencyPassed = true`
 - `fusion.fused.accuracyVsGroundTruth = 0.7384`
 - `cleanTextDiagnostic.passRate = 0.4545`
+- `textRegionCropReport.totalRegions = 13`
+- `textRegionCropReport.cropSucceededCount = 10`
+- `textRegionCropReport.adoptedCount = 0`
+- `textRegionCropReport.rejectedCount = 13`
 - `passedBlocks = 1`
 - `failedBlocks = 12`
 - `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
@@ -42,6 +46,7 @@
 - 当前瓶颈是 OCR 文本质量和 Gemma 270M 翻译能力，不是覆盖绘制，也不是规则过严。
 - 主流程已切到 whole-page + bubble-first 融合；`Let's Battle!` 保留，bubble-first 独有两条真实内容也进入融合结果。
 - post-fusion cleanup 已把 16 个融合块压到 13 个，拒绝重复/碎片块但保留关键真实内容。
+- TextRegion crop OCR 候选层已接入报告和 `1_ocr_probe_text.txt`，本轮 13 个块全部被护栏回退，没有替换主翻译输入。
 - `bubbleAudits` 标出 `bubbleID 4/6/7` 的分割风险，当前只诊断不替换主流程。
 - Vision `customWords` 对当前图最终合并文本无变化，`changedBlockIndexes = []`。
 - 确定性 OCR 纠错能提升部分相似度，但翻译收益不稳定，仍只做探针对照。
@@ -263,6 +268,33 @@
 
 - 新增融合候选模型、`fusionResults` 和 `fusionComparison`。
 - 融合选择只用 bbox、bubbleID、文本相似度、OCR 置信度、文本长度和疑似 OCR 损坏等无真值信号。
+- 主翻译输入切到 `fusedWholePageBubble`；whole-page 和 bubble-first 原始对比仍保留用于回退审计。
+- 保留 whole-page 独有 `Let's Battle!`，并纳入 bubble-first 独有的两条真实内容。
+- `renderOutputs` 不再二次清空沙盒 Output，避免提前生成的 bubble 调试图被本轮主渲染删除；目录清理由探针开始和导出脚本负责。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `output/probe_report.json`
+- `metrics/version_history.csv`
+
+验证结果：
+
+- iPhone 17 Pro 模拟器重新跑 `test/1.png` 并导出。
+- `totalBlocksDetected = 16`、可信匹配 `13`、未匹配 `3`。
+- `averageCoreDialogueOCRSimilarity = 0.7106`、`averageDecorativeOCRSimilarity = 0.8000`。
+- `frameworkComparison.consistencyPassed = true`、`fusionComparison.consistencyPassed = true`。
+- `fusion.fused.accuracyVsGroundTruth = 0.7384`。
+- `cleanTextDiagnostic.passRate = 0.4545`。
+- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`。
+- `likelyRuleFalseFailureBlocks = []`。
+
+遗留事项：
+
+- 融合提高了 OCR 覆盖和可信匹配，但翻译通过仍只有 1 块，瓶颈仍在 OCR 噪声和 Gemma 270M 翻译能力。
+- `totalBlocksDetected = 16` 是纳入真实 bubble-only 内容后的结果；后续仍需继续压重复/碎片块。
 
 ### v11：融合后重复碎片压缩与气泡分割审计
 日期：2026-06-28
@@ -302,33 +334,39 @@
 
 - `-02 AT / LEAST... 2EN-` 残片被保守保留，避免跨 bubble 误删真实内容；后续应在气泡分割层处理。
 - `bubbleAudits` 标出 `bubbleID 4/6/7` 有多块同 bubble 或过大 bubble 风险，下一轮可做诊断开关下的保守拆分实验。
-- 主翻译输入切到 `fusedWholePageBubble`；whole-page 和 bubble-first 原始对比仍保留用于回退审计。
-- 保留 whole-page 独有 `Let's Battle!`，并纳入 bubble-first 独有的两条真实内容。
-- `renderOutputs` 不再二次清空沙盒 Output，避免提前生成的 bubble 调试图被本轮主渲染删除；目录清理由探针开始和导出脚本负责。
+
+### v12：TextRegion crop 候选与结构化中间层
+日期：2026-06-28
+依据：`md/prompt/v1（漫画探针）/v1.2（TextRegion crop候选与Koharu结构化中间层）.md`、当前 `output/probe_report.json`
+
+核心变更：
+
+- 新增 TextRegion crop OCR 候选层，为每个 post-fusion 主块记录 seed bbox、region bbox、crop bbox、bubble clamp、padding、方向、whole-page/fused/adaptive/crop 文本和选择决策。
+- `probe_report.json` 新增 `textRegionCropReport`，`1_ocr_probe_text.txt` 同步写入每块 crop 文本、selected 文本、拒绝理由、词保留率和质量分。
+- crop 采用逻辑只用 ground-truth-free 信号：词数、词保留率、文本相似度、拉丁/符号比例、疑似 OCR 错误、bubble clamp 和质量分；真值只在选择后用于报告评估。
 
 关键文件：
 
-- `AITRANS/Models/TranscriptModels.swift`
 - `AITRANS/Services/MangaOverlayProbeService.swift`
 - `AITRANS/Services/TranslationSessionStore.swift`
-- `output/probe_report.json`
+- `AITRANS/Models/TranscriptModels.swift`
+- `README.md`
 - `metrics/version_history.csv`
+- `output/probe_report.json`
+- `output/1_ocr_probe_text.txt`
 
 验证结果：
 
-- iPhone 17 Pro 模拟器重新跑 `test/1.png` 并导出。
-- `totalBlocksDetected = 16`、可信匹配 `13`、未匹配 `3`。
-- `averageCoreDialogueOCRSimilarity = 0.7106`、`averageDecorativeOCRSimilarity = 0.8000`。
-- `frameworkComparison.consistencyPassed = true`、`fusionComparison.consistencyPassed = true`。
-- `fusion.fused.accuracyVsGroundTruth = 0.7384`。
-- `cleanTextDiagnostic.passRate = 0.4545`。
-- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`。
-- `likelyRuleFalseFailureBlocks = []`。
+- build、模拟器真探针、导出、JSON 解析、`git diff --check` 均通过。
+- `textRegionCropReport.totalRegions = 13`，`cropSucceededCount = 10`，`adoptedCount = 0`，`rejectedCount = 13`。
+- 主要拒绝原因：`rawWordsLost = 5`、`emptyCropText = 3`、`wordCountRegression = 2`、`sameAsFusedText = 2`、`insufficientQualityGain = 2`、`introducedLikelyOCRError = 1`。
+- 主指标无回归：`totalBlocksDetected = 13`、`groundTruthMatchedBlocks = 13`、`groundTruthUnmatchedBlocks = 0`、核心 OCR `0.7106`、装饰 `0.8000`、`fusion.fused.accuracyVsGroundTruth = 0.7384`、`cleanTextDiagnostic.passRate = 0.4545`、`passedBlocks = 1`、`failedBlocks = 12`。
+- 三条保护内容 `Let's Battle!`、`What are you even talking about?`、`We need to get results...` 均保留。
 
 遗留事项：
 
-- 融合提高了 OCR 覆盖和可信匹配，但翻译通过仍只有 1 块，瓶颈仍在 OCR 噪声和 Gemma 270M 翻译能力。
-- `totalBlocksDetected = 16` 是纳入真实 bubble-only 内容后的结果；后续仍需继续压重复/碎片块。
+- 当前 crop 候选没有足够收益，不能为了指标强行替换主翻译输入。
+- 后续应优先改进 TextRegion 检测/气泡分割质量，再重新评估 crop 采用收益。
 
 ### Agent 3：自适应 crop 与回退自测
 日期：2026-06 下旬

@@ -606,6 +606,7 @@ struct MangaOverlayProbeService: Sendable {
         outputDirectory: URL,
         preprocessing: MangaOverlayPreprocessingOptions = .defaultValue,
         cropping: MangaOverlayProbeCropping = .defaultValue,
+        textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
         bubbleDebugImagePath: String? = nil,
         bubbleCropsImagePath: String? = nil,
         bubbleTextOverlayImagePath: String? = nil
@@ -633,7 +634,7 @@ struct MangaOverlayProbeService: Sendable {
             try Self.writePNG(deterministicCorrectionImage, to: deterministicCorrectionURL)
             try Self.writePNG(deterministicTranslationImage, to: deterministicTranslationURL)
             try Self.writePNG(cropsImage, to: cropsURL)
-            try Self.writeOCRProbeText(blocks: blocks, to: ocrProbeTextURL)
+            try Self.writeOCRProbeText(blocks: blocks, textRegionCropReport: textRegionCropReport, to: ocrProbeTextURL)
 
             var preprocessedPath: String?
             if preprocessing.enabled {
@@ -1027,7 +1028,14 @@ struct MangaOverlayProbeService: Sendable {
         }
     }
 
-    private static func writeOCRProbeText(blocks: [MangaOverlayProbeBlock], to url: URL) throws {
+    private static func writeOCRProbeText(
+        blocks: [MangaOverlayProbeBlock],
+        textRegionCropReport: MangaOverlayTextRegionCropReport?,
+        to url: URL
+    ) throws {
+        let textRegionByBlock = Dictionary(
+            uniqueKeysWithValues: (textRegionCropReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
         let content = blocks.map { block in
             let bbox = block.bbox.map { String(Int($0.rounded())) }.joined(separator: ",")
             let raw = block.rawOcrText.replacing("\n", with: " / ")
@@ -1053,6 +1061,15 @@ struct MangaOverlayProbeService: Sendable {
             let renderBounds = block.renderNonTransparentBounds?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
             let glyphRect = block.glyphMaskRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
             let backgroundStdDev = block.backgroundColorStdDev?.formatted(.number.precision(.fractionLength(2))) ?? "nil"
+            let textRegion = textRegionByBlock[block.index]
+            let textRegionCrop = textRegion?.textRegionCropText?.replacing("\n", with: " / ") ?? "nil"
+            let textRegionSelected = textRegion?.selectedText.replacing("\n", with: " / ") ?? "nil"
+            let textRegionCropBBox = textRegion?.cropBBox.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let textRegionReasons = textRegion?.rejectionReasons.joined(separator: " | ") ?? "nil"
+            let textRegionPreservation = textRegion?.rawWordPreservationRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let textRegionQuality = textRegion.map {
+                "\($0.originalQualityScore.formatted(.number.precision(.fractionLength(3)))) -> \($0.candidateQualityScore.formatted(.number.precision(.fractionLength(3))))"
+            } ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
             rawOCR: \(raw)
@@ -1066,6 +1083,14 @@ struct MangaOverlayProbeService: Sendable {
             cropFallbackTriggered: \(block.cropFallbackTriggered)
             cropFallbackReason: \(block.cropFallbackReason ?? "nil")
             cropStrategyUsed: \(block.cropStrategyUsed ?? "nil")
+            textRegionCrop: \(textRegionCrop)
+            textRegionSelected: \(textRegionSelected)
+            textRegionAdopted: \(textRegion.map { String($0.adopted) } ?? "nil")
+            textRegionSelectionReason: \(textRegion?.selectionReason ?? "nil")
+            textRegionRejectionReasons: \(textRegionReasons)
+            textRegionCropBBox: [\(textRegionCropBBox)]
+            textRegionWordPreservation: \(textRegionPreservation)
+            textRegionQualityScore: \(textRegionQuality)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
             renderCollision: checked=\(block.renderCollisionChecked) initialOverflow=\(block.renderCollisionInitialOverflow) resolved=\(block.renderCollisionResolved) fontSize=\(block.renderFontSize?.formatted(.number.precision(.fractionLength(1))) ?? "nil") minFont=\(block.renderMinFontSizeReached) truncated=\(block.renderTextTruncated) nonTransparentBounds=[\(renderBounds)]
@@ -1092,7 +1117,7 @@ struct MangaOverlayProbeService: Sendable {
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map { String($0).trimmingCharacters(in: .whitespaces) }
             .joined(separator: "\n")
-        try cleanContent.write(to: url, atomically: true, encoding: .utf8)
+        try cleanContent.write(to: url, atomically: true, encoding: String.Encoding.utf8)
     }
 
     private static func bubbleResults(

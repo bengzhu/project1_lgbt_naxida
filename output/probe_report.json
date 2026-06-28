@@ -4560,7 +4560,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "9A94FFAD-3B17-439A-9C34-B91B7B8BFBB6",
+      "id" : "A85A4231-8E17-49B1-B154-B8B5E7F449F2",
       "index" : 0,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 1,
@@ -4594,7 +4594,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.857",
-        "preprocessedTruthSimilarity=1.000"
+        "preprocessedTruthSimilarity=1.000",
+        "textRegionCropSource=wholePageOCR",
+        "textRegionCropText=THAT'S \/ RIGHT, \/ RIGHT \/ NOW \/ I'M-",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=sameAsFusedText"
       ],
       "ocrQualityLabel" : "good",
       "ocrText" : "THAT'S\nRIGHT,\nNOW\nI'M-",
@@ -7309,7 +7314,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "ACEA6907-34BF-4420-AB3D-222ED019EDDC",
+      "id" : "FECA4BD2-1E99-4551-943A-F0031DDC4749",
       "index" : 1,
       "ocrGroundTruthSimilarity" : 0.5714285714285714,
       "ocrLegacySimilarity" : 0.9047619047619048,
@@ -7344,7 +7349,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.571",
-        "preprocessedTruthSimilarity=0.714"
+        "preprocessedTruthSimilarity=0.714",
+        "textRegionCropSource=bubbleFirst",
+        "textRegionCropText=I'VE \/ ARRIVED \/ AT REN- \/ SENPArS \/ • HOUSE.",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=introducedLikelyOCRError"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "IVE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE.",
@@ -7835,7 +7845,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "65F0648F-F559-497B-BC76-6577996224C3",
+      "id" : "E8CD76B8-DF30-4E5C-83B0-5382A426ABE1",
       "index" : 2,
       "ocrGroundTruthSimilarity" : 0.6666666666666667,
       "ocrLegacySimilarity" : 0.8333333333333334,
@@ -7856,7 +7866,12 @@
         "fusionSourceIndex=1",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
         "fusionRejected wholePageOCR#2: lowerGroundTruthFreeQualityScore",
-        "postFusionCleanup=kept"
+        "postFusionCleanup=kept",
+        "textRegionCropSource=bubbleFirst",
+        "textRegionCropText=nil",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=emptyCropText"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "THE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.",
@@ -12715,7 +12730,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "A1A104A0-811A-4A57-8A5F-8B76A76B936F",
+      "id" : "F339FAA7-E76D-4BF2-9841-FA339BE5675C",
       "index" : 3,
       "ocrGroundTruthSimilarity" : 0.7,
       "ocrLegacySimilarity" : 0.8529411764705882,
@@ -12736,7 +12751,12 @@
         "fusionSourceIndex=2",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
         "fusionRejected wholePageOCR#3: lowerGroundTruthFreeQualityScore",
-        "postFusionCleanup=kept"
+        "postFusionCleanup=kept",
+        "textRegionCropSource=bubbleFirst",
+        "textRegionCropText=TRANIE",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=wordCountRegression,rawWordsLost"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "ANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS",
@@ -12846,7 +12866,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "312C89DD-B476-4721-8430-3735DC008A53",
+      "id" : "ABB332D6-686F-41A3-9445-8A166BFA974F",
       "index" : 4,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.6666666666666667,
@@ -12881,7 +12901,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.667",
-        "preprocessedTruthSimilarity=0.667"
+        "preprocessedTruthSimilarity=0.667",
+        "textRegionCropSource=wholePageOCR",
+        "textRegionCropText=LET'S \/ BATTLERK",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=insufficientQualityGain"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "LET'S\nBATTLER!",
@@ -18015,7 +18040,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "32CF1F5E-B68B-46E6-8115-267E0C6AE388",
+      "id" : "6BF6F7FA-2A10-4ED6-AABA-3D9158D385EA",
       "index" : 5,
       "ocrGroundTruthSimilarity" : 0.8235294117647058,
       "ocrLegacySimilarity" : 0.8846153846153846,
@@ -18050,7 +18075,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.824",
-        "preprocessedTruthSimilarity=0.667"
+        "preprocessedTruthSimilarity=0.667",
+        "textRegionCropSource=bubbleFirst",
+        "textRegionCropText=JUSTIN \/ SPECIAL \/ TRAINING \/ RAND \/ ASKEO IP \/ →WE \/ COLD \/ JUST \/ PLAY. \/ tas \/ ONUNE \/ THA \/ bICN \/ To e \/ peal",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=rawWordsLost"
       ],
       "ocrQualityLabel" : "usable",
       "ocrText" : "I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...",
@@ -22400,7 +22430,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "93B7BB33-D5C1-42D2-B003-AD7813A7E744",
+      "id" : "2B9CB142-08A8-436F-AC45-ACF2B09D2263",
       "index" : 6,
       "ocrGroundTruthSimilarity" : 0.9166666666666666,
       "ocrLegacySimilarity" : 0.9361702127659575,
@@ -22435,7 +22465,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.917",
-        "preprocessedTruthSimilarity=0.500"
+        "preprocessedTruthSimilarity=0.500",
+        "textRegionCropSource=bubbleFirst",
+        "textRegionCropText=THS IS AN \/ OFFLINE \/ TOLENAMENT, \/ ONLINE \/ WOLLO MAKE \/ MEANWELESS \/ Whart \/ are",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=rawWordsLost"
       ],
       "ocrQualityLabel" : "good",
       "ocrText" : "THIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS",
@@ -24109,7 +24144,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "BFAEA1DF-EE1E-46FA-867A-FAA612BC019F",
+      "id" : "D23369EF-C3C6-4784-9E6F-9C3A91EEB2B7",
       "index" : 7,
       "ocrGroundTruthSimilarity" : 0.6875,
       "ocrLegacySimilarity" : 0.8363636363636363,
@@ -24145,7 +24180,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.688",
-        "preprocessedTruthSimilarity=0.000"
+        "preprocessedTruthSimilarity=0.000",
+        "textRegionCropSource=bubbleFirst",
+        "textRegionCropText=nil",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=emptyCropText"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "WE NEED TO\nGET RESULTS\nAT THS\nTOURNAMENT\nTO SAVE THE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.",
@@ -32003,7 +32043,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "96A57A6A-C5E9-466D-B2F7-4E3A073CEE73",
+      "id" : "B0441C69-9EAF-4721-A387-B71ACE9CCA3C",
       "index" : 8,
       "ocrGroundTruthSimilarity" : 0.8947368421052632,
       "ocrLegacySimilarity" : 0.9482758620689655,
@@ -32037,7 +32077,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.895",
-        "preprocessedTruthSimilarity=0.417"
+        "preprocessedTruthSimilarity=0.417",
+        "textRegionCropSource=bubbleFirst",
+        "textRegionCropText=* THE \/ SUGGESTION \/ OVERRULED, \/ ANO IT WAS \/ THAT TO BE \/ 'STAYNGY \/ OVER AT RENA \/ ESENPAI'S \/ THouser",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=insufficientQualityGain"
       ],
       "ocrQualityLabel" : "usable",
       "ocrText" : "THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.",
@@ -39503,7 +39548,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "45A1B163-4FE3-4B62-9AE7-8D77349D180D",
+      "id" : "94863170-58DF-4981-8874-DF9F4124452D",
       "index" : 9,
       "ocrGroundTruthSimilarity" : 0.5,
       "ocrLegacySimilarity" : 0.7916666666666666,
@@ -39538,7 +39583,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.500",
-        "preprocessedTruthSimilarity=0.714"
+        "preprocessedTruthSimilarity=0.714",
+        "textRegionCropSource=bubbleFirst",
+        "textRegionCropText=NEA \/ eve \/ : talkin",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=wordCountRegression,rawWordsLost"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "What\nare\nyOuL\never talking abodi?",
@@ -44726,7 +44776,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "7A5DBE39-D5A1-4F46-BE63-E5B49966DF1B",
+      "id" : "10B541BA-3101-4ADD-99E0-DC70533C8F4B",
       "index" : 10,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.5,
@@ -44763,7 +44813,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.500",
-        "preprocessedTruthSimilarity=0.438"
+        "preprocessedTruthSimilarity=0.438",
+        "textRegionCropSource=wholePageOCR",
+        "textRegionCropText=KED IP \/ WE \/ OLD \/ JIST \/ -ОЕ ДТ \/ LEAST. \/ NLINE.. \/ • THAT \/ SEEMS \/ TO BE \/ PEN- \/ LOGIC.",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=rawWordsLost"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
@@ -45150,7 +45205,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "7D6B4AC0-A6E1-45CC-8888-4C0B8057FABE",
+      "id" : "C8A65044-EC23-4E0A-BAAE-3A144D123698",
       "index" : 11,
       "ocrGroundTruthSimilarity" : 0.6,
       "ocrLegacySimilarity" : 0.6923076923076923,
@@ -45185,7 +45240,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.600",
-        "preprocessedTruthSimilarity=0.083"
+        "preprocessedTruthSimilarity=0.083",
+        "textRegionCropSource=bubbleFirst",
+        "textRegionCropText=nil",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=emptyCropText"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
@@ -45296,7 +45356,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "AECC2FB7-09D8-4FC4-8F3F-35B9BDDCCC65",
+      "id" : "6D8EF2E0-00F8-4B2C-A294-41F5094ECDFF",
       "index" : 12,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.8,
@@ -45330,7 +45390,12 @@
         "cropFallbackReason=nil",
         "cropStrategyUsed=adaptive",
         "rawTruthSimilarity=0.800",
-        "preprocessedTruthSimilarity=0.600"
+        "preprocessedTruthSimilarity=0.600",
+        "textRegionCropSource=wholePageOCR",
+        "textRegionCropText=City Battler \/ Offline: \/ Tournament",
+        "textRegionCropSelected=false",
+        "textRegionCropSelectionReason=fallbackToFusedText",
+        "textRegionCropRejections=sameAsFusedText"
       ],
       "ocrQualityLabel" : "usable",
       "ocrText" : "City Battler\nOffline.\nTournament",
@@ -49650,7 +49715,7 @@
       "sharpenEnabled" : true
     },
     "productionDecodingMode" : "sampled",
-    "status" : "current pipeline uses fused whole-page Vision OCR and bubble-first OCR candidates with ground-truth-free selection",
+    "status" : "current pipeline uses fused whole-page and bubble-first OCR with post-fusion cleanup plus guarded TextRegion crop OCR candidates",
     "visionNewAPIStatus" : "deployment target is iOS 17.0; RecognizeTextRequest needs @available guard and is not part of the main path"
   },
   "correctionGuardrailTest" : {
@@ -49867,7 +49932,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 15540,
+      "processingTimeMs" : 15272,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -50168,7 +50233,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 154032,
+      "processingTimeMs" : 160391,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -50187,7 +50252,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 15540,
+      "processingTimeMs" : 15272,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -50199,7 +50264,7 @@
     "fused" : {
       "accuracyVsGroundTruth" : 0.7383773465526562,
       "matchedGroundTruthCount" : 13,
-      "processingTimeMs" : 154032,
+      "processingTimeMs" : 160391,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 0
     },
@@ -50305,7 +50370,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 154032,
+      "processingTimeMs" : 160391,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -51262,20 +51327,20 @@
   "outputDirectoryCleaned" : true,
   "outputFileCountAfterCleanup" : 15,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
-    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
-    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
-    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
-    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
+    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
+    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
+    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
+    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
   },
   "overallPassed" : false,
   "retainedOutputFiles" : [
@@ -66966,6 +67031,560 @@
     ],
     "sourceImage" : "synthetic:test\/1.png-content-x3",
     "thresholdAspectRatio" : 2.85
+  },
+  "textRegionCropReport" : {
+    "adoptedBlockIndexes" : [
+
+    ],
+    "adoptedCount" : 0,
+    "cropSucceededCount" : 10,
+    "diagnostics" : [
+      {
+        "adaptiveCropText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
+        "adopted" : false,
+        "blockIndex" : 0,
+        "bubbleID" : 0,
+        "candidateQualityScore" : 0.5111428571428571,
+        "cropBBox" : [
+          478,
+          300,
+          95,
+          143
+        ],
+        "cropClampedByBubble" : true,
+        "fusedTextBeforeCrop" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
+        "orientationHint" : "horizontal",
+        "originalQualityScore" : 0.5111428571428571,
+        "paddingX" : 20.14,
+        "paddingY" : 46.64,
+        "rawWordPreservationRatio" : 1,
+        "regionBBox" : [
+          478,
+          300,
+          95,
+          143
+        ],
+        "rejectionReasons" : [
+          "sameAsFusedText"
+        ],
+        "seedBBox" : [
+          499,
+          328,
+          53,
+          68
+        ],
+        "selectedText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "wholePageOCR",
+        "textRegionCropText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
+        "wholePageText" : "THAT'S\nRIGHT,\nNOW\nI'M-"
+      },
+      {
+        "adaptiveCropText" : "I'VE\nARRIVED\nAT REN-\nSENPATS\n• HOUSE.",
+        "adopted" : false,
+        "blockIndex" : 1,
+        "bubbleID" : 1,
+        "candidateQualityScore" : 0.645119691119691,
+        "cropBBox" : [
+          95,
+          319,
+          91,
+          128
+        ],
+        "cropClampedByBubble" : false,
+        "fusedTextBeforeCrop" : "IVE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE.",
+        "orientationHint" : "horizontal",
+        "originalQualityScore" : 0.7397142857142857,
+        "paddingX" : 19.38,
+        "paddingY" : 37.44,
+        "rawWordPreservationRatio" : 0.5714285714285714,
+        "regionBBox" : [
+          95,
+          319,
+          91,
+          128
+        ],
+        "rejectionReasons" : [
+          "introducedLikelyOCRError"
+        ],
+        "seedBBox" : [
+          115,
+          357,
+          51,
+          52
+        ],
+        "selectedText" : "IVE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE.",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "bubbleFirst",
+        "textRegionCropText" : "I'VE\nARRIVED\nAT REN-\nSENPArS\n• HOUSE.",
+        "wholePageText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE."
+      },
+      {
+        "adopted" : false,
+        "blockIndex" : 2,
+        "bubbleID" : 2,
+        "candidateQualityScore" : 0,
+        "cropBBox" : [
+          480,
+          532,
+          81,
+          94
+        ],
+        "cropClampedByBubble" : false,
+        "fusedTextBeforeCrop" : "THE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.",
+        "orientationHint" : "horizontal",
+        "originalQualityScore" : 0.7937142857142857,
+        "paddingX" : 14.44,
+        "paddingY" : 27.36,
+        "rawWordPreservationRatio" : 0,
+        "regionBBox" : [
+          480,
+          532,
+          81,
+          94
+        ],
+        "rejectionReasons" : [
+          "emptyCropText"
+        ],
+        "seedBBox" : [
+          495,
+          560,
+          51,
+          38
+        ],
+        "selectedText" : "THE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "bubbleFirst",
+        "wholePageText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS."
+      },
+      {
+        "adopted" : false,
+        "blockIndex" : 3,
+        "bubbleID" : 3,
+        "candidateQualityScore" : 0.812,
+        "cropBBox" : [
+          45,
+          654,
+          90,
+          105
+        ],
+        "cropClampedByBubble" : false,
+        "fusedTextBeforeCrop" : "ANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS",
+        "orientationHint" : "verticalCandidate",
+        "originalQualityScore" : 0.8079787234042554,
+        "paddingX" : 23.1,
+        "paddingY" : 19.32,
+        "rawWordPreservationRatio" : 0,
+        "regionBBox" : [
+          45,
+          654,
+          90,
+          105
+        ],
+        "rejectionReasons" : [
+          "wordCountRegression",
+          "rawWordsLost"
+        ],
+        "seedBBox" : [
+          69,
+          674,
+          42,
+          65
+        ],
+        "selectedText" : "ANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "bubbleFirst",
+        "textRegionCropText" : "TRANIE",
+        "wholePageText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL"
+      },
+      {
+        "adaptiveCropText" : "LET'S\nBATTLER!'",
+        "adopted" : false,
+        "blockIndex" : 4,
+        "candidateQualityScore" : 0.636,
+        "cropBBox" : [
+          341,
+          809,
+          143,
+          135
+        ],
+        "cropClampedByBubble" : false,
+        "fusedTextBeforeCrop" : "LET'S\nBATTLER!",
+        "orientationHint" : "horizontal",
+        "originalQualityScore" : 0.611,
+        "paddingX" : 20.9,
+        "paddingY" : 39.6,
+        "rawWordPreservationRatio" : 0.6666666666666666,
+        "regionBBox" : [
+          341,
+          809,
+          143,
+          135
+        ],
+        "rejectionReasons" : [
+          "insufficientQualityGain"
+        ],
+        "seedBBox" : [
+          362,
+          849,
+          101,
+          55
+        ],
+        "selectedText" : "LET'S\nBATTLER!",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "wholePageOCR",
+        "textRegionCropText" : "LET'S\nBATTLERK",
+        "wholePageText" : "LET'S\nBATTLER!"
+      },
+      {
+        "adaptiveCropText" : "LET'S\nBATTLER!'",
+        "adopted" : false,
+        "blockIndex" : 5,
+        "bubbleID" : 7,
+        "candidateQualityScore" : 0.816203830369357,
+        "cropBBox" : [
+          213,
+          900,
+          103,
+          114
+        ],
+        "cropClampedByBubble" : true,
+        "fusedTextBeforeCrop" : "I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...",
+        "orientationHint" : "verticalCandidate",
+        "originalQualityScore" : 0.7757142857142857,
+        "paddingX" : 27.500000000000004,
+        "paddingY" : 23,
+        "rawWordPreservationRatio" : 0.35714285714285715,
+        "regionBBox" : [
+          210,
+          861,
+          106,
+          153
+        ],
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "seedBBox" : [
+          238,
+          884,
+          50,
+          107
+        ],
+        "selectedText" : "I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "bubbleFirst",
+        "textRegionCropText" : "JUSTIN\nSPECIAL\nTRAINING\nRAND\nASKEO IP\n→WE\nCOLD\nJUST\nPLAY.\ntas\nONUNE\nTHA\nbICN\nTo e\npeal",
+        "wholePageText" : "LET'S\nBATTLER!"
+      },
+      {
+        "adaptiveCropText" : "•THIS IS AN\nOFFLINE:\nTOLENAMENT.\nONLINE\nWORLD MAKE\nMEANINELESS",
+        "adopted" : false,
+        "blockIndex" : 6,
+        "bubbleID" : 4,
+        "candidateQualityScore" : 0.8633823529411765,
+        "cropBBox" : [
+          130,
+          857,
+          111,
+          148
+        ],
+        "cropClampedByBubble" : true,
+        "fusedTextBeforeCrop" : "THIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS",
+        "orientationHint" : "horizontal",
+        "originalQualityScore" : 0.8616666666666667,
+        "paddingX" : 23.94,
+        "paddingY" : 48.239999999999995,
+        "rawWordPreservationRatio" : 0.3333333333333333,
+        "regionBBox" : [
+          130,
+          856,
+          111,
+          165
+        ],
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "seedBBox" : [
+          154,
+          905,
+          63,
+          67
+        ],
+        "selectedText" : "THIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "bubbleFirst",
+        "textRegionCropText" : "THS IS AN\nOFFLINE\nTOLENAMENT,\nONLINE\nWOLLO MAKE\nMEANWELESS\nWhart\nare",
+        "wholePageText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE"
+      },
+      {
+        "adaptiveCropText" : "ER!\nME NITO TO\nSET PESULTE\nTOLENANENT\nBAMNIS CLA\nPODA CENG\nDISGANORD",
+        "adopted" : false,
+        "blockIndex" : 7,
+        "bubbleID" : 5,
+        "candidateQualityScore" : 0,
+        "cropBBox" : [
+          485,
+          860,
+          91,
+          132
+        ],
+        "cropClampedByBubble" : true,
+        "fusedTextBeforeCrop" : "WE NEED TO\nGET RESULTS\nAT THS\nTOURNAMENT\nTO SAVE THE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.",
+        "orientationHint" : "horizontal",
+        "originalQualityScore" : 0.7733333333333334,
+        "paddingX" : 19.38,
+        "paddingY" : 41.04,
+        "rawWordPreservationRatio" : 0,
+        "regionBBox" : [
+          485,
+          856,
+          91,
+          141
+        ],
+        "rejectionReasons" : [
+          "emptyCropText"
+        ],
+        "seedBBox" : [
+          505,
+          898,
+          51,
+          57
+        ],
+        "selectedText" : "WE NEED TO\nGET RESULTS\nAT THS\nTOURNAMENT\nTO SAVE THE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "bubbleFirst",
+        "wholePageText" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG"
+      },
+      {
+        "adaptiveCropText" : "INS IS AN\nOPPLNE\nTOLONAMENT,\nDOING M\nONLINE\nWORLD AILKE\niT\nNEANINELESS\nTHE\nSUGEESTION\nVitai\nWAS\nOVERELLED,\nAND IT WAS\nyo\nDECIDED\neven\nTHAT I'D BE\ntalking\nSTAYING\nabout\nOVER AT GEN-\nSENPAI'S\nHOLISE.",
+        "adopted" : false,
+        "blockIndex" : 8,
+        "bubbleID" : 6,
+        "candidateQualityScore" : 0.8171558988764045,
+        "cropBBox" : [
+          10,
+          936,
+          141,
+          156
+        ],
+        "cropClampedByBubble" : false,
+        "fusedTextBeforeCrop" : "THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.",
+        "orientationHint" : "verticalCandidate",
+        "originalQualityScore" : 0.773174172544764,
+        "paddingX" : 36.85,
+        "paddingY" : 30.82,
+        "rawWordPreservationRatio" : 0.5789473684210527,
+        "regionBBox" : [
+          10,
+          936,
+          141,
+          156
+        ],
+        "rejectionReasons" : [
+          "insufficientQualityGain"
+        ],
+        "seedBBox" : [
+          47,
+          967,
+          67,
+          94
+        ],
+        "selectedText" : "THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "bubbleFirst",
+        "textRegionCropText" : "* THE\nSUGGESTION\nOVERRULED,\nANO IT WAS\nTHAT TO BE\n'STAYNGY\nOVER AT RENA\nESENPAI'S\nTHouser",
+        "wholePageText" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE."
+      },
+      {
+        "adaptiveCropText" : "MEA\n: What\nare\nyou\neven\n! talking\nabot",
+        "adopted" : false,
+        "blockIndex" : 9,
+        "bubbleID" : 6,
+        "candidateQualityScore" : 0.7484999999999999,
+        "cropBBox" : [
+          97,
+          959,
+          79,
+          96
+        ],
+        "cropClampedByBubble" : false,
+        "fusedTextBeforeCrop" : "What\nare\nyOuL\never talking abodi?",
+        "orientationHint" : "verticalCandidate",
+        "originalQualityScore" : 0.8083636363636364,
+        "paddingX" : 20.35,
+        "paddingY" : 17.02,
+        "rawWordPreservationRatio" : 0,
+        "regionBBox" : [
+          97,
+          959,
+          79,
+          96
+        ],
+        "rejectionReasons" : [
+          "wordCountRegression",
+          "rawWordsLost"
+        ],
+        "seedBBox" : [
+          118,
+          977,
+          37,
+          60
+        ],
+        "selectedText" : "What\nare\nyOuL\never talking abodi?",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "bubbleFirst",
+        "textRegionCropText" : "NEA\neve\n: talkin",
+        "wholePageText" : "What Whet are\nevery you!\ntalking"
+      },
+      {
+        "adaptiveCropText" : "80 IF\nWE\nUST\nLAY\n-O2 AT\nLEAST,\nLINE.\n• THAT\nSEEMS\nTO BE\nPEN-\nSENDAS\nLOGIC..",
+        "adopted" : false,
+        "blockIndex" : 10,
+        "bubbleID" : 7,
+        "candidateQualityScore" : 0.791830985915493,
+        "cropBBox" : [
+          251,
+          936,
+          114,
+          126
+        ],
+        "cropClampedByBubble" : false,
+        "fusedTextBeforeCrop" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
+        "orientationHint" : "verticalCandidate",
+        "originalQualityScore" : 0.6940909090909091,
+        "paddingX" : 29.700000000000003,
+        "paddingY" : 24.84,
+        "rawWordPreservationRatio" : 0.4166666666666667,
+        "regionBBox" : [
+          251,
+          936,
+          114,
+          126
+        ],
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "seedBBox" : [
+          281,
+          961,
+          54,
+          76
+        ],
+        "selectedText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "wholePageOCR",
+        "textRegionCropText" : "KED IP\nWE\nOLD\nJIST\n-ОЕ ДТ\nLEAST.\nNLINE..\n• THAT\nSEEMS\nTO BE\nPEN-\nLOGIC.",
+        "wholePageText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC."
+      },
+      {
+        "adaptiveCropText" : "cono\nDuST\nONLINE:",
+        "adopted" : false,
+        "blockIndex" : 11,
+        "bubbleID" : 4,
+        "candidateQualityScore" : 0,
+        "cropBBox" : [
+          269,
+          948,
+          36,
+          57
+        ],
+        "cropClampedByBubble" : true,
+        "fusedTextBeforeCrop" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
+        "orientationHint" : "verticalCandidate",
+        "originalQualityScore" : 0.6739999999999999,
+        "paddingX" : 19.8,
+        "paddingY" : 16.560000000000002,
+        "rawWordPreservationRatio" : 0,
+        "regionBBox" : [
+          269,
+          948,
+          76,
+          86
+        ],
+        "rejectionReasons" : [
+          "emptyCropText"
+        ],
+        "seedBBox" : [
+          289,
+          965,
+          36,
+          52
+        ],
+        "selectedText" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "bubbleFirst",
+        "wholePageText" : "JUST"
+      },
+      {
+        "adaptiveCropText" : "City, Battler\nagsT\nOffline.\nTournament",
+        "adopted" : false,
+        "blockIndex" : 12,
+        "candidateQualityScore" : 0.80425,
+        "cropBBox" : [
+          360,
+          931,
+          156,
+          158
+        ],
+        "cropClampedByBubble" : false,
+        "fusedTextBeforeCrop" : "City Battler\nOffline.\nTournament",
+        "orientationHint" : "horizontal",
+        "originalQualityScore" : 0.80425,
+        "paddingX" : 24.32,
+        "paddingY" : 46.08,
+        "rawWordPreservationRatio" : 1,
+        "regionBBox" : [
+          360,
+          931,
+          156,
+          158
+        ],
+        "rejectionReasons" : [
+          "sameAsFusedText"
+        ],
+        "seedBBox" : [
+          385,
+          978,
+          106,
+          64
+        ],
+        "selectedText" : "City Battler\nOffline.\nTournament",
+        "selectionReason" : "fallbackToFusedText",
+        "source" : "wholePageOCR",
+        "textRegionCropText" : "City Battler\nOffline:\nTournament",
+        "wholePageText" : "City Battler\nOffline.\nTournament"
+      }
+    ],
+    "mainRejectionReasons" : {
+      "emptyCropText" : 3,
+      "insufficientQualityGain" : 2,
+      "introducedLikelyOCRError" : 1,
+      "rawWordsLost" : 5,
+      "sameAsFusedText" : 2,
+      "wordCountRegression" : 2
+    },
+    "notes" : [
+      "TextRegion crop OCR uses post-fusion block bbox as seed and clamps to assigned bubble bbox or content rect",
+      "selection uses word preservation, text similarity, word count, Latin\/symbol ratios, OCR error heuristics, and crop clamp signals only",
+      "ground truth is used only after selection to refresh evaluation metrics"
+    ],
+    "rejectedBlockIndexes" : [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "rejectedCount" : 13,
+    "totalRegions" : 13
   },
   "totalBlocksDetected" : 13,
   "visionAPIComparison" : {

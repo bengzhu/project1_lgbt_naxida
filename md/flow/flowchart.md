@@ -61,15 +61,16 @@ flowchart TD
   J --> G
   G --> X["fusionComparison / fusionResults<br/>选择、替换、拒绝可审计"]
   X --> Y["post-fusion cleanup<br/>重复 / 碎片 / 低信息块拒绝"]
+  Y --> V["TextRegion crop OCR<br/>局部 crop 候选 + 护栏回退"]
   D --> Z["bubbleAudits<br/>过大气泡和分割候选诊断"]
 
   %% 诊断旁路：不替代主流程
-  Y --> H["自适应 crop 二次 OCR<br/>诊断和候选对照"]
-  Y --> I["确定性 OCR 纠错候选<br/>只做对照"]
-  Y --> K["slice OCR 对照<br/>长图触发"]
+  V --> H["自适应 crop 二次 OCR<br/>诊断和候选对照"]
+  V --> I["确定性 OCR 纠错候选<br/>只做对照"]
+  V --> K["slice OCR 对照<br/>长图触发"]
 
   %% 翻译：逐块主路径
-  Y --> L["逐块英译中<br/>Mock 或 Local GGUF"]
+  V --> L["逐块英译中<br/>Mock 或 Local GGUF"]
   L --> M["候选抽取与质量判定<br/>raw / candidate / failureCategory"]
   M --> N["失败块保留<br/>blockPassed=false + failureReasons"]
 
@@ -80,6 +81,7 @@ flowchart TD
   M --> R["probe_report.json<br/>从明细实时汇总"]
   X --> R
   Y --> R
+  V --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
   M --> T["1_ocr_probe_text.txt<br/>逐块文本快照"]

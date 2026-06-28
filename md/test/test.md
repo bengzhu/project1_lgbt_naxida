@@ -135,6 +135,10 @@ python3 -m json.tool test/1.ground_truth.json
 - `fusion.fused.accuracyVsGroundTruth = 0.7384`
 - `frameworkComparison.consistencyPassed = true`
 - `fusionComparison.consistencyPassed = true`
+- `textRegionCropReport.totalRegions = 13`
+- `textRegionCropReport.cropSucceededCount = 10`
+- `textRegionCropReport.adoptedCount = 0`
+- `textRegionCropReport.rejectedCount = 13`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
 - `failedBlocks = 12`
