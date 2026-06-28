@@ -53,7 +53,7 @@ python3 -m json.tool output/clean_text_diagnostic.json
 - `output/clean_text_diagnostic.json` 可解析。
 - `test/1.ground_truth.json` 可解析。
 - 最新 `configuration.currentBlockSource = fusedWholePageBubble`。
-- 最新 `totalBlocksDetected = 16`，`frameworkComparison.consistencyPassed = true`，`fusionComparison.consistencyPassed = true`。
+- 最新 `totalBlocksDetected = 13`，`frameworkComparison.consistencyPassed = true`，`fusionComparison.consistencyPassed = true`。
 
 ### 2. Smoke
 验证主要集成路径。
@@ -122,9 +122,12 @@ python3 -m json.tool test/1.ground_truth.json
 当前基线：
 
 - `configuration.currentBlockSource = fusedWholePageBubble`
-- `totalBlocksDetected = 16`
+- `totalBlocksDetected = 13`
+- `postFusionCleanup.blockCountBeforeCleanup = 16`
+- `postFusionCleanup.blockCountAfterCleanup = 13`
+- `postFusionCleanup.rejectedBlockCount = 3`
 - `groundTruthMatchedBlocks = 13`
-- `groundTruthUnmatchedBlocks = 3`
+- `groundTruthUnmatchedBlocks = 0`
 - `averageCoreDialogueOCRSimilarity = 0.7106`
 - `averageDecorativeOCRSimilarity = 0.8000`
 - `wholePageAccuracyVsGroundTruth = 0.5972`
@@ -134,8 +137,8 @@ python3 -m json.tool test/1.ground_truth.json
 - `fusionComparison.consistencyPassed = true`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
-- `failedBlocks = 15`
-- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`
+- `failedBlocks = 12`
+- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
 - `likelyRuleFalseFailureBlocks = []`
 
 ### 4. Full

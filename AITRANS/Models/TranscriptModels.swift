@@ -992,6 +992,32 @@ struct MangaOverlayFusionResult: Equatable, Codable, Sendable {
     var rejectedCandidates: [MangaOverlayFusionCandidate]
 }
 
+struct MangaOverlayPostFusionRejectedBlock: Equatable, Codable, Sendable {
+    var originalFusedBlockIndex: Int
+    var source: String
+    var sourceBlockIndex: Int?
+    var bubbleResultIndex: Int?
+    var bubbleID: Int?
+    var text: String
+    var bbox: [Double]
+    var reason: String
+    var relatedFusedBlockIndex: Int?
+    var relatedText: String?
+    var relatedBBox: [Double]?
+}
+
+struct MangaOverlayPostFusionCleanupReport: Equatable, Codable, Sendable {
+    var applied: Bool
+    var blockCountBeforeCleanup: Int
+    var blockCountAfterCleanup: Int
+    var rejectedBlockCount: Int
+    var rejectedBlocks: [MangaOverlayPostFusionRejectedBlock]
+    var preservedKeyTexts: [String]
+    var missingKeyTexts: [String]
+    var warnings: [String]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -1006,8 +1032,45 @@ struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var fusedAddedBubbleOnlyCount: Int
     var fusedRetainedWholePageOnlyCount: Int
     var fusedRejectedCandidateCount: Int
+    var postFusionCleanup: MangaOverlayPostFusionCleanupReport?
     var consistencyPassed: Bool
     var consistencyWarnings: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayTextRegionCropDiagnostic: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var source: String
+    var seedBBox: [Double]
+    var regionBBox: [Double]
+    var cropBBox: [Double]
+    var cropClampedByBubble: Bool
+    var paddingX: Double
+    var paddingY: Double
+    var orientationHint: String
+    var wholePageText: String
+    var fusedTextBeforeCrop: String
+    var adaptiveCropText: String?
+    var textRegionCropText: String?
+    var selectedText: String
+    var adopted: Bool
+    var selectionReason: String
+    var rejectionReasons: [String]
+    var rawWordPreservationRatio: Double
+    var candidateQualityScore: Double
+    var originalQualityScore: Double
+}
+
+struct MangaOverlayTextRegionCropReport: Equatable, Codable, Sendable {
+    var totalRegions: Int
+    var cropSucceededCount: Int
+    var adoptedCount: Int
+    var rejectedCount: Int
+    var adoptedBlockIndexes: [Int]
+    var rejectedBlockIndexes: [Int]
+    var mainRejectionReasons: [String: Int]
+    var diagnostics: [MangaOverlayTextRegionCropDiagnostic]
     var notes: [String]
 }
 
@@ -1095,6 +1158,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var frameworkComparison: MangaOverlayFrameworkComparison?
     var fusionComparison: MangaOverlayFusionComparison?
     var fusionResults: [MangaOverlayFusionResult]
+    var textRegionCropReport: MangaOverlayTextRegionCropReport?
     var cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
     var batchTranslationComparison: MangaBatchTranslationComparison?
     var deterministicDecodingCheck: MangaDeterministicDecodingCheck?
