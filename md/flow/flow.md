@@ -181,7 +181,9 @@ test/1.png
   -> fused OCR blocks
   -> post-fusion 重复/碎片清理
   -> bubble 分割审计诊断
-  -> TextRegion crop OCR 候选诊断和护栏选择
+  -> BubbleMask 轻量子区域诊断
+  -> TextRegion crop OCR 候选诊断和 subregion / bubble / content clamp
+  -> ground-truth-free crop 护栏选择
   -> 自适应 crop 二次 OCR 诊断
   -> 确定性 OCR 纠错对照
   -> 逐块 Local/Mock 翻译
@@ -280,7 +282,7 @@ test/1.png
 - 词级 Levenshtein 是当前可信 OCR 相似度口径。
 - clean text 失败时优先怀疑模型质量，不继续盲调 OCR。
 - bubble-first 当前参与融合主流程；whole-page 原始块和 bubble-first 原始候选仍保留为对照和回退审计。
-- TextRegion crop 当前是结构化候选层；只有通过 ground-truth-free 护栏才可替换主翻译输入，v12 本轮 0 块采用。
+- TextRegion crop 当前是结构化候选层；v13 会优先尝试可信 block-local subregion clamp，再回退到 bubble bbox 或 content rect。只有通过 ground-truth-free 护栏才可替换主翻译输入，本轮 0 块采用。
 - 确定性纠错当前是对照路径，不替换 `finalTextUsedForTranslation`。
 - tagged batch 当前是负面诊断，不替换逐块翻译。
 

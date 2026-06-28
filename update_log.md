@@ -11,7 +11,7 @@
 ## 当前状态
 日期：2026-06-28
 
-当前项目是 SwiftUI iOS 本地翻译原型，主线已从普通翻译 UI 转到漫画截图 OCR、本地翻译、覆盖合成和探针诊断。最新可用基线来自当前 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 的 v12 行：
+当前项目是 SwiftUI iOS 本地翻译原型，主线已从普通翻译 UI 转到漫画截图 OCR、本地翻译、覆盖合成和探针诊断。最新可用基线来自当前 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 的 v13 行：
 
 - `sourceImage = test/1.png`
 - `engineUsed = Local GGUF`
@@ -36,6 +36,10 @@
 - `textRegionCropReport.cropSucceededCount = 10`
 - `textRegionCropReport.adoptedCount = 0`
 - `textRegionCropReport.rejectedCount = 13`
+- `bubbleSubRegionReport.totalSubRegions = 11`
+- `bubbleSubRegionReport.clampEligibleCount = 2`
+- `bubbleSubRegionReport.oversizedBubbleIDs = [4, 6, 7]`
+- `textRegionCropReport.clampSources = { bubbleBBox: 9, contentRect: 2, subRegion: 2 }`
 - `passedBlocks = 1`
 - `failedBlocks = 12`
 - `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
@@ -47,7 +51,7 @@
 - 主流程已切到 whole-page + bubble-first 融合；`Let's Battle!` 保留，bubble-first 独有两条真实内容也进入融合结果。
 - post-fusion cleanup 已把 16 个融合块压到 13 个，拒绝重复/碎片块但保留关键真实内容。
 - TextRegion crop OCR 候选层已接入报告和 `1_ocr_probe_text.txt`，本轮 13 个块全部被护栏回退，没有替换主翻译输入。
-- `bubbleAudits` 标出 `bubbleID 4/6/7` 的分割风险，当前只诊断不替换主流程。
+- `bubbleAudits` 标出 `bubbleID 4/6/7` 的分割风险；v13 新增轻量 `bubbleSubRegionReport`，其中 2 个 block-local subregion 用于 TextRegion crop clamp，但 crop 采用护栏未放宽。
 - Vision `customWords` 对当前图最终合并文本无变化，`changedBlockIndexes = []`。
 - 确定性 OCR 纠错能提升部分相似度，但翻译收益不稳定，仍只做探针对照。
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
@@ -367,6 +371,45 @@
 
 - 当前 crop 候选没有足够收益，不能为了指标强行替换主翻译输入。
 - 后续应优先改进 TextRegion 检测/气泡分割质量，再重新评估 crop 采用收益。
+
+### v13：BubbleMask 子区域诊断与 TextRegion clamp
+日期：2026-06-28
+依据：`md/prompt/v1（漫画探针）/v1.3（BubbleMask子区域与TextRegion clamp优化）.md`、当前 `output/probe_report.json`
+
+核心变更：
+
+- 新增轻量 `bubbleSubRegionReport`，用 fused block seed bbox、parent bubble bbox、oversized bubble audit 和几何覆盖率生成 block-local subregion 诊断。
+- TextRegion crop OCR 优先使用 `clampEligible` 的 subregion 作为 clamp 边界；无可信 subregion 时继续回退到 bubble bbox 或 content rect。
+- `textRegionCropReport.diagnostics` 新增 `clampSource`、`subRegionID`、`subRegionBBox`、`subRegionCoverageRatio`、`subRegionRejectedReason`、subregion clamp 前后 crop bbox。
+- `1_ocr_probe_text.txt` 同步写入每块 subregion/clamp 证据。
+- crop 采用护栏保持 v12 口径，不放宽 adopted 条件，不用 ground truth 做 subregion 生成、crop clamp 或候选选择。
+
+关键文件：
+
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Models/TranscriptModels.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `metrics/version_history.csv`
+- `output/probe_report.json`
+- `output/1_ocr_probe_text.txt`
+
+验证结果：
+
+- build、模拟器真探针、导出、JSON 解析、`git diff --check` 均通过。
+- `bubbleSubRegionReport.totalSubRegions = 11`，`clampEligibleCount = 2`，`oversizedBubbleIDs = [4, 6, 7]`。
+- `textRegionCropReport.clampSources = { bubbleBBox: 9, contentRect: 2, subRegion: 2 }`，subregion clamp 实际用于块 `[6, 8]`。
+- `textRegionCropReport.totalRegions = 13`，`cropSucceededCount = 10`，`adoptedCount = 0`，`rejectedCount = 13`；主要拒绝原因未因 clamp 变化被放宽。
+- 主指标无回归：`totalBlocksDetected = 13`、`groundTruthMatchedBlocks = 13`、`groundTruthUnmatchedBlocks = 0`、核心 OCR `0.7106`、装饰 `0.8000`、`fusion.fused.accuracyVsGroundTruth = 0.7384`、`cleanTextDiagnostic.passRate = 0.4545`、`passedBlocks = 1`、`failedBlocks = 12`。
+- 三条保护内容 `Let's Battle!`、`What are you even talking about?`、`We need to get results...` 均保留。
+
+遗留事项：
+
+- 轻量 subregion 仍是传统几何近似，不是真正 Koharu 实例 mask。
+- 当前 `adoptedCount = 0`，说明 subregion clamp 只提供了更清楚的 crop 串扰证据，尚未证明可替换主翻译输入。
+- 下一步应继续观察 `bubbleID 4/6/7` 的 sibling overlap 和 subregion 失败原因，再决定是否引入更强的 bubble/text region 检测。
 
 ### Agent 3：自适应 crop 与回退自测
 日期：2026-06 下旬

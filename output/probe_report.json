@@ -4560,7 +4560,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "A85A4231-8E17-49B1-B154-B8B5E7F449F2",
+      "id" : "C41713C7-0D68-4104-ABED-258A126D0B52",
       "index" : 0,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 1,
@@ -4597,6 +4597,10 @@
         "preprocessedTruthSimilarity=1.000",
         "textRegionCropSource=wholePageOCR",
         "textRegionCropText=THAT'S \/ RIGHT, \/ RIGHT \/ NOW \/ I'M-",
+        "textRegionClampSource=bubbleBBox",
+        "textRegionSubRegionID=0",
+        "textRegionSubRegionClampEligible=false",
+        "textRegionSubRegionRejections=parentBubbleNotOversized",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=sameAsFusedText"
@@ -7314,7 +7318,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "FECA4BD2-1E99-4551-943A-F0031DDC4749",
+      "id" : "2BBC6A85-1828-4061-93C8-1AB3539C23AE",
       "index" : 1,
       "ocrGroundTruthSimilarity" : 0.5714285714285714,
       "ocrLegacySimilarity" : 0.9047619047619048,
@@ -7352,6 +7356,10 @@
         "preprocessedTruthSimilarity=0.714",
         "textRegionCropSource=bubbleFirst",
         "textRegionCropText=I'VE \/ ARRIVED \/ AT REN- \/ SENPArS \/ • HOUSE.",
+        "textRegionClampSource=bubbleBBox",
+        "textRegionSubRegionID=1",
+        "textRegionSubRegionClampEligible=false",
+        "textRegionSubRegionRejections=parentBubbleNotOversized",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=introducedLikelyOCRError"
@@ -7845,7 +7853,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "E8CD76B8-DF30-4E5C-83B0-5382A426ABE1",
+      "id" : "878228AF-1B09-4774-90CD-787F420C3156",
       "index" : 2,
       "ocrGroundTruthSimilarity" : 0.6666666666666667,
       "ocrLegacySimilarity" : 0.8333333333333334,
@@ -7869,6 +7877,10 @@
         "postFusionCleanup=kept",
         "textRegionCropSource=bubbleFirst",
         "textRegionCropText=nil",
+        "textRegionClampSource=bubbleBBox",
+        "textRegionSubRegionID=2",
+        "textRegionSubRegionClampEligible=false",
+        "textRegionSubRegionRejections=parentBubbleNotOversized",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=emptyCropText"
@@ -12730,7 +12742,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "F339FAA7-E76D-4BF2-9841-FA339BE5675C",
+      "id" : "CD92AB4A-7D5B-4045-9B4D-374E9F183DC2",
       "index" : 3,
       "ocrGroundTruthSimilarity" : 0.7,
       "ocrLegacySimilarity" : 0.8529411764705882,
@@ -12754,6 +12766,10 @@
         "postFusionCleanup=kept",
         "textRegionCropSource=bubbleFirst",
         "textRegionCropText=TRANIE",
+        "textRegionClampSource=bubbleBBox",
+        "textRegionSubRegionID=3",
+        "textRegionSubRegionClampEligible=false",
+        "textRegionSubRegionRejections=parentBubbleNotOversized",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=wordCountRegression,rawWordsLost"
@@ -12866,7 +12882,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "ABB332D6-686F-41A3-9445-8A166BFA974F",
+      "id" : "8B589424-6683-4BA7-A955-D52F1AE20C60",
       "index" : 4,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.6666666666666667,
@@ -12904,6 +12920,8 @@
         "preprocessedTruthSimilarity=0.667",
         "textRegionCropSource=wholePageOCR",
         "textRegionCropText=LET'S \/ BATTLERK",
+        "textRegionClampSource=contentRect",
+        "textRegionSubRegionRejected=noSubRegion",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=insufficientQualityGain"
@@ -18040,7 +18058,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "6BF6F7FA-2A10-4ED6-AABA-3D9158D385EA",
+      "id" : "35721247-27E3-4A16-B725-AC7A3E23378E",
       "index" : 5,
       "ocrGroundTruthSimilarity" : 0.8235294117647058,
       "ocrLegacySimilarity" : 0.8846153846153846,
@@ -18078,6 +18096,10 @@
         "preprocessedTruthSimilarity=0.667",
         "textRegionCropSource=bubbleFirst",
         "textRegionCropText=JUSTIN \/ SPECIAL \/ TRAINING \/ RAND \/ ASKEO IP \/ →WE \/ COLD \/ JUST \/ PLAY. \/ tas \/ ONUNE \/ THA \/ bICN \/ To e \/ peal",
+        "textRegionClampSource=bubbleBBox",
+        "textRegionSubRegionID=4",
+        "textRegionSubRegionClampEligible=false",
+        "textRegionSubRegionRejections=seedCoverageTooLow",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=rawWordsLost"
@@ -22430,7 +22452,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "2B9CB142-08A8-436F-AC45-ACF2B09D2263",
+      "id" : "3602C467-37CD-47D0-9C68-F63FEF07B66C",
       "index" : 6,
       "ocrGroundTruthSimilarity" : 0.9166666666666666,
       "ocrLegacySimilarity" : 0.9361702127659575,
@@ -22467,7 +22489,10 @@
         "rawTruthSimilarity=0.917",
         "preprocessedTruthSimilarity=0.500",
         "textRegionCropSource=bubbleFirst",
-        "textRegionCropText=THS IS AN \/ OFFLINE \/ TOLENAMENT, \/ ONLINE \/ WOLLO MAKE \/ MEANWELESS \/ Whart \/ are",
+        "textRegionCropText=THS I5 AN \/ OPPLINE \/ TOLENANENT. \/ DONG I \/ ONLINE \/ WOLLO MAKE \/ MEANMELESS \/ Vhwit \/ are",
+        "textRegionClampSource=subRegion",
+        "textRegionSubRegionID=5",
+        "textRegionSubRegionClampEligible=true",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=rawWordsLost"
@@ -24144,7 +24169,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "D23369EF-C3C6-4784-9E6F-9C3A91EEB2B7",
+      "id" : "F05A284E-64B9-4A86-BACD-45F7E6D8EAAE",
       "index" : 7,
       "ocrGroundTruthSimilarity" : 0.6875,
       "ocrLegacySimilarity" : 0.8363636363636363,
@@ -24183,6 +24208,10 @@
         "preprocessedTruthSimilarity=0.000",
         "textRegionCropSource=bubbleFirst",
         "textRegionCropText=nil",
+        "textRegionClampSource=bubbleBBox",
+        "textRegionSubRegionID=6",
+        "textRegionSubRegionClampEligible=false",
+        "textRegionSubRegionRejections=parentBubbleNotOversized",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=emptyCropText"
@@ -32043,7 +32072,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "B0441C69-9EAF-4721-A387-B71ACE9CCA3C",
+      "id" : "CAC68C12-25A7-4A80-8EB0-1EAC5C11946C",
       "index" : 8,
       "ocrGroundTruthSimilarity" : 0.8947368421052632,
       "ocrLegacySimilarity" : 0.9482758620689655,
@@ -32080,6 +32109,9 @@
         "preprocessedTruthSimilarity=0.417",
         "textRegionCropSource=bubbleFirst",
         "textRegionCropText=* THE \/ SUGGESTION \/ OVERRULED, \/ ANO IT WAS \/ THAT TO BE \/ 'STAYNGY \/ OVER AT RENA \/ ESENPAI'S \/ THouser",
+        "textRegionClampSource=subRegion",
+        "textRegionSubRegionID=7",
+        "textRegionSubRegionClampEligible=true",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=insufficientQualityGain"
@@ -39548,7 +39580,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "94863170-58DF-4981-8874-DF9F4124452D",
+      "id" : "5476B0A3-6864-402D-B42E-D469C85E56AC",
       "index" : 9,
       "ocrGroundTruthSimilarity" : 0.5,
       "ocrLegacySimilarity" : 0.7916666666666666,
@@ -39586,6 +39618,10 @@
         "preprocessedTruthSimilarity=0.714",
         "textRegionCropSource=bubbleFirst",
         "textRegionCropText=NEA \/ eve \/ : talkin",
+        "textRegionClampSource=bubbleBBox",
+        "textRegionSubRegionID=8",
+        "textRegionSubRegionClampEligible=false",
+        "textRegionSubRegionRejections=overlapsSiblingSubRegion",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=wordCountRegression,rawWordsLost"
@@ -44776,7 +44812,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "10B541BA-3101-4ADD-99E0-DC70533C8F4B",
+      "id" : "F2A63F71-F045-4266-8EBC-A5B2FC2457F6",
       "index" : 10,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.5,
@@ -44816,6 +44852,10 @@
         "preprocessedTruthSimilarity=0.438",
         "textRegionCropSource=wholePageOCR",
         "textRegionCropText=KED IP \/ WE \/ OLD \/ JIST \/ -ОЕ ДТ \/ LEAST. \/ NLINE.. \/ • THAT \/ SEEMS \/ TO BE \/ PEN- \/ LOGIC.",
+        "textRegionClampSource=bubbleBBox",
+        "textRegionSubRegionID=9",
+        "textRegionSubRegionClampEligible=false",
+        "textRegionSubRegionRejections=overlapsSiblingSubRegion",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=rawWordsLost"
@@ -45205,7 +45245,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "C8A65044-EC23-4E0A-BAAE-3A144D123698",
+      "id" : "1DFD84FC-838C-405F-A250-91CF8DAD8170",
       "index" : 11,
       "ocrGroundTruthSimilarity" : 0.6,
       "ocrLegacySimilarity" : 0.6923076923076923,
@@ -45243,6 +45283,10 @@
         "preprocessedTruthSimilarity=0.083",
         "textRegionCropSource=bubbleFirst",
         "textRegionCropText=nil",
+        "textRegionClampSource=bubbleBBox",
+        "textRegionSubRegionID=10",
+        "textRegionSubRegionClampEligible=false",
+        "textRegionSubRegionRejections=seedCoverageTooLow",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=emptyCropText"
@@ -45356,7 +45400,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "6D8EF2E0-00F8-4B2C-A294-41F5094ECDFF",
+      "id" : "925A8E6D-D94B-4284-8E87-FFC03D1114A3",
       "index" : 12,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.8,
@@ -45393,6 +45437,8 @@
         "preprocessedTruthSimilarity=0.600",
         "textRegionCropSource=wholePageOCR",
         "textRegionCropText=City Battler \/ Offline: \/ Tournament",
+        "textRegionClampSource=contentRect",
+        "textRegionSubRegionRejected=noSubRegion",
         "textRegionCropSelected=false",
         "textRegionCropSelectionReason=fallbackToFusedText",
         "textRegionCropRejections=sameAsFusedText"
@@ -49541,6 +49587,351 @@
     ],
     "unassignedTextRegionCount" : 26
   },
+  "bubbleSubRegionReport" : {
+    "clampEligibleCount" : 2,
+    "diagnostics" : [
+      {
+        "area" : 13938,
+        "bbox" : [
+          475,
+          293,
+          101,
+          138
+        ],
+        "clampEligible" : false,
+        "confidence" : 0.38,
+        "id" : 0,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "diagnosticOnlyParentBubble",
+          "notUsedForClamp"
+        ],
+        "parentBubbleID" : 0,
+        "parentCoverageRatio" : 0.4474478330658106,
+        "rejectionReasons" : [
+          "parentBubbleNotOversized"
+        ],
+        "seedBlockIndexes" : [
+          0
+        ],
+        "seedCoverageRatio" : 1,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "blockSeedDiagnostic"
+      },
+      {
+        "area" : 10670,
+        "bbox" : [
+          92,
+          328,
+          97,
+          110
+        ],
+        "clampEligible" : false,
+        "confidence" : 0.38,
+        "id" : 1,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "diagnosticOnlyParentBubble",
+          "notUsedForClamp"
+        ],
+        "parentBubbleID" : 1,
+        "parentCoverageRatio" : 0.33644447247272496,
+        "rejectionReasons" : [
+          "parentBubbleNotOversized"
+        ],
+        "seedBlockIndexes" : [
+          1
+        ],
+        "seedCoverageRatio" : 1,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "blockSeedDiagnostic"
+      },
+      {
+        "area" : 6960,
+        "bbox" : [
+          477,
+          539,
+          87,
+          80
+        ],
+        "clampEligible" : false,
+        "confidence" : 0.38,
+        "id" : 2,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "diagnosticOnlyParentBubble",
+          "notUsedForClamp"
+        ],
+        "parentBubbleID" : 2,
+        "parentCoverageRatio" : 0.40432206343673754,
+        "rejectionReasons" : [
+          "parentBubbleNotOversized"
+        ],
+        "seedBlockIndexes" : [
+          2
+        ],
+        "seedCoverageRatio" : 1,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "blockSeedDiagnostic"
+      },
+      {
+        "area" : 9680,
+        "bbox" : [
+          50,
+          646,
+          80,
+          121
+        ],
+        "clampEligible" : false,
+        "confidence" : 0.38,
+        "id" : 3,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "diagnosticOnlyParentBubble",
+          "notUsedForClamp"
+        ],
+        "parentBubbleID" : 3,
+        "parentCoverageRatio" : 0.2764134780125643,
+        "rejectionReasons" : [
+          "parentBubbleNotOversized"
+        ],
+        "seedBlockIndexes" : [
+          3
+        ],
+        "seedCoverageRatio" : 1,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "blockSeedDiagnostic"
+      },
+      {
+        "area" : 17818,
+        "bbox" : [
+          213,
+          900,
+          118,
+          151
+        ],
+        "clampEligible" : false,
+        "confidence" : 0.38,
+        "id" : 4,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "oversizedParentBubble",
+          "notUsedForClamp"
+        ],
+        "parentBubbleID" : 7,
+        "parentCoverageRatio" : 0.4712509918011108,
+        "rejectionReasons" : [
+          "seedCoverageTooLow"
+        ],
+        "seedBlockIndexes" : [
+          5
+        ],
+        "seedCoverageRatio" : 0.8504672897196262,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "oversizedBubbleBlockSeed"
+      },
+      {
+        "area" : 25137,
+        "bbox" : [
+          100,
+          858,
+          171,
+          147
+        ],
+        "clampEligible" : true,
+        "confidence" : 0.72,
+        "id" : 5,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "oversizedParentBubble"
+        ],
+        "parentBubbleID" : 4,
+        "parentCoverageRatio" : 0.7136327503974563,
+        "rejectionReasons" : [
+
+        ],
+        "seedBlockIndexes" : [
+          6
+        ],
+        "seedCoverageRatio" : 1,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "oversizedBubbleBlockSeed"
+      },
+      {
+        "area" : 11374,
+        "bbox" : [
+          482,
+          866,
+          94,
+          121
+        ],
+        "clampEligible" : false,
+        "confidence" : 0.38,
+        "id" : 6,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "diagnosticOnlyParentBubble",
+          "notUsedForClamp"
+        ],
+        "parentBubbleID" : 5,
+        "parentCoverageRatio" : 0.5861678004535147,
+        "rejectionReasons" : [
+          "parentBubbleNotOversized"
+        ],
+        "seedBlockIndexes" : [
+          7
+        ],
+        "seedCoverageRatio" : 1,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "blockSeedDiagnostic"
+      },
+      {
+        "area" : 38646,
+        "bbox" : [
+          0,
+          901,
+          171,
+          226
+        ],
+        "clampEligible" : true,
+        "confidence" : 0.72,
+        "id" : 7,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "oversizedParentBubble"
+        ],
+        "parentBubbleID" : 6,
+        "parentCoverageRatio" : 0.6385446614454248,
+        "rejectionReasons" : [
+
+        ],
+        "seedBlockIndexes" : [
+          8
+        ],
+        "seedCoverageRatio" : 1,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "oversizedBubbleBlockSeed"
+      },
+      {
+        "area" : 14544,
+        "bbox" : [
+          86,
+          935,
+          101,
+          144
+        ],
+        "clampEligible" : false,
+        "confidence" : 0.38,
+        "id" : 8,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "oversizedParentBubble",
+          "notUsedForClamp"
+        ],
+        "parentBubbleID" : 6,
+        "parentCoverageRatio" : 0.24030930901159908,
+        "rejectionReasons" : [
+          "overlapsSiblingSubRegion"
+        ],
+        "seedBlockIndexes" : [
+          9
+        ],
+        "seedCoverageRatio" : 1,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "oversizedBubbleBlockSeed"
+      },
+      {
+        "area" : 26864,
+        "bbox" : [
+          235,
+          907,
+          146,
+          184
+        ],
+        "clampEligible" : false,
+        "confidence" : 0.38,
+        "id" : 9,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "oversizedParentBubble",
+          "notUsedForClamp"
+        ],
+        "parentBubbleID" : 7,
+        "parentCoverageRatio" : 0.7104998677598519,
+        "rejectionReasons" : [
+          "overlapsSiblingSubRegion"
+        ],
+        "seedBlockIndexes" : [
+          10
+        ],
+        "seedCoverageRatio" : 1,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "oversizedBubbleBlockSeed"
+      },
+      {
+        "area" : 3619,
+        "bbox" : [
+          258,
+          928,
+          47,
+          77
+        ],
+        "clampEligible" : false,
+        "confidence" : 0.38,
+        "id" : 10,
+        "notes" : [
+          "generatedFromFusedBlockSeedBBox",
+          "oversizedParentBubble",
+          "notUsedForClamp"
+        ],
+        "parentBubbleID" : 4,
+        "parentCoverageRatio" : 0.10274244833068362,
+        "rejectionReasons" : [
+          "seedCoverageTooLow"
+        ],
+        "seedBlockIndexes" : [
+          11
+        ],
+        "seedCoverageRatio" : 0.3418803418803419,
+        "seedTextRegionIndexes" : [
+
+        ],
+        "source" : "oversizedBubbleBlockSeed"
+      }
+    ],
+    "enabled" : true,
+    "notes" : [
+      "lightweight BubbleMask approximation derived from fused block seed bbox and parent bubble bbox",
+      "only oversized bubble subregions with enough seed coverage and smaller-than-parent area are eligible for TextRegion crop clamp",
+      "ground truth is not used to generate, rank, reject, or adopt subregions"
+    ],
+    "oversizedBubbleIDs" : [
+      4,
+      6,
+      7
+    ],
+    "totalSubRegions" : 11
+  },
   "cleanTextDiagnostic" : {
     "cases" : [
       {
@@ -49932,7 +50323,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 15272,
+      "processingTimeMs" : 15865,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -50233,7 +50624,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 160391,
+      "processingTimeMs" : 165108,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -50252,7 +50643,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 15272,
+      "processingTimeMs" : 15865,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -50264,7 +50655,7 @@
     "fused" : {
       "accuracyVsGroundTruth" : 0.7383773465526562,
       "matchedGroundTruthCount" : 13,
-      "processingTimeMs" : 160391,
+      "processingTimeMs" : 165108,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 0
     },
@@ -50370,7 +50761,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 160391,
+      "processingTimeMs" : 165108,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -51327,20 +51718,20 @@
   "outputDirectoryCleaned" : true,
   "outputFileCountAfterCleanup" : 15,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
-    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
-    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
-    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
-    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C325791C-DC56-41F2-92FD-5ADDB6AB86B9\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
+    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
+    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
+    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
+    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
   },
   "overallPassed" : false,
   "retainedOutputFiles" : [
@@ -67045,7 +67436,20 @@
         "blockIndex" : 0,
         "bubbleID" : 0,
         "candidateQualityScore" : 0.5111428571428571,
+        "clampSource" : "bubbleBBox",
         "cropBBox" : [
+          478,
+          300,
+          95,
+          143
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          478,
+          300,
+          95,
+          143
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           478,
           300,
           95,
@@ -67076,6 +67480,15 @@
         "selectedText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
         "selectionReason" : "fallbackToFusedText",
         "source" : "wholePageOCR",
+        "subRegionBBox" : [
+          475,
+          293,
+          101,
+          138
+        ],
+        "subRegionCoverageRatio" : 1,
+        "subRegionID" : 0,
+        "subRegionRejectedReason" : "parentBubbleNotOversized",
         "textRegionCropText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
         "wholePageText" : "THAT'S\nRIGHT,\nNOW\nI'M-"
       },
@@ -67085,7 +67498,20 @@
         "blockIndex" : 1,
         "bubbleID" : 1,
         "candidateQualityScore" : 0.645119691119691,
+        "clampSource" : "bubbleBBox",
         "cropBBox" : [
+          95,
+          319,
+          91,
+          128
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          95,
+          319,
+          91,
+          128
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           95,
           319,
           91,
@@ -67116,6 +67542,15 @@
         "selectedText" : "IVE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE.",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
+        "subRegionBBox" : [
+          92,
+          328,
+          97,
+          110
+        ],
+        "subRegionCoverageRatio" : 1,
+        "subRegionID" : 1,
+        "subRegionRejectedReason" : "parentBubbleNotOversized",
         "textRegionCropText" : "I'VE\nARRIVED\nAT REN-\nSENPArS\n• HOUSE.",
         "wholePageText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE."
       },
@@ -67124,7 +67559,20 @@
         "blockIndex" : 2,
         "bubbleID" : 2,
         "candidateQualityScore" : 0,
+        "clampSource" : "bubbleBBox",
         "cropBBox" : [
+          480,
+          532,
+          81,
+          94
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          480,
+          532,
+          81,
+          94
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           480,
           532,
           81,
@@ -67155,6 +67603,15 @@
         "selectedText" : "THE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
+        "subRegionBBox" : [
+          477,
+          539,
+          87,
+          80
+        ],
+        "subRegionCoverageRatio" : 1,
+        "subRegionID" : 2,
+        "subRegionRejectedReason" : "parentBubbleNotOversized",
         "wholePageText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS."
       },
       {
@@ -67162,7 +67619,20 @@
         "blockIndex" : 3,
         "bubbleID" : 3,
         "candidateQualityScore" : 0.812,
+        "clampSource" : "bubbleBBox",
         "cropBBox" : [
+          45,
+          654,
+          90,
+          105
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          45,
+          654,
+          90,
+          105
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           45,
           654,
           90,
@@ -67194,6 +67664,15 @@
         "selectedText" : "ANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
+        "subRegionBBox" : [
+          50,
+          646,
+          80,
+          121
+        ],
+        "subRegionCoverageRatio" : 1,
+        "subRegionID" : 3,
+        "subRegionRejectedReason" : "parentBubbleNotOversized",
         "textRegionCropText" : "TRANIE",
         "wholePageText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL"
       },
@@ -67202,7 +67681,20 @@
         "adopted" : false,
         "blockIndex" : 4,
         "candidateQualityScore" : 0.636,
+        "clampSource" : "contentRect",
         "cropBBox" : [
+          341,
+          809,
+          143,
+          135
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          341,
+          809,
+          143,
+          135
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           341,
           809,
           143,
@@ -67233,6 +67725,7 @@
         "selectedText" : "LET'S\nBATTLER!",
         "selectionReason" : "fallbackToFusedText",
         "source" : "wholePageOCR",
+        "subRegionRejectedReason" : "noSubRegion",
         "textRegionCropText" : "LET'S\nBATTLERK",
         "wholePageText" : "LET'S\nBATTLER!"
       },
@@ -67242,7 +67735,20 @@
         "blockIndex" : 5,
         "bubbleID" : 7,
         "candidateQualityScore" : 0.816203830369357,
+        "clampSource" : "bubbleBBox",
         "cropBBox" : [
+          213,
+          900,
+          103,
+          114
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          213,
+          900,
+          103,
+          114
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           213,
           900,
           103,
@@ -67273,6 +67779,15 @@
         "selectedText" : "I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
+        "subRegionBBox" : [
+          213,
+          900,
+          118,
+          151
+        ],
+        "subRegionCoverageRatio" : 0.8504672897196262,
+        "subRegionID" : 4,
+        "subRegionRejectedReason" : "seedCoverageTooLow",
         "textRegionCropText" : "JUSTIN\nSPECIAL\nTRAINING\nRAND\nASKEO IP\n→WE\nCOLD\nJUST\nPLAY.\ntas\nONUNE\nTHA\nbICN\nTo e\npeal",
         "wholePageText" : "LET'S\nBATTLER!"
       },
@@ -67281,8 +67796,21 @@
         "adopted" : false,
         "blockIndex" : 6,
         "bubbleID" : 4,
-        "candidateQualityScore" : 0.8633823529411765,
+        "candidateQualityScore" : 0.7854358974358974,
+        "clampSource" : "subRegion",
         "cropBBox" : [
+          130,
+          858,
+          111,
+          147
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          130,
+          858,
+          111,
+          147
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           130,
           857,
           111,
@@ -67313,7 +67841,16 @@
         "selectedText" : "THIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
-        "textRegionCropText" : "THS IS AN\nOFFLINE\nTOLENAMENT,\nONLINE\nWOLLO MAKE\nMEANWELESS\nWhart\nare",
+        "subRegionBBox" : [
+          100,
+          858,
+          171,
+          147
+        ],
+        "subRegionCoverageRatio" : 1,
+        "subRegionID" : 5,
+        "subRegionRejectedReason" : "",
+        "textRegionCropText" : "THS I5 AN\nOPPLINE\nTOLENANENT.\nDONG I\nONLINE\nWOLLO MAKE\nMEANMELESS\nVhwit\nare",
         "wholePageText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE"
       },
       {
@@ -67322,7 +67859,20 @@
         "blockIndex" : 7,
         "bubbleID" : 5,
         "candidateQualityScore" : 0,
+        "clampSource" : "bubbleBBox",
         "cropBBox" : [
+          485,
+          860,
+          91,
+          132
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          485,
+          860,
+          91,
+          132
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           485,
           860,
           91,
@@ -67353,6 +67903,15 @@
         "selectedText" : "WE NEED TO\nGET RESULTS\nAT THS\nTOURNAMENT\nTO SAVE THE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
+        "subRegionBBox" : [
+          482,
+          866,
+          94,
+          121
+        ],
+        "subRegionCoverageRatio" : 1,
+        "subRegionID" : 6,
+        "subRegionRejectedReason" : "parentBubbleNotOversized",
         "wholePageText" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG"
       },
       {
@@ -67361,7 +67920,20 @@
         "blockIndex" : 8,
         "bubbleID" : 6,
         "candidateQualityScore" : 0.8171558988764045,
+        "clampSource" : "subRegion",
         "cropBBox" : [
+          10,
+          936,
+          141,
+          156
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          10,
+          936,
+          141,
+          156
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           10,
           936,
           141,
@@ -67392,6 +67964,15 @@
         "selectedText" : "THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
+        "subRegionBBox" : [
+          0,
+          901,
+          171,
+          226
+        ],
+        "subRegionCoverageRatio" : 1,
+        "subRegionID" : 7,
+        "subRegionRejectedReason" : "",
         "textRegionCropText" : "* THE\nSUGGESTION\nOVERRULED,\nANO IT WAS\nTHAT TO BE\n'STAYNGY\nOVER AT RENA\nESENPAI'S\nTHouser",
         "wholePageText" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE."
       },
@@ -67401,7 +67982,20 @@
         "blockIndex" : 9,
         "bubbleID" : 6,
         "candidateQualityScore" : 0.7484999999999999,
+        "clampSource" : "bubbleBBox",
         "cropBBox" : [
+          97,
+          959,
+          79,
+          96
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          97,
+          959,
+          79,
+          96
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           97,
           959,
           79,
@@ -67433,6 +68027,15 @@
         "selectedText" : "What\nare\nyOuL\never talking abodi?",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
+        "subRegionBBox" : [
+          86,
+          935,
+          101,
+          144
+        ],
+        "subRegionCoverageRatio" : 1,
+        "subRegionID" : 8,
+        "subRegionRejectedReason" : "overlapsSiblingSubRegion",
         "textRegionCropText" : "NEA\neve\n: talkin",
         "wholePageText" : "What Whet are\nevery you!\ntalking"
       },
@@ -67442,7 +68045,20 @@
         "blockIndex" : 10,
         "bubbleID" : 7,
         "candidateQualityScore" : 0.791830985915493,
+        "clampSource" : "bubbleBBox",
         "cropBBox" : [
+          251,
+          936,
+          114,
+          126
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          251,
+          936,
+          114,
+          126
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           251,
           936,
           114,
@@ -67473,6 +68089,15 @@
         "selectedText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
         "selectionReason" : "fallbackToFusedText",
         "source" : "wholePageOCR",
+        "subRegionBBox" : [
+          235,
+          907,
+          146,
+          184
+        ],
+        "subRegionCoverageRatio" : 1,
+        "subRegionID" : 9,
+        "subRegionRejectedReason" : "overlapsSiblingSubRegion",
         "textRegionCropText" : "KED IP\nWE\nOLD\nJIST\n-ОЕ ДТ\nLEAST.\nNLINE..\n• THAT\nSEEMS\nTO BE\nPEN-\nLOGIC.",
         "wholePageText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC."
       },
@@ -67482,7 +68107,20 @@
         "blockIndex" : 11,
         "bubbleID" : 4,
         "candidateQualityScore" : 0,
+        "clampSource" : "bubbleBBox",
         "cropBBox" : [
+          269,
+          948,
+          36,
+          57
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          269,
+          948,
+          36,
+          57
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           269,
           948,
           36,
@@ -67513,6 +68151,15 @@
         "selectedText" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
+        "subRegionBBox" : [
+          258,
+          928,
+          47,
+          77
+        ],
+        "subRegionCoverageRatio" : 0.3418803418803419,
+        "subRegionID" : 10,
+        "subRegionRejectedReason" : "seedCoverageTooLow",
         "wholePageText" : "JUST"
       },
       {
@@ -67520,7 +68167,20 @@
         "adopted" : false,
         "blockIndex" : 12,
         "candidateQualityScore" : 0.80425,
+        "clampSource" : "contentRect",
         "cropBBox" : [
+          360,
+          931,
+          156,
+          158
+        ],
+        "cropBBoxAfterSubRegionClamp" : [
+          360,
+          931,
+          156,
+          158
+        ],
+        "cropBBoxBeforeSubRegionClamp" : [
           360,
           931,
           156,
@@ -67551,6 +68211,7 @@
         "selectedText" : "City Battler\nOffline.\nTournament",
         "selectionReason" : "fallbackToFusedText",
         "source" : "wholePageOCR",
+        "subRegionRejectedReason" : "noSubRegion",
         "textRegionCropText" : "City Battler\nOffline:\nTournament",
         "wholePageText" : "City Battler\nOffline.\nTournament"
       }
@@ -67564,9 +68225,10 @@
       "wordCountRegression" : 2
     },
     "notes" : [
-      "TextRegion crop OCR uses post-fusion block bbox as seed and clamps to assigned bubble bbox or content rect",
+      "TextRegion crop OCR uses post-fusion block bbox as seed and clamps to block-local subregion when eligible, otherwise assigned bubble bbox or content rect",
       "selection uses word preservation, text similarity, word count, Latin\/symbol ratios, OCR error heuristics, and crop clamp signals only",
-      "ground truth is used only after selection to refresh evaluation metrics"
+      "ground truth is used only after selection to refresh evaluation metrics",
+      "subregion clamp does not loosen crop adoption guardrails"
     ],
     "rejectedBlockIndexes" : [
       0,
