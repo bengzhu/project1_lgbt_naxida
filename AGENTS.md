@@ -76,12 +76,15 @@ test/1.png
 - 不要在未证明收益前把 deterministic correction、bubble-first 或 batch translation 替换为主流程。
 
 ## 5. 当前真实基线
-当前可信基线以最新 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 为准。最近记录的 v10 / 当前输出基线是：
+当前可信基线以最新 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 为准。最近记录的 v11 / 当前输出基线是：
 
 - `configuration.currentBlockSource = fusedWholePageBubble`
-- `totalBlocksDetected = 16`
+- `totalBlocksDetected = 13`
+- `postFusionCleanup.blockCountBeforeCleanup = 16`
+- `postFusionCleanup.blockCountAfterCleanup = 13`
+- `postFusionCleanup.rejectedBlockCount = 3`
 - `groundTruthMatchedBlocks = 13`
-- `groundTruthUnmatchedBlocks = 3`
+- `groundTruthUnmatchedBlocks = 0`
 - `averageCoreDialogueOCRSimilarity = 0.7106`
 - `averageDecorativeOCRSimilarity = 0.8000`
 - `wholePageAccuracyVsGroundTruth = 0.5972`
@@ -91,8 +94,8 @@ test/1.png
 - `fusion.fused.accuracyVsGroundTruth = 0.7384`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
-- `failedBlocks = 15`
-- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`
+- `failedBlocks = 12`
+- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
 - `likelyRuleFalseFailureBlocks = []`
 
 当前结论：
@@ -101,7 +104,8 @@ test/1.png
 - Vision `customWords` 对当前图最终合并文本无明显改变。
 - deterministic correction 只做探针对照，不替换主翻译输入。
 - 主流程已切到 whole-page + bubble-first 融合；`Let's Battle!` 没丢，bubble-first 独有的两条真实内容也进入融合结果。
-- `totalBlocksDetected` 从 14 到 16 是纳入真实 bubble-only 内容后的结果；后续仍需继续压重复/碎片块。
+- post-fusion cleanup 已把 16 个融合块压到 13 个，拒绝重复/碎片块但保留三条关键真实内容。
+- `bubbleAudits` 只做气泡分割风险审计，不替换主流程；当前重点观察 `bubbleID 4/6/7`。
 - tagged batch translation 当前格式崩坏，只保留诊断分支。
 
 ## 6. 翻译失败排查顺序

@@ -11,16 +11,19 @@
 ## 当前状态
 日期：2026-06-28
 
-当前项目是 SwiftUI iOS 本地翻译原型，主线已从普通翻译 UI 转到漫画截图 OCR、本地翻译、覆盖合成和探针诊断。最新可用基线来自当前 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 的 v10 行：
+当前项目是 SwiftUI iOS 本地翻译原型，主线已从普通翻译 UI 转到漫画截图 OCR、本地翻译、覆盖合成和探针诊断。最新可用基线来自当前 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 的 v11 行：
 
 - `sourceImage = test/1.png`
 - `engineUsed = Local GGUF`
 - `decodingMode = deterministic`
 - `decodingSeed = 42`
 - `configuration.currentBlockSource = fusedWholePageBubble`
-- `totalBlocksDetected = 16`
+- `totalBlocksDetected = 13`
+- `postFusionCleanup.blockCountBeforeCleanup = 16`
+- `postFusionCleanup.blockCountAfterCleanup = 13`
+- `postFusionCleanup.rejectedBlockCount = 3`
 - `groundTruthMatchedBlocks = 13`
-- `groundTruthUnmatchedBlocks = 3`
+- `groundTruthUnmatchedBlocks = 0`
 - `averageCoreDialogueOCRSimilarity = 0.7106`
 - `averageDecorativeOCRSimilarity = 0.8000`
 - `wholePageAccuracyVsGroundTruth = 0.5972`
@@ -30,14 +33,16 @@
 - `fusion.fused.accuracyVsGroundTruth = 0.7384`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
-- `failedBlocks = 15`
-- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`
+- `failedBlocks = 12`
+- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
 - `likelyRuleFalseFailureBlocks = []`
 
 当前结论：
 
 - 当前瓶颈是 OCR 文本质量和 Gemma 270M 翻译能力，不是覆盖绘制，也不是规则过严。
 - 主流程已切到 whole-page + bubble-first 融合；`Let's Battle!` 保留，bubble-first 独有两条真实内容也进入融合结果。
+- post-fusion cleanup 已把 16 个融合块压到 13 个，拒绝重复/碎片块但保留关键真实内容。
+- `bubbleAudits` 标出 `bubbleID 4/6/7` 的分割风险，当前只诊断不替换主流程。
 - Vision `customWords` 对当前图最终合并文本无变化，`changedBlockIndexes = []`。
 - 确定性 OCR 纠错能提升部分相似度，但翻译收益不稳定，仍只做探针对照。
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
@@ -258,6 +263,45 @@
 
 - 新增融合候选模型、`fusionResults` 和 `fusionComparison`。
 - 融合选择只用 bbox、bubbleID、文本相似度、OCR 置信度、文本长度和疑似 OCR 损坏等无真值信号。
+
+### v11：融合后重复碎片压缩与气泡分割审计
+日期：2026-06-28
+依据：`md/prompt/v1（漫画探针）/v1.1（重复碎片压缩与气泡分割审计）.md`、当前 `output/probe_report.json`
+
+核心变更：
+
+- 在 `fusedWholePageBubble` 后新增 post-fusion cleanup，拒绝明显重复、被包含、低信息或与更完整候选重叠的碎片块。
+- 清理逻辑只用 bbox、bubbleID、source、文本长度、词覆盖、候选间覆盖关系和 OCR 质量启发，不用 ground truth 做生产选择。
+- `probe_report.json` 新增 `fusionComparison.postFusionCleanup`，记录清理前后块数、拒绝块、拒绝原因、关联块和保护内容。
+- `bubbleGeometry` 新增 `bubbleAudits`，诊断每个 bubble 的文本区数量、selected block 数、重叠风险、过大 bubble 风险和 `bubbleSplitCandidate`；本轮不默认拆分主流程。
+
+关键文件：
+
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Models/TranscriptModels.swift`
+- `README.md`
+- `metrics/version_history.csv`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+
+验证结果：
+
+- iPhone 17 Pro 模拟器重新跑 `test/1.png` 并导出最新 `output/`。
+- `totalBlocksDetected = 13`，清理前 `16`，清理后 `13`，拒绝 `3` 块。
+- 被拒绝块：`THE SUGSESTION WAS OVERPULED...`、`PLAY ONLING...`、`JUST`。
+- 三条保护内容 `Let's Battle!`、`What are you even talking about?`、`We need to get results...` 均保留。
+- `groundTruthMatchedBlocks = 13`，`groundTruthUnmatchedBlocks = 0`。
+- `averageCoreDialogueOCRSimilarity = 0.7106`，`averageDecorativeOCRSimilarity = 0.8000`。
+- `frameworkComparison.consistencyPassed = true`，`fusionComparison.consistencyPassed = true`。
+- `fusion.fused.accuracyVsGroundTruth = 0.7384`，`cleanTextDiagnostic.passRate = 0.4545`。
+- `passedBlocks = 1`，`failedBlocks = 12`，`translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`。
+- `likelyRuleFalseFailureBlocks = []`。
+
+遗留事项：
+
+- `-02 AT / LEAST... 2EN-` 残片被保守保留，避免跨 bubble 误删真实内容；后续应在气泡分割层处理。
+- `bubbleAudits` 标出 `bubbleID 4/6/7` 有多块同 bubble 或过大 bubble 风险，下一轮可做诊断开关下的保守拆分实验。
 - 主翻译输入切到 `fusedWholePageBubble`；whole-page 和 bubble-first 原始对比仍保留用于回退审计。
 - 保留 whole-page 独有 `Let's Battle!`，并纳入 bubble-first 独有的两条真实内容。
 - `renderOutputs` 不再二次清空沙盒 Output，避免提前生成的 bubble 调试图被本轮主渲染删除；目录清理由探针开始和导出脚本负责。

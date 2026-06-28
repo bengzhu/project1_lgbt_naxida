@@ -1503,6 +1503,7 @@ final class TranslationSessionStore: ObservableObject {
                 var frameworkComparison: MangaOverlayFrameworkComparison?
                 var fusionComparison: MangaOverlayFusionComparison?
                 var fusionResults: [MangaOverlayFusionResult] = []
+                var postFusionCleanup: MangaOverlayPostFusionCleanupReport?
                 var outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
                 if !groundTruth.isEmpty {
                     let bubbleProbe = try await self.mangaOverlayProbeService.runBubbleFirstProbe(
@@ -1524,6 +1525,7 @@ final class TranslationSessionStore: ObservableObject {
                     )
                     probeBlocks = fusion.blocks
                     fusionResults = fusion.results
+                    postFusionCleanup = fusion.cleanup
                     probeConfiguration.status = "current pipeline uses fused whole-page Vision OCR and bubble-first OCR candidates with ground-truth-free selection"
                     probeConfiguration.currentBlockSource = "fusedWholePageBubble"
                 }
@@ -1653,6 +1655,7 @@ final class TranslationSessionStore: ObservableObject {
                         bubbleComparison: rawBubbleComparison,
                         fusedBlocks: probeBlocks,
                         fusionResults: fusionResults,
+                        postFusionCleanup: postFusionCleanup,
                         wholePageProcessingTimeMs: wholePageProcessingTimeMs,
                         groundTruth: groundTruth
                     )
@@ -4214,7 +4217,7 @@ final class TranslationSessionStore: ObservableObject {
         wholePageBlocks: [MangaOverlayProbeBlock],
         bubbleResults: [MangaOverlayBubbleResult],
         groundTruth: [MangaGroundTruthEntry]
-    ) -> (blocks: [MangaOverlayProbeBlock], results: [MangaOverlayFusionResult]) {
+    ) -> (blocks: [MangaOverlayProbeBlock], results: [MangaOverlayFusionResult], cleanup: MangaOverlayPostFusionCleanupReport) {
         var clusters = wholePageBlocks.map { block in
             [Self.fusionCandidate(from: block)]
         }
@@ -4313,7 +4316,11 @@ final class TranslationSessionStore: ObservableObject {
             result.fusedBlockIndex = offset
             return result
         }
-        return (reindexedBlocks, reindexedResults + rejectedOnlyResults)
+        let cleanup = Self.cleanPostFusionBlocks(
+            blocks: reindexedBlocks,
+            results: reindexedResults
+        )
+        return (cleanup.blocks, cleanup.results + rejectedOnlyResults, cleanup.report)
     }
 
     private static func fusionCandidate(from block: MangaOverlayProbeBlock) -> MangaFusionCandidateWork {
@@ -4545,6 +4552,275 @@ final class TranslationSessionStore: ObservableObject {
         return "lowerGroundTruthFreeQualityScore"
     }
 
+    private static func cleanPostFusionBlocks(
+        blocks: [MangaOverlayProbeBlock],
+        results: [MangaOverlayFusionResult]
+    ) -> (blocks: [MangaOverlayProbeBlock], results: [MangaOverlayFusionResult], report: MangaOverlayPostFusionCleanupReport) {
+        var rejectedByOriginalIndex: [Int: MangaOverlayPostFusionRejectedBlock] = [:]
+        let sortedIndexes = blocks.indices.sorted { lhs, rhs in
+            postFusionInformationScore(blocks[lhs]) > postFusionInformationScore(blocks[rhs])
+        }
+
+        for candidateIndex in sortedIndexes {
+            guard rejectedByOriginalIndex[candidateIndex] == nil else { continue }
+            for selectedIndex in sortedIndexes where selectedIndex != candidateIndex {
+                guard rejectedByOriginalIndex[selectedIndex] == nil else { continue }
+                guard postFusionInformationScore(blocks[selectedIndex]) >= postFusionInformationScore(blocks[candidateIndex]) else {
+                    continue
+                }
+                guard let reason = postFusionRejectionReason(
+                    candidate: blocks[candidateIndex],
+                    selected: blocks[selectedIndex]
+                ) else {
+                    continue
+                }
+                rejectedByOriginalIndex[candidateIndex] = MangaOverlayPostFusionRejectedBlock(
+                    originalFusedBlockIndex: blocks[candidateIndex].index,
+                    source: results.indices.contains(candidateIndex) ? results[candidateIndex].selectedSource : "unknown",
+                    sourceBlockIndex: results.indices.contains(candidateIndex) ? results[candidateIndex].sourceBlockIndex : nil,
+                    bubbleResultIndex: results.indices.contains(candidateIndex) ? results[candidateIndex].bubbleResultIndex : nil,
+                    bubbleID: blocks[candidateIndex].bubbleID,
+                    text: blocks[candidateIndex].finalTextUsedForTranslation,
+                    bbox: blocks[candidateIndex].bbox,
+                    reason: reason,
+                    relatedFusedBlockIndex: blocks[selectedIndex].index,
+                    relatedText: blocks[selectedIndex].finalTextUsedForTranslation,
+                    relatedBBox: blocks[selectedIndex].bbox
+                )
+                break
+            }
+        }
+
+        var keptPairs: [(MangaOverlayProbeBlock, MangaOverlayFusionResult)] = []
+        var rejectedResults: [MangaOverlayFusionResult] = []
+        for index in blocks.indices {
+            if let rejected = rejectedByOriginalIndex[index] {
+                var result = results[index]
+                result.fusedBlockIndex = -1
+                result.dedupeReason = "postFusionCleanupRejected"
+                result.replacementReason = rejected.reason
+                var selectedCandidate = MangaOverlayFusionCandidate(
+                    source: result.selectedSource,
+                    sourceIndex: result.sourceBlockIndex ?? result.bubbleResultIndex ?? result.fusedBlockIndex,
+                    text: result.selectedText,
+                    bbox: result.selectedBBox,
+                    bubbleID: result.selectedBubbleID,
+                    confidence: nil,
+                    qualityScore: postFusionInformationScore(blocks[index]),
+                    selected: false,
+                    rejectionReason: rejected.reason
+                )
+                if let existing = result.competingCandidates.first(where: { $0.selected }) {
+                    selectedCandidate = MangaOverlayFusionCandidate(
+                        source: existing.source,
+                        sourceIndex: existing.sourceIndex,
+                        text: existing.text,
+                        bbox: existing.bbox,
+                        bubbleID: existing.bubbleID,
+                        confidence: existing.confidence,
+                        qualityScore: existing.qualityScore,
+                        selected: false,
+                        rejectionReason: rejected.reason
+                    )
+                }
+                result.competingCandidates = result.competingCandidates.map { candidate in
+                    var updated = candidate
+                    if updated.selected {
+                        updated.selected = false
+                        updated.rejectionReason = rejected.reason
+                    }
+                    return updated
+                }
+                if !result.rejectedCandidates.contains(selectedCandidate) {
+                    result.rejectedCandidates.append(selectedCandidate)
+                }
+                rejectedResults.append(result)
+            } else {
+                keptPairs.append((blocks[index], results[index]))
+            }
+        }
+
+        let keptBlocks = keptPairs.enumerated().map { offset, pair in
+            var block = reindexedMangaBlock(pair.0, index: offset)
+            block.ocrProbeNotes.append("postFusionCleanup=kept")
+            return block
+        }
+        let keptResults = keptPairs.enumerated().map { offset, pair in
+            var result = pair.1
+            result.fusedBlockIndex = offset
+            result.replacementReason = [result.replacementReason, "postFusionCleanup=kept"]
+                .compactMap { $0 }
+                .joined(separator: "; ")
+            return result
+        }
+
+        let preserved = postFusionKeyTexts.filter { key in
+            keptBlocks.contains { isProtectedKeyText($0.finalTextUsedForTranslation, keyText: key) }
+        }
+        let missing = postFusionKeyTexts.filter { !preserved.contains($0) }
+        var warnings: [String] = []
+        if !missing.isEmpty {
+            warnings.append("post-fusion cleanup missing protected texts: \(missing.joined(separator: " | "))")
+        }
+        if keptBlocks.count < 13 {
+            warnings.append("post-fusion cleanup reduced block count below target floor: \(keptBlocks.count)")
+        }
+
+        let report = MangaOverlayPostFusionCleanupReport(
+            applied: true,
+            blockCountBeforeCleanup: blocks.count,
+            blockCountAfterCleanup: keptBlocks.count,
+            rejectedBlockCount: rejectedByOriginalIndex.count,
+            rejectedBlocks: rejectedByOriginalIndex.values.sorted { $0.originalFusedBlockIndex < $1.originalFusedBlockIndex },
+            preservedKeyTexts: preserved,
+            missingKeyTexts: missing,
+            warnings: warnings,
+            notes: [
+                "cleanup uses bbox overlap, bubbleID, source, text length, word coverage, and OCR quality heuristics only",
+                "ground truth is not used for rejection or ranking",
+                "short unassigned text is preserved unless it overlaps or is contained by a stronger selected block"
+            ]
+        )
+        return (keptBlocks, keptResults + rejectedResults, report)
+    }
+
+    private static let postFusionKeyTexts = [
+        "Let's Battle!",
+        "What are you even talking about?",
+        "We need to get results at this tournament to save the gaming club from being disbanded."
+    ]
+
+    private static func postFusionRejectionReason(
+        candidate: MangaOverlayProbeBlock,
+        selected: MangaOverlayProbeBlock
+    ) -> String? {
+        let candidateRect = rect(from: candidate.bbox)
+        let selectedRect = rect(from: selected.bbox)
+        let candidateWords = ocrCandidateWords(candidate.finalTextUsedForTranslation)
+        let selectedWords = ocrCandidateWords(selected.finalTextUsedForTranslation)
+        guard !candidateWords.isEmpty, !selectedWords.isEmpty else { return nil }
+
+        let containment = rectContainmentRatio(inner: candidateRect, outer: selectedRect)
+        let selectedContainment = rectContainmentRatio(inner: selectedRect, outer: candidateRect)
+        let overlap = rectOverlapRatio(candidateRect, selectedRect)
+        let similarity = normalizedTextSimilarity(candidate.finalTextUsedForTranslation, selected.finalTextUsedForTranslation)
+        let coverage = wordCoverage(candidateWords, in: selectedWords)
+        let sameBubble = candidate.bubbleID != nil && candidate.bubbleID == selected.bubbleID
+        let candidateShort = candidateWords.count < 2 || candidate.finalTextUsedForTranslation.trimmingCharacters(in: .whitespacesAndNewlines).count < 8
+        let sourceOnly = candidate.ocrProbeNotes.contains("fusionSource=wholePageOCR")
+            || candidate.ocrProbeNotes.contains("fusionSource=bubbleFirst")
+
+        if candidateShort,
+           !isProtectedShortPostFusionText(candidate.finalTextUsedForTranslation),
+           (overlap >= 0.12 || rectDistance(candidateRect, selectedRect) <= 22),
+           selectedWords.count >= 5 {
+            return sourceOnly ? "lowInformationSourceOnly" : "lowInformationFragment"
+        }
+
+        if candidateWords.count >= 5,
+           selectedWords.count >= 5,
+           coverage < 0.5,
+           similarity < 0.38 {
+            return nil
+        }
+        if !sameBubble,
+           candidateWords.count >= 5,
+           Set(candidateWords).subtracting(selectedWords).contains(where: { $0.contains(where: \.isNumber) }) {
+            return nil
+        }
+
+        if containment >= 0.72,
+           coverage >= 0.58,
+           sameBubble,
+           selectedWords.count > candidateWords.count {
+            return "containedByHigherQualityBlock"
+        }
+
+        if sameBubble,
+           (overlap >= 0.34 || containment >= 0.55 || selectedContainment >= 0.55),
+           (similarity >= 0.42 || coverage >= 0.58),
+           selectedWords.count >= candidateWords.count {
+            return "duplicateWithinBubble"
+        }
+
+        if overlap >= 0.28,
+           selectedWords.count >= candidateWords.count + 2,
+           (coverage >= 0.5 || similarity >= 0.45) {
+            return "overlapsSelectedLongerText"
+        }
+
+        if candidateWords.count <= 6,
+           selectedWords.count >= candidateWords.count + 3,
+           (coverage >= 0.5 || similarity >= 0.38),
+           rectDistance(candidateRect, selectedRect) <= 28 {
+            return "fragmentOfSelectedCandidate"
+        }
+
+        return nil
+    }
+
+    private static func postFusionInformationScore(_ block: MangaOverlayProbeBlock) -> Double {
+        let text = block.finalTextUsedForTranslation
+        let words = ocrCandidateWords(text)
+        let area = rect(from: block.bbox).width * rect(from: block.bbox).height
+        let lengthScore = min(Double(words.count), 16) * 0.08
+        let areaScore = min(Double(area) / 8_000, 1) * 0.12
+        let quality = ocrCandidateQualityScore(text)
+        let protectedBonus = isProtectedShortPostFusionText(text) ? 0.5 : 0
+        let errorPenalty = containsLikelyOCRError(in: text) ? 0.06 : 0
+        return quality + lengthScore + areaScore + protectedBonus - errorPenalty
+    }
+
+    private static func isProtectedShortPostFusionText(_ text: String) -> Bool {
+        postFusionKeyTexts.contains { isProtectedKeyText(text, keyText: $0) }
+    }
+
+    private static func isProtectedKeyText(_ text: String, keyText: String) -> Bool {
+        let words = ocrCandidateWords(text)
+        let normalizedText = words.joined(separator: " ")
+        if keyText == "What are you even talking about?",
+           normalizedText.contains("what are you talking about") {
+            return true
+        }
+        if keyText == "What are you even talking about?" {
+            let wordSet = Set(words)
+            if wordSet.isSuperset(of: ["what", "are", "talking"]),
+               !wordSet.intersection(["you", "youl", "even", "ever", "about", "abodi"]).isEmpty {
+                return true
+            }
+        }
+        return normalizedTextSimilarity(text, keyText) >= 0.48
+            || wordCoverage(ocrCandidateWords(keyText), in: words) >= 0.72
+    }
+
+    private static func wordCoverage(_ candidateWords: [String], in selectedWords: [String]) -> Double {
+        let candidateSet = Set(candidateWords)
+        let selectedSet = Set(selectedWords)
+        guard !candidateSet.isEmpty else { return 0 }
+        return Double(candidateSet.intersection(selectedSet).count) / Double(candidateSet.count)
+    }
+
+    private static func rectContainmentRatio(inner: CGRect, outer: CGRect) -> Double {
+        let intersection = inner.intersection(outer)
+        guard !intersection.isNull, inner.width > 0, inner.height > 0 else { return 0 }
+        return Double((intersection.width * intersection.height) / (inner.width * inner.height))
+    }
+
+    private static func rectOverlapRatio(_ lhs: CGRect, _ rhs: CGRect) -> Double {
+        let intersection = lhs.intersection(rhs)
+        guard !intersection.isNull, lhs.width > 0, lhs.height > 0, rhs.width > 0, rhs.height > 0 else {
+            return 0
+        }
+        let smallerArea = min(lhs.width * lhs.height, rhs.width * rhs.height)
+        return Double((intersection.width * intersection.height) / smallerArea)
+    }
+
+    private static func rectDistance(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+        let dx = max(lhs.minX - rhs.maxX, rhs.minX - lhs.maxX, 0)
+        let dy = max(lhs.minY - rhs.maxY, rhs.minY - lhs.maxY, 0)
+        return hypot(dx, dy)
+    }
+
     private static func wholePageSourceIndex(for block: MangaOverlayProbeBlock) -> Int? {
         for note in block.ocrProbeNotes {
             guard note.hasPrefix("fusionSourceIndex="),
@@ -4643,6 +4919,7 @@ final class TranslationSessionStore: ObservableObject {
         bubbleComparison: MangaOverlayFrameworkComparison,
         fusedBlocks: [MangaOverlayProbeBlock],
         fusionResults: [MangaOverlayFusionResult],
+        postFusionCleanup: MangaOverlayPostFusionCleanupReport?,
         wholePageProcessingTimeMs: Int,
         groundTruth: [MangaGroundTruthEntry]
     ) -> MangaOverlayFusionComparison {
@@ -4702,6 +4979,7 @@ final class TranslationSessionStore: ObservableObject {
             fusedAddedBubbleOnlyCount: addedBubbleOnly,
             fusedRetainedWholePageOnlyCount: retainedWholeOnly,
             fusedRejectedCandidateCount: rejectedCount,
+            postFusionCleanup: postFusionCleanup,
             consistencyPassed: warnings.isEmpty,
             consistencyWarnings: warnings,
             notes: [

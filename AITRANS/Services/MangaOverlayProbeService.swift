@@ -155,9 +155,26 @@ struct MangaOverlayTextRegion: Equatable, Codable, Sendable {
 struct MangaOverlayBubbleGeometryDiagnostics: Equatable, Codable, Sendable {
     var bubbles: [MangaOverlayProbeBubble]
     var textRegions: [MangaOverlayTextRegion]
+    var bubbleAudits: [MangaOverlayBubbleSplitAudit]
     var assignedTextRegionCount: Int
     var unassignedTextRegionCount: Int
     var crossBubbleMergeRejectedCount: Int
+    var notes: [String]
+}
+
+struct MangaOverlayBubbleSplitAudit: Equatable, Codable, Sendable {
+    var bubbleID: Int
+    var bbox: [Double]
+    var source: String
+    var area: Double
+    var confidence: Double?
+    var textRegionCount: Int
+    var fusedBlockIndexes: [Int]
+    var selectedBlockCount: Int
+    var maxBlockOverlapRatio: Double
+    var duplicateTextPairCount: Int
+    var oversizedBubbleRisk: Bool
+    var bubbleSplitCandidate: Bool
     var notes: [String]
 }
 
@@ -229,6 +246,16 @@ struct MangaOverlayPreprocessedOCRResult: Equatable, Sendable {
     var cropFallbackTriggered: Bool
     var cropFallbackReason: String?
     var cropStrategyUsed: String
+}
+
+struct MangaOverlayTextRegionCropResult: Equatable, Sendable {
+    var text: String?
+    var regionBBox: [Double]
+    var cropBBox: [Double]
+    var cropClampedByBubble: Bool
+    var paddingX: Double
+    var paddingY: Double
+    var orientationHint: String
 }
 
 struct MangaOverlayCropFallbackSelfTest: Equatable, Codable, Sendable {
@@ -399,6 +426,62 @@ struct MangaOverlayProbeService: Sendable {
                 cropFallbackTriggered: fallbackTriggered,
                 cropFallbackReason: fallbackReason,
                 cropStrategyUsed: fallbackTriggered ? "fixedFallback" : "adaptive"
+            )
+        }.value
+    }
+
+    func recognizeTextRegionCrop(
+        in image: CGImage,
+        seedBBox: [Double],
+        bubbleBBox: [Double]?,
+        options: MangaOverlayPreprocessingOptions = .defaultValue,
+        cropping: MangaOverlayProbeCropping = .defaultValue
+    ) async throws -> MangaOverlayTextRegionCropResult {
+        try await Task.detached(priority: .userInitiated) {
+            let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            let contentBounds = Self.contentCropRect(for: image, cropping: cropping).intersection(bounds)
+            let seedRect = Self.clamp(Self.rect(from: seedBBox), to: contentBounds).integral
+            guard seedRect.width >= 2, seedRect.height >= 2 else {
+                return MangaOverlayTextRegionCropResult(
+                    text: nil,
+                    regionBBox: seedBBox,
+                    cropBBox: Self.bboxArray(from: seedRect),
+                    cropClampedByBubble: false,
+                    paddingX: 0,
+                    paddingY: 0,
+                    orientationHint: "invalid"
+                )
+            }
+
+            let orientationHint = seedRect.height > seedRect.width * 1.35 ? "verticalCandidate" : "horizontal"
+            let estimatedFontSize = max(6, min(seedRect.width, seedRect.height))
+            let paddingX = orientationHint == "verticalCandidate"
+                ? max(4, min(estimatedFontSize * 0.72, seedRect.width * 0.55))
+                : max(5, min(estimatedFontSize * 0.38, seedRect.width * 0.38))
+            let paddingY = orientationHint == "verticalCandidate"
+                ? max(5, min(estimatedFontSize * 0.46, seedRect.height * 0.40))
+                : max(7, min(estimatedFontSize * 0.88, seedRect.height * 0.72))
+            let regionRect = seedRect.insetBy(dx: -paddingX, dy: -paddingY)
+
+            let cropLimit: CGRect
+            if let bubbleBBox {
+                let bubbleRect = Self.rect(from: bubbleBBox).intersection(bounds)
+                cropLimit = bubbleRect.isNull ? contentBounds : bubbleRect.intersection(contentBounds)
+            } else {
+                cropLimit = contentBounds
+            }
+            let cropRect = Self.clamp(regionRect, to: cropLimit).integral
+            let clampedByBubble = bubbleBBox != nil && !regionRect.integral.equalTo(cropRect)
+            let text = try Self.recognizePreprocessedText(in: image, cropRect: cropRect, options: options)
+
+            return MangaOverlayTextRegionCropResult(
+                text: text,
+                regionBBox: Self.bboxArray(from: Self.clamp(regionRect, to: contentBounds).integral),
+                cropBBox: Self.bboxArray(from: cropRect),
+                cropClampedByBubble: clampedByBubble,
+                paddingX: Double(paddingX),
+                paddingY: Double(paddingY),
+                orientationHint: orientationHint
             )
         }.value
     }
@@ -2186,15 +2269,56 @@ struct MangaOverlayProbeService: Sendable {
                 assignmentMethod: candidate.bubbleAssignmentMethod
             )
         }
+        let indexedBlocks = Array(blocks.enumerated())
+        let audits = bubbles.map { bubble in
+            let bubbleRegions = candidates.filter { $0.bubbleID == bubble.index }
+            let bubbleBlocks = indexedBlocks.filter { $0.element.bubbleID == bubble.index }
+            let blockValues = bubbleBlocks.map(\.element)
+            let maxOverlap = maxBlockOverlapRatio(blocks: blockValues)
+            let duplicatePairs = duplicateTextPairCount(blocks: blockValues)
+            let areaRatio = bubble.boundingBox.width * bubble.boundingBox.height
+                / max(1, CGFloat(bubbles.map { $0.boundingBox.width * $0.boundingBox.height }.max() ?? 1))
+            let oversized = bubbleBlocks.count >= 2 && (areaRatio >= 0.55 || maxOverlap >= 0.45 || duplicatePairs > 0)
+            var auditNotes: [String] = []
+            if blockValues.count >= 2 {
+                auditNotes.append("multipleFusedBlocksInBubble")
+            }
+            if maxOverlap >= 0.45 {
+                auditNotes.append("highBlockOverlapWithinBubble")
+            }
+            if duplicatePairs > 0 {
+                auditNotes.append("similarTextCandidatesWithinBubble")
+            }
+            if oversized {
+                auditNotes.append("bubbleSplitCandidateDiagnosticOnly")
+            }
+            return MangaOverlayBubbleSplitAudit(
+                bubbleID: bubble.index,
+                bbox: rectArray(bubble.boundingBox),
+                source: bubble.source,
+                area: Double(bubble.area),
+                confidence: Double(bubble.confidence),
+                textRegionCount: bubbleRegions.count,
+                fusedBlockIndexes: bubbleBlocks.map(\.offset).sorted(),
+                selectedBlockCount: blockValues.count,
+                maxBlockOverlapRatio: maxOverlap,
+                duplicateTextPairCount: duplicatePairs,
+                oversizedBubbleRisk: oversized,
+                bubbleSplitCandidate: oversized,
+                notes: auditNotes
+            )
+        }
         let assigned = regions.filter { $0.bubbleID != nil }.count
         let notes = [
             "bubble geometry is used as the primary merge boundary for whole-page OCR",
             "unassigned OCR observations are kept but only merge with other unassigned observations",
-            "preprocessed OCR crops are clamped to the assigned bubble bbox when present"
+            "preprocessed OCR crops are clamped to the assigned bubble bbox when present",
+            "bubbleAudits are diagnostic only and do not split or replace the main flow"
         ]
         return MangaOverlayBubbleGeometryDiagnostics(
             bubbles: probeBubbles,
             textRegions: regions,
+            bubbleAudits: audits,
             assignedTextRegionCount: assigned,
             unassignedTextRegionCount: regions.count - assigned,
             crossBubbleMergeRejectedCount: crossBubbleMergeRejectedCount,
@@ -2204,6 +2328,50 @@ struct MangaOverlayProbeService: Sendable {
 
     private static func rectArray(_ rect: CGRect) -> [Double] {
         [rect.minX, rect.minY, rect.width, rect.height].map(Double.init)
+    }
+
+    private static func maxBlockOverlapRatio(blocks: [MangaOverlayOCRBlock]) -> Double {
+        guard blocks.count > 1 else { return 0 }
+        var maxOverlap = 0.0
+        for leftIndex in blocks.indices {
+            for rightIndex in blocks.indices where rightIndex > leftIndex {
+                let left = blocks[leftIndex].boundingBox
+                let right = blocks[rightIndex].boundingBox
+                let intersection = left.intersection(right)
+                guard !intersection.isNull else { continue }
+                let smallerArea = min(left.width * left.height, right.width * right.height)
+                guard smallerArea > 0 else { continue }
+                maxOverlap = max(maxOverlap, Double((intersection.width * intersection.height) / smallerArea))
+            }
+        }
+        return maxOverlap
+    }
+
+    private static func duplicateTextPairCount(blocks: [MangaOverlayOCRBlock]) -> Int {
+        guard blocks.count > 1 else { return 0 }
+        var count = 0
+        for leftIndex in blocks.indices {
+            for rightIndex in blocks.indices where rightIndex > leftIndex {
+                let leftWords = bubbleAuditWords(blocks[leftIndex].text)
+                let rightWords = bubbleAuditWords(blocks[rightIndex].text)
+                guard !leftWords.isEmpty, !rightWords.isEmpty else { continue }
+                let leftSet = Set(leftWords)
+                let rightSet = Set(rightWords)
+                let union = leftSet.union(rightSet).count
+                let similarity = Double(leftSet.intersection(rightSet).count) / Double(max(union, 1))
+                if similarity >= 0.45 {
+                    count += 1
+                }
+            }
+        }
+        return count
+    }
+
+    private static func bubbleAuditWords(_ text: String) -> [String] {
+        text
+            .uppercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { $0.count >= 2 }
     }
 
     private static func detectBubbleCandidates(

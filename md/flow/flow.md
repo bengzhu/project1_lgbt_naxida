@@ -179,6 +179,8 @@ test/1.png
   -> bubble-first OCR candidates
   -> ground-truth-free 融合选择和去重
   -> fused OCR blocks
+  -> post-fusion 重复/碎片清理
+  -> bubble 分割审计诊断
   -> 自适应 crop 二次 OCR 诊断
   -> 确定性 OCR 纠错对照
   -> 逐块 Local/Mock 翻译
@@ -251,6 +253,7 @@ test/1.png
   -> MangaOverlayProbeService.recognizeTextBlocks
   -> MangaOverlayProbeService.runBubbleFirstProbe
   -> fuse whole-page + bubble-first candidates
+  -> post-fusion cleanup / bubbleAudits
   -> TranslationSessionStore.translateMangaProbeBlock
   -> makeMangaOverlayProbeDiagnostics
   -> render overlays / contact sheet
@@ -282,9 +285,12 @@ test/1.png
 来自最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json`：
 
 - `configuration.currentBlockSource = fusedWholePageBubble`
-- `totalBlocksDetected = 16`
+- `totalBlocksDetected = 13`
+- `postFusionCleanup.blockCountBeforeCleanup = 16`
+- `postFusionCleanup.blockCountAfterCleanup = 13`
+- `postFusionCleanup.rejectedBlockCount = 3`
 - `groundTruthMatchedBlocks = 13`
-- `groundTruthUnmatchedBlocks = 3`
+- `groundTruthUnmatchedBlocks = 0`
 - `averageCoreDialogueOCRSimilarity = 0.7106`
 - `averageDecorativeOCRSimilarity = 0.8000`
 - `wholePageAccuracyVsGroundTruth = 0.5972`
@@ -294,13 +300,13 @@ test/1.png
 - `fusionComparison.consistencyPassed = true`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
-- `failedBlocks = 15`
-- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`
+- `failedBlocks = 12`
+- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
 - `likelyRuleFalseFailureBlocks = []`
 
 ## 6. 未来扩展点
 - 更强小模型对比，优先 Qwen2.5-0.5B-Instruct-GGUF q4_k_m。
-- 继续压融合后的重复/碎片块，尤其底部相邻气泡。
+- 基于 `bubbleAudits` 对 `bubbleID 4/6/7` 做诊断开关下的保守气泡拆分实验。
 - 更稳的气泡候选分割。
 - 更强 OCR/纠错护栏，替换主流程前必须用探针证明收益。
 - Share Extension 或 ReplayKit 路线，但当前不是优先级。

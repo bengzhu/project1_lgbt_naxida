@@ -1,6 +1,6 @@
 {
   "batchTranslationComparison" : {
-    "batchBetterBy" : -0.0625,
+    "batchBetterBy" : -0.07692307692307693,
     "batchPassRate" : 0,
     "batchPassedCases" : 0,
     "cases" : [
@@ -131,7 +131,7 @@
         "passed" : false,
         "rawOutputClassification" : "empty",
         "sequentialBlockPassed" : false,
-        "sourceText" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED",
+        "sourceText" : "What are you talking about?",
         "tag" : "[9]"
       },
       {
@@ -144,7 +144,7 @@
         "passed" : false,
         "rawOutputClassification" : "empty",
         "sequentialBlockPassed" : false,
-        "sourceText" : "What are you talking about?",
+        "sourceText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
         "tag" : "[10]"
       },
       {
@@ -157,7 +157,7 @@
         "passed" : false,
         "rawOutputClassification" : "empty",
         "sequentialBlockPassed" : false,
-        "sourceText" : "PLAY ONLING...",
+        "sourceText" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
         "tag" : "[11]"
       },
       {
@@ -169,48 +169,9 @@
         "index" : 12,
         "passed" : false,
         "rawOutputClassification" : "empty",
-        "sequentialBlockPassed" : false,
-        "sourceText" : "JUST",
-        "tag" : "[12]"
-      },
-      {
-        "candidateClassification" : "empty",
-        "failureReasons" : [
-          "翻译为空",
-          "tagMissing"
-        ],
-        "index" : 13,
-        "passed" : false,
-        "rawOutputClassification" : "empty",
-        "sequentialBlockPassed" : false,
-        "sourceText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
-        "tag" : "[13]"
-      },
-      {
-        "candidateClassification" : "empty",
-        "failureReasons" : [
-          "翻译为空",
-          "tagMissing"
-        ],
-        "index" : 14,
-        "passed" : false,
-        "rawOutputClassification" : "empty",
-        "sequentialBlockPassed" : false,
-        "sourceText" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
-        "tag" : "[14]"
-      },
-      {
-        "candidateClassification" : "empty",
-        "failureReasons" : [
-          "翻译为空",
-          "tagMissing"
-        ],
-        "index" : 15,
-        "passed" : false,
-        "rawOutputClassification" : "empty",
         "sequentialBlockPassed" : true,
         "sourceText" : "City Battler\nOffline.\nTournament",
-        "tag" : "[15]"
+        "tag" : "[12]"
       }
     ],
     "decodingMode" : "deterministic",
@@ -232,10 +193,7 @@
       "[9]",
       "[10]",
       "[11]",
-      "[12]",
-      "[13]",
-      "[14]",
-      "[15]"
+      "[12]"
     ],
     "notes" : [
       "diagnosticOnly=true; sequential per-block translation remains the primary flow",
@@ -246,15 +204,15 @@
 
     ],
     "parseFailureReasons" : [
-      "missingTags=[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15]",
-      "unexpectedTags=[16],[17],[18],[19],[20],[21],[22],[23],[24]"
+      "missingTags=[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12]",
+      "unexpectedTags=[13]"
     ],
     "parsedCases" : 0,
-    "prompt" : "把以下英文漫画台词翻译成中文。\n严格保留每一行开头的编号标签，例如 [0]。\n不要合并编号，不要拆分编号，不要解释，不要添加列表符号。\n每个输入编号必须输出且只输出一行对应中文。\n\n[0] THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-\n[1] IVE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE.\n[2] THE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.\n[3] ANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS\n[4] LET'S\nBATTLER!\n[5] I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...\n[6] THIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS\n[7] WE NEED TO\nGET RESULTS\nAT THS\nTOURNAMENT\nTO SAVE THE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.\n[8] THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.\n[9] THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED\n[10] What are you talking about?\n[11] PLAY ONLING...\n[12] JUST\n[13] -O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.\n[14] -02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-\n[15] City Battler\nOffline.\nTournament",
-    "rawOutput" : "\n[16] WE NEED\nTO\nGET\nRESULTS\nAT\nTHS\nTOURNAMENT.\nTO SAVE\nTHE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.\n[17] THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I O BE\nSTAY\nOVER AT REN-\nSENPAI'S\nHOUSE.\n[18] THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED\n[19] What are you talking about?\n[20] PLAY ONLING...\n[21] JUST\n[22] -O2 AT LEAST. -02 AT\nTHAT SEEMS\nTO BE\nSENPAIS SENPArS LOSIC.\n[23] City Battler\nOffline.\nTournament\n[24] WE NEED\nTO\nGET\nRESULTS\nAT\nTHS\nTOURNAMENT.\nTO SAVE\nTHE\nSAM",
-    "sequentialPassRate" : 0.0625,
+    "prompt" : "把以下英文漫画台词翻译成中文。\n严格保留每一行开头的编号标签，例如 [0]。\n不要合并编号，不要拆分编号，不要解释，不要添加列表符号。\n每个输入编号必须输出且只输出一行对应中文。\n\n[0] THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-\n[1] IVE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE.\n[2] THE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.\n[3] ANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS\n[4] LET'S\nBATTLER!\n[5] I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...\n[6] THIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS\n[7] WE NEED TO\nGET RESULTS\nAT THS\nTOURNAMENT\nTO SAVE THE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.\n[8] THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.\n[9] What are you talking about?\n[10] -O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.\n[11] -02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-\n[12] City Battler\nOffline.\nTournament",
+    "rawOutput" : ".\n[13] A CITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBEING\nA\nCITY\nBE",
+    "sequentialPassRate" : 0.07692307692307693,
     "sequentialPassedCases" : 1,
-    "totalCases" : 16
+    "totalCases" : 13
   },
   "blocks" : [
     {
@@ -4602,7 +4560,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "81C11234-1C79-4A35-9126-402DD7348598",
+      "id" : "9A94FFAD-3B17-439A-9C34-B91B7B8BFBB6",
       "index" : 0,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 1,
@@ -4622,6 +4580,7 @@
         "fusionSource=wholePageOCR",
         "fusionSourceIndex=0",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
+        "postFusionCleanup=kept",
         "candidateSelectionSource=afterPreprocessing",
         "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
         "rawCandidateQuality=0.536",
@@ -7350,7 +7309,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "DD2DEED9-D48D-4A4E-8FE5-846BABE12438",
+      "id" : "ACEA6907-34BF-4420-AB3D-222ED019EDDC",
       "index" : 1,
       "ocrGroundTruthSimilarity" : 0.5714285714285714,
       "ocrLegacySimilarity" : 0.9047619047619048,
@@ -7371,6 +7330,7 @@
         "fusionSourceIndex=0",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
         "fusionRejected wholePageOCR#1: lowerGroundTruthFreeQualityScore",
+        "postFusionCleanup=kept",
         "candidateSelectionSource=rawOCR",
         "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
         "rawCandidateQuality=0.740",
@@ -7875,7 +7835,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "D692D5DA-85C2-4466-BBDA-4AC0716D7F31",
+      "id" : "65F0648F-F559-497B-BC76-6577996224C3",
       "index" : 2,
       "ocrGroundTruthSimilarity" : 0.6666666666666667,
       "ocrLegacySimilarity" : 0.8333333333333334,
@@ -7895,7 +7855,8 @@
         "fusionSource=bubbleFirst",
         "fusionSourceIndex=1",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
-        "fusionRejected wholePageOCR#2: lowerGroundTruthFreeQualityScore"
+        "fusionRejected wholePageOCR#2: lowerGroundTruthFreeQualityScore",
+        "postFusionCleanup=kept"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "THE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.",
@@ -12754,7 +12715,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "20E1BBFB-CADF-4FB3-8A0E-94D07B9BF1B7",
+      "id" : "A1A104A0-811A-4A57-8A5F-8B76A76B936F",
       "index" : 3,
       "ocrGroundTruthSimilarity" : 0.7,
       "ocrLegacySimilarity" : 0.8529411764705882,
@@ -12774,7 +12735,8 @@
         "fusionSource=bubbleFirst",
         "fusionSourceIndex=2",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
-        "fusionRejected wholePageOCR#3: lowerGroundTruthFreeQualityScore"
+        "fusionRejected wholePageOCR#3: lowerGroundTruthFreeQualityScore",
+        "postFusionCleanup=kept"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "ANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS",
@@ -12884,7 +12846,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "1F93F473-2563-4A87-972D-1A200A0D8138",
+      "id" : "312C89DD-B476-4721-8430-3735DC008A53",
       "index" : 4,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.6666666666666667,
@@ -12905,6 +12867,7 @@
         "fusionSource=wholePageOCR",
         "fusionSourceIndex=5",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
+        "postFusionCleanup=kept",
         "candidateSelectionSource=rawOCR",
         "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
         "rawCandidateQuality=0.611",
@@ -18052,7 +18015,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "1B504A4E-C744-4703-8D69-06A26431AF6F",
+      "id" : "32CF1F5E-B68B-46E6-8115-267E0C6AE388",
       "index" : 5,
       "ocrGroundTruthSimilarity" : 0.8235294117647058,
       "ocrLegacySimilarity" : 0.8846153846153846,
@@ -18073,6 +18036,7 @@
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
         "fusionRejected wholePageOCR#4: lowerGroundTruthFreeQualityScore",
         "fusionRejected bubbleFirst#3: lowerGroundTruthFreeQualityScore",
+        "postFusionCleanup=kept",
         "candidateSelectionSource=rawOCR",
         "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
         "rawCandidateQuality=0.776",
@@ -18107,9 +18071,9 @@
       "renderMinFontSizeReached" : true,
       "renderNonTransparentBounds" : [
         256,
-        945,
+        946,
         32,
-        8
+        17
       ],
       "renderTextTruncated" : true,
       "rotationAngleUsed" : 0,
@@ -18117,7 +18081,7 @@
         253,
         940,
         110,
-        17
+        26
       ],
       "safeLayoutSource" : "bubbleInsetPartitioned",
       "sliceIndex" : null,
@@ -22436,7 +22400,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "CC13A980-6878-40F3-AEC7-1CC471A5A0B3",
+      "id" : "93B7BB33-D5C1-42D2-B003-AD7813A7E744",
       "index" : 6,
       "ocrGroundTruthSimilarity" : 0.9166666666666666,
       "ocrLegacySimilarity" : 0.9361702127659575,
@@ -22457,6 +22421,7 @@
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
         "fusionRejected wholePageOCR#6: lowerGroundTruthFreeQualityScore",
         "fusionRejected bubbleFirst#8: lowerGroundTruthFreeQualityScore",
+        "postFusionCleanup=kept",
         "candidateSelectionSource=rawOCR",
         "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
         "rawCandidateQuality=0.862",
@@ -22487,20 +22452,20 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 12,
+      "renderFontSize" : 16,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        140,
-        891,
+        92,
+        888,
         63,
-        82
+        88
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        137,
+        89,
         879,
-        105,
+        152,
         103
       ],
       "safeLayoutSource" : "bubbleInsetPartitioned",
@@ -24144,7 +24109,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "56507439-D879-49D3-906B-370742B4CCB9",
+      "id" : "BFAEA1DF-EE1E-46FA-867A-FAA612BC019F",
       "index" : 7,
       "ocrGroundTruthSimilarity" : 0.6875,
       "ocrLegacySimilarity" : 0.8363636363636363,
@@ -24166,6 +24131,7 @@
         "fusionSourceIndex=7",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
         "fusionRejected wholePageOCR#7: lowerGroundTruthFreeQualityScore",
+        "postFusionCleanup=kept",
         "candidateSelectionSource=rawOCR",
         "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
         "rawCandidateQuality=0.773",
@@ -32037,7 +32003,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "98C2831B-5EE4-483B-A4A8-2312FDA3473E",
+      "id" : "96A57A6A-C5E9-466D-B2F7-4E3A073CEE73",
       "index" : 8,
       "ocrGroundTruthSimilarity" : 0.8947368421052632,
       "ocrLegacySimilarity" : 0.9482758620689655,
@@ -32057,6 +32023,7 @@
         "fusionSourceIndex=9",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
         "fusionRejected wholePageOCR#8: lowerGroundTruthFreeQualityScore",
+        "postFusionCleanup=kept",
         "candidateSelectionSource=rawOCR",
         "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
         "rawCandidateQuality=0.773",
@@ -32129,3829 +32096,8 @@
     },
     {
       "adaptivePreprocessingOcrText" : "MEA\n: What\nare\nyou\neven\n! talking\nabot",
-      "afterCorrectionText" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED",
-      "afterPreprocessingOcrText" : "MEA\n: What\nare\nyou\neven\n! talking\nabot",
-      "backgroundColorStdDev" : 41.47068899671686,
-      "backgroundFillApplied" : true,
-      "backgroundFillColor" : [
-        0.9294117647058824,
-        0.9294117647058824,
-        0.9294117647058824
-      ],
-      "bbox" : [
-        48,
-        967,
-        62,
-        50
-      ],
-      "blockPassed" : false,
-      "bubbleAssignmentMethod" : "bubbleFirstFusion",
-      "bubbleID" : 4,
-      "candidateClassification" : "nonChinese",
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : false,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true,
-        "translationNotPlaceholder" : true
-      },
-      "correctionEnabled" : true,
-      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nTHE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED\n",
-      "correctionRejectedReason" : "长度变化 85% 超过 30%",
-      "cropCandidatePreservesRawWords" : false,
-      "cropClampedByBubble" : false,
-      "cropFallbackTriggered" : false,
-      "cropPaddingX" : 18.261238526816914,
-      "cropPaddingY" : 18.261238526816914,
-      "cropStrategyUsed" : "adaptive",
-      "crossBubbleMergeRejected" : false,
-      "deterministicCorrectionAppliedRules" : [
-        "SUGSESTION->SUGGESTION"
-      ],
-      "deterministicCorrectionSimilarity" : 0.38888888888888884,
-      "deterministicCorrectionText" : "THE\nSUGGESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED",
-      "deterministicCorrectionTranslationCandidate" : "请提供您想要翻译的中文句子。",
-      "deterministicCorrectionTranslationFailureDetail" : "deterministicCorrectionTranslationFailure：翻译是占位答复",
-      "deterministicCorrectionTranslationPassed" : false,
-      "deterministicCorrectionTranslationRawOutput" : "\n请提供您想要翻译的中文句子。",
-      "failureCategory" : "ocrInputSuspect",
-      "failureReasons" : [
-        "中文字符不足",
-        "翻译不像中文"
-      ],
-      "finalTextUsedForTranslation" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED",
-      "fixedPreprocessingOcrText" : "Whart\nare\neven\n: talking\nabout?",
-      "glyphMaskFillRects" : [
-        [
-          228,
-          857,
-          5,
-          1
-        ],
-        [
-          227,
-          858,
-          6,
-          1
-        ],
-        [
-          227,
-          859,
-          6,
-          1
-        ],
-        [
-          227,
-          860,
-          6,
-          1
-        ],
-        [
-          227,
-          861,
-          6,
-          1
-        ],
-        [
-          227,
-          862,
-          6,
-          1
-        ],
-        [
-          227,
-          863,
-          6,
-          1
-        ],
-        [
-          227,
-          864,
-          6,
-          1
-        ],
-        [
-          228,
-          865,
-          5,
-          1
-        ],
-        [
-          225,
-          866,
-          8,
-          1
-        ],
-        [
-          224,
-          867,
-          9,
-          1
-        ],
-        [
-          186,
-          868,
-          2,
-          1
-        ],
-        [
-          194,
-          868,
-          3,
-          1
-        ],
-        [
-          223,
-          868,
-          10,
-          1
-        ],
-        [
-          185,
-          869,
-          4,
-          1
-        ],
-        [
-          193,
-          869,
-          5,
-          1
-        ],
-        [
-          224,
-          869,
-          9,
-          1
-        ],
-        [
-          184,
-          870,
-          6,
-          1
-        ],
-        [
-          192,
-          870,
-          7,
-          1
-        ],
-        [
-          220,
-          870,
-          13,
-          1
-        ],
-        [
-          184,
-          871,
-          14,
-          1
-        ],
-        [
-          205,
-          871,
-          1,
-          1
-        ],
-        [
-          214,
-          871,
-          3,
-          1
-        ],
-        [
-          219,
-          871,
-          14,
-          1
-        ],
-        [
-          183,
-          872,
-          15,
-          1
-        ],
-        [
-          204,
-          872,
-          3,
-          1
-        ],
-        [
-          210,
-          872,
-          23,
-          1
-        ],
-        [
-          182,
-          873,
-          17,
-          1
-        ],
-        [
-          203,
-          873,
-          30,
-          1
-        ],
-        [
-          176,
-          874,
-          23,
-          1
-        ],
-        [
-          200,
-          874,
-          1,
-          1
-        ],
-        [
-          203,
-          874,
-          30,
-          1
-        ],
-        [
-          173,
-          875,
-          46,
-          1
-        ],
-        [
-          222,
-          875,
-          11,
-          1
-        ],
-        [
-          171,
-          876,
-          47,
-          1
-        ],
-        [
-          223,
-          876,
-          10,
-          1
-        ],
-        [
-          169,
-          877,
-          46,
-          1
-        ],
-        [
-          216,
-          877,
-          1,
-          1
-        ],
-        [
-          223,
-          877,
-          10,
-          1
-        ],
-        [
-          168,
-          878,
-          47,
-          1
-        ],
-        [
-          223,
-          878,
-          10,
-          1
-        ],
-        [
-          162,
-          879,
-          2,
-          1
-        ],
-        [
-          167,
-          879,
-          20,
-          1
-        ],
-        [
-          189,
-          879,
-          27,
-          1
-        ],
-        [
-          224,
-          879,
-          9,
-          1
-        ],
-        [
-          161,
-          880,
-          16,
-          1
-        ],
-        [
-          197,
-          880,
-          20,
-          1
-        ],
-        [
-          224,
-          880,
-          9,
-          1
-        ],
-        [
-          160,
-          881,
-          14,
-          1
-        ],
-        [
-          200,
-          881,
-          16,
-          1
-        ],
-        [
-          223,
-          881,
-          10,
-          1
-        ],
-        [
-          159,
-          882,
-          13,
-          1
-        ],
-        [
-          202,
-          882,
-          13,
-          1
-        ],
-        [
-          224,
-          882,
-          9,
-          1
-        ],
-        [
-          158,
-          883,
-          12,
-          1
-        ],
-        [
-          204,
-          883,
-          8,
-          1
-        ],
-        [
-          224,
-          883,
-          9,
-          1
-        ],
-        [
-          158,
-          884,
-          10,
-          1
-        ],
-        [
-          205,
-          884,
-          8,
-          1
-        ],
-        [
-          224,
-          884,
-          9,
-          1
-        ],
-        [
-          155,
-          885,
-          1,
-          1
-        ],
-        [
-          158,
-          885,
-          10,
-          1
-        ],
-        [
-          206,
-          885,
-          8,
-          1
-        ],
-        [
-          215,
-          885,
-          2,
-          1
-        ],
-        [
-          224,
-          885,
-          9,
-          1
-        ],
-        [
-          154,
-          886,
-          3,
-          1
-        ],
-        [
-          158,
-          886,
-          9,
-          1
-        ],
-        [
-          207,
-          886,
-          11,
-          1
-        ],
-        [
-          224,
-          886,
-          9,
-          1
-        ],
-        [
-          153,
-          887,
-          13,
-          1
-        ],
-        [
-          208,
-          887,
-          11,
-          1
-        ],
-        [
-          223,
-          887,
-          10,
-          1
-        ],
-        [
-          153,
-          888,
-          12,
-          1
-        ],
-        [
-          209,
-          888,
-          10,
-          1
-        ],
-        [
-          223,
-          888,
-          10,
-          1
-        ],
-        [
-          154,
-          889,
-          11,
-          1
-        ],
-        [
-          209,
-          889,
-          10,
-          1
-        ],
-        [
-          223,
-          889,
-          10,
-          1
-        ],
-        [
-          155,
-          890,
-          9,
-          1
-        ],
-        [
-          210,
-          890,
-          10,
-          1
-        ],
-        [
-          223,
-          890,
-          10,
-          1
-        ],
-        [
-          156,
-          891,
-          7,
-          1
-        ],
-        [
-          211,
-          891,
-          8,
-          1
-        ],
-        [
-          223,
-          891,
-          10,
-          1
-        ],
-        [
-          157,
-          892,
-          6,
-          1
-        ],
-        [
-          211,
-          892,
-          8,
-          1
-        ],
-        [
-          223,
-          892,
-          10,
-          1
-        ],
-        [
-          98,
-          893,
-          1,
-          1
-        ],
-        [
-          156,
-          893,
-          6,
-          1
-        ],
-        [
-          212,
-          893,
-          7,
-          1
-        ],
-        [
-          222,
-          893,
-          11,
-          1
-        ],
-        [
-          85,
-          894,
-          2,
-          1
-        ],
-        [
-          97,
-          894,
-          3,
-          1
-        ],
-        [
-          149,
-          894,
-          2,
-          1
-        ],
-        [
-          156,
-          894,
-          6,
-          1
-        ],
-        [
-          212,
-          894,
-          8,
-          1
-        ],
-        [
-          222,
-          894,
-          11,
-          1
-        ],
-        [
-          84,
-          895,
-          4,
-          1
-        ],
-        [
-          96,
-          895,
-          5,
-          1
-        ],
-        [
-          148,
-          895,
-          4,
-          1
-        ],
-        [
-          156,
-          895,
-          6,
-          1
-        ],
-        [
-          213,
-          895,
-          6,
-          1
-        ],
-        [
-          222,
-          895,
-          11,
-          1
-        ],
-        [
-          83,
-          896,
-          6,
-          1
-        ],
-        [
-          96,
-          896,
-          5,
-          1
-        ],
-        [
-          147,
-          896,
-          6,
-          1
-        ],
-        [
-          155,
-          896,
-          6,
-          1
-        ],
-        [
-          213,
-          896,
-          7,
-          1
-        ],
-        [
-          221,
-          896,
-          12,
-          1
-        ],
-        [
-          83,
-          897,
-          6,
-          1
-        ],
-        [
-          96,
-          897,
-          6,
-          1
-        ],
-        [
-          146,
-          897,
-          15,
-          1
-        ],
-        [
-          213,
-          897,
-          6,
-          1
-        ],
-        [
-          221,
-          897,
-          12,
-          1
-        ],
-        [
-          83,
-          898,
-          6,
-          1
-        ],
-        [
-          96,
-          898,
-          6,
-          1
-        ],
-        [
-          147,
-          898,
-          13,
-          1
-        ],
-        [
-          213,
-          898,
-          6,
-          1
-        ],
-        [
-          221,
-          898,
-          12,
-          1
-        ],
-        [
-          82,
-          899,
-          8,
-          1
-        ],
-        [
-          96,
-          899,
-          5,
-          1
-        ],
-        [
-          148,
-          899,
-          12,
-          1
-        ],
-        [
-          214,
-          899,
-          19,
-          1
-        ],
-        [
-          81,
-          900,
-          11,
-          1
-        ],
-        [
-          96,
-          900,
-          5,
-          1
-        ],
-        [
-          148,
-          900,
-          12,
-          1
-        ],
-        [
-          214,
-          900,
-          19,
-          1
-        ],
-        [
-          79,
-          901,
-          14,
-          1
-        ],
-        [
-          96,
-          901,
-          5,
-          1
-        ],
-        [
-          149,
-          901,
-          10,
-          1
-        ],
-        [
-          214,
-          901,
-          19,
-          1
-        ],
-        [
-          78,
-          902,
-          17,
-          1
-        ],
-        [
-          96,
-          902,
-          5,
-          1
-        ],
-        [
-          149,
-          902,
-          10,
-          1
-        ],
-        [
-          214,
-          902,
-          19,
-          1
-        ],
-        [
-          77,
-          903,
-          24,
-          1
-        ],
-        [
-          148,
-          903,
-          11,
-          1
-        ],
-        [
-          214,
-          903,
-          19,
-          1
-        ],
-        [
-          77,
-          904,
-          24,
-          1
-        ],
-        [
-          149,
-          904,
-          9,
-          1
-        ],
-        [
-          215,
-          904,
-          18,
-          1
-        ],
-        [
-          77,
-          905,
-          24,
-          1
-        ],
-        [
-          149,
-          905,
-          9,
-          1
-        ],
-        [
-          215,
-          905,
-          18,
-          1
-        ],
-        [
-          76,
-          906,
-          26,
-          1
-        ],
-        [
-          149,
-          906,
-          9,
-          1
-        ],
-        [
-          215,
-          906,
-          18,
-          1
-        ],
-        [
-          76,
-          907,
-          13,
-          1
-        ],
-        [
-          90,
-          907,
-          1,
-          1
-        ],
-        [
-          92,
-          907,
-          14,
-          1
-        ],
-        [
-          149,
-          907,
-          9,
-          1
-        ],
-        [
-          215,
-          907,
-          18,
-          1
-        ],
-        [
-          76,
-          908,
-          12,
-          1
-        ],
-        [
-          90,
-          908,
-          19,
-          1
-        ],
-        [
-          149,
-          908,
-          9,
-          1
-        ],
-        [
-          215,
-          908,
-          18,
-          1
-        ],
-        [
-          75,
-          909,
-          37,
-          1
-        ],
-        [
-          119,
-          909,
-          1,
-          1
-        ],
-        [
-          149,
-          909,
-          8,
-          1
-        ],
-        [
-          215,
-          909,
-          18,
-          1
-        ],
-        [
-          75,
-          910,
-          38,
-          1
-        ],
-        [
-          114,
-          910,
-          2,
-          1
-        ],
-        [
-          118,
-          910,
-          3,
-          1
-        ],
-        [
-          127,
-          910,
-          1,
-          1
-        ],
-        [
-          139,
-          910,
-          2,
-          1
-        ],
-        [
-          142,
-          910,
-          1,
-          1
-        ],
-        [
-          149,
-          910,
-          8,
-          1
-        ],
-        [
-          215,
-          910,
-          18,
-          1
-        ],
-        [
-          74,
-          911,
-          48,
-          1
-        ],
-        [
-          126,
-          911,
-          3,
-          1
-        ],
-        [
-          137,
-          911,
-          8,
-          1
-        ],
-        [
-          146,
-          911,
-          11,
-          1
-        ],
-        [
-          215,
-          911,
-          18,
-          1
-        ],
-        [
-          74,
-          912,
-          48,
-          1
-        ],
-        [
-          125,
-          912,
-          5,
-          1
-        ],
-        [
-          134,
-          912,
-          1,
-          1
-        ],
-        [
-          136,
-          912,
-          21,
-          1
-        ],
-        [
-          215,
-          912,
-          18,
-          1
-        ],
-        [
-          73,
-          913,
-          50,
-          1
-        ],
-        [
-          124,
-          913,
-          6,
-          1
-        ],
-        [
-          133,
-          913,
-          24,
-          1
-        ],
-        [
-          215,
-          913,
-          18,
-          1
-        ],
-        [
-          72,
-          914,
-          58,
-          1
-        ],
-        [
-          132,
-          914,
-          24,
-          1
-        ],
-        [
-          216,
-          914,
-          17,
-          1
-        ],
-        [
-          72,
-          915,
-          57,
-          1
-        ],
-        [
-          131,
-          915,
-          25,
-          1
-        ],
-        [
-          216,
-          915,
-          17,
-          1
-        ],
-        [
-          72,
-          916,
-          56,
-          1
-        ],
-        [
-          132,
-          916,
-          24,
-          1
-        ],
-        [
-          216,
-          916,
-          17,
-          1
-        ],
-        [
-          72,
-          917,
-          56,
-          1
-        ],
-        [
-          132,
-          917,
-          16,
-          1
-        ],
-        [
-          149,
-          917,
-          7,
-          1
-        ],
-        [
-          216,
-          917,
-          17,
-          1
-        ],
-        [
-          67,
-          918,
-          62,
-          1
-        ],
-        [
-          132,
-          918,
-          16,
-          1
-        ],
-        [
-          150,
-          918,
-          6,
-          1
-        ],
-        [
-          216,
-          918,
-          17,
-          1
-        ],
-        [
-          67,
-          919,
-          63,
-          1
-        ],
-        [
-          132,
-          919,
-          16,
-          1
-        ],
-        [
-          150,
-          919,
-          6,
-          1
-        ],
-        [
-          216,
-          919,
-          17,
-          1
-        ],
-        [
-          67,
-          920,
-          63,
-          1
-        ],
-        [
-          132,
-          920,
-          17,
-          1
-        ],
-        [
-          150,
-          920,
-          6,
-          1
-        ],
-        [
-          216,
-          920,
-          17,
-          1
-        ],
-        [
-          67,
-          921,
-          89,
-          1
-        ],
-        [
-          216,
-          921,
-          17,
-          1
-        ],
-        [
-          67,
-          922,
-          88,
-          1
-        ],
-        [
-          216,
-          922,
-          17,
-          1
-        ],
-        [
-          67,
-          923,
-          7,
-          1
-        ],
-        [
-          76,
-          923,
-          3,
-          1
-        ],
-        [
-          80,
-          923,
-          1,
-          1
-        ],
-        [
-          112,
-          923,
-          43,
-          1
-        ],
-        [
-          216,
-          923,
-          17,
-          1
-        ],
-        [
-          112,
-          924,
-          43,
-          1
-        ],
-        [
-          216,
-          924,
-          17,
-          1
-        ],
-        [
-          112,
-          925,
-          43,
-          1
-        ],
-        [
-          216,
-          925,
-          17,
-          1
-        ],
-        [
-          112,
-          926,
-          43,
-          1
-        ],
-        [
-          216,
-          926,
-          17,
-          1
-        ],
-        [
-          112,
-          927,
-          43,
-          1
-        ],
-        [
-          216,
-          927,
-          17,
-          1
-        ],
-        [
-          112,
-          928,
-          43,
-          1
-        ],
-        [
-          216,
-          928,
-          17,
-          1
-        ],
-        [
-          112,
-          929,
-          5,
-          1
-        ],
-        [
-          149,
-          929,
-          6,
-          1
-        ],
-        [
-          216,
-          929,
-          5,
-          1
-        ],
-        [
-          223,
-          929,
-          10,
-          1
-        ],
-        [
-          112,
-          930,
-          5,
-          1
-        ],
-        [
-          149,
-          930,
-          6,
-          1
-        ],
-        [
-          216,
-          930,
-          5,
-          1
-        ],
-        [
-          223,
-          930,
-          10,
-          1
-        ],
-        [
-          112,
-          931,
-          5,
-          1
-        ],
-        [
-          149,
-          931,
-          6,
-          1
-        ],
-        [
-          216,
-          931,
-          5,
-          1
-        ],
-        [
-          223,
-          931,
-          10,
-          1
-        ],
-        [
-          112,
-          932,
-          6,
-          1
-        ],
-        [
-          149,
-          932,
-          6,
-          1
-        ],
-        [
-          216,
-          932,
-          5,
-          1
-        ],
-        [
-          223,
-          932,
-          10,
-          1
-        ],
-        [
-          112,
-          933,
-          6,
-          1
-        ],
-        [
-          149,
-          933,
-          6,
-          1
-        ],
-        [
-          216,
-          933,
-          5,
-          1
-        ],
-        [
-          222,
-          933,
-          11,
-          1
-        ],
-        [
-          112,
-          934,
-          6,
-          1
-        ],
-        [
-          149,
-          934,
-          6,
-          1
-        ],
-        [
-          216,
-          934,
-          5,
-          1
-        ],
-        [
-          222,
-          934,
-          11,
-          1
-        ],
-        [
-          112,
-          935,
-          6,
-          1
-        ],
-        [
-          149,
-          935,
-          6,
-          1
-        ],
-        [
-          216,
-          935,
-          6,
-          1
-        ],
-        [
-          223,
-          935,
-          10,
-          1
-        ],
-        [
-          112,
-          936,
-          6,
-          1
-        ],
-        [
-          149,
-          936,
-          6,
-          1
-        ],
-        [
-          216,
-          936,
-          17,
-          1
-        ],
-        [
-          112,
-          937,
-          6,
-          1
-        ],
-        [
-          149,
-          937,
-          6,
-          1
-        ],
-        [
-          216,
-          937,
-          6,
-          1
-        ],
-        [
-          223,
-          937,
-          10,
-          1
-        ],
-        [
-          112,
-          938,
-          43,
-          1
-        ],
-        [
-          216,
-          938,
-          17,
-          1
-        ],
-        [
-          112,
-          939,
-          43,
-          1
-        ],
-        [
-          216,
-          939,
-          17,
-          1
-        ],
-        [
-          112,
-          940,
-          43,
-          1
-        ],
-        [
-          216,
-          940,
-          17,
-          1
-        ],
-        [
-          112,
-          941,
-          43,
-          1
-        ],
-        [
-          216,
-          941,
-          17,
-          1
-        ],
-        [
-          112,
-          942,
-          43,
-          1
-        ],
-        [
-          216,
-          942,
-          17,
-          1
-        ],
-        [
-          112,
-          943,
-          43,
-          1
-        ],
-        [
-          216,
-          943,
-          17,
-          1
-        ],
-        [
-          112,
-          944,
-          43,
-          1
-        ],
-        [
-          216,
-          944,
-          17,
-          1
-        ],
-        [
-          112,
-          945,
-          6,
-          1
-        ],
-        [
-          149,
-          945,
-          6,
-          1
-        ],
-        [
-          216,
-          945,
-          5,
-          1
-        ],
-        [
-          227,
-          945,
-          6,
-          1
-        ],
-        [
-          112,
-          946,
-          6,
-          1
-        ],
-        [
-          149,
-          946,
-          6,
-          1
-        ],
-        [
-          216,
-          946,
-          5,
-          1
-        ],
-        [
-          227,
-          946,
-          6,
-          1
-        ],
-        [
-          112,
-          947,
-          6,
-          1
-        ],
-        [
-          150,
-          947,
-          5,
-          1
-        ],
-        [
-          215,
-          947,
-          6,
-          1
-        ],
-        [
-          227,
-          947,
-          6,
-          1
-        ],
-        [
-          112,
-          948,
-          6,
-          1
-        ],
-        [
-          150,
-          948,
-          5,
-          1
-        ],
-        [
-          216,
-          948,
-          5,
-          1
-        ],
-        [
-          227,
-          948,
-          6,
-          1
-        ],
-        [
-          112,
-          949,
-          6,
-          1
-        ],
-        [
-          150,
-          949,
-          6,
-          1
-        ],
-        [
-          216,
-          949,
-          5,
-          1
-        ],
-        [
-          227,
-          949,
-          6,
-          1
-        ],
-        [
-          112,
-          950,
-          6,
-          1
-        ],
-        [
-          150,
-          950,
-          6,
-          1
-        ],
-        [
-          215,
-          950,
-          6,
-          1
-        ],
-        [
-          227,
-          950,
-          6,
-          1
-        ],
-        [
-          112,
-          951,
-          6,
-          1
-        ],
-        [
-          150,
-          951,
-          6,
-          1
-        ],
-        [
-          215,
-          951,
-          6,
-          1
-        ],
-        [
-          227,
-          951,
-          6,
-          1
-        ],
-        [
-          112,
-          952,
-          6,
-          1
-        ],
-        [
-          150,
-          952,
-          6,
-          1
-        ],
-        [
-          215,
-          952,
-          6,
-          1
-        ],
-        [
-          227,
-          952,
-          6,
-          1
-        ],
-        [
-          112,
-          953,
-          6,
-          1
-        ],
-        [
-          150,
-          953,
-          6,
-          1
-        ],
-        [
-          215,
-          953,
-          6,
-          1
-        ],
-        [
-          227,
-          953,
-          6,
-          1
-        ],
-        [
-          112,
-          954,
-          6,
-          1
-        ],
-        [
-          150,
-          954,
-          6,
-          1
-        ],
-        [
-          215,
-          954,
-          6,
-          1
-        ],
-        [
-          227,
-          954,
-          6,
-          1
-        ],
-        [
-          112,
-          955,
-          6,
-          1
-        ],
-        [
-          150,
-          955,
-          6,
-          1
-        ],
-        [
-          215,
-          955,
-          6,
-          1
-        ],
-        [
-          227,
-          955,
-          6,
-          1
-        ],
-        [
-          112,
-          956,
-          6,
-          1
-        ],
-        [
-          151,
-          956,
-          5,
-          1
-        ],
-        [
-          215,
-          956,
-          6,
-          1
-        ],
-        [
-          227,
-          956,
-          6,
-          1
-        ],
-        [
-          112,
-          957,
-          6,
-          1
-        ],
-        [
-          151,
-          957,
-          6,
-          1
-        ],
-        [
-          215,
-          957,
-          6,
-          1
-        ],
-        [
-          227,
-          957,
-          6,
-          1
-        ],
-        [
-          112,
-          958,
-          6,
-          1
-        ],
-        [
-          151,
-          958,
-          6,
-          1
-        ],
-        [
-          215,
-          958,
-          6,
-          1
-        ],
-        [
-          227,
-          958,
-          6,
-          1
-        ],
-        [
-          112,
-          959,
-          6,
-          1
-        ],
-        [
-          151,
-          959,
-          6,
-          1
-        ],
-        [
-          215,
-          959,
-          6,
-          1
-        ],
-        [
-          227,
-          959,
-          6,
-          1
-        ],
-        [
-          112,
-          960,
-          6,
-          1
-        ],
-        [
-          151,
-          960,
-          6,
-          1
-        ],
-        [
-          215,
-          960,
-          5,
-          1
-        ],
-        [
-          227,
-          960,
-          6,
-          1
-        ],
-        [
-          112,
-          961,
-          6,
-          1
-        ],
-        [
-          152,
-          961,
-          5,
-          1
-        ],
-        [
-          214,
-          961,
-          6,
-          1
-        ],
-        [
-          227,
-          961,
-          6,
-          1
-        ],
-        [
-          112,
-          962,
-          6,
-          1
-        ],
-        [
-          152,
-          962,
-          5,
-          1
-        ],
-        [
-          214,
-          962,
-          6,
-          1
-        ],
-        [
-          227,
-          962,
-          6,
-          1
-        ],
-        [
-          112,
-          963,
-          6,
-          1
-        ],
-        [
-          152,
-          963,
-          6,
-          1
-        ],
-        [
-          214,
-          963,
-          6,
-          1
-        ],
-        [
-          227,
-          963,
-          6,
-          1
-        ],
-        [
-          112,
-          964,
-          6,
-          1
-        ],
-        [
-          152,
-          964,
-          6,
-          1
-        ],
-        [
-          214,
-          964,
-          6,
-          1
-        ],
-        [
-          227,
-          964,
-          6,
-          1
-        ],
-        [
-          112,
-          965,
-          6,
-          1
-        ],
-        [
-          152,
-          965,
-          6,
-          1
-        ],
-        [
-          214,
-          965,
-          6,
-          1
-        ],
-        [
-          227,
-          965,
-          6,
-          1
-        ],
-        [
-          112,
-          966,
-          6,
-          1
-        ],
-        [
-          152,
-          966,
-          6,
-          1
-        ],
-        [
-          214,
-          966,
-          6,
-          1
-        ],
-        [
-          227,
-          966,
-          6,
-          1
-        ],
-        [
-          112,
-          967,
-          6,
-          1
-        ],
-        [
-          153,
-          967,
-          6,
-          1
-        ],
-        [
-          214,
-          967,
-          5,
-          1
-        ],
-        [
-          227,
-          967,
-          6,
-          1
-        ],
-        [
-          72,
-          968,
-          4,
-          1
-        ],
-        [
-          79,
-          968,
-          2,
-          1
-        ],
-        [
-          82,
-          968,
-          3,
-          1
-        ],
-        [
-          112,
-          968,
-          6,
-          1
-        ],
-        [
-          153,
-          968,
-          6,
-          1
-        ],
-        [
-          213,
-          968,
-          6,
-          1
-        ],
-        [
-          227,
-          968,
-          6,
-          1
-        ],
-        [
-          71,
-          969,
-          6,
-          1
-        ],
-        [
-          78,
-          969,
-          8,
-          1
-        ],
-        [
-          112,
-          969,
-          6,
-          1
-        ],
-        [
-          153,
-          969,
-          6,
-          1
-        ],
-        [
-          213,
-          969,
-          6,
-          1
-        ],
-        [
-          227,
-          969,
-          6,
-          1
-        ],
-        [
-          70,
-          970,
-          17,
-          1
-        ],
-        [
-          112,
-          970,
-          6,
-          1
-        ],
-        [
-          154,
-          970,
-          5,
-          1
-        ],
-        [
-          213,
-          970,
-          6,
-          1
-        ],
-        [
-          227,
-          970,
-          6,
-          1
-        ],
-        [
-          70,
-          971,
-          17,
-          1
-        ],
-        [
-          112,
-          971,
-          6,
-          1
-        ],
-        [
-          147,
-          971,
-          13,
-          1
-        ],
-        [
-          213,
-          971,
-          6,
-          1
-        ],
-        [
-          227,
-          971,
-          6,
-          1
-        ],
-        [
-          71,
-          972,
-          17,
-          1
-        ],
-        [
-          112,
-          972,
-          6,
-          1
-        ],
-        [
-          146,
-          972,
-          14,
-          1
-        ],
-        [
-          212,
-          972,
-          6,
-          1
-        ],
-        [
-          227,
-          972,
-          6,
-          1
-        ],
-        [
-          71,
-          973,
-          16,
-          1
-        ],
-        [
-          112,
-          973,
-          6,
-          1
-        ],
-        [
-          145,
-          973,
-          15,
-          1
-        ],
-        [
-          212,
-          973,
-          6,
-          1
-        ],
-        [
-          227,
-          973,
-          6,
-          1
-        ],
-        [
-          71,
-          974,
-          17,
-          1
-        ],
-        [
-          112,
-          974,
-          6,
-          1
-        ],
-        [
-          146,
-          974,
-          15,
-          1
-        ],
-        [
-          212,
-          974,
-          6,
-          1
-        ],
-        [
-          227,
-          974,
-          6,
-          1
-        ],
-        [
-          71,
-          975,
-          17,
-          1
-        ],
-        [
-          112,
-          975,
-          6,
-          1
-        ],
-        [
-          147,
-          975,
-          14,
-          1
-        ],
-        [
-          211,
-          975,
-          6,
-          1
-        ],
-        [
-          227,
-          975,
-          6,
-          1
-        ],
-        [
-          71,
-          976,
-          4,
-          1
-        ],
-        [
-          76,
-          976,
-          15,
-          1
-        ],
-        [
-          92,
-          976,
-          1,
-          1
-        ],
-        [
-          95,
-          976,
-          4,
-          1
-        ],
-        [
-          101,
-          976,
-          1,
-          1
-        ],
-        [
-          105,
-          976,
-          1,
-          1
-        ],
-        [
-          112,
-          976,
-          6,
-          1
-        ],
-        [
-          146,
-          976,
-          15,
-          1
-        ],
-        [
-          211,
-          976,
-          6,
-          1
-        ],
-        [
-          227,
-          976,
-          6,
-          1
-        ],
-        [
-          70,
-          977,
-          33,
-          1
-        ],
-        [
-          104,
-          977,
-          3,
-          1
-        ],
-        [
-          112,
-          977,
-          6,
-          1
-        ],
-        [
-          146,
-          977,
-          16,
-          1
-        ],
-        [
-          211,
-          977,
-          6,
-          1
-        ],
-        [
-          227,
-          977,
-          6,
-          1
-        ],
-        [
-          69,
-          978,
-          39,
-          1
-        ],
-        [
-          112,
-          978,
-          6,
-          1
-        ],
-        [
-          147,
-          978,
-          15,
-          1
-        ],
-        [
-          210,
-          978,
-          6,
-          1
-        ],
-        [
-          227,
-          978,
-          6,
-          1
-        ],
-        [
-          67,
-          979,
-          41,
-          1
-        ],
-        [
-          112,
-          979,
-          6,
-          1
-        ],
-        [
-          147,
-          979,
-          16,
-          1
-        ],
-        [
-          210,
-          979,
-          6,
-          1
-        ],
-        [
-          227,
-          979,
-          6,
-          1
-        ],
-        [
-          67,
-          980,
-          41,
-          1
-        ],
-        [
-          112,
-          980,
-          6,
-          1
-        ],
-        [
-          146,
-          980,
-          17,
-          1
-        ],
-        [
-          209,
-          980,
-          6,
-          1
-        ],
-        [
-          227,
-          980,
-          6,
-          1
-        ],
-        [
-          67,
-          981,
-          41,
-          1
-        ],
-        [
-          112,
-          981,
-          6,
-          1
-        ],
-        [
-          146,
-          981,
-          10,
-          1
-        ],
-        [
-          157,
-          981,
-          7,
-          1
-        ],
-        [
-          209,
-          981,
-          6,
-          1
-        ],
-        [
-          227,
-          981,
-          6,
-          1
-        ],
-        [
-          67,
-          982,
-          41,
-          1
-        ],
-        [
-          112,
-          982,
-          6,
-          1
-        ],
-        [
-          145,
-          982,
-          10,
-          1
-        ],
-        [
-          158,
-          982,
-          6,
-          1
-        ],
-        [
-          208,
-          982,
-          6,
-          1
-        ],
-        [
-          227,
-          982,
-          6,
-          1
-        ],
-        [
-          67,
-          983,
-          41,
-          1
-        ],
-        [
-          112,
-          983,
-          6,
-          1
-        ],
-        [
-          145,
-          983,
-          9,
-          1
-        ],
-        [
-          158,
-          983,
-          7,
-          1
-        ],
-        [
-          208,
-          983,
-          7,
-          1
-        ],
-        [
-          227,
-          983,
-          6,
-          1
-        ],
-        [
-          67,
-          984,
-          1,
-          1
-        ],
-        [
-          69,
-          984,
-          5,
-          1
-        ],
-        [
-          75,
-          984,
-          11,
-          1
-        ],
-        [
-          87,
-          984,
-          20,
-          1
-        ],
-        [
-          112,
-          984,
-          6,
-          1
-        ],
-        [
-          145,
-          984,
-          8,
-          1
-        ],
-        [
-          157,
-          984,
-          8,
-          1
-        ],
-        [
-          207,
-          984,
-          8,
-          1
-        ],
-        [
-          227,
-          984,
-          6,
-          1
-        ],
-        [
-          70,
-          985,
-          4,
-          1
-        ],
-        [
-          76,
-          985,
-          8,
-          1
-        ],
-        [
-          88,
-          985,
-          2,
-          1
-        ],
-        [
-          92,
-          985,
-          1,
-          1
-        ],
-        [
-          95,
-          985,
-          4,
-          1
-        ],
-        [
-          101,
-          985,
-          1,
-          1
-        ],
-        [
-          104,
-          985,
-          2,
-          1
-        ],
-        [
-          112,
-          985,
-          6,
-          1
-        ],
-        [
-          142,
-          985,
-          1,
-          1
-        ],
-        [
-          144,
-          985,
-          8,
-          1
-        ],
-        [
-          157,
-          985,
-          9,
-          1
-        ],
-        [
-          207,
-          985,
-          9,
-          1
-        ],
-        [
-          227,
-          985,
-          6,
-          1
-        ],
-        [
-          71,
-          986,
-          4,
-          1
-        ],
-        [
-          77,
-          986,
-          11,
-          1
-        ],
-        [
-          112,
-          986,
-          6,
-          1
-        ],
-        [
-          141,
-          986,
-          10,
-          1
-        ],
-        [
-          156,
-          986,
-          11,
-          1
-        ],
-        [
-          206,
-          986,
-          10,
-          1
-        ],
-        [
-          227,
-          986,
-          6,
-          1
-        ],
-        [
-          70,
-          987,
-          19,
-          1
-        ],
-        [
-          112,
-          987,
-          6,
-          1
-        ],
-        [
-          139,
-          987,
-          11,
-          1
-        ],
-        [
-          156,
-          987,
-          12,
-          1
-        ],
-        [
-          205,
-          987,
-          12,
-          1
-        ],
-        [
-          227,
-          987,
-          6,
-          1
-        ],
-        [
-          70,
-          988,
-          20,
-          1
-        ],
-        [
-          112,
-          988,
-          6,
-          1
-        ],
-        [
-          138,
-          988,
-          12,
-          1
-        ],
-        [
-          155,
-          988,
-          14,
-          1
-        ],
-        [
-          205,
-          988,
-          12,
-          1
-        ],
-        [
-          227,
-          988,
-          6,
-          1
-        ],
-        [
-          69,
-          989,
-          21,
-          1
-        ],
-        [
-          112,
-          989,
-          6,
-          1
-        ],
-        [
-          137,
-          989,
-          13,
-          1
-        ],
-        [
-          155,
-          989,
-          15,
-          1
-        ],
-        [
-          204,
-          989,
-          13,
-          1
-        ],
-        [
-          227,
-          989,
-          6,
-          1
-        ],
-        [
-          69,
-          990,
-          20,
-          1
-        ],
-        [
-          112,
-          990,
-          6,
-          1
-        ],
-        [
-          138,
-          990,
-          11,
-          1
-        ],
-        [
-          155,
-          990,
-          16,
-          1
-        ],
-        [
-          203,
-          990,
-          13,
-          1
-        ],
-        [
-          227,
-          990,
-          6,
-          1
-        ],
-        [
-          69,
-          991,
-          19,
-          1
-        ],
-        [
-          112,
-          991,
-          6,
-          1
-        ],
-        [
-          139,
-          991,
-          9,
-          1
-        ],
-        [
-          154,
-          991,
-          19,
-          1
-        ],
-        [
-          202,
-          991,
-          13,
-          1
-        ],
-        [
-          227,
-          991,
-          6,
-          1
-        ],
-        [
-          70,
-          992,
-          17,
-          1
-        ],
-        [
-          91,
-          992,
-          4,
-          1
-        ],
-        [
-          97,
-          992,
-          4,
-          1
-        ],
-        [
-          112,
-          992,
-          6,
-          1
-        ],
-        [
-          141,
-          992,
-          6,
-          1
-        ],
-        [
-          154,
-          992,
-          20,
-          1
-        ],
-        [
-          200,
-          992,
-          16,
-          1
-        ],
-        [
-          227,
-          992,
-          6,
-          1
-        ],
-        [
-          70,
-          993,
-          18,
-          1
-        ],
-        [
-          90,
-          993,
-          12,
-          1
-        ],
-        [
-          112,
-          993,
-          6,
-          1
-        ],
-        [
-          142,
-          993,
-          4,
-          1
-        ],
-        [
-          154,
-          993,
-          22,
-          1
-        ],
-        [
-          198,
-          993,
-          19,
-          1
-        ],
-        [
-          227,
-          993,
-          6,
-          1
-        ],
-        [
-          67,
-          994,
-          36,
-          1
-        ],
-        [
-          112,
-          994,
-          6,
-          1
-        ],
-        [
-          143,
-          994,
-          2,
-          1
-        ],
-        [
-          155,
-          994,
-          24,
-          1
-        ],
-        [
-          196,
-          994,
-          22,
-          1
-        ],
-        [
-          227,
-          994,
-          6,
-          1
-        ],
-        [
-          67,
-          995,
-          36,
-          1
-        ],
-        [
-          112,
-          995,
-          6,
-          1
-        ],
-        [
-          155,
-          995,
-          25,
-          1
-        ],
-        [
-          191,
-          995,
-          27,
-          1
-        ],
-        [
-          227,
-          995,
-          6,
-          1
-        ],
-        [
-          67,
-          996,
-          37,
-          1
-        ],
-        [
-          112,
-          996,
-          6,
-          1
-        ],
-        [
-          154,
-          996,
-          27,
-          1
-        ],
-        [
-          182,
-          996,
-          21,
-          1
-        ],
-        [
-          204,
-          996,
-          15,
-          1
-        ],
-        [
-          227,
-          996,
-          6,
-          1
-        ],
-        [
-          67,
-          997,
-          38,
-          1
-        ],
-        [
-          112,
-          997,
-          6,
-          1
-        ],
-        [
-          153,
-          997,
-          48,
-          1
-        ],
-        [
-          205,
-          997,
-          15,
-          1
-        ],
-        [
-          227,
-          997,
-          6,
-          1
-        ],
-        [
-          67,
-          998,
-          39,
-          1
-        ],
-        [
-          112,
-          998,
-          6,
-          1
-        ],
-        [
-          153,
-          998,
-          8,
-          1
-        ],
-        [
-          162,
-          998,
-          38,
-          1
-        ],
-        [
-          205,
-          998,
-          16,
-          1
-        ],
-        [
-          227,
-          998,
-          6,
-          1
-        ],
-        [
-          67,
-          999,
-          39,
-          1
-        ],
-        [
-          112,
-          999,
-          6,
-          1
-        ],
-        [
-          152,
-          999,
-          8,
-          1
-        ],
-        [
-          162,
-          999,
-          38,
-          1
-        ],
-        [
-          205,
-          999,
-          16,
-          1
-        ],
-        [
-          227,
-          999,
-          6,
-          1
-        ],
-        [
-          67,
-          1000,
-          6,
-          1
-        ],
-        [
-          75,
-          1000,
-          30,
-          1
-        ],
-        [
-          112,
-          1000,
-          6,
-          1
-        ],
-        [
-          153,
-          1000,
-          7,
-          1
-        ],
-        [
-          162,
-          1000,
-          38,
-          1
-        ],
-        [
-          205,
-          1000,
-          16,
-          1
-        ],
-        [
-          227,
-          1000,
-          6,
-          1
-        ],
-        [
-          67,
-          1001,
-          5,
-          1
-        ],
-        [
-          76,
-          1001,
-          8,
-          1
-        ],
-        [
-          85,
-          1001,
-          5,
-          1
-        ],
-        [
-          91,
-          1001,
-          13,
-          1
-        ],
-        [
-          112,
-          1001,
-          6,
-          1
-        ],
-        [
-          153,
-          1001,
-          7,
-          1
-        ],
-        [
-          161,
-          1001,
-          10,
-          1
-        ],
-        [
-          173,
-          1001,
-          28,
-          1
-        ],
-        [
-          205,
-          1001,
-          17,
-          1
-        ],
-        [
-          227,
-          1001,
-          6,
-          1
-        ],
-        [
-          67,
-          1002,
-          6,
-          1
-        ],
-        [
-          75,
-          1002,
-          8,
-          1
-        ],
-        [
-          86,
-          1002,
-          4,
-          1
-        ],
-        [
-          92,
-          1002,
-          12,
-          1
-        ],
-        [
-          112,
-          1002,
-          6,
-          1
-        ],
-        [
-          152,
-          1002,
-          17,
-          1
-        ],
-        [
-          173,
-          1002,
-          28,
-          1
-        ],
-        [
-          205,
-          1002,
-          17,
-          1
-        ],
-        [
-          227,
-          1002,
-          6,
-          1
-        ],
-        [
-          67,
-          1003,
-          7,
-          1
-        ],
-        [
-          76,
-          1003,
-          6,
-          1
-        ],
-        [
-          85,
-          1003,
-          19,
-          1
-        ],
-        [
-          112,
-          1003,
-          6,
-          1
-        ],
-        [
-          151,
-          1003,
-          9,
-          1
-        ],
-        [
-          161,
-          1003,
-          7,
-          1
-        ],
-        [
-          174,
-          1003,
-          28,
-          1
-        ],
-        [
-          206,
-          1003,
-          16,
-          1
-        ],
-        [
-          227,
-          1003,
-          6,
-          1
-        ],
-        [
-          67,
-          1004,
-          7,
-          1
-        ],
-        [
-          76,
-          1004,
-          6,
-          1
-        ],
-        [
-          85,
-          1004,
-          20,
-          1
-        ],
-        [
-          112,
-          1004,
-          6,
-          1
-        ],
-        [
-          152,
-          1004,
-          7,
-          1
-        ],
-        [
-          162,
-          1004,
-          5,
-          1
-        ],
-        [
-          174,
-          1004,
-          28,
-          1
-        ],
-        [
-          206,
-          1004,
-          17,
-          1
-        ],
-        [
-          227,
-          1004,
-          6,
-          1
-        ]
-      ],
-      "glyphMaskPixelCount" : 7456,
-      "glyphMaskRect" : [
-        67,
-        857,
-        166,
-        148
-      ],
-      "groundTruthMatch" : "unmatched",
-      "groundTruthMatchThreshold" : 0.42,
-      "id" : "60677059-EE21-4CAF-9F9F-4A04363DF800",
-      "index" : 9,
-      "ocrGroundTruthSimilarity" : 0.33333333333333337,
-      "ocrLegacySimilarity" : 0.6813186813186813,
-      "ocrProbeNotes" : [
-        "groundTruthMatch=unmatched",
-        "ocrSimilarity=0.333",
-        "legacySimilarity=0.681",
-        "ocrQuality=lowSimilarity",
-        "bubbleID=4",
-        "bubbleAssignmentMethod=bubbleFirstFusion",
-        "crossBubbleMergeRejected=false",
-        "sliceIndex=nil",
-        "sliceOverlapDeduped=false",
-        "wordOrderPreserved=false",
-        "containsKnownOCRConfusion",
-        "lowSimilarityAgainstGroundTruth",
-        "fusionSource=bubbleFirst",
-        "fusionSourceIndex=5",
-        "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
-        "candidateSelectionSource=rawOCR",
-        "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
-        "rawCandidateQuality=0.758",
-        "preprocessedCandidateQuality=0.792",
-        "preprocessedPreservesRawWords=false",
-        "cropPaddingX=18.3",
-        "cropPaddingY=18.3",
-        "cropClampedByBubble=false",
-        "cropCandidatePreservesRawWords=false",
-        "cropFallbackTriggered=false",
-        "cropFallbackReason=nil",
-        "cropStrategyUsed=adaptive",
-        "rawTruthSimilarity=0.333",
-        "preprocessedTruthSimilarity=0.714"
-      ],
-      "ocrQualityLabel" : "lowSimilarity",
-      "ocrText" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED",
-      "preprocessingEnabled" : false,
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nTHE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED\n<end_of_turn>\n<start_of_turn>model",
-      "qualityNotes" : [
-        "candidateLength=7",
-        "rawOutputLength=48",
-        "latinLetters=7",
-        "rawLatinLetters=40",
-        "likelyOCRIssue"
-      ],
-      "rawOcrText" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED",
-      "rawOutput" : "\nTHE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED\n",
-      "rawOutputClassification" : "repeatedOriginal",
-      "renderCollisionChecked" : true,
-      "renderCollisionInitialOverflow" : true,
-      "renderCollisionResolved" : true,
-      "renderFontSize" : 10,
-      "renderMinFontSizeReached" : false,
-      "renderNonTransparentBounds" : [
-        90,
-        886,
-        36,
-        92
-      ],
-      "renderTextTruncated" : false,
-      "rotationAngleUsed" : 0,
-      "safeLayoutRect" : [
-        87,
-        877,
-        43,
-        108
-      ],
-      "safeLayoutSource" : "bubbleInsetPartitioned",
-      "sliceIndex" : null,
-      "sliceOverlapDeduped" : false,
-      "translatedText" : "翻译失败\nTHE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED",
-      "translationCandidate" : "DECIDED",
-      "translationDecisionTrace" : [
-        "rawOutputClassification=repeatedOriginal",
-        "candidateClassification=nonChinese",
-        "rawHadContent=true",
-        "rejectedPlaceholder=false",
-        "ocrNotEmpty=true",
-        "translationNotEmpty=true",
-        "translationNotEqualOriginal=true",
-        "translationNotPlaceholder=true",
-        "translationHasCJK=false",
-        "looksLikeChinese=false",
-        "translationLanguageQualityPassed=false"
-      ],
-      "translationFailureDetail" : "模型复读原文，非规则误杀：中文字符不足、翻译不像中文；OCR 输入疑似有误",
-      "wordOrderPreserved" : false
-    },
-    {
       "afterCorrectionText" : "What are you talking about?",
+      "afterPreprocessingOcrText" : "MEA\n: What\nare\nyou\neven\n! talking\nabot",
       "backgroundColorStdDev" : 69.39389777218672,
       "backgroundFillApplied" : false,
       "backgroundFillColor" : [
@@ -35987,8 +32133,8 @@
       "cropCandidatePreservesRawWords" : false,
       "cropClampedByBubble" : false,
       "cropFallbackTriggered" : false,
-      "cropPaddingX" : 13.7825579308903,
-      "cropPaddingY" : 16.845348582199257,
+      "cropPaddingX" : 18.261238526816914,
+      "cropPaddingY" : 18.261238526816914,
       "cropStrategyUsed" : "adaptive",
       "crossBubbleMergeRejected" : false,
       "deterministicCorrectionAppliedRules" : [
@@ -36001,6 +32147,7 @@
         "多词原文只得到过短中文候选"
       ],
       "finalTextUsedForTranslation" : "What are you talking about?",
+      "fixedPreprocessingOcrText" : "Whart\nare\neven\n: talking\nabout?",
       "glyphMaskFillRects" : [
         [
           49,
@@ -43356,8 +39503,8 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "32DD1F32-9C4C-4C9C-BED5-8C81CFA319AB",
-      "index" : 10,
+      "id" : "45A1B163-4FE3-4B62-9AE7-8D77349D180D",
+      "index" : 9,
       "ocrGroundTruthSimilarity" : 0.5,
       "ocrLegacySimilarity" : 0.7916666666666666,
       "ocrProbeNotes" : [
@@ -43376,7 +39523,22 @@
         "fusionSource=bubbleFirst",
         "fusionSourceIndex=10",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
-        "fusionRejected wholePageOCR#9: lowerGroundTruthFreeQualityScore"
+        "fusionRejected wholePageOCR#9: lowerGroundTruthFreeQualityScore",
+        "postFusionCleanup=kept",
+        "candidateSelectionSource=rawOCR",
+        "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
+        "rawCandidateQuality=0.808",
+        "preprocessedCandidateQuality=0.792",
+        "preprocessedPreservesRawWords=false",
+        "cropPaddingX=18.3",
+        "cropPaddingY=18.3",
+        "cropClampedByBubble=false",
+        "cropCandidatePreservesRawWords=false",
+        "cropFallbackTriggered=false",
+        "cropFallbackReason=nil",
+        "cropStrategyUsed=adaptive",
+        "rawTruthSimilarity=0.500",
+        "preprocessedTruthSimilarity=0.714"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "What\nare\nyOuL\never talking abodi?",
@@ -43432,4815 +39594,6 @@
       ],
       "translationFailureDetail" : "translationLanguageQualityFailure：多词原文只得到过短中文候选；OCR 输入疑似有误",
       "wordOrderPreserved" : true
-    },
-    {
-      "afterCorrectionText" : "PLAY ONLING...",
-      "backgroundColorStdDev" : 71.22753405209853,
-      "backgroundFillApplied" : false,
-      "backgroundFillColor" : [
-        0.9333333333333333,
-        0.9333333333333333,
-        0.9333333333333333
-      ],
-      "bbox" : [
-        237,
-        965,
-        54,
-        31
-      ],
-      "blockPassed" : false,
-      "bubbleAssignmentMethod" : "centerPoint",
-      "bubbleID" : 7,
-      "candidateClassification" : "repeatedOriginal",
-      "checks" : {
-        "looksLikeChinese" : false,
-        "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : false,
-        "translationNotContainOriginal" : false,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : false,
-        "translationNotPlaceholder" : true
-      },
-      "correctionEnabled" : true,
-      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：PLAY ONLING...\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nPLAY ONLING...\n",
-      "cropCandidatePreservesRawWords" : false,
-      "cropClampedByBubble" : false,
-      "cropFallbackTriggered" : false,
-      "cropPaddingX" : 13.7825579308903,
-      "cropPaddingY" : 16.845348582199257,
-      "cropStrategyUsed" : "adaptive",
-      "crossBubbleMergeRejected" : true,
-      "deterministicCorrectionAppliedRules" : [
-        "ONLING->ONLINE"
-      ],
-      "deterministicCorrectionSimilarity" : 0.11764705882352944,
-      "deterministicCorrectionText" : "PLAY ONLINE...",
-      "deterministicCorrectionTranslationCandidate" : "PLAY ONLINE...",
-      "deterministicCorrectionTranslationFailureDetail" : "deterministicCorrectionTranslationFailure：翻译等于原文、中文字符不足、翻译不像中文",
-      "deterministicCorrectionTranslationPassed" : false,
-      "deterministicCorrectionTranslationRawOutput" : "\nPLAY ONLINE...\n",
-      "failureCategory" : "ocrInputSuspect",
-      "failureReasons" : [
-        "翻译等于原文",
-        "中文字符不足",
-        "翻译不像中文"
-      ],
-      "finalTextUsedForTranslation" : "PLAY ONLING...",
-      "glyphMaskFillRects" : [
-        [
-          214,
-          900,
-          5,
-          1
-        ],
-        [
-          221,
-          900,
-          12,
-          1
-        ],
-        [
-          296,
-          900,
-          13,
-          1
-        ],
-        [
-          310,
-          900,
-          1,
-          1
-        ],
-        [
-          330,
-          900,
-          10,
-          1
-        ],
-        [
-          353,
-          900,
-          7,
-          1
-        ],
-        [
-          214,
-          901,
-          6,
-          1
-        ],
-        [
-          221,
-          901,
-          12,
-          1
-        ],
-        [
-          295,
-          901,
-          13,
-          1
-        ],
-        [
-          309,
-          901,
-          3,
-          1
-        ],
-        [
-          329,
-          901,
-          10,
-          1
-        ],
-        [
-          353,
-          901,
-          7,
-          1
-        ],
-        [
-          215,
-          902,
-          18,
-          1
-        ],
-        [
-          295,
-          902,
-          12,
-          1
-        ],
-        [
-          308,
-          902,
-          5,
-          1
-        ],
-        [
-          329,
-          902,
-          10,
-          1
-        ],
-        [
-          353,
-          902,
-          8,
-          1
-        ],
-        [
-          215,
-          903,
-          18,
-          1
-        ],
-        [
-          295,
-          903,
-          12,
-          1
-        ],
-        [
-          308,
-          903,
-          6,
-          1
-        ],
-        [
-          329,
-          903,
-          10,
-          1
-        ],
-        [
-          354,
-          903,
-          6,
-          1
-        ],
-        [
-          215,
-          904,
-          18,
-          1
-        ],
-        [
-          295,
-          904,
-          19,
-          1
-        ],
-        [
-          328,
-          904,
-          11,
-          1
-        ],
-        [
-          354,
-          904,
-          5,
-          1
-        ],
-        [
-          215,
-          905,
-          18,
-          1
-        ],
-        [
-          295,
-          905,
-          18,
-          1
-        ],
-        [
-          328,
-          905,
-          11,
-          1
-        ],
-        [
-          354,
-          905,
-          5,
-          1
-        ],
-        [
-          215,
-          906,
-          18,
-          1
-        ],
-        [
-          295,
-          906,
-          17,
-          1
-        ],
-        [
-          316,
-          906,
-          1,
-          1
-        ],
-        [
-          328,
-          906,
-          10,
-          1
-        ],
-        [
-          354,
-          906,
-          5,
-          1
-        ],
-        [
-          215,
-          907,
-          18,
-          1
-        ],
-        [
-          295,
-          907,
-          17,
-          1
-        ],
-        [
-          315,
-          907,
-          4,
-          1
-        ],
-        [
-          327,
-          907,
-          11,
-          1
-        ],
-        [
-          354,
-          907,
-          6,
-          1
-        ],
-        [
-          215,
-          908,
-          18,
-          1
-        ],
-        [
-          295,
-          908,
-          6,
-          1
-        ],
-        [
-          303,
-          908,
-          8,
-          1
-        ],
-        [
-          314,
-          908,
-          6,
-          1
-        ],
-        [
-          326,
-          908,
-          11,
-          1
-        ],
-        [
-          354,
-          908,
-          7,
-          1
-        ],
-        [
-          215,
-          909,
-          18,
-          1
-        ],
-        [
-          295,
-          909,
-          6,
-          1
-        ],
-        [
-          304,
-          909,
-          6,
-          1
-        ],
-        [
-          314,
-          909,
-          7,
-          1
-        ],
-        [
-          326,
-          909,
-          11,
-          1
-        ],
-        [
-          354,
-          909,
-          8,
-          1
-        ],
-        [
-          215,
-          910,
-          18,
-          1
-        ],
-        [
-          295,
-          910,
-          7,
-          1
-        ],
-        [
-          303,
-          910,
-          6,
-          1
-        ],
-        [
-          313,
-          910,
-          8,
-          1
-        ],
-        [
-          325,
-          910,
-          13,
-          1
-        ],
-        [
-          353,
-          910,
-          10,
-          1
-        ],
-        [
-          215,
-          911,
-          18,
-          1
-        ],
-        [
-          295,
-          911,
-          6,
-          1
-        ],
-        [
-          302,
-          911,
-          6,
-          1
-        ],
-        [
-          313,
-          911,
-          11,
-          1
-        ],
-        [
-          325,
-          911,
-          12,
-          1
-        ],
-        [
-          353,
-          911,
-          10,
-          1
-        ],
-        [
-          215,
-          912,
-          18,
-          1
-        ],
-        [
-          295,
-          912,
-          12,
-          1
-        ],
-        [
-          313,
-          912,
-          23,
-          1
-        ],
-        [
-          353,
-          912,
-          10,
-          1
-        ],
-        [
-          216,
-          913,
-          17,
-          1
-        ],
-        [
-          295,
-          913,
-          12,
-          1
-        ],
-        [
-          312,
-          913,
-          24,
-          1
-        ],
-        [
-          354,
-          913,
-          10,
-          1
-        ],
-        [
-          216,
-          914,
-          17,
-          1
-        ],
-        [
-          295,
-          914,
-          13,
-          1
-        ],
-        [
-          312,
-          914,
-          7,
-          1
-        ],
-        [
-          320,
-          914,
-          16,
-          1
-        ],
-        [
-          353,
-          914,
-          12,
-          1
-        ],
-        [
-          216,
-          915,
-          17,
-          1
-        ],
-        [
-          295,
-          915,
-          14,
-          1
-        ],
-        [
-          312,
-          915,
-          7,
-          1
-        ],
-        [
-          321,
-          915,
-          14,
-          1
-        ],
-        [
-          353,
-          915,
-          13,
-          1
-        ],
-        [
-          216,
-          916,
-          17,
-          1
-        ],
-        [
-          295,
-          916,
-          13,
-          1
-        ],
-        [
-          311,
-          916,
-          7,
-          1
-        ],
-        [
-          320,
-          916,
-          15,
-          1
-        ],
-        [
-          352,
-          916,
-          13,
-          1
-        ],
-        [
-          216,
-          917,
-          17,
-          1
-        ],
-        [
-          295,
-          917,
-          15,
-          1
-        ],
-        [
-          311,
-          917,
-          23,
-          1
-        ],
-        [
-          351,
-          917,
-          8,
-          1
-        ],
-        [
-          361,
-          917,
-          3,
-          1
-        ],
-        [
-          216,
-          918,
-          17,
-          1
-        ],
-        [
-          295,
-          918,
-          40,
-          1
-        ],
-        [
-          351,
-          918,
-          8,
-          1
-        ],
-        [
-          362,
-          918,
-          1,
-          1
-        ],
-        [
-          216,
-          919,
-          17,
-          1
-        ],
-        [
-          295,
-          919,
-          41,
-          1
-        ],
-        [
-          351,
-          919,
-          9,
-          1
-        ],
-        [
-          216,
-          920,
-          17,
-          1
-        ],
-        [
-          295,
-          920,
-          41,
-          1
-        ],
-        [
-          351,
-          920,
-          9,
-          1
-        ],
-        [
-          216,
-          921,
-          17,
-          1
-        ],
-        [
-          296,
-          921,
-          40,
-          1
-        ],
-        [
-          351,
-          921,
-          9,
-          1
-        ],
-        [
-          216,
-          922,
-          17,
-          1
-        ],
-        [
-          297,
-          922,
-          40,
-          1
-        ],
-        [
-          351,
-          922,
-          8,
-          1
-        ],
-        [
-          216,
-          923,
-          17,
-          1
-        ],
-        [
-          330,
-          923,
-          6,
-          1
-        ],
-        [
-          350,
-          923,
-          10,
-          1
-        ],
-        [
-          216,
-          924,
-          17,
-          1
-        ],
-        [
-          330,
-          924,
-          7,
-          1
-        ],
-        [
-          349,
-          924,
-          11,
-          1
-        ],
-        [
-          216,
-          925,
-          17,
-          1
-        ],
-        [
-          330,
-          925,
-          6,
-          1
-        ],
-        [
-          349,
-          925,
-          11,
-          1
-        ],
-        [
-          216,
-          926,
-          17,
-          1
-        ],
-        [
-          330,
-          926,
-          6,
-          1
-        ],
-        [
-          348,
-          926,
-          12,
-          1
-        ],
-        [
-          216,
-          927,
-          17,
-          1
-        ],
-        [
-          330,
-          927,
-          6,
-          1
-        ],
-        [
-          348,
-          927,
-          13,
-          1
-        ],
-        [
-          216,
-          928,
-          17,
-          1
-        ],
-        [
-          330,
-          928,
-          6,
-          1
-        ],
-        [
-          347,
-          928,
-          13,
-          1
-        ],
-        [
-          216,
-          929,
-          5,
-          1
-        ],
-        [
-          223,
-          929,
-          10,
-          1
-        ],
-        [
-          330,
-          929,
-          6,
-          1
-        ],
-        [
-          347,
-          929,
-          13,
-          1
-        ],
-        [
-          216,
-          930,
-          5,
-          1
-        ],
-        [
-          223,
-          930,
-          10,
-          1
-        ],
-        [
-          330,
-          930,
-          6,
-          1
-        ],
-        [
-          347,
-          930,
-          13,
-          1
-        ],
-        [
-          216,
-          931,
-          5,
-          1
-        ],
-        [
-          223,
-          931,
-          10,
-          1
-        ],
-        [
-          330,
-          931,
-          6,
-          1
-        ],
-        [
-          346,
-          931,
-          14,
-          1
-        ],
-        [
-          216,
-          932,
-          5,
-          1
-        ],
-        [
-          223,
-          932,
-          10,
-          1
-        ],
-        [
-          330,
-          932,
-          6,
-          1
-        ],
-        [
-          346,
-          932,
-          13,
-          1
-        ],
-        [
-          216,
-          933,
-          5,
-          1
-        ],
-        [
-          223,
-          933,
-          10,
-          1
-        ],
-        [
-          330,
-          933,
-          6,
-          1
-        ],
-        [
-          345,
-          933,
-          14,
-          1
-        ],
-        [
-          216,
-          934,
-          5,
-          1
-        ],
-        [
-          222,
-          934,
-          11,
-          1
-        ],
-        [
-          330,
-          934,
-          6,
-          1
-        ],
-        [
-          345,
-          934,
-          15,
-          1
-        ],
-        [
-          216,
-          935,
-          5,
-          1
-        ],
-        [
-          223,
-          935,
-          10,
-          1
-        ],
-        [
-          330,
-          935,
-          6,
-          1
-        ],
-        [
-          344,
-          935,
-          16,
-          1
-        ],
-        [
-          216,
-          936,
-          5,
-          1
-        ],
-        [
-          222,
-          936,
-          11,
-          1
-        ],
-        [
-          330,
-          936,
-          6,
-          1
-        ],
-        [
-          344,
-          936,
-          16,
-          1
-        ],
-        [
-          216,
-          937,
-          5,
-          1
-        ],
-        [
-          223,
-          937,
-          10,
-          1
-        ],
-        [
-          330,
-          937,
-          6,
-          1
-        ],
-        [
-          344,
-          937,
-          16,
-          1
-        ],
-        [
-          216,
-          938,
-          17,
-          1
-        ],
-        [
-          330,
-          938,
-          6,
-          1
-        ],
-        [
-          343,
-          938,
-          17,
-          1
-        ],
-        [
-          216,
-          939,
-          17,
-          1
-        ],
-        [
-          330,
-          939,
-          6,
-          1
-        ],
-        [
-          343,
-          939,
-          17,
-          1
-        ],
-        [
-          216,
-          940,
-          17,
-          1
-        ],
-        [
-          330,
-          940,
-          6,
-          1
-        ],
-        [
-          342,
-          940,
-          18,
-          1
-        ],
-        [
-          216,
-          941,
-          17,
-          1
-        ],
-        [
-          330,
-          941,
-          6,
-          1
-        ],
-        [
-          342,
-          941,
-          18,
-          1
-        ],
-        [
-          216,
-          942,
-          17,
-          1
-        ],
-        [
-          330,
-          942,
-          6,
-          1
-        ],
-        [
-          342,
-          942,
-          18,
-          1
-        ],
-        [
-          216,
-          943,
-          17,
-          1
-        ],
-        [
-          330,
-          943,
-          6,
-          1
-        ],
-        [
-          341,
-          943,
-          19,
-          1
-        ],
-        [
-          216,
-          944,
-          17,
-          1
-        ],
-        [
-          330,
-          944,
-          6,
-          1
-        ],
-        [
-          341,
-          944,
-          19,
-          1
-        ],
-        [
-          216,
-          945,
-          5,
-          1
-        ],
-        [
-          227,
-          945,
-          6,
-          1
-        ],
-        [
-          330,
-          945,
-          6,
-          1
-        ],
-        [
-          340,
-          945,
-          14,
-          1
-        ],
-        [
-          355,
-          945,
-          5,
-          1
-        ],
-        [
-          216,
-          946,
-          5,
-          1
-        ],
-        [
-          227,
-          946,
-          6,
-          1
-        ],
-        [
-          330,
-          946,
-          6,
-          1
-        ],
-        [
-          340,
-          946,
-          20,
-          1
-        ],
-        [
-          216,
-          947,
-          5,
-          1
-        ],
-        [
-          227,
-          947,
-          6,
-          1
-        ],
-        [
-          330,
-          947,
-          6,
-          1
-        ],
-        [
-          339,
-          947,
-          15,
-          1
-        ],
-        [
-          355,
-          947,
-          5,
-          1
-        ],
-        [
-          216,
-          948,
-          5,
-          1
-        ],
-        [
-          227,
-          948,
-          6,
-          1
-        ],
-        [
-          330,
-          948,
-          6,
-          1
-        ],
-        [
-          339,
-          948,
-          14,
-          1
-        ],
-        [
-          355,
-          948,
-          5,
-          1
-        ],
-        [
-          216,
-          949,
-          5,
-          1
-        ],
-        [
-          227,
-          949,
-          6,
-          1
-        ],
-        [
-          330,
-          949,
-          6,
-          1
-        ],
-        [
-          338,
-          949,
-          14,
-          1
-        ],
-        [
-          354,
-          949,
-          6,
-          1
-        ],
-        [
-          216,
-          950,
-          5,
-          1
-        ],
-        [
-          227,
-          950,
-          6,
-          1
-        ],
-        [
-          330,
-          950,
-          6,
-          1
-        ],
-        [
-          338,
-          950,
-          8,
-          1
-        ],
-        [
-          348,
-          950,
-          1,
-          1
-        ],
-        [
-          355,
-          950,
-          5,
-          1
-        ],
-        [
-          215,
-          951,
-          6,
-          1
-        ],
-        [
-          227,
-          951,
-          6,
-          1
-        ],
-        [
-          330,
-          951,
-          6,
-          1
-        ],
-        [
-          338,
-          951,
-          9,
-          1
-        ],
-        [
-          355,
-          951,
-          5,
-          1
-        ],
-        [
-          215,
-          952,
-          6,
-          1
-        ],
-        [
-          227,
-          952,
-          6,
-          1
-        ],
-        [
-          330,
-          952,
-          6,
-          1
-        ],
-        [
-          337,
-          952,
-          10,
-          1
-        ],
-        [
-          355,
-          952,
-          5,
-          1
-        ],
-        [
-          363,
-          952,
-          1,
-          1
-        ],
-        [
-          215,
-          953,
-          6,
-          1
-        ],
-        [
-          227,
-          953,
-          6,
-          1
-        ],
-        [
-          330,
-          953,
-          6,
-          1
-        ],
-        [
-          337,
-          953,
-          11,
-          1
-        ],
-        [
-          354,
-          953,
-          6,
-          1
-        ],
-        [
-          361,
-          953,
-          4,
-          1
-        ],
-        [
-          215,
-          954,
-          6,
-          1
-        ],
-        [
-          227,
-          954,
-          6,
-          1
-        ],
-        [
-          330,
-          954,
-          6,
-          1
-        ],
-        [
-          337,
-          954,
-          12,
-          1
-        ],
-        [
-          353,
-          954,
-          13,
-          1
-        ],
-        [
-          369,
-          954,
-          1,
-          1
-        ],
-        [
-          215,
-          955,
-          6,
-          1
-        ],
-        [
-          227,
-          955,
-          6,
-          1
-        ],
-        [
-          330,
-          955,
-          20,
-          1
-        ],
-        [
-          354,
-          955,
-          17,
-          1
-        ],
-        [
-          215,
-          956,
-          6,
-          1
-        ],
-        [
-          227,
-          956,
-          6,
-          1
-        ],
-        [
-          330,
-          956,
-          21,
-          1
-        ],
-        [
-          355,
-          956,
-          17,
-          1
-        ],
-        [
-          215,
-          957,
-          6,
-          1
-        ],
-        [
-          227,
-          957,
-          6,
-          1
-        ],
-        [
-          330,
-          957,
-          20,
-          1
-        ],
-        [
-          355,
-          957,
-          17,
-          1
-        ],
-        [
-          374,
-          957,
-          3,
-          1
-        ],
-        [
-          215,
-          958,
-          6,
-          1
-        ],
-        [
-          227,
-          958,
-          6,
-          1
-        ],
-        [
-          330,
-          958,
-          20,
-          1
-        ],
-        [
-          355,
-          958,
-          23,
-          1
-        ],
-        [
-          380,
-          958,
-          2,
-          1
-        ],
-        [
-          215,
-          959,
-          6,
-          1
-        ],
-        [
-          227,
-          959,
-          6,
-          1
-        ],
-        [
-          330,
-          959,
-          19,
-          1
-        ],
-        [
-          356,
-          959,
-          27,
-          1
-        ],
-        [
-          215,
-          960,
-          5,
-          1
-        ],
-        [
-          227,
-          960,
-          6,
-          1
-        ],
-        [
-          253,
-          960,
-          3,
-          1
-        ],
-        [
-          257,
-          960,
-          1,
-          1
-        ],
-        [
-          261,
-          960,
-          1,
-          1
-        ],
-        [
-          264,
-          960,
-          4,
-          1
-        ],
-        [
-          269,
-          960,
-          5,
-          1
-        ],
-        [
-          330,
-          960,
-          15,
-          1
-        ],
-        [
-          346,
-          960,
-          2,
-          1
-        ],
-        [
-          355,
-          960,
-          29,
-          1
-        ],
-        [
-          214,
-          961,
-          6,
-          1
-        ],
-        [
-          227,
-          961,
-          6,
-          1
-        ],
-        [
-          252,
-          961,
-          7,
-          1
-        ],
-        [
-          260,
-          961,
-          15,
-          1
-        ],
-        [
-          330,
-          961,
-          14,
-          1
-        ],
-        [
-          356,
-          961,
-          29,
-          1
-        ],
-        [
-          214,
-          962,
-          6,
-          1
-        ],
-        [
-          227,
-          962,
-          6,
-          1
-        ],
-        [
-          251,
-          962,
-          25,
-          1
-        ],
-        [
-          330,
-          962,
-          15,
-          1
-        ],
-        [
-          355,
-          962,
-          29,
-          1
-        ],
-        [
-          214,
-          963,
-          6,
-          1
-        ],
-        [
-          227,
-          963,
-          6,
-          1
-        ],
-        [
-          251,
-          963,
-          24,
-          1
-        ],
-        [
-          330,
-          963,
-          15,
-          1
-        ],
-        [
-          355,
-          963,
-          29,
-          1
-        ],
-        [
-          214,
-          964,
-          6,
-          1
-        ],
-        [
-          227,
-          964,
-          6,
-          1
-        ],
-        [
-          250,
-          964,
-          24,
-          1
-        ],
-        [
-          330,
-          964,
-          14,
-          1
-        ],
-        [
-          355,
-          964,
-          29,
-          1
-        ],
-        [
-          214,
-          965,
-          6,
-          1
-        ],
-        [
-          227,
-          965,
-          6,
-          1
-        ],
-        [
-          249,
-          965,
-          25,
-          1
-        ],
-        [
-          330,
-          965,
-          15,
-          1
-        ],
-        [
-          355,
-          965,
-          28,
-          1
-        ],
-        [
-          214,
-          966,
-          5,
-          1
-        ],
-        [
-          227,
-          966,
-          6,
-          1
-        ],
-        [
-          249,
-          966,
-          25,
-          1
-        ],
-        [
-          301,
-          966,
-          3,
-          1
-        ],
-        [
-          307,
-          966,
-          2,
-          1
-        ],
-        [
-          330,
-          966,
-          14,
-          1
-        ],
-        [
-          356,
-          966,
-          26,
-          1
-        ],
-        [
-          214,
-          967,
-          5,
-          1
-        ],
-        [
-          227,
-          967,
-          6,
-          1
-        ],
-        [
-          250,
-          967,
-          24,
-          1
-        ],
-        [
-          299,
-          967,
-          6,
-          1
-        ],
-        [
-          306,
-          967,
-          4,
-          1
-        ],
-        [
-          330,
-          967,
-          13,
-          1
-        ],
-        [
-          355,
-          967,
-          27,
-          1
-        ],
-        [
-          213,
-          968,
-          6,
-          1
-        ],
-        [
-          227,
-          968,
-          6,
-          1
-        ],
-        [
-          251,
-          968,
-          17,
-          1
-        ],
-        [
-          270,
-          968,
-          3,
-          1
-        ],
-        [
-          298,
-          968,
-          13,
-          1
-        ],
-        [
-          330,
-          968,
-          10,
-          1
-        ],
-        [
-          355,
-          968,
-          26,
-          1
-        ],
-        [
-          213,
-          969,
-          6,
-          1
-        ],
-        [
-          227,
-          969,
-          6,
-          1
-        ],
-        [
-          252,
-          969,
-          10,
-          1
-        ],
-        [
-          263,
-          969,
-          4,
-          1
-        ],
-        [
-          268,
-          969,
-          1,
-          1
-        ],
-        [
-          271,
-          969,
-          2,
-          1
-        ],
-        [
-          293,
-          969,
-          19,
-          1
-        ],
-        [
-          330,
-          969,
-          11,
-          1
-        ],
-        [
-          355,
-          969,
-          6,
-          1
-        ],
-        [
-          364,
-          969,
-          17,
-          1
-        ],
-        [
-          213,
-          970,
-          6,
-          1
-        ],
-        [
-          227,
-          970,
-          6,
-          1
-        ],
-        [
-          251,
-          970,
-          8,
-          1
-        ],
-        [
-          263,
-          970,
-          3,
-          1
-        ],
-        [
-          267,
-          970,
-          3,
-          1
-        ],
-        [
-          271,
-          970,
-          3,
-          1
-        ],
-        [
-          292,
-          970,
-          21,
-          1
-        ],
-        [
-          330,
-          970,
-          12,
-          1
-        ],
-        [
-          356,
-          970,
-          5,
-          1
-        ],
-        [
-          365,
-          970,
-          15,
-          1
-        ],
-        [
-          213,
-          971,
-          6,
-          1
-        ],
-        [
-          227,
-          971,
-          6,
-          1
-        ],
-        [
-          250,
-          971,
-          10,
-          1
-        ],
-        [
-          262,
-          971,
-          13,
-          1
-        ],
-        [
-          291,
-          971,
-          21,
-          1
-        ],
-        [
-          330,
-          971,
-          13,
-          1
-        ],
-        [
-          355,
-          971,
-          6,
-          1
-        ],
-        [
-          366,
-          971,
-          4,
-          1
-        ],
-        [
-          371,
-          971,
-          9,
-          1
-        ],
-        [
-          213,
-          972,
-          5,
-          1
-        ],
-        [
-          227,
-          972,
-          6,
-          1
-        ],
-        [
-          250,
-          972,
-          10,
-          1
-        ],
-        [
-          261,
-          972,
-          14,
-          1
-        ],
-        [
-          292,
-          972,
-          19,
-          1
-        ],
-        [
-          330,
-          972,
-          12,
-          1
-        ],
-        [
-          356,
-          972,
-          5,
-          1
-        ],
-        [
-          371,
-          972,
-          8,
-          1
-        ],
-        [
-          213,
-          973,
-          5,
-          1
-        ],
-        [
-          227,
-          973,
-          6,
-          1
-        ],
-        [
-          249,
-          973,
-          25,
-          1
-        ],
-        [
-          293,
-          973,
-          18,
-          1
-        ],
-        [
-          330,
-          973,
-          13,
-          1
-        ],
-        [
-          355,
-          973,
-          6,
-          1
-        ],
-        [
-          372,
-          973,
-          6,
-          1
-        ],
-        [
-          213,
-          974,
-          5,
-          1
-        ],
-        [
-          227,
-          974,
-          6,
-          1
-        ],
-        [
-          250,
-          974,
-          23,
-          1
-        ],
-        [
-          298,
-          974,
-          12,
-          1
-        ],
-        [
-          330,
-          974,
-          12,
-          1
-        ],
-        [
-          356,
-          974,
-          5,
-          1
-        ],
-        [
-          372,
-          974,
-          5,
-          1
-        ],
-        [
-          213,
-          975,
-          4,
-          1
-        ],
-        [
-          227,
-          975,
-          6,
-          1
-        ],
-        [
-          250,
-          975,
-          23,
-          1
-        ],
-        [
-          294,
-          975,
-          1,
-          1
-        ],
-        [
-          298,
-          975,
-          6,
-          1
-        ],
-        [
-          306,
-          975,
-          3,
-          1
-        ],
-        [
-          330,
-          975,
-          11,
-          1
-        ],
-        [
-          355,
-          975,
-          6,
-          1
-        ],
-        [
-          373,
-          975,
-          3,
-          1
-        ],
-        [
-          213,
-          976,
-          4,
-          1
-        ],
-        [
-          227,
-          976,
-          6,
-          1
-        ],
-        [
-          250,
-          976,
-          22,
-          1
-        ],
-        [
-          293,
-          976,
-          3,
-          1
-        ],
-        [
-          297,
-          976,
-          7,
-          1
-        ],
-        [
-          330,
-          976,
-          10,
-          1
-        ],
-        [
-          354,
-          976,
-          7,
-          1
-        ],
-        [
-          374,
-          976,
-          1,
-          1
-        ],
-        [
-          213,
-          977,
-          4,
-          1
-        ],
-        [
-          227,
-          977,
-          6,
-          1
-        ],
-        [
-          247,
-          977,
-          3,
-          1
-        ],
-        [
-          251,
-          977,
-          3,
-          1
-        ],
-        [
-          256,
-          977,
-          15,
-          1
-        ],
-        [
-          272,
-          977,
-          4,
-          1
-        ],
-        [
-          292,
-          977,
-          12,
-          1
-        ],
-        [
-          330,
-          977,
-          9,
-          1
-        ],
-        [
-          353,
-          977,
-          8,
-          1
-        ],
-        [
-          213,
-          978,
-          3,
-          1
-        ],
-        [
-          227,
-          978,
-          6,
-          1
-        ],
-        [
-          245,
-          978,
-          6,
-          1
-        ],
-        [
-          252,
-          978,
-          2,
-          1
-        ],
-        [
-          256,
-          978,
-          5,
-          1
-        ],
-        [
-          262,
-          978,
-          2,
-          1
-        ],
-        [
-          265,
-          978,
-          2,
-          1
-        ],
-        [
-          268,
-          978,
-          9,
-          1
-        ],
-        [
-          292,
-          978,
-          13,
-          1
-        ],
-        [
-          330,
-          978,
-          10,
-          1
-        ],
-        [
-          352,
-          978,
-          9,
-          1
-        ],
-        [
-          213,
-          979,
-          3,
-          1
-        ],
-        [
-          227,
-          979,
-          6,
-          1
-        ],
-        [
-          244,
-          979,
-          17,
-          1
-        ],
-        [
-          262,
-          979,
-          16,
-          1
-        ],
-        [
-          292,
-          979,
-          12,
-          1
-        ],
-        [
-          330,
-          979,
-          10,
-          1
-        ],
-        [
-          352,
-          979,
-          9,
-          1
-        ],
-        [
-          213,
-          980,
-          2,
-          1
-        ],
-        [
-          227,
-          980,
-          6,
-          1
-        ],
-        [
-          243,
-          980,
-          34,
-          1
-        ],
-        [
-          292,
-          980,
-          12,
-          1
-        ],
-        [
-          330,
-          980,
-          11,
-          1
-        ],
-        [
-          351,
-          980,
-          10,
-          1
-        ],
-        [
-          213,
-          981,
-          1,
-          1
-        ],
-        [
-          227,
-          981,
-          6,
-          1
-        ],
-        [
-          243,
-          981,
-          35,
-          1
-        ],
-        [
-          292,
-          981,
-          13,
-          1
-        ],
-        [
-          330,
-          981,
-          10,
-          1
-        ],
-        [
-          351,
-          981,
-          10,
-          1
-        ],
-        [
-          227,
-          982,
-          6,
-          1
-        ],
-        [
-          243,
-          982,
-          38,
-          1
-        ],
-        [
-          293,
-          982,
-          11,
-          1
-        ],
-        [
-          330,
-          982,
-          9,
-          1
-        ],
-        [
-          351,
-          982,
-          11,
-          1
-        ],
-        [
-          227,
-          983,
-          6,
-          1
-        ],
-        [
-          243,
-          983,
-          39,
-          1
-        ],
-        [
-          294,
-          983,
-          9,
-          1
-        ],
-        [
-          330,
-          983,
-          10,
-          1
-        ],
-        [
-          351,
-          983,
-          10,
-          1
-        ],
-        [
-          227,
-          984,
-          6,
-          1
-        ],
-        [
-          243,
-          984,
-          40,
-          1
-        ],
-        [
-          295,
-          984,
-          1,
-          1
-        ],
-        [
-          299,
-          984,
-          2,
-          1
-        ],
-        [
-          330,
-          984,
-          11,
-          1
-        ],
-        [
-          351,
-          984,
-          10,
-          1
-        ],
-        [
-          227,
-          985,
-          6,
-          1
-        ],
-        [
-          244,
-          985,
-          39,
-          1
-        ],
-        [
-          330,
-          985,
-          12,
-          1
-        ],
-        [
-          350,
-          985,
-          11,
-          1
-        ],
-        [
-          227,
-          986,
-          6,
-          1
-        ],
-        [
-          245,
-          986,
-          9,
-          1
-        ],
-        [
-          255,
-          986,
-          12,
-          1
-        ],
-        [
-          268,
-          986,
-          14,
-          1
-        ],
-        [
-          330,
-          986,
-          13,
-          1
-        ],
-        [
-          351,
-          986,
-          10,
-          1
-        ],
-        [
-          227,
-          987,
-          6,
-          1
-        ],
-        [
-          246,
-          987,
-          4,
-          1
-        ],
-        [
-          252,
-          987,
-          1,
-          1
-        ],
-        [
-          256,
-          987,
-          1,
-          1
-        ],
-        [
-          258,
-          987,
-          2,
-          1
-        ],
-        [
-          265,
-          987,
-          1,
-          1
-        ],
-        [
-          269,
-          987,
-          1,
-          1
-        ],
-        [
-          271,
-          987,
-          4,
-          1
-        ],
-        [
-          277,
-          987,
-          1,
-          1
-        ],
-        [
-          280,
-          987,
-          1,
-          1
-        ],
-        [
-          330,
-          987,
-          12,
-          1
-        ],
-        [
-          352,
-          987,
-          9,
-          1
-        ],
-        [
-          227,
-          988,
-          6,
-          1
-        ],
-        [
-          330,
-          988,
-          11,
-          1
-        ],
-        [
-          351,
-          988,
-          10,
-          1
-        ],
-        [
-          227,
-          989,
-          6,
-          1
-        ],
-        [
-          330,
-          989,
-          10,
-          1
-        ],
-        [
-          350,
-          989,
-          11,
-          1
-        ],
-        [
-          227,
-          990,
-          6,
-          1
-        ],
-        [
-          296,
-          990,
-          2,
-          1
-        ],
-        [
-          330,
-          990,
-          11,
-          1
-        ],
-        [
-          351,
-          990,
-          10,
-          1
-        ],
-        [
-          227,
-          991,
-          6,
-          1
-        ],
-        [
-          295,
-          991,
-          4,
-          1
-        ],
-        [
-          330,
-          991,
-          10,
-          1
-        ],
-        [
-          350,
-          991,
-          11,
-          1
-        ],
-        [
-          227,
-          992,
-          6,
-          1
-        ],
-        [
-          294,
-          992,
-          6,
-          1
-        ],
-        [
-          330,
-          992,
-          11,
-          1
-        ],
-        [
-          351,
-          992,
-          10,
-          1
-        ],
-        [
-          227,
-          993,
-          6,
-          1
-        ],
-        [
-          293,
-          993,
-          7,
-          1
-        ],
-        [
-          330,
-          993,
-          12,
-          1
-        ],
-        [
-          352,
-          993,
-          9,
-          1
-        ],
-        [
-          227,
-          994,
-          6,
-          1
-        ],
-        [
-          292,
-          994,
-          8,
-          1
-        ],
-        [
-          330,
-          994,
-          12,
-          1
-        ],
-        [
-          351,
-          994,
-          10,
-          1
-        ],
-        [
-          227,
-          995,
-          6,
-          1
-        ],
-        [
-          292,
-          995,
-          9,
-          1
-        ],
-        [
-          330,
-          995,
-          12,
-          1
-        ],
-        [
-          350,
-          995,
-          11,
-          1
-        ],
-        [
-          227,
-          996,
-          6,
-          1
-        ],
-        [
-          293,
-          996,
-          8,
-          1
-        ],
-        [
-          330,
-          996,
-          12,
-          1
-        ],
-        [
-          350,
-          996,
-          11,
-          1
-        ],
-        [
-          227,
-          997,
-          6,
-          1
-        ],
-        [
-          292,
-          997,
-          8,
-          1
-        ],
-        [
-          330,
-          997,
-          11,
-          1
-        ],
-        [
-          351,
-          997,
-          10,
-          1
-        ],
-        [
-          227,
-          998,
-          6,
-          1
-        ],
-        [
-          293,
-          998,
-          6,
-          1
-        ],
-        [
-          330,
-          998,
-          10,
-          1
-        ],
-        [
-          350,
-          998,
-          11,
-          1
-        ],
-        [
-          227,
-          999,
-          6,
-          1
-        ],
-        [
-          294,
-          999,
-          4,
-          1
-        ],
-        [
-          330,
-          999,
-          11,
-          1
-        ],
-        [
-          351,
-          999,
-          10,
-          1
-        ],
-        [
-          227,
-          1000,
-          6,
-          1
-        ],
-        [
-          295,
-          1000,
-          1,
-          1
-        ],
-        [
-          330,
-          1000,
-          12,
-          1
-        ],
-        [
-          350,
-          1000,
-          11,
-          1
-        ],
-        [
-          227,
-          1001,
-          6,
-          1
-        ],
-        [
-          330,
-          1001,
-          11,
-          1
-        ],
-        [
-          351,
-          1001,
-          10,
-          1
-        ],
-        [
-          227,
-          1002,
-          6,
-          1
-        ],
-        [
-          330,
-          1002,
-          10,
-          1
-        ],
-        [
-          350,
-          1002,
-          11,
-          1
-        ],
-        [
-          227,
-          1003,
-          6,
-          1
-        ],
-        [
-          330,
-          1003,
-          9,
-          1
-        ],
-        [
-          349,
-          1003,
-          12,
-          1
-        ],
-        [
-          227,
-          1004,
-          6,
-          1
-        ],
-        [
-          330,
-          1004,
-          10,
-          1
-        ],
-        [
-          350,
-          1004,
-          11,
-          1
-        ],
-        [
-          227,
-          1005,
-          6,
-          1
-        ],
-        [
-          330,
-          1005,
-          11,
-          1
-        ],
-        [
-          349,
-          1005,
-          12,
-          1
-        ],
-        [
-          227,
-          1006,
-          6,
-          1
-        ],
-        [
-          330,
-          1006,
-          12,
-          1
-        ],
-        [
-          349,
-          1006,
-          12,
-          1
-        ],
-        [
-          227,
-          1007,
-          6,
-          1
-        ],
-        [
-          330,
-          1007,
-          12,
-          1
-        ],
-        [
-          349,
-          1007,
-          12,
-          1
-        ],
-        [
-          227,
-          1008,
-          6,
-          1
-        ],
-        [
-          330,
-          1008,
-          12,
-          1
-        ],
-        [
-          350,
-          1008,
-          11,
-          1
-        ],
-        [
-          227,
-          1009,
-          6,
-          1
-        ],
-        [
-          330,
-          1009,
-          11,
-          1
-        ],
-        [
-          349,
-          1009,
-          11,
-          1
-        ],
-        [
-          227,
-          1010,
-          6,
-          1
-        ],
-        [
-          330,
-          1010,
-          12,
-          1
-        ],
-        [
-          348,
-          1010,
-          12,
-          1
-        ],
-        [
-          227,
-          1011,
-          52,
-          1
-        ],
-        [
-          330,
-          1011,
-          12,
-          1
-        ],
-        [
-          347,
-          1011,
-          14,
-          1
-        ],
-        [
-          227,
-          1012,
-          53,
-          1
-        ],
-        [
-          330,
-          1012,
-          11,
-          1
-        ],
-        [
-          347,
-          1012,
-          13,
-          1
-        ],
-        [
-          227,
-          1013,
-          54,
-          1
-        ],
-        [
-          330,
-          1013,
-          8,
-          1
-        ],
-        [
-          339,
-          1013,
-          1,
-          1
-        ],
-        [
-          347,
-          1013,
-          13,
-          1
-        ],
-        [
-          228,
-          1014,
-          53,
-          1
-        ],
-        [
-          330,
-          1014,
-          9,
-          1
-        ],
-        [
-          347,
-          1014,
-          13,
-          1
-        ],
-        [
-          229,
-          1015,
-          52,
-          1
-        ],
-        [
-          330,
-          1015,
-          8,
-          1
-        ],
-        [
-          348,
-          1015,
-          12,
-          1
-        ],
-        [
-          230,
-          1016,
-          51,
-          1
-        ],
-        [
-          330,
-          1016,
-          9,
-          1
-        ],
-        [
-          347,
-          1016,
-          13,
-          1
-        ],
-        [
-          272,
-          1017,
-          1,
-          1
-        ],
-        [
-          274,
-          1017,
-          7,
-          1
-        ],
-        [
-          330,
-          1017,
-          10,
-          1
-        ],
-        [
-          347,
-          1017,
-          13,
-          1
-        ],
-        [
-          275,
-          1018,
-          6,
-          1
-        ],
-        [
-          330,
-          1018,
-          9,
-          1
-        ],
-        [
-          347,
-          1018,
-          13,
-          1
-        ],
-        [
-          275,
-          1019,
-          6,
-          1
-        ],
-        [
-          330,
-          1019,
-          8,
-          1
-        ],
-        [
-          346,
-          1019,
-          14,
-          1
-        ],
-        [
-          275,
-          1020,
-          6,
-          1
-        ],
-        [
-          330,
-          1020,
-          9,
-          1
-        ],
-        [
-          345,
-          1020,
-          15,
-          1
-        ],
-        [
-          275,
-          1021,
-          6,
-          1
-        ],
-        [
-          330,
-          1021,
-          8,
-          1
-        ],
-        [
-          345,
-          1021,
-          15,
-          1
-        ],
-        [
-          275,
-          1022,
-          6,
-          1
-        ],
-        [
-          330,
-          1022,
-          9,
-          1
-        ],
-        [
-          346,
-          1022,
-          14,
-          1
-        ],
-        [
-          275,
-          1023,
-          6,
-          1
-        ],
-        [
-          330,
-          1023,
-          10,
-          1
-        ],
-        [
-          346,
-          1023,
-          14,
-          1
-        ],
-        [
-          275,
-          1024,
-          6,
-          1
-        ],
-        [
-          330,
-          1024,
-          11,
-          1
-        ],
-        [
-          345,
-          1024,
-          15,
-          1
-        ],
-        [
-          275,
-          1025,
-          6,
-          1
-        ],
-        [
-          330,
-          1025,
-          10,
-          1
-        ],
-        [
-          345,
-          1025,
-          15,
-          1
-        ],
-        [
-          275,
-          1026,
-          6,
-          1
-        ],
-        [
-          330,
-          1026,
-          10,
-          1
-        ],
-        [
-          344,
-          1026,
-          15,
-          1
-        ],
-        [
-          275,
-          1027,
-          6,
-          1
-        ],
-        [
-          330,
-          1027,
-          11,
-          1
-        ],
-        [
-          343,
-          1027,
-          16,
-          1
-        ],
-        [
-          275,
-          1028,
-          6,
-          1
-        ],
-        [
-          330,
-          1028,
-          10,
-          1
-        ],
-        [
-          341,
-          1028,
-          1,
-          1
-        ],
-        [
-          343,
-          1028,
-          16,
-          1
-        ],
-        [
-          275,
-          1029,
-          6,
-          1
-        ],
-        [
-          330,
-          1029,
-          29,
-          1
-        ],
-        [
-          275,
-          1030,
-          6,
-          1
-        ],
-        [
-          330,
-          1030,
-          29,
-          1
-        ],
-        [
-          275,
-          1031,
-          6,
-          1
-        ],
-        [
-          330,
-          1031,
-          29,
-          1
-        ],
-        [
-          275,
-          1032,
-          6,
-          1
-        ],
-        [
-          330,
-          1032,
-          29,
-          1
-        ],
-        [
-          275,
-          1033,
-          6,
-          1
-        ],
-        [
-          330,
-          1033,
-          29,
-          1
-        ],
-        [
-          275,
-          1034,
-          6,
-          1
-        ],
-        [
-          330,
-          1034,
-          29,
-          1
-        ],
-        [
-          275,
-          1035,
-          6,
-          1
-        ],
-        [
-          330,
-          1035,
-          29,
-          1
-        ],
-        [
-          275,
-          1036,
-          6,
-          1
-        ],
-        [
-          330,
-          1036,
-          29,
-          1
-        ],
-        [
-          275,
-          1037,
-          6,
-          1
-        ],
-        [
-          330,
-          1037,
-          28,
-          1
-        ],
-        [
-          275,
-          1038,
-          6,
-          1
-        ],
-        [
-          330,
-          1038,
-          13,
-          1
-        ],
-        [
-          356,
-          1038,
-          1,
-          1
-        ],
-        [
-          275,
-          1039,
-          6,
-          1
-        ],
-        [
-          330,
-          1039,
-          13,
-          1
-        ],
-        [
-          275,
-          1040,
-          6,
-          1
-        ],
-        [
-          330,
-          1040,
-          12,
-          1
-        ],
-        [
-          275,
-          1041,
-          6,
-          1
-        ],
-        [
-          330,
-          1041,
-          12,
-          1
-        ],
-        [
-          275,
-          1042,
-          6,
-          1
-        ],
-        [
-          330,
-          1042,
-          12,
-          1
-        ],
-        [
-          275,
-          1043,
-          6,
-          1
-        ],
-        [
-          330,
-          1043,
-          11,
-          1
-        ],
-        [
-          275,
-          1044,
-          6,
-          1
-        ],
-        [
-          330,
-          1044,
-          11,
-          1
-        ],
-        [
-          275,
-          1045,
-          6,
-          1
-        ],
-        [
-          330,
-          1045,
-          11,
-          1
-        ],
-        [
-          275,
-          1046,
-          6,
-          1
-        ],
-        [
-          330,
-          1046,
-          11,
-          1
-        ],
-        [
-          275,
-          1047,
-          6,
-          1
-        ],
-        [
-          330,
-          1047,
-          11,
-          1
-        ],
-        [
-          275,
-          1048,
-          6,
-          1
-        ],
-        [
-          330,
-          1048,
-          10,
-          1
-        ],
-        [
-          275,
-          1049,
-          6,
-          1
-        ],
-        [
-          330,
-          1049,
-          10,
-          1
-        ],
-        [
-          275,
-          1050,
-          6,
-          1
-        ],
-        [
-          330,
-          1050,
-          10,
-          1
-        ],
-        [
-          275,
-          1051,
-          6,
-          1
-        ],
-        [
-          330,
-          1051,
-          10,
-          1
-        ],
-        [
-          275,
-          1052,
-          6,
-          1
-        ],
-        [
-          330,
-          1052,
-          10,
-          1
-        ],
-        [
-          275,
-          1053,
-          6,
-          1
-        ],
-        [
-          330,
-          1053,
-          9,
-          1
-        ],
-        [
-          275,
-          1054,
-          6,
-          1
-        ],
-        [
-          330,
-          1054,
-          9,
-          1
-        ],
-        [
-          275,
-          1055,
-          6,
-          1
-        ],
-        [
-          330,
-          1055,
-          9,
-          1
-        ],
-        [
-          275,
-          1056,
-          6,
-          1
-        ],
-        [
-          330,
-          1056,
-          9,
-          1
-        ],
-        [
-          275,
-          1057,
-          6,
-          1
-        ],
-        [
-          330,
-          1057,
-          9,
-          1
-        ],
-        [
-          275,
-          1058,
-          6,
-          1
-        ],
-        [
-          330,
-          1058,
-          8,
-          1
-        ],
-        [
-          275,
-          1059,
-          6,
-          1
-        ],
-        [
-          330,
-          1059,
-          8,
-          1
-        ],
-        [
-          275,
-          1060,
-          6,
-          1
-        ],
-        [
-          330,
-          1060,
-          8,
-          1
-        ],
-        [
-          275,
-          1061,
-          6,
-          1
-        ],
-        [
-          330,
-          1061,
-          8,
-          1
-        ],
-        [
-          275,
-          1062,
-          6,
-          1
-        ],
-        [
-          330,
-          1062,
-          8,
-          1
-        ],
-        [
-          275,
-          1063,
-          6,
-          1
-        ],
-        [
-          330,
-          1063,
-          7,
-          1
-        ],
-        [
-          275,
-          1064,
-          6,
-          1
-        ],
-        [
-          330,
-          1064,
-          7,
-          1
-        ],
-        [
-          275,
-          1065,
-          6,
-          1
-        ],
-        [
-          330,
-          1065,
-          7,
-          1
-        ],
-        [
-          275,
-          1066,
-          62,
-          1
-        ],
-        [
-          275,
-          1067,
-          62,
-          1
-        ],
-        [
-          275,
-          1068,
-          61,
-          1
-        ],
-        [
-          276,
-          1069,
-          60,
-          1
-        ],
-        [
-          277,
-          1070,
-          59,
-          1
-        ],
-        [
-          278,
-          1071,
-          10,
-          1
-        ],
-        [
-          290,
-          1071,
-          46,
-          1
-        ],
-        [
-          282,
-          1072,
-          6,
-          1
-        ],
-        [
-          290,
-          1072,
-          45,
-          1
-        ],
-        [
-          282,
-          1073,
-          6,
-          1
-        ],
-        [
-          290,
-          1073,
-          45,
-          1
-        ],
-        [
-          282,
-          1074,
-          6,
-          1
-        ],
-        [
-          290,
-          1074,
-          45,
-          1
-        ],
-        [
-          282,
-          1075,
-          6,
-          1
-        ],
-        [
-          290,
-          1075,
-          45,
-          1
-        ],
-        [
-          282,
-          1076,
-          6,
-          1
-        ],
-        [
-          290,
-          1076,
-          44,
-          1
-        ],
-        [
-          282,
-          1077,
-          6,
-          1
-        ],
-        [
-          290,
-          1077,
-          44,
-          1
-        ],
-        [
-          282,
-          1078,
-          6,
-          1
-        ],
-        [
-          290,
-          1078,
-          44,
-          1
-        ],
-        [
-          282,
-          1079,
-          6,
-          1
-        ],
-        [
-          290,
-          1079,
-          16,
-          1
-        ],
-        [
-          307,
-          1079,
-          9,
-          1
-        ],
-        [
-          318,
-          1079,
-          16,
-          1
-        ],
-        [
-          282,
-          1080,
-          6,
-          1
-        ],
-        [
-          290,
-          1080,
-          15,
-          1
-        ],
-        [
-          308,
-          1080,
-          3,
-          1
-        ],
-        [
-          319,
-          1080,
-          14,
-          1
-        ],
-        [
-          282,
-          1081,
-          6,
-          1
-        ],
-        [
-          290,
-          1081,
-          14,
-          1
-        ],
-        [
-          321,
-          1081,
-          12,
-          1
-        ],
-        [
-          282,
-          1082,
-          6,
-          1
-        ],
-        [
-          290,
-          1082,
-          14,
-          1
-        ],
-        [
-          322,
-          1082,
-          11,
-          1
-        ],
-        [
-          282,
-          1083,
-          6,
-          1
-        ],
-        [
-          290,
-          1083,
-          15,
-          1
-        ],
-        [
-          322,
-          1083,
-          11,
-          1
-        ],
-        [
-          282,
-          1084,
-          6,
-          1
-        ],
-        [
-          290,
-          1084,
-          16,
-          1
-        ],
-        [
-          322,
-          1084,
-          11,
-          1
-        ],
-        [
-          282,
-          1085,
-          6,
-          1
-        ],
-        [
-          290,
-          1085,
-          15,
-          1
-        ],
-        [
-          322,
-          1085,
-          11,
-          1
-        ],
-        [
-          282,
-          1086,
-          6,
-          1
-        ],
-        [
-          290,
-          1086,
-          15,
-          1
-        ],
-        [
-          322,
-          1086,
-          10,
-          1
-        ],
-        [
-          282,
-          1087,
-          6,
-          1
-        ],
-        [
-          290,
-          1087,
-          15,
-          1
-        ],
-        [
-          322,
-          1087,
-          10,
-          1
-        ],
-        [
-          282,
-          1088,
-          6,
-          1
-        ],
-        [
-          290,
-          1088,
-          14,
-          1
-        ],
-        [
-          323,
-          1088,
-          9,
-          1
-        ],
-        [
-          282,
-          1089,
-          6,
-          1
-        ],
-        [
-          290,
-          1089,
-          14,
-          1
-        ],
-        [
-          322,
-          1089,
-          10,
-          1
-        ],
-        [
-          282,
-          1090,
-          6,
-          1
-        ],
-        [
-          290,
-          1090,
-          15,
-          1
-        ],
-        [
-          321,
-          1090,
-          11,
-          1
-        ],
-        [
-          282,
-          1091,
-          6,
-          1
-        ],
-        [
-          290,
-          1091,
-          15,
-          1
-        ],
-        [
-          321,
-          1091,
-          10,
-          1
-        ],
-        [
-          282,
-          1092,
-          6,
-          1
-        ],
-        [
-          290,
-          1092,
-          14,
-          1
-        ],
-        [
-          321,
-          1092,
-          10,
-          1
-        ],
-        [
-          282,
-          1093,
-          6,
-          1
-        ],
-        [
-          290,
-          1093,
-          14,
-          1
-        ],
-        [
-          321,
-          1093,
-          10,
-          1
-        ],
-        [
-          282,
-          1094,
-          6,
-          1
-        ],
-        [
-          290,
-          1094,
-          14,
-          1
-        ],
-        [
-          322,
-          1094,
-          9,
-          1
-        ],
-        [
-          282,
-          1095,
-          6,
-          1
-        ],
-        [
-          290,
-          1095,
-          14,
-          1
-        ],
-        [
-          323,
-          1095,
-          8,
-          1
-        ],
-        [
-          282,
-          1096,
-          6,
-          1
-        ],
-        [
-          290,
-          1096,
-          15,
-          1
-        ],
-        [
-          322,
-          1096,
-          9,
-          1
-        ],
-        [
-          282,
-          1097,
-          6,
-          1
-        ],
-        [
-          290,
-          1097,
-          14,
-          1
-        ],
-        [
-          322,
-          1097,
-          9,
-          1
-        ],
-        [
-          282,
-          1098,
-          6,
-          1
-        ],
-        [
-          290,
-          1098,
-          14,
-          1
-        ],
-        [
-          323,
-          1098,
-          7,
-          1
-        ]
-      ],
-      "glyphMaskPixelCount" : 8504,
-      "glyphMaskRect" : [
-        213,
-        900,
-        172,
-        199
-      ],
-      "groundTruthMatch" : "unmatched",
-      "groundTruthMatchThreshold" : 0.42,
-      "id" : "F07A9080-D51C-4336-BF22-F729BE34A608",
-      "index" : 11,
-      "ocrConfidence" : 1,
-      "ocrGroundTruthSimilarity" : 0.05882352941176472,
-      "ocrLegacySimilarity" : 0.2727272727272727,
-      "ocrProbeNotes" : [
-        "groundTruthMatch=unmatched",
-        "ocrSimilarity=0.059",
-        "legacySimilarity=0.273",
-        "ocrQuality=lowSimilarity",
-        "bubbleID=7",
-        "bubbleAssignmentMethod=centerPoint",
-        "crossBubbleMergeRejected=true",
-        "sliceIndex=nil",
-        "sliceOverlapDeduped=false",
-        "containsKnownOCRConfusion",
-        "lowSimilarityAgainstGroundTruth",
-        "fusionSource=wholePageOCR",
-        "fusionSourceIndex=10",
-        "fusionSelectionRule=groundTruthFreeBBoxTextQuality"
-      ],
-      "ocrQualityLabel" : "lowSimilarity",
-      "ocrText" : "PLAY ONLING...",
-      "preprocessingEnabled" : true,
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nPLAY ONLING...\n<end_of_turn>\n<start_of_turn>model",
-      "qualityNotes" : [
-        "translationContainsFullOCRText",
-        "candidateLength=14",
-        "rawOutputLength=14",
-        "latinLetters=10",
-        "rawLatinLetters=10",
-        "likelyOCRIssue"
-      ],
-      "rawOcrText" : "PLAY ONLING...",
-      "rawOutput" : "\nPLAY ONLING...\n",
-      "rawOutputClassification" : "repeatedOriginal",
-      "renderCollisionChecked" : true,
-      "renderCollisionInitialOverflow" : false,
-      "renderCollisionResolved" : true,
-      "renderFontSize" : 10.165000000000001,
-      "renderMinFontSizeReached" : false,
-      "renderNonTransparentBounds" : [
-        256,
-        964,
-        40,
-        22
-      ],
-      "renderTextTruncated" : false,
-      "rotationAngleUsed" : 0,
-      "safeLayoutRect" : [
-        253,
-        961,
-        110,
-        27
-      ],
-      "safeLayoutSource" : "bubbleInsetPartitioned",
-      "sliceIndex" : null,
-      "sliceOverlapDeduped" : false,
-      "translatedText" : "翻译失败\nPLAY ONLING...",
-      "translationCandidate" : "PLAY ONLING...",
-      "translationDecisionTrace" : [
-        "rawOutputClassification=repeatedOriginal",
-        "candidateClassification=repeatedOriginal",
-        "rawHadContent=true",
-        "rejectedPlaceholder=false",
-        "ocrNotEmpty=true",
-        "translationNotEmpty=true",
-        "translationNotEqualOriginal=false",
-        "translationNotPlaceholder=true",
-        "translationHasCJK=false",
-        "looksLikeChinese=false",
-        "translationLanguageQualityPassed=false"
-      ],
-      "translationFailureDetail" : "模型复读原文，非规则误杀：翻译等于原文、中文字符不足、翻译不像中文；OCR 输入疑似有误"
-    },
-    {
-      "adaptivePreprocessingOcrText" : "cono\nDuST\nONLINE:",
-      "afterCorrectionText" : "JUST",
-      "afterPreprocessingOcrText" : "cono\nDuST\nONLINE:",
-      "backgroundFillApplied" : false,
-      "bbox" : [
-        243,
-        955,
-        39,
-        21
-      ],
-      "blockPassed" : false,
-      "bubbleAssignmentMethod" : "unassigned",
-      "bubbleID" : null,
-      "candidateClassification" : "placeholder",
-      "checks" : {
-        "looksLikeChinese" : true,
-        "ocrNotEmpty" : true,
-        "translationHasEnoughChinese" : true,
-        "translationNotContainOriginal" : true,
-        "translationNotEmpty" : true,
-        "translationNotEqualOriginal" : true,
-        "translationNotPlaceholder" : false
-      },
-      "correctionEnabled" : true,
-      "correctionPrompt" : "<start_of_turn>user\n以下文本来自漫画对话框的 OCR 识别结果，可能包含字符识别错误。\n如果存在明显的拼写或字符错误，请修正为最合理的英文原文；\n如果无法确定，原样输出。不要添加任何解释或标点说明。\n\n文本：JUST\n<end_of_turn>\n<start_of_turn>model",
-      "correctionRawOutput" : "\nJUST\n",
-      "cropCandidatePreservesRawWords" : false,
-      "cropClampedByBubble" : false,
-      "cropFallbackTriggered" : false,
-      "cropPaddingX" : 9.591279029846191,
-      "cropPaddingY" : 11.722674369812013,
-      "cropStrategyUsed" : "adaptive",
-      "crossBubbleMergeRejected" : true,
-      "deterministicCorrectionAppliedRules" : [
-
-      ],
-      "deterministicCorrectionSimilarity" : 0.05882352941176472,
-      "deterministicCorrectionText" : "JUST",
-      "failureCategory" : "ocrInputSuspect",
-      "failureReasons" : [
-        "翻译是占位答复"
-      ],
-      "finalTextUsedForTranslation" : "JUST",
-      "fixedPreprocessingOcrText" : "cono\nDUST\n¡PLAY",
-      "glyphMaskFillRects" : [
-
-      ],
-      "glyphMaskPixelCount" : 0,
-      "groundTruthMatch" : "unmatched",
-      "groundTruthMatchThreshold" : 0.42,
-      "id" : "0ECEDEDE-F022-4B31-8137-3606EDBC574A",
-      "index" : 12,
-      "ocrConfidence" : 1,
-      "ocrGroundTruthSimilarity" : 0.05882352941176472,
-      "ocrLegacySimilarity" : 0.1,
-      "ocrProbeNotes" : [
-        "groundTruthMatch=unmatched",
-        "ocrSimilarity=0.059",
-        "legacySimilarity=0.100",
-        "ocrQuality=lowSimilarity",
-        "bubbleID=nil",
-        "bubbleAssignmentMethod=unassigned",
-        "crossBubbleMergeRejected=true",
-        "sliceIndex=nil",
-        "sliceOverlapDeduped=false",
-        "lowSimilarityAgainstGroundTruth",
-        "fusionSource=wholePageOCR",
-        "fusionSourceIndex=11",
-        "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
-        "candidateSelectionSource=rawOCR",
-        "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
-        "rawCandidateQuality=0.812",
-        "preprocessedCandidateQuality=0.774",
-        "preprocessedPreservesRawWords=false",
-        "cropPaddingX=9.6",
-        "cropPaddingY=11.7",
-        "cropClampedByBubble=false",
-        "cropCandidatePreservesRawWords=false",
-        "cropFallbackTriggered=false",
-        "cropFallbackReason=nil",
-        "cropStrategyUsed=adaptive",
-        "rawTruthSimilarity=0.059",
-        "preprocessedTruthSimilarity=0.083"
-      ],
-      "ocrQualityLabel" : "lowSimilarity",
-      "ocrText" : "JUST",
-      "preprocessingEnabled" : true,
-      "prompt" : "<start_of_turn>user\n把以下翻译成中文：\nJUST\n<end_of_turn>\n<start_of_turn>model",
-      "qualityNotes" : [
-        "candidateRejectedAsPlaceholder",
-        "candidateLength=14",
-        "rawOutputLength=14",
-        "cjkCharacters=13",
-        "rawCJKCharacters=13",
-        "cjkCandidateButFailed"
-      ],
-      "rawOcrText" : "JUST",
-      "rawOutput" : "\n请提供您想要翻译的中文句子。",
-      "rawOutputClassification" : "placeholder",
-      "renderCollisionChecked" : true,
-      "renderCollisionInitialOverflow" : false,
-      "renderCollisionResolved" : true,
-      "renderFontSize" : 11.78,
-      "renderMinFontSizeReached" : false,
-      "renderNonTransparentBounds" : [
-        241,
-        967,
-        35,
-        12
-      ],
-      "renderTextTruncated" : false,
-      "rotationAngleUsed" : 0,
-      "safeLayoutRect" : [
-        238,
-        950,
-        50,
-        31
-      ],
-      "safeLayoutSource" : "blockFallbackNoBubble",
-      "sliceIndex" : null,
-      "sliceOverlapDeduped" : false,
-      "translatedText" : "翻译失败\nJUST",
-      "translationCandidate" : "请提供您想要翻译的中文句子。",
-      "translationDecisionTrace" : [
-        "rawOutputClassification=placeholder",
-        "candidateClassification=placeholder",
-        "rawHadContent=true",
-        "rejectedPlaceholder=true",
-        "ocrNotEmpty=true",
-        "translationNotEmpty=true",
-        "translationNotEqualOriginal=true",
-        "translationNotPlaceholder=false",
-        "translationHasCJK=true",
-        "looksLikeChinese=true",
-        "translationLanguageQualityPassed=false"
-      ],
-      "translationFailureDetail" : "模型输出解释\/占位文本，不是真实译文：翻译是占位答复；OCR 输入疑似有误"
     },
     {
       "adaptivePreprocessingOcrText" : "80 IF\nWE\nUST\nLAY\n-O2 AT\nLEAST,\nLINE.\n• THAT\nSEEMS\nTO BE\nPEN-\nSENDAS\nLOGIC..",
@@ -53373,8 +44726,8 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "9729C968-8C99-45B7-B2C0-73301DC1B2E6",
-      "index" : 13,
+      "id" : "7A5DBE39-D5A1-4F46-BE63-E5B49966DF1B",
+      "index" : 10,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.5,
       "ocrLegacySimilarity" : 0.8,
@@ -53396,6 +44749,7 @@
         "fusionSourceIndex=12",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
         "fusionRejected bubbleFirst#12: lowerGroundTruthFreeQualityScore",
+        "postFusionCleanup=kept",
         "candidateSelectionSource=rawOCR",
         "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
         "rawCandidateQuality=0.694",
@@ -53428,21 +44782,21 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 10.909000000000027,
+      "renderFontSize" : 13,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        257,
-        1002,
-        102,
-        49
+        258,
+        979,
+        94,
+        73
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        254,
-        993,
-        108,
-        66
+        255,
+        972,
+        107,
+        85
       ],
       "safeLayoutSource" : "bubbleInsetPartitioned",
       "sliceIndex" : null,
@@ -53466,7 +44820,9 @@
       "wordOrderPreserved" : false
     },
     {
+      "adaptivePreprocessingOcrText" : "cono\nDuST\nONLINE:",
       "afterCorrectionText" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
+      "afterPreprocessingOcrText" : "cono\nDuST\nONLINE:",
       "backgroundColorStdDev" : 13.192616519907268,
       "backgroundFillApplied" : true,
       "backgroundFillColor" : [
@@ -53503,6 +44859,9 @@
       "cropCandidatePreservesRawWords" : false,
       "cropClampedByBubble" : false,
       "cropFallbackTriggered" : false,
+      "cropPaddingX" : 9.591279029846191,
+      "cropPaddingY" : 11.722674369812013,
+      "cropStrategyUsed" : "adaptive",
       "crossBubbleMergeRejected" : false,
       "deterministicCorrectionAppliedRules" : [
 
@@ -53515,6 +44874,7 @@
         "翻译不像中文"
       ],
       "finalTextUsedForTranslation" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
+      "fixedPreprocessingOcrText" : "cono\nDUST\n¡PLAY",
       "glyphMaskFillRects" : [
         [
           301,
@@ -53790,8 +45150,8 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "F5920915-2610-48E1-B8D8-FD7EB8AA972D",
-      "index" : 14,
+      "id" : "7D6B4AC0-A6E1-45CC-8888-4C0B8057FABE",
+      "index" : 11,
       "ocrGroundTruthSimilarity" : 0.6,
       "ocrLegacySimilarity" : 0.6923076923076923,
       "ocrProbeNotes" : [
@@ -53810,7 +45170,22 @@
         "bestGroundTruth=Or at least, that seems to be Senpai's logic.",
         "fusionSource=bubbleFirst",
         "fusionSourceIndex=6",
-        "fusionSelectionRule=groundTruthFreeBBoxTextQuality"
+        "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
+        "postFusionCleanup=kept",
+        "candidateSelectionSource=rawOCR",
+        "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
+        "rawCandidateQuality=0.674",
+        "preprocessedCandidateQuality=0.774",
+        "preprocessedPreservesRawWords=false",
+        "cropPaddingX=9.6",
+        "cropPaddingY=11.7",
+        "cropClampedByBubble=false",
+        "cropCandidatePreservesRawWords=false",
+        "cropFallbackTriggered=false",
+        "cropFallbackReason=nil",
+        "cropStrategyUsed=adaptive",
+        "rawTruthSimilarity=0.600",
+        "preprocessedTruthSimilarity=0.083"
       ],
       "ocrQualityLabel" : "lowSimilarity",
       "ocrText" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
@@ -53921,8 +45296,8 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "CEAAFD13-C723-4680-AC44-F46D638B5CB5",
-      "index" : 15,
+      "id" : "AECC2FB7-09D8-4FC4-8F3F-35B9BDDCCC65",
+      "index" : 12,
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.8,
       "ocrLegacySimilarity" : 0.9642857142857143,
@@ -53941,6 +45316,7 @@
         "fusionSource=wholePageOCR",
         "fusionSourceIndex=13",
         "fusionSelectionRule=groundTruthFreeBBoxTextQuality",
+        "postFusionCleanup=kept",
         "candidateSelectionSource=rawOCR",
         "candidateSelectionRule=textQualityScoreWithoutGroundTruth",
         "rawCandidateQuality=0.804",
@@ -54011,6 +45387,206 @@
   ],
   "bubbleGeometry" : {
     "assignedTextRegionCount" : 289,
+    "bubbleAudits" : [
+      {
+        "area" : 31150,
+        "bbox" : [
+          401,
+          273,
+          175,
+          178
+        ],
+        "bubbleID" : 0,
+        "bubbleSplitCandidate" : false,
+        "confidence" : 0.8199999928474426,
+        "duplicateTextPairCount" : 0,
+        "fusedBlockIndexes" : [
+          0
+        ],
+        "maxBlockOverlapRatio" : 0,
+        "notes" : [
+
+        ],
+        "oversizedBubbleRisk" : false,
+        "selectedBlockCount" : 1,
+        "source" : "ocrSeed",
+        "textRegionCount" : 20
+      },
+      {
+        "area" : 31714,
+        "bbox" : [
+          39,
+          305,
+          202,
+          157
+        ],
+        "bubbleID" : 1,
+        "bubbleSplitCandidate" : false,
+        "confidence" : 0.8199999928474426,
+        "duplicateTextPairCount" : 0,
+        "fusedBlockIndexes" : [
+          1
+        ],
+        "maxBlockOverlapRatio" : 0,
+        "notes" : [
+
+        ],
+        "oversizedBubbleRisk" : false,
+        "selectedBlockCount" : 1,
+        "source" : "ocrSeed",
+        "textRegionCount" : 20
+      },
+      {
+        "area" : 17214,
+        "bbox" : [
+          425,
+          522,
+          151,
+          114
+        ],
+        "bubbleID" : 2,
+        "bubbleSplitCandidate" : false,
+        "confidence" : 0.8199999928474426,
+        "duplicateTextPairCount" : 0,
+        "fusedBlockIndexes" : [
+          2
+        ],
+        "maxBlockOverlapRatio" : 0,
+        "notes" : [
+
+        ],
+        "oversizedBubbleRisk" : false,
+        "selectedBlockCount" : 1,
+        "source" : "ocrSeed",
+        "textRegionCount" : 20
+      },
+      {
+        "area" : 35020,
+        "bbox" : [
+          0,
+          624,
+          206,
+          170
+        ],
+        "bubbleID" : 3,
+        "bubbleSplitCandidate" : false,
+        "confidence" : 0.8199999928474426,
+        "duplicateTextPairCount" : 0,
+        "fusedBlockIndexes" : [
+          3
+        ],
+        "maxBlockOverlapRatio" : 0,
+        "notes" : [
+
+        ],
+        "oversizedBubbleRisk" : false,
+        "selectedBlockCount" : 1,
+        "source" : "ocrSeed",
+        "textRegionCount" : 24
+      },
+      {
+        "area" : 35224,
+        "bbox" : [
+          67,
+          857,
+          238,
+          148
+        ],
+        "bubbleID" : 4,
+        "bubbleSplitCandidate" : true,
+        "confidence" : 0.8199999928474426,
+        "duplicateTextPairCount" : 0,
+        "fusedBlockIndexes" : [
+          4,
+          6
+        ],
+        "maxBlockOverlapRatio" : 0,
+        "notes" : [
+          "multipleFusedBlocksInBubble",
+          "bubbleSplitCandidateDiagnosticOnly"
+        ],
+        "oversizedBubbleRisk" : true,
+        "selectedBlockCount" : 2,
+        "source" : "ocrSeed",
+        "textRegionCount" : 74
+      },
+      {
+        "area" : 19404,
+        "bbox" : [
+          429,
+          860,
+          147,
+          132
+        ],
+        "bubbleID" : 5,
+        "bubbleSplitCandidate" : false,
+        "confidence" : 0.8199999928474426,
+        "duplicateTextPairCount" : 0,
+        "fusedBlockIndexes" : [
+          7
+        ],
+        "maxBlockOverlapRatio" : 0,
+        "notes" : [
+
+        ],
+        "oversizedBubbleRisk" : false,
+        "selectedBlockCount" : 1,
+        "source" : "ocrSeed",
+        "textRegionCount" : 32
+      },
+      {
+        "area" : 60522,
+        "bbox" : [
+          0,
+          883,
+          231,
+          262
+        ],
+        "bubbleID" : 6,
+        "bubbleSplitCandidate" : true,
+        "confidence" : 0.8199999928474426,
+        "duplicateTextPairCount" : 0,
+        "fusedBlockIndexes" : [
+          8,
+          9
+        ],
+        "maxBlockOverlapRatio" : 0.037635606305034326,
+        "notes" : [
+          "multipleFusedBlocksInBubble",
+          "bubbleSplitCandidateDiagnosticOnly"
+        ],
+        "oversizedBubbleRisk" : true,
+        "selectedBlockCount" : 2,
+        "source" : "ocrSeed",
+        "textRegionCount" : 59
+      },
+      {
+        "area" : 37810,
+        "bbox" : [
+          213,
+          900,
+          190,
+          199
+        ],
+        "bubbleID" : 7,
+        "bubbleSplitCandidate" : true,
+        "confidence" : 0.8199999928474426,
+        "duplicateTextPairCount" : 0,
+        "fusedBlockIndexes" : [
+          10,
+          12
+        ],
+        "maxBlockOverlapRatio" : 0.1801274095371284,
+        "notes" : [
+          "multipleFusedBlocksInBubble",
+          "bubbleSplitCandidateDiagnosticOnly"
+        ],
+        "oversizedBubbleRisk" : true,
+        "selectedBlockCount" : 2,
+        "source" : "ocrSeed",
+        "textRegionCount" : 40
+      }
+    ],
     "bubbles" : [
       {
         "area" : 31150,
@@ -54113,7 +45689,8 @@
     "notes" : [
       "bubble geometry is used as the primary merge boundary for whole-page OCR",
       "unassigned OCR observations are kept but only merge with other unassigned observations",
-      "preprocessed OCR crops are clamped to the assigned bubble bbox when present"
+      "preprocessed OCR crops are clamped to the assigned bubble bbox when present",
+      "bubbleAudits are diagnostic only and do not split or replace the main flow"
     ],
     "textRegions" : [
       {
@@ -58110,8 +49687,7 @@
       2,
       6,
       7,
-      9,
-      14
+      11
     ],
     "backgroundFillSkippedBlocks" : [
       0,
@@ -58119,12 +49695,11 @@
       3,
       5,
       8,
-      10,
-      11,
-      13
+      9,
+      10
     ],
-    "bubbleAssignedBlocks" : 13,
-    "bubbleUnassignedBlocks" : 3,
+    "bubbleAssignedBlocks" : 11,
+    "bubbleUnassignedBlocks" : 2,
     "candidateExtractorDroppedRawOutputs" : 0,
     "cjkButFailedCandidates" : 3,
     "cjkFailureBreakdown" : {
@@ -58133,35 +49708,27 @@
     },
     "crossBubbleMergeRejectedBlocks" : [
       4,
-      11,
-      12,
-      13,
-      15
+      10,
+      12
     ],
-    "deterministicCorrectionAverageSimilarity" : 0.6272132153299916,
+    "deterministicCorrectionAverageSimilarity" : 0.7284655360119756,
     "deterministicCorrectionImprovedBlocks" : [
-      9,
-      11,
-      13
+      10
     ],
     "deterministicCorrectionTranslationFailedBlocks" : [
-      9,
-      11,
-      13
+      10
     ],
     "deterministicCorrectionTranslationPassedBlocks" : [
 
     ],
     "deterministicCorrectionTranslationTestedBlocks" : [
-      9,
-      11,
-      13
+      10
     ],
     "emptyTranslationCandidates" : 3,
-    "failedBlocks" : 15,
-    "glyphMaskBlocks" : 13,
+    "failedBlocks" : 12,
+    "glyphMaskBlocks" : 11,
     "groundTruthMatchedBlocks" : 13,
-    "groundTruthUnmatchedBlocks" : 3,
+    "groundTruthUnmatchedBlocks" : 0,
     "likelyModelOutputFailures" : 2,
     "likelyOCRIssueBlocks" : [
       0,
@@ -58169,11 +49736,8 @@
       2,
       3,
       7,
-      9,
-      11,
-      12,
-      13,
-      14
+      10,
+      11
     ],
     "likelyRuleFalseFailureBlocks" : [
 
@@ -58186,12 +49750,9 @@
       7,
       9,
       10,
-      11,
-      12,
-      13,
-      14
+      11
     ],
-    "nonChineseCandidates" : 7,
+    "nonChineseCandidates" : 5,
     "ocrQualityProbe" : [
       "#0 good bubbleID=0 assignment=overlapArea crossBubbleMergeRejected=false match=matched sim=1.000 legacy=1.000 wordOrder=true OCR=\"THAT'S \/ RIGHT, \/ RIGHT \/ NOW \/ I'M-\" truth=\"That's right, right now I'm-\"",
       "#1 lowSimilarity bubbleID=1 assignment=bubbleFirstFusion crossBubbleMergeRejected=false match=matched sim=0.571 legacy=0.905 wordOrder=true OCR=\"IVE \/ ARRIVED \/ AT REN- \/ SENPAI'S \/ HOUSE.\" truth=\"I've arrived at Senpai's house.\"",
@@ -58202,24 +49763,21 @@
       "#6 good bubbleID=4 assignment=bubbleFirstFusion crossBubbleMergeRejected=false match=matched sim=0.917 legacy=0.936 wordOrder=false OCR=\"THIS IS AN \/ OPPLINE \/ TOURNAMENT. \/ DOING IT \/ ONLINE \/ WOULD MAKE \/ IT \/ MEANINGLESS\" truth=\"This is an offline tournament. Doing it online would make it meaningless.\"",
       "#7 lowSimilarity bubbleID=5 assignment=bubbleFirstFusion crossBubbleMergeRejected=false match=matched sim=0.688 legacy=0.836 wordOrder=false OCR=\"WE NEED TO \/ GET RESULTS \/ AT THS \/ TOURNAMENT \/ TO SAVE THE \/ SAMNG CLUR \/ POOM RENG \/ DISBANDED.\" truth=\"We need to get results at this tournament to save the gaming club from being disbanded.\"",
       "#8 usable bubbleID=6 assignment=bubbleFirstFusion crossBubbleMergeRejected=false match=matched sim=0.895 legacy=0.948 wordOrder=false OCR=\"THE \/ SUGGESTION \/ WAS \/ OVERRULED. AND IT WAS \/ DECIDED \/ THAT I'O BE \/ STAYING \/ OVER AT REN- \/ SENPAI'S \/ HOUSE.\" truth=\"The suggestion was overruled, and it was decided that I'd be staying over at Senpai's house.\"",
-      "#9 lowSimilarity bubbleID=4 assignment=bubbleFirstFusion crossBubbleMergeRejected=false match=unmatched sim=0.333 legacy=0.681 OCR=\"THE \/ SUGSESTION \/ WAS \/ OVERPULED, \/ AND IT WAS \/ DECIDED\"",
-      "#10 lowSimilarity bubbleID=6 assignment=bubbleFirstFusion crossBubbleMergeRejected=false match=matched sim=0.500 legacy=0.792 wordOrder=true OCR=\"What are you talking about?\" truth=\"What are you even talking about?\"",
-      "#11 lowSimilarity bubbleID=7 assignment=centerPoint crossBubbleMergeRejected=true match=unmatched sim=0.059 legacy=0.273 OCR=\"PLAY ONLING...\"",
-      "#12 lowSimilarity bubbleID=nil assignment=unassigned crossBubbleMergeRejected=true match=unmatched sim=0.059 legacy=0.100 OCR=\"JUST\"",
-      "#13 lowSimilarity bubbleID=7 assignment=overlapArea crossBubbleMergeRejected=true match=matched sim=0.500 legacy=0.800 wordOrder=false OCR=\"-O2 AT LEAST. -02 AT \/ THAT SEEMS TO BE \/ SENPAIS SENPArS LOSIC.\" truth=\"Or at least, that seems to be Senpai's logic.\"",
-      "#14 lowSimilarity bubbleID=4 assignment=bubbleFirstFusion crossBubbleMergeRejected=false match=matched sim=0.600 legacy=0.692 wordOrder=true OCR=\"-02 AT \/ LEAST, \/ THAT \/ SEEMS \/ TO BE \/ 2EN-\" truth=\"Or at least, that seems to be Senpai's logic.\"",
-      "#15 usable bubbleID=nil assignment=unassigned crossBubbleMergeRejected=true match=matched sim=0.800 legacy=0.964 wordOrder=true OCR=\"City Battler \/ Offline. \/ Tournament\" truth=\"City Battler Offline Tournament 開催!!\""
+      "#9 lowSimilarity bubbleID=6 assignment=bubbleFirstFusion crossBubbleMergeRejected=false match=matched sim=0.500 legacy=0.792 wordOrder=true OCR=\"What are you talking about?\" truth=\"What are you even talking about?\"",
+      "#10 lowSimilarity bubbleID=7 assignment=overlapArea crossBubbleMergeRejected=true match=matched sim=0.500 legacy=0.800 wordOrder=false OCR=\"-O2 AT LEAST. -02 AT \/ THAT SEEMS TO BE \/ SENPAIS SENPArS LOSIC.\" truth=\"Or at least, that seems to be Senpai's logic.\"",
+      "#11 lowSimilarity bubbleID=4 assignment=bubbleFirstFusion crossBubbleMergeRejected=false match=matched sim=0.600 legacy=0.692 wordOrder=true OCR=\"-02 AT \/ LEAST, \/ THAT \/ SEEMS \/ TO BE \/ 2EN-\" truth=\"Or at least, that seems to be Senpai's logic.\"",
+      "#12 usable bubbleID=nil assignment=unassigned crossBubbleMergeRejected=true match=matched sim=0.800 legacy=0.964 wordOrder=true OCR=\"City Battler \/ Offline. \/ Tournament\" truth=\"City Battler Offline Tournament 開催!!\""
     ],
     "passedBlocks" : 1,
     "passedButSuspiciousTranslationBlocks" : [
 
     ],
-    "placeholderTranslationCandidates" : 4,
+    "placeholderTranslationCandidates" : 3,
     "rawOutputEmptyBlocks" : 0,
     "rawOutputNonChineseBlocks" : 6,
-    "rawOutputPlaceholderBlocks" : 4,
-    "rawOutputRepeatedOriginalBlocks" : 4,
-    "renderCollisionCheckedBlocks" : 16,
+    "rawOutputPlaceholderBlocks" : 3,
+    "rawOutputRepeatedOriginalBlocks" : 2,
+    "renderCollisionCheckedBlocks" : 13,
     "renderCollisionInitialOverflowBlocks" : [
       0,
       1,
@@ -58232,8 +49790,7 @@
       8,
       9,
       10,
-      13,
-      14
+      11
     ],
     "renderCollisionResolvedBlocks" : [
       0,
@@ -58248,10 +49805,7 @@
       9,
       10,
       11,
-      12,
-      13,
-      14,
-      15
+      12
     ],
     "renderCollisionUnresolvedBlocks" : [
 
@@ -58265,11 +49819,11 @@
     "repeatedKeywordFailures" : {
       "senpai's" : 2
     },
-    "repeatedOriginalCandidates" : 1,
-    "safeLayoutRectBlocks" : 16,
+    "repeatedOriginalCandidates" : 0,
+    "safeLayoutRectBlocks" : 13,
     "translationFailureBreakdown" : {
       "modelOutputFailure" : 2,
-      "ocrInputSuspect" : 10,
+      "ocrInputSuspect" : 7,
       "translationLanguageQualityFailure" : 3
     },
     "translationLanguageQualityFailedBlocks" : [
@@ -58284,13 +49838,10 @@
       8,
       9,
       10,
-      11,
-      12,
-      13,
-      14
+      11
     ],
     "translationLanguageQualityPassedBlocks" : [
-      15
+      12
     ],
     "translationUsableButOCRSuspectBlocks" : [
 
@@ -58299,8 +49850,7 @@
       6,
       7,
       8,
-      9,
-      13
+      10
     ]
   },
   "engineUsed" : "Local GGUF",
@@ -58317,7 +49867,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 16795,
+      "processingTimeMs" : 15540,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -58618,7 +50168,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 160980,
+      "processingTimeMs" : 154032,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -58637,7 +50187,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 16795,
+      "processingTimeMs" : 15540,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -58649,24 +50199,113 @@
     "fused" : {
       "accuracyVsGroundTruth" : 0.7383773465526562,
       "matchedGroundTruthCount" : 13,
-      "processingTimeMs" : 160980,
-      "totalBlocksDetected" : 16,
-      "unmatchedBlockCount" : 3
+      "processingTimeMs" : 154032,
+      "totalBlocksDetected" : 13,
+      "unmatchedBlockCount" : 0
     },
-    "fusedAddedBubbleOnlyCount" : 2,
-    "fusedFromBubbleFirstCount" : 10,
-    "fusedFromWholePageCount" : 6,
-    "fusedRejectedCandidateCount" : 11,
-    "fusedRetainedWholePageOnlyCount" : 5,
+    "fusedAddedBubbleOnlyCount" : 1,
+    "fusedFromBubbleFirstCount" : 9,
+    "fusedFromWholePageCount" : 4,
+    "fusedRejectedCandidateCount" : 14,
+    "fusedRetainedWholePageOnlyCount" : 3,
     "notes" : [
       "fusion selection uses bbox, bubbleID, OCR text quality, confidence, and text overlap only",
       "ground truth is used only for these evaluation metrics",
       "whole-page and bubble-first raw comparisons remain available for rollback audit"
     ],
+    "postFusionCleanup" : {
+      "applied" : true,
+      "blockCountAfterCleanup" : 13,
+      "blockCountBeforeCleanup" : 16,
+      "missingKeyTexts" : [
+
+      ],
+      "notes" : [
+        "cleanup uses bbox overlap, bubbleID, source, text length, word coverage, and OCR quality heuristics only",
+        "ground truth is not used for rejection or ranking",
+        "short unassigned text is preserved unless it overlaps or is contained by a stronger selected block"
+      ],
+      "preservedKeyTexts" : [
+        "Let's Battle!",
+        "What are you even talking about?",
+        "We need to get results at this tournament to save the gaming club from being disbanded."
+      ],
+      "rejectedBlockCount" : 3,
+      "rejectedBlocks" : [
+        {
+          "bbox" : [
+            48,
+            967,
+            62,
+            50
+          ],
+          "bubbleID" : 4,
+          "bubbleResultIndex" : 5,
+          "originalFusedBlockIndex" : 9,
+          "reason" : "overlapsSelectedLongerText",
+          "relatedBBox" : [
+            47,
+            967,
+            67,
+            94
+          ],
+          "relatedFusedBlockIndex" : 8,
+          "relatedText" : "THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.",
+          "source" : "bubbleFirst",
+          "text" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED"
+        },
+        {
+          "bbox" : [
+            237,
+            965,
+            54,
+            31
+          ],
+          "bubbleID" : 7,
+          "originalFusedBlockIndex" : 11,
+          "reason" : "overlapsSelectedLongerText",
+          "relatedBBox" : [
+            238,
+            884,
+            50,
+            107
+          ],
+          "relatedFusedBlockIndex" : 5,
+          "relatedText" : "I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...",
+          "source" : "wholePageOCR",
+          "sourceBlockIndex" : 10,
+          "text" : "PLAY ONLING..."
+        },
+        {
+          "bbox" : [
+            243,
+            955,
+            39,
+            21
+          ],
+          "originalFusedBlockIndex" : 12,
+          "reason" : "lowInformationSourceOnly",
+          "relatedBBox" : [
+            238,
+            884,
+            50,
+            107
+          ],
+          "relatedFusedBlockIndex" : 5,
+          "relatedText" : "I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...",
+          "source" : "wholePageOCR",
+          "sourceBlockIndex" : 11,
+          "text" : "JUST"
+        }
+      ],
+      "warnings" : [
+
+      ]
+    },
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 160980,
+      "processingTimeMs" : 154032,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -58695,6 +50334,7 @@
       "rejectedCandidates" : [
 
       ],
+      "replacementReason" : "postFusionCleanup=kept",
       "selectedBBox" : [
         499,
         328,
@@ -58760,7 +50400,7 @@
           "text" : "IVE ARRIVED AT REN- SENPAI'S HOUSE."
         }
       ],
-      "replacementReason" : "selectedScore=0.946",
+      "replacementReason" : "selectedScore=0.946; postFusionCleanup=kept",
       "selectedBBox" : [
         115,
         357,
@@ -58825,7 +50465,7 @@
           "text" : "THE CITY RATTLER\nSTATE IN A PEN DAYS."
         }
       ],
-      "replacementReason" : "selectedScore=1.036",
+      "replacementReason" : "selectedScore=1.036; postFusionCleanup=kept",
       "selectedBBox" : [
         495,
         560,
@@ -58890,7 +50530,7 @@
           "text" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL"
         }
       ],
-      "replacementReason" : "selectedScore=1.068",
+      "replacementReason" : "selectedScore=1.068; postFusionCleanup=kept",
       "selectedBBox" : [
         69,
         674,
@@ -58923,6 +50563,7 @@
       "rejectedCandidates" : [
 
       ],
+      "replacementReason" : "postFusionCleanup=kept",
       "selectedBBox" : [
         362,
         849,
@@ -59017,7 +50658,7 @@
           "text" : "EVEN\nTHOUSH\nI SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE..."
         }
       ],
-      "replacementReason" : "selectedScore=1.108",
+      "replacementReason" : "selectedScore=1.108; postFusionCleanup=kept",
       "selectedBBox" : [
         238,
         884,
@@ -59112,7 +50753,7 @@
           "text" : "THIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS"
         }
       ],
-      "replacementReason" : "selectedScore=1.158",
+      "replacementReason" : "selectedScore=1.158; postFusionCleanup=kept",
       "selectedBBox" : [
         154,
         905,
@@ -59177,7 +50818,7 @@
           "text" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG"
         }
       ],
-      "replacementReason" : "selectedScore=1.051",
+      "replacementReason" : "selectedScore=1.051; postFusionCleanup=kept",
       "selectedBBox" : [
         505,
         898,
@@ -59242,7 +50883,7 @@
           "text" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE."
         }
       ],
-      "replacementReason" : "selectedScore=1.177",
+      "replacementReason" : "selectedScore=1.177; postFusionCleanup=kept",
       "selectedBBox" : [
         47,
         967,
@@ -59252,39 +50893,6 @@
       "selectedBubbleID" : 6,
       "selectedSource" : "bubblePreferred",
       "selectedText" : "THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE."
-    },
-    {
-      "bubbleResultIndex" : 5,
-      "competingCandidates" : [
-        {
-          "bbox" : [
-            48,
-            967,
-            62,
-            50
-          ],
-          "bubbleID" : 4,
-          "qualityScore" : 0.7576666666666667,
-          "selected" : true,
-          "source" : "bubbleFirst",
-          "sourceIndex" : 5,
-          "text" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED"
-        }
-      ],
-      "dedupeReason" : "sourceOnlyCandidate",
-      "fusedBlockIndex" : 9,
-      "rejectedCandidates" : [
-
-      ],
-      "selectedBBox" : [
-        48,
-        967,
-        62,
-        50
-      ],
-      "selectedBubbleID" : 4,
-      "selectedSource" : "bubbleFirst",
-      "selectedText" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED"
     },
     {
       "bubbleResultIndex" : 10,
@@ -59321,7 +50929,7 @@
         }
       ],
       "dedupeReason" : "bboxIoUOrCenterDistanceAndTextSimilarity",
-      "fusedBlockIndex" : 10,
+      "fusedBlockIndex" : 9,
       "rejectedCandidates" : [
         {
           "bbox" : [
@@ -59340,7 +50948,7 @@
           "text" : "What Whet are\nevery you!\ntalking"
         }
       ],
-      "replacementReason" : "selectedScore=0.996",
+      "replacementReason" : "selectedScore=0.996; postFusionCleanup=kept",
       "selectedBBox" : [
         118,
         977,
@@ -59350,72 +50958,6 @@
       "selectedBubbleID" : 6,
       "selectedSource" : "bubblePreferred",
       "selectedText" : "What\nare\nyOuL\never talking abodi?"
-    },
-    {
-      "competingCandidates" : [
-        {
-          "bbox" : [
-            237,
-            965,
-            54,
-            31
-          ],
-          "bubbleID" : 7,
-          "confidence" : 1,
-          "qualityScore" : 0.644,
-          "selected" : true,
-          "source" : "wholePageOCR",
-          "sourceIndex" : 10,
-          "text" : "PLAY ONLING..."
-        }
-      ],
-      "dedupeReason" : "sourceOnlyCandidate",
-      "fusedBlockIndex" : 11,
-      "rejectedCandidates" : [
-
-      ],
-      "selectedBBox" : [
-        237,
-        965,
-        54,
-        31
-      ],
-      "selectedBubbleID" : 7,
-      "selectedSource" : "wholePageOCR",
-      "selectedText" : "PLAY ONLING...",
-      "sourceBlockIndex" : 10
-    },
-    {
-      "competingCandidates" : [
-        {
-          "bbox" : [
-            243,
-            955,
-            39,
-            21
-          ],
-          "confidence" : 1,
-          "qualityScore" : 0.812,
-          "selected" : true,
-          "source" : "wholePageOCR",
-          "sourceIndex" : 11,
-          "text" : "JUST"
-        }
-      ],
-      "dedupeReason" : "sourceOnlyCandidate",
-      "fusedBlockIndex" : 12,
-      "rejectedCandidates" : [
-
-      ],
-      "selectedBBox" : [
-        243,
-        955,
-        39,
-        21
-      ],
-      "selectedSource" : "wholePageOCR",
-      "selectedText" : "JUST",
-      "sourceBlockIndex" : 11
     },
     {
       "competingCandidates" : [
@@ -59451,7 +50993,7 @@
         }
       ],
       "dedupeReason" : "bboxIoUOrCenterDistanceAndTextSimilarity",
-      "fusedBlockIndex" : 13,
+      "fusedBlockIndex" : 10,
       "rejectedCandidates" : [
         {
           "bbox" : [
@@ -59469,7 +51011,7 @@
           "text" : "-0R AT\nLEAST. THAT\nSEEMS\nTO BE\n2EN-\nSENPAIS\nLOSIC."
         }
       ],
-      "replacementReason" : "selectedScore=0.870",
+      "replacementReason" : "selectedScore=0.870; postFusionCleanup=kept",
       "selectedBBox" : [
         281,
         961,
@@ -59500,10 +51042,11 @@
         }
       ],
       "dedupeReason" : "sourceOnlyCandidate",
-      "fusedBlockIndex" : 14,
+      "fusedBlockIndex" : 11,
       "rejectedCandidates" : [
 
       ],
+      "replacementReason" : "postFusionCleanup=kept",
       "selectedBBox" : [
         289,
         965,
@@ -59532,10 +51075,11 @@
         }
       ],
       "dedupeReason" : "sourceOnlyCandidate",
-      "fusedBlockIndex" : 15,
+      "fusedBlockIndex" : 12,
       "rejectedCandidates" : [
 
       ],
+      "replacementReason" : "postFusionCleanup=kept",
       "selectedBBox" : [
         385,
         978,
@@ -59545,6 +51089,154 @@
       "selectedSource" : "wholePageOCR",
       "selectedText" : "City Battler\nOffline.\nTournament",
       "sourceBlockIndex" : 13
+    },
+    {
+      "bubbleResultIndex" : 5,
+      "competingCandidates" : [
+        {
+          "bbox" : [
+            48,
+            967,
+            62,
+            50
+          ],
+          "bubbleID" : 4,
+          "qualityScore" : 0.7576666666666667,
+          "rejectionReason" : "overlapsSelectedLongerText",
+          "selected" : false,
+          "source" : "bubbleFirst",
+          "sourceIndex" : 5,
+          "text" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED"
+        }
+      ],
+      "dedupeReason" : "postFusionCleanupRejected",
+      "fusedBlockIndex" : -1,
+      "rejectedCandidates" : [
+        {
+          "bbox" : [
+            48,
+            967,
+            62,
+            50
+          ],
+          "bubbleID" : 4,
+          "qualityScore" : 0.7576666666666667,
+          "rejectionReason" : "overlapsSelectedLongerText",
+          "selected" : false,
+          "source" : "bubbleFirst",
+          "sourceIndex" : 5,
+          "text" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED"
+        }
+      ],
+      "replacementReason" : "overlapsSelectedLongerText",
+      "selectedBBox" : [
+        48,
+        967,
+        62,
+        50
+      ],
+      "selectedBubbleID" : 4,
+      "selectedSource" : "bubbleFirst",
+      "selectedText" : "THE\nSUGSESTION\nWAS\nOVERPULED,\nAND IT WAS\nDECIDED"
+    },
+    {
+      "competingCandidates" : [
+        {
+          "bbox" : [
+            237,
+            965,
+            54,
+            31
+          ],
+          "bubbleID" : 7,
+          "confidence" : 1,
+          "qualityScore" : 0.644,
+          "rejectionReason" : "overlapsSelectedLongerText",
+          "selected" : false,
+          "source" : "wholePageOCR",
+          "sourceIndex" : 10,
+          "text" : "PLAY ONLING..."
+        }
+      ],
+      "dedupeReason" : "postFusionCleanupRejected",
+      "fusedBlockIndex" : -1,
+      "rejectedCandidates" : [
+        {
+          "bbox" : [
+            237,
+            965,
+            54,
+            31
+          ],
+          "bubbleID" : 7,
+          "confidence" : 1,
+          "qualityScore" : 0.644,
+          "rejectionReason" : "overlapsSelectedLongerText",
+          "selected" : false,
+          "source" : "wholePageOCR",
+          "sourceIndex" : 10,
+          "text" : "PLAY ONLING..."
+        }
+      ],
+      "replacementReason" : "overlapsSelectedLongerText",
+      "selectedBBox" : [
+        237,
+        965,
+        54,
+        31
+      ],
+      "selectedBubbleID" : 7,
+      "selectedSource" : "wholePageOCR",
+      "selectedText" : "PLAY ONLING...",
+      "sourceBlockIndex" : 10
+    },
+    {
+      "competingCandidates" : [
+        {
+          "bbox" : [
+            243,
+            955,
+            39,
+            21
+          ],
+          "confidence" : 1,
+          "qualityScore" : 0.812,
+          "rejectionReason" : "lowInformationSourceOnly",
+          "selected" : false,
+          "source" : "wholePageOCR",
+          "sourceIndex" : 11,
+          "text" : "JUST"
+        }
+      ],
+      "dedupeReason" : "postFusionCleanupRejected",
+      "fusedBlockIndex" : -1,
+      "rejectedCandidates" : [
+        {
+          "bbox" : [
+            243,
+            955,
+            39,
+            21
+          ],
+          "confidence" : 1,
+          "qualityScore" : 0.812,
+          "rejectionReason" : "lowInformationSourceOnly",
+          "selected" : false,
+          "source" : "wholePageOCR",
+          "sourceIndex" : 11,
+          "text" : "JUST"
+        }
+      ],
+      "replacementReason" : "lowInformationSourceOnly",
+      "selectedBBox" : [
+        243,
+        955,
+        39,
+        21
+      ],
+      "selectedSource" : "wholePageOCR",
+      "selectedText" : "JUST",
+      "sourceBlockIndex" : 11
     }
   ],
   "lexiconComparison" : {
@@ -59570,20 +51262,20 @@
   "outputDirectoryCleaned" : true,
   "outputFileCountAfterCleanup" : 15,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
-    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
-    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
-    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
-    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/2DBB7173-89DA-4EB6-8667-B87D5D5F8BB6\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
+    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
+    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
+    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
+    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/3BD3F385-B4A8-4130-9284-2696989472C3\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
   },
   "overallPassed" : false,
   "retainedOutputFiles" : [
@@ -75275,7 +66967,7 @@
     "sourceImage" : "synthetic:test\/1.png-content-x3",
     "thresholdAspectRatio" : 2.85
   },
-  "totalBlocksDetected" : 16,
+  "totalBlocksDetected" : 13,
   "visionAPIComparison" : {
     "changed" : false,
     "newAPISample" : [
@@ -75336,11 +67028,8 @@
     "block 6 判定失败：翻译为空",
     "block 7 判定失败：翻译是占位答复",
     "block 8 判定失败：多词原文只得到过短中文候选",
-    "block 9 判定失败：中文字符不足、翻译不像中文",
-    "block 10 判定失败：多词原文只得到过短中文候选",
-    "block 11 判定失败：翻译等于原文、中文字符不足、翻译不像中文",
-    "block 12 判定失败：翻译是占位答复",
-    "block 13 判定失败：中文字符不足、翻译不像中文",
-    "block 14 判定失败：中文字符不足、翻译不像中文"
+    "block 9 判定失败：多词原文只得到过短中文候选",
+    "block 10 判定失败：中文字符不足、翻译不像中文",
+    "block 11 判定失败：中文字符不足、翻译不像中文"
   ]
 }

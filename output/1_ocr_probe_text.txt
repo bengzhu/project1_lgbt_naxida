@@ -170,9 +170,9 @@ cropCandidatePreservesRawWords: true
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
-safeLayoutRect: [253,940,110,17]
+safeLayoutRect: [253,940,110,26]
 safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=8.0 minFont=true truncated=true nonTransparentBounds=[256,945,32,8]
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=8.0 minFont=true truncated=true nonTransparentBounds=[256,946,32,17]
 glyphMask: pixels=9972 rect=[213,900,172,199] fillRects=835
 backgroundFill: applied=false stdDev=69.11
 finalForTranslation: I SAID / IT'S / JUST / SPECIAL / TRAINING / AND / ASKED IF / WE / COULD / PLAY / ONLINE...
@@ -202,9 +202,9 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
-safeLayoutRect: [137,879,105,103]
+safeLayoutRect: [89,879,152,103]
 safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=12.0 minFont=false truncated=false nonTransparentBounds=[140,891,63,82]
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=16.0 minFont=false truncated=false nonTransparentBounds=[92,888,63,88]
 glyphMask: pixels=8879 rect=[67,857,166,148] fillRects=705
 backgroundFill: applied=true stdDev=39.91
 finalForTranslation: THIS IS AN / OPPLINE / TOURNAMENT. / DOING IT / ONLINE / WOULD MAKE / IT / MEANINGLESS
@@ -286,45 +286,13 @@ translationFailureDetail: 模型输出解释/占位文本，不是真实译文�
 qualityNotes: candidateLength=1 | rawOutputLength=279 | cjkCharacters=1 | rawCJKCharacters=52 | translationLanguageQualityIssue=多词原文只得到过短中文候选
 decisionTrace: rawOutputClassification=placeholder | candidateClassification=chinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=true | looksLikeChinese=true | translationLanguageQualityPassed=false | translationLanguageQualityIssue=多词原文只得到过短中文候选
 
-#9 bbox=[48,967,62,50] bubbleID=4 bubbleAssignmentMethod=bubbleFirstFusion crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=unmatched ocrSimilarity=0.333 legacySimilarity=0.681 wordOrder=false blockPassed=false
-rawOCR: THE / SUGSESTION / WAS / OVERPULED, / AND IT WAS / DECIDED
+#9 bbox=[118,977,37,60] bubbleID=6 bubbleAssignmentMethod=bubbleFirstFusion crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.500 legacySimilarity=0.792 wordOrder=true blockPassed=false
+rawOCR: What / are / yOuL / ever talking abodi?
 afterPreprocessing: MEA / : What / are / you / even / ! talking / abot
 adaptivePreprocessing: MEA / : What / are / you / even / ! talking / abot
 fixedPreprocessing: Whart / are / even / : talking / about?
 cropPaddingX: 18.3
 cropPaddingY: 18.3
-cropClampedByBubble: false
-cropCandidatePreservesRawWords: false
-cropFallbackTriggered: false
-cropFallbackReason: nil
-cropStrategyUsed: adaptive
-safeLayoutRect: [87,877,43,108]
-safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=10.0 minFont=false truncated=false nonTransparentBounds=[90,886,36,92]
-glyphMask: pixels=7456 rect=[67,857,166,148] fillRects=611
-backgroundFill: applied=true stdDev=41.47
-finalForTranslation: THE / SUGSESTION / WAS / OVERPULED, / AND IT WAS / DECIDED
-deterministicCorrection: THE / SUGGESTION / WAS / OVERPULED, / AND IT WAS / DECIDED
-bestGroundTruth: nil
-translationCandidate: DECIDED
-rawOutput:  / THE / SUGSESTION / WAS / OVERPULED, / AND IT WAS / DECIDED /
-deterministicCorrectionTranslationPassed: false
-deterministicCorrectionTranslationCandidate: 请提供您想要翻译的中文句子。
-deterministicCorrectionTranslationRawOutput:  / 请提供您想要翻译的中文句子。
-deterministicCorrectionTranslationFailureDetail: deterministicCorrectionTranslationFailure：翻译是占位答复
-failureCategory: ocrInputSuspect
-failureReasons: 中文字符不足 | 翻译不像中文
-translationFailureDetail: 模型复读原文，非规则误杀：中文字符不足、翻译不像中文；OCR 输入疑似有误
-qualityNotes: candidateLength=7 | rawOutputLength=48 | latinLetters=7 | rawLatinLetters=40 | likelyOCRIssue
-decisionTrace: rawOutputClassification=repeatedOriginal | candidateClassification=nonChinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
-
-#10 bbox=[118,977,37,60] bubbleID=6 bubbleAssignmentMethod=bubbleFirstFusion crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.500 legacySimilarity=0.792 wordOrder=true blockPassed=false
-rawOCR: What / are / yOuL / ever talking abodi?
-afterPreprocessing: nil
-adaptivePreprocessing: nil
-fixedPreprocessing: nil
-cropPaddingX: 13.8
-cropPaddingY: 16.8
 cropClampedByBubble: false
 cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
@@ -350,71 +318,7 @@ translationFailureDetail: translationLanguageQualityFailure：多词原文只得
 qualityNotes: candidateLength=3 | rawOutputLength=3 | cjkCharacters=2 | rawCJKCharacters=2 | translationLanguageQualityIssue=多词原文只得到过短中文候选
 decisionTrace: rawOutputClassification=chinese | candidateClassification=chinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=true | looksLikeChinese=true | translationLanguageQualityPassed=false | translationLanguageQualityIssue=多词原文只得到过短中文候选
 
-#11 bbox=[237,965,54,31] bubbleID=7 bubbleAssignmentMethod=centerPoint crossBubbleMergeRejected=true sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=unmatched ocrSimilarity=0.059 legacySimilarity=0.273 wordOrder=nil blockPassed=false
-rawOCR: PLAY ONLING...
-afterPreprocessing: nil
-adaptivePreprocessing: nil
-fixedPreprocessing: nil
-cropPaddingX: 13.8
-cropPaddingY: 16.8
-cropClampedByBubble: false
-cropCandidatePreservesRawWords: false
-cropFallbackTriggered: false
-cropFallbackReason: nil
-cropStrategyUsed: adaptive
-safeLayoutRect: [253,961,110,27]
-safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=false resolved=true fontSize=10.2 minFont=false truncated=false nonTransparentBounds=[256,964,40,22]
-glyphMask: pixels=8504 rect=[213,900,172,199] fillRects=755
-backgroundFill: applied=false stdDev=71.23
-finalForTranslation: PLAY ONLING...
-deterministicCorrection: PLAY ONLINE...
-bestGroundTruth: nil
-translationCandidate: PLAY ONLING...
-rawOutput:  / PLAY ONLING... /
-deterministicCorrectionTranslationPassed: false
-deterministicCorrectionTranslationCandidate: PLAY ONLINE...
-deterministicCorrectionTranslationRawOutput:  / PLAY ONLINE... /
-deterministicCorrectionTranslationFailureDetail: deterministicCorrectionTranslationFailure：翻译等于原文、中文字符不足、翻译不像中文
-failureCategory: ocrInputSuspect
-failureReasons: 翻译等于原文 | 中文字符不足 | 翻译不像中文
-translationFailureDetail: 模型复读原文，非规则误杀：翻译等于原文、中文字符不足、翻译不像中文；OCR 输入疑似有误
-qualityNotes: translationContainsFullOCRText | candidateLength=14 | rawOutputLength=14 | latinLetters=10 | rawLatinLetters=10 | likelyOCRIssue
-decisionTrace: rawOutputClassification=repeatedOriginal | candidateClassification=repeatedOriginal | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=false | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
-
-#12 bbox=[243,955,39,21] bubbleID=nil bubbleAssignmentMethod=unassigned crossBubbleMergeRejected=true sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=unmatched ocrSimilarity=0.059 legacySimilarity=0.100 wordOrder=nil blockPassed=false
-rawOCR: JUST
-afterPreprocessing: cono / DuST / ONLINE:
-adaptivePreprocessing: cono / DuST / ONLINE:
-fixedPreprocessing: cono / DUST / ¡PLAY
-cropPaddingX: 9.6
-cropPaddingY: 11.7
-cropClampedByBubble: false
-cropCandidatePreservesRawWords: false
-cropFallbackTriggered: false
-cropFallbackReason: nil
-cropStrategyUsed: adaptive
-safeLayoutRect: [238,950,50,31]
-safeLayoutSource: blockFallbackNoBubble
-renderCollision: checked=true initialOverflow=false resolved=true fontSize=11.8 minFont=false truncated=false nonTransparentBounds=[241,967,35,12]
-glyphMask: pixels=0 rect=[nil] fillRects=0
-backgroundFill: applied=false stdDev=nil
-finalForTranslation: JUST
-deterministicCorrection: JUST
-bestGroundTruth: nil
-translationCandidate: 请提供您想要翻译的中文句子。
-rawOutput:  / 请提供您想要翻译的中文句子。
-deterministicCorrectionTranslationPassed: nil
-deterministicCorrectionTranslationCandidate: nil
-deterministicCorrectionTranslationRawOutput: nil
-deterministicCorrectionTranslationFailureDetail: nil
-failureCategory: ocrInputSuspect
-failureReasons: 翻译是占位答复
-translationFailureDetail: 模型输出解释/占位文本，不是真实译文：翻译是占位答复；OCR 输入疑似有误
-qualityNotes: candidateRejectedAsPlaceholder | candidateLength=14 | rawOutputLength=14 | cjkCharacters=13 | rawCJKCharacters=13 | cjkCandidateButFailed
-decisionTrace: rawOutputClassification=placeholder | candidateClassification=placeholder | rawHadContent=true | rejectedPlaceholder=true | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=false | translationHasCJK=true | looksLikeChinese=true | translationLanguageQualityPassed=false
-
-#13 bbox=[281,961,54,76] bubbleID=7 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=true sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.500 legacySimilarity=0.800 wordOrder=false blockPassed=false
+#10 bbox=[281,961,54,76] bubbleID=7 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=true sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.500 legacySimilarity=0.800 wordOrder=false blockPassed=false
 rawOCR: -O2 AT LEAST. -02 AT / THAT SEEMS TO BE / SENPAIS SENPArS LOSIC.
 afterPreprocessing: 80 IF / WE / UST / LAY / -O2 AT / LEAST, / LINE. / • THAT / SEEMS / TO BE / PEN- / SENDAS / LOGIC..
 adaptivePreprocessing: 80 IF / WE / UST / LAY / -O2 AT / LEAST, / LINE. / • THAT / SEEMS / TO BE / PEN- / SENDAS / LOGIC..
@@ -426,9 +330,9 @@ cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
 cropStrategyUsed: adaptive
-safeLayoutRect: [254,993,108,66]
+safeLayoutRect: [255,972,107,85]
 safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=10.9 minFont=false truncated=false nonTransparentBounds=[257,1002,102,49]
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=13.0 minFont=false truncated=false nonTransparentBounds=[258,979,94,73]
 glyphMask: pixels=10134 rect=[213,900,172,199] fillRects=843
 backgroundFill: applied=false stdDev=73.90
 finalForTranslation: -O2 AT LEAST. -02 AT / THAT SEEMS TO BE / SENPAIS SENPArS LOSIC.
@@ -446,18 +350,18 @@ translationFailureDetail: 模型复读原文，非规则误杀：中文字符不
 qualityNotes: candidateLength=22 | rawOutputLength=62 | latinLetters=19 | rawLatinLetters=42 | likelyOCRIssue
 decisionTrace: rawOutputClassification=repeatedOriginal | candidateClassification=nonChinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
 
-#14 bbox=[289,965,36,52] bubbleID=4 bubbleAssignmentMethod=bubbleFirstFusion crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.600 legacySimilarity=0.692 wordOrder=true blockPassed=false
+#11 bbox=[289,965,36,52] bubbleID=4 bubbleAssignmentMethod=bubbleFirstFusion crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.600 legacySimilarity=0.692 wordOrder=true blockPassed=false
 rawOCR: -02 AT / LEAST, / THAT / SEEMS / TO BE / 2EN-
-afterPreprocessing: nil
-adaptivePreprocessing: nil
-fixedPreprocessing: nil
-cropPaddingX: nil
-cropPaddingY: nil
+afterPreprocessing: cono / DuST / ONLINE:
+adaptivePreprocessing: cono / DuST / ONLINE:
+fixedPreprocessing: cono / DUST / ¡PLAY
+cropPaddingX: 9.6
+cropPaddingY: 11.7
 cropClampedByBubble: false
 cropCandidatePreservesRawWords: false
 cropFallbackTriggered: false
 cropFallbackReason: nil
-cropStrategyUsed: nil
+cropStrategyUsed: adaptive
 safeLayoutRect: [248,877,37,108]
 safeLayoutSource: bubbleInsetPartitioned
 renderCollision: checked=true initialOverflow=true resolved=true fontSize=10.0 minFont=false truncated=false nonTransparentBounds=[251,887,29,91]
@@ -478,7 +382,7 @@ translationFailureDetail: 模型输出非中文/符号，未达到英译中目�
 qualityNotes: candidateLength=4 | rawOutputLength=36 | latinLetters=2 | rawLatinLetters=22 | likelyOCRIssue
 decisionTrace: rawOutputClassification=nonChinese | candidateClassification=nonChinese | rawHadContent=true | rejectedPlaceholder=false | ocrNotEmpty=true | translationNotEmpty=true | translationNotEqualOriginal=true | translationNotPlaceholder=true | translationHasCJK=false | looksLikeChinese=false | translationLanguageQualityPassed=false
 
-#15 bbox=[385,978,106,64] bubbleID=nil bubbleAssignmentMethod=unassigned crossBubbleMergeRejected=true sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.800 legacySimilarity=0.964 wordOrder=true blockPassed=true
+#12 bbox=[385,978,106,64] bubbleID=nil bubbleAssignmentMethod=unassigned crossBubbleMergeRejected=true sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=0.800 legacySimilarity=0.964 wordOrder=true blockPassed=true
 rawOCR: City Battler / Offline. / Tournament
 afterPreprocessing: City, Battler / agsT / Offline. / Tournament
 adaptivePreprocessing: City, Battler / agsT / Offline. / Tournament
