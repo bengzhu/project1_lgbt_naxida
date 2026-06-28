@@ -23,11 +23,18 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: parentBubbleNotOversized
 textRegionCropBBoxBeforeSubRegionClamp: [478,300,95,143]
 textRegionCropBBoxAfterSubRegionClamp: [478,300,95,143]
+textRegionCropMaskCoverage: 0.998
+textRegionCropMaskRejectedReason: nil
 textRegionWordPreservation: 1.000
 textRegionQualityScore: 0.511 -> 0.511
-safeLayoutRect: [436,308,105,108]
-safeLayoutSource: bubbleInsetSingle
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=20.0 minFont=false truncated=false nonTransparentBounds=[439,339,76,68]
+safeLayoutRect: [425,297,127,130]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 0
+maskDominantCoverage: 1.000
+maskSafeRect: [425,297,127,130]
+maskBubbleIDConsistent: true
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=24.0 minFont=false truncated=false nonTransparentBounds=[428,336,91,79]
 glyphMask: pixels=11455 rect=[401,286,175,165] fillRects=713
 backgroundFill: applied=false stdDev=79.05
 finalForTranslation: THAT'S / RIGHT, / RIGHT / NOW / I'M-
@@ -70,11 +77,18 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: parentBubbleNotOversized
 textRegionCropBBoxBeforeSubRegionClamp: [95,319,91,128]
 textRegionCropBBoxAfterSubRegionClamp: [95,319,91,128]
+textRegionCropMaskCoverage: 1.000
+textRegionCropMaskRejectedReason: nil
 textRegionWordPreservation: 0.571
 textRegionQualityScore: 0.740 -> 0.645
-safeLayoutRect: [58,324,164,119]
-safeLayoutSource: bubbleInsetSingle
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=25.0 minFont=false truncated=false nonTransparentBounds=[61,330,94,110]
+safeLayoutRect: [60,326,160,115]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 1
+maskDominantCoverage: 1.000
+maskSafeRect: [60,326,160,115]
+maskBubbleIDConsistent: true
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=25.0 minFont=false truncated=false nonTransparentBounds=[63,331,94,110]
 glyphMask: pixels=6270 rect=[93,323,103,139] fillRects=432
 backgroundFill: applied=false stdDev=52.93
 finalForTranslation: IVE / ARRIVED / AT REN- / SENPAI'S / HOUSE.
@@ -117,11 +131,18 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: parentBubbleNotOversized
 textRegionCropBBoxBeforeSubRegionClamp: [480,532,81,94]
 textRegionCropBBoxAfterSubRegionClamp: [480,532,81,94]
+textRegionCropMaskCoverage: 1.000
+textRegionCropMaskRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.794 -> 0.000
-safeLayoutRect: [439,536,124,87]
-safeLayoutSource: bubbleInsetSingle
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=15.0 minFont=false truncated=false nonTransparentBounds=[442,539,74,84]
+safeLayoutRect: [440,537,121,84]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 2
+maskDominantCoverage: 1.000
+maskSafeRect: [440,537,121,84]
+maskBubbleIDConsistent: true
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=14.0 minFont=false truncated=false nonTransparentBounds=[443,540,69,79]
 glyphMask: pixels=1182 rect=[497,562,47,34] fillRects=62
 backgroundFill: applied=true stdDev=5.80
 finalForTranslation: THE CITY / HATTLER / TOUPNAMENT / STARTS IN A / PEW DAYS.
@@ -164,11 +185,18 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: parentBubbleNotOversized
 textRegionCropBBoxBeforeSubRegionClamp: [45,654,90,105]
 textRegionCropBBoxAfterSubRegionClamp: [45,654,90,105]
+textRegionCropMaskCoverage: 1.000
+textRegionCropMaskRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.808 -> 0.812
-safeLayoutRect: [34,658,138,102]
-safeLayoutSource: bubbleInsetSingle
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=17.0 minFont=false truncated=false nonTransparentBounds=[37,662,69,95]
+safeLayoutRect: [23,647,160,124]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 3
+maskDominantCoverage: 1.000
+maskSafeRect: [23,647,160,124]
+maskBubbleIDConsistent: true
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=21.0 minFont=false truncated=false nonTransparentBounds=[26,651,84,117]
 glyphMask: pixels=9907 rect=[0,624,206,170] fillRects=790
 backgroundFill: applied=false stdDev=58.51
 finalForTranslation: ANP / THAT'S / WHY / WE'RE / DONS / THIS / SPECIAL / TRAININS
@@ -211,11 +239,18 @@ textRegionSubRegionCoverage: nil
 textRegionSubRegionRejectedReason: noSubRegion
 textRegionCropBBoxBeforeSubRegionClamp: [341,809,143,135]
 textRegionCropBBoxAfterSubRegionClamp: [341,809,143,135]
+textRegionCropMaskCoverage: 0.233
+textRegionCropMaskRejectedReason: lowMaskCoverage
 textRegionWordPreservation: 0.667
 textRegionQualityScore: 0.611 -> 0.636
-safeLayoutRect: [348,841,129,70]
-safeLayoutSource: blockFallbackNoBubble
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=19.8 minFont=false truncated=false nonTransparentBounds=[351,857,77,40]
+safeLayoutRect: [450,881,106,60]
+safeLayoutSource: maskSafeBlockFallback
+maskDominantBubbleID: 5
+maskDominantCoverage: 0.950
+maskSafeRect: [447,878,111,96]
+maskBubbleIDConsistent: false
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=16.8 minFont=false truncated=false nonTransparentBounds=[453,885,66,55]
 glyphMask: pixels=0 rect=[nil] fillRects=0
 backgroundFill: applied=false stdDev=nil
 finalForTranslation: LET'S / BATTLER!
@@ -258,11 +293,18 @@ textRegionSubRegionCoverage: 0.850
 textRegionSubRegionRejectedReason: seedCoverageTooLow
 textRegionCropBBoxBeforeSubRegionClamp: [213,900,103,114]
 textRegionCropBBoxAfterSubRegionClamp: [213,900,103,114]
+textRegionCropMaskCoverage: 0.190
+textRegionCropMaskRejectedReason: lowMaskCoverage
 textRegionWordPreservation: 0.357
 textRegionQualityScore: 0.776 -> 0.816
-safeLayoutRect: [253,940,110,26]
-safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=8.0 minFont=true truncated=true nonTransparentBounds=[256,946,32,17]
+safeLayoutRect: [91,881,191,84]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 4
+maskDominantCoverage: 1.000
+maskSafeRect: [87,877,198,108]
+maskBubbleIDConsistent: false
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=16.0 minFont=false truncated=false nonTransparentBounds=[94,888,63,71]
 glyphMask: pixels=9972 rect=[213,900,172,199] fillRects=835
 backgroundFill: applied=false stdDev=69.11
 finalForTranslation: I SAID / IT'S / JUST / SPECIAL / TRAINING / AND / ASKED IF / WE / COULD / PLAY / ONLINE...
@@ -305,11 +347,18 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason:
 textRegionCropBBoxBeforeSubRegionClamp: [130,857,111,148]
 textRegionCropBBoxAfterSubRegionClamp: [130,858,111,147]
+textRegionCropMaskCoverage: 1.000
+textRegionCropMaskRejectedReason: nil
 textRegionWordPreservation: 0.333
 textRegionQualityScore: 0.862 -> 0.785
-safeLayoutRect: [89,879,152,103]
-safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=16.0 minFont=false truncated=false nonTransparentBounds=[92,888,63,88]
+safeLayoutRect: [91,881,151,99]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 4
+maskDominantCoverage: 1.000
+maskSafeRect: [87,877,198,108]
+maskBubbleIDConsistent: true
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=16.0 minFont=false truncated=false nonTransparentBounds=[94,888,63,88]
 glyphMask: pixels=8879 rect=[67,857,166,148] fillRects=705
 backgroundFill: applied=true stdDev=39.91
 finalForTranslation: THIS IS AN / OPPLINE / TOURNAMENT. / DOING IT / ONLINE / WOULD MAKE / IT / MEANINGLESS
@@ -352,11 +401,18 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: parentBubbleNotOversized
 textRegionCropBBoxBeforeSubRegionClamp: [485,860,91,132]
 textRegionCropBBoxAfterSubRegionClamp: [485,860,91,132]
+textRegionCropMaskCoverage: 0.980
+textRegionCropMaskRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.773 -> 0.000
-safeLayoutRect: [445,876,115,100]
-safeLayoutSource: bubbleInsetSingle
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=12.0 minFont=false truncated=false nonTransparentBounds=[448,886,54,82]
+safeLayoutRect: [447,878,111,96]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 5
+maskDominantCoverage: 1.000
+maskSafeRect: [447,878,111,96]
+maskBubbleIDConsistent: true
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=11.0 minFont=false truncated=false nonTransparentBounds=[450,889,57,75]
 glyphMask: pixels=3134 rect=[507,860,69,132] fillRects=259
 backgroundFill: applied=true stdDev=25.56
 finalForTranslation: WE NEED TO / GET RESULTS / AT THS / TOURNAMENT / TO SAVE THE / SAMNG CLUR / POOM RENG / DISBANDED.
@@ -399,11 +455,18 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason:
 textRegionCropBBoxBeforeSubRegionClamp: [10,936,141,156]
 textRegionCropBBoxAfterSubRegionClamp: [10,936,141,156]
+textRegionCropMaskCoverage: 0.743
+textRegionCropMaskRejectedReason: nil
 textRegionWordPreservation: 0.579
 textRegionQualityScore: 0.773 -> 0.817
-safeLayoutRect: [49,932,57,165]
-safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=10.0 minFont=false truncated=false nonTransparentBounds=[52,945,48,139]
+safeLayoutRect: [35,918,70,192]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 6
+maskDominantCoverage: 0.740
+maskSafeRect: [32,915,167,198]
+maskBubbleIDConsistent: true
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=13.0 minFont=false truncated=false nonTransparentBounds=[38,924,61,181]
 glyphMask: pixels=16597 rect=[0,883,231,244] fillRects=1289
 backgroundFill: applied=false stdDev=67.62
 finalForTranslation: THE / SUGGESTION / WAS / OVERRULED. AND IT WAS / DECIDED / THAT I'O BE / STAYING / OVER AT REN- / SENPAI'S / HOUSE.
@@ -446,11 +509,18 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: overlapsSiblingSubRegion
 textRegionCropBBoxBeforeSubRegionClamp: [97,959,79,96]
 textRegionCropBBoxAfterSubRegionClamp: [97,959,79,96]
+textRegionCropMaskCoverage: 0.521
+textRegionCropMaskRejectedReason: lowMaskCoverage
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.808 -> 0.748
-safeLayoutRect: [112,932,70,163]
-safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=20.0 minFont=false truncated=false nonTransparentBounds=[115,947,63,135]
+safeLayoutRect: [112,919,83,191]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 6
+maskDominantCoverage: 0.533
+maskSafeRect: [32,915,167,198]
+maskBubbleIDConsistent: true
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=23.0 minFont=false truncated=false nonTransparentBounds=[115,938,72,155]
 glyphMask: pixels=14901 rect=[0,883,231,244] fillRects=1224
 backgroundFill: applied=false stdDev=69.39
 finalForTranslation: What are you talking about?
@@ -493,11 +563,18 @@ textRegionSubRegionCoverage: 1.000
 textRegionSubRegionRejectedReason: overlapsSiblingSubRegion
 textRegionCropBBoxBeforeSubRegionClamp: [251,936,114,126]
 textRegionCropBBoxAfterSubRegionClamp: [251,936,114,126]
+textRegionCropMaskCoverage: 0.751
+textRegionCropMaskRejectedReason: nil
 textRegionWordPreservation: 0.417
 textRegionQualityScore: 0.694 -> 0.792
-safeLayoutRect: [255,972,107,85]
-safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=13.0 minFont=false truncated=false nonTransparentBounds=[258,979,94,73]
+safeLayoutRect: [243,972,130,96]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 7
+maskDominantCoverage: 0.779
+maskSafeRect: [239,926,138,147]
+maskBubbleIDConsistent: true
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=15.0 minFont=false truncated=false nonTransparentBounds=[246,979,107,84]
 glyphMask: pixels=10134 rect=[213,900,172,199] fillRects=843
 backgroundFill: applied=false stdDev=73.90
 finalForTranslation: -O2 AT LEAST. -02 AT / THAT SEEMS TO BE / SENPAIS SENPArS LOSIC.
@@ -540,11 +617,18 @@ textRegionSubRegionCoverage: 0.342
 textRegionSubRegionRejectedReason: seedCoverageTooLow
 textRegionCropBBoxBeforeSubRegionClamp: [269,948,36,57]
 textRegionCropBBoxAfterSubRegionClamp: [269,948,36,57]
+textRegionCropMaskCoverage: 0.927
+textRegionCropMaskRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.674 -> 0.000
-safeLayoutRect: [248,877,37,108]
-safeLayoutSource: bubbleInsetPartitioned
-renderCollision: checked=true initialOverflow=true resolved=true fontSize=10.0 minFont=false truncated=false nonTransparentBounds=[251,887,29,91]
+safeLayoutRect: [251,931,120,137]
+safeLayoutSource: maskSafeRect
+maskDominantBubbleID: 7
+maskDominantCoverage: 0.734
+maskSafeRect: [239,926,138,147]
+maskBubbleIDConsistent: false
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=true resolved=true fontSize=23.0 minFont=false truncated=false nonTransparentBounds=[254,937,87,127]
 glyphMask: pixels=396 rect=[291,966,14,39] fillRects=44
 backgroundFill: applied=true stdDev=13.19
 finalForTranslation: -02 AT / LEAST, / THAT / SEEMS / TO BE / 2EN-
@@ -587,11 +671,18 @@ textRegionSubRegionCoverage: nil
 textRegionSubRegionRejectedReason: noSubRegion
 textRegionCropBBoxBeforeSubRegionClamp: [360,931,156,158]
 textRegionCropBBoxAfterSubRegionClamp: [360,931,156,158]
+textRegionCropMaskCoverage: 0.273
+textRegionCropMaskRejectedReason: lowMaskCoverage
 textRegionWordPreservation: 1.000
 textRegionQualityScore: 0.804 -> 0.804
-safeLayoutRect: [370,969,136,82]
-safeLayoutSource: blockFallbackNoBubble
-renderCollision: checked=true initialOverflow=false resolved=true fontSize=30.0 minFont=false truncated=false nonTransparentBounds=[373,996,113,28]
+safeLayoutRect: [244,948,128,119]
+safeLayoutSource: maskSafeBlockFallback
+maskDominantBubbleID: 7
+maskDominantCoverage: 0.604
+maskSafeRect: [239,926,138,147]
+maskBubbleIDConsistent: false
+renderMaskCollision: checked=true resolved=true overflowPixels=0
+renderCollision: checked=true initialOverflow=false resolved=true fontSize=30.0 minFont=false truncated=false nonTransparentBounds=[247,994,113,28]
 glyphMask: pixels=0 rect=[nil] fillRects=0
 backgroundFill: applied=false stdDev=nil
 finalForTranslation: City Battler / Offline. / Tournament

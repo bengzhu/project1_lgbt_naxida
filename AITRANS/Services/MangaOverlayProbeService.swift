@@ -119,6 +119,58 @@ private struct MangaOverlayGlyphMaskPlan: Equatable, Sendable {
     var backgroundFillApplied: Bool
 }
 
+private struct MangaOverlayBubbleMaskRuntime: Equatable, Sendable {
+    var width: Int
+    var height: Int
+    var ids: [Int]
+    var safeRectsByBubbleID: [Int: CGRect]
+
+    func dominantID(in rect: CGRect) -> (id: Int?, ratio: Double, counts: [String: Int]) {
+        let minX = max(0, Int(rect.minX.rounded(.down)))
+        let maxX = min(width, Int(rect.maxX.rounded(.up)))
+        let minY = max(0, Int(rect.minY.rounded(.down)))
+        let maxY = min(height, Int(rect.maxY.rounded(.up)))
+        guard minX < maxX, minY < maxY else { return (nil, 0, [:]) }
+
+        var counts: [Int: Int] = [:]
+        var total = 0
+        for y in minY..<maxY {
+            for x in minX..<maxX {
+                let value = ids[y * width + x]
+                guard value > 0 else { continue }
+                counts[value - 1, default: 0] += 1
+                total += 1
+            }
+        }
+        let keyed = Dictionary(uniqueKeysWithValues: counts.map { (String($0.key), $0.value) })
+        guard total > 0, let dominant = counts.max(by: { $0.value < $1.value }) else {
+            return (nil, 0, keyed)
+        }
+        return (dominant.key, Double(dominant.value) / Double(total), keyed)
+    }
+
+    func coverageRatio(of rect: CGRect, bubbleID: Int?) -> Double {
+        guard let bubbleID else { return 0 }
+        let minX = max(0, Int(rect.minX.rounded(.down)))
+        let maxX = min(width, Int(rect.maxX.rounded(.up)))
+        let minY = max(0, Int(rect.minY.rounded(.down)))
+        let maxY = min(height, Int(rect.maxY.rounded(.up)))
+        guard minX < maxX, minY < maxY else { return 0 }
+
+        var covered = 0
+        var total = 0
+        for y in minY..<maxY {
+            for x in minX..<maxX {
+                total += 1
+                if ids[y * width + x] == bubbleID + 1 {
+                    covered += 1
+                }
+            }
+        }
+        return Double(covered) / Double(max(total, 1))
+    }
+}
+
 struct MangaOverlayProbeBubble: Equatable, Codable, Sendable {
     var id: Int
     var bbox: [Double]
@@ -634,6 +686,7 @@ struct MangaOverlayProbeService: Sendable {
         preprocessing: MangaOverlayPreprocessingOptions = .defaultValue,
         cropping: MangaOverlayProbeCropping = .defaultValue,
         textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleDebugImagePath: String? = nil,
         bubbleCropsImagePath: String? = nil,
         bubbleTextOverlayImagePath: String? = nil
@@ -661,7 +714,12 @@ struct MangaOverlayProbeService: Sendable {
             try Self.writePNG(deterministicCorrectionImage, to: deterministicCorrectionURL)
             try Self.writePNG(deterministicTranslationImage, to: deterministicTranslationURL)
             try Self.writePNG(cropsImage, to: cropsURL)
-            try Self.writeOCRProbeText(blocks: blocks, textRegionCropReport: textRegionCropReport, to: ocrProbeTextURL)
+            try Self.writeOCRProbeText(
+                blocks: blocks,
+                textRegionCropReport: textRegionCropReport,
+                bubbleMaskReport: bubbleMaskReport,
+                to: ocrProbeTextURL
+            )
 
             var preprocessedPath: String?
             if preprocessing.enabled {
@@ -690,7 +748,8 @@ struct MangaOverlayProbeService: Sendable {
     func applySafeLayoutAndRenderingDiagnostics(
         image: CGImage,
         blocks: [MangaOverlayProbeBlock],
-        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil
     ) async -> [MangaOverlayProbeBlock] {
         await Task.detached(priority: .userInitiated) {
             let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
@@ -698,6 +757,12 @@ struct MangaOverlayProbeService: Sendable {
                 uniqueKeysWithValues: bubbleGeometry.bubbles.map { bubble in
                     (bubble.id, Self.clamp(Self.rect(from: bubble.bbox), to: imageBounds))
                 }
+            )
+            let maskInstances = Dictionary(
+                uniqueKeysWithValues: (bubbleMaskReport?.instances ?? []).map { ($0.bubbleID, $0) }
+            )
+            let maskDiagnostics = Dictionary(
+                uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
             )
             let groupedByBubble = Dictionary(grouping: blocks) { block in
                 block.bubbleID
@@ -736,10 +801,40 @@ struct MangaOverlayProbeService: Sendable {
                 let blockRect = Self.rect(from: block.bbox)
                 let fallbackRect = Self.clamp(Self.expand(blockRect, by: 0.14, bounds: imageBounds), to: imageBounds)
                 let safeEntry = safeRectsByBlockID[block.id] ?? (fallbackRect, "blockFallbackNoSafeRect")
-                let safeRect = Self.ensureMinimumRect(safeEntry.rect, fallback: fallbackRect, bounds: imageBounds)
+                let bboxSafeRect = Self.ensureMinimumRect(safeEntry.rect, fallback: fallbackRect, bounds: imageBounds)
+                var safeRect = bboxSafeRect
+                var safeSource = safeEntry.source
+                let maskDiagnostic = maskDiagnostics[block.index]
+                if let bubbleID = maskDiagnostic?.maskDominantBubbleID ?? block.bubbleID,
+                   let instance = maskInstances[bubbleID],
+                   let maskSafe = instance.safeRect.map(Self.rect(from:)),
+                   instance.maskCoverageRatio >= 0.48,
+                   (maskDiagnostic?.maskDominantCoverageRatio ?? 0) >= 0.34,
+                   maskSafe.width >= 8,
+                   maskSafe.height >= 8 {
+                    let partitionedMaskRect: CGRect
+                    if let group = groupedByBubble[block.bubbleID], group.count > 1 {
+                        partitionedMaskRect = Self.partitionedSafeRect(
+                            for: block,
+                            in: group,
+                            bubbleSafeRect: Self.clamp(maskSafe, to: imageBounds)
+                        )
+                    } else {
+                        partitionedMaskRect = Self.clamp(maskSafe, to: imageBounds)
+                    }
+                    let minimumMaskRect = Self.ensureMinimumRect(partitionedMaskRect, fallback: bboxSafeRect, bounds: imageBounds)
+                    if minimumMaskRect.width >= 8, minimumMaskRect.height >= 8 {
+                        safeRect = minimumMaskRect
+                        safeSource = (safeEntry.source == "blockFallbackNoBubble" || safeEntry.source == "blockFallbackNoSafeRect")
+                            ? "maskSafeBlockFallback"
+                            : "maskSafeRect"
+                    }
+                }
                 let text = block.translatedText.trimmingCharacters(in: .whitespacesAndNewlines)
                 updated.safeLayoutRect = Self.bboxArray(from: safeRect)
-                updated.safeLayoutSource = safeEntry.source
+                updated.safeLayoutSourceBeforeMask = safeEntry.source
+                updated.safeLayoutSource = safeSource
+                updated.maskSafeRect = safeSource.hasPrefix("maskSafe") ? Self.bboxArray(from: safeRect) : nil
                 let glyphPlan = Self.makeGlyphMaskPlan(
                     image: image,
                     blockRect: blockRect,
@@ -769,13 +864,221 @@ struct MangaOverlayProbeService: Sendable {
                 updated.renderMinFontSizeReached = plan.minFontSizeReached
                 updated.renderTextTruncated = plan.textTruncated
                 if let bounds = plan.nonTransparentBounds {
-                    updated.renderNonTransparentBounds = Self.bboxArray(from: bounds.offsetBy(dx: safeRect.minX, dy: safeRect.minY))
+                    let globalBounds = bounds.offsetBy(dx: safeRect.minX, dy: safeRect.minY)
+                    updated.renderNonTransparentBounds = Self.bboxArray(from: globalBounds)
+                    let maskCoverage = globalBounds.isNull
+                        ? 0
+                        : Self.rectContainmentRatio(inner: globalBounds, outer: safeRect)
+                    let estimatedPixels = max(0, Int((globalBounds.width * globalBounds.height).rounded()))
+                    updated.renderMaskCollisionChecked = bubbleMaskReport != nil
+                    updated.renderMaskOverflowPixelCount = maskCoverage >= 0.98 ? 0 : estimatedPixels
+                    updated.renderMaskCollisionResolved = updated.renderMaskOverflowPixelCount == 0
                 } else {
                     updated.renderNonTransparentBounds = nil
+                    updated.renderMaskCollisionChecked = bubbleMaskReport != nil
+                    updated.renderMaskCollisionResolved = bubbleMaskReport != nil
+                    updated.renderMaskOverflowPixelCount = 0
                 }
                 return updated
             }
         }.value
+    }
+
+    func makeBubbleMaskReport(
+        image: CGImage,
+        blocks: [MangaOverlayProbeBlock],
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        textRegionCropReport: MangaOverlayTextRegionCropReport?
+    ) async -> MangaOverlayBubbleMaskReport {
+        await Task.detached(priority: .userInitiated) {
+            let runtime = Self.makeApproximateBubbleMaskRuntime(image: image, bubbleGeometry: bubbleGeometry)
+            let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            let splitCandidateIDs = Set(
+                bubbleGeometry.bubbleAudits
+                    .filter(\.bubbleSplitCandidate)
+                    .map(\.bubbleID)
+            )
+            let cropDiagnostics = Dictionary(
+                uniqueKeysWithValues: (textRegionCropReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+            )
+
+            var blockDiagnostics: [MangaOverlayBubbleMaskBlockDiagnostic] = []
+            for block in blocks {
+                let seedRect = Self.clamp(Self.rect(from: block.bbox), to: imageBounds)
+                let dominant = runtime.dominantID(in: seedRect)
+                let dominantID = dominant.id
+                let consistent = block.bubbleID == nil
+                    ? dominantID == nil
+                    : dominantID == block.bubbleID
+                let crop = cropDiagnostics[block.index]
+                let cropRect = crop.map { Self.clamp(Self.rect(from: $0.cropBBox), to: imageBounds) }
+                let cropCoverage = cropRect.map { runtime.coverageRatio(of: $0, bubbleID: block.bubbleID ?? dominantID) }
+                let cropRejectedReason = cropCoverage.flatMap { $0 < 0.55 ? "lowMaskCoverage" : nil }
+                blockDiagnostics.append(
+                    MangaOverlayBubbleMaskBlockDiagnostic(
+                        blockIndex: block.index,
+                        currentBubbleID: block.bubbleID,
+                        maskDominantBubbleID: dominantID,
+                        maskDominantCoverageRatio: dominant.ratio,
+                        maskIDsUnderSeed: dominant.counts,
+                        bubbleIDConsistent: consistent,
+                        safeLayoutSourceBeforeMask: block.safeLayoutSourceBeforeMask ?? block.safeLayoutSource,
+                        safeLayoutSourceAfterMask: block.safeLayoutSource,
+                        maskSafeRect: dominantID.flatMap { runtime.safeRectsByBubbleID[$0].map(Self.bboxArray(from:)) },
+                        renderMaskCollisionChecked: block.renderMaskCollisionChecked,
+                        renderMaskCollisionResolved: block.renderMaskCollisionResolved,
+                        renderMaskOverflowPixelCount: block.renderMaskOverflowPixelCount,
+                        cropMaskCoverageRatio: cropCoverage,
+                        cropMaskRejectedReason: cropRejectedReason
+                    )
+                )
+            }
+
+            let instances = bubbleGeometry.bubbles.map { bubble in
+                let bubbleRect = Self.clamp(Self.rect(from: bubble.bbox), to: imageBounds)
+                let bboxPixelCount = max(1, Int((bubbleRect.width * bubbleRect.height).rounded()))
+                var maskPixelCount = 0
+                for value in runtime.ids where value == bubble.id + 1 {
+                    maskPixelCount += 1
+                }
+                let safeRect = runtime.safeRectsByBubbleID[bubble.id]
+                let safePixelCount = safeRect.map { Int(($0.width * $0.height).rounded()) } ?? 0
+                var riskFlags: [String] = []
+                if splitCandidateIDs.contains(bubble.id) {
+                    riskFlags.append("oversizedBubbleSplitCandidate")
+                }
+                if Double(maskPixelCount) / Double(bboxPixelCount) < 0.35 {
+                    riskFlags.append("lowMaskCoverage")
+                }
+                if safePixelCount < 96 {
+                    riskFlags.append("safeRectTooSmall")
+                }
+                return MangaOverlayBubbleMaskInstanceDiagnostic(
+                    bubbleID: bubble.id,
+                    bbox: bubble.bbox,
+                    maskPixelCount: maskPixelCount,
+                    bboxPixelCount: bboxPixelCount,
+                    maskCoverageRatio: Double(maskPixelCount) / Double(bboxPixelCount),
+                    source: "roundedRectApproximation",
+                    confidence: Double(bubble.confidence),
+                    safePixelCount: safePixelCount,
+                    safeBBox: maskPixelCount > 0 ? bubble.bbox : nil,
+                    safeRect: safeRect.map(Self.bboxArray(from:)),
+                    safeRectCoverageRatio: Double(safePixelCount) / Double(bboxPixelCount),
+                    riskFlags: riskFlags,
+                    notes: [
+                        "instance ID mask approximated from existing bubble bbox only",
+                        "internal raster value is bubbleID + 1 so background can remain 0",
+                        "overlap resolution is stable: smaller bbox area then higher confidence wins",
+                        "ground truth is not used"
+                    ]
+                )
+            }
+            let inconsistent = blockDiagnostics
+                .filter { !$0.bubbleIDConsistent }
+                .map(\.blockIndex)
+            let overflow = blockDiagnostics
+                .filter { $0.renderMaskOverflowPixelCount > 0 }
+                .map(\.blockIndex)
+            let maskSafeBlocks = blockDiagnostics
+                .filter { ($0.safeLayoutSourceAfterMask ?? "").hasPrefix("maskSafe") }
+                .count
+            return MangaOverlayBubbleMaskReport(
+                enabled: true,
+                imageWidth: image.width,
+                imageHeight: image.height,
+                instanceCount: instances.count,
+                instances: instances,
+                blockDiagnostics: blockDiagnostics,
+                maskSafeLayoutBlocks: maskSafeBlocks,
+                bboxFallbackBlocks: max(0, blocks.count - maskSafeBlocks),
+                inconsistentBubbleAssignmentBlocks: inconsistent,
+                renderMaskOverflowBlocks: overflow,
+                notes: [
+                    "lightweight BubbleMask instance-ID approximation, not a real segmentation model",
+                    "mask is used for diagnostics and safe-layout preference only",
+                    "TextRegion crop adoption guardrails are unchanged"
+                ]
+            )
+        }.value
+    }
+
+    private static func makeApproximateBubbleMaskRuntime(
+        image: CGImage,
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics
+    ) -> MangaOverlayBubbleMaskRuntime {
+        let width = image.width
+        let height = image.height
+        let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height))
+        let sortedBubbles = bubbleGeometry.bubbles.sorted { lhs, rhs in
+            let lhsRect = rect(from: lhs.bbox)
+            let rhsRect = rect(from: rhs.bbox)
+            let lhsArea = lhsRect.width * lhsRect.height
+            let rhsArea = rhsRect.width * rhsRect.height
+            if lhsArea != rhsArea {
+                return lhsArea > rhsArea
+            }
+            if lhs.confidence != rhs.confidence {
+                return lhs.confidence < rhs.confidence
+            }
+            return lhs.id > rhs.id
+        }
+
+        var ids = [Int](repeating: 0, count: width * height)
+        for bubble in sortedBubbles {
+            let rect = clamp(rect(from: bubble.bbox).integral, to: imageBounds)
+            guard rect.width >= 2, rect.height >= 2 else { continue }
+            let minX = max(0, Int(rect.minX))
+            let maxX = min(width, Int(rect.maxX))
+            let minY = max(0, Int(rect.minY))
+            let maxY = min(height, Int(rect.maxY))
+            let radius = max(3, min(rect.width, rect.height) * 0.18)
+            for y in minY..<maxY {
+                for x in minX..<maxX where roundedRectContains(
+                    point: CGPoint(x: CGFloat(x) + 0.5, y: CGFloat(y) + 0.5),
+                    rect: rect,
+                    radius: radius
+                ) {
+                    ids[y * width + x] = bubble.id + 1
+                }
+            }
+        }
+
+        let safeRects = Dictionary(
+            uniqueKeysWithValues: bubbleGeometry.bubbles.compactMap { bubble -> (Int, CGRect)? in
+                let bubbleRect = clamp(rect(from: bubble.bbox), to: imageBounds)
+                guard bubbleRect.width >= 10, bubbleRect.height >= 10 else { return nil }
+                let inset = max(4, min(bubbleRect.width, bubbleRect.height) * 0.14)
+                let safeRect = clamp(bubbleRect.insetBy(dx: inset, dy: inset), to: imageBounds).integral
+                guard safeRect.width >= 8, safeRect.height >= 8 else { return nil }
+                return (bubble.id, safeRect)
+            }
+        )
+
+        return MangaOverlayBubbleMaskRuntime(
+            width: width,
+            height: height,
+            ids: ids,
+            safeRectsByBubbleID: safeRects
+        )
+    }
+
+    private static func roundedRectContains(point: CGPoint, rect: CGRect, radius: CGFloat) -> Bool {
+        guard rect.contains(point) else { return false }
+        let clampedRadius = min(radius, min(rect.width, rect.height) / 2)
+        let inner = rect.insetBy(dx: clampedRadius, dy: clampedRadius)
+        if point.x >= inner.minX && point.x <= inner.maxX {
+            return true
+        }
+        if point.y >= inner.minY && point.y <= inner.maxY {
+            return true
+        }
+
+        let cornerX = point.x < inner.minX ? inner.minX : inner.maxX
+        let cornerY = point.y < inner.minY ? inner.minY : inner.maxY
+        let dx = point.x - cornerX
+        let dy = point.y - cornerY
+        return dx * dx + dy * dy <= clampedRadius * clampedRadius
     }
 
     @discardableResult
@@ -1058,10 +1361,14 @@ struct MangaOverlayProbeService: Sendable {
     private static func writeOCRProbeText(
         blocks: [MangaOverlayProbeBlock],
         textRegionCropReport: MangaOverlayTextRegionCropReport?,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         to url: URL
     ) throws {
         let textRegionByBlock = Dictionary(
             uniqueKeysWithValues: (textRegionCropReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let maskByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
         )
         let content = blocks.map { block in
             let bbox = block.bbox.map { String(Int($0.rounded())) }.joined(separator: ",")
@@ -1099,11 +1406,17 @@ struct MangaOverlayProbeService: Sendable {
             let textRegionSubRegionRejected = textRegion?.subRegionRejectedReason ?? "nil"
             let textRegionCropBeforeSubRegion = textRegion?.cropBBoxBeforeSubRegionClamp.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
             let textRegionCropAfterSubRegion = textRegion?.cropBBoxAfterSubRegionClamp.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let textRegionCropMaskCoverage = textRegion?.cropMaskCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let textRegionCropMaskRejected = textRegion?.cropMaskRejectedReason ?? "nil"
             let textRegionReasons = textRegion?.rejectionReasons.joined(separator: " | ") ?? "nil"
             let textRegionPreservation = textRegion?.rawWordPreservationRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let textRegionQuality = textRegion.map {
                 "\($0.originalQualityScore.formatted(.number.precision(.fractionLength(3)))) -> \($0.candidateQualityScore.formatted(.number.precision(.fractionLength(3))))"
             } ?? "nil"
+            let mask = maskByBlock[block.index]
+            let maskDominantID = mask?.maskDominantBubbleID.map(String.init) ?? "nil"
+            let maskDominantCoverage = mask?.maskDominantCoverageRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let maskSafeRect = mask?.maskSafeRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
             rawOCR: \(raw)
@@ -1130,10 +1443,17 @@ struct MangaOverlayProbeService: Sendable {
             textRegionSubRegionRejectedReason: \(textRegionSubRegionRejected)
             textRegionCropBBoxBeforeSubRegionClamp: [\(textRegionCropBeforeSubRegion)]
             textRegionCropBBoxAfterSubRegionClamp: [\(textRegionCropAfterSubRegion)]
+            textRegionCropMaskCoverage: \(textRegionCropMaskCoverage)
+            textRegionCropMaskRejectedReason: \(textRegionCropMaskRejected)
             textRegionWordPreservation: \(textRegionPreservation)
             textRegionQualityScore: \(textRegionQuality)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
+            maskDominantBubbleID: \(maskDominantID)
+            maskDominantCoverage: \(maskDominantCoverage)
+            maskSafeRect: [\(maskSafeRect)]
+            maskBubbleIDConsistent: \(mask.map { String($0.bubbleIDConsistent) } ?? "nil")
+            renderMaskCollision: checked=\(block.renderMaskCollisionChecked) resolved=\(block.renderMaskCollisionResolved) overflowPixels=\(block.renderMaskOverflowPixelCount)
             renderCollision: checked=\(block.renderCollisionChecked) initialOverflow=\(block.renderCollisionInitialOverflow) resolved=\(block.renderCollisionResolved) fontSize=\(block.renderFontSize?.formatted(.number.precision(.fractionLength(1))) ?? "nil") minFont=\(block.renderMinFontSizeReached) truncated=\(block.renderTextTruncated) nonTransparentBounds=[\(renderBounds)]
             glyphMask: pixels=\(block.glyphMaskPixelCount) rect=[\(glyphRect)] fillRects=\(block.glyphMaskFillRects.count)
             backgroundFill: applied=\(block.backgroundFillApplied) stdDev=\(backgroundStdDev)
@@ -3796,6 +4116,12 @@ struct MangaOverlayProbeService: Sendable {
             Double(rect.width.rounded()),
             Double(rect.height.rounded())
         ]
+    }
+
+    private static func rectContainmentRatio(inner: CGRect, outer: CGRect) -> Double {
+        let intersection = inner.intersection(outer)
+        guard !intersection.isNull, inner.width > 0, inner.height > 0 else { return 0 }
+        return Double((intersection.width * intersection.height) / max(1, inner.width * inner.height))
     }
 
     private static func expand(_ rect: CGRect, by fraction: Double, bounds: CGRect) -> CGRect {

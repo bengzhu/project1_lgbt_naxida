@@ -4560,8 +4560,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "C41713C7-0D68-4104-ABED-258A126D0B52",
+      "id" : "302F085E-462C-425E-995C-91D5E4D465D5",
       "index" : 0,
+      "maskSafeRect" : [
+        425,
+        297,
+        127,
+        130
+      ],
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 1,
       "ocrLegacySimilarity" : 1,
@@ -4622,23 +4628,27 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 20,
+      "renderFontSize" : 24,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        439,
-        339,
-        76,
-        68
+        428,
+        336,
+        91,
+        79
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        436,
-        308,
-        105,
-        108
+        425,
+        297,
+        127,
+        130
       ],
-      "safeLayoutSource" : "bubbleInsetSingle",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetSingle",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nTHAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
@@ -7318,8 +7328,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "2BBC6A85-1828-4061-93C8-1AB3539C23AE",
+      "id" : "C99BC011-DEAF-45A0-92D8-BD70733F8E0B",
       "index" : 1,
+      "maskSafeRect" : [
+        60,
+        326,
+        160,
+        115
+      ],
       "ocrGroundTruthSimilarity" : 0.5714285714285714,
       "ocrLegacySimilarity" : 0.9047619047619048,
       "ocrProbeNotes" : [
@@ -7381,22 +7397,26 @@
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
       "renderFontSize" : 25,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        61,
-        330,
+        63,
+        331,
         94,
         110
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        58,
-        324,
-        164,
-        119
+        60,
+        326,
+        160,
+        115
       ],
-      "safeLayoutSource" : "bubbleInsetSingle",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetSingle",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nIVE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE.",
@@ -7853,8 +7873,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "878228AF-1B09-4774-90CD-787F420C3156",
+      "id" : "B87EF3CA-E1C2-46FF-AE9D-654B2648690C",
       "index" : 2,
+      "maskSafeRect" : [
+        440,
+        537,
+        121,
+        84
+      ],
       "ocrGroundTruthSimilarity" : 0.6666666666666667,
       "ocrLegacySimilarity" : 0.8333333333333334,
       "ocrProbeNotes" : [
@@ -7900,23 +7926,27 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 15,
+      "renderFontSize" : 14,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        442,
-        539,
-        74,
-        84
+        443,
+        540,
+        69,
+        79
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        439,
-        536,
-        124,
-        87
+        440,
+        537,
+        121,
+        84
       ],
-      "safeLayoutSource" : "bubbleInsetSingle",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetSingle",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nTHE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.",
@@ -12742,8 +12772,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "CD92AB4A-7D5B-4045-9B4D-374E9F183DC2",
+      "id" : "3312FFEE-F385-45DF-9EC4-9E42AEE4F8A8",
       "index" : 3,
+      "maskSafeRect" : [
+        23,
+        647,
+        160,
+        124
+      ],
       "ocrGroundTruthSimilarity" : 0.7,
       "ocrLegacySimilarity" : 0.8529411764705882,
       "ocrProbeNotes" : [
@@ -12790,23 +12826,27 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 17,
+      "renderFontSize" : 21,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        37,
-        662,
-        69,
-        95
+        26,
+        651,
+        84,
+        117
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        34,
-        658,
-        138,
-        102
+        23,
+        647,
+        160,
+        124
       ],
-      "safeLayoutSource" : "bubbleInsetSingle",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetSingle",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS",
@@ -12882,8 +12922,14 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "8B589424-6683-4BA7-A955-D52F1AE20C60",
+      "id" : "842BFB46-5883-49A0-B75A-E70F762042FF",
       "index" : 4,
+      "maskSafeRect" : [
+        450,
+        881,
+        106,
+        60
+      ],
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.6666666666666667,
       "ocrLegacySimilarity" : 0.9411764705882353,
@@ -12944,23 +12990,27 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 19.751999999999992,
+      "renderFontSize" : 16.81139999999999,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        351,
-        857,
-        77,
-        40
+        453,
+        885,
+        66,
+        55
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        348,
-        841,
-        129,
-        70
+        450,
+        881,
+        106,
+        60
       ],
-      "safeLayoutSource" : "blockFallbackNoBubble",
+      "safeLayoutSource" : "maskSafeBlockFallback",
+      "safeLayoutSourceBeforeMask" : "blockFallbackNoBubble",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nLET'S\nBATTLER!",
@@ -18058,8 +18108,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "35721247-27E3-4A16-B725-AC7A3E23378E",
+      "id" : "EF58CC0B-0F14-4E9F-AD99-4408C33C9AC6",
       "index" : 5,
+      "maskSafeRect" : [
+        91,
+        881,
+        191,
+        84
+      ],
       "ocrGroundTruthSimilarity" : 0.8235294117647058,
       "ocrLegacySimilarity" : 0.8846153846153846,
       "ocrProbeNotes" : [
@@ -18119,23 +18175,27 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 8,
-      "renderMinFontSizeReached" : true,
+      "renderFontSize" : 16,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
+      "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        256,
-        946,
-        32,
-        17
+        94,
+        888,
+        63,
+        71
       ],
-      "renderTextTruncated" : true,
+      "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        253,
-        940,
-        110,
-        26
+        91,
+        881,
+        191,
+        84
       ],
-      "safeLayoutSource" : "bubbleInsetPartitioned",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nI SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...",
@@ -22452,8 +22512,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "3602C467-37CD-47D0-9C68-F63FEF07B66C",
+      "id" : "8D3A13D9-4C69-4A85-A206-42EDB139770B",
       "index" : 6,
+      "maskSafeRect" : [
+        91,
+        881,
+        151,
+        99
+      ],
       "ocrGroundTruthSimilarity" : 0.9166666666666666,
       "ocrLegacySimilarity" : 0.9361702127659575,
       "ocrProbeNotes" : [
@@ -22513,9 +22579,12 @@
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
       "renderFontSize" : 16,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        92,
+        94,
         888,
         63,
         88
@@ -22523,12 +22592,13 @@
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        89,
-        879,
-        152,
-        103
+        91,
+        881,
+        151,
+        99
       ],
-      "safeLayoutSource" : "bubbleInsetPartitioned",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nTHIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS",
@@ -24169,8 +24239,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "F05A284E-64B9-4A86-BACD-45F7E6D8EAAE",
+      "id" : "D12ED367-8402-4DC6-BD15-F251D865BC89",
       "index" : 7,
+      "maskSafeRect" : [
+        447,
+        878,
+        111,
+        96
+      ],
       "ocrGroundTruthSimilarity" : 0.6875,
       "ocrLegacySimilarity" : 0.8363636363636363,
       "ocrProbeNotes" : [
@@ -24235,23 +24311,27 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 12,
+      "renderFontSize" : 11,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        448,
-        886,
-        54,
-        82
+        450,
+        889,
+        57,
+        75
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        445,
-        876,
-        115,
-        100
+        447,
+        878,
+        111,
+        96
       ],
-      "safeLayoutSource" : "bubbleInsetSingle",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetSingle",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nWE NEED TO\nGET RESULTS\nAT THS\nTOURNAMENT\nTO SAVE THE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.",
@@ -32072,8 +32152,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "CAC68C12-25A7-4A80-8EB0-1EAC5C11946C",
+      "id" : "35C5FEBC-63D4-4FEC-B571-245039B11251",
       "index" : 8,
+      "maskSafeRect" : [
+        35,
+        918,
+        70,
+        192
+      ],
       "ocrGroundTruthSimilarity" : 0.8947368421052632,
       "ocrLegacySimilarity" : 0.9482758620689655,
       "ocrProbeNotes" : [
@@ -32133,23 +32219,27 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 10,
+      "renderFontSize" : 13,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        52,
-        945,
-        48,
-        139
+        38,
+        924,
+        61,
+        181
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        49,
-        932,
-        57,
-        165
+        35,
+        918,
+        70,
+        192
       ],
-      "safeLayoutSource" : "bubbleInsetPartitioned",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nTHE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.",
@@ -39580,8 +39670,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "5476B0A3-6864-402D-B42E-D469C85E56AC",
+      "id" : "AC7E9E44-B126-4674-A695-2976A6773EC1",
       "index" : 9,
+      "maskSafeRect" : [
+        112,
+        919,
+        83,
+        191
+      ],
       "ocrGroundTruthSimilarity" : 0.5,
       "ocrLegacySimilarity" : 0.7916666666666666,
       "ocrProbeNotes" : [
@@ -39643,23 +39739,27 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 20,
+      "renderFontSize" : 23,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
         115,
-        947,
-        63,
-        135
+        938,
+        72,
+        155
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
         112,
-        932,
-        70,
-        163
+        919,
+        83,
+        191
       ],
-      "safeLayoutSource" : "bubbleInsetPartitioned",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\nWhat are you talking about?",
@@ -44812,8 +44912,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "F2A63F71-F045-4266-8EBC-A5B2FC2457F6",
+      "id" : "B304CAE4-E189-40C7-B9C4-FC8863A641DC",
       "index" : 10,
+      "maskSafeRect" : [
+        243,
+        972,
+        130,
+        96
+      ],
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.5,
       "ocrLegacySimilarity" : 0.8,
@@ -44877,23 +44983,27 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 13,
+      "renderFontSize" : 15,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        258,
+        246,
         979,
-        94,
-        73
+        107,
+        84
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        255,
+        243,
         972,
-        107,
-        85
+        130,
+        96
       ],
-      "safeLayoutSource" : "bubbleInsetPartitioned",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\n-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
@@ -45245,8 +45355,14 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "1DFD84FC-838C-405F-A250-91CF8DAD8170",
+      "id" : "9A7537F0-8417-49E7-BEAE-4D63A7F86440",
       "index" : 11,
+      "maskSafeRect" : [
+        251,
+        931,
+        120,
+        137
+      ],
       "ocrGroundTruthSimilarity" : 0.6,
       "ocrLegacySimilarity" : 0.6923076923076923,
       "ocrProbeNotes" : [
@@ -45308,23 +45424,27 @@
       "renderCollisionChecked" : true,
       "renderCollisionInitialOverflow" : true,
       "renderCollisionResolved" : true,
-      "renderFontSize" : 10,
+      "renderFontSize" : 23,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        251,
-        887,
-        29,
-        91
+        254,
+        937,
+        87,
+        127
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        248,
-        877,
-        37,
-        108
+        251,
+        931,
+        120,
+        137
       ],
-      "safeLayoutSource" : "bubbleInsetPartitioned",
+      "safeLayoutSource" : "maskSafeRect",
+      "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "翻译失败\n-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
@@ -45400,8 +45520,14 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "925A8E6D-D94B-4284-8E87-FFC03D1114A3",
+      "id" : "385B3221-5071-4499-98BC-AE74DB296BD4",
       "index" : 12,
+      "maskSafeRect" : [
+        244,
+        948,
+        128,
+        119
+      ],
       "ocrConfidence" : 1,
       "ocrGroundTruthSimilarity" : 0.8,
       "ocrLegacySimilarity" : 0.9642857142857143,
@@ -45460,22 +45586,26 @@
       "renderCollisionInitialOverflow" : false,
       "renderCollisionResolved" : true,
       "renderFontSize" : 30,
+      "renderMaskCollisionChecked" : true,
+      "renderMaskCollisionResolved" : true,
+      "renderMaskOverflowPixelCount" : 0,
       "renderMinFontSizeReached" : false,
       "renderNonTransparentBounds" : [
-        373,
-        996,
+        247,
+        994,
         113,
         28
       ],
       "renderTextTruncated" : false,
       "rotationAngleUsed" : 0,
       "safeLayoutRect" : [
-        370,
-        969,
-        136,
-        82
+        244,
+        948,
+        128,
+        119
       ],
-      "safeLayoutSource" : "blockFallbackNoBubble",
+      "safeLayoutSource" : "maskSafeBlockFallback",
+      "safeLayoutSourceBeforeMask" : "blockFallbackNoBubble",
       "sliceIndex" : null,
       "sliceOverlapDeduped" : false,
       "translatedText" : "城市战役",
@@ -49587,6 +49717,622 @@
     ],
     "unassignedTextRegionCount" : 26
   },
+  "bubbleMaskReport" : {
+    "bboxFallbackBlocks" : 0,
+    "blockDiagnostics" : [
+      {
+        "blockIndex" : 0,
+        "bubbleIDConsistent" : true,
+        "cropMaskCoverageRatio" : 0.9976444608023556,
+        "currentBubbleID" : 0,
+        "maskDominantBubbleID" : 0,
+        "maskDominantCoverageRatio" : 1,
+        "maskIDsUnderSeed" : {
+          "0" : 3604
+        },
+        "maskSafeRect" : [
+          425,
+          297,
+          127,
+          130
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetSingle"
+      },
+      {
+        "blockIndex" : 1,
+        "bubbleIDConsistent" : true,
+        "cropMaskCoverageRatio" : 1,
+        "currentBubbleID" : 1,
+        "maskDominantBubbleID" : 1,
+        "maskDominantCoverageRatio" : 1,
+        "maskIDsUnderSeed" : {
+          "1" : 2652
+        },
+        "maskSafeRect" : [
+          60,
+          326,
+          160,
+          115
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetSingle"
+      },
+      {
+        "blockIndex" : 2,
+        "bubbleIDConsistent" : true,
+        "cropMaskCoverageRatio" : 1,
+        "currentBubbleID" : 2,
+        "maskDominantBubbleID" : 2,
+        "maskDominantCoverageRatio" : 1,
+        "maskIDsUnderSeed" : {
+          "2" : 1938
+        },
+        "maskSafeRect" : [
+          440,
+          537,
+          121,
+          84
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetSingle"
+      },
+      {
+        "blockIndex" : 3,
+        "bubbleIDConsistent" : true,
+        "cropMaskCoverageRatio" : 1,
+        "currentBubbleID" : 3,
+        "maskDominantBubbleID" : 3,
+        "maskDominantCoverageRatio" : 1,
+        "maskIDsUnderSeed" : {
+          "3" : 2730
+        },
+        "maskSafeRect" : [
+          23,
+          647,
+          160,
+          124
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetSingle"
+      },
+      {
+        "blockIndex" : 4,
+        "bubbleIDConsistent" : false,
+        "cropMaskCoverageRatio" : 0.23315203315203314,
+        "cropMaskRejectedReason" : "lowMaskCoverage",
+        "maskDominantBubbleID" : 5,
+        "maskDominantCoverageRatio" : 0.9503105590062112,
+        "maskIDsUnderSeed" : {
+          "5" : 1377,
+          "7" : 72
+        },
+        "maskSafeRect" : [
+          447,
+          878,
+          111,
+          96
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeBlockFallback",
+        "safeLayoutSourceBeforeMask" : "blockFallbackNoBubble"
+      },
+      {
+        "blockIndex" : 5,
+        "bubbleIDConsistent" : false,
+        "cropMaskCoverageRatio" : 0.19008686765457333,
+        "cropMaskRejectedReason" : "lowMaskCoverage",
+        "currentBubbleID" : 7,
+        "maskDominantBubbleID" : 4,
+        "maskDominantCoverageRatio" : 1,
+        "maskIDsUnderSeed" : {
+          "4" : 5350
+        },
+        "maskSafeRect" : [
+          87,
+          877,
+          198,
+          108
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned"
+      },
+      {
+        "blockIndex" : 6,
+        "bubbleIDConsistent" : true,
+        "cropMaskCoverageRatio" : 1,
+        "currentBubbleID" : 4,
+        "maskDominantBubbleID" : 4,
+        "maskDominantCoverageRatio" : 1,
+        "maskIDsUnderSeed" : {
+          "4" : 4221
+        },
+        "maskSafeRect" : [
+          87,
+          877,
+          198,
+          108
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned"
+      },
+      {
+        "blockIndex" : 7,
+        "bubbleIDConsistent" : true,
+        "cropMaskCoverageRatio" : 0.9801864801864801,
+        "currentBubbleID" : 5,
+        "maskDominantBubbleID" : 5,
+        "maskDominantCoverageRatio" : 1,
+        "maskIDsUnderSeed" : {
+          "5" : 2907
+        },
+        "maskSafeRect" : [
+          447,
+          878,
+          111,
+          96
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetSingle"
+      },
+      {
+        "blockIndex" : 8,
+        "bubbleIDConsistent" : true,
+        "cropMaskCoverageRatio" : 0.743316966721222,
+        "currentBubbleID" : 6,
+        "maskDominantBubbleID" : 6,
+        "maskDominantCoverageRatio" : 0.7402349952365831,
+        "maskIDsUnderSeed" : {
+          "4" : 1636,
+          "6" : 4662
+        },
+        "maskSafeRect" : [
+          32,
+          915,
+          167,
+          198
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned"
+      },
+      {
+        "blockIndex" : 9,
+        "bubbleIDConsistent" : true,
+        "cropMaskCoverageRatio" : 0.5208333333333334,
+        "cropMaskRejectedReason" : "lowMaskCoverage",
+        "currentBubbleID" : 6,
+        "maskDominantBubbleID" : 6,
+        "maskDominantCoverageRatio" : 0.5333333333333333,
+        "maskIDsUnderSeed" : {
+          "4" : 1036,
+          "6" : 1184
+        },
+        "maskSafeRect" : [
+          32,
+          915,
+          167,
+          198
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned"
+      },
+      {
+        "blockIndex" : 10,
+        "bubbleIDConsistent" : true,
+        "cropMaskCoverageRatio" : 0.7510442773600668,
+        "currentBubbleID" : 7,
+        "maskDominantBubbleID" : 7,
+        "maskDominantCoverageRatio" : 0.7792397660818714,
+        "maskIDsUnderSeed" : {
+          "4" : 906,
+          "7" : 3198
+        },
+        "maskSafeRect" : [
+          239,
+          926,
+          138,
+          147
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned"
+      },
+      {
+        "blockIndex" : 11,
+        "bubbleIDConsistent" : false,
+        "cropMaskCoverageRatio" : 0.9269005847953217,
+        "currentBubbleID" : 4,
+        "maskDominantBubbleID" : 7,
+        "maskDominantCoverageRatio" : 0.7339743589743589,
+        "maskIDsUnderSeed" : {
+          "4" : 498,
+          "7" : 1374
+        },
+        "maskSafeRect" : [
+          239,
+          926,
+          138,
+          147
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeRect",
+        "safeLayoutSourceBeforeMask" : "bubbleInsetPartitioned"
+      },
+      {
+        "blockIndex" : 12,
+        "bubbleIDConsistent" : false,
+        "cropMaskCoverageRatio" : 0.27259818240830896,
+        "cropMaskRejectedReason" : "lowMaskCoverage",
+        "maskDominantBubbleID" : 7,
+        "maskDominantCoverageRatio" : 0.6040901940220241,
+        "maskIDsUnderSeed" : {
+          "5" : 755,
+          "7" : 1152
+        },
+        "maskSafeRect" : [
+          239,
+          926,
+          138,
+          147
+        ],
+        "renderMaskCollisionChecked" : true,
+        "renderMaskCollisionResolved" : true,
+        "renderMaskOverflowPixelCount" : 0,
+        "safeLayoutSourceAfterMask" : "maskSafeBlockFallback",
+        "safeLayoutSourceBeforeMask" : "blockFallbackNoBubble"
+      }
+    ],
+    "enabled" : true,
+    "imageHeight" : 1280,
+    "imageWidth" : 576,
+    "inconsistentBubbleAssignmentBlocks" : [
+      4,
+      5,
+      11,
+      12
+    ],
+    "instanceCount" : 8,
+    "instances" : [
+      {
+        "bbox" : [
+          401,
+          273,
+          175,
+          178
+        ],
+        "bboxPixelCount" : 31150,
+        "bubbleID" : 0,
+        "confidence" : 0.8199999928474426,
+        "maskCoverageRatio" : 0.9729052969502407,
+        "maskPixelCount" : 30306,
+        "notes" : [
+          "instance ID mask approximated from existing bubble bbox only",
+          "internal raster value is bubbleID + 1 so background can remain 0",
+          "overlap resolution is stable: smaller bbox area then higher confidence wins",
+          "ground truth is not used"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeBBox" : [
+          401,
+          273,
+          175,
+          178
+        ],
+        "safePixelCount" : 16510,
+        "safeRect" : [
+          425,
+          297,
+          127,
+          130
+        ],
+        "safeRectCoverageRatio" : 0.530016051364366,
+        "source" : "roundedRectApproximation"
+      },
+      {
+        "bbox" : [
+          39,
+          305,
+          202,
+          157
+        ],
+        "bboxPixelCount" : 31714,
+        "bubbleID" : 1,
+        "confidence" : 0.8199999928474426,
+        "maskCoverageRatio" : 0.9783061108658636,
+        "maskPixelCount" : 31026,
+        "notes" : [
+          "instance ID mask approximated from existing bubble bbox only",
+          "internal raster value is bubbleID + 1 so background can remain 0",
+          "overlap resolution is stable: smaller bbox area then higher confidence wins",
+          "ground truth is not used"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeBBox" : [
+          39,
+          305,
+          202,
+          157
+        ],
+        "safePixelCount" : 18400,
+        "safeRect" : [
+          60,
+          326,
+          160,
+          115
+        ],
+        "safeRectCoverageRatio" : 0.5801854070757394,
+        "source" : "roundedRectApproximation"
+      },
+      {
+        "bbox" : [
+          425,
+          522,
+          151,
+          114
+        ],
+        "bboxPixelCount" : 17214,
+        "bubbleID" : 2,
+        "confidence" : 0.8199999928474426,
+        "maskCoverageRatio" : 0.9786220518182874,
+        "maskPixelCount" : 16846,
+        "notes" : [
+          "instance ID mask approximated from existing bubble bbox only",
+          "internal raster value is bubbleID + 1 so background can remain 0",
+          "overlap resolution is stable: smaller bbox area then higher confidence wins",
+          "ground truth is not used"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeBBox" : [
+          425,
+          522,
+          151,
+          114
+        ],
+        "safePixelCount" : 10164,
+        "safeRect" : [
+          440,
+          537,
+          121,
+          84
+        ],
+        "safeRectCoverageRatio" : 0.5904496340188219,
+        "source" : "roundedRectApproximation"
+      },
+      {
+        "bbox" : [
+          0,
+          624,
+          206,
+          170
+        ],
+        "bboxPixelCount" : 35020,
+        "bubbleID" : 3,
+        "confidence" : 0.8199999928474426,
+        "maskCoverageRatio" : 0.9772701313535123,
+        "maskPixelCount" : 34224,
+        "notes" : [
+          "instance ID mask approximated from existing bubble bbox only",
+          "internal raster value is bubbleID + 1 so background can remain 0",
+          "overlap resolution is stable: smaller bbox area then higher confidence wins",
+          "ground truth is not used"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeBBox" : [
+          0,
+          624,
+          206,
+          170
+        ],
+        "safePixelCount" : 19840,
+        "safeRect" : [
+          23,
+          647,
+          160,
+          124
+        ],
+        "safeRectCoverageRatio" : 0.566533409480297,
+        "source" : "roundedRectApproximation"
+      },
+      {
+        "bbox" : [
+          67,
+          857,
+          238,
+          148
+        ],
+        "bboxPixelCount" : 35224,
+        "bubbleID" : 4,
+        "confidence" : 0.8199999928474426,
+        "maskCoverageRatio" : 0.9829661594367477,
+        "maskPixelCount" : 34624,
+        "notes" : [
+          "instance ID mask approximated from existing bubble bbox only",
+          "internal raster value is bubbleID + 1 so background can remain 0",
+          "overlap resolution is stable: smaller bbox area then higher confidence wins",
+          "ground truth is not used"
+        ],
+        "riskFlags" : [
+          "oversizedBubbleSplitCandidate"
+        ],
+        "safeBBox" : [
+          67,
+          857,
+          238,
+          148
+        ],
+        "safePixelCount" : 21384,
+        "safeRect" : [
+          87,
+          877,
+          198,
+          108
+        ],
+        "safeRectCoverageRatio" : 0.607086077674313,
+        "source" : "roundedRectApproximation"
+      },
+      {
+        "bbox" : [
+          429,
+          860,
+          147,
+          132
+        ],
+        "bboxPixelCount" : 19404,
+        "bubbleID" : 5,
+        "confidence" : 0.8199999928474426,
+        "maskCoverageRatio" : 0.9754689754689755,
+        "maskPixelCount" : 18928,
+        "notes" : [
+          "instance ID mask approximated from existing bubble bbox only",
+          "internal raster value is bubbleID + 1 so background can remain 0",
+          "overlap resolution is stable: smaller bbox area then higher confidence wins",
+          "ground truth is not used"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeBBox" : [
+          429,
+          860,
+          147,
+          132
+        ],
+        "safePixelCount" : 10656,
+        "safeRect" : [
+          447,
+          878,
+          111,
+          96
+        ],
+        "safeRectCoverageRatio" : 0.549165120593692,
+        "source" : "roundedRectApproximation"
+      },
+      {
+        "bbox" : [
+          0,
+          883,
+          231,
+          262
+        ],
+        "bboxPixelCount" : 60522,
+        "bubbleID" : 6,
+        "confidence" : 0.8199999928474426,
+        "maskCoverageRatio" : 0.6293909652688279,
+        "maskPixelCount" : 38092,
+        "notes" : [
+          "instance ID mask approximated from existing bubble bbox only",
+          "internal raster value is bubbleID + 1 so background can remain 0",
+          "overlap resolution is stable: smaller bbox area then higher confidence wins",
+          "ground truth is not used"
+        ],
+        "riskFlags" : [
+          "oversizedBubbleSplitCandidate"
+        ],
+        "safeBBox" : [
+          0,
+          883,
+          231,
+          262
+        ],
+        "safePixelCount" : 33066,
+        "safeRect" : [
+          32,
+          915,
+          167,
+          198
+        ],
+        "safeRectCoverageRatio" : 0.5463467829880043,
+        "source" : "roundedRectApproximation"
+      },
+      {
+        "bbox" : [
+          213,
+          900,
+          190,
+          199
+        ],
+        "bboxPixelCount" : 37810,
+        "bubbleID" : 7,
+        "confidence" : 0.8199999928474426,
+        "maskCoverageRatio" : 0.7286432160804021,
+        "maskPixelCount" : 27550,
+        "notes" : [
+          "instance ID mask approximated from existing bubble bbox only",
+          "internal raster value is bubbleID + 1 so background can remain 0",
+          "overlap resolution is stable: smaller bbox area then higher confidence wins",
+          "ground truth is not used"
+        ],
+        "riskFlags" : [
+          "oversizedBubbleSplitCandidate"
+        ],
+        "safeBBox" : [
+          213,
+          900,
+          190,
+          199
+        ],
+        "safePixelCount" : 20286,
+        "safeRect" : [
+          239,
+          926,
+          138,
+          147
+        ],
+        "safeRectCoverageRatio" : 0.5365247289076964,
+        "source" : "roundedRectApproximation"
+      }
+    ],
+    "maskSafeLayoutBlocks" : 13,
+    "notes" : [
+      "lightweight BubbleMask instance-ID approximation, not a real segmentation model",
+      "mask is used for diagnostics and safe-layout preference only",
+      "TextRegion crop adoption guardrails are unchanged"
+    ],
+    "renderMaskOverflowBlocks" : [
+
+    ]
+  },
   "bubbleSubRegionReport" : {
     "clampEligibleCount" : 2,
     "diagnostics" : [
@@ -50267,10 +51013,10 @@
 
     ],
     "renderMinFontSizeReachedBlocks" : [
-      5
+
     ],
     "renderTextTruncatedBlocks" : [
-      5
+
     ],
     "repeatedKeywordFailures" : {
       "senpai's" : 2
@@ -50323,7 +51069,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 15865,
+      "processingTimeMs" : 15626,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -50624,7 +51370,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 165108,
+      "processingTimeMs" : 168820,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -50643,7 +51389,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 15865,
+      "processingTimeMs" : 15626,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -50655,7 +51401,7 @@
     "fused" : {
       "accuracyVsGroundTruth" : 0.7383773465526562,
       "matchedGroundTruthCount" : 13,
-      "processingTimeMs" : 165108,
+      "processingTimeMs" : 168820,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 0
     },
@@ -50761,7 +51507,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 165108,
+      "processingTimeMs" : 168820,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -51718,20 +52464,20 @@
   "outputDirectoryCleaned" : true,
   "outputFileCountAfterCleanup" : 15,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
-    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
-    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
-    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
-    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/F772511B-3324-4EA6-8EDE-FBA87C1075BD\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
+    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
+    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
+    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
+    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D2F18641-479B-4269-A0B7-5AA8FB7D5CD6\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
   },
   "overallPassed" : false,
   "retainedOutputFiles" : [
@@ -67456,6 +68202,7 @@
           143
         ],
         "cropClampedByBubble" : true,
+        "cropMaskCoverageRatio" : 0.9976444608023556,
         "fusedTextBeforeCrop" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.5111428571428571,
@@ -67518,6 +68265,7 @@
           128
         ],
         "cropClampedByBubble" : false,
+        "cropMaskCoverageRatio" : 1,
         "fusedTextBeforeCrop" : "IVE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE.",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.7397142857142857,
@@ -67579,6 +68327,7 @@
           94
         ],
         "cropClampedByBubble" : false,
+        "cropMaskCoverageRatio" : 1,
         "fusedTextBeforeCrop" : "THE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.7937142857142857,
@@ -67639,6 +68388,7 @@
           105
         ],
         "cropClampedByBubble" : false,
+        "cropMaskCoverageRatio" : 1,
         "fusedTextBeforeCrop" : "ANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.8079787234042554,
@@ -67701,6 +68451,8 @@
           135
         ],
         "cropClampedByBubble" : false,
+        "cropMaskCoverageRatio" : 0.23315203315203314,
+        "cropMaskRejectedReason" : "lowMaskCoverage",
         "fusedTextBeforeCrop" : "LET'S\nBATTLER!",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.611,
@@ -67755,6 +68507,8 @@
           114
         ],
         "cropClampedByBubble" : true,
+        "cropMaskCoverageRatio" : 0.19008686765457333,
+        "cropMaskRejectedReason" : "lowMaskCoverage",
         "fusedTextBeforeCrop" : "I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.7757142857142857,
@@ -67817,6 +68571,7 @@
           148
         ],
         "cropClampedByBubble" : true,
+        "cropMaskCoverageRatio" : 1,
         "fusedTextBeforeCrop" : "THIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.8616666666666667,
@@ -67879,6 +68634,7 @@
           132
         ],
         "cropClampedByBubble" : true,
+        "cropMaskCoverageRatio" : 0.9801864801864801,
         "fusedTextBeforeCrop" : "WE NEED TO\nGET RESULTS\nAT THS\nTOURNAMENT\nTO SAVE THE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.7733333333333334,
@@ -67940,6 +68696,7 @@
           156
         ],
         "cropClampedByBubble" : false,
+        "cropMaskCoverageRatio" : 0.743316966721222,
         "fusedTextBeforeCrop" : "THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.773174172544764,
@@ -68002,6 +68759,8 @@
           96
         ],
         "cropClampedByBubble" : false,
+        "cropMaskCoverageRatio" : 0.5208333333333334,
+        "cropMaskRejectedReason" : "lowMaskCoverage",
         "fusedTextBeforeCrop" : "What\nare\nyOuL\never talking abodi?",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.8083636363636364,
@@ -68065,6 +68824,7 @@
           126
         ],
         "cropClampedByBubble" : false,
+        "cropMaskCoverageRatio" : 0.7510442773600668,
         "fusedTextBeforeCrop" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.6940909090909091,
@@ -68127,6 +68887,7 @@
           57
         ],
         "cropClampedByBubble" : true,
+        "cropMaskCoverageRatio" : 0.9269005847953217,
         "fusedTextBeforeCrop" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.6739999999999999,
@@ -68187,6 +68948,8 @@
           158
         ],
         "cropClampedByBubble" : false,
+        "cropMaskCoverageRatio" : 0.27259818240830896,
+        "cropMaskRejectedReason" : "lowMaskCoverage",
         "fusedTextBeforeCrop" : "City Battler\nOffline.\nTournament",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.80425,
@@ -68228,7 +68991,8 @@
       "TextRegion crop OCR uses post-fusion block bbox as seed and clamps to block-local subregion when eligible, otherwise assigned bubble bbox or content rect",
       "selection uses word preservation, text similarity, word count, Latin\/symbol ratios, OCR error heuristics, and crop clamp signals only",
       "ground truth is used only after selection to refresh evaluation metrics",
-      "subregion clamp does not loosen crop adoption guardrails"
+      "subregion clamp does not loosen crop adoption guardrails",
+      "BubbleMask coverage is diagnostic only and does not loosen TextRegion crop adoption guardrails"
     ],
     "rejectedBlockIndexes" : [
       0,

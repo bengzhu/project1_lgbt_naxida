@@ -376,9 +376,14 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
     var cropStrategyUsed: String?
     var safeLayoutRect: [Double]?
     var safeLayoutSource: String?
+    var safeLayoutSourceBeforeMask: String?
+    var maskSafeRect: [Double]?
     var renderCollisionChecked: Bool
     var renderCollisionInitialOverflow: Bool
     var renderCollisionResolved: Bool
+    var renderMaskCollisionChecked: Bool
+    var renderMaskCollisionResolved: Bool
+    var renderMaskOverflowPixelCount: Int
     var renderFontSize: Double?
     var renderMinFontSizeReached: Bool
     var renderTextTruncated: Bool
@@ -454,9 +459,14 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         case cropStrategyUsed
         case safeLayoutRect
         case safeLayoutSource
+        case safeLayoutSourceBeforeMask
+        case maskSafeRect
         case renderCollisionChecked
         case renderCollisionInitialOverflow
         case renderCollisionResolved
+        case renderMaskCollisionChecked
+        case renderMaskCollisionResolved
+        case renderMaskOverflowPixelCount
         case renderFontSize
         case renderMinFontSizeReached
         case renderTextTruncated
@@ -533,9 +543,14 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         cropStrategyUsed: String? = nil,
         safeLayoutRect: [Double]? = nil,
         safeLayoutSource: String? = nil,
+        safeLayoutSourceBeforeMask: String? = nil,
+        maskSafeRect: [Double]? = nil,
         renderCollisionChecked: Bool = false,
         renderCollisionInitialOverflow: Bool = false,
         renderCollisionResolved: Bool = false,
+        renderMaskCollisionChecked: Bool = false,
+        renderMaskCollisionResolved: Bool = false,
+        renderMaskOverflowPixelCount: Int = 0,
         renderFontSize: Double? = nil,
         renderMinFontSizeReached: Bool = false,
         renderTextTruncated: Bool = false,
@@ -618,9 +633,14 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         self.cropStrategyUsed = cropStrategyUsed
         self.safeLayoutRect = safeLayoutRect
         self.safeLayoutSource = safeLayoutSource
+        self.safeLayoutSourceBeforeMask = safeLayoutSourceBeforeMask
+        self.maskSafeRect = maskSafeRect
         self.renderCollisionChecked = renderCollisionChecked
         self.renderCollisionInitialOverflow = renderCollisionInitialOverflow
         self.renderCollisionResolved = renderCollisionResolved
+        self.renderMaskCollisionChecked = renderMaskCollisionChecked
+        self.renderMaskCollisionResolved = renderMaskCollisionResolved
+        self.renderMaskOverflowPixelCount = renderMaskOverflowPixelCount
         self.renderFontSize = renderFontSize
         self.renderMinFontSizeReached = renderMinFontSizeReached
         self.renderTextTruncated = renderTextTruncated
@@ -698,9 +718,14 @@ struct MangaOverlayProbeBlock: Identifiable, Equatable, Codable, Sendable {
         try container.encodeIfPresent(cropStrategyUsed, forKey: .cropStrategyUsed)
         try container.encodeIfPresent(safeLayoutRect, forKey: .safeLayoutRect)
         try container.encodeIfPresent(safeLayoutSource, forKey: .safeLayoutSource)
+        try container.encodeIfPresent(safeLayoutSourceBeforeMask, forKey: .safeLayoutSourceBeforeMask)
+        try container.encodeIfPresent(maskSafeRect, forKey: .maskSafeRect)
         try container.encode(renderCollisionChecked, forKey: .renderCollisionChecked)
         try container.encode(renderCollisionInitialOverflow, forKey: .renderCollisionInitialOverflow)
         try container.encode(renderCollisionResolved, forKey: .renderCollisionResolved)
+        try container.encode(renderMaskCollisionChecked, forKey: .renderMaskCollisionChecked)
+        try container.encode(renderMaskCollisionResolved, forKey: .renderMaskCollisionResolved)
+        try container.encode(renderMaskOverflowPixelCount, forKey: .renderMaskOverflowPixelCount)
         try container.encodeIfPresent(renderFontSize, forKey: .renderFontSize)
         try container.encode(renderMinFontSizeReached, forKey: .renderMinFontSizeReached)
         try container.encode(renderTextTruncated, forKey: .renderTextTruncated)
@@ -1052,6 +1077,8 @@ struct MangaOverlayTextRegionCropDiagnostic: Equatable, Codable, Sendable {
     var subRegionRejectedReason: String?
     var cropBBoxBeforeSubRegionClamp: [Double]
     var cropBBoxAfterSubRegionClamp: [Double]
+    var cropMaskCoverageRatio: Double?
+    var cropMaskRejectedReason: String?
     var cropClampedByBubble: Bool
     var paddingX: Double
     var paddingY: Double
@@ -1103,6 +1130,53 @@ struct MangaOverlayBubbleSubRegionReport: Equatable, Codable, Sendable {
     var clampEligibleCount: Int
     var oversizedBubbleIDs: [Int]
     var diagnostics: [MangaOverlayBubbleSubRegionDiagnostic]
+    var notes: [String]
+}
+
+struct MangaOverlayBubbleMaskInstanceDiagnostic: Equatable, Codable, Sendable {
+    var bubbleID: Int
+    var bbox: [Double]
+    var maskPixelCount: Int
+    var bboxPixelCount: Int
+    var maskCoverageRatio: Double
+    var source: String
+    var confidence: Double
+    var safePixelCount: Int
+    var safeBBox: [Double]?
+    var safeRect: [Double]?
+    var safeRectCoverageRatio: Double
+    var riskFlags: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayBubbleMaskBlockDiagnostic: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var currentBubbleID: Int?
+    var maskDominantBubbleID: Int?
+    var maskDominantCoverageRatio: Double
+    var maskIDsUnderSeed: [String: Int]
+    var bubbleIDConsistent: Bool
+    var safeLayoutSourceBeforeMask: String?
+    var safeLayoutSourceAfterMask: String?
+    var maskSafeRect: [Double]?
+    var renderMaskCollisionChecked: Bool
+    var renderMaskCollisionResolved: Bool
+    var renderMaskOverflowPixelCount: Int
+    var cropMaskCoverageRatio: Double?
+    var cropMaskRejectedReason: String?
+}
+
+struct MangaOverlayBubbleMaskReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var imageWidth: Int
+    var imageHeight: Int
+    var instanceCount: Int
+    var instances: [MangaOverlayBubbleMaskInstanceDiagnostic]
+    var blockDiagnostics: [MangaOverlayBubbleMaskBlockDiagnostic]
+    var maskSafeLayoutBlocks: Int
+    var bboxFallbackBlocks: Int
+    var inconsistentBubbleAssignmentBlocks: [Int]
+    var renderMaskOverflowBlocks: [Int]
     var notes: [String]
 }
 
@@ -1192,6 +1266,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var fusionResults: [MangaOverlayFusionResult]
     var textRegionCropReport: MangaOverlayTextRegionCropReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
+    var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
     var batchTranslationComparison: MangaBatchTranslationComparison?
     var deterministicDecodingCheck: MangaDeterministicDecodingCheck?
