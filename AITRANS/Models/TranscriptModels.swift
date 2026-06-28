@@ -1071,6 +1071,14 @@ struct MangaOverlayTextRegionCropDiagnostic: Equatable, Codable, Sendable {
     var regionBBox: [Double]
     var cropBBox: [Double]
     var clampSource: String
+    var correctedBubbleID: Int?
+    var splitCandidateID: Int?
+    var cropBBoxBeforeAssignmentCorrection: [Double]?
+    var cropBBoxAfterAssignmentCorrection: [Double]?
+    var cropMaskCoverageBefore: Double?
+    var cropMaskCoverageAfter: Double?
+    var assignmentCorrectionRejectedReason: String?
+    var splitCandidateRejectedReason: String?
     var subRegionID: Int?
     var subRegionBBox: [Double]?
     var subRegionCoverageRatio: Double?
@@ -1180,6 +1188,61 @@ struct MangaOverlayBubbleMaskReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaOverlayBubbleAssignmentCorrectionDiagnostic: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var currentBubbleID: Int?
+    var maskDominantBubbleID: Int?
+    var maskDominantCoverageRatio: Double
+    var maskIDsUnderSeed: [String: Int]
+    var correctionRecommended: Bool
+    var correctedBubbleID: Int?
+    var correctionAppliedToCropClamp: Bool
+    var correctionAppliedToSafeLayout: Bool
+    var decision: String
+    var rejectionReasons: [String]
+    var riskFlags: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayBubbleAssignmentCorrectionReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var evaluatedBlockCount: Int
+    var inconsistentBlockIndexes: [Int]
+    var recommendedCorrectionBlocks: [Int]
+    var appliedToCropClampBlocks: [Int]
+    var appliedToSafeLayoutBlocks: [Int]
+    var rejectedCorrectionBlocks: [Int]
+    var diagnostics: [MangaOverlayBubbleAssignmentCorrectionDiagnostic]
+    var notes: [String]
+}
+
+struct MangaOverlayBubbleSplitCandidateDiagnostic: Equatable, Codable, Sendable {
+    var id: Int
+    var parentBubbleID: Int
+    var seedBlockIndexes: [Int]
+    var bbox: [Double]
+    var safeRect: [Double]?
+    var maskPixelCount: Int
+    var parentMaskCoverageRatio: Double
+    var seedCoverageRatio: Double
+    var siblingOverlapRatio: Double
+    var clampEligible: Bool
+    var appliedToBlockIndexes: [Int]
+    var rejectionReasons: [String]
+    var riskFlags: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayBubbleSplitCandidateReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var parentBubbleIDs: [Int]
+    var candidateCount: Int
+    var clampEligibleCount: Int
+    var appliedToCropClampBlocks: [Int]
+    var diagnostics: [MangaOverlayBubbleSplitCandidateDiagnostic]
+    var notes: [String]
+}
+
 struct MangaCleanTextDiagnosticCase: Equatable, Codable, Sendable {
     var index: Int
     var groundTruthType: String
@@ -1267,6 +1330,8 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var textRegionCropReport: MangaOverlayTextRegionCropReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
+    var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
+    var bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?
     var cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
     var batchTranslationComparison: MangaBatchTranslationComparison?
     var deterministicDecodingCheck: MangaDeterministicDecodingCheck?
