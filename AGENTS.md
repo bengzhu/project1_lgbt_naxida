@@ -1,175 +1,107 @@
-# AITRANS 后续 Codex Agent 提示词
+# AGENTS.md
+本文是 AITRANS 的核心入口记忆、项目总览、基本规则和多 Agent 工作流。保持精简；历史细节看 `update_log.md`，当前架构看 `md/flow/flow.md`，测试选择看 `md/test/test.md`。
 
-你是接手 `AITRANS` 项目的 Codex 工程 agent。这个仓库是一个 SwiftUI iOS 本地 AI 翻译原型，当前重点不是普通翻译 UI，而是漫画截图 OCR、本地翻译、覆盖合成和探针诊断链路。请按本文工作，不要重新猜项目结构。
+## 1. 项目总览
+AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点不是普通翻译 UI，而是漫画截图 OCR、本地翻译、覆盖合成和探针诊断链路。
 
-## 0. 接手前必须做
-
-每次开始任务先读：
-
-1. `README.md`
-2. `git status --short`
-3. 最近 git 记录：`git log --oneline -5`
-4. 如果任务涉及漫画探针，再读：
-   - `AITRANS/Services/MangaOverlayProbeService.swift`
-   - `AITRANS/Services/TranslationSessionStore.swift`
-   - `AITRANS/Models/TranscriptModels.swift`
-   - `test/1.ground_truth.json`
-   - 最新 `output/probe_report.json`
-   - 最新 `output/1_ocr_probe_text.txt`
-
-不要假设 README 里的历史数字都仍可作为验收。以最新 `probe_report.json` 和当前代码为准。
-
-## 1. 项目定位
-
-AITRANS 是 SwiftUI iOS 本地翻译原型：
+核心事实：
 
 - 默认 `MockGemmaService` 用于 UI 和数据流冒烟。
-- `Local` 模式通过 `llama.cpp` 加载 GGUF，在设备或模拟器本地生成翻译。
-- 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，它适合验证下载、加载、接口和闪退风险，不适合当翻译质量基准。
-- 当前质量验证更应考虑 `Qwen2.5-0.5B-Instruct-GGUF` 的 `q4_k_m`，但不要在没有任务要求时擅自更换模型。
+- `Local` 模式通过 `GemmaLocalService` + `LlamaRuntime` + `llama.cpp` 加载 GGUF。
+- 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合当翻译质量基准。
+- 质量对比优先考虑更强小模型，例如 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 
-## 2. 当前重点链路
+## 2. 必读顺序
+每轮开始先读：
 
-漫画覆盖翻译探针固定读取 bundle 内 `test/1.png`：
+1. `README.md`
+2. `AGENTS.md`
+3. `git status --short`
+4. `git log --oneline -5`
+5. `update_log.md`
+6. `md/flow/flow.md`
+7. `md/flow/flowchart.md`
+8. `md/test/test.md`
 
-1. 裁掉浏览器 UI / 广告 / 底部导航。
-2. 对漫画内容做 Vision OCR。
-3. 合并 OCR observations 为逻辑文字块。
-4. 用极简英译中 prompt 翻译：`把以下翻译成中文：`
-5. 覆盖绘制译文；失败块也要绘制 `翻译失败 + OCR 原文`，不能静默跳过。
-6. 输出调试 PNG、JSON 和纯文本报告到 App 沙盒 `Application Support/AITRANS/Output/`。
-7. 再用 `scripts/export-probe-output.sh` 导出到项目根 `output/`。
-
-输出目录每轮都必须清理，不能堆积旧图。当前报告会记录：
-
-- `outputDirectoryCleaned`
-- `outputCleanupRemovedItemCount`
-- `outputFileCountAfterCleanup`
-- `retainedOutputFiles`
-- `outputCleanupPolicy`
-
-## 3. 当前真实基线
-
-截至 README v21，`test/1.png` 的可信基线是：
-
-- 人工真值：`12` 条，`11 dialogue + 1 decorative`
-- 整页 OCR 最终块：`totalBlocksDetected = 12`
-- 可信匹配：`10 matched / 2 unmatched`
-- 整页核心对话平均 OCR 相似度：`0.6196`
-- 装饰标题平均 OCR 相似度：`0.8000`
-- bubble-first 核心对话平均 OCR 相似度：`0.7397`
-- clean text diagnostic：`4/11` 通过，`passRate = 0.3636`
-- 高频专有名词损坏：`repeatedKeywordFailures = { "senpai's": 2 }`
-- 双框架一致性：`consistencyPassed = true`
-
-旧数字 `0.8378 / 0.8755` 已确认不可信。原因：
-
-- 旧 `test/1.ground_truth.json` 不完整。
-- 旧匹配逻辑会强行把 OCR 块配到不相关真值。
-- 旧相似度算法对词序错乱过于宽容。
-
-后续不要再用旧 `accuracyVsGroundTruth = 0.8378 / 0.8755` 做验收，只能作为历史对照。
-
-## 4. 关键代码位置
+涉及漫画探针、OCR、覆盖绘制、翻译质量或报告模型时，继续读：
 
 - `AITRANS/Services/MangaOverlayProbeService.swift`
-  - 漫画探针主流程、OCR、合并、渲染、报告、contact sheet。
 - `AITRANS/Services/TranslationSessionStore.swift`
-  - 翻译请求组装、候选选择、质量判定、clean text diagnostic、开发页状态。
 - `AITRANS/Models/TranscriptModels.swift`
-  - 探针报告模型、块模型、diagnostics、framework comparison、clean text diagnostic 模型。
-- `AITRANS/Services/GemmaLocalService.swift`
-  - 真实本地模型层，封装 llama.cpp 调用和输出清洗。
-- `AITRANS/Services/LlamaRuntime.swift`
-  - llama.cpp C API 封装。
 - `test/1.ground_truth.json`
-  - 当前漫画图人工真值，结构为 `{ "text": "...", "type": "dialogue|decorative" }`。
-- `scripts/export-probe-output.sh`
-  - 从 CoreSimulator App 容器导出探针输出到项目根 `output/`。
+- 最新 `output/probe_report.json`
+- 最新 `output/clean_text_diagnostic.json`
+- 最新 `output/1_ocr_probe_text.txt`
 
-## 5. 探针输出文件
+不要假设 README 的历史数字仍可验收；以当前代码、最新 `output/`、`metrics/version_history.csv` 和实际测试结果为准。
 
-常见最新输出：
+## 3. 核心架构边界
+- `TranslationSessionStore` 是 UI 状态、模型调用、历史、诊断和持久化的统一调度中心。
+- UI 层只触发 store 方法，不绕开 store 直接改持久化、模型状态或报告状态。
+- 普通图片 OCR 使用 `VisionOCRService`；漫画覆盖探针使用 `MangaOverlayProbeService` 的独立诊断链路。
+- 用户实际翻译和 summary 走 sampled 解码；漫画探针、raw 诊断、clean text、batch 对照和纠错翻译对照走 deterministic 解码。
+- `test/1.ground_truth.json` 只能用于探针验证和统计，不能用于真实产品路径或生产候选选择。
+- 模型文件不进仓库。
 
-- `output/probe_report.json`
-- `output/clean_text_diagnostic.json`
-- `output/1_ocr_probe_text.txt`
-- `output/1_probe_contact_sheet.png`
-- `output/1_debug_boxes.png`
-- `output/1_translated_overlay.png`
-- `output/1_ocr_text_overlay.png`
-- `output/1_bubble_text_overlay.png`
-- `output/1_bubble_crops.png`
-- `output/1_deterministic_correction_overlay.png`
-- `output/1_deterministic_translation_overlay.png`
-- `output/1_block_crops.png`
-- `output/1_preprocessed_content.png`
+## 4. 漫画探针硬规则
+漫画覆盖翻译探针固定读取 bundle 内 `test/1.png`：
 
-看质量时优先打开 `1_probe_contact_sheet.png`，再按问题查看单图。
-
-## 6. 必须遵守的质量原则
-
-### 6.1 不隐藏失败
-
-任何 OCR 块翻译失败，都必须：
-
-- 保留在 `probe_report.json` 的 `blocks` 明细中。
-- 在覆盖图上显示出来。
-- 写入 `blockPassed = false` 和明确 `failureReasons`。
-- 记录 `translationDecisionTrace` 和 `translationFailureDetail`。
-
-不要因为失败就跳过绘制。
-
-### 6.2 不用真值做生产决策
-
-`test/1.ground_truth.json` 只能用于探针验证和统计，不能用于真实产品路径的候选选择。
-
-候选选择必须依赖非真值信号，例如：
-
-- OCR / Vision 置信度
-- 文本质量评分
-- raw OCR 与预处理 OCR 的词保留关系
-- 合理的长度、字符、词序启发式
-
-可以用真值验证这个策略是否变好，但不能把真值作为选择依据。
-
-### 6.3 可信匹配必须能拒绝
-
-真值匹配不能强行配最近项。低于阈值的块必须标为：
-
-```json
-"groundTruthMatch": "unmatched"
+```text
+test/1.png
+  -> 裁掉浏览器 UI / 广告 / 底部导航
+  -> Vision OCR
+  -> 合并 OCR observations 为逻辑文字块
+  -> 极简英译中 prompt：把以下翻译成中文：
+  -> 覆盖绘制译文或失败文本
+  -> 输出 JSON / TXT / PNG 到 App 沙盒 Output
+  -> scripts/export-probe-output.sh 导出到项目根 output/
 ```
 
-`unmatched` 块保留在报告里，但不纳入准确率平均。
+必须遵守：
 
-### 6.4 相似度必须词序敏感
+- 失败块必须保留在 `probe_report.json` 的 `blocks` 明细中。
+- 失败块必须在覆盖图上显示 `翻译失败 + OCR 原文`，不能静默跳过。
+- 失败块必须写入 `blockPassed = false`、`failureReasons`、`translationDecisionTrace`、`translationFailureDetail`。
+- 输出目录每轮必须清理，不能混入旧 PNG / JSON。
+- 可信匹配必须能拒绝；低于阈值写 `groundTruthMatch = "unmatched"`，且不纳入平均准确率。
+- OCR 相似度使用词级 Levenshtein；保留 `ocrLegacySimilarity` 和 `wordOrderPreserved`。
+- 核心对话 `dialogue` 和装饰标题 `decorative` 必须分开统计。
 
-当前使用词级 Levenshtein 相似度，并保留旧相似度 `ocrLegacySimilarity` 作对照。不要退回对词序错乱过于宽容的算法。
+禁止：
 
-报告中必须保留：
+- 不要用 ground truth 做生产候选选择。
+- 不要把旧 `accuracyVsGroundTruth = 0.8378 / 0.8755` 当当前基线。
+- 不要只看 `cjkCharacters > 0` 判定翻译成功。
+- 不要因为 clean text 失败就继续盲目调 OCR。
+- 不要在未证明收益前把 deterministic correction、bubble-first 或 batch translation 替换为主流程。
 
-- `ocrGroundTruthSimilarity`
-- `ocrLegacySimilarity`
-- `wordOrderPreserved`
+## 5. 当前真实基线
+当前可信基线以最新 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 为准。最近记录的 v9 / 当前输出基线是：
 
-### 6.5 核心对话和装饰标题分开统计
+- `totalBlocksDetected = 14`
+- `groundTruthMatchedBlocks = 10`
+- `groundTruthUnmatchedBlocks = 4`
+- `averageCoreDialogueOCRSimilarity = 0.6131`
+- `averageDecorativeOCRSimilarity = 0.8000`
+- `wholePageAccuracyVsGroundTruth = 0.6131`
+- `bubbleFirstAccuracyVsGroundTruth = 0.7397`
+- `frameworkComparison.consistencyPassed = true`
+- `cleanTextDiagnostic.passRate = 0.4545`
+- `passedBlocks = 1`
+- `failedBlocks = 13`
+- `translationFailureBreakdown = { ocrInputSuspect: 10, translationLanguageQualityFailure: 3 }`
+- `likelyRuleFalseFailureBlocks = []`
 
-`test/1.ground_truth.json` 中：
+当前结论：
 
-- `dialogue` 是核心对话。
-- `decorative` 是装饰性标题，例如 `City Battler Offline Tournament 開催!!`。
+- 主要瓶颈是 OCR 文本质量和 Gemma 270M 翻译能力，不是覆盖绘制，也不是规则过严。
+- Vision `customWords` 对当前图最终合并文本无明显改变。
+- deterministic correction 只做探针对照，不替换主翻译输入。
+- bubble-first 比整页 OCR 可信核心准确率高，但会漏掉整页路径独有真实内容 `Let's Battle!`，不能直接独占主流程。
+- tagged batch translation 当前格式崩坏，只保留诊断分支。
 
-平均准确率必须区分：
-
-- `averageCoreDialogueOCRSimilarity`
-- `averageDecorativeOCRSimilarity`
-
-不要混在一起算一个看似好看的总分。
-
-## 7. 翻译失败排查顺序
-
-不要只看覆盖图猜原因。按这个顺序查：
+## 6. 翻译失败排查顺序
+不要只看覆盖图猜原因。按顺序查：
 
 1. `failureCategory`
 2. `rawOutputClassification`
@@ -180,93 +112,35 @@ AITRANS 是 SwiftUI iOS 本地翻译原型：
 7. `ocrProbeNotes`
 8. `cleanTextDiagnostic`
 
-判断规则：
+判断口径：
 
 - `ocrInputSuspect`：优先修 OCR、合并、裁切、纠错或气泡路径。
 - `modelOutputFailure`：优先查模型 raw 输出、采样、prompt 或换模型。
-- `translationLanguageQualityFailure`：模型给了中文或半中文，但候选质量差，比如太短、混英文、解释型输出。
+- `translationLanguageQualityFailure`：模型给了中文或半中文，但候选太短、混英文、像解释或列表。
 - `ruleFalseFailureSuspected`：才考虑放宽判定规则。
 
-如果 `likelyRuleFalseFailureBlocks = []`，不要声称“规则太严格”。当前多轮实测都指向：Gemma 270M 翻译能力和 OCR 输入错误是主要瓶颈。
+如果 `likelyRuleFalseFailureBlocks = []`，不要声称“规则太严格”。
 
-## 8. 当前已知问题
+## 7. Agent A/B/C 迭代工作流
+### 人工
+人工提出目标、边界、禁止项、验收标准和测试要求，并把入口文档、历史日志、核心流程、测试规范和相关上下文交给 Agent A。
 
-1. Gemma 270M 翻译质量差：
-   - clean text direct-to-model 只有 `4/11` 通过。
-   - 常见问题：复读英文、混入 `Senpai's house` / `meaningless` / `disbanded`、输出解释或列表。
+### Agent A：目标分析与提示词
+Agent A 默认不直接写代码。必须读取入口文档、历史日志、核心流程、测试规范和相关源码，明确本轮目标、非目标、边界、依赖、风险、关键文件、测试要求和验收标准。输出写给 Agent B 的版本化提示词，保存到 `md/prompt/vX（阶段）/vX.Y（任务）.md`。
 
-2. OCR 找到区域但文本仍错：
-   - `THE CITY RATTLER / STATE IN A PEN DAYS.`
-   - `THAT'S / WE'RE WHY / TRANINS SPECIAL`
-   - `SUGSESTION THE / OVERRULED...`
-   - `SENPAIS / SENPArS / LOSIC`
+### Agent B：实现与测试
+Agent B 按 Agent A 提示词小步实现，不做无关重构。必须按 `md/test/test.md` 选择测试层级，记录具体命令和结果，说明未跑测试的原因，不伪造验证，不回滚用户或其他 Agent 的改动。
 
-3. Vision `customWords` 对当前图最终合并文本没有明显改变：
-   - `changedBlockIndexes = []`
-   - 不能指望它单独解决常见词误识别。
+### Agent C：验收与核心文档更新
+Agent C 查看实际 diff，核对测试结果，检查架构边界、测试充分性、文档同步和未说明风险。通过后更新 `md/flow/flow.md`、`md/flow/flowchart.md`，必要时追加 `update_log.md` 和 `metrics/version_history.csv`。
 
-4. 确定性 OCR 纠错能提升相似度，但翻译仍未必通过：
-   - 修正 OCR 后，Gemma 270M 仍可能复读或输出英文。
-   - 当前纠错候选只做探针对照，不替换主流程。
+## 8. 测试规则
+- 文档-only 修改至少运行 `git diff --check`。
+- Swift 或 Xcode 工程修改至少运行命令行 build。
+- 漫画探针、翻译链路或报告模型修改必须重新跑探针、导出最新 `output/`、解析 JSON，并汇总关键数字。
+- 读取 CoreSimulator App 容器通常需要更高权限；受限环境中要请求批准或明确说明未导出原因。
 
-5. bubble-first 当前比整页 OCR 可信核心准确率更高，但仍是探针对照路径，不是主流程替换。
-
-## 9. 后续优先级建议
-
-按优先级推进，不要同时大改所有东西：
-
-### P0：模型质量对比
-
-下一轮优先引入或手动导入更强的小模型做对比，例如 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`。
-
-必须复用现有诊断：
-
-- 开发页 raw 探针
-- `clean_text_diagnostic.json`
-- 漫画覆盖探针
-
-对比时记录：
-
-- clean text pass rate
-- raw 输出类型分布
-- 是否仍复读英文
-- 是否仍输出解释/列表
-- 漫画端到端 `blockPassed`
-
-### P1：OCR / bubble-first 继续降噪
-
-目标不是让块数更高，而是让每个最终块更接近真实对话框。
-
-重点：
-
-- 减少 bubble-first 重复块。
-- 让底部相邻气泡拆分更稳。
-- 保留 `What are you even talking about?`、`We need to get results...` 等当前 bubble-first 找到而整页漏/差的块。
-- 不要让浏览器 UI、广告、导航进入 OCR。
-
-### P2：OCR 纠错策略
-
-当前 LLM 纠错护栏有效，但 Gemma 270M 纠错不可用。后续可评估：
-
-- 更强模型纠错。
-- 更小范围的确定性规则。
-- 专有名词词表。
-- 只在相似度和词形证据足够时替换主翻译输入。
-
-替换主流程前必须用探针证明收益。
-
-### P3：产品化 UI
-
-当前不优先。除非用户明确要求，否则不要先做：
-
-- 开发页可视化开关 UI
-- ReplayKit / 悬浮窗
-- 音频功能扩展
-- 大规模产品界面重构
-
-## 10. 运行和验证命令
-
-命令行构建：
+常用命令：
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
@@ -277,78 +151,32 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-导出模拟器探针输出：
-
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer scripts/export-probe-output.sh booted
 ```
-
-如果需要指定设备，使用实际 device id：
-
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer scripts/export-probe-output.sh <DEVICE_ID>
-```
-
-注意：读取 CoreSimulator App 容器通常需要更高权限；在受限环境中要请求批准。
-
-JSON 检查：
 
 ```sh
 python3 -m json.tool test/1.ground_truth.json
 python3 -m json.tool output/probe_report.json
 python3 -m json.tool output/clean_text_diagnostic.json
-```
-
-空白检查：
-
-```sh
 git diff --check
 ```
 
-## 11. 每轮完成标准
+## 9. 文档规则
+- `AGENTS.md` 是唯一核心入口文档。
+- `update_log.md` 记录版本历史、关键决策、验证结果和遗留问题。
+- `md/flow/flow.md` 只写当前真实架构和运行流程。
+- `md/flow/flowchart.md` 必须与 `flow.md` 同步。
+- `md/test/test.md` 是测试选择依据。
+- `md/prompt/` 保存 Agent A 的版本化实现提示词。
+- 功能更新或 bug 修复后，按影响同步更新 README 近期记录、`update_log.md`、flow/test 文档和 `metrics/version_history.csv`。
 
-每次改漫画探针或翻译链路，至少做到：
+## 10. 交付格式
+最终回复使用中文，至少包含：
 
-1. 构建通过，或明确说明未构建原因。
-2. 重新跑探针，或明确说明未跑原因。
-3. 导出最新 `output/`。
-4. 检查 `probe_report.json`、`clean_text_diagnostic.json` 可解析。
-5. 汇总关键数字：
-   - `totalBlocksDetected`
-   - `groundTruthMatchedBlocks`
-   - `groundTruthUnmatchedBlocks`
-   - `averageCoreDialogueOCRSimilarity`
-   - `averageDecorativeOCRSimilarity`
-   - `frameworkComparison.consistencyPassed`
-   - `cleanTextDiagnostic.passRate`
-   - `likelyRuleFalseFailureBlocks`
-   - `translationFailureBreakdown`
-6. 更新 `README.md` 的“近期优化记录”，写清：
-   - 改了什么
-   - 验证了什么
-   - 新数字是什么
-   - 仍有什么风险
-
-## 12. 禁止事项
-
-- 不要把旧 `0.8378 / 0.8755` 当新基线。
-- 不要用 ground truth 参与生产候选选择。
-- 不要失败时静默跳过覆盖绘制。
-- 不要只看 `cjkCharacters > 0` 就判定翻译成功。
-- 不要因为 clean text 失败就继续盲目调 OCR。
-- 不要在未证明收益前把确定性纠错候选替换为主翻译输入。
-- 不要把模型文件提交进仓库。
-- 不要清理或回退用户未要求回退的改动。
-- 不要大范围重构 SwiftUI UI，除非任务明确要求。
-
-## 13. 给后续 Codex 的默认执行口径
-
-接到新任务时，用下面口径工作：
-
-1. 先读 README 和本文件，确认当前基线。
-2. 再定位相关代码，不凭记忆改。
-3. 小步修改，每一步都能用探针或 JSON 证明。
-4. 数字从明细实时算，不维护两套统计。
-5. 失败分类要诚实，不为好看调数字。
-6. 如果 clean text 仍失败，优先讨论模型质量，而不是继续放宽规则。
-7. 最终回复用中文，给出改动、验证、关键数字和产物路径。
+- 改了什么。
+- 关键文件。
+- 已运行的验证命令和结果。
+- 未运行的测试及原因。
+- 涉及漫画探针或翻译链路时，汇总关键数字。
+- 已知风险和下一步建议。

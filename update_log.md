@@ -478,13 +478,13 @@
 
 核心变更：
 
-- 新增标准入口 `AGENT.md`，保留 `AGENTS.md` 作为漫画探针详细约束。
+- 整合标准入口为 `AGENTS.md`，作为项目唯一核心入口文档。
 - 新增 `md/prompt/README.md`、`md/test/test.md`、`md/flow/flow.md`、`md/flow/flowchart.md`。
 - 根据 git 记录、README 和指标 CSV 整理本 `update_log.md`。
 
 关键文件：
 
-- `AGENT.md`
+- `AGENTS.md`
 - `update_log.md`
 - `md/prompt/README.md`
 - `md/test/test.md`
