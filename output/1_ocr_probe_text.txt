@@ -39,6 +39,8 @@ textBoxCandidate: id=0 source=bubbleBBoxTextRegionCropBBox bbox=[478,300,95,143]
 segmentMask: pixels=11455 rect=[401,286,175,165] fillRects=713 textBoxCoverage=1.000 bubbleCoverage=0.998 usableForCropEvidence=true rejections=
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[0:seedTightTextBox:score=0.980 bbox=[494,322,63,80] | 1:bubbleContainedTextBox:score=0.970 bbox=[489,315,73,94] | 2:maskMajorityTextBox:score=0.960 bbox=[490,317,62,90]] rejectedPlanIDs=[] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=0 controlVariant=currentTextRegionCrop controlText=THAT'S / RIGHT, / RIGHT / NOW / I'M- controlQuality=0.511 bestShadowID=1 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=THAT'S / RIGHT, / RIGHT / NOW / I'M- bestQuality=0.511 qualityDelta=0.000 promotionVerdict=controlStillBest stopReasons=
+textBoxPlanFailure: primary=controlStillBest verdict=controlStillBest action=noActionControlBest bestShadowBetterThanControl=false blockers=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | sameAsFusedText
+promotionChecks: passed=noBubbleMaskConflict | noIntroducedLikelyOCRError | noRawWordsLost | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded | wordPreservationRatio>=0.80 failed=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | sameAsFusedText
 cropFailureAttribution: sameAsFusedText
 safeLayoutRect: [425,297,127,130]
 safeLayoutSource: maskSafeRect
@@ -108,6 +110,8 @@ textBoxCandidate: id=1 source=bubbleBBoxTextRegionCropBBox bbox=[95,319,91,128] 
 segmentMask: pixels=6270 rect=[93,323,103,139] fillRects=432 textBoxCoverage=0.969 bubbleCoverage=1.000 usableForCropEvidence=true rejections=
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[3:seedTightTextBox:score=0.980 bbox=[110,352,61,62] | 4:bubbleContainedTextBox:score=0.970 bbox=[105,347,71,72] | 5:maskMajorityTextBox:score=0.960 bbox=[106,348,69,70]] rejectedPlanIDs=[] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=4 controlVariant=currentTextRegionCrop controlText=I'VE / ARRIVED / AT REN- / SENPArS / • HOUSE. controlQuality=0.645 bestShadowID=5 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=I'VE / ARRIVED / AT REN- / SENPAI'S / HOUSE, bestQuality=0.696 qualityDelta=0.051 promotionVerdict=noLocalOCRBenefit stopReasons=
+textBoxPlanFailure: primary=candidatePromotionBlocked verdict=noLocalOCRBenefit action=candidateNeedsPromotionGateReview bestShadowBetterThanControl=true blockers=qualityDeltaBelowOrEqual0.08
+promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noRawWordsLost | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded | wordPreservationRatio>=0.80 failed=qualityDeltaBelowOrEqual0.08
 cropFailureAttribution: introducedLikelyOCRError | localVisionRegression
 safeLayoutRect: [60,326,160,115]
 safeLayoutSource: maskSafeRect
@@ -177,6 +181,8 @@ textBoxCandidate: id=2 source=bubbleBBoxTextRegionCropBBox bbox=[480,532,81,94] 
 segmentMask: pixels=1182 rect=[497,562,47,34] fillRects=62 textBoxCoverage=1.000 bubbleCoverage=1.000 usableForCropEvidence=true rejections=
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[6:seedTightTextBox:score=0.980 bbox=[490,556,61,46] | 7:bubbleContainedTextBox:score=0.970 bbox=[485,553,71,52] | 8:maskMajorityTextBox:score=0.960 bbox=[486,553,69,52]] rejectedPlanIDs=[] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=8 controlVariant=currentTextRegionCrop controlText=nil controlQuality=0.000 bestShadowID=11 bestVariant=preCropTextBoxPlan.maskMajorityTextBox bestText=THE OTE / fafiitt / TAPTEIN bestQuality=0.802 qualityDelta=0.802 promotionVerdict=noLocalOCRBenefit stopReasons=localVisionCropNotPromising
+textBoxPlanFailure: primary=localVisionCropNotPromising verdict=noLocalOCRBenefit action=stopLocalVisionCrop bestShadowBetterThanControl=true blockers=rawWordsLost | wordPreservationRatioBelow0.80
+promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded | qualityDelta>0.08 failed=rawWordsLost | wordPreservationRatioBelow0.80
 cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [440,537,121,84]
 safeLayoutSource: maskSafeRect
@@ -246,6 +252,8 @@ textBoxCandidate: id=3 source=bubbleBBoxTextRegionCropBBox bbox=[45,654,90,105] 
 segmentMask: pixels=9907 rect=[0,624,206,170] fillRects=790 textBoxCoverage=1.000 bubbleCoverage=1.000 usableForCropEvidence=true rejections=
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[9:seedTightTextBox:score=0.980 bbox=[65,668,50,77] | 10:bubbleContainedTextBox:score=0.970 bbox=[61,662,58,89] | 11:maskMajorityTextBox:score=0.960 bbox=[62,663,56,87]] rejectedPlanIDs=[] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=12 controlVariant=currentTextRegionCrop controlText=TRANIE controlQuality=0.812 bestShadowID=13 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=BPECIAL / TRININE bestQuality=0.801 qualityDelta=-0.011 promotionVerdict=controlStillBest stopReasons=localVisionCropNotPromising
+textBoxPlanFailure: primary=localVisionCropNotPromising verdict=controlStillBest action=stopLocalVisionCrop bestShadowBetterThanControl=false blockers=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
+promotionChecks: passed=noBubbleMaskConflict | noIntroducedLikelyOCRError | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
 cropFailureAttribution: localVisionRegression | rawWordsLost | wordCountRegression
 safeLayoutRect: [23,647,160,124]
 safeLayoutSource: maskSafeRect
@@ -315,6 +323,8 @@ textBoxCandidate: id=4 source=contentRectTextRegionCropBBox bbox=[341,809,143,13
 segmentMask: pixels=0 rect=[nil] fillRects=0 textBoxCoverage=nil bubbleCoverage=0.233 usableForCropEvidence=false rejections=missingGlyphMask | segmentOutsideBubbleRisk | unassignedBlockDiagnosticOnly
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[] rejectedPlanIDs=[12,13] planningVerdict=protectedDiagnosticOnly stopReasons=geometryEvidenceTooWeak | protectedDiagnosticOnly
 cropExperiment: controlID=16 controlVariant=currentTextRegionCrop controlText=LET'S / BATTLERK controlQuality=0.636 bestShadowID=18 bestVariant=maskSafeRectConstrained bestText=ER! bestQuality=0.695 qualityDelta=0.059 promotionVerdict=protectedDiagnosticOnly stopReasons=protectedShortTextDiagnosticOnly
+textBoxPlanFailure: primary=protectedDiagnosticOnly verdict=protectedDiagnosticOnly action=stopProtectedBlock bestShadowBetterThanControl=true blockers=bubbleMaskConflict | protectedShortTextDiagnosticOnly | qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
+promotionChecks: passed=betterThanControl | noIntroducedLikelyOCRError | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=bubbleMaskConflict | protectedShortTextDiagnosticOnly | qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
 cropFailureAttribution: bubbleMaskConflict | insufficientQualityGain | segmentMaskWeak | textBoxTooWide
 safeLayoutRect: [450,881,106,60]
 safeLayoutSource: maskSafeBlockFallback
@@ -384,6 +394,8 @@ textBoxCandidate: id=5 source=splitCandidateTextRegionCropBBox bbox=[210,861,95,
 segmentMask: pixels=9972 rect=[213,900,172,199] fillRects=835 textBoxCoverage=0.706 bubbleCoverage=0.011 usableForCropEvidence=false rejections=segmentOutsideBubbleRisk
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[14:seedTightTextBox:score=0.962 bbox=[234,875,58,125]] rejectedPlanIDs=[15,16] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=20 controlVariant=currentTextRegionCrop controlText=EVEN 5 / THOUSH / I SAID / JUSTE / SPECIAL / TRAINING / HAND / ASKEO I / • WE: / COLLO / JIST / PLAY / ONLINE controlQuality=0.702 bestShadowID=21 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=JISTi, / SPECIAL / TRANINGY / :KAND / ДЗКЕО I / *. WE / COLLD / JUSTI / -OR AT / PLAY / LEAST, / ONLINE / ITHAT- / SSEENS / ATO GE / LEEN- / SENDAr: bestQuality=0.795 qualityDelta=0.093 promotionVerdict=segmentEvidenceTooWeak stopReasons=localVisionCropNotPromising | segmentEvidenceTooWeak
+textBoxPlanFailure: primary=localVisionCropNotPromising verdict=segmentEvidenceTooWeak action=stopLocalVisionCrop bestShadowBetterThanControl=true blockers=rawWordsLost | wordPreservationRatioBelow0.80
+promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded | qualityDelta>0.08 failed=rawWordsLost | wordPreservationRatioBelow0.80
 cropFailureAttribution: bubbleMaskConflict | introducedLikelyOCRError | localVisionRegression | rawWordsLost | segmentMaskWeak
 safeLayoutRect: [91,881,191,84]
 safeLayoutSource: maskSafeRect
@@ -453,6 +465,8 @@ textBoxCandidate: id=6 source=subRegionTextRegionCropBBox bbox=[130,858,111,147]
 segmentMask: pixels=8879 rect=[67,857,166,148] fillRects=705 textBoxCoverage=0.928 bubbleCoverage=1.000 usableForCropEvidence=true rejections=
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[17:seedTightTextBox:score=0.980 bbox=[148,899,75,79] | 18:bubbleContainedTextBox:score=0.970 bbox=[142,892,87,93] | 19:maskMajorityTextBox:score=0.960 bbox=[143,894,85,89]] rejectedPlanIDs=[] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=22 controlVariant=currentTextRegionCrop controlText=THS I5 AN / OPPLINE / TOLENANENT. / DONG I / ONLINE / WOLLO MAKE / MEANMELESS / Vhwit / are controlQuality=0.785 bestShadowID=23 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=THIS IS AN / • OPPLINE / TOURNAMENT, / DONe IT / ONLINE / WOLLO MAKE / MEANWELESS / of bestQuality=0.852 qualityDelta=0.067 promotionVerdict=noLocalOCRBenefit stopReasons=
+textBoxPlanFailure: primary=candidatePromotionBlocked verdict=noLocalOCRBenefit action=candidateNeedsPromotionGateReview bestShadowBetterThanControl=true blockers=qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
+promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noRawWordsLost | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
 cropFailureAttribution: localVisionRegression | rawWordsLost
 safeLayoutRect: [91,881,151,99]
 safeLayoutSource: maskSafeRect
@@ -522,6 +536,8 @@ textBoxCandidate: id=7 source=bubbleBBoxTextRegionCropBBox bbox=[485,860,91,132]
 segmentMask: pixels=3134 rect=[507,860,69,132] fillRects=259 textBoxCoverage=1.000 bubbleCoverage=0.980 usableForCropEvidence=true rejections=
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[20:seedTightTextBox:score=0.980 bbox=[500,893,61,67] | 21:bubbleContainedTextBox:score=0.970 bbox=[495,887,71,79] | 22:maskMajorityTextBox:score=0.960 bbox=[496,888,62,77]] rejectedPlanIDs=[] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=26 controlVariant=currentTextRegionCrop controlText=nil controlQuality=0.000 bestShadowID=nil bestVariant=nil bestText=nil bestQuality=nil qualityDelta=nil promotionVerdict=localVisionCropNotPromising stopReasons=localVisionCropNotPromising
+textBoxPlanFailure: primary=localVisionCropNotPromising verdict=localVisionCropNotPromising action=stopLocalVisionCrop bestShadowBetterThanControl=false blockers=noShadowCandidate
+promotionChecks: passed= failed=noShadowCandidate
 cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [447,878,111,96]
 safeLayoutSource: maskSafeRect
@@ -591,6 +607,8 @@ textBoxCandidate: id=8 source=subRegionTextRegionCropBBox bbox=[10,936,141,156] 
 segmentMask: pixels=16597 rect=[0,883,231,244] fillRects=1289 textBoxCoverage=1.000 bubbleCoverage=0.743 usableForCropEvidence=true rejections=
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[23:seedTightTextBox:score=0.933 bbox=[41,959,79,110] | 24:bubbleContainedTextBox:score=0.923 bbox=[34,950,93,128] | 25:maskMajorityTextBox:score=0.913 bbox=[36,951,89,126]] rejectedPlanIDs=[] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=30 controlVariant=currentTextRegionCrop controlText=* THE / SUGGESTION / OVERRULED, / ANO IT WAS / THAT TO BE / 'STAYNGY / OVER AT RENA / ESENPAI'S / THouser controlQuality=0.817 bestShadowID=31 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=i THE / (SUGGESTION / OVERDUKED, / ANO I'WAS! / ¡DECIDEDI / THAT TO BE / STAYING / OVER AT REN / SENPAI'S, / THOuse: bestQuality=0.763 qualityDelta=-0.054 promotionVerdict=controlStillBest stopReasons=
+textBoxPlanFailure: primary=controlStillBest verdict=controlStillBest action=noActionControlBest bestShadowBetterThanControl=false blockers=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
+promotionChecks: passed=noBubbleMaskConflict | noIntroducedLikelyOCRError | noRawWordsLost | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
 cropFailureAttribution: insufficientQualityGain
 safeLayoutRect: [35,918,70,192]
 safeLayoutSource: maskSafeRect
@@ -660,6 +678,8 @@ textBoxCandidate: id=9 source=splitCandidateTextRegionCropBBox bbox=[97,959,79,9
 segmentMask: pixels=14901 rect=[0,883,231,244] fillRects=1224 textBoxCoverage=1.000 bubbleCoverage=0.521 usableForCropEvidence=true rejections=
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[26:seedTightTextBox:score=0.896 bbox=[115,972,43,70] | 27:bubbleContainedTextBox:score=0.886 bbox=[111,966,51,82] | 28:maskMajorityTextBox:score=0.876 bbox=[112,967,49,80]] rejectedPlanIDs=[] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=34 controlVariant=currentTextRegionCrop controlText=NEA / eve / : talkin controlQuality=0.748 bestShadowID=35 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=MEANI / ION / : What / ED, / AS / even / BE / : talking / abox / TEN- bestQuality=0.817 qualityDelta=0.069 promotionVerdict=noLocalOCRBenefit stopReasons=localVisionCropNotPromising
+textBoxPlanFailure: primary=localVisionCropNotPromising verdict=noLocalOCRBenefit action=stopLocalVisionCrop bestShadowBetterThanControl=true blockers=qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
+promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
 cropFailureAttribution: localVisionRegression | rawWordsLost | wordCountRegression
 safeLayoutRect: [112,919,83,191]
 safeLayoutSource: maskSafeRect
@@ -729,6 +749,8 @@ textBoxCandidate: id=10 source=splitCandidateTextRegionCropBBox bbox=[251,936,11
 segmentMask: pixels=10134 rect=[213,900,172,199] fillRects=843 textBoxCoverage=1.000 bubbleCoverage=0.751 usableForCropEvidence=true rejections=
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[29:seedTightTextBox:score=0.940 bbox=[276,954,64,90] | 30:bubbleContainedTextBox:score=0.930 bbox=[271,947,74,104] | 31:maskMajorityTextBox:score=0.920 bbox=[272,948,72,102]] rejectedPlanIDs=[] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=38 controlVariant=currentTextRegionCrop controlText=KED IP / WE / OLD / JIST / -ОЕ ДТ / LEAST. / NLINE.. / • THAT / SEEMS / TO BE / PEN- / LOGIC. controlQuality=0.792 bestShadowID=41 bestVariant=preCropTextBoxPlan.maskMajorityTextBox bestText=TRAINING / AND / ASKEO IF / WE / COLLO / JUIST / PLAY / -OR AT / LEAST. / ONLINE-. / THAT / SEEMS / TO BE / PEN- / LOGIC.. bestQuality=0.831 qualityDelta=0.039 promotionVerdict=noLocalOCRBenefit stopReasons=
+textBoxPlanFailure: primary=candidatePromotionBlocked verdict=noLocalOCRBenefit action=candidateNeedsPromotionGateReview bestShadowBetterThanControl=true blockers=qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
+promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noRawWordsLost | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
 cropFailureAttribution: localVisionRegression | rawWordsLost
 safeLayoutRect: [243,972,130,96]
 safeLayoutSource: maskSafeRect
@@ -798,6 +820,8 @@ textBoxCandidate: id=11 source=bubbleBBoxTextRegionCropBBox bbox=[269,948,36,57]
 segmentMask: pixels=396 rect=[291,966,14,39] fillRects=44 textBoxCoverage=1.000 bubbleCoverage=0.927 usableForCropEvidence=true rejections=
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[32:seedTightTextBox:score=0.932 bbox=[286,960,42,62]] rejectedPlanIDs=[33,34] planningVerdict=shadowOCREligiblePlans stopReasons=
 cropExperiment: controlID=42 controlVariant=currentTextRegionCrop controlText=nil controlQuality=0.000 bestShadowID=nil bestVariant=nil bestText=nil bestQuality=nil qualityDelta=nil promotionVerdict=localVisionCropNotPromising stopReasons=localVisionCropNotPromising
+textBoxPlanFailure: primary=localVisionCropNotPromising verdict=localVisionCropNotPromising action=stopLocalVisionCrop bestShadowBetterThanControl=false blockers=noShadowCandidate
+promotionChecks: passed= failed=noShadowCandidate
 cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [251,931,120,137]
 safeLayoutSource: maskSafeRect
@@ -867,6 +891,8 @@ textBoxCandidate: id=12 source=contentRectTextRegionCropBBox bbox=[360,931,156,1
 segmentMask: pixels=0 rect=[nil] fillRects=0 textBoxCoverage=nil bubbleCoverage=0.273 usableForCropEvidence=false rejections=decorativeTitleDiagnosticOnly | missingGlyphMask | segmentOutsideBubbleRisk | unassignedBlockDiagnosticOnly
 preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[] rejectedPlanIDs=[35,36] planningVerdict=protectedDiagnosticOnly stopReasons=geometryEvidenceTooWeak | protectedDiagnosticOnly
 cropExperiment: controlID=44 controlVariant=currentTextRegionCrop controlText=City Battler / Offline: / Tournament controlQuality=0.804 bestShadowID=45 bestVariant=textBoxTight bestText=City Battler / Offline: / Tournament bestQuality=0.804 qualityDelta=0.000 promotionVerdict=protectedDiagnosticOnly stopReasons=decorativeTitleDiagnosticOnly
+textBoxPlanFailure: primary=protectedDiagnosticOnly verdict=protectedDiagnosticOnly action=stopProtectedBlock bestShadowBetterThanControl=false blockers=bubbleMaskConflict | decorativeTitleDiagnosticOnly | notBetterThanControl | qualityDeltaBelowOrEqual0.08 | sameAsFusedText
+promotionChecks: passed=noIntroducedLikelyOCRError | noRawWordsLost | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded | wordPreservationRatio>=0.80 failed=bubbleMaskConflict | decorativeTitleDiagnosticOnly | notBetterThanControl | qualityDeltaBelowOrEqual0.08 | sameAsFusedText
 cropFailureAttribution: bubbleMaskConflict | sameAsFusedText | segmentMaskWeak | textBoxTooWide
 safeLayoutRect: [244,948,128,119]
 safeLayoutSource: maskSafeBlockFallback
