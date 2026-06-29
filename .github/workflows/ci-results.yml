@@ -18,6 +18,10 @@ jobs:
       RESULT_ROOT: ci-results
       TEST_RESULTS_DIR: ci-results/TestResults
       OUTPUT_COPY_DIR: ci-results/output
+      MODEL_CACHE_DIR: .ci-models
+      MODEL_TAG: model-gemma-3-270m-it-qat-q4_0-v1
+      MODEL_ASSET: gemma-3-270m-it-qat-Q4_0.gguf
+      MODEL_SHA256: 3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6
 
     steps:
       - name: Checkout
@@ -46,6 +50,52 @@ jobs:
             echo "artifact_name=$artifact_name"
             echo "result_bundle=$result_bundle"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Restore GGUF model cache
+        id: gguf_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.MODEL_CACHE_DIR }}
+          key: gguf-${{ env.MODEL_TAG }}-${{ env.MODEL_SHA256 }}
+
+      - name: Download GGUF from GitHub Release
+        id: download_model
+        if: steps.gguf_cache.outputs.cache-hit != 'true'
+        shell: bash
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$MODEL_CACHE_DIR"
+          {
+            echo "Downloading $MODEL_ASSET from release $MODEL_TAG"
+            gh release download "$MODEL_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --pattern "$MODEL_ASSET" \
+              --dir "$MODEL_CACHE_DIR"
+          } 2>&1 | tee "$RESULT_ROOT/model-download.log"
+
+      - name: Verify GGUF model
+        id: verify_model
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          model_path="$MODEL_CACHE_DIR/$MODEL_ASSET"
+          {
+            echo "cache-hit=${{ steps.gguf_cache.outputs.cache-hit }}"
+            test -f "$model_path"
+            echo "$MODEL_SHA256  $model_path" | shasum -a 256 -c -
+            du -h "$model_path"
+          } 2>&1 | tee "$RESULT_ROOT/model-verify.log"
+
+      - name: Save GGUF model cache
+        if: steps.gguf_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.MODEL_CACHE_DIR }}
+          key: gguf-${{ env.MODEL_TAG }}-${{ env.MODEL_SHA256 }}
 
       - name: Static checks
         id: static_checks
@@ -107,16 +157,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          STATIC_STATUS="${{ steps.static_checks.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" python3 - <<'PY'
+          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" python3 - <<'PY'
           import os
           import xml.etree.ElementTree as ET
 
           root = ET.Element("testsuite", name="AITRANS CI Results", tests="2")
           failures = 0
           cases = [
+              ("gguf-model", os.environ["MODEL_STATUS"], "GGUF model setup failed"),
               ("static-checks", os.environ["STATIC_STATUS"], "static checks failed"),
               ("xcode-build", os.environ["BUILD_STATUS"], "xcode build failed"),
           ]
+          root.set("tests", str(len(cases)))
           for name, status, message in cases:
               case = ET.SubElement(root, "testcase", classname="ci", name=name)
               if status != "success":
@@ -160,14 +212,24 @@ jobs:
               "junitPath": "${RESULT_ROOT}/junit.xml",
               "xcodebuildLogPath": "${RESULT_ROOT}/xcodebuild.log",
               "staticChecksLogPath": "${RESULT_ROOT}/static-checks.log",
+              "modelDownloadLogPath": "${RESULT_ROOT}/model-download.log",
+              "modelVerifyLogPath": "${RESULT_ROOT}/model-verify.log",
               "failureSummaryPath": "${RESULT_ROOT}/ci-failure-summary.md",
               "probeReportPath": "$probe_path",
               "cleanTextDiagnosticPath": "$clean_path",
               "ocrProbeTextPath": "$ocr_text_path",
+              "modelReleaseTag": "${MODEL_TAG}",
+              "modelAsset": "${MODEL_ASSET}",
+              "modelSha256": "${MODEL_SHA256}",
+              "modelCacheKey": "gguf-${MODEL_TAG}-${MODEL_SHA256}",
+              "modelCacheHit": "${{ steps.gguf_cache.outputs.cache-hit }}",
+              "modelLocalPath": "${MODEL_CACHE_DIR}/${MODEL_ASSET}",
+              "modelDownloadOutcome": "${{ steps.download_model.outcome }}",
+              "modelVerifyOutcome": "${{ steps.verify_model.outcome }}",
               "staticChecksOutcome": "${{ steps.static_checks.outcome }}",
               "xcodeBuildOutcome": "${{ steps.xcode_build.outcome }}",
               "probeRunInWorkflow": False,
-              "probeRunNote": "Full cloud manga probe is not run yet; GGUF, simulator container export, and model cache setup are pending.",
+              "probeRunNote": "Full cloud manga probe is not run yet; GGUF download/cache is prepared, but simulator app container import/export is pending.",
               "encryptedPackageArtifactUsedForReview": False
           }
           with open("${RESULT_ROOT}/ci-artifact-manifest.json", "w", encoding="utf-8") as f:
@@ -182,10 +244,15 @@ jobs:
             echo "- runId: ${GITHUB_RUN_ID}"
             echo "- runAttempt: ${GITHUB_RUN_ATTEMPT}"
             echo "- artifact: ${{ steps.meta.outputs.artifact_name }}"
+            echo "- GGUF cache hit: ${{ steps.gguf_cache.outputs.cache-hit }}"
+            echo "- GGUF download: ${{ steps.download_model.outcome }}"
+            echo "- GGUF verify: ${{ steps.verify_model.outcome }}"
             echo "- static checks: ${{ steps.static_checks.outcome }}"
             echo "- xcode build: ${{ steps.xcode_build.outcome }}"
             echo
             echo "## Logs for Agent B"
+            echo "- Model download: ${RESULT_ROOT}/model-download.log"
+            echo "- Model verify: ${RESULT_ROOT}/model-verify.log"
             echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
             echo "- Xcode build: ${RESULT_ROOT}/xcodebuild.log"
             echo "- Xcode result bundle: ${{ steps.meta.outputs.result_bundle }}"
@@ -193,9 +260,9 @@ jobs:
             echo "- Manifest: ${RESULT_ROOT}/ci-artifact-manifest.json"
             echo
             echo "## Probe status"
-            echo "Full cloud manga probe was not run in this workflow. Current blockers are GGUF download/cache setup, stable simulator app container export, and any external detector artifacts required by the probe."
+            echo "Full cloud manga probe was not run in this workflow. GGUF download/cache is now prepared; remaining blockers are stable simulator app container model import/export and any external detector artifacts required by the probe."
             echo
-            if [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ]; then
+            if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ]; then
               echo "## Return to Agent B"
               echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
             else
@@ -216,7 +283,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ]; then
+          if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ]; then
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi
