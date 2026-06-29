@@ -7066,13 +7066,20 @@ final class TranslationSessionStore: ObservableObject {
     ) -> MangaOverlayExternalArtifactReadinessReport {
         let artifactsDirectory = bundledTestDirectory?.appendingPathComponent("koharu_artifacts", isDirectory: true)
         let manifestURL = artifactsDirectory?.appendingPathComponent("1.manifest.json")
+        var isDirectory: ObjCBool = false
+        let activeArtifactsDirectory = artifactsDirectory.map {
+            FileManager.default.fileExists(atPath: $0.path, isDirectory: &isDirectory) && isDirectory.boolValue
+        } ?? false
         var parseErrors: [String] = []
         var notes = [
             "shadowOnly=true",
             "groundTruthNotUsed=true",
             "doesNotChangeFinalTextUsedForTranslation=true",
             "doesNotChangeTextRegionCropAdoptedCount=true",
-            "doesNotAttachExternalDetectorRuntime=true"
+            "doesNotAttachExternalDetectorRuntime=true",
+            "activeInputDirectory=test/koharu_artifacts",
+            "contractExamplesDirectory=md/koharu研究/artifact_contract/examples",
+            "contract examples are non-active fixtures and must not be copied into the App bundle as detector output"
         ]
         let manifest: MangaOverlayExternalArtifactManifest? = Self.decodeExternalArtifact(
             MangaOverlayExternalArtifactManifest.self,
@@ -7163,12 +7170,26 @@ final class TranslationSessionStore: ObservableObject {
         if let segmentMaskReport {
             notes.append("internalSegmentGlyphBlocks=\(segmentMaskReport.glyphMaskBlocks)")
         }
+        if manifest?.contractExampleOnly == true {
+            notes.append("contractExampleOnly=true; active readiness is blocked because this is not real detector output")
+        }
         if readinessVerdict != "readyForShadowOCR" {
             notes.append("external detector artifact evidence is insufficient; stop before shadow OCR")
         }
+        let shadowAllowed = readinessVerdict == "readyForShadowOCR"
+            && activeArtifactsDirectory
+            && manifest?.contractExampleOnly != true
         return MangaOverlayExternalArtifactReadinessReport(
             enabled: true,
             sourceImage: "test/1.png",
+            activeArtifactsDirectory: activeArtifactsDirectory,
+            contractExampleOnly: manifest?.contractExampleOnly ?? false,
+            generatedBy: manifest?.generatedBy,
+            manifestPath: manifestURL?.path,
+            textBoxesPath: textBoxesURL?.path,
+            bubbleMaskPath: bubbleMaskURL?.path,
+            segmentMaskPath: segmentMaskURL?.path,
+            externalTextBoxesShadowOCRAllowed: shadowAllowed,
             manifestFound: manifest != nil,
             textBoxesFound: Self.fileExists(textBoxesURL),
             bubbleMaskFound: Self.fileExists(bubbleMaskURL),
@@ -7320,6 +7341,10 @@ final class TranslationSessionStore: ObservableObject {
         } else {
             segmentSizeMatches = nil
         }
+        var notes = ["bbox convention is original image pixel coordinates with top-left origin"]
+        if manifest?.contractExampleOnly == true {
+            notes.append("contractExampleOnly=true")
+        }
         return MangaOverlayExternalArtifactCoordinateValidation(
             coordinateSpace: coordinateSpace,
             expectedCoordinateSpace: expected,
@@ -7331,7 +7356,7 @@ final class TranslationSessionStore: ObservableObject {
             invalidBubbleInstanceIDs: invalidBubbles,
             segmentMaskSizeMatches: segmentSizeMatches,
             errors: errors,
-            notes: ["bbox convention is original image pixel coordinates with top-left origin"]
+            notes: notes
         )
     }
 
@@ -7407,11 +7432,22 @@ final class TranslationSessionStore: ObservableObject {
     ) -> String {
         if !manifestFound { return "manifestMissing" }
         if !parseErrors.isEmpty { return "parseFailed" }
-        if !coordinateValidation.errors.isEmpty { return "coordinateSpaceMismatch" }
+        if coordinateValidation.errors.contains("coordinateSpaceMissing") { return "coordinateSpaceMissing" }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("coordinateSpaceMismatch") }) {
+            return "coordinateSpaceMismatch"
+        }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("sourceImageMismatch") }) {
+            return "sourceImageMismatch"
+        }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("invalidTextBoxBBoxes") || $0.hasPrefix("invalidBubbleBBoxes") || $0.hasPrefix("segmentMaskSizeMismatch") }) {
+            return "coordinateValidationFailed"
+        }
+        if !coordinateValidation.errors.isEmpty { return "coordinateValidationFailed" }
         if !missingArtifacts.isEmpty { return "artifactFilesMissing" }
         if textBoxes.isEmpty { return "insufficientTextBoxCoverage" }
         if bubbleInstances.isEmpty { return "insufficientBubbleCoverage" }
         if segmentMask == nil { return "segmentMaskMissing" }
+        if coordinateValidation.notes.contains("contractExampleOnly=true") { return "contractExampleOnly" }
         return "readyForShadowOCR"
     }
 
@@ -7429,6 +7465,10 @@ final class TranslationSessionStore: ObservableObject {
             return "evaluateCoreMLConversion"
         case "parseFailed":
             return "stopUntilParserFixed"
+        case "contractExampleOnly":
+            return "stopBecauseFixtureIsNotDetectorOutput"
+        case "coordinateSpaceMissing", "coordinateSpaceMismatch", "sourceImageMismatch", "coordinateValidationFailed":
+            return "stopUntilArtifactContractFixed"
         default:
             return "stopUntilArtifactsProvided"
         }

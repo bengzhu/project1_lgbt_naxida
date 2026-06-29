@@ -1,0 +1,9 @@
+[
+  {
+    "id": "bad-bubble-out-of-bounds",
+    "bbox": [-5, 100, 120, 80],
+    "confidence": 0.6,
+    "maskValue": 1,
+    "pixelCount": 1000
+  }
+]

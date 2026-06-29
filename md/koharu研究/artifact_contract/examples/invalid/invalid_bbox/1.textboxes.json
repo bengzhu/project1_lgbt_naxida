@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "id": "bad-textbox-negative-width",
+      "bbox": [20, 20, -10, 40],
+      "confidence": 0.5
+    },
+    {
+      "id": "bad-textbox-out-of-bounds",
+      "bbox": [550, 1260, 80, 80],
+      "confidence": 1.2
+    }
+  ]
+}

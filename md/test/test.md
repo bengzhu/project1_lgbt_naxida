@@ -55,6 +55,11 @@ git diff --check
 python3 -m json.tool test/1.ground_truth.json
 python3 -m json.tool output/probe_report.json
 python3 -m json.tool output/clean_text_diagnostic.json
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
 ```
 
 当前基线：
@@ -215,6 +220,7 @@ python3 -m json.tool test/1.ground_truth.json
 - `externalArtifactReadinessReport.nextAction = stopUntilArtifactsProvided`
 - `externalArtifactReadinessReport.missingArtifacts = [manifest, TextBoxes, BubbleMask, SegmentMask]`
 - `externalArtifactReadinessReport.blockAlignment.count = 13`
+- 外部 Koharu artifact validator 对 `md/koharu研究/artifact_contract/examples/valid` 应返回 `validationPassed = true`、`verdict = contractExampleOnly`、`externalTextBoxesShadowOCRAllowed = false`；对 invalid fixtures 应在 `--expect-fail` 下成功；对缺失的 `test/koharu_artifacts` 应在 `--allow-missing` 下返回 `manifestMissing`。
 - `1_ocr_probe_text.txt` 每块包含 `textBoxPlanFailure` 和 `promotionChecks`；目标块 `[1, 6, 10]` 还包含 `lineTextBoxPlans`、`lineCropExperiment`、`linePromotionChecks` 和 `lineResearchDecision`；每块还包含 `externalArtifacts` 摘要
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`

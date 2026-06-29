@@ -1595,6 +1595,9 @@ struct MangaOverlayProbeService: Sendable {
             let externalAlignment = externalArtifactAlignmentByBlock[block.index]
             let externalReadiness = externalArtifactReadinessReport?.readinessVerdict ?? "nil"
             let externalNextAction = externalArtifactReadinessReport?.nextAction ?? "nil"
+            let externalShadowAllowed = externalArtifactReadinessReport.map { String($0.externalTextBoxesShadowOCRAllowed) } ?? "nil"
+            let externalActiveDirectory = externalArtifactReadinessReport.map { String($0.activeArtifactsDirectory) } ?? "nil"
+            let externalContractExampleOnly = externalArtifactReadinessReport.map { String($0.contractExampleOnly) } ?? "nil"
             let externalTextBoxMatch = externalAlignment?.bestTextBoxID ?? "none"
             let externalTextBoxIoU = externalAlignment?.bestTextBoxIoU?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let externalBubbleMatch = externalAlignment?.bestBubbleInstanceID ?? "none"
@@ -1650,7 +1653,7 @@ struct MangaOverlayProbeService: Sendable {
             lineCropExperiment: bestLineShadowID=\(lineExperimentSummary?.bestShadowCandidateID.map(String.init) ?? "nil") bestVariant=\(lineExperimentSummary?.bestVariantName ?? "nil") bestText=\(lineBestText) qualityDelta=\(lineBestDelta) wordPreservation=\(lineBestPreservation) promotionVerdict=\(lineExperimentSummary?.promotionVerdict ?? "nil") stopReasons=\(lineStopReasons)
             linePromotionChecks: passed=\(linePromotionChecks?.passed ?? "nil") failed=\(linePromotionChecks?.failed ?? "nil")
             lineResearchDecision: \(lineResearchDecision)
-            externalArtifacts: readiness=\(externalReadiness) textBoxID=\(externalTextBoxMatch) textBoxIoU=\(externalTextBoxIoU) bubbleInstanceID=\(externalBubbleMatch) bubbleIoU=\(externalBubbleIoU) segmentMask=\(externalSegmentCoverage) alignment=\(externalAlignmentVerdict) nextAction=\(externalNextAction)
+            externalArtifacts: readiness=\(externalReadiness) shadowOCRAllowed=\(externalShadowAllowed) activeDirectory=\(externalActiveDirectory) contractExampleOnly=\(externalContractExampleOnly) textBoxID=\(externalTextBoxMatch) textBoxIoU=\(externalTextBoxIoU) bubbleInstanceID=\(externalBubbleMatch) bubbleIoU=\(externalBubbleIoU) segmentMask=\(externalSegmentCoverage) alignment=\(externalAlignmentVerdict) nextAction=\(externalNextAction)
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1682,7 +1685,7 @@ struct MangaOverlayProbeService: Sendable {
         }
         .joined(separator: "\n\n")
         let externalSummary = """
-        externalArtifactReadiness: manifestFound=\(externalArtifactReadinessReport.map { String($0.manifestFound) } ?? "nil") textBoxesFound=\(externalArtifactReadinessReport.map { String($0.textBoxesFound) } ?? "nil") bubbleMaskFound=\(externalArtifactReadinessReport.map { String($0.bubbleMaskFound) } ?? "nil") segmentMaskFound=\(externalArtifactReadinessReport.map { String($0.segmentMaskFound) } ?? "nil") verdict=\(externalArtifactReadinessReport?.readinessVerdict ?? "nil") nextAction=\(externalArtifactReadinessReport?.nextAction ?? "nil") missing=\(externalArtifactReadinessReport?.missingArtifacts.joined(separator: ",") ?? "nil")
+        externalArtifactReadiness: activeDirectory=\(externalArtifactReadinessReport.map { String($0.activeArtifactsDirectory) } ?? "nil") contractExampleOnly=\(externalArtifactReadinessReport.map { String($0.contractExampleOnly) } ?? "nil") shadowOCRAllowed=\(externalArtifactReadinessReport.map { String($0.externalTextBoxesShadowOCRAllowed) } ?? "nil") manifestFound=\(externalArtifactReadinessReport.map { String($0.manifestFound) } ?? "nil") textBoxesFound=\(externalArtifactReadinessReport.map { String($0.textBoxesFound) } ?? "nil") bubbleMaskFound=\(externalArtifactReadinessReport.map { String($0.bubbleMaskFound) } ?? "nil") segmentMaskFound=\(externalArtifactReadinessReport.map { String($0.segmentMaskFound) } ?? "nil") verdict=\(externalArtifactReadinessReport?.readinessVerdict ?? "nil") nextAction=\(externalArtifactReadinessReport?.nextAction ?? "nil") missing=\(externalArtifactReadinessReport?.missingArtifacts.joined(separator: ",") ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)
