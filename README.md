@@ -29,6 +29,8 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - Agent B 候选实现分支使用 `codeb/vX.Y-短标题`，push 后由 GitHub Actions 重验证。
 - 本机默认只跑轻量检查；除非人工明确要求，不默认跑本机 Xcode build 或漫画探针。
 - Agent C 验收使用未加密的 `AITRANS CI Results` artifact，核对 `.xcresult`、`junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json` 和失败摘要。
+- 云端验证必须先用 `gh auth login` 拿到 GitHub 权限，Agent C 才能下载 Actions 结果包。
+- Agent C 下载的云端测试缓存默认放在 `/private/tmp/aitrans-c-review-<run_id>/`，由人工确认后删除。
 - 现有加密软件包 artifact 只用于软件包交付，不作为 Agent C 验收依据。
 
 ## 当前界面
