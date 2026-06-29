@@ -900,6 +900,43 @@
 - 不得把 reference/koharu-main 源码存在、现有 Vision OCR blocks、pre-crop plan 或 line plan 写成“真实 detector 已接入”。
 - 不应继续在 v20 已判停的 block / line / deskew crop 变体上试参。
 
+### v22：Koharu 外部 Artifact 契约与离线 Validator
+日期：2026-06-29
+依据：`md/prompt/v1（漫画探针）/v1.12（Koharu外部Artifact契约与Shadow OCR入口）.md`
+
+核心变更：
+
+- 新增 `md/koharu研究/artifact_contract/README.md`，明确 active 输入目录是 `test/koharu_artifacts/`，非活动 fixture 目录是 `md/koharu研究/artifact_contract/examples/`。
+- 新增 valid / invalid contract fixtures；valid fixture 标记 `contractExampleOnly=true`，只用于 schema / parser smoke，不代表真实 detector 输出。
+- 新增 `scripts/validate-koharu-artifacts.py`，用 Python 标准库校验 manifest、fallback 路径、TextBoxes、Bubble instances、SegmentMask summary、source image、坐标系、bbox、confidence 和图片尺寸。当前 `test/1.png` 文件名为 `.png`，实际 header 是 JPEG，validator 同时支持 PNG / JPEG header。
+- Swift `externalArtifactReadinessReport` 新增 active/example 区分、manifest / artifact 路径、`generatedBy` 和 `externalTextBoxesShadowOCRAllowed`；`contractExampleOnly`、坐标缺失、坐标不匹配、source image 不匹配、bbox / SegmentMask 尺寸错误现在有更明确的 verdict / nextAction。
+- GitHub Actions 静态检查加入 artifact validator，并在 `ci-artifact-manifest.json` 记录 validator 日志路径、是否运行和 active artifact 目录是否存在。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `.github/workflows/ci-results.yml`
+- `scripts/validate-koharu-artifacts.py`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/artifact_contract/examples/`
+- `README.md`
+- `md/flow/flow.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮应运行 `git diff --check`、JSON 解析和 artifact validator smoke。
+- 本轮不跑本机 Xcode build / 漫画探针；Swift build、云端探针和结果包由 PR 后 GitHub Actions 验证。
+- 这是 contract / validator 版本，不刷新 `output/`，不追加 `metrics/version_history.csv` 漫画指标行。
+
+遗留事项：
+
+- 当前仓库仍没有真实 `test/koharu_artifacts/` active artifact；没有真实 detector / segmenter 输出时，App 探针应继续阻塞在 `manifestMissing` 或 `artifactFilesMissing`。
+- 下一轮只有在人工或外部 Koharu 侧提供真实 TextBoxes / BubbleMask / SegmentMask artifact 后，才允许准备 `externalArtifact.*` shadow OCR candidate；仍不得替换主输入或放宽 promotion gate。
+
 ### Agent 3：自适应 crop 与回退自测
 日期：2026-06 下旬
 依据提交：`da9d574`

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "coord-mismatch-bubble",
+    "bbox": [90, 150, 160, 100],
+    "confidence": 0.5,
+    "maskValue": 1,
+    "pixelCount": 1000
+  }
+]

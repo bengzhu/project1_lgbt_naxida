@@ -1401,6 +1401,7 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
     var schemaVersion: String
     var sourceImage: String
     var coordinateSpace: String
+    var contractExampleOnly: Bool
     var generatedBy: String?
     var generatedAt: String?
     var textBoxesPath: String?
@@ -1412,6 +1413,7 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
         case schemaVersion
         case sourceImage
         case coordinateSpace
+        case contractExampleOnly
         case generatedBy
         case generatedAt
         case textBoxesPath
@@ -1425,6 +1427,7 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
         schemaVersion = try container.decodeIfPresent(String.self, forKey: .schemaVersion) ?? "unknown"
         sourceImage = try container.decodeIfPresent(String.self, forKey: .sourceImage) ?? ""
         coordinateSpace = try container.decodeIfPresent(String.self, forKey: .coordinateSpace) ?? ""
+        contractExampleOnly = try container.decodeIfPresent(Bool.self, forKey: .contractExampleOnly) ?? false
         generatedBy = try container.decodeIfPresent(String.self, forKey: .generatedBy)
         generatedAt = try container.decodeIfPresent(String.self, forKey: .generatedAt)
         textBoxesPath = try container.decodeIfPresent(String.self, forKey: .textBoxesPath)
@@ -1608,6 +1611,14 @@ struct MangaOverlayExternalArtifactBlockAlignment: Equatable, Codable, Sendable 
 struct MangaOverlayExternalArtifactReadinessReport: Equatable, Codable, Sendable {
     var enabled: Bool
     var sourceImage: String
+    var activeArtifactsDirectory: Bool
+    var contractExampleOnly: Bool
+    var generatedBy: String?
+    var manifestPath: String?
+    var textBoxesPath: String?
+    var bubbleMaskPath: String?
+    var segmentMaskPath: String?
+    var externalTextBoxesShadowOCRAllowed: Bool
     var manifestFound: Bool
     var textBoxesFound: Bool
     var bubbleMaskFound: Bool
