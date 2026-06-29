@@ -113,6 +113,35 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v2.2：GitHub Release GGUF 下载与 Actions 缓存
+日期：2026-06-29
+依据：云端验证基础设施改造；未刷新 `output/`，未追加 `metrics/version_history.csv` 漫画指标行。
+
+核心变更：
+
+- `AITRANS CI Results` workflow 新增 Release 模型下载、SHA256 校验和 Actions cache。
+- 模型来源固定为 Release `model-gemma-3-270m-it-qat-q4_0-v1` 的 `gemma-3-270m-it-qat-Q4_0.gguf`。
+- SHA256 固定为 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`。
+- 结果包 manifest 新增 `modelReleaseTag`、`modelAsset`、`modelSha256`、`modelCacheKey`、`modelCacheHit`、`modelLocalPath`、`modelDownloadOutcome`、`modelVerifyOutcome`。
+- 结果包新增或保留 `model-download.log`、`model-verify.log`，失败摘要中列出模型下载和校验状态。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/test/test.md`
+- `md/flow/flow.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮应运行 `git diff --check`、`python3 -m json.tool test/1.ground_truth.json`、workflow smoke 和 YAML 解析。
+- 未运行本机 Xcode build / 漫画探针；按规则交给云端验证。
+
+遗留事项：
+
+- v2.2 只解决模型下载、校验和缓存；下一步才把 `.ci-models/gemma-3-270m-it-qat-Q4_0.gguf` 导入模拟器 App 沙盒的 `Application Support/Models/Gemma-1.5B/model.gguf`，再运行完整漫画探针和导出 `output/`。
+
 ### 协作流程维护：云端验证和结果包制度
 日期：2026-06-29
 依据：流程制度变更，不是漫画探针质量版本；未刷新 `output/`，未追加 `metrics/version_history.csv` 漫画指标行。

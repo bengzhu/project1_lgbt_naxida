@@ -8,7 +8,7 @@
 - 加密打包 workflow 只用于软件包交付，不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 - 如果云端验证失败，Agent C 按 `ci-failure-summary.md`、`xcodebuild.log`、`junit.xml`、`.xcresult` 和 manifest 输出退回清单，Agent B 修复后继续 push。
 - 如果云端环境缺少模拟器、GGUF、App 容器权限或外部 artifact，必须说明哪个测试未运行、缺什么依赖、是否影响验收、需要人工提供什么。
-- GGUF 云端模型问题已知，后续通过 GitHub Release + workflow 下载 + 缓存解决；本规范不要求提交 GGUF。
+- GGUF 云端模型通过 GitHub Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载，并用 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6` 校验后缓存到 `.ci-models/`；本规范不要求提交 GGUF。
 
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：
@@ -265,6 +265,7 @@ Agent B 的云端结果必须可下载、可追溯、未加密，供 Agent C 验
 - `xcodebuild.log`：完整构建日志。
 - `ci-artifact-manifest.json`：结果包索引，包含 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`createdAt`、`xcodeVersion`、`scheme`、`destination`、`resultBundlePath`、`junitPath`、`xcodebuildLogPath`、`failureSummaryPath`、`probeReportPath`。
 - `ci-failure-summary.md`：无论成功或失败都生成；失败时写清失败阶段、关键日志位置、建议 Agent B 先看哪些文件。
+- `model-download.log` / `model-verify.log`：Release 下载、cache 命中和 SHA256 校验记录。
 - 若运行漫画探针：上传 `output/probe_report.json`、`output/clean_text_diagnostic.json`、`output/1_ocr_probe_text.txt` 和关键 PNG。
 
 artifact 命名建议：

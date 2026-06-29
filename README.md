@@ -33,6 +33,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - Agent C 下载的云端测试缓存默认放在 `/private/tmp/aitrans-c-review-<run_id>/`，由人工确认后删除。
 - Agent C 通过 PR 合并后必须删除远端 `codeb/...` 候选分支，避免分支无限堆积；无权限删除时要明确说明。
 - 现有加密软件包 artifact 只用于软件包交付，不作为 Agent C 验收依据。
+- `AITRANS CI Results` 会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，并用 Actions cache 复用 `.ci-models/`。当前只完成模型下载/缓存，完整探针还需后续把模型导入模拟器 App 沙盒。
 
 ## 当前界面
 
