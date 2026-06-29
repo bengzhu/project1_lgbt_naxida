@@ -93,6 +93,7 @@
 - `externalArtifactReadinessReport.nextAction = stopUntilArtifactsProvided`
 - `externalArtifactReadinessReport.missingArtifacts = [manifest, TextBoxes, BubbleMask, SegmentMask]`
 - `externalArtifactReadinessReport.blockAlignment.count = 13`
+- v1.13 新增 `externalTextBoxShadowOCRReport` 后，默认缺 active artifact 的预期是 `executed = false`、`gateVerdict = manifestMissing`、`candidateCount = 0`、`ocrExecutedCount = 0`、`promotedExternalShadowBlocks = []`、`skippedBlocks = [0...12]`；完整数字待 PR 后云端探针刷新。
 - `textRegionCropReport.failureAttributionBreakdown = { localVisionRegression: 6, rawWordsLost: 5, bubbleMaskConflict: 3, emptyLocalOCR: 3, segmentMaskWeak: 3, textBoxTooWide: 2, introducedLikelyOCRError: 2, wordCountRegression: 2, sameAsFusedText: 2, insufficientQualityGain: 2 }`
 - `passedBlocks = 1`
 - `failedBlocks = 12`
@@ -108,6 +109,7 @@
 - `bubbleAudits` 标出 `bubbleID 4/6/7` 的分割风险；v13 新增轻量 `bubbleSubRegionReport`，v14 新增 `bubbleMaskReport`，v15 新增归属修正报告和保守 split candidate 报告，v16 新增轻量 `textBoxCandidateReport`、`segmentMaskReport` 和 crop failure attribution，v17 新增 shadow-only `cropExperimentReport`，v18 新增 TextRegion crop 前生成的 `preCropTextBoxPlanReport`，v19 新增 `textBoxPlanFailureReport`，v20 新增 `lineTextBoxPlanReport` / `lineCropExperimentReport`。当前只有 block 5 的归属修正用于 crop clamp，split candidate 用于块 `[5, 9, 10]` 的 crop clamp；TextBox 候选是 TextRegion crop 之后派生的诊断层，`usedForCropBlocks = []`；pre-crop plan、crop experiment、line crop experiment 的 best shadow candidate 和 failure attribution 都不替换 `finalTextUsedForTranslation`；crop 采用护栏未放宽。
 - v20 证明 block `[1, 6, 10]` 的 line-level / deskew shadow 候选仍不能通过既有 promotion gate，应停止继续在这条 crop/line/deskew 试参线上消耗。
 - v21 新增真实 TextBoxes / BubbleMask / SegmentMask artifact 适配前证据闸门；当前 `test/koharu_artifacts/` 不存在，报告明确阻塞在 `manifestMissing`，不得伪造 detector 接入。
+- v1.13 新增 external TextBoxes shadow OCR 接入口，完全由 `externalArtifactReadinessReport.externalTextBoxesShadowOCRAllowed` 门控；ready 前只写阻塞报告，ready 后每块最多 1 个 `externalArtifact.textBoxCrop` 候选，只进 JSON / TXT，不替换主 OCR、翻译、覆盖或通过判定。
 - Vision `customWords` 对当前图最终合并文本无变化，`changedBlockIndexes = []`。
 - 确定性 OCR 纠错能提升部分相似度，但翻译收益不稳定，仍只做探针对照。
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
@@ -169,6 +171,48 @@
 遗留事项：
 
 - 若 GitHub-hosted runner 的模拟器启动、App 容器读取或探针耗时不稳定，应优先查看 `manga-probe.log`、`app-console.log`、`output/manga_probe_progress.json` 和 `simulator-build.log`，再决定是否拆分成独立 probe workflow 或继续削减探针云端耗时。
+
+### v1.13 / v22 待验证：外部 TextBoxes shadow OCR 候选接入
+日期：2026-06-29
+依据：`md/prompt/v1（漫画探针）/v1.13（外部TextBoxes Shadow OCR候选接入）.md`；本轮修改 Swift 报告模型和探针诊断链路，完整 build / 探针交给 GitHub Actions，不刷新仓库根 `output/`，不追加 `metrics/version_history.csv` 漫画指标行。
+
+核心变更：
+
+- 新增 `MangaOverlayExternalTextBoxShadowOCRReport`、block summary 和 candidate report 模型。
+- 探针在生成 `externalArtifactReadinessReport` 后运行 external TextBoxes shadow OCR gate；只有 `readinessVerdict = readyForShadowOCR`、`activeArtifactsDirectory = true`、`contractExampleOnly = false` 且 `externalTextBoxesShadowOCRAllowed = true` 才执行 OCR。
+- 默认缺 `test/koharu_artifacts/` 时新 report 明确写 `executed = false`、`candidateCount = 0`、`ocrExecutedCount = 0`、所有块 skipped，阻塞原因来自 readiness verdict。
+- readiness 通过时，每个 fused block 最多选择 1 个 `externalArtifact.textBoxCrop` candidate；选择只使用 external TextBox 与 block 的 IoU、中心点包含、confidence、bubble alignment 和面积比例等无真值信号。
+- external TextBox crop 复用本地 Vision OCR，只把 OCR 文本、quality delta、word preservation、promotion blockers 和 report-only verdict 写入 `probe_report.json` 与 `1_ocr_probe_text.txt`。
+- `promotedExternalShadowBlocks` 保持空；若候选满足既有 gate，只写 `wouldPromoteByExistingGateBlocks`，不替换 `finalTextUsedForTranslation`、主覆盖图、`blockPassed`、`configuration.currentBlockSource` 或 `textRegionCropReport.adoptedCount`。
+- README、flow、flowchart 和 test 文档同步说明 real detector artifact、contract fixture、readiness gate、external shadow OCR report 和主流程之间的边界。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证计划：
+
+- 本地运行轻量检查：`git diff --check`、JSON 解析、Koharu artifact validator valid / invalid / allow-missing。
+- 不运行本机 Xcode build / 漫画探针；Swift build、云端探针、结果包和 artifact 由 PR 后 GitHub Actions 验证。
+
+验收口径：
+
+- 缺 active artifact 时 shadow OCR 不执行，不新增 `externalArtifact.*` OCR candidate。
+- `contractExampleOnly = true` 时 shadow OCR 不执行。
+- 真实 active artifact ready 时才允许 external TextBoxes shadow OCR，且每块最多 1 个 candidate。
+- candidate 选择和 report-only promotion 不使用 ground truth。
+- external OCR 结果只进 report / TXT，不改变主输入、主覆盖图、通过判定或 TextRegion crop adopted 数。
+
+遗留事项：
+
+- 当前仓库默认仍没有真实 active `test/koharu_artifacts/`；若 Koharu 或人工提供 artifact，必须先跑 validator，再由云端探针验证新 report 的 `executed=true` 路径。
 
 ### v2.2：GitHub Release GGUF 下载与 Actions 缓存
 日期：2026-06-29
