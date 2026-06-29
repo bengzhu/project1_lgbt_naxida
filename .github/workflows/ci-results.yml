@@ -206,6 +206,12 @@ jobs:
               exit 1
             fi
             echo "Installing $app_path"
+            echo "Bundled test resources:"
+            find "$app_path" -maxdepth 3 \( -path '*/test*' -o -name '1.png' -o -name '1.ground_truth.json' \) -print | sort || true
+            if [ ! -f "$app_path/test/1.png" ]; then
+              echo "test/1.png is missing from built simulator app bundle" >&2
+              exit 1
+            fi
             xcrun simctl install "$device_id" "$app_path"
 
             container="$(xcrun simctl get_app_container "$device_id" "$BUNDLE_ID" data)"
@@ -237,6 +243,8 @@ jobs:
             report="$output_dir/probe_report.json"
             progress="$output_dir/manga_probe_progress.json"
             last_status_print=0
+            last_progress_mtime=0
+            stalled_progress_seconds=0
             while [ "$SECONDS" -lt "$deadline" ]; do
               if [ $((SECONDS - last_status_print)) -ge 60 ]; then
                 last_status_print="$SECONDS"
@@ -244,10 +252,22 @@ jobs:
                 if [ -f "$progress" ]; then
                   echo "Current probe progress:"
                   cat "$progress" || true
+                  progress_mtime="$(stat -f %m "$progress")"
+                  if [ "$progress_mtime" = "$last_progress_mtime" ]; then
+                    stalled_progress_seconds=$((stalled_progress_seconds + 60))
+                    echo "Probe progress unchanged for ${stalled_progress_seconds}s"
+                  else
+                    last_progress_mtime="$progress_mtime"
+                    stalled_progress_seconds=0
+                  fi
                 fi
                 if [ -d "$output_dir" ]; then
                   echo "Current output files:"
                   find "$output_dir" -maxdepth 1 -type f -print | sort || true
+                fi
+                if [ -f "$progress" ] && [ "$stalled_progress_seconds" -ge 600 ]; then
+                  echo "Probe progress did not advance for ${stalled_progress_seconds}s" >&2
+                  break
                 fi
               fi
               if [ -s "$report" ]; then
@@ -285,6 +305,9 @@ jobs:
               echo "probe_report.json was not produced before timeout" >&2
               exit 1
             fi
+            rm -rf output
+            mkdir -p output
+            cp -R "$output_dir"/. output/ || true
             python3 -m json.tool "$report" >/dev/null
             python3 - "$report" <<'PY'
           import json, sys

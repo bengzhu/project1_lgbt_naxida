@@ -137,9 +137,13 @@ final class TranslationSessionStore: ObservableObject {
 
         restoreSnapshot()
         updateModelDownloadStateFromDisk()
+#if DEBUG
         if !Self.shouldRunMangaOverlayProbeFromLaunchEnvironment {
             refreshSpeechRecognitionCapabilities()
         }
+#else
+        refreshSpeechRecognitionCapabilities()
+#endif
         refreshModelStatus()
         persist()
         runLaunchLLMSmokeTestIfNeeded()
@@ -173,8 +177,9 @@ final class TranslationSessionStore: ObservableObject {
         if isLocalModelInstalled {
             selectedEngine = .local
         }
-        Task { @MainActor [weak self] in
-            self?.runMangaOverlayProbe()
+        Task { @MainActor in
+            self.writeMangaProbeProgress(stage: "launch-task-start")
+            self.runMangaOverlayProbe()
         }
 #endif
     }
@@ -280,7 +285,14 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     private var bundledTestDirectory: URL? {
-        Bundle.main.url(forResource: "test", withExtension: nil)
+        let candidates = [
+            Bundle.main.resourceURL?.appendingPathComponent("test", isDirectory: true),
+            Bundle.main.url(forResource: "test", withExtension: nil)
+        ]
+        return candidates.compactMap { $0 }.first {
+            var isDirectory: ObjCBool = false
+            return FileManager.default.fileExists(atPath: $0.path, isDirectory: &isDirectory) && isDirectory.boolValue
+        }
     }
 
     private var mangaOverlayOutputDirectory: URL {
@@ -1421,15 +1433,21 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func runMangaOverlayProbe() {
-        guard !isRunningMangaOverlayProbe else { return }
-        guard let url = bundledTestDirectory?.appendingPathComponent("1.png"),
-              FileManager.default.fileExists(atPath: url.path) else {
+        guard !isRunningMangaOverlayProbe else {
+            writeMangaProbeProgress(stage: "already-running")
+            return
+        }
+        guard let url = bundledTestFile(named: "1.png") else {
+            let message = "test/1.png 未找到，请确认已放入项目根 test/ 并重新构建。"
+            writeMangaProbeProgress(stage: "missing-test-image", message: message)
             mangaOverlayProbeState = .failed
-            mangaOverlayProbeMessage = "test/1.png 未找到，请确认已放入项目根 test/ 并重新构建。"
+            mangaOverlayProbeMessage = message
             dataTransferMessage = mangaOverlayProbeMessage
+            writeMangaProbeFailureReport(message)
             return
         }
 
+        writeMangaProbeProgress(stage: "probe-entry")
         isRunningMangaOverlayProbe = true
         mangaOverlayProbeState = .loading
         mangaOverlayProbeMessage = "正在读取 test/1.png"
@@ -1437,12 +1455,12 @@ final class TranslationSessionStore: ObservableObject {
         mangaOverlayProbeBlocks = []
         dataTransferMessage = mangaOverlayProbeMessage
 
-        Task { [weak self] in
-            guard let self else { return }
+        Task { @MainActor in
             defer { self.isRunningMangaOverlayProbe = false }
 
             do {
                 let startedAt = Date.now
+                self.writeMangaProbeProgress(stage: "probe-task-start", startedAt: startedAt)
                 let outputCleanupRemovedItemCount = try MangaOverlayProbeService.recreateDirectory(self.mangaOverlayOutputDirectory)
                 self.writeMangaProbeProgress(stage: "output-cleaned", startedAt: startedAt)
                 let data = try Data(contentsOf: url)
@@ -1898,22 +1916,44 @@ final class TranslationSessionStore: ObservableObject {
                 self.dataTransferMessage = self.mangaOverlayProbeMessage
             } catch {
                 self.writeMangaProbeProgress(stage: "error", message: "\(type(of: error)): \(error.localizedDescription)")
-                let outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
-                let report = self.makeMangaOverlayProbeReport(
-                    blocks: self.mangaOverlayProbeBlocks,
-                    outputFiles: outputFiles,
-                    configuration: .defaultValue,
-                    bubbleGeometry: nil,
-                    extraWarnings: ["运行错误：\(type(of: error)): \(error.localizedDescription)"]
-                )
-                let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
-                try? FileManager.default.createDirectory(at: self.mangaOverlayOutputDirectory, withIntermediateDirectories: true)
-                try? MangaOverlayProbeService.writeReport(report, to: reportURL)
+                self.writeMangaProbeFailureReport("运行错误：\(type(of: error)): \(error.localizedDescription)")
                 self.mangaOverlayProbeState = .failed
                 self.mangaOverlayProbeMessage = "漫画探针失败：\(error.localizedDescription)"
-                self.mangaOverlayProbeReport = report
                 self.dataTransferMessage = self.mangaOverlayProbeMessage
             }
+        }
+    }
+
+    @discardableResult
+    private func writeMangaProbeFailureReport(_ warning: String) -> MangaOverlayProbeReport {
+        let outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
+        let report = makeMangaOverlayProbeReport(
+            blocks: mangaOverlayProbeBlocks,
+            outputFiles: outputFiles,
+            configuration: .defaultValue,
+            bubbleGeometry: nil,
+            extraWarnings: [warning]
+        )
+        let reportURL = mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
+        try? FileManager.default.createDirectory(at: mangaOverlayOutputDirectory, withIntermediateDirectories: true)
+        try? MangaOverlayProbeService.writeReport(report, to: reportURL)
+        mangaOverlayProbeReport = report
+        return report
+    }
+
+    private func bundledTestFile(named filename: String) -> URL? {
+        let filenameURL = URL(fileURLWithPath: filename)
+        let baseName = filenameURL.deletingPathExtension().lastPathComponent
+        let fileExtension = filenameURL.pathExtension
+        var candidates: [URL?] = [
+            bundledTestDirectory?.appendingPathComponent(filename),
+            Bundle.main.url(forResource: baseName, withExtension: fileExtension, subdirectory: "test")
+        ]
+        if let resourceURL = Bundle.main.resourceURL {
+            candidates.append(resourceURL.appendingPathComponent(filename))
+        }
+        return candidates.compactMap { $0 }.first {
+            FileManager.default.fileExists(atPath: $0.path)
         }
     }
 

@@ -34,7 +34,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - Agent C 通过 PR 合并后必须删除远端 `codeb/...` 候选分支，避免分支无限堆积；无权限删除时要明确说明。
 - 现有加密软件包 artifact 只用于软件包交付，不作为 Agent C 验收依据。
 - `AITRANS CI Results` 会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，并用 Actions cache 复用 `.ci-models/`。当前只完成模型下载/缓存，完整探针还需后续把模型导入模拟器 App 沙盒。
-- 云端探针会构建并安装 Debug simulator app，把缓存模型复制到 App sandbox 的 `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 启动 App，导出本轮 `output/` 到未加密结果包。`Gemma-1.5B` 是历史目录名；实际文件必须用 Release asset 名、字节数和 SHA256 校验确认。验收口径是报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0`、关键 JSON/TXT/PNG 可用；`overallPassed=false` 仍可能是当前模型质量基线，不单独作为 CI 失败。若探针超时，结果包会保留 `manga-probe.log`、`app-console.log` 和 `output/manga_probe_progress.json`。
+- 云端探针会构建并安装 Debug simulator app，把缓存模型复制到 App sandbox 的 `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 启动 App，导出本轮 `output/` 到未加密结果包。`Gemma-1.5B` 是历史目录名；实际文件必须用 Release asset 名、字节数和 SHA256 校验确认。验收口径是报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0`、关键 JSON/TXT/PNG 可用；`overallPassed=false` 仍可能是当前模型质量基线，不单独作为 CI 失败。若探针超时，结果包会保留 `manga-probe.log`、`app-console.log` 和 `output/manga_probe_progress.json`；若进度长时间不更新，workflow 会提前收束日志，避免空等 60 分钟。
 
 ## 当前界面
 
