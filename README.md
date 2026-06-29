@@ -23,6 +23,14 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 
 项目根目录的 `test/` 已作为 folder resource 打进 App bundle。往 `test/` 放入音频或 OCR 图片后，需要重新构建安装 App，Pro 页的测试按钮才会扫描到新文件。
 
+## 协作与云端验证
+
+- 日常工作主分支是 `smalldata_test`；`main` 只作外观展示，不合并日常开发成果。
+- Agent B 候选实现分支使用 `codeb/vX.Y-短标题`，push 后由 GitHub Actions 重验证。
+- 本机默认只跑轻量检查；除非人工明确要求，不默认跑本机 Xcode build 或漫画探针。
+- Agent C 验收使用未加密的 `AITRANS CI Results` artifact，核对 `.xcresult`、`junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json` 和失败摘要。
+- 现有加密软件包 artifact 只用于软件包交付，不作为 Agent C 验收依据。
+
 ## 当前界面
 
 - `工作台`：主界面是一个简洁翻译框，输入文字后点击 `翻译`，会使用当前提示词和 Mock/Local 模型接口生成译文；默认免费目标语言为中文和英语。

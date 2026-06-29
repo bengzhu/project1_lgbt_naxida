@@ -1,0 +1,222 @@
+name: AITRANS CI Results
+
+on:
+  push:
+    branches:
+      - smalldata_test
+      - 'codeb/**'
+  workflow_dispatch:
+
+jobs:
+  ci-results:
+    name: Build and publish CI result bundle
+    runs-on: macos-latest
+    env:
+      SCHEME: AITRANS
+      DESTINATION: generic/platform=iOS Simulator
+      DERIVED_DATA: .derivedData-ci
+      RESULT_ROOT: ci-results
+      TEST_RESULTS_DIR: ci-results/TestResults
+      OUTPUT_COPY_DIR: ci-results/output
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$TEST_RESULTS_DIR" "$OUTPUT_COPY_DIR"
+          branch="${GITHUB_REF_NAME}"
+          branch_slug="$(echo "$branch" | tr '/[:space:]' '-' | tr -cd '[:alnum:]._-')"
+          short_sha="${GITHUB_SHA:0:12}"
+          version="unversioned"
+          if [[ "$branch" =~ v([0-9]+(\.[0-9]+)*) ]]; then
+            version="v${BASH_REMATCH[1]}"
+          fi
+          artifact_name="aitrans-ci-${version}-${branch_slug}-${short_sha}-run${GITHUB_RUN_ID}-attempt${GITHUB_RUN_ATTEMPT}"
+          result_bundle="${TEST_RESULTS_DIR}/AITRANS-${version}-${short_sha}.xcresult"
+          {
+            echo "branch=$branch"
+            echo "branch_slug=$branch_slug"
+            echo "short_sha=$short_sha"
+            echo "version=$version"
+            echo "artifact_name=$artifact_name"
+            echo "result_bundle=$result_bundle"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Static checks
+        id: static_checks
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          {
+            echo "## Static checks"
+            git diff --check
+            python3 -m json.tool test/1.ground_truth.json >/dev/null
+            if [ -f output/probe_report.json ]; then
+              python3 -m json.tool output/probe_report.json >/dev/null
+            else
+              echo "output/probe_report.json not present; skipping existing output parse"
+            fi
+            if [ -f output/clean_text_diagnostic.json ]; then
+              python3 -m json.tool output/clean_text_diagnostic.json >/dev/null
+            else
+              echo "output/clean_text_diagnostic.json not present; skipping existing clean text parse"
+            fi
+          } 2>&1 | tee "$RESULT_ROOT/static-checks.log"
+
+      - name: Xcode build
+        id: xcode_build
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p "$TEST_RESULTS_DIR"
+          rm -rf "${{ steps.meta.outputs.result_bundle }}"
+          xcodebuild \
+            -project AITRANS.xcodeproj \
+            -scheme "$SCHEME" \
+            -destination "$DESTINATION" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -resultBundlePath "${{ steps.meta.outputs.result_bundle }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            build \
+          2>&1 | tee "$RESULT_ROOT/xcodebuild.log"
+          exit ${PIPESTATUS[0]}
+
+      - name: Copy available probe outputs
+        id: copy_probe_outputs
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_COPY_DIR"
+          if [ -d output ]; then
+            find output -maxdepth 1 -type f \( -name '*.json' -o -name '*.txt' -o -name '*.png' \) -print -exec cp {} "$OUTPUT_COPY_DIR/" \;
+          fi
+          if [ ! -f "$OUTPUT_COPY_DIR/probe_report.json" ]; then
+            echo "probe_report.json not available in current checkout output; full cloud manga probe did not run in this workflow" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
+          fi
+
+      - name: Write JUnit summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATIC_STATUS="${{ steps.static_checks.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" python3 - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+
+          root = ET.Element("testsuite", name="AITRANS CI Results", tests="2")
+          failures = 0
+          cases = [
+              ("static-checks", os.environ["STATIC_STATUS"], "static checks failed"),
+              ("xcode-build", os.environ["BUILD_STATUS"], "xcode build failed"),
+          ]
+          for name, status, message in cases:
+              case = ET.SubElement(root, "testcase", classname="ci", name=name)
+              if status != "success":
+                  failures += 1
+                  failure = ET.SubElement(case, "failure", message=message)
+                  failure.text = "See logs, the .xcresult bundle, and ci-failure-summary.md."
+          root.set("failures", str(failures))
+          tree = ET.ElementTree(root)
+          ET.indent(tree, space="  ")
+          tree.write(os.path.join(os.environ["RESULT_ROOT"], "junit.xml"), encoding="utf-8", xml_declaration=True)
+          PY
+
+      - name: Write manifest and failure summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcode_version="$(xcodebuild -version | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+          created_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          probe_path=""
+          clean_path=""
+          ocr_text_path=""
+          [ -f "$OUTPUT_COPY_DIR/probe_report.json" ] && probe_path="$OUTPUT_COPY_DIR/probe_report.json"
+          [ -f "$OUTPUT_COPY_DIR/clean_text_diagnostic.json" ] && clean_path="$OUTPUT_COPY_DIR/clean_text_diagnostic.json"
+          [ -f "$OUTPUT_COPY_DIR/1_ocr_probe_text.txt" ] && ocr_text_path="$OUTPUT_COPY_DIR/1_ocr_probe_text.txt"
+          python3 - <<PY
+          import json
+          manifest = {
+              "version": "${{ steps.meta.outputs.version }}",
+              "branch": "${{ steps.meta.outputs.branch }}",
+              "commitSha": "${GITHUB_SHA}",
+              "shortSha": "${{ steps.meta.outputs.short_sha }}",
+              "runId": "${GITHUB_RUN_ID}",
+              "runAttempt": "${GITHUB_RUN_ATTEMPT}",
+              "workflowName": "${GITHUB_WORKFLOW}",
+              "createdAt": "$created_at",
+              "xcodeVersion": "$xcode_version",
+              "scheme": "${SCHEME}",
+              "destination": "${DESTINATION}",
+              "resultBundlePath": "${{ steps.meta.outputs.result_bundle }}",
+              "junitPath": "${RESULT_ROOT}/junit.xml",
+              "xcodebuildLogPath": "${RESULT_ROOT}/xcodebuild.log",
+              "staticChecksLogPath": "${RESULT_ROOT}/static-checks.log",
+              "failureSummaryPath": "${RESULT_ROOT}/ci-failure-summary.md",
+              "probeReportPath": "$probe_path",
+              "cleanTextDiagnosticPath": "$clean_path",
+              "ocrProbeTextPath": "$ocr_text_path",
+              "staticChecksOutcome": "${{ steps.static_checks.outcome }}",
+              "xcodeBuildOutcome": "${{ steps.xcode_build.outcome }}",
+              "probeRunInWorkflow": False,
+              "probeRunNote": "Full cloud manga probe is not run yet; GGUF, simulator container export, and model cache setup are pending.",
+              "encryptedPackageArtifactUsedForReview": False
+          }
+          with open("${RESULT_ROOT}/ci-artifact-manifest.json", "w", encoding="utf-8") as f:
+              json.dump(manifest, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          PY
+          {
+            echo "# AITRANS CI Failure Summary"
+            echo
+            echo "- branch: ${{ steps.meta.outputs.branch }}"
+            echo "- commitSha: ${GITHUB_SHA}"
+            echo "- runId: ${GITHUB_RUN_ID}"
+            echo "- runAttempt: ${GITHUB_RUN_ATTEMPT}"
+            echo "- artifact: ${{ steps.meta.outputs.artifact_name }}"
+            echo "- static checks: ${{ steps.static_checks.outcome }}"
+            echo "- xcode build: ${{ steps.xcode_build.outcome }}"
+            echo
+            echo "## Logs for Agent B"
+            echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
+            echo "- Xcode build: ${RESULT_ROOT}/xcodebuild.log"
+            echo "- Xcode result bundle: ${{ steps.meta.outputs.result_bundle }}"
+            echo "- JUnit summary: ${RESULT_ROOT}/junit.xml"
+            echo "- Manifest: ${RESULT_ROOT}/ci-artifact-manifest.json"
+            echo
+            echo "## Probe status"
+            echo "Full cloud manga probe was not run in this workflow. Current blockers are GGUF download/cache setup, stable simulator app container export, and any external detector artifacts required by the probe."
+            echo
+            if [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ]; then
+              echo "## Return to Agent B"
+              echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
+            else
+              echo "## Result"
+              echo "Static checks and Xcode build passed. Agent C still needs to inspect the diff, manifest, logs, and available output artifacts."
+            fi
+          } > "$RESULT_ROOT/ci-failure-summary.md"
+
+      - name: Upload CI result bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.artifact_name }}
+          path: ci-results
+          retention-days: 14
+
+      - name: Fail job if checks failed
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ]; then
+            echo "CI result bundle uploaded; failing job because at least one required stage failed."
+            exit 1
+          fi

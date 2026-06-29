@@ -1,17 +1,26 @@
 # AGENTS.md
-本文是 AITRANS 的核心入口记忆、项目总览、基本规则和多 Agent 工作流。保持精简；历史细节看 `update_log.md`，当前架构看 `md/flow/flow.md`，测试选择看 `md/test/test.md`。
+本文是 AITRANS 的核心入口记忆、项目总览、硬规则和多 Agent 工作流。保持精简；历史细节看 `update_log.md`，当前架构看 `md/flow/flow.md`，测试选择看 `md/test/test.md`。
 
-## 1. 项目总览
-AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点不是普通翻译 UI，而是漫画截图 OCR、本地翻译、覆盖合成和探针诊断链路。
+## 0. 角色召唤和身份标识
+- 用户消息以 `agenta`、`a:` 或 `A:` 开头，表示召唤 Agent A。
+- 用户消息以 `agentb`、`b:` 或 `B:` 开头，表示召唤 Agent B。
+- 用户消息以 `agentc`、`c:` 或 `C:` 开头，表示召唤 Agent C。
+- 没有这些前缀时，按普通 Codex 任务处理；若任务需要 A/B/C 边界，先提醒用户指定角色或说明本轮按普通任务执行。
+- Agent A 最终回复第一行必须写：`我是 Agent A。`
+- Agent B 最终回复第一行必须写：`我是 Agent B。`
+- Agent C 最终回复第一行必须写：`我是 Agent C。`
 
-核心事实：
+## 1. 项目核心事实
+AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR、本地翻译、覆盖合成和探针诊断链路。
 
 - 默认 `MockGemmaService` 用于 UI 和数据流冒烟。
 - `Local` 模式通过 `GemmaLocalService` + `LlamaRuntime` + `llama.cpp` 加载 GGUF。
-- 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合当翻译质量基准。
-- 质量对比优先考虑更强小模型，例如 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
+- 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
+- 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
+- GGUF 不进仓库。云端 GGUF 依赖后续由人工通过 GitHub Release + workflow 下载 + 缓存解决，本轮流程改造不处理模型分发。
+- 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
-## 2. 必读顺序
+## 2. 每轮必读
 每轮开始先读：
 
 1. `README.md`
@@ -35,13 +44,13 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点不是普通翻译 
 
 不要假设 README 的历史数字仍可验收；以当前代码、最新 `output/`、`metrics/version_history.csv` 和实际测试结果为准。
 
-## 3. 核心架构边界
+## 3. 架构硬边界
 - `TranslationSessionStore` 是 UI 状态、模型调用、历史、诊断和持久化的统一调度中心。
 - UI 层只触发 store 方法，不绕开 store 直接改持久化、模型状态或报告状态。
 - 普通图片 OCR 使用 `VisionOCRService`；漫画覆盖探针使用 `MangaOverlayProbeService` 的独立诊断链路。
 - 用户实际翻译和 summary 走 sampled 解码；漫画探针、raw 诊断、clean text、batch 对照和纠错翻译对照走 deterministic 解码。
 - `test/1.ground_truth.json` 只能用于探针验证和统计，不能用于真实产品路径或生产候选选择。
-- 模型文件不进仓库。
+- action 打包软件包当前有密码保护；不要为 Agent C 验收改动或解密该包。Agent C 只看独立未加密的 CI 结果包。
 
 ## 4. 漫画探针硬规则
 漫画覆盖翻译探针固定读取 bundle 内 `test/1.png`：
@@ -75,106 +84,62 @@ test/1.png
 - 不要因为 clean text 失败就继续盲目调 OCR。
 - 不要在未证明收益前把 deterministic correction、bubble-first 或 batch translation 替换为主流程。
 
-## 5. 当前真实基线
-当前可信基线以最新 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 为准。最近记录的 v18 / 当前输出基线是：
+## 5. Git 分支和云端验证工作流
+- `main`：外观展示分支。禁止 Agent B / C 把日常开发成果合并到 `main`。
+- `smalldata_test`：本仓库实际工作主分支。若外部提示词写成 `samlldata_test`，以当前远端真实分支 `origin/smalldata_test` 为准。
+- `codeb/vX.Y-短标题`：Agent B 候选实现分支，例如 `codeb/v2.0-cloud-ci-workflow`。
+- Agent B 每轮从最新 `smalldata_test` 开 `codeb/...` 分支，完成后 push。
+- Agent C 从远端拉取 `codeb/...` 分支验收；通过后合并到 `smalldata_test` 并 push。
+- 任何 Agent 在 `git push`、`git merge`、删除远端分支或改变远端状态前，都必须确认目标不是 `main`。
+- Agent C 合并后应记录候选分支是否可删除；没有权限删除时必须说明。
 
-- `configuration.currentBlockSource = fusedWholePageBubble`
-- `totalBlocksDetected = 13`
-- `postFusionCleanup.blockCountBeforeCleanup = 16`
-- `postFusionCleanup.blockCountAfterCleanup = 13`
-- `postFusionCleanup.rejectedBlockCount = 3`
-- `groundTruthMatchedBlocks = 13`
-- `groundTruthUnmatchedBlocks = 0`
-- `averageCoreDialogueOCRSimilarity = 0.7106`
-- `averageDecorativeOCRSimilarity = 0.8000`
-- `wholePageAccuracyVsGroundTruth = 0.5972`
-- `bubbleFirstAccuracyVsGroundTruth = 0.7300`
-- `frameworkComparison.consistencyPassed = true`
-- `fusionComparison.consistencyPassed = true`
-- `fusion.fused.accuracyVsGroundTruth = 0.7384`
-- `cleanTextDiagnostic.passRate = 0.4545`
-- `textRegionCropReport.totalRegions = 13`
-- `textRegionCropReport.cropSucceededCount = 10`
-- `textRegionCropReport.adoptedCount = 0`
-- `textRegionCropReport.rejectedCount = 13`
-- `textBoxCandidateReport.usedForCropBlocks = []`
-- `preCropTextBoxPlanReport.planCount = 37`
-- `preCropTextBoxPlanReport.shadowOCREligiblePlanCount = 29`
-- `preCropTextBoxPlanReport.selectedForShadowOCRBlocks = [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11]`
-- `preCropTextBoxPlanReport.stoppedBlocks = [4, 12]`
-- `cropExperimentReport.candidateCount = 48`
-- `cropExperimentReport.controlCandidateCount = 13`
-- `cropExperimentReport.ocrSucceededCount = 36`
-- `cropExperimentReport.betterThanControlCount = 13`
-- `cropExperimentReport.promotedShadowBlocks = []`
-- `cropExperimentReport.stoppedBlocks = [2, 3, 4, 5, 7, 9, 11, 12]`
-- `passedBlocks = 1`
-- `failedBlocks = 12`
-- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
-- `likelyRuleFalseFailureBlocks = []`
+默认验证路径：
 
-当前结论：
+- 除非人工明确要求“本机测试”“本地 build”“本地跑探针”“本地 xcodebuild”，否则完整 build、Xcode 测试、漫画探针、报告生成和重验证默认交给 GitHub Actions。
+- 本地仍可做 `git diff --check`、JSON 解析、YAML smoke 等轻量检查；这些不算重负载本机测试。
+- Swift / Xcode / 漫画探针相关任务完成后，默认 push `codeb/...`，由 GitHub Actions 跑 build、静态检查、可用报告检查和 artifact 上传。
+- 现有加密打包 workflow 只产出受密码保护的软件包；Agent C 不以该包验收。
+- 独立 CI 结果包必须未加密，至少包含 `.xcresult`、`junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`，以及可用的 `output/` 报告。
+- 若云端失败，Agent B 根据结果包中的失败摘要、日志路径和 manifest 修复后继续 push，不改回默认本机循环。
 
-- 主要瓶颈是 OCR 文本质量和 Gemma 270M 翻译能力，不是覆盖绘制，也不是规则过严。
-- Vision `customWords` 对当前图最终合并文本无明显改变。
-- deterministic correction 只做探针对照，不替换主翻译输入。
-- 主流程已切到 whole-page + bubble-first 融合；`Let's Battle!` 没丢，bubble-first 独有的两条真实内容也进入融合结果。
-- post-fusion cleanup 已把 16 个融合块压到 13 个，拒绝重复/碎片块但保留三条关键真实内容。
-- TextRegion crop OCR 候选层已接入报告，但本轮 13 个块全部被护栏回退，没有替换主翻译输入。
-- `bubbleAudits` 只做气泡分割风险审计，不替换主流程；当前重点观察 `bubbleID 4/6/7`。
-- `preCropTextBoxPlanReport` 是 TextRegion crop 前生成的 Koharu 式上游 TextBox plan artifact；每块最多保留 3 个 plan，只用于 shadow OCR，不写回 `finalTextUsedForTranslation`。
-- `cropExperimentReport` 是 shadow-only 实验矩阵；v18 优先使用 `preCropTextBoxPlan.*` 变体作为 shadow OCR 来源，best shadow candidate 只进入 JSON/TXT 报告，不写回 `finalTextUsedForTranslation`，也不改变 `textRegionCropReport.adoptedCount`。
-- tagged batch translation 当前格式崩坏，只保留诊断分支。
+## 6. Agent A/B/C 职责
+### Agent A
+- 默认不改代码。
+- 读取入口文档、历史、流程、测试规范和相关源码。
+- 输出写给 Agent B 的版本化提示词，保存到 `md/prompt/vX（阶段）/vX.Y（任务）.md`。
+- 提示词必须明确目标、非目标、分支名建议、测试层级、CI 期望、验收标准和禁止项。
 
-## 6. 翻译失败排查顺序
-不要只看覆盖图猜原因。按顺序查：
+### Agent B
+- 从最新 `smalldata_test` 开 `codeb/vX.Y-短标题` 分支。
+- 按 Agent A 提示词小步实现，不做无关重构。
+- 默认本地只跑轻量检查；除非人工明确要求，不跑本机完整 Xcode build 或漫画探针。
+- 完成后 push 分支，让 GitHub Actions 运行。
+- 最终回复必须列出分支名、commit SHA、push 结果、CI 入口或 run 信息、本地已跑检查、未跑测试原因、artifact 名称；若 Actions 尚未完成，必须说明等待云端结果。
 
-1. `failureCategory`
-2. `rawOutputClassification`
-3. `candidateClassification`
-4. `translationCandidate`
-5. `failureReasons`
-6. `qualityNotes`
-7. `ocrProbeNotes`
-8. `cleanTextDiagnostic`
+### Agent C
+- 拉取 `codeb/...` 分支，查看实际 diff、文档同步、架构边界、GitHub Actions 结论、日志和 artifacts。
+- 只能验收与当前 `codeb/...` HEAD 完全一致的 `commitSha`。
+- 必须核对 `ci-artifact-manifest.json` 中的 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`，确认没有拿旧包、错包或其他分支的包。
+- 必须查看 `.xcresult` 或摘要、`junit.xml`、`xcodebuild.log`、`ci-failure-summary.md`；涉及探针时还必须检查云端生成或上传的 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和关键 PNG。
+- 有 bug 或云端验证失败时，输出退回清单，说明应由 Agent B 修复的日志位置和失败原因，不合并。
+- 通过后更新版本号和核心文档，合并到 `smalldata_test`，push。严禁合并到 `main`。
 
-判断口径：
+## 7. 测试选择
+- 文档-only 修改至少运行 `git diff --check`，可加 JSON/YAML smoke。
+- Swift 或 Xcode 工程修改默认不在本机跑完整 build；按规则推分支交给 GitHub Actions。
+- 漫画探针、翻译链路或报告模型修改必须由云端能稳定运行的探针生成报告；若当前云端因模拟器、GGUF、App 容器或外部 artifact 缺失不能稳定运行，必须在最终回复和文档中列明未验证范围、缺失依赖、是否影响验收和需要人工提供什么。
+- 不得伪造测试结果，不得把旧 artifact 当新结果。
 
-- `ocrInputSuspect`：优先修 OCR、合并、裁切、纠错或气泡路径。
-- `modelOutputFailure`：优先查模型 raw 输出、采样、prompt 或换模型。
-- `translationLanguageQualityFailure`：模型给了中文或半中文，但候选太短、混英文、像解释或列表。
-- `ruleFalseFailureSuspected`：才考虑放宽判定规则。
+本地轻量命令：
 
-如果 `likelyRuleFalseFailureBlocks = []`，不要声称“规则太严格”。
+```sh
+git diff --check
+python3 -m json.tool test/1.ground_truth.json
+python3 -m json.tool output/probe_report.json
+python3 -m json.tool output/clean_text_diagnostic.json
+```
 
-## 7. Agent A/B/C 迭代工作流
-### 人工
-人工提出目标、边界、禁止项、验收标准和测试要求，并把入口文档、历史日志、核心流程、测试规范和相关上下文交给 Agent A。
-
-### Agent A：目标分析与提示词
-Agent A 默认不直接写代码。必须读取入口文档、历史日志、核心流程、测试规范和相关源码，明确本轮目标、非目标、边界、依赖、风险、关键文件、测试要求和验收标准。输出写给 Agent B 的版本化提示词，保存到 `md/prompt/vX（阶段）/vX.Y（任务）.md`。
-
-### Agent B：实现与测试
-Agent B 按 Agent A 提示词小步实现，不做无关重构。必须按 `md/test/test.md` 选择测试层级，记录具体命令和结果，说明未跑测试的原因，不伪造验证，不回滚用户或其他 Agent 的改动。
-
-### Agent C：验收与核心文档更新
-Agent C 查看实际 diff，核对测试结果，检查架构边界、测试充分性、文档同步和未说明风险。通过后更新 `md/flow/flow.md`、`md/flow/flowchart.md`，必要时追加 `update_log.md` 和 `metrics/version_history.csv`。
-
-Agent C 审查通过后必须进入版本收口：
-
-- 确认本轮版本号，优先沿用 Agent A 提示词版本或 `metrics/version_history.csv` 的版本；人工指定版本号时以人工为准。
-- 确认 `git status --short` 中只包含本轮应交付文件；若有无关改动，必须说明并避免纳入提交。
-- 执行 `git add`、`git commit` 和 `git push`，把通过验收的版本推到远端。
-- 提交信息按版本号管理，格式建议为 `vN: 简要说明本版本做了什么`，正文可补充关键验证和风险。
-- 如果审查未通过、测试未达标、远端不可用或权限受限，不得伪装已提交或已 push；必须说明阻塞原因和当前 git 状态。
-
-## 8. 测试规则
-- 文档-only 修改至少运行 `git diff --check`。
-- Swift 或 Xcode 工程修改至少运行命令行 build。
-- 漫画探针、翻译链路或报告模型修改必须重新跑探针、导出最新 `output/`、解析 JSON，并汇总关键数字。
-- 读取 CoreSimulator App 容器通常需要更高权限；受限环境中要请求批准或明确说明未导出原因。
-
-常用命令：
+人工明确要求本机 build 时使用：
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
@@ -185,18 +150,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer scripts/export-probe-output.sh booted
-```
-
-```sh
-python3 -m json.tool test/1.ground_truth.json
-python3 -m json.tool output/probe_report.json
-python3 -m json.tool output/clean_text_diagnostic.json
-git diff --check
-```
-
-## 9. 文档规则
+## 8. 文档和版本收口
 - `AGENTS.md` 是唯一核心入口文档。
 - `update_log.md` 记录版本历史、关键决策、验证结果和遗留问题。
 - `md/flow/flow.md` 只写当前真实架构和运行流程。
@@ -204,15 +158,17 @@ git diff --check
 - `md/test/test.md` 是测试选择依据。
 - `md/prompt/` 保存 Agent A 的版本化实现提示词。
 - 功能更新或 bug 修复后，按影响同步更新 README 近期记录、`update_log.md`、flow/test 文档和 `metrics/version_history.csv`。
-- Agent C 验收通过后的正式版本必须有对应 git commit，并 push 到远端；版本号、提交信息和文档记录应一致。
+- 流程制度变更不伪装成漫画探针质量版本；未重新跑完整探针时不追加 `metrics/version_history.csv` 漫画指标行。
 
-## 10. 交付格式
+## 9. 最终回复格式
 最终回复使用中文，至少包含：
 
 - 改了什么。
 - 关键文件。
+- 当前分支名和是否触碰远端。
 - 已运行的验证命令和结果。
 - 未运行的测试及原因。
-- Agent C 通过后，说明 git commit / push 结果和提交哈希；若未执行，说明原因。
+- 未跑本机 build / 探针时，明确写“未跑本机 build / 探针，按规则交给云端验证”。
+- Agent C 通过后，说明 git commit / push / merge 结果和提交哈希；若未执行，说明原因。
 - 涉及漫画探针或翻译链路时，汇总关键数字。
 - 已知风险和下一步建议。
