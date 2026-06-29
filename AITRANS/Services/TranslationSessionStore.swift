@@ -1543,6 +1543,7 @@ final class TranslationSessionStore: ObservableObject {
                 var lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport?
                 var lineCropExperimentReport: MangaOverlayLineCropExperimentReport?
                 var externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
+                var externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1814,6 +1815,14 @@ final class TranslationSessionStore: ObservableObject {
                     bubbleMaskReport: bubbleMaskReport,
                     segmentMaskReport: segmentMaskReport
                 )
+                self.mangaOverlayProbeMessage = "正在检查外部 TextBoxes shadow OCR gate"
+                externalTextBoxShadowOCRReport = try await self.makeExternalTextBoxShadowOCRReport(
+                    blocks: probeBlocks,
+                    image: recognized.image,
+                    readinessReport: externalArtifactReadinessReport,
+                    bundledTestDirectory: self.bundledTestDirectory,
+                    preprocessing: probeConfiguration.preprocessing
+                )
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
@@ -1832,6 +1841,7 @@ final class TranslationSessionStore: ObservableObject {
                     lineTextBoxPlanReport: lineTextBoxPlanReport,
                     lineCropExperimentReport: lineCropExperimentReport,
                     externalArtifactReadinessReport: externalArtifactReadinessReport,
+                    externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport
@@ -1896,6 +1906,7 @@ final class TranslationSessionStore: ObservableObject {
                     lineTextBoxPlanReport: lineTextBoxPlanReport,
                     lineCropExperimentReport: lineCropExperimentReport,
                     externalArtifactReadinessReport: externalArtifactReadinessReport,
+                    externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -6965,6 +6976,7 @@ final class TranslationSessionStore: ObservableObject {
         lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport? = nil,
         lineCropExperimentReport: MangaOverlayLineCropExperimentReport? = nil,
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport? = nil,
+        externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7034,6 +7046,7 @@ final class TranslationSessionStore: ObservableObject {
             lineTextBoxPlanReport: lineTextBoxPlanReport,
             lineCropExperimentReport: lineCropExperimentReport,
             externalArtifactReadinessReport: externalArtifactReadinessReport,
+            externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7207,6 +7220,383 @@ final class TranslationSessionStore: ObservableObject {
             nextAction: nextAction,
             notes: notes
         )
+    }
+
+    private func makeExternalTextBoxShadowOCRReport(
+        blocks: [MangaOverlayProbeBlock],
+        image: CGImage,
+        readinessReport: MangaOverlayExternalArtifactReadinessReport?,
+        bundledTestDirectory: URL?,
+        preprocessing: MangaOverlayPreprocessingOptions
+    ) async throws -> MangaOverlayExternalTextBoxShadowOCRReport {
+        let gateVerdict = readinessReport?.readinessVerdict ?? "readinessReportMissing"
+        let activeDirectory = readinessReport?.activeArtifactsDirectory ?? false
+        let contractExampleOnly = readinessReport?.contractExampleOnly ?? false
+        let shadowAllowed = readinessReport?.externalTextBoxesShadowOCRAllowed ?? false
+        var notes = [
+            "shadowOnly=true",
+            "groundTruthNotUsed=true",
+            "doesNotChangeFinalTextUsedForTranslation=true",
+            "doesNotChangeMainOverlay=true",
+            "doesNotChangeBlockPassed=true",
+            "doesNotChangeTextRegionCropAdoptedCount=true",
+            "candidateSelectionSignals=IoU,centerContainment,confidence,bubbleAlignment,bboxAreaRatio"
+        ]
+
+        guard shadowAllowed, activeDirectory, !contractExampleOnly else {
+            if contractExampleOnly {
+                notes.append("blockedBecauseContractExampleOnly")
+            }
+            notes.append("external TextBoxes shadow OCR did not execute because readiness gate is \(gateVerdict)")
+            let summaries = blocks.map { block in
+                MangaOverlayExternalTextBoxShadowOCRBlockSummary(
+                    blockIndex: block.index,
+                    selectedCandidateID: nil,
+                    selectedTextBoxID: nil,
+                    candidateBBox: nil,
+                    ocrExecuted: false,
+                    ocrSucceeded: false,
+                    ocrText: nil,
+                    qualityDelta: nil,
+                    wordPreservationRatio: nil,
+                    promotionVerdict: "blockedByReadinessGate",
+                    blockers: [gateVerdict],
+                    notes: ["no externalArtifact.* candidate generated"]
+                )
+            }
+            return MangaOverlayExternalTextBoxShadowOCRReport(
+                enabled: true,
+                executed: false,
+                gateVerdict: gateVerdict,
+                activeArtifactsDirectory: activeDirectory,
+                contractExampleOnly: contractExampleOnly,
+                externalTextBoxesShadowOCRAllowed: shadowAllowed,
+                shadowOnly: true,
+                groundTruthNotUsed: true,
+                doesNotChangeFinalTextUsedForTranslation: true,
+                doesNotChangeMainOverlay: true,
+                candidateCount: 0,
+                ocrExecutedCount: 0,
+                ocrSucceededCount: 0,
+                betterThanControlCount: 0,
+                promotedExternalShadowBlocks: [],
+                wouldPromoteByExistingGateBlocks: [],
+                skippedBlocks: blocks.map(\.index).sorted(),
+                blockSummaries: summaries,
+                candidates: [],
+                notes: notes
+            )
+        }
+
+        let artifactsDirectory = bundledTestDirectory?.appendingPathComponent("koharu_artifacts", isDirectory: true)
+        let manifestURL = artifactsDirectory?.appendingPathComponent("1.manifest.json")
+        var parseErrors: [String] = []
+        let manifest = Self.decodeExternalArtifact(
+            MangaOverlayExternalArtifactManifest.self,
+            from: manifestURL,
+            label: "manifest",
+            parseErrors: &parseErrors
+        )
+        let textBoxesURL = Self.externalArtifactURL(
+            named: manifest?.textBoxesPath,
+            fallback: "1.textboxes.json",
+            artifactsDirectory: artifactsDirectory
+        )
+        let bubbleMaskURL = Self.externalArtifactURL(
+            named: manifest?.bubbleMaskPath,
+            fallback: "1.bubbles.json",
+            artifactsDirectory: artifactsDirectory
+        )
+        let textBoxes = Self.decodeExternalArtifactList(
+            MangaOverlayExternalTextBox.self,
+            from: textBoxesURL,
+            keys: ["textBoxes", "textboxes", "items"],
+            label: "textBoxes",
+            parseErrors: &parseErrors
+        )
+        let bubbleInstances = Self.decodeExternalArtifactList(
+            MangaOverlayExternalBubbleInstance.self,
+            from: bubbleMaskURL,
+            keys: ["bubbleInstances", "bubbles", "instances", "items"],
+            label: "bubbleMask",
+            parseErrors: &parseErrors
+        )
+        if !parseErrors.isEmpty {
+            notes.append("parseErrors=\(parseErrors.joined(separator: ","))")
+        }
+
+        var nextCandidateID = 0
+        var candidates: [MangaOverlayExternalTextBoxShadowOCRCandidate] = []
+        var summaries: [MangaOverlayExternalTextBoxShadowOCRBlockSummary] = []
+        var skippedBlocks: [Int] = []
+
+        for block in blocks {
+            let selected = Self.selectExternalTextBoxShadowCandidate(
+                for: block,
+                textBoxes: textBoxes,
+                bubbleInstances: bubbleInstances,
+                imageWidth: image.width,
+                imageHeight: image.height
+            )
+            guard let selected else {
+                skippedBlocks.append(block.index)
+                summaries.append(
+                    MangaOverlayExternalTextBoxShadowOCRBlockSummary(
+                        blockIndex: block.index,
+                        selectedCandidateID: nil,
+                        selectedTextBoxID: nil,
+                        candidateBBox: nil,
+                        ocrExecuted: false,
+                        ocrSucceeded: false,
+                        ocrText: nil,
+                        qualityDelta: nil,
+                        wordPreservationRatio: nil,
+                        promotionVerdict: "skippedNoMatchingExternalTextBox",
+                        blockers: ["noMatchingExternalTextBox"],
+                        notes: ["external TextBox candidate rejected before OCR"]
+                    )
+                )
+                continue
+            }
+
+            let crop = try await mangaOverlayProbeService.recognizeExternalTextBoxCrop(
+                in: image,
+                textBoxBBox: selected.textBox.bbox,
+                options: preprocessing
+            )
+            let controlText = block.finalTextUsedForTranslation
+            let controlQuality = Self.ocrCandidateQualityScore(controlText)
+            let ocrText = crop.text?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let ocrTextValue = ocrText ?? ""
+            let candidateQuality = Self.ocrCandidateQualityScore(ocrTextValue)
+            let preservation = Self.wordPreservationRatio(
+                sourceWords: Self.ocrCandidateWords(controlText),
+                candidateWords: Self.ocrCandidateWords(ocrTextValue)
+            )
+            let qualityDelta = candidateQuality - controlQuality
+            var blockers = selected.rejectionReasons
+            if ocrTextValue.isEmpty {
+                blockers.append("emptyLocalOCR")
+            }
+            if Self.ocrCandidateWords(controlText).count >= 3, preservation < 0.55 {
+                blockers.append("rawWordsLost")
+            }
+            if Self.ocrCandidateWords(controlText).count >= 2,
+               Self.ocrCandidateWords(ocrTextValue).count < max(2, Int(ceil(Double(Self.ocrCandidateWords(controlText).count) * 0.55))) {
+                blockers.append("wordCountRegression")
+            }
+            if Self.ocrCandidateWords(ocrTextValue).joined(separator: " ") == Self.ocrCandidateWords(controlText).joined(separator: " ") {
+                blockers.append("sameAsFusedText")
+            }
+            if Self.containsLikelyOCRError(in: ocrTextValue), !Self.containsLikelyOCRError(in: controlText), candidateQuality <= controlQuality + 0.08 {
+                blockers.append("introducedLikelyOCRError")
+            }
+            let betterThanControl = candidateQuality > controlQuality + 0.03
+            let wouldPromote = !ocrTextValue.isEmpty
+                && preservation >= 0.80
+                && qualityDelta > 0.08
+                && !blockers.contains("rawWordsLost")
+                && !blockers.contains("introducedLikelyOCRError")
+                && !blockers.contains("sameAsFusedText")
+                && !blockers.contains("bubbleAlignmentMismatch")
+                && !blockers.contains("textBoxAreaTooLarge")
+            let verdict = wouldPromote ? "wouldPromoteByExistingGateReportOnly" : (betterThanControl ? "betterThanControlButBlocked" : "controlStillBest")
+            let candidateID = nextCandidateID
+            nextCandidateID += 1
+            candidates.append(
+                MangaOverlayExternalTextBoxShadowOCRCandidate(
+                    candidateID: candidateID,
+                    blockIndex: block.index,
+                    selectedTextBoxID: selected.textBox.id,
+                    variantName: "externalArtifact.textBoxCrop",
+                    textBoxBBox: selected.textBox.bbox,
+                    cropBBox: crop.cropBBox,
+                    textBoxConfidence: selected.textBox.confidence,
+                    textBoxIoU: selected.iou,
+                    blockCenterContained: selected.centerContained,
+                    bubbleInstanceID: selected.bubbleInstance?.id,
+                    bubbleAlignmentMatched: selected.bubbleAlignmentMatched,
+                    areaRatioToBlock: selected.areaRatio,
+                    linePolygonsPresent: selected.textBox.linePolygons?.isEmpty == false,
+                    sourceDirection: selected.textBox.sourceDirection,
+                    rotationDegrees: selected.textBox.rotationDegrees,
+                    deskewExecuted: false,
+                    ocrExecuted: true,
+                    ocrSucceeded: !ocrTextValue.isEmpty,
+                    controlText: controlText,
+                    ocrText: ocrText,
+                    wordPreservationRatio: preservation,
+                    qualityScoreBefore: controlQuality,
+                    qualityScoreAfter: candidateQuality,
+                    qualityDelta: qualityDelta,
+                    betterThanControl: betterThanControl,
+                    promotionVerdict: verdict,
+                    blockers: Array(Set(blockers)).sorted(),
+                    riskFlags: selected.riskFlags,
+                    notes: [
+                        "shadowOnly=true",
+                        "variantName=externalArtifact.textBoxCrop",
+                        "deskewExecuted=false",
+                        "paddingX=\(crop.paddingX.formatted(.number.precision(.fractionLength(1))))",
+                        "paddingY=\(crop.paddingY.formatted(.number.precision(.fractionLength(1))))",
+                        "groundTruthUsedForSelection=false",
+                        "groundTruthUsedForPromotion=false"
+                    ]
+                )
+            )
+            summaries.append(
+                MangaOverlayExternalTextBoxShadowOCRBlockSummary(
+                    blockIndex: block.index,
+                    selectedCandidateID: candidateID,
+                    selectedTextBoxID: selected.textBox.id,
+                    candidateBBox: crop.cropBBox,
+                    ocrExecuted: true,
+                    ocrSucceeded: !ocrTextValue.isEmpty,
+                    ocrText: ocrText,
+                    qualityDelta: qualityDelta,
+                    wordPreservationRatio: preservation,
+                    promotionVerdict: verdict,
+                    blockers: Array(Set(blockers)).sorted(),
+                    notes: ["externalArtifact.textBoxCrop shadow candidate; not written to finalTextUsedForTranslation"]
+                )
+            )
+        }
+
+        let wouldPromoteBlocks = candidates
+            .filter { $0.promotionVerdict == "wouldPromoteByExistingGateReportOnly" }
+            .map(\.blockIndex)
+            .sorted()
+        notes.append("promotedExternalShadowBlocks intentionally remains empty; wouldPromoteByExistingGateBlocks is report-only")
+        return MangaOverlayExternalTextBoxShadowOCRReport(
+            enabled: true,
+            executed: true,
+            gateVerdict: gateVerdict,
+            activeArtifactsDirectory: activeDirectory,
+            contractExampleOnly: contractExampleOnly,
+            externalTextBoxesShadowOCRAllowed: shadowAllowed,
+            shadowOnly: true,
+            groundTruthNotUsed: true,
+            doesNotChangeFinalTextUsedForTranslation: true,
+            doesNotChangeMainOverlay: true,
+            candidateCount: candidates.count,
+            ocrExecutedCount: candidates.filter(\.ocrExecuted).count,
+            ocrSucceededCount: candidates.filter(\.ocrSucceeded).count,
+            betterThanControlCount: candidates.filter(\.betterThanControl).count,
+            promotedExternalShadowBlocks: [],
+            wouldPromoteByExistingGateBlocks: wouldPromoteBlocks,
+            skippedBlocks: skippedBlocks.sorted(),
+            blockSummaries: summaries.sorted { $0.blockIndex < $1.blockIndex },
+            candidates: candidates.sorted { $0.candidateID < $1.candidateID },
+            notes: notes
+        )
+    }
+
+    private struct ExternalTextBoxShadowSelection {
+        var textBox: MangaOverlayExternalTextBox
+        var bubbleInstance: MangaOverlayExternalBubbleInstance?
+        var iou: Double
+        var centerContained: Bool
+        var areaRatio: Double
+        var bubbleAlignmentMatched: Bool
+        var riskFlags: [String]
+        var rejectionReasons: [String]
+        var score: Double
+    }
+
+    private static func selectExternalTextBoxShadowCandidate(
+        for block: MangaOverlayProbeBlock,
+        textBoxes: [MangaOverlayExternalTextBox],
+        bubbleInstances: [MangaOverlayExternalBubbleInstance],
+        imageWidth: Int,
+        imageHeight: Int
+    ) -> ExternalTextBoxShadowSelection? {
+        let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(imageWidth), height: CGFloat(imageHeight))
+        let blockRect = rect(from: block.bbox)
+        let blockArea = max(blockRect.width * blockRect.height, 1)
+        let blockCenter = CGPoint(x: blockRect.midX, y: blockRect.midY)
+        let blockBubble = bestExternalBubble(for: blockRect, bubbleInstances: bubbleInstances)
+
+        return textBoxes.compactMap { textBox -> ExternalTextBoxShadowSelection? in
+            let textBoxRect = rect(from: textBox.bbox)
+            var rejectionReasons: [String] = []
+            var riskFlags: [String] = []
+            guard textBoxRect.width >= 2,
+                  textBoxRect.height >= 2,
+                  textBoxRect.minX >= imageBounds.minX,
+                  textBoxRect.minY >= imageBounds.minY,
+                  textBoxRect.maxX <= imageBounds.maxX,
+                  textBoxRect.maxY <= imageBounds.maxY else {
+                return nil
+            }
+            let iou = rectIoU(blockRect, textBoxRect)
+            let centerContained = textBoxRect.contains(blockCenter)
+            if iou <= 0.01 && !centerContained {
+                rejectionReasons.append("noBlockOverlapOrCenterContainment")
+            }
+            let areaRatio = (textBoxRect.width * textBoxRect.height) / blockArea
+            if areaRatio > 5.0 {
+                rejectionReasons.append("textBoxAreaTooLarge")
+            }
+            if areaRatio < 0.04 {
+                rejectionReasons.append("textBoxAreaTooSmall")
+            }
+            let textBoxBubble = bestExternalBubble(for: textBoxRect, bubbleInstances: bubbleInstances)
+            let bubbleAlignmentMatched = blockBubble?.id == nil
+                || textBoxBubble?.id == nil
+                || blockBubble?.id == textBoxBubble?.id
+            if !bubbleAlignmentMatched {
+                rejectionReasons.append("bubbleAlignmentMismatch")
+            }
+            if textBox.linePolygons?.isEmpty == false {
+                riskFlags.append("linePolygonsPresentDeskewNotExecuted")
+            }
+            if textBox.rotationDegrees != nil {
+                riskFlags.append("rotationRecordedDeskewNotExecuted")
+            }
+            guard rejectionReasons.isEmpty else { return nil }
+            let confidence = textBox.confidence ?? 0
+            let ratioScore = max(0, 1 - abs(log(max(areaRatio, 0.001))))
+            let score = (centerContained ? 2.0 : 0)
+                + iou * 4
+                + confidence
+                + ratioScore * 0.4
+                + (bubbleAlignmentMatched ? 0.35 : 0)
+            return ExternalTextBoxShadowSelection(
+                textBox: textBox,
+                bubbleInstance: textBoxBubble ?? blockBubble,
+                iou: iou,
+                centerContained: centerContained,
+                areaRatio: areaRatio,
+                bubbleAlignmentMatched: bubbleAlignmentMatched,
+                riskFlags: Array(Set(riskFlags)).sorted(),
+                rejectionReasons: [],
+                score: score
+            )
+        }
+        .sorted {
+            if $0.centerContained != $1.centerContained {
+                return $0.centerContained && !$1.centerContained
+            }
+            if abs($0.iou - $1.iou) > 0.0001 {
+                return $0.iou > $1.iou
+            }
+            if ($0.textBox.confidence ?? 0) != ($1.textBox.confidence ?? 0) {
+                return ($0.textBox.confidence ?? 0) > ($1.textBox.confidence ?? 0)
+            }
+            return $0.score > $1.score
+        }
+        .first
+    }
+
+    private static func bestExternalBubble(
+        for rect: CGRect,
+        bubbleInstances: [MangaOverlayExternalBubbleInstance]
+    ) -> MangaOverlayExternalBubbleInstance? {
+        bubbleInstances
+            .map { ($0, rectIoU(rect, Self.rect(from: $0.bbox))) }
+            .filter { $0.1 >= 0.05 }
+            .max { $0.1 < $1.1 }?
+            .0
     }
 
     private static func externalArtifactURL(named path: String?, fallback: String, artifactsDirectory: URL?) -> URL? {
