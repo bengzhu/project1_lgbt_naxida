@@ -157,6 +157,14 @@ python3 -m json.tool test/1.ground_truth.json
 - `bubbleSplitCandidateReport.candidateCount = 6`
 - `bubbleSplitCandidateReport.clampEligibleCount = 3`
 - `bubbleSplitCandidateReport.appliedToCropClampBlocks = [5, 9, 10]`
+- `textBoxCandidateReport.usedForCropBlocks = []`
+- `cropExperimentReport.candidateCount = 52`
+- `cropExperimentReport.controlCandidateCount = 13`
+- `cropExperimentReport.ocrSucceededCount = 43`
+- `cropExperimentReport.betterThanControlCount = 15`
+- `cropExperimentReport.promotedShadowBlocks = []`
+- `cropExperimentReport.stoppedBlocks = [2, 4, 5, 6, 7, 9, 11, 12]`
+- `cropExperimentReport` 每块候选数最大为 4，即 control + 最多 3 个 shadow 候选
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
 - `failedBlocks = 12`

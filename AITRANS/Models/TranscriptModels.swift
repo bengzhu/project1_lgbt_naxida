@@ -1185,6 +1185,65 @@ struct MangaOverlaySegmentMaskReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaOverlayCropExperimentCandidate: Equatable, Codable, Sendable {
+    var candidateID: Int
+    var blockIndex: Int
+    var variantName: String
+    var sourceStack: [String]
+    var bboxBeforeClamp: [Double]
+    var bboxAfterClamp: [Double]
+    var clampSource: String
+    var preprocessingProfile: String
+    var ocrText: String?
+    var ocrSucceeded: Bool
+    var wordPreservationRatio: Double
+    var lineCountDelta: Int
+    var qualityScoreBefore: Double
+    var qualityScoreAfter: Double
+    var qualityDelta: Double
+    var betterThanControl: Bool
+    var riskFlags: [String]
+    var rejectionReasons: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayCropExperimentBlockSummary: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var controlCandidateID: Int?
+    var bestShadowCandidateID: Int?
+    var bestVariantName: String?
+    var promotionVerdict: String
+    var stopReasons: [String]
+    var candidateIDs: [Int]
+    var notes: [String]
+}
+
+struct MangaOverlayCropExperimentVariantSummary: Equatable, Codable, Sendable {
+    var variantName: String
+    var attemptedCount: Int
+    var ocrSucceededCount: Int
+    var betterThanControlCount: Int
+    var promotedBlockCount: Int
+    var degradedCount: Int
+    var emptyOutputCount: Int
+    var rawWordsLostCount: Int
+}
+
+struct MangaOverlayCropExperimentReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var evaluatedBlockCount: Int
+    var candidateCount: Int
+    var controlCandidateCount: Int
+    var ocrSucceededCount: Int
+    var betterThanControlCount: Int
+    var promotedShadowBlocks: [Int]
+    var stoppedBlocks: [Int]
+    var variantBreakdown: [String: MangaOverlayCropExperimentVariantSummary]
+    var blockSummaries: [MangaOverlayCropExperimentBlockSummary]
+    var candidates: [MangaOverlayCropExperimentCandidate]
+    var notes: [String]
+}
+
 struct MangaOverlayBubbleSubRegionDiagnostic: Equatable, Codable, Sendable {
     var id: Int
     var parentBubbleID: Int
@@ -1399,6 +1458,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var textRegionCropReport: MangaOverlayTextRegionCropReport?
     var textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?
     var segmentMaskReport: MangaOverlaySegmentMaskReport?
+    var cropExperimentReport: MangaOverlayCropExperimentReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?

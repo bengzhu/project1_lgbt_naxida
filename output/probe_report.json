@@ -4560,7 +4560,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "26707685-8E15-4347-A76A-7B03389D9D3B",
+      "id" : "0D84187E-6CAB-4D77-BBF1-186402E87B27",
       "index" : 0,
       "maskSafeRect" : [
         425,
@@ -7330,7 +7330,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "2EB96457-D255-434D-ADBF-4CC082AA00BF",
+      "id" : "E6A271B2-2C80-49C3-A970-6A64A6D83365",
       "index" : 1,
       "maskSafeRect" : [
         60,
@@ -7877,7 +7877,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "B6E00B59-13FC-499A-90DB-A090FB51771F",
+      "id" : "AF864E62-0A2B-4A94-AF1C-6BE1F5A16720",
       "index" : 2,
       "maskSafeRect" : [
         440,
@@ -12778,7 +12778,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "86D74626-7100-47DE-8FF1-A33521063618",
+      "id" : "85203F04-9C9C-471F-B226-0AC68871AF42",
       "index" : 3,
       "maskSafeRect" : [
         23,
@@ -12930,7 +12930,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "81132091-5FC8-4CA3-A20E-C3A1F1AA01A3",
+      "id" : "FB076B19-F1A1-4771-A5D3-25462D20C77D",
       "index" : 4,
       "maskSafeRect" : [
         450,
@@ -18118,7 +18118,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "18BCA6BF-C90E-4A51-909C-1BA16173700D",
+      "id" : "3209AFA3-E94E-465A-9B08-636B1710C5C8",
       "index" : 5,
       "maskSafeRect" : [
         91,
@@ -22526,7 +22526,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "1FE5751E-D490-4AA9-B70C-114613415DCB",
+      "id" : "15AF3492-4358-43DC-B5F7-A12DED7D5DA7",
       "index" : 6,
       "maskSafeRect" : [
         91,
@@ -24255,7 +24255,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "20597D9E-80B0-42E0-AD0D-087FD0D6FB93",
+      "id" : "DB2D56BD-605D-4DEA-B5A0-437714DFC771",
       "index" : 7,
       "maskSafeRect" : [
         447,
@@ -32170,7 +32170,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "8B91EE3A-AC2D-46DC-BAEE-973B807F90A3",
+      "id" : "2A6F852A-7BB2-4532-B217-E7E51618DA52",
       "index" : 8,
       "maskSafeRect" : [
         35,
@@ -39690,7 +39690,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "CA29A636-5D34-4431-9C2D-89E07AA27026",
+      "id" : "43DCCEFB-1617-41F8-82B3-17E87EE3B8AC",
       "index" : 9,
       "maskSafeRect" : [
         112,
@@ -44936,7 +44936,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "DF2F1C25-351C-46EF-9620-518447B8714C",
+      "id" : "F1788E06-158D-42C6-877E-59AA98047955",
       "index" : 10,
       "maskSafeRect" : [
         243,
@@ -45383,7 +45383,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "F206EBBB-5612-4AFA-ADBA-5A13B1D6D152",
+      "id" : "3618F95E-D7AE-4BC4-9318-9051940C5641",
       "index" : 11,
       "maskSafeRect" : [
         251,
@@ -45551,7 +45551,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "DE1D7EE9-1087-4DF7-85FE-5BC64B166A73",
+      "id" : "14CEF0F4-73A1-4CBB-ABA8-A7099EDD1B23",
       "index" : 12,
       "maskSafeRect" : [
         244,
@@ -51496,6 +51496,2548 @@
     "proposed" : "The City Battler Tournament starts in a few days.",
     "reason" : "长度变化 390% 超过 30%"
   },
+  "cropExperimentReport" : {
+    "betterThanControlCount" : 15,
+    "blockSummaries" : [
+      {
+        "bestShadowCandidateID" : 1,
+        "bestVariantName" : "textBoxTight",
+        "blockIndex" : 0,
+        "candidateIDs" : [
+          0,
+          1,
+          2,
+          3
+        ],
+        "controlCandidateID" : 0,
+        "notes" : [
+          "shadowOnlyNoMainInputChange"
+        ],
+        "promotionVerdict" : "controlStillBest",
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 7,
+        "bestVariantName" : "maskSafeRectConstrained",
+        "blockIndex" : 1,
+        "candidateIDs" : [
+          4,
+          5,
+          6,
+          7
+        ],
+        "controlCandidateID" : 4,
+        "notes" : [
+          "shadowOnlyNoMainInputChange"
+        ],
+        "promotionVerdict" : "noLocalOCRBenefit",
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 10,
+        "bestVariantName" : "glyphMaskExpanded",
+        "blockIndex" : 2,
+        "candidateIDs" : [
+          8,
+          9,
+          10,
+          11
+        ],
+        "controlCandidateID" : 8,
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "textBoxNotEligibleForUpstreamCrop"
+        ],
+        "promotionVerdict" : "noLocalOCRBenefit",
+        "stopReasons" : [
+          "localVisionCropNotPromising"
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 14,
+        "bestVariantName" : "glyphMaskExpanded",
+        "blockIndex" : 3,
+        "candidateIDs" : [
+          12,
+          13,
+          14,
+          15
+        ],
+        "controlCandidateID" : 12,
+        "notes" : [
+          "shadowOnlyNoMainInputChange"
+        ],
+        "promotionVerdict" : "controlStillBest",
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 18,
+        "bestVariantName" : "maskSafeRectConstrained",
+        "blockIndex" : 4,
+        "candidateIDs" : [
+          16,
+          17,
+          18,
+          19
+        ],
+        "controlCandidateID" : 16,
+        "notes" : [
+          "shadowOnlyNoMainInputChange"
+        ],
+        "promotionVerdict" : "protectedDiagnosticOnly",
+        "stopReasons" : [
+          "protectedShortTextDiagnosticOnly"
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 23,
+        "bestVariantName" : "splitCandidateClamp",
+        "blockIndex" : 5,
+        "candidateIDs" : [
+          20,
+          21,
+          22,
+          23
+        ],
+        "controlCandidateID" : 20,
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "textBoxNotEligibleForUpstreamCrop"
+        ],
+        "promotionVerdict" : "segmentEvidenceTooWeak",
+        "stopReasons" : [
+          "segmentEvidenceTooWeak"
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 25,
+        "bestVariantName" : "textBoxTight",
+        "blockIndex" : 6,
+        "candidateIDs" : [
+          24,
+          25,
+          26,
+          27
+        ],
+        "controlCandidateID" : 24,
+        "notes" : [
+          "shadowOnlyNoMainInputChange"
+        ],
+        "promotionVerdict" : "noLocalOCRBenefit",
+        "stopReasons" : [
+          "localVisionCropNotPromising"
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 30,
+        "bestVariantName" : "glyphMaskExpanded",
+        "blockIndex" : 7,
+        "candidateIDs" : [
+          28,
+          29,
+          30,
+          31
+        ],
+        "controlCandidateID" : 28,
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "textBoxNotEligibleForUpstreamCrop"
+        ],
+        "promotionVerdict" : "noLocalOCRBenefit",
+        "stopReasons" : [
+          "localVisionCropNotPromising"
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 34,
+        "bestVariantName" : "glyphMaskExpanded",
+        "blockIndex" : 8,
+        "candidateIDs" : [
+          32,
+          33,
+          34,
+          35
+        ],
+        "controlCandidateID" : 32,
+        "notes" : [
+          "shadowOnlyNoMainInputChange"
+        ],
+        "promotionVerdict" : "controlStillBest",
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 39,
+        "bestVariantName" : "maskSafeRectConstrained",
+        "blockIndex" : 9,
+        "candidateIDs" : [
+          36,
+          37,
+          38,
+          39
+        ],
+        "controlCandidateID" : 36,
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "textBoxNotEligibleForUpstreamCrop"
+        ],
+        "promotionVerdict" : "noLocalOCRBenefit",
+        "stopReasons" : [
+          "localVisionCropNotPromising"
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 42,
+        "bestVariantName" : "glyphMaskExpanded",
+        "blockIndex" : 10,
+        "candidateIDs" : [
+          40,
+          41,
+          42,
+          43
+        ],
+        "controlCandidateID" : 40,
+        "notes" : [
+          "shadowOnlyNoMainInputChange"
+        ],
+        "promotionVerdict" : "noLocalOCRBenefit",
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 47,
+        "bestVariantName" : "maskSafeRectConstrained",
+        "blockIndex" : 11,
+        "candidateIDs" : [
+          44,
+          45,
+          46,
+          47
+        ],
+        "controlCandidateID" : 44,
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "textBoxNotEligibleForUpstreamCrop"
+        ],
+        "promotionVerdict" : "bubbleMaskConflict",
+        "stopReasons" : [
+          "bubbleMaskConflict"
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 49,
+        "bestVariantName" : "textBoxTight",
+        "blockIndex" : 12,
+        "candidateIDs" : [
+          48,
+          49,
+          50,
+          51
+        ],
+        "controlCandidateID" : 48,
+        "notes" : [
+          "shadowOnlyNoMainInputChange"
+        ],
+        "promotionVerdict" : "protectedDiagnosticOnly",
+        "stopReasons" : [
+          "decorativeTitleDiagnosticOnly"
+        ]
+      }
+    ],
+    "candidateCount" : 52,
+    "candidates" : [
+      {
+        "bboxAfterClamp" : [
+          478,
+          300,
+          95,
+          143
+        ],
+        "bboxBeforeClamp" : [
+          478,
+          300,
+          95,
+          143
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 0,
+        "candidateID" : 0,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.5111428571428571,
+        "qualityScoreBefore" : 0.5111428571428571,
+        "rejectionReasons" : [
+          "sameAsFusedText"
+        ],
+        "riskFlags" : [
+          "sameAsFusedText"
+        ],
+        "sourceStack" : [
+          "bubbleBBox",
+          "existingTextRegionCrop",
+          "wholePageOCR"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 1
+      },
+      {
+        "bboxAfterClamp" : [
+          478,
+          300,
+          95,
+          143
+        ],
+        "bboxBeforeClamp" : [
+          499,
+          328,
+          53,
+          68
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 0,
+        "candidateID" : 1,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.5111428571428571,
+        "qualityScoreBefore" : 0.5111428571428571,
+        "rejectionReasons" : [
+          "sameAsFusedText"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "bubbleBBoxTextRegionCropBBox",
+          "fusedSeedBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 1
+      },
+      {
+        "bboxAfterClamp" : [
+          401,
+          300,
+          175,
+          151
+        ],
+        "bboxBeforeClamp" : [
+          345,
+          233,
+          287,
+          271
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 0,
+        "candidateID" : 2,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "SegmentMask glyph evidence is usable for crop evidence"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.5111428571428571,
+        "qualityScoreBefore" : 0.5111428571428571,
+        "rejectionReasons" : [
+          "sameAsFusedText"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "SegmentMask",
+          "fusedSeedBBox",
+          "glyphMaskRect"
+        ],
+        "variantName" : "glyphMaskExpanded",
+        "wordPreservationRatio" : 1
+      },
+      {
+        "bboxAfterClamp" : [
+          437,
+          300,
+          139,
+          151
+        ],
+        "bboxBeforeClamp" : [
+          478,
+          300,
+          74,
+          127
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 0,
+        "candidateID" : 3,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.5111428571428571,
+        "qualityScoreBefore" : 0.5111428571428571,
+        "rejectionReasons" : [
+          "sameAsFusedText"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 1
+      },
+      {
+        "bboxAfterClamp" : [
+          95,
+          319,
+          91,
+          128
+        ],
+        "bboxBeforeClamp" : [
+          95,
+          319,
+          91,
+          128
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 1,
+        "candidateID" : 4,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "I'VE\nARRIVED\nAT REN-\nSENPArS\n• HOUSE.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.645119691119691,
+        "qualityScoreBefore" : 0.7397142857142857,
+        "rejectionReasons" : [
+          "introducedLikelyOCRError"
+        ],
+        "riskFlags" : [
+          "introducedLikelyOCRError",
+          "localVisionRegression"
+        ],
+        "sourceStack" : [
+          "bubbleBBox",
+          "bubbleFirst",
+          "existingTextRegionCrop"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0.5714285714285714
+      },
+      {
+        "bboxAfterClamp" : [
+          95,
+          319,
+          91,
+          128
+        ],
+        "bboxBeforeClamp" : [
+          115,
+          357,
+          51,
+          52
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 1,
+        "candidateID" : 5,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "I'VE\nARRIVED\nAT REN-\nSENPArS\n• HOUSE.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.645119691119691,
+        "qualityScoreBefore" : 0.7397142857142857,
+        "rejectionReasons" : [
+          "introducedLikelyOCRError"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "bubbleBBoxTextRegionCropBBox",
+          "fusedSeedBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0.5714285714285714
+      },
+      {
+        "bboxAfterClamp" : [
+          39,
+          305,
+          202,
+          157
+        ],
+        "bboxBeforeClamp" : [
+          60,
+          278,
+          169,
+          229
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 1,
+        "candidateID" : 6,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "SegmentMask glyph evidence is usable for crop evidence"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "IVE\nARRIVED\nAT REN-\nSENPArS\n• HOUSE.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.059380308880308985,
+        "qualityScoreAfter" : 0.7045,
+        "qualityScoreBefore" : 0.7397142857142857,
+        "rejectionReasons" : [
+          "introducedLikelyOCRError"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "SegmentMask",
+          "fusedSeedBBox",
+          "glyphMaskRect"
+        ],
+        "variantName" : "glyphMaskExpanded",
+        "wordPreservationRatio" : 0.7142857142857143
+      },
+      {
+        "bboxAfterClamp" : [
+          60,
+          305,
+          161,
+          157
+        ],
+        "bboxBeforeClamp" : [
+          95,
+          326,
+          91,
+          115
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 1,
+        "candidateID" : 7,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "I'VE\nARRIVED\nAT REN-\nSENPAI'S\n• HOUSE.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.037064519406624696,
+        "qualityScoreAfter" : 0.6821842105263157,
+        "qualityScoreBefore" : 0.7397142857142857,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0.8571428571428571
+      },
+      {
+        "bboxAfterClamp" : [
+          480,
+          532,
+          81,
+          94
+        ],
+        "bboxBeforeClamp" : [
+          480,
+          532,
+          81,
+          94
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 2,
+        "candidateID" : 8,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -5,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : false,
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0,
+        "qualityScoreBefore" : 0.7937142857142857,
+        "rejectionReasons" : [
+          "emptyCropText",
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+          "emptyLocalOCR"
+        ],
+        "sourceStack" : [
+          "bubbleBBox",
+          "bubbleFirst",
+          "existingTextRegionCrop"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          480,
+          532,
+          81,
+          94
+        ],
+        "bboxBeforeClamp" : [
+          495,
+          560,
+          51,
+          38
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 2,
+        "candidateID" : 9,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -5,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : false,
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0,
+        "qualityScoreBefore" : 0.7937142857142857,
+        "rejectionReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "bubbleBBoxTextRegionCropBBox",
+          "fusedSeedBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          459,
+          522,
+          117,
+          114
+        ],
+        "bboxBeforeClamp" : [
+          481,
+          551,
+          79,
+          56
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 2,
+        "candidateID" : 10,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -4,
+        "notes" : [
+          "SegmentMask glyph evidence is usable for crop evidence"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "BartLET",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.812,
+        "qualityScoreAfter" : 0.812,
+        "qualityScoreBefore" : 0.7937142857142857,
+        "rejectionReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "SegmentMask",
+          "fusedSeedBBox",
+          "glyphMaskRect"
+        ],
+        "variantName" : "glyphMaskExpanded",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          449,
+          522,
+          127,
+          114
+        ],
+        "bboxBeforeClamp" : [
+          480,
+          537,
+          81,
+          84
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 2,
+        "candidateID" : 11,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -5,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : false,
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0,
+        "qualityScoreBefore" : 0.7937142857142857,
+        "rejectionReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          45,
+          654,
+          90,
+          105
+        ],
+        "bboxBeforeClamp" : [
+          45,
+          654,
+          90,
+          105
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 3,
+        "candidateID" : 12,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -7,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "TRANIE",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.812,
+        "qualityScoreBefore" : 0.8079787234042554,
+        "rejectionReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+          "localVisionRegression",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "sourceStack" : [
+          "bubbleBBox",
+          "bubbleFirst",
+          "existingTextRegionCrop"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          45,
+          654,
+          90,
+          105
+        ],
+        "bboxBeforeClamp" : [
+          69,
+          674,
+          42,
+          65
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 3,
+        "candidateID" : 13,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -7,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "TRANIE",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.812,
+        "qualityScoreBefore" : 0.8079787234042554,
+        "rejectionReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "bubbleBBoxTextRegionCropBBox",
+          "fusedSeedBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          0,
+          624,
+          206,
+          170
+        ],
+        "bboxBeforeClamp" : [
+          -66,
+          569,
+          338,
+          280
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 3,
+        "candidateID" : 14,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "SegmentMask glyph evidence is usable for crop evidence"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "AND\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTEANNS.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : -0.01308695652173919,
+        "qualityScoreAfter" : 0.7989130434782609,
+        "qualityScoreBefore" : 0.8079787234042554,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "SegmentMask",
+          "fusedSeedBBox",
+          "glyphMaskRect"
+        ],
+        "variantName" : "glyphMaskExpanded",
+        "wordPreservationRatio" : 0.8
+      },
+      {
+        "bboxAfterClamp" : [
+          10,
+          624,
+          160,
+          170
+        ],
+        "bboxBeforeClamp" : [
+          45,
+          654,
+          90,
+          105
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 3,
+        "candidateID" : 15,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "ANO\nTHAT'S\nWHY\nWE'RE\nDONG\nTHIS\nSPECIAL\nTRANNE",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : -0.007000000000000006,
+        "qualityScoreAfter" : 0.805,
+        "qualityScoreBefore" : 0.8079787234042554,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0.7
+      },
+      {
+        "bboxAfterClamp" : [
+          341,
+          809,
+          143,
+          135
+        ],
+        "bboxBeforeClamp" : [
+          341,
+          809,
+          143,
+          135
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 4,
+        "candidateID" : 16,
+        "clampSource" : "contentRect",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "LET'S\nBATTLERK",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.636,
+        "qualityScoreBefore" : 0.611,
+        "rejectionReasons" : [
+          "bubbleMaskConflict",
+          "insufficientQualityGain"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict",
+          "insufficientQualityGain",
+          "segmentMaskWeak",
+          "textBoxTooWide"
+        ],
+        "sourceStack" : [
+          "contentRect",
+          "existingTextRegionCrop",
+          "wholePageOCR"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0.6666666666666666
+      },
+      {
+        "bboxAfterClamp" : [
+          341,
+          809,
+          143,
+          135
+        ],
+        "bboxBeforeClamp" : [
+          362,
+          849,
+          101,
+          55
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 4,
+        "candidateID" : 17,
+        "clampSource" : "contentRect",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "LET'S\nBATTLERK",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.636,
+        "qualityScoreBefore" : 0.611,
+        "rejectionReasons" : [
+          "bubbleMaskConflict",
+          "bubbleMaskCoverageLow",
+          "evidenceScoreBelowCropThreshold"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict",
+          "safeRectOverlapLow"
+        ],
+        "sourceStack" : [
+          "contentRectTextRegionCropBBox",
+          "fusedSeedBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0.6666666666666666
+      },
+      {
+        "bboxAfterClamp" : [
+          426,
+          860,
+          79,
+          102
+        ],
+        "bboxBeforeClamp" : [
+          447,
+          878,
+          37,
+          66
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 4,
+        "candidateID" : 18,
+        "clampSource" : "contentRect",
+        "lineCountDelta" : -1,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "ER!",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.05933333333333335,
+        "qualityScoreAfter" : 0.6953333333333334,
+        "qualityScoreBefore" : 0.611,
+        "rejectionReasons" : [
+          "bubbleMaskConflict",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict"
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          325,
+          794,
+          175,
+          165
+        ],
+        "bboxBeforeClamp" : [
+          351,
+          843,
+          123,
+          67
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 4,
+        "candidateID" : 19,
+        "clampSource" : "contentRect",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "weak SegmentMask blocks only get conservative seed-bbox shadow comparison"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "LET'S\nBATTLER!'",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : -0.043333333333333335,
+        "qualityScoreAfter" : 0.5926666666666667,
+        "qualityScoreBefore" : 0.611,
+        "rejectionReasons" : [
+          "missingGlyphMask",
+          "sameAsFusedText",
+          "segmentEvidenceTooWeak",
+          "segmentOutsideBubbleRisk",
+          "unassignedBlockDiagnosticOnly"
+        ],
+        "riskFlags" : [
+          "segmentEvidenceTooWeak",
+          "unassignedBlock"
+        ],
+        "sourceStack" : [
+          "fusedSeedBBox",
+          "weakSegmentFallback"
+        ],
+        "variantName" : "conservativeSeedBBox",
+        "wordPreservationRatio" : 1
+      },
+      {
+        "bboxAfterClamp" : [
+          210,
+          861,
+          95,
+          144
+        ],
+        "bboxBeforeClamp" : [
+          210,
+          861,
+          106,
+          153
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 5,
+        "candidateID" : 20,
+        "clampSource" : "splitCandidate",
+        "lineCountDelta" : 2,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "EVEN 5\nTHOUSH\nI SAID\nJUSTE\nSPECIAL\nTRAINING\nHAND\nASKEO I\n• WE:\nCOLLO\nJIST\nPLAY\nONLINE",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.701764705882353,
+        "qualityScoreBefore" : 0.7757142857142857,
+        "rejectionReasons" : [
+          "bubbleMaskConflict",
+          "introducedLikelyOCRError",
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict",
+          "introducedLikelyOCRError",
+          "localVisionRegression",
+          "rawWordsLost",
+          "segmentMaskWeak"
+        ],
+        "sourceStack" : [
+          "bubbleFirst",
+          "existingTextRegionCrop",
+          "splitCandidate"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0.5
+      },
+      {
+        "bboxAfterClamp" : [
+          213,
+          900,
+          103,
+          114
+        ],
+        "bboxBeforeClamp" : [
+          238,
+          884,
+          50,
+          107
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 5,
+        "candidateID" : 21,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 4,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "JUSTIN\nSPECIAL\nTRAINING\nRAND\nASKEO IP\n→WE\nCOLD\nJUST\nPLAY.\ntas\nONUNE\nTHA\nbICN\nTo e\npeal",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.114439124487004,
+        "qualityScoreAfter" : 0.816203830369357,
+        "qualityScoreBefore" : 0.7757142857142857,
+        "rejectionReasons" : [
+          "bubbleMaskCoverageLow",
+          "evidenceScoreBelowCropThreshold",
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "fusedSeedBBox",
+          "splitCandidateTextRegionCropBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0.35714285714285715
+      },
+      {
+        "bboxAfterClamp" : [
+          213,
+          900,
+          114,
+          120
+        ],
+        "bboxBeforeClamp" : [
+          210,
+          877,
+          75,
+          108
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 5,
+        "candidateID" : 22,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 4,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "ASTiNTE\nSPECIAL\nITRANING\nRAND e-\nASKEO IF.\n*› WEL\n«JUSTE\n02 Al\niPLAYE\nLEAST\nONUINE\nITHAT-\nSEEHS\nTO BE\nGEEN-",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.10164650907091799,
+        "qualityScoreAfter" : 0.803411214953271,
+        "qualityScoreBefore" : 0.7757142857142857,
+        "rejectionReasons" : [
+          "bubbleMaskConflict",
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict"
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0.14285714285714285
+      },
+      {
+        "bboxAfterClamp" : [
+          200,
+          857,
+          105,
+          148
+        ],
+        "bboxBeforeClamp" : [
+          200,
+          857,
+          105,
+          148
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 5,
+        "candidateID" : 23,
+        "clampSource" : "splitCandidate",
+        "lineCountDelta" : 5,
+        "notes" : [
+          "conservative split candidate shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "EVEN 5\nTHOLISH\nI SAID\nJUSTi\nSPECIAL\nTRAINING\nNT\nSAND\nASKEO\nKE\n• WE:\nCOLLD\nJUST\nTSEUL\nPLAY\nONLINE",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.11520220588235297,
+        "qualityScoreAfter" : 0.8169669117647059,
+        "qualityScoreBefore" : 0.7757142857142857,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+          "parentBubbleOversized"
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "parentBubbleID:4",
+          "splitCandidate"
+        ],
+        "variantName" : "splitCandidateClamp",
+        "wordPreservationRatio" : 0.5714285714285714
+      },
+      {
+        "bboxAfterClamp" : [
+          130,
+          858,
+          111,
+          147
+        ],
+        "bboxBeforeClamp" : [
+          130,
+          856,
+          111,
+          165
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 6,
+        "candidateID" : 24,
+        "clampSource" : "subRegion",
+        "lineCountDelta" : 1,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "THS I5 AN\nOPPLINE\nTOLENANENT.\nDONG I\nONLINE\nWOLLO MAKE\nMEANMELESS\nVhwit\nare",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.7854358974358974,
+        "qualityScoreBefore" : 0.8616666666666667,
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+          "localVisionRegression",
+          "rawWordsLost"
+        ],
+        "sourceStack" : [
+          "bubbleFirst",
+          "existingTextRegionCrop",
+          "subRegion"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0.3333333333333333
+      },
+      {
+        "bboxAfterClamp" : [
+          130,
+          857,
+          111,
+          148
+        ],
+        "bboxBeforeClamp" : [
+          154,
+          905,
+          63,
+          67
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 6,
+        "candidateID" : 25,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "THS IS AN\nOFFLINE\nTOLENAMENT,\nONLINE\nWOLLO MAKE\nMEANWELESS\nWhart\nare",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.07794645550527912,
+        "qualityScoreAfter" : 0.8633823529411765,
+        "qualityScoreBefore" : 0.8616666666666667,
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+          "splitCandidateRejected"
+        ],
+        "sourceStack" : [
+          "fusedSeedBBox",
+          "subRegionTextRegionCropBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0.3333333333333333
+      },
+      {
+        "bboxAfterClamp" : [
+          67,
+          857,
+          238,
+          148
+        ],
+        "bboxBeforeClamp" : [
+          13,
+          809,
+          274,
+          244
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 6,
+        "candidateID" : 26,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 16,
+        "notes" : [
+          "SegmentMask glyph evidence is usable for crop evidence"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "EVEN\nTHOUSH\nI SAID\n• IT'S\nJUST\n•THeS IS AN\nSPECIAL\n• OFFLNE•\nTRAINING\nTOLENAMENT.\nAND\nONLINE\nASKED IF\nWORLD MAKE\nWE:\nCOLLO\nMEANMELESS\nJUST\nTHE\nPLAY\nGESTION\nONLINEn\nWAS\n-PALLED.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : -0.05299271561771546,
+        "qualityScoreAfter" : 0.7324431818181819,
+        "qualityScoreBefore" : 0.8616666666666667,
+        "rejectionReasons" : [
+          "introducedLikelyOCRError",
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "SegmentMask",
+          "fusedSeedBBox",
+          "glyphMaskRect"
+        ],
+        "variantName" : "glyphMaskExpanded",
+        "wordPreservationRatio" : 0.5
+      },
+      {
+        "bboxAfterClamp" : [
+          88,
+          857,
+          195,
+          148
+        ],
+        "bboxBeforeClamp" : [
+          130,
+          877,
+          111,
+          108
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 6,
+        "candidateID" : 27,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 16,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "EVEN\nTHOUSH\nI SAID\n. IT'S\nJUST\nTHIS I5 AN\nSPECIAL\n• OPPLINE\nTRAINING\nTOURNAMENT,\nAND\nASKEO IF\nONLINE\nWOLLO NAKE\nWE\nCOLO\nMEANWELESS\nJUST\nPLAY\nTION\nWhat\nONLINE..\nED.\nore",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : -0.07007661599877157,
+        "qualityScoreAfter" : 0.7153592814371258,
+        "qualityScoreBefore" : 0.8616666666666667,
+        "rejectionReasons" : [
+          "introducedLikelyOCRError"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0.5833333333333334
+      },
+      {
+        "bboxAfterClamp" : [
+          485,
+          860,
+          91,
+          132
+        ],
+        "bboxBeforeClamp" : [
+          485,
+          856,
+          91,
+          141
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 7,
+        "candidateID" : 28,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -8,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : false,
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0,
+        "qualityScoreBefore" : 0.7733333333333334,
+        "rejectionReasons" : [
+          "emptyCropText",
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+          "emptyLocalOCR"
+        ],
+        "sourceStack" : [
+          "bubbleBBox",
+          "bubbleFirst",
+          "existingTextRegionCrop"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          485,
+          860,
+          91,
+          132
+        ],
+        "bboxBeforeClamp" : [
+          505,
+          898,
+          51,
+          57
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 7,
+        "candidateID" : 29,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -8,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : false,
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0,
+        "qualityScoreBefore" : 0.7733333333333334,
+        "rejectionReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "bubbleBBoxTextRegionCropBBox",
+          "fusedSeedBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          433,
+          860,
+          143,
+          132
+        ],
+        "bboxBeforeClamp" : [
+          484,
+          817,
+          115,
+          218
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 7,
+        "candidateID" : 30,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 1,
+        "notes" : [
+          "SegmentMask glyph evidence is usable for crop evidence"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "ER!\nME NISO TO\nFET PESULTE\nAT THO\nTOLENAAENT\n10 Save TH-\nBAMAIB CLUO\nPOOHOING\nDisgsOsD",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.7626744186046512,
+        "qualityScoreAfter" : 0.7626744186046512,
+        "qualityScoreBefore" : 0.7733333333333334,
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "SegmentMask",
+          "fusedSeedBBox",
+          "glyphMaskRect"
+        ],
+        "variantName" : "glyphMaskExpanded",
+        "wordPreservationRatio" : 0.25
+      },
+      {
+        "bboxAfterClamp" : [
+          457,
+          860,
+          119,
+          132
+        ],
+        "bboxBeforeClamp" : [
+          485,
+          878,
+          73,
+          96
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 7,
+        "candidateID" : 31,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -6,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "se\nLTI9EA",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.7582222222222222,
+        "qualityScoreAfter" : 0.7582222222222222,
+        "qualityScoreBefore" : 0.7733333333333334,
+        "rejectionReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          10,
+          936,
+          141,
+          156
+        ],
+        "bboxBeforeClamp" : [
+          10,
+          936,
+          141,
+          156
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 8,
+        "candidateID" : 32,
+        "clampSource" : "subRegion",
+        "lineCountDelta" : -1,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "* THE\nSUGGESTION\nOVERRULED,\nANO IT WAS\nTHAT TO BE\n'STAYNGY\nOVER AT RENA\nESENPAI'S\nTHouser",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.8171558988764045,
+        "qualityScoreBefore" : 0.773174172544764,
+        "rejectionReasons" : [
+          "insufficientQualityGain"
+        ],
+        "riskFlags" : [
+          "insufficientQualityGain"
+        ],
+        "sourceStack" : [
+          "bubbleFirst",
+          "existingTextRegionCrop",
+          "subRegion"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0.5789473684210527
+      },
+      {
+        "bboxAfterClamp" : [
+          10,
+          936,
+          141,
+          156
+        ],
+        "bboxBeforeClamp" : [
+          47,
+          967,
+          67,
+          94
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 8,
+        "candidateID" : 33,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -1,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "* THE\nSUGGESTION\nOVERRULED,\nANO IT WAS\nTHAT TO BE\n'STAYNGY\nOVER AT RENA\nESENPAI'S\nTHouser",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.8171558988764045,
+        "qualityScoreBefore" : 0.773174172544764,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+          "splitCandidateRejected"
+        ],
+        "sourceStack" : [
+          "fusedSeedBBox",
+          "subRegionTextRegionCropBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0.5789473684210527
+      },
+      {
+        "bboxAfterClamp" : [
+          0,
+          883,
+          231,
+          218
+        ],
+        "bboxBeforeClamp" : [
+          -74,
+          804,
+          379,
+          402
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 8,
+        "candidateID" : 34,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 7,
+        "notes" : [
+          "SegmentMask glyph evidence is usable for crop evidence"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "THES IS AN\nOFFLNE •\nTOURNAMENT,\nDONe п\nONLINE\nWORLD MAKE\nMEANIELESS\nTHE\n• SUGGESTION\nWAS\n: OVERPLLEO:\nAND IT WAS\nDECIDED\nTHAT TO BE\nSTAYING\n'SENPAI'S :\nHOUSE.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : -0.015948498681662593,
+        "qualityScoreAfter" : 0.8012074001947419,
+        "qualityScoreBefore" : 0.773174172544764,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "SegmentMask",
+          "fusedSeedBBox",
+          "glyphMaskRect"
+        ],
+        "variantName" : "glyphMaskExpanded",
+        "wordPreservationRatio" : 0.6842105263157895
+      },
+      {
+        "bboxAfterClamp" : [
+          0,
+          883,
+          197,
+          218
+        ],
+        "bboxBeforeClamp" : [
+          32,
+          936,
+          119,
+          156
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 8,
+        "candidateID" : 35,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 6,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "TrES iS.\n: OFFEN\nTOLKNAM\nONUNI\nWORLD M\nMEANIEL\n+ THE\nSUGGESTION\n¡ OVERALLED;\nAND IT WAS\n• DECIDED:\n: THAT ID BE\n• 15TAYING.*\nOVER AT DEN-\nSENPAI'S :\nHOUSE:",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : -0.041542995650597936,
+        "qualityScoreAfter" : 0.7756129032258066,
+        "qualityScoreBefore" : 0.773174172544764,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0.7368421052631579
+      },
+      {
+        "bboxAfterClamp" : [
+          97,
+          959,
+          79,
+          96
+        ],
+        "bboxBeforeClamp" : [
+          97,
+          959,
+          79,
+          96
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 9,
+        "candidateID" : 36,
+        "clampSource" : "splitCandidate",
+        "lineCountDelta" : 2,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "NEA\neve\n: talkin",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.7484999999999999,
+        "qualityScoreBefore" : 0.7951851851851852,
+        "rejectionReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+          "localVisionRegression",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "sourceStack" : [
+          "bubbleFirst",
+          "existingTextRegionCrop",
+          "splitCandidate"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          97,
+          959,
+          79,
+          96
+        ],
+        "bboxBeforeClamp" : [
+          118,
+          977,
+          37,
+          60
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 9,
+        "candidateID" : 37,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 2,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "NEA\neve\n: talkin",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.7484999999999999,
+        "qualityScoreBefore" : 0.7951851851851852,
+        "rejectionReasons" : [
+          "evidenceScoreBelowCropThreshold",
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "fusedSeedBBox",
+          "splitCandidateTextRegionCropBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          0,
+          883,
+          231,
+          218
+        ],
+        "bboxBeforeClamp" : [
+          -74,
+          804,
+          379,
+          402
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 9,
+        "candidateID" : 38,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 16,
+        "notes" : [
+          "SegmentMask glyph evidence is usable for crop evidence"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "THES IS AN\nOFFLNE •\nTOURNAMENT,\nDONe п\nONLINE\nWORLD MAKE\nMEANIELESS\nTHE\n• SUGGESTION\nWAS\n: OVERPLLEO:\nAND IT WAS\nDECIDED\nTHAT TO BE\nSTAYING\n'SENPAI'S :\nHOUSE.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.05270740019474196,
+        "qualityScoreAfter" : 0.8012074001947419,
+        "qualityScoreBefore" : 0.7951851851851852,
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "SegmentMask",
+          "fusedSeedBBox",
+          "glyphMaskRect"
+        ],
+        "variantName" : "glyphMaskExpanded",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          66,
+          889,
+          141,
+          212
+        ],
+        "bboxBeforeClamp" : [
+          97,
+          959,
+          79,
+          96
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 9,
+        "candidateID" : 39,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 22,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "THIS IS AN\nOPPLINE\nTOURNAMEN\nONLINE\nWORLD MAK\n• IT\nMEANIELES\nTHE\nGESTION\nVind\nWAS\nERALLED,\nare\nO IT WAS\nECIDED\neven\nAT ID BE\n: talking\nTAYING\n• abo\nP AT DEN-\nENPAI'S\nOUSE.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.046672780435938255,
+        "qualityScoreAfter" : 0.7951727804359382,
+        "qualityScoreBefore" : 0.7951851851851852,
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0.4
+      },
+      {
+        "bboxAfterClamp" : [
+          251,
+          936,
+          114,
+          126
+        ],
+        "bboxBeforeClamp" : [
+          251,
+          936,
+          114,
+          126
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 10,
+        "candidateID" : 40,
+        "clampSource" : "splitCandidate",
+        "lineCountDelta" : 9,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "KED IP\nWE\nOLD\nJIST\n-ОЕ ДТ\nLEAST.\nNLINE..\n• THAT\nSEEMS\nTO BE\nPEN-\nLOGIC.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.791830985915493,
+        "qualityScoreBefore" : 0.6940909090909091,
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+          "localVisionRegression",
+          "rawWordsLost"
+        ],
+        "sourceStack" : [
+          "existingTextRegionCrop",
+          "splitCandidate",
+          "wholePageOCR"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0.4166666666666667
+      },
+      {
+        "bboxAfterClamp" : [
+          251,
+          936,
+          114,
+          126
+        ],
+        "bboxBeforeClamp" : [
+          281,
+          961,
+          54,
+          76
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 10,
+        "candidateID" : 41,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 9,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "KED IP\nWE\nOLD\nJIST\n-ОЕ ДТ\nLEAST.\nNLINE..\n• THAT\nSEEMS\nTO BE\nPEN-\nLOGIC.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.791830985915493,
+        "qualityScoreBefore" : 0.6940909090909091,
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "fusedSeedBBox",
+          "splitCandidateTextRegionCropBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0.4166666666666667
+      },
+      {
+        "bboxAfterClamp" : [
+          213,
+          900,
+          190,
+          199
+        ],
+        "bboxBeforeClamp" : [
+          157,
+          836,
+          284,
+          327
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 10,
+        "candidateID" : 42,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 14,
+        "notes" : [
+          "SegmentMask glyph evidence is usable for crop evidence"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "JUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOLLO\nJUIST\nPLAY\n-OR AT\nLEAST.\nONLINE-.\nTHAT\nSEEMS\nTO BE\nCEN-\nLOGIC.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.045621844273186385,
+        "qualityScoreAfter" : 0.8374528301886793,
+        "qualityScoreBefore" : 0.6940909090909091,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "SegmentMask",
+          "fusedSeedBBox",
+          "glyphMaskRect"
+        ],
+        "variantName" : "glyphMaskExpanded",
+        "wordPreservationRatio" : 0.5833333333333334
+      },
+      {
+        "bboxAfterClamp" : [
+          213,
+          900,
+          190,
+          199
+        ],
+        "bboxBeforeClamp" : [
+          251,
+          936,
+          114,
+          126
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 10,
+        "candidateID" : 43,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 14,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "JUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOLLO\nJUIST\nPLAY\n-OR AT\nLEAST.\nONLINE-.\nTHAT\nSEEMS\nTO BE\nCEN-\nLOGIC.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.045621844273186385,
+        "qualityScoreAfter" : 0.8374528301886793,
+        "qualityScoreBefore" : 0.6940909090909091,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0.5833333333333334
+      },
+      {
+        "bboxAfterClamp" : [
+          269,
+          948,
+          36,
+          57
+        ],
+        "bboxBeforeClamp" : [
+          269,
+          948,
+          76,
+          86
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 11,
+        "candidateID" : 44,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -6,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : false,
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0,
+        "qualityScoreBefore" : 0.6739999999999999,
+        "rejectionReasons" : [
+          "emptyCropText",
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+          "emptyLocalOCR"
+        ],
+        "sourceStack" : [
+          "bubbleBBox",
+          "bubbleFirst",
+          "existingTextRegionCrop"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          280,
+          957,
+          25,
+          48
+        ],
+        "bboxBeforeClamp" : [
+          289,
+          965,
+          16,
+          40
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 11,
+        "candidateID" : 45,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -6,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : false,
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0,
+        "qualityScoreBefore" : 0.6739999999999999,
+        "rejectionReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+          "splitCandidateRejected"
+        ],
+        "sourceStack" : [
+          "bubbleBBoxTextRegionCropBBox",
+          "fusedSeedBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          266,
+          939,
+          39,
+          66
+        ],
+        "bboxBeforeClamp" : [
+          283,
+          953,
+          30,
+          65
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 11,
+        "candidateID" : 46,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -6,
+        "notes" : [
+          "SegmentMask glyph evidence is usable for crop evidence"
+        ],
+        "ocrSucceeded" : false,
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0,
+        "qualityScoreBefore" : 0.6739999999999999,
+        "rejectionReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "SegmentMask",
+          "fusedSeedBBox",
+          "glyphMaskRect"
+        ],
+        "variantName" : "glyphMaskExpanded",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          240,
+          886,
+          65,
+          119
+        ],
+        "bboxBeforeClamp" : [
+          269,
+          948,
+          76,
+          86
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 11,
+        "candidateID" : 47,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 2,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "UTER\nSPECIAL\nTRANING*\nKAND M\nASKED LAN\nJUST\nPLAY,\nION INC",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.8054066985645932,
+        "qualityScoreAfter" : 0.8054066985645932,
+        "qualityScoreBefore" : 0.6739999999999999,
+        "rejectionReasons" : [
+          "bubbleMaskConflict",
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict"
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          360,
+          931,
+          156,
+          158
+        ],
+        "bboxBeforeClamp" : [
+          360,
+          931,
+          156,
+          158
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 12,
+        "candidateID" : 48,
+        "clampSource" : "contentRect",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "controlCandidate",
+          "existing TextRegion crop result reused; no extra OCR call"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "City Battler\nOffline:\nTournament",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.80425,
+        "qualityScoreBefore" : 0.80425,
+        "rejectionReasons" : [
+          "bubbleMaskConflict",
+          "sameAsFusedText"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict",
+          "sameAsFusedText",
+          "segmentMaskWeak",
+          "textBoxTooWide"
+        ],
+        "sourceStack" : [
+          "contentRect",
+          "existingTextRegionCrop",
+          "wholePageOCR"
+        ],
+        "variantName" : "currentTextRegionCrop",
+        "wordPreservationRatio" : 1
+      },
+      {
+        "bboxAfterClamp" : [
+          360,
+          931,
+          156,
+          158
+        ],
+        "bboxBeforeClamp" : [
+          385,
+          978,
+          106,
+          64
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 12,
+        "candidateID" : 49,
+        "clampSource" : "contentRect",
+        "lineCountDelta" : 0,
+        "notes" : [
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "City Battler\nOffline:\nTournament",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0.80425,
+        "qualityScoreBefore" : 0.80425,
+        "rejectionReasons" : [
+          "bubbleMaskConflict",
+          "bubbleMaskCoverageLow",
+          "decorativeTitleDiagnosticOnly",
+          "evidenceScoreBelowCropThreshold",
+          "sameAsFusedText"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict",
+          "safeRectOverlapLow"
+        ],
+        "sourceStack" : [
+          "contentRectTextRegionCropBBox",
+          "fusedSeedBBox",
+          "textBoxCandidate"
+        ],
+        "variantName" : "textBoxTight",
+        "wordPreservationRatio" : 1
+      },
+      {
+        "bboxAfterClamp" : [
+          350,
+          923,
+          37,
+          158
+        ],
+        "bboxBeforeClamp" : [
+          360,
+          931,
+          17,
+          142
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 12,
+        "candidateID" : 50,
+        "clampSource" : "contentRect",
+        "lineCountDelta" : -3,
+        "notes" : [
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrSucceeded" : false,
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : -0.80425,
+        "qualityScoreAfter" : 0,
+        "qualityScoreBefore" : 0.80425,
+        "rejectionReasons" : [
+          "bubbleMaskConflict",
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict"
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskSafeRectConstrained",
+        "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          344,
+          914,
+          188,
+          187
+        ],
+        "bboxBeforeClamp" : [
+          374,
+          971,
+          128,
+          78
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 12,
+        "candidateID" : 51,
+        "clampSource" : "contentRect",
+        "lineCountDelta" : 5,
+        "notes" : [
+          "weak SegmentMask blocks only get conservative seed-bbox shadow comparison"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "AT\nTOLEN\n10 Sa\nSAMN\nlail\nCity Battleri\nOffline..\nTournament",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.026631355932203338,
+        "qualityScoreAfter" : 0.8308813559322034,
+        "qualityScoreBefore" : 0.80425,
+        "rejectionReasons" : [
+          "decorativeTitleDiagnosticOnly",
+          "missingGlyphMask",
+          "segmentEvidenceTooWeak",
+          "segmentOutsideBubbleRisk",
+          "unassignedBlockDiagnosticOnly"
+        ],
+        "riskFlags" : [
+          "decorativeTitle",
+          "segmentEvidenceTooWeak",
+          "unassignedBlock"
+        ],
+        "sourceStack" : [
+          "fusedSeedBBox",
+          "weakSegmentFallback"
+        ],
+        "variantName" : "conservativeSeedBBox",
+        "wordPreservationRatio" : 0.75
+      }
+    ],
+    "controlCandidateCount" : 13,
+    "enabled" : true,
+    "evaluatedBlockCount" : 13,
+    "notes" : [
+      "shadow-only TextRegion crop experiment matrix; bestShadowCandidate is never written to finalTextUsedForTranslation",
+      "control is the existing TextRegion crop result; each block gets at most three additional shadow candidates",
+      "candidate generation and promotion verdicts use bbox, mask, TextBox, SegmentMask, raw-word preservation, and OCR text quality only",
+      "ground truth is not used for candidate generation, ranking, promotion, adoption, or fallback",
+      "textRegionCropReport.adoptedCount remains governed by the existing guardrail"
+    ],
+    "ocrSucceededCount" : 43,
+    "promotedShadowBlocks" : [
+
+    ],
+    "stoppedBlocks" : [
+      2,
+      4,
+      5,
+      6,
+      7,
+      9,
+      11,
+      12
+    ],
+    "variantBreakdown" : {
+      "conservativeSeedBBox" : {
+        "attemptedCount" : 2,
+        "betterThanControlCount" : 0,
+        "degradedCount" : 0,
+        "emptyOutputCount" : 0,
+        "ocrSucceededCount" : 2,
+        "promotedBlockCount" : 0,
+        "rawWordsLostCount" : 0,
+        "variantName" : "conservativeSeedBBox"
+      },
+      "currentTextRegionCrop" : {
+        "attemptedCount" : 13,
+        "betterThanControlCount" : 0,
+        "degradedCount" : 0,
+        "emptyOutputCount" : 3,
+        "ocrSucceededCount" : 10,
+        "promotedBlockCount" : 0,
+        "rawWordsLostCount" : 8,
+        "variantName" : "currentTextRegionCrop"
+      },
+      "glyphMaskExpanded" : {
+        "attemptedCount" : 10,
+        "betterThanControlCount" : 5,
+        "degradedCount" : 0,
+        "emptyOutputCount" : 1,
+        "ocrSucceededCount" : 9,
+        "promotedBlockCount" : 0,
+        "rawWordsLostCount" : 5,
+        "variantName" : "glyphMaskExpanded"
+      },
+      "maskSafeRectConstrained" : {
+        "attemptedCount" : 13,
+        "betterThanControlCount" : 7,
+        "degradedCount" : 1,
+        "emptyOutputCount" : 2,
+        "ocrSucceededCount" : 11,
+        "promotedBlockCount" : 0,
+        "rawWordsLostCount" : 7,
+        "variantName" : "maskSafeRectConstrained"
+      },
+      "splitCandidateClamp" : {
+        "attemptedCount" : 1,
+        "betterThanControlCount" : 1,
+        "degradedCount" : 0,
+        "emptyOutputCount" : 0,
+        "ocrSucceededCount" : 1,
+        "promotedBlockCount" : 0,
+        "rawWordsLostCount" : 0,
+        "variantName" : "splitCandidateClamp"
+      },
+      "textBoxTight" : {
+        "attemptedCount" : 13,
+        "betterThanControlCount" : 2,
+        "degradedCount" : 0,
+        "emptyOutputCount" : 3,
+        "ocrSucceededCount" : 10,
+        "promotedBlockCount" : 0,
+        "rawWordsLostCount" : 8,
+        "variantName" : "textBoxTight"
+      }
+    }
+  },
   "cropFallbackSelfTest" : {
     "blockIndex" : 0,
     "fallbackPreservesRawWords" : true,
@@ -51704,7 +54246,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 16002,
+      "processingTimeMs" : 16325,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -52005,7 +54547,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 173432,
+      "processingTimeMs" : 229966,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -52024,7 +54566,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 16002,
+      "processingTimeMs" : 16325,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -52036,7 +54578,7 @@
     "fused" : {
       "accuracyVsGroundTruth" : 0.7383773465526562,
       "matchedGroundTruthCount" : 13,
-      "processingTimeMs" : 173432,
+      "processingTimeMs" : 229966,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 0
     },
@@ -52142,7 +54684,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 173432,
+      "processingTimeMs" : 229966,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -53099,20 +55641,20 @@
   "outputDirectoryCleaned" : true,
   "outputFileCountAfterCleanup" : 15,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
-    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
-    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
-    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
-    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
+    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
+    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
+    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
+    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
   },
   "overallPassed" : false,
   "retainedOutputFiles" : [
