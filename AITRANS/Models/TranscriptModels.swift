@@ -1185,6 +1185,47 @@ struct MangaOverlaySegmentMaskReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaOverlayPreCropTextBoxPlan: Equatable, Codable, Sendable {
+    var planID: Int
+    var blockIndex: Int
+    var variantName: String
+    var sourceSignals: [String]
+    var bbox: [Double]
+    var seedBBox: [Double]
+    var bubbleID: Int?
+    var dominantBubbleID: Int?
+    var bubbleCoverageRatio: Double?
+    var glyphCoverageRatio: Double?
+    var safeRectCoverageRatio: Double?
+    var estimatedOrientation: String
+    var evidenceScore: Double
+    var eligibleForShadowOCR: Bool
+    var riskFlags: [String]
+    var rejectionReasons: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayPreCropTextBoxPlanBlockSummary: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var selectedPlanIDsForShadowOCR: [Int]
+    var rejectedPlanIDs: [Int]
+    var planningVerdict: String
+    var stopReasons: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayPreCropTextBoxPlanReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var evaluatedBlockCount: Int
+    var planCount: Int
+    var shadowOCREligiblePlanCount: Int
+    var selectedForShadowOCRBlocks: [Int]
+    var stoppedBlocks: [Int]
+    var blockSummaries: [MangaOverlayPreCropTextBoxPlanBlockSummary]
+    var plans: [MangaOverlayPreCropTextBoxPlan]
+    var notes: [String]
+}
+
 struct MangaOverlayCropExperimentCandidate: Equatable, Codable, Sendable {
     var candidateID: Int
     var blockIndex: Int
@@ -1458,6 +1499,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var textRegionCropReport: MangaOverlayTextRegionCropReport?
     var textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?
     var segmentMaskReport: MangaOverlaySegmentMaskReport?
+    var preCropTextBoxPlanReport: MangaOverlayPreCropTextBoxPlanReport?
     var cropExperimentReport: MangaOverlayCropExperimentReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
