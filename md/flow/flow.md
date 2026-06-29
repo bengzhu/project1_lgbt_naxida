@@ -195,6 +195,7 @@ test/1.png
   -> glyph mask / 背景估计 / 安全布局 / 离屏碰撞检查
   -> TextRegion crop shadow 实验矩阵（control + pre-crop plan 候选，不替换主输入）
   -> TextBox plan 失败归因与晋级门槛审计（解释 blockers，不替换主输入）
+  -> line-level TextBox / deskew shadow 验证（仅目标块，不替换主输入）
   -> JSON / TXT / PNG 输出
 ```
 
@@ -294,6 +295,7 @@ test/1.png
 - v18 `preCropTextBoxPlanReport` 是 TextRegion crop 前生成的 Koharu 式上游 TextBox plan artifact；每块最多保留 3 个 plan，只用 fused seed bbox、bubble geometry、BubbleMask majority/safe rect、subRegion、split candidate、assignment correction 和 glyph/SegmentMask proxy 等无真值信号排序。
 - v18 `cropExperimentReport` 仍是 shadow-only 实验矩阵；control 使用当前 TextRegion crop，shadow 候选优先来自 `preCropTextBoxPlan.*`，`bestShadowCandidate` 和 `promotionVerdict` 不替换 `finalTextUsedForTranslation`，也不改变 `textRegionCropReport.adoptedCount`。
 - v19 `textBoxPlanFailureReport` 用 `sourcePlanID` 串联 plan、candidate 和 block 级结论，只解释 promotion checks / blockers / recommended action，不改变主输入、主覆盖图或 `textRegionCropReport.adoptedCount`。
+- v20 `lineTextBoxPlanReport` / `lineCropExperimentReport` 只对 `textBoxPlanFailureReport.continueGeometryResearchBlocks` 生成 line-level TextBox / deskew shadow 候选；当前目标块 `[1, 6, 10]` 共 12 个候选，全部只写报告和 TXT，不改变主输入、主覆盖图、`blockPassed` 或 `textRegionCropReport.adoptedCount`。
 - BubbleMask 当前是 bbox/rounded-rect 近似实例 ID mask，用于 seed 归属、归属修正诊断、保守 split candidate、mask-safe layout、crop coverage 和渲染碰撞诊断；不是 Koharu 真实分割 mask，不能把布局收益冒充 OCR 提升。
 - 确定性纠错当前是对照路径，不替换 `finalTextUsedForTranslation`。
 - tagged batch 当前是负面诊断，不替换逐块翻译。
@@ -333,6 +335,14 @@ test/1.png
 - `textBoxPlanFailureReport.promotedShadowBlockCount = 0`
 - `textBoxPlanFailureReport.stopRecommendedBlocks = [2, 3, 4, 5, 7, 9, 11, 12]`
 - `textBoxPlanFailureReport.continueGeometryResearchBlocks = [1, 6, 10]`
+- `lineTextBoxPlanReport.targetBlocks = [1, 6, 10]`
+- `lineTextBoxPlanReport.planCount = 12`
+- `lineTextBoxPlanReport.shadowOCREligiblePlanCount = 12`
+- `lineCropExperimentReport.candidateCount = 12`
+- `lineCropExperimentReport.ocrSucceededCount = 12`
+- `lineCropExperimentReport.betterThanControlCount = 5`
+- `lineCropExperimentReport.promotedLineShadowBlocks = []`
+- `lineCropExperimentReport.stoppedAfterLineResearchBlocks = [1, 6, 10]`
 - `textBoxPlanFailureReport.candidatePromotionBlockedBlocks = [1, 2, 4, 5, 6, 9, 10]`
 - `passedBlocks = 1`
 - `failedBlocks = 12`

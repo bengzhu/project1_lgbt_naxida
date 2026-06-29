@@ -41,6 +41,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=0 controlVariant=currentTextRegionCrop controlText=THAT'S / RIGHT, / RIGHT / NOW / I'M- controlQuality=0.511 bestShadowID=1 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=THAT'S / RIGHT, / RIGHT / NOW / I'M- bestQuality=0.511 qualityDelta=0.000 promotionVerdict=controlStillBest stopReasons=
 textBoxPlanFailure: primary=controlStillBest verdict=controlStillBest action=noActionControlBest bestShadowBetterThanControl=false blockers=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | sameAsFusedText
 promotionChecks: passed=noBubbleMaskConflict | noIntroducedLikelyOCRError | noRawWordsLost | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded | wordPreservationRatio>=0.80 failed=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | sameAsFusedText
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] rejectedPlanIDs=[nil] planningVerdict=skipped stopReasons=nil
+lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
+linePromotionChecks: passed=nil failed=nil
+lineResearchDecision: skipped
 cropFailureAttribution: sameAsFusedText
 safeLayoutRect: [425,297,127,130]
 safeLayoutSource: maskSafeRect
@@ -112,6 +116,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=4 controlVariant=currentTextRegionCrop controlText=I'VE / ARRIVED / AT REN- / SENPArS / • HOUSE. controlQuality=0.645 bestShadowID=5 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=I'VE / ARRIVED / AT REN- / SENPAI'S / HOUSE, bestQuality=0.696 qualityDelta=0.051 promotionVerdict=noLocalOCRBenefit stopReasons=
 textBoxPlanFailure: primary=candidatePromotionBlocked verdict=noLocalOCRBenefit action=candidateNeedsPromotionGateReview bestShadowBetterThanControl=true blockers=qualityDeltaBelowOrEqual0.08
 promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noRawWordsLost | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded | wordPreservationRatio>=0.80 failed=qualityDeltaBelowOrEqual0.08
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[0:lineTightTextBox:parent=3:angle=nil:score=0.941 ocrExecuted=true bbox=[86,326,109,115] | 1:lineBandTextBox:parent=3:angle=nil:score=0.897 ocrExecuted=true bbox=[94,326,93,115] | 2:deskewProbeTextBox:parent=3:angle=-3.0:score=0.881 ocrExecuted=true bbox=[86,326,109,115] | 3:deskewProbeTextBox:parent=3:angle=3.0:score=0.881 ocrExecuted=true bbox=[86,326,109,115]] rejectedPlanIDs=[] planningVerdict=lineShadowOCREligiblePlans stopReasons=
+lineCropExperiment: bestLineShadowID=1 bestVariant=lineTextBoxPlan.lineBandTextBox bestText=I'VE / ARRIVED / AT REN- / SENPAIS / HOUSE. qualityDelta=0.095 wordPreservation=0.571 promotionVerdict=noLocalOCRBenefit stopReasons=wordPreservationRatioBelow0.80
+linePromotionChecks: passed=ocrSucceeded | qualityDelta>0.08 failed=wordPreservationRatioBelow0.80
+lineResearchDecision: lineResearchDecision=stop reason=wordPreservationRatioBelow0.80
 cropFailureAttribution: introducedLikelyOCRError | localVisionRegression
 safeLayoutRect: [60,326,160,115]
 safeLayoutSource: maskSafeRect
@@ -183,6 +191,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=8 controlVariant=currentTextRegionCrop controlText=nil controlQuality=0.000 bestShadowID=11 bestVariant=preCropTextBoxPlan.maskMajorityTextBox bestText=THE OTE / fafiitt / TAPTEIN bestQuality=0.802 qualityDelta=0.802 promotionVerdict=noLocalOCRBenefit stopReasons=localVisionCropNotPromising
 textBoxPlanFailure: primary=localVisionCropNotPromising verdict=noLocalOCRBenefit action=stopLocalVisionCrop bestShadowBetterThanControl=true blockers=rawWordsLost | wordPreservationRatioBelow0.80
 promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded | qualityDelta>0.08 failed=rawWordsLost | wordPreservationRatioBelow0.80
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] rejectedPlanIDs=[nil] planningVerdict=skipped stopReasons=nil
+lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
+linePromotionChecks: passed=nil failed=nil
+lineResearchDecision: skipped
 cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [440,537,121,84]
 safeLayoutSource: maskSafeRect
@@ -254,6 +266,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=12 controlVariant=currentTextRegionCrop controlText=TRANIE controlQuality=0.812 bestShadowID=13 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=BPECIAL / TRININE bestQuality=0.801 qualityDelta=-0.011 promotionVerdict=controlStillBest stopReasons=localVisionCropNotPromising
 textBoxPlanFailure: primary=localVisionCropNotPromising verdict=controlStillBest action=stopLocalVisionCrop bestShadowBetterThanControl=false blockers=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
 promotionChecks: passed=noBubbleMaskConflict | noIntroducedLikelyOCRError | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] rejectedPlanIDs=[nil] planningVerdict=skipped stopReasons=nil
+lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
+linePromotionChecks: passed=nil failed=nil
+lineResearchDecision: skipped
 cropFailureAttribution: localVisionRegression | rawWordsLost | wordCountRegression
 safeLayoutRect: [23,647,160,124]
 safeLayoutSource: maskSafeRect
@@ -325,6 +341,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=16 controlVariant=currentTextRegionCrop controlText=LET'S / BATTLERK controlQuality=0.636 bestShadowID=18 bestVariant=maskSafeRectConstrained bestText=ER! bestQuality=0.695 qualityDelta=0.059 promotionVerdict=protectedDiagnosticOnly stopReasons=protectedShortTextDiagnosticOnly
 textBoxPlanFailure: primary=protectedDiagnosticOnly verdict=protectedDiagnosticOnly action=stopProtectedBlock bestShadowBetterThanControl=true blockers=bubbleMaskConflict | protectedShortTextDiagnosticOnly | qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
 promotionChecks: passed=betterThanControl | noIntroducedLikelyOCRError | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=bubbleMaskConflict | protectedShortTextDiagnosticOnly | qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] rejectedPlanIDs=[nil] planningVerdict=skipped stopReasons=nil
+lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
+linePromotionChecks: passed=nil failed=nil
+lineResearchDecision: skipped
 cropFailureAttribution: bubbleMaskConflict | insufficientQualityGain | segmentMaskWeak | textBoxTooWide
 safeLayoutRect: [450,881,106,60]
 safeLayoutSource: maskSafeBlockFallback
@@ -396,6 +416,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=20 controlVariant=currentTextRegionCrop controlText=EVEN 5 / THOUSH / I SAID / JUSTE / SPECIAL / TRAINING / HAND / ASKEO I / • WE: / COLLO / JIST / PLAY / ONLINE controlQuality=0.702 bestShadowID=21 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=JISTi, / SPECIAL / TRANINGY / :KAND / ДЗКЕО I / *. WE / COLLD / JUSTI / -OR AT / PLAY / LEAST, / ONLINE / ITHAT- / SSEENS / ATO GE / LEEN- / SENDAr: bestQuality=0.795 qualityDelta=0.093 promotionVerdict=segmentEvidenceTooWeak stopReasons=localVisionCropNotPromising | segmentEvidenceTooWeak
 textBoxPlanFailure: primary=localVisionCropNotPromising verdict=segmentEvidenceTooWeak action=stopLocalVisionCrop bestShadowBetterThanControl=true blockers=rawWordsLost | wordPreservationRatioBelow0.80
 promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded | qualityDelta>0.08 failed=rawWordsLost | wordPreservationRatioBelow0.80
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] rejectedPlanIDs=[nil] planningVerdict=skipped stopReasons=nil
+lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
+linePromotionChecks: passed=nil failed=nil
+lineResearchDecision: skipped
 cropFailureAttribution: bubbleMaskConflict | introducedLikelyOCRError | localVisionRegression | rawWordsLost | segmentMaskWeak
 safeLayoutRect: [91,881,191,84]
 safeLayoutSource: maskSafeRect
@@ -467,6 +491,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=22 controlVariant=currentTextRegionCrop controlText=THS I5 AN / OPPLINE / TOLENANENT. / DONG I / ONLINE / WOLLO MAKE / MEANMELESS / Vhwit / are controlQuality=0.785 bestShadowID=23 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=THIS IS AN / • OPPLINE / TOURNAMENT, / DONe IT / ONLINE / WOLLO MAKE / MEANWELESS / of bestQuality=0.852 qualityDelta=0.067 promotionVerdict=noLocalOCRBenefit stopReasons=
 textBoxPlanFailure: primary=candidatePromotionBlocked verdict=noLocalOCRBenefit action=candidateNeedsPromotionGateReview bestShadowBetterThanControl=true blockers=qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
 promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noRawWordsLost | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[4:lineTightTextBox:parent=17:angle=nil:score=0.891 ocrExecuted=true bbox=[119,877,133,108] | 5:lineBandTextBox:parent=17:angle=nil:score=0.886 ocrExecuted=true bbox=[111,877,149,108] | 6:deskewProbeTextBox:parent=17:angle=-3.0:score=0.831 ocrExecuted=true bbox=[119,877,133,108] | 7:deskewProbeTextBox:parent=17:angle=3.0:score=0.831 ocrExecuted=true bbox=[119,877,133,108]] rejectedPlanIDs=[] planningVerdict=lineShadowOCREligiblePlans stopReasons=
+lineCropExperiment: bestLineShadowID=4 bestVariant=lineTextBoxPlan.lineTightTextBox bestText=EVEN. / THOUSH / I SAID / JIST / THIS IS AN / SPECIAL / • OPPLINE: / TRAINING / TOLENANENT. / AND / DOING IT / ASKEO H / ONLINE / WOLLO MAKE / WE / COLLD / MEANWELESS / JUST / PLAY / ESTION / ONLINE... / AS / LLED. qualityDelta=-0.053 wordPreservation=0.750 promotionVerdict=controlStillBest stopReasons=introducedLikelyOCRError | lineCandidateDoesNotBeatV19BestShadow | notBetterThanControl | qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
+linePromotionChecks: passed=ocrSucceeded failed=introducedLikelyOCRError | qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
+lineResearchDecision: lineResearchDecision=stop reason=introducedLikelyOCRError+lineCandidateDoesNotBeatV19BestShadow+notBetterThanControl+qualityDeltaBelowOrEqual0.08+wordPreservationRatioBelow0.80
 cropFailureAttribution: localVisionRegression | rawWordsLost
 safeLayoutRect: [91,881,151,99]
 safeLayoutSource: maskSafeRect
@@ -538,6 +566,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=26 controlVariant=currentTextRegionCrop controlText=nil controlQuality=0.000 bestShadowID=nil bestVariant=nil bestText=nil bestQuality=nil qualityDelta=nil promotionVerdict=localVisionCropNotPromising stopReasons=localVisionCropNotPromising
 textBoxPlanFailure: primary=localVisionCropNotPromising verdict=localVisionCropNotPromising action=stopLocalVisionCrop bestShadowBetterThanControl=false blockers=noShadowCandidate
 promotionChecks: passed= failed=noShadowCandidate
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] rejectedPlanIDs=[nil] planningVerdict=skipped stopReasons=nil
+lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
+linePromotionChecks: passed=nil failed=nil
+lineResearchDecision: skipped
 cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [447,878,111,96]
 safeLayoutSource: maskSafeRect
@@ -609,6 +641,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=30 controlVariant=currentTextRegionCrop controlText=* THE / SUGGESTION / OVERRULED, / ANO IT WAS / THAT TO BE / 'STAYNGY / OVER AT RENA / ESENPAI'S / THouser controlQuality=0.817 bestShadowID=31 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=i THE / (SUGGESTION / OVERDUKED, / ANO I'WAS! / ¡DECIDEDI / THAT TO BE / STAYING / OVER AT REN / SENPAI'S, / THOuse: bestQuality=0.763 qualityDelta=-0.054 promotionVerdict=controlStillBest stopReasons=
 textBoxPlanFailure: primary=controlStillBest verdict=controlStillBest action=noActionControlBest bestShadowBetterThanControl=false blockers=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
 promotionChecks: passed=noBubbleMaskConflict | noIntroducedLikelyOCRError | noRawWordsLost | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=notBetterThanControl | qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] rejectedPlanIDs=[nil] planningVerdict=skipped stopReasons=nil
+lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
+linePromotionChecks: passed=nil failed=nil
+lineResearchDecision: skipped
 cropFailureAttribution: insufficientQualityGain
 safeLayoutRect: [35,918,70,192]
 safeLayoutSource: maskSafeRect
@@ -680,6 +716,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=34 controlVariant=currentTextRegionCrop controlText=NEA / eve / : talkin controlQuality=0.748 bestShadowID=35 bestVariant=preCropTextBoxPlan.seedTightTextBox bestText=MEANI / ION / : What / ED, / AS / even / BE / : talking / abox / TEN- bestQuality=0.817 qualityDelta=0.069 promotionVerdict=noLocalOCRBenefit stopReasons=localVisionCropNotPromising
 textBoxPlanFailure: primary=localVisionCropNotPromising verdict=noLocalOCRBenefit action=stopLocalVisionCrop bestShadowBetterThanControl=true blockers=qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
 promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=qualityDeltaBelowOrEqual0.08 | rawWordsLost | wordPreservationRatioBelow0.80
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] rejectedPlanIDs=[nil] planningVerdict=skipped stopReasons=nil
+lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
+linePromotionChecks: passed=nil failed=nil
+lineResearchDecision: skipped
 cropFailureAttribution: localVisionRegression | rawWordsLost | wordCountRegression
 safeLayoutRect: [112,919,83,191]
 safeLayoutSource: maskSafeRect
@@ -751,6 +791,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=38 controlVariant=currentTextRegionCrop controlText=KED IP / WE / OLD / JIST / -ОЕ ДТ / LEAST. / NLINE.. / • THAT / SEEMS / TO BE / PEN- / LOGIC. controlQuality=0.792 bestShadowID=41 bestVariant=preCropTextBoxPlan.maskMajorityTextBox bestText=TRAINING / AND / ASKEO IF / WE / COLLO / JUIST / PLAY / -OR AT / LEAST. / ONLINE-. / THAT / SEEMS / TO BE / PEN- / LOGIC.. bestQuality=0.831 qualityDelta=0.039 promotionVerdict=noLocalOCRBenefit stopReasons=
 textBoxPlanFailure: primary=candidatePromotionBlocked verdict=noLocalOCRBenefit action=candidateNeedsPromotionGateReview bestShadowBetterThanControl=true blockers=qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
 promotionChecks: passed=betterThanControl | noBubbleMaskConflict | noIntroducedLikelyOCRError | noRawWordsLost | noSameAsFusedText | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded failed=qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[8:lineTightTextBox:parent=31:angle=nil:score=0.885 ocrExecuted=true bbox=[239,926,138,147] | 9:lineBandTextBox:parent=31:angle=nil:score=0.870 ocrExecuted=true bbox=[239,927,138,144] | 10:deskewProbeTextBox:parent=31:angle=-3.0:score=0.825 ocrExecuted=true bbox=[239,926,138,147] | 11:deskewProbeTextBox:parent=31:angle=3.0:score=0.825 ocrExecuted=true bbox=[239,926,138,147]] rejectedPlanIDs=[] planningVerdict=lineShadowOCREligiblePlans stopReasons=
+lineCropExperiment: bestLineShadowID=8 bestVariant=lineTextBoxPlan.lineTightTextBox bestText=JUST / SPECIAL / TRAINING / AND / ASKED IF / WE / COLLO / JUIST / PLAY / -OR AT / LEAST. / ONLINE-. / THAT / SEEMS / TO BE / CEN- / LOGIC. qualityDelta=0.046 wordPreservation=0.583 promotionVerdict=noLocalOCRBenefit stopReasons=lineCandidateDoesNotBeatV19BestShadow | qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
+linePromotionChecks: passed=ocrSucceeded failed=qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
+lineResearchDecision: lineResearchDecision=stop reason=lineCandidateDoesNotBeatV19BestShadow+qualityDeltaBelowOrEqual0.08+wordPreservationRatioBelow0.80
 cropFailureAttribution: localVisionRegression | rawWordsLost
 safeLayoutRect: [243,972,130,96]
 safeLayoutSource: maskSafeRect
@@ -822,6 +866,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=42 controlVariant=currentTextRegionCrop controlText=nil controlQuality=0.000 bestShadowID=nil bestVariant=nil bestText=nil bestQuality=nil qualityDelta=nil promotionVerdict=localVisionCropNotPromising stopReasons=localVisionCropNotPromising
 textBoxPlanFailure: primary=localVisionCropNotPromising verdict=localVisionCropNotPromising action=stopLocalVisionCrop bestShadowBetterThanControl=false blockers=noShadowCandidate
 promotionChecks: passed= failed=noShadowCandidate
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] rejectedPlanIDs=[nil] planningVerdict=skipped stopReasons=nil
+lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
+linePromotionChecks: passed=nil failed=nil
+lineResearchDecision: skipped
 cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [251,931,120,137]
 safeLayoutSource: maskSafeRect
@@ -893,6 +941,10 @@ preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTe
 cropExperiment: controlID=44 controlVariant=currentTextRegionCrop controlText=City Battler / Offline: / Tournament controlQuality=0.804 bestShadowID=45 bestVariant=textBoxTight bestText=City Battler / Offline: / Tournament bestQuality=0.804 qualityDelta=0.000 promotionVerdict=protectedDiagnosticOnly stopReasons=decorativeTitleDiagnosticOnly
 textBoxPlanFailure: primary=protectedDiagnosticOnly verdict=protectedDiagnosticOnly action=stopProtectedBlock bestShadowBetterThanControl=false blockers=bubbleMaskConflict | decorativeTitleDiagnosticOnly | notBetterThanControl | qualityDeltaBelowOrEqual0.08 | sameAsFusedText
 promotionChecks: passed=noIntroducedLikelyOCRError | noRawWordsLost | noSegmentEvidenceTooWeak | noSegmentOutsideBubbleRisk | ocrSucceeded | wordPreservationRatio>=0.80 failed=bubbleMaskConflict | decorativeTitleDiagnosticOnly | notBetterThanControl | qualityDeltaBelowOrEqual0.08 | sameAsFusedText
+lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] rejectedPlanIDs=[nil] planningVerdict=skipped stopReasons=nil
+lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
+linePromotionChecks: passed=nil failed=nil
+lineResearchDecision: skipped
 cropFailureAttribution: bubbleMaskConflict | sameAsFusedText | segmentMaskWeak | textBoxTooWide
 safeLayoutRect: [244,948,128,119]
 safeLayoutSource: maskSafeBlockFallback

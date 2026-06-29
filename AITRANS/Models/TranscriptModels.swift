@@ -1339,6 +1339,64 @@ struct MangaOverlayTextBoxPlanFailureReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaOverlayLineTextBoxPlan: Equatable, Codable, Sendable {
+    var planID: Int
+    var blockIndex: Int
+    var parentPlanID: Int?
+    var variantName: String
+    var lineIndex: Int?
+    var bbox: [Double]
+    var seedBBox: [Double]
+    var bubbleID: Int?
+    var orientationHint: String
+    var deskewAngleDegrees: Double?
+    var sourceSignals: [String]
+    var bubbleCoverageRatio: Double?
+    var glyphCoverageRatio: Double?
+    var safeRectCoverageRatio: Double?
+    var siblingOverlapRatio: Double?
+    var evidenceScore: Double
+    var eligibleForShadowOCR: Bool
+    var ocrExecuted: Bool
+    var riskFlags: [String]
+    var rejectionReasons: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayLineTextBoxPlanBlockSummary: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var sourceFailureAction: String
+    var selectedPlanIDsForShadowOCR: [Int]
+    var rejectedPlanIDs: [Int]
+    var planningVerdict: String
+    var stopReasons: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayLineTextBoxPlanReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var targetBlocks: [Int]
+    var evaluatedBlockCount: Int
+    var planCount: Int
+    var shadowOCREligiblePlanCount: Int
+    var blockSummaries: [MangaOverlayLineTextBoxPlanBlockSummary]
+    var plans: [MangaOverlayLineTextBoxPlan]
+    var notes: [String]
+}
+
+struct MangaOverlayLineCropExperimentReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var targetBlocks: [Int]
+    var candidateCount: Int
+    var ocrSucceededCount: Int
+    var betterThanControlCount: Int
+    var promotedLineShadowBlocks: [Int]
+    var stoppedAfterLineResearchBlocks: [Int]
+    var blockSummaries: [MangaOverlayCropExperimentBlockSummary]
+    var candidates: [MangaOverlayCropExperimentCandidate]
+    var notes: [String]
+}
+
 struct MangaOverlayBubbleSubRegionDiagnostic: Equatable, Codable, Sendable {
     var id: Int
     var parentBubbleID: Int
@@ -1556,6 +1614,8 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var preCropTextBoxPlanReport: MangaOverlayPreCropTextBoxPlanReport?
     var cropExperimentReport: MangaOverlayCropExperimentReport?
     var textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?
+    var lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport?
+    var lineCropExperimentReport: MangaOverlayLineCropExperimentReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?

@@ -717,6 +717,8 @@ struct MangaOverlayProbeService: Sendable {
         preCropTextBoxPlanReport: MangaOverlayPreCropTextBoxPlanReport? = nil,
         cropExperimentReport: MangaOverlayCropExperimentReport? = nil,
         textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport? = nil,
+        lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport? = nil,
+        lineCropExperimentReport: MangaOverlayLineCropExperimentReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -755,6 +757,8 @@ struct MangaOverlayProbeService: Sendable {
                 preCropTextBoxPlanReport: preCropTextBoxPlanReport,
                 cropExperimentReport: cropExperimentReport,
                 textBoxPlanFailureReport: textBoxPlanFailureReport,
+                lineTextBoxPlanReport: lineTextBoxPlanReport,
+                lineCropExperimentReport: lineCropExperimentReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1406,6 +1410,8 @@ struct MangaOverlayProbeService: Sendable {
         preCropTextBoxPlanReport: MangaOverlayPreCropTextBoxPlanReport?,
         cropExperimentReport: MangaOverlayCropExperimentReport?,
         textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?,
+        lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport?,
+        lineCropExperimentReport: MangaOverlayLineCropExperimentReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1434,6 +1440,18 @@ struct MangaOverlayProbeService: Sendable {
         )
         let failureSummaryByBlock = Dictionary(
             uniqueKeysWithValues: (textBoxPlanFailureReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let linePlanSummaryByBlock = Dictionary(
+            uniqueKeysWithValues: (lineTextBoxPlanReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let linePlanByID = Dictionary(
+            uniqueKeysWithValues: (lineTextBoxPlanReport?.plans ?? []).map { ($0.planID, $0) }
+        )
+        let lineExperimentSummaryByBlock = Dictionary(
+            uniqueKeysWithValues: (lineCropExperimentReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let lineExperimentCandidateByID = Dictionary(
+            uniqueKeysWithValues: (lineCropExperimentReport?.candidates ?? []).map { ($0.candidateID, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1539,6 +1557,35 @@ struct MangaOverlayProbeService: Sendable {
             let failurePassedChecks = failureSummary?.passedPromotionChecks.joined(separator: " | ") ?? "nil"
             let failureFailedChecks = failureSummary?.failedPromotionChecks.joined(separator: " | ") ?? "nil"
             let failureBlockers = failureSummary?.promotionBlockers.joined(separator: " | ") ?? "nil"
+            let linePlanSummary = linePlanSummaryByBlock[block.index]
+            let lineSelectedPlans = linePlanSummary?.selectedPlanIDsForShadowOCR
+                .compactMap { linePlanByID[$0] }
+                .map {
+                    "\($0.planID):\($0.variantName):parent=\($0.parentPlanID.map(String.init) ?? "nil"):angle=\($0.deskewAngleDegrees?.formatted(.number.precision(.fractionLength(1))) ?? "nil"):score=\($0.evidenceScore.formatted(.number.precision(.fractionLength(3)))) ocrExecuted=\($0.ocrExecuted) bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))]"
+                }
+                .joined(separator: " | ") ?? "nil"
+            let lineRejectedPlans = linePlanSummary?.rejectedPlanIDs.map(String.init).joined(separator: ",") ?? "nil"
+            let linePlanStopReasons = linePlanSummary?.stopReasons.joined(separator: " | ") ?? "nil"
+            let lineExperimentSummary = lineExperimentSummaryByBlock[block.index]
+            let bestLineCandidate = lineExperimentSummary?.bestShadowCandidateID.flatMap { lineExperimentCandidateByID[$0] }
+            let lineBestText = bestLineCandidate?.ocrText?.replacing("\n", with: " / ") ?? "nil"
+            let lineBestDelta = bestLineCandidate?.qualityDelta.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let lineBestPreservation = bestLineCandidate?.wordPreservationRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let linePromotionChecks = bestLineCandidate.map { candidate -> (passed: String, failed: String) in
+                var passed: [String] = []
+                var failed: [String] = []
+                candidate.ocrSucceeded ? passed.append("ocrSucceeded") : failed.append("emptyLocalOCR")
+                candidate.wordPreservationRatio >= 0.80 ? passed.append("wordPreservationRatio>=0.80") : failed.append("wordPreservationRatioBelow0.80")
+                candidate.qualityDelta > 0.08 ? passed.append("qualityDelta>0.08") : failed.append("qualityDeltaBelowOrEqual0.08")
+                for blocker in candidate.rejectionReasons + candidate.riskFlags {
+                    failed.append(blocker)
+                }
+                return (Array(Set(passed)).sorted().joined(separator: " | "), Array(Set(failed)).sorted().joined(separator: " | "))
+            }
+            let lineResearchDecision = lineExperimentSummary?.notes
+                .filter { $0.hasPrefix("lineResearchDecision=") || $0.hasPrefix("reason=") }
+                .joined(separator: " ") ?? "skipped"
+            let lineStopReasons = lineExperimentSummary?.stopReasons.joined(separator: " | ") ?? "nil"
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1584,6 +1631,10 @@ struct MangaOverlayProbeService: Sendable {
             cropExperiment: controlID=\(experimentSummary?.controlCandidateID.map(String.init) ?? "nil") controlVariant=\(controlCandidate?.variantName ?? "nil") controlText=\(experimentControlText) controlQuality=\(experimentControlQuality) bestShadowID=\(experimentSummary?.bestShadowCandidateID.map(String.init) ?? "nil") bestVariant=\(experimentSummary?.bestVariantName ?? "nil") bestText=\(experimentShadowText) bestQuality=\(experimentShadowQuality) qualityDelta=\(experimentShadowDelta) promotionVerdict=\(experimentSummary?.promotionVerdict ?? "nil") stopReasons=\(experimentStopReasons)
             textBoxPlanFailure: primary=\(failureSummary?.primaryFailureCategory ?? "nil") verdict=\(failureSummary?.verdict ?? "nil") action=\(failureSummary?.recommendedNextAction ?? "nil") bestShadowBetterThanControl=\(failureSummary.map { String($0.bestShadowBetterThanControl) } ?? "nil") blockers=\(failureBlockers)
             promotionChecks: passed=\(failurePassedChecks) failed=\(failureFailedChecks)
+            lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[\(lineSelectedPlans)] rejectedPlanIDs=[\(lineRejectedPlans)] planningVerdict=\(linePlanSummary?.planningVerdict ?? "skipped") stopReasons=\(linePlanStopReasons)
+            lineCropExperiment: bestLineShadowID=\(lineExperimentSummary?.bestShadowCandidateID.map(String.init) ?? "nil") bestVariant=\(lineExperimentSummary?.bestVariantName ?? "nil") bestText=\(lineBestText) qualityDelta=\(lineBestDelta) wordPreservation=\(lineBestPreservation) promotionVerdict=\(lineExperimentSummary?.promotionVerdict ?? "nil") stopReasons=\(lineStopReasons)
+            linePromotionChecks: passed=\(linePromotionChecks?.passed ?? "nil") failed=\(linePromotionChecks?.failed ?? "nil")
+            lineResearchDecision: \(lineResearchDecision)
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
