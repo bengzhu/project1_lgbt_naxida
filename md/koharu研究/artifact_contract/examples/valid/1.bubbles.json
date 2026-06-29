@@ -1,0 +1,20 @@
+{
+  "bubbleInstances": [
+    {
+      "id": "example-bubble-1",
+      "bbox": [96, 144, 182, 112],
+      "confidence": 0.71,
+      "maskValue": 1,
+      "pixelCount": 12840,
+      "notes": ["contractExampleOnly=true", "summary only"]
+    },
+    {
+      "id": "example-bubble-2",
+      "bbox": [250, 360, 212, 136],
+      "confidence": 0.68,
+      "maskValue": 2,
+      "pixelCount": 17620,
+      "notes": ["contractExampleOnly=true", "summary only"]
+    }
+  ]
+}

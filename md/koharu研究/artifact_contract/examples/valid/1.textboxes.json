@@ -1,0 +1,27 @@
+{
+  "textBoxes": [
+    {
+      "id": "example-textbox-1",
+      "bbox": [118, 172, 120, 46],
+      "confidence": 0.82,
+      "detector": "manual-contract-fixture",
+      "sourceDirection": "Horizontal",
+      "rotationDegrees": 0,
+      "detectedFontSizePx": 18,
+      "linePolygons": [
+        [[118, 172], [238, 172], [238, 196], [118, 196]]
+      ],
+      "notes": ["contractExampleOnly=true", "not real detector output"]
+    },
+    {
+      "id": "example-textbox-2",
+      "x": 278,
+      "y": 394,
+      "width": 146,
+      "height": 58,
+      "confidence": 0.76,
+      "detector": "manual-contract-fixture",
+      "notes": ["contractExampleOnly=true", "x/y/width/height compatibility sample"]
+    }
+  ]
+}

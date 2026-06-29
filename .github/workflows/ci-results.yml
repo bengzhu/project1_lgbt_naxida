@@ -120,6 +120,11 @@ jobs:
             else
               echo "output/clean_text_diagnostic.json not present; skipping existing clean text parse"
             fi
+            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid
+            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
+            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
+            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
+            python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
           } 2>&1 | tee "$RESULT_ROOT/static-checks.log"
 
       - name: Xcode build
@@ -397,6 +402,11 @@ jobs:
           [ -f "$OUTPUT_COPY_DIR/clean_text_diagnostic.json" ] && clean_path="$OUTPUT_COPY_DIR/clean_text_diagnostic.json"
           [ -f "$OUTPUT_COPY_DIR/1_ocr_probe_text.txt" ] && ocr_text_path="$OUTPUT_COPY_DIR/1_ocr_probe_text.txt"
           [ -f "$OUTPUT_COPY_DIR/manga_probe_progress.json" ] && probe_progress_path="$OUTPUT_COPY_DIR/manga_probe_progress.json"
+          if [ -d test/koharu_artifacts ]; then
+            koharu_active_artifacts_present=true
+          else
+            koharu_active_artifacts_present=false
+          fi
           python3 - <<PY
           import json
           manifest = {
@@ -418,6 +428,9 @@ jobs:
               "mangaProbeLogPath": "${RESULT_ROOT}/manga-probe.log",
               "appConsoleLogPath": "${RESULT_ROOT}/app-console.log",
               "staticChecksLogPath": "${RESULT_ROOT}/static-checks.log",
+              "koharuArtifactValidatorLogPath": "${RESULT_ROOT}/static-checks.log",
+              "koharuArtifactValidatorRan": "${{ steps.static_checks.outcome }}" == "success",
+              "koharuActiveArtifactsDirectoryPresent": "$koharu_active_artifacts_present" == "true",
               "modelDownloadLogPath": "${RESULT_ROOT}/model-download.log",
               "modelVerifyLogPath": "${RESULT_ROOT}/model-verify.log",
               "failureSummaryPath": "${RESULT_ROOT}/ci-failure-summary.md",
