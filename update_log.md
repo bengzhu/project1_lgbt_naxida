@@ -125,7 +125,9 @@
 - workflow 用 `AITRANS_RUN_MANGA_PROBE=1` 启动 App，等待 `probe_report.json`，校验 `engineUsed = Local GGUF`、`totalBlocksDetected > 0` 和 `blocks` 非空，然后导出本轮 `output/` 到未加密 CI 结果包。
 - DEBUG 启动探针逻辑在发现本地模型已安装时自动切换 `selectedEngine = .local`，避免 CI 误用 Mock。
 - workflow 将云端探针等待上限提高到 3600 秒，每分钟打印 App 沙盒 `Output` 快照和 `manga_probe_progress.json`，失败时也复制已有 `output/` 到结果包。
+- workflow 若发现 `manga_probe_progress.json` 连续 10 分钟不更新，会提前收束日志并失败，避免 App 已启动但探针主任务未推进时空等 3600 秒。
 - DEBUG 漫画探针会在 `Output/manga_probe_progress.json` 写入当前阶段、耗时和块数，便于判断卡在 OCR、翻译、渲染还是报告写入。
+- DEBUG 启动探针现在会写入 `launch-task-start`、`probe-entry`、`probe-task-start` 等阶段；缺 `test/1.png`、重复运行和运行异常都会写入进度或失败报告，避免只有 `launch-trigger-received` 而没有后续证据。
 - workflow 同时通过 `SIMCTL_CHILD_*`、`launchctl setenv`、普通 argv 和 `-AITRANS_RUN_MANGA_PROBE 1` UserDefaults 参数触发 DEBUG 探针；App 侧同时识别环境变量、启动参数和 UserDefaults，并在收到触发后立即写入 `launch-trigger-received` 进度。
 - DEBUG 漫画探针启动时跳过 `refreshSpeechRecognitionCapabilities()`，避免云端启动先查询多语言 Speech asset，延迟或干扰探针触发。
 - workflow 在开始探针前清空仓库根 `output/`，成功后必须从 App 沙盒导出新 `output/`，并强制校验 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和关键 PNG，避免把 checkout 自带旧报告误当云端结果。
@@ -160,7 +162,9 @@
 - run `28361773796` 在 commit `0c22574dd060a3623e793e314648a4ca6ec55805` 上进入 `Run cloud manga probe` 后 App 已启动但 `Output` 目录持续为空；该现象指向启动触发未进入 App 探针入口，已取消并改为多触发。
 - run `28363254764` 在 commit `0c3140b9960061083cec50e17a7538acfa900b49` 上因 workflow 内 `simctl spawn ps` 在 iOS 模拟器中不可用而提前失败；artifact 里的 `output/` 来自 checkout 旧文件，不作为云端探针通过结果。后续已改为清空旧 `output/` 并要求从 App 沙盒导出新结果。
 - run `28363769439` 在 commit `5728c14b3dfb26570ff9e5fcbf9eb13cdd631a73` 上清空旧 `output/` 后仍未生成沙盒报告，已取消；App 日志显示启动早期在查询 Speech assets，因此后续跳过云端探针启动时的 Speech capability refresh。
-- 后续修复把等待上限、App 侧进度文件和日志收集补齐；验收必须看新 run 的 manifest 和 artifact。
+- run `28364280623` 在 commit `3075339a63dad07e887a61c383268d2653c69eb5` 上模型下载、SHA256 校验、Xcode build 和 simulator build 均成功；`manga_probe_progress.json` 停在 `launch-trigger-received`，说明 App 已收到触发但未进入探针主任务。该 run 的模型文件位于历史目录 `Gemma-1.5B`，但 SHA256 和 `241410624` 字节大小确认实际是 Release 的 Gemma 270M GGUF，不是模型传错。
+- `AITRANS - Build IPA` run `28364280582` 同 commit 的 archive 失败为 exit 65，GitHub step 只保留 `xcpretty` 摘要，缺少具体 Swift/link/sign 原始错误；workflow 已改为使用 latest stable Xcode、显式 `generic/platform=iOS` destination，并上传 `xcodebuild-archive.log`，同时不改变加密打包密码流程。
+- 后续修复把等待上限、App 侧进度文件、停滞检测和日志收集补齐；验收必须看新 run 的 manifest 和 artifact。
 
 遗留事项：
 

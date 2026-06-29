@@ -9,6 +9,6 @@ third_party/llama.cpp/
 third_party/llama.cpp/build-*/
 截屏2026-06-07 下午7.54.22.png
 image.png
-test/1.png
 *.png
+!test/1.png
 reference
