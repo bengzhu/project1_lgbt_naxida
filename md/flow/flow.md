@@ -317,7 +317,8 @@ test/1.png
 - `ci-artifact-manifest.json` 必须能追溯 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`scheme`、`destination`、结果路径和探针报告路径。
 - 云端失败时，workflow 必须保留日志和失败摘要，Agent C 按结果包指出应交回 Agent B 修复的失败阶段和日志位置。
 - 云端结果包 workflow 会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，并缓存到 `.ci-models/`。
-- 云端完整漫画探针目前仍受模拟器 App 容器模型导入、输出导出和外部 artifact 等依赖影响；能稳定运行时必须生成新报告，不能稳定运行时必须显式说明未运行范围和后续补齐条件。
+- 云端完整漫画探针会构建 Debug simulator app，创建并启动 iPhone 模拟器，安装 `com.local.aitrans`，把缓存 GGUF 复制到 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 启动 App，等待并导出本轮 `output/`。
+- 云端探针验收报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0` 和关键产物存在；`overallPassed=false` 不单独判 CI 失败，因为当前质量基线本身仍有失败块。
 - 本阶段不提交模型文件，Release asset 是云端模型来源。
 
 ## 5. 已确认铁律
