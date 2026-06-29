@@ -1505,6 +1505,8 @@ final class TranslationSessionStore: ObservableObject {
                 var fusionResults: [MangaOverlayFusionResult] = []
                 var postFusionCleanup: MangaOverlayPostFusionCleanupReport?
                 var textRegionCropReport: MangaOverlayTextRegionCropReport?
+                var textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?
+                var segmentMaskReport: MangaOverlaySegmentMaskReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1688,6 +1690,23 @@ final class TranslationSessionStore: ObservableObject {
                     textRegionCropReport,
                     mergingMaskDiagnosticsFrom: bubbleMaskReport
                 )
+                textBoxCandidateReport = Self.makeTextBoxCandidateReport(
+                    blocks: probeBlocks,
+                    textRegionCropReport: textRegionCropReport,
+                    bubbleMaskReport: bubbleMaskReport,
+                    assignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                    splitCandidateReport: bubbleSplitCandidateReport
+                )
+                segmentMaskReport = Self.makeSegmentMaskReport(
+                    blocks: probeBlocks,
+                    textBoxCandidateReport: textBoxCandidateReport,
+                    bubbleMaskReport: bubbleMaskReport
+                )
+                textRegionCropReport = Self.textRegionCropReport(
+                    textRegionCropReport,
+                    mergingTextBoxCandidateReport: textBoxCandidateReport,
+                    segmentMaskReport: segmentMaskReport
+                )
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
@@ -1697,6 +1716,8 @@ final class TranslationSessionStore: ObservableObject {
                     outputDirectory: self.mangaOverlayOutputDirectory,
                     preprocessing: probeConfiguration.preprocessing,
                     textRegionCropReport: textRegionCropReport,
+                    textBoxCandidateReport: textBoxCandidateReport,
+                    segmentMaskReport: segmentMaskReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport
@@ -1751,6 +1772,8 @@ final class TranslationSessionStore: ObservableObject {
                     fusionComparison: fusionComparison,
                     fusionResults: fusionResults,
                     textRegionCropReport: textRegionCropReport,
+                    textBoxCandidateReport: textBoxCandidateReport,
+                    segmentMaskReport: segmentMaskReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -2387,6 +2410,19 @@ final class TranslationSessionStore: ObservableObject {
                     clampSource: crop.clampSource,
                     correctedBubbleID: assignmentCorrection?.correctedBubbleID,
                     splitCandidateID: splitCandidate?.id,
+                    textBoxCandidateID: nil,
+                    segmentMaskUsableForCropEvidence: nil,
+                    failureAttribution: Self.cropFailureAttribution(
+                        bubbleID: block.bubbleID,
+                        decisionRejections: decision.rejectionReasons,
+                        cropText: crop.text,
+                        clampSource: crop.clampSource,
+                        assignmentCorrection: assignmentCorrection,
+                        splitCandidate: splitCandidate,
+                        cropMaskCoverageRatio: nil,
+                        textBox: nil,
+                        segmentMask: nil
+                    ),
                     cropBBoxBeforeAssignmentCorrection: crop.cropBBoxBeforeAssignmentCorrection,
                     cropBBoxAfterAssignmentCorrection: crop.cropBBoxAfterAssignmentCorrection,
                     cropMaskCoverageBefore: nil,
@@ -2425,6 +2461,10 @@ final class TranslationSessionStore: ObservableObject {
         for reason in diagnostics.flatMap(\.rejectionReasons) {
             rejectionCounts[reason, default: 0] += 1
         }
+        var attributionCounts: [String: Int] = [:]
+        for reason in diagnostics.flatMap(\.failureAttribution) {
+            attributionCounts[reason, default: 0] += 1
+        }
         let report = MangaOverlayTextRegionCropReport(
             totalRegions: diagnostics.count,
             cropSucceededCount: succeeded,
@@ -2433,6 +2473,7 @@ final class TranslationSessionStore: ObservableObject {
             adoptedBlockIndexes: adoptedIndexes,
             rejectedBlockIndexes: rejectedIndexes,
             mainRejectionReasons: rejectionCounts,
+            failureAttributionBreakdown: attributionCounts,
             diagnostics: diagnostics,
             notes: [
                 "TextRegion crop OCR uses post-fusion block bbox as seed and clamps to block-local subregion when eligible, otherwise assigned bubble bbox or content rect",
@@ -2839,6 +2880,255 @@ final class TranslationSessionStore: ObservableObject {
             adoptedBlockIndexes: report.adoptedBlockIndexes,
             rejectedBlockIndexes: report.rejectedBlockIndexes,
             mainRejectionReasons: report.mainRejectionReasons,
+            failureAttributionBreakdown: report.failureAttributionBreakdown,
+            diagnostics: diagnostics,
+            notes: notes
+        )
+    }
+
+    private static func makeTextBoxCandidateReport(
+        blocks: [MangaOverlayProbeBlock],
+        textRegionCropReport: MangaOverlayTextRegionCropReport?,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        assignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        splitCandidateReport: MangaOverlayBubbleSplitCandidateReport?
+    ) -> MangaOverlayTextBoxCandidateReport? {
+        guard let textRegionCropReport else { return nil }
+        let cropByBlock = Dictionary(uniqueKeysWithValues: textRegionCropReport.diagnostics.map { ($0.blockIndex, $0) })
+        let maskByBlock = Dictionary(uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) })
+        let correctionByBlock = Dictionary(uniqueKeysWithValues: (assignmentCorrectionReport?.diagnostics ?? []).map { ($0.blockIndex, $0) })
+        var splitByBlock: [Int: MangaOverlayBubbleSplitCandidateDiagnostic] = [:]
+        for diagnostic in splitCandidateReport?.diagnostics ?? [] {
+            for index in diagnostic.seedBlockIndexes where splitByBlock[index] == nil {
+                splitByBlock[index] = diagnostic
+            }
+        }
+
+        let diagnostics = blocks.compactMap { block -> MangaOverlayTextBoxCandidateDiagnostic? in
+            guard let crop = cropByBlock[block.index] else { return nil }
+            let seedRect = rect(from: crop.seedBBox)
+            let cropRect = rect(from: crop.cropBBox)
+            let glyphRect = block.glyphMaskRect.map { rect(from: $0) }
+            let safeRect = block.safeLayoutRect.map { rect(from: $0) }
+            let glyphOverlap = glyphRect.map { rectOverlapRatio($0, cropRect) }
+            let safeOverlap = safeRect.map { rectOverlapRatio($0, cropRect) }
+            let bubbleCoverage = maskByBlock[block.index]?.cropMaskCoverageRatio ?? crop.cropMaskCoverageRatio
+            var rejectionReasons: [String] = []
+            var riskFlags: [String] = []
+
+            if cropRect.width < max(10, seedRect.width * 0.62) || cropRect.height < max(10, seedRect.height * 0.62) {
+                rejectionReasons.append("textBoxTooTight")
+            }
+            if cropRect.width > seedRect.width * 3.4 || cropRect.height > seedRect.height * 3.4 {
+                riskFlags.append("textBoxTooWide")
+            }
+            if let glyphOverlap, glyphOverlap < 0.45 {
+                rejectionReasons.append("glyphOverlapLow")
+            }
+            if let bubbleCoverage, bubbleCoverage < 0.45 {
+                rejectionReasons.append("bubbleMaskCoverageLow")
+            }
+            if let safeOverlap, safeOverlap < 0.40 {
+                riskFlags.append("safeRectOverlapLow")
+            }
+            if crop.rejectionReasons.contains("emptyCropText") {
+                rejectionReasons.append("emptyLocalOCR")
+            }
+            if let correction = correctionByBlock[block.index],
+               correction.decision == "rejectedDiagnosticOnly",
+               correction.currentBubbleID != correction.maskDominantBubbleID {
+                riskFlags.append("bubbleMaskConflict")
+            }
+            if let split = splitByBlock[block.index], split.clampEligible == false {
+                riskFlags.append("splitCandidateRejected")
+            }
+
+            let evidenceScore = Self.textBoxEvidenceScore(
+                bubbleMaskCoverageRatio: bubbleCoverage,
+                glyphOverlapRatio: glyphOverlap,
+                safeRectOverlapRatio: safeOverlap,
+                cropRejections: crop.rejectionReasons,
+                riskFlags: riskFlags
+            )
+            if evidenceScore < 0.58 {
+                rejectionReasons.append("evidenceScoreBelowCropThreshold")
+            }
+            let eligible = rejectionReasons.isEmpty
+            return MangaOverlayTextBoxCandidateDiagnostic(
+                id: block.index,
+                blockIndex: block.index,
+                source: "\(crop.clampSource)TextRegionCropBBox",
+                bbox: crop.cropBBox,
+                seedBBox: crop.seedBBox,
+                orientationHint: crop.orientationHint,
+                bubbleID: crop.bubbleID,
+                correctedBubbleID: crop.correctedBubbleID,
+                splitCandidateID: crop.splitCandidateID,
+                clampSource: crop.clampSource,
+                paddingX: crop.paddingX,
+                paddingY: crop.paddingY,
+                bubbleMaskCoverageRatio: bubbleCoverage,
+                glyphOverlapRatio: glyphOverlap,
+                safeRectOverlapRatio: safeOverlap,
+                evidenceScore: evidenceScore,
+                eligibleForCrop: eligible,
+                derivedFromTextRegionCrop: true,
+                usedForTextRegionCrop: false,
+                rejectionReasons: Array(Set(rejectionReasons)).sorted(),
+                riskFlags: Array(Set(riskFlags)).sorted(),
+                notes: [
+                    "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+                    "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+                    "groundTruthNotUsed",
+                    crop.adopted ? "cropTextAdoptedByExistingGuardrail" : "diagnosticOnlyFallbackToFusedText"
+                ]
+            )
+        }
+
+        return MangaOverlayTextBoxCandidateReport(
+            enabled: true,
+            evaluatedBlockCount: blocks.count,
+            candidateCount: diagnostics.count,
+            cropEligibleCount: diagnostics.filter(\.eligibleForCrop).count,
+            usedForCropBlocks: diagnostics.filter(\.usedForTextRegionCrop).map(\.blockIndex).sorted(),
+            rejectedBlocks: diagnostics.filter { !$0.eligibleForCrop }.map(\.blockIndex).sorted(),
+            diagnostics: diagnostics.sorted { $0.blockIndex < $1.blockIndex },
+            notes: [
+                "TextBoxes are lightweight diagnostics built from fused block seed bbox, crop bbox, clamp source, glyph mask, safe rect, and approximate BubbleMask coverage",
+                "TextBox candidates are derived after TextRegion crop diagnostics in this version; usedForTextRegionCrop stays false until TextBox is an upstream clamp input",
+                "TextBox eligibility does not loosen TextRegion crop adoption guardrails",
+                "ground truth is not used to score, rank, reject, or adopt TextBox candidates"
+            ]
+        )
+    }
+
+    private static func makeSegmentMaskReport(
+        blocks: [MangaOverlayProbeBlock],
+        textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?
+    ) -> MangaOverlaySegmentMaskReport? {
+        guard let textBoxCandidateReport else { return nil }
+        let textBoxByBlock = Dictionary(uniqueKeysWithValues: textBoxCandidateReport.diagnostics.map { ($0.blockIndex, $0) })
+        let maskByBlock = Dictionary(uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) })
+
+        let diagnostics = blocks.map { block -> MangaOverlaySegmentMaskDiagnostic in
+            let textBox = textBoxByBlock[block.index]
+            let textBoxRect = textBox.map { rect(from: $0.bbox) }
+            let glyphRect = block.glyphMaskRect.map { rect(from: $0) }
+            let safeRect = block.safeLayoutRect.map { rect(from: $0) }
+            let textBoxCoverage = glyphRect.flatMap { glyph in
+                textBoxRect.map { rectOverlapRatio(glyph, $0) }
+            }
+            let bubbleCoverage = maskByBlock[block.index]?.cropMaskCoverageRatio
+            let safeCoverage = glyphRect.flatMap { glyph in
+                safeRect.map { rectOverlapRatio(glyph, $0) }
+            }
+            var rejectionReasons: [String] = []
+            var riskFlags: [String] = []
+            if block.glyphMaskPixelCount <= 0 {
+                rejectionReasons.append("missingGlyphMask")
+            }
+            if let textBoxCoverage, textBoxCoverage < 0.42 {
+                rejectionReasons.append("glyphEscapesTextBox")
+            }
+            if let bubbleCoverage, bubbleCoverage < 0.45 {
+                rejectionReasons.append("segmentOutsideBubbleRisk")
+            }
+            if let safeCoverage, safeCoverage < 0.38 {
+                riskFlags.append("safeRectCoverageLow")
+            }
+            if block.bubbleID == nil {
+                riskFlags.append("unassignedBlock")
+                rejectionReasons.append("unassignedBlockDiagnosticOnly")
+            }
+            let normalized = block.finalTextUsedForTranslation.lowercased()
+            if block.bubbleID == nil,
+               (normalized.contains("city battler") || normalized.contains("offline") || normalized.contains("tournament")) {
+                riskFlags.append("decorativeTitle")
+                rejectionReasons.append("decorativeTitleDiagnosticOnly")
+            }
+            let glyphEscapesTextBox = rejectionReasons.contains("glyphEscapesTextBox")
+            let glyphEscapesBubble = rejectionReasons.contains("segmentOutsideBubbleRisk")
+            let usableForCleanup = block.glyphMaskPixelCount > 0 && !glyphEscapesBubble
+            let usableForCropEvidence = usableForCleanup
+                && !glyphEscapesTextBox
+                && !(block.bubbleID == nil)
+                && !riskFlags.contains("decorativeTitle")
+            return MangaOverlaySegmentMaskDiagnostic(
+                blockIndex: block.index,
+                textBoxCandidateID: textBox?.id,
+                glyphMaskPixelCount: block.glyphMaskPixelCount,
+                glyphMaskRect: block.glyphMaskRect,
+                glyphMaskFillRectCount: block.glyphMaskFillRects.count,
+                textBoxCoverageRatio: textBoxCoverage,
+                bubbleMaskCoverageRatio: bubbleCoverage,
+                safeRectCoverageRatio: safeCoverage,
+                glyphEscapesBubble: glyphEscapesBubble,
+                glyphEscapesTextBox: glyphEscapesTextBox,
+                usableForCleanup: usableForCleanup,
+                usableForCropEvidence: usableForCropEvidence,
+                rejectionReasons: Array(Set(rejectionReasons)).sorted(),
+                riskFlags: Array(Set(riskFlags)).sorted(),
+                notes: [
+                    "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+                    "not a learned segmentation model",
+                    "groundTruthNotUsed"
+                ]
+            )
+        }
+
+        return MangaOverlaySegmentMaskReport(
+            enabled: true,
+            evaluatedBlockCount: blocks.count,
+            glyphMaskBlocks: diagnostics.filter { $0.glyphMaskPixelCount > 0 }.count,
+            usableForCleanupBlocks: diagnostics.filter(\.usableForCleanup).map(\.blockIndex).sorted(),
+            usableForCropEvidenceBlocks: diagnostics.filter(\.usableForCropEvidence).map(\.blockIndex).sorted(),
+            weakSegmentBlocks: diagnostics.filter { !$0.usableForCropEvidence }.map(\.blockIndex).sorted(),
+            diagnostics: diagnostics.sorted { $0.blockIndex < $1.blockIndex },
+            notes: [
+                "SegmentMask is a traditional image-processing approximation derived from existing glyph mask evidence",
+                "usableForCropEvidence is diagnostic and does not loosen TextRegion crop adoption guardrails",
+                "decorative, unassigned, and weak glyph blocks stay diagnostic-only"
+            ]
+        )
+    }
+
+    private static func textRegionCropReport(
+        _ report: MangaOverlayTextRegionCropReport?,
+        mergingTextBoxCandidateReport textBoxReport: MangaOverlayTextBoxCandidateReport?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?
+    ) -> MangaOverlayTextRegionCropReport? {
+        guard let report else { return nil }
+        let textBoxByBlock = Dictionary(uniqueKeysWithValues: (textBoxReport?.diagnostics ?? []).map { ($0.blockIndex, $0) })
+        let segmentByBlock = Dictionary(uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) })
+        let diagnostics = report.diagnostics.map { diagnostic in
+            var updated = diagnostic
+            let textBox = textBoxByBlock[diagnostic.blockIndex]
+            let segment = segmentByBlock[diagnostic.blockIndex]
+            updated.textBoxCandidateID = textBox?.id
+            updated.segmentMaskUsableForCropEvidence = segment?.usableForCropEvidence
+            updated.failureAttribution = Self.cropFailureAttribution(
+                diagnostic: diagnostic,
+                textBox: textBox,
+                segmentMask: segment
+            )
+            return updated
+        }
+        var attributionCounts: [String: Int] = [:]
+        for reason in diagnostics.flatMap(\.failureAttribution) {
+            attributionCounts[reason, default: 0] += 1
+        }
+        var notes = report.notes
+        notes.append("TextBox and SegmentMask evidence is diagnostic and does not loosen TextRegion crop adoption guardrails")
+        return MangaOverlayTextRegionCropReport(
+            totalRegions: report.totalRegions,
+            cropSucceededCount: report.cropSucceededCount,
+            adoptedCount: report.adoptedCount,
+            rejectedCount: report.rejectedCount,
+            adoptedBlockIndexes: report.adoptedBlockIndexes,
+            rejectedBlockIndexes: report.rejectedBlockIndexes,
+            mainRejectionReasons: report.mainRejectionReasons,
+            failureAttributionBreakdown: attributionCounts,
             diagnostics: diagnostics,
             notes: notes
         )
@@ -2927,6 +3217,109 @@ final class TranslationSessionStore: ObservableObject {
             }
         }
         return (adopted, selected, reason, rejections, preservation, candidateScore, originalScore)
+    }
+
+    private static func cropFailureAttribution(
+        bubbleID: Int?,
+        decisionRejections: [String],
+        cropText: String?,
+        clampSource: String,
+        assignmentCorrection: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+        splitCandidate: MangaOverlayBubbleSplitCandidateDiagnostic?,
+        cropMaskCoverageRatio: Double?,
+        textBox: MangaOverlayTextBoxCandidateDiagnostic?,
+        segmentMask: MangaOverlaySegmentMaskDiagnostic?
+    ) -> [String] {
+        var result = Set<String>()
+        let trimmedCrop = cropText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if trimmedCrop.isEmpty || decisionRejections.contains("emptyCropText") {
+            result.insert("emptyLocalOCR")
+        }
+        if decisionRejections.contains("rawWordsLost") {
+            result.insert("rawWordsLost")
+        }
+        if decisionRejections.contains("wordCountRegression") {
+            result.insert("wordCountRegression")
+        }
+        if decisionRejections.contains("introducedLikelyOCRError") {
+            result.insert("introducedLikelyOCRError")
+        }
+        if decisionRejections.contains("sameAsFusedText") {
+            result.insert("sameAsFusedText")
+        }
+        if decisionRejections.contains("insufficientQualityGain") {
+            result.insert("insufficientQualityGain")
+        }
+        if decisionRejections.contains("rawWordsLost") || decisionRejections.contains("wordCountRegression") || decisionRejections.contains("introducedLikelyOCRError") {
+            result.insert("localVisionRegression")
+        }
+        if clampSource == "contentRect", bubbleID == nil {
+            result.insert("textBoxTooWide")
+        }
+        if let cropMaskCoverageRatio, cropMaskCoverageRatio < 0.45 {
+            result.insert("bubbleMaskConflict")
+        }
+        if let assignmentCorrection,
+           assignmentCorrection.currentBubbleID != assignmentCorrection.maskDominantBubbleID,
+           !assignmentCorrection.correctionAppliedToCropClamp {
+            result.insert("bubbleMaskConflict")
+        }
+        if let splitCandidate, !splitCandidate.clampEligible {
+            result.insert("textBoxTooWide")
+        }
+        if let textBox {
+            if textBox.rejectionReasons.contains("textBoxTooTight") {
+                result.insert("textBoxTooTight")
+            }
+            if textBox.riskFlags.contains("textBoxTooWide") {
+                result.insert("textBoxTooWide")
+            }
+            if textBox.rejectionReasons.contains("bubbleMaskCoverageLow") || textBox.riskFlags.contains("bubbleMaskConflict") {
+                result.insert("bubbleMaskConflict")
+            }
+        }
+        if let segmentMask, !segmentMask.usableForCropEvidence {
+            result.insert("segmentMaskWeak")
+        }
+        return Array(result).sorted()
+    }
+
+    private static func cropFailureAttribution(
+        diagnostic: MangaOverlayTextRegionCropDiagnostic,
+        textBox: MangaOverlayTextBoxCandidateDiagnostic?,
+        segmentMask: MangaOverlaySegmentMaskDiagnostic?
+    ) -> [String] {
+        cropFailureAttribution(
+            bubbleID: diagnostic.bubbleID,
+            decisionRejections: diagnostic.rejectionReasons,
+            cropText: diagnostic.textRegionCropText,
+            clampSource: diagnostic.clampSource,
+            assignmentCorrection: nil,
+            splitCandidate: nil,
+            cropMaskCoverageRatio: diagnostic.cropMaskCoverageRatio,
+            textBox: textBox,
+            segmentMask: segmentMask
+        )
+    }
+
+    private static func textBoxEvidenceScore(
+        bubbleMaskCoverageRatio: Double?,
+        glyphOverlapRatio: Double?,
+        safeRectOverlapRatio: Double?,
+        cropRejections: [String],
+        riskFlags: [String]
+    ) -> Double {
+        var score = 0.34
+        score += min(max(bubbleMaskCoverageRatio ?? 0.45, 0), 1) * 0.24
+        score += min(max(glyphOverlapRatio ?? 0.35, 0), 1) * 0.20
+        score += min(max(safeRectOverlapRatio ?? 0.50, 0), 1) * 0.12
+        if cropRejections.contains("emptyCropText") { score -= 0.18 }
+        if cropRejections.contains("rawWordsLost") { score -= 0.12 }
+        if cropRejections.contains("wordCountRegression") { score -= 0.10 }
+        if cropRejections.contains("introducedLikelyOCRError") { score -= 0.10 }
+        if riskFlags.contains("textBoxTooWide") { score -= 0.08 }
+        if riskFlags.contains("bubbleMaskConflict") { score -= 0.10 }
+        return min(max(score, 0), 1)
     }
 
     private static func wordPreservationRatio(sourceWords: [String], candidateWords: [String]) -> Double {
@@ -4563,6 +4956,8 @@ final class TranslationSessionStore: ObservableObject {
         fusionComparison: MangaOverlayFusionComparison? = nil,
         fusionResults: [MangaOverlayFusionResult] = [],
         textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
+        textBoxCandidateReport: MangaOverlayTextBoxCandidateReport? = nil,
+        segmentMaskReport: MangaOverlaySegmentMaskReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -4624,6 +5019,8 @@ final class TranslationSessionStore: ObservableObject {
             fusionComparison: fusionComparison,
             fusionResults: fusionResults,
             textRegionCropReport: textRegionCropReport,
+            textBoxCandidateReport: textBoxCandidateReport,
+            segmentMaskReport: segmentMaskReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,

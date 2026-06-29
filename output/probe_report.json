@@ -4560,7 +4560,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "9F4B42AA-07FE-4B54-A302-E345E866FC45",
+      "id" : "26707685-8E15-4347-A76A-7B03389D9D3B",
       "index" : 0,
       "maskSafeRect" : [
         425,
@@ -7330,7 +7330,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "C4EFE75A-EE57-41CE-B927-A9B61FDC103A",
+      "id" : "2EB96457-D255-434D-ADBF-4CC082AA00BF",
       "index" : 1,
       "maskSafeRect" : [
         60,
@@ -7877,7 +7877,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "8B57F012-6BA7-4F5B-BB89-FBB93B369305",
+      "id" : "B6E00B59-13FC-499A-90DB-A090FB51771F",
       "index" : 2,
       "maskSafeRect" : [
         440,
@@ -12778,7 +12778,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "8780BDF2-67E5-4A16-80B3-25857D536D7C",
+      "id" : "86D74626-7100-47DE-8FF1-A33521063618",
       "index" : 3,
       "maskSafeRect" : [
         23,
@@ -12930,7 +12930,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "C127FE99-7E05-4B81-83CA-EA2D06996FA3",
+      "id" : "81132091-5FC8-4CA3-A20E-C3A1F1AA01A3",
       "index" : 4,
       "maskSafeRect" : [
         450,
@@ -18118,7 +18118,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "BDBEBB97-A918-429D-8378-7D4A6D6D5FBC",
+      "id" : "18BCA6BF-C90E-4A51-909C-1BA16173700D",
       "index" : 5,
       "maskSafeRect" : [
         91,
@@ -22526,7 +22526,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "E4CD4769-54BF-4CAF-A3C2-2ED81137A561",
+      "id" : "1FE5751E-D490-4AA9-B70C-114613415DCB",
       "index" : 6,
       "maskSafeRect" : [
         91,
@@ -24255,7 +24255,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "B9DE9BED-13CC-4865-BF83-B3A5BAC93111",
+      "id" : "20597D9E-80B0-42E0-AD0D-087FD0D6FB93",
       "index" : 7,
       "maskSafeRect" : [
         447,
@@ -32170,7 +32170,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "3090CFAD-04E6-4435-96B7-8D3127E9BEFF",
+      "id" : "8B91EE3A-AC2D-46DC-BAEE-973B807F90A3",
       "index" : 8,
       "maskSafeRect" : [
         35,
@@ -39690,7 +39690,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "EE53D957-5CA0-40CA-8B36-D014FF0CC3EB",
+      "id" : "CA29A636-5D34-4431-9C2D-89E07AA27026",
       "index" : 9,
       "maskSafeRect" : [
         112,
@@ -44936,7 +44936,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "44C5374F-30AF-4DEE-9347-95BB0944E2CC",
+      "id" : "DF2F1C25-351C-46EF-9620-518447B8714C",
       "index" : 10,
       "maskSafeRect" : [
         243,
@@ -45383,7 +45383,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "7EE64B62-4393-4A9F-9776-EF710644F34A",
+      "id" : "F206EBBB-5612-4AFA-ADBA-5A13B1D6D152",
       "index" : 11,
       "maskSafeRect" : [
         251,
@@ -45551,7 +45551,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "D6C36FB1-3689-4F8E-AE48-83D597DE1F7F",
+      "id" : "DE1D7EE9-1087-4DF7-85FE-5BC64B166A73",
       "index" : 12,
       "maskSafeRect" : [
         244,
@@ -51704,7 +51704,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 16310,
+      "processingTimeMs" : 16002,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -52005,7 +52005,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 173265,
+      "processingTimeMs" : 173432,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -52024,7 +52024,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 16310,
+      "processingTimeMs" : 16002,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -52036,7 +52036,7 @@
     "fused" : {
       "accuracyVsGroundTruth" : 0.7383773465526562,
       "matchedGroundTruthCount" : 13,
-      "processingTimeMs" : 173265,
+      "processingTimeMs" : 173432,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 0
     },
@@ -52142,7 +52142,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 173265,
+      "processingTimeMs" : 173432,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -53099,20 +53099,20 @@
   "outputDirectoryCleaned" : true,
   "outputFileCountAfterCleanup" : 15,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
-    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
-    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
-    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
-    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/E1985A3D-5A7C-4C90-AAA3-5D0880816562\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
+    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
+    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
+    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
+    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/87BDA6FC-5027-4688-9E09-CD5A319A25EF\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
   },
   "overallPassed" : false,
   "retainedOutputFiles" : [
@@ -53132,6 +53132,427 @@
     "clean_text_diagnostic.json",
     "probe_report.json"
   ],
+  "segmentMaskReport" : {
+    "diagnostics" : [
+      {
+        "blockIndex" : 0,
+        "bubbleMaskCoverageRatio" : 0.9976444608023556,
+        "glyphEscapesBubble" : false,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 713,
+        "glyphMaskPixelCount" : 11455,
+        "glyphMaskRect" : [
+          401,
+          286,
+          175,
+          165
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "textBoxCandidateID" : 0,
+        "textBoxCoverageRatio" : 1,
+        "usableForCleanup" : true,
+        "usableForCropEvidence" : true
+      },
+      {
+        "blockIndex" : 1,
+        "bubbleMaskCoverageRatio" : 1,
+        "glyphEscapesBubble" : false,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 432,
+        "glyphMaskPixelCount" : 6270,
+        "glyphMaskRect" : [
+          93,
+          323,
+          103,
+          139
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 0.8273381294964028,
+        "textBoxCandidateID" : 1,
+        "textBoxCoverageRatio" : 0.96875,
+        "usableForCleanup" : true,
+        "usableForCropEvidence" : true
+      },
+      {
+        "blockIndex" : 2,
+        "bubbleMaskCoverageRatio" : 1,
+        "glyphEscapesBubble" : false,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 62,
+        "glyphMaskPixelCount" : 1182,
+        "glyphMaskRect" : [
+          497,
+          562,
+          47,
+          34
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "textBoxCandidateID" : 2,
+        "textBoxCoverageRatio" : 1,
+        "usableForCleanup" : true,
+        "usableForCropEvidence" : true
+      },
+      {
+        "blockIndex" : 3,
+        "bubbleMaskCoverageRatio" : 1,
+        "glyphEscapesBubble" : false,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 790,
+        "glyphMaskPixelCount" : 9907,
+        "glyphMaskRect" : [
+          0,
+          624,
+          206,
+          170
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "textBoxCandidateID" : 3,
+        "textBoxCoverageRatio" : 1,
+        "usableForCleanup" : true,
+        "usableForCropEvidence" : true
+      },
+      {
+        "blockIndex" : 4,
+        "bubbleMaskCoverageRatio" : 0.23315203315203314,
+        "glyphEscapesBubble" : true,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 0,
+        "glyphMaskPixelCount" : 0,
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+          "missingGlyphMask",
+          "segmentOutsideBubbleRisk",
+          "unassignedBlockDiagnosticOnly"
+        ],
+        "riskFlags" : [
+          "unassignedBlock"
+        ],
+        "textBoxCandidateID" : 4,
+        "usableForCleanup" : false,
+        "usableForCropEvidence" : false
+      },
+      {
+        "blockIndex" : 5,
+        "bubbleMaskCoverageRatio" : 0.010964912280701754,
+        "glyphEscapesBubble" : true,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 835,
+        "glyphMaskPixelCount" : 9972,
+        "glyphMaskRect" : [
+          213,
+          900,
+          172,
+          199
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+          "segmentOutsideBubbleRisk"
+        ],
+        "riskFlags" : [
+          "safeRectCoverageLow"
+        ],
+        "safeRectCoverageRatio" : 0.2795437546746447,
+        "textBoxCandidateID" : 5,
+        "textBoxCoverageRatio" : 0.706140350877193,
+        "usableForCleanup" : false,
+        "usableForCropEvidence" : false
+      },
+      {
+        "blockIndex" : 6,
+        "bubbleMaskCoverageRatio" : 1,
+        "glyphEscapesBubble" : false,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 705,
+        "glyphMaskPixelCount" : 8879,
+        "glyphMaskRect" : [
+          67,
+          857,
+          166,
+          148
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 0.9403973509933775,
+        "textBoxCandidateID" : 6,
+        "textBoxCoverageRatio" : 0.9279279279279279,
+        "usableForCleanup" : true,
+        "usableForCropEvidence" : true
+      },
+      {
+        "blockIndex" : 7,
+        "bubbleMaskCoverageRatio" : 0.9801864801864801,
+        "glyphEscapesBubble" : false,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 259,
+        "glyphMaskPixelCount" : 3134,
+        "glyphMaskRect" : [
+          507,
+          860,
+          69,
+          132
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 0.5375494071146245,
+        "textBoxCandidateID" : 7,
+        "textBoxCoverageRatio" : 1,
+        "usableForCleanup" : true,
+        "usableForCropEvidence" : true
+      },
+      {
+        "blockIndex" : 8,
+        "bubbleMaskCoverageRatio" : 0.743316966721222,
+        "glyphEscapesBubble" : false,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 1289,
+        "glyphMaskPixelCount" : 16597,
+        "glyphMaskRect" : [
+          0,
+          883,
+          231,
+          244
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "textBoxCandidateID" : 8,
+        "textBoxCoverageRatio" : 1,
+        "usableForCleanup" : true,
+        "usableForCropEvidence" : true
+      },
+      {
+        "blockIndex" : 9,
+        "bubbleMaskCoverageRatio" : 0.5208333333333334,
+        "glyphEscapesBubble" : false,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 1224,
+        "glyphMaskPixelCount" : 14901,
+        "glyphMaskRect" : [
+          0,
+          883,
+          231,
+          244
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "textBoxCandidateID" : 9,
+        "textBoxCoverageRatio" : 1,
+        "usableForCleanup" : true,
+        "usableForCropEvidence" : true
+      },
+      {
+        "blockIndex" : 10,
+        "bubbleMaskCoverageRatio" : 0.7510442773600668,
+        "glyphEscapesBubble" : false,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 843,
+        "glyphMaskPixelCount" : 10134,
+        "glyphMaskRect" : [
+          213,
+          900,
+          172,
+          199
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "textBoxCandidateID" : 10,
+        "textBoxCoverageRatio" : 1,
+        "usableForCleanup" : true,
+        "usableForCropEvidence" : true
+      },
+      {
+        "blockIndex" : 11,
+        "bubbleMaskCoverageRatio" : 0.9269005847953217,
+        "glyphEscapesBubble" : false,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 44,
+        "glyphMaskPixelCount" : 396,
+        "glyphMaskRect" : [
+          291,
+          966,
+          14,
+          39
+        ],
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "textBoxCandidateID" : 11,
+        "textBoxCoverageRatio" : 1,
+        "usableForCleanup" : true,
+        "usableForCropEvidence" : true
+      },
+      {
+        "blockIndex" : 12,
+        "bubbleMaskCoverageRatio" : 0.27259818240830896,
+        "glyphEscapesBubble" : true,
+        "glyphEscapesTextBox" : false,
+        "glyphMaskFillRectCount" : 0,
+        "glyphMaskPixelCount" : 0,
+        "notes" : [
+          "lightweight SegmentMask diagnostic aggregates existing glyph mask rectangles and approximate BubbleMask coverage",
+          "not a learned segmentation model",
+          "groundTruthNotUsed"
+        ],
+        "rejectionReasons" : [
+          "decorativeTitleDiagnosticOnly",
+          "missingGlyphMask",
+          "segmentOutsideBubbleRisk",
+          "unassignedBlockDiagnosticOnly"
+        ],
+        "riskFlags" : [
+          "decorativeTitle",
+          "unassignedBlock"
+        ],
+        "textBoxCandidateID" : 12,
+        "usableForCleanup" : false,
+        "usableForCropEvidence" : false
+      }
+    ],
+    "enabled" : true,
+    "evaluatedBlockCount" : 13,
+    "glyphMaskBlocks" : 11,
+    "notes" : [
+      "SegmentMask is a traditional image-processing approximation derived from existing glyph mask evidence",
+      "usableForCropEvidence is diagnostic and does not loosen TextRegion crop adoption guardrails",
+      "decorative, unassigned, and weak glyph blocks stay diagnostic-only"
+    ],
+    "usableForCleanupBlocks" : [
+      0,
+      1,
+      2,
+      3,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "usableForCropEvidenceBlocks" : [
+      0,
+      1,
+      2,
+      3,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "weakSegmentBlocks" : [
+      4,
+      5,
+      12
+    ]
+  },
   "sliceOCR" : {
     "aspectRatio" : 1.390625,
     "candidates" : [
@@ -68804,6 +69225,571 @@
     "sourceImage" : "synthetic:test\/1.png-content-x3",
     "thresholdAspectRatio" : 2.85
   },
+  "textBoxCandidateReport" : {
+    "candidateCount" : 13,
+    "cropEligibleCount" : 6,
+    "diagnostics" : [
+      {
+        "bbox" : [
+          478,
+          300,
+          95,
+          143
+        ],
+        "blockIndex" : 0,
+        "bubbleID" : 0,
+        "bubbleMaskCoverageRatio" : 0.9976444608023556,
+        "clampSource" : "bubbleBBox",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : true,
+        "evidenceScore" : 0.8624497607655504,
+        "glyphOverlapRatio" : 1,
+        "id" : 0,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "horizontal",
+        "paddingX" : 20.14,
+        "paddingY" : 46.64,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectOverlapRatio" : 0.6917924181082076,
+        "seedBBox" : [
+          499,
+          328,
+          53,
+          68
+        ],
+        "source" : "bubbleBBoxTextRegionCropBBox",
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          95,
+          319,
+          91,
+          128
+        ],
+        "blockIndex" : 1,
+        "bubbleID" : 1,
+        "bubbleMaskCoverageRatio" : 1,
+        "clampSource" : "bubbleBBox",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : true,
+        "evidenceScore" : 0.7815625,
+        "glyphOverlapRatio" : 0.96875,
+        "id" : 1,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "horizontal",
+        "paddingX" : 19.38,
+        "paddingY" : 37.44,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectOverlapRatio" : 0.8984375,
+        "seedBBox" : [
+          115,
+          357,
+          51,
+          52
+        ],
+        "source" : "bubbleBBoxTextRegionCropBBox",
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          480,
+          532,
+          81,
+          94
+        ],
+        "blockIndex" : 2,
+        "bubbleID" : 2,
+        "bubbleMaskCoverageRatio" : 1,
+        "clampSource" : "bubbleBBox",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : false,
+        "evidenceScore" : 0.7072340425531916,
+        "glyphOverlapRatio" : 1,
+        "id" : 2,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "horizontal",
+        "paddingX" : 14.44,
+        "paddingY" : 27.36,
+        "rejectionReasons" : [
+          "emptyLocalOCR"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectOverlapRatio" : 0.8936170212765957,
+        "seedBBox" : [
+          495,
+          560,
+          51,
+          38
+        ],
+        "source" : "bubbleBBoxTextRegionCropBBox",
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          45,
+          654,
+          90,
+          105
+        ],
+        "blockIndex" : 3,
+        "bubbleID" : 3,
+        "bubbleMaskCoverageRatio" : 1,
+        "clampSource" : "bubbleBBox",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : true,
+        "evidenceScore" : 0.68,
+        "glyphOverlapRatio" : 1,
+        "id" : 3,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "verticalCandidate",
+        "paddingX" : 23.1,
+        "paddingY" : 19.32,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectOverlapRatio" : 1,
+        "seedBBox" : [
+          69,
+          674,
+          42,
+          65
+        ],
+        "source" : "bubbleBBoxTextRegionCropBBox",
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          341,
+          809,
+          143,
+          135
+        ],
+        "blockIndex" : 4,
+        "bubbleMaskCoverageRatio" : 0.23315203315203314,
+        "clampSource" : "contentRect",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : false,
+        "evidenceScore" : 0.40444705399422387,
+        "id" : 4,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "horizontal",
+        "paddingX" : 20.9,
+        "paddingY" : 39.6,
+        "rejectionReasons" : [
+          "bubbleMaskCoverageLow",
+          "evidenceScoreBelowCropThreshold"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict",
+          "safeRectOverlapLow"
+        ],
+        "safeRectOverlapRatio" : 0.32075471698113206,
+        "seedBBox" : [
+          362,
+          849,
+          101,
+          55
+        ],
+        "source" : "contentRectTextRegionCropBBox",
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          210,
+          861,
+          95,
+          144
+        ],
+        "blockIndex" : 5,
+        "bubbleID" : 7,
+        "bubbleMaskCoverageRatio" : 0.010964912280701754,
+        "clampSource" : "splitCandidate",
+        "correctedBubbleID" : 4,
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : false,
+        "evidenceScore" : 0.3169122807017545,
+        "glyphOverlapRatio" : 0.706140350877193,
+        "id" : 5,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "verticalCandidate",
+        "paddingX" : 27.500000000000004,
+        "paddingY" : 23,
+        "rejectionReasons" : [
+          "bubbleMaskCoverageLow",
+          "evidenceScoreBelowCropThreshold"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectOverlapRatio" : 0.4421052631578947,
+        "seedBBox" : [
+          238,
+          884,
+          50,
+          107
+        ],
+        "source" : "splitCandidateTextRegionCropBBox",
+        "splitCandidateID" : 0,
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          130,
+          858,
+          111,
+          147
+        ],
+        "blockIndex" : 6,
+        "bubbleID" : 4,
+        "bubbleMaskCoverageRatio" : 1,
+        "clampSource" : "subRegion",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : true,
+        "evidenceScore" : 0.733797506115387,
+        "glyphOverlapRatio" : 0.9279279279279279,
+        "id" : 6,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "horizontal",
+        "paddingX" : 23.94,
+        "paddingY" : 48.239999999999995,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+          "splitCandidateRejected"
+        ],
+        "safeRectOverlapRatio" : 0.7350993377483444,
+        "seedBBox" : [
+          154,
+          905,
+          63,
+          67
+        ],
+        "source" : "subRegionTextRegionCropBBox",
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          485,
+          860,
+          91,
+          132
+        ],
+        "blockIndex" : 7,
+        "bubbleID" : 5,
+        "bubbleMaskCoverageRatio" : 0.9801864801864801,
+        "clampSource" : "bubbleBBox",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : false,
+        "evidenceScore" : 0.6741636741636741,
+        "glyphOverlapRatio" : 1,
+        "id" : 7,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "horizontal",
+        "paddingX" : 19.38,
+        "paddingY" : 41.04,
+        "rejectionReasons" : [
+          "emptyLocalOCR"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectOverlapRatio" : 0.6576576576576577,
+        "seedBBox" : [
+          505,
+          898,
+          51,
+          57
+        ],
+        "source" : "bubbleBBoxTextRegionCropBBox",
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          10,
+          936,
+          141,
+          156
+        ],
+        "blockIndex" : 8,
+        "bubbleID" : 6,
+        "bubbleMaskCoverageRatio" : 0.743316966721222,
+        "clampSource" : "subRegion",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : true,
+        "evidenceScore" : 0.8158960720130933,
+        "glyphOverlapRatio" : 1,
+        "id" : 8,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "verticalCandidate",
+        "paddingX" : 36.85,
+        "paddingY" : 30.82,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+          "splitCandidateRejected"
+        ],
+        "safeRectOverlapRatio" : 0.8125,
+        "seedBBox" : [
+          47,
+          967,
+          67,
+          94
+        ],
+        "source" : "subRegionTextRegionCropBBox",
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          97,
+          959,
+          79,
+          96
+        ],
+        "blockIndex" : 9,
+        "bubbleID" : 6,
+        "bubbleMaskCoverageRatio" : 0.5208333333333334,
+        "clampSource" : "splitCandidate",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : false,
+        "evidenceScore" : 0.5422151898734178,
+        "glyphOverlapRatio" : 1,
+        "id" : 9,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "verticalCandidate",
+        "paddingX" : 20.35,
+        "paddingY" : 17.02,
+        "rejectionReasons" : [
+          "evidenceScoreBelowCropThreshold"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectOverlapRatio" : 0.810126582278481,
+        "seedBBox" : [
+          118,
+          977,
+          37,
+          60
+        ],
+        "source" : "splitCandidateTextRegionCropBBox",
+        "splitCandidateID" : 4,
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          251,
+          936,
+          114,
+          126
+        ],
+        "blockIndex" : 10,
+        "bubbleID" : 7,
+        "bubbleMaskCoverageRatio" : 0.7510442773600668,
+        "clampSource" : "splitCandidate",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : true,
+        "evidenceScore" : 0.6989044727202623,
+        "glyphOverlapRatio" : 1,
+        "id" : 10,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "verticalCandidate",
+        "paddingX" : 29.700000000000003,
+        "paddingY" : 24.84,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectOverlapRatio" : 0.8221153846153846,
+        "seedBBox" : [
+          281,
+          961,
+          54,
+          76
+        ],
+        "source" : "splitCandidateTextRegionCropBBox",
+        "splitCandidateID" : 5,
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          269,
+          948,
+          36,
+          57
+        ],
+        "blockIndex" : 11,
+        "bubbleID" : 4,
+        "bubbleMaskCoverageRatio" : 0.9269005847953217,
+        "clampSource" : "bubbleBBox",
+        "correctedBubbleID" : 7,
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : false,
+        "evidenceScore" : 0.7024561403508771,
+        "glyphOverlapRatio" : 1,
+        "id" : 11,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "verticalCandidate",
+        "paddingX" : 19.8,
+        "paddingY" : 16.560000000000002,
+        "rejectionReasons" : [
+          "emptyLocalOCR"
+        ],
+        "riskFlags" : [
+          "splitCandidateRejected"
+        ],
+        "safeRectOverlapRatio" : 1,
+        "seedBBox" : [
+          289,
+          965,
+          36,
+          52
+        ],
+        "source" : "bubbleBBoxTextRegionCropBBox",
+        "usedForTextRegionCrop" : false
+      },
+      {
+        "bbox" : [
+          360,
+          931,
+          156,
+          158
+        ],
+        "blockIndex" : 12,
+        "bubbleMaskCoverageRatio" : 0.27259818240830896,
+        "clampSource" : "contentRect",
+        "derivedFromTextRegionCrop" : true,
+        "eligibleForCrop" : false,
+        "evidenceScore" : 0.3866735637779941,
+        "id" : 12,
+        "notes" : [
+          "lightweight TextBox candidate derived from existing TextRegion crop bbox",
+          "derived after TextRegion crop diagnostics; not used as an upstream crop clamp input in this version",
+          "groundTruthNotUsed",
+          "diagnosticOnlyFallbackToFusedText"
+        ],
+        "orientationHint" : "horizontal",
+        "paddingX" : 24.32,
+        "paddingY" : 46.08,
+        "rejectionReasons" : [
+          "bubbleMaskCoverageLow",
+          "evidenceScoreBelowCropThreshold"
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict",
+          "safeRectOverlapLow"
+        ],
+        "safeRectOverlapRatio" : 0.09375,
+        "seedBBox" : [
+          385,
+          978,
+          106,
+          64
+        ],
+        "source" : "contentRectTextRegionCropBBox",
+        "usedForTextRegionCrop" : false
+      }
+    ],
+    "enabled" : true,
+    "evaluatedBlockCount" : 13,
+    "notes" : [
+      "TextBoxes are lightweight diagnostics built from fused block seed bbox, crop bbox, clamp source, glyph mask, safe rect, and approximate BubbleMask coverage",
+      "TextBox candidates are derived after TextRegion crop diagnostics in this version; usedForTextRegionCrop stays false until TextBox is an upstream clamp input",
+      "TextBox eligibility does not loosen TextRegion crop adoption guardrails",
+      "ground truth is not used to score, rank, reject, or adopt TextBox candidates"
+    ],
+    "rejectedBlocks" : [
+      2,
+      4,
+      5,
+      7,
+      9,
+      11,
+      12
+    ],
+    "usedForCropBlocks" : [
+
+    ]
+  },
   "textRegionCropReport" : {
     "adoptedBlockIndexes" : [
 
@@ -68841,6 +69827,9 @@
         "cropMaskCoverageAfter" : 0.9976444608023556,
         "cropMaskCoverageBefore" : 0.9976444608023556,
         "cropMaskCoverageRatio" : 0.9976444608023556,
+        "failureAttribution" : [
+          "sameAsFusedText"
+        ],
         "fusedTextBeforeCrop" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.5111428571428571,
@@ -68862,6 +69851,7 @@
           53,
           68
         ],
+        "segmentMaskUsableForCropEvidence" : true,
         "selectedText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
         "selectionReason" : "fallbackToFusedText",
         "source" : "wholePageOCR",
@@ -68874,6 +69864,7 @@
         "subRegionCoverageRatio" : 1,
         "subRegionID" : 0,
         "subRegionRejectedReason" : "parentBubbleNotOversized",
+        "textBoxCandidateID" : 0,
         "textRegionCropText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
         "wholePageText" : "THAT'S\nRIGHT,\nNOW\nI'M-"
       },
@@ -68907,6 +69898,10 @@
         "cropMaskCoverageAfter" : 1,
         "cropMaskCoverageBefore" : 1,
         "cropMaskCoverageRatio" : 1,
+        "failureAttribution" : [
+          "introducedLikelyOCRError",
+          "localVisionRegression"
+        ],
         "fusedTextBeforeCrop" : "IVE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE.",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.7397142857142857,
@@ -68928,6 +69923,7 @@
           51,
           52
         ],
+        "segmentMaskUsableForCropEvidence" : true,
         "selectedText" : "IVE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE.",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
@@ -68940,6 +69936,7 @@
         "subRegionCoverageRatio" : 1,
         "subRegionID" : 1,
         "subRegionRejectedReason" : "parentBubbleNotOversized",
+        "textBoxCandidateID" : 1,
         "textRegionCropText" : "I'VE\nARRIVED\nAT REN-\nSENPArS\n• HOUSE.",
         "wholePageText" : "IVE ARRIVED AT REN- SENPAI'S HOUSE."
       },
@@ -68972,6 +69969,9 @@
         "cropMaskCoverageAfter" : 1,
         "cropMaskCoverageBefore" : 1,
         "cropMaskCoverageRatio" : 1,
+        "failureAttribution" : [
+          "emptyLocalOCR"
+        ],
         "fusedTextBeforeCrop" : "THE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.7937142857142857,
@@ -68993,6 +69993,7 @@
           51,
           38
         ],
+        "segmentMaskUsableForCropEvidence" : true,
         "selectedText" : "THE CITY\nHATTLER\nTOUPNAMENT\nSTARTS IN A\nPEW DAYS.",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
@@ -69005,6 +70006,7 @@
         "subRegionCoverageRatio" : 1,
         "subRegionID" : 2,
         "subRegionRejectedReason" : "parentBubbleNotOversized",
+        "textBoxCandidateID" : 2,
         "wholePageText" : "THE CITY RATTLER\nSTATE IN A PEN DAYS."
       },
       {
@@ -69036,6 +70038,11 @@
         "cropMaskCoverageAfter" : 1,
         "cropMaskCoverageBefore" : 1,
         "cropMaskCoverageRatio" : 1,
+        "failureAttribution" : [
+          "localVisionRegression",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
         "fusedTextBeforeCrop" : "ANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.8079787234042554,
@@ -69058,6 +70065,7 @@
           42,
           65
         ],
+        "segmentMaskUsableForCropEvidence" : true,
         "selectedText" : "ANP\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTRAININS",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
@@ -69070,6 +70078,7 @@
         "subRegionCoverageRatio" : 1,
         "subRegionID" : 3,
         "subRegionRejectedReason" : "parentBubbleNotOversized",
+        "textBoxCandidateID" : 3,
         "textRegionCropText" : "TRANIE",
         "wholePageText" : "THAT'S\nWE'RE WHY\nTRANINS SPECIAL"
       },
@@ -69103,6 +70112,12 @@
         "cropMaskCoverageBefore" : 0.23315203315203314,
         "cropMaskCoverageRatio" : 0.23315203315203314,
         "cropMaskRejectedReason" : "lowMaskCoverage",
+        "failureAttribution" : [
+          "bubbleMaskConflict",
+          "insufficientQualityGain",
+          "segmentMaskWeak",
+          "textBoxTooWide"
+        ],
         "fusedTextBeforeCrop" : "LET'S\nBATTLER!",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.611,
@@ -69124,10 +70139,12 @@
           101,
           55
         ],
+        "segmentMaskUsableForCropEvidence" : false,
         "selectedText" : "LET'S\nBATTLER!",
         "selectionReason" : "fallbackToFusedText",
         "source" : "wholePageOCR",
         "subRegionRejectedReason" : "noSubRegion",
+        "textBoxCandidateID" : 4,
         "textRegionCropText" : "LET'S\nBATTLERK",
         "wholePageText" : "LET'S\nBATTLER!"
       },
@@ -69174,6 +70191,13 @@
         "cropMaskCoverageAfter" : 0.010964912280701754,
         "cropMaskCoverageRatio" : 0.010964912280701754,
         "cropMaskRejectedReason" : "lowMaskCoverage",
+        "failureAttribution" : [
+          "bubbleMaskConflict",
+          "introducedLikelyOCRError",
+          "localVisionRegression",
+          "rawWordsLost",
+          "segmentMaskWeak"
+        ],
         "fusedTextBeforeCrop" : "I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.7757142857142857,
@@ -69196,6 +70220,7 @@
           50,
           107
         ],
+        "segmentMaskUsableForCropEvidence" : false,
         "selectedText" : "I SAID\nIT'S\nJUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOULD\nPLAY\nONLINE...",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
@@ -69210,6 +70235,7 @@
         "subRegionCoverageRatio" : 0.8504672897196262,
         "subRegionID" : 4,
         "subRegionRejectedReason" : "seedCoverageTooLow",
+        "textBoxCandidateID" : 5,
         "textRegionCropText" : "EVEN 5\nTHOUSH\nI SAID\nJUSTE\nSPECIAL\nTRAINING\nHAND\nASKEO I\n• WE:\nCOLLO\nJIST\nPLAY\nONLINE",
         "wholePageText" : "LET'S\nBATTLER!"
       },
@@ -69243,6 +70269,10 @@
         "cropMaskCoverageAfter" : 1,
         "cropMaskCoverageBefore" : 1,
         "cropMaskCoverageRatio" : 1,
+        "failureAttribution" : [
+          "localVisionRegression",
+          "rawWordsLost"
+        ],
         "fusedTextBeforeCrop" : "THIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.8616666666666667,
@@ -69264,6 +70294,7 @@
           63,
           67
         ],
+        "segmentMaskUsableForCropEvidence" : true,
         "selectedText" : "THIS IS AN\nOPPLINE\nTOURNAMENT.\nDOING IT\nONLINE\nWOULD MAKE\nIT\nMEANINGLESS",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
@@ -69276,6 +70307,7 @@
         "subRegionCoverageRatio" : 1,
         "subRegionID" : 5,
         "subRegionRejectedReason" : "",
+        "textBoxCandidateID" : 6,
         "textRegionCropText" : "THS I5 AN\nOPPLINE\nTOLENANENT.\nDONG I\nONLINE\nWOLLO MAKE\nMEANMELESS\nVhwit\nare",
         "wholePageText" : "THIS IS AN\nTOURNAMENT. DOING IT\nWOULD MAKE WOLLD MAKE ONLINE"
       },
@@ -69309,6 +70341,9 @@
         "cropMaskCoverageAfter" : 0.9801864801864801,
         "cropMaskCoverageBefore" : 0.9801864801864801,
         "cropMaskCoverageRatio" : 0.9801864801864801,
+        "failureAttribution" : [
+          "emptyLocalOCR"
+        ],
         "fusedTextBeforeCrop" : "WE NEED TO\nGET RESULTS\nAT THS\nTOURNAMENT\nTO SAVE THE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.7733333333333334,
@@ -69330,6 +70365,7 @@
           51,
           57
         ],
+        "segmentMaskUsableForCropEvidence" : true,
         "selectedText" : "WE NEED TO\nGET RESULTS\nAT THS\nTOURNAMENT\nTO SAVE THE\nSAMNG CLUR\nPOOM RENG\nDISBANDED.",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
@@ -69342,6 +70378,7 @@
         "subRegionCoverageRatio" : 1,
         "subRegionID" : 6,
         "subRegionRejectedReason" : "parentBubbleNotOversized",
+        "textBoxCandidateID" : 7,
         "wholePageText" : "GET PESULTE\nSAMING CLUE TO SAVE THE\nPOOM BENG"
       },
       {
@@ -69374,6 +70411,9 @@
         "cropMaskCoverageAfter" : 0.743316966721222,
         "cropMaskCoverageBefore" : 0.743316966721222,
         "cropMaskCoverageRatio" : 0.743316966721222,
+        "failureAttribution" : [
+          "insufficientQualityGain"
+        ],
         "fusedTextBeforeCrop" : "THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.773174172544764,
@@ -69395,6 +70435,7 @@
           67,
           94
         ],
+        "segmentMaskUsableForCropEvidence" : true,
         "selectedText" : "THE\nSUGGESTION\nWAS\nOVERRULED. AND IT WAS\nDECIDED\nTHAT I'O BE\nSTAYING\nOVER AT REN-\nSENPAI'S\nHOUSE.",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
@@ -69407,6 +70448,7 @@
         "subRegionCoverageRatio" : 1,
         "subRegionID" : 7,
         "subRegionRejectedReason" : "",
+        "textBoxCandidateID" : 8,
         "textRegionCropText" : "* THE\nSUGGESTION\nOVERRULED,\nANO IT WAS\nTHAT TO BE\n'STAYNGY\nOVER AT RENA\nESENPAI'S\nTHouser",
         "wholePageText" : "SUGSESTION THE\nOVERRULED AND IT WAS\nTHAT I'D BE DECIDED\nSTAYING OVER AT REN-\nHOUSE."
       },
@@ -69452,6 +70494,11 @@
         "cropMaskCoverageAfter" : 0.5208333333333334,
         "cropMaskCoverageRatio" : 0.5208333333333334,
         "cropMaskRejectedReason" : "lowMaskCoverage",
+        "failureAttribution" : [
+          "localVisionRegression",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
         "fusedTextBeforeCrop" : "What\nare\nyOuL\never talking abodi?",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.8083636363636364,
@@ -69474,6 +70521,7 @@
           37,
           60
         ],
+        "segmentMaskUsableForCropEvidence" : true,
         "selectedText" : "What\nare\nyOuL\never talking abodi?",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
@@ -69488,6 +70536,7 @@
         "subRegionCoverageRatio" : 1,
         "subRegionID" : 8,
         "subRegionRejectedReason" : "overlapsSiblingSubRegion",
+        "textBoxCandidateID" : 9,
         "textRegionCropText" : "NEA\neve\n: talkin",
         "wholePageText" : "What Whet are\nevery you!\ntalking"
       },
@@ -69532,6 +70581,10 @@
         "cropClampedByBubble" : false,
         "cropMaskCoverageAfter" : 0.7510442773600668,
         "cropMaskCoverageRatio" : 0.7510442773600668,
+        "failureAttribution" : [
+          "localVisionRegression",
+          "rawWordsLost"
+        ],
         "fusedTextBeforeCrop" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.6940909090909091,
@@ -69553,6 +70606,7 @@
           54,
           76
         ],
+        "segmentMaskUsableForCropEvidence" : true,
         "selectedText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC.",
         "selectionReason" : "fallbackToFusedText",
         "source" : "wholePageOCR",
@@ -69567,6 +70621,7 @@
         "subRegionCoverageRatio" : 1,
         "subRegionID" : 9,
         "subRegionRejectedReason" : "overlapsSiblingSubRegion",
+        "textBoxCandidateID" : 10,
         "textRegionCropText" : "KED IP\nWE\nOLD\nJIST\n-ОЕ ДТ\nLEAST.\nNLINE..\n• THAT\nSEEMS\nTO BE\nPEN-\nLOGIC.",
         "wholePageText" : "-O2 AT LEAST. -02 AT\nTHAT SEEMS TO BE\nSENPAIS SENPArS LOSIC."
       },
@@ -69601,6 +70656,9 @@
         "cropMaskCoverageAfter" : 0.9269005847953217,
         "cropMaskCoverageBefore" : 0.9269005847953217,
         "cropMaskCoverageRatio" : 0.9269005847953217,
+        "failureAttribution" : [
+          "emptyLocalOCR"
+        ],
         "fusedTextBeforeCrop" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
         "orientationHint" : "verticalCandidate",
         "originalQualityScore" : 0.6739999999999999,
@@ -69622,6 +70680,7 @@
           36,
           52
         ],
+        "segmentMaskUsableForCropEvidence" : true,
         "selectedText" : "-02 AT\nLEAST,\nTHAT\nSEEMS\nTO BE\n2EN-",
         "selectionReason" : "fallbackToFusedText",
         "source" : "bubbleFirst",
@@ -69634,6 +70693,7 @@
         "subRegionCoverageRatio" : 0.3418803418803419,
         "subRegionID" : 10,
         "subRegionRejectedReason" : "seedCoverageTooLow",
+        "textBoxCandidateID" : 11,
         "wholePageText" : "JUST"
       },
       {
@@ -69666,6 +70726,12 @@
         "cropMaskCoverageBefore" : 0.27259818240830896,
         "cropMaskCoverageRatio" : 0.27259818240830896,
         "cropMaskRejectedReason" : "lowMaskCoverage",
+        "failureAttribution" : [
+          "bubbleMaskConflict",
+          "sameAsFusedText",
+          "segmentMaskWeak",
+          "textBoxTooWide"
+        ],
         "fusedTextBeforeCrop" : "City Battler\nOffline.\nTournament",
         "orientationHint" : "horizontal",
         "originalQualityScore" : 0.80425,
@@ -69687,14 +70753,28 @@
           106,
           64
         ],
+        "segmentMaskUsableForCropEvidence" : false,
         "selectedText" : "City Battler\nOffline.\nTournament",
         "selectionReason" : "fallbackToFusedText",
         "source" : "wholePageOCR",
         "subRegionRejectedReason" : "noSubRegion",
+        "textBoxCandidateID" : 12,
         "textRegionCropText" : "City Battler\nOffline:\nTournament",
         "wholePageText" : "City Battler\nOffline.\nTournament"
       }
     ],
+    "failureAttributionBreakdown" : {
+      "bubbleMaskConflict" : 3,
+      "emptyLocalOCR" : 3,
+      "insufficientQualityGain" : 2,
+      "introducedLikelyOCRError" : 2,
+      "localVisionRegression" : 6,
+      "rawWordsLost" : 5,
+      "sameAsFusedText" : 2,
+      "segmentMaskWeak" : 3,
+      "textBoxTooWide" : 2,
+      "wordCountRegression" : 2
+    },
     "mainRejectionReasons" : {
       "emptyCropText" : 3,
       "insufficientQualityGain" : 2,
@@ -69708,7 +70788,8 @@
       "selection uses word preservation, text similarity, word count, Latin\/symbol ratios, OCR error heuristics, and crop clamp signals only",
       "ground truth is used only after selection to refresh evaluation metrics",
       "subregion clamp does not loosen crop adoption guardrails",
-      "BubbleMask coverage is diagnostic only and does not loosen TextRegion crop adoption guardrails"
+      "BubbleMask coverage is diagnostic only and does not loosen TextRegion crop adoption guardrails",
+      "TextBox and SegmentMask evidence is diagnostic and does not loosen TextRegion crop adoption guardrails"
     ],
     "rejectedBlockIndexes" : [
       0,

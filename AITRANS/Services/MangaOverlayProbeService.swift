@@ -712,6 +712,8 @@ struct MangaOverlayProbeService: Sendable {
         preprocessing: MangaOverlayPreprocessingOptions = .defaultValue,
         cropping: MangaOverlayProbeCropping = .defaultValue,
         textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
+        textBoxCandidateReport: MangaOverlayTextBoxCandidateReport? = nil,
+        segmentMaskReport: MangaOverlaySegmentMaskReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -745,6 +747,8 @@ struct MangaOverlayProbeService: Sendable {
             try Self.writeOCRProbeText(
                 blocks: blocks,
                 textRegionCropReport: textRegionCropReport,
+                textBoxCandidateReport: textBoxCandidateReport,
+                segmentMaskReport: segmentMaskReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1391,6 +1395,8 @@ struct MangaOverlayProbeService: Sendable {
     private static func writeOCRProbeText(
         blocks: [MangaOverlayProbeBlock],
         textRegionCropReport: MangaOverlayTextRegionCropReport?,
+        textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1398,6 +1404,12 @@ struct MangaOverlayProbeService: Sendable {
     ) throws {
         let textRegionByBlock = Dictionary(
             uniqueKeysWithValues: (textRegionCropReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let textBoxByBlock = Dictionary(
+            uniqueKeysWithValues: (textBoxCandidateReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1472,6 +1484,18 @@ struct MangaOverlayProbeService: Sendable {
             let split = splitByBlock[block.index]
             let splitReasons = split?.rejectionReasons.joined(separator: " | ") ?? "nil"
             let splitBBox = split?.bbox.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let textBox = textBoxByBlock[block.index]
+            let textBoxBBox = textBox?.bbox.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let textBoxRejections = textBox?.rejectionReasons.joined(separator: " | ") ?? "nil"
+            let textBoxRisks = textBox?.riskFlags.joined(separator: " | ") ?? "nil"
+            let textBoxScore = textBox?.evidenceScore.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let textBoxGlyphOverlap = textBox?.glyphOverlapRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let textBoxBubbleCoverage = textBox?.bubbleMaskCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let segment = segmentByBlock[block.index]
+            let segmentTextBoxCoverage = segment?.textBoxCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let segmentBubbleCoverage = segment?.bubbleMaskCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let segmentRejections = segment?.rejectionReasons.joined(separator: " | ") ?? "nil"
+            let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
             rawOCR: \(raw)
@@ -1510,6 +1534,9 @@ struct MangaOverlayProbeService: Sendable {
             textRegionSplitCandidateRejectedReason: \(textRegionSplitRejected)
             textRegionWordPreservation: \(textRegionPreservation)
             textRegionQualityScore: \(textRegionQuality)
+            textBoxCandidate: id=\(textBox.map { String($0.id) } ?? "nil") source=\(textBox?.source ?? "nil") bbox=[\(textBoxBBox)] evidenceScore=\(textBoxScore) eligibleForCrop=\(textBox.map { String($0.eligibleForCrop) } ?? "nil") derivedFromTextRegionCrop=\(textBox.map { String($0.derivedFromTextRegionCrop) } ?? "nil") usedForTextRegionCrop=\(textBox.map { String($0.usedForTextRegionCrop) } ?? "nil") glyphOverlap=\(textBoxGlyphOverlap) bubbleCoverage=\(textBoxBubbleCoverage) rejections=\(textBoxRejections) risks=\(textBoxRisks)
+            segmentMask: pixels=\(segment.map { String($0.glyphMaskPixelCount) } ?? "nil") rect=[\(glyphRect)] fillRects=\(segment.map { String($0.glyphMaskFillRectCount) } ?? "nil") textBoxCoverage=\(segmentTextBoxCoverage) bubbleCoverage=\(segmentBubbleCoverage) usableForCropEvidence=\(segment.map { String($0.usableForCropEvidence) } ?? "nil") rejections=\(segmentRejections)
+            cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
             maskDominantBubbleID: \(maskDominantID)
