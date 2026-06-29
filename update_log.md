@@ -113,6 +113,59 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v2.3：云端导入 GGUF 并运行漫画探针
+日期：2026-06-29
+依据：云端验证基础设施改造；本轮修改 CI 和 DEBUG 启动逻辑，不刷新仓库根 `output/`，不追加 `metrics/version_history.csv` 漫画指标行。
+
+核心变更：
+
+- `AITRANS CI Results` workflow 在下载并校验 Release GGUF 后，构建 Debug simulator app。
+- workflow 动态选择可用 iOS runtime 和 iPhone simulator device type，创建临时模拟器并安装 `com.local.aitrans`。
+- workflow 把 `.ci-models/gemma-3-270m-it-qat-Q4_0.gguf` 复制到 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，并校验 SHA256。
+- workflow 用 `AITRANS_RUN_MANGA_PROBE=1` 启动 App，等待 `probe_report.json`，校验 `engineUsed = Local GGUF`、`totalBlocksDetected > 0` 和 `blocks` 非空，然后导出本轮 `output/` 到未加密 CI 结果包。
+- DEBUG 启动探针逻辑在发现本地模型已安装时自动切换 `selectedEngine = .local`，避免 CI 误用 Mock。
+- workflow 将云端探针等待上限提高到 3600 秒，每分钟打印 App 沙盒 `Output` 快照和 `manga_probe_progress.json`，失败时也复制已有 `output/` 到结果包。
+- DEBUG 漫画探针会在 `Output/manga_probe_progress.json` 写入当前阶段、耗时和块数，便于判断卡在 OCR、翻译、渲染还是报告写入。
+- workflow 同时通过 `SIMCTL_CHILD_*`、`launchctl setenv`、普通 argv 和 `-AITRANS_RUN_MANGA_PROBE 1` UserDefaults 参数触发 DEBUG 探针；App 侧同时识别环境变量、启动参数和 UserDefaults，并在收到触发后立即写入 `launch-trigger-received` 进度。
+- DEBUG 漫画探针启动时跳过 `refreshSpeechRecognitionCapabilities()`，避免云端启动先查询多语言 Speech asset，延迟或干扰探针触发。
+- workflow 在开始探针前清空仓库根 `output/`，成功后必须从 App 沙盒导出新 `output/`，并强制校验 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和关键 PNG，避免把 checkout 自带旧报告误当云端结果。
+- workflow 在导入模型时打印 Release asset、历史目录路径、SHA256 校验和字节数，避免把 `Models/Gemma-1.5B` 目录名误判为 1.5B 模型。
+- 结果包新增 `simulator-build.log`、`manga-probe.log`、`app-console.log`、`probe-device-id.txt`、`probe-app-container.txt`、`output/manga_probe_progress.json` 等排查线索。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/test/test.md`
+- `md/flow/flow.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮应运行 `git diff --check`、`python3 -m json.tool test/1.ground_truth.json`、workflow smoke 和 YAML 解析。
+- 本机不运行 Xcode build / 漫画探针；完整探针由推送后的 GitHub Actions 验证。
+
+验收口径：
+
+- 云端探针报告可解析。
+- `engineUsed = Local GGUF`。
+- `totalBlocksDetected > 0` 且 `blocks` 非空。
+- `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和关键 PNG 上传到结果包。
+- `overallPassed=false` 不单独视为 CI 失败，因为当前模型质量基线仍包含失败块。
+
+已知云端尝试：
+
+- run `28360252442` 在 commit `161383946abb1edcc5929b72df748aa3d5a7d44e` 上完成模型校验、静态检查、Xcode build 和 simulator build，但 `manga-probe.log` 显示 900 秒内未生成 `probe_report.json`，因此不作为通过结果。
+- run `28361773796` 在 commit `0c22574dd060a3623e793e314648a4ca6ec55805` 上进入 `Run cloud manga probe` 后 App 已启动但 `Output` 目录持续为空；该现象指向启动触发未进入 App 探针入口，已取消并改为多触发。
+- run `28363254764` 在 commit `0c3140b9960061083cec50e17a7538acfa900b49` 上因 workflow 内 `simctl spawn ps` 在 iOS 模拟器中不可用而提前失败；artifact 里的 `output/` 来自 checkout 旧文件，不作为云端探针通过结果。后续已改为清空旧 `output/` 并要求从 App 沙盒导出新结果。
+- run `28363769439` 在 commit `5728c14b3dfb26570ff9e5fcbf9eb13cdd631a73` 上清空旧 `output/` 后仍未生成沙盒报告，已取消；App 日志显示启动早期在查询 Speech assets，因此后续跳过云端探针启动时的 Speech capability refresh。
+- 后续修复把等待上限、App 侧进度文件和日志收集补齐；验收必须看新 run 的 manifest 和 artifact。
+
+遗留事项：
+
+- 若 GitHub-hosted runner 的模拟器启动、App 容器读取或探针耗时不稳定，应优先查看 `manga-probe.log`、`app-console.log`、`output/manga_probe_progress.json` 和 `simulator-build.log`，再决定是否拆分成独立 probe workflow 或继续削减探针云端耗时。
+
 ### v2.2：GitHub Release GGUF 下载与 Actions 缓存
 日期：2026-06-29
 依据：云端验证基础设施改造；未刷新 `output/`，未追加 `metrics/version_history.csv` 漫画指标行。

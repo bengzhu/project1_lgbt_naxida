@@ -137,7 +137,9 @@ final class TranslationSessionStore: ObservableObject {
 
         restoreSnapshot()
         updateModelDownloadStateFromDisk()
-        refreshSpeechRecognitionCapabilities()
+        if !Self.shouldRunMangaOverlayProbeFromLaunchEnvironment {
+            refreshSpeechRecognitionCapabilities()
+        }
         refreshModelStatus()
         persist()
         runLaunchLLMSmokeTestIfNeeded()
@@ -164,6 +166,13 @@ final class TranslationSessionStore: ObservableObject {
     private func runLaunchMangaOverlayProbeIfNeeded() {
 #if DEBUG
         guard Self.shouldRunMangaOverlayProbeFromLaunchEnvironment else { return }
+        writeMangaProbeProgress(
+            stage: "launch-trigger-received",
+            message: "env=\(ProcessInfo.processInfo.environment["AITRANS_RUN_MANGA_PROBE"] ?? "nil") args=\(ProcessInfo.processInfo.arguments.joined(separator: " "))"
+        )
+        if isLocalModelInstalled {
+            selectedEngine = .local
+        }
         Task { @MainActor [weak self] in
             self?.runMangaOverlayProbe()
         }
@@ -1435,15 +1444,18 @@ final class TranslationSessionStore: ObservableObject {
             do {
                 let startedAt = Date.now
                 let outputCleanupRemovedItemCount = try MangaOverlayProbeService.recreateDirectory(self.mangaOverlayOutputDirectory)
+                self.writeMangaProbeProgress(stage: "output-cleaned", startedAt: startedAt)
                 let data = try Data(contentsOf: url)
                 self.mangaOverlayProbeState = .recognizing
                 self.mangaOverlayProbeMessage = "正在用 0/90/180/270 多角度 Vision OCR"
+                self.writeMangaProbeProgress(stage: "whole-page-ocr-start", startedAt: startedAt)
                 var probeConfiguration = MangaOverlayProbeConfiguration.defaultValue
                 let activeCustomWords = probeConfiguration.customLexiconEnabled ? probeConfiguration.customLexicon : []
                 let recognized = try await self.mangaOverlayProbeService.recognizeTextBlocks(
                     in: data,
                     customWords: activeCustomWords
                 )
+                self.writeMangaProbeProgress(stage: "whole-page-ocr-done", startedAt: startedAt, blocks: recognized.blocks.count)
                 let lexiconComparison = try await self.mangaOverlayProbeService.compareCustomLexicon(
                     in: data,
                     customWords: probeConfiguration.customLexicon
@@ -1519,6 +1531,7 @@ final class TranslationSessionStore: ObservableObject {
                 var bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?
                 var outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
                 if !groundTruth.isEmpty {
+                    self.writeMangaProbeProgress(stage: "bubble-first-start", startedAt: startedAt, blocks: probeBlocks.count)
                     let bubbleProbe = try await self.mangaOverlayProbeService.runBubbleFirstProbe(
                         imageData: data,
                         groundTruth: groundTruth,
@@ -1541,12 +1554,14 @@ final class TranslationSessionStore: ObservableObject {
                     postFusionCleanup = fusion.cleanup
                     probeConfiguration.status = "current pipeline uses fused whole-page Vision OCR and bubble-first OCR candidates with ground-truth-free selection"
                     probeConfiguration.currentBlockSource = "fusedWholePageBubble"
+                    self.writeMangaProbeProgress(stage: "bubble-first-done", startedAt: startedAt, blocks: probeBlocks.count)
                 }
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 var cropFallbackSelfTest: MangaOverlayCropFallbackSelfTest?
                 if probeConfiguration.preprocessing.enabled {
                     self.mangaOverlayProbeMessage = "正在对 \(probeBlocks.count) 个文本块做裁切放大预处理 OCR"
+                    self.writeMangaProbeProgress(stage: "preprocessing-crop-start", startedAt: startedAt, blocks: probeBlocks.count)
                     for index in probeBlocks.indices {
                         guard let sourceIndex = Self.wholePageSourceIndex(for: probeBlocks[index]),
                               recognized.blocks.indices.contains(sourceIndex) else {
@@ -1641,6 +1656,7 @@ final class TranslationSessionStore: ObservableObject {
                         ? "fusedWholePageBubbleTextRegionCrop"
                         : "fusedWholePageBubble"
                     self.mangaOverlayProbeBlocks = probeBlocks
+                    self.writeMangaProbeProgress(stage: "preprocessing-crop-done", startedAt: startedAt, blocks: probeBlocks.count)
                 }
 
                 for index in probeBlocks.indices where probeBlocks[index].deterministicCorrectionText == nil {
@@ -1663,24 +1679,30 @@ final class TranslationSessionStore: ObservableObject {
 
                 self.mangaOverlayProbeState = .translating
                 self.mangaOverlayProbeMessage = "已识别 \(probeBlocks.count) 个文本块，正在逐块翻译"
+                self.writeMangaProbeProgress(stage: "translation-start", startedAt: startedAt, blocks: probeBlocks.count)
 
                 for index in probeBlocks.indices {
                     let translated = await self.translateMangaProbeBlock(probeBlocks[index])
                     probeBlocks[index] = translated
                     self.mangaOverlayProbeBlocks = probeBlocks
+                    self.writeMangaProbeProgress(stage: "translation-block-\(index + 1)-of-\(probeBlocks.count)", startedAt: startedAt, blocks: probeBlocks.count)
                 }
 
                 self.mangaOverlayProbeMessage = "正在对确定性 OCR 纠错候选做翻译对照"
+                self.writeMangaProbeProgress(stage: "deterministic-correction-translation-start", startedAt: startedAt, blocks: probeBlocks.count)
                 for index in probeBlocks.indices where Self.shouldProbeDeterministicCorrectionTranslation(probeBlocks[index]) {
                     probeBlocks[index] = await self.translateDeterministicCorrectionCandidate(probeBlocks[index])
                     self.mangaOverlayProbeBlocks = probeBlocks
+                    self.writeMangaProbeProgress(stage: "deterministic-correction-translation-block-\(index + 1)-of-\(probeBlocks.count)", startedAt: startedAt, blocks: probeBlocks.count)
                 }
 
                 self.mangaOverlayProbeMessage = "正在运行 tagged 批量翻译诊断分支"
+                self.writeMangaProbeProgress(stage: "tagged-batch-start", startedAt: startedAt, blocks: probeBlocks.count)
                 let batchTranslationComparison = await self.runTaggedBatchTranslationComparison(blocks: probeBlocks)
 
                 self.mangaOverlayProbeState = .rendering
                 self.mangaOverlayProbeMessage = "正在生成 BubbleMask 实例 ID 近似和 mask-safe layout 诊断"
+                self.writeMangaProbeProgress(stage: "rendering-diagnostics-start", startedAt: startedAt, blocks: probeBlocks.count)
                 let preliminaryBubbleMaskReport = await self.mangaOverlayProbeService.makeBubbleMaskReport(
                     image: recognized.image,
                     blocks: probeBlocks,
@@ -1777,6 +1799,7 @@ final class TranslationSessionStore: ObservableObject {
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
+                self.writeMangaProbeProgress(stage: "render-output-start", startedAt: startedAt, blocks: probeBlocks.count)
                 let renderedOutputFiles = try await self.mangaOverlayProbeService.renderOutputs(
                     image: recognized.image,
                     blocks: probeBlocks,
@@ -1825,10 +1848,12 @@ final class TranslationSessionStore: ObservableObject {
                     outputFiles: outputFiles,
                     outputDirectory: self.mangaOverlayOutputDirectory
                 )
+                self.writeMangaProbeProgress(stage: "clean-text-diagnostic-start", startedAt: startedAt, blocks: probeBlocks.count)
                 let cleanTextDiagnostic = await self.runCleanTextDiagnostic(groundTruth: groundTruth)
                 let cleanDiagnosticURL = self.mangaOverlayOutputDirectory.appendingPathComponent("clean_text_diagnostic.json")
                 try Self.writeCleanTextDiagnostic(cleanTextDiagnostic, to: cleanDiagnosticURL)
                 outputFiles.cleanTextDiagnosticFile = cleanDiagnosticURL.path
+                self.writeMangaProbeProgress(stage: "deterministic-decoding-check-start", startedAt: startedAt, blocks: probeBlocks.count)
                 let deterministicDecodingCheck = await self.runDeterministicDecodingCheck(groundTruth: groundTruth)
 
                 let report = self.makeMangaOverlayProbeReport(
@@ -1864,6 +1889,7 @@ final class TranslationSessionStore: ObservableObject {
                 )
                 let reportURL = self.mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
                 try MangaOverlayProbeService.writeReport(report, to: reportURL)
+                self.writeMangaProbeProgress(stage: "probe-report-written", startedAt: startedAt, blocks: report.blocks.count)
 
                 self.mangaOverlayProbeState = report.overallPassed ? .completed : .failed
                 self.mangaOverlayProbeMessage = "漫画探针完成：\(report.blocks.count) 块，overallPassed=\(report.overallPassed)，输出 \(self.mangaOverlayOutputDirectory.path)"
@@ -1871,6 +1897,7 @@ final class TranslationSessionStore: ObservableObject {
                 self.mangaOverlayProbeBlocks = report.blocks
                 self.dataTransferMessage = self.mangaOverlayProbeMessage
             } catch {
+                self.writeMangaProbeProgress(stage: "error", message: "\(type(of: error)): \(error.localizedDescription)")
                 let outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
                 let report = self.makeMangaOverlayProbeReport(
                     blocks: self.mangaOverlayProbeBlocks,
@@ -6215,6 +6242,41 @@ final class TranslationSessionStore: ObservableObject {
         try data.write(to: url, options: .atomic)
     }
 
+    private func writeMangaProbeProgress(
+        stage: String,
+        startedAt: Date? = nil,
+        blocks: Int? = nil,
+        message: String? = nil
+    ) {
+        var payload: [String: Any] = [
+            "stage": stage,
+            "updatedAt": ISO8601DateFormatter().string(from: Date())
+        ]
+        if let startedAt {
+            payload["elapsedSeconds"] = Int(Date().timeIntervalSince(startedAt))
+        }
+        if let blocks {
+            payload["blocks"] = blocks
+        }
+        if let message {
+            payload["message"] = message
+        }
+
+        do {
+            try FileManager.default.createDirectory(
+                at: mangaOverlayOutputDirectory,
+                withIntermediateDirectories: true
+            )
+            let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
+            try data.write(
+                to: mangaOverlayOutputDirectory.appendingPathComponent("manga_probe_progress.json"),
+                options: .atomic
+            )
+        } catch {
+            writeLaunchLLMSmokeProbe("manga-progress-write-error stage=\(stage) error=\(Self.probeField(error.localizedDescription))")
+        }
+    }
+
     private func mangaProbeChecks(
         original: String,
         translation: String,
@@ -9612,11 +9674,22 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     private static var shouldRunLLMSmokeTestFromLaunchEnvironment: Bool {
-        ProcessInfo.processInfo.environment["AITRANS_RUN_LLM_SMOKE"] == "1"
+        launchFlagEnabled("AITRANS_RUN_LLM_SMOKE")
     }
 
     private static var shouldRunMangaOverlayProbeFromLaunchEnvironment: Bool {
-        ProcessInfo.processInfo.environment["AITRANS_RUN_MANGA_PROBE"] == "1"
+        launchFlagEnabled("AITRANS_RUN_MANGA_PROBE")
+    }
+
+    private static func launchFlagEnabled(_ key: String) -> Bool {
+        if ProcessInfo.processInfo.environment[key] == "1" {
+            return true
+        }
+        if UserDefaults.standard.string(forKey: key) == "1" || UserDefaults.standard.bool(forKey: key) {
+            return true
+        }
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.contains("\(key)=1") || arguments.contains("--\(key)=1")
     }
 
     private static let launchTranslationProbeCases = [
