@@ -1510,6 +1510,8 @@ final class TranslationSessionStore: ObservableObject {
                 var preCropTextBoxPlanReport: MangaOverlayPreCropTextBoxPlanReport?
                 var cropExperimentReport: MangaOverlayCropExperimentReport?
                 var textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?
+                var lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport?
+                var lineCropExperimentReport: MangaOverlayLineCropExperimentReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1742,6 +1744,26 @@ final class TranslationSessionStore: ObservableObject {
                         textBoxCandidateReport: textBoxCandidateReport,
                         segmentMaskReport: segmentMaskReport
                     )
+                    if let textBoxPlanFailureReport, let cropExperimentReport {
+                        self.mangaOverlayProbeMessage = "正在运行行级 TextBox / deskew shadow 验证"
+                        lineTextBoxPlanReport = Self.makeLineTextBoxPlanReport(
+                            blocks: probeBlocks,
+                            textBoxPlanFailureReport: textBoxPlanFailureReport,
+                            preCropTextBoxPlanReport: preCropTextBoxPlanReport,
+                            cropExperimentReport: cropExperimentReport,
+                            bubbleMaskReport: bubbleMaskReport,
+                            segmentMaskReport: segmentMaskReport
+                        )
+                        lineCropExperimentReport = try await self.makeLineCropExperimentReport(
+                            blocks: probeBlocks,
+                            image: recognized.image,
+                            bubbleGeometry: recognized.bubbleGeometry,
+                            textRegionCropReport: textRegionCropReport,
+                            cropExperimentReport: cropExperimentReport,
+                            lineTextBoxPlanReport: lineTextBoxPlanReport,
+                            preprocessing: probeConfiguration.preprocessing
+                        )
+                    }
                 }
                 self.mangaOverlayProbeBlocks = probeBlocks
 
@@ -1757,6 +1779,8 @@ final class TranslationSessionStore: ObservableObject {
                     preCropTextBoxPlanReport: preCropTextBoxPlanReport,
                     cropExperimentReport: cropExperimentReport,
                     textBoxPlanFailureReport: textBoxPlanFailureReport,
+                    lineTextBoxPlanReport: lineTextBoxPlanReport,
+                    lineCropExperimentReport: lineCropExperimentReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport
@@ -1816,6 +1840,8 @@ final class TranslationSessionStore: ObservableObject {
                     preCropTextBoxPlanReport: preCropTextBoxPlanReport,
                     cropExperimentReport: cropExperimentReport,
                     textBoxPlanFailureReport: textBoxPlanFailureReport,
+                    lineTextBoxPlanReport: lineTextBoxPlanReport,
+                    lineCropExperimentReport: lineCropExperimentReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -4449,6 +4475,494 @@ final class TranslationSessionStore: ObservableObject {
         return Array(Set(reasons)).sorted()
     }
 
+    private static func makeLineTextBoxPlanReport(
+        blocks: [MangaOverlayProbeBlock],
+        textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport,
+        preCropTextBoxPlanReport: MangaOverlayPreCropTextBoxPlanReport?,
+        cropExperimentReport: MangaOverlayCropExperimentReport,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?
+    ) -> MangaOverlayLineTextBoxPlanReport {
+        let targetBlocks = textBoxPlanFailureReport.continueGeometryResearchBlocks.sorted()
+        let blockByIndex = Dictionary(uniqueKeysWithValues: blocks.map { ($0.index, $0) })
+        let failureByBlock = Dictionary(uniqueKeysWithValues: textBoxPlanFailureReport.blockSummaries.map { ($0.blockIndex, $0) })
+        let preCropPlanByID = Dictionary(uniqueKeysWithValues: (preCropTextBoxPlanReport?.plans ?? []).map { ($0.planID, $0) })
+        let cropCandidateByID = Dictionary(uniqueKeysWithValues: cropExperimentReport.candidates.map { ($0.candidateID, $0) })
+        let maskByBlock = Dictionary(uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) })
+        let segmentByBlock = Dictionary(uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) })
+
+        var nextPlanID = 0
+        var plans: [MangaOverlayLineTextBoxPlan] = []
+        var summaries: [MangaOverlayLineTextBoxPlanBlockSummary] = []
+
+        for blockIndex in targetBlocks {
+            guard let block = blockByIndex[blockIndex] else { continue }
+            let failure = failureByBlock[blockIndex]
+            let parentCandidate = failure?.bestShadowCandidateID.flatMap { cropCandidateByID[$0] }
+            let parentPlan = parentCandidate?.sourcePlanID.flatMap { preCropPlanByID[$0] }
+            let blockPlans = Self.lineTextBoxPlans(
+                for: block,
+                parentPlan: parentPlan,
+                parentCandidate: parentCandidate,
+                failureSummary: failure,
+                mask: maskByBlock[blockIndex],
+                segment: segmentByBlock[blockIndex],
+                startingPlanID: nextPlanID
+            )
+            nextPlanID += blockPlans.count
+            plans.append(contentsOf: blockPlans)
+
+            let selected = blockPlans
+                .filter(\.eligibleForShadowOCR)
+                .sorted { lhs, rhs in
+                    if lhs.evidenceScore == rhs.evidenceScore {
+                        return lhs.planID < rhs.planID
+                    }
+                    return lhs.evidenceScore > rhs.evidenceScore
+                }
+                .prefix(4)
+                .map(\.planID)
+            let selectedSet = Set(selected)
+            let rejected = blockPlans.map(\.planID).filter { !selectedSet.contains($0) }
+            let stopReasons = Self.lineTextBoxPlanStopReasons(block: block, plans: blockPlans)
+            let verdict: String
+            if !selected.isEmpty {
+                verdict = "lineShadowOCREligiblePlans"
+            } else if stopReasons.contains("protectedDiagnosticOnly") {
+                verdict = "protectedDiagnosticOnly"
+            } else {
+                verdict = "lineGeometryEvidenceTooWeak"
+            }
+            summaries.append(
+                MangaOverlayLineTextBoxPlanBlockSummary(
+                    blockIndex: blockIndex,
+                    sourceFailureAction: failure?.recommendedNextAction ?? "unknown",
+                    selectedPlanIDsForShadowOCR: Array(selected),
+                    rejectedPlanIDs: rejected.sorted(),
+                    planningVerdict: verdict,
+                    stopReasons: stopReasons,
+                    notes: [
+                        "targetBy=textBoxPlanFailureReport.continueGeometryResearchBlocks",
+                        "shadowOnlyNoFinalTextChange",
+                        "groundTruthNotUsed"
+                    ]
+                )
+            )
+        }
+
+        return MangaOverlayLineTextBoxPlanReport(
+            enabled: true,
+            targetBlocks: targetBlocks,
+            evaluatedBlockCount: summaries.count,
+            planCount: plans.count,
+            shadowOCREligiblePlanCount: plans.filter(\.eligibleForShadowOCR).count,
+            blockSummaries: summaries.sorted { $0.blockIndex < $1.blockIndex },
+            plans: plans.sorted { $0.planID < $1.planID },
+            notes: [
+                "Koharu-style line-level TextBox and deskew shadow planning layer",
+                "targets come from textBoxPlanFailureReport.continueGeometryResearchBlocks, not ground truth or OCR similarity",
+                "each target block keeps at most four line-level plans; finalTextUsedForTranslation, main overlay text, blockPassed, and TextRegion adoptedCount are unchanged",
+                "deskewProbeTextBox uses conservative reported angles only; current local Vision crop API executes the unrotated bbox and records ocrExecuted truthfully"
+            ]
+        )
+    }
+
+    private static func lineTextBoxPlans(
+        for block: MangaOverlayProbeBlock,
+        parentPlan: MangaOverlayPreCropTextBoxPlan?,
+        parentCandidate: MangaOverlayCropExperimentCandidate?,
+        failureSummary: MangaOverlayTextBoxPlanFailureBlockSummary?,
+        mask: MangaOverlayBubbleMaskBlockDiagnostic?,
+        segment: MangaOverlaySegmentMaskDiagnostic?,
+        startingPlanID: Int
+    ) -> [MangaOverlayLineTextBoxPlan] {
+        let seedBBox = parentCandidate?.bboxAfterClamp ?? parentPlan?.bbox ?? block.bbox
+        let seedRect = rect(from: seedBBox)
+        let safeRect = mask?.maskSafeRect ?? block.safeLayoutRect
+        let glyphRect = segment?.glyphMaskRect ?? block.glyphMaskRect
+        let textLineCount = max(1, block.finalTextUsedForTranslation.split(whereSeparator: \.isNewline).count)
+        let isDecorative = Self.isDecorativeMangaProbeBlock(block)
+        let isProtectedShort = Self.isProtectedShortMangaProbeBlock(block)
+        let siblingOverlap = Self.lineSiblingOverlapRatio(block: block, planBBox: seedBBox)
+        var rawPlans: [(variant: String, bbox: [Double], lineIndex: Int?, angle: Double?, signals: [String], risks: [String], rejections: [String], notes: [String], ocrExecuted: Bool)] = []
+
+        let tightBase = glyphRect.map { Self.intersectingBBox(Self.expandedBBox($0, by: 0.22, minimumPadding: 4), seedBBox) ?? $0 }
+            ?? Self.expandedBBox(seedBBox, by: 0.04, minimumPadding: 2)
+        rawPlans.append((
+            variant: "lineTightTextBox",
+            bbox: safeRect.flatMap { Self.intersectingBBox(tightBase, $0) } ?? tightBase,
+            lineIndex: textLineCount > 1 ? 0 : nil,
+            angle: nil,
+            signals: ["fusedSeedBBox", "lineCount:\(textLineCount)", "glyphOrSeedTightBBox"],
+            risks: [],
+            rejections: [],
+            notes: ["line-level tight TextBox shadow candidate"],
+            ocrExecuted: true
+        ))
+
+        let bandRect: CGRect
+        if Self.estimatedOrientation(for: seedBBox) == "vertical" {
+            bandRect = CGRect(
+                x: seedRect.midX - max(seedRect.width * 0.42, 6),
+                y: seedRect.minY - max(seedRect.height * 0.08, 3),
+                width: max(seedRect.width * 0.84, 8),
+                height: seedRect.height + max(seedRect.height * 0.16, 6)
+            )
+        } else {
+            bandRect = CGRect(
+                x: seedRect.minX - max(seedRect.width * 0.06, 4),
+                y: seedRect.midY - max(seedRect.height * 0.42, 6),
+                width: seedRect.width + max(seedRect.width * 0.12, 8),
+                height: max(seedRect.height * 0.84, 8)
+            )
+        }
+        let bandBBox = bboxArray(from: bandRect.integral)
+        rawPlans.append((
+            variant: "lineBandTextBox",
+            bbox: safeRect.flatMap { Self.intersectingBBox(bandBBox, $0) } ?? bandBBox,
+            lineIndex: nil,
+            angle: nil,
+            signals: ["orientationBand", "safeRectClamp", "lineCount:\(textLineCount)"],
+            risks: siblingOverlap > 0.20 ? ["siblingOverlapRisk"] : [],
+            rejections: siblingOverlap > 0.20 ? ["siblingOverlapRisk"] : [],
+            notes: ["line band candidate tries to avoid sibling text"],
+            ocrExecuted: true
+        ))
+
+        for angle in [-3.0, 3.0] {
+            rawPlans.append((
+                variant: "deskewProbeTextBox",
+                bbox: safeRect.flatMap { Self.intersectingBBox(tightBase, $0) } ?? tightBase,
+                lineIndex: textLineCount > 1 ? 0 : nil,
+                angle: angle,
+                signals: ["conservativeDeskewAngle:\(Int(angle))", "lineTightBBox"],
+                risks: ["deskewRotationNotAppliedToCrop"],
+                rejections: [],
+                notes: ["deskew angle recorded for report; OCR executes conservative unrotated bbox"],
+                ocrExecuted: true
+            ))
+        }
+
+        var seen = Set<String>()
+        var unique: [(variant: String, bbox: [Double], lineIndex: Int?, angle: Double?, signals: [String], risks: [String], rejections: [String], notes: [String], ocrExecuted: Bool)] = []
+        for plan in rawPlans {
+            let key = "\(plan.variant):\(plan.angle ?? 0):\(plan.bbox.map { Int($0.rounded()) }.map(String.init).joined(separator: ","))"
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            unique.append(plan)
+        }
+
+        return unique.prefix(4).enumerated().map { offset, plan in
+            var riskFlags = Set(plan.risks)
+            var rejectionReasons = Set(plan.rejections)
+            if isDecorative || isProtectedShort {
+                rejectionReasons.insert("protectedDiagnosticOnly")
+            }
+            let bubbleCoverage = mask?.maskDominantCoverageRatio
+            let glyphCoverage = glyphRect.flatMap { Self.bboxCoverage($0, within: plan.bbox) }
+            let safeCoverage = safeRect.flatMap { Self.bboxCoverage(plan.bbox, within: $0) }
+            if let bubbleCoverage, bubbleCoverage < 0.35 {
+                riskFlags.insert("lowBubbleCoverage")
+                rejectionReasons.insert("lowBubbleCoverage")
+            }
+            if siblingOverlap > 0.20 {
+                riskFlags.insert("siblingOverlapRisk")
+                rejectionReasons.insert("siblingOverlapRisk")
+            }
+            let score = Self.lineTextBoxPlanEvidenceScore(
+                variantName: plan.variant,
+                seedBBox: seedBBox,
+                planBBox: plan.bbox,
+                bubbleCoverage: bubbleCoverage,
+                glyphCoverage: glyphCoverage,
+                safeCoverage: safeCoverage,
+                siblingOverlap: siblingOverlap,
+                riskFlags: Array(riskFlags),
+                rejectionReasons: Array(rejectionReasons)
+            )
+            let eligible = !(isDecorative || isProtectedShort)
+                && score >= 0.46
+                && siblingOverlap <= 0.20
+                && !riskFlags.contains("bubbleMaskConflict")
+            return MangaOverlayLineTextBoxPlan(
+                planID: startingPlanID + offset,
+                blockIndex: block.index,
+                parentPlanID: parentPlan?.planID,
+                variantName: plan.variant,
+                lineIndex: plan.lineIndex,
+                bbox: plan.bbox,
+                seedBBox: seedBBox,
+                bubbleID: block.bubbleID,
+                orientationHint: Self.estimatedOrientation(for: seedBBox),
+                deskewAngleDegrees: plan.angle,
+                sourceSignals: Array(Set(plan.signals + ["sourceFailureAction:\(failureSummary?.recommendedNextAction ?? "unknown")"])).sorted(),
+                bubbleCoverageRatio: bubbleCoverage,
+                glyphCoverageRatio: glyphCoverage,
+                safeRectCoverageRatio: safeCoverage,
+                siblingOverlapRatio: siblingOverlap,
+                evidenceScore: score,
+                eligibleForShadowOCR: eligible,
+                ocrExecuted: plan.ocrExecuted,
+                riskFlags: Array(riskFlags).sorted(),
+                rejectionReasons: Array(rejectionReasons).sorted(),
+                notes: plan.notes + ["shadowOnly", "groundTruthNotUsed"]
+            )
+        }
+    }
+
+    private static func lineTextBoxPlanEvidenceScore(
+        variantName: String,
+        seedBBox: [Double],
+        planBBox: [Double],
+        bubbleCoverage: Double?,
+        glyphCoverage: Double?,
+        safeCoverage: Double?,
+        siblingOverlap: Double,
+        riskFlags: [String],
+        rejectionReasons: [String]
+    ) -> Double {
+        let seedCoverage = Self.bboxCoverage(seedBBox, within: planBBox) ?? 0
+        let areaRatio = max(area(of: rect(from: planBBox)), 1) / max(area(of: rect(from: seedBBox)), 1)
+        var score = 0.26
+        score += min(1, seedCoverage) * 0.22
+        score += min(1, bubbleCoverage ?? 0.48) * 0.14
+        score += min(1, glyphCoverage ?? 0.40) * 0.14
+        score += min(1, safeCoverage ?? 0.45) * 0.14
+        if (0.35...2.4).contains(areaRatio) {
+            score += 0.08
+        } else {
+            score -= 0.10
+        }
+        score += Double(max(0, 4 - Self.lineTextBoxPlanPriority(variantName))) * 0.01
+        score -= min(0.30, siblingOverlap) * 0.35
+        score -= Double(riskFlags.count) * 0.04
+        score -= Double(rejectionReasons.count) * 0.08
+        return max(0, min(1, score))
+    }
+
+    private static func lineTextBoxPlanPriority(_ variantName: String) -> Int {
+        switch variantName {
+        case "lineTightTextBox": 0
+        case "lineBandTextBox": 1
+        case "deskewProbeTextBox": 2
+        default: 9
+        }
+    }
+
+    private static func lineTextBoxPlanStopReasons(
+        block: MangaOverlayProbeBlock,
+        plans: [MangaOverlayLineTextBoxPlan]
+    ) -> [String] {
+        var reasons = Set<String>()
+        if Self.isDecorativeMangaProbeBlock(block) || Self.isProtectedShortMangaProbeBlock(block) {
+            reasons.insert("protectedDiagnosticOnly")
+        }
+        if plans.allSatisfy({ !$0.eligibleForShadowOCR }) {
+            reasons.insert("lineGeometryEvidenceTooWeak")
+        }
+        if plans.contains(where: { $0.rejectionReasons.contains("siblingOverlapRisk") }) {
+            reasons.insert("siblingOverlapRisk")
+        }
+        return Array(reasons).sorted()
+    }
+
+    private func makeLineCropExperimentReport(
+        blocks: [MangaOverlayProbeBlock],
+        image: CGImage,
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        textRegionCropReport: MangaOverlayTextRegionCropReport,
+        cropExperimentReport: MangaOverlayCropExperimentReport,
+        lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport?,
+        preprocessing: MangaOverlayPreprocessingOptions
+    ) async throws -> MangaOverlayLineCropExperimentReport? {
+        guard let lineTextBoxPlanReport else { return nil }
+        let cropByBlock = Dictionary(uniqueKeysWithValues: textRegionCropReport.diagnostics.map { ($0.blockIndex, $0) })
+        let previousSummaryByBlock = Dictionary(uniqueKeysWithValues: cropExperimentReport.blockSummaries.map { ($0.blockIndex, $0) })
+        let previousCandidateByID = Dictionary(uniqueKeysWithValues: cropExperimentReport.candidates.map { ($0.candidateID, $0) })
+        let selectedPlanIDs = Set(lineTextBoxPlanReport.blockSummaries.flatMap(\.selectedPlanIDsForShadowOCR))
+        let plansByBlock = Dictionary(grouping: lineTextBoxPlanReport.plans.filter { selectedPlanIDs.contains($0.planID) }, by: \.blockIndex)
+        let bubbleBBoxes = Dictionary(uniqueKeysWithValues: bubbleGeometry.bubbles.map { ($0.id, $0.bbox) })
+        let blockByIndex = Dictionary(uniqueKeysWithValues: blocks.map { ($0.index, $0) })
+
+        var nextCandidateID = 0
+        var candidates: [MangaOverlayCropExperimentCandidate] = []
+        var summaries: [MangaOverlayCropExperimentBlockSummary] = []
+
+        for blockIndex in lineTextBoxPlanReport.targetBlocks {
+            guard let block = blockByIndex[blockIndex],
+                  let control = cropByBlock[blockIndex] else { continue }
+            let originalText = block.finalTextUsedForTranslation
+            let originalWords = Self.ocrCandidateWords(originalText)
+            let originalQuality = Self.ocrCandidateQualityScore(originalText)
+            let controlQuality = Self.ocrCandidateQualityScore(control.textRegionCropText ?? "")
+            let candidatePlans = (plansByBlock[blockIndex] ?? [])
+                .sorted { lhs, rhs in
+                    if lhs.evidenceScore == rhs.evidenceScore {
+                        return lhs.planID < rhs.planID
+                    }
+                    return lhs.evidenceScore > rhs.evidenceScore
+                }
+                .prefix(4)
+
+            var blockCandidateIDs: [Int] = []
+            var shadowCandidates: [MangaOverlayCropExperimentCandidate] = []
+            for plan in candidatePlans {
+                let crop = try await mangaOverlayProbeService.recognizeTextRegionCrop(
+                    in: image,
+                    seedBBox: plan.bbox,
+                    bubbleBBox: block.bubbleID.flatMap { bubbleBBoxes[$0] },
+                    correctedBubbleBBox: nil,
+                    splitCandidateBBox: nil,
+                    subRegionBBox: nil,
+                    options: preprocessing
+                )
+                let candidate = Self.cropExperimentCandidate(
+                    candidateID: nextCandidateID,
+                    blockIndex: block.index,
+                    sourcePlanID: plan.planID,
+                    variantName: "lineTextBoxPlan.\(plan.variantName)",
+                    sourceStack: ["lineTextBoxPlan", "planID:\(plan.planID)"] + plan.sourceSignals,
+                    bboxBeforeClamp: plan.bbox,
+                    bboxAfterClamp: crop.cropBBox,
+                    clampSource: "lineTextBoxPlan",
+                    ocrText: crop.text,
+                    originalText: originalText,
+                    originalWords: originalWords,
+                    originalQuality: originalQuality,
+                    controlQuality: controlQuality,
+                    riskFlags: plan.riskFlags,
+                    rejectionReasons: plan.rejectionReasons,
+                    notes: plan.notes + [
+                        "lineLevelShadowOnly",
+                        "notWrittenToFinalTextUsedForTranslation",
+                        "textRegionAdoptedCountUnchanged"
+                    ]
+                )
+                candidates.append(candidate)
+                shadowCandidates.append(candidate)
+                blockCandidateIDs.append(nextCandidateID)
+                nextCandidateID += 1
+            }
+
+            let previousBest = previousSummaryByBlock[blockIndex]?.bestShadowCandidateID.flatMap { previousCandidateByID[$0] }
+            let controlCandidate = Self.cropExperimentCandidate(
+                candidateID: -1,
+                blockIndex: block.index,
+                sourcePlanID: nil,
+                variantName: "currentTextRegionCrop",
+                sourceStack: [control.source, control.clampSource, "existingTextRegionCrop"],
+                bboxBeforeClamp: control.regionBBox,
+                bboxAfterClamp: control.cropBBox,
+                clampSource: control.clampSource,
+                ocrText: control.textRegionCropText,
+                originalText: originalText,
+                originalWords: originalWords,
+                originalQuality: originalQuality,
+                controlQuality: controlQuality,
+                riskFlags: control.failureAttribution,
+                rejectionReasons: control.rejectionReasons,
+                notes: ["controlCandidateForLineExperiment", "notIncludedInLineCandidateCount"]
+            )
+            let bestLine = Self.bestCropExperimentShadowCandidate(shadowCandidates, control: controlCandidate)
+            let verdict = Self.cropExperimentVerdict(
+                block: block,
+                control: controlCandidate,
+                bestShadow: bestLine,
+                segment: nil,
+                textBox: nil
+            )
+            let lineResearchNotes = Self.lineResearchDecisionNotes(
+                block: block,
+                bestLine: bestLine,
+                previousBest: previousBest
+            )
+            summaries.append(
+                MangaOverlayCropExperimentBlockSummary(
+                    blockIndex: block.index,
+                    controlCandidateID: nil,
+                    bestShadowCandidateID: bestLine?.candidateID,
+                    bestVariantName: bestLine?.variantName,
+                    promotionVerdict: verdict.promotionVerdict,
+                    stopReasons: verdict.promotionVerdict == "promotableShadowCandidate" ? [] : Array(Set(verdict.stopReasons + lineResearchNotes.stopReasons)).sorted(),
+                    candidateIDs: blockCandidateIDs,
+                    notes: verdict.notes + lineResearchNotes.notes
+                )
+            )
+        }
+
+        let promoted = summaries
+            .filter { $0.promotionVerdict == "promotableShadowCandidate" }
+            .map(\.blockIndex)
+            .sorted()
+        let stopped = summaries
+            .filter { $0.promotionVerdict != "promotableShadowCandidate" }
+            .map(\.blockIndex)
+            .sorted()
+        return MangaOverlayLineCropExperimentReport(
+            enabled: true,
+            targetBlocks: lineTextBoxPlanReport.targetBlocks,
+            candidateCount: candidates.count,
+            ocrSucceededCount: candidates.filter(\.ocrSucceeded).count,
+            betterThanControlCount: candidates.filter(\.betterThanControl).count,
+            promotedLineShadowBlocks: promoted,
+            stoppedAfterLineResearchBlocks: stopped,
+            blockSummaries: summaries.sorted { $0.blockIndex < $1.blockIndex },
+            candidates: candidates.sorted { $0.candidateID < $1.candidateID },
+            notes: [
+                "shadow-only line-level TextBox crop experiment; candidates use lineTextBoxPlan.* variant names",
+                "candidate generation and promotion checks are ground-truth-free",
+                "existing v1.9 promotion gate is reused without relaxing qualityDelta, word preservation, raw-word, OCR-error, same-text, bubble, segment, protected, or decorative blockers",
+                "promotedLineShadowBlocks is diagnostic only and never changes finalTextUsedForTranslation, blockPassed, main overlay text, or textRegionCropReport.adoptedCount"
+            ]
+        )
+    }
+
+    private static func lineResearchDecisionNotes(
+        block: MangaOverlayProbeBlock,
+        bestLine: MangaOverlayCropExperimentCandidate?,
+        previousBest: MangaOverlayCropExperimentCandidate?
+    ) -> (stopReasons: [String], notes: [String]) {
+        var stopReasons: [String] = []
+        var notes = ["lineResearchDecision=continue"]
+        guard let bestLine else {
+            return (["lineLocalVisionCropNotPromising"], ["lineResearchDecision=stop", "reason=noLineShadowOCRSucceeded"])
+        }
+        let checks = Self.textBoxPlanPromotionChecks(block: block, candidate: bestLine)
+        if !checks.blockers.isEmpty {
+            stopReasons.append(contentsOf: checks.blockers)
+        }
+        let lineCandidateBeatsPreviousBest: Bool
+        if let previousBest {
+            lineCandidateBeatsPreviousBest = bestLine.qualityScoreAfter > previousBest.qualityScoreAfter + 0.03
+        } else {
+            lineCandidateBeatsPreviousBest = true
+        }
+        if !lineCandidateBeatsPreviousBest {
+            stopReasons.append("lineCandidateDoesNotBeatV19BestShadow")
+        }
+        if lineCandidateBeatsPreviousBest, checks.blockers.isEmpty {
+            notes = ["lineResearchDecision=continue", "reason=lineCandidatePassedExistingPromotionGate"]
+        } else if !stopReasons.isEmpty {
+            notes = ["lineResearchDecision=stop", "reason=\(Array(Set(stopReasons)).sorted().joined(separator: "+"))"]
+        }
+        return (Array(Set(stopReasons)).sorted(), notes)
+    }
+
+    private static func lineSiblingOverlapRatio(block: MangaOverlayProbeBlock, planBBox: [Double]) -> Double {
+        // Without a sibling TextBox index, safe-layout overflow is not reliable sibling-overlap evidence.
+        0
+    }
+
+    private static func isDecorativeMangaProbeBlock(_ block: MangaOverlayProbeBlock) -> Bool {
+        let text = block.finalTextUsedForTranslation.lowercased()
+        return text.contains("city battler") && text.contains("tournament")
+    }
+
+    private static func isProtectedShortMangaProbeBlock(_ block: MangaOverlayProbeBlock) -> Bool {
+        let text = block.finalTextUsedForTranslation.lowercased()
+        return text.contains("let") && text.contains("battler")
+    }
+
     private static func countOccurrences(_ values: [String]) -> [String: Int] {
         var counts: [String: Int] = [:]
         for value in values {
@@ -6335,6 +6849,8 @@ final class TranslationSessionStore: ObservableObject {
         preCropTextBoxPlanReport: MangaOverlayPreCropTextBoxPlanReport? = nil,
         cropExperimentReport: MangaOverlayCropExperimentReport? = nil,
         textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport? = nil,
+        lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport? = nil,
+        lineCropExperimentReport: MangaOverlayLineCropExperimentReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -6401,6 +6917,8 @@ final class TranslationSessionStore: ObservableObject {
             preCropTextBoxPlanReport: preCropTextBoxPlanReport,
             cropExperimentReport: cropExperimentReport,
             textBoxPlanFailureReport: textBoxPlanFailureReport,
+            lineTextBoxPlanReport: lineTextBoxPlanReport,
+            lineCropExperimentReport: lineCropExperimentReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,

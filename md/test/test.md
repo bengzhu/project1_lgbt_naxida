@@ -177,7 +177,15 @@ python3 -m json.tool test/1.ground_truth.json
 - `textBoxPlanFailureReport.stopRecommendedBlocks = [2, 3, 4, 5, 7, 9, 11, 12]`
 - `textBoxPlanFailureReport.continueGeometryResearchBlocks = [1, 6, 10]`
 - `textBoxPlanFailureReport.candidatePromotionBlockedBlocks = [1, 2, 4, 5, 6, 9, 10]`
-- `1_ocr_probe_text.txt` 每块包含 `textBoxPlanFailure` 和 `promotionChecks`
+- `lineTextBoxPlanReport.targetBlocks = [1, 6, 10]`
+- `lineTextBoxPlanReport.planCount = 12`
+- `lineTextBoxPlanReport.shadowOCREligiblePlanCount = 12`
+- `lineCropExperimentReport.candidateCount = 12`
+- `lineCropExperimentReport.ocrSucceededCount = 12`
+- `lineCropExperimentReport.betterThanControlCount = 5`
+- `lineCropExperimentReport.promotedLineShadowBlocks = []`
+- `lineCropExperimentReport.stoppedAfterLineResearchBlocks = [1, 6, 10]`
+- `1_ocr_probe_text.txt` 每块包含 `textBoxPlanFailure` 和 `promotionChecks`；目标块 `[1, 6, 10]` 还包含 `lineTextBoxPlans`、`lineCropExperiment`、`linePromotionChecks` 和 `lineResearchDecision`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
 - `failedBlocks = 12`
