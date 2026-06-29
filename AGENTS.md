@@ -147,6 +147,14 @@ Agent B 按 Agent A 提示词小步实现，不做无关重构。必须按 `md/t
 ### Agent C：验收与核心文档更新
 Agent C 查看实际 diff，核对测试结果，检查架构边界、测试充分性、文档同步和未说明风险。通过后更新 `md/flow/flow.md`、`md/flow/flowchart.md`，必要时追加 `update_log.md` 和 `metrics/version_history.csv`。
 
+Agent C 审查通过后必须进入版本收口：
+
+- 确认本轮版本号，优先沿用 Agent A 提示词版本或 `metrics/version_history.csv` 的版本；人工指定版本号时以人工为准。
+- 确认 `git status --short` 中只包含本轮应交付文件；若有无关改动，必须说明并避免纳入提交。
+- 执行 `git add`、`git commit` 和 `git push`，把通过验收的版本推到远端。
+- 提交信息按版本号管理，格式建议为 `vN: 简要说明本版本做了什么`，正文可补充关键验证和风险。
+- 如果审查未通过、测试未达标、远端不可用或权限受限，不得伪装已提交或已 push；必须说明阻塞原因和当前 git 状态。
+
 ## 8. 测试规则
 - 文档-only 修改至少运行 `git diff --check`。
 - Swift 或 Xcode 工程修改至少运行命令行 build。
@@ -183,6 +191,7 @@ git diff --check
 - `md/test/test.md` 是测试选择依据。
 - `md/prompt/` 保存 Agent A 的版本化实现提示词。
 - 功能更新或 bug 修复后，按影响同步更新 README 近期记录、`update_log.md`、flow/test 文档和 `metrics/version_history.csv`。
+- Agent C 验收通过后的正式版本必须有对应 git commit，并 push 到远端；版本号、提交信息和文档记录应一致。
 
 ## 10. 交付格式
 最终回复使用中文，至少包含：
@@ -191,5 +200,6 @@ git diff --check
 - 关键文件。
 - 已运行的验证命令和结果。
 - 未运行的测试及原因。
+- Agent C 通过后，说明 git commit / push 结果和提交哈希；若未执行，说明原因。
 - 涉及漫画探针或翻译链路时，汇总关键数字。
 - 已知风险和下一步建议。
