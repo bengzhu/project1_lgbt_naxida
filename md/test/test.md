@@ -76,10 +76,11 @@ python3 -m json.tool output/clean_text_diagnostic.json
 默认动作：
 
 ```text
-Agent B push codeb/vX.Y-短标题
+Agent B push codeb/vX.Y-短标题 并创建 PR 到 smalldata_test
   -> GitHub Actions 运行 xcodebuild
   -> 上传未加密 CI 结果包
   -> Agent C 按 manifest 核对分支、commitSha、runId、runAttempt
+  -> Agent C 通过 PR merge 后删除远端 codeb/... 候选分支
 ```
 
 云端最低命令等价于：
@@ -278,6 +279,7 @@ Agent C 取用规则：
 - 必须核对 manifest 的 `branch`、`commitSha`、`runId`、`runAttempt`。
 - B 再次 push 后，旧 run 结果废弃。
 - Actions 重跑时，记录实际验收的 `runAttempt`。
+- C 验收通过后默认通过 PR merge 收口，并删除远端 `codeb/...` 候选分支；无权限删除时必须说明。
 
 ## 4. 静态检查
 常用命令：
