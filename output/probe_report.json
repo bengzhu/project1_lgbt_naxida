@@ -4560,7 +4560,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "0D84187E-6CAB-4D77-BBF1-186402E87B27",
+      "id" : "A7C3FC25-A2AB-463E-B1FD-FC20A913E00C",
       "index" : 0,
       "maskSafeRect" : [
         425,
@@ -7330,7 +7330,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "E6A271B2-2C80-49C3-A970-6A64A6D83365",
+      "id" : "F932DD45-8010-4F6F-B9AE-3E5CC0EC0CB9",
       "index" : 1,
       "maskSafeRect" : [
         60,
@@ -7877,7 +7877,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "AF864E62-0A2B-4A94-AF1C-6BE1F5A16720",
+      "id" : "3D84241D-FDE4-4F7A-B0D2-23BB665DEEF7",
       "index" : 2,
       "maskSafeRect" : [
         440,
@@ -12778,7 +12778,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "85203F04-9C9C-471F-B226-0AC68871AF42",
+      "id" : "35144EAD-0425-4C73-903E-041B283ACF33",
       "index" : 3,
       "maskSafeRect" : [
         23,
@@ -12930,7 +12930,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "FB076B19-F1A1-4771-A5D3-25462D20C77D",
+      "id" : "153523CD-F9D0-45DB-99D4-67C17C094951",
       "index" : 4,
       "maskSafeRect" : [
         450,
@@ -18118,7 +18118,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "3209AFA3-E94E-465A-9B08-636B1710C5C8",
+      "id" : "0FF42483-AA3E-4983-8794-DB9521CA8A70",
       "index" : 5,
       "maskSafeRect" : [
         91,
@@ -22526,7 +22526,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "15AF3492-4358-43DC-B5F7-A12DED7D5DA7",
+      "id" : "9829B103-1E7F-4666-8F8F-396C79D3FC54",
       "index" : 6,
       "maskSafeRect" : [
         91,
@@ -24255,7 +24255,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "DB2D56BD-605D-4DEA-B5A0-437714DFC771",
+      "id" : "595988EB-EF2C-4E01-8E92-B9FF44854945",
       "index" : 7,
       "maskSafeRect" : [
         447,
@@ -32170,7 +32170,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "2A6F852A-7BB2-4532-B217-E7E51618DA52",
+      "id" : "84A45E4D-830D-4CA1-B13C-5C2BAED9F7E5",
       "index" : 8,
       "maskSafeRect" : [
         35,
@@ -39690,7 +39690,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "43DCCEFB-1617-41F8-82B3-17E87EE3B8AC",
+      "id" : "95F0B0AF-F3B0-4967-8E1A-A2736D9E00BE",
       "index" : 9,
       "maskSafeRect" : [
         112,
@@ -44936,7 +44936,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "F1788E06-158D-42C6-877E-59AA98047955",
+      "id" : "A52030E3-EF42-491C-BC81-3BC25F4F10C2",
       "index" : 10,
       "maskSafeRect" : [
         243,
@@ -45383,7 +45383,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "3618F95E-D7AE-4BC4-9318-9051940C5641",
+      "id" : "388841A6-0701-4843-AC63-3194EECE524C",
       "index" : 11,
       "maskSafeRect" : [
         251,
@@ -45551,7 +45551,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "14CEF0F4-73A1-4CBB-ABA8-A7099EDD1B23",
+      "id" : "B1D9FD9B-457F-41BB-AF23-BF1F68020712",
       "index" : 12,
       "maskSafeRect" : [
         244,
@@ -51497,11 +51497,11 @@
     "reason" : "长度变化 390% 超过 30%"
   },
   "cropExperimentReport" : {
-    "betterThanControlCount" : 15,
+    "betterThanControlCount" : 13,
     "blockSummaries" : [
       {
         "bestShadowCandidateID" : 1,
-        "bestVariantName" : "textBoxTight",
+        "bestVariantName" : "preCropTextBoxPlan.seedTightTextBox",
         "blockIndex" : 0,
         "candidateIDs" : [
           0,
@@ -51519,8 +51519,8 @@
         ]
       },
       {
-        "bestShadowCandidateID" : 7,
-        "bestVariantName" : "maskSafeRectConstrained",
+        "bestShadowCandidateID" : 5,
+        "bestVariantName" : "preCropTextBoxPlan.seedTightTextBox",
         "blockIndex" : 1,
         "candidateIDs" : [
           4,
@@ -51538,8 +51538,8 @@
         ]
       },
       {
-        "bestShadowCandidateID" : 10,
-        "bestVariantName" : "glyphMaskExpanded",
+        "bestShadowCandidateID" : 11,
+        "bestVariantName" : "preCropTextBoxPlan.maskMajorityTextBox",
         "blockIndex" : 2,
         "candidateIDs" : [
           8,
@@ -51558,8 +51558,8 @@
         ]
       },
       {
-        "bestShadowCandidateID" : 14,
-        "bestVariantName" : "glyphMaskExpanded",
+        "bestShadowCandidateID" : 13,
+        "bestVariantName" : "preCropTextBoxPlan.seedTightTextBox",
         "blockIndex" : 3,
         "candidateIDs" : [
           12,
@@ -51573,7 +51573,7 @@
         ],
         "promotionVerdict" : "controlStillBest",
         "stopReasons" : [
-
+          "localVisionCropNotPromising"
         ]
       },
       {
@@ -51596,14 +51596,12 @@
         ]
       },
       {
-        "bestShadowCandidateID" : 23,
-        "bestVariantName" : "splitCandidateClamp",
+        "bestShadowCandidateID" : 21,
+        "bestVariantName" : "preCropTextBoxPlan.seedTightTextBox",
         "blockIndex" : 5,
         "candidateIDs" : [
           20,
-          21,
-          22,
-          23
+          21
         ],
         "controlCandidateID" : 20,
         "notes" : [
@@ -51612,59 +51610,58 @@
         ],
         "promotionVerdict" : "segmentEvidenceTooWeak",
         "stopReasons" : [
+          "localVisionCropNotPromising",
           "segmentEvidenceTooWeak"
         ]
       },
       {
-        "bestShadowCandidateID" : 25,
-        "bestVariantName" : "textBoxTight",
+        "bestShadowCandidateID" : 23,
+        "bestVariantName" : "preCropTextBoxPlan.seedTightTextBox",
         "blockIndex" : 6,
         "candidateIDs" : [
+          22,
+          23,
           24,
-          25,
-          26,
-          27
+          25
         ],
-        "controlCandidateID" : 24,
+        "controlCandidateID" : 22,
         "notes" : [
           "shadowOnlyNoMainInputChange"
         ],
         "promotionVerdict" : "noLocalOCRBenefit",
         "stopReasons" : [
-          "localVisionCropNotPromising"
+
         ]
       },
       {
-        "bestShadowCandidateID" : 30,
-        "bestVariantName" : "glyphMaskExpanded",
         "blockIndex" : 7,
         "candidateIDs" : [
+          26,
+          27,
           28,
-          29,
-          30,
-          31
+          29
         ],
-        "controlCandidateID" : 28,
+        "controlCandidateID" : 26,
         "notes" : [
           "shadowOnlyNoMainInputChange",
           "textBoxNotEligibleForUpstreamCrop"
         ],
-        "promotionVerdict" : "noLocalOCRBenefit",
+        "promotionVerdict" : "localVisionCropNotPromising",
         "stopReasons" : [
           "localVisionCropNotPromising"
         ]
       },
       {
-        "bestShadowCandidateID" : 34,
-        "bestVariantName" : "glyphMaskExpanded",
+        "bestShadowCandidateID" : 31,
+        "bestVariantName" : "preCropTextBoxPlan.seedTightTextBox",
         "blockIndex" : 8,
         "candidateIDs" : [
+          30,
+          31,
           32,
-          33,
-          34,
-          35
+          33
         ],
-        "controlCandidateID" : 32,
+        "controlCandidateID" : 30,
         "notes" : [
           "shadowOnlyNoMainInputChange"
         ],
@@ -51674,16 +51671,16 @@
         ]
       },
       {
-        "bestShadowCandidateID" : 39,
-        "bestVariantName" : "maskSafeRectConstrained",
+        "bestShadowCandidateID" : 35,
+        "bestVariantName" : "preCropTextBoxPlan.seedTightTextBox",
         "blockIndex" : 9,
         "candidateIDs" : [
+          34,
+          35,
           36,
-          37,
-          38,
-          39
+          37
         ],
-        "controlCandidateID" : 36,
+        "controlCandidateID" : 34,
         "notes" : [
           "shadowOnlyNoMainInputChange",
           "textBoxNotEligibleForUpstreamCrop"
@@ -51694,16 +51691,16 @@
         ]
       },
       {
-        "bestShadowCandidateID" : 42,
-        "bestVariantName" : "glyphMaskExpanded",
+        "bestShadowCandidateID" : 41,
+        "bestVariantName" : "preCropTextBoxPlan.maskMajorityTextBox",
         "blockIndex" : 10,
         "candidateIDs" : [
+          38,
+          39,
           40,
-          41,
-          42,
-          43
+          41
         ],
-        "controlCandidateID" : 40,
+        "controlCandidateID" : 38,
         "notes" : [
           "shadowOnlyNoMainInputChange"
         ],
@@ -51713,9 +51710,25 @@
         ]
       },
       {
-        "bestShadowCandidateID" : 47,
-        "bestVariantName" : "maskSafeRectConstrained",
         "blockIndex" : 11,
+        "candidateIDs" : [
+          42,
+          43
+        ],
+        "controlCandidateID" : 42,
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "textBoxNotEligibleForUpstreamCrop"
+        ],
+        "promotionVerdict" : "localVisionCropNotPromising",
+        "stopReasons" : [
+          "localVisionCropNotPromising"
+        ]
+      },
+      {
+        "bestShadowCandidateID" : 45,
+        "bestVariantName" : "textBoxTight",
+        "blockIndex" : 12,
         "candidateIDs" : [
           44,
           45,
@@ -51723,26 +51736,6 @@
           47
         ],
         "controlCandidateID" : 44,
-        "notes" : [
-          "shadowOnlyNoMainInputChange",
-          "textBoxNotEligibleForUpstreamCrop"
-        ],
-        "promotionVerdict" : "bubbleMaskConflict",
-        "stopReasons" : [
-          "bubbleMaskConflict"
-        ]
-      },
-      {
-        "bestShadowCandidateID" : 49,
-        "bestVariantName" : "textBoxTight",
-        "blockIndex" : 12,
-        "candidateIDs" : [
-          48,
-          49,
-          50,
-          51
-        ],
-        "controlCandidateID" : 48,
         "notes" : [
           "shadowOnlyNoMainInputChange"
         ],
@@ -51752,7 +51745,7 @@
         ]
       }
     ],
-    "candidateCount" : 52,
+    "candidateCount" : 48,
     "candidates" : [
       {
         "bboxAfterClamp" : [
@@ -51798,16 +51791,16 @@
       },
       {
         "bboxAfterClamp" : [
-          478,
+          470,
           300,
-          95,
-          143
+          106,
+          151
         ],
         "bboxBeforeClamp" : [
-          499,
-          328,
-          53,
-          68
+          494,
+          322,
+          63,
+          80
         ],
         "betterThanControl" : false,
         "blockIndex" : 0,
@@ -51815,7 +51808,11 @@
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : 0,
         "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
         ],
         "ocrSucceeded" : true,
         "ocrText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
@@ -51830,25 +51827,26 @@
 
         ],
         "sourceStack" : [
-          "bubbleBBoxTextRegionCropBBox",
           "fusedSeedBBox",
-          "textBoxCandidate"
+          "ocrObservationBBox",
+          "planID:0",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "textBoxTight",
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
         "wordPreservationRatio" : 1
       },
       {
         "bboxAfterClamp" : [
-          401,
+          461,
           300,
-          175,
+          115,
           151
         ],
         "bboxBeforeClamp" : [
-          345,
-          233,
-          287,
-          271
+          489,
+          315,
+          73,
+          94
         ],
         "betterThanControl" : false,
         "blockIndex" : 0,
@@ -51856,7 +51854,11 @@
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : 0,
         "notes" : [
-          "SegmentMask glyph evidence is usable for crop evidence"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "seed bbox expanded then clamped to current bubble geometry"
         ],
         "ocrSucceeded" : true,
         "ocrText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
@@ -51871,25 +51873,27 @@
 
         ],
         "sourceStack" : [
-          "SegmentMask",
+          "bubbleGeometry",
+          "bubbleID:0",
           "fusedSeedBBox",
-          "glyphMaskRect"
+          "planID:1",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "glyphMaskExpanded",
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox",
         "wordPreservationRatio" : 1
       },
       {
         "bboxAfterClamp" : [
-          437,
+          455,
           300,
-          139,
-          151
+          121,
+          136
         ],
         "bboxBeforeClamp" : [
-          478,
-          300,
-          74,
-          127
+          490,
+          317,
+          62,
+          90
         ],
         "betterThanControl" : false,
         "blockIndex" : 0,
@@ -51897,7 +51901,11 @@
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : 0,
         "notes" : [
-          "mask-safe rect constrained shadow OCR"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
         ],
         "ocrSucceeded" : true,
         "ocrText" : "THAT'S\nRIGHT,\nRIGHT\nNOW\nI'M-",
@@ -51913,9 +51921,12 @@
         ],
         "sourceStack" : [
           "BubbleMask",
-          "maskSafeRect"
+          "maskMajorityID:0",
+          "maskSafeRect",
+          "planID:2",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "maskSafeRectConstrained",
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox",
         "wordPreservationRatio" : 1
       },
       {
@@ -51963,57 +51974,62 @@
       },
       {
         "bboxAfterClamp" : [
-          95,
-          319,
-          91,
-          128
+          86,
+          307,
+          109,
+          152
         ],
         "bboxBeforeClamp" : [
-          115,
-          357,
-          51,
-          52
+          110,
+          352,
+          61,
+          62
         ],
-        "betterThanControl" : false,
+        "betterThanControl" : true,
         "blockIndex" : 1,
         "candidateID" : 5,
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : 0,
         "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "I'VE\nARRIVED\nAT REN-\nSENPArS\n• HOUSE.",
+        "ocrText" : "I'VE\nARRIVED\nAT REN-\nSENPAI'S\nHOUSE,",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0,
-        "qualityScoreAfter" : 0.645119691119691,
+        "qualityDelta" : 0.05088030888030892,
+        "qualityScoreAfter" : 0.696,
         "qualityScoreBefore" : 0.7397142857142857,
         "rejectionReasons" : [
-          "introducedLikelyOCRError"
+
         ],
         "riskFlags" : [
 
         ],
         "sourceStack" : [
-          "bubbleBBoxTextRegionCropBBox",
           "fusedSeedBBox",
-          "textBoxCandidate"
+          "ocrObservationBBox",
+          "planID:3",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "textBoxTight",
-        "wordPreservationRatio" : 0.5714285714285714
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
+        "wordPreservationRatio" : 0.8571428571428571
       },
       {
         "bboxAfterClamp" : [
-          39,
+          78,
           305,
-          202,
+          125,
           157
         ],
         "bboxBeforeClamp" : [
-          60,
-          278,
-          169,
-          229
+          105,
+          347,
+          71,
+          72
         ],
         "betterThanControl" : true,
         "blockIndex" : 1,
@@ -52021,40 +52037,46 @@
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : 0,
         "notes" : [
-          "SegmentMask glyph evidence is usable for crop evidence"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "seed bbox expanded then clamped to current bubble geometry"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "IVE\nARRIVED\nAT REN-\nSENPArS\n• HOUSE.",
+        "ocrText" : "I'VE\nARRIVED\nAT REN-\nSENPAÍ'S\nHOUSE.",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.059380308880308985,
-        "qualityScoreAfter" : 0.7045,
+        "qualityDelta" : 0.041158086658086734,
+        "qualityScoreAfter" : 0.6862777777777778,
         "qualityScoreBefore" : 0.7397142857142857,
         "rejectionReasons" : [
-          "introducedLikelyOCRError"
+
         ],
         "riskFlags" : [
 
         ],
         "sourceStack" : [
-          "SegmentMask",
+          "bubbleGeometry",
+          "bubbleID:1",
           "fusedSeedBBox",
-          "glyphMaskRect"
+          "planID:4",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "glyphMaskExpanded",
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox",
         "wordPreservationRatio" : 0.7142857142857143
       },
       {
         "bboxAfterClamp" : [
-          60,
+          79,
           305,
-          161,
+          123,
           157
         ],
         "bboxBeforeClamp" : [
-          95,
-          326,
-          91,
-          115
+          106,
+          348,
+          69,
+          70
         ],
         "betterThanControl" : true,
         "blockIndex" : 1,
@@ -52062,13 +52084,17 @@
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : 0,
         "notes" : [
-          "mask-safe rect constrained shadow OCR"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "I'VE\nARRIVED\nAT REN-\nSENPAI'S\n• HOUSE.",
+        "ocrText" : "I'VE\nARRIVED\nAT REN-\nSENPAIS\nHOUSE.",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.037064519406624696,
-        "qualityScoreAfter" : 0.6821842105263157,
+        "qualityDelta" : 0.09459459459459463,
+        "qualityScoreAfter" : 0.7397142857142857,
         "qualityScoreBefore" : 0.7397142857142857,
         "rejectionReasons" : [
 
@@ -52078,10 +52104,13 @@
         ],
         "sourceStack" : [
           "BubbleMask",
-          "maskSafeRect"
+          "maskMajorityID:1",
+          "maskSafeRect",
+          "planID:5",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "maskSafeRectConstrained",
-        "wordPreservationRatio" : 0.8571428571428571
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox",
+        "wordPreservationRatio" : 0.5714285714285714
       },
       {
         "bboxAfterClamp" : [
@@ -52129,69 +52158,31 @@
       },
       {
         "bboxAfterClamp" : [
-          480,
-          532,
-          81,
-          94
-        ],
-        "bboxBeforeClamp" : [
-          495,
-          560,
-          51,
-          38
-        ],
-        "betterThanControl" : false,
-        "blockIndex" : 2,
-        "candidateID" : 9,
-        "clampSource" : "bubbleBBox",
-        "lineCountDelta" : -5,
-        "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
-        ],
-        "ocrSucceeded" : false,
-        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0,
-        "qualityScoreAfter" : 0,
-        "qualityScoreBefore" : 0.7937142857142857,
-        "rejectionReasons" : [
-          "emptyLocalOCR",
-          "rawWordsLost",
-          "wordCountRegression"
-        ],
-        "riskFlags" : [
-
-        ],
-        "sourceStack" : [
-          "bubbleBBoxTextRegionCropBBox",
-          "fusedSeedBBox",
-          "textBoxCandidate"
-        ],
-        "variantName" : "textBoxTight",
-        "wordPreservationRatio" : 0
-      },
-      {
-        "bboxAfterClamp" : [
-          459,
+          472,
           522,
-          117,
+          97,
           114
         ],
         "bboxBeforeClamp" : [
-          481,
-          551,
-          79,
-          56
+          490,
+          556,
+          61,
+          46
         ],
         "betterThanControl" : true,
         "blockIndex" : 2,
-        "candidateID" : 10,
+        "candidateID" : 9,
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : -4,
         "notes" : [
-          "SegmentMask glyph evidence is usable for crop evidence"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "BartLET",
+        "ocrText" : "Honi",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
         "qualityDelta" : 0.812,
         "qualityScoreAfter" : 0.812,
@@ -52204,33 +52195,38 @@
 
         ],
         "sourceStack" : [
-          "SegmentMask",
           "fusedSeedBBox",
-          "glyphMaskRect"
+          "ocrObservationBBox",
+          "planID:6",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "glyphMaskExpanded",
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
         "wordPreservationRatio" : 0
       },
       {
         "bboxAfterClamp" : [
-          449,
+          465,
           522,
-          127,
+          111,
           114
         ],
         "bboxBeforeClamp" : [
-          480,
-          537,
-          81,
-          84
+          485,
+          553,
+          71,
+          52
         ],
         "betterThanControl" : false,
         "blockIndex" : 2,
-        "candidateID" : 11,
+        "candidateID" : 10,
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : -5,
         "notes" : [
-          "mask-safe rect constrained shadow OCR"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "seed bbox expanded then clamped to current bubble geometry"
         ],
         "ocrSucceeded" : false,
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
@@ -52246,11 +52242,62 @@
 
         ],
         "sourceStack" : [
-          "BubbleMask",
-          "maskSafeRect"
+          "bubbleGeometry",
+          "bubbleID:2",
+          "fusedSeedBBox",
+          "planID:7",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "maskSafeRectConstrained",
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox",
         "wordPreservationRatio" : 0
+      },
+      {
+        "bboxAfterClamp" : [
+          466,
+          522,
+          109,
+          114
+        ],
+        "bboxBeforeClamp" : [
+          486,
+          553,
+          69,
+          52
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 2,
+        "candidateID" : 11,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -2,
+        "notes" : [
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "THE OTE\nfafiitt\nTAPTEIN",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.8023478260869565,
+        "qualityScoreAfter" : 0.8023478260869565,
+        "qualityScoreBefore" : 0.7937142857142857,
+        "rejectionReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "BubbleMask",
+          "maskMajorityID:2",
+          "maskSafeRect",
+          "planID:8",
+          "preCropTextBoxPlan"
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox",
+        "wordPreservationRatio" : 0.1111111111111111
       },
       {
         "bboxAfterClamp" : [
@@ -52299,30 +52346,34 @@
       },
       {
         "bboxAfterClamp" : [
-          45,
-          654,
-          90,
-          105
+          37,
+          645,
+          106,
+          123
         ],
         "bboxBeforeClamp" : [
-          69,
-          674,
-          42,
-          65
+          65,
+          668,
+          50,
+          77
         ],
         "betterThanControl" : false,
         "blockIndex" : 3,
         "candidateID" : 13,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : -7,
+        "lineCountDelta" : -6,
         "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "TRANIE",
+        "ocrText" : "BPECIAL\nTRININE",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0,
-        "qualityScoreAfter" : 0.812,
+        "qualityDelta" : -0.011333333333333417,
+        "qualityScoreAfter" : 0.8006666666666666,
         "qualityScoreBefore" : 0.8079787234042554,
         "rejectionReasons" : [
           "rawWordsLost",
@@ -52332,93 +52383,109 @@
 
         ],
         "sourceStack" : [
-          "bubbleBBoxTextRegionCropBBox",
           "fusedSeedBBox",
-          "textBoxCandidate"
+          "ocrObservationBBox",
+          "planID:9",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "textBoxTight",
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
         "wordPreservationRatio" : 0
       },
       {
         "bboxAfterClamp" : [
-          0,
-          624,
-          206,
-          170
+          29,
+          635,
+          122,
+          143
         ],
         "bboxBeforeClamp" : [
-          -66,
-          569,
-          338,
-          280
+          61,
+          662,
+          58,
+          89
         ],
         "betterThanControl" : false,
         "blockIndex" : 3,
         "candidateID" : 14,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 0,
+        "lineCountDelta" : -8,
         "notes" : [
-          "SegmentMask glyph evidence is usable for crop evidence"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "seed bbox expanded then clamped to current bubble geometry"
         ],
-        "ocrSucceeded" : true,
-        "ocrText" : "AND\nTHAT'S\nWHY\nWE'RE\nDONS\nTHIS\nSPECIAL\nTEANNS.",
+        "ocrSucceeded" : false,
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : -0.01308695652173919,
-        "qualityScoreAfter" : 0.7989130434782609,
+        "qualityDelta" : -0.812,
+        "qualityScoreAfter" : 0,
         "qualityScoreBefore" : 0.8079787234042554,
         "rejectionReasons" : [
-
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
         ],
         "riskFlags" : [
 
         ],
         "sourceStack" : [
-          "SegmentMask",
+          "bubbleGeometry",
+          "bubbleID:3",
           "fusedSeedBBox",
-          "glyphMaskRect"
+          "planID:10",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "glyphMaskExpanded",
-        "wordPreservationRatio" : 0.8
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox",
+        "wordPreservationRatio" : 0
       },
       {
         "bboxAfterClamp" : [
-          10,
-          624,
-          160,
-          170
+          31,
+          637,
+          118,
+          139
         ],
         "bboxBeforeClamp" : [
-          45,
-          654,
-          90,
-          105
+          62,
+          663,
+          56,
+          87
         ],
         "betterThanControl" : false,
         "blockIndex" : 3,
         "candidateID" : 15,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 0,
+        "lineCountDelta" : -8,
         "notes" : [
-          "mask-safe rect constrained shadow OCR"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
         ],
-        "ocrSucceeded" : true,
-        "ocrText" : "ANO\nTHAT'S\nWHY\nWE'RE\nDONG\nTHIS\nSPECIAL\nTRANNE",
+        "ocrSucceeded" : false,
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : -0.007000000000000006,
-        "qualityScoreAfter" : 0.805,
+        "qualityDelta" : -0.812,
+        "qualityScoreAfter" : 0,
         "qualityScoreBefore" : 0.8079787234042554,
         "rejectionReasons" : [
-
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
         ],
         "riskFlags" : [
 
         ],
         "sourceStack" : [
           "BubbleMask",
-          "maskSafeRect"
+          "maskMajorityID:3",
+          "maskSafeRect",
+          "planID:11",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "maskSafeRectConstrained",
-        "wordPreservationRatio" : 0.7
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox",
+        "wordPreservationRatio" : 0
       },
       {
         "bboxAfterClamp" : [
@@ -52649,32 +52716,34 @@
         "bboxAfterClamp" : [
           213,
           900,
-          103,
-          114
+          111,
+          127
         ],
         "bboxBeforeClamp" : [
-          238,
-          884,
-          50,
-          107
+          234,
+          875,
+          58,
+          125
         ],
         "betterThanControl" : true,
         "blockIndex" : 5,
         "candidateID" : 21,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 4,
+        "lineCountDelta" : 6,
         "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "JUSTIN\nSPECIAL\nTRAINING\nRAND\nASKEO IP\n→WE\nCOLD\nJUST\nPLAY.\ntas\nONUNE\nTHA\nbICN\nTo e\npeal",
+        "ocrText" : "JISTi,\nSPECIAL\nTRANINGY\n:KAND\nДЗКЕО I\n*. WE\nCOLLD\nJUSTI\n-OR AT\nPLAY\nLEAST,\nONLINE\nITHAT-\nSSEENS\nATO GE\nLEEN-\nSENDAr:",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.114439124487004,
-        "qualityScoreAfter" : 0.816203830369357,
+        "qualityDelta" : 0.09314908722109527,
+        "qualityScoreAfter" : 0.7949137931034482,
         "qualityScoreBefore" : 0.7757142857142857,
         "rejectionReasons" : [
-          "bubbleMaskCoverageLow",
-          "evidenceScoreBelowCropThreshold",
           "rawWordsLost"
         ],
         "riskFlags" : [
@@ -52682,93 +52751,12 @@
         ],
         "sourceStack" : [
           "fusedSeedBBox",
-          "splitCandidateTextRegionCropBBox",
-          "textBoxCandidate"
+          "ocrObservationBBox",
+          "planID:14",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "textBoxTight",
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
         "wordPreservationRatio" : 0.35714285714285715
-      },
-      {
-        "bboxAfterClamp" : [
-          213,
-          900,
-          114,
-          120
-        ],
-        "bboxBeforeClamp" : [
-          210,
-          877,
-          75,
-          108
-        ],
-        "betterThanControl" : true,
-        "blockIndex" : 5,
-        "candidateID" : 22,
-        "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 4,
-        "notes" : [
-          "mask-safe rect constrained shadow OCR"
-        ],
-        "ocrSucceeded" : true,
-        "ocrText" : "ASTiNTE\nSPECIAL\nITRANING\nRAND e-\nASKEO IF.\n*› WEL\n«JUSTE\n02 Al\niPLAYE\nLEAST\nONUINE\nITHAT-\nSEEHS\nTO BE\nGEEN-",
-        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.10164650907091799,
-        "qualityScoreAfter" : 0.803411214953271,
-        "qualityScoreBefore" : 0.7757142857142857,
-        "rejectionReasons" : [
-          "bubbleMaskConflict",
-          "rawWordsLost"
-        ],
-        "riskFlags" : [
-          "bubbleMaskConflict"
-        ],
-        "sourceStack" : [
-          "BubbleMask",
-          "maskSafeRect"
-        ],
-        "variantName" : "maskSafeRectConstrained",
-        "wordPreservationRatio" : 0.14285714285714285
-      },
-      {
-        "bboxAfterClamp" : [
-          200,
-          857,
-          105,
-          148
-        ],
-        "bboxBeforeClamp" : [
-          200,
-          857,
-          105,
-          148
-        ],
-        "betterThanControl" : true,
-        "blockIndex" : 5,
-        "candidateID" : 23,
-        "clampSource" : "splitCandidate",
-        "lineCountDelta" : 5,
-        "notes" : [
-          "conservative split candidate shadow OCR"
-        ],
-        "ocrSucceeded" : true,
-        "ocrText" : "EVEN 5\nTHOLISH\nI SAID\nJUSTi\nSPECIAL\nTRAINING\nNT\nSAND\nASKEO\nKE\n• WE:\nCOLLD\nJUST\nTSEUL\nPLAY\nONLINE",
-        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.11520220588235297,
-        "qualityScoreAfter" : 0.8169669117647059,
-        "qualityScoreBefore" : 0.7757142857142857,
-        "rejectionReasons" : [
-
-        ],
-        "riskFlags" : [
-          "parentBubbleOversized"
-        ],
-        "sourceStack" : [
-          "BubbleMask",
-          "parentBubbleID:4",
-          "splitCandidate"
-        ],
-        "variantName" : "splitCandidateClamp",
-        "wordPreservationRatio" : 0.5714285714285714
       },
       {
         "bboxAfterClamp" : [
@@ -52785,7 +52773,7 @@
         ],
         "betterThanControl" : false,
         "blockIndex" : 6,
-        "candidateID" : 24,
+        "candidateID" : 22,
         "clampSource" : "subRegion",
         "lineCountDelta" : 1,
         "notes" : [
@@ -52815,126 +52803,143 @@
       },
       {
         "bboxAfterClamp" : [
-          130,
+          119,
           857,
-          111,
+          133,
           148
         ],
         "bboxBeforeClamp" : [
-          154,
-          905,
-          63,
-          67
+          148,
+          899,
+          75,
+          79
         ],
         "betterThanControl" : true,
         "blockIndex" : 6,
-        "candidateID" : 25,
+        "candidateID" : 23,
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : 0,
         "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "THS IS AN\nOFFLINE\nTOLENAMENT,\nONLINE\nWOLLO MAKE\nMEANWELESS\nWhart\nare",
+        "ocrText" : "THIS IS AN\n• OPPLINE\nTOURNAMENT,\nDONe IT\nONLINE\nWOLLO MAKE\nMEANWELESS\nof",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.07794645550527912,
-        "qualityScoreAfter" : 0.8633823529411765,
+        "qualityDelta" : 0.06650854700854714,
+        "qualityScoreAfter" : 0.8519444444444445,
         "qualityScoreBefore" : 0.8616666666666667,
         "rejectionReasons" : [
-          "rawWordsLost"
-        ],
-        "riskFlags" : [
-          "splitCandidateRejected"
-        ],
-        "sourceStack" : [
-          "fusedSeedBBox",
-          "subRegionTextRegionCropBBox",
-          "textBoxCandidate"
-        ],
-        "variantName" : "textBoxTight",
-        "wordPreservationRatio" : 0.3333333333333333
-      },
-      {
-        "bboxAfterClamp" : [
-          67,
-          857,
-          238,
-          148
-        ],
-        "bboxBeforeClamp" : [
-          13,
-          809,
-          274,
-          244
-        ],
-        "betterThanControl" : false,
-        "blockIndex" : 6,
-        "candidateID" : 26,
-        "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 16,
-        "notes" : [
-          "SegmentMask glyph evidence is usable for crop evidence"
-        ],
-        "ocrSucceeded" : true,
-        "ocrText" : "EVEN\nTHOUSH\nI SAID\n• IT'S\nJUST\n•THeS IS AN\nSPECIAL\n• OFFLNE•\nTRAINING\nTOLENAMENT.\nAND\nONLINE\nASKED IF\nWORLD MAKE\nWE:\nCOLLO\nMEANMELESS\nJUST\nTHE\nPLAY\nGESTION\nONLINEn\nWAS\n-PALLED.",
-        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : -0.05299271561771546,
-        "qualityScoreAfter" : 0.7324431818181819,
-        "qualityScoreBefore" : 0.8616666666666667,
-        "rejectionReasons" : [
-          "introducedLikelyOCRError",
-          "rawWordsLost"
+
         ],
         "riskFlags" : [
 
         ],
         "sourceStack" : [
-          "SegmentMask",
           "fusedSeedBBox",
-          "glyphMaskRect"
+          "ocrObservationBBox",
+          "planID:17",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "glyphMaskExpanded",
-        "wordPreservationRatio" : 0.5
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
+        "wordPreservationRatio" : 0.75
       },
       {
         "bboxAfterClamp" : [
-          88,
+          108,
           857,
-          195,
+          155,
           148
         ],
         "bboxBeforeClamp" : [
-          130,
-          877,
-          111,
-          108
+          142,
+          892,
+          87,
+          93
         ],
-        "betterThanControl" : false,
+        "betterThanControl" : true,
         "blockIndex" : 6,
-        "candidateID" : 27,
+        "candidateID" : 24,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 16,
+        "lineCountDelta" : 11,
         "notes" : [
-          "mask-safe rect constrained shadow OCR"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "seed bbox expanded then clamped to current bubble geometry"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "EVEN\nTHOUSH\nI SAID\n. IT'S\nJUST\nTHIS I5 AN\nSPECIAL\n• OPPLINE\nTRAINING\nTOURNAMENT,\nAND\nASKEO IF\nONLINE\nWOLLO NAKE\nWE\nCOLO\nMEANWELESS\nJUST\nPLAY\nTION\nWhat\nONLINE..\nED.\nore",
+        "ocrText" : "EVI\nTHO\nJu\nTHIS IS AN\nSPE\n• OFPLINE\nTRAN\nTOUENAMENT,\nAr\nDONe IT\nONLINE\nASKI\nWOLLO MAKE\nCOI\nMEANWELESS\nJu\nPL\nONe\nof.",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : -0.07007661599877157,
-        "qualityScoreAfter" : 0.7153592814371258,
+        "qualityDelta" : 0.055433667781493945,
+        "qualityScoreAfter" : 0.8408695652173913,
         "qualityScoreBefore" : 0.8616666666666667,
         "rejectionReasons" : [
-          "introducedLikelyOCRError"
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "bubbleGeometry",
+          "bubbleID:4",
+          "fusedSeedBBox",
+          "planID:18",
+          "preCropTextBoxPlan"
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox",
+        "wordPreservationRatio" : 0.5833333333333334
+      },
+      {
+        "bboxAfterClamp" : [
+          110,
+          857,
+          151,
+          148
+        ],
+        "bboxBeforeClamp" : [
+          143,
+          894,
+          85,
+          89
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 6,
+        "candidateID" : 25,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 7,
+        "notes" : [
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "EV\nTHO\nTHS I AN\nSPE\n• OFPLNE\nTOUENAMENT,\nDONG IT\nONLINE\nASK\nWOLLO MAKE\nMEANWELESS\nPL\nWhat\nON\norg",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.03431739203778683,
+        "qualityScoreAfter" : 0.8197532894736842,
+        "qualityScoreBefore" : 0.8616666666666667,
+        "rejectionReasons" : [
+          "rawWordsLost"
         ],
         "riskFlags" : [
 
         ],
         "sourceStack" : [
           "BubbleMask",
-          "maskSafeRect"
+          "maskMajorityID:4",
+          "maskSafeRect",
+          "planID:19",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "maskSafeRectConstrained",
-        "wordPreservationRatio" : 0.5833333333333334
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox",
+        "wordPreservationRatio" : 0.4166666666666667
       },
       {
         "bboxAfterClamp" : [
@@ -52951,7 +52956,7 @@
         ],
         "betterThanControl" : false,
         "blockIndex" : 7,
-        "candidateID" : 28,
+        "candidateID" : 26,
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : -8,
         "notes" : [
@@ -52982,24 +52987,28 @@
       },
       {
         "bboxAfterClamp" : [
-          485,
+          476,
           860,
-          91,
+          100,
           132
         ],
         "bboxBeforeClamp" : [
-          505,
-          898,
-          51,
-          57
+          500,
+          893,
+          61,
+          67
         ],
         "betterThanControl" : false,
         "blockIndex" : 7,
-        "candidateID" : 29,
+        "candidateID" : 27,
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : -8,
         "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
         ],
         "ocrSucceeded" : false,
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
@@ -53015,82 +53024,94 @@
 
         ],
         "sourceStack" : [
-          "bubbleBBoxTextRegionCropBBox",
           "fusedSeedBBox",
-          "textBoxCandidate"
+          "ocrObservationBBox",
+          "planID:20",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "textBoxTight",
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
         "wordPreservationRatio" : 0
       },
       {
         "bboxAfterClamp" : [
-          433,
+          468,
           860,
-          143,
+          108,
           132
         ],
         "bboxBeforeClamp" : [
-          484,
-          817,
-          115,
-          218
+          495,
+          887,
+          71,
+          79
         ],
-        "betterThanControl" : true,
+        "betterThanControl" : false,
         "blockIndex" : 7,
-        "candidateID" : 30,
+        "candidateID" : 28,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 1,
+        "lineCountDelta" : -8,
         "notes" : [
-          "SegmentMask glyph evidence is usable for crop evidence"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "seed bbox expanded then clamped to current bubble geometry"
         ],
-        "ocrSucceeded" : true,
-        "ocrText" : "ER!\nME NISO TO\nFET PESULTE\nAT THO\nTOLENAAENT\n10 Save TH-\nBAMAIB CLUO\nPOOHOING\nDisgsOsD",
+        "ocrSucceeded" : false,
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.7626744186046512,
-        "qualityScoreAfter" : 0.7626744186046512,
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0,
         "qualityScoreBefore" : 0.7733333333333334,
         "rejectionReasons" : [
-          "rawWordsLost"
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
         ],
         "riskFlags" : [
 
         ],
         "sourceStack" : [
-          "SegmentMask",
+          "bubbleGeometry",
+          "bubbleID:5",
           "fusedSeedBBox",
-          "glyphMaskRect"
+          "planID:21",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "glyphMaskExpanded",
-        "wordPreservationRatio" : 0.25
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox",
+        "wordPreservationRatio" : 0
       },
       {
         "bboxAfterClamp" : [
-          457,
+          472,
           860,
-          119,
+          104,
           132
         ],
         "bboxBeforeClamp" : [
-          485,
-          878,
-          73,
-          96
+          496,
+          888,
+          62,
+          77
         ],
-        "betterThanControl" : true,
+        "betterThanControl" : false,
         "blockIndex" : 7,
-        "candidateID" : 31,
+        "candidateID" : 29,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : -6,
+        "lineCountDelta" : -8,
         "notes" : [
-          "mask-safe rect constrained shadow OCR"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
         ],
-        "ocrSucceeded" : true,
-        "ocrText" : "se\nLTI9EA",
+        "ocrSucceeded" : false,
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.7582222222222222,
-        "qualityScoreAfter" : 0.7582222222222222,
+        "qualityDelta" : 0,
+        "qualityScoreAfter" : 0,
         "qualityScoreBefore" : 0.7733333333333334,
         "rejectionReasons" : [
+          "emptyLocalOCR",
           "rawWordsLost",
           "wordCountRegression"
         ],
@@ -53099,9 +53120,12 @@
         ],
         "sourceStack" : [
           "BubbleMask",
-          "maskSafeRect"
+          "maskMajorityID:5",
+          "maskSafeRect",
+          "planID:22",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "maskSafeRectConstrained",
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox",
         "wordPreservationRatio" : 0
       },
       {
@@ -53119,7 +53143,7 @@
         ],
         "betterThanControl" : false,
         "blockIndex" : 8,
-        "candidateID" : 32,
+        "candidateID" : 30,
         "clampSource" : "subRegion",
         "lineCountDelta" : -1,
         "notes" : [
@@ -53148,71 +53172,34 @@
       },
       {
         "bboxAfterClamp" : [
-          10,
-          936,
-          141,
-          156
-        ],
-        "bboxBeforeClamp" : [
-          47,
-          967,
-          67,
-          94
-        ],
-        "betterThanControl" : false,
-        "blockIndex" : 8,
-        "candidateID" : 33,
-        "clampSource" : "bubbleBBox",
-        "lineCountDelta" : -1,
-        "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
-        ],
-        "ocrSucceeded" : true,
-        "ocrText" : "* THE\nSUGGESTION\nOVERRULED,\nANO IT WAS\nTHAT TO BE\n'STAYNGY\nOVER AT RENA\nESENPAI'S\nTHouser",
-        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0,
-        "qualityScoreAfter" : 0.8171558988764045,
-        "qualityScoreBefore" : 0.773174172544764,
-        "rejectionReasons" : [
-
-        ],
-        "riskFlags" : [
-          "splitCandidateRejected"
-        ],
-        "sourceStack" : [
-          "fusedSeedBBox",
-          "subRegionTextRegionCropBBox",
-          "textBoxCandidate"
-        ],
-        "variantName" : "textBoxTight",
-        "wordPreservationRatio" : 0.5789473684210527
-      },
-      {
-        "bboxAfterClamp" : [
           0,
-          883,
-          231,
-          218
+          922,
+          164,
+          179
         ],
         "bboxBeforeClamp" : [
-          -74,
-          804,
-          379,
-          402
+          41,
+          959,
+          79,
+          110
         ],
         "betterThanControl" : false,
         "blockIndex" : 8,
-        "candidateID" : 34,
+        "candidateID" : 31,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 7,
+        "lineCountDelta" : 0,
         "notes" : [
-          "SegmentMask glyph evidence is usable for crop evidence"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "THES IS AN\nOFFLNE •\nTOURNAMENT,\nDONe п\nONLINE\nWORLD MAKE\nMEANIELESS\nTHE\n• SUGGESTION\nWAS\n: OVERPLLEO:\nAND IT WAS\nDECIDED\nTHAT TO BE\nSTAYING\n'SENPAI'S :\nHOUSE.",
+        "ocrText" : "i THE\n(SUGGESTION\nOVERDUKED,\nANO I'WAS!\n¡DECIDEDI\nTHAT TO BE\nSTAYING\nOVER AT REN\nSENPAI'S,\nTHOuse:",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : -0.015948498681662593,
-        "qualityScoreAfter" : 0.8012074001947419,
+        "qualityDelta" : -0.05429875601926171,
+        "qualityScoreAfter" : 0.7628571428571428,
         "qualityScoreBefore" : 0.773174172544764,
         "rejectionReasons" : [
 
@@ -53221,52 +53208,109 @@
 
         ],
         "sourceStack" : [
-          "SegmentMask",
           "fusedSeedBBox",
-          "glyphMaskRect"
+          "ocrObservationBBox",
+          "planID:23",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "glyphMaskExpanded",
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
         "wordPreservationRatio" : 0.6842105263157895
       },
       {
         "bboxAfterClamp" : [
           0,
-          883,
-          197,
-          218
+          907,
+          179,
+          194
         ],
         "bboxBeforeClamp" : [
-          32,
-          936,
-          119,
-          156
+          34,
+          950,
+          93,
+          128
         ],
         "betterThanControl" : false,
         "blockIndex" : 8,
-        "candidateID" : 35,
+        "candidateID" : 32,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 6,
+        "lineCountDelta" : -4,
         "notes" : [
-          "mask-safe rect constrained shadow OCR"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "seed bbox expanded then clamped to current bubble geometry"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "TrES iS.\n: OFFEN\nTOLKNAM\nONUNI\nWORLD M\nMEANIEL\n+ THE\nSUGGESTION\n¡ OVERALLED;\nAND IT WAS\n• DECIDED:\n: THAT ID BE\n• 15TAYING.*\nOVER AT DEN-\nSENPAI'S :\nHOUSE:",
+        "ocrText" : "I WAS\nDED\nBE\nOVER\nSEA\nHOUSt",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : -0.041542995650597936,
-        "qualityScoreAfter" : 0.7756129032258066,
+        "qualityDelta" : -0.07521939093989671,
+        "qualityScoreAfter" : 0.7419365079365078,
         "qualityScoreBefore" : 0.773174172544764,
         "rejectionReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "riskFlags" : [
 
+        ],
+        "sourceStack" : [
+          "bubbleGeometry",
+          "bubbleID:6",
+          "fusedSeedBBox",
+          "planID:24",
+          "preCropTextBoxPlan"
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox",
+        "wordPreservationRatio" : 0.2631578947368421
+      },
+      {
+        "bboxAfterClamp" : [
+          0,
+          910,
+          174,
+          191
+        ],
+        "bboxBeforeClamp" : [
+          36,
+          951,
+          89,
+          126
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 8,
+        "candidateID" : 33,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : -10,
+        "notes" : [
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrSucceeded" : false,
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : -0.8171558988764045,
+        "qualityScoreAfter" : 0,
+        "qualityScoreBefore" : 0.773174172544764,
+        "rejectionReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
         ],
         "riskFlags" : [
 
         ],
         "sourceStack" : [
           "BubbleMask",
-          "maskSafeRect"
+          "maskMajorityID:6",
+          "maskSafeRect",
+          "planID:25",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "maskSafeRectConstrained",
-        "wordPreservationRatio" : 0.7368421052631579
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox",
+        "wordPreservationRatio" : 0
       },
       {
         "bboxAfterClamp" : [
@@ -53283,7 +53327,7 @@
         ],
         "betterThanControl" : false,
         "blockIndex" : 9,
-        "candidateID" : 36,
+        "candidateID" : 34,
         "clampSource" : "splitCandidate",
         "lineCountDelta" : 2,
         "notes" : [
@@ -53315,113 +53359,127 @@
       },
       {
         "bboxAfterClamp" : [
-          97,
-          959,
-          79,
-          96
+          91,
+          952,
+          91,
+          110
         ],
         "bboxBeforeClamp" : [
-          118,
-          977,
-          37,
-          60
+          115,
+          972,
+          43,
+          70
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 9,
+        "candidateID" : 35,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 9,
+        "notes" : [
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "MEANI\nION\n: What\nED,\nAS\neven\nBE\n: talking\nabox\nTEN-",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.06855882352941178,
+        "qualityScoreAfter" : 0.8170588235294117,
+        "qualityScoreBefore" : 0.7951851851851852,
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox",
+          "planID:26",
+          "preCropTextBoxPlan"
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
+        "wordPreservationRatio" : 0.4
+      },
+      {
+        "bboxAfterClamp" : [
+          82,
+          942,
+          109,
+          130
+        ],
+        "bboxBeforeClamp" : [
+          111,
+          966,
+          51,
+          82
         ],
         "betterThanControl" : false,
         "blockIndex" : 9,
+        "candidateID" : 36,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 15,
+        "notes" : [
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "WORLO\n'IT\nMEANINE\nSTION\n'LED,\nor\nWAS\nyou\nDED\neven\n'D BE\n: talking\nING\nT BEN-\nAl'S\nSE.",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : -0.006611455108359032,
+        "qualityScoreAfter" : 0.7418885448916409,
+        "qualityScoreBefore" : 0.7951851851851852,
+        "rejectionReasons" : [
+          "rawWordsLost"
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "bubbleGeometry",
+          "bubbleID:6",
+          "fusedSeedBBox",
+          "planID:27",
+          "preCropTextBoxPlan"
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox",
+        "wordPreservationRatio" : 0.4
+      },
+      {
+        "bboxAfterClamp" : [
+          85,
+          944,
+          103,
+          126
+        ],
+        "bboxBeforeClamp" : [
+          112,
+          967,
+          49,
+          80
+        ],
+        "betterThanControl" : true,
+        "blockIndex" : 9,
         "candidateID" : 37,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 2,
+        "lineCountDelta" : 11,
         "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "NEA\neve\n: talkin",
+        "ocrText" : "WOrLD\nMEANIN\nTION\nLED.\nWAS\nED\neven\n• BE\n: talking\nNE\n'BEN-\nSE.",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0,
-        "qualityScoreAfter" : 0.7484999999999999,
-        "qualityScoreBefore" : 0.7951851851851852,
-        "rejectionReasons" : [
-          "evidenceScoreBelowCropThreshold",
-          "rawWordsLost"
-        ],
-        "riskFlags" : [
-
-        ],
-        "sourceStack" : [
-          "fusedSeedBBox",
-          "splitCandidateTextRegionCropBBox",
-          "textBoxCandidate"
-        ],
-        "variantName" : "textBoxTight",
-        "wordPreservationRatio" : 0
-      },
-      {
-        "bboxAfterClamp" : [
-          0,
-          883,
-          231,
-          218
-        ],
-        "bboxBeforeClamp" : [
-          -74,
-          804,
-          379,
-          402
-        ],
-        "betterThanControl" : true,
-        "blockIndex" : 9,
-        "candidateID" : 38,
-        "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 16,
-        "notes" : [
-          "SegmentMask glyph evidence is usable for crop evidence"
-        ],
-        "ocrSucceeded" : true,
-        "ocrText" : "THES IS AN\nOFFLNE •\nTOURNAMENT,\nDONe п\nONLINE\nWORLD MAKE\nMEANIELESS\nTHE\n• SUGGESTION\nWAS\n: OVERPLLEO:\nAND IT WAS\nDECIDED\nTHAT TO BE\nSTAYING\n'SENPAI'S :\nHOUSE.",
-        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.05270740019474196,
-        "qualityScoreAfter" : 0.8012074001947419,
-        "qualityScoreBefore" : 0.7951851851851852,
-        "rejectionReasons" : [
-          "rawWordsLost"
-        ],
-        "riskFlags" : [
-
-        ],
-        "sourceStack" : [
-          "SegmentMask",
-          "fusedSeedBBox",
-          "glyphMaskRect"
-        ],
-        "variantName" : "glyphMaskExpanded",
-        "wordPreservationRatio" : 0
-      },
-      {
-        "bboxAfterClamp" : [
-          66,
-          889,
-          141,
-          212
-        ],
-        "bboxBeforeClamp" : [
-          97,
-          959,
-          79,
-          96
-        ],
-        "betterThanControl" : true,
-        "blockIndex" : 9,
-        "candidateID" : 39,
-        "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 22,
-        "notes" : [
-          "mask-safe rect constrained shadow OCR"
-        ],
-        "ocrSucceeded" : true,
-        "ocrText" : "THIS IS AN\nOPPLINE\nTOURNAMEN\nONLINE\nWORLD MAK\n• IT\nMEANIELES\nTHE\nGESTION\nVind\nWAS\nERALLED,\nare\nO IT WAS\nECIDED\neven\nAT ID BE\n: talking\nTAYING\n• abo\nP AT DEN-\nENPAI'S\nOUSE.",
-        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.046672780435938255,
-        "qualityScoreAfter" : 0.7951727804359382,
+        "qualityDelta" : 0.06424193548387103,
+        "qualityScoreAfter" : 0.812741935483871,
         "qualityScoreBefore" : 0.7951851851851852,
         "rejectionReasons" : [
           "rawWordsLost"
@@ -53431,10 +53489,13 @@
         ],
         "sourceStack" : [
           "BubbleMask",
-          "maskSafeRect"
+          "maskMajorityID:6",
+          "maskSafeRect",
+          "planID:28",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "maskSafeRectConstrained",
-        "wordPreservationRatio" : 0.4
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox",
+        "wordPreservationRatio" : 0.2
       },
       {
         "bboxAfterClamp" : [
@@ -53451,7 +53512,7 @@
         ],
         "betterThanControl" : false,
         "blockIndex" : 10,
-        "candidateID" : 40,
+        "candidateID" : 38,
         "clampSource" : "splitCandidate",
         "lineCountDelta" : 9,
         "notes" : [
@@ -53481,71 +53542,34 @@
       },
       {
         "bboxAfterClamp" : [
-          251,
-          936,
-          114,
-          126
+          240,
+          924,
+          136,
+          150
         ],
         "bboxBeforeClamp" : [
-          281,
-          961,
-          54,
-          76
+          276,
+          954,
+          64,
+          90
         ],
         "betterThanControl" : false,
         "blockIndex" : 10,
-        "candidateID" : 41,
+        "candidateID" : 39,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 9,
+        "lineCountDelta" : 12,
         "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "KED IP\nWE\nOLD\nJIST\n-ОЕ ДТ\nLEAST.\nNLINE..\n• THAT\nSEEMS\nTO BE\nPEN-\nLOGIC.",
+        "ocrText" : "AND\nASKEO IP\nWE\nCOLLO\nJIST\nPLAY\n-OR AT\nLEAST.\nONLINE..\n• THAT\nSEEMS\nTO BE\nPEN-\nSENDU'S\nLOGIG..",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0,
-        "qualityScoreAfter" : 0.791830985915493,
-        "qualityScoreBefore" : 0.6940909090909091,
-        "rejectionReasons" : [
-          "rawWordsLost"
-        ],
-        "riskFlags" : [
-
-        ],
-        "sourceStack" : [
-          "fusedSeedBBox",
-          "splitCandidateTextRegionCropBBox",
-          "textBoxCandidate"
-        ],
-        "variantName" : "textBoxTight",
-        "wordPreservationRatio" : 0.4166666666666667
-      },
-      {
-        "bboxAfterClamp" : [
-          213,
-          900,
-          190,
-          199
-        ],
-        "bboxBeforeClamp" : [
-          157,
-          836,
-          284,
-          327
-        ],
-        "betterThanControl" : true,
-        "blockIndex" : 10,
-        "candidateID" : 42,
-        "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 14,
-        "notes" : [
-          "SegmentMask glyph evidence is usable for crop evidence"
-        ],
-        "ocrSucceeded" : true,
-        "ocrText" : "JUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOLLO\nJUIST\nPLAY\n-OR AT\nLEAST.\nONLINE-.\nTHAT\nSEEMS\nTO BE\nCEN-\nLOGIC.",
-        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.045621844273186385,
-        "qualityScoreAfter" : 0.8374528301886793,
+        "qualityDelta" : 0.003952888664574217,
+        "qualityScoreAfter" : 0.7957838745800672,
         "qualityScoreBefore" : 0.6940909090909091,
         "rejectionReasons" : [
 
@@ -53554,39 +53578,91 @@
 
         ],
         "sourceStack" : [
-          "SegmentMask",
           "fusedSeedBBox",
-          "glyphMaskRect"
+          "ocrObservationBBox",
+          "planID:29",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "glyphMaskExpanded",
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
         "wordPreservationRatio" : 0.5833333333333334
       },
       {
         "bboxAfterClamp" : [
-          213,
-          900,
-          190,
-          199
+          230,
+          912,
+          156,
+          174
         ],
         "bboxBeforeClamp" : [
-          251,
-          936,
-          114,
-          126
+          271,
+          947,
+          74,
+          104
+        ],
+        "betterThanControl" : false,
+        "blockIndex" : 10,
+        "candidateID" : 40,
+        "clampSource" : "bubbleBBox",
+        "lineCountDelta" : 13,
+        "notes" : [
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrSucceeded" : true,
+        "ocrText" : "TRAINING\nAND\nASKED IF\nWE\nCOLLO\nJUST\nPLAY\n-OR AT\nONLINE...\nLEAST,\nTHAT\nSEEMS\nTO BE\nPEN-\nSENDA'S\nLOGIC..",
+        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
+        "qualityDelta" : 0.013021955260977602,
+        "qualityScoreAfter" : 0.8048529411764705,
+        "qualityScoreBefore" : 0.6940909090909091,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "sourceStack" : [
+          "bubbleGeometry",
+          "bubbleID:7",
+          "fusedSeedBBox",
+          "planID:30",
+          "preCropTextBoxPlan"
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox",
+        "wordPreservationRatio" : 0.5833333333333334
+      },
+      {
+        "bboxAfterClamp" : [
+          232,
+          914,
+          152,
+          170
+        ],
+        "bboxBeforeClamp" : [
+          272,
+          948,
+          72,
+          102
         ],
         "betterThanControl" : true,
         "blockIndex" : 10,
-        "candidateID" : 43,
+        "candidateID" : 41,
         "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 14,
+        "lineCountDelta" : 12,
         "notes" : [
-          "mask-safe rect constrained shadow OCR"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
         ],
         "ocrSucceeded" : true,
-        "ocrText" : "JUST\nSPECIAL\nTRAINING\nAND\nASKED IF\nWE\nCOLLO\nJUIST\nPLAY\n-OR AT\nLEAST.\nONLINE-.\nTHAT\nSEEMS\nTO BE\nCEN-\nLOGIC.",
+        "ocrText" : "TRAINING\nAND\nASKEO IF\nWE\nCOLLO\nJUIST\nPLAY\n-OR AT\nLEAST.\nONLINE-.\nTHAT\nSEEMS\nTO BE\nPEN-\nLOGIC..",
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.045621844273186385,
-        "qualityScoreAfter" : 0.8374528301886793,
+        "qualityDelta" : 0.0388073119568475,
+        "qualityScoreAfter" : 0.8306382978723404,
         "qualityScoreBefore" : 0.6940909090909091,
         "rejectionReasons" : [
 
@@ -53596,9 +53672,12 @@
         ],
         "sourceStack" : [
           "BubbleMask",
-          "maskSafeRect"
+          "maskMajorityID:7",
+          "maskSafeRect",
+          "planID:31",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "maskSafeRectConstrained",
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox",
         "wordPreservationRatio" : 0.5833333333333334
       },
       {
@@ -53616,7 +53695,7 @@
         ],
         "betterThanControl" : false,
         "blockIndex" : 11,
-        "candidateID" : 44,
+        "candidateID" : 42,
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : -6,
         "notes" : [
@@ -53647,66 +53726,28 @@
       },
       {
         "bboxAfterClamp" : [
-          280,
-          957,
-          25,
-          48
-        ],
-        "bboxBeforeClamp" : [
-          289,
-          965,
-          16,
-          40
-        ],
-        "betterThanControl" : false,
-        "blockIndex" : 11,
-        "candidateID" : 45,
-        "clampSource" : "bubbleBBox",
-        "lineCountDelta" : -6,
-        "notes" : [
-          "TextBox is derived shadow evidence and remains downstream-only"
-        ],
-        "ocrSucceeded" : false,
-        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0,
-        "qualityScoreAfter" : 0,
-        "qualityScoreBefore" : 0.6739999999999999,
-        "rejectionReasons" : [
-          "emptyLocalOCR",
-          "rawWordsLost",
-          "wordCountRegression"
-        ],
-        "riskFlags" : [
-          "splitCandidateRejected"
-        ],
-        "sourceStack" : [
-          "bubbleBBoxTextRegionCropBBox",
-          "fusedSeedBBox",
-          "textBoxCandidate"
-        ],
-        "variantName" : "textBoxTight",
-        "wordPreservationRatio" : 0
-      },
-      {
-        "bboxAfterClamp" : [
-          266,
-          939,
-          39,
-          66
-        ],
-        "bboxBeforeClamp" : [
-          283,
-          953,
-          30,
+          262,
+          940,
+          43,
           65
         ],
+        "bboxBeforeClamp" : [
+          286,
+          960,
+          42,
+          62
+        ],
         "betterThanControl" : false,
         "blockIndex" : 11,
-        "candidateID" : 46,
+        "candidateID" : 43,
         "clampSource" : "bubbleBBox",
         "lineCountDelta" : -6,
         "notes" : [
-          "SegmentMask glyph evidence is usable for crop evidence"
+          "preCropTextBoxPlanReport",
+          "shadowOnly",
+          "groundTruthNotUsed",
+          "notWrittenToFinalTextUsedForTranslation",
+          "most conservative upstream TextBox plan"
         ],
         "ocrSucceeded" : false,
         "preprocessingProfile" : "existingMangaOverlayPreprocessing",
@@ -53722,52 +53763,12 @@
 
         ],
         "sourceStack" : [
-          "SegmentMask",
           "fusedSeedBBox",
-          "glyphMaskRect"
+          "ocrObservationBBox",
+          "planID:32",
+          "preCropTextBoxPlan"
         ],
-        "variantName" : "glyphMaskExpanded",
-        "wordPreservationRatio" : 0
-      },
-      {
-        "bboxAfterClamp" : [
-          240,
-          886,
-          65,
-          119
-        ],
-        "bboxBeforeClamp" : [
-          269,
-          948,
-          76,
-          86
-        ],
-        "betterThanControl" : true,
-        "blockIndex" : 11,
-        "candidateID" : 47,
-        "clampSource" : "bubbleBBox",
-        "lineCountDelta" : 2,
-        "notes" : [
-          "mask-safe rect constrained shadow OCR"
-        ],
-        "ocrSucceeded" : true,
-        "ocrText" : "UTER\nSPECIAL\nTRANING*\nKAND M\nASKED LAN\nJUST\nPLAY,\nION INC",
-        "preprocessingProfile" : "existingMangaOverlayPreprocessing",
-        "qualityDelta" : 0.8054066985645932,
-        "qualityScoreAfter" : 0.8054066985645932,
-        "qualityScoreBefore" : 0.6739999999999999,
-        "rejectionReasons" : [
-          "bubbleMaskConflict",
-          "rawWordsLost"
-        ],
-        "riskFlags" : [
-          "bubbleMaskConflict"
-        ],
-        "sourceStack" : [
-          "BubbleMask",
-          "maskSafeRect"
-        ],
-        "variantName" : "maskSafeRectConstrained",
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox",
         "wordPreservationRatio" : 0
       },
       {
@@ -53785,7 +53786,7 @@
         ],
         "betterThanControl" : false,
         "blockIndex" : 12,
-        "candidateID" : 48,
+        "candidateID" : 44,
         "clampSource" : "contentRect",
         "lineCountDelta" : 0,
         "notes" : [
@@ -53831,7 +53832,7 @@
         ],
         "betterThanControl" : false,
         "blockIndex" : 12,
-        "candidateID" : 49,
+        "candidateID" : 45,
         "clampSource" : "contentRect",
         "lineCountDelta" : 0,
         "notes" : [
@@ -53877,7 +53878,7 @@
         ],
         "betterThanControl" : false,
         "blockIndex" : 12,
-        "candidateID" : 50,
+        "candidateID" : 46,
         "clampSource" : "contentRect",
         "lineCountDelta" : -3,
         "notes" : [
@@ -53919,7 +53920,7 @@
         ],
         "betterThanControl" : false,
         "blockIndex" : 12,
-        "candidateID" : 51,
+        "candidateID" : 47,
         "clampSource" : "contentRect",
         "lineCountDelta" : 5,
         "notes" : [
@@ -53956,20 +53957,20 @@
     "evaluatedBlockCount" : 13,
     "notes" : [
       "shadow-only TextRegion crop experiment matrix; bestShadowCandidate is never written to finalTextUsedForTranslation",
-      "control is the existing TextRegion crop result; each block gets at most three additional shadow candidates",
-      "candidate generation and promotion verdicts use bbox, mask, TextBox, SegmentMask, raw-word preservation, and OCR text quality only",
+      "control is the existing TextRegion crop result; each block gets at most three additional shadow candidates selected from preCropTextBoxPlanReport when available",
+      "candidate generation and promotion verdicts use bbox, mask, upstream TextBox plans, SegmentMask proxy, raw-word preservation, and OCR text quality only",
       "ground truth is not used for candidate generation, ranking, promotion, adoption, or fallback",
       "textRegionCropReport.adoptedCount remains governed by the existing guardrail"
     ],
-    "ocrSucceededCount" : 43,
+    "ocrSucceededCount" : 36,
     "promotedShadowBlocks" : [
 
     ],
     "stoppedBlocks" : [
       2,
+      3,
       4,
       5,
-      6,
       7,
       9,
       11,
@@ -53996,44 +53997,54 @@
         "rawWordsLostCount" : 8,
         "variantName" : "currentTextRegionCrop"
       },
-      "glyphMaskExpanded" : {
-        "attemptedCount" : 10,
-        "betterThanControlCount" : 5,
-        "degradedCount" : 0,
-        "emptyOutputCount" : 1,
-        "ocrSucceededCount" : 9,
-        "promotedBlockCount" : 0,
-        "rawWordsLostCount" : 5,
-        "variantName" : "glyphMaskExpanded"
-      },
       "maskSafeRectConstrained" : {
-        "attemptedCount" : 13,
-        "betterThanControlCount" : 7,
-        "degradedCount" : 1,
-        "emptyOutputCount" : 2,
-        "ocrSucceededCount" : 11,
-        "promotedBlockCount" : 0,
-        "rawWordsLostCount" : 7,
-        "variantName" : "maskSafeRectConstrained"
-      },
-      "splitCandidateClamp" : {
-        "attemptedCount" : 1,
+        "attemptedCount" : 2,
         "betterThanControlCount" : 1,
-        "degradedCount" : 0,
-        "emptyOutputCount" : 0,
+        "degradedCount" : 1,
+        "emptyOutputCount" : 1,
         "ocrSucceededCount" : 1,
         "promotedBlockCount" : 0,
-        "rawWordsLostCount" : 0,
-        "variantName" : "splitCandidateClamp"
+        "rawWordsLostCount" : 2,
+        "variantName" : "maskSafeRectConstrained"
+      },
+      "preCropTextBoxPlan.bubbleContainedTextBox" : {
+        "attemptedCount" : 9,
+        "betterThanControlCount" : 2,
+        "degradedCount" : 1,
+        "emptyOutputCount" : 3,
+        "ocrSucceededCount" : 6,
+        "promotedBlockCount" : 0,
+        "rawWordsLostCount" : 5,
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      "preCropTextBoxPlan.maskMajorityTextBox" : {
+        "attemptedCount" : 9,
+        "betterThanControlCount" : 5,
+        "degradedCount" : 2,
+        "emptyOutputCount" : 3,
+        "ocrSucceededCount" : 6,
+        "promotedBlockCount" : 0,
+        "rawWordsLostCount" : 6,
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      "preCropTextBoxPlan.seedTightTextBox" : {
+        "attemptedCount" : 11,
+        "betterThanControlCount" : 5,
+        "degradedCount" : 0,
+        "emptyOutputCount" : 2,
+        "ocrSucceededCount" : 9,
+        "promotedBlockCount" : 0,
+        "rawWordsLostCount" : 6,
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
       },
       "textBoxTight" : {
-        "attemptedCount" : 13,
-        "betterThanControlCount" : 2,
+        "attemptedCount" : 2,
+        "betterThanControlCount" : 0,
         "degradedCount" : 0,
-        "emptyOutputCount" : 3,
-        "ocrSucceededCount" : 10,
+        "emptyOutputCount" : 0,
+        "ocrSucceededCount" : 2,
         "promotedBlockCount" : 0,
-        "rawWordsLostCount" : 8,
+        "rawWordsLostCount" : 0,
         "variantName" : "textBoxTight"
       }
     }
@@ -54246,7 +54257,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 16325,
+      "processingTimeMs" : 16312,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -54547,7 +54558,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 229966,
+      "processingTimeMs" : 211977,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -54566,7 +54577,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 16325,
+      "processingTimeMs" : 16312,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -54578,7 +54589,7 @@
     "fused" : {
       "accuracyVsGroundTruth" : 0.7383773465526562,
       "matchedGroundTruthCount" : 13,
-      "processingTimeMs" : 229966,
+      "processingTimeMs" : 211977,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 0
     },
@@ -54684,7 +54695,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 229966,
+      "processingTimeMs" : 211977,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -55637,26 +55648,1706 @@
     "withoutLexiconTotalBlocks" : 14
   },
   "outputCleanupPolicy" : "探针开始重建 App 沙盒 Output；renderOutputs 只写入本轮文件；export-probe-output.sh 重建项目根 output；只保留本轮 probe_report.json 和本轮 PNG\/TXT\/JSON。",
-  "outputCleanupRemovedItemCount" : 15,
+  "outputCleanupRemovedItemCount" : 4,
   "outputDirectoryCleaned" : true,
   "outputFileCountAfterCleanup" : 15,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
-    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
-    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
-    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
-    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/96419A99-2691-408D-8289-E41385735025\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
+    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
+    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
+    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
+    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
   },
   "overallPassed" : false,
+  "preCropTextBoxPlanReport" : {
+    "blockSummaries" : [
+      {
+        "blockIndex" : 0,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          0,
+          1,
+          2
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 1,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          3,
+          4,
+          5
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 2,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          6,
+          7,
+          8
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 3,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          9,
+          10,
+          11
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 4,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "protectedDiagnosticOnly",
+        "rejectedPlanIDs" : [
+          12,
+          13
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+
+        ],
+        "stopReasons" : [
+          "geometryEvidenceTooWeak",
+          "protectedDiagnosticOnly"
+        ]
+      },
+      {
+        "blockIndex" : 5,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+          15,
+          16
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          14
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 6,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          17,
+          18,
+          19
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 7,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          20,
+          21,
+          22
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 8,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          23,
+          24,
+          25
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 9,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          26,
+          27,
+          28
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 10,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          29,
+          30,
+          31
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 11,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "shadowOCREligiblePlans",
+        "rejectedPlanIDs" : [
+          33,
+          34
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+          32
+        ],
+        "stopReasons" : [
+
+        ]
+      },
+      {
+        "blockIndex" : 12,
+        "notes" : [
+          "preCropPlanningGeneratedBeforeTextRegionCrop",
+          "shadowOnlyNoFinalTextChange",
+          "groundTruthNotUsed"
+        ],
+        "planningVerdict" : "protectedDiagnosticOnly",
+        "rejectedPlanIDs" : [
+          35,
+          36
+        ],
+        "selectedPlanIDsForShadowOCR" : [
+
+        ],
+        "stopReasons" : [
+          "geometryEvidenceTooWeak",
+          "protectedDiagnosticOnly"
+        ]
+      }
+    ],
+    "enabled" : true,
+    "evaluatedBlockCount" : 13,
+    "notes" : [
+      "Koharu-style upstream TextBox planning artifact generated before TextRegion crop OCR",
+      "plans use fused seed bbox, bubble geometry, BubbleMask majority, subRegion, split candidate, assignment correction, glyph\/SegmentMask proxy, and safe rect signals only",
+      "each block keeps at most three plans eligible for shadow OCR; finalTextUsedForTranslation and TextRegion adoptedCount are unchanged",
+      "ground truth is not used for planning, scoring, ranking, shadow OCR selection, adoption, or fallback"
+    ],
+    "planCount" : 37,
+    "plans" : [
+      {
+        "bbox" : [
+          494,
+          322,
+          63,
+          80
+        ],
+        "blockIndex" : 0,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 0,
+        "dominantBubbleID" : 0,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.98,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 0,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          499,
+          328,
+          53,
+          68
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          489,
+          315,
+          73,
+          94
+        ],
+        "blockIndex" : 0,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 0,
+        "dominantBubbleID" : 0,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.97,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 1,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          499,
+          328,
+          53,
+          68
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:0",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          490,
+          317,
+          62,
+          90
+        ],
+        "blockIndex" : 0,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 0,
+        "dominantBubbleID" : 0,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.96,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 2,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          499,
+          328,
+          53,
+          68
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:0",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          110,
+          352,
+          61,
+          62
+        ],
+        "blockIndex" : 1,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 1,
+        "dominantBubbleID" : 1,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "square",
+        "evidenceScore" : 0.98,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 3,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          115,
+          357,
+          51,
+          52
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          105,
+          347,
+          71,
+          72
+        ],
+        "blockIndex" : 1,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 1,
+        "dominantBubbleID" : 1,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "square",
+        "evidenceScore" : 0.97,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 4,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          115,
+          357,
+          51,
+          52
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:1",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          106,
+          348,
+          69,
+          70
+        ],
+        "blockIndex" : 1,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 1,
+        "dominantBubbleID" : 1,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "square",
+        "evidenceScore" : 0.96,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 5,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          115,
+          357,
+          51,
+          52
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:1",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          490,
+          556,
+          61,
+          46
+        ],
+        "blockIndex" : 2,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 2,
+        "dominantBubbleID" : 2,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "horizontal",
+        "evidenceScore" : 0.98,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 6,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          495,
+          560,
+          51,
+          38
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          485,
+          553,
+          71,
+          52
+        ],
+        "blockIndex" : 2,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 2,
+        "dominantBubbleID" : 2,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "horizontal",
+        "evidenceScore" : 0.97,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 7,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          495,
+          560,
+          51,
+          38
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:2",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          486,
+          553,
+          69,
+          52
+        ],
+        "blockIndex" : 2,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 2,
+        "dominantBubbleID" : 2,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "horizontal",
+        "evidenceScore" : 0.96,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 8,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          495,
+          560,
+          51,
+          38
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:2",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          65,
+          668,
+          50,
+          77
+        ],
+        "blockIndex" : 3,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 3,
+        "dominantBubbleID" : 3,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.98,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 9,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          69,
+          674,
+          42,
+          65
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          61,
+          662,
+          58,
+          89
+        ],
+        "blockIndex" : 3,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 3,
+        "dominantBubbleID" : 3,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.97,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 10,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          69,
+          674,
+          42,
+          65
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:3",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          62,
+          663,
+          56,
+          87
+        ],
+        "blockIndex" : 3,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 3,
+        "dominantBubbleID" : 3,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.96,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 11,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          69,
+          674,
+          42,
+          65
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:3",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          353,
+          844,
+          119,
+          65
+        ],
+        "blockIndex" : 4,
+        "bubbleCoverageRatio" : 0.9503105590062112,
+        "dominantBubbleID" : 5,
+        "eligibleForShadowOCR" : false,
+        "estimatedOrientation" : "horizontal",
+        "evidenceScore" : 0.743037898820938,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 12,
+        "rejectionReasons" : [
+          "protectedDiagnosticOnly"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 0.07488748874887488,
+        "seedBBox" : [
+          362,
+          849,
+          101,
+          55
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          447,
+          878,
+          33,
+          35
+        ],
+        "blockIndex" : 4,
+        "bubbleCoverageRatio" : 0.9503105590062112,
+        "dominantBubbleID" : 5,
+        "eligibleForShadowOCR" : false,
+        "estimatedOrientation" : "horizontal",
+        "evidenceScore" : 0.36951314634569044,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 13,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict"
+        ],
+        "safeRectCoverageRatio" : 0.07488748874887488,
+        "seedBBox" : [
+          362,
+          849,
+          101,
+          55
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:5",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          234,
+          875,
+          58,
+          125
+        ],
+        "blockIndex" : 5,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 7,
+        "dominantBubbleID" : 4,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.9619663551401867,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 14,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 0.8872897196261682,
+        "seedBBox" : [
+          238,
+          884,
+          50,
+          107
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          229,
+          900,
+          68,
+          111
+        ],
+        "blockIndex" : 5,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 7,
+        "dominantBubbleID" : 4,
+        "eligibleForShadowOCR" : false,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.8690691588785046,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 15,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict"
+        ],
+        "safeRectCoverageRatio" : 0.8872897196261682,
+        "seedBBox" : [
+          238,
+          884,
+          50,
+          107
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:7",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          230,
+          877,
+          55,
+          108
+        ],
+        "blockIndex" : 5,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 7,
+        "dominantBubbleID" : 4,
+        "eligibleForShadowOCR" : false,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.8671700934579439,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 16,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict"
+        ],
+        "safeRectCoverageRatio" : 0.8872897196261682,
+        "seedBBox" : [
+          238,
+          884,
+          50,
+          107
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:4",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          148,
+          899,
+          75,
+          79
+        ],
+        "blockIndex" : 6,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 4,
+        "dominantBubbleID" : 4,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "square",
+        "evidenceScore" : 0.98,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 17,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          154,
+          905,
+          63,
+          67
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          142,
+          892,
+          87,
+          93
+        ],
+        "blockIndex" : 6,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 4,
+        "dominantBubbleID" : 4,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "square",
+        "evidenceScore" : 0.97,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 18,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          154,
+          905,
+          63,
+          67
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:4",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          143,
+          894,
+          85,
+          89
+        ],
+        "blockIndex" : 6,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 4,
+        "dominantBubbleID" : 4,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "square",
+        "evidenceScore" : 0.96,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 19,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          154,
+          905,
+          63,
+          67
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:4",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          500,
+          893,
+          61,
+          67
+        ],
+        "blockIndex" : 7,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 5,
+        "dominantBubbleID" : 5,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "square",
+        "evidenceScore" : 0.98,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 20,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          505,
+          898,
+          51,
+          57
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          495,
+          887,
+          71,
+          79
+        ],
+        "blockIndex" : 7,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 5,
+        "dominantBubbleID" : 5,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "square",
+        "evidenceScore" : 0.97,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 21,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          505,
+          898,
+          51,
+          57
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:5",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          496,
+          888,
+          62,
+          77
+        ],
+        "blockIndex" : 7,
+        "bubbleCoverageRatio" : 1,
+        "bubbleID" : 5,
+        "dominantBubbleID" : 5,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "square",
+        "evidenceScore" : 0.96,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 22,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          505,
+          898,
+          51,
+          57
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:5",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          41,
+          959,
+          79,
+          110
+        ],
+        "blockIndex" : 8,
+        "bubbleCoverageRatio" : 0.7402349952365831,
+        "bubbleID" : 6,
+        "dominantBubbleID" : 6,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.933242299142585,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 23,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          47,
+          967,
+          67,
+          94
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          34,
+          950,
+          93,
+          128
+        ],
+        "blockIndex" : 8,
+        "bubbleCoverageRatio" : 0.7402349952365831,
+        "bubbleID" : 6,
+        "dominantBubbleID" : 6,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.923242299142585,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 24,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          47,
+          967,
+          67,
+          94
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:6",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          36,
+          951,
+          89,
+          126
+        ],
+        "blockIndex" : 8,
+        "bubbleCoverageRatio" : 0.7402349952365831,
+        "bubbleID" : 6,
+        "dominantBubbleID" : 6,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.913242299142585,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 25,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          47,
+          967,
+          67,
+          94
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:6",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          115,
+          972,
+          43,
+          70
+        ],
+        "blockIndex" : 9,
+        "bubbleCoverageRatio" : 0.5333333333333333,
+        "bubbleID" : 6,
+        "dominantBubbleID" : 6,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.8959999999999999,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 26,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          118,
+          977,
+          37,
+          60
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          111,
+          966,
+          51,
+          82
+        ],
+        "blockIndex" : 9,
+        "bubbleCoverageRatio" : 0.5333333333333333,
+        "bubbleID" : 6,
+        "dominantBubbleID" : 6,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.886,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 27,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          118,
+          977,
+          37,
+          60
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:6",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          112,
+          967,
+          49,
+          80
+        ],
+        "blockIndex" : 9,
+        "bubbleCoverageRatio" : 0.5333333333333333,
+        "bubbleID" : 6,
+        "dominantBubbleID" : 6,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.876,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 28,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          118,
+          977,
+          37,
+          60
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:6",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          276,
+          954,
+          64,
+          90
+        ],
+        "blockIndex" : 10,
+        "bubbleCoverageRatio" : 0.7792397660818714,
+        "bubbleID" : 7,
+        "dominantBubbleID" : 7,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.9402631578947369,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 29,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          281,
+          961,
+          54,
+          76
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          271,
+          947,
+          74,
+          104
+        ],
+        "blockIndex" : 10,
+        "bubbleCoverageRatio" : 0.7792397660818714,
+        "bubbleID" : 7,
+        "dominantBubbleID" : 7,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.9302631578947369,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 30,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          281,
+          961,
+          54,
+          76
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:7",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          272,
+          948,
+          72,
+          102
+        ],
+        "blockIndex" : 10,
+        "bubbleCoverageRatio" : 0.7792397660818714,
+        "bubbleID" : 7,
+        "dominantBubbleID" : 7,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.9202631578947369,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 31,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          281,
+          961,
+          54,
+          76
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:7",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          286,
+          960,
+          42,
+          62
+        ],
+        "blockIndex" : 11,
+        "bubbleCoverageRatio" : 0.7339743589743589,
+        "bubbleID" : 4,
+        "dominantBubbleID" : 7,
+        "eligibleForShadowOCR" : true,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.9321153846153847,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 32,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          289,
+          965,
+          36,
+          52
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          283,
+          956,
+          48,
+          70
+        ],
+        "blockIndex" : 11,
+        "bubbleCoverageRatio" : 0.7339743589743589,
+        "bubbleID" : 4,
+        "dominantBubbleID" : 7,
+        "eligibleForShadowOCR" : false,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.8621153846153846,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 33,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict"
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          289,
+          965,
+          36,
+          52
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:7",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      },
+      {
+        "bbox" : [
+          282,
+          955,
+          23,
+          50
+        ],
+        "blockIndex" : 11,
+        "bubbleCoverageRatio" : 0.7339743589743589,
+        "bubbleID" : 4,
+        "dominantBubbleID" : 7,
+        "eligibleForShadowOCR" : false,
+        "estimatedOrientation" : "vertical",
+        "evidenceScore" : 0.5473290598290599,
+        "notes" : [
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "planID" : 34,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict"
+        ],
+        "safeRectCoverageRatio" : 1,
+        "seedBBox" : [
+          289,
+          965,
+          36,
+          52
+        ],
+        "sourceSignals" : [
+          "bubbleGeometry",
+          "bubbleID:4",
+          "fusedSeedBBox"
+        ],
+        "variantName" : "bubbleContainedTextBox"
+      },
+      {
+        "bbox" : [
+          376,
+          972,
+          124,
+          76
+        ],
+        "blockIndex" : 12,
+        "bubbleCoverageRatio" : 0.6040901940220241,
+        "dominantBubbleID" : 7,
+        "eligibleForShadowOCR" : false,
+        "estimatedOrientation" : "horizontal",
+        "evidenceScore" : 0.6687362349239644,
+        "notes" : [
+          "most conservative upstream TextBox plan"
+        ],
+        "planID" : 35,
+        "rejectionReasons" : [
+          "protectedDiagnosticOnly"
+        ],
+        "riskFlags" : [
+
+        ],
+        "safeRectCoverageRatio" : 0,
+        "seedBBox" : [
+          385,
+          978,
+          106,
+          64
+        ],
+        "sourceSignals" : [
+          "fusedSeedBBox",
+          "ocrObservationBBox"
+        ],
+        "variantName" : "seedTightTextBox"
+      },
+      {
+        "bbox" : [
+          368,
+          967,
+          9,
+          86
+        ],
+        "blockIndex" : 12,
+        "bubbleCoverageRatio" : 0.6040901940220241,
+        "dominantBubbleID" : 7,
+        "eligibleForShadowOCR" : false,
+        "estimatedOrientation" : "horizontal",
+        "evidenceScore" : 0.2787362349239644,
+        "notes" : [
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "planID" : 36,
+        "rejectionReasons" : [
+
+        ],
+        "riskFlags" : [
+          "bubbleMaskConflict"
+        ],
+        "safeRectCoverageRatio" : 0,
+        "seedBBox" : [
+          385,
+          978,
+          106,
+          64
+        ],
+        "sourceSignals" : [
+          "BubbleMask",
+          "maskMajorityID:7",
+          "maskSafeRect"
+        ],
+        "variantName" : "maskMajorityTextBox"
+      }
+    ],
+    "selectedForShadowOCRBlocks" : [
+      0,
+      1,
+      2,
+      3,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "shadowOCREligiblePlanCount" : 29,
+    "stoppedBlocks" : [
+      4,
+      12
+    ]
+  },
   "retainedOutputFiles" : [
     "1_block_crops.png",
     "1_bubble_crops.png",

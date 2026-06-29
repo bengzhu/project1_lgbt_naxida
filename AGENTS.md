@@ -76,7 +76,7 @@ test/1.png
 - 不要在未证明收益前把 deterministic correction、bubble-first 或 batch translation 替换为主流程。
 
 ## 5. 当前真实基线
-当前可信基线以最新 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 为准。最近记录的 v17 / 当前输出基线是：
+当前可信基线以最新 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 为准。最近记录的 v18 / 当前输出基线是：
 
 - `configuration.currentBlockSource = fusedWholePageBubble`
 - `totalBlocksDetected = 13`
@@ -98,12 +98,16 @@ test/1.png
 - `textRegionCropReport.adoptedCount = 0`
 - `textRegionCropReport.rejectedCount = 13`
 - `textBoxCandidateReport.usedForCropBlocks = []`
-- `cropExperimentReport.candidateCount = 52`
+- `preCropTextBoxPlanReport.planCount = 37`
+- `preCropTextBoxPlanReport.shadowOCREligiblePlanCount = 29`
+- `preCropTextBoxPlanReport.selectedForShadowOCRBlocks = [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11]`
+- `preCropTextBoxPlanReport.stoppedBlocks = [4, 12]`
+- `cropExperimentReport.candidateCount = 48`
 - `cropExperimentReport.controlCandidateCount = 13`
-- `cropExperimentReport.ocrSucceededCount = 43`
-- `cropExperimentReport.betterThanControlCount = 15`
+- `cropExperimentReport.ocrSucceededCount = 36`
+- `cropExperimentReport.betterThanControlCount = 13`
 - `cropExperimentReport.promotedShadowBlocks = []`
-- `cropExperimentReport.stoppedBlocks = [2, 4, 5, 6, 7, 9, 11, 12]`
+- `cropExperimentReport.stoppedBlocks = [2, 3, 4, 5, 7, 9, 11, 12]`
 - `passedBlocks = 1`
 - `failedBlocks = 12`
 - `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
@@ -118,7 +122,8 @@ test/1.png
 - post-fusion cleanup 已把 16 个融合块压到 13 个，拒绝重复/碎片块但保留三条关键真实内容。
 - TextRegion crop OCR 候选层已接入报告，但本轮 13 个块全部被护栏回退，没有替换主翻译输入。
 - `bubbleAudits` 只做气泡分割风险审计，不替换主流程；当前重点观察 `bubbleID 4/6/7`。
-- `cropExperimentReport` 是 shadow-only 实验矩阵；best shadow candidate 只进入 JSON/TXT 报告，不写回 `finalTextUsedForTranslation`，也不改变 `textRegionCropReport.adoptedCount`。
+- `preCropTextBoxPlanReport` 是 TextRegion crop 前生成的 Koharu 式上游 TextBox plan artifact；每块最多保留 3 个 plan，只用于 shadow OCR，不写回 `finalTextUsedForTranslation`。
+- `cropExperimentReport` 是 shadow-only 实验矩阵；v18 优先使用 `preCropTextBoxPlan.*` 变体作为 shadow OCR 来源，best shadow candidate 只进入 JSON/TXT 报告，不写回 `finalTextUsedForTranslation`，也不改变 `textRegionCropReport.adoptedCount`。
 - tagged batch translation 当前格式崩坏，只保留诊断分支。
 
 ## 6. 翻译失败排查顺序

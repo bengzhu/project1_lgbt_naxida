@@ -158,13 +158,17 @@ python3 -m json.tool test/1.ground_truth.json
 - `bubbleSplitCandidateReport.clampEligibleCount = 3`
 - `bubbleSplitCandidateReport.appliedToCropClampBlocks = [5, 9, 10]`
 - `textBoxCandidateReport.usedForCropBlocks = []`
-- `cropExperimentReport.candidateCount = 52`
+- `preCropTextBoxPlanReport.planCount = 37`
+- `preCropTextBoxPlanReport.shadowOCREligiblePlanCount = 29`
+- `preCropTextBoxPlanReport.selectedForShadowOCRBlocks = [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11]`
+- `preCropTextBoxPlanReport.stoppedBlocks = [4, 12]`
+- `cropExperimentReport.candidateCount = 48`
 - `cropExperimentReport.controlCandidateCount = 13`
-- `cropExperimentReport.ocrSucceededCount = 43`
-- `cropExperimentReport.betterThanControlCount = 15`
+- `cropExperimentReport.ocrSucceededCount = 36`
+- `cropExperimentReport.betterThanControlCount = 13`
 - `cropExperimentReport.promotedShadowBlocks = []`
-- `cropExperimentReport.stoppedBlocks = [2, 4, 5, 6, 7, 9, 11, 12]`
-- `cropExperimentReport` 每块候选数最大为 4，即 control + 最多 3 个 shadow 候选
+- `cropExperimentReport.stoppedBlocks = [2, 3, 4, 5, 7, 9, 11, 12]`
+- `cropExperimentReport` 每块候选数最大为 4，即 control + 最多 3 个 shadow 候选；v18 shadow 候选优先来自 `preCropTextBoxPlan.*`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
 - `failedBlocks = 12`

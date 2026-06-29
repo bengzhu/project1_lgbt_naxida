@@ -714,6 +714,7 @@ struct MangaOverlayProbeService: Sendable {
         textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
         textBoxCandidateReport: MangaOverlayTextBoxCandidateReport? = nil,
         segmentMaskReport: MangaOverlaySegmentMaskReport? = nil,
+        preCropTextBoxPlanReport: MangaOverlayPreCropTextBoxPlanReport? = nil,
         cropExperimentReport: MangaOverlayCropExperimentReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -750,6 +751,7 @@ struct MangaOverlayProbeService: Sendable {
                 textRegionCropReport: textRegionCropReport,
                 textBoxCandidateReport: textBoxCandidateReport,
                 segmentMaskReport: segmentMaskReport,
+                preCropTextBoxPlanReport: preCropTextBoxPlanReport,
                 cropExperimentReport: cropExperimentReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -1399,6 +1401,7 @@ struct MangaOverlayProbeService: Sendable {
         textRegionCropReport: MangaOverlayTextRegionCropReport?,
         textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?,
         segmentMaskReport: MangaOverlaySegmentMaskReport?,
+        preCropTextBoxPlanReport: MangaOverlayPreCropTextBoxPlanReport?,
         cropExperimentReport: MangaOverlayCropExperimentReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
@@ -1413,6 +1416,12 @@ struct MangaOverlayProbeService: Sendable {
         )
         let segmentByBlock = Dictionary(
             uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let preCropPlanSummaryByBlock = Dictionary(
+            uniqueKeysWithValues: (preCropTextBoxPlanReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let preCropPlanByID = Dictionary(
+            uniqueKeysWithValues: (preCropTextBoxPlanReport?.plans ?? []).map { ($0.planID, $0) }
         )
         let experimentSummaryByBlock = Dictionary(
             uniqueKeysWithValues: (cropExperimentReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
@@ -1504,6 +1513,13 @@ struct MangaOverlayProbeService: Sendable {
             let segmentTextBoxCoverage = segment?.textBoxCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let segmentBubbleCoverage = segment?.bubbleMaskCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let segmentRejections = segment?.rejectionReasons.joined(separator: " | ") ?? "nil"
+            let preCropSummary = preCropPlanSummaryByBlock[block.index]
+            let preCropSelectedPlans = preCropSummary?.selectedPlanIDsForShadowOCR
+                .compactMap { preCropPlanByID[$0] }
+                .map { "\($0.planID):\($0.variantName):score=\($0.evidenceScore.formatted(.number.precision(.fractionLength(3)))) bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))]" }
+                .joined(separator: " | ") ?? "nil"
+            let preCropRejectedPlans = preCropSummary?.rejectedPlanIDs.map(String.init).joined(separator: ",") ?? "nil"
+            let preCropStopReasons = preCropSummary?.stopReasons.joined(separator: " | ") ?? "nil"
             let experimentSummary = experimentSummaryByBlock[block.index]
             let controlCandidate = experimentSummary?.controlCandidateID.flatMap { experimentCandidateByID[$0] }
             let bestShadowCandidate = experimentSummary?.bestShadowCandidateID.flatMap { experimentCandidateByID[$0] }
@@ -1554,6 +1570,7 @@ struct MangaOverlayProbeService: Sendable {
             textRegionQualityScore: \(textRegionQuality)
             textBoxCandidate: id=\(textBox.map { String($0.id) } ?? "nil") source=\(textBox?.source ?? "nil") bbox=[\(textBoxBBox)] evidenceScore=\(textBoxScore) eligibleForCrop=\(textBox.map { String($0.eligibleForCrop) } ?? "nil") derivedFromTextRegionCrop=\(textBox.map { String($0.derivedFromTextRegionCrop) } ?? "nil") usedForTextRegionCrop=\(textBox.map { String($0.usedForTextRegionCrop) } ?? "nil") glyphOverlap=\(textBoxGlyphOverlap) bubbleCoverage=\(textBoxBubbleCoverage) rejections=\(textBoxRejections) risks=\(textBoxRisks)
             segmentMask: pixels=\(segment.map { String($0.glyphMaskPixelCount) } ?? "nil") rect=[\(glyphRect)] fillRects=\(segment.map { String($0.glyphMaskFillRectCount) } ?? "nil") textBoxCoverage=\(segmentTextBoxCoverage) bubbleCoverage=\(segmentBubbleCoverage) usableForCropEvidence=\(segment.map { String($0.usableForCropEvidence) } ?? "nil") rejections=\(segmentRejections)
+            preCropTextBoxPlans: shadowOnly=true groundTruthNotUsed=true notWrittenToFinalTextUsedForTranslation=true selected=[\(preCropSelectedPlans)] rejectedPlanIDs=[\(preCropRejectedPlans)] planningVerdict=\(preCropSummary?.planningVerdict ?? "nil") stopReasons=\(preCropStopReasons)
             cropExperiment: controlID=\(experimentSummary?.controlCandidateID.map(String.init) ?? "nil") controlVariant=\(controlCandidate?.variantName ?? "nil") controlText=\(experimentControlText) controlQuality=\(experimentControlQuality) bestShadowID=\(experimentSummary?.bestShadowCandidateID.map(String.init) ?? "nil") bestVariant=\(experimentSummary?.bestVariantName ?? "nil") bestText=\(experimentShadowText) bestQuality=\(experimentShadowQuality) qualityDelta=\(experimentShadowDelta) promotionVerdict=\(experimentSummary?.promotionVerdict ?? "nil") stopReasons=\(experimentStopReasons)
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]

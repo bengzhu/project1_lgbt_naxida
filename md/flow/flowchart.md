@@ -64,7 +64,8 @@ flowchart TD
   Y --> U["BubbleMask 子区域诊断<br/>block-local subregion"]
   U --> BM["BubbleMask 实例 ID 近似<br/>mask-safe layout / collision / crop coverage"]
   BM --> BA["BubbleMask 归属修正 / split candidate<br/>ground-truth-free 保守采用"]
-  BA --> V["TextRegion crop OCR<br/>split / corrected bubble / subregion / bubble / content clamp + 护栏回退"]
+  BA --> PTB["preCropTextBoxPlanReport<br/>TextRegion crop 前上游 plan / shadow-only"]
+  PTB --> V["TextRegion crop OCR<br/>split / corrected bubble / subregion / bubble / content clamp + 护栏回退"]
   V --> GV["ground-truth-free crop 护栏选择<br/>不放宽 adopted 规则"]
   GV --> TB["TextBox / SegmentMask 派生证据层<br/>crop 后诊断 / failure attribution"]
   D --> Z["bubbleAudits<br/>过大气泡和分割候选诊断"]
@@ -83,13 +84,14 @@ flowchart TD
   %% 报告和渲染
   N --> O["safeLayoutRect<br/>多块同气泡分区"]
   O --> P["glyph mask + 背景估计<br/>纯色块才填充"]
-  P --> CE["cropExperimentReport<br/>shadow-only control + 最多 3 个候选"]
+  P --> CE["cropExperimentReport<br/>control + pre-crop plan shadow OCR"]
   P --> Q["覆盖图 / OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
   X --> R
   Y --> R
   V --> R
   GV --> R
+  PTB --> R
   TB --> R
   CE --> R
   Z --> R
