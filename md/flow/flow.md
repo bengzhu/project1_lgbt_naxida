@@ -186,6 +186,7 @@ test/1.png
   -> BubbleMask 归属修正诊断和保守 split candidate
   -> TextRegion crop OCR 候选诊断和 split / corrected bubble / subregion / bubble / content / mask coverage 审计
   -> ground-truth-free crop 护栏选择
+  -> TextBox / SegmentMask crop 后派生诊断和 failure attribution
   -> 自适应 crop 二次 OCR 诊断
   -> 确定性 OCR 纠错对照
   -> 逐块 Local/Mock 翻译

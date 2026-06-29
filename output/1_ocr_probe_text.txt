@@ -35,6 +35,9 @@ textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,insufficientNonB
 textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 1.000
 textRegionQualityScore: 0.511 -> 0.511
+textBoxCandidate: id=0 source=bubbleBBoxTextRegionCropBBox bbox=[478,300,95,143] evidenceScore=0.862 eligibleForCrop=true derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=1.000 bubbleCoverage=0.998 rejections= risks=
+segmentMask: pixels=11455 rect=[401,286,175,165] fillRects=713 textBoxCoverage=1.000 bubbleCoverage=0.998 usableForCropEvidence=true rejections=
+cropFailureAttribution: sameAsFusedText
 safeLayoutRect: [425,297,127,130]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 0
@@ -99,6 +102,9 @@ textRegionAssignmentCorrectionRejectedReason: alreadyConsistent
 textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.571
 textRegionQualityScore: 0.740 -> 0.645
+textBoxCandidate: id=1 source=bubbleBBoxTextRegionCropBBox bbox=[95,319,91,128] evidenceScore=0.782 eligibleForCrop=true derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=0.969 bubbleCoverage=1.000 rejections= risks=
+segmentMask: pixels=6270 rect=[93,323,103,139] fillRects=432 textBoxCoverage=0.969 bubbleCoverage=1.000 usableForCropEvidence=true rejections=
+cropFailureAttribution: introducedLikelyOCRError | localVisionRegression
 safeLayoutRect: [60,326,160,115]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 1
@@ -163,6 +169,9 @@ textRegionAssignmentCorrectionRejectedReason: alreadyConsistent
 textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.794 -> 0.000
+textBoxCandidate: id=2 source=bubbleBBoxTextRegionCropBBox bbox=[480,532,81,94] evidenceScore=0.707 eligibleForCrop=false derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=1.000 bubbleCoverage=1.000 rejections=emptyLocalOCR risks=
+segmentMask: pixels=1182 rect=[497,562,47,34] fillRects=62 textBoxCoverage=1.000 bubbleCoverage=1.000 usableForCropEvidence=true rejections=
+cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [440,537,121,84]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 2
@@ -227,6 +236,9 @@ textRegionAssignmentCorrectionRejectedReason: alreadyConsistent
 textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.808 -> 0.812
+textBoxCandidate: id=3 source=bubbleBBoxTextRegionCropBBox bbox=[45,654,90,105] evidenceScore=0.680 eligibleForCrop=true derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=1.000 bubbleCoverage=1.000 rejections= risks=
+segmentMask: pixels=9907 rect=[0,624,206,170] fillRects=790 textBoxCoverage=1.000 bubbleCoverage=1.000 usableForCropEvidence=true rejections=
+cropFailureAttribution: localVisionRegression | rawWordsLost | wordCountRegression
 safeLayoutRect: [23,647,160,124]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 3
@@ -291,6 +303,9 @@ textRegionAssignmentCorrectionRejectedReason: protectedShortTextDiagnosticOnly
 textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.667
 textRegionQualityScore: 0.611 -> 0.636
+textBoxCandidate: id=4 source=contentRectTextRegionCropBBox bbox=[341,809,143,135] evidenceScore=0.404 eligibleForCrop=false derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=nil bubbleCoverage=0.233 rejections=bubbleMaskCoverageLow | evidenceScoreBelowCropThreshold risks=bubbleMaskConflict | safeRectOverlapLow
+segmentMask: pixels=0 rect=[nil] fillRects=0 textBoxCoverage=nil bubbleCoverage=0.233 usableForCropEvidence=false rejections=missingGlyphMask | segmentOutsideBubbleRisk | unassignedBlockDiagnosticOnly
+cropFailureAttribution: bubbleMaskConflict | insufficientQualityGain | segmentMaskWeak | textBoxTooWide
 safeLayoutRect: [450,881,106,60]
 safeLayoutSource: maskSafeBlockFallback
 maskDominantBubbleID: 5
@@ -355,6 +370,9 @@ textRegionAssignmentCorrectionRejectedReason:
 textRegionSplitCandidateRejectedReason:
 textRegionWordPreservation: 0.500
 textRegionQualityScore: 0.776 -> 0.702
+textBoxCandidate: id=5 source=splitCandidateTextRegionCropBBox bbox=[210,861,95,144] evidenceScore=0.317 eligibleForCrop=false derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=0.706 bubbleCoverage=0.011 rejections=bubbleMaskCoverageLow | evidenceScoreBelowCropThreshold risks=
+segmentMask: pixels=9972 rect=[213,900,172,199] fillRects=835 textBoxCoverage=0.706 bubbleCoverage=0.011 usableForCropEvidence=false rejections=segmentOutsideBubbleRisk
+cropFailureAttribution: bubbleMaskConflict | introducedLikelyOCRError | localVisionRegression | rawWordsLost | segmentMaskWeak
 safeLayoutRect: [91,881,191,84]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 4
@@ -419,6 +437,9 @@ textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,decorativeTitleD
 textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.333
 textRegionQualityScore: 0.862 -> 0.785
+textBoxCandidate: id=6 source=subRegionTextRegionCropBBox bbox=[130,858,111,147] evidenceScore=0.734 eligibleForCrop=true derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=0.928 bubbleCoverage=1.000 rejections= risks=splitCandidateRejected
+segmentMask: pixels=8879 rect=[67,857,166,148] fillRects=705 textBoxCoverage=0.928 bubbleCoverage=1.000 usableForCropEvidence=true rejections=
+cropFailureAttribution: localVisionRegression | rawWordsLost
 safeLayoutRect: [91,881,151,99]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 4
@@ -483,6 +504,9 @@ textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,decorativeTitleD
 textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.773 -> 0.000
+textBoxCandidate: id=7 source=bubbleBBoxTextRegionCropBBox bbox=[485,860,91,132] evidenceScore=0.674 eligibleForCrop=false derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=1.000 bubbleCoverage=0.980 rejections=emptyLocalOCR risks=
+segmentMask: pixels=3134 rect=[507,860,69,132] fillRects=259 textBoxCoverage=1.000 bubbleCoverage=0.980 usableForCropEvidence=true rejections=
+cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [447,878,111,96]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 5
@@ -547,6 +571,9 @@ textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,dominantCoverage
 textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.579
 textRegionQualityScore: 0.773 -> 0.817
+textBoxCandidate: id=8 source=subRegionTextRegionCropBBox bbox=[10,936,141,156] evidenceScore=0.816 eligibleForCrop=true derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=1.000 bubbleCoverage=0.743 rejections= risks=splitCandidateRejected
+segmentMask: pixels=16597 rect=[0,883,231,244] fillRects=1289 textBoxCoverage=1.000 bubbleCoverage=0.743 usableForCropEvidence=true rejections=
+cropFailureAttribution: insufficientQualityGain
 safeLayoutRect: [35,918,70,192]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 6
@@ -611,6 +638,9 @@ textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,dominantCoverage
 textRegionSplitCandidateRejectedReason:
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.808 -> 0.748
+textBoxCandidate: id=9 source=splitCandidateTextRegionCropBBox bbox=[97,959,79,96] evidenceScore=0.542 eligibleForCrop=false derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=1.000 bubbleCoverage=0.521 rejections=evidenceScoreBelowCropThreshold risks=
+segmentMask: pixels=14901 rect=[0,883,231,244] fillRects=1224 textBoxCoverage=1.000 bubbleCoverage=0.521 usableForCropEvidence=true rejections=
+cropFailureAttribution: localVisionRegression | rawWordsLost | wordCountRegression
 safeLayoutRect: [112,919,83,191]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 6
@@ -675,6 +705,9 @@ textRegionAssignmentCorrectionRejectedReason: alreadyConsistent,dominantCoverage
 textRegionSplitCandidateRejectedReason:
 textRegionWordPreservation: 0.417
 textRegionQualityScore: 0.694 -> 0.792
+textBoxCandidate: id=10 source=splitCandidateTextRegionCropBBox bbox=[251,936,114,126] evidenceScore=0.699 eligibleForCrop=true derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=1.000 bubbleCoverage=0.751 rejections= risks=
+segmentMask: pixels=10134 rect=[213,900,172,199] fillRects=843 textBoxCoverage=1.000 bubbleCoverage=0.751 usableForCropEvidence=true rejections=
+cropFailureAttribution: localVisionRegression | rawWordsLost
 safeLayoutRect: [243,972,130,96]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 7
@@ -739,6 +772,9 @@ textRegionAssignmentCorrectionRejectedReason: dominantCoverageBelowClampThreshol
 textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 0.000
 textRegionQualityScore: 0.674 -> 0.000
+textBoxCandidate: id=11 source=bubbleBBoxTextRegionCropBBox bbox=[269,948,36,57] evidenceScore=0.702 eligibleForCrop=false derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=1.000 bubbleCoverage=0.927 rejections=emptyLocalOCR risks=splitCandidateRejected
+segmentMask: pixels=396 rect=[291,966,14,39] fillRects=44 textBoxCoverage=1.000 bubbleCoverage=0.927 usableForCropEvidence=true rejections=
+cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [251,931,120,137]
 safeLayoutSource: maskSafeRect
 maskDominantBubbleID: 7
@@ -803,6 +839,9 @@ textRegionAssignmentCorrectionRejectedReason: decorativeTitleDiagnosticOnly,domi
 textRegionSplitCandidateRejectedReason: nil
 textRegionWordPreservation: 1.000
 textRegionQualityScore: 0.804 -> 0.804
+textBoxCandidate: id=12 source=contentRectTextRegionCropBBox bbox=[360,931,156,158] evidenceScore=0.387 eligibleForCrop=false derivedFromTextRegionCrop=true usedForTextRegionCrop=false glyphOverlap=nil bubbleCoverage=0.273 rejections=bubbleMaskCoverageLow | evidenceScoreBelowCropThreshold risks=bubbleMaskConflict | safeRectOverlapLow
+segmentMask: pixels=0 rect=[nil] fillRects=0 textBoxCoverage=nil bubbleCoverage=0.273 usableForCropEvidence=false rejections=decorativeTitleDiagnosticOnly | missingGlyphMask | segmentOutsideBubbleRisk | unassignedBlockDiagnosticOnly
+cropFailureAttribution: bubbleMaskConflict | sameAsFusedText | segmentMaskWeak | textBoxTooWide
 safeLayoutRect: [244,948,128,119]
 safeLayoutSource: maskSafeBlockFallback
 maskDominantBubbleID: 7

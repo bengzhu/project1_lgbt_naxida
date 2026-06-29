@@ -1073,6 +1073,9 @@ struct MangaOverlayTextRegionCropDiagnostic: Equatable, Codable, Sendable {
     var clampSource: String
     var correctedBubbleID: Int?
     var splitCandidateID: Int?
+    var textBoxCandidateID: Int?
+    var segmentMaskUsableForCropEvidence: Bool?
+    var failureAttribution: [String]
     var cropBBoxBeforeAssignmentCorrection: [Double]?
     var cropBBoxAfterAssignmentCorrection: [Double]?
     var cropMaskCoverageBefore: Double?
@@ -1112,7 +1115,73 @@ struct MangaOverlayTextRegionCropReport: Equatable, Codable, Sendable {
     var adoptedBlockIndexes: [Int]
     var rejectedBlockIndexes: [Int]
     var mainRejectionReasons: [String: Int]
+    var failureAttributionBreakdown: [String: Int]
     var diagnostics: [MangaOverlayTextRegionCropDiagnostic]
+    var notes: [String]
+}
+
+struct MangaOverlayTextBoxCandidateDiagnostic: Equatable, Codable, Sendable {
+    var id: Int
+    var blockIndex: Int
+    var source: String
+    var bbox: [Double]
+    var seedBBox: [Double]
+    var orientationHint: String
+    var bubbleID: Int?
+    var correctedBubbleID: Int?
+    var splitCandidateID: Int?
+    var clampSource: String
+    var paddingX: Double
+    var paddingY: Double
+    var bubbleMaskCoverageRatio: Double?
+    var glyphOverlapRatio: Double?
+    var safeRectOverlapRatio: Double?
+    var evidenceScore: Double
+    var eligibleForCrop: Bool
+    var derivedFromTextRegionCrop: Bool
+    var usedForTextRegionCrop: Bool
+    var rejectionReasons: [String]
+    var riskFlags: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayTextBoxCandidateReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var evaluatedBlockCount: Int
+    var candidateCount: Int
+    var cropEligibleCount: Int
+    var usedForCropBlocks: [Int]
+    var rejectedBlocks: [Int]
+    var diagnostics: [MangaOverlayTextBoxCandidateDiagnostic]
+    var notes: [String]
+}
+
+struct MangaOverlaySegmentMaskDiagnostic: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var textBoxCandidateID: Int?
+    var glyphMaskPixelCount: Int
+    var glyphMaskRect: [Double]?
+    var glyphMaskFillRectCount: Int
+    var textBoxCoverageRatio: Double?
+    var bubbleMaskCoverageRatio: Double?
+    var safeRectCoverageRatio: Double?
+    var glyphEscapesBubble: Bool
+    var glyphEscapesTextBox: Bool
+    var usableForCleanup: Bool
+    var usableForCropEvidence: Bool
+    var rejectionReasons: [String]
+    var riskFlags: [String]
+    var notes: [String]
+}
+
+struct MangaOverlaySegmentMaskReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var evaluatedBlockCount: Int
+    var glyphMaskBlocks: Int
+    var usableForCleanupBlocks: [Int]
+    var usableForCropEvidenceBlocks: [Int]
+    var weakSegmentBlocks: [Int]
+    var diagnostics: [MangaOverlaySegmentMaskDiagnostic]
     var notes: [String]
 }
 
@@ -1328,6 +1397,8 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var fusionComparison: MangaOverlayFusionComparison?
     var fusionResults: [MangaOverlayFusionResult]
     var textRegionCropReport: MangaOverlayTextRegionCropReport?
+    var textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?
+    var segmentMaskReport: MangaOverlaySegmentMaskReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?

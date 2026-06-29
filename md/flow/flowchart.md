@@ -65,16 +65,18 @@ flowchart TD
   U --> BM["BubbleMask 实例 ID 近似<br/>mask-safe layout / collision / crop coverage"]
   BM --> BA["BubbleMask 归属修正 / split candidate<br/>ground-truth-free 保守采用"]
   BA --> V["TextRegion crop OCR<br/>split / corrected bubble / subregion / bubble / content clamp + 护栏回退"]
+  V --> GV["ground-truth-free crop 护栏选择<br/>不放宽 adopted 规则"]
+  GV --> TB["TextBox / SegmentMask 派生证据层<br/>crop 后诊断 / failure attribution"]
   D --> Z["bubbleAudits<br/>过大气泡和分割候选诊断"]
   Z --> U
 
   %% 诊断旁路：不替代主流程
-  V --> H["自适应 crop 二次 OCR<br/>诊断和候选对照"]
-  V --> I["确定性 OCR 纠错候选<br/>只做对照"]
-  V --> K["slice OCR 对照<br/>长图触发"]
+  TB --> H["自适应 crop 二次 OCR<br/>诊断和候选对照"]
+  TB --> I["确定性 OCR 纠错候选<br/>只做对照"]
+  TB --> K["slice OCR 对照<br/>长图触发"]
 
   %% 翻译：逐块主路径
-  V --> L["逐块英译中<br/>Mock 或 Local GGUF"]
+  TB --> L["逐块英译中<br/>Mock 或 Local GGUF"]
   L --> M["候选抽取与质量判定<br/>raw / candidate / failureCategory"]
   M --> N["失败块保留<br/>blockPassed=false + failureReasons"]
 
@@ -86,6 +88,8 @@ flowchart TD
   X --> R
   Y --> R
   V --> R
+  GV --> R
+  TB --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
   M --> T["1_ocr_probe_text.txt<br/>逐块文本快照"]
