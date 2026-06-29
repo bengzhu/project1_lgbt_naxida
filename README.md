@@ -160,7 +160,7 @@ test/
 - `blocks[].ocrProbeNotes`：逐块记录 OCR 和人工真值的相似度、质量标签、已知 OCR 混淆提示。
 - `diagnostics`：本轮整体排查汇总，统计通过/失败块、空候选、占位输出、复读原文、非中文输出、raw 输出类型、候选抽取丢弃、平均 OCR 真值相似度、疑似 OCR 问题块、疑似规则误伤块、失败分类分布、中文候选失败原因分布、翻译语言质量通过/失败块、硬通过但质量可疑块。
 - `diagnostics.averageCoreDialogueOCRSimilarity` / `averageDecorativeOCRSimilarity` / `groundTruthMatchedBlocks` / `groundTruthUnmatchedBlocks` / `wordOrderFailedBlocks` / `repeatedKeywordFailures`：可信匹配后的核心对话/装饰文字分开统计、未匹配块计数、词序失败块和高频专有名词损坏追踪。
-- `configuration.currentBlockSource`：记录当前块来源。当前是整图 OCR observations 的空间聚类/去重，即 (a)，不是图像层面的气泡连通域检测。
+- `configuration.currentBlockSource`：记录当前块来源。当前是 `fusedWholePageBubble`，即 whole-page OCR 与 bubble-first OCR 的无真值融合主流程。
 - `configuration.preprocessing`：记录本轮预处理增强开关，包含灰度、对比亮度、自适应二值化、裁切放大、锐化和放大倍数。
 - `configuration.customLexiconEnabled` / `customLexicon`：记录 Vision `customWords` 是否启用和本轮词表。
 - `blocks[].rawOcrText` / `afterPreprocessingOcrText` / `finalTextUsedForTranslation`：记录原始 OCR、裁切预处理后二次 OCR、最终送翻译文本。当前预处理结果只用于对比展示，不替换整图 OCR 主流程。
@@ -172,6 +172,7 @@ test/
 - `visionAPIComparison`：旧 `VNRecognizeTextRequest` 与 iOS 18+ Swift 原生 `RecognizeTextRequest` 的 0° OCR 对比。当前只作为独立探针，不替换主流程。
 - `frameworkComparison`：整页 OCR 与 bubble-first 对照。差集列表、交集数量和汇总准确率都从最终明细现场计算，`consistencyPassed` 必须为 `true`；如果计数和列表不一致，会写入 `consistencyWarnings`。
 - `fusionComparison` / `fusionResults`：whole-page 与 bubble-first 的融合主流程审计。候选选择只用 bbox、bubbleID、文本相似度、OCR 置信度和文本质量等无真值信号；ground truth 只用于事后评估。报告会记录被选来源、竞争候选、替换原因和拒绝原因。
+- `cropExperimentReport`：TextRegion crop 的 shadow-only 实验矩阵。control 使用当前 TextRegion crop，每块最多额外跑 3 个候选；`bestShadowCandidate` 只进入 JSON/TXT 报告，不替换 `finalTextUsedForTranslation`，也不放宽 `textRegionCropReport.adoptedCount`。
 - `cleanTextDiagnostic` / `output/clean_text_diagnostic.json`：跳过 OCR，直接把 `test/1.ground_truth.json` 中的 dialogue 真值送入当前翻译链路，用于判断失败来自 OCR 噪声还是当前 Local 模型/判定链路。
 - `overallPassed`：至少 1 个块、所有块通过质量判定、两张 PNG 非空才为 `true`。
 - `outputDirectoryCleaned` / `retainedOutputFiles` / `outputCleanupPolicy`：记录本轮输出目录是否按清理策略重建，以及本轮最终保留的 PNG/JSON 文件名。
@@ -415,6 +416,8 @@ bash Tools/build-llama-ios-xcframework.sh
 - 本次未提交工作区 v15 实测指标：iPhone 17 Pro 模拟器重新跑 `test/1.png` 并导出，`assignmentCorrection = { evaluatedBlockCount: 13, recommendedCorrectionBlocks: [5,11], appliedToCropClampBlocks: [5], rejectedCorrectionBlocks: [4,11,12] }`，`splitCandidateReport = { parentBubbleIDs: [4,6,7], candidateCount: 6, clampEligibleCount: 3, appliedToCropClampBlocks: [5,9,10] }`。TextRegion crop 仍为 `13 regions / 10 succeeded / 0 adopted / 13 rejected`，主指标保持 `13 matched / 0 unmatched`、核心 OCR `0.7106`、装饰 `0.8000`、`fusion.fused.accuracyVsGroundTruth = 0.7384`、`cleanTextDiagnostic.passRate = 0.4545`、`passed/failed = 1/12`，三条保护文本仍保留。
 - 本次未提交工作区 v16：新增轻量 `textBoxCandidateReport`、`segmentMaskReport` 和 `textRegionCropReport.failureAttributionBreakdown`。这些字段把现有 crop bbox、glyph mask、BubbleMask coverage、safe rect 和拒绝原因组织成 TextBoxes / SegmentMask 证据层；它们只做诊断，不引入新模型、不用 ground truth 选候选、不放宽 crop 采用护栏。
 - 本次未提交工作区 v16 实测指标：iPhone 17 Pro 模拟器重新跑 `test/1.png` 并导出，`textBoxCandidateReport = { candidateCount: 13, cropEligibleCount: 6, usedForCropBlocks: [], rejectedBlocks: [2,4,5,7,9,11,12] }`，`segmentMaskReport = { glyphMaskBlocks: 11, usableForCropEvidenceBlocks: [0,1,2,3,6,7,8,9,10,11], weakSegmentBlocks: [4,5,12] }`，`failureAttributionBreakdown = { localVisionRegression: 6, rawWordsLost: 5, bubbleMaskConflict: 3, emptyLocalOCR: 3, segmentMaskWeak: 3, textBoxTooWide: 2, introducedLikelyOCRError: 2, wordCountRegression: 2, sameAsFusedText: 2, insufficientQualityGain: 2 }`。TextBox 候选本轮是 TextRegion crop 之后派生的诊断层，未作为上游 crop clamp 输入。TextRegion crop 仍为 `13/10/0/13`，主指标保持 `13 matched / 0 unmatched`、核心 OCR `0.7106`、装饰 `0.8000`，三条保护文本仍保留。
+- 本次未提交工作区 v17：新增 shadow-only `cropExperimentReport`。每块以当前 TextRegion crop 作为 control，再最多运行 3 个额外候选，来源限定在 TextBox、SegmentMask/glyph、BubbleMask mask-safe rect、split candidate、corrected bubble 或 subregion 等现有结构证据；`bestShadowCandidate` 和 `promotionVerdict` 只写报告和 `1_ocr_probe_text.txt`，不写回 `finalTextUsedForTranslation`。
+- 本次未提交工作区 v17 实测指标：iPhone 17 Pro 模拟器重新跑 `test/1.png` 并导出，`cropExperimentReport = { candidateCount: 52, controlCandidateCount: 13, ocrSucceededCount: 43, betterThanControlCount: 15, promotedShadowBlocks: [], stoppedBlocks: [2,4,5,6,7,9,11,12] }`，每块候选数最大为 4。variant 尝试数：`textBoxTight=13`、`maskSafeRectConstrained=13`、`glyphMaskExpanded=10`、`conservativeSeedBBox=2`、`splitCandidateClamp=1`、`currentTextRegionCrop=13`。TextRegion crop adopted 仍为 `0`，TextBox `usedForCropBlocks=[]`，主指标保持 `13 matched / 0 unmatched`、核心 OCR `0.7106`、装饰 `0.8000`，融合清理 `missingKeyTexts=[]`。
 
 ## 后续对话指引
 

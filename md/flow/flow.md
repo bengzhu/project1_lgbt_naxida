@@ -192,6 +192,7 @@ test/1.png
   -> 逐块 Local/Mock 翻译
   -> clean text / batch / whole-page / bubble-first / slice OCR 对照
   -> glyph mask / 背景估计 / 安全布局 / 离屏碰撞检查
+  -> TextRegion crop shadow 实验矩阵（control + 最多 3 个候选，不替换主输入）
   -> JSON / TXT / PNG 输出
 ```
 
@@ -263,6 +264,7 @@ test/1.png
   -> BubbleMask 归属修正 / split candidate 诊断
   -> TextRegion crop OCR 候选诊断和护栏选择
   -> TranslationSessionStore.translateMangaProbeBlock
+  -> TextBox / SegmentMask 派生诊断和 crop experiment shadow 矩阵
   -> makeMangaOverlayProbeDiagnostics
   -> render overlays / contact sheet
   -> write JSON / TXT / PNG
@@ -287,6 +289,7 @@ test/1.png
 - clean text 失败时优先怀疑模型质量，不继续盲调 OCR。
 - bubble-first 当前参与融合主流程；whole-page 原始块和 bubble-first 原始候选仍保留为对照和回退审计。
 - TextRegion crop 当前是结构化候选层；v15 会优先尝试可信 split candidate 或 corrected bubble mask，再回退到 block-local subregion、bubble bbox 或 content rect。只有通过 ground-truth-free 护栏才可替换主翻译输入，本轮 0 块采用。
+- v17 `cropExperimentReport` 是 shadow-only 实验矩阵；control 使用当前 TextRegion crop，每块最多再跑 3 个候选，`bestShadowCandidate` 和 `promotionVerdict` 不替换 `finalTextUsedForTranslation`，也不改变 `textRegionCropReport.adoptedCount`。
 - BubbleMask 当前是 bbox/rounded-rect 近似实例 ID mask，用于 seed 归属、归属修正诊断、保守 split candidate、mask-safe layout、crop coverage 和渲染碰撞诊断；不是 Koharu 真实分割 mask，不能把布局收益冒充 OCR 提升。
 - 确定性纠错当前是对照路径，不替换 `finalTextUsedForTranslation`。
 - tagged batch 当前是负面诊断，不替换逐块翻译。

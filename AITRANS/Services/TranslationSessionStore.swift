@@ -1507,6 +1507,7 @@ final class TranslationSessionStore: ObservableObject {
                 var textRegionCropReport: MangaOverlayTextRegionCropReport?
                 var textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?
                 var segmentMaskReport: MangaOverlaySegmentMaskReport?
+                var cropExperimentReport: MangaOverlayCropExperimentReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1707,6 +1708,22 @@ final class TranslationSessionStore: ObservableObject {
                     mergingTextBoxCandidateReport: textBoxCandidateReport,
                     segmentMaskReport: segmentMaskReport
                 )
+                if let textRegionCropReport, let textBoxCandidateReport, let segmentMaskReport {
+                    self.mangaOverlayProbeMessage = "正在运行 TextRegion crop shadow 实验矩阵"
+                    cropExperimentReport = try await self.makeCropExperimentReport(
+                        blocks: probeBlocks,
+                        image: recognized.image,
+                        bubbleGeometry: recognized.bubbleGeometry,
+                        textRegionCropReport: textRegionCropReport,
+                        textBoxCandidateReport: textBoxCandidateReport,
+                        segmentMaskReport: segmentMaskReport,
+                        bubbleMaskReport: bubbleMaskReport,
+                        bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                        bubbleSplitCandidateReport: bubbleSplitCandidateReport,
+                        bubbleSubRegionReport: bubbleSubRegionReport,
+                        preprocessing: probeConfiguration.preprocessing
+                    )
+                }
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
@@ -1718,6 +1735,7 @@ final class TranslationSessionStore: ObservableObject {
                     textRegionCropReport: textRegionCropReport,
                     textBoxCandidateReport: textBoxCandidateReport,
                     segmentMaskReport: segmentMaskReport,
+                    cropExperimentReport: cropExperimentReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport
@@ -1774,6 +1792,7 @@ final class TranslationSessionStore: ObservableObject {
                     textRegionCropReport: textRegionCropReport,
                     textBoxCandidateReport: textBoxCandidateReport,
                     segmentMaskReport: segmentMaskReport,
+                    cropExperimentReport: cropExperimentReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -3132,6 +3151,529 @@ final class TranslationSessionStore: ObservableObject {
             diagnostics: diagnostics,
             notes: notes
         )
+    }
+
+    private struct CropExperimentPlan: Equatable {
+        var variantName: String
+        var sourceStack: [String]
+        var bbox: [Double]
+        var clampSource: String
+        var riskFlags: [String]
+        var rejectionReasons: [String]
+        var notes: [String]
+    }
+
+    private func makeCropExperimentReport(
+        blocks: [MangaOverlayProbeBlock],
+        image: CGImage,
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        textRegionCropReport: MangaOverlayTextRegionCropReport,
+        textBoxCandidateReport: MangaOverlayTextBoxCandidateReport,
+        segmentMaskReport: MangaOverlaySegmentMaskReport,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
+        bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?,
+        preprocessing: MangaOverlayPreprocessingOptions
+    ) async throws -> MangaOverlayCropExperimentReport {
+        let cropByBlock = Dictionary(uniqueKeysWithValues: textRegionCropReport.diagnostics.map { ($0.blockIndex, $0) })
+        let textBoxByBlock = Dictionary(uniqueKeysWithValues: textBoxCandidateReport.diagnostics.map { ($0.blockIndex, $0) })
+        let segmentByBlock = Dictionary(uniqueKeysWithValues: segmentMaskReport.diagnostics.map { ($0.blockIndex, $0) })
+        let maskByBlock = Dictionary(uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) })
+        let correctionByBlock = Self.assignmentCorrectionsByBlock(from: bubbleAssignmentCorrectionReport)
+        let splitByBlock = Self.splitCandidatesByBlock(from: bubbleSplitCandidateReport)
+        let subRegionByBlock = Self.subRegionDiagnosticsByBlock(from: bubbleSubRegionReport)
+        let bubbleBBoxes = Dictionary(uniqueKeysWithValues: bubbleGeometry.bubbles.map { ($0.id, $0.bbox) })
+
+        var nextCandidateID = 0
+        var candidates: [MangaOverlayCropExperimentCandidate] = []
+        var summaries: [MangaOverlayCropExperimentBlockSummary] = []
+
+        for block in blocks {
+            guard let control = cropByBlock[block.index] else { continue }
+            let originalText = block.finalTextUsedForTranslation
+            let originalWords = Self.ocrCandidateWords(originalText)
+            let originalQuality = Self.ocrCandidateQualityScore(originalText)
+            let controlQuality = Self.ocrCandidateQualityScore(control.textRegionCropText ?? "")
+            let controlCandidateID = nextCandidateID
+            let controlCandidate = Self.cropExperimentCandidate(
+                candidateID: controlCandidateID,
+                blockIndex: block.index,
+                variantName: "currentTextRegionCrop",
+                sourceStack: [control.source, control.clampSource, "existingTextRegionCrop"],
+                bboxBeforeClamp: control.regionBBox,
+                bboxAfterClamp: control.cropBBox,
+                clampSource: control.clampSource,
+                ocrText: control.textRegionCropText,
+                originalText: originalText,
+                originalWords: originalWords,
+                originalQuality: originalQuality,
+                controlQuality: controlQuality,
+                riskFlags: control.failureAttribution,
+                rejectionReasons: control.rejectionReasons,
+                notes: ["controlCandidate", "existing TextRegion crop result reused; no extra OCR call"]
+            )
+            candidates.append(controlCandidate)
+            nextCandidateID += 1
+
+            let plans = Self.cropExperimentPlans(
+                for: block,
+                control: control,
+                textBox: textBoxByBlock[block.index],
+                segment: segmentByBlock[block.index],
+                mask: maskByBlock[block.index],
+                correction: correctionByBlock[block.index],
+                split: splitByBlock[block.index],
+                subRegion: subRegionByBlock[block.index],
+                bubbleBBoxes: bubbleBBoxes
+            )
+
+            var blockCandidateIDs = [controlCandidateID]
+            var shadowCandidates: [MangaOverlayCropExperimentCandidate] = []
+            for plan in plans.prefix(3) {
+                let crop = try await mangaOverlayProbeService.recognizeTextRegionCrop(
+                    in: image,
+                    seedBBox: plan.bbox,
+                    bubbleBBox: block.bubbleID.flatMap { bubbleBBoxes[$0] },
+                    correctedBubbleBBox: plan.clampSource == "correctedBubbleMask" ? plan.bbox : nil,
+                    splitCandidateBBox: plan.clampSource == "splitCandidate" ? plan.bbox : nil,
+                    subRegionBBox: plan.clampSource == "subRegion" ? plan.bbox : nil,
+                    options: preprocessing
+                )
+                let candidate = Self.cropExperimentCandidate(
+                    candidateID: nextCandidateID,
+                    blockIndex: block.index,
+                    variantName: plan.variantName,
+                    sourceStack: plan.sourceStack,
+                    bboxBeforeClamp: plan.bbox,
+                    bboxAfterClamp: crop.cropBBox,
+                    clampSource: crop.clampSource,
+                    ocrText: crop.text,
+                    originalText: originalText,
+                    originalWords: originalWords,
+                    originalQuality: originalQuality,
+                    controlQuality: controlQuality,
+                    riskFlags: plan.riskFlags,
+                    rejectionReasons: plan.rejectionReasons,
+                    notes: plan.notes
+                )
+                candidates.append(candidate)
+                shadowCandidates.append(candidate)
+                blockCandidateIDs.append(nextCandidateID)
+                nextCandidateID += 1
+            }
+
+            let bestShadow = Self.bestCropExperimentShadowCandidate(
+                shadowCandidates,
+                control: controlCandidate
+            )
+            let verdict = Self.cropExperimentVerdict(
+                block: block,
+                control: controlCandidate,
+                bestShadow: bestShadow,
+                segment: segmentByBlock[block.index],
+                textBox: textBoxByBlock[block.index]
+            )
+            summaries.append(
+                MangaOverlayCropExperimentBlockSummary(
+                    blockIndex: block.index,
+                    controlCandidateID: controlCandidateID,
+                    bestShadowCandidateID: bestShadow?.candidateID,
+                    bestVariantName: bestShadow?.variantName,
+                    promotionVerdict: verdict.promotionVerdict,
+                    stopReasons: verdict.stopReasons,
+                    candidateIDs: blockCandidateIDs,
+                    notes: verdict.notes
+                )
+            )
+        }
+
+        let promotedBlocks = summaries
+            .filter { $0.promotionVerdict == "promotableShadowCandidate" }
+            .map(\.blockIndex)
+            .sorted()
+        let stoppedBlocks = summaries
+            .filter { !$0.stopReasons.isEmpty }
+            .map(\.blockIndex)
+            .sorted()
+        return MangaOverlayCropExperimentReport(
+            enabled: true,
+            evaluatedBlockCount: summaries.count,
+            candidateCount: candidates.count,
+            controlCandidateCount: candidates.filter { $0.variantName == "currentTextRegionCrop" }.count,
+            ocrSucceededCount: candidates.filter(\.ocrSucceeded).count,
+            betterThanControlCount: candidates.filter(\.betterThanControl).count,
+            promotedShadowBlocks: promotedBlocks,
+            stoppedBlocks: stoppedBlocks,
+            variantBreakdown: Self.cropExperimentVariantBreakdown(candidates: candidates, summaries: summaries),
+            blockSummaries: summaries.sorted { $0.blockIndex < $1.blockIndex },
+            candidates: candidates.sorted { $0.candidateID < $1.candidateID },
+            notes: [
+                "shadow-only TextRegion crop experiment matrix; bestShadowCandidate is never written to finalTextUsedForTranslation",
+                "control is the existing TextRegion crop result; each block gets at most three additional shadow candidates",
+                "candidate generation and promotion verdicts use bbox, mask, TextBox, SegmentMask, raw-word preservation, and OCR text quality only",
+                "ground truth is not used for candidate generation, ranking, promotion, adoption, or fallback",
+                "textRegionCropReport.adoptedCount remains governed by the existing guardrail"
+            ]
+        )
+    }
+
+    private static func cropExperimentPlans(
+        for block: MangaOverlayProbeBlock,
+        control: MangaOverlayTextRegionCropDiagnostic,
+        textBox: MangaOverlayTextBoxCandidateDiagnostic?,
+        segment: MangaOverlaySegmentMaskDiagnostic?,
+        mask: MangaOverlayBubbleMaskBlockDiagnostic?,
+        correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+        split: MangaOverlayBubbleSplitCandidateDiagnostic?,
+        subRegion: MangaOverlayBubbleSubRegionDiagnostic?,
+        bubbleBBoxes: [Int: [Double]]
+    ) -> [CropExperimentPlan] {
+        let finalText = block.finalTextUsedForTranslation.lowercased()
+        let isDecorative = finalText.contains("city battler") && finalText.contains("tournament")
+        let isProtectedShort = finalText.contains("let") && finalText.contains("battler")
+        var plans: [CropExperimentPlan] = []
+
+        if let textBox {
+            var rejectionReasons = textBox.rejectionReasons
+            let riskFlags = textBox.riskFlags
+            if isDecorative {
+                rejectionReasons.append("decorativeTitleDiagnosticOnly")
+            }
+            plans.append(
+                CropExperimentPlan(
+                    variantName: "textBoxTight",
+                    sourceStack: ["fusedSeedBBox", "textBoxCandidate", textBox.source],
+                    bbox: Self.tightenedBBox(seedBBox: control.seedBBox, candidateBBox: textBox.bbox),
+                    clampSource: "textBoxCandidate",
+                    riskFlags: Array(Set(riskFlags)).sorted(),
+                    rejectionReasons: Array(Set(rejectionReasons)).sorted(),
+                    notes: ["TextBox is derived shadow evidence and remains downstream-only"]
+                )
+            )
+        }
+
+        if let segment, segment.usableForCropEvidence, let glyphBBox = segment.glyphMaskRect {
+            plans.append(
+                CropExperimentPlan(
+                    variantName: "glyphMaskExpanded",
+                    sourceStack: ["SegmentMask", "glyphMaskRect", "fusedSeedBBox"],
+                    bbox: Self.expandedBBox(glyphBBox, by: 0.32, minimumPadding: 8),
+                    clampSource: "segmentMaskGlyph",
+                    riskFlags: segment.riskFlags,
+                    rejectionReasons: segment.rejectionReasons,
+                    notes: ["SegmentMask glyph evidence is usable for crop evidence"]
+                )
+            )
+        } else if let segment, !segment.usableForCropEvidence {
+            plans.append(
+                CropExperimentPlan(
+                    variantName: "conservativeSeedBBox",
+                    sourceStack: ["fusedSeedBBox", "weakSegmentFallback"],
+                    bbox: Self.expandedBBox(control.seedBBox, by: 0.10, minimumPadding: 4),
+                    clampSource: "weakSegmentFallback",
+                    riskFlags: segment.riskFlags + ["segmentEvidenceTooWeak"],
+                    rejectionReasons: segment.rejectionReasons,
+                    notes: ["weak SegmentMask blocks only get conservative seed-bbox shadow comparison"]
+                )
+            )
+        }
+
+        if !isDecorative, !isProtectedShort, let split, split.clampEligible {
+            plans.append(
+                CropExperimentPlan(
+                    variantName: "splitCandidateClamp",
+                    sourceStack: ["BubbleMask", "splitCandidate", "parentBubbleID:\(split.parentBubbleID)"],
+                    bbox: split.bbox,
+                    clampSource: "splitCandidate",
+                    riskFlags: split.riskFlags,
+                    rejectionReasons: split.rejectionReasons,
+                    notes: ["conservative split candidate shadow OCR"]
+                )
+            )
+        }
+
+        if !isDecorative,
+           !isProtectedShort,
+           let correction,
+           correction.correctionAppliedToCropClamp,
+           let correctedBubbleID = correction.correctedBubbleID,
+           let bbox = bubbleBBoxes[correctedBubbleID] {
+            plans.append(
+                CropExperimentPlan(
+                    variantName: "correctedBubbleClamp",
+                    sourceStack: ["BubbleMask", "assignmentCorrection", "bubbleID:\(correctedBubbleID)"],
+                    bbox: bbox,
+                    clampSource: "correctedBubbleMask",
+                    riskFlags: correction.riskFlags,
+                    rejectionReasons: correction.rejectionReasons,
+                    notes: ["assignment correction is already eligible for crop clamp; shadow-only rerun"]
+                )
+            )
+        }
+
+        if let subRegion, subRegion.clampEligible {
+            plans.append(
+                CropExperimentPlan(
+                    variantName: "subRegionClamp",
+                    sourceStack: ["BubbleMask", "subRegion", "parentBubbleID:\(subRegion.parentBubbleID)"],
+                    bbox: subRegion.bbox,
+                    clampSource: "subRegion",
+                    riskFlags: [],
+                    rejectionReasons: subRegion.rejectionReasons,
+                    notes: ["block-local subregion shadow OCR"]
+                )
+            )
+        }
+
+        if let maskRect = mask?.maskSafeRect {
+            plans.append(
+                CropExperimentPlan(
+                    variantName: "maskSafeRectConstrained",
+                    sourceStack: ["BubbleMask", "maskSafeRect"],
+                    bbox: Self.intersectingBBox(control.regionBBox, maskRect) ?? maskRect,
+                    clampSource: "maskSafeRect",
+                    riskFlags: mask?.bubbleIDConsistent == true ? [] : ["bubbleMaskConflict"],
+                    rejectionReasons: [],
+                    notes: ["mask-safe rect constrained shadow OCR"]
+                )
+            )
+        }
+
+        return Self.uniqueCropExperimentPlans(plans)
+    }
+
+    private static func cropExperimentCandidate(
+        candidateID: Int,
+        blockIndex: Int,
+        variantName: String,
+        sourceStack: [String],
+        bboxBeforeClamp: [Double],
+        bboxAfterClamp: [Double],
+        clampSource: String,
+        ocrText: String?,
+        originalText: String,
+        originalWords: [String],
+        originalQuality: Double,
+        controlQuality: Double,
+        riskFlags: [String],
+        rejectionReasons: [String],
+        notes: [String]
+    ) -> MangaOverlayCropExperimentCandidate {
+        let candidateText = ocrText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let candidateWords = Self.ocrCandidateWords(candidateText)
+        let preservation = Self.wordPreservationRatio(sourceWords: originalWords, candidateWords: candidateWords)
+        let quality = Self.ocrCandidateQualityScore(candidateText)
+        let lineCountDelta = candidateText.split(separator: "\n").count - originalText.split(separator: "\n").count
+        let risks = Set(riskFlags)
+        var rejections = Set(rejectionReasons)
+        if candidateText.isEmpty {
+            rejections.insert("emptyLocalOCR")
+        }
+        if originalWords.count >= 3, preservation < 0.55 {
+            rejections.insert("rawWordsLost")
+        }
+        if originalWords.count >= 2, candidateWords.count < max(2, Int(ceil(Double(originalWords.count) * 0.55))) {
+            rejections.insert("wordCountRegression")
+        }
+        if Self.ocrCandidateWords(candidateText).joined(separator: " ") == Self.ocrCandidateWords(originalText).joined(separator: " ") {
+            rejections.insert("sameAsFusedText")
+        }
+        if Self.containsLikelyOCRError(in: candidateText), !Self.containsLikelyOCRError(in: originalText), quality <= originalQuality + 0.08 {
+            rejections.insert("introducedLikelyOCRError")
+        }
+        if risks.contains("bubbleMaskConflict") {
+            rejections.insert("bubbleMaskConflict")
+        }
+        if risks.contains("segmentEvidenceTooWeak") {
+            rejections.insert("segmentEvidenceTooWeak")
+        }
+        return MangaOverlayCropExperimentCandidate(
+            candidateID: candidateID,
+            blockIndex: blockIndex,
+            variantName: variantName,
+            sourceStack: Array(Set(sourceStack)).sorted(),
+            bboxBeforeClamp: bboxBeforeClamp,
+            bboxAfterClamp: bboxAfterClamp,
+            clampSource: clampSource,
+            preprocessingProfile: "existingMangaOverlayPreprocessing",
+            ocrText: ocrText,
+            ocrSucceeded: !candidateText.isEmpty,
+            wordPreservationRatio: preservation,
+            lineCountDelta: lineCountDelta,
+            qualityScoreBefore: originalQuality,
+            qualityScoreAfter: quality,
+            qualityDelta: quality - controlQuality,
+            betterThanControl: quality > controlQuality + 0.03,
+            riskFlags: Array(risks).sorted(),
+            rejectionReasons: Array(rejections).sorted(),
+            notes: notes
+        )
+    }
+
+    private static func bestCropExperimentShadowCandidate(
+        _ candidates: [MangaOverlayCropExperimentCandidate],
+        control: MangaOverlayCropExperimentCandidate
+    ) -> MangaOverlayCropExperimentCandidate? {
+        candidates
+            .filter { $0.ocrSucceeded }
+            .sorted { lhs, rhs in
+                let lhsScore = Self.cropExperimentRankingScore(lhs, control: control)
+                let rhsScore = Self.cropExperimentRankingScore(rhs, control: control)
+                if lhsScore == rhsScore {
+                    return lhs.candidateID < rhs.candidateID
+                }
+                return lhsScore > rhsScore
+            }
+            .first
+    }
+
+    private static func cropExperimentRankingScore(
+        _ candidate: MangaOverlayCropExperimentCandidate,
+        control: MangaOverlayCropExperimentCandidate
+    ) -> Double {
+        var score = candidate.qualityScoreAfter
+        score += candidate.wordPreservationRatio * 0.18
+        score += candidate.betterThanControl ? 0.10 : 0
+        score -= Double(candidate.rejectionReasons.count) * 0.08
+        score -= Double(candidate.riskFlags.count) * 0.04
+        if candidate.qualityScoreAfter < control.qualityScoreAfter - 0.08 {
+            score -= 0.12
+        }
+        return score
+    }
+
+    private static func cropExperimentVerdict(
+        block: MangaOverlayProbeBlock,
+        control: MangaOverlayCropExperimentCandidate,
+        bestShadow: MangaOverlayCropExperimentCandidate?,
+        segment: MangaOverlaySegmentMaskDiagnostic?,
+        textBox: MangaOverlayTextBoxCandidateDiagnostic?
+    ) -> (promotionVerdict: String, stopReasons: [String], notes: [String]) {
+        let finalText = block.finalTextUsedForTranslation.lowercased()
+        let isDecorative = finalText.contains("city battler") && finalText.contains("tournament")
+        let isProtectedShort = finalText.contains("let") && finalText.contains("battler")
+        var stopReasons: [String] = []
+        var notes = ["shadowOnlyNoMainInputChange"]
+
+        if isDecorative {
+            return ("protectedDiagnosticOnly", ["decorativeTitleDiagnosticOnly"], notes)
+        }
+        if isProtectedShort {
+            return ("protectedDiagnosticOnly", ["protectedShortTextDiagnosticOnly"], notes)
+        }
+        if segment?.usableForCropEvidence == false {
+            stopReasons.append("segmentEvidenceTooWeak")
+        }
+        if textBox?.eligibleForCrop == false {
+            notes.append("textBoxNotEligibleForUpstreamCrop")
+        }
+        guard let bestShadow else {
+            stopReasons.append("localVisionCropNotPromising")
+            return ("localVisionCropNotPromising", Array(Set(stopReasons)).sorted(), notes)
+        }
+        if bestShadow.rejectionReasons.contains("bubbleMaskConflict") {
+            stopReasons.append("bubbleMaskConflict")
+            return ("bubbleMaskConflict", Array(Set(stopReasons)).sorted(), notes)
+        }
+        if bestShadow.rejectionReasons.contains("emptyLocalOCR")
+            || bestShadow.rejectionReasons.contains("rawWordsLost")
+            || bestShadow.rejectionReasons.contains("wordCountRegression") {
+            stopReasons.append("localVisionCropNotPromising")
+        }
+        let promotable = bestShadow.ocrSucceeded
+            && bestShadow.wordPreservationRatio >= 0.80
+            && bestShadow.qualityDelta > 0.08
+            && !bestShadow.rejectionReasons.contains("rawWordsLost")
+            && !bestShadow.rejectionReasons.contains("introducedLikelyOCRError")
+            && !bestShadow.rejectionReasons.contains("sameAsFusedText")
+            && !bestShadow.rejectionReasons.contains("bubbleMaskConflict")
+            && !bestShadow.riskFlags.contains("segmentOutsideBubbleRisk")
+        if promotable {
+            return ("promotableShadowCandidate", [], notes)
+        }
+        if bestShadow.rejectionReasons.contains("sameAsFusedText") || bestShadow.qualityScoreAfter <= control.qualityScoreAfter + 0.03 {
+            return ("controlStillBest", Array(Set(stopReasons)).sorted(), notes)
+        }
+        if segment?.usableForCropEvidence == false {
+            return ("segmentEvidenceTooWeak", Array(Set(stopReasons)).sorted(), notes)
+        }
+        return ("noLocalOCRBenefit", Array(Set(stopReasons)).sorted(), notes)
+    }
+
+    private static func cropExperimentVariantBreakdown(
+        candidates: [MangaOverlayCropExperimentCandidate],
+        summaries: [MangaOverlayCropExperimentBlockSummary]
+    ) -> [String: MangaOverlayCropExperimentVariantSummary] {
+        let promotedIDs = Set(summaries.compactMap { summary -> Int? in
+            summary.promotionVerdict == "promotableShadowCandidate" ? summary.bestShadowCandidateID : nil
+        })
+        var result: [String: MangaOverlayCropExperimentVariantSummary] = [:]
+        for variant in Set(candidates.map(\.variantName)).sorted() {
+            let matches = candidates.filter { $0.variantName == variant }
+            result[variant] = MangaOverlayCropExperimentVariantSummary(
+                variantName: variant,
+                attemptedCount: matches.count,
+                ocrSucceededCount: matches.filter(\.ocrSucceeded).count,
+                betterThanControlCount: matches.filter(\.betterThanControl).count,
+                promotedBlockCount: matches.filter { promotedIDs.contains($0.candidateID) }.count,
+                degradedCount: matches.filter { !$0.betterThanControl && $0.qualityDelta < -0.08 }.count,
+                emptyOutputCount: matches.filter { $0.rejectionReasons.contains("emptyLocalOCR") }.count,
+                rawWordsLostCount: matches.filter { $0.rejectionReasons.contains("rawWordsLost") }.count
+            )
+        }
+        return result
+    }
+
+    private static func uniqueCropExperimentPlans(_ plans: [CropExperimentPlan]) -> [CropExperimentPlan] {
+        var seen = Set<String>()
+        var result: [CropExperimentPlan] = []
+        for plan in plans {
+            let key = "\(plan.variantName):\(plan.bbox.map { Int($0.rounded()) }.map(String.init).joined(separator: ","))"
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            result.append(plan)
+        }
+        return result.sorted { lhs, rhs in
+            Self.cropExperimentPlanPriority(lhs.variantName) < Self.cropExperimentPlanPriority(rhs.variantName)
+        }
+    }
+
+    private static func cropExperimentPlanPriority(_ variantName: String) -> Int {
+        switch variantName {
+        case "textBoxTight": 0
+        case "glyphMaskExpanded": 1
+        case "maskSafeRectConstrained": 2
+        case "splitCandidateClamp": 3
+        case "correctedBubbleClamp": 4
+        case "subRegionClamp": 5
+        default: 9
+        }
+    }
+
+    private static func tightenedBBox(seedBBox: [Double], candidateBBox: [Double]) -> [Double] {
+        let seed = rect(from: seedBBox)
+        let candidate = rect(from: candidateBBox)
+        let intersection = seed.intersection(candidate)
+        if !intersection.isNull, intersection.width >= 4, intersection.height >= 4 {
+            return bboxArray(from: intersection.integral)
+        }
+        return candidateBBox
+    }
+
+    private static func expandedBBox(_ bbox: [Double], by ratio: CGFloat, minimumPadding: CGFloat) -> [Double] {
+        let rect = rect(from: bbox)
+        let paddingX = max(minimumPadding, rect.width * ratio)
+        let paddingY = max(minimumPadding, rect.height * ratio)
+        return bboxArray(from: rect.insetBy(dx: -paddingX, dy: -paddingY).integral)
+    }
+
+    private static func intersectingBBox(_ lhs: [Double], _ rhs: [Double]) -> [Double]? {
+        let intersection = rect(from: lhs).intersection(rect(from: rhs))
+        guard !intersection.isNull, intersection.width >= 4, intersection.height >= 4 else {
+            return nil
+        }
+        return bboxArray(from: intersection.integral)
     }
 
     private static func evaluateTextRegionCropSelection(
@@ -4958,6 +5500,7 @@ final class TranslationSessionStore: ObservableObject {
         textRegionCropReport: MangaOverlayTextRegionCropReport? = nil,
         textBoxCandidateReport: MangaOverlayTextBoxCandidateReport? = nil,
         segmentMaskReport: MangaOverlaySegmentMaskReport? = nil,
+        cropExperimentReport: MangaOverlayCropExperimentReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -5021,6 +5564,7 @@ final class TranslationSessionStore: ObservableObject {
             textRegionCropReport: textRegionCropReport,
             textBoxCandidateReport: textBoxCandidateReport,
             segmentMaskReport: segmentMaskReport,
+            cropExperimentReport: cropExperimentReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
