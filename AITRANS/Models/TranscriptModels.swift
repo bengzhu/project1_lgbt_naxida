@@ -1229,6 +1229,7 @@ struct MangaOverlayPreCropTextBoxPlanReport: Equatable, Codable, Sendable {
 struct MangaOverlayCropExperimentCandidate: Equatable, Codable, Sendable {
     var candidateID: Int
     var blockIndex: Int
+    var sourcePlanID: Int?
     var variantName: String
     var sourceStack: [String]
     var bboxBeforeClamp: [Double]
@@ -1282,6 +1283,59 @@ struct MangaOverlayCropExperimentReport: Equatable, Codable, Sendable {
     var variantBreakdown: [String: MangaOverlayCropExperimentVariantSummary]
     var blockSummaries: [MangaOverlayCropExperimentBlockSummary]
     var candidates: [MangaOverlayCropExperimentCandidate]
+    var notes: [String]
+}
+
+struct MangaOverlayTextBoxPlanFailureDiagnostic: Equatable, Codable, Sendable {
+    var planID: Int?
+    var blockIndex: Int
+    var variantName: String
+    var planFailureCategory: String
+    var geometryReasons: [String]
+    var bubbleMaskReasons: [String]
+    var segmentMaskReasons: [String]
+    var safetyReasons: [String]
+    var protectionReasons: [String]
+    var candidateID: Int?
+    var ocrFailureCategory: String?
+    var ocrReasons: [String]
+    var passedPromotionChecks: [String]
+    var failedPromotionChecks: [String]
+    var promotionBlockers: [String]
+    var recommendedNextAction: String
+    var notes: [String]
+}
+
+struct MangaOverlayTextBoxPlanFailureBlockSummary: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var verdict: String
+    var primaryFailureCategory: String
+    var planIDs: [Int]
+    var candidateIDs: [Int]
+    var bestShadowCandidateID: Int?
+    var bestShadowBetterThanControl: Bool
+    var passedPromotionChecks: [String]
+    var failedPromotionChecks: [String]
+    var promotionBlockers: [String]
+    var recommendedNextAction: String
+    var notes: [String]
+}
+
+struct MangaOverlayTextBoxPlanFailureReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var evaluatedBlockCount: Int
+    var evaluatedPlanCount: Int
+    var evaluatedCandidateCount: Int
+    var betterThanControlCandidateCount: Int
+    var promotedShadowBlockCount: Int
+    var planFailureBreakdown: [String: Int]
+    var ocrFailureBreakdown: [String: Int]
+    var promotionBlockerBreakdown: [String: Int]
+    var stopRecommendedBlocks: [Int]
+    var continueGeometryResearchBlocks: [Int]
+    var candidatePromotionBlockedBlocks: [Int]
+    var blockSummaries: [MangaOverlayTextBoxPlanFailureBlockSummary]
+    var diagnostics: [MangaOverlayTextBoxPlanFailureDiagnostic]
     var notes: [String]
 }
 
@@ -1501,6 +1555,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var segmentMaskReport: MangaOverlaySegmentMaskReport?
     var preCropTextBoxPlanReport: MangaOverlayPreCropTextBoxPlanReport?
     var cropExperimentReport: MangaOverlayCropExperimentReport?
+    var textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?

@@ -4560,7 +4560,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "A7C3FC25-A2AB-463E-B1FD-FC20A913E00C",
+      "id" : "4FC2164C-61E4-40DC-A588-37DE2E497DD7",
       "index" : 0,
       "maskSafeRect" : [
         425,
@@ -7330,7 +7330,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "F932DD45-8010-4F6F-B9AE-3E5CC0EC0CB9",
+      "id" : "46959E19-0405-421E-B349-7F0A000E0BB2",
       "index" : 1,
       "maskSafeRect" : [
         60,
@@ -7877,7 +7877,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "3D84241D-FDE4-4F7A-B0D2-23BB665DEEF7",
+      "id" : "E86CC248-C6EF-498E-94CC-6BCF3198FF48",
       "index" : 2,
       "maskSafeRect" : [
         440,
@@ -12778,7 +12778,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "35144EAD-0425-4C73-903E-041B283ACF33",
+      "id" : "9851D546-2EB3-41B8-AA51-2A65BBCE6F32",
       "index" : 3,
       "maskSafeRect" : [
         23,
@@ -12930,7 +12930,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "153523CD-F9D0-45DB-99D4-67C17C094951",
+      "id" : "5D1170DD-AD5E-41E5-B9EE-23C342DA7543",
       "index" : 4,
       "maskSafeRect" : [
         450,
@@ -18118,7 +18118,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "0FF42483-AA3E-4983-8794-DB9521CA8A70",
+      "id" : "74E168F9-9087-4794-9F89-F7556469299C",
       "index" : 5,
       "maskSafeRect" : [
         91,
@@ -22526,7 +22526,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "9829B103-1E7F-4666-8F8F-396C79D3FC54",
+      "id" : "CC96B357-5052-4630-8472-3FB389896890",
       "index" : 6,
       "maskSafeRect" : [
         91,
@@ -24255,7 +24255,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "595988EB-EF2C-4E01-8E92-B9FF44854945",
+      "id" : "DE000385-4D92-4AFD-9BF2-7819627DE565",
       "index" : 7,
       "maskSafeRect" : [
         447,
@@ -32170,7 +32170,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "84A45E4D-830D-4CA1-B13C-5C2BAED9F7E5",
+      "id" : "3851CFAD-8684-49E9-BC6A-B9CB36856191",
       "index" : 8,
       "maskSafeRect" : [
         35,
@@ -39690,7 +39690,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "95F0B0AF-F3B0-4967-8E1A-A2736D9E00BE",
+      "id" : "2567122C-9A65-4706-A13D-A33F92DD1A83",
       "index" : 9,
       "maskSafeRect" : [
         112,
@@ -44936,7 +44936,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "A52030E3-EF42-491C-BC81-3BC25F4F10C2",
+      "id" : "64CF5C8D-3D1A-49DF-B8BB-0F0388E192FC",
       "index" : 10,
       "maskSafeRect" : [
         243,
@@ -45383,7 +45383,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "388841A6-0701-4843-AC63-3194EECE524C",
+      "id" : "AF89134D-986F-4A50-9CCA-68566C385EAC",
       "index" : 11,
       "maskSafeRect" : [
         251,
@@ -45551,7 +45551,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "B1D9FD9B-457F-41BB-AF23-BF1F68020712",
+      "id" : "909A6322-B9B5-4268-AEAC-109F91D28604",
       "index" : 12,
       "maskSafeRect" : [
         244,
@@ -51826,6 +51826,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 0,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -51872,6 +51873,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 1,
         "sourceStack" : [
           "bubbleGeometry",
           "bubbleID:0",
@@ -51919,6 +51921,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 2,
         "sourceStack" : [
           "BubbleMask",
           "maskMajorityID:0",
@@ -52009,6 +52012,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 3,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -52055,6 +52059,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 4,
         "sourceStack" : [
           "bubbleGeometry",
           "bubbleID:1",
@@ -52102,6 +52107,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 5,
         "sourceStack" : [
           "BubbleMask",
           "maskMajorityID:1",
@@ -52194,6 +52200,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 6,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -52241,6 +52248,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 7,
         "sourceStack" : [
           "bubbleGeometry",
           "bubbleID:2",
@@ -52289,6 +52297,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 8,
         "sourceStack" : [
           "BubbleMask",
           "maskMajorityID:2",
@@ -52382,6 +52391,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 9,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -52429,6 +52439,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 10,
         "sourceStack" : [
           "bubbleGeometry",
           "bubbleID:3",
@@ -52477,6 +52488,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 11,
         "sourceStack" : [
           "BubbleMask",
           "maskMajorityID:3",
@@ -52749,6 +52761,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 14,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -52838,6 +52851,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 17,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -52884,6 +52898,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 18,
         "sourceStack" : [
           "bubbleGeometry",
           "bubbleID:4",
@@ -52931,6 +52946,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 19,
         "sourceStack" : [
           "BubbleMask",
           "maskMajorityID:4",
@@ -53023,6 +53039,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 20,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -53070,6 +53087,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 21,
         "sourceStack" : [
           "bubbleGeometry",
           "bubbleID:5",
@@ -53118,6 +53136,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 22,
         "sourceStack" : [
           "BubbleMask",
           "maskMajorityID:5",
@@ -53207,6 +53226,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 23,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -53254,6 +53274,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 24,
         "sourceStack" : [
           "bubbleGeometry",
           "bubbleID:6",
@@ -53302,6 +53323,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 25,
         "sourceStack" : [
           "BubbleMask",
           "maskMajorityID:6",
@@ -53394,6 +53416,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 26,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -53440,6 +53463,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 27,
         "sourceStack" : [
           "bubbleGeometry",
           "bubbleID:6",
@@ -53487,6 +53511,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 28,
         "sourceStack" : [
           "BubbleMask",
           "maskMajorityID:6",
@@ -53577,6 +53602,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 29,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -53623,6 +53649,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 30,
         "sourceStack" : [
           "bubbleGeometry",
           "bubbleID:7",
@@ -53670,6 +53697,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 31,
         "sourceStack" : [
           "BubbleMask",
           "maskMajorityID:7",
@@ -53762,6 +53790,7 @@
         "riskFlags" : [
 
         ],
+        "sourcePlanID" : 32,
         "sourceStack" : [
           "fusedSeedBBox",
           "ocrObservationBBox",
@@ -54257,7 +54286,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 16312,
+      "processingTimeMs" : 15487,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -54558,7 +54587,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 211977,
+      "processingTimeMs" : 207219,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -54577,7 +54606,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 16312,
+      "processingTimeMs" : 15487,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -54589,7 +54618,7 @@
     "fused" : {
       "accuracyVsGroundTruth" : 0.7383773465526562,
       "matchedGroundTruthCount" : 13,
-      "processingTimeMs" : 211977,
+      "processingTimeMs" : 207219,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 0
     },
@@ -54695,7 +54724,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 211977,
+      "processingTimeMs" : 207219,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -55648,24 +55677,24 @@
     "withoutLexiconTotalBlocks" : 14
   },
   "outputCleanupPolicy" : "探针开始重建 App 沙盒 Output；renderOutputs 只写入本轮文件；export-probe-output.sh 重建项目根 output；只保留本轮 probe_report.json 和本轮 PNG\/TXT\/JSON。",
-  "outputCleanupRemovedItemCount" : 4,
+  "outputCleanupRemovedItemCount" : 15,
   "outputDirectoryCleaned" : true,
   "outputFileCountAfterCleanup" : 15,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
-    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
-    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
-    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
-    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/FF05F6A0-1303-4F6B-8D05-D4BC16BEDCBD\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
+    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
+    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
+    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
+    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/D58AE07E-477D-4640-81DD-FD6074C24F50\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
   },
   "overallPassed" : false,
   "preCropTextBoxPlanReport" : {
@@ -74021,6 +74050,2768 @@
     ],
     "usedForCropBlocks" : [
 
+    ]
+  },
+  "textBoxPlanFailureReport" : {
+    "betterThanControlCandidateCount" : 13,
+    "blockSummaries" : [
+      {
+        "bestShadowBetterThanControl" : false,
+        "bestShadowCandidateID" : 1,
+        "blockIndex" : 0,
+        "candidateIDs" : [
+          1,
+          2,
+          3
+        ],
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "wordPreservationRatio>=0.80"
+        ],
+        "planIDs" : [
+          0,
+          1,
+          2
+        ],
+        "primaryFailureCategory" : "controlStillBest",
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "recommendedNextAction" : "noActionControlBest",
+        "verdict" : "controlStillBest"
+      },
+      {
+        "bestShadowBetterThanControl" : true,
+        "bestShadowCandidateID" : 5,
+        "blockIndex" : 1,
+        "candidateIDs" : [
+          5,
+          6,
+          7
+        ],
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "wordPreservationRatio>=0.80"
+        ],
+        "planIDs" : [
+          3,
+          4,
+          5
+        ],
+        "primaryFailureCategory" : "candidatePromotionBlocked",
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08"
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "verdict" : "noLocalOCRBenefit"
+      },
+      {
+        "bestShadowBetterThanControl" : true,
+        "bestShadowCandidateID" : 11,
+        "blockIndex" : 2,
+        "candidateIDs" : [
+          9,
+          10,
+          11
+        ],
+        "failedPromotionChecks" : [
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "qualityDelta>0.08"
+        ],
+        "planIDs" : [
+          6,
+          7,
+          8
+        ],
+        "primaryFailureCategory" : "localVisionCropNotPromising",
+        "promotionBlockers" : [
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "verdict" : "noLocalOCRBenefit"
+      },
+      {
+        "bestShadowBetterThanControl" : false,
+        "bestShadowCandidateID" : 13,
+        "blockIndex" : 3,
+        "candidateIDs" : [
+          13,
+          14,
+          15
+        ],
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planIDs" : [
+          9,
+          10,
+          11
+        ],
+        "primaryFailureCategory" : "localVisionCropNotPromising",
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "verdict" : "controlStillBest"
+      },
+      {
+        "bestShadowBetterThanControl" : true,
+        "bestShadowCandidateID" : 18,
+        "blockIndex" : 4,
+        "candidateIDs" : [
+          17,
+          18,
+          19
+        ],
+        "failedPromotionChecks" : [
+          "bubbleMaskConflict",
+          "protectedShortTextDiagnosticOnly",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planIDs" : [
+          12,
+          13
+        ],
+        "primaryFailureCategory" : "protectedDiagnosticOnly",
+        "promotionBlockers" : [
+          "bubbleMaskConflict",
+          "protectedShortTextDiagnosticOnly",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "verdict" : "protectedDiagnosticOnly"
+      },
+      {
+        "bestShadowBetterThanControl" : true,
+        "bestShadowCandidateID" : 21,
+        "blockIndex" : 5,
+        "candidateIDs" : [
+          21
+        ],
+        "failedPromotionChecks" : [
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "qualityDelta>0.08"
+        ],
+        "planIDs" : [
+          14,
+          15,
+          16
+        ],
+        "primaryFailureCategory" : "localVisionCropNotPromising",
+        "promotionBlockers" : [
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "verdict" : "segmentEvidenceTooWeak"
+      },
+      {
+        "bestShadowBetterThanControl" : true,
+        "bestShadowCandidateID" : 23,
+        "blockIndex" : 6,
+        "candidateIDs" : [
+          23,
+          24,
+          25
+        ],
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planIDs" : [
+          17,
+          18,
+          19
+        ],
+        "primaryFailureCategory" : "candidatePromotionBlocked",
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "verdict" : "noLocalOCRBenefit"
+      },
+      {
+        "bestShadowBetterThanControl" : false,
+        "blockIndex" : 7,
+        "candidateIDs" : [
+          27,
+          28,
+          29
+        ],
+        "failedPromotionChecks" : [
+          "noShadowCandidate"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+
+        ],
+        "planIDs" : [
+          20,
+          21,
+          22
+        ],
+        "primaryFailureCategory" : "localVisionCropNotPromising",
+        "promotionBlockers" : [
+          "noShadowCandidate"
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "verdict" : "localVisionCropNotPromising"
+      },
+      {
+        "bestShadowBetterThanControl" : false,
+        "bestShadowCandidateID" : 31,
+        "blockIndex" : 8,
+        "candidateIDs" : [
+          31,
+          32,
+          33
+        ],
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planIDs" : [
+          23,
+          24,
+          25
+        ],
+        "primaryFailureCategory" : "controlStillBest",
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "recommendedNextAction" : "noActionControlBest",
+        "verdict" : "controlStillBest"
+      },
+      {
+        "bestShadowBetterThanControl" : true,
+        "bestShadowCandidateID" : 35,
+        "blockIndex" : 9,
+        "candidateIDs" : [
+          35,
+          36,
+          37
+        ],
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planIDs" : [
+          26,
+          27,
+          28
+        ],
+        "primaryFailureCategory" : "localVisionCropNotPromising",
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "verdict" : "noLocalOCRBenefit"
+      },
+      {
+        "bestShadowBetterThanControl" : true,
+        "bestShadowCandidateID" : 41,
+        "blockIndex" : 10,
+        "candidateIDs" : [
+          39,
+          40,
+          41
+        ],
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planIDs" : [
+          29,
+          30,
+          31
+        ],
+        "primaryFailureCategory" : "candidatePromotionBlocked",
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "verdict" : "noLocalOCRBenefit"
+      },
+      {
+        "bestShadowBetterThanControl" : false,
+        "blockIndex" : 11,
+        "candidateIDs" : [
+          43
+        ],
+        "failedPromotionChecks" : [
+          "noShadowCandidate"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+
+        ],
+        "planIDs" : [
+          32,
+          33,
+          34
+        ],
+        "primaryFailureCategory" : "localVisionCropNotPromising",
+        "promotionBlockers" : [
+          "noShadowCandidate"
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "verdict" : "localVisionCropNotPromising"
+      },
+      {
+        "bestShadowBetterThanControl" : false,
+        "bestShadowCandidateID" : 45,
+        "blockIndex" : 12,
+        "candidateIDs" : [
+          45,
+          46,
+          47
+        ],
+        "failedPromotionChecks" : [
+          "bubbleMaskConflict",
+          "decorativeTitleDiagnosticOnly",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "notes" : [
+          "shadowOnlyNoMainInputChange",
+          "groundTruthNotUsed",
+          "textRegionAdoptedCountUnchanged"
+        ],
+        "passedPromotionChecks" : [
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "wordPreservationRatio>=0.80"
+        ],
+        "planIDs" : [
+          35,
+          36
+        ],
+        "primaryFailureCategory" : "protectedDiagnosticOnly",
+        "promotionBlockers" : [
+          "bubbleMaskConflict",
+          "decorativeTitleDiagnosticOnly",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "verdict" : "protectedDiagnosticOnly"
+      }
+    ],
+    "candidatePromotionBlockedBlocks" : [
+      1,
+      2,
+      4,
+      5,
+      6,
+      9,
+      10
+    ],
+    "continueGeometryResearchBlocks" : [
+      1,
+      6,
+      10
+    ],
+    "diagnostics" : [
+      {
+        "blockIndex" : 0,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 1,
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "sameAsFusedText",
+        "ocrReasons" : [
+          "sameAsFusedText"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "wordPreservationRatio>=0.80"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 0,
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "noActionControlBest",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 0,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 2,
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrFailureCategory" : "sameAsFusedText",
+        "ocrReasons" : [
+          "sameAsFusedText"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "wordPreservationRatio>=0.80"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 1,
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "noActionControlBest",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 0,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 3,
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrFailureCategory" : "sameAsFusedText",
+        "ocrReasons" : [
+          "sameAsFusedText"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "wordPreservationRatio>=0.80"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 2,
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "noActionControlBest",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 1,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 5,
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "qualityGainInsufficient",
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "wordPreservationRatio>=0.80"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 3,
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 1,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 6,
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrFailureCategory" : "qualityGainInsufficient",
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 4,
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 1,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 7,
+        "failedPromotionChecks" : [
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrFailureCategory" : "betterButUnsafe",
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "qualityDelta>0.08"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 5,
+        "promotionBlockers" : [
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 2,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 9,
+        "failedPromotionChecks" : [
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "rawWordsLost",
+        "ocrReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "qualityDelta>0.08"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 6,
+        "promotionBlockers" : [
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 2,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 10,
+        "failedPromotionChecks" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrFailureCategory" : "emptyLocalOCR",
+        "ocrReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 7,
+        "promotionBlockers" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 2,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 11,
+        "failedPromotionChecks" : [
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrFailureCategory" : "rawWordsLost",
+        "ocrReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "qualityDelta>0.08"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 8,
+        "promotionBlockers" : [
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 3,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 13,
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "rawWordsLost",
+        "ocrReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 9,
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 3,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 14,
+        "failedPromotionChecks" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrFailureCategory" : "emptyLocalOCR",
+        "ocrReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 10,
+        "promotionBlockers" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 3,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 15,
+        "failedPromotionChecks" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrFailureCategory" : "emptyLocalOCR",
+        "ocrReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 11,
+        "promotionBlockers" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 4,
+        "bubbleMaskReasons" : [
+
+        ],
+        "failedPromotionChecks" : [
+          "noShadowCandidate"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+
+        ],
+        "planFailureCategory" : "protectedDiagnosticOnly",
+        "planID" : 12,
+        "promotionBlockers" : [
+          "noShadowCandidate"
+        ],
+        "protectionReasons" : [
+          "protectedShortTextDiagnosticOnly"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "safetyReasons" : [
+          "safeRectCoverageBelow0.35"
+        ],
+        "segmentMaskReasons" : [
+          "segmentEvidenceTooWeak"
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 4,
+        "bubbleMaskReasons" : [
+          "bubbleMaskConflict"
+        ],
+        "failedPromotionChecks" : [
+          "noShadowCandidate"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible",
+          "evidenceScoreBelowGeometryThreshold"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+
+        ],
+        "planFailureCategory" : "protectedDiagnosticOnly",
+        "planID" : 13,
+        "promotionBlockers" : [
+          "noShadowCandidate"
+        ],
+        "protectionReasons" : [
+          "protectedShortTextDiagnosticOnly"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "safetyReasons" : [
+          "safeRectCoverageBelow0.35"
+        ],
+        "segmentMaskReasons" : [
+          "segmentEvidenceTooWeak"
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 4,
+        "bubbleMaskReasons" : [
+          "bubbleMaskConflict",
+          "bubbleMaskCoverageLow"
+        ],
+        "candidateID" : 17,
+        "failedPromotionChecks" : [
+          "bubbleMaskConflict",
+          "notBetterThanControl",
+          "protectedShortTextDiagnosticOnly",
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "legacyOrFallbackShadowCandidate",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrFailureCategory" : "bubbleMaskConflict",
+        "ocrReasons" : [
+          "bubbleMaskConflict",
+          "bubbleMaskCoverageLow",
+          "evidenceScoreBelowCropThreshold"
+        ],
+        "passedPromotionChecks" : [
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "legacyShadowCandidate",
+        "promotionBlockers" : [
+          "bubbleMaskConflict",
+          "notBetterThanControl",
+          "protectedShortTextDiagnosticOnly",
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+          "protectedShortTextDiagnosticOnly"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "safetyReasons" : [
+          "bubbleMaskConflict",
+          "safeRectOverlapLow"
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "textBoxTight"
+      },
+      {
+        "blockIndex" : 4,
+        "bubbleMaskReasons" : [
+          "bubbleMaskConflict"
+        ],
+        "candidateID" : 18,
+        "failedPromotionChecks" : [
+          "bubbleMaskConflict",
+          "protectedShortTextDiagnosticOnly",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "legacyOrFallbackShadowCandidate",
+          "shadowOnlyNoFinalTextChange",
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrFailureCategory" : "rawWordsLost",
+        "ocrReasons" : [
+          "bubbleMaskConflict",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "legacyShadowCandidate",
+        "promotionBlockers" : [
+          "bubbleMaskConflict",
+          "protectedShortTextDiagnosticOnly",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+          "protectedShortTextDiagnosticOnly"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "safetyReasons" : [
+          "bubbleMaskConflict"
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "maskSafeRectConstrained"
+      },
+      {
+        "blockIndex" : 4,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 19,
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "protectedShortTextDiagnosticOnly",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText",
+          "segmentEvidenceTooWeak"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "legacyOrFallbackShadowCandidate",
+          "shadowOnlyNoFinalTextChange",
+          "weak SegmentMask blocks only get conservative seed-bbox shadow comparison"
+        ],
+        "ocrFailureCategory" : "sameAsFusedText",
+        "ocrReasons" : [
+          "missingGlyphMask",
+          "sameAsFusedText",
+          "segmentEvidenceTooWeak",
+          "segmentOutsideBubbleRisk",
+          "unassignedBlockDiagnosticOnly"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "wordPreservationRatio>=0.80"
+        ],
+        "planFailureCategory" : "legacyShadowCandidate",
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "protectedShortTextDiagnosticOnly",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText",
+          "segmentEvidenceTooWeak"
+        ],
+        "protectionReasons" : [
+          "protectedShortTextDiagnosticOnly"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "safetyReasons" : [
+          "segmentEvidenceTooWeak",
+          "unassignedBlock"
+        ],
+        "segmentMaskReasons" : [
+          "segmentEvidenceTooWeak",
+          "segmentOutsideBubbleRisk"
+        ],
+        "variantName" : "conservativeSeedBBox"
+      },
+      {
+        "blockIndex" : 5,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 21,
+        "failedPromotionChecks" : [
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "rawWordsLost",
+        "ocrReasons" : [
+          "rawWordsLost"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "qualityDelta>0.08"
+        ],
+        "planFailureCategory" : "segmentEvidenceTooWeak",
+        "planID" : 14,
+        "promotionBlockers" : [
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+          "segmentEvidenceTooWeak"
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 5,
+        "bubbleMaskReasons" : [
+          "bubbleMaskConflict"
+        ],
+        "failedPromotionChecks" : [
+          "noShadowCandidate"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+
+        ],
+        "planFailureCategory" : "bubbleMaskConflict",
+        "planID" : 15,
+        "promotionBlockers" : [
+          "noShadowCandidate"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+          "segmentEvidenceTooWeak"
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 5,
+        "bubbleMaskReasons" : [
+          "bubbleMaskConflict"
+        ],
+        "failedPromotionChecks" : [
+          "noShadowCandidate"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+
+        ],
+        "planFailureCategory" : "bubbleMaskConflict",
+        "planID" : 16,
+        "promotionBlockers" : [
+          "noShadowCandidate"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+          "segmentEvidenceTooWeak"
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 6,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 23,
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "qualityGainInsufficient",
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 17,
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 6,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 24,
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrFailureCategory" : "qualityGainInsufficient",
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 18,
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 6,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 25,
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrFailureCategory" : "rawWordsLost",
+        "ocrReasons" : [
+          "rawWordsLost"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 19,
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 7,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 27,
+        "failedPromotionChecks" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "emptyLocalOCR",
+        "ocrReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 20,
+        "promotionBlockers" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 7,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 28,
+        "failedPromotionChecks" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrFailureCategory" : "emptyLocalOCR",
+        "ocrReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 21,
+        "promotionBlockers" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 7,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 29,
+        "failedPromotionChecks" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrFailureCategory" : "emptyLocalOCR",
+        "ocrReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 22,
+        "promotionBlockers" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 8,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 31,
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "controlStillBest",
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 23,
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "noActionControlBest",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 8,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 32,
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrFailureCategory" : "rawWordsLost",
+        "ocrReasons" : [
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 24,
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "noActionControlBest",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 8,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 33,
+        "failedPromotionChecks" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrFailureCategory" : "emptyLocalOCR",
+        "ocrReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 25,
+        "promotionBlockers" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "noActionControlBest",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 9,
+        "bubbleMaskReasons" : [
+          "bubbleCoverageBelow0.55"
+        ],
+        "candidateID" : 35,
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "rawWordsLost",
+        "ocrReasons" : [
+          "rawWordsLost"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "lowBubbleCoverage",
+        "planID" : 26,
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 9,
+        "bubbleMaskReasons" : [
+          "bubbleCoverageBelow0.55"
+        ],
+        "candidateID" : 36,
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrFailureCategory" : "rawWordsLost",
+        "ocrReasons" : [
+          "rawWordsLost"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "lowBubbleCoverage",
+        "planID" : 27,
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 9,
+        "bubbleMaskReasons" : [
+          "bubbleCoverageBelow0.55"
+        ],
+        "candidateID" : 37,
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrFailureCategory" : "rawWordsLost",
+        "ocrReasons" : [
+          "rawWordsLost"
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "lowBubbleCoverage",
+        "planID" : 28,
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 10,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 39,
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "controlStillBest",
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 29,
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 10,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 40,
+        "failedPromotionChecks" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrFailureCategory" : "controlStillBest",
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 30,
+        "promotionBlockers" : [
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 10,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 41,
+        "failedPromotionChecks" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrFailureCategory" : "qualityGainInsufficient",
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+          "betterThanControl",
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 31,
+        "promotionBlockers" : [
+          "qualityDeltaBelowOrEqual0.08",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "candidateNeedsPromotionGateReview",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 11,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 43,
+        "failedPromotionChecks" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrFailureCategory" : "emptyLocalOCR",
+        "ocrReasons" : [
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk"
+        ],
+        "planFailureCategory" : "eligibleButNeedsShadowOCR",
+        "planID" : 32,
+        "promotionBlockers" : [
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 11,
+        "bubbleMaskReasons" : [
+          "bubbleMaskConflict"
+        ],
+        "failedPromotionChecks" : [
+          "noShadowCandidate"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+
+        ],
+        "planFailureCategory" : "bubbleMaskConflict",
+        "planID" : 33,
+        "promotionBlockers" : [
+          "noShadowCandidate"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 11,
+        "bubbleMaskReasons" : [
+          "bubbleMaskConflict"
+        ],
+        "failedPromotionChecks" : [
+          "noShadowCandidate"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible",
+          "evidenceScoreBelowGeometryThreshold"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "seed bbox expanded then clamped to current bubble geometry"
+        ],
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+
+        ],
+        "planFailureCategory" : "bubbleMaskConflict",
+        "planID" : 34,
+        "promotionBlockers" : [
+          "noShadowCandidate"
+        ],
+        "protectionReasons" : [
+
+        ],
+        "recommendedNextAction" : "stopLocalVisionCrop",
+        "safetyReasons" : [
+
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "preCropTextBoxPlan.bubbleContainedTextBox"
+      },
+      {
+        "blockIndex" : 12,
+        "bubbleMaskReasons" : [
+
+        ],
+        "failedPromotionChecks" : [
+          "noShadowCandidate"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible",
+          "evidenceScoreBelowGeometryThreshold"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "most conservative upstream TextBox plan"
+        ],
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+
+        ],
+        "planFailureCategory" : "protectedDiagnosticOnly",
+        "planID" : 35,
+        "promotionBlockers" : [
+          "noShadowCandidate"
+        ],
+        "protectionReasons" : [
+          "decorativeTitleDiagnosticOnly"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "safetyReasons" : [
+          "safeRectCoverageBelow0.35"
+        ],
+        "segmentMaskReasons" : [
+          "segmentEvidenceTooWeak"
+        ],
+        "variantName" : "preCropTextBoxPlan.seedTightTextBox"
+      },
+      {
+        "blockIndex" : 12,
+        "bubbleMaskReasons" : [
+          "bubbleMaskConflict"
+        ],
+        "failedPromotionChecks" : [
+          "noShadowCandidate"
+        ],
+        "geometryReasons" : [
+          "downstreamTextBoxNotCropEligible",
+          "evidenceScoreBelowGeometryThreshold"
+        ],
+        "notes" : [
+          "planCandidateLinkedBySourcePlanID",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox plan constrained by BubbleMask majority and safe rect"
+        ],
+        "ocrReasons" : [
+
+        ],
+        "passedPromotionChecks" : [
+
+        ],
+        "planFailureCategory" : "protectedDiagnosticOnly",
+        "planID" : 36,
+        "promotionBlockers" : [
+          "noShadowCandidate"
+        ],
+        "protectionReasons" : [
+          "decorativeTitleDiagnosticOnly"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "safetyReasons" : [
+          "safeRectCoverageBelow0.35"
+        ],
+        "segmentMaskReasons" : [
+          "segmentEvidenceTooWeak"
+        ],
+        "variantName" : "preCropTextBoxPlan.maskMajorityTextBox"
+      },
+      {
+        "blockIndex" : 12,
+        "bubbleMaskReasons" : [
+          "bubbleMaskConflict",
+          "bubbleMaskCoverageLow"
+        ],
+        "candidateID" : 45,
+        "failedPromotionChecks" : [
+          "bubbleMaskConflict",
+          "decorativeTitleDiagnosticOnly",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "legacyOrFallbackShadowCandidate",
+          "shadowOnlyNoFinalTextChange",
+          "TextBox is derived shadow evidence and remains downstream-only"
+        ],
+        "ocrFailureCategory" : "sameAsFusedText",
+        "ocrReasons" : [
+          "bubbleMaskConflict",
+          "bubbleMaskCoverageLow",
+          "decorativeTitleDiagnosticOnly",
+          "evidenceScoreBelowCropThreshold",
+          "sameAsFusedText"
+        ],
+        "passedPromotionChecks" : [
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded",
+          "wordPreservationRatio>=0.80"
+        ],
+        "planFailureCategory" : "legacyShadowCandidate",
+        "promotionBlockers" : [
+          "bubbleMaskConflict",
+          "decorativeTitleDiagnosticOnly",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "sameAsFusedText"
+        ],
+        "protectionReasons" : [
+          "decorativeTitleDiagnosticOnly"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "safetyReasons" : [
+          "bubbleMaskConflict",
+          "safeRectOverlapLow"
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "textBoxTight"
+      },
+      {
+        "blockIndex" : 12,
+        "bubbleMaskReasons" : [
+          "bubbleMaskConflict"
+        ],
+        "candidateID" : 46,
+        "failedPromotionChecks" : [
+          "bubbleMaskConflict",
+          "decorativeTitleDiagnosticOnly",
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "legacyOrFallbackShadowCandidate",
+          "shadowOnlyNoFinalTextChange",
+          "mask-safe rect constrained shadow OCR"
+        ],
+        "ocrFailureCategory" : "emptyLocalOCR",
+        "ocrReasons" : [
+          "bubbleMaskConflict",
+          "emptyLocalOCR",
+          "rawWordsLost",
+          "wordCountRegression"
+        ],
+        "passedPromotionChecks" : [
+          "noIntroducedLikelyOCRError",
+          "noSameAsFusedText",
+          "noSegmentEvidenceTooWeak",
+          "noSegmentOutsideBubbleRisk"
+        ],
+        "planFailureCategory" : "legacyShadowCandidate",
+        "promotionBlockers" : [
+          "bubbleMaskConflict",
+          "decorativeTitleDiagnosticOnly",
+          "emptyLocalOCR",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "rawWordsLost",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+          "decorativeTitleDiagnosticOnly"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "safetyReasons" : [
+          "bubbleMaskConflict"
+        ],
+        "segmentMaskReasons" : [
+
+        ],
+        "variantName" : "maskSafeRectConstrained"
+      },
+      {
+        "blockIndex" : 12,
+        "bubbleMaskReasons" : [
+
+        ],
+        "candidateID" : 47,
+        "failedPromotionChecks" : [
+          "decorativeTitleDiagnosticOnly",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "segmentEvidenceTooWeak",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "geometryReasons" : [
+
+        ],
+        "notes" : [
+          "legacyOrFallbackShadowCandidate",
+          "shadowOnlyNoFinalTextChange",
+          "weak SegmentMask blocks only get conservative seed-bbox shadow comparison"
+        ],
+        "ocrFailureCategory" : "controlStillBest",
+        "ocrReasons" : [
+          "decorativeTitleDiagnosticOnly",
+          "missingGlyphMask",
+          "segmentEvidenceTooWeak",
+          "segmentOutsideBubbleRisk",
+          "unassignedBlockDiagnosticOnly"
+        ],
+        "passedPromotionChecks" : [
+          "noBubbleMaskConflict",
+          "noIntroducedLikelyOCRError",
+          "noRawWordsLost",
+          "noSameAsFusedText",
+          "noSegmentOutsideBubbleRisk",
+          "ocrSucceeded"
+        ],
+        "planFailureCategory" : "legacyShadowCandidate",
+        "promotionBlockers" : [
+          "decorativeTitleDiagnosticOnly",
+          "notBetterThanControl",
+          "qualityDeltaBelowOrEqual0.08",
+          "segmentEvidenceTooWeak",
+          "wordPreservationRatioBelow0.80"
+        ],
+        "protectionReasons" : [
+          "decorativeTitleDiagnosticOnly"
+        ],
+        "recommendedNextAction" : "stopProtectedBlock",
+        "safetyReasons" : [
+          "decorativeTitle",
+          "segmentEvidenceTooWeak",
+          "unassignedBlock"
+        ],
+        "segmentMaskReasons" : [
+          "segmentEvidenceTooWeak",
+          "segmentOutsideBubbleRisk"
+        ],
+        "variantName" : "conservativeSeedBBox"
+      }
+    ],
+    "enabled" : true,
+    "evaluatedBlockCount" : 13,
+    "evaluatedCandidateCount" : 35,
+    "evaluatedPlanCount" : 37,
+    "notes" : [
+      "diagnosticOnly=true; this report explains pre-crop TextBox plans and shadow OCR promotion blockers",
+      "promotion checks are ground-truth-free and do not change finalTextUsedForTranslation",
+      "betterThanControlCandidateCount does not imply promotable candidate; blockers must be empty for promotion",
+      "TextRegion crop adoptedCount remains controlled by the existing guardrail"
+    ],
+    "ocrFailureBreakdown" : {
+      "betterButUnsafe" : 1,
+      "bubbleMaskConflict" : 1,
+      "controlStillBest" : 4,
+      "emptyLocalOCR" : 9,
+      "qualityGainInsufficient" : 5,
+      "rawWordsLost" : 10,
+      "sameAsFusedText" : 5
+    },
+    "planFailureBreakdown" : {
+      "bubbleMaskConflict" : 4,
+      "eligibleButNeedsShadowOCR" : 25,
+      "legacyShadowCandidate" : 6,
+      "lowBubbleCoverage" : 3,
+      "protectedDiagnosticOnly" : 4,
+      "segmentEvidenceTooWeak" : 1
+    },
+    "promotedShadowBlockCount" : 0,
+    "promotionBlockerBreakdown" : {
+      "bubbleMaskConflict" : 4,
+      "decorativeTitleDiagnosticOnly" : 3,
+      "emptyLocalOCR" : 9,
+      "noShadowCandidate" : 8,
+      "notBetterThanControl" : 22,
+      "protectedShortTextDiagnosticOnly" : 3,
+      "qualityDeltaBelowOrEqual0.08" : 31,
+      "rawWordsLost" : 19,
+      "sameAsFusedText" : 5,
+      "segmentEvidenceTooWeak" : 2,
+      "wordPreservationRatioBelow0.80" : 29
+    },
+    "stopRecommendedBlocks" : [
+      2,
+      3,
+      4,
+      5,
+      7,
+      9,
+      11,
+      12
     ]
   },
   "textRegionCropReport" : {

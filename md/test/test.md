@@ -169,6 +169,15 @@ python3 -m json.tool test/1.ground_truth.json
 - `cropExperimentReport.promotedShadowBlocks = []`
 - `cropExperimentReport.stoppedBlocks = [2, 3, 4, 5, 7, 9, 11, 12]`
 - `cropExperimentReport` 每块候选数最大为 4，即 control + 最多 3 个 shadow 候选；v18 shadow 候选优先来自 `preCropTextBoxPlan.*`
+- `textBoxPlanFailureReport.evaluatedBlockCount = 13`
+- `textBoxPlanFailureReport.evaluatedPlanCount = 37`
+- `textBoxPlanFailureReport.evaluatedCandidateCount = 35`
+- `textBoxPlanFailureReport.betterThanControlCandidateCount = 13`
+- `textBoxPlanFailureReport.promotedShadowBlockCount = 0`
+- `textBoxPlanFailureReport.stopRecommendedBlocks = [2, 3, 4, 5, 7, 9, 11, 12]`
+- `textBoxPlanFailureReport.continueGeometryResearchBlocks = [1, 6, 10]`
+- `textBoxPlanFailureReport.candidatePromotionBlockedBlocks = [1, 2, 4, 5, 6, 9, 10]`
+- `1_ocr_probe_text.txt` 每块包含 `textBoxPlanFailure` 和 `promotionChecks`
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
 - `failedBlocks = 12`
