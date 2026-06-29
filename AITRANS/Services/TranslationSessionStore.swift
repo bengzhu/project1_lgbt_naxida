@@ -1512,6 +1512,7 @@ final class TranslationSessionStore: ObservableObject {
                 var textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?
                 var lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport?
                 var lineCropExperimentReport: MangaOverlayLineCropExperimentReport?
+                var externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1765,6 +1766,14 @@ final class TranslationSessionStore: ObservableObject {
                         )
                     }
                 }
+                externalArtifactReadinessReport = Self.makeExternalArtifactReadinessReport(
+                    blocks: probeBlocks,
+                    imageWidth: recognized.image.width,
+                    imageHeight: recognized.image.height,
+                    bundledTestDirectory: self.bundledTestDirectory,
+                    bubbleMaskReport: bubbleMaskReport,
+                    segmentMaskReport: segmentMaskReport
+                )
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
@@ -1781,6 +1790,7 @@ final class TranslationSessionStore: ObservableObject {
                     textBoxPlanFailureReport: textBoxPlanFailureReport,
                     lineTextBoxPlanReport: lineTextBoxPlanReport,
                     lineCropExperimentReport: lineCropExperimentReport,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport
@@ -1842,6 +1852,7 @@ final class TranslationSessionStore: ObservableObject {
                     textBoxPlanFailureReport: textBoxPlanFailureReport,
                     lineTextBoxPlanReport: lineTextBoxPlanReport,
                     lineCropExperimentReport: lineCropExperimentReport,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -6851,6 +6862,7 @@ final class TranslationSessionStore: ObservableObject {
         textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport? = nil,
         lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport? = nil,
         lineCropExperimentReport: MangaOverlayLineCropExperimentReport? = nil,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -6919,6 +6931,7 @@ final class TranslationSessionStore: ObservableObject {
             textBoxPlanFailureReport: textBoxPlanFailureReport,
             lineTextBoxPlanReport: lineTextBoxPlanReport,
             lineCropExperimentReport: lineCropExperimentReport,
+            externalArtifactReadinessReport: externalArtifactReadinessReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -6939,6 +6952,384 @@ final class TranslationSessionStore: ObservableObject {
             outputCleanupPolicy: "探针开始重建 App 沙盒 Output；renderOutputs 只写入本轮文件；export-probe-output.sh 重建项目根 output；只保留本轮 probe_report.json 和本轮 PNG/TXT/JSON。",
             warnings: warnings
         )
+    }
+
+    private static func makeExternalArtifactReadinessReport(
+        blocks: [MangaOverlayProbeBlock],
+        imageWidth: Int,
+        imageHeight: Int,
+        bundledTestDirectory: URL?,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?
+    ) -> MangaOverlayExternalArtifactReadinessReport {
+        let artifactsDirectory = bundledTestDirectory?.appendingPathComponent("koharu_artifacts", isDirectory: true)
+        let manifestURL = artifactsDirectory?.appendingPathComponent("1.manifest.json")
+        var parseErrors: [String] = []
+        var notes = [
+            "shadowOnly=true",
+            "groundTruthNotUsed=true",
+            "doesNotChangeFinalTextUsedForTranslation=true",
+            "doesNotChangeTextRegionCropAdoptedCount=true",
+            "doesNotAttachExternalDetectorRuntime=true"
+        ]
+        let manifest: MangaOverlayExternalArtifactManifest? = Self.decodeExternalArtifact(
+            MangaOverlayExternalArtifactManifest.self,
+            from: manifestURL,
+            label: "manifest",
+            parseErrors: &parseErrors
+        )
+        if artifactsDirectory == nil {
+            notes.append("bundled test directory is unavailable")
+        } else if let artifactsDirectory, !FileManager.default.fileExists(atPath: artifactsDirectory.path) {
+            notes.append("test/koharu_artifacts directory not found")
+        }
+
+        let textBoxesURL = Self.externalArtifactURL(
+            named: manifest?.textBoxesPath,
+            fallback: "1.textboxes.json",
+            artifactsDirectory: artifactsDirectory
+        )
+        let bubbleMaskURL = Self.externalArtifactURL(
+            named: manifest?.bubbleMaskPath,
+            fallback: "1.bubbles.json",
+            artifactsDirectory: artifactsDirectory
+        )
+        let segmentMaskURL = Self.externalArtifactURL(
+            named: manifest?.segmentMaskPath,
+            fallback: "1.segment_mask.json",
+            artifactsDirectory: artifactsDirectory
+        )
+        let textBoxes = Self.decodeExternalArtifactList(
+            MangaOverlayExternalTextBox.self,
+            from: textBoxesURL,
+            keys: ["textBoxes", "textboxes", "items"],
+            label: "textBoxes",
+            parseErrors: &parseErrors
+        )
+        let bubbleInstances = Self.decodeExternalArtifactList(
+            MangaOverlayExternalBubbleInstance.self,
+            from: bubbleMaskURL,
+            keys: ["bubbleInstances", "bubbles", "instances", "items"],
+            label: "bubbleMask",
+            parseErrors: &parseErrors
+        )
+        let segmentMask = Self.decodeExternalArtifact(
+            MangaOverlayExternalSegmentMaskSummary.self,
+            from: segmentMaskURL,
+            label: "segmentMask",
+            parseErrors: &parseErrors
+        )
+        let missingArtifacts = Self.externalMissingArtifacts(
+            manifestURL: manifestURL,
+            textBoxesURL: textBoxesURL,
+            bubbleMaskURL: bubbleMaskURL,
+            segmentMaskURL: segmentMaskURL
+        )
+        let coordinateValidation = Self.validateExternalArtifactCoordinates(
+            manifest: manifest,
+            textBoxes: textBoxes,
+            bubbleInstances: bubbleInstances,
+            segmentMask: segmentMask,
+            imageWidth: imageWidth,
+            imageHeight: imageHeight
+        )
+        let blockAlignment = Self.externalArtifactBlockAlignment(
+            blocks: blocks,
+            textBoxes: textBoxes,
+            bubbleInstances: bubbleInstances,
+            segmentMask: segmentMask,
+            segmentMaskReport: segmentMaskReport
+        )
+        let readinessVerdict = Self.externalArtifactReadinessVerdict(
+            manifestFound: manifest != nil,
+            textBoxes: textBoxes,
+            bubbleInstances: bubbleInstances,
+            segmentMask: segmentMask,
+            missingArtifacts: missingArtifacts,
+            parseErrors: parseErrors,
+            coordinateValidation: coordinateValidation
+        )
+        let nextAction = Self.externalArtifactNextAction(
+            verdict: readinessVerdict,
+            textBoxes: textBoxes,
+            bubbleInstances: bubbleInstances,
+            segmentMask: segmentMask
+        )
+        if let bubbleMaskReport {
+            notes.append("internalBubbleMaskInstances=\(bubbleMaskReport.instanceCount)")
+        }
+        if let segmentMaskReport {
+            notes.append("internalSegmentGlyphBlocks=\(segmentMaskReport.glyphMaskBlocks)")
+        }
+        if readinessVerdict != "readyForShadowOCR" {
+            notes.append("external detector artifact evidence is insufficient; stop before shadow OCR")
+        }
+        return MangaOverlayExternalArtifactReadinessReport(
+            enabled: true,
+            sourceImage: "test/1.png",
+            manifestFound: manifest != nil,
+            textBoxesFound: Self.fileExists(textBoxesURL),
+            bubbleMaskFound: Self.fileExists(bubbleMaskURL),
+            segmentMaskFound: Self.fileExists(segmentMaskURL),
+            textBoxCount: textBoxes.count,
+            bubbleInstanceCount: bubbleInstances.count,
+            segmentGlyphPixelCount: segmentMask?.glyphPixelCount,
+            parsedTextBoxCount: textBoxes.count,
+            parsedBubbleInstanceCount: bubbleInstances.count,
+            parseErrors: parseErrors,
+            missingArtifacts: missingArtifacts,
+            coordinateValidation: coordinateValidation,
+            blockAlignment: blockAlignment,
+            readinessVerdict: readinessVerdict,
+            nextAction: nextAction,
+            notes: notes
+        )
+    }
+
+    private static func externalArtifactURL(named path: String?, fallback: String, artifactsDirectory: URL?) -> URL? {
+        guard let artifactsDirectory else { return nil }
+        guard let path, !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return artifactsDirectory.appendingPathComponent(fallback)
+        }
+        let url = URL(fileURLWithPath: path)
+        return url.isFileURL && path.hasPrefix("/") ? url : artifactsDirectory.appendingPathComponent(path)
+    }
+
+    private static func decodeExternalArtifact<T: Decodable>(
+        _ type: T.Type,
+        from url: URL?,
+        label: String,
+        parseErrors: inout [String]
+    ) -> T? {
+        guard let url, FileManager.default.fileExists(atPath: url.path) else { return nil }
+        do {
+            return try JSONDecoder().decode(type, from: Data(contentsOf: url))
+        } catch {
+            parseErrors.append("\(label): \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    private static func decodeExternalArtifactList<T: Decodable>(
+        _ type: T.Type,
+        from url: URL?,
+        keys: [String],
+        label: String,
+        parseErrors: inout [String]
+    ) -> [T] {
+        guard let url, FileManager.default.fileExists(atPath: url.path) else { return [] }
+        do {
+            let data = try Data(contentsOf: url)
+            if let values = try? JSONDecoder().decode([T].self, from: data) {
+                return values
+            }
+            let object = try JSONSerialization.jsonObject(with: data)
+            guard let dictionary = object as? [String: Any] else {
+                parseErrors.append("\(label): expected array or keyed object")
+                return []
+            }
+            for key in keys {
+                guard let raw = dictionary[key] else { continue }
+                let nestedData = try JSONSerialization.data(withJSONObject: raw)
+                return try JSONDecoder().decode([T].self, from: nestedData)
+            }
+            parseErrors.append("\(label): missing supported list key \(keys.joined(separator: "/"))")
+            return []
+        } catch {
+            parseErrors.append("\(label): \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    private static func externalMissingArtifacts(
+        manifestURL: URL?,
+        textBoxesURL: URL?,
+        bubbleMaskURL: URL?,
+        segmentMaskURL: URL?
+    ) -> [String] {
+        var missing: [String] = []
+        if !fileExists(manifestURL) { missing.append("manifest") }
+        if !fileExists(textBoxesURL) { missing.append("TextBoxes") }
+        if !fileExists(bubbleMaskURL) { missing.append("BubbleMask") }
+        if !fileExists(segmentMaskURL) { missing.append("SegmentMask") }
+        return missing
+    }
+
+    private static func fileExists(_ url: URL?) -> Bool {
+        guard let url else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    private static func validateExternalArtifactCoordinates(
+        manifest: MangaOverlayExternalArtifactManifest?,
+        textBoxes: [MangaOverlayExternalTextBox],
+        bubbleInstances: [MangaOverlayExternalBubbleInstance],
+        segmentMask: MangaOverlayExternalSegmentMaskSummary?,
+        imageWidth: Int,
+        imageHeight: Int
+    ) -> MangaOverlayExternalArtifactCoordinateValidation {
+        let expected = "originalImageTopLeftPixels"
+        let coordinateSpace = manifest?.coordinateSpace
+        let sourceImageMatches = manifest?.sourceImage == nil || manifest?.sourceImage == "test/1.png"
+        var errors: [String] = []
+        if let coordinateSpace, coordinateSpace != expected {
+            errors.append("coordinateSpaceMismatch:\(coordinateSpace)")
+        } else if coordinateSpace == nil {
+            errors.append("coordinateSpaceMissing")
+        }
+        if !sourceImageMatches {
+            errors.append("sourceImageMismatch:\(manifest?.sourceImage ?? "nil")")
+        }
+        let bounds = CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
+        let invalidTextBoxes = textBoxes.compactMap { textBox -> String? in
+            let rect = rect(from: textBox.bbox)
+            guard rect.width > 0, rect.height > 0, rect.minX >= 0, rect.minY >= 0,
+                  rect.maxX <= bounds.maxX, rect.maxY <= bounds.maxY else {
+                return textBox.id
+            }
+            if let confidence = textBox.confidence, !(0...1).contains(confidence) {
+                return textBox.id
+            }
+            return nil
+        }
+        let invalidBubbles = bubbleInstances.compactMap { bubble -> String? in
+            let rect = rect(from: bubble.bbox)
+            guard rect.width > 0, rect.height > 0, rect.minX >= 0, rect.minY >= 0,
+                  rect.maxX <= bounds.maxX, rect.maxY <= bounds.maxY else {
+                return bubble.id
+            }
+            if let confidence = bubble.confidence, !(0...1).contains(confidence) {
+                return bubble.id
+            }
+            return nil
+        }
+        if !invalidTextBoxes.isEmpty {
+            errors.append("invalidTextBoxBBoxes=\(invalidTextBoxes.joined(separator: ","))")
+        }
+        if !invalidBubbles.isEmpty {
+            errors.append("invalidBubbleBBoxes=\(invalidBubbles.joined(separator: ","))")
+        }
+        let segmentSizeMatches: Bool?
+        if let width = segmentMask?.width, let height = segmentMask?.height {
+            segmentSizeMatches = width == imageWidth && height == imageHeight
+            if segmentSizeMatches == false {
+                errors.append("segmentMaskSizeMismatch:\(width)x\(height)")
+            }
+        } else {
+            segmentSizeMatches = nil
+        }
+        return MangaOverlayExternalArtifactCoordinateValidation(
+            coordinateSpace: coordinateSpace,
+            expectedCoordinateSpace: expected,
+            sourceImageMatches: sourceImageMatches,
+            imageWidth: imageWidth,
+            imageHeight: imageHeight,
+            bboxValidationPassed: invalidTextBoxes.isEmpty && invalidBubbles.isEmpty,
+            invalidTextBoxIDs: invalidTextBoxes,
+            invalidBubbleInstanceIDs: invalidBubbles,
+            segmentMaskSizeMatches: segmentSizeMatches,
+            errors: errors,
+            notes: ["bbox convention is original image pixel coordinates with top-left origin"]
+        )
+    }
+
+    private static func externalArtifactBlockAlignment(
+        blocks: [MangaOverlayProbeBlock],
+        textBoxes: [MangaOverlayExternalTextBox],
+        bubbleInstances: [MangaOverlayExternalBubbleInstance],
+        segmentMask: MangaOverlayExternalSegmentMaskSummary?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?
+    ) -> [MangaOverlayExternalArtifactBlockAlignment] {
+        let internalSegmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        return blocks.map { block in
+            let blockRect = rect(from: block.bbox)
+            let bestTextBox = textBoxes
+                .map { ($0, rectIoU(blockRect, rect(from: $0.bbox))) }
+                .max { $0.1 < $1.1 }
+            let bestBubble = bubbleInstances
+                .map { ($0, rectIoU(blockRect, rect(from: $0.bbox))) }
+                .max { $0.1 < $1.1 }
+            let textBoxRect = bestTextBox.map { rect(from: $0.0.bbox) }
+            let center = CGPoint(x: blockRect.midX, y: blockRect.midY)
+            let centerContained = textBoxRect?.contains(center) ?? false
+            let segmentCoverageLevel: String
+            if let segmentMask {
+                let glyphPixels = segmentMask.glyphPixelCount ?? 0
+                segmentCoverageLevel = glyphPixels > 0 ? "summaryAvailable" : "summaryEmpty"
+            } else if let internalSegment = internalSegmentByBlock[block.index] {
+                segmentCoverageLevel = internalSegment.usableForCropEvidence ? "internalProxyUsableOnly" : "internalProxyWeakOnly"
+            } else {
+                segmentCoverageLevel = "missing"
+            }
+            let hasTextBoxMatch = (bestTextBox?.1 ?? 0) >= 0.10 || centerContained
+            let hasBubbleMatch = (bestBubble?.1 ?? 0) >= 0.10
+            let verdict: String
+            if textBoxes.isEmpty && bubbleInstances.isEmpty {
+                verdict = "notEvaluatedMissingArtifacts"
+            } else if hasTextBoxMatch && hasBubbleMatch {
+                verdict = "aligned"
+            } else if hasTextBoxMatch {
+                verdict = "textBoxOnly"
+            } else if hasBubbleMatch {
+                verdict = "bubbleOnly"
+            } else {
+                verdict = "unaligned"
+            }
+            return MangaOverlayExternalArtifactBlockAlignment(
+                blockIndex: block.index,
+                blockBBox: block.bbox,
+                bestTextBoxID: hasTextBoxMatch ? bestTextBox?.0.id : nil,
+                bestTextBoxIoU: bestTextBox?.1,
+                textBoxCenterContained: centerContained,
+                bestBubbleInstanceID: hasBubbleMatch ? bestBubble?.0.id : nil,
+                bestBubbleIoU: bestBubble?.1,
+                currentBubbleID: block.bubbleID,
+                bestExternalBubbleMaskValue: hasBubbleMatch ? bestBubble?.0.maskValue : nil,
+                segmentCoverageLevel: segmentCoverageLevel,
+                alignmentVerdict: verdict,
+                notes: ["alignment is shadow-only and uses IoU/center containment without ground truth"]
+            )
+        }
+    }
+
+    private static func externalArtifactReadinessVerdict(
+        manifestFound: Bool,
+        textBoxes: [MangaOverlayExternalTextBox],
+        bubbleInstances: [MangaOverlayExternalBubbleInstance],
+        segmentMask: MangaOverlayExternalSegmentMaskSummary?,
+        missingArtifacts: [String],
+        parseErrors: [String],
+        coordinateValidation: MangaOverlayExternalArtifactCoordinateValidation
+    ) -> String {
+        if !manifestFound { return "manifestMissing" }
+        if !parseErrors.isEmpty { return "parseFailed" }
+        if !coordinateValidation.errors.isEmpty { return "coordinateSpaceMismatch" }
+        if !missingArtifacts.isEmpty { return "artifactFilesMissing" }
+        if textBoxes.isEmpty { return "insufficientTextBoxCoverage" }
+        if bubbleInstances.isEmpty { return "insufficientBubbleCoverage" }
+        if segmentMask == nil { return "segmentMaskMissing" }
+        return "readyForShadowOCR"
+    }
+
+    private static func externalArtifactNextAction(
+        verdict: String,
+        textBoxes: [MangaOverlayExternalTextBox],
+        bubbleInstances: [MangaOverlayExternalBubbleInstance],
+        segmentMask: MangaOverlayExternalSegmentMaskSummary?
+    ) -> String {
+        switch verdict {
+        case "readyForShadowOCR":
+            if !textBoxes.isEmpty { return "continueWithExternalTextBoxesShadowOCR" }
+            if !bubbleInstances.isEmpty { return "continueWithBubbleMaskComparison" }
+            if segmentMask != nil { return "continueWithSegmentMaskComparison" }
+            return "evaluateCoreMLConversion"
+        case "parseFailed":
+            return "stopUntilParserFixed"
+        default:
+            return "stopUntilArtifactsProvided"
+        }
     }
 
     private func makeMangaOverlayProbeDiagnostics(blocks: [MangaOverlayProbeBlock]) -> MangaOverlayProbeDiagnostics {

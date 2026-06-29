@@ -4560,7 +4560,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "65437514-75EB-4EA2-A43F-93095D94C0AE",
+      "id" : "58BF298F-5129-44A8-984C-5DA53856FAFE",
       "index" : 0,
       "maskSafeRect" : [
         425,
@@ -7330,7 +7330,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "3D412430-661A-43BE-A1C7-BD8C93C01576",
+      "id" : "54235F20-8F33-4C55-83D4-38474873F76E",
       "index" : 1,
       "maskSafeRect" : [
         60,
@@ -7877,7 +7877,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "63189ED6-5D79-4500-8385-F861AAA8EEA2",
+      "id" : "D937DDA2-3D4C-4E82-8F72-00862F620718",
       "index" : 2,
       "maskSafeRect" : [
         440,
@@ -12778,7 +12778,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "473C62C2-75FF-49B3-9128-B8D06A1E9459",
+      "id" : "BB73111D-AAE9-4529-9380-6E208DC78B5B",
       "index" : 3,
       "maskSafeRect" : [
         23,
@@ -12930,7 +12930,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "1AD19BEB-8D2C-4B4B-B646-0EEC240AFCF1",
+      "id" : "A9BA53C5-B636-4E52-8A3F-61716D3A6136",
       "index" : 4,
       "maskSafeRect" : [
         450,
@@ -18118,7 +18118,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "C1DB924F-D950-4FF9-896E-9EAF7270731C",
+      "id" : "DFE28BFA-7BFD-4905-91E7-818CE08B9759",
       "index" : 5,
       "maskSafeRect" : [
         91,
@@ -22526,7 +22526,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "20CF4A77-F0C5-44D7-AAF7-FABDE1F8BD45",
+      "id" : "6681D683-4E38-49C2-B09F-C718470DFB47",
       "index" : 6,
       "maskSafeRect" : [
         91,
@@ -24255,7 +24255,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "CBE46456-CF15-43A0-9252-4B74E46D1C79",
+      "id" : "CD1E5821-A8B1-4EEB-B889-65EC82259CB7",
       "index" : 7,
       "maskSafeRect" : [
         447,
@@ -32170,7 +32170,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "C6E9820D-5343-4217-A20D-A2EE7ECAF10B",
+      "id" : "B5007E56-4092-49B6-9F29-BF4301E9BC08",
       "index" : 8,
       "maskSafeRect" : [
         35,
@@ -39690,7 +39690,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "DE3B157B-4162-43E0-BF09-9ED3156621C5",
+      "id" : "3EE7CA53-B235-4456-A91A-2669DB225429",
       "index" : 9,
       "maskSafeRect" : [
         112,
@@ -44936,7 +44936,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "7BA2E88D-DCBA-4C09-9B5D-30C653064AAB",
+      "id" : "76089077-5BF1-4E95-B795-2D6CBB4B6D92",
       "index" : 10,
       "maskSafeRect" : [
         243,
@@ -45383,7 +45383,7 @@
       ],
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "D5D89227-707A-428B-8262-C875DF9A4878",
+      "id" : "6BC49FF3-F637-4B09-9C58-B582BDDEF83A",
       "index" : 11,
       "maskSafeRect" : [
         251,
@@ -45551,7 +45551,7 @@
       "glyphMaskPixelCount" : 0,
       "groundTruthMatch" : "matched",
       "groundTruthMatchThreshold" : 0.42,
-      "id" : "C82DA53C-FFF6-4A8D-A59D-0C306CA36181",
+      "id" : "53D2C487-C123-44AD-9707-38412547AC3D",
       "index" : 12,
       "maskSafeRect" : [
         244,
@@ -54273,6 +54273,267 @@
     ]
   },
   "engineUsed" : "Local GGUF",
+  "externalArtifactReadinessReport" : {
+    "blockAlignment" : [
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          499,
+          328,
+          53,
+          68
+        ],
+        "blockIndex" : 0,
+        "currentBubbleID" : 0,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyUsableOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          115,
+          357,
+          51,
+          52
+        ],
+        "blockIndex" : 1,
+        "currentBubbleID" : 1,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyUsableOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          495,
+          560,
+          51,
+          38
+        ],
+        "blockIndex" : 2,
+        "currentBubbleID" : 2,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyUsableOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          69,
+          674,
+          42,
+          65
+        ],
+        "blockIndex" : 3,
+        "currentBubbleID" : 3,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyUsableOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          362,
+          849,
+          101,
+          55
+        ],
+        "blockIndex" : 4,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyWeakOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          238,
+          884,
+          50,
+          107
+        ],
+        "blockIndex" : 5,
+        "currentBubbleID" : 7,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyWeakOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          154,
+          905,
+          63,
+          67
+        ],
+        "blockIndex" : 6,
+        "currentBubbleID" : 4,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyUsableOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          505,
+          898,
+          51,
+          57
+        ],
+        "blockIndex" : 7,
+        "currentBubbleID" : 5,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyUsableOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          47,
+          967,
+          67,
+          94
+        ],
+        "blockIndex" : 8,
+        "currentBubbleID" : 6,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyUsableOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          118,
+          977,
+          37,
+          60
+        ],
+        "blockIndex" : 9,
+        "currentBubbleID" : 6,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyUsableOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          281,
+          961,
+          54,
+          76
+        ],
+        "blockIndex" : 10,
+        "currentBubbleID" : 7,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyUsableOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          289,
+          965,
+          36,
+          52
+        ],
+        "blockIndex" : 11,
+        "currentBubbleID" : 4,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyUsableOnly",
+        "textBoxCenterContained" : false
+      },
+      {
+        "alignmentVerdict" : "notEvaluatedMissingArtifacts",
+        "blockBBox" : [
+          385,
+          978,
+          106,
+          64
+        ],
+        "blockIndex" : 12,
+        "notes" : [
+          "alignment is shadow-only and uses IoU\/center containment without ground truth"
+        ],
+        "segmentCoverageLevel" : "internalProxyWeakOnly",
+        "textBoxCenterContained" : false
+      }
+    ],
+    "bubbleInstanceCount" : 0,
+    "bubbleMaskFound" : false,
+    "coordinateValidation" : {
+      "bboxValidationPassed" : true,
+      "errors" : [
+        "coordinateSpaceMissing"
+      ],
+      "expectedCoordinateSpace" : "originalImageTopLeftPixels",
+      "imageHeight" : 1280,
+      "imageWidth" : 576,
+      "invalidBubbleInstanceIDs" : [
+
+      ],
+      "invalidTextBoxIDs" : [
+
+      ],
+      "notes" : [
+        "bbox convention is original image pixel coordinates with top-left origin"
+      ],
+      "sourceImageMatches" : true
+    },
+    "enabled" : true,
+    "manifestFound" : false,
+    "missingArtifacts" : [
+      "manifest",
+      "TextBoxes",
+      "BubbleMask",
+      "SegmentMask"
+    ],
+    "nextAction" : "stopUntilArtifactsProvided",
+    "notes" : [
+      "shadowOnly=true",
+      "groundTruthNotUsed=true",
+      "doesNotChangeFinalTextUsedForTranslation=true",
+      "doesNotChangeTextRegionCropAdoptedCount=true",
+      "doesNotAttachExternalDetectorRuntime=true",
+      "test\/koharu_artifacts directory not found",
+      "internalBubbleMaskInstances=8",
+      "internalSegmentGlyphBlocks=11",
+      "external detector artifact evidence is insufficient; stop before shadow OCR"
+    ],
+    "parseErrors" : [
+
+    ],
+    "parsedBubbleInstanceCount" : 0,
+    "parsedTextBoxCount" : 0,
+    "readinessVerdict" : "manifestMissing",
+    "segmentMaskFound" : false,
+    "sourceImage" : "test\/1.png",
+    "textBoxCount" : 0,
+    "textBoxesFound" : false
+  },
   "frameworkComparison" : {
     "blocksFoundByBoth" : 7,
     "blocksOnlyInBubbleFirst" : [
@@ -54286,7 +54547,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 15426,
+      "processingTimeMs" : 15745,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -54587,7 +54848,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 231479,
+      "processingTimeMs" : 232688,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -54606,7 +54867,7 @@
     "bubbleFirst" : {
       "accuracyVsGroundTruth" : 0.7299623138729175,
       "matchedGroundTruthCount" : 12,
-      "processingTimeMs" : 15426,
+      "processingTimeMs" : 15745,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 1
     },
@@ -54618,7 +54879,7 @@
     "fused" : {
       "accuracyVsGroundTruth" : 0.7383773465526562,
       "matchedGroundTruthCount" : 13,
-      "processingTimeMs" : 231479,
+      "processingTimeMs" : 232688,
       "totalBlocksDetected" : 13,
       "unmatchedBlockCount" : 0
     },
@@ -54724,7 +54985,7 @@
     "wholePage" : {
       "accuracyVsGroundTruth" : 0.597183317771553,
       "matchedGroundTruthCount" : 10,
-      "processingTimeMs" : 231479,
+      "processingTimeMs" : 232688,
       "totalBlocksDetected" : 14,
       "unmatchedBlockCount" : 4
     }
@@ -56994,20 +57255,20 @@
   "outputDirectoryCleaned" : true,
   "outputFileCountAfterCleanup" : 15,
   "outputFiles" : {
-    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
-    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
-    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
-    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
-    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
-    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
-    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
-    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
-    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
-    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
-    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
-    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
-    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
-    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/C8D4F889-88D1-44D9-AF3F-0CCBDC2B4F7C\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
+    "blockCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_block_crops.png",
+    "bubbleCropsImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_bubble_crops.png",
+    "bubbleDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_bubble_debug.png",
+    "bubbleSeedDebugImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_bubble_seed_debug.png",
+    "bubbleTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_bubble_text_overlay.png",
+    "cleanTextDiagnosticFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/clean_text_diagnostic.json",
+    "debugBoxesImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_debug_boxes.png",
+    "deterministicCorrectionOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_correction_overlay.png",
+    "deterministicTranslationOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_deterministic_translation_overlay.png",
+    "ocrProbeTextFile" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_ocr_probe_text.txt",
+    "ocrTextOverlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_ocr_text_overlay.png",
+    "overlayImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_translated_overlay.png",
+    "preprocessedContentImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_preprocessed_content.png",
+    "probeContactSheetImage" : "\/Users\/a114514\/Library\/Developer\/CoreSimulator\/Devices\/A1EA6908-3306-44E0-9F99-F0F77DAE2404\/data\/Containers\/Data\/Application\/247B26D4-01B1-4899-8FD4-5C995A15A967\/Library\/Application Support\/AITRANS\/Output\/1_probe_contact_sheet.png"
   },
   "overallPassed" : false,
   "preCropTextBoxPlanReport" : {

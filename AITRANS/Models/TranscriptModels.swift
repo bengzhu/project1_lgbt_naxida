@@ -1397,6 +1397,235 @@ struct MangaOverlayLineCropExperimentReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
+    var schemaVersion: String
+    var sourceImage: String
+    var coordinateSpace: String
+    var generatedBy: String?
+    var generatedAt: String?
+    var textBoxesPath: String?
+    var bubbleMaskPath: String?
+    var segmentMaskPath: String?
+    var notes: [String]
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case sourceImage
+        case coordinateSpace
+        case generatedBy
+        case generatedAt
+        case textBoxesPath
+        case bubbleMaskPath
+        case segmentMaskPath
+        case notes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decodeIfPresent(String.self, forKey: .schemaVersion) ?? "unknown"
+        sourceImage = try container.decodeIfPresent(String.self, forKey: .sourceImage) ?? ""
+        coordinateSpace = try container.decodeIfPresent(String.self, forKey: .coordinateSpace) ?? ""
+        generatedBy = try container.decodeIfPresent(String.self, forKey: .generatedBy)
+        generatedAt = try container.decodeIfPresent(String.self, forKey: .generatedAt)
+        textBoxesPath = try container.decodeIfPresent(String.self, forKey: .textBoxesPath)
+        bubbleMaskPath = try container.decodeIfPresent(String.self, forKey: .bubbleMaskPath)
+        segmentMaskPath = try container.decodeIfPresent(String.self, forKey: .segmentMaskPath)
+        notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
+    }
+}
+
+struct MangaOverlayExternalTextBox: Equatable, Codable, Sendable {
+    var id: String
+    var bbox: [Double]
+    var confidence: Double?
+    var detector: String?
+    var linePolygons: [[[Double]]]?
+    var sourceDirection: String?
+    var rotationDegrees: Double?
+    var detectedFontSizePx: Double?
+    var notes: [String]
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case bbox
+        case x
+        case y
+        case width
+        case height
+        case confidence
+        case detector
+        case linePolygons
+        case sourceDirection
+        case rotationDegrees
+        case rotationDeg
+        case detectedFontSizePx
+        case notes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        if let bbox = try container.decodeIfPresent([Double].self, forKey: .bbox), bbox.count == 4 {
+            self.bbox = bbox
+        } else {
+            let x = try container.decodeIfPresent(Double.self, forKey: .x) ?? 0
+            let y = try container.decodeIfPresent(Double.self, forKey: .y) ?? 0
+            let width = try container.decodeIfPresent(Double.self, forKey: .width) ?? 0
+            let height = try container.decodeIfPresent(Double.self, forKey: .height) ?? 0
+            bbox = [x, y, width, height]
+        }
+        confidence = try container.decodeIfPresent(Double.self, forKey: .confidence)
+        detector = try container.decodeIfPresent(String.self, forKey: .detector)
+        linePolygons = try container.decodeIfPresent([[[Double]]].self, forKey: .linePolygons)
+        sourceDirection = try container.decodeIfPresent(String.self, forKey: .sourceDirection)
+        rotationDegrees = try container.decodeIfPresent(Double.self, forKey: .rotationDegrees)
+            ?? container.decodeIfPresent(Double.self, forKey: .rotationDeg)
+        detectedFontSizePx = try container.decodeIfPresent(Double.self, forKey: .detectedFontSizePx)
+        notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(bbox, forKey: .bbox)
+        try container.encodeIfPresent(confidence, forKey: .confidence)
+        try container.encodeIfPresent(detector, forKey: .detector)
+        try container.encodeIfPresent(linePolygons, forKey: .linePolygons)
+        try container.encodeIfPresent(sourceDirection, forKey: .sourceDirection)
+        try container.encodeIfPresent(rotationDegrees, forKey: .rotationDegrees)
+        try container.encodeIfPresent(detectedFontSizePx, forKey: .detectedFontSizePx)
+        try container.encode(notes, forKey: .notes)
+    }
+}
+
+struct MangaOverlayExternalBubbleInstance: Equatable, Codable, Sendable {
+    var id: String
+    var bbox: [Double]
+    var confidence: Double?
+    var pixelCount: Int?
+    var maskValue: Int?
+    var notes: [String]
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case bbox
+        case x
+        case y
+        case width
+        case height
+        case confidence
+        case pixelCount
+        case maskValue
+        case notes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        if let bbox = try container.decodeIfPresent([Double].self, forKey: .bbox), bbox.count == 4 {
+            self.bbox = bbox
+        } else {
+            let x = try container.decodeIfPresent(Double.self, forKey: .x) ?? 0
+            let y = try container.decodeIfPresent(Double.self, forKey: .y) ?? 0
+            let width = try container.decodeIfPresent(Double.self, forKey: .width) ?? 0
+            let height = try container.decodeIfPresent(Double.self, forKey: .height) ?? 0
+            bbox = [x, y, width, height]
+        }
+        confidence = try container.decodeIfPresent(Double.self, forKey: .confidence)
+        pixelCount = try container.decodeIfPresent(Int.self, forKey: .pixelCount)
+        maskValue = try container.decodeIfPresent(Int.self, forKey: .maskValue)
+        notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(bbox, forKey: .bbox)
+        try container.encodeIfPresent(confidence, forKey: .confidence)
+        try container.encodeIfPresent(pixelCount, forKey: .pixelCount)
+        try container.encodeIfPresent(maskValue, forKey: .maskValue)
+        try container.encode(notes, forKey: .notes)
+    }
+}
+
+struct MangaOverlayExternalSegmentMaskSummary: Equatable, Codable, Sendable {
+    var sourcePath: String?
+    var width: Int?
+    var height: Int?
+    var glyphPixelCount: Int?
+    var connectedComponentCount: Int?
+    var notes: [String]
+
+    private enum CodingKeys: String, CodingKey {
+        case sourcePath
+        case width
+        case height
+        case glyphPixelCount
+        case connectedComponentCount
+        case notes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sourcePath = try container.decodeIfPresent(String.self, forKey: .sourcePath)
+        width = try container.decodeIfPresent(Int.self, forKey: .width)
+        height = try container.decodeIfPresent(Int.self, forKey: .height)
+        glyphPixelCount = try container.decodeIfPresent(Int.self, forKey: .glyphPixelCount)
+        connectedComponentCount = try container.decodeIfPresent(Int.self, forKey: .connectedComponentCount)
+        notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
+    }
+}
+
+struct MangaOverlayExternalArtifactCoordinateValidation: Equatable, Codable, Sendable {
+    var coordinateSpace: String?
+    var expectedCoordinateSpace: String
+    var sourceImageMatches: Bool
+    var imageWidth: Int
+    var imageHeight: Int
+    var bboxValidationPassed: Bool
+    var invalidTextBoxIDs: [String]
+    var invalidBubbleInstanceIDs: [String]
+    var segmentMaskSizeMatches: Bool?
+    var errors: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayExternalArtifactBlockAlignment: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var blockBBox: [Double]
+    var bestTextBoxID: String?
+    var bestTextBoxIoU: Double?
+    var textBoxCenterContained: Bool
+    var bestBubbleInstanceID: String?
+    var bestBubbleIoU: Double?
+    var currentBubbleID: Int?
+    var bestExternalBubbleMaskValue: Int?
+    var segmentCoverageLevel: String
+    var alignmentVerdict: String
+    var notes: [String]
+}
+
+struct MangaOverlayExternalArtifactReadinessReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var sourceImage: String
+    var manifestFound: Bool
+    var textBoxesFound: Bool
+    var bubbleMaskFound: Bool
+    var segmentMaskFound: Bool
+    var textBoxCount: Int
+    var bubbleInstanceCount: Int
+    var segmentGlyphPixelCount: Int?
+    var parsedTextBoxCount: Int
+    var parsedBubbleInstanceCount: Int
+    var parseErrors: [String]
+    var missingArtifacts: [String]
+    var coordinateValidation: MangaOverlayExternalArtifactCoordinateValidation
+    var blockAlignment: [MangaOverlayExternalArtifactBlockAlignment]
+    var readinessVerdict: String
+    var nextAction: String
+    var notes: [String]
+}
+
 struct MangaOverlayBubbleSubRegionDiagnostic: Equatable, Codable, Sendable {
     var id: Int
     var parentBubbleID: Int
@@ -1616,6 +1845,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?
     var lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport?
     var lineCropExperimentReport: MangaOverlayLineCropExperimentReport?
+    var externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?

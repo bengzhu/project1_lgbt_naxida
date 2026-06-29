@@ -1,3 +1,4 @@
+externalArtifactReadiness: manifestFound=false textBoxesFound=false bubbleMaskFound=false segmentMaskFound=false verdict=manifestMissing nextAction=stopUntilArtifactsProvided missing=manifest,TextBoxes,BubbleMask,SegmentMask
 #0 bbox=[499,328,53,68] bubbleID=0 bubbleAssignmentMethod=overlapArea crossBubbleMergeRejected=false sliceIndex=nil sliceOverlapDeduped=false angle=0 groundTruthMatch=matched ocrSimilarity=1.000 legacySimilarity=1.000 wordOrder=true blockPassed=false
 rawOCR: THAT'S / RIGHT, / NOW / I'M-
 afterPreprocessing: THAT'S / RIGHT, / RIGHT / NOW / I'M-
@@ -45,6 +46,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] r
 lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
 linePromotionChecks: passed=nil failed=nil
 lineResearchDecision: skipped
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyUsableOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: sameAsFusedText
 safeLayoutRect: [425,297,127,130]
 safeLayoutSource: maskSafeRect
@@ -120,6 +122,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[0:line
 lineCropExperiment: bestLineShadowID=1 bestVariant=lineTextBoxPlan.lineBandTextBox bestText=I'VE / ARRIVED / AT REN- / SENPAIS / HOUSE. qualityDelta=0.095 wordPreservation=0.571 promotionVerdict=noLocalOCRBenefit stopReasons=wordPreservationRatioBelow0.80
 linePromotionChecks: passed=ocrSucceeded | qualityDelta>0.08 failed=wordPreservationRatioBelow0.80
 lineResearchDecision: lineResearchDecision=stop reason=wordPreservationRatioBelow0.80
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyUsableOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: introducedLikelyOCRError | localVisionRegression
 safeLayoutRect: [60,326,160,115]
 safeLayoutSource: maskSafeRect
@@ -195,6 +198,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] r
 lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
 linePromotionChecks: passed=nil failed=nil
 lineResearchDecision: skipped
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyUsableOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [440,537,121,84]
 safeLayoutSource: maskSafeRect
@@ -270,6 +274,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] r
 lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
 linePromotionChecks: passed=nil failed=nil
 lineResearchDecision: skipped
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyUsableOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: localVisionRegression | rawWordsLost | wordCountRegression
 safeLayoutRect: [23,647,160,124]
 safeLayoutSource: maskSafeRect
@@ -345,6 +350,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] r
 lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
 linePromotionChecks: passed=nil failed=nil
 lineResearchDecision: skipped
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyWeakOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: bubbleMaskConflict | insufficientQualityGain | segmentMaskWeak | textBoxTooWide
 safeLayoutRect: [450,881,106,60]
 safeLayoutSource: maskSafeBlockFallback
@@ -420,6 +426,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] r
 lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
 linePromotionChecks: passed=nil failed=nil
 lineResearchDecision: skipped
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyWeakOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: bubbleMaskConflict | introducedLikelyOCRError | localVisionRegression | rawWordsLost | segmentMaskWeak
 safeLayoutRect: [91,881,191,84]
 safeLayoutSource: maskSafeRect
@@ -495,6 +502,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[4:line
 lineCropExperiment: bestLineShadowID=4 bestVariant=lineTextBoxPlan.lineTightTextBox bestText=EVEN. / THOUSH / I SAID / JIST / THIS IS AN / SPECIAL / • OPPLINE: / TRAINING / TOLENANENT. / AND / DOING IT / ASKEO H / ONLINE / WOLLO MAKE / WE / COLLD / MEANWELESS / JUST / PLAY / ESTION / ONLINE... / AS / LLED. qualityDelta=-0.053 wordPreservation=0.750 promotionVerdict=controlStillBest stopReasons=introducedLikelyOCRError | lineCandidateDoesNotBeatV19BestShadow | notBetterThanControl | qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
 linePromotionChecks: passed=ocrSucceeded failed=introducedLikelyOCRError | qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
 lineResearchDecision: lineResearchDecision=stop reason=introducedLikelyOCRError+lineCandidateDoesNotBeatV19BestShadow+notBetterThanControl+qualityDeltaBelowOrEqual0.08+wordPreservationRatioBelow0.80
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyUsableOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: localVisionRegression | rawWordsLost
 safeLayoutRect: [91,881,151,99]
 safeLayoutSource: maskSafeRect
@@ -570,6 +578,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] r
 lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
 linePromotionChecks: passed=nil failed=nil
 lineResearchDecision: skipped
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyUsableOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [447,878,111,96]
 safeLayoutSource: maskSafeRect
@@ -645,6 +654,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] r
 lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
 linePromotionChecks: passed=nil failed=nil
 lineResearchDecision: skipped
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyUsableOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: insufficientQualityGain
 safeLayoutRect: [35,918,70,192]
 safeLayoutSource: maskSafeRect
@@ -720,6 +730,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] r
 lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
 linePromotionChecks: passed=nil failed=nil
 lineResearchDecision: skipped
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyUsableOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: localVisionRegression | rawWordsLost | wordCountRegression
 safeLayoutRect: [112,919,83,191]
 safeLayoutSource: maskSafeRect
@@ -795,6 +806,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[8:line
 lineCropExperiment: bestLineShadowID=8 bestVariant=lineTextBoxPlan.lineTightTextBox bestText=JUST / SPECIAL / TRAINING / AND / ASKED IF / WE / COLLO / JUIST / PLAY / -OR AT / LEAST. / ONLINE-. / THAT / SEEMS / TO BE / CEN- / LOGIC. qualityDelta=0.046 wordPreservation=0.583 promotionVerdict=noLocalOCRBenefit stopReasons=lineCandidateDoesNotBeatV19BestShadow | qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
 linePromotionChecks: passed=ocrSucceeded failed=qualityDeltaBelowOrEqual0.08 | wordPreservationRatioBelow0.80
 lineResearchDecision: lineResearchDecision=stop reason=lineCandidateDoesNotBeatV19BestShadow+qualityDeltaBelowOrEqual0.08+wordPreservationRatioBelow0.80
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyUsableOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: localVisionRegression | rawWordsLost
 safeLayoutRect: [243,972,130,96]
 safeLayoutSource: maskSafeRect
@@ -870,6 +882,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] r
 lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
 linePromotionChecks: passed=nil failed=nil
 lineResearchDecision: skipped
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyUsableOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: emptyLocalOCR
 safeLayoutRect: [251,931,120,137]
 safeLayoutSource: maskSafeRect
@@ -945,6 +958,7 @@ lineTextBoxPlans: shadowOnly=true targetBy=v1.9ContinueGeometry selected=[nil] r
 lineCropExperiment: bestLineShadowID=nil bestVariant=nil bestText=nil qualityDelta=nil wordPreservation=nil promotionVerdict=nil stopReasons=nil
 linePromotionChecks: passed=nil failed=nil
 lineResearchDecision: skipped
+externalArtifacts: readiness=manifestMissing textBoxID=none textBoxIoU=nil bubbleInstanceID=none bubbleIoU=nil segmentMask=internalProxyWeakOnly alignment=notEvaluatedMissingArtifacts nextAction=stopUntilArtifactsProvided
 cropFailureAttribution: bubbleMaskConflict | sameAsFusedText | segmentMaskWeak | textBoxTooWide
 safeLayoutRect: [244,948,128,119]
 safeLayoutSource: maskSafeBlockFallback
