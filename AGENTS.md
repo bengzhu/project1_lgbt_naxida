@@ -89,9 +89,10 @@ test/1.png
 - `smalldata_test`：本仓库实际工作主分支。若外部提示词写成 `samlldata_test`，以当前远端真实分支 `origin/smalldata_test` 为准。
 - `codeb/vX.Y-短标题`：Agent B 候选实现分支，例如 `codeb/v2.0-cloud-ci-workflow`。
 - Agent B 每轮从最新 `smalldata_test` 开 `codeb/...` 分支，完成后 push。
-- Agent C 从远端拉取 `codeb/...` 分支验收；通过后合并到 `smalldata_test` 并 push。
+- Agent B push 后默认创建 Pull Request，base 为 `smalldata_test`，head 为 `codeb/...`。
+- Agent C 从 PR / 远端 `codeb/...` 分支验收；通过后优先通过 PR merge 合并到 `smalldata_test`。
 - 任何 Agent 在 `git push`、`git merge`、删除远端分支或改变远端状态前，都必须确认目标不是 `main`。
-- Agent C 合并后应记录候选分支是否可删除；没有权限删除时必须说明。
+- Agent C 合并后必须删除远端 `codeb/...` 候选分支，或确认 GitHub PR 的 delete branch 已执行；没有权限删除时必须说明，避免候选分支无限堆积。
 
 默认验证路径：
 
@@ -113,8 +114,8 @@ test/1.png
 - 从最新 `smalldata_test` 开 `codeb/vX.Y-短标题` 分支。
 - 按 Agent A 提示词小步实现，不做无关重构。
 - 默认本地只跑轻量检查；除非人工明确要求，不跑本机完整 Xcode build 或漫画探针。
-- 完成后 push 分支，让 GitHub Actions 运行。
-- 最终回复必须列出分支名、commit SHA、push 结果、CI 入口或 run 信息、本地已跑检查、未跑测试原因、artifact 名称；若 Actions 尚未完成，必须说明等待云端结果。
+- 完成后 push 分支并创建 PR 到 `smalldata_test`，让 GitHub Actions 运行。
+- 最终回复必须列出分支名、PR 链接、commit SHA、push 结果、CI 入口或 run 信息、本地已跑检查、未跑测试原因、artifact 名称；若 Actions 尚未完成，必须说明等待云端结果。
 
 ### Agent C
 - 拉取 `codeb/...` 分支，查看实际 diff、文档同步、架构边界、GitHub Actions 结论、日志和 artifacts。
@@ -122,7 +123,8 @@ test/1.png
 - 必须核对 `ci-artifact-manifest.json` 中的 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`，确认没有拿旧包、错包或其他分支的包。
 - 必须查看 `.xcresult` 或摘要、`junit.xml`、`xcodebuild.log`、`ci-failure-summary.md`；涉及探针时还必须检查云端生成或上传的 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和关键 PNG。
 - 有 bug 或云端验证失败时，输出退回清单，说明应由 Agent B 修复的日志位置和失败原因，不合并。
-- 通过后更新版本号和核心文档，合并到 `smalldata_test`，push。严禁合并到 `main`。
+- 通过后更新版本号和核心文档，通过 PR merge 合并到 `smalldata_test`，push。严禁合并到 `main`。
+- 合并完成后删除远端 `codeb/...` 候选分支，或在最终回复说明未删除原因。
 
 ## 7. 测试选择
 - 文档-only 修改至少运行 `git diff --check`，可加 JSON/YAML smoke。

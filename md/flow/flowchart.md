@@ -126,9 +126,10 @@ flowchart TD
   B0 --> B1["Agent B<br/>按提示词小步实现"]
   B1 --> B2["本地轻量检查<br/>git diff --check / JSON / YAML smoke"]
   B2 --> B3["push codeb/...<br/>不合并 main"]
+  B3 --> B4["创建 PR<br/>base=smalldata_test / head=codeb/..."]
 
   %% 云端验证和结果包
-  B3 --> G1["GitHub Actions<br/>build / JSON / 静态检查 / 可用探针"]
+  B4 --> G1["GitHub Actions<br/>build / JSON / 静态检查 / 可用探针"]
   G1 --> G2["未加密 CI 结果包<br/>xcresult / junit.xml / xcodebuild.log / manifest / failure summary"]
   G1 --> G3["加密打包 workflow<br/>软件包交付，Agent C 不以此验收"]
 
@@ -138,9 +139,10 @@ flowchart TD
   CFail -- "失败" --> R["退回清单<br/>失败阶段、日志路径、manifest、交给 B 修复"]
   R --> B1
   CFail -- "通过" --> C2["更新核心文档<br/>flow.md / flowchart.md / update_log.md"]
-  C2 --> C3["合并到 smalldata_test 并 push<br/>禁止合并到 main"]
+  C2 --> C3["PR merge 到 smalldata_test<br/>禁止合并到 main"]
+  C3 --> C4["删除远端 codeb/...<br/>避免候选分支堆积"]
 
   %% 回到人工
-  C3 --> H2["人工复核<br/>确认后进入下一轮"]
+  C4 --> H2["人工复核<br/>确认后进入下一轮"]
   H2 --> H
 ```
