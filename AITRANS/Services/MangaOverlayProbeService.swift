@@ -719,6 +719,7 @@ struct MangaOverlayProbeService: Sendable {
         textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport? = nil,
         lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport? = nil,
         lineCropExperimentReport: MangaOverlayLineCropExperimentReport? = nil,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -759,6 +760,7 @@ struct MangaOverlayProbeService: Sendable {
                 textBoxPlanFailureReport: textBoxPlanFailureReport,
                 lineTextBoxPlanReport: lineTextBoxPlanReport,
                 lineCropExperimentReport: lineCropExperimentReport,
+                externalArtifactReadinessReport: externalArtifactReadinessReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1412,6 +1414,7 @@ struct MangaOverlayProbeService: Sendable {
         textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?,
         lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport?,
         lineCropExperimentReport: MangaOverlayLineCropExperimentReport?,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1452,6 +1455,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let lineExperimentCandidateByID = Dictionary(
             uniqueKeysWithValues: (lineCropExperimentReport?.candidates ?? []).map { ($0.candidateID, $0) }
+        )
+        let externalArtifactAlignmentByBlock = Dictionary(
+            uniqueKeysWithValues: (externalArtifactReadinessReport?.blockAlignment ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1586,6 +1592,15 @@ struct MangaOverlayProbeService: Sendable {
                 .filter { $0.hasPrefix("lineResearchDecision=") || $0.hasPrefix("reason=") }
                 .joined(separator: " ") ?? "skipped"
             let lineStopReasons = lineExperimentSummary?.stopReasons.joined(separator: " | ") ?? "nil"
+            let externalAlignment = externalArtifactAlignmentByBlock[block.index]
+            let externalReadiness = externalArtifactReadinessReport?.readinessVerdict ?? "nil"
+            let externalNextAction = externalArtifactReadinessReport?.nextAction ?? "nil"
+            let externalTextBoxMatch = externalAlignment?.bestTextBoxID ?? "none"
+            let externalTextBoxIoU = externalAlignment?.bestTextBoxIoU?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let externalBubbleMatch = externalAlignment?.bestBubbleInstanceID ?? "none"
+            let externalBubbleIoU = externalAlignment?.bestBubbleIoU?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let externalSegmentCoverage = externalAlignment?.segmentCoverageLevel ?? "missing"
+            let externalAlignmentVerdict = externalAlignment?.alignmentVerdict ?? "notEvaluatedMissingArtifacts"
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1635,6 +1650,7 @@ struct MangaOverlayProbeService: Sendable {
             lineCropExperiment: bestLineShadowID=\(lineExperimentSummary?.bestShadowCandidateID.map(String.init) ?? "nil") bestVariant=\(lineExperimentSummary?.bestVariantName ?? "nil") bestText=\(lineBestText) qualityDelta=\(lineBestDelta) wordPreservation=\(lineBestPreservation) promotionVerdict=\(lineExperimentSummary?.promotionVerdict ?? "nil") stopReasons=\(lineStopReasons)
             linePromotionChecks: passed=\(linePromotionChecks?.passed ?? "nil") failed=\(linePromotionChecks?.failed ?? "nil")
             lineResearchDecision: \(lineResearchDecision)
+            externalArtifacts: readiness=\(externalReadiness) textBoxID=\(externalTextBoxMatch) textBoxIoU=\(externalTextBoxIoU) bubbleInstanceID=\(externalBubbleMatch) bubbleIoU=\(externalBubbleIoU) segmentMask=\(externalSegmentCoverage) alignment=\(externalAlignmentVerdict) nextAction=\(externalNextAction)
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1665,7 +1681,11 @@ struct MangaOverlayProbeService: Sendable {
             """
         }
         .joined(separator: "\n\n")
-        let cleanContent = content
+        let externalSummary = """
+        externalArtifactReadiness: manifestFound=\(externalArtifactReadinessReport.map { String($0.manifestFound) } ?? "nil") textBoxesFound=\(externalArtifactReadinessReport.map { String($0.textBoxesFound) } ?? "nil") bubbleMaskFound=\(externalArtifactReadinessReport.map { String($0.bubbleMaskFound) } ?? "nil") segmentMaskFound=\(externalArtifactReadinessReport.map { String($0.segmentMaskFound) } ?? "nil") verdict=\(externalArtifactReadinessReport?.readinessVerdict ?? "nil") nextAction=\(externalArtifactReadinessReport?.nextAction ?? "nil") missing=\(externalArtifactReadinessReport?.missingArtifacts.joined(separator: ",") ?? "nil")
+
+        """
+        let cleanContent = (externalSummary + content)
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map { String($0).trimmingCharacters(in: .whitespaces) }
             .joined(separator: "\n")

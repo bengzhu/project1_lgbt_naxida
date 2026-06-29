@@ -196,6 +196,7 @@ test/1.png
   -> TextRegion crop shadow 实验矩阵（control + pre-crop plan 候选，不替换主输入）
   -> TextBox plan 失败归因与晋级门槛审计（解释 blockers，不替换主输入）
   -> line-level TextBox / deskew shadow 验证（仅目标块，不替换主输入）
+  -> external artifact readiness gate（真实 TextBoxes / BubbleMask / SegmentMask 输入解析、校验和阻塞报告）
   -> JSON / TXT / PNG 输出
 ```
 
@@ -268,6 +269,7 @@ test/1.png
   -> TextRegion crop OCR 候选诊断和护栏选择
   -> TranslationSessionStore.translateMangaProbeBlock
   -> TextBox / SegmentMask 派生诊断和 crop experiment shadow 矩阵
+  -> external artifact readiness gate
   -> makeMangaOverlayProbeDiagnostics
   -> render overlays / contact sheet
   -> write JSON / TXT / PNG
@@ -296,6 +298,7 @@ test/1.png
 - v18 `cropExperimentReport` 仍是 shadow-only 实验矩阵；control 使用当前 TextRegion crop，shadow 候选优先来自 `preCropTextBoxPlan.*`，`bestShadowCandidate` 和 `promotionVerdict` 不替换 `finalTextUsedForTranslation`，也不改变 `textRegionCropReport.adoptedCount`。
 - v19 `textBoxPlanFailureReport` 用 `sourcePlanID` 串联 plan、candidate 和 block 级结论，只解释 promotion checks / blockers / recommended action，不改变主输入、主覆盖图或 `textRegionCropReport.adoptedCount`。
 - v20 `lineTextBoxPlanReport` / `lineCropExperimentReport` 只对 `textBoxPlanFailureReport.continueGeometryResearchBlocks` 生成 line-level TextBox / deskew shadow 候选；当前目标块 `[1, 6, 10]` 共 12 个候选，全部只写报告和 TXT，不改变主输入、主覆盖图、`blockPassed` 或 `textRegionCropReport.adoptedCount`。
+- v21 `externalArtifactReadinessReport` 是真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门；它只读 `test/koharu_artifacts/` 或 manifest 指定文件，做解析、坐标校验和 block alignment。没有真实 artifact 时输出 `manifestMissing` / `stopUntilArtifactsProvided`，不能用现有 Vision OCR、pre-crop plan 或 line plan 伪装 detector 输出。
 - BubbleMask 当前是 bbox/rounded-rect 近似实例 ID mask，用于 seed 归属、归属修正诊断、保守 split candidate、mask-safe layout、crop coverage 和渲染碰撞诊断；不是 Koharu 真实分割 mask，不能把布局收益冒充 OCR 提升。
 - 确定性纠错当前是对照路径，不替换 `finalTextUsedForTranslation`。
 - tagged batch 当前是负面诊断，不替换逐块翻译。

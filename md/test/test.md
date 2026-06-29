@@ -185,7 +185,15 @@ python3 -m json.tool test/1.ground_truth.json
 - `lineCropExperimentReport.betterThanControlCount = 5`
 - `lineCropExperimentReport.promotedLineShadowBlocks = []`
 - `lineCropExperimentReport.stoppedAfterLineResearchBlocks = [1, 6, 10]`
-- `1_ocr_probe_text.txt` 每块包含 `textBoxPlanFailure` 和 `promotionChecks`；目标块 `[1, 6, 10]` 还包含 `lineTextBoxPlans`、`lineCropExperiment`、`linePromotionChecks` 和 `lineResearchDecision`
+- `externalArtifactReadinessReport.manifestFound = false`
+- `externalArtifactReadinessReport.textBoxesFound = false`
+- `externalArtifactReadinessReport.bubbleMaskFound = false`
+- `externalArtifactReadinessReport.segmentMaskFound = false`
+- `externalArtifactReadinessReport.readinessVerdict = manifestMissing`
+- `externalArtifactReadinessReport.nextAction = stopUntilArtifactsProvided`
+- `externalArtifactReadinessReport.missingArtifacts = [manifest, TextBoxes, BubbleMask, SegmentMask]`
+- `externalArtifactReadinessReport.blockAlignment.count = 13`
+- `1_ocr_probe_text.txt` 每块包含 `textBoxPlanFailure` 和 `promotionChecks`；目标块 `[1, 6, 10]` 还包含 `lineTextBoxPlans`、`lineCropExperiment`、`linePromotionChecks` 和 `lineResearchDecision`；每块还包含 `externalArtifacts` 摘要
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
 - `failedBlocks = 12`
