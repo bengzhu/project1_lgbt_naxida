@@ -281,10 +281,41 @@ test/1.png
 - 状态层：`TranslationSessionStore.swift` 汇总 UI 状态、持久化、翻译调用和报告生成。
 - 服务层：Vision OCR、Manga probe、Local model download、Gemma local、llama runtime。
 - UI 层：SwiftUI 页面只展示状态并触发 store 方法。
-- 测试层：`md/test/test.md` 定义 build、JSON、探针、导出和静态检查层级。
+- 测试层：`md/test/test.md` 定义本地轻量检查、GitHub Actions 重验证、结果包和失败回传规则。
 - 版本层：`update_log.md` 记录历史，`metrics/version_history.csv` 记录可量化指标。
 
-## 4. 已确认铁律
+## 4. 云端协作和验证流
+当前日常开发不再把本机 Xcode build / 模拟器探针作为默认硬要求。默认流程是：
+
+```text
+人工目标
+  -> Agent A 本地分析并写版本化提示词
+  -> Agent B 从 smalldata_test 开 codeb/vX.Y-短标题 分支
+  -> Agent B 本地只跑轻量检查
+  -> Agent B push codeb/... 到 GitHub
+  -> GitHub Actions 运行 build / JSON / 静态检查 / 可用探针
+  -> GitHub Actions 上传未加密 CI 结果包
+  -> Agent C 拉取 codeb/...，核对 diff、日志、manifest 和 artifact
+      -> 失败：C 输出退回清单，B 按结果包日志继续修
+      -> 通过：C 更新核心文档，合并回 smalldata_test 并 push
+```
+
+分支规则：
+
+- `main` 只作为外观展示分支，禁止合并日常开发成果。
+- `smalldata_test` 是当前远端真实工作主分支；若旧提示词写成 `samlldata_test`，以 `origin/smalldata_test` 为准。
+- `codeb/vX.Y-短标题` 是 Agent B 候选实现分支。
+
+结果包规则：
+
+- 加密打包 workflow 只负责软件包交付，不作为 Agent C 验收依据，不为验收改动密码或解密流程。
+- Agent C 使用独立未加密 CI 结果包验收，至少核对 `.xcresult`、`junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`。
+- `ci-artifact-manifest.json` 必须能追溯 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`scheme`、`destination`、结果路径和探针报告路径。
+- 云端失败时，workflow 必须保留日志和失败摘要，Agent C 按结果包指出应交回 Agent B 修复的失败阶段和日志位置。
+- 云端完整漫画探针目前受模拟器、GGUF、App 容器和外部 artifact 等依赖影响；能稳定运行时必须生成新报告，不能稳定运行时必须显式说明未运行范围和后续补齐条件。
+- GGUF 模型云端依赖已知，后续由 GitHub Release + workflow 下载 + 缓存解决；本阶段不提交模型文件。
+
+## 5. 已确认铁律
 - `TranslationSessionStore` 是单一状态和调度中心。
 - ground truth 只能做探针统计，不能做生产候选选择。
 - 失败块必须进入报告和覆盖图。
@@ -303,7 +334,7 @@ test/1.png
 - 确定性纠错当前是对照路径，不替换 `finalTextUsedForTranslation`。
 - tagged batch 当前是负面诊断，不替换逐块翻译。
 
-## 5. 当前关键基线
+## 6. 当前关键基线
 来自最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json`：
 
 - `configuration.currentBlockSource = fusedWholePageBubble`
@@ -352,14 +383,14 @@ test/1.png
 - `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
 - `likelyRuleFalseFailureBlocks = []`
 
-## 6. 未来扩展点
+## 7. 未来扩展点
 - 更强小模型对比，优先 Qwen2.5-0.5B-Instruct-GGUF q4_k_m。
 - 基于 `bubbleAudits` 对 `bubbleID 4/6/7` 做诊断开关下的保守气泡拆分实验。
 - 更稳的气泡候选分割。
 - 更强 OCR/纠错护栏，替换主流程前必须用探针证明收益。
 - Share Extension 或 ReplayKit 路线，但当前不是优先级。
 
-## 7. 不允许破坏的行为
+## 8. 不允许破坏的行为
 - 不得静默隐藏翻译失败块。
 - 不得让旧输出文件污染新验收。
 - 不得把测试真值写入生产决策。

@@ -1,8 +1,17 @@
 # 测试规范
-本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认从最小测试开始，根据改动范围扩大。
+本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端重验证，本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
-## 固定前缀 / 环境要求
-命令行构建固定使用完整 Xcode：
+## 0. 默认验证策略
+- Agent B 默认本地只跑 `git diff --check`、JSON 解析、YAML smoke 等轻量检查。
+- Swift / Xcode / 漫画探针相关任务完成后，默认 push 到 `codeb/vX.Y-短标题`，由 GitHub Actions 执行重验证。
+- Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
+- 加密打包 workflow 只用于软件包交付，不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
+- 如果云端验证失败，Agent C 按 `ci-failure-summary.md`、`xcodebuild.log`、`junit.xml`、`.xcresult` 和 manifest 输出退回清单，Agent B 修复后继续 push。
+- 如果云端环境缺少模拟器、GGUF、App 容器权限或外部 artifact，必须说明哪个测试未运行、缺什么依赖、是否影响验收、需要人工提供什么。
+- GGUF 云端模型问题已知，后续通过 GitHub Release + workflow 下载 + 缓存解决；本规范不要求提交 GGUF。
+
+## 1. 固定前缀 / 环境要求
+人工明确要求本机命令行构建时，固定使用完整 Xcode：
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
@@ -26,10 +35,10 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - Local 模式需要沙盒内存在 GGUF 模型，默认内置下载模型只适合接口冒烟。
 - 导出模拟器 App 容器通常需要读取 CoreSimulator 容器，受限环境下要请求批准。
 
-当前仓库没有独立 XCTest 目标作为主要验收入口，核心验证以 build、开发页探针、漫画探针 JSON/PNG 和静态检查为主。
+当前仓库没有独立 XCTest 目标作为主要验收入口。日常核心验证由 GitHub Actions 产出 build 结果包、日志、JSON/PNG artifact 和失败摘要；本地命令保留为人工要求或紧急排查路径。
 
-## 测试分层
-### 1. Probe / Fast
+## 2. 测试分层
+### 2.1 Local Light / Fast
 最快发现主链路断点。
 
 触发条件：
@@ -55,8 +64,8 @@ python3 -m json.tool output/clean_text_diagnostic.json
 - 最新 `configuration.currentBlockSource = fusedWholePageBubble`。
 - 最新 `totalBlocksDetected = 13`，`frameworkComparison.consistencyPassed = true`，`fusionComparison.consistencyPassed = true`。
 
-### 2. Smoke
-验证主要集成路径。
+### 2.2 Cloud Smoke
+验证主要集成路径，默认在 GitHub Actions 运行。
 
 触发条件：
 
@@ -64,7 +73,16 @@ python3 -m json.tool output/clean_text_diagnostic.json
 - `TranslationSessionStore`、模型接口、OCR 服务、SwiftUI 入口或 Info.plist 改变。
 - 需要确认 target 能编译。
 
-命令：
+默认动作：
+
+```text
+Agent B push codeb/vX.Y-短标题
+  -> GitHub Actions 运行 xcodebuild
+  -> 上传未加密 CI 结果包
+  -> Agent C 按 manifest 核对分支、commitSha、runId、runAttempt
+```
+
+云端最低命令等价于：
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
@@ -80,7 +98,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - 近期多轮该 build 通过。
 - 构建日志可能出现 CoreSimulator 沙盒警告，只要最终 `BUILD SUCCEEDED` 即可作为 build 通过。
 
-### 3. Stage Regression
+### 2.3 Stage Regression
 覆盖当前阶段核心模块。
 
 触发条件：
@@ -88,7 +106,9 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - 修改漫画探针、OCR 合并、覆盖绘制、报告模型、clean text diagnostic、translation quality gate、Local/Mock 模型适配。
 - 修改会影响 `probe_report.json` 结构或 `output/` 产物。
 
-命令：
+默认动作：优先由 GitHub Actions 运行能稳定执行的 build、JSON 检查、报告解析和探针产物收集。若完整漫画探针因 GitHub-hosted macOS runner、GGUF、模拟器容器或 App 沙盒访问不稳定而不能运行，workflow 必须生成失败摘要或跳过说明，不能伪造新 `output/`。
+
+人工明确要求本机运行时命令：
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
@@ -200,7 +220,7 @@ python3 -m json.tool test/1.ground_truth.json
 - `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
 - `likelyRuleFalseFailureBlocks = []`
 
-### 4. Full
+### 2.4 Full
 全量验证。
 
 触发条件：
@@ -208,7 +228,7 @@ python3 -m json.tool test/1.ground_truth.json
 - 修改 llama.cpp 封装、模型下载/导入、Xcode framework、bundle resource、持久化迁移、Pro 权限或发布相关配置。
 - 版本收尾或准备提交时需要高置信度。
 
-命令：
+默认动作：由 GitHub Actions 负责 build/test/report/artifact 重验证。人工明确要求本机全量时命令：
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
@@ -236,7 +256,30 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - generic iOS device build 在 README 当前验证中记录通过。
 - Debug iOS Simulator app bundle 曾确认内嵌 `llama.framework`。
 
-## 静态检查
+## 3. 云端结果包要求
+Agent B 的云端结果必须可下载、可追溯、未加密，供 Agent C 验收。最低内容：
+
+- `.xcresult`：Xcode 结果包，例如 `TestResults/AITRANS-${version}-${short_sha}.xcresult`。
+- `junit.xml`：CI 可读摘要。当前没有 XCTest 时，至少生成 build smoke 的 JUnit 摘要。
+- `xcodebuild.log`：完整构建日志。
+- `ci-artifact-manifest.json`：结果包索引，包含 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`createdAt`、`xcodeVersion`、`scheme`、`destination`、`resultBundlePath`、`junitPath`、`xcodebuildLogPath`、`failureSummaryPath`、`probeReportPath`。
+- `ci-failure-summary.md`：无论成功或失败都生成；失败时写清失败阶段、关键日志位置、建议 Agent B 先看哪些文件。
+- 若运行漫画探针：上传 `output/probe_report.json`、`output/clean_text_diagnostic.json`、`output/1_ocr_probe_text.txt` 和关键 PNG。
+
+artifact 命名建议：
+
+```text
+aitrans-ci-${version}-${branch_slug}-${short_sha}-run${run_id}-attempt${run_attempt}
+```
+
+Agent C 取用规则：
+
+- 只看当前 `codeb/...` HEAD 对应的 `commitSha`。
+- 必须核对 manifest 的 `branch`、`commitSha`、`runId`、`runAttempt`。
+- B 再次 push 后，旧 run 结果废弃。
+- Actions 重跑时，记录实际验收的 `runAttempt`。
+
+## 4. 静态检查
 常用命令：
 
 ```sh
@@ -253,11 +296,12 @@ python3 -m json.tool output/clean_text_diagnostic.json
 python3 scripts/append-version-metrics.py --version vN --notes "简短说明"
 ```
 
-## 规则
+## 5. 规则
 - 每次实现前先读本文件。
-- 默认从最小测试开始，根据改动范围扩大。
+- 默认从本地轻量检查开始，重负载验证交给 GitHub Actions。
 - 不得伪造测试结果。
 - 未跑测试必须说明原因。
-- 文档-only 修改可只跑 `git diff --check`，但要说明未跑 build 和探针的原因。
+- 文档-only 修改可只跑 `git diff --check` 和必要 JSON/YAML smoke，但要说明未跑 build 和探针的原因。
+- 未经人工明确要求，不因为 Swift 代码变化就在本机默认跑 Xcode build 或完整漫画探针。
 - 漫画探针或翻译链路修改后，最终回复必须汇总关键数字。
 - 如果 clean text 仍失败，优先讨论模型质量，不要继续盲目调 OCR 或放宽规则。

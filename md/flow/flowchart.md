@@ -110,7 +110,7 @@ flowchart TD
 ```
 
 ## 3. Agent 迭代流程图
-这张图描述以后每轮任务如何从人工目标进入 Agent A、Agent B、Agent C，再回到人工复核。
+这张图描述以后每轮任务如何从人工目标进入 Agent A、Agent B、GitHub Actions 和 Agent C。默认重验证在云端，本机只做轻量检查；`main` 不参与日常开发合并。
 
 ```mermaid
 flowchart TD
@@ -121,15 +121,24 @@ flowchart TD
   A1 --> A2["Agent A 分析<br/>目标、非目标、风险、测试、验收"]
   A2 --> P["md/prompt/vX（阶段）/vX.Y（任务）.md<br/>写给 Agent B 的实现提示词"]
 
-  %% Agent B 实现和验证
-  P --> B1["Agent B<br/>按提示词小步实现"]
-  B1 --> B2["按 md/test/test.md 测试<br/>记录命令、结果、未跑原因"]
-  B2 --> B3["实现输出<br/>改动、关键文件、验证、风险"]
+  %% Agent B 实现、轻量检查和推送
+  P --> B0["从 smalldata_test 开分支<br/>codeb/vX.Y-短标题"]
+  B0 --> B1["Agent B<br/>按提示词小步实现"]
+  B1 --> B2["本地轻量检查<br/>git diff --check / JSON / YAML smoke"]
+  B2 --> B3["push codeb/...<br/>不合并 main"]
+
+  %% 云端验证和结果包
+  B3 --> G1["GitHub Actions<br/>build / JSON / 静态检查 / 可用探针"]
+  G1 --> G2["未加密 CI 结果包<br/>xcresult / junit.xml / xcodebuild.log / manifest / failure summary"]
+  G1 --> G3["加密打包 workflow<br/>软件包交付，Agent C 不以此验收"]
 
   %% Agent C 验收和文档同步
-  B3 --> C1["Agent C<br/>看 diff、核对测试、检查架构边界"]
-  C1 --> C2["更新核心文档<br/>flow.md / flowchart.md / update_log.md"]
-  C2 --> C3["验收结论<br/>通过或不通过、问题清单、下一步"]
+  G2 --> C1["Agent C<br/>核对 HEAD commit、diff、Actions 结论、日志和 artifact"]
+  C1 --> CFail{"是否通过"}
+  CFail -- "失败" --> R["退回清单<br/>失败阶段、日志路径、manifest、交给 B 修复"]
+  R --> B1
+  CFail -- "通过" --> C2["更新核心文档<br/>flow.md / flowchart.md / update_log.md"]
+  C2 --> C3["合并到 smalldata_test 并 push<br/>禁止合并到 main"]
 
   %% 回到人工
   C3 --> H2["人工复核<br/>确认后进入下一轮"]
