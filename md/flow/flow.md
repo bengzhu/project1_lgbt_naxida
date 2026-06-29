@@ -293,11 +293,13 @@ test/1.png
   -> Agent B 从 smalldata_test 开 codeb/vX.Y-短标题 分支
   -> Agent B 本地只跑轻量检查
   -> Agent B push codeb/... 到 GitHub
+  -> Agent B 创建 PR：base=smalldata_test, head=codeb/...
   -> GitHub Actions 运行 build / JSON / 静态检查 / 可用探针
   -> GitHub Actions 上传未加密 CI 结果包
-  -> Agent C 拉取 codeb/...，核对 diff、日志、manifest 和 artifact
+  -> Agent C 通过 PR 和结果包核对 diff、日志、manifest 和 artifact
       -> 失败：C 输出退回清单，B 按结果包日志继续修
-      -> 通过：C 更新核心文档，合并回 smalldata_test 并 push
+      -> 通过：C 更新核心文档，经 PR merge 合并回 smalldata_test
+      -> C 删除远端 codeb/... 候选分支
 ```
 
 分支规则：
@@ -305,6 +307,8 @@ test/1.png
 - `main` 只作为外观展示分支，禁止合并日常开发成果。
 - `smalldata_test` 是当前远端真实工作主分支；若旧提示词写成 `samlldata_test`，以 `origin/smalldata_test` 为准。
 - `codeb/vX.Y-短标题` 是 Agent B 候选实现分支。
+- Agent B push 后默认创建 PR 到 `smalldata_test`；Agent C 通过 PR merge 收口。
+- Agent C 合并后必须删除远端 `codeb/...` 候选分支，或说明没有权限删除，避免长期堆积。
 
 结果包规则：
 
