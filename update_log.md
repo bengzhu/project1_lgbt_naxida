@@ -1,12 +1,12 @@
 # 项目版本更新记录
-本文记录 AITRANS 的正式版本、重要维护事项、关键决策和遗留问题。它不是流水账，细节证据优先看 `README.md`、`metrics/version_history.csv`、最新 `output/` 和 git 提交。
+本文记录 AITRANS 的正式版本、重要维护事项、关键决策和遗留问题。README 不再写更新记录；细节证据优先看本日志、`metrics/version_history.csv`、最新 `output/` 和 git 提交。
 
 ## 维护规则
 - 每完成一个正式版本或重要任务后追加记录。
 - 记录必须包含：版本或任务名、日期、核心变更、关键文件、验证结果、遗留事项。
 - 文档整理、目录迁移、回滚、打捞等不伪装成新版本，写入“历史维护记录”。
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
-- 涉及漫画探针或翻译链路时，README 近期记录和 `metrics/version_history.csv` 必须 append-only 更新。
+- 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
 ## 当前状态
 日期：2026-06-29
@@ -1126,6 +1126,30 @@
 - 下一轮优先做更强小模型对比，如 Qwen2.5-0.5B-Instruct-GGUF q4_k_m，或推进 bubble-first + whole-page 融合，而不是继续放宽质量规则。
 
 ## 历史维护记录
+### README 更新记录收口到 update_log
+日期：2026-06-29
+
+核心变更：
+
+- 删除 README 中的“近期优化记录”长段落，README 改为只保留项目说明、当前用法和稳定规则。
+- 明确版本历史、关键决策、验证结果和遗留问题统一写入 `update_log.md`。
+- 同步修正 `AGENTS.md` 和 README 中“更新 README 近期记录”的旧维护规则。
+- 保留 `metrics/version_history.csv` 作为漫画探针和翻译链路可量化版本的 append-only 指标表。
+
+关键文件：
+
+- `README.md`
+- `AGENTS.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮是文档-only 流程收口，按规则运行轻量静态检查。
+
+遗留事项：
+
+- 历史条目已在 `update_log.md` 汇总；后续不要再向 README 追加更新记录。
+
 ### 建立多 Agent 迭代文档体系
 日期：2026-06-28
 

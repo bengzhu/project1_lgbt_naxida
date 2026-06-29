@@ -42,7 +42,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 最新 `output/clean_text_diagnostic.json`
 - 最新 `output/1_ocr_probe_text.txt`
 
-不要假设 README 的历史数字仍可验收；以当前代码、最新 `output/`、`metrics/version_history.csv` 和实际测试结果为准。
+README 不再承载历史基线；涉及验收时以当前代码、`update_log.md`、最新 `output/`、`metrics/version_history.csv` 和实际测试结果为准。
 
 ## 3. 架构硬边界
 - `TranslationSessionStore` 是 UI 状态、模型调用、历史、诊断和持久化的统一调度中心。
@@ -159,7 +159,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - `md/flow/flowchart.md` 必须与 `flow.md` 同步。
 - `md/test/test.md` 是测试选择依据。
 - `md/prompt/` 保存 Agent A 的版本化实现提示词。
-- 功能更新或 bug 修复后，按影响同步更新 README 近期记录、`update_log.md`、flow/test 文档和 `metrics/version_history.csv`。
+- 功能更新或 bug 修复后，按影响同步更新 `update_log.md`、flow/test 文档和 `metrics/version_history.csv`；README 不再写更新记录，只保留项目说明、当前用法和稳定规则。
 - 流程制度变更不伪装成漫画探针质量版本；未重新跑完整探针时不追加 `metrics/version_history.csv` 漫画指标行。
 
 ## 9. 最终回复格式
