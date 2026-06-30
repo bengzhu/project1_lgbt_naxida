@@ -34,7 +34,9 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - Agent C 通过 PR 合并后必须删除远端 `codeb/...` 候选分支，避免分支无限堆积；无权限删除时要明确说明。
 - 现有加密软件包 artifact 只用于软件包交付，不作为 Agent C 验收依据。
 - `AITRANS CI Results` 会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，并用 Actions cache 复用 `.ci-models/`。当前只完成模型下载/缓存，完整探针还需后续把模型导入模拟器 App 沙盒。
-- 云端探针会构建并安装 Debug simulator app，把缓存模型复制到 App sandbox 的 `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 启动 App，导出本轮 `output/` 到未加密结果包。`Gemma-1.5B` 是历史目录名；实际文件必须用 Release asset 名、字节数和 SHA256 校验确认。验收口径是报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0`、关键 JSON/TXT/PNG 可用；`overallPassed=false` 仍可能是当前模型质量基线，不单独作为 CI 失败。若探针超时，结果包会保留 `manga-probe.log`、`app-console.log` 和 `output/manga_probe_progress.json`；若进度长时间不更新，workflow 会提前收束日志，避免空等 60 分钟。
+- 云端探针复用同一次 Debug simulator build 产物安装 App，把缓存模型复制到 App sandbox 的 `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 和 `AITRANS_MANGA_PROBE_MODE` 启动 App，导出本轮 `output/` 到未加密结果包。`Gemma-1.5B` 是历史目录名；实际文件必须用 Release asset 名、字节数和 SHA256 校验确认。
+- `AITRANS CI Results` 默认对 `codeb/**` 和 `smalldata_test` push 运行 `ci-fast` 探针；手动 `workflow_dispatch` 可选 `full` 或 `skip`。`ci-fast` 仍是真模拟器、Local GGUF、真实 `test/1.png`、deterministic 解码、whole-page OCR、bubble-first 融合、逐块翻译、失败块覆盖、`probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt`、`1_debug_boxes.png`、`1_translated_overlay.png` 和 Koharu external artifact gate；只跳过 lexicon / Vision API / slice / crop experiment / line shadow / batch / 纠错翻译对照 / contact sheet 等 shadow-only 诊断。Agent C 通过 manifest 的 `probeMode`、`probeFastPathEnabled`、`probeSkippedDiagnostics`、`probeOutputRetainedFiles` 和 `probeReportSummary` 区分快速与全量。
+- 云端探针验收口径是报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0`、关键 JSON/TXT/PNG 可用；`overallPassed=false` 仍可能是当前模型质量基线，不单独作为 CI 失败。若探针超时，结果包会保留 `manga-probe.log`、`app-console.log` 和 `output/manga_probe_progress.json`；`ci-fast` 进度 5 分钟不更新会提前收束，`full` 为 10 分钟。
 
 ## 当前界面
 

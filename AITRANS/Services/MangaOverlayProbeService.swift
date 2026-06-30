@@ -747,7 +747,8 @@ struct MangaOverlayProbeService: Sendable {
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
         bubbleDebugImagePath: String? = nil,
         bubbleCropsImagePath: String? = nil,
-        bubbleTextOverlayImagePath: String? = nil
+        bubbleTextOverlayImagePath: String? = nil,
+        renderDiagnosticPNGs: Bool = true
     ) async throws -> MangaOverlayProbeOutputFiles {
         try await Task.detached(priority: .userInitiated) {
             try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
@@ -762,16 +763,26 @@ struct MangaOverlayProbeService: Sendable {
             let preprocessedURL = outputDirectory.appendingPathComponent("1_preprocessed_content.png")
             let debugImage = try Self.drawDebugBoxes(on: image, blocks: blocks)
             let overlayImage = try Self.drawTranslatedOverlay(on: image, blocks: blocks)
-            let ocrTextImage = try Self.drawOCRTextOverlay(on: image, blocks: blocks)
-            let deterministicCorrectionImage = try Self.drawDeterministicCorrectionOverlay(on: image, blocks: blocks)
-            let deterministicTranslationImage = try Self.drawDeterministicTranslationOverlay(on: image, blocks: blocks)
-            let cropsImage = try Self.drawBlockCrops(from: image, blocks: blocks, preprocessing: preprocessing)
             try Self.writePNG(debugImage, to: debugURL)
             try Self.writePNG(overlayImage, to: overlayURL)
-            try Self.writePNG(ocrTextImage, to: ocrTextURL)
-            try Self.writePNG(deterministicCorrectionImage, to: deterministicCorrectionURL)
-            try Self.writePNG(deterministicTranslationImage, to: deterministicTranslationURL)
-            try Self.writePNG(cropsImage, to: cropsURL)
+            var ocrTextPath: String?
+            var deterministicCorrectionPath: String?
+            var deterministicTranslationPath: String?
+            var cropsPath: String?
+            if renderDiagnosticPNGs {
+                let ocrTextImage = try Self.drawOCRTextOverlay(on: image, blocks: blocks)
+                let deterministicCorrectionImage = try Self.drawDeterministicCorrectionOverlay(on: image, blocks: blocks)
+                let deterministicTranslationImage = try Self.drawDeterministicTranslationOverlay(on: image, blocks: blocks)
+                let cropsImage = try Self.drawBlockCrops(from: image, blocks: blocks, preprocessing: preprocessing)
+                try Self.writePNG(ocrTextImage, to: ocrTextURL)
+                try Self.writePNG(deterministicCorrectionImage, to: deterministicCorrectionURL)
+                try Self.writePNG(deterministicTranslationImage, to: deterministicTranslationURL)
+                try Self.writePNG(cropsImage, to: cropsURL)
+                ocrTextPath = ocrTextURL.path
+                deterministicCorrectionPath = deterministicCorrectionURL.path
+                deterministicTranslationPath = deterministicTranslationURL.path
+                cropsPath = cropsURL.path
+            }
             try Self.writeOCRProbeText(
                 blocks: blocks,
                 textRegionCropReport: textRegionCropReport,
@@ -791,7 +802,7 @@ struct MangaOverlayProbeService: Sendable {
             )
 
             var preprocessedPath: String?
-            if preprocessing.enabled {
+            if preprocessing.enabled && renderDiagnosticPNGs {
                 let contentRect = Self.contentCropRect(for: image, cropping: cropping)
                 let cropped = try Self.croppedImage(image, rect: contentRect)
                 let prepared = try Self.preprocessedImage(cropped, options: preprocessing)
@@ -801,11 +812,11 @@ struct MangaOverlayProbeService: Sendable {
             return MangaOverlayProbeOutputFiles(
                 debugBoxesImage: debugURL.path,
                 overlayImage: overlayURL.path,
-                ocrTextOverlayImage: ocrTextURL.path,
-                deterministicCorrectionOverlayImage: deterministicCorrectionURL.path,
-                deterministicTranslationOverlayImage: deterministicTranslationURL.path,
+                ocrTextOverlayImage: ocrTextPath,
+                deterministicCorrectionOverlayImage: deterministicCorrectionPath,
+                deterministicTranslationOverlayImage: deterministicTranslationPath,
                 ocrProbeTextFile: ocrProbeTextURL.path,
-                blockCropsImage: cropsURL.path,
+                blockCropsImage: cropsPath,
                 preprocessedContentImage: preprocessedPath,
                 bubbleDebugImage: bubbleDebugImagePath,
                 bubbleCropsImage: bubbleCropsImagePath,

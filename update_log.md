@@ -298,6 +298,51 @@
 
 - 下一步需要 Koharu / 人工提供 `test/1.png` 对应的真实 detector / segmenter 四件套：`1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`。
 
+### v1.16：云端 CI 分层加速与探针快模式
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.16（云端CI分层加速与探针快模式）.md`。本轮是 CI / DEBUG 探针运行制度改造，不刷新漫画质量指标，不追加 `metrics/version_history.csv`。
+
+核心变更：
+
+- `AITRANS CI Results` 新增 `workflow_dispatch` 输入 `probe_mode = ci-fast / full / skip`；`codeb/**` 和 `smalldata_test` push 默认 `ci-fast`。
+- 云端 CI 改为单次 Debug simulator build：`Xcode build` 产出 `.xcresult` 和可安装 app，后续步骤只定位并复用 app，不再重复完整 simulator build。
+- `ci-fast` 仍安装真实 simulator app、导入 Release GGUF、读取真实 `test/1.png`、使用 deterministic 解码，保留 whole-page OCR、bubble-first 融合、post-fusion cleanup、逐块 Local GGUF 翻译、失败块覆盖、核心 PNG、`probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt`、Koharu readiness gate 和 external TextBoxes shadow OCR gate。
+- `ci-fast` 跳过高成本 shadow-only / 对照层：lexicon comparison、Vision API comparison、synthetic slice、TextRegion crop shadow、crop experiment、TextBox plan failure、line crop、模型 OCR 纠错、确定性纠错翻译、tagged batch、contact sheet 和诊断 PNG。
+- DEBUG 探针新增 `AITRANS_MANGA_PROBE_MODE` 读取；报告配置新增 `probeRunMode`、`probeFastPathEnabled`、`skippedDiagnostics`。
+- `manga_probe_progress.json` 新增 mode、fast path、跳过项、已保留输出文件和阶段耗时字段。
+- manifest 新增 `probeMode`、`probeFastPathEnabled`、`probeSkippedReason`、`probeTimeoutSeconds`、`probeStallTimeoutSeconds`、`probeDurationSeconds`、`probeSkippedDiagnostics`、`probeOutputRequiredFiles`、`probeOutputRetainedFiles`、`probeReportSummary`、`simulatorAppReusedFromXcodeBuild` 和 `simulatorAppPath`。
+- `ci-fast` 等待上限为 1800 秒，停滞阈值 300 秒，每 30 秒打印进度；`full` 保留 3600 秒和 600 秒停滞阈值。
+- README、flow、flowchart 和 test 文档同步说明 fast / full / skip 边界和 Agent C 验收字段。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.16（云端CI分层加速与探针快模式）.md`
+
+验证结果：
+
+- 本轮 Agent B 本地应运行轻量检查、Koharu validator valid / invalid / allow-missing / print-required-files，以及 workflow YAML smoke。
+- 未跑本机 Xcode build / 漫画探针；按规则推送 `codeb/v1.16-ci-probe-fastpath` 后交给 GitHub Actions 验证。
+
+验收口径：
+
+- PR base 必须是 `smalldata_test`，不能指向 `main`。
+- `ci-results.yml` 不再重复完整 simulator build。
+- 默认云端结果包 manifest 应显示 `probeMode = ci-fast`、`probeFastPathEnabled = true`、`simulatorAppReusedFromXcodeBuild = true`、`engineUsed = Local GGUF`、`totalBlocksDetected > 0` 和关键输出文件。
+- `full` 仍可由手动 workflow_dispatch 触发；`skip` 只能用于文档-only 或人工明确跳过，并必须写 `probeSkippedReason`。
+
+遗留事项：
+
+- v1.16 仍不提供真实 active `test/koharu_artifacts/`，因此不能声称验证了 `externalTextBoxShadowOCRReport.executed = true`。
+
 ### v2.2：GitHub Release GGUF 下载与 Actions 缓存
 日期：2026-06-29
 依据：云端验证基础设施改造；未刷新 `output/`，未追加 `metrics/version_history.csv` 漫画指标行。
