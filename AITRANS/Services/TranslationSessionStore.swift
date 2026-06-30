@@ -9451,6 +9451,11 @@ final class TranslationSessionStore: ObservableObject {
             }
         }
 
+        func boolString(_ value: Bool?) -> String {
+            guard let value else { return "nil" }
+            return String(value)
+        }
+
         let blockTraces = blocks.map { block -> MangaKoharuArtifactBlockTrace in
             let mask = maskByBlock[block.index]
             let textBox = textBoxByBlock[block.index]
@@ -9524,7 +9529,7 @@ final class TranslationSessionStore: ObservableObject {
                 sourceReport: "bubbleMaskReport",
                 sourceIDs: mask?.maskDominantBubbleID.map { ["maskBubble.\($0)"] } ?? [],
                 confidence: mask?.maskDominantCoverageRatio,
-                gateChecks: [gate("bubbleMaskConsistent", passed: mask?.bubbleIDConsistent != false && !needsBubbleMask, severity: needsBubbleMask || mask?.bubbleIDConsistent == false ? "blocking" : "info", evidence: ["maskConsistent=\(mask?.bubbleIDConsistent.map(String.init) ?? "nil")", "realArtifactGate=\(realArtifactGateVerdict)"], affectedBlocks: [block.index], nextAction: needsBubbleMask ? "provideRealKoharuArtifact" : "reviewBubbleMaskEvidence")],
+                gateChecks: [gate("bubbleMaskConsistent", passed: mask?.bubbleIDConsistent != false && !needsBubbleMask, severity: needsBubbleMask || mask?.bubbleIDConsistent == false ? "blocking" : "info", evidence: ["maskConsistent=\(boolString(mask?.bubbleIDConsistent))", "realArtifactGate=\(realArtifactGateVerdict)"], affectedBlocks: [block.index], nextAction: needsBubbleMask ? "provideRealKoharuArtifact" : "reviewBubbleMaskEvidence")],
                 blockers: needsBubbleMask ? [realArtifactGateVerdict] : (mask?.bubbleIDConsistent == false ? ["bubbleMaskConflict"] : []),
                 downstreamImpact: needsBubbleMask || mask?.bubbleIDConsistent == false ? ["bubbleAssignment", "bubbleSegmentation", "artifactReadiness"] : []
             ))
@@ -9546,7 +9551,7 @@ final class TranslationSessionStore: ObservableObject {
                 sourceReport: "segmentMaskReport",
                 sourceIDs: segment.map { ["segmentMask.block.\($0.blockIndex)"] } ?? [],
                 confidence: segment?.textBoxCoverageRatio ?? segment?.bubbleMaskCoverageRatio,
-                gateChecks: [gate("segmentMaskUsableForCropEvidence", passed: segment?.usableForCropEvidence != false && !needsSegmentMask, severity: needsSegmentMask || segment?.usableForCropEvidence == false ? "blocking" : "info", evidence: ["usable=\(segment?.usableForCropEvidence.map(String.init) ?? "nil")", "realArtifactGate=\(realArtifactGateVerdict)"], affectedBlocks: [block.index], nextAction: needsSegmentMask ? "provideRealKoharuArtifact" : "keepProxyEvidenceReportOnly")],
+                gateChecks: [gate("segmentMaskUsableForCropEvidence", passed: segment?.usableForCropEvidence != false && !needsSegmentMask, severity: needsSegmentMask || segment?.usableForCropEvidence == false ? "blocking" : "info", evidence: ["usable=\(boolString(segment?.usableForCropEvidence))", "realArtifactGate=\(realArtifactGateVerdict)"], affectedBlocks: [block.index], nextAction: needsSegmentMask ? "provideRealKoharuArtifact" : "keepProxyEvidenceReportOnly")],
                 blockers: needsSegmentMask ? [realArtifactGateVerdict] : (segment?.usableForCropEvidence == false ? (segment?.rejectionReasons ?? ["segmentMaskWeak"]) : []),
                 downstreamImpact: needsSegmentMask || segment?.usableForCropEvidence == false ? ["ocrAccuracy", "renderLayout", "artifactReadiness"] : []
             ))
@@ -9557,7 +9562,7 @@ final class TranslationSessionStore: ObservableObject {
                 sourceReport: "finalTextUsedForTranslation",
                 sourceIDs: ["block.\(block.index).finalTextUsedForTranslation"],
                 confidence: block.ocrGroundTruthSimilarity,
-                gateChecks: [gate("ocrInputUsableForTranslation", passed: !ocrLooksBlocked, severity: ocrLooksBlocked ? "blocking" : "info", evidence: ["failureCategory=\(block.failureCategory)", "wordOrderPreserved=\(block.wordOrderPreserved.map(String.init) ?? "nil")"], affectedBlocks: [block.index], nextAction: ocrLooksBlocked ? "improveTextBoxOrSegmentEvidence" : "continue")],
+                gateChecks: [gate("ocrInputUsableForTranslation", passed: !ocrLooksBlocked, severity: ocrLooksBlocked ? "blocking" : "info", evidence: ["failureCategory=\(block.failureCategory)", "wordOrderPreserved=\(boolString(block.wordOrderPreserved))"], affectedBlocks: [block.index], nextAction: ocrLooksBlocked ? "improveTextBoxOrSegmentEvidence" : "continue")],
                 blockers: ocrLooksBlocked ? ["ocrInputSuspect"] : [],
                 downstreamImpact: ocrLooksBlocked ? ["ocrAccuracy", "translationFailureClassification"] : []
             ))
@@ -9641,7 +9646,7 @@ final class TranslationSessionStore: ObservableObject {
                 status: candidateVerdicts.contains(where: { $0.hasPrefix("blockedBy") }) ? "blocked" : "ready",
                 artifactKind: "derivedReportArtifact",
                 sourceReport: "structureActionCandidateReport",
-                sourceIDs: structure?.candidates.map(\.candidateID) ?? [],
+                sourceIDs: structure?.candidates.map { $0.candidateID } ?? [],
                 gateChecks: [gate("structureActionsReportOnly", passed: !candidateVerdicts.contains(where: { $0.hasPrefix("blockedBy") }), severity: candidateVerdicts.contains(where: { $0.hasPrefix("blockedBy") }) ? "warning" : "info", evidence: ["verdicts=\(candidateVerdicts.joined(separator: ","))"], affectedBlocks: [block.index], nextAction: recommendedSteps.first ?? "manualReview")],
                 blockers: candidateVerdicts.filter { $0.hasPrefix("blockedBy") },
                 downstreamImpact: candidateVerdicts.contains(where: { $0.hasPrefix("blockedBy") }) ? ["artifactReadiness", "manualReview"] : []
@@ -9656,7 +9661,7 @@ final class TranslationSessionStore: ObservableObject {
 
             let blockingStages = traces.filter { $0.status == "blocked" || $0.status == "missingRequiredArtifact" }
             let firstBlocking = blockingStages.first
-            let impacts = Array(Set(blockingStages.flatMap(\.downstreamImpact))).sorted()
+            let impacts = Array(Set(blockingStages.flatMap { $0.downstreamImpact })).sorted()
             let fallbackAction = bottleneck?.recommendedNextAction ?? reading?.recommendedStructureAction ?? recommendedSteps.first ?? "manualReview"
             return MangaKoharuArtifactBlockTrace(
                 blockIndex: block.index,
@@ -9675,10 +9680,10 @@ final class TranslationSessionStore: ObservableObject {
             )
         }
 
-        let allStageTraces = blockTraces.flatMap(\.stageTraces)
+        let allStageTraces = blockTraces.flatMap { $0.stageTraces }
         func stageSummary(for stageName: String) -> MangaKoharuArtifactStageSummary {
             let traces = allStageTraces.filter { $0.stageName == stageName }
-            let statuses = traces.map(\.status)
+            let statuses = traces.map { $0.status }
             let status: String
             if statuses.contains("blocked") {
                 status = "blocked"
@@ -9695,10 +9700,13 @@ final class TranslationSessionStore: ObservableObject {
             } else {
                 status = "notApplicable"
             }
-            let artifactKind = traces.map(\.artifactKind).first { $0 != "notApplicable" } ?? "notApplicable"
-            let producedBy = Array(Set(traces.map(\.sourceReport))).sorted()
+            let artifactKind = traces.map { $0.artifactKind }.first { $0 != "notApplicable" } ?? "notApplicable"
+            let producedBy = Array(Set(traces.map { $0.sourceReport })).sorted()
             let consumedBy = Self.koharuArtifactConsumers(for: stageName)
-            let stageBlocks = traces.flatMap { $0.gateChecks.flatMap(\.affectedBlocks) }
+            let stageBlocks = traces.flatMap { trace in
+                trace.gateChecks.flatMap { $0.affectedBlocks }
+            }
+            let primaryGateChecks = Array(traces.flatMap { $0.gateChecks }.prefix(3))
             return MangaKoharuArtifactStageSummary(
                 stageName: stageName,
                 artifactKind: artifactKind,
@@ -9710,7 +9718,7 @@ final class TranslationSessionStore: ObservableObject {
                 blockedBlockCount: traces.filter { $0.status == "blocked" }.count,
                 proxyOnlyBlockCount: traces.filter { $0.status == "readyProxyOnly" }.count,
                 missingBlockCount: traces.filter { $0.status == "missingRequiredArtifact" }.count,
-                primaryGateChecks: traces.flatMap(\.gateChecks).prefix(3).map { $0 },
+                primaryGateChecks: primaryGateChecks,
                 notes: [
                     "stageTraceCount=\(traces.count)",
                     "affectedBlocks=\(Array(Set(stageBlocks)).sorted().map(String.init).joined(separator: ","))"
@@ -9719,15 +9727,46 @@ final class TranslationSessionStore: ObservableObject {
         }
         let stageSummaries = stageOrder.map(stageSummary)
         let dependencyEdges = koharuArtifactDependencyEdges(realArtifactsAvailable: realArtifactsAvailable)
-        let blocksNeedingRealTextBoxes = blockTraces.filter { trace in
-            trace.stageTraces.contains { $0.stageName == "textBoxes" && $0.status == "missingRequiredArtifact" }
-        }.map(\.blockIndex).sorted()
-        let blocksNeedingRealBubbleMask = blockTraces.filter { trace in
-            trace.stageTraces.contains { $0.stageName == "bubbleMask" && $0.status == "missingRequiredArtifact" }
-        }.map(\.blockIndex).sorted()
-        let blocksNeedingRealSegmentMask = blockTraces.filter { trace in
-            trace.stageTraces.contains { $0.stageName == "segmentMask" && $0.status == "missingRequiredArtifact" }
-        }.map(\.blockIndex).sorted()
+        let stageStatuses = stageSummaries.map { $0.status }
+        let artifactKinds = allStageTraces.map { $0.artifactKind }
+        let firstBlockingStages = blockTraces.map { $0.firstBlockingStage }
+        let downstreamImpacts = blockTraces.flatMap { $0.downstreamImpacts }
+        let readyStageSummaries = stageSummaries.filter { $0.status == "ready" || $0.status == "shadowOnlyReady" }
+        let proxyOnlyStageSummaries = stageSummaries.filter { $0.status == "readyProxyOnly" }
+        let missingRequiredStageSummaries = stageSummaries.filter { $0.status == "missingRequiredArtifact" }
+        let blockedStageSummaries = stageSummaries.filter { $0.status == "blocked" }
+        let readyStages = readyStageSummaries.map { $0.stageName }
+        let proxyOnlyStages = proxyOnlyStageSummaries.map { $0.stageName }
+        let missingRequiredStages = missingRequiredStageSummaries.map { $0.stageName }
+        let blockedStages = blockedStageSummaries.map { $0.stageName }
+
+        let textBoxMissingTraces = blockTraces.filter { trace in
+            trace.stageTraces.contains { stageTrace in
+                stageTrace.stageName == "textBoxes" && stageTrace.status == "missingRequiredArtifact"
+            }
+        }
+        let bubbleMaskMissingTraces = blockTraces.filter { trace in
+            trace.stageTraces.contains { stageTrace in
+                stageTrace.stageName == "bubbleMask" && stageTrace.status == "missingRequiredArtifact"
+            }
+        }
+        let segmentMaskMissingTraces = blockTraces.filter { trace in
+            trace.stageTraces.contains { stageTrace in
+                stageTrace.stageName == "segmentMask" && stageTrace.status == "missingRequiredArtifact"
+            }
+        }
+        let blocksNeedingRealTextBoxes = textBoxMissingTraces.map { $0.blockIndex }.sorted()
+        let blocksNeedingRealBubbleMask = bubbleMaskMissingTraces.map { $0.blockIndex }.sorted()
+        let blocksNeedingRealSegmentMask = segmentMaskMissingTraces.map { $0.blockIndex }.sorted()
+        let blocksStoppedByOCRCropEvidence = blockTraces.filter { trace in
+            ["ocrText", "ocrCropShadow", "lineTextBoxShadow"].contains(trace.firstBlockingStage)
+        }.map { $0.blockIndex }.sorted()
+        let blocksStoppedByTranslationModelQuality = blockTraces.filter { trace in
+            trace.firstBlockingStage == "translation"
+        }.map { $0.blockIndex }.sorted()
+        let blocksWithRenderOnlyIssues = blockTraces.filter { trace in
+            trace.firstBlockingStage == "renderLayout"
+        }.map { $0.blockIndex }.sorted()
 
         return MangaKoharuArtifactDAGReport(
             enabled: true,
@@ -9735,22 +9774,22 @@ final class TranslationSessionStore: ObservableObject {
             evaluatedBlockCount: blockTraces.count,
             stageCount: stageSummaries.count,
             edgeCount: dependencyEdges.count,
-            stageStatusBreakdown: countBy(stageSummaries.map(\.status)),
-            artifactKindBreakdown: countBy(allStageTraces.map(\.artifactKind)),
-            firstBlockingStageBreakdown: countBy(blockTraces.map(\.firstBlockingStage)),
-            downstreamImpactBreakdown: countBy(blockTraces.flatMap(\.downstreamImpacts)),
-            readyStages: stageSummaries.filter { $0.status == "ready" || $0.status == "shadowOnlyReady" }.map(\.stageName),
-            proxyOnlyStages: stageSummaries.filter { $0.status == "readyProxyOnly" }.map(\.stageName),
-            missingRequiredStages: stageSummaries.filter { $0.status == "missingRequiredArtifact" }.map(\.stageName),
-            blockedStages: stageSummaries.filter { $0.status == "blocked" }.map(\.stageName),
+            stageStatusBreakdown: countBy(stageStatuses),
+            artifactKindBreakdown: countBy(artifactKinds),
+            firstBlockingStageBreakdown: countBy(firstBlockingStages),
+            downstreamImpactBreakdown: countBy(downstreamImpacts),
+            readyStages: readyStages,
+            proxyOnlyStages: proxyOnlyStages,
+            missingRequiredStages: missingRequiredStages,
+            blockedStages: blockedStages,
             realArtifactGateVerdict: realArtifactGateVerdict,
             realArtifactGateNextAction: realArtifactGateNextAction,
             blocksNeedingRealTextBoxes: blocksNeedingRealTextBoxes,
             blocksNeedingRealBubbleMask: blocksNeedingRealBubbleMask,
             blocksNeedingRealSegmentMask: blocksNeedingRealSegmentMask,
-            blocksStoppedByOCRCropEvidence: blockTraces.filter { ["ocrText", "ocrCropShadow", "lineTextBoxShadow"].contains($0.firstBlockingStage) }.map(\.blockIndex).sorted(),
-            blocksStoppedByTranslationModelQuality: blockTraces.filter { $0.firstBlockingStage == "translation" }.map(\.blockIndex).sorted(),
-            blocksWithRenderOnlyIssues: blockTraces.filter { $0.firstBlockingStage == "renderLayout" }.map(\.blockIndex).sorted(),
+            blocksStoppedByOCRCropEvidence: blocksStoppedByOCRCropEvidence,
+            blocksStoppedByTranslationModelQuality: blocksStoppedByTranslationModelQuality,
+            blocksWithRenderOnlyIssues: blocksWithRenderOnlyIssues,
             dependencyEdges: dependencyEdges,
             stageSummaries: stageSummaries,
             blockTraces: blockTraces,
@@ -9764,7 +9803,7 @@ final class TranslationSessionStore: ObservableObject {
 
     private static func koharuArtifactConsumers(for stageName: String) -> [String] {
         let edges = koharuArtifactDependencyEdges(realArtifactsAvailable: false)
-        return edges.filter { $0.fromStage == stageName }.map(\.toStage).sorted()
+        return edges.filter { $0.fromStage == stageName }.map { $0.toStage }.sorted()
     }
 
     private static func koharuArtifactDependencyEdges(realArtifactsAvailable: Bool) -> [MangaKoharuArtifactDependencyEdge] {

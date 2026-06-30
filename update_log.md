@@ -143,6 +143,7 @@
 验证计划：
 
 - 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 退回修复：云端 run `28433914248` 在 `TranslationSessionStore.swift` 的 v1.22 DAG 报告构建处触发 Swift 6 编译失败；已改为显式 optional Bool 字符串转换、显式 closure 和多步局部统计，降低 type-check 压力，不改变报告语义或主流程。
 - 未跑本机 build / 探针，按规则交给云端验证。
 - 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuArtifactDAGReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`stageCount >= 8`、`edgeCount >= 8`，关键 breakdown 非空，每条 dependency edge 的 `diagnosticOnly = true`、`wouldChangeMainFlow = false`，且 `1_ocr_probe_text.txt` 包含新 summary 和逐块 `koharuArtifactTrace`。
 
