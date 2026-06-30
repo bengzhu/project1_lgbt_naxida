@@ -124,7 +124,9 @@ jobs:
             python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
             python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
             python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
-            python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
+            python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --print-required-files
+            python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing > "$RESULT_ROOT/koharu-active-artifacts-validation.json"
+            cat "$RESULT_ROOT/koharu-active-artifacts-validation.json"
           } 2>&1 | tee "$RESULT_ROOT/static-checks.log"
 
       - name: Xcode build
@@ -402,6 +404,8 @@ jobs:
           [ -f "$OUTPUT_COPY_DIR/clean_text_diagnostic.json" ] && clean_path="$OUTPUT_COPY_DIR/clean_text_diagnostic.json"
           [ -f "$OUTPUT_COPY_DIR/1_ocr_probe_text.txt" ] && ocr_text_path="$OUTPUT_COPY_DIR/1_ocr_probe_text.txt"
           [ -f "$OUTPUT_COPY_DIR/manga_probe_progress.json" ] && probe_progress_path="$OUTPUT_COPY_DIR/manga_probe_progress.json"
+          koharu_validation_path="${RESULT_ROOT}/koharu-active-artifacts-validation.json"
+          [ -f "$koharu_validation_path" ] || koharu_validation_path=""
           if [ -d test/koharu_artifacts ]; then
             koharu_active_artifacts_present=true
           else
@@ -409,6 +413,21 @@ jobs:
           fi
           python3 - <<PY
           import json
+          from pathlib import Path
+
+          def load_json(path):
+              if not path:
+                  return None
+              candidate = Path(path)
+              if not candidate.is_file():
+                  return None
+              with candidate.open("r", encoding="utf-8") as handle:
+                  return json.load(handle)
+
+          koharu_validation = load_json("$koharu_validation_path")
+          probe_report = load_json("$probe_path")
+          external_readiness = (probe_report or {}).get("externalArtifactReadinessReport")
+          external_shadow = (probe_report or {}).get("externalTextBoxShadowOCRReport")
           manifest = {
               "version": "${{ steps.meta.outputs.version }}",
               "branch": "${{ steps.meta.outputs.branch }}",
@@ -429,8 +448,35 @@ jobs:
               "appConsoleLogPath": "${RESULT_ROOT}/app-console.log",
               "staticChecksLogPath": "${RESULT_ROOT}/static-checks.log",
               "koharuArtifactValidatorLogPath": "${RESULT_ROOT}/static-checks.log",
+              "koharuActiveArtifactValidationPath": "$koharu_validation_path",
               "koharuArtifactValidatorRan": "${{ steps.static_checks.outcome }}" == "success",
               "koharuActiveArtifactsDirectoryPresent": "$koharu_active_artifacts_present" == "true",
+              "koharuArtifactValidation": koharu_validation,
+              "externalArtifactReadinessSummary": {
+                  "readinessVerdict": (external_readiness or {}).get("readinessVerdict"),
+                  "activeArtifactsDirectory": (external_readiness or {}).get("activeArtifactsDirectory"),
+                  "contractExampleOnly": (external_readiness or {}).get("contractExampleOnly"),
+                  "externalTextBoxesShadowOCRAllowed": (external_readiness or {}).get("externalTextBoxesShadowOCRAllowed"),
+                  "manifestFound": (external_readiness or {}).get("manifestFound"),
+                  "textBoxesFound": (external_readiness or {}).get("textBoxesFound"),
+                  "bubbleMaskFound": (external_readiness or {}).get("bubbleMaskFound"),
+                  "segmentMaskFound": (external_readiness or {}).get("segmentMaskFound"),
+                  "textBoxCount": (external_readiness or {}).get("textBoxCount"),
+                  "bubbleInstanceCount": (external_readiness or {}).get("bubbleInstanceCount"),
+                  "missingArtifacts": (external_readiness or {}).get("missingArtifacts"),
+                  "nextAction": (external_readiness or {}).get("nextAction"),
+              },
+              "externalTextBoxShadowOCRSummary": {
+                  "executed": (external_shadow or {}).get("executed"),
+                  "gateVerdict": (external_shadow or {}).get("gateVerdict"),
+                  "candidateCount": (external_shadow or {}).get("candidateCount"),
+                  "ocrExecutedCount": (external_shadow or {}).get("ocrExecutedCount"),
+                  "ocrSucceededCount": (external_shadow or {}).get("ocrSucceededCount"),
+                  "betterThanControlCount": (external_shadow or {}).get("betterThanControlCount"),
+                  "promotedExternalShadowBlocks": (external_shadow or {}).get("promotedExternalShadowBlocks"),
+                  "wouldPromoteByExistingGateBlocks": (external_shadow or {}).get("wouldPromoteByExistingGateBlocks"),
+                  "skippedBlocks": (external_shadow or {}).get("skippedBlocks"),
+              },
               "modelDownloadLogPath": "${RESULT_ROOT}/model-download.log",
               "modelVerifyLogPath": "${RESULT_ROOT}/model-verify.log",
               "failureSummaryPath": "${RESULT_ROOT}/ci-failure-summary.md",
@@ -478,6 +524,7 @@ jobs:
             echo "- Model download: ${RESULT_ROOT}/model-download.log"
             echo "- Model verify: ${RESULT_ROOT}/model-verify.log"
             echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
+            echo "- Koharu active artifact validation: ${RESULT_ROOT}/koharu-active-artifacts-validation.json"
             echo "- Xcode build: ${RESULT_ROOT}/xcodebuild.log"
             echo "- Simulator build: ${RESULT_ROOT}/simulator-build.log"
             echo "- Manga probe: ${RESULT_ROOT}/manga-probe.log"
@@ -492,6 +539,22 @@ jobs:
               echo "Cloud manga probe ran and exported output artifacts. Review ${OUTPUT_COPY_DIR}/probe_report.json, ${OUTPUT_COPY_DIR}/clean_text_diagnostic.json, ${OUTPUT_COPY_DIR}/1_ocr_probe_text.txt, and PNGs."
             else
               echo "Cloud manga probe did not complete. Review ${RESULT_ROOT}/manga-probe.log, ${RESULT_ROOT}/app-console.log, ${RESULT_ROOT}/simulator-build.log, and ${OUTPUT_COPY_DIR}/manga_probe_progress.json if present."
+            fi
+            echo
+            echo "## Koharu artifact gate"
+            if [ -f "${RESULT_ROOT}/koharu-active-artifacts-validation.json" ]; then
+              python3 - <<PY
+          import json
+          with open("${RESULT_ROOT}/koharu-active-artifacts-validation.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+          print(f"- activeArtifactsDirectory: {data.get('activeArtifactsDirectory')}")
+          print(f"- verdict: {data.get('verdict')}")
+          print(f"- externalTextBoxesShadowOCRAllowed: {data.get('externalTextBoxesShadowOCRAllowed')}")
+          print(f"- nextAction: {data.get('nextAction')}")
+          print(f"- readinessBlockers: {data.get('readinessBlockers')}")
+          PY
+            else
+              echo "- active artifact validator output missing; inspect static checks."
             fi
             echo
             if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ] || [ "${{ steps.simulator_build.outcome }}" != "success" ] || [ "${{ steps.manga_probe.outcome }}" != "success" ]; then
