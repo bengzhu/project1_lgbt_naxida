@@ -743,6 +743,8 @@ struct MangaOverlayProbeService: Sendable {
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport? = nil,
         externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport? = nil,
         internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport? = nil,
+        routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport? = nil,
+        ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -797,6 +799,8 @@ struct MangaOverlayProbeService: Sendable {
                 externalArtifactReadinessReport: externalArtifactReadinessReport,
                 externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
                 internalStructureBottleneckReport: internalStructureBottleneckReport,
+                routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
+                ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1453,6 +1457,8 @@ struct MangaOverlayProbeService: Sendable {
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
         externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?,
         internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?,
+        routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport?,
+        ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1502,6 +1508,12 @@ struct MangaOverlayProbeService: Sendable {
         )
         let internalBottleneckByBlock = Dictionary(
             uniqueKeysWithValues: (internalStructureBottleneckReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let routingComparisonByBlock = Dictionary(
+            uniqueKeysWithValues: (routingDrivenTranslationComparisonReport?.cases ?? []).map { ($0.blockIndex, $0) }
+        )
+        let ocrDamageByBlock = Dictionary(
+            uniqueKeysWithValues: (ocrCharacterDamageAuditReport?.cases ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1658,6 +1670,17 @@ struct MangaOverlayProbeService: Sendable {
             let bottleneckSecondary = bottleneck?.secondaryBottlenecks.joined(separator: " | ") ?? "nil"
             let bottleneckEvidence = bottleneck?.evidence.joined(separator: " | ") ?? "nil"
             let bottleneckMustNotPromote = bottleneck?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
+            let routingComparison = routingComparisonByBlock[block.index]
+            let routingVariantFailureReasons = routingComparison?.variantFailureReasons.joined(separator: " | ") ?? "nil"
+            let routingMustNotPromote = routingComparison?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
+            let ocrDamage = ocrDamageByBlock[block.index]
+            let damagedTokens = ocrDamage?.damagedTokens.joined(separator: ",") ?? "nil"
+            let missingTokens = ocrDamage?.missingGroundTruthTokens.joined(separator: ",") ?? "nil"
+            let extraTokens = ocrDamage?.extraOcrTokens.joined(separator: ",") ?? "nil"
+            let substitutions = ocrDamage?.suspectedSubstitutions.joined(separator: ",") ?? "nil"
+            let repeatedDamage = ocrDamage?.repeatedKeywordDamage.joined(separator: ",") ?? "nil"
+            let ocrDamageCropBlockers = ocrDamage?.cropBlockers.joined(separator: " | ") ?? "nil"
+            let ocrDamageMustNotPromote = ocrDamage?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1710,6 +1733,8 @@ struct MangaOverlayProbeService: Sendable {
             externalArtifacts: readiness=\(externalReadiness) shadowOCRAllowed=\(externalShadowAllowed) activeDirectory=\(externalActiveDirectory) contractExampleOnly=\(externalContractExampleOnly) textBoxID=\(externalTextBoxMatch) textBoxIoU=\(externalTextBoxIoU) bubbleInstanceID=\(externalBubbleMatch) bubbleIoU=\(externalBubbleIoU) segmentMask=\(externalSegmentCoverage) alignment=\(externalAlignmentVerdict) nextAction=\(externalNextAction)
             externalTextBoxShadowOCR: executed=\(externalShadowSummary.map { String($0.ocrExecuted) } ?? "false") selectedTextBoxID=\(externalShadowSummary?.selectedTextBoxID ?? "none") candidateBBox=[\(externalShadowBBox)] ocrSucceeded=\(externalShadowSummary.map { String($0.ocrSucceeded) } ?? "false") ocrText=\(externalShadowText) qualityDelta=\(externalShadowDelta) wordPreservation=\(externalShadowPreservation) promotionVerdict=\(externalShadowSummary?.promotionVerdict ?? "skipped") blockers=\(externalShadowBlockers)
             internalStructureBottleneck: primary=\(bottleneck?.primaryBottleneck ?? "nil") secondary=\(bottleneckSecondary) recommended=\(bottleneck?.recommendedNextAction ?? "nil") evidence=\(bottleneckEvidence) mustNotPromote=\(bottleneckMustNotPromote)
+            routingDrivenTranslationComparison: variantID=\(routingComparison?.variantID ?? "nil") improvement=\(routingComparison?.improvementCategory ?? "nil") controlPassed=\(routingComparison.map { String($0.controlPassed) } ?? "nil") variantPassed=\(routingComparison.map { String($0.variantPassed) } ?? "nil") variantCandidate=\(routingComparison?.variantCandidate.replacing("\n", with: " / ") ?? "nil") variantRawClass=\(routingComparison?.variantRawOutputClassification ?? "nil") variantCandidateClass=\(routingComparison?.variantCandidateClassification ?? "nil") latinLeakReduced=\(routingComparison.map { String($0.latinLeakReduced) } ?? "nil") failures=\(routingVariantFailureReasons) diagnosticOnly=\(routingComparison.map { String($0.diagnosticOnly) } ?? "nil") mustNotPromote=\(routingMustNotPromote)
+            ocrCharacterDamageAudit: damaged=[\(damagedTokens)] missing=[\(missingTokens)] extra=[\(extraTokens)] substitutions=[\(substitutions)] repeatedKeywordDamage=[\(repeatedDamage)] lineBreakRisk=\(ocrDamage.map { String($0.lineBreakRisk) } ?? "nil") action=\(ocrDamage?.recommendedNextAction ?? "nil") cropBlockers=\(ocrDamageCropBlockers) textBoxEvidence=\(ocrDamage?.textBoxEvidenceSummary ?? "nil") segmentEvidence=\(ocrDamage?.segmentMaskEvidenceSummary ?? "nil") diagnosticOnly=\(ocrDamage.map { String($0.diagnosticOnly) } ?? "nil") mustNotPromote=\(ocrDamageMustNotPromote)
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1744,6 +1769,8 @@ struct MangaOverlayProbeService: Sendable {
         externalArtifactReadiness: activeDirectory=\(externalArtifactReadinessReport.map { String($0.activeArtifactsDirectory) } ?? "nil") contractExampleOnly=\(externalArtifactReadinessReport.map { String($0.contractExampleOnly) } ?? "nil") shadowOCRAllowed=\(externalArtifactReadinessReport.map { String($0.externalTextBoxesShadowOCRAllowed) } ?? "nil") manifestFound=\(externalArtifactReadinessReport.map { String($0.manifestFound) } ?? "nil") textBoxesFound=\(externalArtifactReadinessReport.map { String($0.textBoxesFound) } ?? "nil") bubbleMaskFound=\(externalArtifactReadinessReport.map { String($0.bubbleMaskFound) } ?? "nil") segmentMaskFound=\(externalArtifactReadinessReport.map { String($0.segmentMaskFound) } ?? "nil") verdict=\(externalArtifactReadinessReport?.readinessVerdict ?? "nil") nextAction=\(externalArtifactReadinessReport?.nextAction ?? "nil") missing=\(externalArtifactReadinessReport?.missingArtifacts.joined(separator: ",") ?? "nil")
         externalTextBoxShadowOCR: enabled=\(externalTextBoxShadowOCRReport.map { String($0.enabled) } ?? "nil") executed=\(externalTextBoxShadowOCRReport.map { String($0.executed) } ?? "nil") gateVerdict=\(externalTextBoxShadowOCRReport?.gateVerdict ?? "nil") candidates=\(externalTextBoxShadowOCRReport.map { String($0.candidateCount) } ?? "nil") ocrExecuted=\(externalTextBoxShadowOCRReport.map { String($0.ocrExecutedCount) } ?? "nil") betterThanControl=\(externalTextBoxShadowOCRReport.map { String($0.betterThanControlCount) } ?? "nil") skipped=\(externalTextBoxShadowOCRReport?.skippedBlocks.map(String.init).joined(separator: ",") ?? "nil")
         internalStructureBottleneckReport: evaluated=\(internalStructureBottleneckReport.map { String($0.evaluatedBlockCount) } ?? "nil") primary=\(internalStructureBottleneckReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") recommended=\(internalStructureBottleneckReport?.recommendedActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") duplicateOrFragment=\(internalStructureBottleneckReport?.duplicateOrFragmentBlocks.map(String.init).joined(separator: ",") ?? "nil")
+        routingDrivenTranslationComparisonReport: enabled=\(routingDrivenTranslationComparisonReport.map { String($0.enabled) } ?? "nil") evaluated=\(routingDrivenTranslationComparisonReport.map { String($0.evaluatedCaseCount) } ?? "nil") targets=\(routingDrivenTranslationComparisonReport?.targetBlockIndexes.map(String.init).joined(separator: ",") ?? "nil") controlPassed=\(routingDrivenTranslationComparisonReport.map { String($0.controlPassedCount) } ?? "nil") variantPassed=\(routingDrivenTranslationComparisonReport.map { String($0.variantPassedCount) } ?? "nil") improvements=\(routingDrivenTranslationComparisonReport?.improvementBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        ocrCharacterDamageAuditReport: enabled=\(ocrCharacterDamageAuditReport.map { String($0.enabled) } ?? "nil") evaluated=\(ocrCharacterDamageAuditReport.map { String($0.evaluatedBlockCount) } ?? "nil") targets=\(ocrCharacterDamageAuditReport?.targetBlockIndexes.map(String.init).joined(separator: ",") ?? "nil") lineBreakRisk=\(ocrCharacterDamageAuditReport?.lineBreakRiskBlocks.map(String.init).joined(separator: ",") ?? "nil") cropBlocked=\(ocrCharacterDamageAuditReport?.cropBlockedBlocks.map(String.init).joined(separator: ",") ?? "nil") actions=\(ocrCharacterDamageAuditReport?.recommendedActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)

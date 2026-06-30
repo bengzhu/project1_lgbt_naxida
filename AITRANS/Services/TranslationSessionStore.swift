@@ -1577,6 +1577,8 @@ final class TranslationSessionStore: ObservableObject {
                 var externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
                 var externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?
                 var internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?
+                var routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport?
+                var ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1877,6 +1879,22 @@ final class TranslationSessionStore: ObservableObject {
                     postFusionCleanup: postFusionCleanup,
                     externalArtifactReadinessReport: externalArtifactReadinessReport
                 )
+                self.mangaOverlayProbeMessage = "正在运行路由驱动翻译对照和 OCR 损坏审计"
+                self.writeMangaProbeProgress(stage: "routing-audits-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                if let internalStructureBottleneckReport {
+                    routingDrivenTranslationComparisonReport = await self.makeRoutingDrivenTranslationComparisonReport(
+                        blocks: probeBlocks,
+                        internalStructureBottleneckReport: internalStructureBottleneckReport
+                    )
+                    ocrCharacterDamageAuditReport = Self.makeOCRCharacterDamageAuditReport(
+                        blocks: probeBlocks,
+                        internalStructureBottleneckReport: internalStructureBottleneckReport,
+                        textRegionCropReport: textRegionCropReport,
+                        textBoxCandidateReport: textBoxCandidateReport,
+                        segmentMaskReport: segmentMaskReport,
+                        textBoxPlanFailureReport: textBoxPlanFailureReport
+                    )
+                }
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
@@ -1897,6 +1915,8 @@ final class TranslationSessionStore: ObservableObject {
                     externalArtifactReadinessReport: externalArtifactReadinessReport,
                     externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
                     internalStructureBottleneckReport: internalStructureBottleneckReport,
+                    routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
+                    ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1971,6 +1991,8 @@ final class TranslationSessionStore: ObservableObject {
                     externalArtifactReadinessReport: externalArtifactReadinessReport,
                     externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
                     internalStructureBottleneckReport: internalStructureBottleneckReport,
+                    routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
+                    ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7073,6 +7095,8 @@ final class TranslationSessionStore: ObservableObject {
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport? = nil,
         externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport? = nil,
         internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport? = nil,
+        routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport? = nil,
+        ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7144,6 +7168,8 @@ final class TranslationSessionStore: ObservableObject {
             externalArtifactReadinessReport: externalArtifactReadinessReport,
             externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
             internalStructureBottleneckReport: internalStructureBottleneckReport,
+            routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
+            ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -8443,6 +8469,443 @@ final class TranslationSessionStore: ObservableObject {
             reasons.append("decorativeTitleProtected")
         }
         return Array(Set(reasons)).sorted()
+    }
+
+    private func makeRoutingDrivenTranslationComparisonReport(
+        blocks: [MangaOverlayProbeBlock],
+        internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport
+    ) async -> MangaRoutingDrivenTranslationComparisonReport {
+        let variantID = "strictChineseOnlyV1"
+        let routedByBlock = Dictionary(
+            uniqueKeysWithValues: internalStructureBottleneckReport.blockSummaries.map { ($0.blockIndex, $0) }
+        )
+        let targets = blocks
+            .filter { block in
+                routedByBlock[block.index]?.primaryBottleneck == "modelTranslationQuality"
+            }
+            .sorted { lhs, rhs in
+                let lhsPassed = lhs.blockPassed ? 1 : 0
+                let rhsPassed = rhs.blockPassed ? 1 : 0
+                if lhsPassed != rhsPassed { return lhsPassed < rhsPassed }
+                return lhs.index < rhs.index
+            }
+            .prefix(5)
+
+        var cases: [MangaRoutingDrivenTranslationComparisonCase] = []
+        for block in targets {
+            guard let routing = routedByBlock[block.index] else { continue }
+            let prompt = Self.strictChineseOnlyPrompt(for: block.finalTextUsedForTranslation)
+            let rawOutput: String
+            let errorCode: String?
+            if selectedEngine == .local {
+                let probe = localService.rawProbe(prompt: prompt, maxTokens: min(max(96, block.finalTextUsedForTranslation.count * 2), 220))
+                rawOutput = probe.output
+                errorCode = probe.errorCode
+            } else {
+                let request = makeProbeRequest(source: .englishUS, target: .simplifiedChinese, input: prompt)
+                do {
+                    try await mockService.prepare()
+                    let result = try await mockService.generate(request)
+                    rawOutput = result.text
+                    errorCode = nil
+                } catch {
+                    rawOutput = ""
+                    errorCode = "\(type(of: error)): \(error.localizedDescription)"
+                }
+            }
+
+            let extraction = Self.extractMangaProbeTranslationCandidate(rawOutput)
+            let candidate = extraction.candidate
+            let rawClassification = Self.classifyMangaProbeRawOutput(rawOutput, original: block.finalTextUsedForTranslation)
+            let candidateClassification = Self.classifyMangaProbeCandidate(
+                candidate,
+                original: block.finalTextUsedForTranslation,
+                rejectedPlaceholder: extraction.rejectedPlaceholder
+            )
+            let checks = mangaProbeChecks(
+                original: block.finalTextUsedForTranslation,
+                translation: candidate,
+                errorCode: errorCode
+            )
+            let baseReasons = mangaProbeFailureReasons(
+                checks: checks,
+                errorCode: errorCode,
+                original: block.finalTextUsedForTranslation,
+                translation: candidate
+            )
+            let checksPassed = Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
+            let languageReason = checksPassed ? Self.mangaProbeTranslationLanguageQualityIssue(
+                original: block.finalTextUsedForTranslation,
+                candidate: candidate,
+                rawOutput: rawOutput,
+                rawClassification: rawClassification
+            ) : nil
+            let variantFailureReasons = baseReasons + [languageReason].compactMap { $0 }
+            let variantPassed = checksPassed && languageReason == nil
+            let latinLeakReduced = Self.latinLetterCount(in: candidate) < Self.latinLetterCount(in: block.translationCandidate)
+            let emptyOutputFixed = block.candidateClassification == "empty" && !candidate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let controlWasPlaceholder = block.candidateClassification == "placeholder"
+                || block.candidateClassification == "placeholderRejected"
+            let placeholderFixed = controlWasPlaceholder
+                && candidateClassification != "empty"
+                && candidateClassification != "placeholder"
+                && candidateClassification != "placeholderRejected"
+            let shortChineseFixed = Self.isShortChineseFailure(block) && !Self.isShortChineseCandidate(candidate, original: block.finalTextUsedForTranslation)
+            let improvement = Self.routingTranslationImprovementCategory(
+                control: block,
+                variantPassed: variantPassed,
+                variantFailureReasons: variantFailureReasons,
+                variantRawClassification: rawClassification,
+                variantCandidateClassification: candidateClassification,
+                latinLeakReduced: latinLeakReduced,
+                emptyOutputFixed: emptyOutputFixed,
+                placeholderFixed: placeholderFixed,
+                shortChineseFixed: shortChineseFixed
+            )
+            var mustNotPromote = routing.mustNotPromoteReasons
+            mustNotPromote.append("diagnosticOnlyStrictPromptDoesNotReplaceMainTranslation")
+            mustNotPromote.append("mainProbePromptUnchanged")
+
+            cases.append(MangaRoutingDrivenTranslationComparisonCase(
+                blockIndex: block.index,
+                routingPrimaryBottleneck: routing.primaryBottleneck,
+                routingRecommendedAction: routing.recommendedNextAction,
+                sourceText: block.finalTextUsedForTranslation,
+                controlCandidate: block.translationCandidate,
+                controlPassed: block.blockPassed,
+                controlFailureCategory: block.failureCategory,
+                controlFailureReasons: block.failureReasons,
+                variantID: variantID,
+                variantPrompt: prompt,
+                variantRawOutput: rawOutput,
+                variantCandidate: candidate,
+                variantRawOutputClassification: rawClassification,
+                variantCandidateClassification: candidateClassification,
+                variantPassed: variantPassed,
+                variantFailureReasons: variantFailureReasons,
+                improvementCategory: improvement,
+                latinLeakReduced: latinLeakReduced,
+                emptyOutputFixed: emptyOutputFixed,
+                placeholderFixed: placeholderFixed,
+                shortChineseFixed: shortChineseFixed,
+                diagnosticOnly: true,
+                mustNotPromoteReasons: Array(Set(mustNotPromote)).sorted()
+            ))
+        }
+
+        return MangaRoutingDrivenTranslationComparisonReport(
+            enabled: true,
+            decodingMode: selectedEngine == .local ? ModelDecodingProfile.deterministic.mode : "mock",
+            decodingSeed: selectedEngine == .local ? ModelDecodingProfile.deterministic.seed : nil,
+            variantID: variantID,
+            candidateSelectionRule: "Select first five final blocks whose internalStructureBottleneckReport.primaryBottleneck == modelTranslationQuality; no ground truth is read for sample selection.",
+            evaluatedCaseCount: cases.count,
+            targetBlockIndexes: cases.map(\.blockIndex).sorted(),
+            controlPassedCount: cases.filter(\.controlPassed).count,
+            variantPassedCount: cases.filter(\.variantPassed).count,
+            passedButControlFailedBlocks: cases.filter { !$0.controlPassed && $0.variantPassed }.map(\.blockIndex).sorted(),
+            worseThanControlBlocks: cases.filter { $0.controlPassed && !$0.variantPassed }.map(\.blockIndex).sorted(),
+            emptyOutputFixedBlocks: cases.filter(\.emptyOutputFixed).map(\.blockIndex).sorted(),
+            placeholderFixedBlocks: cases.filter(\.placeholderFixed).map(\.blockIndex).sorted(),
+            latinLeakReducedBlocks: cases.filter(\.latinLeakReduced).map(\.blockIndex).sorted(),
+            improvementBreakdown: Self.countBy(cases.map(\.improvementCategory)),
+            cases: cases,
+            notes: [
+                "report-only strict prompt comparison; main block translationCandidate, blockPassed, failureCategory, decision trace, and overlay are unchanged",
+                "variant uses existing candidate extraction, raw/candidate classification, checks, failure reasons, and language quality gate"
+            ]
+        )
+    }
+
+    private static func strictChineseOnlyPrompt(for sourceText: String) -> String {
+        """
+        把以下英文漫画台词翻译成简体中文。
+        只输出中文译文，不要解释，不要列点，不要重复英文原文。
+        如果出现 Senpai、Ren、City Battler、Tournament 等专有名词，请用自然中文或音译处理，不要原样保留英文短语。
+        原文：
+        \(sourceText)
+        """
+    }
+
+    private static func routingTranslationImprovementCategory(
+        control: MangaOverlayProbeBlock,
+        variantPassed: Bool,
+        variantFailureReasons: [String],
+        variantRawClassification: String,
+        variantCandidateClassification: String,
+        latinLeakReduced: Bool,
+        emptyOutputFixed: Bool,
+        placeholderFixed: Bool,
+        shortChineseFixed: Bool
+    ) -> String {
+        if control.blockPassed && !variantPassed {
+            return "worseThanControl"
+        }
+        if variantPassed && !control.blockPassed {
+            return "passedButControlFailed"
+        }
+        if emptyOutputFixed {
+            return "fixedEmptyOutput"
+        }
+        if placeholderFixed {
+            return "fixedPlaceholder"
+        }
+        if latinLeakReduced {
+            return "fixedLatinLeak"
+        }
+        if shortChineseFixed {
+            return "fixedShortChinese"
+        }
+        if variantRawClassification == "empty" || variantCandidateClassification == "empty"
+            || variantRawClassification == "placeholder"
+            || variantCandidateClassification == "placeholder"
+            || variantCandidateClassification == "placeholderRejected"
+            || variantRawClassification == "repeatedOriginal"
+            || variantCandidateClassification == "repeatedOriginal"
+            || variantRawClassification == "nonChinese"
+            || variantCandidateClassification == "nonChinese"
+            || variantRawClassification == "symbolsOnly" {
+            return "stillModelOutputFailure"
+        }
+        if !variantPassed,
+           variantFailureReasons.contains(where: { $0.contains("过短") || $0.contains("拉丁") || $0.contains("英文") || $0.contains("解释") || $0.contains("泛化") }) {
+            return "stillTranslationLanguageQualityFailure"
+        }
+        return "noChange"
+    }
+
+    private static func isShortChineseFailure(_ block: MangaOverlayProbeBlock) -> Bool {
+        block.failureReasons.contains(where: { $0.contains("过短") })
+            || block.translationFailureDetail?.contains("过短") == true
+            || block.qualityNotes.contains(where: { $0.contains("translationLanguageQualityIssue=多词原文只得到过短中文候选") || $0.contains("translationLanguageQualityIssue=长原文只得到过短中文候选") })
+    }
+
+    private static func isShortChineseCandidate(_ candidate: String, original: String) -> Bool {
+        let sourceWords = ocrCandidateWords(original).filter { $0.count >= 3 }
+        let cjkCount = cjkCharacterCount(in: candidate)
+        return (sourceWords.count >= 3 && cjkCount <= 2) || (sourceWords.count >= 5 && cjkCount <= 4)
+    }
+
+    private static func makeOCRCharacterDamageAuditReport(
+        blocks: [MangaOverlayProbeBlock],
+        internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport,
+        textRegionCropReport: MangaOverlayTextRegionCropReport?,
+        textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?,
+        textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?
+    ) -> MangaOCRCharacterDamageAuditReport {
+        let routedByBlock = Dictionary(
+            uniqueKeysWithValues: internalStructureBottleneckReport.blockSummaries.map { ($0.blockIndex, $0) }
+        )
+        let textRegionByBlock = Dictionary(
+            uniqueKeysWithValues: (textRegionCropReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let textBoxByBlock = Dictionary(
+            uniqueKeysWithValues: (textBoxCandidateReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let failureByBlock = Dictionary(
+            uniqueKeysWithValues: (textBoxPlanFailureReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+
+        let cases = blocks
+            .filter { block in
+                routedByBlock[block.index]?.primaryBottleneck == "ocrCharacterDamage"
+                    || block.failureCategory == "ocrInputSuspect"
+                    || (block.ocrGroundTruthSimilarity ?? 1) < 0.72
+            }
+            .map { block -> MangaOCRCharacterDamageAuditCase in
+                let audit = Self.ocrDamageTokenAudit(
+                    ocrText: block.finalTextUsedForTranslation,
+                    groundTruthText: block.bestGroundTruthText
+                )
+                let textRegion = textRegionByBlock[block.index]
+                let textBox = textBoxByBlock[block.index]
+                let segment = segmentByBlock[block.index]
+                let failure = failureByBlock[block.index]
+                let cropBlockers = Self.ocrDamageCropBlockers(textRegion: textRegion, textBoxFailure: failure)
+                let action = Self.ocrDamageRecommendedAction(
+                    block: block,
+                    audit: audit,
+                    cropBlockers: cropBlockers,
+                    textBox: textBox,
+                    segment: segment,
+                    routing: routedByBlock[block.index]
+                )
+                var mustNotPromote = routedByBlock[block.index]?.mustNotPromoteReasons ?? []
+                mustNotPromote.append("diagnosticOnlyDoesNotReplaceFinalTextUsedForTranslation")
+                mustNotPromote.append("groundTruthUsedOnlyForDamageAudit")
+                if action == "doNotTuneCropFurther" {
+                    mustNotPromote.append("v20LineDeskewPathAlreadyStopped")
+                }
+
+                return MangaOCRCharacterDamageAuditCase(
+                    blockIndex: block.index,
+                    groundTruthMatch: block.groundTruthMatch,
+                    groundTruthType: block.bestGroundTruthType,
+                    ocrGroundTruthSimilarity: block.ocrGroundTruthSimilarity,
+                    wordOrderPreserved: block.wordOrderPreserved,
+                    finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                    bestGroundTruthText: block.bestGroundTruthText,
+                    damagedTokens: audit.damagedTokens,
+                    missingGroundTruthTokens: audit.missingGroundTruthTokens,
+                    extraOcrTokens: audit.extraOcrTokens,
+                    suspectedSubstitutions: audit.suspectedSubstitutions,
+                    repeatedKeywordDamage: audit.repeatedKeywordDamage,
+                    lineBreakRisk: Self.ocrLineBreakRisk(block.finalTextUsedForTranslation),
+                    bubbleID: block.bubbleID,
+                    textBoxEvidenceSummary: Self.textBoxEvidenceSummary(textBox),
+                    segmentMaskEvidenceSummary: Self.segmentMaskEvidenceSummary(segment),
+                    cropBlockers: cropBlockers,
+                    recommendedNextAction: action,
+                    diagnosticOnly: true,
+                    mustNotPromoteReasons: Array(Set(mustNotPromote)).sorted()
+                )
+            }
+
+        return MangaOCRCharacterDamageAuditReport(
+            enabled: true,
+            evaluatedBlockCount: cases.count,
+            targetBlockIndexes: cases.map(\.blockIndex).sorted(),
+            damageTokenFrequency: Self.countFrequency(cases.flatMap(\.damagedTokens)),
+            missingTokenFrequency: Self.countFrequency(cases.flatMap(\.missingGroundTruthTokens)),
+            substitutionFrequency: Self.countFrequency(cases.flatMap(\.suspectedSubstitutions)),
+            repeatedKeywordDamage: Self.countFrequency(cases.flatMap(\.repeatedKeywordDamage)),
+            lineBreakRiskBlocks: cases.filter(\.lineBreakRisk).map(\.blockIndex).sorted(),
+            cropBlockedBlocks: cases.filter { !$0.cropBlockers.isEmpty }.map(\.blockIndex).sorted(),
+            textBoxOrSegmentEvidenceBlocks: cases.filter {
+                ($0.textBoxEvidenceSummary?.isEmpty == false) || ($0.segmentMaskEvidenceSummary?.isEmpty == false)
+            }.map(\.blockIndex).sorted(),
+            recommendedActionBreakdown: Self.countBy(cases.map(\.recommendedNextAction)),
+            cases: cases,
+            notes: [
+                "ground truth is used only for probe damage analysis, never for production OCR candidate selection or promotion",
+                "audit explains token substitutions, missing tokens, extra OCR tokens, line break risk, crop blockers, and TextBox/SegmentMask proxy evidence"
+            ]
+        )
+    }
+
+    private struct OCRDamageTokenAudit {
+        var damagedTokens: [String]
+        var missingGroundTruthTokens: [String]
+        var extraOcrTokens: [String]
+        var suspectedSubstitutions: [String]
+        var repeatedKeywordDamage: [String]
+    }
+
+    private static func ocrDamageTokenAudit(ocrText: String, groundTruthText: String?) -> OCRDamageTokenAudit {
+        let ocrTokens = ocrCandidateWords(ocrText)
+        let truthTokens = ocrCandidateWords(groundTruthText ?? "")
+        let ocrSet = Set(ocrTokens)
+        let truthSet = Set(truthTokens)
+        let missing = truthTokens.filter { !ocrSet.contains($0) }
+        let extra = ocrTokens.filter { !truthSet.contains($0) }
+        var substitutions: [String] = []
+        var damaged: [String] = []
+        for ocrToken in extra {
+            guard let truthToken = missing
+                .filter({ abs($0.count - ocrToken.count) <= 3 })
+                .max(by: { normalizedTextSimilarity(ocrToken, $0) < normalizedTextSimilarity(ocrToken, $1) }) else {
+                continue
+            }
+            let similarity = normalizedTextSimilarity(ocrToken, truthToken)
+            if similarity >= 0.34 {
+                substitutions.append("\(ocrToken.uppercased())->\(truthToken.uppercased())")
+                damaged.append(ocrToken.uppercased())
+            }
+        }
+        let tracked = ["battler", "tournament", "few", "and", "training", "this", "gaming", "club", "being", "logic", "results"]
+        let repeatedKeywordDamage = tracked.filter { keyword in
+            truthSet.contains(keyword) && !ocrSet.contains(keyword)
+        }
+        return OCRDamageTokenAudit(
+            damagedTokens: Array(Set(damaged)).sorted(),
+            missingGroundTruthTokens: Array(Set(missing.map { $0.uppercased() })).sorted(),
+            extraOcrTokens: Array(Set(extra.map { $0.uppercased() })).sorted(),
+            suspectedSubstitutions: Array(Set(substitutions)).sorted(),
+            repeatedKeywordDamage: repeatedKeywordDamage.map { $0.uppercased() }.sorted()
+        )
+    }
+
+    private static func ocrDamageCropBlockers(
+        textRegion: MangaOverlayTextRegionCropDiagnostic?,
+        textBoxFailure: MangaOverlayTextBoxPlanFailureBlockSummary?
+    ) -> [String] {
+        var blockers: [String] = []
+        if let textRegion {
+            blockers.append(contentsOf: textRegion.rejectionReasons)
+            blockers.append(contentsOf: textRegion.failureAttribution)
+            if let cropMaskRejectedReason = textRegion.cropMaskRejectedReason {
+                blockers.append(cropMaskRejectedReason)
+            }
+            if let assignmentCorrectionRejectedReason = textRegion.assignmentCorrectionRejectedReason {
+                blockers.append(assignmentCorrectionRejectedReason)
+            }
+            if let splitCandidateRejectedReason = textRegion.splitCandidateRejectedReason {
+                blockers.append(splitCandidateRejectedReason)
+            }
+        }
+        if let textBoxFailure {
+            blockers.append(contentsOf: textBoxFailure.promotionBlockers)
+            blockers.append(textBoxFailure.primaryFailureCategory)
+        }
+        return Array(Set(blockers.filter { !$0.isEmpty })).sorted()
+    }
+
+    private static func ocrDamageRecommendedAction(
+        block: MangaOverlayProbeBlock,
+        audit: OCRDamageTokenAudit,
+        cropBlockers: [String],
+        textBox: MangaOverlayTextBoxCandidateDiagnostic?,
+        segment: MangaOverlaySegmentMaskDiagnostic?,
+        routing: MangaOverlayInternalStructureBottleneckBlock?
+    ) -> String {
+        if routing?.primaryBottleneck == "modelTranslationQuality" || block.failureCategory == "modelOutputFailure" {
+            return "promptComparisonOnly"
+        }
+        if cropBlockers.contains(where: {
+            ["qualityDeltaBelowOrEqual0.08", "wordPreservationRatioBelow0.80", "wordCountRegression", "rawWordsLost", "introducedLikelyOCRError"].contains($0)
+        }) {
+            return "doNotTuneCropFurther"
+        }
+        if textBox?.eligibleForCrop == true || segment?.usableForCropEvidence == true {
+            return "needsBetterTextBoxOrSegmentEvidence"
+        }
+        if block.crossBubbleMergeRejected || block.bubbleID == nil {
+            return "needsBubbleSplitOrAssignmentReview"
+        }
+        if !audit.suspectedSubstitutions.isEmpty || !audit.repeatedKeywordDamage.isEmpty {
+            return "needsOCRModelOrEngineComparison"
+        }
+        return "manualReview"
+    }
+
+    private static func textBoxEvidenceSummary(_ diagnostic: MangaOverlayTextBoxCandidateDiagnostic?) -> String? {
+        guard let diagnostic else { return nil }
+        return "id=\(diagnostic.id) source=\(diagnostic.source) eligible=\(diagnostic.eligibleForCrop) score=\(diagnostic.evidenceScore.formatted(.number.precision(.fractionLength(3)))) rejections=\(diagnostic.rejectionReasons.joined(separator: ",")) risks=\(diagnostic.riskFlags.joined(separator: ","))"
+    }
+
+    private static func segmentMaskEvidenceSummary(_ diagnostic: MangaOverlaySegmentMaskDiagnostic?) -> String? {
+        guard let diagnostic else { return nil }
+        return "pixels=\(diagnostic.glyphMaskPixelCount) usableForCropEvidence=\(diagnostic.usableForCropEvidence) textBoxCoverage=\(diagnostic.textBoxCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bubbleCoverage=\(diagnostic.bubbleMaskCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil") rejections=\(diagnostic.rejectionReasons.joined(separator: ","))"
+    }
+
+    private static func ocrLineBreakRisk(_ text: String) -> Bool {
+        let lines = text
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard lines.count >= 3 else { return false }
+        let shortLines = lines.filter { ocrCandidateWords($0).count <= 2 }.count
+        return shortLines >= max(2, lines.count / 2)
+    }
+
+    private static func countFrequency(_ values: [String]) -> [String: Int] {
+        values.reduce(into: [:]) { partial, value in
+            partial[value, default: 0] += 1
+        }
     }
 
     private static func looksLikeInternalDuplicateOrFragment(_ block: MangaOverlayProbeBlock) -> Bool {

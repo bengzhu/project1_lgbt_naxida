@@ -1090,6 +1090,91 @@ struct MangaOverlayInternalStructureBottleneckReport: Equatable, Codable, Sendab
     var notes: [String]
 }
 
+struct MangaRoutingDrivenTranslationComparisonCase: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var routingPrimaryBottleneck: String
+    var routingRecommendedAction: String
+    var sourceText: String
+    var controlCandidate: String
+    var controlPassed: Bool
+    var controlFailureCategory: String
+    var controlFailureReasons: [String]
+    var variantID: String
+    var variantPrompt: String
+    var variantRawOutput: String
+    var variantCandidate: String
+    var variantRawOutputClassification: String
+    var variantCandidateClassification: String
+    var variantPassed: Bool
+    var variantFailureReasons: [String]
+    var improvementCategory: String
+    var latinLeakReduced: Bool
+    var emptyOutputFixed: Bool
+    var placeholderFixed: Bool
+    var shortChineseFixed: Bool
+    var diagnosticOnly: Bool
+    var mustNotPromoteReasons: [String]
+}
+
+struct MangaRoutingDrivenTranslationComparisonReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var decodingMode: String
+    var decodingSeed: UInt32?
+    var variantID: String
+    var candidateSelectionRule: String
+    var evaluatedCaseCount: Int
+    var targetBlockIndexes: [Int]
+    var controlPassedCount: Int
+    var variantPassedCount: Int
+    var passedButControlFailedBlocks: [Int]
+    var worseThanControlBlocks: [Int]
+    var emptyOutputFixedBlocks: [Int]
+    var placeholderFixedBlocks: [Int]
+    var latinLeakReducedBlocks: [Int]
+    var improvementBreakdown: [String: Int]
+    var cases: [MangaRoutingDrivenTranslationComparisonCase]
+    var notes: [String]
+}
+
+struct MangaOCRCharacterDamageAuditCase: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var groundTruthMatch: String
+    var groundTruthType: String?
+    var ocrGroundTruthSimilarity: Double?
+    var wordOrderPreserved: Bool?
+    var finalTextUsedForTranslation: String
+    var bestGroundTruthText: String?
+    var damagedTokens: [String]
+    var missingGroundTruthTokens: [String]
+    var extraOcrTokens: [String]
+    var suspectedSubstitutions: [String]
+    var repeatedKeywordDamage: [String]
+    var lineBreakRisk: Bool
+    var bubbleID: Int?
+    var textBoxEvidenceSummary: String?
+    var segmentMaskEvidenceSummary: String?
+    var cropBlockers: [String]
+    var recommendedNextAction: String
+    var diagnosticOnly: Bool
+    var mustNotPromoteReasons: [String]
+}
+
+struct MangaOCRCharacterDamageAuditReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var evaluatedBlockCount: Int
+    var targetBlockIndexes: [Int]
+    var damageTokenFrequency: [String: Int]
+    var missingTokenFrequency: [String: Int]
+    var substitutionFrequency: [String: Int]
+    var repeatedKeywordDamage: [String: Int]
+    var lineBreakRiskBlocks: [Int]
+    var cropBlockedBlocks: [Int]
+    var textBoxOrSegmentEvidenceBlocks: [Int]
+    var recommendedActionBreakdown: [String: Int]
+    var cases: [MangaOCRCharacterDamageAuditCase]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -1976,6 +2061,8 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
     var externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?
     var internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?
+    var routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport?
+    var ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
