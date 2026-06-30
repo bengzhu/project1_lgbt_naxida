@@ -266,6 +266,38 @@
 - 当前仍没有真实 active `test/koharu_artifacts/`，因此不能验证 `externalTextBoxShadowOCRReport.executed = true` 或 OCR 收益。
 - 下一步需要 Koharu 或人工提供 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`，先由 validator 达到 `readyForShadowOCR`，再通过云端探针核对 executed=true。
 
+### v1.15：Koharu 真实 artifact 交付包 handoff
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.15（Koharu真实Artifact交付包与executed验证）.md`。当前仍没有真实 `test/koharu_artifacts/` active artifact，因此本轮走路径 B；不创建 fake active artifact，不调 Vision crop / line deskew，不刷新漫画指标，不追加 `metrics/version_history.csv`。
+
+核心变更：
+
+- 新增 Agent A v1.15 提示词，明确下一步只验证真实 Koharu / 外部 detector 四件套的 `readyForShadowOCR` 与 `externalTextBoxShadowOCRReport.executed=true`。
+- 在 `md/koharu研究/artifact_contract/README.md` 新增 v1.15 真实交付包清单，面向 Koharu / 人工列出四个必需文件、每个文件最低字段、坐标系、图像尺寸、禁止来源、validator 命令和 ready 后的云端验收字段。
+- 确认当前 active 目录不存在，validator 阻塞仍是 `manifestMissing`、`nextAction = stopUntilArtifactsProvided`，缺 `manifest`、`TextBoxes`、`BubbleMask`、`SegmentMask`。
+
+关键文件：
+
+- `md/prompt/v1（漫画探针）/v1.15（Koharu真实Artifact交付包与executed验证）.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮应运行 `git diff --check`、JSON 解析和 Koharu artifact validator valid / invalid / allow-missing / print-required-files。
+- 当前 `test/koharu_artifacts` 不存在；`python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing` 返回 `verdict = manifestMissing`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`。
+- 未跑本机 build / 探针；本轮是文档和交付清单收口，不涉及 Swift 代码或探针产物刷新。
+
+验收口径：
+
+- 没有真实 active artifact 时，v1.15 不能声称已验证 `executed=true`。
+- 不得把 contract examples、Vision OCR、pre-crop plan、line plan、BubbleMask proxy、SegmentMask proxy、ground truth 或手写框复制到 `test/koharu_artifacts/`。
+- Koharu / 人工交付真实四件套后，必须先通过 validator，再由云端探针验证 `readyForShadowOCR` 与 `externalTextBoxShadowOCRReport.executed = true`。
+
+遗留事项：
+
+- 下一步需要 Koharu / 人工提供 `test/1.png` 对应的真实 detector / segmenter 四件套：`1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`。
+
 ### v2.2：GitHub Release GGUF 下载与 Actions 缓存
 日期：2026-06-29
 依据：云端验证基础设施改造；未刷新 `output/`，未追加 `metrics/version_history.csv` 漫画指标行。
