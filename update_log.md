@@ -221,6 +221,42 @@
 
 - 当前仓库默认仍没有真实 active `test/koharu_artifacts/`；若 Koharu 或人工提供 artifact，必须先跑 validator，再由云端探针验证新 report 的 `executed=true` 路径。
 
+### v1.14：Koharu artifact 注入校验与 CI 摘要闭环
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.14（真实KoharuArtifact注入与ShadowOCR验证闭环）.md`。当前没有真实 `test/koharu_artifacts/` active artifact，因此本轮走缺 artifact 路径 B；不创建 active artifact，不刷新漫画指标，不追加 `metrics/version_history.csv`。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 `--print-required-files`，可直接打印 Koharu / 外部 detector 侧需要交付的 active 四件套。
+- validator 摘要新增 `readyForShadowOCR`、`nextAction`、`readinessBlockers`、`requiredFiles` 和 `activeArtifactPolicy`，缺 active artifact 时明确返回 `manifestMissing`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`。
+- `AITRANS CI Results` 静态检查会把 `test/koharu_artifacts` validator 摘要写入 `ci-results/koharu-active-artifacts-validation.json`。
+- `ci-artifact-manifest.json` 新增 `koharuActiveArtifactValidationPath`、`koharuArtifactValidation`、`externalArtifactReadinessSummary` 和 `externalTextBoxShadowOCRSummary`，Agent C 可直接核对缺 artifact 阻塞路径或未来 executed=true 路径。
+- `ci-failure-summary.md` 新增 Koharu artifact gate 小节，列出 active directory、verdict、shadow OCR allowed、nextAction 和 blockers。
+- `md/koharu研究/artifact_contract/README.md` 新增从 Koharu 导出到 AITRANS contract 的最小转换要求，继续禁止 examples、Vision、pre-crop plan、line plan、proxy mask、ground truth 或手写理想框冒充真实 detector 输出。
+- README、flow、flowchart 和 test 文档同步 v1.14 validator / CI 闭环边界。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.14（真实KoharuArtifact注入与ShadowOCR验证闭环）.md`
+
+验证计划：
+
+- 本地只跑轻量检查：`git diff --check`、JSON 解析、validator valid / invalid / allow-missing / print-required-files。
+- 不跑本机 Xcode build / 漫画探针；按规则由 GitHub Actions 验证 build、simulator probe 和结果包字段。
+
+遗留事项：
+
+- 当前仍没有真实 active `test/koharu_artifacts/`，因此不能验证 `externalTextBoxShadowOCRReport.executed = true` 或 OCR 收益。
+- 下一步需要 Koharu 或人工提供 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`，先由 validator 达到 `readyForShadowOCR`，再通过云端探针核对 executed=true。
+
 ### v2.2：GitHub Release GGUF 下载与 Actions 缓存
 日期：2026-06-29
 依据：云端验证基础设施改造；未刷新 `output/`，未追加 `metrics/version_history.csv` 漫画指标行。

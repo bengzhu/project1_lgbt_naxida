@@ -133,7 +133,7 @@ flowchart TD
 
   %% 云端验证和结果包
   B4 --> G1["GitHub Actions<br/>build / JSON / 静态检查 / 可用探针"]
-  G1 --> G2["未加密 CI 结果包<br/>xcresult / junit.xml / xcodebuild.log / manifest / failure summary"]
+  G1 --> G2["未加密 CI 结果包<br/>xcresult / junit.xml / xcodebuild.log / manifest / failure summary / Koharu gate 摘要"]
   G1 --> G3["加密打包 workflow<br/>软件包交付，Agent C 不以此验收"]
 
   %% Agent C 验收和文档同步

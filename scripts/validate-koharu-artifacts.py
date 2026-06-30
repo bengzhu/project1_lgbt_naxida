@@ -14,6 +14,53 @@ from typing import Any
 EXPECTED_COORDINATE_SPACE = "originalImageTopLeftPixels"
 EXPECTED_SOURCE_IMAGE = "test/1.png"
 DEFAULT_IMAGE_PATH = Path("test/1.png")
+ACTIVE_ARTIFACT_ROOT = Path("test/koharu_artifacts")
+REQUIRED_ARTIFACT_FILES = [
+    {
+        "path": "test/koharu_artifacts/1.manifest.json",
+        "kind": "manifest",
+        "required": True,
+        "notes": [
+            "schemaVersion must be aitrans.koharu_artifact_contract.v1",
+            "sourceImage must be test/1.png",
+            "coordinateSpace must be originalImageTopLeftPixels",
+            "contractExampleOnly must be false for active detector output",
+        ],
+    },
+    {
+        "path": "test/koharu_artifacts/1.textboxes.json",
+        "kind": "TextBoxes",
+        "required": True,
+        "notes": [
+            "array or object with textBoxes/textboxes/items",
+            "each bbox is [x, y, width, height] in original image top-left pixels",
+            "confidence, when present, must be in [0, 1]",
+        ],
+    },
+    {
+        "path": "test/koharu_artifacts/1.bubbles.json",
+        "kind": "BubbleMask",
+        "required": True,
+        "notes": [
+            "array or object with bubbleInstances/bubbles/instances/items",
+            "summary must include per-instance id and bbox; maskValue/pixelCount are recommended",
+        ],
+    },
+    {
+        "path": "test/koharu_artifacts/1.segment_mask.json",
+        "kind": "SegmentMask",
+        "required": True,
+        "notes": [
+            "summary object with width and height matching test/1.png",
+            "glyphPixelCount and connectedComponentCount are recommended",
+        ],
+    },
+]
+
+
+def is_active_artifacts_root(root: Path) -> bool:
+    normalized = Path(str(root).rstrip("/"))
+    return normalized == ACTIVE_ARTIFACT_ROOT or tuple(normalized.parts[-2:]) == tuple(ACTIVE_ARTIFACT_ROOT.parts)
 
 
 def read_image_size(path: Path) -> tuple[int, int]:
@@ -186,6 +233,46 @@ def verdict_for(
     return "readyForShadowOCR"
 
 
+def next_action_for(verdict: str) -> str:
+    if verdict == "readyForShadowOCR":
+        return "continueWithExternalTextBoxesShadowOCR"
+    if verdict == "parseFailed":
+        return "stopUntilParserFixed"
+    if verdict == "contractExampleOnly":
+        return "stopBecauseFixtureIsNotDetectorOutput"
+    if verdict in {
+        "coordinateSpaceMissing",
+        "coordinateSpaceMismatch",
+        "sourceImageMismatch",
+        "coordinateValidationFailed",
+    }:
+        return "stopUntilArtifactContractFixed"
+    return "stopUntilArtifactsProvided"
+
+
+def readiness_blockers(
+    verdict: str,
+    missing_artifacts: list[str],
+    parse_errors: list[str],
+    coordinate_errors: list[str],
+    contract_example_only: bool,
+    active_artifacts_directory: bool,
+) -> list[str]:
+    blockers: list[str] = []
+    if verdict == "readyForShadowOCR":
+        return blockers
+    if not active_artifacts_directory:
+        blockers.append("activeArtifactsDirectoryMissing")
+    if contract_example_only:
+        blockers.append("contractExampleOnly")
+    blockers.extend(f"missing:{item}" for item in missing_artifacts)
+    blockers.extend(f"parse:{item}" for item in parse_errors)
+    blockers.extend(f"coordinate:{item}" for item in coordinate_errors)
+    if not blockers:
+        blockers.append(verdict)
+    return blockers
+
+
 def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any]:
     parse_errors: list[str] = []
     coordinate_errors: list[str] = []
@@ -263,15 +350,43 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         segment_mask=segment_mask,
         contract_example_only=contract_example_only,
     )
-    shadow_allowed = verdict == "readyForShadowOCR" and root.exists() and not contract_example_only
+    active_artifacts_directory = is_active_artifacts_root(root) and root.exists()
+    shadow_allowed = verdict == "readyForShadowOCR" and active_artifacts_directory and not contract_example_only
+    blockers = readiness_blockers(
+        verdict,
+        missing_artifacts,
+        parse_errors,
+        coordinate_errors,
+        contract_example_only,
+        active_artifacts_directory,
+    )
     return {
         "root": str(root),
-        "activeArtifactsDirectory": root == Path("test/koharu_artifacts"),
+        "activeArtifactsDirectory": active_artifacts_directory,
         "manifestFound": manifest is not None,
         "contractExampleOnly": contract_example_only,
         "verdict": verdict,
+        "readyForShadowOCR": verdict == "readyForShadowOCR",
         "validationPassed": verdict in {"readyForShadowOCR", "contractExampleOnly"},
         "externalTextBoxesShadowOCRAllowed": shadow_allowed,
+        "nextAction": next_action_for(verdict),
+        "readinessBlockers": blockers,
+        "requiredFiles": REQUIRED_ARTIFACT_FILES,
+        "activeArtifactPolicy": {
+            "activeInputDirectory": str(ACTIVE_ARTIFACT_ROOT),
+            "examplesDirectory": "md/koharu研究/artifact_contract/examples",
+            "examplesMayEnableShadowOCR": False,
+            "forbiddenActiveSources": [
+                "contract examples",
+                "Vision OCR blocks",
+                "pre-crop plan",
+                "line plan",
+                "BubbleMask proxy",
+                "SegmentMask proxy",
+                "ground truth",
+                "handwritten ideal boxes",
+            ],
+        },
         "missingArtifacts": missing_artifacts,
         "parseErrors": parse_errors,
         "coordinateErrors": coordinate_errors,
@@ -296,16 +411,59 @@ def main() -> int:
     parser.add_argument("--root", required=True, help="Artifact root containing 1.manifest.json or fallback files.")
     parser.add_argument("--allow-missing", action="store_true", help="Return success when the root is missing, with a blocking verdict.")
     parser.add_argument("--expect-fail", action="store_true", help="Return success only when validation fails.")
+    parser.add_argument("--print-required-files", action="store_true", help="Print the required active artifact file checklist and exit.")
     parser.add_argument("--image", default=str(DEFAULT_IMAGE_PATH), help="Probe source image used for coordinate bounds.")
     args = parser.parse_args()
 
     root = Path(args.root)
+    if args.print_required_files:
+        summary = {
+            "activeInputDirectory": str(ACTIVE_ARTIFACT_ROOT),
+            "sourceImage": EXPECTED_SOURCE_IMAGE,
+            "coordinateSpace": EXPECTED_COORDINATE_SPACE,
+            "requiredFiles": REQUIRED_ARTIFACT_FILES,
+            "readyForShadowOCRRequires": [
+                "verdict == readyForShadowOCR",
+                "activeArtifactsDirectory == true",
+                "contractExampleOnly == false",
+                "externalTextBoxesShadowOCRAllowed == true",
+            ],
+            "forbiddenActiveSources": [
+                "contract examples",
+                "Vision OCR blocks",
+                "pre-crop plan",
+                "line plan",
+                "BubbleMask proxy",
+                "SegmentMask proxy",
+                "ground truth",
+                "handwritten ideal boxes",
+            ],
+        }
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        print()
+        return 0
+
     image_path = Path(args.image)
     if not root.exists() and not args.allow_missing:
+        active_artifacts_directory = is_active_artifacts_root(root) and root.exists()
         summary = {
             "root": str(root),
+            "activeArtifactsDirectory": active_artifacts_directory,
+            "manifestFound": False,
+            "contractExampleOnly": False,
             "verdict": "manifestMissing",
+            "readyForShadowOCR": False,
             "validationPassed": False,
+            "externalTextBoxesShadowOCRAllowed": False,
+            "nextAction": "stopUntilArtifactsProvided",
+            "readinessBlockers": [
+                "activeArtifactsDirectoryMissing",
+                "missing:manifest",
+                "missing:TextBoxes",
+                "missing:BubbleMask",
+                "missing:SegmentMask",
+            ],
+            "requiredFiles": REQUIRED_ARTIFACT_FILES,
             "missingArtifacts": ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"],
             "parseErrors": [],
             "coordinateErrors": [],
