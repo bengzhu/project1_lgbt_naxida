@@ -1321,6 +1321,101 @@ struct MangaStructureActionCandidateReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuArtifactGateCheck: Equatable, Codable, Sendable {
+    var checkName: String
+    var passed: Bool
+    var severity: String
+    var evidence: [String]
+    var affectedBlocks: [Int]
+    var recommendedNextAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuArtifactDependencyEdge: Equatable, Codable, Sendable {
+    var fromStage: String
+    var toStage: String
+    var required: Bool
+    var artifactKind: String
+    var available: Bool
+    var consumer: String
+    var missingReason: String?
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuArtifactStageSummary: Equatable, Codable, Sendable {
+    var stageName: String
+    var artifactKind: String
+    var status: String
+    var producedBy: [String]
+    var consumedBy: [String]
+    var blockCount: Int
+    var readyBlockCount: Int
+    var blockedBlockCount: Int
+    var proxyOnlyBlockCount: Int
+    var missingBlockCount: Int
+    var primaryGateChecks: [MangaKoharuArtifactGateCheck]
+    var notes: [String]
+}
+
+struct MangaKoharuArtifactStageTrace: Equatable, Codable, Sendable {
+    var stageName: String
+    var status: String
+    var artifactKind: String
+    var sourceReport: String
+    var sourceIDs: [String]
+    var confidence: Double?
+    var gateChecks: [MangaKoharuArtifactGateCheck]
+    var blockers: [String]
+    var downstreamImpact: [String]
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuArtifactBlockTrace: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var failureCategory: String
+    var blockPassed: Bool
+    var bubbleID: Int?
+    var firstBlockingStage: String
+    var firstBlockingReason: String
+    var downstreamImpacts: [String]
+    var stageTraces: [MangaKoharuArtifactStageTrace]
+    var structureActionCandidateVerdicts: [String]
+    var recommendedNextAction: String
+}
+
+struct MangaKoharuArtifactDAGReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var pipelineName: String
+    var evaluatedBlockCount: Int
+    var stageCount: Int
+    var edgeCount: Int
+    var stageStatusBreakdown: [String: Int]
+    var artifactKindBreakdown: [String: Int]
+    var firstBlockingStageBreakdown: [String: Int]
+    var downstreamImpactBreakdown: [String: Int]
+    var readyStages: [String]
+    var proxyOnlyStages: [String]
+    var missingRequiredStages: [String]
+    var blockedStages: [String]
+    var realArtifactGateVerdict: String
+    var realArtifactGateNextAction: String
+    var blocksNeedingRealTextBoxes: [Int]
+    var blocksNeedingRealBubbleMask: [Int]
+    var blocksNeedingRealSegmentMask: [Int]
+    var blocksStoppedByOCRCropEvidence: [Int]
+    var blocksStoppedByTranslationModelQuality: [Int]
+    var blocksWithRenderOnlyIssues: [Int]
+    var dependencyEdges: [MangaKoharuArtifactDependencyEdge]
+    var stageSummaries: [MangaKoharuArtifactStageSummary]
+    var blockTraces: [MangaKoharuArtifactBlockTrace]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -2211,6 +2306,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?
     var readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?
     var structureActionCandidateReport: MangaStructureActionCandidateReport?
+    var koharuArtifactDAGReport: MangaKoharuArtifactDAGReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
