@@ -93,7 +93,7 @@
 - `externalArtifactReadinessReport.nextAction = stopUntilArtifactsProvided`
 - `externalArtifactReadinessReport.missingArtifacts = [manifest, TextBoxes, BubbleMask, SegmentMask]`
 - `externalArtifactReadinessReport.blockAlignment.count = 13`
-- v1.13 新增 `externalTextBoxShadowOCRReport` 后，默认缺 active artifact 的预期是 `executed = false`、`gateVerdict = manifestMissing`、`candidateCount = 0`、`ocrExecutedCount = 0`、`promotedExternalShadowBlocks = []`、`skippedBlocks = [0...12]`；完整数字待 PR 后云端探针刷新。
+- v1.13 新增 `externalTextBoxShadowOCRReport` 后，云端 run `28381772143` 已验证默认缺 active artifact 时 `executed = false`、`gateVerdict = manifestMissing`、`candidateCount = 0`、`ocrExecutedCount = 0`、`promotedExternalShadowBlocks = []`、`skippedBlocks = [0...12]`。
 - `textRegionCropReport.failureAttributionBreakdown = { localVisionRegression: 6, rawWordsLost: 5, bubbleMaskConflict: 3, emptyLocalOCR: 3, segmentMaskWeak: 3, textBoxTooWide: 2, introducedLikelyOCRError: 2, wordCountRegression: 2, sameAsFusedText: 2, insufficientQualityGain: 2 }`
 - `passedBlocks = 1`
 - `failedBlocks = 12`
@@ -172,9 +172,9 @@
 
 - 若 GitHub-hosted runner 的模拟器启动、App 容器读取或探针耗时不稳定，应优先查看 `manga-probe.log`、`app-console.log`、`output/manga_probe_progress.json` 和 `simulator-build.log`，再决定是否拆分成独立 probe workflow 或继续削减探针云端耗时。
 
-### v1.13 / v22 待验证：外部 TextBoxes shadow OCR 候选接入
-日期：2026-06-29
-依据：`md/prompt/v1（漫画探针）/v1.13（外部TextBoxes Shadow OCR候选接入）.md`；本轮修改 Swift 报告模型和探针诊断链路，完整 build / 探针交给 GitHub Actions，不刷新仓库根 `output/`，不追加 `metrics/version_history.csv` 漫画指标行。
+### v1.13 / v22：外部 TextBoxes shadow OCR 候选接入
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.13（外部TextBoxes Shadow OCR候选接入）.md`、PR #3、`AITRANS CI Results` run `28381772143`。本轮修改 Swift 报告模型和探针诊断链路；完整 build / 探针已由 GitHub Actions 验证，仓库根 `output/` 未刷新，长期指标追加到 `metrics/version_history.csv` v22 行。
 
 核心变更：
 
@@ -197,10 +197,17 @@
 - `md/test/test.md`
 - `update_log.md`
 
-验证计划：
+验证结果：
 
-- 本地运行轻量检查：`git diff --check`、JSON 解析、Koharu artifact validator valid / invalid / allow-missing。
-- 不运行本机 Xcode build / 漫画探针；Swift build、云端探针、结果包和 artifact 由 PR 后 GitHub Actions 验证。
+- Agent B 本地轻量检查通过：`git diff --check`、`python3 -m json.tool test/1.ground_truth.json`、`python3 -m json.tool output/probe_report.json`、`python3 -m json.tool output/clean_text_diagnostic.json`，以及 Koharu artifact validator valid / invalid / allow-missing。
+- Agent C 核对 PR #3：base `smalldata_test`、head `codeb/v1.13-external-textbox-shadow-ocr`、head commit `790f72cfc05e354d65351827694748b5db3de0a3`。
+- 云端 `AITRANS CI Results` run `28381772143` / attempt `1` 通过；manifest 匹配 `version = v1.13`、`branch = codeb/v1.13-external-textbox-shadow-ocr`、`commitSha = 790f72cfc05e354d65351827694748b5db3de0a3`、`workflowName = AITRANS CI Results`。
+- 结果包 `aitrans-ci-v1.13-codeb-v1.13-external-textbox-shadow-ocr--790f72cfc05e-run28381772143-attempt1` 包含 `.xcresult`、`junit.xml`、`xcodebuild.log`、`simulator-build.log`、`manga-probe.log`、`app-console.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md` 和 `output/`。
+- `junit.xml`：5 tests、0 failures；GGUF download / verify、static checks、Xcode build、simulator build、manga probe 全部 success。
+- 云端探针：`engineUsed = Local GGUF`、`decodingMode = deterministic`、`decodingSeed = 42`、`totalBlocksDetected = 13`、`outputDirectoryCleaned = true`、`overallPassed = false`。
+- v1.13 gate 结果：`externalArtifactReadinessReport.readinessVerdict = manifestMissing`、`externalTextBoxesShadowOCRReport.executed = false`、`candidateCount = 0`、`ocrExecutedCount = 0`、`promotedExternalShadowBlocks = []`、`skippedBlocks = [0...12]`。
+- 质量数字未因本轮 shadow-only gate 改变：`groundTruthMatchedBlocks = 13`、`groundTruthUnmatchedBlocks = 0`、`averageCoreDialogueOCRSimilarity = 0.7106`、`averageDecorativeOCRSimilarity = 0.8000`、`cleanTextDiagnostic.passRate = 0.4545`、`passedBlocks = 1`、`failedBlocks = 12`。
+- `overallPassed = false` 仍来自当前 Gemma 270M / OCR 质量基线，不作为本轮 v1.13 gate 失败。
 
 验收口径：
 
