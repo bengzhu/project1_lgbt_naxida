@@ -1583,6 +1583,7 @@ final class TranslationSessionStore: ObservableObject {
                 var structureActionCandidateReport: MangaStructureActionCandidateReport?
                 var koharuArtifactDAGReport: MangaKoharuArtifactDAGReport?
                 var koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport?
+                var koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1957,6 +1958,26 @@ final class TranslationSessionStore: ObservableObject {
                     externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
                     cleanTextDiagnostic: cleanTextDiagnostic
                 )
+                koharuNativeReplicationScoreboardReport = Self.makeKoharuNativeReplicationScoreboardReport(
+                    blocks: probeBlocks,
+                    diagnostics: makeMangaOverlayProbeDiagnostics(blocks: probeBlocks),
+                    textRegionCropReport: textRegionCropReport,
+                    textBoxPlanFailureReport: textBoxPlanFailureReport,
+                    lineCropExperimentReport: lineCropExperimentReport,
+                    bubbleMaskReport: bubbleMaskReport,
+                    bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                    bubbleSplitCandidateReport: bubbleSplitCandidateReport,
+                    segmentMaskReport: segmentMaskReport,
+                    readingOrderStructureAuditReport: readingOrderStructureAuditReport,
+                    structureActionCandidateReport: structureActionCandidateReport,
+                    internalStructureBottleneckReport: internalStructureBottleneckReport,
+                    ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
+                    koharuArtifactDAGReport: koharuArtifactDAGReport,
+                    koharuStageGapReplicationReport: koharuStageGapReplicationReport,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport,
+                    externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+                    cleanTextDiagnostic: cleanTextDiagnostic
+                )
                 let deterministicDecodingCheck: MangaDeterministicDecodingCheck?
                 if runOptions.runDeterministicDecodingCheck {
                     self.writeMangaProbeProgress(stage: "deterministic-decoding-check-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
@@ -1990,6 +2011,7 @@ final class TranslationSessionStore: ObservableObject {
                     structureActionCandidateReport: structureActionCandidateReport,
                     koharuArtifactDAGReport: koharuArtifactDAGReport,
                     koharuStageGapReplicationReport: koharuStageGapReplicationReport,
+                    koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -2057,6 +2079,7 @@ final class TranslationSessionStore: ObservableObject {
                     structureActionCandidateReport: structureActionCandidateReport,
                     koharuArtifactDAGReport: koharuArtifactDAGReport,
                     koharuStageGapReplicationReport: koharuStageGapReplicationReport,
+                    koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7165,6 +7188,7 @@ final class TranslationSessionStore: ObservableObject {
         structureActionCandidateReport: MangaStructureActionCandidateReport? = nil,
         koharuArtifactDAGReport: MangaKoharuArtifactDAGReport? = nil,
         koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport? = nil,
+        koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7242,6 +7266,7 @@ final class TranslationSessionStore: ObservableObject {
             structureActionCandidateReport: structureActionCandidateReport,
             koharuArtifactDAGReport: koharuArtifactDAGReport,
             koharuStageGapReplicationReport: koharuStageGapReplicationReport,
+            koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -10533,6 +10558,444 @@ final class TranslationSessionStore: ObservableObject {
     private static func koharuArtifactConsumers(for stageName: String) -> [String] {
         let edges = koharuArtifactDependencyEdges(realArtifactsAvailable: false)
         return edges.filter { $0.fromStage == stageName }.map { $0.toStage }.sorted()
+    }
+
+    private static func makeKoharuNativeReplicationScoreboardReport(
+        blocks: [MangaOverlayProbeBlock],
+        diagnostics: MangaOverlayProbeDiagnostics,
+        textRegionCropReport: MangaOverlayTextRegionCropReport?,
+        textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?,
+        lineCropExperimentReport: MangaOverlayLineCropExperimentReport?,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?,
+        readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?,
+        structureActionCandidateReport: MangaStructureActionCandidateReport?,
+        internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?,
+        ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?,
+        koharuArtifactDAGReport: MangaKoharuArtifactDAGReport?,
+        koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport?,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
+        externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?,
+        cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
+    ) -> MangaKoharuNativeReplicationScoreboardReport {
+        func uniqueSorted(_ values: [Int]) -> [Int] {
+            Array(Set(values)).sorted()
+        }
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaKoharuNativeMetricSignal {
+            MangaKoharuNativeMetricSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+        func joined(_ values: [Int]) -> String {
+            values.map(String.init).joined(separator: ",")
+        }
+        func countBy(_ values: [String]) -> [String: Int] {
+            values.reduce(into: [:]) { partial, value in
+                partial[value, default: 0] += 1
+            }
+        }
+
+        let allBlockIndexes = blocks.map(\.index).sorted()
+        let cleanPassRate = cleanTextDiagnostic?.passRate ?? 0
+        let cleanTextModelFloorLow = cleanTextDiagnostic.map { $0.passRate < 0.80 } ?? true
+        let textBoxStopBlocks = textBoxPlanFailureReport?.stopRecommendedBlocks ?? []
+        let lineStopBlocks = lineCropExperimentReport?.stoppedAfterLineResearchBlocks ?? []
+        let stopLocalTuningBlocks = uniqueSorted(textBoxStopBlocks + lineStopBlocks)
+        let bubbleConflictBlocks = uniqueSorted(
+            (bubbleMaskReport?.inconsistentBubbleAssignmentBlocks ?? [])
+                + (readingOrderStructureAuditReport?.maskConflictBlocks ?? [])
+                + (bubbleAssignmentCorrectionReport?.recommendedCorrectionBlocks ?? [])
+        )
+        let bubbleSplitBlocks = uniqueSorted(readingOrderStructureAuditReport?.splitRiskBlocks ?? [])
+        let segmentWeakBlocks = uniqueSorted(segmentMaskReport?.weakSegmentBlocks ?? [])
+        let renderIssueBlocks = uniqueSorted(
+            diagnostics.renderCollisionUnresolvedBlocks
+                + diagnostics.renderTextTruncatedBlocks
+                + blocks.filter { $0.renderMaskOverflowPixelCount > 0 }.map(\.index)
+        )
+        let translationModelBlocks = uniqueSorted(
+            blocks
+                .filter { $0.failureCategory == "modelOutputFailure" || $0.failureCategory == "translationLanguageQualityFailure" }
+                .map(\.index)
+        )
+        let ocrInputBlocks = uniqueSorted(blocks.filter { $0.failureCategory == "ocrInputSuspect" }.map(\.index))
+        let externalArtifactReady = externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed == true
+        let externalStatus = externalArtifactReady ? "passed" : "externalOptionalMissing"
+
+        let textBoxFailureByBlock = Dictionary(
+            uniqueKeysWithValues: (textBoxPlanFailureReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let lineFailureByBlock = Dictionary(
+            uniqueKeysWithValues: (lineCropExperimentReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let maskByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let bottleneckByBlock = Dictionary(
+            uniqueKeysWithValues: (internalStructureBottleneckReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let damageByBlock = Dictionary(
+            uniqueKeysWithValues: (ocrCharacterDamageAuditReport?.cases ?? []).map { ($0.blockIndex, $0) }
+        )
+        let dagByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuArtifactDAGReport?.blockTraces ?? []).map { ($0.blockIndex, $0) }
+        )
+        let stageGapByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuStageGapReplicationReport?.blockPlans ?? []).map { ($0.blockIndex, $0) }
+        )
+
+        let blockScorecards: [MangaKoharuNativeBlockScorecard] = blocks.map { block in
+            var stopEvidence: [String] = []
+            if textBoxStopBlocks.contains(block.index) {
+                stopEvidence.append("textBoxPlanFailureReport.stopRecommendedBlocks")
+            }
+            if lineStopBlocks.contains(block.index) {
+                stopEvidence.append("lineCropExperimentReport.stoppedAfterLineResearchBlocks")
+            }
+            let textBoxFailure = textBoxFailureByBlock[block.index]
+            if textBoxFailure?.promotionBlockers.contains(where: { $0.contains("rawWordsLost") || $0.contains("wordPreservation") }) == true {
+                stopEvidence.append("wordPreservationGuardrail")
+            }
+            if textBoxFailure?.promotionBlockers.contains(where: { $0.contains("rawWordsLost") }) == true {
+                stopEvidence.append("rawWordsLost")
+            }
+
+            let mask = maskByBlock[block.index]
+            let segment = segmentByBlock[block.index]
+            let renderGateStatus = renderIssueBlocks.contains(block.index) ? "blocked" : "passed"
+            let bubbleGateStatus = bubbleConflictBlocks.contains(block.index) || bubbleSplitBlocks.contains(block.index) || block.bubbleID == nil ? "warning" : "passed"
+            let segmentGateStatus = segmentWeakBlocks.contains(block.index) || segment?.glyphEscapesBubble == true ? "warning" : "passed"
+            let stopLocal = !stopEvidence.isEmpty
+            let ocrGateStatus: String
+            if stopLocal {
+                ocrGateStatus = "stop"
+            } else if block.failureCategory == "ocrInputSuspect" {
+                ocrGateStatus = "blocked"
+            } else if block.wordOrderPreserved == false {
+                ocrGateStatus = "warning"
+            } else {
+                ocrGateStatus = "passed"
+            }
+            let translationGateStatus: String
+            if translationModelBlocks.contains(block.index), cleanTextModelFloorLow {
+                translationGateStatus = "warning"
+            } else if translationModelBlocks.contains(block.index) {
+                translationGateStatus = "blocked"
+            } else if block.blockPassed {
+                translationGateStatus = "passed"
+            } else {
+                translationGateStatus = "warning"
+            }
+
+            let primaryStage: String
+            let primaryBottleneck: String
+            let priority: String
+            let workItemID: String
+            let nextAction: String
+            if translationModelBlocks.contains(block.index), cleanTextModelFloorLow {
+                primaryStage = "translations"
+                primaryBottleneck = "translationModelQuality"
+                priority = "P1"
+                workItemID = "WI-translation-model-floor-comparison"
+                nextAction = "compareModelOrPromptWithoutChangingMainPrompt"
+            } else if stopLocal {
+                primaryStage = "nativeTextBoxes"
+                primaryBottleneck = "cropLineDeskewStoplist"
+                priority = "stop"
+                workItemID = "WI-native-textbox-artifact-scorecard"
+                nextAction = "stopLocalCropLineDeskewTuningAndScoreNativeTextBoxEvidence"
+            } else if block.failureCategory == "ocrInputSuspect" {
+                primaryStage = "ocrText"
+                primaryBottleneck = "ocrInputQuality"
+                priority = "P1"
+                workItemID = "WI-native-textbox-artifact-scorecard"
+                nextAction = "moveToNativeTextBoxAndBubbleEvidenceScorecard"
+            } else if bubbleGateStatus == "warning" {
+                primaryStage = "nativeBubbleMask"
+                primaryBottleneck = "bubbleAssignmentOrSplit"
+                priority = "P1"
+                workItemID = "WI-bubblemask-assignment-split-scorecard"
+                nextAction = "reviewBubbleAssignmentAndSplitScorecard"
+            } else if segmentGateStatus == "warning" {
+                primaryStage = "nativeSegmentMask"
+                primaryBottleneck = "segmentMaskProxyCoverage"
+                priority = "P2"
+                workItemID = "WI-segmentmask-proxy-coverage-scorecard"
+                nextAction = "keepSegmentMaskProxyReportOnlyAndAuditCoverage"
+            } else if renderGateStatus != "passed" {
+                primaryStage = "finalRender"
+                primaryBottleneck = "renderLayout"
+                priority = "P2"
+                workItemID = "WI-render-regression-lock"
+                nextAction = "lockRenderSafeAreaAndFailureOverlayRegression"
+            } else {
+                primaryStage = block.blockPassed ? "finalRender" : "ocrText"
+                primaryBottleneck = bottleneckByBlock[block.index]?.primaryBottleneck ?? "reportOnlyReview"
+                priority = block.blockPassed ? "P3" : "manualReview"
+                workItemID = block.blockPassed ? "WI-render-regression-lock" : "WI-native-textbox-artifact-scorecard"
+                nextAction = block.blockPassed ? "retainRenderRegressionLock" : "manualReviewNativeScorecard"
+            }
+
+            let prioritySignals = [
+                "failureCategory=\(block.failureCategory)",
+                "cleanTextPassRate=\(cleanPassRate.formatted(.number.precision(.fractionLength(4))))",
+                "ocrGate=\(ocrGateStatus)",
+                "bubbleGate=\(bubbleGateStatus)",
+                "segmentGate=\(segmentGateStatus)",
+                "translationGate=\(translationGateStatus)",
+                "renderGate=\(renderGateStatus)"
+            ]
+            var mustNotPromote = [
+                "diagnosticOnly=true",
+                "wouldChangeMainFlow=false",
+                "groundTruthUsedForDecision=false"
+            ]
+            mustNotPromote += textBoxFailure?.promotionBlockers ?? []
+            mustNotPromote += lineFailureByBlock[block.index]?.stopReasons ?? []
+            mustNotPromote += bottleneckByBlock[block.index]?.mustNotPromoteReasons ?? []
+            mustNotPromote += damageByBlock[block.index]?.mustNotPromoteReasons ?? []
+            mustNotPromote += dagByBlock[block.index]?.stageTraces.flatMap(\.blockers) ?? []
+            mustNotPromote += stageGapByBlock[block.index]?.mustNotPromoteReasons ?? []
+
+            return MangaKoharuNativeBlockScorecard(
+                blockIndex: block.index,
+                groundTruthMatch: block.groundTruthMatch,
+                bestGroundTruthType: block.bestGroundTruthType,
+                ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
+                blockPassed: block.blockPassed,
+                failureCategory: block.failureCategory,
+                bubbleID: block.bubbleID,
+                primaryNativeStage: primaryStage,
+                primaryBottleneck: primaryBottleneck,
+                recommendedPriority: priority,
+                prioritySignals: prioritySignals,
+                priorityUsedGroundTruth: false,
+                ocrGateStatus: ocrGateStatus,
+                bubbleGateStatus: bubbleGateStatus,
+                segmentGateStatus: segmentGateStatus,
+                translationGateStatus: translationGateStatus,
+                renderGateStatus: renderGateStatus,
+                stopLocalCropOrLineTuning: stopLocal,
+                stopEvidence: Array(Set(stopEvidence)).sorted(),
+                mustNotPromoteReasons: Array(Set(mustNotPromote)).sorted(),
+                recommendedWorkItemID: workItemID,
+                nextAction: nextAction
+            )
+        }
+
+        func stage(
+            _ name: String,
+            artifact: String,
+            status: String,
+            gateStatus: String,
+            bottleneck: String,
+            affected: [Int],
+            stop: Bool,
+            workItem: String,
+            decisions: [MangaKoharuNativeMetricSignal],
+            evaluations: [MangaKoharuNativeMetricSignal] = []
+        ) -> MangaKoharuNativeStageScorecard {
+            MangaKoharuNativeStageScorecard(
+                stageName: name,
+                referenceKoharuArtifact: artifact,
+                nativeStatus: status,
+                decisionSignals: decisions,
+                evaluationSignals: evaluations,
+                primaryGateStatus: gateStatus,
+                primaryBottleneck: bottleneck,
+                affectedBlocks: uniqueSorted(affected),
+                stopLocalTuning: stop,
+                nextWorkItemID: workItem,
+                groundTruthUsedForEvaluationOnly: !evaluations.isEmpty,
+                groundTruthUsedForDecision: false,
+                diagnosticOnly: true,
+                wouldChangeMainFlow: false
+            )
+        }
+
+        let evaluationSignals = [
+            signal("averageCoreDialogueOCRSimilarity", diagnostics.averageCoreDialogueOCRSimilarity.formatted(.number.precision(.fractionLength(4))), source: "probe_report.diagnostics", decision: false, evaluation: true),
+            signal("averageDecorativeOCRSimilarity", diagnostics.averageDecorativeOCRSimilarity.formatted(.number.precision(.fractionLength(4))), source: "probe_report.diagnostics", decision: false, evaluation: true),
+            signal("groundTruthMatchedBlocks", String(diagnostics.groundTruthMatchedBlocks), source: "probe_report.diagnostics", decision: false, evaluation: true),
+            signal("groundTruthUnmatchedBlocks", String(diagnostics.groundTruthUnmatchedBlocks), source: "probe_report.diagnostics", decision: false, evaluation: true)
+        ]
+        let stageScorecards: [MangaKoharuNativeStageScorecard] = [
+            stage("sourceImage", artifact: "SourceImage", status: "nativeReady", gateStatus: "passed", bottleneck: "none", affected: [], stop: false, workItem: "WI-render-regression-lock", decisions: [signal("sourceImage", "test/1.png", source: "MangaOverlayProbeConfiguration")]),
+            stage("contentCrop", artifact: "ContentCrop", status: "nativeReady", gateStatus: "passed", bottleneck: "none", affected: [], stop: false, workItem: "WI-render-regression-lock", decisions: [signal("contentCropBeforeOCR", "true", source: "MangaOverlayProbeConfiguration")]),
+            stage("nativeTextBoxes", artifact: "TextBoxes", status: stopLocalTuningBlocks.isEmpty ? "nativeProxyReady" : "nativeStopTuning", gateStatus: stopLocalTuningBlocks.isEmpty ? "warning" : "stop", bottleneck: "cropLineDeskewStoplist", affected: stopLocalTuningBlocks, stop: !stopLocalTuningBlocks.isEmpty, workItem: "WI-native-textbox-artifact-scorecard", decisions: [
+                signal("textRegionCropAdoptedCount", String(textRegionCropReport?.adoptedCount ?? 0), source: "textRegionCropReport"),
+                signal("textBoxStopBlocks", joined(stopLocalTuningBlocks), source: "textBoxPlanFailureReport,lineCropExperimentReport")
+            ], evaluations: evaluationSignals),
+            stage("nativeBubbleMask", artifact: "BubbleMask", status: "nativeProxyReady", gateStatus: bubbleConflictBlocks.isEmpty ? "passed" : "warning", bottleneck: "bubbleAssignmentOrSplit", affected: uniqueSorted(bubbleConflictBlocks + bubbleSplitBlocks), stop: false, workItem: "WI-bubblemask-assignment-split-scorecard", decisions: [
+                signal("bubbleConflictBlocks", joined(bubbleConflictBlocks), source: "bubbleMaskReport,readingOrderStructureAuditReport"),
+                signal("splitRiskBlocks", joined(bubbleSplitBlocks), source: "readingOrderStructureAuditReport")
+            ]),
+            stage("nativeSegmentMask", artifact: "SegmentMask", status: "nativeProxyReady", gateStatus: segmentWeakBlocks.isEmpty ? "passed" : "warning", bottleneck: "segmentMaskProxyCoverage", affected: segmentWeakBlocks, stop: false, workItem: "WI-segmentmask-proxy-coverage-scorecard", decisions: [
+                signal("weakSegmentBlocks", joined(segmentWeakBlocks), source: "segmentMaskReport"),
+                signal("usableForCropEvidenceBlocks", joined(segmentMaskReport?.usableForCropEvidenceBlocks ?? []), source: "segmentMaskReport")
+            ]),
+            stage("ocrText", artifact: "OcrText", status: stopLocalTuningBlocks.isEmpty ? "shadowBlocked" : "nativeStopTuning", gateStatus: stopLocalTuningBlocks.isEmpty ? "blocked" : "stop", bottleneck: "ocrInputQuality", affected: uniqueSorted(ocrInputBlocks + stopLocalTuningBlocks), stop: !stopLocalTuningBlocks.isEmpty, workItem: "WI-native-textbox-artifact-scorecard", decisions: [
+                signal("ocrInputSuspectBlocks", joined(ocrInputBlocks), source: "blocks.failureCategory"),
+                signal("textBoxPlanPromotedShadowBlockCount", String(textBoxPlanFailureReport?.promotedShadowBlockCount ?? 0), source: "textBoxPlanFailureReport")
+            ], evaluations: evaluationSignals),
+            stage("translations", artifact: "Translations", status: cleanTextModelFloorLow ? "modelLimited" : "nativeReady", gateStatus: cleanTextModelFloorLow ? "warning" : "passed", bottleneck: "translationModelQuality", affected: translationModelBlocks, stop: false, workItem: "WI-translation-model-floor-comparison", decisions: [
+                signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "clean_text_diagnostic.json"),
+                signal("translationFailureBreakdown", diagnostics.translationFailureBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "probe_report.diagnostics")
+            ]),
+            stage("glyphEraseOrInpaintProxy", artifact: "Inpainted", status: "nativeProxyReady", gateStatus: segmentWeakBlocks.isEmpty ? "passed" : "warning", bottleneck: "segmentMaskProxyOnly", affected: segmentWeakBlocks, stop: false, workItem: "WI-segmentmask-proxy-coverage-scorecard", decisions: [
+                signal("glyphMaskBlocks", String(diagnostics.glyphMaskBlocks), source: "probe_report.diagnostics"),
+                signal("proxyNotRealSegmentMask", "true", source: "segmentMaskReport")
+            ]),
+            stage("renderedSprites", artifact: "RenderedSprites", status: renderIssueBlocks.isEmpty ? "renderStable" : "shadowBlocked", gateStatus: renderIssueBlocks.isEmpty ? "passed" : "blocked", bottleneck: "renderLayout", affected: renderIssueBlocks, stop: false, workItem: "WI-render-regression-lock", decisions: [
+                signal("renderIssueBlocks", joined(renderIssueBlocks), source: "renderDiagnostics")
+            ]),
+            stage("finalRender", artifact: "FinalRender", status: renderIssueBlocks.isEmpty ? "renderStable" : "shadowBlocked", gateStatus: renderIssueBlocks.isEmpty ? "passed" : "blocked", bottleneck: "finalOverlay", affected: renderIssueBlocks, stop: false, workItem: "WI-render-regression-lock", decisions: [
+                signal("failedBlocksStillRendered", "true", source: "1_translated_overlay.png"),
+                signal("outputOverlayRequired", "true", source: "MangaOverlayProbeService.drawTranslatedOverlay")
+            ])
+        ]
+
+        func gate(
+            id: String,
+            name: String,
+            scope: String,
+            status: String,
+            affected: [Int],
+            failureMeans: String,
+            action: String,
+            threshold: String,
+            decisions: [MangaKoharuNativeMetricSignal],
+            evaluations: [MangaKoharuNativeMetricSignal] = []
+        ) -> MangaKoharuNativeGateLedgerEntry {
+            MangaKoharuNativeGateLedgerEntry(
+                gateID: id,
+                gateName: name,
+                scope: scope,
+                status: status,
+                requiredForMainFlowPromotion: true,
+                decisionSignals: decisions,
+                evaluationSignals: evaluations,
+                threshold: threshold,
+                affectedBlocks: uniqueSorted(affected),
+                failureMeans: failureMeans,
+                recommendedAction: action,
+                groundTruthUsedForDecision: false
+            )
+        }
+
+        let gateLedger: [MangaKoharuNativeGateLedgerEntry] = [
+            gate(id: "G-no-main-flow-mutation", name: "No main flow mutation", scope: "report", status: "passed", affected: [], failureMeans: "scoreboard changed OCR, translation, cleanup, overlay, or blockPassed", action: "revertBehavioralChange", threshold: "all report-only flags true", decisions: [signal("wouldChangeMainFlow", "false", source: "koharuNativeReplicationScoreboardReport")]),
+            gate(id: "G-no-ground-truth-decision", name: "No ground truth decision", scope: "report", status: "passed", affected: [], failureMeans: "ground truth influenced candidate generation, ordering, promotion, cleanup, or priority", action: "removeGroundTruthFromDecisionPath", threshold: "groundTruthUsedForDecision=false", decisions: [signal("groundTruthUsedForDecision", "false", source: "koharuNativeReplicationScoreboardReport")], evaluations: evaluationSignals),
+            gate(id: "G-native-textbox-word-preservation", name: "Native TextBox word preservation", scope: "nativeTextBoxes", status: stopLocalTuningBlocks.isEmpty ? "warning" : "stop", affected: stopLocalTuningBlocks, failureMeans: "crop, TextBox, or line shadow loses raw keywords", action: "freezeLocalCropLineDeskewTuning", threshold: "no rawWordsLost and word preservation guardrail passes", decisions: [signal("stopLocalTuningBlocks", joined(stopLocalTuningBlocks), source: "textBoxPlanFailureReport,lineCropExperimentReport")]),
+            gate(id: "G-native-textbox-stoplist", name: "Native TextBox stoplist", scope: "nativeTextBoxes", status: stopLocalTuningBlocks.isEmpty ? "passed" : "stop", affected: stopLocalTuningBlocks, failureMeans: "known failed crop, line, or deskew local tuning is recommended again", action: "routeToNativeScoreboardOrModelFloor", threshold: "stoplist blocks are not recommended for more local tuning", decisions: [signal("textBoxStopBlocks", joined(textBoxStopBlocks), source: "textBoxPlanFailureReport"), signal("lineStopBlocks", joined(lineStopBlocks), source: "lineCropExperimentReport")]),
+            gate(id: "G-bubble-assignment-conflict", name: "Bubble assignment conflict", scope: "nativeBubbleMask", status: bubbleConflictBlocks.isEmpty ? "passed" : "warning", affected: uniqueSorted(bubbleConflictBlocks + bubbleSplitBlocks), failureMeans: "cross-bubble merge or proxy conflict is promoted into main flow", action: "keepBubbleConflictReportOnly", threshold: "conflicts remain shadow/report-only", decisions: [signal("bubbleConflictBlocks", joined(bubbleConflictBlocks), source: "bubbleMaskReport,readingOrderStructureAuditReport")]),
+            gate(id: "G-segment-mask-inside-bubble", name: "Segment mask inside bubble", scope: "nativeSegmentMask", status: segmentWeakBlocks.isEmpty ? "passed" : "warning", affected: segmentWeakBlocks, failureMeans: "glyph or segment proxy escapes bubble or is treated as real Koharu SegmentMask", action: "keepSegmentProxyForRenderAndReportsOnly", threshold: "no glyph escape and proxy label retained", decisions: [signal("weakSegmentBlocks", joined(segmentWeakBlocks), source: "segmentMaskReport")]),
+            gate(id: "G-clean-text-model-floor", name: "Clean text model floor", scope: "translations", status: cleanTextModelFloorLow ? "warning" : "passed", affected: translationModelBlocks, failureMeans: "translation failure is misattributed only to OCR while clean text pass rate is low", action: "keepModelLimitedClassification", threshold: "cleanTextDiagnostic.passRate >= 0.80", decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "clean_text_diagnostic.json")]),
+            gate(id: "G-render-failure-overlay", name: "Render failure overlay", scope: "finalRender", status: "passed", affected: [], failureMeans: "failed block is silently skipped", action: "retainFailureOverlayContract", threshold: "failed blocks draw failure text plus OCR source", decisions: [signal("failedBlocks", String(diagnostics.failedBlocks), source: "probe_report.diagnostics")]),
+            gate(id: "G-render-no-overflow", name: "Render no overflow", scope: "finalRender", status: renderIssueBlocks.isEmpty ? "passed" : "blocked", affected: renderIssueBlocks, failureMeans: "overlay is inverted, mirrored, truncated, or out of bounds", action: "lockRenderSafeAreaBeforeOCRChanges", threshold: "no unresolved overflow or truncation", decisions: [signal("renderIssueBlocks", joined(renderIssueBlocks), source: "renderDiagnostics")]),
+            gate(id: "G-external-artifact-optional", name: "External artifact optional", scope: "externalArtifacts", status: externalStatus, affected: externalArtifactReady ? [] : allBlockIndexes, failureMeans: "missing external artifact blocks the native scoreboard or proxy is renamed real Koharu artifact", action: "recordOptionalExternalPathOnly", threshold: "externalArtifactsRequiredForThisReport=false", decisions: [signal("readinessVerdict", externalArtifactReadinessReport?.readinessVerdict ?? "missing", source: "externalArtifactReadinessReport")])
+        ]
+
+        func workItem(
+            _ id: String,
+            title: String,
+            priority: String,
+            stages: [String],
+            blocks: [Int],
+            why: String,
+            decisions: [MangaKoharuNativeMetricSignal],
+            evaluations: [MangaKoharuNativeMetricSignal] = [],
+            ciFast: Bool,
+            full: Bool,
+            external: Bool,
+            metrics: [String],
+            blockedBy: [String],
+            stops: [String],
+            nonGoals: [String],
+            branch: String
+        ) -> MangaKoharuNativeWorkItem {
+            MangaKoharuNativeWorkItem(
+                workItemID: id,
+                title: title,
+                priority: priority,
+                targetStages: stages,
+                targetBlocks: uniqueSorted(blocks),
+                whyNow: why,
+                decisionSignals: decisions,
+                evaluationSignals: evaluations,
+                canRunInCIFast: ciFast,
+                requiresFullProbe: full,
+                requiresExternalArtifact: external,
+                expectedMetricMovement: metrics,
+                blockedByGates: blockedBy,
+                stopConditions: stops,
+                nonGoals: nonGoals,
+                suggestedBranchName: branch
+            )
+        }
+
+        let recommendedNextWorkItems: [MangaKoharuNativeWorkItem] = [
+            workItem("WI-native-textbox-artifact-scorecard", title: "Score native TextBox proxy evidence and freeze failed crop/line/deskew tuning", priority: "P0", stages: ["nativeTextBoxes", "ocrText"], blocks: uniqueSorted(stopLocalTuningBlocks + ocrInputBlocks), why: "Existing crop and line shadow reports have stop evidence; next work should score native structure evidence instead of more local parameter tuning.", decisions: [signal("stopLocalTuningBlocks", joined(stopLocalTuningBlocks), source: "textBoxPlanFailureReport,lineCropExperimentReport")], evaluations: evaluationSignals, ciFast: true, full: false, external: false, metrics: ["stoplist stability", "word preservation guardrail", "OCR similarity evaluation-only"], blockedBy: ["G-native-textbox-stoplist"], stops: ["stop if proposed work changes finalTextUsedForTranslation", "stop if priority uses ground truth"], nonGoals: ["do not run more crop/line/deskew tuning", "do not promote shadow OCR"], branch: "codeb/vNEXT-native-textbox-scorecard"),
+            workItem("WI-bubblemask-assignment-split-scorecard", title: "Score BubbleMask assignment, split risk, and sibling layout", priority: "P1", stages: ["nativeBubbleMask"], blocks: uniqueSorted(bubbleConflictBlocks + bubbleSplitBlocks), why: "Bubble conflicts and split risks are structural evidence that can be scored without external artifacts.", decisions: [signal("bubbleConflictBlocks", joined(bubbleConflictBlocks), source: "bubbleMaskReport,readingOrderStructureAuditReport")], ciFast: true, full: false, external: false, metrics: ["conflict blocks", "split risk blocks", "same-bubble sibling count"], blockedBy: ["G-bubble-assignment-conflict"], stops: ["stop if any proposal crosses bubble boundaries"], nonGoals: ["do not call proxy mask real Koharu BubbleMask"], branch: "codeb/vNEXT-bubblemask-scorecard"),
+            workItem("WI-segmentmask-proxy-coverage-scorecard", title: "Score SegmentMask proxy coverage for render/report-only use", priority: "P2", stages: ["nativeSegmentMask", "glyphEraseOrInpaintProxy"], blocks: segmentWeakBlocks, why: "Glyph and connected-component evidence is useful for coverage and rendering, but must stay proxy-only.", decisions: [signal("weakSegmentBlocks", joined(segmentWeakBlocks), source: "segmentMaskReport")], ciFast: true, full: false, external: false, metrics: ["weak segment blocks", "inside bubble coverage", "render collision"], blockedBy: ["G-segment-mask-inside-bubble"], stops: ["stop if proxy is used as real SegmentMask"], nonGoals: ["do not implement inpainting", "do not change OCR input"], branch: "codeb/vNEXT-segmentmask-proxy-scorecard"),
+            workItem("WI-translation-model-floor-comparison", title: "Compare model or prompt floor without changing the main prompt", priority: "P1", stages: ["translations"], blocks: translationModelBlocks, why: "Clean text pass rate is the model floor; failures should not be treated as pure OCR work.", decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "clean_text_diagnostic.json")], ciFast: true, full: false, external: false, metrics: ["clean text pass rate", "model output failure count", "translation language quality failure count"], blockedBy: ["G-clean-text-model-floor"], stops: ["stop if comparison changes main prompt or model"], nonGoals: ["do not swap model", "do not loosen quality rules"], branch: "codeb/vNEXT-translation-floor-comparison"),
+            workItem("WI-render-regression-lock", title: "Lock safe layout, failure overlay, and no-overflow render invariants", priority: "P2", stages: ["renderedSprites", "finalRender"], blocks: renderIssueBlocks, why: "Rendering is stable when no overflow/truncation is present; keep it protected while structure reports evolve.", decisions: [signal("renderIssueBlocks", joined(renderIssueBlocks), source: "renderDiagnostics")], ciFast: true, full: false, external: false, metrics: ["unresolved overflow blocks", "truncated blocks", "failure overlay retained"], blockedBy: ["G-render-failure-overlay", "G-render-no-overflow"], stops: ["stop if failed blocks disappear from overlay"], nonGoals: ["do not implement true sprite rendering"], branch: "codeb/vNEXT-render-regression-lock"),
+            workItem("WI-external-artifact-optional-handoff", title: "Record optional external artifact handoff state", priority: "P3", stages: ["nativeTextBoxes", "nativeBubbleMask", "nativeSegmentMask"], blocks: externalArtifactReady ? [] : allBlockIndexes, why: "Real Koharu artifacts are optional for this native scoreboard but the handoff state must remain explicit.", decisions: [signal("readinessVerdict", externalArtifactReadinessReport?.readinessVerdict ?? "missing", source: "externalArtifactReadinessReport")], ciFast: true, full: false, external: true, metrics: ["readiness verdict", "required files", "alignment status"], blockedBy: ["G-external-artifact-optional"], stops: ["stop if proxy evidence is renamed real artifact"], nonGoals: ["do not create active artifacts", "do not block native scoreboard"], branch: "codeb/vNEXT-external-artifact-optional-handoff")
+        ]
+
+        let stageStatusBreakdown = countBy(stageScorecards.map(\.nativeStatus))
+        let gateStatusBreakdown = countBy(gateLedger.map(\.status))
+        let blockPrimaryBottleneckBreakdown = countBy(blockScorecards.map(\.primaryBottleneck))
+        let recommendedPriorityBreakdown = countBy(blockScorecards.map(\.recommendedPriority))
+
+        return MangaKoharuNativeReplicationScoreboardReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referencePipeline: "Koharu",
+            evaluatedBlockCount: blocks.count,
+            stageScorecardCount: stageScorecards.count,
+            gateCount: gateLedger.count,
+            workItemCount: recommendedNextWorkItems.count,
+            externalArtifactsRequiredForThisReport: false,
+            groundTruthUsedForEvaluationOnly: true,
+            groundTruthUsedForDecision: false,
+            stageStatusBreakdown: stageStatusBreakdown,
+            gateStatusBreakdown: gateStatusBreakdown,
+            blockPrimaryBottleneckBreakdown: blockPrimaryBottleneckBreakdown,
+            recommendedPriorityBreakdown: recommendedPriorityBreakdown,
+            stopLocalTuningBlocks: stopLocalTuningBlocks,
+            nativeReadyStages: stageScorecards.filter { $0.nativeStatus == "nativeReady" }.map(\.stageName).sorted(),
+            nativeProxyReadyStages: stageScorecards.filter { $0.nativeStatus == "nativeProxyReady" }.map(\.stageName).sorted(),
+            shadowBlockedStages: stageScorecards.filter { $0.nativeStatus == "shadowBlocked" }.map(\.stageName).sorted(),
+            modelLimitedStages: stageScorecards.filter { $0.nativeStatus == "modelLimited" }.map(\.stageName).sorted(),
+            renderStableStages: stageScorecards.filter { $0.nativeStatus == "renderStable" }.map(\.stageName).sorted(),
+            stageScorecards: stageScorecards,
+            gateLedger: gateLedger,
+            blockScorecards: blockScorecards,
+            recommendedNextWorkItems: recommendedNextWorkItems,
+            notes: [
+                "koharuNativeReplicationScoreboardReport is report-only and uses AITRANS probe outputs to score local Koharu-style replication stages.",
+                "externalArtifactsRequiredForThisReport=false; missing test/koharu_artifacts is recorded as optional external path state, not native scoreboard blockage.",
+                "decision and gate signals are ground-truth-free; OCR ground truth metrics are evaluation-only and never used for priority or nextAction.",
+                "crop, line, and deskew local tuning stoplist is explicit so later work moves to native structure scoring or model floor comparison.",
+                "does not run OCR or LLM and does not change main OCR, translation input, overlay drawing, blockPassed, failureCategory, cleanup, candidate selection, or currentBlockSource."
+            ]
+        )
     }
 
     private static func koharuArtifactDependencyEdges(realArtifactsAvailable: Bool) -> [MangaKoharuArtifactDependencyEdge] {
