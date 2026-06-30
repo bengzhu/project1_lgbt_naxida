@@ -1637,6 +1637,76 @@ struct MangaOverlayExternalArtifactReadinessReport: Equatable, Codable, Sendable
     var notes: [String]
 }
 
+struct MangaOverlayExternalTextBoxShadowOCRCandidate: Equatable, Codable, Sendable {
+    var candidateID: Int
+    var blockIndex: Int
+    var selectedTextBoxID: String?
+    var variantName: String
+    var textBoxBBox: [Double]?
+    var cropBBox: [Double]?
+    var textBoxConfidence: Double?
+    var textBoxIoU: Double?
+    var blockCenterContained: Bool
+    var bubbleInstanceID: String?
+    var bubbleAlignmentMatched: Bool
+    var areaRatioToBlock: Double?
+    var linePolygonsPresent: Bool
+    var sourceDirection: String?
+    var rotationDegrees: Double?
+    var deskewExecuted: Bool
+    var ocrExecuted: Bool
+    var ocrSucceeded: Bool
+    var controlText: String
+    var ocrText: String?
+    var wordPreservationRatio: Double
+    var qualityScoreBefore: Double
+    var qualityScoreAfter: Double
+    var qualityDelta: Double
+    var betterThanControl: Bool
+    var promotionVerdict: String
+    var blockers: [String]
+    var riskFlags: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayExternalTextBoxShadowOCRBlockSummary: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var selectedCandidateID: Int?
+    var selectedTextBoxID: String?
+    var candidateBBox: [Double]?
+    var ocrExecuted: Bool
+    var ocrSucceeded: Bool
+    var ocrText: String?
+    var qualityDelta: Double?
+    var wordPreservationRatio: Double?
+    var promotionVerdict: String
+    var blockers: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayExternalTextBoxShadowOCRReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var executed: Bool
+    var gateVerdict: String
+    var activeArtifactsDirectory: Bool
+    var contractExampleOnly: Bool
+    var externalTextBoxesShadowOCRAllowed: Bool
+    var shadowOnly: Bool
+    var groundTruthNotUsed: Bool
+    var doesNotChangeFinalTextUsedForTranslation: Bool
+    var doesNotChangeMainOverlay: Bool
+    var candidateCount: Int
+    var ocrExecutedCount: Int
+    var ocrSucceededCount: Int
+    var betterThanControlCount: Int
+    var promotedExternalShadowBlocks: [Int]
+    var wouldPromoteByExistingGateBlocks: [Int]
+    var skippedBlocks: [Int]
+    var blockSummaries: [MangaOverlayExternalTextBoxShadowOCRBlockSummary]
+    var candidates: [MangaOverlayExternalTextBoxShadowOCRCandidate]
+    var notes: [String]
+}
+
 struct MangaOverlayBubbleSubRegionDiagnostic: Equatable, Codable, Sendable {
     var id: Int
     var parentBubbleID: Int
@@ -1857,6 +1927,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport?
     var lineCropExperimentReport: MangaOverlayLineCropExperimentReport?
     var externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
+    var externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?

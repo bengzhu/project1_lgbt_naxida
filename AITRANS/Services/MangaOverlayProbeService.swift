@@ -591,6 +591,27 @@ struct MangaOverlayProbeService: Sendable {
         }.value
     }
 
+    func recognizeExternalTextBoxCrop(
+        in image: CGImage,
+        textBoxBBox: [Double],
+        options: MangaOverlayPreprocessingOptions = .defaultValue
+    ) async throws -> (text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double) {
+        try await Task.detached(priority: .userInitiated) {
+            let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            let seedRect = Self.clamp(Self.rect(from: textBoxBBox), to: bounds).integral
+            guard seedRect.width >= 2, seedRect.height >= 2 else {
+                return (nil, Self.bboxArray(from: seedRect), 0, 0)
+            }
+            let padding = Self.adaptiveCropPadding(for: seedRect)
+            let cropRect = Self.clamp(
+                seedRect.insetBy(dx: -padding.x, dy: -padding.y),
+                to: bounds
+            ).integral
+            let text = try Self.recognizePreprocessedText(in: image, cropRect: cropRect, options: options)
+            return (text, Self.bboxArray(from: cropRect), Double(padding.x), Double(padding.y))
+        }.value
+    }
+
     func runCropFallbackSelfTest(
         in image: CGImage,
         block: MangaOverlayOCRBlock?,
@@ -720,6 +741,7 @@ struct MangaOverlayProbeService: Sendable {
         lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport? = nil,
         lineCropExperimentReport: MangaOverlayLineCropExperimentReport? = nil,
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport? = nil,
+        externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -761,6 +783,7 @@ struct MangaOverlayProbeService: Sendable {
                 lineTextBoxPlanReport: lineTextBoxPlanReport,
                 lineCropExperimentReport: lineCropExperimentReport,
                 externalArtifactReadinessReport: externalArtifactReadinessReport,
+                externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1415,6 +1438,7 @@ struct MangaOverlayProbeService: Sendable {
         lineTextBoxPlanReport: MangaOverlayLineTextBoxPlanReport?,
         lineCropExperimentReport: MangaOverlayLineCropExperimentReport?,
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
+        externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1458,6 +1482,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let externalArtifactAlignmentByBlock = Dictionary(
             uniqueKeysWithValues: (externalArtifactReadinessReport?.blockAlignment ?? []).map { ($0.blockIndex, $0) }
+        )
+        let externalShadowSummaryByBlock = Dictionary(
+            uniqueKeysWithValues: (externalTextBoxShadowOCRReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1604,6 +1631,12 @@ struct MangaOverlayProbeService: Sendable {
             let externalBubbleIoU = externalAlignment?.bestBubbleIoU?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let externalSegmentCoverage = externalAlignment?.segmentCoverageLevel ?? "missing"
             let externalAlignmentVerdict = externalAlignment?.alignmentVerdict ?? "notEvaluatedMissingArtifacts"
+            let externalShadowSummary = externalShadowSummaryByBlock[block.index]
+            let externalShadowBBox = externalShadowSummary?.candidateBBox?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil"
+            let externalShadowText = externalShadowSummary?.ocrText?.replacing("\n", with: " / ") ?? "nil"
+            let externalShadowDelta = externalShadowSummary?.qualityDelta?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let externalShadowPreservation = externalShadowSummary?.wordPreservationRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
+            let externalShadowBlockers = externalShadowSummary?.blockers.joined(separator: " | ") ?? "nil"
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1654,6 +1687,7 @@ struct MangaOverlayProbeService: Sendable {
             linePromotionChecks: passed=\(linePromotionChecks?.passed ?? "nil") failed=\(linePromotionChecks?.failed ?? "nil")
             lineResearchDecision: \(lineResearchDecision)
             externalArtifacts: readiness=\(externalReadiness) shadowOCRAllowed=\(externalShadowAllowed) activeDirectory=\(externalActiveDirectory) contractExampleOnly=\(externalContractExampleOnly) textBoxID=\(externalTextBoxMatch) textBoxIoU=\(externalTextBoxIoU) bubbleInstanceID=\(externalBubbleMatch) bubbleIoU=\(externalBubbleIoU) segmentMask=\(externalSegmentCoverage) alignment=\(externalAlignmentVerdict) nextAction=\(externalNextAction)
+            externalTextBoxShadowOCR: executed=\(externalShadowSummary.map { String($0.ocrExecuted) } ?? "false") selectedTextBoxID=\(externalShadowSummary?.selectedTextBoxID ?? "none") candidateBBox=[\(externalShadowBBox)] ocrSucceeded=\(externalShadowSummary.map { String($0.ocrSucceeded) } ?? "false") ocrText=\(externalShadowText) qualityDelta=\(externalShadowDelta) wordPreservation=\(externalShadowPreservation) promotionVerdict=\(externalShadowSummary?.promotionVerdict ?? "skipped") blockers=\(externalShadowBlockers)
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1686,6 +1720,7 @@ struct MangaOverlayProbeService: Sendable {
         .joined(separator: "\n\n")
         let externalSummary = """
         externalArtifactReadiness: activeDirectory=\(externalArtifactReadinessReport.map { String($0.activeArtifactsDirectory) } ?? "nil") contractExampleOnly=\(externalArtifactReadinessReport.map { String($0.contractExampleOnly) } ?? "nil") shadowOCRAllowed=\(externalArtifactReadinessReport.map { String($0.externalTextBoxesShadowOCRAllowed) } ?? "nil") manifestFound=\(externalArtifactReadinessReport.map { String($0.manifestFound) } ?? "nil") textBoxesFound=\(externalArtifactReadinessReport.map { String($0.textBoxesFound) } ?? "nil") bubbleMaskFound=\(externalArtifactReadinessReport.map { String($0.bubbleMaskFound) } ?? "nil") segmentMaskFound=\(externalArtifactReadinessReport.map { String($0.segmentMaskFound) } ?? "nil") verdict=\(externalArtifactReadinessReport?.readinessVerdict ?? "nil") nextAction=\(externalArtifactReadinessReport?.nextAction ?? "nil") missing=\(externalArtifactReadinessReport?.missingArtifacts.joined(separator: ",") ?? "nil")
+        externalTextBoxShadowOCR: enabled=\(externalTextBoxShadowOCRReport.map { String($0.enabled) } ?? "nil") executed=\(externalTextBoxShadowOCRReport.map { String($0.executed) } ?? "nil") gateVerdict=\(externalTextBoxShadowOCRReport?.gateVerdict ?? "nil") candidates=\(externalTextBoxShadowOCRReport.map { String($0.candidateCount) } ?? "nil") ocrExecuted=\(externalTextBoxShadowOCRReport.map { String($0.ocrExecutedCount) } ?? "nil") betterThanControl=\(externalTextBoxShadowOCRReport.map { String($0.betterThanControlCount) } ?? "nil") skipped=\(externalTextBoxShadowOCRReport?.skippedBlocks.map(String.init).joined(separator: ",") ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)
