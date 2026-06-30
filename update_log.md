@@ -354,6 +354,39 @@
 
 - v1.16 仍不提供真实 active `test/koharu_artifacts/`，因此不能声称验证了 `externalTextBoxShadowOCRReport.executed = true`。
 
+### v1.17：Koharu 真实 artifact 首包缺失退回
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.17（Koharu真实Artifact首包接入与收益归因）.md`。当前仍没有真实 `test/koharu_artifacts/` active artifact，因此本轮走路径 B；不创建 fake active artifact，不改 Swift / CI / 探针主流程，不刷新漫画指标，不追加 `metrics/version_history.csv`。
+
+核心变更：
+
+- 新增 Agent A v1.17 提示词，明确下一步只在真实 Koharu / 外部 detector 四件套到位后验证 `readyForShadowOCR`、云端 `executed=true` 和 shadow OCR 收益归因。
+- 新增 `md/koharu研究/v1.17-artifact-first-pass.md`，记录当前第一事实：仓库没有真实 active artifact，因此不能验证 `externalTextBoxShadowOCRReport.executed = true`，也不能判断 Koharu OCR 收益。
+- 面向 Koharu / 人工列出首包必须回答的问题：detector 来源、原图坐标转换、bbox 越界、核心对话覆盖、Bubble instance 覆盖、SegmentMask 尺寸、`contractExampleOnly=false`、validator ready 和云端 App bundle 可读。
+- 确认本轮不创建 `test/koharu_artifacts/`，不复制 examples，不用 Vision OCR、pre-crop plan、line plan、BubbleMask proxy、SegmentMask proxy、ground truth 或手写框生成 active artifact。
+
+关键文件：
+
+- `md/prompt/v1（漫画探针）/v1.17（Koharu真实Artifact首包接入与收益归因）.md`
+- `md/koharu研究/v1.17-artifact-first-pass.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮应运行 `git diff --check`、JSON 解析和 Koharu artifact validator valid / invalid / allow-missing / print-required-files。
+- 当前 `test/koharu_artifacts` 不存在；`python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing` 应返回 `verdict = manifestMissing`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`。
+- 未跑本机 build / 探针；本轮没有 Swift / 探针代码变更，不能触发云端 `executed=true` 收益验证。
+
+验收口径：
+
+- 没有真实 active artifact 时，v1.17 不能声称已验证 `executed=true` 或 Koharu OCR 收益。
+- 若下一轮提供真实四件套，必须先通过 validator，再由云端 `ci-fast` 证明 `activeArtifactsDirectory = true`、`externalTextBoxesShadowOCRAllowed = true`、`externalTextBoxShadowOCRReport.executed = true`、`candidateCount > 0`、`ocrExecutedCount > 0`。
+- 即使 external OCR 有收益，也仍是 shadow-only；不得替换 `finalTextUsedForTranslation`、主覆盖图、`blockPassed`、`configuration.currentBlockSource` 或 `textRegionCropReport.adoptedCount`。
+
+遗留事项：
+
+- 下一步仍需要 Koharu / 人工提供 `test/1.png` 对应的真实 detector / segmenter 四件套：`1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`。
+
 ### v2.2：GitHub Release GGUF 下载与 Actions 缓存
 日期：2026-06-29
 依据：云端验证基础设施改造；未刷新 `output/`，未追加 `metrics/version_history.csv` 漫画指标行。
