@@ -393,6 +393,94 @@
 
 - 下一步仍需要 Koharu / 人工提供 `test/1.png` 对应的真实 detector / segmenter 四件套：`1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`。
 
+### 方向修正：Koharu 作为算法参考，不再等待外部 artifact
+日期：2026-06-30
+依据：人工确认“真实 Koharu artifact 没办法跑；不管 Koharu 的结果，只向它的算法和框架靠近，用 AITRANS 自己跑出的图片结果分析 OCR 准确率、气泡、翻译情况，并继续优化算法结构”。本记录是项目方向修正，不是漫画探针质量版本；不刷新 `output/`，不追加 `metrics/version_history.csv`。
+
+核心决策：
+
+- 不再把真实 `test/koharu_artifacts/` 四件套作为后续主线阻塞项。
+- 保留现有 external artifact contract、validator、App readiness gate 和 `externalTextBoxShadowOCRReport`，作为将来如果有人提供真实 detector 输出时的可选防伪/诊断入口；但日常优化不等待它。
+- Koharu 后续定位调整为算法和框架参考，而不是外部运行依赖。可借鉴的方向包括 TextBoxes 思想、BubbleMask / SegmentMask 中间层、气泡实例归属、mask-safe layout、crop / OCR 候选晋级门槛、失败归因、清字/覆盖结构和 artifact DAG 式诊断。
+- 后续主要使用 AITRANS 自己的 `test/1.png` 探针、云端 `ci-fast` / `full` 输出、`probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt`、关键 PNG 和 `metrics/version_history.csv` 来分析 OCR 准确率、气泡归属/分割、翻译失败分类、覆盖渲染和结构性瓶颈。
+- 真实外部 artifact 仍不得伪造；不要用 contract examples、Vision OCR、pre-crop plan、line plan、BubbleMask proxy、SegmentMask proxy、ground truth 或手写框冒充 detector 输出。
+- 后续 Agent A 提示词应优先围绕本项目可执行的算法结构优化：例如 OCR block 合并/去重、bubble-first 与 whole-page 融合、气泡分割与归属修正、TextBox/SegmentMask proxy 质量归因、crop 候选晋级、翻译 prompt / 模型对照、报告摘要和可视化排查，而不是继续要求 Koharu / 人工交付四件套。
+
+关键文件：
+
+- `update_log.md`
+- `md/koharu研究/koharu图像识别链路研究.md`
+- `md/koharu研究/v6～9work.md`
+- `md/koharu研究/v1.17-artifact-first-pass.md`
+- `md/prompt/v1（漫画探针）/v1.17（Koharu真实Artifact首包接入与收益归因）.md`
+
+验证结果：
+
+- 本轮应运行 `git diff --check`。
+- 本轮只改方向记录，不涉及 Swift 代码、CI workflow、探针报告模型或 `output/` 产物。
+- 未跑本机 build / 探针；按规则，后续涉及 Swift / 漫画探针改动时仍交给云端验证。
+
+后续执行口径：
+
+- Agent A 下一版提示词不再以“缺真实 Koharu artifact”为阻塞结论。
+- Agent B 不应再围绕 `manifestMissing` 做重复文档或 fake artifact 工作。
+- Agent C 验收后续算法优化时，重点看当前分支 HEAD 的云端结果包、报告字段、关键 PNG、OCR/气泡/翻译指标和是否保持主流程边界。
+- external artifact gate 可以保留在报告中显示 `manifestMissing`，这只是可选外部输入缺失，不再代表主线无法继续。
+
+### v1.18：内部结构瓶颈路由与保守碎片清理
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.18（Koharu式内部结构瓶颈路由与保守清理）.md`。本轮修改 Swift 探针报告模型、post-fusion cleanup 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `internalStructureBottleneckReport`，从最终 blocks、post-fusion cleanup、TextRegion crop、TextBox plan failure、BubbleMask、assignment correction、split candidate、external readiness 和翻译失败分类聚合结构瓶颈路由。
+- 每块写出 `primaryBottleneck`、`secondaryBottlenecks`、`recommendedNextAction`、`evidence` 和 `mustNotPromoteReasons`；报告级汇总 primary breakdown、recommended action breakdown、dialogue / decorative breakdown 和关键 block 列表。
+- `1_ocr_probe_text.txt` 增加 `internalStructureBottleneck` 逐块摘要；`ci-fast` 也生成该报告，不只在 full 模式生成。
+- post-fusion cleanup 新增保守 `duplicateOrFragment` 规则，使用 bbox 强重叠/邻域、bubble 或 mask-safe 邻域、token 覆盖、信息分、OCR 错误启发和保护文本检查清理低信息碎片。
+- `fusionComparison.postFusionCleanup.rejectedBlocks[]` 增加 `relatedKeptBlockIndex`、`qualityScore`、`protectedTextMatched` 和 ground-truth-free `evidence`，便于 Agent C 审计拒绝原因。
+- 保护文本扩展包含 `The City Battler Tournament starts in a few days.`；external artifact 缺失只作为 optional note，不再作为主线阻塞。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行轻量检查：`swiftc -parse` 目标 Swift 文件、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `internalStructureBottleneckReport.evaluatedBlockCount = totalBlocksDetected`，breakdown 非空，`1_ocr_probe_text.txt` 含 `internalStructureBottleneck`，且 `configuration.currentBlockSource` 仍为 `fusedWholePageBubble`。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.18 新字段；以 PR 后云端结果包为准。
+- 若云端 OCR 波动导致新 duplicate/fragment cleanup no-op，本轮仍应通过瓶颈路由报告提供可审计价值；不得为了让 block 数变化而硬编码 block index 或使用 ground truth。
+
+Agent C 退回复修：
+
+- PR #8 初次云端 run `28424308991` 虽然 CI success，但 artifact 显示 post-fusion cleanup 从 `16 -> 11`，误删了远距离真实文本，并产生 `post-fusion cleanup reduced block count below target floor: 11` warning，因此未通过验收。
+- 根因 1：`duplicateOrFragment` 的 `sameDominantNeighborhood` 把两个 `nil` 的 `safeLayoutRect` / `maskSafeRect` 当成同邻域证据。修复后只有非空且相等的 safe / mask rect，或真实 same bubble / bbox 重叠 / bbox 邻近，才算邻域证据。
+- 根因 2：`internalStructureBottleneckReport` 用 rejected 的 `originalFusedBlockIndex` 去匹配 cleanup 后已重编号的 `block.index`，导致保留块被误标为 `duplicateOrFragment`。修复后保留块写入 `postFusionCleanupOriginalFusedBlockIndex` note，rejected 原始索引只用于报告汇总；逐块 primary / secondary 不再用 rejected 原始索引误判最终保留块。
+- 本修复不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`；重新 push 后仍由 GitHub Actions 生成新的 ci-fast artifact 供 Agent C 验收。
+
+Agent C 最终验收：
+
+- PR #8 base 为 `smalldata_test`，head 为 `codeb/v1.18-internal-structure-routing`，最终验收 commit 为 `74d81dce9d90af57058575428c71721e3fd7534f`。
+- 云端 `AITRANS CI Results` run `28425069180` / attempt `1` 通过；artifact `aitrans-ci-v1.18-codeb-v1.18-internal-structure-routing--74d81dce9d90-run28425069180-attempt1` 的 manifest 匹配 `version = v1.18`、`branch = codeb/v1.18-internal-structure-routing`、`commitSha = 74d81dce9d90af57058575428c71721e3fd7534f`、`workflowName = AITRANS CI Results`。
+- 结果包包含 `.xcresult`、`junit.xml`、`xcodebuild.log`、`ci-failure-summary.md`、`ci-artifact-manifest.json`、`output/probe_report.json`、`output/clean_text_diagnostic.json`、`output/1_ocr_probe_text.txt` 和关键 PNG。
+- `junit.xml`：5 tests、0 failures；GGUF verify、static checks、Xcode build、simulator build、manga probe 均为 success。
+- 云端探针：`engineUsed = Local GGUF`、`decodingMode = deterministic`、`decodingSeed = 42`、`configuration.currentBlockSource = fusedWholePageBubble`、`probeRunMode = ci-fast`、`totalBlocksDetected = 13`、`outputDirectoryCleaned = true`、`overallPassed = false`。
+- post-fusion cleanup 复验通过：`blockCountBeforeCleanup = 16`、`blockCountAfterCleanup = 13`、`rejectedBlockCount = 3`、`warnings = []`、`missingKeyTexts = []`；`THAT'S RIGHT...` 和 `IVE ARRIVED...` 真实文本保留，初次 run 的远距离误删已消失。
+- `internalStructureBottleneckReport` 复验通过：`evaluatedBlockCount = 13`，`primaryBottleneckBreakdown = { bubbleAssignmentOrSplit: 2, modelTranslationQuality: 5, ocrCharacterDamage: 5, passed: 1 }`，`recommendedActionBreakdown` 非空，`duplicateOrFragmentBlocks = []`，`postFusionRejectedDuplicateOrFragmentBlocks = []`，`1_ocr_probe_text.txt` 含逐块 `internalStructureBottleneck` 摘要和 `postFusionCleanupOriginalFusedBlockIndex` 证据。
+- 质量数字：`groundTruthMatchedBlocks = 13`、`groundTruthUnmatchedBlocks = 0`、`averageCoreDialogueOCRSimilarity = 0.6987`、`averageDecorativeOCRSimilarity = 0.8000`、`passedBlocks = 1`、`failedBlocks = 12`、`translationFailureBreakdown = { modelOutputFailure: 3, ocrInputSuspect: 7, translationLanguageQualityFailure: 2 }`、`likelyRuleFalseFailureBlocks = []`、`cleanTextDiagnostic.passRate = 0.4545`。
+- `overallPassed = false` 仍来自当前 Gemma 270M / OCR 质量基线，不作为本轮结构路由和 cleanup 修复失败。
+
 ### v2.2：GitHub Release GGUF 下载与 Actions 缓存
 日期：2026-06-29
 依据：云端验证基础设施改造；未刷新 `output/`，未追加 `metrics/version_history.csv` 漫画指标行。

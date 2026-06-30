@@ -91,6 +91,7 @@ flowchart TD
   TBF --> LTB["lineTextBoxPlanReport / lineCropExperimentReport<br/>目标块行级 TextBox / deskew shadow 验证"]
   LTB --> EAR["externalArtifactReadinessReport<br/>真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门"]
   EAR --> ETS["externalTextBoxShadowOCRReport<br/>ready 后每块最多 1 个 externalArtifact.textBoxCrop / shadow-only"]
+  ETS --> ISR["internalStructureBottleneckReport<br/>OCR / bubble / crop / translation / render 路由诊断"]
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
   X --> R
@@ -104,6 +105,7 @@ flowchart TD
   LTB --> R
   EAR --> R
   ETS --> R
+  ISR --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
   M --> T["1_ocr_probe_text.txt<br/>逐块文本快照"]
@@ -112,6 +114,7 @@ flowchart TD
   LTB --> T
   EAR --> T
   ETS --> T
+  ISR --> T
 ```
 
 ## 3. Agent 迭代流程图
