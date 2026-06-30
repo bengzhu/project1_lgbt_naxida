@@ -748,6 +748,7 @@ struct MangaOverlayProbeService: Sendable {
         readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport? = nil,
         structureActionCandidateReport: MangaStructureActionCandidateReport? = nil,
         koharuArtifactDAGReport: MangaKoharuArtifactDAGReport? = nil,
+        koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -807,6 +808,7 @@ struct MangaOverlayProbeService: Sendable {
                 readingOrderStructureAuditReport: readingOrderStructureAuditReport,
                 structureActionCandidateReport: structureActionCandidateReport,
                 koharuArtifactDAGReport: koharuArtifactDAGReport,
+                koharuStageGapReplicationReport: koharuStageGapReplicationReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1468,6 +1470,7 @@ struct MangaOverlayProbeService: Sendable {
         readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?,
         structureActionCandidateReport: MangaStructureActionCandidateReport?,
         koharuArtifactDAGReport: MangaKoharuArtifactDAGReport?,
+        koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1532,6 +1535,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let koharuArtifactTraceByBlock = Dictionary(
             uniqueKeysWithValues: (koharuArtifactDAGReport?.blockTraces ?? []).map { ($0.blockIndex, $0) }
+        )
+        let koharuStageGapPlanByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuStageGapReplicationReport?.blockPlans ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1718,6 +1724,9 @@ struct MangaOverlayProbeService: Sendable {
                 .filter { ["bubbleMask", "textBoxes", "segmentMask", "ocrText", "translation", "renderLayout"].contains($0.stageName) }
                 .map { "\($0.stageName)=\($0.status)" }
                 .joined(separator: " | ") ?? "nil"
+            let koharuStageGapPlan = koharuStageGapPlanByBlock[block.index]
+            let koharuStageGapEvidence = koharuStageGapPlan?.minimumEvidenceToCollect.joined(separator: " | ") ?? "nil"
+            let koharuStageGapMustNotPromote = koharuStageGapPlan?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1775,6 +1784,7 @@ struct MangaOverlayProbeService: Sendable {
             readingOrderStructureAudit: currentOrderIndex=\(readingOrder.map { String($0.currentOrderIndex) } ?? "nil") proposedReadingOrderIndex=\(readingOrder.map { String($0.proposedReadingOrderIndex) } ?? "nil") orderChanged=\(readingOrder.map { String($0.orderChanged) } ?? "nil") orderConfidence=\(readingOrder?.orderConfidence.formatted(.number.precision(.fractionLength(3))) ?? "nil") bubbleGroupID=\(readingOrder?.bubbleGroupID ?? "nil") sameBubbleSiblingBlockIndexes=[\(readingOrderSiblings)] bubbleAssignmentRisk=\(readingOrder?.bubbleAssignmentRisk ?? "nil") splitOrMergeRisk=\(readingOrder?.splitOrMergeRisk ?? "nil") duplicateOrFragmentRisk=\(readingOrder?.duplicateOrFragmentRisk ?? "nil") recommendedStructureAction=\(readingOrder?.recommendedStructureAction ?? "nil") risks=\(readingOrderRisks) diagnosticOnly=\(readingOrder.map { String($0.diagnosticOnly) } ?? "nil") mustNotPromote=\(readingOrderMustNotPromote)
             structureActionCandidates: count=\(structureAction.map { String($0.candidateCount) } ?? "0") executed=\(structureAction.map { String($0.executedCandidateCount) } ?? "0") types=\(structureActionTypes) verdicts=\(structureActionVerdicts) nextSteps=\(structureActionNextSteps) skipped=\(structureActionSkipReasons) deltas=\(structureActionDeltas)
             koharuArtifactTrace: firstBlockingStage=\(koharuArtifactTrace?.firstBlockingStage ?? "nil") firstBlockingReason=\(koharuArtifactTrace?.firstBlockingReason ?? "nil") downstreamImpacts=\(koharuArtifactTrace?.downstreamImpacts.joined(separator: ",") ?? "nil") recommendedNextAction=\(koharuArtifactTrace?.recommendedNextAction ?? "nil") keyStages=\(koharuStageStatus)
+            koharuStageGapPlan: firstBlocking=\(koharuStageGapPlan?.firstBlockingStageFromDAG ?? "nil") targetStage=\(koharuStageGapPlan?.targetCanonicalStage ?? "nil") gap=\(koharuStageGapPlan?.primaryGapCategory ?? "nil") workPackage=\(koharuStageGapPlan?.recommendedWorkPackageID ?? "nil") requiresRealArtifact=\(koharuStageGapPlan.map { String($0.requiresRealExternalArtifact) } ?? "nil") requiresFullProbe=\(koharuStageGapPlan.map { String($0.requiresFullProbe) } ?? "nil") canCIFast=\(koharuStageGapPlan.map { String($0.canBeEvaluatedInCIFast) } ?? "nil") nextAction=\(koharuStageGapPlan?.nextAction ?? "nil") evidence=\(koharuStageGapEvidence) mustNotPromote=\(koharuStageGapMustNotPromote)
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1814,6 +1824,7 @@ struct MangaOverlayProbeService: Sendable {
         readingOrderStructureAuditReport: enabled=\(readingOrderStructureAuditReport.map { String($0.enabled) } ?? "nil") evaluated=\(readingOrderStructureAuditReport.map { String($0.evaluatedBlockCount) } ?? "nil") orderChanged=\(readingOrderStructureAuditReport?.orderChangedBlocks.map(String.init).joined(separator: ",") ?? "nil") lowConfidenceOrderBlocks=\(readingOrderStructureAuditReport?.lowConfidenceOrderBlocks.map(String.init).joined(separator: ",") ?? "nil") multiBlockBubbleGroups=\(readingOrderStructureAuditReport?.multiBlockBubbleGroups.map { "\($0.key):[\($0.value.map(String.init).joined(separator: ","))]" }.sorted().joined(separator: " | ") ?? "nil") maskConflictBlocks=\(readingOrderStructureAuditReport?.maskConflictBlocks.map(String.init).joined(separator: ",") ?? "nil") splitRiskBlocks=\(readingOrderStructureAuditReport?.splitRiskBlocks.map(String.init).joined(separator: ",") ?? "nil") duplicateOrFragmentRiskBlocks=\(readingOrderStructureAuditReport?.duplicateOrFragmentRiskBlocks.map(String.init).joined(separator: ",") ?? "nil") actions=\(readingOrderStructureAuditReport?.recommendedStructureActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         structureActionCandidateReport: enabled=\(structureActionCandidateReport.map { String($0.enabled) } ?? "nil") evaluated=\(structureActionCandidateReport.map { String($0.evaluatedBlockCount) } ?? "nil") candidates=\(structureActionCandidateReport.map { String($0.candidateCount) } ?? "nil") executed=\(structureActionCandidateReport.map { String($0.executedCandidateCount) } ?? "nil") skipped=\(structureActionCandidateReport.map { String($0.skippedCandidateCount) } ?? "nil") types=\(structureActionCandidateReport?.candidateTypeBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") verdicts=\(structureActionCandidateReport?.promotionVerdictBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") nextSteps=\(structureActionCandidateReport?.recommendedNextStepBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") wouldImprove=\(structureActionCandidateReport?.reportOnlyWouldImproveBlocks.map(String.init).joined(separator: ",") ?? "nil") blocked=\(structureActionCandidateReport?.blockedBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealArtifact=\(structureActionCandidateReport?.needsRealArtifactBlocks.map(String.init).joined(separator: ",") ?? "nil")
         koharuArtifactDAGReport: enabled=\(koharuArtifactDAGReport.map { String($0.enabled) } ?? "nil") evaluated=\(koharuArtifactDAGReport.map { String($0.evaluatedBlockCount) } ?? "nil") stages=\(koharuArtifactDAGReport.map { String($0.stageCount) } ?? "nil") edges=\(koharuArtifactDAGReport.map { String($0.edgeCount) } ?? "nil") stageStatus=\(koharuArtifactDAGReport?.stageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") firstBlocking=\(koharuArtifactDAGReport?.firstBlockingStageBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") downstreamImpact=\(koharuArtifactDAGReport?.downstreamImpactBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") realArtifactGateVerdict=\(koharuArtifactDAGReport?.realArtifactGateVerdict ?? "nil") realArtifactGateNextAction=\(koharuArtifactDAGReport?.realArtifactGateNextAction ?? "nil") needsTextBoxes=\(koharuArtifactDAGReport?.blocksNeedingRealTextBoxes.map(String.init).joined(separator: ",") ?? "nil") needsBubbleMask=\(koharuArtifactDAGReport?.blocksNeedingRealBubbleMask.map(String.init).joined(separator: ",") ?? "nil") needsSegmentMask=\(koharuArtifactDAGReport?.blocksNeedingRealSegmentMask.map(String.init).joined(separator: ",") ?? "nil")
+        koharuStageGapReplicationReport: enabled=\(koharuStageGapReplicationReport.map { String($0.enabled) } ?? "nil") stages=\(koharuStageGapReplicationReport.map { String($0.canonicalStageCount) } ?? "nil") gaps=\(koharuStageGapReplicationReport.map { String($0.gapCount) } ?? "nil") workPackages=\(koharuStageGapReplicationReport.map { String($0.workPackageCount) } ?? "nil") readiness=\(koharuStageGapReplicationReport?.replicationReadinessBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") blockedByRealArtifact=\(koharuStageGapReplicationReport?.blockedByRealArtifactStages.joined(separator: ",") ?? "nil") stopTuning=\(koharuStageGapReplicationReport?.stopTuningStages.joined(separator: ",") ?? "nil") mustWaitForExternalArtifact=\(koharuStageGapReplicationReport?.mustWaitForExternalArtifactStages.joined(separator: ",") ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)
