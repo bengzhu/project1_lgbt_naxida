@@ -59,6 +59,7 @@ python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_con
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --print-required-files
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
 ```
 
@@ -222,7 +223,7 @@ python3 -m json.tool test/1.ground_truth.json
 - `externalArtifactReadinessReport.blockAlignment.count = 13`
 - 默认缺 active artifact 时，`externalTextBoxShadowOCRReport.executed = false`、`gateVerdict = manifestMissing`、`candidateCount = 0`、`ocrExecutedCount = 0`、`promotedExternalShadowBlocks = []`、`skippedBlocks = [0...12]`。
 - 若真实 `test/koharu_artifacts/` readiness 通过，`externalTextBoxShadowOCRReport` 每块最多生成 1 个 `externalArtifact.textBoxCrop` candidate；选择和 report-only promotion 不能读取 `test/1.ground_truth.json`，且不得改变 `finalTextUsedForTranslation`、主覆盖图、`blockPassed`、`configuration.currentBlockSource` 或 `textRegionCropReport.adoptedCount`。
-- 外部 Koharu artifact validator 对 `md/koharu研究/artifact_contract/examples/valid` 应返回 `validationPassed = true`、`verdict = contractExampleOnly`、`externalTextBoxesShadowOCRAllowed = false`；对 invalid fixtures 应在 `--expect-fail` 下成功；对缺失的 `test/koharu_artifacts` 应在 `--allow-missing` 下返回 `manifestMissing`。
+- 外部 Koharu artifact validator 对 `md/koharu研究/artifact_contract/examples/valid` 应返回 `validationPassed = true`、`verdict = contractExampleOnly`、`externalTextBoxesShadowOCRAllowed = false`；对 invalid fixtures 应在 `--expect-fail` 下成功；`--print-required-files` 应输出 active 目录四件套和 forbidden active sources；对缺失的 `test/koharu_artifacts` 应在 `--allow-missing` 下返回 `manifestMissing`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided` 和缺失文件 blockers。
 - `1_ocr_probe_text.txt` 每块包含 `textBoxPlanFailure` 和 `promotionChecks`；目标块 `[1, 6, 10]` 还包含 `lineTextBoxPlans`、`lineCropExperiment`、`linePromotionChecks` 和 `lineResearchDecision`；每块还包含 `externalArtifacts` 与 `externalTextBoxShadowOCR` 摘要。
 - `cleanTextDiagnostic.passRate = 0.4545`
 - `passedBlocks = 1`
@@ -272,7 +273,7 @@ Agent B 的云端结果必须可下载、可追溯、未加密，供 Agent C 验
 - `.xcresult`：Xcode 结果包，例如 `TestResults/AITRANS-${version}-${short_sha}.xcresult`。
 - `junit.xml`：CI 可读摘要。当前没有 XCTest 时，至少生成 build smoke 的 JUnit 摘要。
 - `xcodebuild.log`：完整构建日志。
-- `ci-artifact-manifest.json`：结果包索引，包含 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`createdAt`、`xcodeVersion`、`scheme`、`destination`、`resultBundlePath`、`junitPath`、`xcodebuildLogPath`、`failureSummaryPath`、`probeReportPath`。
+- `ci-artifact-manifest.json`：结果包索引，包含 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`createdAt`、`xcodeVersion`、`scheme`、`destination`、`resultBundlePath`、`junitPath`、`xcodebuildLogPath`、`failureSummaryPath`、`probeReportPath`。v1.14 起还包含 `koharuActiveArtifactValidationPath`、`koharuArtifactValidation`、`externalArtifactReadinessSummary` 和 `externalTextBoxShadowOCRSummary`，用于区分缺 artifact 阻塞路径和 ready/executed=true 路径。
 - `ci-failure-summary.md`：无论成功或失败都生成；失败时写清失败阶段、关键日志位置、建议 Agent B 先看哪些文件。
 - `model-download.log` / `model-verify.log`：Release 下载、cache 命中和 SHA256 校验记录。
 - `simulator-build.log` / `manga-probe.log`：Debug simulator app 构建、安装、模型导入、探针启动、报告等待和导出日志。
@@ -288,6 +289,7 @@ Agent C 取用规则：
 
 - 只看当前 `codeb/...` HEAD 对应的 `commitSha`。
 - 必须核对 manifest 的 `branch`、`commitSha`、`runId`、`runAttempt`。
+- 涉及 external artifact 时，必须核对 manifest 内 `koharuArtifactValidation.verdict`、`externalArtifactReadinessSummary.readinessVerdict`、`externalTextBoxShadowOCRSummary.executed`，并确认这些值来自当前 `commitSha` 的结果包。
 - B 再次 push 后，旧 run 结果废弃。
 - Actions 重跑时，记录实际验收的 `runAttempt`。
 - C 验收通过后默认通过 PR merge 收口，并删除远端 `codeb/...` 候选分支；无权限删除时必须说明。
