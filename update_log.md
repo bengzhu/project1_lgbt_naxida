@@ -115,6 +115,41 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.19：路由驱动翻译对照与 OCR 损坏审计
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.19（路由驱动翻译对照与OCR损坏审计）.md`。本轮修改 Swift 探针报告模型和诊断 TXT；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `routingDrivenTranslationComparisonReport`，从 v1.18 `internalStructureBottleneckReport` 中选择最多 5 个 `modelTranslationQuality` 块，运行 deterministic `strictChineseOnlyV1` prompt 对照。
+- strict prompt 对照复用现有候选抽取、raw / candidate 分类、质量 checks、failure reasons 和 language quality gate，只记录 control / variant / improvement / blockers，不替换主流程 prompt、译文、`blockPassed`、失败分类或覆盖图。
+- 新增 `ocrCharacterDamageAuditReport`，只审计 `ocrCharacterDamage`、`ocrInputSuspect` 或 `ocrGroundTruthSimilarity < 0.72` 的块，输出 damaged / missing / extra / substitution token、重复关键词损坏、line break risk、TextBox / SegmentMask 证据、crop blockers 和 recommended action。
+- OCR 损坏审计允许使用 `test/1.ground_truth.json` 做探针诊断，但不参与生产候选选择、排序、cleanup、promotion 或文本替换。
+- `1_ocr_probe_text.txt` 新增两个 report 的逐块摘要和报告级 summary。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.19（路由驱动翻译对照与OCR损坏审计）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明两个新 report 都存在，`routingDrivenTranslationComparisonReport.evaluatedCaseCount <= 5`，`ocrCharacterDamageAuditReport.evaluatedBlockCount > 0`，`1_ocr_probe_text.txt` 包含逐块摘要，且 `configuration.currentBlockSource` 仍为 `fusedWholePageBubble`。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.19 新字段；以 PR 后云端结果包为准。
+- strict prompt 对照可能变好、变差或无变化，均只作为诊断信号，不代表本轮主流程质量提升。
+
 ### v2.3：云端导入 GGUF 并运行漫画探针
 日期：2026-06-29
 依据：云端验证基础设施改造；本轮修改 CI 和 DEBUG 启动逻辑，不刷新仓库根 `output/`，不追加 `metrics/version_history.csv` 漫画指标行。
