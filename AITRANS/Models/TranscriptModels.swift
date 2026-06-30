@@ -1416,6 +1416,111 @@ struct MangaKoharuArtifactDAGReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuPromotionGate: Equatable, Codable, Sendable {
+    var gateName: String
+    var scope: String
+    var requiredForPromotion: Bool
+    var currentStatus: String
+    var evidence: [String]
+    var threshold: String
+    var affectedBlocks: [Int]
+    var failureMeans: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuStageConformanceCheck: Equatable, Codable, Sendable {
+    var checkName: String
+    var passed: Bool
+    var evidence: [String]
+    var requiredForPromotion: Bool
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuStageGapSummary: Equatable, Codable, Sendable {
+    var canonicalStage: String
+    var currentAITRANSStage: String
+    var currentCapability: String
+    var artifactKind: String
+    var sourceReports: [String]
+    var gapCategory: String
+    var replicationReadiness: String
+    var minimumRequiredInputs: [String]
+    var availableEvidence: [String]
+    var missingEvidence: [String]
+    var affectedBlocks: [Int]
+    var primaryDownstreamImpact: String
+    var promotionGates: [MangaKoharuPromotionGate]
+    var conformanceChecks: [MangaKoharuStageConformanceCheck]
+    var stopConditions: [String]
+    var recommendedWorkPackageID: String
+    var groundTruthUsedForPlanning: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuReplicationWorkPackage: Equatable, Codable, Sendable {
+    var workPackageID: String
+    var title: String
+    var priority: String
+    var targetStages: [String]
+    var targetBlocks: [Int]
+    var inputArtifactsRequired: [String]
+    var canRunInCIFast: Bool
+    var requiresFullProbe: Bool
+    var requiresRealExternalArtifact: Bool
+    var expectedMetricMovement: [String]
+    var promotionGates: [MangaKoharuPromotionGate]
+    var rollbackOrStopConditions: [String]
+    var nonGoals: [String]
+    var recommendedBranchName: String
+}
+
+struct MangaKoharuBlockReplicationPlan: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var blockPassed: Bool
+    var failureCategory: String
+    var bubbleID: Int?
+    var firstBlockingStageFromDAG: String
+    var primaryGapCategory: String
+    var targetCanonicalStage: String
+    var recommendedWorkPackageID: String
+    var minimumEvidenceToCollect: [String]
+    var mustNotPromoteReasons: [String]
+    var canBeEvaluatedInCIFast: Bool
+    var requiresFullProbe: Bool
+    var requiresRealExternalArtifact: Bool
+    var nextAction: String
+}
+
+struct MangaKoharuStageGapReplicationReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var referencePipeline: String
+    var evaluatedBlockCount: Int
+    var canonicalStageCount: Int
+    var gapCount: Int
+    var workPackageCount: Int
+    var stageCapabilityBreakdown: [String: Int]
+    var gapCategoryBreakdown: [String: Int]
+    var replicationReadinessBreakdown: [String: Int]
+    var promotionGateBreakdown: [String: Int]
+    var blockedByRealArtifactStages: [String]
+    var blockedByOCRStages: [String]
+    var blockedByBubbleSegmentationStages: [String]
+    var blockedBySegmentMaskStages: [String]
+    var blockedByTranslationModelStages: [String]
+    var renderReadyStages: [String]
+    var stopTuningStages: [String]
+    var readyForShadowOnlyStages: [String]
+    var mustWaitForExternalArtifactStages: [String]
+    var stageGaps: [MangaKoharuStageGapSummary]
+    var workPackages: [MangaKoharuReplicationWorkPackage]
+    var blockPlans: [MangaKoharuBlockReplicationPlan]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -2307,6 +2412,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?
     var structureActionCandidateReport: MangaStructureActionCandidateReport?
     var koharuArtifactDAGReport: MangaKoharuArtifactDAGReport?
+    var koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?

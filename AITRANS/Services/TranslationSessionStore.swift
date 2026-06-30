@@ -1582,6 +1582,7 @@ final class TranslationSessionStore: ObservableObject {
                 var readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?
                 var structureActionCandidateReport: MangaStructureActionCandidateReport?
                 var koharuArtifactDAGReport: MangaKoharuArtifactDAGReport?
+                var koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1938,6 +1939,31 @@ final class TranslationSessionStore: ObservableObject {
                     readingOrderStructureAuditReport: readingOrderStructureAuditReport,
                     structureActionCandidateReport: structureActionCandidateReport
                 )
+                self.writeMangaProbeProgress(stage: "clean-text-diagnostic-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                let cleanTextDiagnostic = await self.runCleanTextDiagnostic(groundTruth: groundTruth)
+                let cleanDiagnosticURL = self.mangaOverlayOutputDirectory.appendingPathComponent("clean_text_diagnostic.json")
+                try Self.writeCleanTextDiagnostic(cleanTextDiagnostic, to: cleanDiagnosticURL)
+                outputFiles.cleanTextDiagnosticFile = cleanDiagnosticURL.path
+                koharuStageGapReplicationReport = Self.makeKoharuStageGapReplicationReport(
+                    blocks: probeBlocks,
+                    koharuArtifactDAGReport: koharuArtifactDAGReport,
+                    structureActionCandidateReport: structureActionCandidateReport,
+                    readingOrderStructureAuditReport: readingOrderStructureAuditReport,
+                    internalStructureBottleneckReport: internalStructureBottleneckReport,
+                    ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
+                    textBoxPlanFailureReport: textBoxPlanFailureReport,
+                    lineCropExperimentReport: lineCropExperimentReport,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport,
+                    externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+                    cleanTextDiagnostic: cleanTextDiagnostic
+                )
+                let deterministicDecodingCheck: MangaDeterministicDecodingCheck?
+                if runOptions.runDeterministicDecodingCheck {
+                    self.writeMangaProbeProgress(stage: "deterministic-decoding-check-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                    deterministicDecodingCheck = await self.runDeterministicDecodingCheck(groundTruth: groundTruth)
+                } else {
+                    deterministicDecodingCheck = nil
+                }
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
@@ -1963,6 +1989,7 @@ final class TranslationSessionStore: ObservableObject {
                     readingOrderStructureAuditReport: readingOrderStructureAuditReport,
                     structureActionCandidateReport: structureActionCandidateReport,
                     koharuArtifactDAGReport: koharuArtifactDAGReport,
+                    koharuStageGapReplicationReport: koharuStageGapReplicationReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -2000,19 +2027,6 @@ final class TranslationSessionStore: ObservableObject {
                         outputDirectory: self.mangaOverlayOutputDirectory
                     )
                 }
-                self.writeMangaProbeProgress(stage: "clean-text-diagnostic-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
-                let cleanTextDiagnostic = await self.runCleanTextDiagnostic(groundTruth: groundTruth)
-                let cleanDiagnosticURL = self.mangaOverlayOutputDirectory.appendingPathComponent("clean_text_diagnostic.json")
-                try Self.writeCleanTextDiagnostic(cleanTextDiagnostic, to: cleanDiagnosticURL)
-                outputFiles.cleanTextDiagnosticFile = cleanDiagnosticURL.path
-                let deterministicDecodingCheck: MangaDeterministicDecodingCheck?
-                if runOptions.runDeterministicDecodingCheck {
-                    self.writeMangaProbeProgress(stage: "deterministic-decoding-check-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
-                    deterministicDecodingCheck = await self.runDeterministicDecodingCheck(groundTruth: groundTruth)
-                } else {
-                    deterministicDecodingCheck = nil
-                }
-
                 let report = self.makeMangaOverlayProbeReport(
                     blocks: probeBlocks,
                     outputFiles: outputFiles,
@@ -2042,6 +2056,7 @@ final class TranslationSessionStore: ObservableObject {
                     readingOrderStructureAuditReport: readingOrderStructureAuditReport,
                     structureActionCandidateReport: structureActionCandidateReport,
                     koharuArtifactDAGReport: koharuArtifactDAGReport,
+                    koharuStageGapReplicationReport: koharuStageGapReplicationReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7149,6 +7164,7 @@ final class TranslationSessionStore: ObservableObject {
         readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport? = nil,
         structureActionCandidateReport: MangaStructureActionCandidateReport? = nil,
         koharuArtifactDAGReport: MangaKoharuArtifactDAGReport? = nil,
+        koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7225,6 +7241,7 @@ final class TranslationSessionStore: ObservableObject {
             readingOrderStructureAuditReport: readingOrderStructureAuditReport,
             structureActionCandidateReport: structureActionCandidateReport,
             koharuArtifactDAGReport: koharuArtifactDAGReport,
+            koharuStageGapReplicationReport: koharuStageGapReplicationReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -9797,6 +9814,718 @@ final class TranslationSessionStore: ObservableObject {
                 "koharuArtifactDAGReport is report-only and does not change OCR, translation input, overlay drawing, blockPassed, failureCategory, cleanup, or candidate selection",
                 "realKoharuArtifact is only reported when externalArtifactReadinessReport allows shadow OCR; internal proxy reports remain aitransProxyArtifact or derivedReportArtifact",
                 "ground truth similarity is copied only into ocrSimilarityForEvaluation and is not used for gate pass/fail, planning, sorting, promotion, cleanup, or rendering"
+            ]
+        )
+    }
+
+    private static func makeKoharuStageGapReplicationReport(
+        blocks: [MangaOverlayProbeBlock],
+        koharuArtifactDAGReport: MangaKoharuArtifactDAGReport?,
+        structureActionCandidateReport: MangaStructureActionCandidateReport?,
+        readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?,
+        internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?,
+        ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?,
+        textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?,
+        lineCropExperimentReport: MangaOverlayLineCropExperimentReport?,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
+        externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?,
+        cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
+    ) -> MangaKoharuStageGapReplicationReport {
+        let allBlockIndexes = blocks.map(\.index).sorted()
+        let dagBlockByIndex = Dictionary(
+            uniqueKeysWithValues: (koharuArtifactDAGReport?.blockTraces ?? []).map { ($0.blockIndex, $0) }
+        )
+        let structureByBlock = Dictionary(
+            uniqueKeysWithValues: (structureActionCandidateReport?.cases ?? []).map { ($0.blockIndex, $0) }
+        )
+        let bottleneckByBlock = Dictionary(
+            uniqueKeysWithValues: (internalStructureBottleneckReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let ocrDamageByBlock = Dictionary(
+            uniqueKeysWithValues: (ocrCharacterDamageAuditReport?.cases ?? []).map { ($0.blockIndex, $0) }
+        )
+        let missingArtifactNames = externalArtifactReadinessReport?.missingArtifacts.sorted() ?? ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]
+        let realArtifactReady = externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed == true
+        let realArtifactVerdict = externalArtifactReadinessReport?.readinessVerdict ?? "notEvaluated"
+        let realArtifactNextAction = externalArtifactReadinessReport?.nextAction ?? "notEvaluated"
+        let cleanPassRate = cleanTextDiagnostic?.passRate ?? 0
+        let cleanTextLow = cleanTextDiagnostic.map { $0.passRate < 0.80 } ?? true
+
+        func uniqueSorted(_ values: [Int]) -> [Int] {
+            Array(Set(values)).sorted()
+        }
+
+        func blockIndexes(firstBlockedBy stages: Set<String>) -> [Int] {
+            uniqueSorted((koharuArtifactDAGReport?.blockTraces ?? [])
+                .filter { stages.contains($0.firstBlockingStage) }
+                .map(\.blockIndex))
+        }
+
+        func gate(
+            _ name: String,
+            scope: String,
+            required: Bool = true,
+            status: String,
+            evidence: [String],
+            threshold: String,
+            affected: [Int],
+            failureMeans: String
+        ) -> MangaKoharuPromotionGate {
+            MangaKoharuPromotionGate(
+                gateName: name,
+                scope: scope,
+                requiredForPromotion: required,
+                currentStatus: status,
+                evidence: evidence,
+                threshold: threshold,
+                affectedBlocks: uniqueSorted(affected),
+                failureMeans: failureMeans,
+                groundTruthUsedForDecision: false
+            )
+        }
+
+        func check(
+            _ name: String,
+            passed: Bool,
+            evidence: [String],
+            required: Bool = true
+        ) -> MangaKoharuStageConformanceCheck {
+            MangaKoharuStageConformanceCheck(
+                checkName: name,
+                passed: passed,
+                evidence: evidence,
+                requiredForPromotion: required,
+                groundTruthUsedForDecision: false
+            )
+        }
+
+        let noMainFlowMutationGate = gate(
+            "noMainFlowMutation",
+            scope: "allStages",
+            status: "passed",
+            evidence: ["report-only builder writes JSON/TXT fields only"],
+            threshold: "finalTextUsedForTranslation, blockPassed, cleanup, overlay, prompt unchanged",
+            affected: allBlockIndexes,
+            failureMeans: "Do not promote report output into main OCR, translation, cleanup, or render selection."
+        )
+        let noGroundTruthPlanningGate = gate(
+            "noGroundTruthPlanning",
+            scope: "allStages",
+            status: "passed",
+            evidence: ["groundTruth is copied only as ocrSimilarityForEvaluation"],
+            threshold: "no candidate generation, sorting, cleanup, promotion, or render choice may read ground truth",
+            affected: allBlockIndexes,
+            failureMeans: "Planning or promotion would be invalid if ground truth changes any decision."
+        )
+        let realArtifactReadinessGate = gate(
+            "realArtifactReadiness",
+            scope: "externalArtifacts",
+            status: realArtifactReady ? "passed" : "blocked",
+            evidence: [
+                "readinessVerdict=\(realArtifactVerdict)",
+                "nextAction=\(realArtifactNextAction)",
+                "missing=\(missingArtifactNames.joined(separator: ","))"
+            ],
+            threshold: "active artifact directory with manifest, TextBoxes, BubbleMask, SegmentMask; contractExampleOnly=false",
+            affected: allBlockIndexes,
+            failureMeans: "TextBoxes, BubbleMask, and SegmentMask cannot advance beyond proxy/report-only evidence."
+        )
+        let protectedTextGate = gate(
+            "protectedTextRetained",
+            scope: "fusionAndCleanup",
+            status: "passed",
+            evidence: ["post-fusion cleanup keeps final blocks and protected decorative/dialogue text"],
+            threshold: "key dialogue and decorative title must remain in final blocks",
+            affected: allBlockIndexes,
+            failureMeans: "Cleanup must be reverted if protected content disappears."
+        )
+        let wordPreservationGate = gate(
+            "wordPreservationGuardrail",
+            scope: "ocrShadowCandidates",
+            status: (textBoxPlanFailureReport?.candidatePromotionBlockedBlocks.isEmpty == false) ? "blocked" : "passed",
+            evidence: [
+                "candidatePromotionBlockedBlocks=\(textBoxPlanFailureReport?.candidatePromotionBlockedBlocks.map(String.init).joined(separator: ",") ?? "nil")",
+                "lineStoppedBlocks=\(lineCropExperimentReport?.stoppedAfterLineResearchBlocks.map(String.init).joined(separator: ",") ?? "nil")"
+            ],
+            threshold: "shadow OCR must preserve raw keywords and avoid likely OCR regressions before promotion",
+            affected: uniqueSorted((textBoxPlanFailureReport?.candidatePromotionBlockedBlocks ?? []) + (lineCropExperimentReport?.stoppedAfterLineResearchBlocks ?? [])),
+            failureMeans: "Do not promote crop, line, deskew, or external OCR text."
+        )
+        let bubbleConflictGate = gate(
+            "bubbleConflictResolved",
+            scope: "bubbleMask",
+            status: (readingOrderStructureAuditReport?.maskConflictBlocks.isEmpty == false) ? "blocked" : "passed",
+            evidence: ["maskConflictBlocks=\(readingOrderStructureAuditReport?.maskConflictBlocks.map(String.init).joined(separator: ",") ?? "nil")"],
+            threshold: "no cross-bubble merge or unresolved mask conflict for promoted assignment",
+            affected: readingOrderStructureAuditReport?.maskConflictBlocks ?? [],
+            failureMeans: "Bubble assignment/split changes remain report-only."
+        )
+        let segmentInsideBubbleGate = gate(
+            "segmentInsideBubble",
+            scope: "segmentMask",
+            status: realArtifactReady ? "readyForShadow" : "blocked",
+            evidence: ["externalSegmentMaskAllowed=\(realArtifactReady)", "missing=\(missingArtifactNames.joined(separator: ","))"],
+            threshold: "glyph/segment evidence must stay inside owning bubble and satisfy coverage checks",
+            affected: koharuArtifactDAGReport?.blocksNeedingRealSegmentMask ?? allBlockIndexes,
+            failureMeans: "SegmentMask evidence cannot drive crop or erase promotion."
+        )
+        let renderNoOverflowGate = gate(
+            "renderNoOverflow",
+            scope: "renderedSprites",
+            status: (koharuArtifactDAGReport?.blocksWithRenderOnlyIssues.isEmpty == false) ? "blocked" : "passed",
+            evidence: ["renderOnlyIssueBlocks=\(koharuArtifactDAGReport?.blocksWithRenderOnlyIssues.map(String.init).joined(separator: ",") ?? "nil")"],
+            threshold: "all success and failure blocks draw forward, visible, and non-truncated",
+            affected: koharuArtifactDAGReport?.blocksWithRenderOnlyIssues ?? [],
+            failureMeans: "Keep render safe-area reflow as report-only until overflow is resolved."
+        )
+        let cleanTextGate = gate(
+            "cleanTextModelFloor",
+            scope: "translations",
+            status: cleanTextLow ? "blocked" : "passed",
+            evidence: ["cleanTextPassRate=\(cleanPassRate.formatted(.number.precision(.fractionLength(4))))"],
+            threshold: "clean text pass rate >= 0.80 before assigning most end-to-end failure solely to OCR",
+            affected: blocks.filter { !$0.blockPassed }.map(\.index),
+            failureMeans: "Run model/prompt comparison before claiming OCR-only gains."
+        )
+
+        let textBoxBlocks = uniqueSorted((koharuArtifactDAGReport?.blocksNeedingRealTextBoxes ?? []) + blockIndexes(firstBlockedBy: ["textBoxes", "externalArtifactGate"]))
+        let bubbleBlocks = uniqueSorted((koharuArtifactDAGReport?.blocksNeedingRealBubbleMask ?? []) + (readingOrderStructureAuditReport?.maskConflictBlocks ?? []))
+        let segmentBlocks = uniqueSorted((koharuArtifactDAGReport?.blocksNeedingRealSegmentMask ?? []))
+        let ocrBlocks = uniqueSorted((koharuArtifactDAGReport?.blocksStoppedByOCRCropEvidence ?? []) + blocks.filter { $0.failureCategory == "ocrInputSuspect" }.map { $0.index })
+        let translationBlocks = uniqueSorted((koharuArtifactDAGReport?.blocksStoppedByTranslationModelQuality ?? []) + blocks.filter { $0.failureCategory == "modelOutputFailure" || $0.failureCategory == "translationLanguageQualityFailure" }.map { $0.index })
+        let renderBlocks = uniqueSorted(koharuArtifactDAGReport?.blocksWithRenderOnlyIssues ?? [])
+        let cropStopBlocks = uniqueSorted((textBoxPlanFailureReport?.stopRecommendedBlocks ?? []) + (lineCropExperimentReport?.stoppedAfterLineResearchBlocks ?? []))
+
+        func stageGap(
+            canonicalStage: String,
+            currentAITRANSStage: String,
+            capability: String,
+            artifactKind: String,
+            sourceReports: [String],
+            gapCategory: String,
+            readiness: String,
+            minimumInputs: [String],
+            availableEvidence: [String],
+            missingEvidence: [String],
+            affectedBlocks: [Int],
+            impact: String,
+            gates: [MangaKoharuPromotionGate],
+            checks: [MangaKoharuStageConformanceCheck],
+            stopConditions: [String],
+            workPackageID: String
+        ) -> MangaKoharuStageGapSummary {
+            MangaKoharuStageGapSummary(
+                canonicalStage: canonicalStage,
+                currentAITRANSStage: currentAITRANSStage,
+                currentCapability: capability,
+                artifactKind: artifactKind,
+                sourceReports: sourceReports.sorted(),
+                gapCategory: gapCategory,
+                replicationReadiness: readiness,
+                minimumRequiredInputs: minimumInputs,
+                availableEvidence: availableEvidence,
+                missingEvidence: missingEvidence,
+                affectedBlocks: uniqueSorted(affectedBlocks),
+                primaryDownstreamImpact: impact,
+                promotionGates: gates,
+                conformanceChecks: checks,
+                stopConditions: stopConditions,
+                recommendedWorkPackageID: workPackageID,
+                groundTruthUsedForPlanning: false,
+                diagnosticOnly: true,
+                wouldChangeMainFlow: false
+            )
+        }
+
+        let stageGaps: [MangaKoharuStageGapSummary] = [
+            stageGap(
+                canonicalStage: "sourceImage",
+                currentAITRANSStage: "bundleResource:test/1.png",
+                capability: "aitransInternalReady",
+                artifactKind: "aitransInternalArtifact",
+                sourceReports: ["MangaOverlayProbeConfiguration", "koharuArtifactDAGReport"],
+                gapCategory: "noGapForCurrentScope",
+                readiness: "readyForReportOnly",
+                minimumInputs: ["test/1.png in bundle"],
+                availableEvidence: ["sourceImage fixed to test/1.png"],
+                missingEvidence: [],
+                affectedBlocks: [],
+                impact: "none",
+                gates: [noMainFlowMutationGate, noGroundTruthPlanningGate],
+                checks: [check("sourceImageStable", passed: true, evidence: ["sourceImage=test/1.png"])],
+                stopConditions: ["do not change source material in this report-only version"],
+                workPackageID: "WP-render-safe-area-retain"
+            ),
+            stageGap(
+                canonicalStage: "contentCrop",
+                currentAITRANSStage: "configured browser UI crop",
+                capability: "aitransInternalReady",
+                artifactKind: "aitransInternalArtifact",
+                sourceReports: ["MangaOverlayProbeConfiguration.cropping", "koharuArtifactDAGReport"],
+                gapCategory: "noGapForCurrentScope",
+                readiness: "readyForReportOnly",
+                minimumInputs: ["top/bottom crop ratios", "content image size"],
+                availableEvidence: ["browser UI, ad, and bottom nav are cropped before OCR"],
+                missingEvidence: [],
+                affectedBlocks: [],
+                impact: "ocrAccuracy",
+                gates: [noMainFlowMutationGate],
+                checks: [check("contentCropStillBeforeOCR", passed: true, evidence: ["crop runs before Vision OCR"])],
+                stopConditions: ["do not tune crop in v1.23 without new exported probe evidence"],
+                workPackageID: "WP-render-safe-area-retain"
+            ),
+            stageGap(
+                canonicalStage: "textBoxes",
+                currentAITRANSStage: "textBoxCandidateReport / preCropTextBoxPlanReport / externalArtifactReadinessReport",
+                capability: realArtifactReady ? "realKoharuArtifactReady" : "missingExternalArtifact",
+                artifactKind: realArtifactReady ? "realKoharuArtifact" : "missingArtifact",
+                sourceReports: ["textBoxCandidateReport", "preCropTextBoxPlanReport", "externalArtifactReadinessReport", "koharuArtifactDAGReport"],
+                gapCategory: realArtifactReady ? "proxyNeedsValidation" : "externalArtifactRequired",
+                readiness: realArtifactReady ? "readyForShadowOnly" : "needsRealKoharuArtifact",
+                minimumInputs: ["active manifest", "TextBoxes JSON", "block alignment"],
+                availableEvidence: ["internal TextBox proxy and crop plan reports exist"],
+                missingEvidence: realArtifactReady ? [] : missingArtifactNames,
+                affectedBlocks: textBoxBlocks,
+                impact: "ocrAccuracy",
+                gates: [realArtifactReadinessGate, wordPreservationGate, noGroundTruthPlanningGate],
+                checks: [check("textBoxesAreRealExternalArtifact", passed: realArtifactReady, evidence: ["readinessVerdict=\(realArtifactVerdict)"])],
+                stopConditions: ["do not treat Vision/pre-crop/line plans as real Koharu TextBoxes"],
+                workPackageID: "WP-textboxes-real-artifact-gate"
+            ),
+            stageGap(
+                canonicalStage: "bubbleMask",
+                currentAITRANSStage: "bubbleMaskReport proxy instance IDs",
+                capability: realArtifactReady ? "realKoharuArtifactReady" : "missingExternalArtifact",
+                artifactKind: realArtifactReady ? "realKoharuArtifact" : "aitransProxyArtifact",
+                sourceReports: ["bubbleMaskReport", "bubbleAssignmentCorrectionReport", "bubbleSplitCandidateReport", "readingOrderStructureAuditReport"],
+                gapCategory: bubbleBlocks.isEmpty ? "proxyNeedsValidation" : "bubbleAssignmentOrSplit",
+                readiness: realArtifactReady ? "readyForShadowOnly" : "needsRealKoharuArtifact",
+                minimumInputs: ["BubbleMask JSON", "bubble instance IDs", "block-to-bubble alignment"],
+                availableEvidence: ["mask-safe layout", "bubble conflict blocks", "split candidates"],
+                missingEvidence: realArtifactReady ? [] : ["real BubbleMask artifact"],
+                affectedBlocks: bubbleBlocks,
+                impact: "bubbleSegmentation",
+                gates: [bubbleConflictGate, realArtifactReadinessGate, noMainFlowMutationGate],
+                checks: [check("proxyMaskNotPromotedAsKoharuMask", passed: !realArtifactReady, evidence: ["current proxy remains report-only"], required: false)],
+                stopConditions: ["do not cross-bubble merge or promote split until real mask validates assignment"],
+                workPackageID: "WP-bubblemask-instance-validation"
+            ),
+            stageGap(
+                canonicalStage: "segmentMask",
+                currentAITRANSStage: "segmentMaskReport glyph proxy",
+                capability: realArtifactReady ? "realKoharuArtifactReady" : "aitransProxyOnly",
+                artifactKind: realArtifactReady ? "realKoharuArtifact" : "aitransProxyArtifact",
+                sourceReports: ["segmentMaskReport", "renderDiagnostics", "externalArtifactReadinessReport"],
+                gapCategory: segmentBlocks.isEmpty ? "proxyNeedsValidation" : "segmentMaskWeak",
+                readiness: realArtifactReady ? "readyForShadowOnly" : "needsRealKoharuArtifact",
+                minimumInputs: ["SegmentMask JSON", "glyph coverage", "bubble-contained mask evidence"],
+                availableEvidence: ["glyph mask pixels", "textBox/bubble coverage ratios", "render mask collision diagnostics"],
+                missingEvidence: realArtifactReady ? [] : ["real SegmentMask artifact"],
+                affectedBlocks: segmentBlocks,
+                impact: "ocrAccuracy",
+                gates: [segmentInsideBubbleGate, realArtifactReadinessGate, noGroundTruthPlanningGate],
+                checks: [check("segmentProxyNotUsedForErasePromotion", passed: true, evidence: ["v1.23 only emits report fields"])],
+                stopConditions: ["do not use glyph proxy as Koharu SegmentMask promotion evidence"],
+                workPackageID: "WP-segmentmask-glyph-coverage-gate"
+            ),
+            stageGap(
+                canonicalStage: "ocrText",
+                currentAITRANSStage: "finalTextUsedForTranslation from fusedWholePageBubble",
+                capability: "aitransInternalReady",
+                artifactKind: "aitransInternalArtifact",
+                sourceReports: ["blocks.finalTextUsedForTranslation", "textBoxPlanFailureReport", "lineCropExperimentReport", "ocrCharacterDamageAuditReport"],
+                gapCategory: cropStopBlocks.isEmpty ? "ocrInputQuality" : "lineDeskewStopped",
+                readiness: cropStopBlocks.isEmpty ? "readyForReportOnly" : "stopLocalHeuristicTuning",
+                minimumInputs: ["final OCR text", "word preservation guardrail", "crop/line blocker summaries"],
+                availableEvidence: ["OCR similarity copied for evaluation only", "crop and line promotion blockers"],
+                missingEvidence: [],
+                affectedBlocks: uniqueSorted(ocrBlocks + cropStopBlocks),
+                impact: "translationFailureClassification",
+                gates: [wordPreservationGate, noGroundTruthPlanningGate],
+                checks: [check("ocrSimilarityEvaluationOnly", passed: true, evidence: ["ocrGroundTruthSimilarity not used for candidate selection"])],
+                stopConditions: ["stop crop/line/deskew tuning when preservation or introduced-error gates fail"],
+                workPackageID: "WP-ocr-crop-stoplist"
+            ),
+            stageGap(
+                canonicalStage: "translations",
+                currentAITRANSStage: "Gemma 270M deterministic per-block translation",
+                capability: "aitransInternalReady",
+                artifactKind: "aitransInternalArtifact",
+                sourceReports: ["translationDecisionTrace", "routingDrivenTranslationComparisonReport", "cleanTextDiagnostic"],
+                gapCategory: translationBlocks.isEmpty && !cleanTextLow ? "noGapForCurrentScope" : "translationModelQuality",
+                readiness: translationBlocks.isEmpty && !cleanTextLow ? "readyForReportOnly" : "needsModelComparison",
+                minimumInputs: ["per-block raw output", "candidate classification", "clean text diagnostic"],
+                availableEvidence: ["failureCategory", "translationDecisionTrace", "cleanTextDiagnostic pass rate"],
+                missingEvidence: ["stronger local model comparison artifact"],
+                affectedBlocks: translationBlocks,
+                impact: "translationFailureClassification",
+                gates: [cleanTextGate, noMainFlowMutationGate],
+                checks: [check("cleanTextNotMisreadAsOCROnly", passed: !cleanTextLow, evidence: ["passRate=\(cleanPassRate.formatted(.number.precision(.fractionLength(4))))"], required: false)],
+                stopConditions: ["do not attribute all failures to OCR while clean text pass rate is low"],
+                workPackageID: "WP-translation-model-comparison"
+            ),
+            stageGap(
+                canonicalStage: "cleanTextDiagnostic",
+                currentAITRANSStage: "ground truth dialogue deterministic model diagnostic",
+                capability: "aitransInternalReady",
+                artifactKind: "derivedReportArtifact",
+                sourceReports: ["clean_text_diagnostic.json"],
+                gapCategory: cleanTextLow ? "translationModelQuality" : "noGapForCurrentScope",
+                readiness: cleanTextLow ? "needsModelComparison" : "readyForReportOnly",
+                minimumInputs: ["dialogue ground truth for diagnostic only", "same translation quality helper"],
+                availableEvidence: ["passRate=\(cleanPassRate.formatted(.number.precision(.fractionLength(4))))"],
+                missingEvidence: cleanTextLow ? ["model comparison baseline"] : [],
+                affectedBlocks: translationBlocks,
+                impact: "translationFailureClassification",
+                gates: [cleanTextGate],
+                checks: [check("diagnosticOnlyGroundTruthUse", passed: true, evidence: ["ground truth used only to bypass OCR for model diagnostic"])],
+                stopConditions: ["do not use clean text cases for production candidate selection"],
+                workPackageID: "WP-translation-model-comparison"
+            ),
+            stageGap(
+                canonicalStage: "inpaintOrGlyphErase",
+                currentAITRANSStage: "glyph mask / plain background fill / translucent overlay",
+                capability: "shadowOnly",
+                artifactKind: "aitransProxyArtifact",
+                sourceReports: ["renderDiagnostics", "segmentMaskReport"],
+                gapCategory: "inpaintingNotImplemented",
+                readiness: "manualReviewOnly",
+                minimumInputs: ["real SegmentMask or erase mask", "background reconstruction policy"],
+                availableEvidence: ["glyph mask rects", "background color std dev", "backgroundFillApplied"],
+                missingEvidence: ["inpainting model or deterministic erase artifact"],
+                affectedBlocks: [],
+                impact: "renderLayout",
+                gates: [segmentInsideBubbleGate, renderNoOverflowGate],
+                checks: [check("noInpaintingClaim", passed: true, evidence: ["current overlay is not Koharu inpainting"])],
+                stopConditions: ["do not claim inpainting readiness from translucent overlay"],
+                workPackageID: "WP-render-safe-area-retain"
+            ),
+            stageGap(
+                canonicalStage: "renderedSprites",
+                currentAITRANSStage: "safeLayoutRect / collision diagnostics",
+                capability: "aitransInternalReady",
+                artifactKind: "aitransInternalArtifact",
+                sourceReports: ["renderDiagnostics", "1_translated_overlay.png"],
+                gapCategory: renderBlocks.isEmpty ? "renderLayoutOnly" : "manualReviewRequired",
+                readiness: "readyForReportOnly",
+                minimumInputs: ["safe layout rect", "font fit", "collision bounds"],
+                availableEvidence: ["safeLayoutRect", "renderMaskCollision", "renderTextTruncated"],
+                missingEvidence: [],
+                affectedBlocks: renderBlocks,
+                impact: "finalRender",
+                gates: [renderNoOverflowGate, protectedTextGate],
+                checks: [check("failureBlocksStillDrawn", passed: true, evidence: ["overlay draws failure text plus OCR original"])],
+                stopConditions: ["do not let OCR changes remove failure-block overlays"],
+                workPackageID: "WP-render-safe-area-retain"
+            ),
+            stageGap(
+                canonicalStage: "finalRender",
+                currentAITRANSStage: "1_translated_overlay.png",
+                capability: "aitransInternalReady",
+                artifactKind: "aitransInternalArtifact",
+                sourceReports: ["renderOutputs", "probe_report.outputFiles"],
+                gapCategory: "renderLayoutOnly",
+                readiness: "readyForReportOnly",
+                minimumInputs: ["debug boxes", "translated overlay", "OCR probe text"],
+                availableEvidence: ["failed blocks are retained and rendered"],
+                missingEvidence: [],
+                affectedBlocks: renderBlocks,
+                impact: "userVisibleOverlay",
+                gates: [renderNoOverflowGate, noMainFlowMutationGate],
+                checks: [check("finalOverlayReportOnlyUnaffected", passed: true, evidence: ["v1.23 does not change drawing code"])],
+                stopConditions: ["do not use report-only stage plan to change overlay output"],
+                workPackageID: "WP-render-safe-area-retain"
+            )
+        ]
+
+        func package(
+            id: String,
+            title: String,
+            priority: String,
+            stages: [String],
+            blocks: [Int],
+            inputs: [String],
+            ciFast: Bool,
+            full: Bool,
+            realArtifact: Bool,
+            metrics: [String],
+            gates: [MangaKoharuPromotionGate],
+            stops: [String],
+            nonGoals: [String],
+            branch: String
+        ) -> MangaKoharuReplicationWorkPackage {
+            MangaKoharuReplicationWorkPackage(
+                workPackageID: id,
+                title: title,
+                priority: priority,
+                targetStages: stages,
+                targetBlocks: uniqueSorted(blocks),
+                inputArtifactsRequired: inputs,
+                canRunInCIFast: ciFast,
+                requiresFullProbe: full,
+                requiresRealExternalArtifact: realArtifact,
+                expectedMetricMovement: metrics,
+                promotionGates: gates,
+                rollbackOrStopConditions: stops,
+                nonGoals: nonGoals,
+                recommendedBranchName: branch
+            )
+        }
+
+        let workPackages: [MangaKoharuReplicationWorkPackage] = [
+            package(
+                id: "WP-textboxes-real-artifact-gate",
+                title: "Validate real Koharu TextBoxes/BubbleMask/SegmentMask active artifact gate",
+                priority: "P0",
+                stages: ["textBoxes", "bubbleMask", "segmentMask"],
+                blocks: uniqueSorted(textBoxBlocks + bubbleBlocks + segmentBlocks),
+                inputs: ["test/koharu_artifacts/manifest.json", "TextBoxes JSON", "BubbleMask JSON", "SegmentMask JSON"],
+                ciFast: false,
+                full: false,
+                realArtifact: true,
+                metrics: ["artifact readiness verdict", "block alignment", "external TextBoxes shadow OCR candidate count"],
+                gates: [realArtifactReadinessGate, noGroundTruthPlanningGate],
+                stops: ["stop until active artifact files are provided and contractExampleOnly=false"],
+                nonGoals: ["do not create fake active artifacts", "do not replace finalTextUsedForTranslation"],
+                branch: "codeb/vNEXT-koharu-real-artifact-gate"
+            ),
+            package(
+                id: "WP-bubblemask-instance-validation",
+                title: "Validate BubbleMask proxy conflicts against future real instance mask",
+                priority: "P1",
+                stages: ["bubbleMask"],
+                blocks: bubbleBlocks,
+                inputs: ["bubbleMaskReport", "bubbleAssignmentCorrectionReport", "bubbleSplitCandidateReport"],
+                ciFast: true,
+                full: false,
+                realArtifact: false,
+                metrics: ["bubble conflict blocks", "split risk blocks", "same-bubble sibling layout"],
+                gates: [bubbleConflictGate, protectedTextGate],
+                stops: ["stop if candidate crosses bubble boundaries or removes protected text"],
+                nonGoals: ["do not promote proxy mask as real Koharu segmentation"],
+                branch: "codeb/vNEXT-bubblemask-validation"
+            ),
+            package(
+                id: "WP-segmentmask-glyph-coverage-gate",
+                title: "Define SegmentMask glyph coverage and inside-bubble promotion gate",
+                priority: "P1",
+                stages: ["segmentMask", "inpaintOrGlyphErase"],
+                blocks: segmentBlocks,
+                inputs: ["segmentMaskReport", "glyph mask diagnostics", "render mask collision"],
+                ciFast: true,
+                full: false,
+                realArtifact: false,
+                metrics: ["segment usable blocks", "bubble/textBox coverage ratios", "render overflow"],
+                gates: [segmentInsideBubbleGate, renderNoOverflowGate],
+                stops: ["stop if glyph mask leaks outside owning bubble or weakens crop evidence"],
+                nonGoals: ["do not implement inpainting", "do not use glyph proxy as real SegmentMask"],
+                branch: "codeb/vNEXT-segmentmask-glyph-gate"
+            ),
+            package(
+                id: "WP-ocr-crop-stoplist",
+                title: "Freeze crop/line/deskew local tuning that fails promotion gates",
+                priority: "P0",
+                stages: ["ocrText"],
+                blocks: uniqueSorted(ocrBlocks + cropStopBlocks),
+                inputs: ["textBoxPlanFailureReport", "lineCropExperimentReport", "ocrCharacterDamageAuditReport"],
+                ciFast: true,
+                full: true,
+                realArtifact: false,
+                metrics: ["dialogue/decorative OCR similarity for evaluation", "word preservation", "introduced likely OCR error blockers"],
+                gates: [wordPreservationGate, noGroundTruthPlanningGate],
+                stops: ["stop when shadow candidate loses raw keywords or introduces likely OCR damage"],
+                nonGoals: ["do not replace finalTextUsedForTranslation", "do not tune OCR by ground truth"],
+                branch: "codeb/vNEXT-ocr-crop-stoplist"
+            ),
+            package(
+                id: "WP-render-safe-area-retain",
+                title: "Retain render safe-area and failure overlay guarantees",
+                priority: "P2",
+                stages: ["inpaintOrGlyphErase", "renderedSprites", "finalRender"],
+                blocks: renderBlocks,
+                inputs: ["safeLayoutRect", "render collision diagnostics", "translated overlay PNG"],
+                ciFast: true,
+                full: false,
+                realArtifact: false,
+                metrics: ["render overflow", "truncation", "failure block drawn count"],
+                gates: [renderNoOverflowGate, protectedTextGate],
+                stops: ["stop if failed blocks are skipped or text is inverted/truncated"],
+                nonGoals: ["do not implement true inpainting in this package"],
+                branch: "codeb/vNEXT-render-safe-area-retain"
+            ),
+            package(
+                id: "WP-translation-model-comparison",
+                title: "Compare model or prompt quality without changing main prompt",
+                priority: "P1",
+                stages: ["translations", "cleanTextDiagnostic"],
+                blocks: translationBlocks,
+                inputs: ["clean_text_diagnostic.json", "translationDecisionTrace", "routingDrivenTranslationComparisonReport"],
+                ciFast: true,
+                full: false,
+                realArtifact: false,
+                metrics: ["clean text pass rate", "failureCategory distribution", "strict prompt variant pass count"],
+                gates: [cleanTextGate, noMainFlowMutationGate],
+                stops: ["stop attributing failures to OCR when clean text pass rate remains low"],
+                nonGoals: ["do not swap model", "do not change sampled user translation path", "do not change main prompt"],
+                branch: "codeb/vNEXT-translation-model-comparison"
+            )
+        ]
+
+        func targetStage(for firstBlockingStage: String) -> String {
+            switch firstBlockingStage {
+            case "textBoxes", "externalArtifactGate", "externalTextBoxShadowOCR":
+                return "textBoxes"
+            case "bubbleMask", "bubbleCandidates":
+                return "bubbleMask"
+            case "segmentMask":
+                return "segmentMask"
+            case "ocrText", "ocrCropShadow", "lineTextBoxShadow", "visionOCRCandidates":
+                return "ocrText"
+            case "translation":
+                return "translations"
+            case "renderLayout", "finalOverlay":
+                return "renderedSprites"
+            default:
+                return "ocrText"
+            }
+        }
+
+        func gapCategory(for stage: String, block: MangaOverlayProbeBlock) -> String {
+            switch stage {
+            case "textBoxes":
+                return realArtifactReady ? "proxyNeedsValidation" : "externalArtifactRequired"
+            case "bubbleMask":
+                return "bubbleAssignmentOrSplit"
+            case "segmentMask":
+                return "segmentMaskWeak"
+            case "translations":
+                return "translationModelQuality"
+            case "renderedSprites":
+                return "renderLayoutOnly"
+            default:
+                if block.failureCategory == "ocrInputSuspect" {
+                    return "ocrInputQuality"
+                }
+                return cropStopBlocks.contains(block.index) ? "lineDeskewStopped" : "ocrInputQuality"
+            }
+        }
+
+        func workPackageID(for stage: String, gapCategory: String) -> String {
+            switch gapCategory {
+            case "externalArtifactRequired":
+                return "WP-textboxes-real-artifact-gate"
+            case "bubbleAssignmentOrSplit":
+                return "WP-bubblemask-instance-validation"
+            case "segmentMaskWeak":
+                return "WP-segmentmask-glyph-coverage-gate"
+            case "translationModelQuality":
+                return "WP-translation-model-comparison"
+            case "renderLayoutOnly", "manualReviewRequired":
+                return "WP-render-safe-area-retain"
+            default:
+                if stage == "segmentMask" {
+                    return "WP-segmentmask-glyph-coverage-gate"
+                }
+                return "WP-ocr-crop-stoplist"
+            }
+        }
+
+        let blockPlans: [MangaKoharuBlockReplicationPlan] = blocks.map { block -> MangaKoharuBlockReplicationPlan in
+            let dagTrace = dagBlockByIndex[block.index]
+            let firstBlocking = dagTrace?.firstBlockingStage ?? "notAvailable"
+            let targetStage = targetStage(for: firstBlocking)
+            let primaryGap = gapCategory(for: targetStage, block: block)
+            let packageID = workPackageID(for: targetStage, gapCategory: primaryGap)
+            let requiresReal = primaryGap == "externalArtifactRequired"
+                || ["textBoxes", "bubbleMask", "segmentMask"].contains(targetStage) && !realArtifactReady
+                || dagTrace?.recommendedNextAction == "provideRealKoharuArtifact"
+            let requiresFull = firstBlocking == "ocrCropShadow" || firstBlocking == "lineTextBoxShadow"
+            let structureMustNotPromote = structureByBlock[block.index]?.candidates.flatMap(\.mustNotPromoteReasons) ?? []
+            let bottleneckMustNotPromote = bottleneckByBlock[block.index]?.mustNotPromoteReasons ?? []
+            let ocrDamageMustNotPromote = ocrDamageByBlock[block.index]?.mustNotPromoteReasons ?? []
+            let traceBlockers = dagTrace?.stageTraces.flatMap(\.blockers) ?? []
+            let minimumEvidence: [String]
+            if requiresReal {
+                minimumEvidence = ["active Koharu artifact files", "readinessVerdict=readyForShadowOCR", "block alignment for block \(block.index)"]
+            } else if targetStage == "translations" {
+                minimumEvidence = ["clean text diagnostic", "raw output classification", "candidate classification"]
+            } else if targetStage == "renderedSprites" {
+                minimumEvidence = ["safeLayoutRect", "render overflow diagnostics", "translated overlay PNG"]
+            } else {
+                minimumEvidence = ["word preservation", "no introduced likely OCR error", "bubble/segment blocker summary"]
+            }
+            return MangaKoharuBlockReplicationPlan(
+                blockIndex: block.index,
+                groundTruthMatch: block.groundTruthMatch,
+                bestGroundTruthType: block.bestGroundTruthType,
+                ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
+                blockPassed: block.blockPassed,
+                failureCategory: block.failureCategory,
+                bubbleID: block.bubbleID,
+                firstBlockingStageFromDAG: firstBlocking,
+                primaryGapCategory: primaryGap,
+                targetCanonicalStage: targetStage,
+                recommendedWorkPackageID: packageID,
+                minimumEvidenceToCollect: minimumEvidence,
+                mustNotPromoteReasons: Array(Set(structureMustNotPromote + bottleneckMustNotPromote + ocrDamageMustNotPromote + traceBlockers + ["noMainFlowMutation", "noGroundTruthPlanning"])).sorted(),
+                canBeEvaluatedInCIFast: !requiresFull,
+                requiresFullProbe: requiresFull,
+                requiresRealExternalArtifact: requiresReal,
+                nextAction: requiresReal ? "provideRealKoharuArtifact" : (dagTrace?.recommendedNextAction ?? "reviewStageGapReport")
+            )
+        }
+
+        let stageCapabilityBreakdown = countBy(stageGaps.map { $0.currentCapability })
+        let gapCategoryBreakdown = countBy(stageGaps.map { $0.gapCategory })
+        let replicationReadinessBreakdown = countBy(stageGaps.map { $0.replicationReadiness })
+        let promotionGateStatuses = stageGaps.flatMap { gap in
+            gap.promotionGates.map { gate in gate.currentStatus }
+        }
+        let promotionGateBreakdown = countBy(promotionGateStatuses)
+        let gapCount = stageGaps.filter { $0.gapCategory != "noGapForCurrentScope" }.count
+        let blockedByRealArtifactStages = stageGaps.filter { $0.replicationReadiness == "needsRealKoharuArtifact" }.map { $0.canonicalStage }
+        let blockedByOCRStages = stageGaps.filter { ["ocrInputQuality", "cropPromotionBlocked", "lineDeskewStopped"].contains($0.gapCategory) }.map { $0.canonicalStage }
+        let blockedByBubbleStages = stageGaps.filter { $0.gapCategory == "bubbleAssignmentOrSplit" }.map { $0.canonicalStage }
+        let blockedBySegmentStages = stageGaps.filter { gap in
+            gap.gapCategory == "segmentMaskWeak" || gap.canonicalStage == "segmentMask"
+        }.map { $0.canonicalStage }
+        let blockedByTranslationStages = stageGaps.filter { $0.gapCategory == "translationModelQuality" }.map { $0.canonicalStage }
+        let renderReadyStages = stageGaps.filter { gap in
+            ["renderedSprites", "finalRender"].contains(gap.canonicalStage)
+                && gap.replicationReadiness == "readyForReportOnly"
+        }.map { $0.canonicalStage }
+        let stopTuningStages = stageGaps.filter { $0.replicationReadiness == "stopLocalHeuristicTuning" }.map { $0.canonicalStage }
+        let readyForShadowOnlyStages = stageGaps.filter { $0.replicationReadiness == "readyForShadowOnly" }.map { $0.canonicalStage }
+        let mustWaitForExternalArtifactStages = stageGaps.filter { $0.replicationReadiness == "needsRealKoharuArtifact" }.map { $0.canonicalStage }
+
+        return MangaKoharuStageGapReplicationReport(
+            enabled: true,
+            referencePipeline: "Koharu",
+            evaluatedBlockCount: blocks.count,
+            canonicalStageCount: stageGaps.count,
+            gapCount: gapCount,
+            workPackageCount: workPackages.count,
+            stageCapabilityBreakdown: stageCapabilityBreakdown,
+            gapCategoryBreakdown: gapCategoryBreakdown,
+            replicationReadinessBreakdown: replicationReadinessBreakdown,
+            promotionGateBreakdown: promotionGateBreakdown,
+            blockedByRealArtifactStages: blockedByRealArtifactStages.sorted(),
+            blockedByOCRStages: blockedByOCRStages.sorted(),
+            blockedByBubbleSegmentationStages: blockedByBubbleStages.sorted(),
+            blockedBySegmentMaskStages: blockedBySegmentStages.sorted(),
+            blockedByTranslationModelStages: blockedByTranslationStages.sorted(),
+            renderReadyStages: renderReadyStages.sorted(),
+            stopTuningStages: stopTuningStages.sorted(),
+            readyForShadowOnlyStages: readyForShadowOnlyStages.sorted(),
+            mustWaitForExternalArtifactStages: mustWaitForExternalArtifactStages.sorted(),
+            stageGaps: stageGaps,
+            workPackages: workPackages,
+            blockPlans: blockPlans,
+            notes: [
+                "koharuStageGapReplicationReport converts the v1.22 DAG into canonical Koharu stage gaps, work packages, promotion gates, and per-block replication plans",
+                "report-only: does not run OCR or LLM, does not change finalTextUsedForTranslation, blockPassed, failureCategory, cleanup, overlay, prompt, or currentBlockSource",
+                "ground truth similarity is evaluation-only; all planning and promotion gates set groundTruthUsedForDecision=false",
+                "real TextBoxes/BubbleMask/SegmentMask remain blocked until active external artifact readiness passes; proxy reports are not renamed as real Koharu artifacts"
             ]
         )
     }
