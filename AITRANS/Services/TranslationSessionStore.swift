@@ -1580,6 +1580,7 @@ final class TranslationSessionStore: ObservableObject {
                 var routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport?
                 var ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?
                 var readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?
+                var structureActionCandidateReport: MangaStructureActionCandidateReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1907,6 +1908,21 @@ final class TranslationSessionStore: ObservableObject {
                     internalStructureBottleneckReport: internalStructureBottleneckReport,
                     postFusionCleanup: postFusionCleanup
                 )
+                structureActionCandidateReport = Self.makeStructureActionCandidateReport(
+                    blocks: probeBlocks,
+                    readingOrderStructureAuditReport: readingOrderStructureAuditReport,
+                    internalStructureBottleneckReport: internalStructureBottleneckReport,
+                    bubbleMaskReport: bubbleMaskReport,
+                    bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                    bubbleSplitCandidateReport: bubbleSplitCandidateReport,
+                    textBoxCandidateReport: textBoxCandidateReport,
+                    segmentMaskReport: segmentMaskReport,
+                    cropExperimentReport: cropExperimentReport,
+                    textBoxPlanFailureReport: textBoxPlanFailureReport,
+                    lineCropExperimentReport: lineCropExperimentReport,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport,
+                    externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport
+                )
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
@@ -1930,6 +1946,7 @@ final class TranslationSessionStore: ObservableObject {
                     routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
                     ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
                     readingOrderStructureAuditReport: readingOrderStructureAuditReport,
+                    structureActionCandidateReport: structureActionCandidateReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -2007,6 +2024,7 @@ final class TranslationSessionStore: ObservableObject {
                     routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
                     ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
                     readingOrderStructureAuditReport: readingOrderStructureAuditReport,
+                    structureActionCandidateReport: structureActionCandidateReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7112,6 +7130,7 @@ final class TranslationSessionStore: ObservableObject {
         routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport? = nil,
         ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport? = nil,
         readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport? = nil,
+        structureActionCandidateReport: MangaStructureActionCandidateReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7186,6 +7205,7 @@ final class TranslationSessionStore: ObservableObject {
             routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
             ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
             readingOrderStructureAuditReport: readingOrderStructureAuditReport,
+            structureActionCandidateReport: structureActionCandidateReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -9107,6 +9127,701 @@ final class TranslationSessionStore: ObservableObject {
                 "decorative titles and protected key dialogue can be marked protected or manual review but are not suggested as deletable"
             ]
         )
+    }
+
+    private static func makeStructureActionCandidateReport(
+        blocks: [MangaOverlayProbeBlock],
+        readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?,
+        internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
+        textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?,
+        cropExperimentReport: MangaOverlayCropExperimentReport?,
+        textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?,
+        lineCropExperimentReport: MangaOverlayLineCropExperimentReport?,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
+        externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?
+    ) -> MangaStructureActionCandidateReport {
+        let readingByBlock = Dictionary(
+            uniqueKeysWithValues: (readingOrderStructureAuditReport?.cases ?? []).map { ($0.blockIndex, $0) }
+        )
+        let routingByBlock = Dictionary(
+            uniqueKeysWithValues: (internalStructureBottleneckReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let maskByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let correctionByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleAssignmentCorrectionReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        var splitByBlock: [Int: MangaOverlayBubbleSplitCandidateDiagnostic] = [:]
+        for diagnostic in bubbleSplitCandidateReport?.diagnostics ?? [] {
+            for blockIndex in diagnostic.seedBlockIndexes where splitByBlock[blockIndex] == nil {
+                splitByBlock[blockIndex] = diagnostic
+            }
+        }
+        let textBoxByBlock = Dictionary(
+            uniqueKeysWithValues: (textBoxCandidateReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let failureByBlock = Dictionary(
+            uniqueKeysWithValues: (textBoxPlanFailureReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let cropSummaryByBlock = Dictionary(
+            uniqueKeysWithValues: (cropExperimentReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let cropCandidateByID = Dictionary(
+            uniqueKeysWithValues: (cropExperimentReport?.candidates ?? []).map { ($0.candidateID, $0) }
+        )
+        let lineSummaryByBlock = Dictionary(
+            uniqueKeysWithValues: (lineCropExperimentReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let lineCandidateByID = Dictionary(
+            uniqueKeysWithValues: (lineCropExperimentReport?.candidates ?? []).map { ($0.candidateID, $0) }
+        )
+        let externalShadowByBlock = Dictionary(
+            uniqueKeysWithValues: (externalTextBoxShadowOCRReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let realArtifactsMissing = externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed != true
+        let realArtifactBlocker = realArtifactsMissing
+            ? (externalArtifactReadinessReport?.readinessVerdict ?? "missingRealArtifacts")
+            : nil
+
+        let cases = blocks.map { block -> MangaStructureActionCandidateCase in
+            let reading = readingByBlock[block.index]
+            let routing = routingByBlock[block.index]
+            let mask = maskByBlock[block.index]
+            let correction = correctionByBlock[block.index]
+            let split = splitByBlock[block.index]
+            let textBox = textBoxByBlock[block.index]
+            let segment = segmentByBlock[block.index]
+            let failure = failureByBlock[block.index]
+            let cropSummary = cropSummaryByBlock[block.index]
+            let cropBest = cropSummary?.bestShadowCandidateID.flatMap { cropCandidateByID[$0] }
+            let lineSummary = lineSummaryByBlock[block.index]
+            let lineBest = lineSummary?.bestShadowCandidateID.flatMap { lineCandidateByID[$0] }
+            let externalShadow = externalShadowByBlock[block.index]
+            var candidateTypes: [String] = []
+
+            func appendCandidateType(_ candidateType: String) {
+                candidateTypes.append(candidateType)
+            }
+
+            if reading?.orderChanged == true {
+                appendCandidateType("readingOrderReindex")
+            }
+            if let risk = reading?.bubbleAssignmentRisk, risk != "none" {
+                appendCandidateType("bubbleAssignmentReview")
+            }
+            if let splitRisk = reading?.splitOrMergeRisk,
+               ["oversizedBubbleNeedsSplit", "sameBubblePotentialOverSplit", "crossBubbleMergeRejected"].contains(splitRisk) {
+                appendCandidateType("bubbleSplitShadow")
+            } else if reading?.sameBubbleSiblingBlockIndexes.isEmpty == false {
+                appendCandidateType("sameBubbleSiblingLayout")
+            }
+            if let duplicateRisk = reading?.duplicateOrFragmentRisk, duplicateRisk != "none" {
+                appendCandidateType("duplicateFragmentProtection")
+            }
+            if ["missing", "weak"].contains(reading?.textBoxEvidenceLevel ?? "") {
+                appendCandidateType("textBoxEvidenceRequired")
+            }
+            if ["missing", "weak"].contains(reading?.segmentMaskEvidenceLevel ?? "") {
+                appendCandidateType("segmentMaskEvidenceRequired")
+            }
+            if block.renderCollisionInitialOverflow || block.renderMaskOverflowPixelCount > 0 || block.renderTextTruncated {
+                appendCandidateType("renderSafeAreaReflow")
+            }
+            if candidateTypes.isEmpty || reading?.recommendedStructureAction == "manualReview" {
+                appendCandidateType("manualReviewOnly")
+            }
+
+            let candidates = candidateTypes.enumerated().map { ordinal, candidateType in
+                structureActionCandidate(
+                    ordinal: ordinal,
+                    candidateType: candidateType,
+                    block: block,
+                    reading: reading,
+                    routing: routing,
+                    mask: mask,
+                    correction: correction,
+                    split: split,
+                    textBox: textBox,
+                    segment: segment,
+                    failure: failure,
+                    cropBest: cropBest,
+                    lineBest: lineBest,
+                    externalShadow: externalShadow,
+                    realArtifactBlocker: realArtifactBlocker
+                )
+            }
+
+            return MangaStructureActionCandidateCase(
+                blockIndex: block.index,
+                sourceRecommendedAction: reading?.recommendedStructureAction ?? "missingReadingOrderAudit",
+                candidateCount: candidates.count,
+                executedCandidateCount: candidates.filter(\.executed).count,
+                skippedCandidateCount: candidates.filter { !$0.executed }.count,
+                candidateTypes: Array(Set(candidates.map(\.candidateType))).sorted(),
+                promotionVerdicts: Array(Set(candidates.map(\.promotionVerdict))).sorted(),
+                recommendedNextSteps: Array(Set(candidates.map(\.recommendedNextStep))).sorted(),
+                candidates: candidates
+            )
+        }
+
+        let candidates = cases.flatMap(\.candidates)
+        return MangaStructureActionCandidateReport(
+            enabled: true,
+            evaluatedBlockCount: cases.count,
+            candidateCount: candidates.count,
+            executedCandidateCount: candidates.filter(\.executed).count,
+            skippedCandidateCount: candidates.filter { !$0.executed }.count,
+            candidateTypeBreakdown: countBy(candidates.map(\.candidateType)),
+            promotionVerdictBreakdown: countBy(candidates.map(\.promotionVerdict)),
+            recommendedNextStepBreakdown: countBy(candidates.map(\.recommendedNextStep)),
+            reportOnlyWouldImproveBlocks: Array(Set(candidates.filter { $0.promotionVerdict == "reportOnlyWouldImprove" }.map(\.blockIndex))).sorted(),
+            blockedBlocks: Array(Set(candidates.filter { $0.promotionVerdict.hasPrefix("blockedBy") }.map(\.blockIndex))).sorted(),
+            needsRealArtifactBlocks: Array(Set(candidates.filter { $0.recommendedNextStep == "provideRealKoharuArtifact" }.map(\.blockIndex))).sorted(),
+            renderReflowCandidateBlocks: Array(Set(candidates.filter { $0.candidateType == "renderSafeAreaReflow" }.map(\.blockIndex))).sorted(),
+            bubbleSplitCandidateBlocks: Array(Set(candidates.filter { $0.candidateType == "bubbleSplitShadow" }.map(\.blockIndex))).sorted(),
+            bubbleAssignmentReviewBlocks: Array(Set(candidates.filter { $0.candidateType == "bubbleAssignmentReview" }.map(\.blockIndex))).sorted(),
+            duplicateProtectionBlocks: Array(Set(candidates.filter { $0.candidateType == "duplicateFragmentProtection" }.map(\.blockIndex))).sorted(),
+            manualReviewBlocks: Array(Set(candidates.filter { $0.candidateType == "manualReviewOnly" }.map(\.blockIndex))).sorted(),
+            cases: cases,
+            notes: [
+                "structureActionCandidateReport is a shadow-only candidate matrix built from readingOrderStructureAuditReport and existing probe evidence",
+                "it does not reorder blocks, change finalTextUsedForTranslation, change overlay rendering, change blockPassed, change failureCategory, or change post-fusion cleanup",
+                "ground truth fields may be copied into evaluation metrics such as control OCR similarity, but are never used for planning, sorting, selecting, promotion, cleanup, or drawing",
+                "missing real Koharu TextBoxes/BubbleMask/SegmentMask artifacts produce blocked/needsRealArtifact candidates; internal proxies are not promoted as detector output",
+                "ci-fast uses only existing geometry, render diagnostics, and already-produced shadow OCR summaries; this report does not add new OCR or LLM calls"
+            ]
+        )
+    }
+
+    private static func structureActionCandidate(
+        ordinal: Int,
+        candidateType: String,
+        block: MangaOverlayProbeBlock,
+        reading: MangaReadingOrderStructureAuditCase?,
+        routing: MangaOverlayInternalStructureBottleneckBlock?,
+        mask: MangaOverlayBubbleMaskBlockDiagnostic?,
+        correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+        split: MangaOverlayBubbleSplitCandidateDiagnostic?,
+        textBox: MangaOverlayTextBoxCandidateDiagnostic?,
+        segment: MangaOverlaySegmentMaskDiagnostic?,
+        failure: MangaOverlayTextBoxPlanFailureBlockSummary?,
+        cropBest: MangaOverlayCropExperimentCandidate?,
+        lineBest: MangaOverlayCropExperimentCandidate?,
+        externalShadow: MangaOverlayExternalTextBoxShadowOCRBlockSummary?,
+        realArtifactBlocker: String?
+    ) -> MangaStructureActionCandidate {
+        let sourceRisks = reading?.orderRiskFlags ?? []
+        let inputSignals = structureActionInputSignals(
+            block: block,
+            reading: reading,
+            routing: routing,
+            mask: mask,
+            correction: correction,
+            split: split,
+            textBox: textBox,
+            segment: segment,
+            cropBest: cropBest,
+            lineBest: lineBest,
+            externalShadow: externalShadow
+        )
+        let plannedOperation = structureActionPlannedOperation(
+            candidateType: candidateType,
+            reading: reading,
+            correction: correction,
+            split: split,
+            realArtifactBlocker: realArtifactBlocker
+        )
+        let expectedBenefit = structureActionExpectedBenefit(candidateType)
+        let executionMode = structureActionExecutionMode(
+            candidateType: candidateType,
+            cropBest: cropBest,
+            lineBest: lineBest,
+            externalShadow: externalShadow,
+            realArtifactBlocker: realArtifactBlocker
+        )
+        let controlMetrics = structureActionMetrics(
+            candidateType: candidateType,
+            block: block,
+            reading: reading,
+            mask: mask,
+            split: split,
+            cropBest: nil,
+            lineBest: nil,
+            externalShadow: nil,
+            shadow: false
+        )
+        let shadowMetrics = structureActionMetrics(
+            candidateType: candidateType,
+            block: block,
+            reading: reading,
+            mask: mask,
+            split: split,
+            cropBest: cropBest,
+            lineBest: lineBest,
+            externalShadow: externalShadow,
+            shadow: true
+        )
+        let delta = structureActionDelta(control: controlMetrics, shadow: shadowMetrics)
+        let skippedReason = structureActionSkippedReason(
+            candidateType: candidateType,
+            realArtifactBlocker: realArtifactBlocker,
+            cropBest: cropBest,
+            lineBest: lineBest,
+            externalShadow: externalShadow
+        )
+        let executed = skippedReason == nil
+        let verdict = structureActionPromotionVerdict(
+            candidateType: candidateType,
+            executed: executed,
+            reading: reading,
+            correction: correction,
+            split: split,
+            textBox: textBox,
+            segment: segment,
+            failure: failure,
+            cropBest: cropBest,
+            lineBest: lineBest,
+            externalShadow: externalShadow,
+            realArtifactBlocker: realArtifactBlocker,
+            delta: delta
+        )
+        let blockers = structureActionPromotionBlockers(
+            candidateType: candidateType,
+            verdict: verdict,
+            reading: reading,
+            routing: routing,
+            correction: correction,
+            split: split,
+            textBox: textBox,
+            segment: segment,
+            failure: failure,
+            cropBest: cropBest,
+            lineBest: lineBest,
+            externalShadow: externalShadow,
+            realArtifactBlocker: realArtifactBlocker
+        )
+        let nextStep = structureActionRecommendedNextStep(
+            candidateType: candidateType,
+            verdict: verdict,
+            realArtifactBlocker: realArtifactBlocker
+        )
+        var mustNotPromote = reading?.mustNotPromoteReasons ?? routing?.mustNotPromoteReasons ?? []
+        mustNotPromote.append("diagnosticOnly=true")
+        mustNotPromote.append("wouldChangeMainFlow=false")
+        mustNotPromote.append("groundTruthUsedForPlanning=false")
+        mustNotPromote.append("structureActionCandidateReportDoesNotPromote")
+
+        return MangaStructureActionCandidate(
+            candidateID: "structureAction.\(block.index).\(candidateType).\(ordinal)",
+            blockIndex: block.index,
+            candidateType: candidateType,
+            sourceRecommendedAction: reading?.recommendedStructureAction ?? "missingReadingOrderAudit",
+            sourceRisks: sourceRisks,
+            inputSignals: inputSignals,
+            plannedOperation: plannedOperation,
+            expectedBenefit: expectedBenefit,
+            executionMode: executionMode,
+            diagnosticOnly: true,
+            groundTruthUsedForPlanning: false,
+            wouldChangeMainFlow: false,
+            mustNotPromoteReasons: Array(Set(mustNotPromote)).sorted(),
+            executed: executed,
+            executionSkippedReason: skippedReason,
+            controlMetrics: controlMetrics,
+            shadowMetrics: shadowMetrics,
+            delta: delta,
+            promotionVerdict: verdict,
+            promotionBlockers: blockers,
+            recommendedNextStep: nextStep
+        )
+    }
+
+    private static func structureActionMetrics(
+        candidateType: String,
+        block: MangaOverlayProbeBlock,
+        reading: MangaReadingOrderStructureAuditCase?,
+        mask: MangaOverlayBubbleMaskBlockDiagnostic?,
+        split: MangaOverlayBubbleSplitCandidateDiagnostic?,
+        cropBest: MangaOverlayCropExperimentCandidate?,
+        lineBest: MangaOverlayCropExperimentCandidate?,
+        externalShadow: MangaOverlayExternalTextBoxShadowOCRBlockSummary?,
+        shadow: Bool
+    ) -> MangaStructureActionCandidateMetrics {
+        let safeRect = block.safeLayoutRect.map(rect(from:))
+        let blockRect = rect(from: block.bbox)
+        let splitRect = split?.safeRect.map(rect(from:)) ?? split.map { rect(from: $0.bbox) }
+        let safeAreaBefore = area(of: safeRect ?? blockRect)
+        let safeAreaAfter = area(of: splitRect ?? safeRect ?? blockRect)
+        let bestShadowQualityDelta = lineBest?.qualityDelta ?? cropBest?.qualityDelta ?? externalShadow?.qualityDelta
+        return MangaStructureActionCandidateMetrics(
+            orderIndexDelta: shadow ? (reading.map { $0.proposedReadingOrderIndex - $0.currentOrderIndex }) : 0,
+            bubbleIDBefore: block.bubbleID,
+            bubbleIDAfter: shadow ? (correctionBubbleID(mask: mask) ?? block.bubbleID) : block.bubbleID,
+            bubbleConsistencyBefore: mask?.bubbleIDConsistent,
+            bubbleConsistencyAfter: shadow ? (mask?.maskDominantBubbleID != nil ? true : mask?.bubbleIDConsistent) : mask?.bubbleIDConsistent,
+            maskCoverageBefore: mask?.cropMaskCoverageRatio ?? mask?.maskDominantCoverageRatio,
+            maskCoverageAfter: shadow ? max(mask?.cropMaskCoverageRatio ?? 0, mask?.maskDominantCoverageRatio ?? 0) : (mask?.cropMaskCoverageRatio ?? mask?.maskDominantCoverageRatio),
+            safeLayoutAreaBefore: safeAreaBefore,
+            safeLayoutAreaAfter: shadow ? safeAreaAfter : safeAreaBefore,
+            renderOverflowBefore: block.renderMaskOverflowPixelCount,
+            renderOverflowAfter: shadow ? (block.renderMaskCollisionResolved ? 0 : block.renderMaskOverflowPixelCount) : block.renderMaskOverflowPixelCount,
+            siblingOverlapBefore: reading?.sameBubbleSiblingBlockIndexes.isEmpty == false ? 1 : 0,
+            siblingOverlapAfter: shadow ? (candidateType == "sameBubbleSiblingLayout" || candidateType == "renderSafeAreaReflow" ? 0 : (reading?.sameBubbleSiblingBlockIndexes.isEmpty == false ? 1 : 0)) : (reading?.sameBubbleSiblingBlockIndexes.isEmpty == false ? 1 : 0),
+            ocrSimilarityBefore: block.ocrGroundTruthSimilarity,
+            ocrSimilarityAfter: shadow ? bestShadowQualityDelta.map { (block.ocrGroundTruthSimilarity ?? 0) + $0 } : block.ocrGroundTruthSimilarity,
+            translationFailureCategoryBefore: block.failureCategory,
+            translationFailureCategoryAfter: shadow ? block.failureCategory : block.failureCategory
+        )
+    }
+
+    private static func correctionBubbleID(mask: MangaOverlayBubbleMaskBlockDiagnostic?) -> Int? {
+        mask?.maskDominantBubbleID
+    }
+
+    private static func structureActionDelta(
+        control: MangaStructureActionCandidateMetrics,
+        shadow: MangaStructureActionCandidateMetrics
+    ) -> MangaStructureActionCandidateDelta {
+        let maskDelta = optionalDelta(shadow.maskCoverageAfter, control.maskCoverageBefore)
+        let safeAreaDelta = optionalDelta(shadow.safeLayoutAreaAfter, control.safeLayoutAreaBefore)
+        let overflowDelta: Int?
+        if let after = shadow.renderOverflowAfter, let before = control.renderOverflowBefore {
+            overflowDelta = after - before
+        } else {
+            overflowDelta = nil
+        }
+        let siblingDelta = optionalDelta(shadow.siblingOverlapAfter, control.siblingOverlapBefore)
+        let ocrDelta = optionalDelta(shadow.ocrSimilarityAfter, control.ocrSimilarityBefore)
+        var summary: [String] = []
+        if let value = shadow.orderIndexDelta, value != 0 { summary.append("orderIndexDelta=\(value)") }
+        if let maskDelta { summary.append("maskCoverageDelta=\(maskDelta.formatted(.number.precision(.fractionLength(3))))") }
+        if let safeAreaDelta { summary.append("safeLayoutAreaDelta=\(safeAreaDelta.formatted(.number.precision(.fractionLength(1))))") }
+        if let overflowDelta { summary.append("renderOverflowDelta=\(overflowDelta)") }
+        if let siblingDelta { summary.append("siblingOverlapDelta=\(siblingDelta.formatted(.number.precision(.fractionLength(3))))") }
+        if let ocrDelta { summary.append("ocrSimilarityDelta=\(ocrDelta.formatted(.number.precision(.fractionLength(3))))") }
+        if summary.isEmpty { summary.append("noMeasuredDelta") }
+
+        return MangaStructureActionCandidateDelta(
+            orderIndexDelta: shadow.orderIndexDelta,
+            bubbleConsistencyChanged: optionalChanged(control.bubbleConsistencyBefore, shadow.bubbleConsistencyAfter),
+            maskCoverageDelta: maskDelta,
+            safeLayoutAreaDelta: safeAreaDelta,
+            renderOverflowDelta: overflowDelta,
+            siblingOverlapDelta: siblingDelta,
+            ocrSimilarityDelta: ocrDelta,
+            translationFailureCategoryChanged: optionalChanged(control.translationFailureCategoryBefore, shadow.translationFailureCategoryAfter),
+            summary: summary
+        )
+    }
+
+    private static func optionalDelta(_ lhs: Double?, _ rhs: Double?) -> Double? {
+        guard let lhs, let rhs else { return nil }
+        return lhs - rhs
+    }
+
+    private static func optionalChanged<T: Equatable>(_ lhs: T?, _ rhs: T?) -> Bool? {
+        guard let lhs, let rhs else { return nil }
+        return lhs != rhs
+    }
+
+    private static func structureActionInputSignals(
+        block: MangaOverlayProbeBlock,
+        reading: MangaReadingOrderStructureAuditCase?,
+        routing: MangaOverlayInternalStructureBottleneckBlock?,
+        mask: MangaOverlayBubbleMaskBlockDiagnostic?,
+        correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+        split: MangaOverlayBubbleSplitCandidateDiagnostic?,
+        textBox: MangaOverlayTextBoxCandidateDiagnostic?,
+        segment: MangaOverlaySegmentMaskDiagnostic?,
+        cropBest: MangaOverlayCropExperimentCandidate?,
+        lineBest: MangaOverlayCropExperimentCandidate?,
+        externalShadow: MangaOverlayExternalTextBoxShadowOCRBlockSummary?
+    ) -> [String] {
+        var signals = [
+            "source=readingOrderStructureAuditReport",
+            "blockPassed=\(block.blockPassed)",
+            "failureCategory=\(block.failureCategory)",
+            "bubbleID=\(block.bubbleID.map(String.init) ?? "nil")",
+            "recommendedStructureAction=\(reading?.recommendedStructureAction ?? "nil")",
+            "primaryBottleneck=\(routing?.primaryBottleneck ?? "nil")"
+        ]
+        if let reading {
+            signals.append("orderChanged=\(reading.orderChanged)")
+            signals.append("bubbleAssignmentRisk=\(reading.bubbleAssignmentRisk)")
+            signals.append("splitOrMergeRisk=\(reading.splitOrMergeRisk)")
+            signals.append("duplicateOrFragmentRisk=\(reading.duplicateOrFragmentRisk)")
+            signals.append("textBoxEvidence=\(reading.textBoxEvidenceLevel)")
+            signals.append("segmentMaskEvidence=\(reading.segmentMaskEvidenceLevel)")
+        }
+        if let mask {
+            signals.append("maskDominantBubbleID=\(mask.maskDominantBubbleID.map(String.init) ?? "nil")")
+            signals.append("maskCoverage=\(mask.maskDominantCoverageRatio.formatted(.number.precision(.fractionLength(3))))")
+            signals.append("maskConsistent=\(mask.bubbleIDConsistent)")
+        }
+        if let correction {
+            signals.append("correctionRecommended=\(correction.correctionRecommended)")
+            signals.append("correctedBubbleID=\(correction.correctedBubbleID.map(String.init) ?? "nil")")
+        }
+        if let split {
+            signals.append("splitCandidateID=\(split.id)")
+            signals.append("splitClampEligible=\(split.clampEligible)")
+        }
+        if let textBox {
+            signals.append("textBoxScore=\(textBox.evidenceScore.formatted(.number.precision(.fractionLength(3))))")
+            signals.append("textBoxEligible=\(textBox.eligibleForCrop)")
+        }
+        if let segment {
+            signals.append("segmentUsableForCrop=\(segment.usableForCropEvidence)")
+            signals.append("segmentPixels=\(segment.glyphMaskPixelCount)")
+        }
+        if let cropBest {
+            signals.append("cropBestDelta=\(cropBest.qualityDelta.formatted(.number.precision(.fractionLength(3))))")
+            signals.append("cropBestVariant=\(cropBest.variantName)")
+        }
+        if let lineBest {
+            signals.append("lineBestDelta=\(lineBest.qualityDelta.formatted(.number.precision(.fractionLength(3))))")
+            signals.append("lineBestVariant=\(lineBest.variantName)")
+        }
+        if let externalShadow {
+            signals.append("externalShadowVerdict=\(externalShadow.promotionVerdict)")
+            signals.append("externalShadowDelta=\(externalShadow.qualityDelta?.formatted(.number.precision(.fractionLength(3))) ?? "nil")")
+        }
+        return Array(Set(signals)).sorted()
+    }
+
+    private static func structureActionPlannedOperation(
+        candidateType: String,
+        reading: MangaReadingOrderStructureAuditCase?,
+        correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+        split: MangaOverlayBubbleSplitCandidateDiagnostic?,
+        realArtifactBlocker: String?
+    ) -> String {
+        switch candidateType {
+        case "readingOrderReindex":
+            "Compute proposedReadingOrderIndex=\(reading?.proposedReadingOrderIndex ?? -1) for diagnostics only; do not reorder blocks or batch input."
+        case "bubbleAssignmentReview":
+            "Evaluate shadow regroup from correctedBubbleID=\(correction?.correctedBubbleID.map(String.init) ?? "nil") or maskDominantBubbleID=\(reading?.maskDominantBubbleID.map(String.init) ?? "nil"); do not change block.bubbleID."
+        case "bubbleSplitShadow":
+            "Evaluate splitCandidateID=\((split?.id).map(String.init) ?? "nil") / subregion / maskSafeRect geometry already produced by earlier reports; do not replace safeLayoutRect or OCR input."
+        case "sameBubbleSiblingLayout":
+            "Recompute same-bubble sibling layout risk from v1.20 siblings; do not change overlay drawing."
+        case "duplicateFragmentProtection":
+            "Mark protected key dialogue or decorative title against deletion; do not change post-fusion cleanup."
+        case "textBoxEvidenceRequired":
+            "Require real Koharu TextBoxes before upstream promotion; current blocker=\(realArtifactBlocker ?? "none")."
+        case "segmentMaskEvidenceRequired":
+            "Require real Koharu SegmentMask before upstream promotion; current blocker=\(realArtifactBlocker ?? "none")."
+        case "renderSafeAreaReflow":
+            "Run report-only safe-area geometry comparison from existing safeLayoutRect, maskSafeRect, and render overflow diagnostics."
+        default:
+            "Manual review only; no executable main-flow operation is planned."
+        }
+    }
+
+    private static func structureActionExpectedBenefit(_ candidateType: String) -> String {
+        switch candidateType {
+        case "readingOrderReindex":
+            "Detect whether visual order differs from current final block order before any future batch ordering change."
+        case "bubbleAssignmentReview":
+            "Reduce bubble assignment conflicts using existing mask/correction signals."
+        case "bubbleSplitShadow":
+            "Estimate whether split or subregion geometry improves mask coverage or shadow OCR without changing the main block."
+        case "sameBubbleSiblingLayout":
+            "Reduce same-bubble overlap and clarify sibling placement for future render partitioning."
+        case "duplicateFragmentProtection":
+            "Prevent protected dialogue or decorative title from being treated as removable duplicate/fragment."
+        case "textBoxEvidenceRequired":
+            "Block premature TextBox-based promotion until real detector artifacts are available."
+        case "segmentMaskEvidenceRequired":
+            "Block premature SegmentMask-based promotion until real glyph mask evidence is available."
+        case "renderSafeAreaReflow":
+            "Estimate whether existing safe-area geometry can reduce overflow or truncation."
+        default:
+            "Keep the block in manual review when available signals are insufficient."
+        }
+    }
+
+    private static func structureActionExecutionMode(
+        candidateType: String,
+        cropBest: MangaOverlayCropExperimentCandidate?,
+        lineBest: MangaOverlayCropExperimentCandidate?,
+        externalShadow: MangaOverlayExternalTextBoxShadowOCRBlockSummary?,
+        realArtifactBlocker: String?
+    ) -> String {
+        switch candidateType {
+        case "textBoxEvidenceRequired", "segmentMaskEvidenceRequired":
+            realArtifactBlocker == nil ? "existingExternalArtifactShadowSummary" : "blockedNeedsRealArtifact"
+        case "bubbleSplitShadow":
+            cropBest != nil || lineBest != nil ? "reuseExistingCropOrLineShadowMetrics" : "geometryOnly"
+        case "bubbleAssignmentReview", "sameBubbleSiblingLayout", "renderSafeAreaReflow", "readingOrderReindex", "duplicateFragmentProtection":
+            "geometryOnlyNoOCRNoLLM"
+        default:
+            externalShadow != nil ? "reuseExistingExternalShadowSummary" : "manualReviewOnly"
+        }
+    }
+
+    private static func structureActionSkippedReason(
+        candidateType: String,
+        realArtifactBlocker: String?,
+        cropBest: MangaOverlayCropExperimentCandidate?,
+        lineBest: MangaOverlayCropExperimentCandidate?,
+        externalShadow: MangaOverlayExternalTextBoxShadowOCRBlockSummary?
+    ) -> String? {
+        if ["textBoxEvidenceRequired", "segmentMaskEvidenceRequired"].contains(candidateType),
+           let realArtifactBlocker {
+            return realArtifactBlocker == "manifestMissing" ? "missingRealArtifacts" : "needsRealArtifact"
+        }
+        if candidateType == "manualReviewOnly" {
+            return "manualReviewOnly"
+        }
+        if candidateType == "bubbleSplitShadow", cropBest == nil, lineBest == nil {
+            return nil
+        }
+        if candidateType == "textBoxEvidenceRequired", externalShadow == nil, realArtifactBlocker == nil {
+            return "noExistingExternalShadowSummary"
+        }
+        return nil
+    }
+
+    private static func structureActionPromotionVerdict(
+        candidateType: String,
+        executed: Bool,
+        reading: MangaReadingOrderStructureAuditCase?,
+        correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+        split: MangaOverlayBubbleSplitCandidateDiagnostic?,
+        textBox: MangaOverlayTextBoxCandidateDiagnostic?,
+        segment: MangaOverlaySegmentMaskDiagnostic?,
+        failure: MangaOverlayTextBoxPlanFailureBlockSummary?,
+        cropBest: MangaOverlayCropExperimentCandidate?,
+        lineBest: MangaOverlayCropExperimentCandidate?,
+        externalShadow: MangaOverlayExternalTextBoxShadowOCRBlockSummary?,
+        realArtifactBlocker: String?,
+        delta: MangaStructureActionCandidateDelta
+    ) -> String {
+        if candidateType == "manualReviewOnly" || !executed {
+            if realArtifactBlocker != nil {
+                return "blockedByMissingRealArtifact"
+            }
+            return "manualReviewOnly"
+        }
+        if ["textBoxEvidenceRequired", "segmentMaskEvidenceRequired"].contains(candidateType), realArtifactBlocker != nil {
+            return "blockedByMissingRealArtifact"
+        }
+        if candidateType == "textBoxEvidenceRequired", textBox?.evidenceScore ?? 0 < 0.50 {
+            return "blockedByWeakTextBoxEvidence"
+        }
+        if candidateType == "segmentMaskEvidenceRequired", segment?.usableForCropEvidence != true {
+            return "blockedByWeakSegmentMaskEvidence"
+        }
+        if candidateType == "duplicateFragmentProtection" {
+            return reading?.duplicateOrFragmentRisk == "protectedTextDoNotDelete"
+                ? "blockedByProtectedText"
+                : "reportOnlyWouldImprove"
+        }
+        if candidateType == "bubbleAssignmentReview", correction?.correctionRecommended == true || reading?.bubbleAssignmentRisk == "maskConflict" {
+            return "blockedByBubbleConflict"
+        }
+        if let best = lineBest ?? cropBest {
+            if best.rejectionReasons.contains("rawWordsLost") || best.rejectionReasons.contains("introducedLikelyOCRError") {
+                return "blockedByOCRRegression"
+            }
+            if best.betterThanControl || best.qualityDelta > 0.08 {
+                return "reportOnlyWouldImprove"
+            }
+        }
+        if externalShadow?.promotionVerdict == "wouldPromoteByExistingGateReportOnly" {
+            return "reportOnlyWouldImprove"
+        }
+        if candidateType == "renderSafeAreaReflow", let overflowDelta = delta.renderOverflowDelta, overflowDelta < 0 {
+            return "reportOnlyWouldImprove"
+        }
+        if candidateType == "readingOrderReindex", reading?.orderChanged == true, (reading?.orderConfidence ?? 0) >= 0.68 {
+            return "reportOnlyWouldImprove"
+        }
+        if split?.clampEligible == true, failure?.bestShadowBetterThanControl == true {
+            return "reportOnlyWouldImprove"
+        }
+        return "reportOnlyNoBenefit"
+    }
+
+    private static func structureActionPromotionBlockers(
+        candidateType: String,
+        verdict: String,
+        reading: MangaReadingOrderStructureAuditCase?,
+        routing: MangaOverlayInternalStructureBottleneckBlock?,
+        correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+        split: MangaOverlayBubbleSplitCandidateDiagnostic?,
+        textBox: MangaOverlayTextBoxCandidateDiagnostic?,
+        segment: MangaOverlaySegmentMaskDiagnostic?,
+        failure: MangaOverlayTextBoxPlanFailureBlockSummary?,
+        cropBest: MangaOverlayCropExperimentCandidate?,
+        lineBest: MangaOverlayCropExperimentCandidate?,
+        externalShadow: MangaOverlayExternalTextBoxShadowOCRBlockSummary?,
+        realArtifactBlocker: String?
+    ) -> [String] {
+        var blockers = reading?.mustNotPromoteReasons ?? routing?.mustNotPromoteReasons ?? []
+        blockers.append("reportOnlyCandidate")
+        if let realArtifactBlocker {
+            blockers.append("realArtifactGate:\(realArtifactBlocker)")
+        }
+        blockers.append(contentsOf: correction?.rejectionReasons.map { "assignmentCorrection:\($0)" } ?? [])
+        blockers.append(contentsOf: split?.rejectionReasons.map { "splitCandidate:\($0)" } ?? [])
+        blockers.append(contentsOf: textBox?.rejectionReasons.map { "textBox:\($0)" } ?? [])
+        blockers.append(contentsOf: segment?.rejectionReasons.map { "segmentMask:\($0)" } ?? [])
+        blockers.append(contentsOf: failure?.promotionBlockers.map { "textBoxPlan:\($0)" } ?? [])
+        blockers.append(contentsOf: cropBest?.rejectionReasons.map { "cropShadow:\($0)" } ?? [])
+        blockers.append(contentsOf: lineBest?.rejectionReasons.map { "lineShadow:\($0)" } ?? [])
+        blockers.append(contentsOf: externalShadow?.blockers.map { "externalShadow:\($0)" } ?? [])
+        if verdict == "blockedByWeakTextBoxEvidence", textBox == nil {
+            blockers.append("textBoxEvidenceMissing")
+        }
+        if verdict == "blockedByWeakSegmentMaskEvidence", segment == nil {
+            blockers.append("segmentMaskEvidenceMissing")
+        }
+        if candidateType == "manualReviewOnly" {
+            blockers.append("manualReviewOnly")
+        }
+        return Array(Set(blockers)).sorted()
+    }
+
+    private static func structureActionRecommendedNextStep(
+        candidateType: String,
+        verdict: String,
+        realArtifactBlocker: String?
+    ) -> String {
+        if ["textBoxEvidenceRequired", "segmentMaskEvidenceRequired"].contains(candidateType),
+           realArtifactBlocker != nil || verdict == "blockedByMissingRealArtifact" {
+            return "provideRealKoharuArtifact"
+        }
+        switch verdict {
+        case "reportOnlyWouldImprove":
+            return "keepCandidateForFuturePromotionReview"
+        case "blockedByOCRRegression":
+            return "stopOCRPromotion"
+        case "blockedByBubbleConflict":
+            return "inspectBubbleAssignmentBeforePromotion"
+        case "blockedByWeakTextBoxEvidence":
+            return "collectTextBoxEvidence"
+        case "blockedByWeakSegmentMaskEvidence":
+            return "collectSegmentMaskEvidence"
+        case "blockedByProtectedText":
+            return "keepProtectedText"
+        case "manualReviewOnly":
+            return "manualReview"
+        default:
+            if candidateType == "renderSafeAreaReflow" {
+                return "keepRenderGeometryDiagnostics"
+            }
+            return "stopCandidate"
+        }
     }
 
     private static func readingOrderSortedBlockIndexes(_ blocks: [MangaOverlayProbeBlock]) -> [Int] {
