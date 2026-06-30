@@ -331,6 +331,17 @@
 
 - 本轮 Agent B 本地应运行轻量检查、Koharu validator valid / invalid / allow-missing / print-required-files，以及 workflow YAML smoke。
 - 未跑本机 Xcode build / 漫画探针；按规则推送 `codeb/v1.16-ci-probe-fastpath` 后交给 GitHub Actions 验证。
+- Agent C 核对 PR #6：base `smalldata_test`、head `codeb/v1.16-ci-probe-fastpath`、head commit `ccd57e4906bf14eaa5b27253fae2d82fa24b581a`。
+- 云端 `AITRANS CI Results` run `28420791001` / attempt `1` 通过；manifest 匹配 `version = v1.16`、`branch = codeb/v1.16-ci-probe-fastpath`、`commitSha = ccd57e4906bf14eaa5b27253fae2d82fa24b581a`、`workflowName = AITRANS CI Results`。
+- 结果包 `aitrans-ci-v1.16-codeb-v1.16-ci-probe-fastpath--ccd57e4906bf-run28420791001-attempt1` 包含 `.xcresult`、`junit.xml`、`xcodebuild.log`、`simulator-build.log`、`manga-probe.log`、`app-console.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`、`koharu-active-artifacts-validation.json` 和 `output/`。
+- `junit.xml`：5 tests、0 failures；GGUF download / verify、static checks、Xcode build、simulator app locate、manga probe 全部 success。
+- manifest：`probeMode = ci-fast`、`probeFastPathEnabled = true`、`simulatorAppReusedFromXcodeBuild = true`、`probeTimeoutSeconds = 1800`、`probeStallTimeoutSeconds = 300`、`probeDurationSeconds = 150`。
+- 云端探针：`engineUsed = Local GGUF`、`decodingMode = deterministic`、`decodingSeed = 42`、`totalBlocksDetected = 13`、`outputDirectoryCleaned = true`、`overallPassed = false`。
+- `ci-fast` 保留输出满足要求：`probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt`、`1_debug_boxes.png`、`1_translated_overlay.png`、`manga_probe_progress.json`；额外保留 bubble debug PNG。
+- `configuration.probeRunMode = ci-fast`、`probeFastPathEnabled = true`，`skippedDiagnostics` 包含 lexicon / Vision API / synthetic slice / TextRegion crop / crop experiment / line crop / tagged batch / correction / contact sheet / diagnostic PNG 等高成本诊断。
+- 质量数字：`passedBlocks = 1`、`failedBlocks = 12`、`groundTruthMatchedBlocks = 13`、`groundTruthUnmatchedBlocks = 0`、`averageCoreDialogueOCRSimilarity = 0.6987`、`averageDecorativeOCRSimilarity = 0.8000`、`cleanTextDiagnostic.passRate = 0.4545`。
+- Koharu gate：`externalArtifactReadinessReport.readinessVerdict = manifestMissing`、`externalTextBoxesShadowOCRAllowed = false`、`externalTextBoxShadowOCRReport.executed = false`、`candidateCount = 0`、`ocrExecutedCount = 0`、`promotedExternalShadowBlocks = []`、`skippedBlocks = [0...12]`。
+- PR #6 已通过 GitHub merge 合并到 `smalldata_test`，merge commit `226de189e1cec63c23130eaf1389c112068ee68e`。
 
 验收口径：
 
