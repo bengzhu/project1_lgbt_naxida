@@ -462,6 +462,13 @@
 - 旧仓库根 `output/` 不含 v1.18 新字段；以 PR 后云端结果包为准。
 - 若云端 OCR 波动导致新 duplicate/fragment cleanup no-op，本轮仍应通过瓶颈路由报告提供可审计价值；不得为了让 block 数变化而硬编码 block index 或使用 ground truth。
 
+Agent C 退回复修：
+
+- PR #8 初次云端 run `28424308991` 虽然 CI success，但 artifact 显示 post-fusion cleanup 从 `16 -> 11`，误删了远距离真实文本，并产生 `post-fusion cleanup reduced block count below target floor: 11` warning，因此未通过验收。
+- 根因 1：`duplicateOrFragment` 的 `sameDominantNeighborhood` 把两个 `nil` 的 `safeLayoutRect` / `maskSafeRect` 当成同邻域证据。修复后只有非空且相等的 safe / mask rect，或真实 same bubble / bbox 重叠 / bbox 邻近，才算邻域证据。
+- 根因 2：`internalStructureBottleneckReport` 用 rejected 的 `originalFusedBlockIndex` 去匹配 cleanup 后已重编号的 `block.index`，导致保留块被误标为 `duplicateOrFragment`。修复后保留块写入 `postFusionCleanupOriginalFusedBlockIndex` note，rejected 原始索引只用于报告汇总；逐块 primary / secondary 不再用 rejected 原始索引误判最终保留块。
+- 本修复不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`；重新 push 后仍由 GitHub Actions 生成新的 ci-fast artifact 供 Agent C 验收。
+
 ### v2.2：GitHub Release GGUF 下载与 Actions 缓存
 日期：2026-06-29
 依据：云端验证基础设施改造；未刷新 `output/`，未追加 `metrics/version_history.csv` 漫画指标行。
