@@ -1521,6 +1521,118 @@ struct MangaKoharuStageGapReplicationReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuNativeMetricSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuNativeStageScorecard: Equatable, Codable, Sendable {
+    var stageName: String
+    var referenceKoharuArtifact: String
+    var nativeStatus: String
+    var decisionSignals: [MangaKoharuNativeMetricSignal]
+    var evaluationSignals: [MangaKoharuNativeMetricSignal]
+    var primaryGateStatus: String
+    var primaryBottleneck: String
+    var affectedBlocks: [Int]
+    var stopLocalTuning: Bool
+    var nextWorkItemID: String
+    var groundTruthUsedForEvaluationOnly: Bool
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuNativeGateLedgerEntry: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var requiredForMainFlowPromotion: Bool
+    var decisionSignals: [MangaKoharuNativeMetricSignal]
+    var evaluationSignals: [MangaKoharuNativeMetricSignal]
+    var threshold: String
+    var affectedBlocks: [Int]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuNativeBlockScorecard: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var blockPassed: Bool
+    var failureCategory: String
+    var bubbleID: Int?
+    var primaryNativeStage: String
+    var primaryBottleneck: String
+    var recommendedPriority: String
+    var prioritySignals: [String]
+    var priorityUsedGroundTruth: Bool
+    var ocrGateStatus: String
+    var bubbleGateStatus: String
+    var segmentGateStatus: String
+    var translationGateStatus: String
+    var renderGateStatus: String
+    var stopLocalCropOrLineTuning: Bool
+    var stopEvidence: [String]
+    var mustNotPromoteReasons: [String]
+    var recommendedWorkItemID: String
+    var nextAction: String
+}
+
+struct MangaKoharuNativeWorkItem: Equatable, Codable, Sendable {
+    var workItemID: String
+    var title: String
+    var priority: String
+    var targetStages: [String]
+    var targetBlocks: [Int]
+    var whyNow: String
+    var decisionSignals: [MangaKoharuNativeMetricSignal]
+    var evaluationSignals: [MangaKoharuNativeMetricSignal]
+    var canRunInCIFast: Bool
+    var requiresFullProbe: Bool
+    var requiresExternalArtifact: Bool
+    var expectedMetricMovement: [String]
+    var blockedByGates: [String]
+    var stopConditions: [String]
+    var nonGoals: [String]
+    var suggestedBranchName: String
+}
+
+struct MangaKoharuNativeReplicationScoreboardReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var evaluatedBlockCount: Int
+    var stageScorecardCount: Int
+    var gateCount: Int
+    var workItemCount: Int
+    var externalArtifactsRequiredForThisReport: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var groundTruthUsedForDecision: Bool
+    var stageStatusBreakdown: [String: Int]
+    var gateStatusBreakdown: [String: Int]
+    var blockPrimaryBottleneckBreakdown: [String: Int]
+    var recommendedPriorityBreakdown: [String: Int]
+    var stopLocalTuningBlocks: [Int]
+    var nativeReadyStages: [String]
+    var nativeProxyReadyStages: [String]
+    var shadowBlockedStages: [String]
+    var modelLimitedStages: [String]
+    var renderStableStages: [String]
+    var stageScorecards: [MangaKoharuNativeStageScorecard]
+    var gateLedger: [MangaKoharuNativeGateLedgerEntry]
+    var blockScorecards: [MangaKoharuNativeBlockScorecard]
+    var recommendedNextWorkItems: [MangaKoharuNativeWorkItem]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -2413,6 +2525,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var structureActionCandidateReport: MangaStructureActionCandidateReport?
     var koharuArtifactDAGReport: MangaKoharuArtifactDAGReport?
     var koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport?
+    var koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
