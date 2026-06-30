@@ -8168,10 +8168,15 @@ final class TranslationSessionStore: ObservableObject {
                 splitByBlock[blockIndex] = diagnostic
             }
         }
-        let postFusionDuplicateBlocks = Set(
+        let postFusionRejectedDuplicateOriginalIndexes = Set(
             (postFusionCleanup?.rejectedBlocks ?? [])
                 .filter { $0.reason == "duplicateOrFragment" || $0.reason.localizedCaseInsensitiveContains("fragment") || $0.reason.localizedCaseInsensitiveContains("duplicate") }
                 .map(\.originalFusedBlockIndex)
+        )
+        let postFusionRelatedKeptOriginalIndexes = Set(
+            (postFusionCleanup?.rejectedBlocks ?? [])
+                .filter { $0.reason == "duplicateOrFragment" || $0.reason.localizedCaseInsensitiveContains("fragment") || $0.reason.localizedCaseInsensitiveContains("duplicate") }
+                .compactMap(\.relatedFusedBlockIndex)
         )
         let optionalExternalMissing = externalArtifactReadinessReport?.readinessVerdict == "manifestMissing"
             || externalArtifactReadinessReport?.readinessVerdict == "artifactFilesMissing"
@@ -8219,8 +8224,11 @@ final class TranslationSessionStore: ObservableObject {
                 evidence.append("splitClampEligible=\(split.clampEligible)")
                 evidence.append("splitRejections=\(split.rejectionReasons.joined(separator: ","))")
             }
-            if postFusionDuplicateBlocks.contains(block.index) {
-                evidence.append("postFusionCleanupRejectedDuplicateOrFragment=true")
+            if let originalFusedIndex = postFusionOriginalFusedBlockIndex(in: block) {
+                evidence.append("postFusionCleanupOriginalFusedBlockIndex=\(originalFusedIndex)")
+                if postFusionRelatedKeptOriginalIndexes.contains(originalFusedIndex) {
+                    evidence.append("postFusionCleanupKeptRelatedDuplicateOrFragment=true")
+                }
             }
 
             let secondary = internalSecondaryBottlenecks(
@@ -8230,15 +8238,13 @@ final class TranslationSessionStore: ObservableObject {
                 mask: mask,
                 correction: correction,
                 split: split,
-                postFusionDuplicateBlocks: postFusionDuplicateBlocks,
                 optionalExternalMissing: optionalExternalMissing
             )
             let primary = internalPrimaryBottleneck(
                 block: block,
                 secondary: secondary,
                 crop: crop,
-                textBoxFailure: textBoxFailure,
-                postFusionDuplicateBlocks: postFusionDuplicateBlocks
+                textBoxFailure: textBoxFailure
             )
             let action = internalRecommendedAction(for: primary)
             let mustNotPromote = internalMustNotPromoteReasons(
@@ -8294,7 +8300,7 @@ final class TranslationSessionStore: ObservableObject {
             bubbleSplitOrAssignmentBlocks: summaries.filter { $0.primaryBottleneck == "bubbleAssignmentOrSplit" || $0.secondaryBottlenecks.contains("bubbleAssignmentOrSplit") }.map(\.blockIndex).sorted(),
             renderOnlyBlocks: summaries.filter { $0.primaryBottleneck == "renderOnly" }.map(\.blockIndex).sorted(),
             passedBlocks: summaries.filter(\.blockPassed).map(\.blockIndex).sorted(),
-            postFusionRejectedDuplicateOrFragmentBlocks: Array(postFusionDuplicateBlocks).sorted(),
+            postFusionRejectedDuplicateOrFragmentBlocks: Array(postFusionRejectedDuplicateOriginalIndexes).sorted(),
             blockSummaries: summaries,
             notes: [
                 "internalStructureBottleneckReport aggregates existing probe evidence and does not replace finalTextUsedForTranslation",
@@ -8311,14 +8317,13 @@ final class TranslationSessionStore: ObservableObject {
         mask: MangaOverlayBubbleMaskBlockDiagnostic?,
         correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
         split: MangaOverlayBubbleSplitCandidateDiagnostic?,
-        postFusionDuplicateBlocks: Set<Int>,
         optionalExternalMissing: Bool
     ) -> [String] {
         var result: [String] = []
         if block.blockPassed {
             result.append("passed")
         }
-        if postFusionDuplicateBlocks.contains(block.index) || looksLikeInternalDuplicateOrFragment(block) {
+        if looksLikeInternalDuplicateOrFragment(block) {
             result.append("duplicateOrFragment")
         }
         if block.failureCategory == "ocrInputSuspect"
@@ -8360,8 +8365,7 @@ final class TranslationSessionStore: ObservableObject {
         block: MangaOverlayProbeBlock,
         secondary: [String],
         crop: MangaOverlayTextRegionCropDiagnostic?,
-        textBoxFailure: MangaOverlayTextBoxPlanFailureBlockSummary?,
-        postFusionDuplicateBlocks: Set<Int>
+        textBoxFailure: MangaOverlayTextBoxPlanFailureBlockSummary?
     ) -> String {
         if block.blockPassed {
             if block.bestGroundTruthType == MangaGroundTruthEntry.decorativeType {
@@ -8369,7 +8373,7 @@ final class TranslationSessionStore: ObservableObject {
             }
             return "passed"
         }
-        if postFusionDuplicateBlocks.contains(block.index) || looksLikeInternalDuplicateOrFragment(block) {
+        if looksLikeInternalDuplicateOrFragment(block) {
             return "duplicateOrFragment"
         }
         if secondary.contains("modelTranslationQuality"),
@@ -8452,6 +8456,13 @@ final class TranslationSessionStore: ObservableObject {
         }
         let text = block.finalTextUsedForTranslation.uppercased()
         return text.contains("AT") && text.contains("LEAST") && (text.contains("2EN") || text.contains("SEN"))
+    }
+
+    private static func postFusionOriginalFusedBlockIndex(in block: MangaOverlayProbeBlock) -> Int? {
+        for note in block.ocrProbeNotes where note.hasPrefix("postFusionCleanupOriginalFusedBlockIndex=") {
+            return Int(note.replacing("postFusionCleanupOriginalFusedBlockIndex=", with: ""))
+        }
+        return nil
     }
 
     private static func countBy(_ values: [String]) -> [String: Int] {
@@ -8972,7 +8983,7 @@ final class TranslationSessionStore: ObservableObject {
                     bbox: blocks[candidateIndex].bbox,
                     reason: rejection.reason,
                     relatedFusedBlockIndex: blocks[selectedIndex].index,
-                    relatedKeptBlockIndex: blocks[selectedIndex].index,
+                    relatedKeptBlockIndex: nil,
                     relatedText: blocks[selectedIndex].finalTextUsedForTranslation,
                     relatedBBox: blocks[selectedIndex].bbox,
                     qualityScore: postFusionInformationScore(blocks[candidateIndex]),
@@ -9032,8 +9043,22 @@ final class TranslationSessionStore: ObservableObject {
             }
         }
 
+        let keptOriginalIndexToNewIndex = Dictionary(
+            uniqueKeysWithValues: keptPairs.enumerated().map { offset, pair in
+                (pair.0.index, offset)
+            }
+        )
+        let rejectedBlocks = rejectedByOriginalIndex.values.map { rejected in
+            var updated = rejected
+            if let relatedFusedBlockIndex = rejected.relatedFusedBlockIndex {
+                updated.relatedKeptBlockIndex = keptOriginalIndexToNewIndex[relatedFusedBlockIndex]
+            }
+            return updated
+        }
+
         let keptBlocks = keptPairs.enumerated().map { offset, pair in
             var block = reindexedMangaBlock(pair.0, index: offset)
+            block.ocrProbeNotes.append("postFusionCleanupOriginalFusedBlockIndex=\(pair.0.index)")
             block.ocrProbeNotes.append("postFusionCleanup=kept")
             return block
         }
@@ -9063,7 +9088,7 @@ final class TranslationSessionStore: ObservableObject {
             blockCountBeforeCleanup: blocks.count,
             blockCountAfterCleanup: keptBlocks.count,
             rejectedBlockCount: rejectedByOriginalIndex.count,
-            rejectedBlocks: rejectedByOriginalIndex.values.sorted { $0.originalFusedBlockIndex < $1.originalFusedBlockIndex },
+            rejectedBlocks: rejectedBlocks.sorted { $0.originalFusedBlockIndex < $1.originalFusedBlockIndex },
             preservedKeyTexts: preserved,
             missingKeyTexts: missing,
             warnings: warnings,
@@ -9203,11 +9228,15 @@ final class TranslationSessionStore: ObservableObject {
 
         let candidateRect = rect(from: candidate.bbox)
         let selectedRect = rect(from: selected.bbox)
-        let sameDominantNeighborhood = candidate.bubbleID == selected.bubbleID
-            || candidate.safeLayoutRect == selected.safeLayoutRect
-            || candidate.maskSafeRect == selected.maskSafeRect
-            || (candidate.safeLayoutRect != nil && candidate.safeLayoutRect == selected.maskSafeRect)
+        let sameBubble = candidate.bubbleID != nil && candidate.bubbleID == selected.bubbleID
+        let sameSafeLayoutRect = candidate.safeLayoutRect != nil && candidate.safeLayoutRect == selected.safeLayoutRect
+        let sameMaskSafeRect = candidate.maskSafeRect != nil && candidate.maskSafeRect == selected.maskSafeRect
+        let crossSafeMaskRect = (candidate.safeLayoutRect != nil && candidate.safeLayoutRect == selected.maskSafeRect)
             || (candidate.maskSafeRect != nil && candidate.maskSafeRect == selected.safeLayoutRect)
+        let sameDominantNeighborhood = sameBubble
+            || sameSafeLayoutRect
+            || sameMaskSafeRect
+            || crossSafeMaskRect
         let strongNeighborhood = sameDominantNeighborhood
             || containment >= 0.62
             || selectedContainment >= 0.62
@@ -9238,6 +9267,10 @@ final class TranslationSessionStore: ObservableObject {
             "selectedArea=\(selectedArea.formatted(.number.precision(.fractionLength(1))))",
             "candidateContainsLikelyOCRError=\(containsLikelyOCRError(in: candidate.finalTextUsedForTranslation))",
             "sameDominantNeighborhood=\(sameDominantNeighborhood)",
+            "sameBubble=\(sameBubble)",
+            "sameSafeLayoutRect=\(sameSafeLayoutRect)",
+            "sameMaskSafeRect=\(sameMaskSafeRect)",
+            "crossSafeMaskRect=\(crossSafeMaskRect)",
             "fuzzyWordCoverage=\(fuzzyWordCoverage(candidateWords, in: selectedWords).formatted(.number.precision(.fractionLength(3))))",
             "groundTruthUsed=false"
         ]
