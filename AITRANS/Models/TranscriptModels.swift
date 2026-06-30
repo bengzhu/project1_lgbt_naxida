@@ -1033,8 +1033,12 @@ struct MangaOverlayPostFusionRejectedBlock: Equatable, Codable, Sendable {
     var bbox: [Double]
     var reason: String
     var relatedFusedBlockIndex: Int?
+    var relatedKeptBlockIndex: Int?
     var relatedText: String?
     var relatedBBox: [Double]?
+    var qualityScore: Double?
+    var protectedTextMatched: Bool?
+    var evidence: [String]?
 }
 
 struct MangaOverlayPostFusionCleanupReport: Equatable, Codable, Sendable {
@@ -1046,6 +1050,43 @@ struct MangaOverlayPostFusionCleanupReport: Equatable, Codable, Sendable {
     var preservedKeyTexts: [String]
     var missingKeyTexts: [String]
     var warnings: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayInternalStructureBottleneckBlock: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var groundTruthMatch: String
+    var groundTruthType: String?
+    var ocrGroundTruthSimilarity: Double?
+    var wordOrderPreserved: Bool?
+    var bubbleID: Int?
+    var bbox: [Double]
+    var finalTextUsedForTranslation: String
+    var failureCategory: String
+    var blockPassed: Bool
+    var primaryBottleneck: String
+    var secondaryBottlenecks: [String]
+    var recommendedNextAction: String
+    var evidence: [String]
+    var mustNotPromoteReasons: [String]
+}
+
+struct MangaOverlayInternalStructureBottleneckReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var evaluatedBlockCount: Int
+    var primaryBottleneckBreakdown: [String: Int]
+    var recommendedActionBreakdown: [String: Int]
+    var dialogueBottleneckBreakdown: [String: Int]
+    var decorativeBottleneckBreakdown: [String: Int]
+    var ocrInputSuspectBlocks: [Int]
+    var duplicateOrFragmentBlocks: [Int]
+    var modelTranslationQualityBlocks: [Int]
+    var cropCandidateBlockedBlocks: [Int]
+    var bubbleSplitOrAssignmentBlocks: [Int]
+    var renderOnlyBlocks: [Int]
+    var passedBlocks: [Int]
+    var postFusionRejectedDuplicateOrFragmentBlocks: [Int]
+    var blockSummaries: [MangaOverlayInternalStructureBottleneckBlock]
     var notes: [String]
 }
 
@@ -1934,6 +1975,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var lineCropExperimentReport: MangaOverlayLineCropExperimentReport?
     var externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
     var externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?
+    var internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?

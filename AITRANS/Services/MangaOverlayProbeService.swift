@@ -742,6 +742,7 @@ struct MangaOverlayProbeService: Sendable {
         lineCropExperimentReport: MangaOverlayLineCropExperimentReport? = nil,
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport? = nil,
         externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport? = nil,
+        internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -795,6 +796,7 @@ struct MangaOverlayProbeService: Sendable {
                 lineCropExperimentReport: lineCropExperimentReport,
                 externalArtifactReadinessReport: externalArtifactReadinessReport,
                 externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+                internalStructureBottleneckReport: internalStructureBottleneckReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1450,6 +1452,7 @@ struct MangaOverlayProbeService: Sendable {
         lineCropExperimentReport: MangaOverlayLineCropExperimentReport?,
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
         externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?,
+        internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1496,6 +1499,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let externalShadowSummaryByBlock = Dictionary(
             uniqueKeysWithValues: (externalTextBoxShadowOCRReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let internalBottleneckByBlock = Dictionary(
+            uniqueKeysWithValues: (internalStructureBottleneckReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1648,6 +1654,10 @@ struct MangaOverlayProbeService: Sendable {
             let externalShadowDelta = externalShadowSummary?.qualityDelta?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let externalShadowPreservation = externalShadowSummary?.wordPreservationRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let externalShadowBlockers = externalShadowSummary?.blockers.joined(separator: " | ") ?? "nil"
+            let bottleneck = internalBottleneckByBlock[block.index]
+            let bottleneckSecondary = bottleneck?.secondaryBottlenecks.joined(separator: " | ") ?? "nil"
+            let bottleneckEvidence = bottleneck?.evidence.joined(separator: " | ") ?? "nil"
+            let bottleneckMustNotPromote = bottleneck?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1699,6 +1709,7 @@ struct MangaOverlayProbeService: Sendable {
             lineResearchDecision: \(lineResearchDecision)
             externalArtifacts: readiness=\(externalReadiness) shadowOCRAllowed=\(externalShadowAllowed) activeDirectory=\(externalActiveDirectory) contractExampleOnly=\(externalContractExampleOnly) textBoxID=\(externalTextBoxMatch) textBoxIoU=\(externalTextBoxIoU) bubbleInstanceID=\(externalBubbleMatch) bubbleIoU=\(externalBubbleIoU) segmentMask=\(externalSegmentCoverage) alignment=\(externalAlignmentVerdict) nextAction=\(externalNextAction)
             externalTextBoxShadowOCR: executed=\(externalShadowSummary.map { String($0.ocrExecuted) } ?? "false") selectedTextBoxID=\(externalShadowSummary?.selectedTextBoxID ?? "none") candidateBBox=[\(externalShadowBBox)] ocrSucceeded=\(externalShadowSummary.map { String($0.ocrSucceeded) } ?? "false") ocrText=\(externalShadowText) qualityDelta=\(externalShadowDelta) wordPreservation=\(externalShadowPreservation) promotionVerdict=\(externalShadowSummary?.promotionVerdict ?? "skipped") blockers=\(externalShadowBlockers)
+            internalStructureBottleneck: primary=\(bottleneck?.primaryBottleneck ?? "nil") secondary=\(bottleneckSecondary) recommended=\(bottleneck?.recommendedNextAction ?? "nil") evidence=\(bottleneckEvidence) mustNotPromote=\(bottleneckMustNotPromote)
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1732,6 +1743,7 @@ struct MangaOverlayProbeService: Sendable {
         let externalSummary = """
         externalArtifactReadiness: activeDirectory=\(externalArtifactReadinessReport.map { String($0.activeArtifactsDirectory) } ?? "nil") contractExampleOnly=\(externalArtifactReadinessReport.map { String($0.contractExampleOnly) } ?? "nil") shadowOCRAllowed=\(externalArtifactReadinessReport.map { String($0.externalTextBoxesShadowOCRAllowed) } ?? "nil") manifestFound=\(externalArtifactReadinessReport.map { String($0.manifestFound) } ?? "nil") textBoxesFound=\(externalArtifactReadinessReport.map { String($0.textBoxesFound) } ?? "nil") bubbleMaskFound=\(externalArtifactReadinessReport.map { String($0.bubbleMaskFound) } ?? "nil") segmentMaskFound=\(externalArtifactReadinessReport.map { String($0.segmentMaskFound) } ?? "nil") verdict=\(externalArtifactReadinessReport?.readinessVerdict ?? "nil") nextAction=\(externalArtifactReadinessReport?.nextAction ?? "nil") missing=\(externalArtifactReadinessReport?.missingArtifacts.joined(separator: ",") ?? "nil")
         externalTextBoxShadowOCR: enabled=\(externalTextBoxShadowOCRReport.map { String($0.enabled) } ?? "nil") executed=\(externalTextBoxShadowOCRReport.map { String($0.executed) } ?? "nil") gateVerdict=\(externalTextBoxShadowOCRReport?.gateVerdict ?? "nil") candidates=\(externalTextBoxShadowOCRReport.map { String($0.candidateCount) } ?? "nil") ocrExecuted=\(externalTextBoxShadowOCRReport.map { String($0.ocrExecutedCount) } ?? "nil") betterThanControl=\(externalTextBoxShadowOCRReport.map { String($0.betterThanControlCount) } ?? "nil") skipped=\(externalTextBoxShadowOCRReport?.skippedBlocks.map(String.init).joined(separator: ",") ?? "nil")
+        internalStructureBottleneckReport: evaluated=\(internalStructureBottleneckReport.map { String($0.evaluatedBlockCount) } ?? "nil") primary=\(internalStructureBottleneckReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") recommended=\(internalStructureBottleneckReport?.recommendedActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") duplicateOrFragment=\(internalStructureBottleneckReport?.duplicateOrFragmentBlocks.map(String.init).joined(separator: ",") ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)
