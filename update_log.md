@@ -115,6 +115,45 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.24：Koharu 本地复刻 Scoreboard 与 Gate Ledger
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.24（Koharu本地复刻Scoreboard与GateLedger）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuNativeReplicationScoreboardReport`，只用 AITRANS 自己的 probe 输出，把 v1.23 stage gap / work package 转成 stage scorecard、gate ledger、block scorecard 和下一轮 work items。
+- 报告顶层输出 `source = AITRANSProbe`、`referencePipeline = Koharu`、`externalArtifactsRequiredForThisReport = false`、`groundTruthUsedForDecision = false` 和 `groundTruthUsedForEvaluationOnly = true`。
+- `stageScorecards[]` 覆盖 `sourceImage`、`contentCrop`、`nativeTextBoxes`、`nativeBubbleMask`、`nativeSegmentMask`、`ocrText`、`translations`、`glyphEraseOrInpaintProxy`、`renderedSprites` 和 `finalRender`，区分 native / proxy / shadow / stop / model-limited / render-stable 状态。
+- `gateLedger[]` 新增 no-main-flow-mutation、no-ground-truth-decision、native TextBox word preservation / stoplist、bubble conflict、SegmentMask inside bubble、clean text model floor、failure overlay、render no-overflow 和 external artifact optional 等 gate。
+- `blockScorecards[]` 为每个最终块输出 OCR / bubble / segment / translation / render gate 状态、stoplist 证据、推荐 work item 和 next action；priority 和 nextAction 不读取 ground truth。
+- `recommendedNextWorkItems[]` 明确把已证伪的 crop / line / deskew 本地试参加入 stoplist，下一步转向 native TextBox / BubbleMask / SegmentMask 评分、translation model floor 对照和 render regression lock。
+- `1_ocr_probe_text.txt` 新增报告级 `koharuNativeReplicationScoreboardReport` summary 和逐块 `koharuNativeBlockScorecard` 摘要。
+- 缺真实 `test/koharu_artifacts/` 只记为 `externalOptionalMissing` 可选外部路径，不阻塞 native scoreboard；但仍不能把 Vision OCR、pre-crop plan、line plan、BubbleMask proxy 或 SegmentMask proxy 冒充成真实 Koharu artifact。
+- 报告只复用既有探针证据，不新增 OCR / LLM 调用；不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.24（Koharu本地复刻Scoreboard与GateLedger）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuNativeReplicationScoreboardReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`stageScorecardCount >= 9`、`gateCount >= 8`、`workItemCount >= 1`，关键 breakdown 非空，`externalArtifactsRequiredForThisReport = false`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`，每个 `stageScorecards[]` / `gateLedger[]` 的决策字段不使用 ground truth，且 `1_ocr_probe_text.txt` 包含新 summary 和逐块 `koharuNativeBlockScorecard`。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.24 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.23：Koharu 阶段差距复刻计划与晋级门槛
 日期：2026-06-30
 依据：`md/prompt/v1（漫画探针）/v1.23（Koharu阶段差距复刻计划与晋级门槛）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
