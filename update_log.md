@@ -115,6 +115,41 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.20：阅读顺序与气泡归属结构计划审计
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.20（阅读顺序与气泡归属结构计划审计）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `readingOrderStructureAuditReport`，从最终 blocks、bbox、safe layout、bubbleID、BubbleMask、TextBox / SegmentMask proxy、post-fusion cleanup 和 v1.18 / v1.19 路由证据现场计算阅读顺序与结构计划审计。
+- 每块写出 `currentOrderIndex`、`proposedReadingOrderIndex`、`orderConfidence`、`bubbleGroupID`、同气泡 sibling、气泡归属风险、分割/合并风险、重复/碎片风险、保护标记、结构动作建议和 `mustNotPromoteReasons`。
+- 报告级汇总 `orderChangedBlocks`、`lowConfidenceOrderBlocks`、`multiBlockBubbleGroups`、`maskConflictBlocks`、`splitRiskBlocks`、`duplicateOrFragmentRiskBlocks` 以及 TextBox / SegmentMask / 风险 / 动作 breakdown。
+- `1_ocr_probe_text.txt` 新增报告级 `readingOrderStructureAuditReport` summary 和每块 `readingOrderStructureAudit` 摘要。
+- 报告只做诊断，不改变 `blocks` 顺序、batch 输入、`finalTextUsedForTranslation`、翻译候选、`blockPassed`、失败分类、post-fusion cleanup 或覆盖图。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.20（阅读顺序与气泡归属结构计划审计）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `readingOrderStructureAuditReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`cases.count == totalBlocksDetected`，关键 breakdown 非空，`1_ocr_probe_text.txt` 包含新 summary 和逐块摘要，且 v1.18 / v1.19 报告仍存在。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.20 新字段；以 PR 后云端结果包为准。
+- 阅读顺序启发式可能和漫画叙事顺序不一致，本轮只输出 report-only 风险和建议，不应用到主流程。
+
 ### v1.19：路由驱动翻译对照与 OCR 损坏审计
 日期：2026-06-30
 依据：`md/prompt/v1（漫画探针）/v1.19（路由驱动翻译对照与OCR损坏审计）.md`。本轮修改 Swift 探针报告模型和诊断 TXT；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
