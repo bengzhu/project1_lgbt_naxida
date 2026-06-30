@@ -469,6 +469,18 @@ Agent C 退回复修：
 - 根因 2：`internalStructureBottleneckReport` 用 rejected 的 `originalFusedBlockIndex` 去匹配 cleanup 后已重编号的 `block.index`，导致保留块被误标为 `duplicateOrFragment`。修复后保留块写入 `postFusionCleanupOriginalFusedBlockIndex` note，rejected 原始索引只用于报告汇总；逐块 primary / secondary 不再用 rejected 原始索引误判最终保留块。
 - 本修复不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`；重新 push 后仍由 GitHub Actions 生成新的 ci-fast artifact 供 Agent C 验收。
 
+Agent C 最终验收：
+
+- PR #8 base 为 `smalldata_test`，head 为 `codeb/v1.18-internal-structure-routing`，最终验收 commit 为 `74d81dce9d90af57058575428c71721e3fd7534f`。
+- 云端 `AITRANS CI Results` run `28425069180` / attempt `1` 通过；artifact `aitrans-ci-v1.18-codeb-v1.18-internal-structure-routing--74d81dce9d90-run28425069180-attempt1` 的 manifest 匹配 `version = v1.18`、`branch = codeb/v1.18-internal-structure-routing`、`commitSha = 74d81dce9d90af57058575428c71721e3fd7534f`、`workflowName = AITRANS CI Results`。
+- 结果包包含 `.xcresult`、`junit.xml`、`xcodebuild.log`、`ci-failure-summary.md`、`ci-artifact-manifest.json`、`output/probe_report.json`、`output/clean_text_diagnostic.json`、`output/1_ocr_probe_text.txt` 和关键 PNG。
+- `junit.xml`：5 tests、0 failures；GGUF verify、static checks、Xcode build、simulator build、manga probe 均为 success。
+- 云端探针：`engineUsed = Local GGUF`、`decodingMode = deterministic`、`decodingSeed = 42`、`configuration.currentBlockSource = fusedWholePageBubble`、`probeRunMode = ci-fast`、`totalBlocksDetected = 13`、`outputDirectoryCleaned = true`、`overallPassed = false`。
+- post-fusion cleanup 复验通过：`blockCountBeforeCleanup = 16`、`blockCountAfterCleanup = 13`、`rejectedBlockCount = 3`、`warnings = []`、`missingKeyTexts = []`；`THAT'S RIGHT...` 和 `IVE ARRIVED...` 真实文本保留，初次 run 的远距离误删已消失。
+- `internalStructureBottleneckReport` 复验通过：`evaluatedBlockCount = 13`，`primaryBottleneckBreakdown = { bubbleAssignmentOrSplit: 2, modelTranslationQuality: 5, ocrCharacterDamage: 5, passed: 1 }`，`recommendedActionBreakdown` 非空，`duplicateOrFragmentBlocks = []`，`postFusionRejectedDuplicateOrFragmentBlocks = []`，`1_ocr_probe_text.txt` 含逐块 `internalStructureBottleneck` 摘要和 `postFusionCleanupOriginalFusedBlockIndex` 证据。
+- 质量数字：`groundTruthMatchedBlocks = 13`、`groundTruthUnmatchedBlocks = 0`、`averageCoreDialogueOCRSimilarity = 0.6987`、`averageDecorativeOCRSimilarity = 0.8000`、`passedBlocks = 1`、`failedBlocks = 12`、`translationFailureBreakdown = { modelOutputFailure: 3, ocrInputSuspect: 7, translationLanguageQualityFailure: 2 }`、`likelyRuleFalseFailureBlocks = []`、`cleanTextDiagnostic.passRate = 0.4545`。
+- `overallPassed = false` 仍来自当前 Gemma 270M / OCR 质量基线，不作为本轮结构路由和 cleanup 修复失败。
+
 ### v2.2：GitHub Release GGUF 下载与 Actions 缓存
 日期：2026-06-29
 依据：云端验证基础设施改造；未刷新 `output/`，未追加 `metrics/version_history.csv` 漫画指标行。
