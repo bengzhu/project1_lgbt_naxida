@@ -1579,6 +1579,7 @@ final class TranslationSessionStore: ObservableObject {
                 var internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?
                 var routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport?
                 var ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?
+                var readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1895,6 +1896,17 @@ final class TranslationSessionStore: ObservableObject {
                         textBoxPlanFailureReport: textBoxPlanFailureReport
                     )
                 }
+                readingOrderStructureAuditReport = Self.makeReadingOrderStructureAuditReport(
+                    blocks: probeBlocks,
+                    bubbleMaskReport: bubbleMaskReport,
+                    bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                    bubbleSplitCandidateReport: bubbleSplitCandidateReport,
+                    textBoxCandidateReport: textBoxCandidateReport,
+                    segmentMaskReport: segmentMaskReport,
+                    textBoxPlanFailureReport: textBoxPlanFailureReport,
+                    internalStructureBottleneckReport: internalStructureBottleneckReport,
+                    postFusionCleanup: postFusionCleanup
+                )
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
@@ -1917,6 +1929,7 @@ final class TranslationSessionStore: ObservableObject {
                     internalStructureBottleneckReport: internalStructureBottleneckReport,
                     routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
                     ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
+                    readingOrderStructureAuditReport: readingOrderStructureAuditReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1993,6 +2006,7 @@ final class TranslationSessionStore: ObservableObject {
                     internalStructureBottleneckReport: internalStructureBottleneckReport,
                     routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
                     ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
+                    readingOrderStructureAuditReport: readingOrderStructureAuditReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7097,6 +7111,7 @@ final class TranslationSessionStore: ObservableObject {
         internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport? = nil,
         routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport? = nil,
         ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport? = nil,
+        readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7170,6 +7185,7 @@ final class TranslationSessionStore: ObservableObject {
             internalStructureBottleneckReport: internalStructureBottleneckReport,
             routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
             ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
+            readingOrderStructureAuditReport: readingOrderStructureAuditReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -8906,6 +8922,419 @@ final class TranslationSessionStore: ObservableObject {
         values.reduce(into: [:]) { partial, value in
             partial[value, default: 0] += 1
         }
+    }
+
+    private static func makeReadingOrderStructureAuditReport(
+        blocks: [MangaOverlayProbeBlock],
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
+        textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?,
+        textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?,
+        internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?,
+        postFusionCleanup: MangaOverlayPostFusionCleanupReport?
+    ) -> MangaReadingOrderStructureAuditReport {
+        let maskByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let correctionByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleAssignmentCorrectionReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        var splitByBlock: [Int: MangaOverlayBubbleSplitCandidateDiagnostic] = [:]
+        for diagnostic in bubbleSplitCandidateReport?.diagnostics ?? [] {
+            for blockIndex in diagnostic.seedBlockIndexes where splitByBlock[blockIndex] == nil {
+                splitByBlock[blockIndex] = diagnostic
+            }
+        }
+        let textBoxByBlock = Dictionary(
+            uniqueKeysWithValues: (textBoxCandidateReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let failureByBlock = Dictionary(
+            uniqueKeysWithValues: (textBoxPlanFailureReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let routingByBlock = Dictionary(
+            uniqueKeysWithValues: (internalStructureBottleneckReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let rejectedOriginalIndexes = Set((postFusionCleanup?.rejectedBlocks ?? []).map(\.originalFusedBlockIndex))
+        let relatedKeptOriginalIndexes = Set((postFusionCleanup?.rejectedBlocks ?? []).compactMap(\.relatedFusedBlockIndex))
+        let proposedOrder = readingOrderSortedBlockIndexes(blocks)
+        let proposedRankByBlock = Dictionary(uniqueKeysWithValues: proposedOrder.enumerated().map { ($0.element, $0.offset) })
+        let groupIDsByBlock = Dictionary(uniqueKeysWithValues: blocks.map { block in
+            (block.index, readingOrderBubbleGroupID(block: block, mask: maskByBlock[block.index]))
+        })
+        let groupMembers = Dictionary(grouping: blocks, by: { groupIDsByBlock[$0.index] ?? "unassigned:\($0.index)" })
+            .mapValues { $0.map(\.index).sorted() }
+
+        let cases = blocks.map { block -> MangaReadingOrderStructureAuditCase in
+            let mask = maskByBlock[block.index]
+            let correction = correctionByBlock[block.index]
+            let split = splitByBlock[block.index]
+            let textBox = textBoxByBlock[block.index]
+            let segment = segmentByBlock[block.index]
+            let failure = failureByBlock[block.index]
+            let routing = routingByBlock[block.index]
+            let groupID = groupIDsByBlock[block.index] ?? "unassigned:\(block.index)"
+            let siblings = (groupMembers[groupID] ?? [])
+                .filter { $0 != block.index }
+            let currentOrderIndex = blocks.firstIndex(where: { $0.index == block.index }) ?? block.index
+            let proposedIndex = proposedRankByBlock[block.index] ?? currentOrderIndex
+            let bubbleRisk = readingOrderBubbleAssignmentRisk(block: block, mask: mask, correction: correction, split: split)
+            let splitRisk = readingOrderSplitOrMergeRisk(block: block, siblingIndexes: siblings, split: split)
+            let duplicateRisk = readingOrderDuplicateOrFragmentRisk(
+                block: block,
+                rejectedOriginalIndexes: rejectedOriginalIndexes,
+                relatedKeptOriginalIndexes: relatedKeptOriginalIndexes
+            )
+            let decorativeProtected = block.bestGroundTruthType == MangaGroundTruthEntry.decorativeType
+                || isPostFusionDecorativeTitleText(block.finalTextUsedForTranslation)
+            let keyProtected = isProtectedShortPostFusionText(block.finalTextUsedForTranslation)
+            let textBoxEvidence = readingOrderTextBoxEvidenceLevel(textBox, failure: failure)
+            let segmentEvidence = readingOrderSegmentMaskEvidenceLevel(segment)
+            let confidence = readingOrderConfidence(
+                block: block,
+                proposedOrderChanged: proposedIndex != currentOrderIndex,
+                siblingIndexes: siblings,
+                bubbleRisk: bubbleRisk,
+                splitRisk: splitRisk,
+                duplicateRisk: duplicateRisk,
+                textBoxEvidence: textBoxEvidence,
+                segmentEvidence: segmentEvidence,
+                decorativeProtected: decorativeProtected
+            )
+            let riskFlags = readingOrderRiskFlags(
+                orderChanged: proposedIndex != currentOrderIndex,
+                confidence: confidence,
+                bubbleRisk: bubbleRisk,
+                splitRisk: splitRisk,
+                duplicateRisk: duplicateRisk,
+                textBoxEvidence: textBoxEvidence,
+                segmentEvidence: segmentEvidence,
+                decorativeProtected: decorativeProtected,
+                keyProtected: keyProtected
+            )
+            let action = readingOrderRecommendedStructureAction(
+                block: block,
+                orderChanged: proposedIndex != currentOrderIndex,
+                confidence: confidence,
+                bubbleRisk: bubbleRisk,
+                splitRisk: splitRisk,
+                duplicateRisk: duplicateRisk,
+                textBoxEvidence: textBoxEvidence,
+                segmentEvidence: segmentEvidence,
+                decorativeProtected: decorativeProtected,
+                keyProtected: keyProtected
+            )
+            var mustNotPromote = routing?.mustNotPromoteReasons ?? []
+            mustNotPromote.append("diagnosticOnlyDoesNotChangeBlockOrder")
+            mustNotPromote.append("diagnosticOnlyDoesNotReplaceFinalTextUsedForTranslation")
+            mustNotPromote.append("groundTruthUsedOnlyForEvaluationFields")
+            if proposedIndex != currentOrderIndex {
+                mustNotPromote.append("proposedReadingOrderNotAppliedToBlocks")
+            }
+            if decorativeProtected {
+                mustNotPromote.append("decorativeTitleProtected")
+            }
+            if keyProtected {
+                mustNotPromote.append("keyDialogueProtected")
+            }
+
+            return MangaReadingOrderStructureAuditCase(
+                blockIndex: block.index,
+                currentOrderIndex: currentOrderIndex,
+                proposedReadingOrderIndex: proposedIndex,
+                orderChanged: proposedIndex != currentOrderIndex,
+                orderConfidence: confidence,
+                orderRiskFlags: riskFlags,
+                bubbleID: block.bubbleID,
+                maskDominantBubbleID: mask?.maskDominantBubbleID,
+                bubbleIDConsistent: mask?.bubbleIDConsistent ?? (block.bubbleID != nil),
+                bubbleGroupID: groupID,
+                sameBubbleSiblingBlockIndexes: siblings,
+                bbox: block.bbox,
+                safeLayoutRect: block.safeLayoutRect,
+                groundTruthMatch: block.groundTruthMatch,
+                groundTruthType: block.bestGroundTruthType,
+                ocrGroundTruthSimilarity: block.ocrGroundTruthSimilarity,
+                finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                primaryBottleneck: routing?.primaryBottleneck,
+                translationFailureCategory: block.failureCategory,
+                textBoxEvidenceLevel: textBoxEvidence,
+                segmentMaskEvidenceLevel: segmentEvidence,
+                bubbleAssignmentRisk: bubbleRisk,
+                splitOrMergeRisk: splitRisk,
+                duplicateOrFragmentRisk: duplicateRisk,
+                decorativeProtectionApplied: decorativeProtected,
+                recommendedStructureAction: action,
+                diagnosticOnly: true,
+                mustNotPromoteReasons: Array(Set(mustNotPromote)).sorted()
+            )
+        }
+
+        let multiGroups = groupMembers.filter { key, value in
+            value.count > 1 && !key.hasPrefix("unassigned:")
+        }
+
+        return MangaReadingOrderStructureAuditReport(
+            enabled: true,
+            evaluatedBlockCount: cases.count,
+            currentOrderRule: "Final blocks array order from fusedWholePageBubble/post-fusion cleanup; unchanged by this report.",
+            proposedOrderRule: "Ground-truth-free visual order: centerY row bucketing, same row by centerX, same bubble/mask group kept local; only proposedReadingOrderIndex is reported.",
+            orderChangedBlocks: cases.filter(\.orderChanged).map(\.blockIndex).sorted(),
+            lowConfidenceOrderBlocks: cases.filter { $0.orderConfidence < 0.68 }.map(\.blockIndex).sorted(),
+            bubbleGroupCount: groupMembers.count,
+            multiBlockBubbleGroups: multiGroups,
+            unassignedBlocks: cases.filter { $0.bubbleAssignmentRisk == "unassigned" }.map(\.blockIndex).sorted(),
+            maskConflictBlocks: cases.filter { $0.bubbleAssignmentRisk == "maskConflict" || $0.bubbleAssignmentRisk == "lowMaskCoverage" }.map(\.blockIndex).sorted(),
+            correctionRecommendedBlocks: cases.filter { $0.bubbleAssignmentRisk == "correctionRecommended" }.map(\.blockIndex).sorted(),
+            splitRiskBlocks: cases.filter { $0.splitOrMergeRisk != "none" }.map(\.blockIndex).sorted(),
+            duplicateOrFragmentRiskBlocks: cases.filter { $0.duplicateOrFragmentRisk != "none" && $0.duplicateOrFragmentRisk != "protectedTextDoNotDelete" }.map(\.blockIndex).sorted(),
+            decorativeProtectedBlocks: cases.filter(\.decorativeProtectionApplied).map(\.blockIndex).sorted(),
+            keyDialogueProtectedBlocks: cases.filter { $0.mustNotPromoteReasons.contains("keyDialogueProtected") }.map(\.blockIndex).sorted(),
+            textBoxEvidenceBreakdown: countBy(cases.map(\.textBoxEvidenceLevel)),
+            segmentMaskEvidenceBreakdown: countBy(cases.map(\.segmentMaskEvidenceLevel)),
+            bubbleAssignmentRiskBreakdown: countBy(cases.map(\.bubbleAssignmentRisk)),
+            splitOrMergeRiskBreakdown: countBy(cases.map(\.splitOrMergeRisk)),
+            duplicateOrFragmentRiskBreakdown: countBy(cases.map(\.duplicateOrFragmentRisk)),
+            recommendedStructureActionBreakdown: countBy(cases.map(\.recommendedStructureAction)),
+            cases: cases,
+            notes: [
+                "readingOrderStructureAuditReport is report-only and does not reorder blocks, batch input, overlay drawing, translation, cleanup, or pass/fail decisions",
+                "proposed reading order uses bbox and bubble/mask grouping signals only; ground truth fields remain diagnostic evaluation fields",
+                "decorative titles and protected key dialogue can be marked protected or manual review but are not suggested as deletable"
+            ]
+        )
+    }
+
+    private static func readingOrderSortedBlockIndexes(_ blocks: [MangaOverlayProbeBlock]) -> [Int] {
+        let items = blocks.map { block -> (index: Int, rect: CGRect, rowKey: Double, centerX: Double, group: String) in
+            let rect = rect(from: block.bbox)
+            let rowHeight = max(CGFloat(28), min(CGFloat(96), rect.height * 0.85))
+            let rowKey = (Double(rect.midY) / Double(rowHeight)).rounded()
+            let group = block.bubbleID.map { "bubble:\($0)" } ?? "unassigned:\(block.index)"
+            return (block.index, rect, rowKey, Double(rect.midX), group)
+        }
+        return items.sorted { lhs, rhs in
+            if lhs.group == rhs.group,
+               abs(lhs.rect.midY - rhs.rect.midY) <= max(lhs.rect.height, rhs.rect.height) * 1.25 {
+                if abs(lhs.rect.midY - rhs.rect.midY) > max(CGFloat(18), min(lhs.rect.height, rhs.rect.height) * 0.40) {
+                    return lhs.rect.midY < rhs.rect.midY
+                }
+                return lhs.rect.midX < rhs.rect.midX
+            }
+            if lhs.rowKey != rhs.rowKey {
+                return lhs.rowKey < rhs.rowKey
+            }
+            if abs(lhs.rect.midY - rhs.rect.midY) > max(CGFloat(20), min(lhs.rect.height, rhs.rect.height) * 0.55) {
+                return lhs.rect.midY < rhs.rect.midY
+            }
+            return lhs.centerX < rhs.centerX
+        }
+        .map(\.index)
+    }
+
+    private static func readingOrderBubbleGroupID(
+        block: MangaOverlayProbeBlock,
+        mask: MangaOverlayBubbleMaskBlockDiagnostic?
+    ) -> String {
+        if let maskDominantBubbleID = mask?.maskDominantBubbleID {
+            return "mask:\(maskDominantBubbleID)"
+        }
+        if let bubbleID = block.bubbleID {
+            return "bubble:\(bubbleID)"
+        }
+        return "unassigned:\(block.index)"
+    }
+
+    private static func readingOrderBubbleAssignmentRisk(
+        block: MangaOverlayProbeBlock,
+        mask: MangaOverlayBubbleMaskBlockDiagnostic?,
+        correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+        split: MangaOverlayBubbleSplitCandidateDiagnostic?
+    ) -> String {
+        if block.bubbleID == nil {
+            return "unassigned"
+        }
+        if correction?.correctionRecommended == true {
+            return "correctionRecommended"
+        }
+        if split?.parentBubbleID == block.bubbleID {
+            return "splitParent"
+        }
+        if let mask, !mask.bubbleIDConsistent {
+            return "maskConflict"
+        }
+        if let coverage = mask?.cropMaskCoverageRatio ?? mask?.maskDominantCoverageRatio,
+           coverage < 0.45 {
+            return "lowMaskCoverage"
+        }
+        return "none"
+    }
+
+    private static func readingOrderSplitOrMergeRisk(
+        block: MangaOverlayProbeBlock,
+        siblingIndexes: [Int],
+        split: MangaOverlayBubbleSplitCandidateDiagnostic?
+    ) -> String {
+        if isProtectedShortPostFusionText(block.finalTextUsedForTranslation)
+            || isPostFusionDecorativeTitleText(block.finalTextUsedForTranslation) {
+            return "doNotMergeProtected"
+        }
+        if block.crossBubbleMergeRejected {
+            return "crossBubbleMergeRejected"
+        }
+        if split?.clampEligible == true {
+            return "oversizedBubbleNeedsSplit"
+        }
+        if !siblingIndexes.isEmpty {
+            let wordCount = ocrCandidateWords(block.finalTextUsedForTranslation).count
+            return wordCount <= 3 ? "sameBubblePotentialOverSplit" : "sameBubbleMultiBlockExpected"
+        }
+        return "none"
+    }
+
+    private static func readingOrderDuplicateOrFragmentRisk(
+        block: MangaOverlayProbeBlock,
+        rejectedOriginalIndexes: Set<Int>,
+        relatedKeptOriginalIndexes: Set<Int>
+    ) -> String {
+        if isProtectedShortPostFusionText(block.finalTextUsedForTranslation)
+            || isPostFusionDecorativeTitleText(block.finalTextUsedForTranslation) {
+            return "protectedTextDoNotDelete"
+        }
+        if let originalIndex = postFusionOriginalFusedBlockIndex(in: block),
+           relatedKeptOriginalIndexes.contains(originalIndex) || rejectedOriginalIndexes.contains(originalIndex) {
+            return "postFusionRejectedRelated"
+        }
+        if looksLikeInternalDuplicateOrFragment(block) {
+            return "possibleDuplicate"
+        }
+        let words = ocrCandidateWords(block.finalTextUsedForTranslation)
+        if words.count <= 2, block.groundTruthMatch == "unmatched" {
+            return "possibleFragment"
+        }
+        return "none"
+    }
+
+    private static func readingOrderTextBoxEvidenceLevel(
+        _ textBox: MangaOverlayTextBoxCandidateDiagnostic?,
+        failure: MangaOverlayTextBoxPlanFailureBlockSummary?
+    ) -> String {
+        guard let textBox else { return "missing" }
+        if textBox.eligibleForCrop && textBox.evidenceScore >= 0.70 && textBox.rejectionReasons.isEmpty {
+            return "strong"
+        }
+        if textBox.evidenceScore >= 0.50 || failure?.bestShadowBetterThanControl == true {
+            return "partial"
+        }
+        if textBox.evidenceScore > 0 || !textBox.rejectionReasons.isEmpty || !textBox.riskFlags.isEmpty {
+            return "weak"
+        }
+        return "missing"
+    }
+
+    private static func readingOrderSegmentMaskEvidenceLevel(_ segment: MangaOverlaySegmentMaskDiagnostic?) -> String {
+        guard let segment else { return "missing" }
+        if segment.usableForCropEvidence, segment.glyphMaskPixelCount > 0, segment.rejectionReasons.isEmpty {
+            return "strong"
+        }
+        if segment.usableForCropEvidence {
+            return "usable"
+        }
+        if segment.glyphMaskPixelCount > 0 || !segment.rejectionReasons.isEmpty || !segment.riskFlags.isEmpty {
+            return "weak"
+        }
+        return "missing"
+    }
+
+    private static func readingOrderConfidence(
+        block: MangaOverlayProbeBlock,
+        proposedOrderChanged: Bool,
+        siblingIndexes: [Int],
+        bubbleRisk: String,
+        splitRisk: String,
+        duplicateRisk: String,
+        textBoxEvidence: String,
+        segmentEvidence: String,
+        decorativeProtected: Bool
+    ) -> Double {
+        var score = 0.88
+        if proposedOrderChanged { score -= 0.16 }
+        if block.bubbleID == nil { score -= 0.14 }
+        if !siblingIndexes.isEmpty { score -= 0.06 }
+        if ["maskConflict", "correctionRecommended", "lowMaskCoverage", "splitParent"].contains(bubbleRisk) { score -= 0.16 }
+        if ["sameBubblePotentialOverSplit", "oversizedBubbleNeedsSplit", "crossBubbleMergeRejected"].contains(splitRisk) { score -= 0.10 }
+        if duplicateRisk != "none", duplicateRisk != "protectedTextDoNotDelete" { score -= 0.12 }
+        if textBoxEvidence == "missing" { score -= 0.08 }
+        if segmentEvidence == "missing" { score -= 0.05 }
+        if decorativeProtected { score += 0.04 }
+        return min(max(score, 0), 1)
+    }
+
+    private static func readingOrderRiskFlags(
+        orderChanged: Bool,
+        confidence: Double,
+        bubbleRisk: String,
+        splitRisk: String,
+        duplicateRisk: String,
+        textBoxEvidence: String,
+        segmentEvidence: String,
+        decorativeProtected: Bool,
+        keyProtected: Bool
+    ) -> [String] {
+        var flags: [String] = []
+        if orderChanged { flags.append("proposedOrderDiffersFromCurrent") }
+        if confidence < 0.68 { flags.append("lowOrderConfidence") }
+        if bubbleRisk != "none" { flags.append("bubbleAssignmentRisk:\(bubbleRisk)") }
+        if splitRisk != "none" { flags.append("splitOrMergeRisk:\(splitRisk)") }
+        if duplicateRisk != "none" { flags.append("duplicateOrFragmentRisk:\(duplicateRisk)") }
+        if textBoxEvidence == "weak" || textBoxEvidence == "missing" { flags.append("textBoxEvidence:\(textBoxEvidence)") }
+        if segmentEvidence == "weak" || segmentEvidence == "missing" { flags.append("segmentMaskEvidence:\(segmentEvidence)") }
+        if decorativeProtected { flags.append("decorativeProtected") }
+        if keyProtected { flags.append("keyDialogueProtected") }
+        return Array(Set(flags)).sorted()
+    }
+
+    private static func readingOrderRecommendedStructureAction(
+        block: MangaOverlayProbeBlock,
+        orderChanged: Bool,
+        confidence: Double,
+        bubbleRisk: String,
+        splitRisk: String,
+        duplicateRisk: String,
+        textBoxEvidence: String,
+        segmentEvidence: String,
+        decorativeProtected: Bool,
+        keyProtected: Bool
+    ) -> String {
+        if decorativeProtected {
+            return "protectDecorativeTitle"
+        }
+        if keyProtected {
+            return "protectKeyDialogue"
+        }
+        if duplicateRisk != "none", duplicateRisk != "protectedTextDoNotDelete" {
+            return "reviewDuplicateOrFragment"
+        }
+        if splitRisk == "oversizedBubbleNeedsSplit" || splitRisk == "sameBubblePotentialOverSplit" {
+            return "reviewBubbleSplit"
+        }
+        if bubbleRisk != "none" {
+            return "reviewBubbleAssignment"
+        }
+        if textBoxEvidence == "missing" || segmentEvidence == "missing" {
+            return "needsTextBoxOrSegmentEvidence"
+        }
+        if orderChanged {
+            return confidence >= 0.68 ? "reportOnlyReorderSuggested" : "manualReview"
+        }
+        if block.blockPassed {
+            return "noActionPassed"
+        }
+        return "keepCurrentOrder"
     }
 
     private static func looksLikeInternalDuplicateOrFragment(_ block: MangaOverlayProbeBlock) -> Bool {

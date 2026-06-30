@@ -1175,6 +1175,63 @@ struct MangaOCRCharacterDamageAuditReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaReadingOrderStructureAuditCase: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var currentOrderIndex: Int
+    var proposedReadingOrderIndex: Int
+    var orderChanged: Bool
+    var orderConfidence: Double
+    var orderRiskFlags: [String]
+    var bubbleID: Int?
+    var maskDominantBubbleID: Int?
+    var bubbleIDConsistent: Bool
+    var bubbleGroupID: String
+    var sameBubbleSiblingBlockIndexes: [Int]
+    var bbox: [Double]
+    var safeLayoutRect: [Double]?
+    var groundTruthMatch: String
+    var groundTruthType: String?
+    var ocrGroundTruthSimilarity: Double?
+    var finalTextUsedForTranslation: String
+    var primaryBottleneck: String?
+    var translationFailureCategory: String
+    var textBoxEvidenceLevel: String
+    var segmentMaskEvidenceLevel: String
+    var bubbleAssignmentRisk: String
+    var splitOrMergeRisk: String
+    var duplicateOrFragmentRisk: String
+    var decorativeProtectionApplied: Bool
+    var recommendedStructureAction: String
+    var diagnosticOnly: Bool
+    var mustNotPromoteReasons: [String]
+}
+
+struct MangaReadingOrderStructureAuditReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var evaluatedBlockCount: Int
+    var currentOrderRule: String
+    var proposedOrderRule: String
+    var orderChangedBlocks: [Int]
+    var lowConfidenceOrderBlocks: [Int]
+    var bubbleGroupCount: Int
+    var multiBlockBubbleGroups: [String: [Int]]
+    var unassignedBlocks: [Int]
+    var maskConflictBlocks: [Int]
+    var correctionRecommendedBlocks: [Int]
+    var splitRiskBlocks: [Int]
+    var duplicateOrFragmentRiskBlocks: [Int]
+    var decorativeProtectedBlocks: [Int]
+    var keyDialogueProtectedBlocks: [Int]
+    var textBoxEvidenceBreakdown: [String: Int]
+    var segmentMaskEvidenceBreakdown: [String: Int]
+    var bubbleAssignmentRiskBreakdown: [String: Int]
+    var splitOrMergeRiskBreakdown: [String: Int]
+    var duplicateOrFragmentRiskBreakdown: [String: Int]
+    var recommendedStructureActionBreakdown: [String: Int]
+    var cases: [MangaReadingOrderStructureAuditCase]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -2063,6 +2120,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?
     var routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport?
     var ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?
+    var readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
