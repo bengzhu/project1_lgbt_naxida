@@ -115,6 +115,46 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.25：Native TextBox Proxy 质量账本与候选冻结
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.25（NativeTextBoxProxy质量账本与候选冻结）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `nativeTextBoxProxyLedgerReport`，执行 v1.24 的 `WI-native-textbox-artifact-scorecard`，聚合现有 TextBox / crop / line / BubbleMask / SegmentMask / OCR damage / v1.24 scoreboard 证据。
+- 报告顶层输出 `source = AITRANSProbe`、`referenceWorkItemID = WI-native-textbox-artifact-scorecard`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false` 和 `diagnosticOnly = true`。
+- `blockLedgers[]` 为每个最终块输出 qualityStatus、candidateSources、word preservation、protected keyword、bubble / segment / OCR damage / translation model / render gate、stoplist 命中、mustNotPromoteReasons 和 nextAction。
+- `candidateLedgers[]` 汇总 fused seed bbox、TextRegion crop control、pre-crop TextBox plan、crop experiment shadow、line TextBox plan、line crop shadow 等既有候选证据；候选只做 report-only 账本，不写回主流程。
+- `gateLedger[]` 固定包含 no-main-flow-mutation、no-ground-truth-decision、word preservation、protected keywords、stoplist freeze、bubble containment、segment support、OCR damage、model floor 和 render stability。
+- `stoplist[]` 冻结已证伪的 crop / line / deskew 本地试参，过期条件只能是未来证据条件，不通过降低阈值解冻。
+- `1_ocr_probe_text.txt` 新增报告级 `nativeTextBoxProxyLedgerReport` summary 和逐块 `nativeTextBoxProxyLedger` 摘要。
+- 报告只复用既有探针证据，不新增 OCR / LLM 调用；不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.25（NativeTextBoxProxy质量账本与候选冻结）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 退回修复：云端 run `28452180814` 在 `TranslationSessionStore.swift` 触发 Swift 编译失败，原因是 v1.25 ledger helper 误读不存在的 `MangaOverlayTextRegionCropDiagnostic.candidatePreservesRawWords` 字段；已改为使用现有 `rawWordPreservationRatio >= 0.72` 推导，并移除同 helper 未使用的 BubbleMask 字典，不改变报告语义或主流程。
+- 退回修复：云端 run `28453929047` 在 `makeNativeTextBoxProxyLedgerReport` 的 `blockLedgers` 大闭包触发 Swift 类型检查超时；已拆为显式 helper / 子表达式并改用显式循环生成 block ledger，同时清理 v1.24 scoreboard helper 未使用的 `mask` 变量，不改变报告语义或主流程。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `nativeTextBoxProxyLedgerReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgers.count == totalBlocksDetected`、`gateLedger.count >= 10`，关键 breakdown 非空，stoplist 覆盖既有 crop / line stop blocks，且 `1_ocr_probe_text.txt` 包含新 summary 和逐块 `nativeTextBoxProxyLedger`。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.25 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.24：Koharu 本地复刻 Scoreboard 与 Gate Ledger
 日期：2026-06-30
 依据：`md/prompt/v1（漫画探针）/v1.24（Koharu本地复刻Scoreboard与GateLedger）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。

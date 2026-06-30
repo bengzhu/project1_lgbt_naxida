@@ -1633,6 +1633,117 @@ struct MangaKoharuNativeReplicationScoreboardReport: Equatable, Codable, Sendabl
     var notes: [String]
 }
 
+struct MangaNativeTextBoxProxySignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaNativeTextBoxProxyCandidateLedger: Equatable, Codable, Sendable {
+    var candidateID: String
+    var blockIndex: Int
+    var source: String
+    var bbox: [Double]
+    var clampSource: String?
+    var bubbleID: Int?
+    var textPreview: String?
+    var rawWordsPreserved: Bool?
+    var protectedKeywordsPreserved: Bool?
+    var wordCountDelta: Int?
+    var bubbleContained: Bool?
+    var segmentMaskSupported: Bool?
+    var introducedLikelyOCRError: Bool
+    var promotionVerdict: String
+    var promotionBlockers: [String]
+    var reportOnlyRank: Int
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaNativeTextBoxProxyBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var failureCategory: String
+    var blockPassed: Bool
+    var qualityStatus: String
+    var primaryFreezeReason: String?
+    var candidateSources: [String]
+    var candidateCount: Int
+    var bestReportOnlyCandidateID: String?
+    var rawWordPreservationStatus: String
+    var protectedKeywordStatus: String
+    var wordOrderStatus: String
+    var bubbleConstraintStatus: String
+    var segmentMaskConstraintStatus: String
+    var ocrDamageStatus: String
+    var translationModelFloorStatus: String
+    var renderStatus: String
+    var stoplistHit: Bool
+    var stoplistReasons: [String]
+    var decisionSignals: [MangaNativeTextBoxProxySignal]
+    var evaluationSignals: [MangaNativeTextBoxProxySignal]
+    var mustNotPromoteReasons: [String]
+    var nextAction: String
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaNativeTextBoxProxyGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaNativeTextBoxProxySignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaNativeTextBoxProxyStoplistEntry: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var scope: String
+    var reason: String
+    var sourceReports: [String]
+    var evidence: [String]
+    var expiresWhen: String
+    var nextAllowedAction: String
+}
+
+struct MangaNativeTextBoxProxyLedgerReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referenceWorkItemID: String
+    var evaluatedBlockCount: Int
+    var candidateLedgerCount: Int
+    var gateCount: Int
+    var stoplistCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var qualityStatusBreakdown: [String: Int]
+    var candidateSourceBreakdown: [String: Int]
+    var freezeReasonBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var stoplistBlocks: [Int]
+    var shadowOnlyEligibleBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var blockedByWordPreservationBlocks: [Int]
+    var blockedByBubbleMaskBlocks: [Int]
+    var blockedBySegmentMaskBlocks: [Int]
+    var blockedByTranslationModelBlocks: [Int]
+    var blockLedgers: [MangaNativeTextBoxProxyBlockLedger]
+    var candidateLedgers: [MangaNativeTextBoxProxyCandidateLedger]
+    var gateLedger: [MangaNativeTextBoxProxyGate]
+    var stoplist: [MangaNativeTextBoxProxyStoplistEntry]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -2526,6 +2637,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuArtifactDAGReport: MangaKoharuArtifactDAGReport?
     var koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport?
     var koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport?
+    var nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
