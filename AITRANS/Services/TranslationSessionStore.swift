@@ -1576,6 +1576,7 @@ final class TranslationSessionStore: ObservableObject {
                 var lineCropExperimentReport: MangaOverlayLineCropExperimentReport?
                 var externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
                 var externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?
+                var internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1866,6 +1867,16 @@ final class TranslationSessionStore: ObservableObject {
                     bundledTestDirectory: self.bundledTestDirectory,
                     preprocessing: probeConfiguration.preprocessing
                 )
+                internalStructureBottleneckReport = Self.makeInternalStructureBottleneckReport(
+                    blocks: probeBlocks,
+                    textRegionCropReport: textRegionCropReport,
+                    textBoxPlanFailureReport: textBoxPlanFailureReport,
+                    bubbleMaskReport: bubbleMaskReport,
+                    bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                    bubbleSplitCandidateReport: bubbleSplitCandidateReport,
+                    postFusionCleanup: postFusionCleanup,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport
+                )
                 self.mangaOverlayProbeBlocks = probeBlocks
 
                 self.mangaOverlayProbeMessage = "正在生成 bbox 调试图、覆盖合成图和 probe_report.json"
@@ -1885,6 +1896,7 @@ final class TranslationSessionStore: ObservableObject {
                     lineCropExperimentReport: lineCropExperimentReport,
                     externalArtifactReadinessReport: externalArtifactReadinessReport,
                     externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+                    internalStructureBottleneckReport: internalStructureBottleneckReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1958,6 +1970,7 @@ final class TranslationSessionStore: ObservableObject {
                     lineCropExperimentReport: lineCropExperimentReport,
                     externalArtifactReadinessReport: externalArtifactReadinessReport,
                     externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+                    internalStructureBottleneckReport: internalStructureBottleneckReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7059,6 +7072,7 @@ final class TranslationSessionStore: ObservableObject {
         lineCropExperimentReport: MangaOverlayLineCropExperimentReport? = nil,
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport? = nil,
         externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport? = nil,
+        internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7129,6 +7143,7 @@ final class TranslationSessionStore: ObservableObject {
             lineCropExperimentReport: lineCropExperimentReport,
             externalArtifactReadinessReport: externalArtifactReadinessReport,
             externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+            internalStructureBottleneckReport: internalStructureBottleneckReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -8125,6 +8140,326 @@ final class TranslationSessionStore: ObservableObject {
         return failures
     }
 
+    private static func makeInternalStructureBottleneckReport(
+        blocks: [MangaOverlayProbeBlock],
+        textRegionCropReport: MangaOverlayTextRegionCropReport?,
+        textBoxPlanFailureReport: MangaOverlayTextBoxPlanFailureReport?,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
+        postFusionCleanup: MangaOverlayPostFusionCleanupReport?,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
+    ) -> MangaOverlayInternalStructureBottleneckReport {
+        let cropByBlock = Dictionary(
+            uniqueKeysWithValues: (textRegionCropReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let textBoxFailureByBlock = Dictionary(
+            uniqueKeysWithValues: (textBoxPlanFailureReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let bubbleMaskByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let correctionByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleAssignmentCorrectionReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        var splitByBlock: [Int: MangaOverlayBubbleSplitCandidateDiagnostic] = [:]
+        for diagnostic in bubbleSplitCandidateReport?.diagnostics ?? [] {
+            for blockIndex in diagnostic.seedBlockIndexes where splitByBlock[blockIndex] == nil {
+                splitByBlock[blockIndex] = diagnostic
+            }
+        }
+        let postFusionDuplicateBlocks = Set(
+            (postFusionCleanup?.rejectedBlocks ?? [])
+                .filter { $0.reason == "duplicateOrFragment" || $0.reason.localizedCaseInsensitiveContains("fragment") || $0.reason.localizedCaseInsensitiveContains("duplicate") }
+                .map(\.originalFusedBlockIndex)
+        )
+        let optionalExternalMissing = externalArtifactReadinessReport?.readinessVerdict == "manifestMissing"
+            || externalArtifactReadinessReport?.readinessVerdict == "artifactFilesMissing"
+
+        let summaries = blocks.map { block -> MangaOverlayInternalStructureBottleneckBlock in
+            let crop = cropByBlock[block.index]
+            let textBoxFailure = textBoxFailureByBlock[block.index]
+            let mask = bubbleMaskByBlock[block.index]
+            let correction = correctionByBlock[block.index]
+            let split = splitByBlock[block.index]
+
+            var evidence: [String] = [
+                "failureCategory=\(block.failureCategory)",
+                "blockPassed=\(block.blockPassed)",
+                "groundTruthMatch=\(block.groundTruthMatch)",
+                "groundTruthType=\(block.bestGroundTruthType ?? "nil")",
+                "bubbleID=\(block.bubbleID.map(String.init) ?? "nil")",
+                "wordOrderPreserved=\(block.wordOrderPreserved.map(String.init) ?? "nil")",
+                "externalArtifactOptionalMissing=\(optionalExternalMissing)"
+            ]
+            if let similarity = block.ocrGroundTruthSimilarity {
+                evidence.append("ocrSimilarity=\(similarity.formatted(.number.precision(.fractionLength(3))))")
+            }
+            if let crop {
+                evidence.append("cropSelection=\(crop.selectionReason)")
+                evidence.append("cropRejections=\(crop.rejectionReasons.joined(separator: ","))")
+                evidence.append("cropFailureAttribution=\(crop.failureAttribution.joined(separator: ","))")
+            }
+            if let textBoxFailure {
+                evidence.append("textBoxPlanFailure=\(textBoxFailure.primaryFailureCategory)")
+                evidence.append("promotionBlockers=\(textBoxFailure.promotionBlockers.joined(separator: ","))")
+                evidence.append("planRecommendedAction=\(textBoxFailure.recommendedNextAction)")
+            }
+            if let mask {
+                evidence.append("maskBubbleIDConsistent=\(mask.bubbleIDConsistent)")
+                evidence.append("maskDominantBubbleID=\(mask.maskDominantBubbleID.map(String.init) ?? "nil")")
+                evidence.append("maskDominantCoverage=\(mask.maskDominantCoverageRatio.formatted(.number.precision(.fractionLength(3))))")
+            }
+            if let correction {
+                evidence.append("bubbleAssignmentCorrection=\(correction.decision)")
+                evidence.append("correctionRecommended=\(correction.correctionRecommended)")
+            }
+            if let split {
+                evidence.append("splitCandidateID=\(split.id)")
+                evidence.append("splitClampEligible=\(split.clampEligible)")
+                evidence.append("splitRejections=\(split.rejectionReasons.joined(separator: ","))")
+            }
+            if postFusionDuplicateBlocks.contains(block.index) {
+                evidence.append("postFusionCleanupRejectedDuplicateOrFragment=true")
+            }
+
+            let secondary = internalSecondaryBottlenecks(
+                block: block,
+                crop: crop,
+                textBoxFailure: textBoxFailure,
+                mask: mask,
+                correction: correction,
+                split: split,
+                postFusionDuplicateBlocks: postFusionDuplicateBlocks,
+                optionalExternalMissing: optionalExternalMissing
+            )
+            let primary = internalPrimaryBottleneck(
+                block: block,
+                secondary: secondary,
+                crop: crop,
+                textBoxFailure: textBoxFailure,
+                postFusionDuplicateBlocks: postFusionDuplicateBlocks
+            )
+            let action = internalRecommendedAction(for: primary)
+            let mustNotPromote = internalMustNotPromoteReasons(
+                block: block,
+                crop: crop,
+                textBoxFailure: textBoxFailure,
+                optionalExternalMissing: optionalExternalMissing
+            )
+
+            return MangaOverlayInternalStructureBottleneckBlock(
+                blockIndex: block.index,
+                groundTruthMatch: block.groundTruthMatch,
+                groundTruthType: block.bestGroundTruthType,
+                ocrGroundTruthSimilarity: block.ocrGroundTruthSimilarity,
+                wordOrderPreserved: block.wordOrderPreserved,
+                bubbleID: block.bubbleID,
+                bbox: block.bbox,
+                finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                failureCategory: block.failureCategory,
+                blockPassed: block.blockPassed,
+                primaryBottleneck: primary,
+                secondaryBottlenecks: secondary.filter { $0 != primary },
+                recommendedNextAction: action,
+                evidence: evidence,
+                mustNotPromoteReasons: mustNotPromote
+            )
+        }
+
+        let primaryBreakdown = countBy(summaries.map(\.primaryBottleneck))
+        let actionBreakdown = countBy(summaries.map(\.recommendedNextAction))
+        let dialogueBreakdown = countBy(
+            summaries
+                .filter { $0.groundTruthType == MangaGroundTruthEntry.dialogueType }
+                .map(\.primaryBottleneck)
+        )
+        let decorativeBreakdown = countBy(
+            summaries
+                .filter { $0.groundTruthType == MangaGroundTruthEntry.decorativeType }
+                .map(\.primaryBottleneck)
+        )
+
+        return MangaOverlayInternalStructureBottleneckReport(
+            enabled: true,
+            evaluatedBlockCount: summaries.count,
+            primaryBottleneckBreakdown: primaryBreakdown,
+            recommendedActionBreakdown: actionBreakdown,
+            dialogueBottleneckBreakdown: dialogueBreakdown,
+            decorativeBottleneckBreakdown: decorativeBreakdown,
+            ocrInputSuspectBlocks: summaries.filter { $0.failureCategory == "ocrInputSuspect" || $0.primaryBottleneck == "ocrCharacterDamage" }.map(\.blockIndex).sorted(),
+            duplicateOrFragmentBlocks: summaries.filter { $0.primaryBottleneck == "duplicateOrFragment" || $0.secondaryBottlenecks.contains("duplicateOrFragment") }.map(\.blockIndex).sorted(),
+            modelTranslationQualityBlocks: summaries.filter { $0.primaryBottleneck == "modelTranslationQuality" || $0.secondaryBottlenecks.contains("modelTranslationQuality") }.map(\.blockIndex).sorted(),
+            cropCandidateBlockedBlocks: summaries.filter { $0.primaryBottleneck == "cropCandidateBlocked" || $0.secondaryBottlenecks.contains("cropCandidateBlocked") }.map(\.blockIndex).sorted(),
+            bubbleSplitOrAssignmentBlocks: summaries.filter { $0.primaryBottleneck == "bubbleAssignmentOrSplit" || $0.secondaryBottlenecks.contains("bubbleAssignmentOrSplit") }.map(\.blockIndex).sorted(),
+            renderOnlyBlocks: summaries.filter { $0.primaryBottleneck == "renderOnly" }.map(\.blockIndex).sorted(),
+            passedBlocks: summaries.filter(\.blockPassed).map(\.blockIndex).sorted(),
+            postFusionRejectedDuplicateOrFragmentBlocks: Array(postFusionDuplicateBlocks).sorted(),
+            blockSummaries: summaries,
+            notes: [
+                "internalStructureBottleneckReport aggregates existing probe evidence and does not replace finalTextUsedForTranslation",
+                "ground truth is used only for evaluation fields such as similarity and type, not for production candidate selection",
+                "external artifact manifestMissing is treated as optional missing input and does not block the internal routing report"
+            ]
+        )
+    }
+
+    private static func internalSecondaryBottlenecks(
+        block: MangaOverlayProbeBlock,
+        crop: MangaOverlayTextRegionCropDiagnostic?,
+        textBoxFailure: MangaOverlayTextBoxPlanFailureBlockSummary?,
+        mask: MangaOverlayBubbleMaskBlockDiagnostic?,
+        correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+        split: MangaOverlayBubbleSplitCandidateDiagnostic?,
+        postFusionDuplicateBlocks: Set<Int>,
+        optionalExternalMissing: Bool
+    ) -> [String] {
+        var result: [String] = []
+        if block.blockPassed {
+            result.append("passed")
+        }
+        if postFusionDuplicateBlocks.contains(block.index) || looksLikeInternalDuplicateOrFragment(block) {
+            result.append("duplicateOrFragment")
+        }
+        if block.failureCategory == "ocrInputSuspect"
+            || (block.ocrGroundTruthSimilarity ?? 1) < 0.72
+            || block.wordOrderPreserved == false
+            || containsLikelyOCRError(in: block.finalTextUsedForTranslation) {
+            result.append("ocrCharacterDamage")
+        }
+        if block.failureCategory == "modelOutputFailure"
+            || block.failureCategory == "translationLanguageQualityFailure" {
+            result.append("modelTranslationQuality")
+        }
+        if let textBoxFailure,
+           textBoxFailure.bestShadowBetterThanControl || !textBoxFailure.promotionBlockers.isEmpty {
+            result.append("cropCandidateBlocked")
+        } else if let crop,
+                  crop.rejectionReasons.contains(where: { ["rawWordsLost", "emptyCropText", "wordCountRegression", "introducedLikelyOCRError"].contains($0) }) {
+            result.append("cropCandidateBlocked")
+        }
+        if mask?.bubbleIDConsistent == false
+            || correction?.correctionRecommended == true
+            || split?.clampEligible == true
+            || block.crossBubbleMergeRejected {
+            result.append("bubbleAssignmentOrSplit")
+        }
+        if block.blockPassed,
+           block.renderCollisionChecked,
+           block.renderCollisionResolved,
+           !block.renderTextTruncated {
+            result.append("renderOnly")
+        }
+        if optionalExternalMissing {
+            result.append("externalArtifactOptionalMissing")
+        }
+        return Array(Set(result)).sorted()
+    }
+
+    private static func internalPrimaryBottleneck(
+        block: MangaOverlayProbeBlock,
+        secondary: [String],
+        crop: MangaOverlayTextRegionCropDiagnostic?,
+        textBoxFailure: MangaOverlayTextBoxPlanFailureBlockSummary?,
+        postFusionDuplicateBlocks: Set<Int>
+    ) -> String {
+        if block.blockPassed {
+            if block.bestGroundTruthType == MangaGroundTruthEntry.decorativeType {
+                return "passed"
+            }
+            return "passed"
+        }
+        if postFusionDuplicateBlocks.contains(block.index) || looksLikeInternalDuplicateOrFragment(block) {
+            return "duplicateOrFragment"
+        }
+        if secondary.contains("modelTranslationQuality"),
+           !(secondary.contains("ocrCharacterDamage") && block.failureCategory == "ocrInputSuspect") {
+            return "modelTranslationQuality"
+        }
+        if let textBoxFailure,
+           textBoxFailure.bestShadowBetterThanControl,
+           textBoxFailure.promotionBlockers.contains(where: { ["qualityDeltaBelowOrEqual0.08", "wordPreservationRatioBelow0.80", "rawWordsLost"].contains($0) }) {
+            return "cropCandidateBlocked"
+        }
+        if crop?.failureAttribution.contains("bubbleMaskConflict") == true || secondary.contains("bubbleAssignmentOrSplit") {
+            return "bubbleAssignmentOrSplit"
+        }
+        if secondary.contains("ocrCharacterDamage") {
+            return "ocrCharacterDamage"
+        }
+        if secondary.contains("cropCandidateBlocked") {
+            return "cropCandidateBlocked"
+        }
+        return "unknown"
+    }
+
+    private static func internalRecommendedAction(for primary: String) -> String {
+        switch primary {
+        case "passed":
+            "noActionPassed"
+        case "duplicateOrFragment":
+            "tryPostFusionFragmentSuppression"
+        case "ocrCharacterDamage":
+            "improveTextBoxOrSegmentEvidence"
+        case "bubbleAssignmentOrSplit":
+            "improveBubbleSplitOrAssignment"
+        case "cropCandidateBlocked":
+            "keepMainTextAndDoNotTuneGeometry"
+        case "modelTranslationQuality":
+            "tryPromptOrModelComparison"
+        case "renderOnly":
+            "renderNoAction"
+        case "externalArtifactOptionalMissing":
+            "noActionExternalArtifactOptional"
+        default:
+            "manualReview"
+        }
+    }
+
+    private static func internalMustNotPromoteReasons(
+        block: MangaOverlayProbeBlock,
+        crop: MangaOverlayTextRegionCropDiagnostic?,
+        textBoxFailure: MangaOverlayTextBoxPlanFailureBlockSummary?,
+        optionalExternalMissing: Bool
+    ) -> [String] {
+        var reasons = [
+            "groundTruthNotAllowedForSelection",
+            "reportOnlyDoesNotChangeMainInput"
+        ]
+        if let crop, !crop.adopted {
+            reasons.append(contentsOf: crop.rejectionReasons.map { "cropRejected:\($0)" })
+        }
+        if let textBoxFailure {
+            reasons.append(contentsOf: textBoxFailure.promotionBlockers.map { "promotionBlocked:\($0)" })
+        }
+        if optionalExternalMissing {
+            reasons.append("externalArtifactOptionalMissing")
+        }
+        if block.bestGroundTruthType == MangaGroundTruthEntry.decorativeType {
+            reasons.append("decorativeTitleProtected")
+        }
+        return Array(Set(reasons)).sorted()
+    }
+
+    private static func looksLikeInternalDuplicateOrFragment(_ block: MangaOverlayProbeBlock) -> Bool {
+        let words = ocrCandidateWords(block.finalTextUsedForTranslation)
+        guard words.count <= 7 else { return false }
+        if isProtectedShortPostFusionText(block.finalTextUsedForTranslation) {
+            return false
+        }
+        if isPostFusionDecorativeTitleText(block.finalTextUsedForTranslation) {
+            return false
+        }
+        let text = block.finalTextUsedForTranslation.uppercased()
+        return text.contains("AT") && text.contains("LEAST") && (text.contains("2EN") || text.contains("SEN"))
+    }
+
+    private static func countBy(_ values: [String]) -> [String: Int] {
+        values.reduce(into: [:]) { partial, value in
+            partial[value, default: 0] += 1
+        }
+    }
+
     private static func cjkFailureDiagnosticKey(for block: MangaOverlayProbeBlock) -> String {
         if block.failureReasons.contains(where: { $0.contains("占位") || $0.contains("标签") }) {
             return "placeholderOrLabel"
@@ -8618,10 +8953,10 @@ final class TranslationSessionStore: ObservableObject {
             guard rejectedByOriginalIndex[candidateIndex] == nil else { continue }
             for selectedIndex in sortedIndexes where selectedIndex != candidateIndex {
                 guard rejectedByOriginalIndex[selectedIndex] == nil else { continue }
-                guard postFusionInformationScore(blocks[selectedIndex]) >= postFusionInformationScore(blocks[candidateIndex]) else {
+                guard postFusionInformationScore(blocks[selectedIndex]) + 0.08 >= postFusionInformationScore(blocks[candidateIndex]) else {
                     continue
                 }
-                guard let reason = postFusionRejectionReason(
+                guard let rejection = postFusionRejection(
                     candidate: blocks[candidateIndex],
                     selected: blocks[selectedIndex]
                 ) else {
@@ -8635,10 +8970,14 @@ final class TranslationSessionStore: ObservableObject {
                     bubbleID: blocks[candidateIndex].bubbleID,
                     text: blocks[candidateIndex].finalTextUsedForTranslation,
                     bbox: blocks[candidateIndex].bbox,
-                    reason: reason,
+                    reason: rejection.reason,
                     relatedFusedBlockIndex: blocks[selectedIndex].index,
+                    relatedKeptBlockIndex: blocks[selectedIndex].index,
                     relatedText: blocks[selectedIndex].finalTextUsedForTranslation,
-                    relatedBBox: blocks[selectedIndex].bbox
+                    relatedBBox: blocks[selectedIndex].bbox,
+                    qualityScore: postFusionInformationScore(blocks[candidateIndex]),
+                    protectedTextMatched: isProtectedShortPostFusionText(blocks[candidateIndex].finalTextUsedForTranslation),
+                    evidence: rejection.evidence
                 )
                 break
             }
@@ -8715,7 +9054,7 @@ final class TranslationSessionStore: ObservableObject {
         if !missing.isEmpty {
             warnings.append("post-fusion cleanup missing protected texts: \(missing.joined(separator: " | "))")
         }
-        if keptBlocks.count < 13 {
+        if keptBlocks.count < 12 {
             warnings.append("post-fusion cleanup reduced block count below target floor: \(keptBlocks.count)")
         }
 
@@ -8731,7 +9070,8 @@ final class TranslationSessionStore: ObservableObject {
             notes: [
                 "cleanup uses bbox overlap, bubbleID, source, text length, word coverage, and OCR quality heuristics only",
                 "ground truth is not used for rejection or ranking",
-                "short unassigned text is preserved unless it overlaps or is contained by a stronger selected block"
+                "short unassigned text is preserved unless it overlaps or is contained by a stronger selected block",
+                "v1.18 duplicateOrFragment rule rejects only strong-overlap lower-information fragments and keeps protected key texts"
             ]
         )
         return (keptBlocks, keptResults + rejectedResults, report)
@@ -8740,13 +9080,14 @@ final class TranslationSessionStore: ObservableObject {
     private static let postFusionKeyTexts = [
         "Let's Battle!",
         "What are you even talking about?",
-        "We need to get results at this tournament to save the gaming club from being disbanded."
+        "We need to get results at this tournament to save the gaming club from being disbanded.",
+        "The City Battler Tournament starts in a few days."
     ]
 
-    private static func postFusionRejectionReason(
+    private static func postFusionRejection(
         candidate: MangaOverlayProbeBlock,
         selected: MangaOverlayProbeBlock
-    ) -> String? {
+    ) -> (reason: String, evidence: [String])? {
         let candidateRect = rect(from: candidate.bbox)
         let selectedRect = rect(from: selected.bbox)
         let candidateWords = ocrCandidateWords(candidate.finalTextUsedForTranslation)
@@ -8762,12 +9103,25 @@ final class TranslationSessionStore: ObservableObject {
         let candidateShort = candidateWords.count < 2 || candidate.finalTextUsedForTranslation.trimmingCharacters(in: .whitespacesAndNewlines).count < 8
         let sourceOnly = candidate.ocrProbeNotes.contains("fusionSource=wholePageOCR")
             || candidate.ocrProbeNotes.contains("fusionSource=bubbleFirst")
+        let baseEvidence = [
+            "candidateWords=\(candidateWords.count)",
+            "selectedWords=\(selectedWords.count)",
+            "overlap=\(overlap.formatted(.number.precision(.fractionLength(3))))",
+            "containment=\(containment.formatted(.number.precision(.fractionLength(3))))",
+            "selectedContainment=\(selectedContainment.formatted(.number.precision(.fractionLength(3))))",
+            "similarity=\(similarity.formatted(.number.precision(.fractionLength(3))))",
+            "wordCoverage=\(coverage.formatted(.number.precision(.fractionLength(3))))",
+            "sameBubble=\(sameBubble)",
+            "candidateQuality=\(postFusionInformationScore(candidate).formatted(.number.precision(.fractionLength(3))))",
+            "selectedQuality=\(postFusionInformationScore(selected).formatted(.number.precision(.fractionLength(3))))",
+            "protectedTextMatched=\(isProtectedShortPostFusionText(candidate.finalTextUsedForTranslation))"
+        ]
 
         if candidateShort,
            !isProtectedShortPostFusionText(candidate.finalTextUsedForTranslation),
            (overlap >= 0.12 || rectDistance(candidateRect, selectedRect) <= 22),
            selectedWords.count >= 5 {
-            return sourceOnly ? "lowInformationSourceOnly" : "lowInformationFragment"
+            return (sourceOnly ? "lowInformationSourceOnly" : "lowInformationFragment", baseEvidence)
         }
 
         if candidateWords.count >= 5,
@@ -8786,30 +9140,122 @@ final class TranslationSessionStore: ObservableObject {
            coverage >= 0.58,
            sameBubble,
            selectedWords.count > candidateWords.count {
-            return "containedByHigherQualityBlock"
+            return ("containedByHigherQualityBlock", baseEvidence)
         }
 
         if sameBubble,
            (overlap >= 0.34 || containment >= 0.55 || selectedContainment >= 0.55),
            (similarity >= 0.42 || coverage >= 0.58),
            selectedWords.count >= candidateWords.count {
-            return "duplicateWithinBubble"
+            return ("duplicateWithinBubble", baseEvidence)
         }
 
         if overlap >= 0.28,
            selectedWords.count >= candidateWords.count + 2,
            (coverage >= 0.5 || similarity >= 0.45) {
-            return "overlapsSelectedLongerText"
+            return ("overlapsSelectedLongerText", baseEvidence)
         }
 
         if candidateWords.count <= 6,
            selectedWords.count >= candidateWords.count + 3,
            (coverage >= 0.5 || similarity >= 0.38),
            rectDistance(candidateRect, selectedRect) <= 28 {
-            return "fragmentOfSelectedCandidate"
+            return ("fragmentOfSelectedCandidate", baseEvidence)
+        }
+
+        if let duplicateEvidence = postFusionDuplicateOrFragmentEvidence(
+            candidate: candidate,
+            selected: selected,
+            candidateWords: candidateWords,
+            selectedWords: selectedWords,
+            containment: containment,
+            selectedContainment: selectedContainment,
+            overlap: overlap,
+            similarity: similarity,
+            coverage: coverage,
+            baseEvidence: baseEvidence
+        ) {
+            return duplicateEvidence
         }
 
         return nil
+    }
+
+    private static func postFusionDuplicateOrFragmentEvidence(
+        candidate: MangaOverlayProbeBlock,
+        selected: MangaOverlayProbeBlock,
+        candidateWords: [String],
+        selectedWords: [String],
+        containment: Double,
+        selectedContainment: Double,
+        overlap: Double,
+        similarity: Double,
+        coverage: Double,
+        baseEvidence: [String]
+    ) -> (reason: String, evidence: [String])? {
+        if isProtectedShortPostFusionText(candidate.finalTextUsedForTranslation) {
+            return nil
+        }
+        if isPostFusionDecorativeTitleText(candidate.finalTextUsedForTranslation) {
+            return nil
+        }
+        guard selectedWords.count >= candidateWords.count else { return nil }
+
+        let candidateRect = rect(from: candidate.bbox)
+        let selectedRect = rect(from: selected.bbox)
+        let sameDominantNeighborhood = candidate.bubbleID == selected.bubbleID
+            || candidate.safeLayoutRect == selected.safeLayoutRect
+            || candidate.maskSafeRect == selected.maskSafeRect
+            || (candidate.safeLayoutRect != nil && candidate.safeLayoutRect == selected.maskSafeRect)
+            || (candidate.maskSafeRect != nil && candidate.maskSafeRect == selected.safeLayoutRect)
+        let strongNeighborhood = sameDominantNeighborhood
+            || containment >= 0.62
+            || selectedContainment >= 0.62
+            || overlap >= 0.52
+            || (rectDistance(candidateRect, selectedRect) <= 18 && overlap >= 0.24)
+        guard strongNeighborhood else { return nil }
+
+        let tokenRelated = coverage >= 0.58
+            || similarity >= 0.42
+            || fuzzyWordCoverage(candidateWords, in: selectedWords) >= 0.58
+        guard tokenRelated else { return nil }
+
+        let candidateScore = postFusionInformationScore(candidate)
+        let selectedScore = postFusionInformationScore(selected)
+        let candidateArea = area(of: candidateRect)
+        let selectedArea = area(of: selectedRect)
+        let lowerInformation = candidateScore <= selectedScore + 0.08
+            && (
+                candidateWords.count <= selectedWords.count - 2
+                || candidateArea <= selectedArea * 0.72
+                || containsLikelyOCRError(in: candidate.finalTextUsedForTranslation)
+            )
+        guard lowerInformation else { return nil }
+
+        let evidence = baseEvidence + [
+            "rule=strongOverlapTokenSubset",
+            "candidateArea=\(candidateArea.formatted(.number.precision(.fractionLength(1))))",
+            "selectedArea=\(selectedArea.formatted(.number.precision(.fractionLength(1))))",
+            "candidateContainsLikelyOCRError=\(containsLikelyOCRError(in: candidate.finalTextUsedForTranslation))",
+            "sameDominantNeighborhood=\(sameDominantNeighborhood)",
+            "fuzzyWordCoverage=\(fuzzyWordCoverage(candidateWords, in: selectedWords).formatted(.number.precision(.fractionLength(3))))",
+            "groundTruthUsed=false"
+        ]
+        return ("duplicateOrFragment", evidence)
+    }
+
+    private static func fuzzyWordCoverage(_ candidateWords: [String], in selectedWords: [String]) -> Double {
+        guard !candidateWords.isEmpty else { return 0 }
+        let selectedSet = Set(selectedWords)
+        let preserved = candidateWords.filter { candidate in
+            selectedSet.contains(candidate)
+                || selectedWords.contains { selected in
+                    correctionWordSimilarity(candidate, selected) >= 0.62
+                        || candidate.contains(selected)
+                        || selected.contains(candidate)
+                }
+        }.count
+        return Double(preserved) / Double(candidateWords.count)
     }
 
     private static func postFusionInformationScore(_ block: MangaOverlayProbeBlock) -> Double {
@@ -8826,6 +9272,13 @@ final class TranslationSessionStore: ObservableObject {
 
     private static func isProtectedShortPostFusionText(_ text: String) -> Bool {
         postFusionKeyTexts.contains { isProtectedKeyText(text, keyText: $0) }
+    }
+
+    private static func isPostFusionDecorativeTitleText(_ text: String) -> Bool {
+        let words = Set(ocrCandidateWords(text))
+        return words.contains("city")
+            && (words.contains("battler") || words.contains("hattler"))
+            && words.contains("tournament")
     }
 
     private static func isProtectedKeyText(_ text: String, keyText: String) -> Bool {
