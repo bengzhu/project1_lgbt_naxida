@@ -115,6 +115,43 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.21：结构动作候选矩阵与 Shadow 执行评估
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.21（结构动作候选矩阵与Shadow执行评估）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `structureActionCandidateReport`，把 v1.20 `readingOrderStructureAuditReport` 的结构建议转成 shadow-only 候选矩阵。
+- 候选类型覆盖 `readingOrderReindex`、`bubbleAssignmentReview`、`bubbleSplitShadow`、`sameBubbleSiblingLayout`、`duplicateFragmentProtection`、`textBoxEvidenceRequired`、`segmentMaskEvidenceRequired`、`renderSafeAreaReflow` 和 `manualReviewOnly`。
+- 每个候选写出 `plannedOperation`、`expectedBenefit`、`executionMode`、control/shadow metrics、delta、`promotionVerdict`、`promotionBlockers` 和 `recommendedNextStep`。
+- 报告级汇总 candidate type、promotion verdict、next step、report-only would improve、blocked、needs real artifact、render reflow、bubble split / assignment、duplicate protection 和 manual review blocks。
+- `1_ocr_probe_text.txt` 新增报告级 `structureActionCandidateReport` summary 和每块 `structureActionCandidates` 摘要，包含跳过原因和 delta summary。
+- 报告只复用已有几何、渲染和 shadow OCR 摘要，不新增 OCR / LLM 调用；不改变 `blocks` 顺序、batch 输入、`finalTextUsedForTranslation`、覆盖图、`blockPassed`、失败分类、post-fusion cleanup 或候选选择。
+- 缺真实 Koharu TextBoxes / BubbleMask / SegmentMask artifact 时只输出阻塞和 `provideRealKoharuArtifact`，不得用 Vision OCR、pre-crop plan、line plan、BubbleMask proxy 或 SegmentMask proxy 冒充 detector 输出。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.21（结构动作候选矩阵与Shadow执行评估）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `structureActionCandidateReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`candidateCount >= 1`，关键 breakdown 非空，每个 candidate 的 `diagnosticOnly = true`、`groundTruthUsedForPlanning = false`、`wouldChangeMainFlow = false`，且 `1_ocr_probe_text.txt` 包含新 summary 和逐块摘要。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.21 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.20：阅读顺序与气泡归属结构计划审计
 日期：2026-06-30
 依据：`md/prompt/v1（漫画探针）/v1.20（阅读顺序与气泡归属结构计划审计）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
