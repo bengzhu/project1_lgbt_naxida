@@ -115,6 +115,44 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.23：Koharu 阶段差距复刻计划与晋级门槛
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.23（Koharu阶段差距复刻计划与晋级门槛）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuStageGapReplicationReport`，把 v1.22 `koharuArtifactDAGReport` 转成 Koharu canonical stage 差距、work package、promotion gate 和逐块复刻计划。
+- 报告覆盖 `sourceImage`、`contentCrop`、`textBoxes`、`bubbleMask`、`segmentMask`、`ocrText`、`translations`、`cleanTextDiagnostic`、`inpaintOrGlyphErase`、`renderedSprites` 和 `finalRender`。
+- 每个 stage gap 写出当前 AITRANS 能力、artifact kind、source reports、gap category、replication readiness、最小输入、现有/缺失证据、受影响块、promotion gates、stop conditions 和推荐 work package。
+- 每个 work package 写出优先级、目标阶段/块、是否可在 `ci-fast` 验证、是否需要 full probe、是否必须真实 external artifact、预期指标移动、rollback / stop 条件和非目标。
+- 每个 block 输出 `firstBlockingStageFromDAG`、`primaryGapCategory`、目标 canonical stage、推荐 work package、最小证据、禁止晋级原因、是否需要 full / real artifact 和下一步动作。
+- `1_ocr_probe_text.txt` 新增报告级 `koharuStageGapReplicationReport` summary 和逐块 `koharuStageGapPlan` 摘要。
+- 报告只复用既有探针证据，不新增 OCR / LLM 调用；不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择或 `configuration.currentBlockSource`。
+- 缺真实 active `test/koharu_artifacts/` 时，真实 TextBoxes / BubbleMask / SegmentMask 仍保持 `manifestMissing` / `stopUntilArtifactsProvided` 阻塞，不能把 Vision OCR、pre-crop plan、line plan、BubbleMask proxy 或 SegmentMask proxy 冒充成 Koharu artifact。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.23（Koharu阶段差距复刻计划与晋级门槛）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuStageGapReplicationReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`canonicalStageCount >= 9`、`workPackageCount >= 1`，关键 breakdown 非空，`stageGaps[].diagnosticOnly = true`、`stageGaps[].groundTruthUsedForPlanning = false`、`stageGaps[].wouldChangeMainFlow = false`，每个 promotion gate 的 `groundTruthUsedForDecision = false`，且 `1_ocr_probe_text.txt` 包含新 summary 和逐块 `koharuStageGapPlan`。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.23 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.22：Koharu 式 Artifact DAG 阶段账本与瓶颈闭环
 日期：2026-06-30
 依据：`md/prompt/v1（漫画探针）/v1.22（Koharu式ArtifactDAG阶段账本与瓶颈闭环）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
