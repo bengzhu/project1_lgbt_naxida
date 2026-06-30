@@ -11085,9 +11085,6 @@ final class TranslationSessionStore: ObservableObject {
         let lineFailureByBlock = Dictionary(
             uniqueKeysWithValues: (lineCropExperimentReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
         )
-        let bubbleByBlock = Dictionary(
-            uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
-        )
         let segmentByBlock = Dictionary(
             uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
         )
@@ -11169,7 +11166,7 @@ final class TranslationSessionStore: ObservableObject {
                     clampSource: crop.clampSource,
                     bubbleID: block.bubbleID,
                     text: crop.selectedText,
-                    rawWordsPreserved: crop.candidatePreservesRawWords,
+                    rawWordsPreserved: crop.rawWordPreservationRatio >= 0.72,
                     protectedKeywordsPreserved: !containsAny(crop.failureAttribution + crop.rejectionReasons, needles: ["protected", "keyword"]),
                     wordCountDelta: nil,
                     bubbleContained: crop.cropClampedByBubble,
