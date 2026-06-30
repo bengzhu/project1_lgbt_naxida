@@ -10661,9 +10661,6 @@ final class TranslationSessionStore: ObservableObject {
         let lineFailureByBlock = Dictionary(
             uniqueKeysWithValues: (lineCropExperimentReport?.blockSummaries ?? []).map { ($0.blockIndex, $0) }
         )
-        let maskByBlock = Dictionary(
-            uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
-        )
         let segmentByBlock = Dictionary(
             uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
         )
@@ -10696,7 +10693,6 @@ final class TranslationSessionStore: ObservableObject {
                 stopEvidence.append("rawWordsLost")
             }
 
-            let mask = maskByBlock[block.index]
             let segment = segmentByBlock[block.index]
             let renderGateStatus = renderIssueBlocks.contains(block.index) ? "blocked" : "passed"
             let bubbleGateStatus = bubbleConflictBlocks.contains(block.index) || bubbleSplitBlocks.contains(block.index) || block.bubbleID == nil ? "warning" : "passed"
@@ -11282,91 +11278,123 @@ final class TranslationSessionStore: ObservableObject {
                 + diagnostics.renderTextTruncatedBlocks
                 + blocks.filter { $0.renderMaskOverflowPixelCount > 0 }.map(\.index)
         )
-        let candidateSourcesByBlock = Dictionary(grouping: candidateLedgers, by: \.blockIndex)
-        let blockLedgers: [MangaNativeTextBoxProxyBlockLedger] = blocks.map { block in
-            let candidates = candidateSourcesByBlock[block.index] ?? []
-            let candidateSources = Array(Set(candidates.map(\.source))).sorted()
-            let blockers = Array(Set(
-                (textBoxFailureByBlock[block.index]?.promotionBlockers ?? [])
-                    + (lineFailureByBlock[block.index]?.stopReasons ?? [])
-                    + (bottleneckByBlock[block.index]?.mustNotPromoteReasons ?? [])
-                    + (damageByBlock[block.index]?.mustNotPromoteReasons ?? [])
-                    + (nativeScorecardByBlock[block.index]?.mustNotPromoteReasons ?? [])
-            )).sorted()
-            let stopReasons = Array(Set(stopReasonsByBlock[block.index] ?? [])).sorted()
-            let wordBlocked = containsAny(stopReasons + blockers, needles: ["rawWordsLost", "wordPreservation"])
-            let protectedBlocked = containsAny(stopReasons + blockers, needles: ["protected", "keyword"])
-            let bubbleBlocked = bubbleConflictBlocks.contains(block.index)
-                || containsAny(stopReasons + blockers, needles: ["bubbleConflict", "outsideBubble"])
-            let segmentBlocked = segmentWeakBlocks.contains(block.index)
-                || segmentByBlock[block.index]?.glyphEscapesBubble == true
-                || containsAny(stopReasons + blockers, needles: ["weakSegment"])
-            let damageBlocked = damageByBlock[block.index] != nil || block.failureCategory == "ocrInputSuspect"
-            let modelBlocked = translationModelBlocks.contains(block.index) && cleanTextModelFloorLow
-            let renderBlocked = renderIssueBlocks.contains(block.index)
-            let qualityStatus: String
-            let primaryFreezeReason: String?
-            let nextAction: String
+        let candidateSourcesByBlock: [Int: [MangaNativeTextBoxProxyCandidateLedger]] = Dictionary(grouping: candidateLedgers, by: \.blockIndex)
+
+        func sortedUniqueStrings(_ values: [String]) -> [String] {
+            Array(Set(values)).sorted()
+        }
+        func promotionBlockers(for blockIndex: Int) -> [String] {
+            var blockers: [String] = []
+            blockers.append(contentsOf: textBoxFailureByBlock[blockIndex]?.promotionBlockers ?? [])
+            blockers.append(contentsOf: lineFailureByBlock[blockIndex]?.stopReasons ?? [])
+            blockers.append(contentsOf: bottleneckByBlock[blockIndex]?.mustNotPromoteReasons ?? [])
+            blockers.append(contentsOf: damageByBlock[blockIndex]?.mustNotPromoteReasons ?? [])
+            blockers.append(contentsOf: nativeScorecardByBlock[blockIndex]?.mustNotPromoteReasons ?? [])
+            return sortedUniqueStrings(blockers)
+        }
+        func qualityDecision(
+            stopReasons: [String],
+            wordBlocked: Bool,
+            bubbleBlocked: Bool,
+            segmentBlocked: Bool,
+            damageBlocked: Bool,
+            modelBlocked: Bool,
+            renderBlocked: Bool,
+            hasShadowOnlyEligibleCandidate: Bool,
+            blockPassed: Bool
+        ) -> (qualityStatus: String, primaryFreezeReason: String?, nextAction: String) {
             if !stopReasons.isEmpty {
-                qualityStatus = "frozenByStoplist"
-                primaryFreezeReason = stopReasons.first
-                nextAction = "freezeLocalCropLineDeskew"
-            } else if wordBlocked {
-                qualityStatus = "blockedByWordPreservation"
-                primaryFreezeReason = "wordPreservation"
-                nextAction = "freezeLocalCropLineDeskew"
-            } else if bubbleBlocked {
-                qualityStatus = "blockedByBubbleMaskConflict"
-                primaryFreezeReason = "bubbleMaskConflict"
-                nextAction = "collectBubbleMaskEvidence"
-            } else if segmentBlocked {
-                qualityStatus = "blockedByWeakSegmentMask"
-                primaryFreezeReason = "weakSegmentMask"
-                nextAction = "collectSegmentMaskEvidence"
-            } else if damageBlocked {
-                qualityStatus = "blockedByOCRDamage"
-                primaryFreezeReason = "ocrDamage"
-                nextAction = "keepReportOnly"
-            } else if modelBlocked {
-                qualityStatus = "modelLimited"
-                primaryFreezeReason = "translationModelFloor"
-                nextAction = "routeToTranslationModelFloor"
-            } else if candidates.contains(where: { $0.promotionVerdict == "shadowOnlyEligible" }) {
-                qualityStatus = "shadowOnlyEligible"
-                primaryFreezeReason = nil
-                nextAction = "eligibleForFutureShadowReview"
-            } else if block.blockPassed && !renderBlocked {
-                qualityStatus = "reportOnlyStable"
-                primaryFreezeReason = nil
-                nextAction = "keepReportOnly"
-            } else {
-                qualityStatus = "manualReviewOnly"
-                primaryFreezeReason = "insufficientCandidateDetail"
-                nextAction = "manualReviewOnly"
+                return ("frozenByStoplist", stopReasons.first, "freezeLocalCropLineDeskew")
             }
-            let decisionSignals = [
+            if wordBlocked {
+                return ("blockedByWordPreservation", "wordPreservation", "freezeLocalCropLineDeskew")
+            }
+            if bubbleBlocked {
+                return ("blockedByBubbleMaskConflict", "bubbleMaskConflict", "collectBubbleMaskEvidence")
+            }
+            if segmentBlocked {
+                return ("blockedByWeakSegmentMask", "weakSegmentMask", "collectSegmentMaskEvidence")
+            }
+            if damageBlocked {
+                return ("blockedByOCRDamage", "ocrDamage", "keepReportOnly")
+            }
+            if modelBlocked {
+                return ("modelLimited", "translationModelFloor", "routeToTranslationModelFloor")
+            }
+            if hasShadowOnlyEligibleCandidate {
+                return ("shadowOnlyEligible", nil, "eligibleForFutureShadowReview")
+            }
+            if blockPassed && !renderBlocked {
+                return ("reportOnlyStable", nil, "keepReportOnly")
+            }
+            return ("manualReviewOnly", "insufficientCandidateDetail", "manualReviewOnly")
+        }
+        func decisionSignals(
+            for block: MangaOverlayProbeBlock,
+            candidateSources: [String],
+            stopReasons: [String],
+            blockers: [String]
+        ) -> [MangaNativeTextBoxProxySignal] {
+            [
                 signal("failureCategory", block.failureCategory, source: "blocks.failureCategory"),
                 signal("candidateSources", candidateSources.joined(separator: ","), source: "nativeTextBoxProxyLedgerReport.candidateLedgers"),
                 signal("stoplistReasons", stopReasons.joined(separator: ","), source: "textBoxPlanFailureReport,lineCropExperimentReport,koharuNativeReplicationScoreboardReport"),
                 signal("promotionBlockers", blockers.joined(separator: ","), source: "textBoxPlanFailureReport,lineCropExperimentReport"),
                 signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "clean_text_diagnostic.json")
             ]
-            let evaluationSignals = [
+        }
+        func evaluationSignals(for block: MangaOverlayProbeBlock) -> [MangaNativeTextBoxProxySignal] {
+            [
                 signal("ocrGroundTruthSimilarity", block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true),
                 signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
                 signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
                 signal("wordOrderPreserved", block.wordOrderPreserved.map(String.init) ?? "nil", source: "blocks.wordOrderPreserved", decision: false, evaluation: true)
             ]
+        }
+        func makeBlockLedger(for block: MangaOverlayProbeBlock) -> MangaNativeTextBoxProxyBlockLedger {
+            let blockIndex = block.index
+            let candidates: [MangaNativeTextBoxProxyCandidateLedger] = candidateSourcesByBlock[blockIndex] ?? []
+            let candidateSources: [String] = sortedUniqueStrings(candidates.map(\.source))
+            let blockers: [String] = promotionBlockers(for: blockIndex)
+            let stopReasons: [String] = sortedUniqueStrings(stopReasonsByBlock[blockIndex] ?? [])
+            let gateInputs: [String] = stopReasons + blockers
+            let wordBlocked: Bool = containsAny(gateInputs, needles: ["rawWordsLost", "wordPreservation"])
+            let protectedBlocked: Bool = containsAny(gateInputs, needles: ["protected", "keyword"])
+            let bubbleBlocked: Bool = bubbleConflictBlocks.contains(blockIndex)
+                || containsAny(gateInputs, needles: ["bubbleConflict", "outsideBubble"])
+            let segmentBlocked: Bool = segmentWeakBlocks.contains(blockIndex)
+                || segmentByBlock[blockIndex]?.glyphEscapesBubble == true
+                || containsAny(gateInputs, needles: ["weakSegment"])
+            let damageBlocked: Bool = damageByBlock[blockIndex] != nil || block.failureCategory == "ocrInputSuspect"
+            let modelBlocked: Bool = translationModelBlocks.contains(blockIndex) && cleanTextModelFloorLow
+            let renderBlocked: Bool = renderIssueBlocks.contains(blockIndex)
+            let hasShadowOnlyEligibleCandidate: Bool = candidates.contains { candidate in
+                candidate.promotionVerdict == "shadowOnlyEligible"
+            }
+            let decision = qualityDecision(
+                stopReasons: stopReasons,
+                wordBlocked: wordBlocked,
+                bubbleBlocked: bubbleBlocked,
+                segmentBlocked: segmentBlocked,
+                damageBlocked: damageBlocked,
+                modelBlocked: modelBlocked,
+                renderBlocked: renderBlocked,
+                hasShadowOnlyEligibleCandidate: hasShadowOnlyEligibleCandidate,
+                blockPassed: block.blockPassed
+            )
+            let bestCandidateID = candidates.first { candidate in
+                candidate.promotionVerdict == "shadowOnlyEligible" || candidate.promotionVerdict == "reportOnlyWouldImprove"
+            }?.candidateID
             return MangaNativeTextBoxProxyBlockLedger(
                 blockIndex: block.index,
                 bubbleID: block.bubbleID,
                 failureCategory: block.failureCategory,
                 blockPassed: block.blockPassed,
-                qualityStatus: qualityStatus,
-                primaryFreezeReason: primaryFreezeReason,
+                qualityStatus: decision.qualityStatus,
+                primaryFreezeReason: decision.primaryFreezeReason,
                 candidateSources: candidateSources,
                 candidateCount: candidates.count,
-                bestReportOnlyCandidateID: candidates.first { $0.promotionVerdict == "shadowOnlyEligible" || $0.promotionVerdict == "reportOnlyWouldImprove" }?.candidateID,
+                bestReportOnlyCandidateID: bestCandidateID,
                 rawWordPreservationStatus: wordBlocked ? "blocked" : "preservedOrNotApplicable",
                 protectedKeywordStatus: protectedBlocked ? "blocked" : "preservedOrNotApplicable",
                 wordOrderStatus: block.wordOrderPreserved == false ? "evaluationWarning" : "preservedOrUnknown",
@@ -11377,14 +11405,19 @@ final class TranslationSessionStore: ObservableObject {
                 renderStatus: renderBlocked ? "blocked" : "stable",
                 stoplistHit: !stopReasons.isEmpty,
                 stoplistReasons: stopReasons,
-                decisionSignals: decisionSignals,
-                evaluationSignals: evaluationSignals,
+                decisionSignals: decisionSignals(for: block, candidateSources: candidateSources, stopReasons: stopReasons, blockers: blockers),
+                evaluationSignals: evaluationSignals(for: block),
                 mustNotPromoteReasons: blockers,
-                nextAction: nextAction,
+                nextAction: decision.nextAction,
                 groundTruthUsedForDecision: false,
                 diagnosticOnly: true,
                 wouldChangeMainFlow: false
             )
+        }
+        var blockLedgers: [MangaNativeTextBoxProxyBlockLedger] = []
+        blockLedgers.reserveCapacity(blocks.count)
+        for block in blocks {
+            blockLedgers.append(makeBlockLedger(for: block))
         }
 
         let stoplistBlocks = uniqueSorted(blockLedgers.filter(\.stoplistHit).map(\.blockIndex))
