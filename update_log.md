@@ -373,9 +373,15 @@
 
 验证结果：
 
-- 本轮应运行 `git diff --check`、JSON 解析和 Koharu artifact validator valid / invalid / allow-missing / print-required-files。
-- 当前 `test/koharu_artifacts` 不存在；`python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing` 应返回 `verdict = manifestMissing`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`。
-- 未跑本机 build / 探针；本轮没有 Swift / 探针代码变更，不能触发云端 `executed=true` 收益验证。
+- Agent B 本地轻量检查通过：`git diff --check`、`python3 -m json.tool test/1.ground_truth.json`、`python3 -m json.tool output/probe_report.json`、`python3 -m json.tool output/clean_text_diagnostic.json`，以及 Koharu artifact validator valid / invalid / allow-missing / print-required-files。
+- Agent C 核对 PR #7：base `smalldata_test`、head `codeb/v1.17-koharu-artifact-first-pass`、head commit `9e467bd089a74f5ced7858a0a243bf5a4ab76d14`。
+- 云端 `AITRANS CI Results` run `28422226573` / attempt `1` 通过；manifest 匹配 `version = v1.17`、`branch = codeb/v1.17-koharu-artifact-first-pass`、`commitSha = 9e467bd089a74f5ced7858a0a243bf5a4ab76d14`、`workflowName = AITRANS CI Results`。
+- 结果包 `aitrans-ci-v1.17-codeb-v1.17-koharu-artifact-first-pass--9e467bd089a7-run28422226573-attempt1` 包含 `.xcresult`、`junit.xml`、`xcodebuild.log`、`simulator-build.log`、`manga-probe.log`、`app-console.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`、`koharu-active-artifacts-validation.json` 和 `output/`。
+- `junit.xml`：5 tests、0 failures；GGUF download / verify、static checks、Xcode build、simulator build、manga probe 全部 success。
+- 云端探针：`probeMode = ci-fast`、`engineUsed = Local GGUF`、`decodingMode = deterministic`、`decodingSeed = 42`、`totalBlocksDetected = 13`、`outputDirectoryCleaned = true`、`overallPassed = false`。
+- 质量数字：`passedBlocks = 1`、`failedBlocks = 12`、`groundTruthMatchedBlocks = 13`、`groundTruthUnmatchedBlocks = 0`、`averageCoreDialogueOCRSimilarity = 0.6987`、`averageDecorativeOCRSimilarity = 0.8000`、`cleanTextDiagnostic.passRate = 0.4545`。
+- Koharu gate：`koharuActiveArtifactsDirectoryPresent = false`、`externalArtifactReadinessReport.readinessVerdict = manifestMissing`、`externalTextBoxesShadowOCRAllowed = false`、`externalTextBoxShadowOCRReport.executed = false`、`candidateCount = 0`、`ocrExecutedCount = 0`、`promotedExternalShadowBlocks = []`、`skippedBlocks = [0...12]`。
+- 本轮未跑本机 build / 探针；文档-only 修改按规则交给云端验证。没有真实 active artifact，因此仍不能触发云端 `executed=true` 收益验证。
 
 验收口径：
 
