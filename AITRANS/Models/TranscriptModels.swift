@@ -325,6 +325,9 @@ struct MangaOverlayCorrectionOptions: Equatable, Codable, Sendable {
 struct MangaOverlayProbeConfiguration: Equatable, Codable, Sendable {
     var status: String
     var currentBlockSource: String
+    var probeRunMode: String
+    var probeFastPathEnabled: Bool
+    var skippedDiagnostics: [String]
     var preprocessing: MangaOverlayPreprocessingOptions
     var correction: MangaOverlayCorrectionOptions
     var diagnosticDecodingMode: String
@@ -338,6 +341,9 @@ struct MangaOverlayProbeConfiguration: Equatable, Codable, Sendable {
     static let defaultValue = MangaOverlayProbeConfiguration(
         status: "current pipeline uses bubble geometry as primary merge boundary for whole-page Vision OCR observations",
         currentBlockSource: "bubble-constrained whole-page OCR observations merged only within assigned bubble ID",
+        probeRunMode: "full",
+        probeFastPathEnabled: false,
+        skippedDiagnostics: [],
         preprocessing: .defaultValue,
         correction: .defaultValue,
         diagnosticDecodingMode: ModelDecodingProfile.deterministic.mode,
