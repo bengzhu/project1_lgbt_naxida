@@ -745,6 +745,7 @@ struct MangaOverlayProbeService: Sendable {
         internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport? = nil,
         routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport? = nil,
         ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport? = nil,
+        readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -801,6 +802,7 @@ struct MangaOverlayProbeService: Sendable {
                 internalStructureBottleneckReport: internalStructureBottleneckReport,
                 routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
                 ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
+                readingOrderStructureAuditReport: readingOrderStructureAuditReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1459,6 +1461,7 @@ struct MangaOverlayProbeService: Sendable {
         internalStructureBottleneckReport: MangaOverlayInternalStructureBottleneckReport?,
         routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport?,
         ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?,
+        readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1514,6 +1517,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let ocrDamageByBlock = Dictionary(
             uniqueKeysWithValues: (ocrCharacterDamageAuditReport?.cases ?? []).map { ($0.blockIndex, $0) }
+        )
+        let readingOrderByBlock = Dictionary(
+            uniqueKeysWithValues: (readingOrderStructureAuditReport?.cases ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1681,6 +1687,10 @@ struct MangaOverlayProbeService: Sendable {
             let repeatedDamage = ocrDamage?.repeatedKeywordDamage.joined(separator: ",") ?? "nil"
             let ocrDamageCropBlockers = ocrDamage?.cropBlockers.joined(separator: " | ") ?? "nil"
             let ocrDamageMustNotPromote = ocrDamage?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
+            let readingOrder = readingOrderByBlock[block.index]
+            let readingOrderRisks = readingOrder?.orderRiskFlags.joined(separator: " | ") ?? "nil"
+            let readingOrderSiblings = readingOrder?.sameBubbleSiblingBlockIndexes.map(String.init).joined(separator: ",") ?? "nil"
+            let readingOrderMustNotPromote = readingOrder?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1735,6 +1745,7 @@ struct MangaOverlayProbeService: Sendable {
             internalStructureBottleneck: primary=\(bottleneck?.primaryBottleneck ?? "nil") secondary=\(bottleneckSecondary) recommended=\(bottleneck?.recommendedNextAction ?? "nil") evidence=\(bottleneckEvidence) mustNotPromote=\(bottleneckMustNotPromote)
             routingDrivenTranslationComparison: variantID=\(routingComparison?.variantID ?? "nil") improvement=\(routingComparison?.improvementCategory ?? "nil") controlPassed=\(routingComparison.map { String($0.controlPassed) } ?? "nil") variantPassed=\(routingComparison.map { String($0.variantPassed) } ?? "nil") variantCandidate=\(routingComparison?.variantCandidate.replacing("\n", with: " / ") ?? "nil") variantRawClass=\(routingComparison?.variantRawOutputClassification ?? "nil") variantCandidateClass=\(routingComparison?.variantCandidateClassification ?? "nil") latinLeakReduced=\(routingComparison.map { String($0.latinLeakReduced) } ?? "nil") failures=\(routingVariantFailureReasons) diagnosticOnly=\(routingComparison.map { String($0.diagnosticOnly) } ?? "nil") mustNotPromote=\(routingMustNotPromote)
             ocrCharacterDamageAudit: damaged=[\(damagedTokens)] missing=[\(missingTokens)] extra=[\(extraTokens)] substitutions=[\(substitutions)] repeatedKeywordDamage=[\(repeatedDamage)] lineBreakRisk=\(ocrDamage.map { String($0.lineBreakRisk) } ?? "nil") action=\(ocrDamage?.recommendedNextAction ?? "nil") cropBlockers=\(ocrDamageCropBlockers) textBoxEvidence=\(ocrDamage?.textBoxEvidenceSummary ?? "nil") segmentEvidence=\(ocrDamage?.segmentMaskEvidenceSummary ?? "nil") diagnosticOnly=\(ocrDamage.map { String($0.diagnosticOnly) } ?? "nil") mustNotPromote=\(ocrDamageMustNotPromote)
+            readingOrderStructureAudit: currentOrderIndex=\(readingOrder.map { String($0.currentOrderIndex) } ?? "nil") proposedReadingOrderIndex=\(readingOrder.map { String($0.proposedReadingOrderIndex) } ?? "nil") orderChanged=\(readingOrder.map { String($0.orderChanged) } ?? "nil") orderConfidence=\(readingOrder?.orderConfidence.formatted(.number.precision(.fractionLength(3))) ?? "nil") bubbleGroupID=\(readingOrder?.bubbleGroupID ?? "nil") sameBubbleSiblingBlockIndexes=[\(readingOrderSiblings)] bubbleAssignmentRisk=\(readingOrder?.bubbleAssignmentRisk ?? "nil") splitOrMergeRisk=\(readingOrder?.splitOrMergeRisk ?? "nil") duplicateOrFragmentRisk=\(readingOrder?.duplicateOrFragmentRisk ?? "nil") recommendedStructureAction=\(readingOrder?.recommendedStructureAction ?? "nil") risks=\(readingOrderRisks) diagnosticOnly=\(readingOrder.map { String($0.diagnosticOnly) } ?? "nil") mustNotPromote=\(readingOrderMustNotPromote)
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1771,6 +1782,7 @@ struct MangaOverlayProbeService: Sendable {
         internalStructureBottleneckReport: evaluated=\(internalStructureBottleneckReport.map { String($0.evaluatedBlockCount) } ?? "nil") primary=\(internalStructureBottleneckReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") recommended=\(internalStructureBottleneckReport?.recommendedActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") duplicateOrFragment=\(internalStructureBottleneckReport?.duplicateOrFragmentBlocks.map(String.init).joined(separator: ",") ?? "nil")
         routingDrivenTranslationComparisonReport: enabled=\(routingDrivenTranslationComparisonReport.map { String($0.enabled) } ?? "nil") evaluated=\(routingDrivenTranslationComparisonReport.map { String($0.evaluatedCaseCount) } ?? "nil") targets=\(routingDrivenTranslationComparisonReport?.targetBlockIndexes.map(String.init).joined(separator: ",") ?? "nil") controlPassed=\(routingDrivenTranslationComparisonReport.map { String($0.controlPassedCount) } ?? "nil") variantPassed=\(routingDrivenTranslationComparisonReport.map { String($0.variantPassedCount) } ?? "nil") improvements=\(routingDrivenTranslationComparisonReport?.improvementBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         ocrCharacterDamageAuditReport: enabled=\(ocrCharacterDamageAuditReport.map { String($0.enabled) } ?? "nil") evaluated=\(ocrCharacterDamageAuditReport.map { String($0.evaluatedBlockCount) } ?? "nil") targets=\(ocrCharacterDamageAuditReport?.targetBlockIndexes.map(String.init).joined(separator: ",") ?? "nil") lineBreakRisk=\(ocrCharacterDamageAuditReport?.lineBreakRiskBlocks.map(String.init).joined(separator: ",") ?? "nil") cropBlocked=\(ocrCharacterDamageAuditReport?.cropBlockedBlocks.map(String.init).joined(separator: ",") ?? "nil") actions=\(ocrCharacterDamageAuditReport?.recommendedActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        readingOrderStructureAuditReport: enabled=\(readingOrderStructureAuditReport.map { String($0.enabled) } ?? "nil") evaluated=\(readingOrderStructureAuditReport.map { String($0.evaluatedBlockCount) } ?? "nil") orderChanged=\(readingOrderStructureAuditReport?.orderChangedBlocks.map(String.init).joined(separator: ",") ?? "nil") lowConfidenceOrderBlocks=\(readingOrderStructureAuditReport?.lowConfidenceOrderBlocks.map(String.init).joined(separator: ",") ?? "nil") multiBlockBubbleGroups=\(readingOrderStructureAuditReport?.multiBlockBubbleGroups.map { "\($0.key):[\($0.value.map(String.init).joined(separator: ","))]" }.sorted().joined(separator: " | ") ?? "nil") maskConflictBlocks=\(readingOrderStructureAuditReport?.maskConflictBlocks.map(String.init).joined(separator: ",") ?? "nil") splitRiskBlocks=\(readingOrderStructureAuditReport?.splitRiskBlocks.map(String.init).joined(separator: ",") ?? "nil") duplicateOrFragmentRiskBlocks=\(readingOrderStructureAuditReport?.duplicateOrFragmentRiskBlocks.map(String.init).joined(separator: ",") ?? "nil") actions=\(readingOrderStructureAuditReport?.recommendedStructureActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)
