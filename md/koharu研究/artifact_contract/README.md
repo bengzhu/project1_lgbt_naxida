@@ -78,6 +78,108 @@ validator 只读指定目录，不复制、不生成 active artifact。输出 JS
 - `1.manifest.json` 必须声明 `schemaVersion = aitrans.koharu_artifact_contract.v1`、`sourceImage = test/1.png`、`coordinateSpace = originalImageTopLeftPixels`、`contractExampleOnly = false`，并记录 `generatedBy`。
 - 转换后先运行 validator；只有 `readyForShadowOCR = true` 且 `externalTextBoxesShadowOCRAllowed = true`，App 探针才允许执行 external TextBoxes shadow OCR。
 
+## v1.15 真实交付包清单
+
+当前 active 目录仍不存在，validator 的正确阻塞结果是 `verdict = manifestMissing`、`nextAction = stopUntilArtifactsProvided`。v1.15 不再接受继续补 Vision crop、line deskew 或 fake fixture；下一步只等待真实 Koharu / 外部 detector 交付包。
+
+Koharu / 人工必须交付以下四个文件：
+
+```text
+test/koharu_artifacts/
+  1.manifest.json
+  1.textboxes.json
+  1.bubbles.json
+  1.segment_mask.json
+```
+
+`1.manifest.json` 必填字段：
+
+```json
+{
+  "schemaVersion": "aitrans.koharu_artifact_contract.v1",
+  "sourceImage": "test/1.png",
+  "coordinateSpace": "originalImageTopLeftPixels",
+  "contractExampleOnly": false,
+  "generatedBy": "真实 detector / Koharu 输出来源",
+  "textBoxesPath": "1.textboxes.json",
+  "bubbleMaskPath": "1.bubbles.json",
+  "segmentMaskPath": "1.segment_mask.json",
+  "notes": []
+}
+```
+
+`1.textboxes.json` 最低要求：
+
+- 顶层是数组，或对象里包含 `textBoxes` / `textboxes` / `items` 数组。
+- 每个 TextBox 必须有 `bbox = [x, y, width, height]`，或等价的 `x`、`y`、`width`、`height`。
+- 坐标必须是 `test/1.png` 原图左上角像素坐标，原图尺寸固定为 `576 x 1280`。
+- bbox 宽高必须为正，不能越界。
+- `confidence` 如存在，必须在 `[0, 1]`。
+- 可选保留 `linePolygons`、`sourceDirection`、`rotationDegrees` / `rotationDeg`、`detectedFontSizePx`、`detector`。
+
+`1.bubbles.json` 最低要求：
+
+- 顶层是数组，或对象里包含 `bubbleInstances` / `bubbles` / `instances` / `items` 数组。
+- 每个气泡 instance 至少包含 `id` 和 `bbox`。
+- 建议包含 `maskValue` 和 `pixelCount`，用于后续更严格的 mask-safe layout 归因。
+- bbox 坐标同样必须在 `576 x 1280` 原图范围内。
+
+`1.segment_mask.json` 最低要求：
+
+- 顶层是对象。
+- 必须包含 `width = 576` 和 `height = 1280`。
+- 建议包含 `glyphPixelCount` 和 `connectedComponentCount`。
+- 当前契约只要求 summary，不要求提交真实 mask PNG；后续若要启用 mask-safe rendering / inpainting，再扩展真实 mask 文件。
+
+交付后先运行：
+
+```sh
+python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --print-required-files
+python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts
+```
+
+必须达到：
+
+```text
+verdict = readyForShadowOCR
+readyForShadowOCR = true
+externalTextBoxesShadowOCRAllowed = true
+missingArtifacts = []
+parseErrors = []
+coordinateErrors = []
+textBoxCount > 0
+bubbleInstanceCount > 0
+segmentMaskSizeMatches = true
+```
+
+禁止作为 active artifact 来源：
+
+- contract examples
+- Vision OCR blocks
+- pre-crop plan
+- line plan
+- BubbleMask proxy
+- SegmentMask proxy
+- ground truth
+- handwritten ideal boxes
+
+如果 detector 输出来自裁切图、缩放图或其他坐标空间，必须先在外部转换到 `originalImageTopLeftPixels`，并在 manifest `notes` 说明转换来源。AITRANS App 不会在读取时猜测坐标换算。
+
+ready 后，AITRANS 云端探针应证明：
+
+```text
+koharuArtifactValidation.verdict = readyForShadowOCR
+externalArtifactReadinessSummary.readinessVerdict = readyForShadowOCR
+externalArtifactReadinessSummary.activeArtifactsDirectory = true
+externalArtifactReadinessSummary.contractExampleOnly = false
+externalArtifactReadinessSummary.externalTextBoxesShadowOCRAllowed = true
+externalTextBoxShadowOCRSummary.executed = true
+externalTextBoxShadowOCRSummary.candidateCount > 0
+externalTextBoxShadowOCRSummary.ocrExecutedCount > 0
+```
+
+该路径仍是 shadow-only：external OCR 结果只写入 `probe_report.json` 和 `1_ocr_probe_text.txt`，不得改变 `finalTextUsedForTranslation`、主覆盖图、`blockPassed`、`configuration.currentBlockSource` 或 `textRegionCropReport.adoptedCount`。
+
 ## Readiness 语义
 
 只有同时满足以下条件，App 报告才允许进入 external TextBoxes shadow OCR：
