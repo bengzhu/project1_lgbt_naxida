@@ -247,10 +247,19 @@
 - `update_log.md`
 - `md/prompt/v1（漫画探针）/v1.14（真实KoharuArtifact注入与ShadowOCR验证闭环）.md`
 
-验证计划：
+验证结果：
 
-- 本地只跑轻量检查：`git diff --check`、JSON 解析、validator valid / invalid / allow-missing / print-required-files。
-- 不跑本机 Xcode build / 漫画探针；按规则由 GitHub Actions 验证 build、simulator probe 和结果包字段。
+- Agent B 本地轻量检查通过：`git diff --check`、`python3 -m json.tool test/1.ground_truth.json`、`python3 -m json.tool output/probe_report.json`、`python3 -m json.tool output/clean_text_diagnostic.json`、validator valid / invalid `--expect-fail`、`--print-required-files` 和 `test/koharu_artifacts --allow-missing`。
+- Agent C 核对 PR #4：base `smalldata_test`、head `codeb/v1.14-koharu-artifact-validation-loop`、head commit `2cf9ed0e2db39152006f257236e7e63ad51828da`。
+- 云端 `AITRANS CI Results` run `28417554480` / attempt `1` 通过；manifest 匹配 `version = v1.14`、`branch = codeb/v1.14-koharu-artifact-validation-loop`、`commitSha = 2cf9ed0e2db39152006f257236e7e63ad51828da`、`workflowName = AITRANS CI Results`。
+- 结果包 `aitrans-ci-v1.14-codeb-v1.14-koharu-artifact-validation-loop--2cf9ed0e2db3-run28417554480-attempt1` 包含 `.xcresult`、`junit.xml`、`xcodebuild.log`、`simulator-build.log`、`manga-probe.log`、`app-console.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`、`koharu-active-artifacts-validation.json` 和 `output/`。
+- `junit.xml`：5 tests、0 failures；GGUF download / verify、static checks、Xcode build、simulator build、manga probe 全部 success。
+- `koharu-active-artifacts-validation.json`：`verdict = manifestMissing`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`、`missingArtifacts = [manifest, TextBoxes, BubbleMask, SegmentMask]`，并列出 active 四件套 `requiredFiles`。
+- 云端探针：`engineUsed = Local GGUF`、`decodingMode = deterministic`、`decodingSeed = 42`、`totalBlocksDetected = 13`、`outputDirectoryCleaned = true`、`overallPassed = false`。
+- App 侧 gate 摘要：`externalArtifactReadinessReport.readinessVerdict = manifestMissing`、`activeArtifactsDirectory = false`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`。
+- Shadow OCR 摘要：`externalTextBoxShadowOCRReport.executed = false`、`candidateCount = 0`、`ocrExecutedCount = 0`、`ocrSucceededCount = 0`、`promotedExternalShadowBlocks = []`、`wouldPromoteByExistingGateBlocks = []`、`skippedBlocks = [0...12]`。
+- 质量数字未因本轮 CI 可见性改造改变：`groundTruthMatchedBlocks = 13`、`groundTruthUnmatchedBlocks = 0`、`averageCoreDialogueOCRSimilarity = 0.7106`、`averageDecorativeOCRSimilarity = 0.8000`、`cleanTextDiagnostic.passRate = 0.4545`、`passedBlocks = 1`、`failedBlocks = 12`。
+- Agent C 已通过 PR #4 merge 到 `smalldata_test`，merge commit `a758117`；远端 `codeb/v1.14-koharu-artifact-validation-loop` 已由 PR merge 命令请求删除。
 
 遗留事项：
 
