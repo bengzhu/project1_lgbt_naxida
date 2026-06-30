@@ -115,6 +115,42 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.22：Koharu 式 Artifact DAG 阶段账本与瓶颈闭环
+日期：2026-06-30
+依据：`md/prompt/v1（漫画探针）/v1.22（Koharu式ArtifactDAG阶段账本与瓶颈闭环）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuArtifactDAGReport`，把 SourceImage、ContentCrop、Vision OCR、BubbleMask、TextBoxes、SegmentMask、OCR text、shadow crop、external artifact gate、translation、render layout 和 v1.21 结构动作候选组织成 Koharu 式 Artifact DAG 阶段账本。
+- 报告级输出 dependency edges、stage summaries、stage status / artifact kind / first blocking stage / downstream impact breakdown，以及真实 artifact gate verdict / next action。
+- 每块输出 `blockTraces[]`，包含 `firstBlockingStage`、`firstBlockingReason`、`downstreamImpacts`、关键 `stageTraces`、v1.21 候选 verdict 和 `recommendedNextAction`。
+- 缺真实 active `test/koharu_artifacts/` 时，只把需要真实 TextBoxes / BubbleMask / SegmentMask 的 promotion 标为 `missingRequiredArtifact`，不把当前主流程整体判废。
+- `1_ocr_probe_text.txt` 新增报告级 `koharuArtifactDAGReport` summary 和逐块 `koharuArtifactTrace` 摘要，便于不打开巨大 JSON 时定位首次阻塞阶段。
+- 该报告只复用既有探针证据，不新增 OCR / LLM 调用；不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup 或候选选择。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.22（Koharu式ArtifactDAG阶段账本与瓶颈闭环）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuArtifactDAGReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`stageCount >= 8`、`edgeCount >= 8`，关键 breakdown 非空，每条 dependency edge 的 `diagnosticOnly = true`、`wouldChangeMainFlow = false`，且 `1_ocr_probe_text.txt` 包含新 summary 和逐块 `koharuArtifactTrace`。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.22 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.21：结构动作候选矩阵与 Shadow 执行评估
 日期：2026-06-30
 依据：`md/prompt/v1（漫画探针）/v1.21（结构动作候选矩阵与Shadow执行评估）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
