@@ -32,8 +32,8 @@ flowchart TD
   C --> M["漫画覆盖翻译探针<br/>test/1.png"]
   M --> N["MangaOverlayProbeService<br/>裁切、多角度 OCR、气泡归属、合并"]
   N --> O["逐块翻译和质量判定<br/>失败块仍写报告和绘制"]
-  O --> P["诊断对照<br/>clean text / bubble-first / slice OCR / batch / 纠错"]
-  P --> Q["覆盖渲染<br/>safeLayoutRect / glyph mask / contact sheet"]
+  O --> P["探针模式门控<br/>ci-fast / full / skip"]
+  P --> Q["覆盖渲染<br/>safeLayoutRect / glyph mask / 核心 PNG"]
 
   %% 输出：持久化和调试产物
   C --> R["state.json<br/>会话、历史、提示词、设置"]
@@ -84,12 +84,14 @@ flowchart TD
   %% 报告和渲染
   N --> O["safeLayoutRect<br/>多块同气泡分区"]
   O --> P["glyph mask + 背景估计<br/>纯色块才填充"]
-  P --> CE["cropExperimentReport<br/>control + pre-crop plan shadow OCR"]
+  P --> MODE{"probeRunMode"}
+  MODE -- "full" --> CE["cropExperimentReport<br/>control + pre-crop plan shadow OCR"]
+  MODE -- "ci-fast" --> EAR
   CE --> TBF["textBoxPlanFailureReport<br/>plan / candidate / block 失败归因与晋级 blockers"]
   TBF --> LTB["lineTextBoxPlanReport / lineCropExperimentReport<br/>目标块行级 TextBox / deskew shadow 验证"]
   LTB --> EAR["externalArtifactReadinessReport<br/>真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门"]
   EAR --> ETS["externalTextBoxShadowOCRReport<br/>ready 后每块最多 1 个 externalArtifact.textBoxCrop / shadow-only"]
-  P --> Q["覆盖图 / OCR 图 / bubble 图 / contact sheet"]
+  P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
   X --> R
   Y --> R
@@ -132,7 +134,8 @@ flowchart TD
   B3 --> B4["创建 PR<br/>base=smalldata_test / head=codeb/..."]
 
   %% 云端验证和结果包
-  B4 --> G1["GitHub Actions<br/>build / JSON / 静态检查 / 可用探针"]
+  B4 --> G1["GitHub Actions<br/>单次 Debug simulator build / JSON / 静态检查 / ci-fast 探针"]
+  G0["workflow_dispatch<br/>可选 full 或 skip"] --> G1
   G1 --> G2["未加密 CI 结果包<br/>xcresult / junit.xml / xcodebuild.log / manifest / failure summary / Koharu gate 摘要"]
   G1 --> G3["加密打包 workflow<br/>软件包交付，Agent C 不以此验收"]
 

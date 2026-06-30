@@ -6,6 +6,16 @@ on:
       - smalldata_test
       - 'codeb/**'
   workflow_dispatch:
+    inputs:
+      probe_mode:
+        description: 'Manga probe mode: ci-fast, full, or skip'
+        required: false
+        default: ci-fast
+        type: choice
+        options:
+          - ci-fast
+          - full
+          - skip
 
 jobs:
   ci-results:
@@ -24,7 +34,6 @@ jobs:
       MODEL_TAG: model-gemma-3-270m-it-qat-q4_0-v1
       MODEL_ASSET: gemma-3-270m-it-qat-Q4_0.gguf
       MODEL_SHA256: 3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6
-      PROBE_TIMEOUT_SECONDS: 3600
 
     steps:
       - name: Checkout
@@ -39,6 +48,28 @@ jobs:
           branch="${GITHUB_REF_NAME}"
           branch_slug="$(echo "$branch" | tr '/[:space:]' '-' | tr -cd '[:alnum:]._-')"
           short_sha="${GITHUB_SHA:0:12}"
+          requested_probe_mode="${{ github.event.inputs.probe_mode }}"
+          if [ -z "$requested_probe_mode" ]; then
+            requested_probe_mode="ci-fast"
+          fi
+          case "$requested_probe_mode" in
+            ci-fast)
+              probe_timeout_seconds=1800
+              probe_stall_timeout_seconds=300
+              ;;
+            full)
+              probe_timeout_seconds=3600
+              probe_stall_timeout_seconds=600
+              ;;
+            skip)
+              probe_timeout_seconds=0
+              probe_stall_timeout_seconds=0
+              ;;
+            *)
+              echo "Invalid probe_mode=$requested_probe_mode" >&2
+              exit 1
+              ;;
+          esac
           version="unversioned"
           if [[ "$branch" =~ v([0-9]+(\.[0-9]+)*) ]]; then
             version="v${BASH_REMATCH[1]}"
@@ -52,7 +83,15 @@ jobs:
             echo "version=$version"
             echo "artifact_name=$artifact_name"
             echo "result_bundle=$result_bundle"
+            echo "probe_mode=$requested_probe_mode"
+            echo "probe_timeout_seconds=$probe_timeout_seconds"
+            echo "probe_stall_timeout_seconds=$probe_stall_timeout_seconds"
           } >> "$GITHUB_OUTPUT"
+          {
+            echo "PROBE_MODE=$requested_probe_mode"
+            echo "PROBE_TIMEOUT_SECONDS=$probe_timeout_seconds"
+            echo "PROBE_STALL_TIMEOUT_SECONDS=$probe_stall_timeout_seconds"
+          } >> "$GITHUB_ENV"
 
       - name: Restore GGUF model cache
         id: gguf_cache
@@ -140,6 +179,7 @@ jobs:
           xcodebuild \
             -project AITRANS.xcodeproj \
             -scheme "$SCHEME" \
+            -configuration Debug \
             -destination "$DESTINATION" \
             -derivedDataPath "$DERIVED_DATA" \
             -resultBundlePath "${{ steps.meta.outputs.result_bundle }}" \
@@ -148,25 +188,27 @@ jobs:
           2>&1 | tee "$RESULT_ROOT/xcodebuild.log"
           exit ${PIPESTATUS[0]}
 
-      - name: Build simulator app for manga probe
+      - name: Locate simulator app for manga probe
         id: simulator_build
         shell: bash
         continue-on-error: true
         run: |
-          set -o pipefail
-          xcodebuild \
-            -project AITRANS.xcodeproj \
-            -scheme "$SCHEME" \
-            -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$DERIVED_DATA" \
-            CODE_SIGNING_ALLOWED=NO \
-            build \
-          2>&1 | tee "$RESULT_ROOT/simulator-build.log"
-          exit ${PIPESTATUS[0]}
+          set -euo pipefail
+          {
+            echo "Reusing app from Xcode build output; this step must not invoke xcodebuild."
+            app_path="$(find "$DERIVED_DATA/Build/Products/Debug-iphonesimulator" -maxdepth 2 -name "$SCHEME.app" -type d | head -n 1)"
+            if [ -z "$app_path" ]; then
+              echo "Debug simulator app not found under $DERIVED_DATA/Build/Products/Debug-iphonesimulator" >&2
+              exit 1
+            fi
+            echo "simulatorAppReusedFromXcodeBuild=true"
+            echo "simulatorAppPath=$app_path"
+            echo "simulator_app_path=$app_path" >> "$GITHUB_OUTPUT"
+          } 2>&1 | tee "$RESULT_ROOT/simulator-build.log"
 
       - name: Run cloud manga probe
         id: manga_probe
+        if: steps.meta.outputs.probe_mode != 'skip'
         shell: bash
         continue-on-error: true
         run: |
@@ -207,9 +249,9 @@ jobs:
             xcrun simctl boot "$device_id"
             xcrun simctl bootstatus "$device_id" -b
 
-            app_path="$(find "$DERIVED_DATA/Build/Products/Debug-iphonesimulator" -maxdepth 2 -name "$SCHEME.app" -type d | head -n 1)"
+            app_path="${{ steps.simulator_build.outputs.simulator_app_path }}"
             if [ -z "$app_path" ]; then
-              echo "Debug simulator app not found under $DERIVED_DATA/Build/Products/Debug-iphonesimulator" >&2
+              echo "Debug simulator app path is missing from locate step" >&2
               exit 1
             fi
             echo "Installing $app_path"
@@ -241,10 +283,14 @@ jobs:
             trap 'kill "$log_pid" >/dev/null 2>&1 || true; xcrun simctl shutdown "$device_id" >/dev/null 2>&1 || true; xcrun simctl delete "$device_id" >/dev/null 2>&1 || true' EXIT
 
             xcrun simctl spawn "$device_id" launchctl setenv AITRANS_RUN_MANGA_PROBE 1
+            xcrun simctl spawn "$device_id" launchctl setenv AITRANS_MANGA_PROBE_MODE "$PROBE_MODE"
             echo "Launching manga probe"
             SIMCTL_CHILD_AITRANS_RUN_MANGA_PROBE=1 \
+              SIMCTL_CHILD_AITRANS_MANGA_PROBE_MODE="$PROBE_MODE" \
               xcrun simctl launch --terminate-running-process "$device_id" "$BUNDLE_ID" \
-              AITRANS_RUN_MANGA_PROBE=1 --AITRANS_RUN_MANGA_PROBE=1 -AITRANS_RUN_MANGA_PROBE 1
+              AITRANS_RUN_MANGA_PROBE=1 AITRANS_MANGA_PROBE_MODE="$PROBE_MODE" \
+              --AITRANS_RUN_MANGA_PROBE=1 --AITRANS_MANGA_PROBE_MODE="$PROBE_MODE" \
+              -AITRANS_RUN_MANGA_PROBE 1 -AITRANS_MANGA_PROBE_MODE "$PROBE_MODE"
 
             deadline=$((SECONDS + PROBE_TIMEOUT_SECONDS))
             report="$output_dir/probe_report.json"
@@ -253,7 +299,7 @@ jobs:
             last_progress_mtime=0
             stalled_progress_seconds=0
             while [ "$SECONDS" -lt "$deadline" ]; do
-              if [ $((SECONDS - last_status_print)) -ge 60 ]; then
+              if [ $((SECONDS - last_status_print)) -ge 30 ]; then
                 last_status_print="$SECONDS"
                 echo "Waiting for probe report; remaining=$((deadline - SECONDS))s"
                 if [ -f "$progress" ]; then
@@ -261,7 +307,7 @@ jobs:
                   cat "$progress" || true
                   progress_mtime="$(stat -f %m "$progress")"
                   if [ "$progress_mtime" = "$last_progress_mtime" ]; then
-                    stalled_progress_seconds=$((stalled_progress_seconds + 60))
+                    stalled_progress_seconds=$((stalled_progress_seconds + 30))
                     echo "Probe progress unchanged for ${stalled_progress_seconds}s"
                   else
                     last_progress_mtime="$progress_mtime"
@@ -272,7 +318,7 @@ jobs:
                   echo "Current output files:"
                   find "$output_dir" -maxdepth 1 -type f -print | sort || true
                 fi
-                if [ -f "$progress" ] && [ "$stalled_progress_seconds" -ge 600 ]; then
+                if [ -f "$progress" ] && [ "$stalled_progress_seconds" -ge "$PROBE_STALL_TIMEOUT_SECONDS" ]; then
                   echo "Probe progress did not advance for ${stalled_progress_seconds}s" >&2
                   break
                 fi
@@ -336,8 +382,10 @@ jobs:
               "1_ocr_probe_text.txt",
               "1_debug_boxes.png",
               "1_translated_overlay.png",
-              "1_probe_contact_sheet.png",
+              "manga_probe_progress.json",
           ]
+          if "${{ steps.meta.outputs.probe_mode }}" == "full":
+              required.append("1_probe_contact_sheet.png")
           missing = [name for name in required if not pathlib.Path("output", name).is_file()]
           if missing:
               raise SystemExit(f"missing exported probe outputs: {missing}")
@@ -357,24 +405,28 @@ jobs:
           if [ ! -f "$OUTPUT_COPY_DIR/probe_report.json" ]; then
             echo "probe_report.json not available from this workflow run; cloud manga probe did not complete successfully" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
           fi
+          find "$OUTPUT_COPY_DIR" -maxdepth 1 -type f -print | while read -r file; do basename "$file"; done | sort > "$RESULT_ROOT/probe-output-retained-files.txt"
 
       - name: Write JUnit summary
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" python3 - <<'PY'
+          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
           import os
           import xml.etree.ElementTree as ET
 
           root = ET.Element("testsuite", name="AITRANS CI Results", tests="2")
           failures = 0
+          probe_status = os.environ["MANGA_PROBE_STATUS"]
+          if os.environ["PROBE_MODE"] == "skip" and probe_status == "skipped":
+              probe_status = "success"
           cases = [
               ("gguf-model", os.environ["MODEL_STATUS"], "GGUF model setup failed"),
               ("static-checks", os.environ["STATIC_STATUS"], "static checks failed"),
               ("xcode-build", os.environ["BUILD_STATUS"], "xcode build failed"),
               ("simulator-build", "${{ steps.simulator_build.outcome }}", "simulator build failed"),
-              ("manga-probe", "${{ steps.manga_probe.outcome }}", "manga probe failed"),
+              ("manga-probe", probe_status, "manga probe failed"),
           ]
           root.set("tests", str(len(cases)))
           for name, status, message in cases:
@@ -400,6 +452,7 @@ jobs:
           clean_path=""
           ocr_text_path=""
           probe_progress_path=""
+          probe_output_retained_files_path="${RESULT_ROOT}/probe-output-retained-files.txt"
           [ -f "$OUTPUT_COPY_DIR/probe_report.json" ] && probe_path="$OUTPUT_COPY_DIR/probe_report.json"
           [ -f "$OUTPUT_COPY_DIR/clean_text_diagnostic.json" ] && clean_path="$OUTPUT_COPY_DIR/clean_text_diagnostic.json"
           [ -f "$OUTPUT_COPY_DIR/1_ocr_probe_text.txt" ] && ocr_text_path="$OUTPUT_COPY_DIR/1_ocr_probe_text.txt"
@@ -426,8 +479,14 @@ jobs:
 
           koharu_validation = load_json("$koharu_validation_path")
           probe_report = load_json("$probe_path")
+          probe_progress = load_json("$probe_progress_path")
+          retained_output_files = []
+          retained_path = Path("$probe_output_retained_files_path")
+          if retained_path.is_file():
+              retained_output_files = [line.strip() for line in retained_path.read_text(encoding="utf-8").splitlines() if line.strip()]
           external_readiness = (probe_report or {}).get("externalArtifactReadinessReport")
           external_shadow = (probe_report or {}).get("externalTextBoxShadowOCRReport")
+          probe_configuration = (probe_report or {}).get("configuration") or {}
           manifest = {
               "version": "${{ steps.meta.outputs.version }}",
               "branch": "${{ steps.meta.outputs.branch }}",
@@ -441,6 +500,8 @@ jobs:
               "scheme": "${SCHEME}",
               "destination": "${DESTINATION}",
               "resultBundlePath": "${{ steps.meta.outputs.result_bundle }}",
+              "simulatorAppReusedFromXcodeBuild": True,
+              "simulatorAppPath": "${{ steps.simulator_build.outputs.simulator_app_path }}",
               "junitPath": "${RESULT_ROOT}/junit.xml",
               "xcodebuildLogPath": "${RESULT_ROOT}/xcodebuild.log",
               "simulatorBuildLogPath": "${RESULT_ROOT}/simulator-build.log",
@@ -484,6 +545,47 @@ jobs:
               "cleanTextDiagnosticPath": "$clean_path",
               "ocrProbeTextPath": "$ocr_text_path",
               "probeProgressPath": "$probe_progress_path",
+              "probeMode": "${{ steps.meta.outputs.probe_mode }}",
+              "probeFastPathEnabled": "${{ steps.meta.outputs.probe_mode }}" == "ci-fast",
+              "probeSkippedReason": "workflow_dispatch_or_document_only_skip" if "${{ steps.meta.outputs.probe_mode }}" == "skip" else None,
+              "probeTimeoutSeconds": int("${{ steps.meta.outputs.probe_timeout_seconds }}"),
+              "probeStallTimeoutSeconds": int("${{ steps.meta.outputs.probe_stall_timeout_seconds }}"),
+              "probeDurationSeconds": (probe_progress or {}).get("elapsedSeconds"),
+              "probeStageDurationsSeconds": (probe_progress or {}).get("stageDurationsSeconds"),
+              "probeSkippedDiagnostics": probe_configuration.get("skippedDiagnostics") or (probe_progress or {}).get("skippedDiagnostics") or [],
+              "probeOutputRequiredFiles": (
+                  [
+                      "probe_report.json",
+                      "clean_text_diagnostic.json",
+                      "1_ocr_probe_text.txt",
+                      "1_debug_boxes.png",
+                      "1_translated_overlay.png",
+                      "manga_probe_progress.json",
+                      "1_probe_contact_sheet.png",
+                  ]
+                  if "${{ steps.meta.outputs.probe_mode }}" == "full"
+                  else []
+                  if "${{ steps.meta.outputs.probe_mode }}" == "skip"
+                  else [
+                      "probe_report.json",
+                      "clean_text_diagnostic.json",
+                      "1_ocr_probe_text.txt",
+                      "1_debug_boxes.png",
+                      "1_translated_overlay.png",
+                      "manga_probe_progress.json",
+                  ]
+              ),
+              "probeOutputRetainedFiles": retained_output_files,
+              "probeReportSummary": {
+                  "engineUsed": (probe_report or {}).get("engineUsed"),
+                  "decodingMode": (probe_report or {}).get("decodingMode"),
+                  "decodingSeed": (probe_report or {}).get("decodingSeed"),
+                  "totalBlocksDetected": (probe_report or {}).get("totalBlocksDetected"),
+                  "overallPassed": (probe_report or {}).get("overallPassed"),
+                  "currentBlockSource": probe_configuration.get("currentBlockSource"),
+                  "probeRunMode": probe_configuration.get("probeRunMode"),
+                  "probeFastPathEnabled": probe_configuration.get("probeFastPathEnabled"),
+              },
               "modelReleaseTag": "${MODEL_TAG}",
               "modelAsset": "${MODEL_ASSET}",
               "modelSha256": "${MODEL_SHA256}",
@@ -497,7 +599,7 @@ jobs:
               "simulatorBuildOutcome": "${{ steps.simulator_build.outcome }}",
               "mangaProbeOutcome": "${{ steps.manga_probe.outcome }}",
               "probeRunInWorkflow": "${{ steps.manga_probe.outcome }}" == "success",
-              "probeRunNote": "Cloud manga probe installs the simulator app, imports model.gguf into the app container, launches with AITRANS_RUN_MANGA_PROBE=1, and exports output/ when successful.",
+              "probeRunNote": "Cloud manga probe installs the reused simulator app, imports model.gguf into the app container, launches with AITRANS_RUN_MANGA_PROBE=1 and AITRANS_MANGA_PROBE_MODE, and exports output/ when successful.",
               "encryptedPackageArtifactUsedForReview": False
           }
           with open("${RESULT_ROOT}/ci-artifact-manifest.json", "w", encoding="utf-8") as f:
@@ -512,6 +614,9 @@ jobs:
             echo "- runId: ${GITHUB_RUN_ID}"
             echo "- runAttempt: ${GITHUB_RUN_ATTEMPT}"
             echo "- artifact: ${{ steps.meta.outputs.artifact_name }}"
+            echo "- probe mode: ${{ steps.meta.outputs.probe_mode }}"
+            echo "- probe timeout seconds: ${{ steps.meta.outputs.probe_timeout_seconds }}"
+            echo "- probe stall timeout seconds: ${{ steps.meta.outputs.probe_stall_timeout_seconds }}"
             echo "- GGUF cache hit: ${{ steps.gguf_cache.outputs.cache-hit }}"
             echo "- GGUF download: ${{ steps.download_model.outcome }}"
             echo "- GGUF verify: ${{ steps.verify_model.outcome }}"
@@ -535,7 +640,9 @@ jobs:
             echo "- Manifest: ${RESULT_ROOT}/ci-artifact-manifest.json"
             echo
             echo "## Probe status"
-            if [ "${{ steps.manga_probe.outcome }}" = "success" ]; then
+            if [ "${{ steps.meta.outputs.probe_mode }}" = "skip" ]; then
+              echo "Cloud manga probe was skipped by probe_mode=skip. This is only acceptable for document-only or explicitly skipped validation; inspect manifest probeSkippedReason."
+            elif [ "${{ steps.manga_probe.outcome }}" = "success" ]; then
               echo "Cloud manga probe ran and exported output artifacts. Review ${OUTPUT_COPY_DIR}/probe_report.json, ${OUTPUT_COPY_DIR}/clean_text_diagnostic.json, ${OUTPUT_COPY_DIR}/1_ocr_probe_text.txt, and PNGs."
             else
               echo "Cloud manga probe did not complete. Review ${RESULT_ROOT}/manga-probe.log, ${RESULT_ROOT}/app-console.log, ${RESULT_ROOT}/simulator-build.log, and ${OUTPUT_COPY_DIR}/manga_probe_progress.json if present."
@@ -557,7 +664,7 @@ jobs:
               echo "- active artifact validator output missing; inspect static checks."
             fi
             echo
-            if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ] || [ "${{ steps.simulator_build.outcome }}" != "success" ] || [ "${{ steps.manga_probe.outcome }}" != "success" ]; then
+            if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ] || [ "${{ steps.simulator_build.outcome }}" != "success" ] || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
               echo "## Return to Agent B"
               echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
             else
@@ -578,7 +685,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ] || [ "${{ steps.simulator_build.outcome }}" != "success" ] || [ "${{ steps.manga_probe.outcome }}" != "success" ]; then
+          if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ] || [ "${{ steps.simulator_build.outcome }}" != "success" ] || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi
