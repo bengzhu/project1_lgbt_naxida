@@ -1232,6 +1232,95 @@ struct MangaReadingOrderStructureAuditReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaStructureActionCandidateMetrics: Equatable, Codable, Sendable {
+    var orderIndexDelta: Int?
+    var bubbleIDBefore: Int?
+    var bubbleIDAfter: Int?
+    var bubbleConsistencyBefore: Bool?
+    var bubbleConsistencyAfter: Bool?
+    var maskCoverageBefore: Double?
+    var maskCoverageAfter: Double?
+    var safeLayoutAreaBefore: Double?
+    var safeLayoutAreaAfter: Double?
+    var renderOverflowBefore: Int?
+    var renderOverflowAfter: Int?
+    var siblingOverlapBefore: Double?
+    var siblingOverlapAfter: Double?
+    var ocrSimilarityBefore: Double?
+    var ocrSimilarityAfter: Double?
+    var translationFailureCategoryBefore: String?
+    var translationFailureCategoryAfter: String?
+}
+
+struct MangaStructureActionCandidateDelta: Equatable, Codable, Sendable {
+    var orderIndexDelta: Int?
+    var bubbleConsistencyChanged: Bool?
+    var maskCoverageDelta: Double?
+    var safeLayoutAreaDelta: Double?
+    var renderOverflowDelta: Int?
+    var siblingOverlapDelta: Double?
+    var ocrSimilarityDelta: Double?
+    var translationFailureCategoryChanged: Bool?
+    var summary: [String]
+}
+
+struct MangaStructureActionCandidate: Equatable, Codable, Sendable {
+    var candidateID: String
+    var blockIndex: Int
+    var candidateType: String
+    var sourceRecommendedAction: String
+    var sourceRisks: [String]
+    var inputSignals: [String]
+    var plannedOperation: String
+    var expectedBenefit: String
+    var executionMode: String
+    var diagnosticOnly: Bool
+    var groundTruthUsedForPlanning: Bool
+    var wouldChangeMainFlow: Bool
+    var mustNotPromoteReasons: [String]
+    var executed: Bool
+    var executionSkippedReason: String?
+    var controlMetrics: MangaStructureActionCandidateMetrics
+    var shadowMetrics: MangaStructureActionCandidateMetrics
+    var delta: MangaStructureActionCandidateDelta
+    var promotionVerdict: String
+    var promotionBlockers: [String]
+    var recommendedNextStep: String
+}
+
+struct MangaStructureActionCandidateCase: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var sourceRecommendedAction: String
+    var candidateCount: Int
+    var executedCandidateCount: Int
+    var skippedCandidateCount: Int
+    var candidateTypes: [String]
+    var promotionVerdicts: [String]
+    var recommendedNextSteps: [String]
+    var candidates: [MangaStructureActionCandidate]
+}
+
+struct MangaStructureActionCandidateReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var evaluatedBlockCount: Int
+    var candidateCount: Int
+    var executedCandidateCount: Int
+    var skippedCandidateCount: Int
+    var candidateTypeBreakdown: [String: Int]
+    var promotionVerdictBreakdown: [String: Int]
+    var recommendedNextStepBreakdown: [String: Int]
+    var reportOnlyWouldImproveBlocks: [Int]
+    var blockedBlocks: [Int]
+    var needsRealArtifactBlocks: [Int]
+    var renderReflowCandidateBlocks: [Int]
+    var bubbleSplitCandidateBlocks: [Int]
+    var bubbleAssignmentReviewBlocks: [Int]
+    var duplicateProtectionBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var cases: [MangaStructureActionCandidateCase]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -2121,6 +2210,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport?
     var ocrCharacterDamageAuditReport: MangaOCRCharacterDamageAuditReport?
     var readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?
+    var structureActionCandidateReport: MangaStructureActionCandidateReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?

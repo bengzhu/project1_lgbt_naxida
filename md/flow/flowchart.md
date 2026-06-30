@@ -95,6 +95,7 @@ flowchart TD
   ISR --> RTA["routingDrivenTranslationComparisonReport<br/>modelTranslationQuality 块 strict prompt 对照 / report-only"]
   ISR --> ODA["ocrCharacterDamageAuditReport<br/>OCR 损坏 token 审计 / report-only"]
   ISR --> ROA["readingOrderStructureAuditReport<br/>阅读顺序 / 气泡归属 / 结构动作审计 / report-only"]
+  ROA --> SAC["structureActionCandidateReport<br/>结构动作候选矩阵 / shadow 执行评估 / report-only"]
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
   X --> R
@@ -112,6 +113,7 @@ flowchart TD
   RTA --> R
   ODA --> R
   ROA --> R
+  SAC --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
   M --> T["1_ocr_probe_text.txt<br/>逐块文本快照"]
@@ -124,6 +126,7 @@ flowchart TD
   RTA --> T
   ODA --> T
   ROA --> T
+  SAC --> T
 ```
 
 ## 3. Agent 迭代流程图
