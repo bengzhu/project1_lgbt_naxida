@@ -1888,6 +1888,143 @@ struct MangaBubbleMaskAssignmentSplitScoreboardReport: Equatable, Codable, Senda
     var notes: [String]
 }
 
+struct MangaKoharuBubbleIndexSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuBubbleIndexBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var bbox: [Double]
+    var blockPassed: Bool
+    var failureCategory: String
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var currentSafeLayoutRect: [Double]?
+    var currentSafeLayoutSource: String?
+    var shadowBubbleID: Int?
+    var shadowBubbleSource: String
+    var shadowAssignmentConfidence: Double?
+    var assignmentVerdict: String
+    var assignmentSignals: [MangaKoharuBubbleIndexSignal]
+    var shadowSafeLayoutRect: [Double]?
+    var shadowSafeLayoutSource: String?
+    var currentVsShadowSafeRectIoU: Double?
+    var safeAreaVerdict: String
+    var safeAreaSignals: [MangaKoharuBubbleIndexSignal]
+    var siblingBubbleID: Int?
+    var siblingBlockIndexes: [Int]
+    var siblingPartitionID: String?
+    var siblingPartitionVerdict: String
+    var splitCandidateIDs: [Int]
+    var renderLockVerdict: String
+    var primaryBottleneck: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuBubbleIndexSignal]
+    var evaluationSignals: [MangaKoharuBubbleIndexSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuBubbleIndexBubbleLedger: Equatable, Codable, Sendable {
+    var bubbleID: Int
+    var bbox: [Double]
+    var maskPixelCount: Int
+    var maskCoverageRatio: Double
+    var safeRect: [Double]?
+    var safeRectCoverageRatio: Double
+    var blockIndexes: [Int]
+    var siblingGroupIDs: [String]
+    var splitCandidateIDs: [Int]
+    var assignmentConflictBlocks: [Int]
+    var correctionRecommendedBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var layoutVerdict: String
+    var primaryRisk: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuBubbleIndexSignal]
+    var evaluationSignals: [MangaKoharuBubbleIndexSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuBubbleIndexSiblingLedger: Equatable, Codable, Sendable {
+    var siblingGroupID: String
+    var bubbleID: Int
+    var blockIndexes: [Int]
+    var readingOrderIndexes: [Int]
+    var currentSafeLayoutRects: [[Double]]
+    var shadowPartitionRects: [[Double]]
+    var maxCurrentSafeRectOverlapRatio: Double
+    var maxShadowPartitionOverlapRatio: Double
+    var partitionVerdict: String
+    var splitCandidateIDs: [Int]
+    var renderLockVerdict: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuBubbleIndexSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuBubbleIndexGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuBubbleIndexSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuBubbleIndexShadowLedgerReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var evaluatedBlockCount: Int
+    var evaluatedBubbleCount: Int
+    var blockLedgerCount: Int
+    var bubbleLedgerCount: Int
+    var siblingLedgerCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var proxyNotRealBubbleMask: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var ledgerVerdict: String
+    var assignmentVerdictBreakdown: [String: Int]
+    var safeAreaVerdictBreakdown: [String: Int]
+    var siblingPartitionVerdictBreakdown: [String: Int]
+    var renderLockVerdictBreakdown: [String: Int]
+    var bubbleLayoutVerdictBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var conflictBlocks: [Int]
+    var splitReviewBlocks: [Int]
+    var sameBubbleSiblingBlocks: [Int]
+    var safeAreaCompareBlocks: [Int]
+    var needsRealBubbleMaskBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var blockLedgers: [MangaKoharuBubbleIndexBlockLedger]
+    var bubbleLedgers: [MangaKoharuBubbleIndexBubbleLedger]
+    var siblingLedgers: [MangaKoharuBubbleIndexSiblingLedger]
+    var gateLedger: [MangaKoharuBubbleIndexGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -3851,6 +3988,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport?
     var koharuExternalArtifactRequestPacketReport: MangaKoharuExternalArtifactRequestPacketReport?
     var koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport?
+    var koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
