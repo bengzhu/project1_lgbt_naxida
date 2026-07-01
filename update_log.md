@@ -115,6 +115,42 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.32：Koharu WorkOrder Router 执行工作单与收益预算
+日期：2026-07-01
+依据：`md/prompt/v1（漫画探针）/v1.32（KoharuWorkOrderRouter执行工作单与收益预算）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuWorkOrderRouterReport`，从 v1.31 `koharuPipelineResolverReport` 派生固定 work orders、逐块 routes、budget ledger 和 gate ledger。
+- 固定 work order 覆盖 resolver ledger 收口、本地 crop / line / deskew stoplist、真实 TextBoxes / BubbleMask / SegmentMask 请求、render lock 保持、translation model floor handoff、external artifact package handoff 和 manual review。
+- 逐块 route 输出 primary / secondary work order、primary bottleneck、模型地板、render lock、stoplist、真实 artifact 需求、CI/full/external 预算和下一步动作。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuWorkOrderRouterReport`；convergence 新增 `WI-koharu-workorder-router` 和 `G-koharu-workorder-router-executed`。
+- `1_ocr_probe_text.txt` 新增 router report summary、`workOrderQueue` 摘要和逐块 `koharuWorkOrderRoute` 行。
+- 报告只做 report-only 诊断；不新增 OCR / LLM、不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、safe layout、glyph mask、背景填充或 `configuration.currentBlockSource`。ground truth 只进入 evaluation signals，不参与 work order routing、priority、budget 或 next action。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.32（KoharuWorkOrderRouter执行工作单与收益预算）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuWorkOrderRouterReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`workOrderCount >= 7`、`blockRouteCount == totalBlocksDetected`、`gateCount >= 10`，breakdown 非空，缺 active artifact 时 external work orders 保持 blocked/missing，convergence 包含 router reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 router summary、work order queue 和逐块 route。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.32 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.31：Koharu Pipeline Resolver 影子 DAG 阶段调度与阻塞传播
 日期：2026-07-01
 依据：`md/prompt/v1（漫画探针）/v1.31（KoharuPipelineResolver影子DAG阶段调度与阻塞传播）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
