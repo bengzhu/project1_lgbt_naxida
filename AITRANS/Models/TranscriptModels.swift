@@ -3022,6 +3022,142 @@ struct MangaTranslationModelFloorGate: Equatable, Codable, Sendable {
     var groundTruthUsedForDecision: Bool
 }
 
+struct MangaKoharuRenderSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuRenderBlockLock: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var failureReasons: [String]
+    var safeLayoutRect: [Double]?
+    var safeLayoutSource: String?
+    var maskSafeRect: [Double]?
+    var maskDominantBubbleID: Int?
+    var maskDominantCoverage: Double?
+    var maskBubbleIDConsistent: Bool?
+    var renderCollisionChecked: Bool
+    var renderCollisionInitialOverflow: Bool
+    var renderCollisionResolved: Bool
+    var renderMaskCollisionChecked: Bool
+    var renderMaskCollisionResolved: Bool
+    var renderMaskOverflowPixelCount: Int
+    var renderFontSize: Double?
+    var renderMinFontSizeReached: Bool
+    var renderTextTruncated: Bool
+    var renderNonTransparentBounds: [Double]?
+    var glyphMaskPixelCount: Int
+    var glyphMaskFillRectCount: Int
+    var backgroundFillApplied: Bool
+    var backgroundFillColor: [Double]?
+    var failureOverlayRequired: Bool
+    var failureOverlayLocked: Bool
+    var translationCandidateForRender: String
+    var fallbackTextForRender: String
+    var renderStatus: String
+    var primaryRenderRisk: String
+    var recommendedNextAction: String
+    var decisionSignals: [MangaKoharuRenderSignal]
+    var evaluationSignals: [MangaKoharuRenderSignal]
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuRenderArtifactStage: Equatable, Codable, Sendable {
+    var stageName: String
+    var referenceKoharuArtifact: String
+    var currentAITRANSArtifact: String
+    var stageStatus: String
+    var proxyOnly: Bool
+    var realArtifactAvailable: Bool
+    var sourceReports: [String]
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuRenderSignal]
+    var evaluationSignals: [MangaKoharuRenderSignal]
+    var missingKoharuCapabilities: [String]
+    var lockedInvariants: [String]
+    var mustNotPromoteReasons: [String]
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuRenderOutputFileCheck: Equatable, Codable, Sendable {
+    var fileName: String
+    var requiredInCIFast: Bool
+    var requiredInFull: Bool
+    var presentInRetainedOutputFiles: Bool
+    var nonEmpty: Bool
+    var source: String
+    var status: String
+    var failureMeans: String
+    var recommendedAction: String
+}
+
+struct MangaKoharuRenderGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuRenderSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuRenderRegressionLockReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referenceWorkItemID: String
+    var referencePipeline: String
+    var evaluatedBlockCount: Int
+    var renderedSpritesStageStatus: String
+    var finalRenderStageStatus: String
+    var renderLockVerdict: String
+    var renderLockVerdictBreakdown: [String: Int]
+    var renderStatusBreakdown: [String: Int]
+    var safeLayoutSourceBreakdown: [String: Int]
+    var backgroundFillStatusBreakdown: [String: Int]
+    var glyphMaskStatusBreakdown: [String: Int]
+    var failureOverlayStatusBreakdown: [String: Int]
+    var outputFileStatusBreakdown: [String: Int]
+    var renderCollisionCheckedBlocks: [Int]
+    var renderCollisionResolvedBlocks: [Int]
+    var renderCollisionUnresolvedBlocks: [Int]
+    var renderMaskCollisionCheckedBlocks: [Int]
+    var renderMaskCollisionResolvedBlocks: [Int]
+    var renderMaskOverflowBlocks: [Int]
+    var renderTextTruncatedBlocks: [Int]
+    var renderIssueBlocks: [Int]
+    var failureOverlayRequiredBlocks: [Int]
+    var failureOverlayLockedBlocks: [Int]
+    var safeLayoutRectBlocks: [Int]
+    var maskSafeRectBlocks: [Int]
+    var glyphMaskBlocks: [Int]
+    var backgroundFillAppliedBlocks: [Int]
+    var coreOutputFilesPresent: Bool
+    var coreOutputFilesNonEmpty: Bool
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var proxyNotRealKoharuRenderer: Bool
+    var blockLocks: [MangaKoharuRenderBlockLock]
+    var artifactStages: [MangaKoharuRenderArtifactStage]
+    var outputFileChecks: [MangaKoharuRenderOutputFileCheck]
+    var gateLedger: [MangaKoharuRenderGate]
+    var notes: [String]
+}
+
 struct MangaTranslationModelFloorComparisonReport: Equatable, Codable, Sendable {
     var enabled: Bool
     var source: String
@@ -3146,6 +3282,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
     var koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
+    var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
