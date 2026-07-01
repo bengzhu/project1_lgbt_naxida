@@ -755,6 +755,7 @@ struct MangaOverlayProbeService: Sendable {
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport? = nil,
         koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -821,6 +822,7 @@ struct MangaOverlayProbeService: Sendable {
                 segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                 koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
                 translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+                koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1464,7 +1466,7 @@ struct MangaOverlayProbeService: Sendable {
         }
     }
 
-    private static func writeOCRProbeText(
+    static func writeOCRProbeText(
         blocks: [MangaOverlayProbeBlock],
         textRegionCropReport: MangaOverlayTextRegionCropReport?,
         textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?,
@@ -1489,6 +1491,7 @@ struct MangaOverlayProbeService: Sendable {
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?,
         koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1574,6 +1577,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let translationFloorNoisyByBlock = Dictionary(
             uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let renderLockByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1790,6 +1796,7 @@ struct MangaOverlayProbeService: Sendable {
             let segmentMaskProxyMustNotPromote = segmentMaskProxyScoreboard?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
             let koharuArtifactPath = koharuConvergencePathByBlock[block.index]
             let translationFloorNoisy = translationFloorNoisyByBlock[block.index]
+            let renderLock = renderLockByBlock[block.index]
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1854,6 +1861,7 @@ struct MangaOverlayProbeService: Sendable {
             segmentMaskProxyScoreboard: coverage=\(segmentMaskProxyScoreboard?.coverageStatus ?? "nil") cleanup=\(segmentMaskProxyScoreboard?.cleanupStatus ?? "nil") renderMask=\(segmentMaskProxyScoreboard?.renderMaskStatus ?? "nil") glyphPixels=\(segmentMaskProxyScoreboard.map { String($0.glyphMaskPixelCount) } ?? "nil") textBoxCoverage=\(segmentMaskProxyTextBoxCoverage) bubbleCoverage=\(segmentMaskProxyBubbleCoverage) safeRectCoverage=\(segmentMaskProxySafeRectCoverage) backgroundFill=\(segmentMaskProxyScoreboard.map { String($0.backgroundFillApplied) } ?? "nil") nextAction=\(segmentMaskProxyScoreboard?.nextAction ?? "nil") mustNotPromote=\(segmentMaskProxyMustNotPromote)
             koharuArtifactPath: firstBlockingArtifact=\(koharuArtifactPath?.firstBlockingArtifact ?? "nil") textBox=\(koharuArtifactPath?.textBoxStatus ?? "nil") bubble=\(koharuArtifactPath?.bubbleMaskStatus ?? "nil") segment=\(koharuArtifactPath?.segmentMaskStatus ?? "nil") translation=\(koharuArtifactPath?.translationStatus ?? "nil") render=\(koharuArtifactPath?.renderStatus ?? "nil") modelFloorLimited=\(koharuArtifactPath.map { String($0.modelFloorLimited) } ?? "nil") renderLocked=\(koharuArtifactPath.map { String($0.renderLocked) } ?? "nil") needsRealArtifact=\(koharuArtifactPath.map { String($0.needsRealArtifact) } ?? "nil") nextAction=\(koharuArtifactPath?.primaryNextAction ?? "nil")
             translationFloorNoisyBlock: modelFloorLimited=\(translationFloorNoisy.map { String($0.modelFloorLimited) } ?? "nil") ocrInputSuspect=\(translationFloorNoisy.map { String($0.ocrInputSuspect) } ?? "nil") languageQualityFailure=\(translationFloorNoisy.map { String($0.translationLanguageQualityFailure) } ?? "nil") routingOutcome=\(translationFloorNoisy?.routingComparisonOutcome ?? "nil") nextAction=\(translationFloorNoisy?.recommendedNextAction ?? "nil")
+            renderLock: status=\(renderLock?.renderStatus ?? "nil") failureOverlayRequired=\(renderLock.map { String($0.failureOverlayRequired) } ?? "nil") failureOverlayLocked=\(renderLock.map { String($0.failureOverlayLocked) } ?? "nil") safeLayoutSource=\(renderLock?.safeLayoutSource ?? "nil") maskOverflowPixels=\(renderLock.map { String($0.renderMaskOverflowPixelCount) } ?? "nil") truncated=\(renderLock.map { String($0.renderTextTruncated) } ?? "nil") nextAction=\(renderLock?.recommendedNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1895,7 +1903,18 @@ struct MangaOverlayProbeService: Sendable {
             .map { "\($0.key)=\($0.value)" }
             .sorted()
             .joined(separator: ",") ?? "nil"
+        let renderOutputMissing = (koharuRenderRegressionLockReport?.outputFileChecks ?? [])
+            .filter { $0.requiredInCIFast && !$0.nonEmpty }
+            .map(\.fileName)
+            .joined(separator: ",")
+        let renderWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
+            $0.workItemID == "WI-render-regression-lock"
+        }
         let externalSummary = """
+        koharuRenderRegressionLockReport: enabled=\(koharuRenderRegressionLockReport.map { String($0.enabled) } ?? "nil") blocks=\(koharuRenderRegressionLockReport.map { String($0.evaluatedBlockCount) } ?? "nil") verdict=\(koharuRenderRegressionLockReport?.renderLockVerdict ?? "nil") renderedSpritesStage=\(koharuRenderRegressionLockReport?.renderedSpritesStageStatus ?? "nil") finalRenderStage=\(koharuRenderRegressionLockReport?.finalRenderStageStatus ?? "nil")
+        renderIssues: overflow=\(koharuRenderRegressionLockReport?.renderCollisionUnresolvedBlocks.map(String.init).joined(separator: ",") ?? "nil") truncated=\(koharuRenderRegressionLockReport?.renderTextTruncatedBlocks.map(String.init).joined(separator: ",") ?? "nil") maskOverflow=\(koharuRenderRegressionLockReport?.renderMaskOverflowBlocks.map(String.init).joined(separator: ",") ?? "nil") missingSafeLayout=\(koharuRenderRegressionLockReport?.blockLocks.filter { $0.safeLayoutRect == nil }.map { String($0.blockIndex) }.joined(separator: ",") ?? "nil")
+        outputFiles: corePresent=\(koharuRenderRegressionLockReport.map { String($0.coreOutputFilesPresent) } ?? "nil") coreNonEmpty=\(koharuRenderRegressionLockReport.map { String($0.coreOutputFilesNonEmpty) } ?? "nil") missing=\(renderOutputMissing.isEmpty ? "none" : renderOutputMissing)
+        renderRegressionLockWorkItem: status=\(renderWorkItem?.status ?? "nil") closedByVersion=\(renderWorkItem?.closedByVersion ?? "nil") blockers=\(renderWorkItem?.remainingBlockers.joined(separator: ",") ?? "nil")
         translationModelFloorComparisonReport: enabled=\(translationModelFloorComparisonReport.map { String($0.enabled) } ?? "nil") cleanCases=\(translationModelFloorComparisonReport.map { String($0.evaluatedCleanCaseCount) } ?? "nil") noisyBlocks=\(translationModelFloorComparisonReport.map { String($0.evaluatedNoisyBlockCount) } ?? "nil") baselinePassRate=\(translationModelFloorComparisonReport.map { $0.baselinePassRate.formatted(.number.precision(.fractionLength(4))) } ?? "nil") variantPassRate=\(translationModelFloorComparisonReport.map { $0.variantPassRate.formatted(.number.precision(.fractionLength(4))) } ?? "nil") delta=\(translationModelFloorComparisonReport.map { $0.passRateDelta.formatted(.number.precision(.fractionLength(4))) } ?? "nil") floorVerdict=\(translationModelFloorComparisonReport?.floorVerdict ?? "nil")
         promptVariantOutcome=\(translationFloorPromptOutcomes)
         modelFloorBlocks=\(translationModelFloorComparisonReport?.noisyModelFloorBlocks.map(String.init).joined(separator: ",") ?? "nil") ocrSuspectBlocks=\(translationModelFloorComparisonReport?.noisyOCRSuspectBlocks.map(String.init).joined(separator: ",") ?? "nil") languageQualityBlocks=\(translationModelFloorComparisonReport?.noisyTranslationLanguageQualityBlocks.map(String.init).joined(separator: ",") ?? "nil")
