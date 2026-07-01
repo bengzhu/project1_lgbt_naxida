@@ -115,6 +115,42 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.29：Translation Model Floor 对照矩阵与 Koharu 翻译地板账本
+日期：2026-07-01
+依据：`md/prompt/v1（漫画探针）/v1.29（TranslationModelFloor对照矩阵与Koharu翻译地板账本）.md`。本轮修改 Swift 探针报告模型、deterministic clean text strict prompt 诊断、Koharu convergence work item 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `translationModelFloorComparisonReport`，执行 v1.28 未闭合的 `WI-translation-model-floor-comparison`。
+- 报告复用 `cleanTextDiagnostic` 的 dialogue baseline cases，额外运行 deterministic `strictChineseOnlyV1` prompt 变体，记录 baseline / variant prompt、raw output、candidate、raw / candidate classification、failure reasons、pass state 和 prompt variant outcome。
+- 报告聚合 noisy final blocks、v1.19 `routingDrivenTranslationComparisonReport`、`batchTranslationComparison` 和 `koharuArtifactConvergenceReport` work item，输出 `floorVerdict`、clean/noisy 计数、prompt outcome breakdown、failure reason breakdown 和 gate ledger。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `translationModelFloorComparisonReport`，`WI-translation-model-floor-comparison` 可从 v1.28 的未执行 open 状态推进为 `closedReportOnly` 或 `openModelFloorConfirmed`；这只表示对照账本已执行，不表示模型质量问题已解决。
+- `1_ocr_probe_text.txt` 新增报告级 `translationModelFloorComparisonReport` summary、逐条 `translationFloorCleanCase` 和逐块 `translationFloorNoisyBlock` 摘要。
+- 报告只做 report-only 诊断；clean text ground truth 只用于模型地板评估，不参与 noisy OCR 候选选择、主 prompt、主译文、覆盖图、`blockPassed`、失败分类、质量规则、模型选择或 metrics history。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.29（TranslationModelFloor对照矩阵与Koharu翻译地板账本）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `translationModelFloorComparisonReport.enabled = true`、`evaluatedCleanCaseCount == cleanTextDiagnostic.totalCases`、`evaluatedNoisyBlockCount == totalBlocksDetected`、`baselinePassRate == cleanTextDiagnostic.passRate`、`floorVerdict` 和 breakdown 非空、`gateLedger.count >= 9`、`koharuArtifactConvergenceReport.referenceReports` 包含新 report、`WI-translation-model-floor-comparison` 不再只是 v1.28 未执行 open 状态，且 `1_ocr_probe_text.txt` 包含新 summary、clean case 摘要和逐块 noisy block 摘要。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.29 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.28：Koharu Artifact 收敛矩阵与下一步决策账本
 日期：2026-07-01
 依据：`md/prompt/v1（漫画探针）/v1.28（KoharuArtifact收敛矩阵与下一步决策账本）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。

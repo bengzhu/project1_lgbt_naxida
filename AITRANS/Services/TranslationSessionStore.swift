@@ -1588,6 +1588,7 @@ final class TranslationSessionStore: ObservableObject {
                 var bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?
                 var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
                 var koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
+                var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1949,6 +1950,15 @@ final class TranslationSessionStore: ObservableObject {
                 let cleanDiagnosticURL = self.mangaOverlayOutputDirectory.appendingPathComponent("clean_text_diagnostic.json")
                 try Self.writeCleanTextDiagnostic(cleanTextDiagnostic, to: cleanDiagnosticURL)
                 outputFiles.cleanTextDiagnosticFile = cleanDiagnosticURL.path
+                self.writeMangaProbeProgress(stage: "translation-model-floor-comparison-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                translationModelFloorComparisonReport = await self.makeTranslationModelFloorComparisonReport(
+                    blocks: probeBlocks,
+                    groundTruth: groundTruth,
+                    cleanTextDiagnostic: cleanTextDiagnostic,
+                    routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
+                    batchTranslationComparison: batchTranslationComparison,
+                    koharuArtifactConvergenceReport: nil
+                )
                 koharuStageGapReplicationReport = Self.makeKoharuStageGapReplicationReport(
                     blocks: probeBlocks,
                     koharuArtifactDAGReport: koharuArtifactDAGReport,
@@ -2030,7 +2040,8 @@ final class TranslationSessionStore: ObservableObject {
                     segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                     externalArtifactReadinessReport: externalArtifactReadinessReport,
                     externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
-                    cleanTextDiagnostic: cleanTextDiagnostic
+                    cleanTextDiagnostic: cleanTextDiagnostic,
+                    translationModelFloorComparisonReport: translationModelFloorComparisonReport
                 )
                 let deterministicDecodingCheck: MangaDeterministicDecodingCheck?
                 if runOptions.runDeterministicDecodingCheck {
@@ -2070,6 +2081,7 @@ final class TranslationSessionStore: ObservableObject {
                     bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
                     segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                     koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
+                    translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -2142,6 +2154,7 @@ final class TranslationSessionStore: ObservableObject {
                     bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
                     segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                     koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
+                    translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -6472,6 +6485,482 @@ final class TranslationSessionStore: ObservableObject {
         )
     }
 
+    private func makeTranslationModelFloorComparisonReport(
+        blocks: [MangaOverlayProbeBlock],
+        groundTruth: [MangaGroundTruthEntry],
+        cleanTextDiagnostic: MangaCleanTextDiagnosticReport?,
+        routingDrivenTranslationComparisonReport: MangaRoutingDrivenTranslationComparisonReport?,
+        batchTranslationComparison: MangaBatchTranslationComparison?,
+        koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
+    ) async -> MangaTranslationModelFloorComparisonReport {
+        let variantPromptID = "strictChineseOnlyV1"
+        let cleanEntries = groundTruth.enumerated()
+            .filter { _, entry in entry.type == MangaGroundTruthEntry.dialogueType }
+            .map { index, entry in (index, entry) }
+        let baselineByIndex = Dictionary(
+            uniqueKeysWithValues: (cleanTextDiagnostic?.cases ?? []).map { ($0.index, $0) }
+        )
+
+        var cleanCases: [MangaTranslationModelFloorCleanCase] = []
+        for (index, entry) in cleanEntries {
+            let baseline = baselineByIndex[index]
+            let variant = await runStrictCleanTextTranslationComparison(index: index, entry: entry, variantPromptID: variantPromptID)
+            let baselineCandidate = baseline?.translationCandidate ?? ""
+            let baselineRawOutput = baseline?.rawOutput ?? ""
+            let baselinePrompt = baseline?.prompt ?? ""
+            let baselineRawClassification = Self.classifyMangaProbeRawOutput(baselineRawOutput, original: entry.text)
+            let baselineCandidateClassification = Self.classifyMangaProbeCandidate(
+                baselineCandidate,
+                original: entry.text,
+                rejectedPlaceholder: false
+            )
+            let latinLeakReduced = Self.latinLetterCount(in: variant.candidate) < Self.latinLetterCount(in: baselineCandidate)
+            let emptyOutputFixed = baselineCandidate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !variant.candidate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let baselinePlaceholder = baselineCandidateClassification == "placeholder"
+                || baselineCandidateClassification == "placeholderRejected"
+            let placeholderFixed = baselinePlaceholder
+                && variant.candidateClassification != "placeholder"
+                && variant.candidateClassification != "placeholderRejected"
+                && variant.candidateClassification != "empty"
+            let shortChineseFixed = Self.isShortChineseCandidate(baselineCandidate, original: entry.text)
+                && !Self.isShortChineseCandidate(variant.candidate, original: entry.text)
+            let outcome = Self.translationFloorPromptVariantOutcome(
+                baselinePassed: baseline?.passed == true,
+                variantPassed: variant.passed,
+                baselineCandidateClassification: baselineCandidateClassification,
+                variantCandidateClassification: variant.candidateClassification,
+                latinLeakReduced: latinLeakReduced,
+                emptyOutputFixed: emptyOutputFixed,
+                placeholderFixed: placeholderFixed,
+                shortChineseFixed: shortChineseFixed
+            )
+
+            cleanCases.append(
+                MangaTranslationModelFloorCleanCase(
+                    groundTruthIndex: index,
+                    groundTruthType: entry.type,
+                    sourceText: entry.text,
+                    baselinePrompt: baselinePrompt,
+                    baselineRawOutput: baselineRawOutput,
+                    baselineCandidate: baselineCandidate,
+                    baselineRawOutputClassification: baselineRawClassification,
+                    baselineCandidateClassification: baselineCandidateClassification,
+                    baselinePassed: baseline?.passed == true,
+                    baselineFailureReasons: baseline?.failureReasons ?? ["cleanTextDiagnosticMissing"],
+                    variantPromptID: variantPromptID,
+                    variantPrompt: variant.prompt,
+                    variantRawOutput: variant.rawOutput,
+                    variantCandidate: variant.candidate,
+                    variantRawOutputClassification: variant.rawClassification,
+                    variantCandidateClassification: variant.candidateClassification,
+                    variantPassed: variant.passed,
+                    variantFailureReasons: variant.failureReasons,
+                    promptVariantOutcome: outcome,
+                    latinLeakReduced: latinLeakReduced,
+                    emptyOutputFixed: emptyOutputFixed,
+                    placeholderFixed: placeholderFixed,
+                    shortChineseFixed: shortChineseFixed,
+                    groundTruthUsedForDecision: false,
+                    diagnosticOnly: true,
+                    wouldChangeMainFlow: false
+                )
+            )
+        }
+
+        let baselinePassedCases = cleanCases.filter(\.baselinePassed).map(\.groundTruthIndex).sorted()
+        let variantPassedCases = cleanCases.filter(\.variantPassed).map(\.groundTruthIndex).sorted()
+        let variantFixedCases = cleanCases.filter { !$0.baselinePassed && $0.variantPassed }.map(\.groundTruthIndex).sorted()
+        let variantRegressedCases = cleanCases.filter { $0.baselinePassed && !$0.variantPassed }.map(\.groundTruthIndex).sorted()
+        let baselinePassRate = cleanTextDiagnostic?.passRate ?? (cleanCases.isEmpty ? 0 : Double(baselinePassedCases.count) / Double(cleanCases.count))
+        let variantPassRate = cleanCases.isEmpty ? 0 : Double(variantPassedCases.count) / Double(cleanCases.count)
+        let routingByBlock = Dictionary(
+            uniqueKeysWithValues: (routingDrivenTranslationComparisonReport?.cases ?? []).map { ($0.blockIndex, $0) }
+        )
+        let convergenceByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuArtifactConvergenceReport?.blockPaths ?? []).map { ($0.blockIndex, $0) }
+        )
+        let modelFloorLow = baselinePassRate < 0.80 || variantPassRate < 0.80
+        let noisySummaries = Self.makeTranslationModelFloorNoisyBlockSummaries(
+            blocks: blocks,
+            cleanTextModelFloorLow: modelFloorLow,
+            routingByBlock: routingByBlock,
+            convergenceByBlock: convergenceByBlock
+        )
+        let batchFormatFailure = (batchTranslationComparison?.enabled == true)
+            && ((batchTranslationComparison?.parsedCases ?? 0) == 0 || !(batchTranslationComparison?.parseFailureReasons.isEmpty ?? true))
+        let floorVerdict = Self.translationFloorVerdict(
+            cleanCaseCount: cleanCases.count,
+            baselinePassRate: baselinePassRate,
+            variantPassRate: variantPassRate,
+            fixedCases: variantFixedCases,
+            regressedCases: variantRegressedCases,
+            noisySummaries: noisySummaries,
+            batchFormatFailure: batchFormatFailure
+        )
+        let gates = Self.makeTranslationModelFloorGateLedger(
+            cleanCases: cleanCases,
+            noisySummaries: noisySummaries,
+            cleanTextDiagnostic: cleanTextDiagnostic,
+            batchFormatFailure: batchFormatFailure,
+            floorVerdict: floorVerdict,
+            convergenceReportLinked: true
+        )
+
+        var notes = [
+            "translationModelFloorComparisonReport executes WI-translation-model-floor-comparison as report-only model floor ledger.",
+            "Clean text ground truth is used only to measure current model/prompt floor and is not used for noisy block candidate selection, OCR replacement, final translation, overlay, or blockPassed.",
+            "Strict prompt variant uses deterministic decoding and existing candidate extraction, raw/candidate classification, mangaProbeChecks, failure reasons, and language quality gate.",
+            "No noisy final block is retranslated by this report; noisy summaries aggregate existing blocks, routing comparison, batch comparison, and clean text floor signals.",
+            "This report does not change the main prompt, selected model, finalTextUsedForTranslation, translationCandidate, blockPassed, failureCategory, decision trace, overlay rendering, or metrics history."
+        ]
+        if cleanTextDiagnostic == nil {
+            notes.append("cleanTextDiagnostic missing; clean cases are generated from ground truth with missing baseline markers.")
+        }
+        if koharuArtifactConvergenceReport == nil {
+            notes.append("koharuArtifactConvergenceReport is generated after this report in the same run; convergence consumes this report for work item status.")
+        }
+
+        return MangaTranslationModelFloorComparisonReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referenceWorkItemID: "WI-translation-model-floor-comparison",
+            evaluatedCleanCaseCount: cleanCases.count,
+            evaluatedNoisyBlockCount: noisySummaries.count,
+            baselinePromptID: "currentCleanTextPrompt",
+            variantPromptID: variantPromptID,
+            decodingMode: selectedEngine == .local ? ModelDecodingProfile.deterministic.mode : "mock",
+            decodingSeed: selectedEngine == .local ? ModelDecodingProfile.deterministic.seed : nil,
+            baselinePassRate: baselinePassRate,
+            variantPassRate: variantPassRate,
+            passRateDelta: variantPassRate - baselinePassRate,
+            baselinePassedCases: baselinePassedCases,
+            variantPassedCases: variantPassedCases,
+            variantFixedCases: variantFixedCases,
+            variantRegressedCases: variantRegressedCases,
+            latinLeakReducedCases: cleanCases.filter(\.latinLeakReduced).map(\.groundTruthIndex).sorted(),
+            emptyOutputFixedCases: cleanCases.filter(\.emptyOutputFixed).map(\.groundTruthIndex).sorted(),
+            placeholderFixedCases: cleanCases.filter(\.placeholderFixed).map(\.groundTruthIndex).sorted(),
+            formatFollowingFailureCases: cleanCases.filter { Self.translationFloorFormatFollowingFailed($0) }.map(\.groundTruthIndex).sorted(),
+            noisyModelFloorBlocks: noisySummaries.filter(\.modelFloorLimited).map(\.blockIndex).sorted(),
+            noisyOCRSuspectBlocks: noisySummaries.filter(\.ocrInputSuspect).map(\.blockIndex).sorted(),
+            noisyTranslationLanguageQualityBlocks: noisySummaries.filter(\.translationLanguageQualityFailure).map(\.blockIndex).sorted(),
+            batchFormatFailure: batchFormatFailure,
+            floorVerdict: floorVerdict,
+            floorVerdictBreakdown: Self.countBy([floorVerdict]),
+            promptVariantOutcomeBreakdown: Self.countBy(cleanCases.map(\.promptVariantOutcome)),
+            failureReasonBreakdown: Self.countBy(cleanCases.flatMap { $0.baselineFailureReasons + $0.variantFailureReasons }),
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            cleanTextGroundTruthUsedForModelFloorOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            cleanCases: cleanCases,
+            noisyBlockSummaries: noisySummaries,
+            gateLedger: gates,
+            notes: notes
+        )
+    }
+
+    private struct StrictCleanTextTranslationComparison {
+        var prompt: String
+        var rawOutput: String
+        var candidate: String
+        var rawClassification: String
+        var candidateClassification: String
+        var passed: Bool
+        var failureReasons: [String]
+    }
+
+    private func runStrictCleanTextTranslationComparison(
+        index: Int,
+        entry: MangaGroundTruthEntry,
+        variantPromptID: String
+    ) async -> StrictCleanTextTranslationComparison {
+        let prompt = Self.strictChineseOnlyPrompt(for: entry.text)
+        let rawOutput: String
+        let errorCode: String?
+        if selectedEngine == .local {
+            let probe = localService.rawProbe(prompt: prompt, maxTokens: min(max(96, entry.text.count * 2), 220))
+            rawOutput = probe.output
+            errorCode = probe.errorCode
+        } else {
+            let request = makeProbeRequest(source: .englishUS, target: .simplifiedChinese, input: prompt)
+            do {
+                try await mockService.prepare()
+                let result = try await mockService.generate(request)
+                rawOutput = result.text
+                errorCode = nil
+            } catch {
+                rawOutput = ""
+                errorCode = "\(type(of: error)): \(error.localizedDescription)"
+            }
+        }
+        let extraction = Self.extractMangaProbeTranslationCandidate(rawOutput)
+        let candidate = extraction.candidate
+        let rawClassification = Self.classifyMangaProbeRawOutput(rawOutput, original: entry.text)
+        let candidateClassification = Self.classifyMangaProbeCandidate(
+            candidate,
+            original: entry.text,
+            rejectedPlaceholder: extraction.rejectedPlaceholder
+        )
+        let checks = mangaProbeChecks(original: entry.text, translation: candidate, errorCode: errorCode)
+        let baseReasons = mangaProbeFailureReasons(
+            checks: checks,
+            errorCode: errorCode,
+            original: entry.text,
+            translation: candidate
+        )
+        let checksPassed = Self.mangaProbeBlockPassed(checks, errorCode: errorCode)
+        let qualityReason = checksPassed ? Self.mangaProbeTranslationLanguageQualityIssue(
+            original: entry.text,
+            candidate: candidate,
+            rawOutput: rawOutput,
+            rawClassification: rawClassification
+        ) : nil
+        let failureReasons = baseReasons + [qualityReason].compactMap { $0 }
+        let passed = checksPassed && qualityReason == nil
+        return StrictCleanTextTranslationComparison(
+            prompt: prompt,
+            rawOutput: rawOutput,
+            candidate: candidate,
+            rawClassification: rawClassification,
+            candidateClassification: candidateClassification,
+            passed: passed,
+            failureReasons: failureReasons
+        )
+    }
+
+    private static func translationFloorPromptVariantOutcome(
+        baselinePassed: Bool,
+        variantPassed: Bool,
+        baselineCandidateClassification: String,
+        variantCandidateClassification: String,
+        latinLeakReduced: Bool,
+        emptyOutputFixed: Bool,
+        placeholderFixed: Bool,
+        shortChineseFixed: Bool
+    ) -> String {
+        if baselinePassed && variantPassed {
+            return "samePass"
+        }
+        if !baselinePassed && variantPassed {
+            return "fixedByVariant"
+        }
+        if baselinePassed && !variantPassed {
+            return "regressedByVariant"
+        }
+        if emptyOutputFixed {
+            return "emptyOutputFixed"
+        }
+        if placeholderFixed {
+            return "placeholderFixed"
+        }
+        if latinLeakReduced {
+            return "latinLeakReduced"
+        }
+        if shortChineseFixed {
+            return "shortChineseStillFails"
+        }
+        if variantCandidateClassification == "nonChinese"
+            || variantCandidateClassification == "symbolsOnly"
+            || variantCandidateClassification == "repeatedOriginal" {
+            return "nonChineseStillFails"
+        }
+        if baselineCandidateClassification == "mixedChineseAndEnglish"
+            && variantCandidateClassification == "mixedChineseAndEnglish" {
+            return "nonChineseStillFails"
+        }
+        return "sameFail"
+    }
+
+    private static func makeTranslationModelFloorNoisyBlockSummaries(
+        blocks: [MangaOverlayProbeBlock],
+        cleanTextModelFloorLow: Bool,
+        routingByBlock: [Int: MangaRoutingDrivenTranslationComparisonCase],
+        convergenceByBlock: [Int: MangaKoharuArtifactConvergenceBlockPath]
+    ) -> [MangaTranslationModelFloorNoisyBlockSummary] {
+        blocks.map { block in
+            let routing = routingByBlock[block.index]
+            let convergence = convergenceByBlock[block.index]
+            let ocrInputSuspect = block.failureCategory == "ocrInputSuspect"
+            let languageQualityFailure = block.failureCategory == "translationLanguageQualityFailure"
+                || block.failureReasons.contains(where: { $0.contains("拉丁") || $0.contains("英文") || $0.contains("不像中文") })
+            let outputFailure = block.failureCategory == "modelOutputFailure"
+                || block.rawOutputClassification == "empty"
+                || block.candidateClassification == "empty"
+                || block.rawOutputClassification == "placeholder"
+                || block.candidateClassification == "placeholder"
+                || block.rawOutputClassification == "repeatedOriginal"
+                || block.candidateClassification == "repeatedOriginal"
+            let modelFloorLimited = !block.blockPassed
+                && cleanTextModelFloorLow
+                && !ocrInputSuspect
+                && (languageQualityFailure || outputFailure)
+            let routingOutcome = routing?.improvementCategory
+            let nextAction: String
+            if modelFloorLimited {
+                nextAction = routingOutcome == "passedButControlFailed"
+                    ? "keepStrictPromptReportOnlyAndOpenPromotionGate"
+                    : "classifyCurrentModelFloorBeforeOCRTuning"
+            } else if ocrInputSuspect {
+                nextAction = "keepOCRInputSuspectSeparateFromModelFloor"
+            } else if block.blockPassed {
+                nextAction = "noActionPassed"
+            } else {
+                nextAction = "manualReviewTranslationFloorSignal"
+            }
+            let decisionSignals = [
+                translationFloorSignal("failureCategory", block.failureCategory, source: "blocks"),
+                translationFloorSignal("candidateClassification", block.candidateClassification, source: "blocks"),
+                translationFloorSignal("rawOutputClassification", block.rawOutputClassification, source: "blocks"),
+                translationFloorSignal("cleanTextModelFloorLow", String(cleanTextModelFloorLow), source: "cleanTextDiagnostic"),
+                translationFloorSignal("routingOutcome", routingOutcome ?? "nil", source: "routingDrivenTranslationComparisonReport")
+            ]
+            let evaluationSignals = [
+                translationFloorSignal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
+                translationFloorSignal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true),
+                translationFloorSignal("ocrSimilarityForEvaluation", block.ocrGroundTruthSimilarity.map { $0.formatted(.number.precision(.fractionLength(4))) } ?? "nil", source: "blocks", decision: false, evaluation: true)
+            ]
+            return MangaTranslationModelFloorNoisyBlockSummary(
+                blockIndex: block.index,
+                bubbleID: block.bubbleID,
+                blockPassed: block.blockPassed,
+                failureCategory: block.failureCategory,
+                failureReasons: block.failureReasons,
+                finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                translationCandidate: block.translationCandidate,
+                rawOutputClassification: block.rawOutputClassification,
+                candidateClassification: block.candidateClassification,
+                groundTruthMatch: block.groundTruthMatch,
+                bestGroundTruthType: block.bestGroundTruthType,
+                ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
+                primaryBottleneckFromConvergence: convergence?.primaryStructuralBottleneck,
+                routingComparisonOutcome: routingOutcome,
+                modelFloorLimited: modelFloorLimited,
+                ocrInputSuspect: ocrInputSuspect,
+                translationLanguageQualityFailure: languageQualityFailure,
+                recommendedNextAction: nextAction,
+                decisionSignals: decisionSignals,
+                evaluationSignals: evaluationSignals,
+                groundTruthUsedForDecision: false,
+                diagnosticOnly: true,
+                wouldChangeMainFlow: false
+            )
+        }
+        .sorted { $0.blockIndex < $1.blockIndex }
+    }
+
+    private static func translationFloorVerdict(
+        cleanCaseCount: Int,
+        baselinePassRate: Double,
+        variantPassRate: Double,
+        fixedCases: [Int],
+        regressedCases: [Int],
+        noisySummaries: [MangaTranslationModelFloorNoisyBlockSummary],
+        batchFormatFailure: Bool
+    ) -> String {
+        if cleanCaseCount == 0 {
+            return "insufficientEvidence"
+        }
+        if variantPassRate + 0.05 < baselinePassRate || regressedCases.count > fixedCases.count {
+            return "promptVariantRegresses"
+        }
+        if variantPassRate >= baselinePassRate + 0.15 || fixedCases.count >= 2 {
+            return "promptVariantPromisingReportOnly"
+        }
+        if batchFormatFailure && baselinePassRate < 0.80 && variantPassRate < 0.80 {
+            return "formatFollowingFailure"
+        }
+        let modelBlocks = noisySummaries.filter(\.modelFloorLimited).count
+        let ocrBlocks = noisySummaries.filter(\.ocrInputSuspect).count
+        if baselinePassRate < 0.80 && modelBlocks > 0 && ocrBlocks > 0 {
+            return "mixedModelAndOCRFailure"
+        }
+        if baselinePassRate < 0.80 || variantPassRate < 0.80 || modelBlocks > 0 {
+            return "modelFloorConfirmed"
+        }
+        return "promptVariantNoBenefit"
+    }
+
+    private static func translationFloorFormatFollowingFailed(_ cleanCase: MangaTranslationModelFloorCleanCase) -> Bool {
+        cleanCase.variantRawOutputClassification == "empty"
+            || cleanCase.variantCandidateClassification == "empty"
+            || cleanCase.variantRawOutputClassification == "placeholder"
+            || cleanCase.variantCandidateClassification == "placeholder"
+            || cleanCase.variantRawOutputClassification == "repeatedOriginal"
+            || cleanCase.variantCandidateClassification == "repeatedOriginal"
+    }
+
+    private static func makeTranslationModelFloorGateLedger(
+        cleanCases: [MangaTranslationModelFloorCleanCase],
+        noisySummaries: [MangaTranslationModelFloorNoisyBlockSummary],
+        cleanTextDiagnostic: MangaCleanTextDiagnosticReport?,
+        batchFormatFailure: Bool,
+        floorVerdict: String,
+        convergenceReportLinked: Bool
+    ) -> [MangaTranslationModelFloorGate] {
+        let allCaseIndexes = cleanCases.map(\.groundTruthIndex).sorted()
+        let allBlockIndexes = noisySummaries.map(\.blockIndex).sorted()
+        let strictExecuted = !cleanCases.isEmpty && cleanCases.allSatisfy { !$0.variantPrompt.isEmpty }
+        let modelFloorBlocks = noisySummaries.filter(\.modelFloorLimited).map(\.blockIndex).sorted()
+
+        func gate(
+            _ id: String,
+            name: String,
+            scope: String,
+            status: String,
+            threshold: String,
+            affectedCases: [Int] = [],
+            affectedBlocks: [Int] = [],
+            failureMeans: String,
+            action: String,
+            signals: [MangaTranslationModelFloorSignal]
+        ) -> MangaTranslationModelFloorGate {
+            MangaTranslationModelFloorGate(
+                gateID: id,
+                gateName: name,
+                scope: scope,
+                status: status,
+                threshold: threshold,
+                affectedCases: affectedCases,
+                affectedBlocks: affectedBlocks,
+                decisionSignals: signals,
+                failureMeans: failureMeans,
+                recommendedAction: action,
+                groundTruthUsedForDecision: false
+            )
+        }
+
+        return [
+            gate("G-translation-floor-no-main-flow-mutation", name: "No main flow mutation", scope: "report", status: "passed", threshold: "wouldChangeMainFlow=false", failureMeans: "strict prompt comparison changes main translation, prompt, model, blockPassed, or overlay", action: "revertBehavioralChange", signals: [translationFloorSignal("wouldChangeMainFlow", "false", source: "translationModelFloorComparisonReport")]),
+            gate("G-translation-floor-no-ground-truth-production-decision", name: "No ground truth production decision", scope: "report", status: "passed", threshold: "groundTruthUsedForDecision=false", affectedCases: allCaseIndexes, affectedBlocks: allBlockIndexes, failureMeans: "ground truth changes noisy block action, OCR candidate, final text, or overlay", action: "moveGroundTruthToEvaluationSignalsOnly", signals: [translationFloorSignal("groundTruthUsedForDecision", "false", source: "translationModelFloorComparisonReport")]),
+            gate("G-clean-text-baseline-present", name: "Clean text baseline present", scope: "cleanText", status: cleanTextDiagnostic == nil ? "blocked" : "passed", threshold: "cleanTextDiagnostic.totalCases > 0", affectedCases: allCaseIndexes, failureMeans: "model floor is classified without baseline clean text", action: "restoreCleanTextDiagnostic", signals: [translationFloorSignal("cleanTextDiagnosticPresent", String(cleanTextDiagnostic != nil), source: "cleanTextDiagnostic")]),
+            gate("G-strict-clean-text-variant-executed", name: "Strict clean text variant executed", scope: "cleanText", status: strictExecuted ? "passed" : "blocked", threshold: "strictChineseOnlyV1 attempted for each clean case", affectedCases: allCaseIndexes, failureMeans: "prompt variant missing or silently skipped", action: "keepReportAndShowBlockedGate", signals: [translationFloorSignal("strictExecuted", String(strictExecuted), source: "translationModelFloorComparisonReport")]),
+            gate("G-current-model-floor-classified", name: "Current model floor classified", scope: "Translations", status: floorVerdict == "insufficientEvidence" ? "warning" : "passed", threshold: "floorVerdict != insufficientEvidence", affectedBlocks: modelFloorBlocks, failureMeans: "OCR tuning proceeds without separating clean text model floor", action: "classifyBeforeOCRTuning", signals: [translationFloorSignal("floorVerdict", floorVerdict, source: "translationModelFloorComparisonReport")]),
+            gate("G-prompt-variant-report-only", name: "Prompt variant report-only", scope: "Translations", status: "passed", threshold: "strict prompt never replaces main prompt in v1.29", affectedCases: cleanCases.filter { $0.promptVariantOutcome == "fixedByVariant" }.map(\.groundTruthIndex).sorted(), failureMeans: "strict prompt is promoted without separate gate", action: "openPromptPromotionShadowTaskIfNeeded", signals: [translationFloorSignal("fixedCases", cleanCases.filter { $0.promptVariantOutcome == "fixedByVariant" }.map(\.groundTruthIndex).map(String.init).joined(separator: ","), source: "translationModelFloorComparisonReport")]),
+            gate("G-batch-tag-format-boundary", name: "Batch tag format boundary", scope: "batchTranslation", status: batchFormatFailure ? "warning" : "passed", threshold: "parsedCases > 0 before any batch promotion", affectedBlocks: allBlockIndexes, failureMeans: "tagged batch output is promoted despite parse failure", action: "keepSequentialTranslationPrimary", signals: [translationFloorSignal("batchFormatFailure", String(batchFormatFailure), source: "batchTranslationComparison")]),
+            gate("G-koharu-convergence-workitem-linked", name: "Koharu convergence work item linked", scope: "KoharuConvergence", status: convergenceReportLinked ? "passed" : "warning", threshold: "koharuArtifactConvergenceReport consumes translationModelFloorComparisonReport", failureMeans: "WI-translation-model-floor-comparison remains v1.28 open-not-executed", action: "regenerateConvergenceWithTranslationFloorReport", signals: [translationFloorSignal("convergenceReportLinkedAtReportCreation", String(convergenceReportLinked), source: "koharuArtifactConvergenceReport")]),
+            gate("G-ci-fast-translation-floor-availability", name: "CI fast translation floor availability", scope: "ci-fast", status: "passed", threshold: "report generated without full-only dependencies", affectedCases: allCaseIndexes, affectedBlocks: allBlockIndexes, failureMeans: "ci-fast artifact lacks translation floor report", action: "requireReportInCIFastArtifact", signals: [translationFloorSignal("evaluatedCleanCaseCount", String(cleanCases.count), source: "translationModelFloorComparisonReport")])
+        ]
+    }
+
+    private static func translationFloorSignal(
+        _ name: String,
+        _ value: String,
+        source: String,
+        decision: Bool = true,
+        evaluation: Bool = false
+    ) -> MangaTranslationModelFloorSignal {
+        MangaTranslationModelFloorSignal(
+            name: name,
+            value: value,
+            sourceReport: source,
+            groundTruthFreeDecisionSignal: decision,
+            groundTruthUsedForEvaluationOnly: evaluation
+        )
+    }
+
     private func runDeterministicDecodingCheck(groundTruth: [MangaGroundTruthEntry]) async -> MangaDeterministicDecodingCheck {
         let input = groundTruth.first { $0.type == MangaGroundTruthEntry.dialogueType }?.text
             ?? "The City Battler Tournament starts in a few days."
@@ -7255,6 +7744,7 @@ final class TranslationSessionStore: ObservableObject {
         bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport? = nil,
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport? = nil,
         koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport? = nil,
+        translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7305,7 +7795,8 @@ final class TranslationSessionStore: ObservableObject {
             segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
             externalArtifactReadinessReport: externalArtifactReadinessReport,
             externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
-            cleanTextDiagnostic: cleanTextDiagnostic
+            cleanTextDiagnostic: cleanTextDiagnostic,
+            translationModelFloorComparisonReport: translationModelFloorComparisonReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -7350,6 +7841,7 @@ final class TranslationSessionStore: ObservableObject {
             bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
             segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
             koharuArtifactConvergenceReport: convergenceReport,
+            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -12578,7 +13070,8 @@ final class TranslationSessionStore: ObservableObject {
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?,
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
         externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?,
-        cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
+        cleanTextDiagnostic: MangaCleanTextDiagnosticReport?,
+        translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -12610,6 +13103,27 @@ final class TranslationSessionStore: ObservableObject {
 
         let allBlockIndexes = blocks.map(\.index)
         let cleanPassRate = cleanTextDiagnostic?.passRate ?? 0
+        let translationFloorExecuted = translationModelFloorComparisonReport?.enabled == true
+        let translationFloorVerdict = translationModelFloorComparisonReport?.floorVerdict ?? "notExecuted"
+        let translationFloorStatus: String
+        if !translationFloorExecuted {
+            translationFloorStatus = "openModelFloor"
+        } else if translationFloorVerdict == "promptVariantPromisingReportOnly" {
+            translationFloorStatus = "closedReportOnly"
+        } else {
+            translationFloorStatus = "openModelFloorConfirmed"
+        }
+        let translationFloorBlockers: [String]
+        if !translationFloorExecuted {
+            translationFloorBlockers = ["not implemented before v1.29", "must not change prompt or model in convergence report"]
+        } else if translationFloorVerdict == "promptVariantPromisingReportOnly" {
+            translationFloorBlockers = ["promptVariantRequiresSeparatePromotionTask", "model quality not solved in v1.29"]
+        } else {
+            translationFloorBlockers = ["currentModelFloorStillOpen", "model quality not solved in v1.29"]
+        }
+        let translationFloorNextAction = translationFloorVerdict == "promptVariantPromisingReportOnly"
+            ? "openPromptPromotionShadowGate"
+            : "keepModelFloorOpenAndConsiderModelComparison"
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -12902,7 +13416,7 @@ final class TranslationSessionStore: ObservableObject {
             stage("BubbleMask", artifact: "BubbleMask", current: "BubbleMask assignment and split proxy scoreboard", status: bubbleNeedBlocks.isEmpty ? "proxyStableReportOnly" : "requiresRealArtifact", proxyOnly: true, realAvailable: false, reports: ["bubbleMaskAssignmentSplitScoreboardReport"], affected: bubbleNeedBlocks, firstBlocking: bubbleNeedBlocks.isEmpty ? "none" : "BubbleMask", closed: bubbleMaskAssignmentSplitScoreboardReport == nil ? [] : ["WI-bubblemask-assignment-split-scorecard"], blocked: bubbleNeedBlocks.isEmpty ? [] : ["WI-external-artifact-optional-handoff"], nextAction: bubbleNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", decisions: [signal("needsRealBubbleMaskBlocks", joined(bubbleNeedBlocks), source: "bubbleMaskAssignmentSplitScoreboardReport")], mustNot: ["doNotUseProxyMaskAsRealBubbleMask"]),
             stage("SegmentMask", artifact: "SegmentMask", current: "Glyph mask SegmentMask proxy scoreboard", status: segmentNeedBlocks.isEmpty ? "proxyStableReportOnly" : "requiresRealArtifact", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport"], affected: segmentNeedBlocks, firstBlocking: segmentNeedBlocks.isEmpty ? "none" : "SegmentMask", closed: segmentMaskProxyCoverageScoreboardReport == nil ? [] : ["WI-segmentmask-proxy-coverage-scorecard"], blocked: segmentNeedBlocks.isEmpty ? [] : ["WI-external-artifact-optional-handoff"], nextAction: segmentNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport"), signal("needsRealSegmentMaskBlocks", joined(segmentNeedBlocks), source: "segmentMaskProxyCoverageScoreboardReport")], mustNot: ["doNotUseGlyphMaskProxyAsRealSegmentMask"]),
             stage("OcrText", artifact: "OcrText", current: "fused whole-page + bubble-first OCR", status: diagnostics.likelyOCRIssueBlocks.isEmpty ? "proxyStableReportOnly" : "proxyBlocked", proxyOnly: false, realAvailable: true, reports: ["diagnostics", "nativeTextBoxProxyLedgerReport"], affected: diagnostics.likelyOCRIssueBlocks, firstBlocking: diagnostics.likelyOCRIssueBlocks.isEmpty ? "none" : "OcrText", closed: [], blocked: textBoxStopBlocks.isEmpty ? [] : ["WI-native-textbox-artifact-scorecard"], nextAction: textBoxStopBlocks.isEmpty ? "keepReportOnly" : "stopLocalCropLineDeskewTuning", decisions: [signal("likelyOCRIssueBlocks", joined(diagnostics.likelyOCRIssueBlocks), source: "diagnostics"), signal("textBoxStoplistBlocks", joined(textBoxStopBlocks), source: "nativeTextBoxProxyLedgerReport")], evaluations: evaluationSignals, mustNot: ["doNotUseGroundTruthToSelectOCRCandidate"]),
-            stage("Translations", artifact: "Translations", current: "Local GGUF deterministic block translation", status: modelFloorLimitedBlocks.isEmpty ? "proxyStableReportOnly" : "modelLimited", proxyOnly: false, realAvailable: true, reports: ["cleanTextDiagnostic", "diagnostics"], affected: modelFloorLimitedBlocks, firstBlocking: modelFloorLimitedBlocks.isEmpty ? "none" : "Translations", closed: [], blocked: ["WI-translation-model-floor-comparison"], nextAction: "routeToTranslationModelFloorComparison", decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic"), signal("translationFailureBreakdown", diagnostics.translationFailureBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "diagnostics")], mustNot: ["doNotChangePromptOrModelInConvergenceReport"]),
+            stage("Translations", artifact: "Translations", current: "Local GGUF deterministic block translation plus v1.29 clean text floor comparison", status: translationFloorExecuted ? translationFloorStatus : (modelFloorLimitedBlocks.isEmpty ? "proxyStableReportOnly" : "modelLimited"), proxyOnly: false, realAvailable: true, reports: ["cleanTextDiagnostic", "translationModelFloorComparisonReport", "diagnostics"], affected: modelFloorLimitedBlocks, firstBlocking: modelFloorLimitedBlocks.isEmpty ? "none" : "Translations", closed: translationFloorStatus == "closedReportOnly" ? ["WI-translation-model-floor-comparison"] : [], blocked: translationFloorStatus == "closedReportOnly" ? [] : ["WI-translation-model-floor-comparison"], nextAction: translationFloorNextAction, decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic"), signal("translationFloorVerdict", translationFloorVerdict, source: "translationModelFloorComparisonReport"), signal("translationFailureBreakdown", diagnostics.translationFailureBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "diagnostics")], mustNot: ["doNotChangePromptOrModelInConvergenceReport"]),
             stage("Inpainted", artifact: "Inpainted", current: "glyph erase/background fill proxy", status: "proxyStableReportOnly", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport", "blocks.backgroundFill"], affected: segmentMaskProxyCoverageScoreboardReport?.backgroundFillAppliedBlocks ?? [], firstBlocking: "none", closed: segmentMaskProxyCoverageScoreboardReport == nil ? [] : ["WI-segmentmask-proxy-coverage-scorecard"], blocked: [], nextAction: "keepReportOnly", decisions: [signal("inpaintingImplemented", "false", source: "segmentMaskProxyCoverageScoreboardReport.cleanupLedgers")], mustNot: ["doNotImplementInpaintingInThisReport"]),
             stage("RenderedSprites", artifact: "RenderedSprites", current: "safeLayoutRect overlay text renderer", status: "renderStableLocked", proxyOnly: false, realAvailable: true, reports: ["blocks.renderDiagnostics"], affected: renderRegressionLockBlocks, firstBlocking: "none", closed: [], blocked: ["WI-render-regression-lock"], nextAction: "routeToRenderRegressionLock", decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics")], mustNot: ["doNotChangeOverlayRendererInConvergenceReport"]),
             stage("FinalRender", artifact: "FinalRender", current: "debug boxes and translated overlay PNG", status: "renderStableLocked", proxyOnly: false, realAvailable: true, reports: ["outputFiles", "blocks.renderDiagnostics"], affected: renderRegressionLockBlocks, firstBlocking: "none", closed: [], blocked: ["WI-render-regression-lock"], nextAction: "routeToRenderRegressionLock", decisions: [signal("renderTextTruncatedBlocks", joined(diagnostics.renderTextTruncatedBlocks), source: "diagnostics"), signal("renderCollisionUnresolvedBlocks", joined(diagnostics.renderCollisionUnresolvedBlocks), source: "diagnostics")], mustNot: ["doNotChangePNGRenderingInConvergenceReport"]),
@@ -12949,7 +13463,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-native-textbox-artifact-scorecard", title: "Native TextBox proxy quality ledger", status: nativeTextBoxProxyLedgerReport == nil ? "manualReviewOnly" : (textBoxStopBlocks.isEmpty ? "closedReportOnly" : "closedStoplist"), sourceReport: "nativeTextBoxProxyLedgerReport", stages: ["TextBoxes", "OcrText"], blocks: uniqueSorted(textBoxStopBlocks + diagnostics.likelyOCRIssueBlocks), version: nativeTextBoxProxyLedgerReport == nil ? nil : "v1.25", blockers: textBoxStopBlocks.isEmpty ? [] : ["local crop/line/deskew tuning is stoplisted"], nextAction: "stopLocalCropLineDeskewTuning", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(nativeTextBoxProxyLedgerReport != nil), source: "nativeTextBoxProxyLedgerReport")], evaluations: evaluationSignals),
             workItem("WI-bubblemask-assignment-split-scorecard", title: "BubbleMask assignment and split scoreboard", status: bubbleMaskAssignmentSplitScoreboardReport == nil ? "manualReviewOnly" : "closedReportOnly", sourceReport: "bubbleMaskAssignmentSplitScoreboardReport", stages: ["BubbleMask"], blocks: bubbleNeedBlocks, version: bubbleMaskAssignmentSplitScoreboardReport == nil ? nil : "v1.26", blockers: bubbleNeedBlocks.isEmpty ? [] : ["real BubbleMask artifact needed for promotion"], nextAction: bubbleNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(bubbleMaskAssignmentSplitScoreboardReport != nil), source: "bubbleMaskAssignmentSplitScoreboardReport")]),
             workItem("WI-segmentmask-proxy-coverage-scorecard", title: "SegmentMask proxy coverage and cleanup ledger", status: segmentMaskProxyCoverageScoreboardReport == nil ? "manualReviewOnly" : "closedReportOnly", sourceReport: "segmentMaskProxyCoverageScoreboardReport", stages: ["SegmentMask", "Inpainted"], blocks: segmentNeedBlocks, version: segmentMaskProxyCoverageScoreboardReport == nil ? nil : "v1.27", blockers: segmentNeedBlocks.isEmpty ? [] : ["real SegmentMask artifact needed for promotion"], nextAction: segmentNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(segmentMaskProxyCoverageScoreboardReport != nil), source: "segmentMaskProxyCoverageScoreboardReport"), signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
-            workItem("WI-translation-model-floor-comparison", title: "Translation model floor comparison", status: "openModelFloor", sourceReport: "cleanTextDiagnostic", stages: ["Translations"], blocks: modelFloorLimitedBlocks, version: nil, blockers: ["not implemented in v1.28", "must not change prompt or model in convergence report"], nextAction: "routeToTranslationModelFloorComparison", ciFast: true, full: false, external: false, decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic")]),
+            workItem("WI-translation-model-floor-comparison", title: "Translation model floor comparison", status: translationFloorStatus, sourceReport: translationFloorExecuted ? "translationModelFloorComparisonReport" : "cleanTextDiagnostic", stages: ["Translations"], blocks: modelFloorLimitedBlocks, version: translationFloorExecuted ? "v1.29" : nil, blockers: translationFloorBlockers, nextAction: translationFloorNextAction, ciFast: true, full: false, external: false, decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic"), signal("translationFloorVerdict", translationFloorVerdict, source: "translationModelFloorComparisonReport")]),
             workItem("WI-render-regression-lock", title: "Render regression lock", status: "openRenderRegressionLock", sourceReport: "blocks.renderDiagnostics", stages: ["RenderedSprites", "FinalRender"], blocks: renderRegressionLockBlocks, version: nil, blockers: ["not implemented in v1.28", "must not change overlay renderer in convergence report"], nextAction: "routeToRenderRegressionLock", ciFast: true, full: false, external: false, decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics")]),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
@@ -12961,7 +13475,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeReplicationScoreboardReport == nil ? "koharuNativeReplicationScoreboardReport" : nil,
             nativeTextBoxProxyLedgerReport == nil ? "nativeTextBoxProxyLedgerReport" : nil,
             bubbleMaskAssignmentSplitScoreboardReport == nil ? "bubbleMaskAssignmentSplitScoreboardReport" : nil,
-            segmentMaskProxyCoverageScoreboardReport == nil ? "segmentMaskProxyCoverageScoreboardReport" : nil
+            segmentMaskProxyCoverageScoreboardReport == nil ? "segmentMaskProxyCoverageScoreboardReport" : nil,
+            translationModelFloorComparisonReport == nil ? "translationModelFloorComparisonReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -12995,7 +13510,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-textbox-workitem-closed-report-only", name: "TextBox work item closed report-only", scope: "TextBoxes", status: nativeTextBoxProxyLedgerReport == nil ? "warning" : "passed", threshold: "nativeTextBoxProxyLedgerReport present", affected: textBoxStopBlocks, failureMeans: "v1.25 TextBox ledger is missing from convergence inputs", action: "restoreNativeTextBoxProxyLedgerReport", decisions: [signal("reportAvailable", String(nativeTextBoxProxyLedgerReport != nil), source: "nativeTextBoxProxyLedgerReport")]),
             gate("G-bubblemask-workitem-closed-report-only", name: "BubbleMask work item closed report-only", scope: "BubbleMask", status: bubbleMaskAssignmentSplitScoreboardReport == nil ? "warning" : "passed", threshold: "bubbleMaskAssignmentSplitScoreboardReport present", affected: bubbleNeedBlocks, failureMeans: "v1.26 BubbleMask scoreboard is missing from convergence inputs", action: "restoreBubbleMaskAssignmentSplitScoreboardReport", decisions: [signal("reportAvailable", String(bubbleMaskAssignmentSplitScoreboardReport != nil), source: "bubbleMaskAssignmentSplitScoreboardReport")]),
             gate("G-segmentmask-workitem-closed-report-only", name: "SegmentMask work item closed report-only", scope: "SegmentMask", status: segmentMaskProxyCoverageScoreboardReport == nil ? "warning" : "passed", threshold: "segmentMaskProxyCoverageScoreboardReport present", affected: segmentNeedBlocks, failureMeans: "v1.27 SegmentMask scoreboard is missing from convergence inputs", action: "restoreSegmentMaskProxyCoverageScoreboardReport", decisions: [signal("reportAvailable", String(segmentMaskProxyCoverageScoreboardReport != nil), source: "segmentMaskProxyCoverageScoreboardReport")]),
-            gate("G-translation-model-floor-open", name: "Translation model floor remains open", scope: "Translations", status: "open", threshold: "no prompt/model/quality-rule mutation in v1.28", affected: modelFloorLimitedBlocks, failureMeans: "convergence report silently changes translation path", action: "routeToTranslationModelFloorComparison", decisions: [signal("modelFloorLimitedBlocks", joined(modelFloorLimitedBlocks), source: "blocks,cleanTextDiagnostic")]),
+            gate("G-translation-model-floor-executed", name: "Translation model floor comparison executed", scope: "Translations", status: translationFloorExecuted ? (translationFloorStatus == "closedReportOnly" ? "passed" : "warning") : "open", threshold: "translationModelFloorComparisonReport.enabled=true without prompt/model mutation", affected: modelFloorLimitedBlocks, failureMeans: "convergence report silently changes translation path or leaves v1.29 floor ledger unlinked", action: translationFloorNextAction, decisions: [signal("modelFloorLimitedBlocks", joined(modelFloorLimitedBlocks), source: "blocks,cleanTextDiagnostic"), signal("translationFloorVerdict", translationFloorVerdict, source: "translationModelFloorComparisonReport")]),
             gate("G-render-regression-lock-open", name: "Render regression lock remains open", scope: "FinalRender", status: "open", threshold: "render diagnostics summarized without renderer mutation", affected: renderRegressionLockBlocks, failureMeans: "convergence report changes overlay rendering", action: "routeToRenderRegressionLock", decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics")]),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
@@ -13012,12 +13527,13 @@ final class TranslationSessionStore: ObservableObject {
             "externalArtifactReadinessReport",
             "externalTextBoxShadowOCRReport",
             "cleanTextDiagnostic",
+            "translationModelFloorComparisonReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, and v1.27 SegmentMask report-only scoreboards into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, and v1.29 translation model floor report-only scoreboards into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
