@@ -115,6 +115,43 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.27：SegmentMask Proxy 覆盖评分板与 Glyph 清字边界账本
+日期：2026-07-01
+依据：`md/prompt/v1（漫画探针）/v1.27（SegmentMaskProxy覆盖评分板与Glyph清字边界账本）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `segmentMaskProxyCoverageScoreboardReport`，执行 v1.24 的 `WI-segmentmask-proxy-coverage-scorecard`，聚合现有 glyph mask、SegmentMask proxy、TextBox 覆盖、BubbleMask 覆盖、safe rect、背景填充和渲染碰撞证据。
+- 报告顶层输出 `source = AITRANSProbe`、`referenceWorkItemID = WI-segmentmask-proxy-coverage-scorecard`、`referenceKoharuArtifact = SegmentMask`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true` 和 `proxyNotRealSegmentMask = true`。
+- `blockScorecards[]` 为每个最终块输出 coverage status、cleanup status、render mask status、glyph / TextBox / BubbleMask / safe rect 覆盖、background fill、render collision、TextBox / BubbleMask ledger 状态、must-not-promote reasons 和 nextAction。
+- `cleanupLedgers[]` 采用每个最终块一条的稳定计数规则，记录 glyph 清字边界、background fill guardrail、allowed cleanup use、blocked cleanup reasons、`inpaintingImplemented = false` 和 `proxyOnly = true`。
+- `gateLedger[]` 固定包含 no-main-flow-mutation、no-ground-truth-decision、proxy boundary、glyph available、TextBox / BubbleMask / safe rect coverage、background fill guardrail、render mask collision、TextBox ledger boundary、BubbleMask boundary 和 real SegmentMask artifact boundary。
+- `1_ocr_probe_text.txt` 新增报告级 `segmentMaskProxyCoverageScoreboardReport` summary 和逐块 `segmentMaskProxyScoreboard` 摘要。
+- 报告只复用既有探针证据，不新增 OCR / LLM 调用；不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect`、`glyphMaskFillRects`、背景填充行为、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.27（SegmentMaskProxy覆盖评分板与Glyph清字边界账本）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `segmentMaskProxyCoverageScoreboardReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`glyphMaskBlockCount == segmentMaskReport.glyphMaskBlocks`、`blockScorecards.count == totalBlocksDetected`、`cleanupLedgerCount >= glyphMaskBlockCount`、`gateLedger.count >= 12`，关键 breakdown 非空，`proxyNotRealSegmentMask = true`，且 `1_ocr_probe_text.txt` 包含新 summary 和逐块 `segmentMaskProxyScoreboard`。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.27 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.26：BubbleMask 归属分割评分板与 Sibling 布局账本
 日期：2026-07-01
 依据：`md/prompt/v1（漫画探针）/v1.26（BubbleMask归属分割评分板与Sibling布局账本）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
