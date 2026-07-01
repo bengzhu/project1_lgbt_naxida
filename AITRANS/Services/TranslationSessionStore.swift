@@ -14312,6 +14312,34 @@ final class TranslationSessionStore: ObservableObject {
                 ?? bubble?.primaryBubbleBottleneck
                 ?? segment?.primarySegmentBottleneck
                 ?? block.failureCategory
+            let resolverFirstBlockedNodeID = resolver?.firstBlockedNodeID ?? "missingResolverInput"
+            let resolverRecommendedExecutionItemID = resolver?.recommendedExecutionItemID ?? "missingResolverInput"
+            let secondaryWorkOrderIDs = sortedUniqueStrings(secondary)
+            let decisionSignals: [MangaKoharuWorkOrderSignal] = [
+                signal("failureCategory", block.failureCategory, source: "blocks.failureCategory"),
+                signal("resolverFirstBlockedNodeID", resolver?.firstBlockedNodeID ?? "nil", source: "koharuPipelineResolverReport"),
+                signal("stoplistedLocalTuning", String(stoplisted), source: "nativeTextBoxProxyLedgerReport,koharuPipelineResolverReport"),
+                signal("modelFloorLimited", String(modelLimited), source: "translationModelFloorComparisonReport"),
+                signal("requiresExternalArtifact", String(requiresExternal), source: "externalArtifactReadinessReport")
+            ]
+            let ocrSimilarityForEvaluation = block.ocrGroundTruthSimilarity
+            let ocrSimilaritySignalValue = ocrSimilarityForEvaluation?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+            let evaluationSignals: [MangaKoharuWorkOrderSignal] = [
+                signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
+                signal("ocrSimilarityForEvaluation", ocrSimilaritySignalValue, source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+            ]
+            var mustNotPromoteReasons = [
+                "workOrderRouterDiagnosticOnly",
+                "groundTruthUsedOnlyForEvaluationSignals",
+                "doNotChangeMainOCRTranslationOverlayOrFailureClassification"
+            ]
+            mustNotPromoteReasons.append(contentsOf: resolver?.mustNotPromoteReasons ?? [])
+            mustNotPromoteReasons.append(contentsOf: textBox?.mustNotPromoteReasons ?? [])
+            mustNotPromoteReasons.append(contentsOf: bubble?.mustNotPromoteReasons ?? [])
+            mustNotPromoteReasons.append(contentsOf: segment?.mustNotPromoteReasons ?? [])
+            let uniqueMustNotPromoteReasons = sortedUniqueStrings(mustNotPromoteReasons)
+
             return MangaKoharuWorkOrderBlockRoute(
                 blockIndex: block.index,
                 bubbleID: block.bubbleID,
@@ -14319,11 +14347,11 @@ final class TranslationSessionStore: ObservableObject {
                 failureCategory: block.failureCategory,
                 groundTruthMatch: block.groundTruthMatch,
                 bestGroundTruthType: block.bestGroundTruthType,
-                ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
-                resolverFirstBlockedNodeID: resolver?.firstBlockedNodeID ?? "missingResolverInput",
-                resolverRecommendedExecutionItemID: resolver?.recommendedExecutionItemID ?? "missingResolverInput",
+                ocrSimilarityForEvaluation: ocrSimilarityForEvaluation,
+                resolverFirstBlockedNodeID: resolverFirstBlockedNodeID,
+                resolverRecommendedExecutionItemID: resolverRecommendedExecutionItemID,
                 primaryWorkOrderID: primary,
-                secondaryWorkOrderIDs: sortedUniqueStrings(secondary),
+                secondaryWorkOrderIDs: secondaryWorkOrderIDs,
                 primaryBottleneck: primaryBottleneck,
                 modelFloorLimited: modelLimited,
                 renderLocked: renderLocked,
@@ -14336,23 +14364,9 @@ final class TranslationSessionStore: ObservableObject {
                 requiresFullProbe: false,
                 budgetClass: budget,
                 recommendedNextAction: nextAction,
-                decisionSignals: [
-                    signal("failureCategory", block.failureCategory, source: "blocks.failureCategory"),
-                    signal("resolverFirstBlockedNodeID", resolver?.firstBlockedNodeID ?? "nil", source: "koharuPipelineResolverReport"),
-                    signal("stoplistedLocalTuning", String(stoplisted), source: "nativeTextBoxProxyLedgerReport,koharuPipelineResolverReport"),
-                    signal("modelFloorLimited", String(modelLimited), source: "translationModelFloorComparisonReport"),
-                    signal("requiresExternalArtifact", String(requiresExternal), source: "externalArtifactReadinessReport")
-                ],
-                evaluationSignals: [
-                    signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
-                    signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
-                    signal("ocrSimilarityForEvaluation", block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
-                ],
-                mustNotPromoteReasons: sortedUniqueStrings([
-                    "workOrderRouterDiagnosticOnly",
-                    "groundTruthUsedOnlyForEvaluationSignals",
-                    "doNotChangeMainOCRTranslationOverlayOrFailureClassification"
-                ] + (resolver?.mustNotPromoteReasons ?? []) + (textBox?.mustNotPromoteReasons ?? []) + (bubble?.mustNotPromoteReasons ?? []) + (segment?.mustNotPromoteReasons ?? [])),
+                decisionSignals: decisionSignals,
+                evaluationSignals: evaluationSignals,
+                mustNotPromoteReasons: uniqueMustNotPromoteReasons,
                 groundTruthUsedForDecision: false,
                 diagnosticOnly: true,
                 wouldChangeMainFlow: false
@@ -15403,6 +15417,31 @@ final class TranslationSessionStore: ObservableObject {
                 ? "renderIssueOpen"
                 : "renderLocked"
             let action = nextAction(assignment: assignment, safeArea: safeArea, sibling: sibling, render: renderVerdict)
+            let shadowSafeLayoutSource = shadowSafeRect == nil ? "missing" : "bubbleMaskReport.maskSafeRect"
+            let siblingPartitionID = block.bubbleID.map { "BI-\($0)" }
+            let primaryBottleneck = replay?.primaryBottleneck ?? scoreboard?.primaryBubbleBottleneck ?? block.failureCategory
+            let assignmentSignals: [MangaKoharuBubbleIndexSignal] = [
+                signal("currentBubbleID", block.bubbleID.map(String.init) ?? "nil", source: "blocks.bubbleID"),
+                signal("maskDominantBubbleID", shadowBubbleID.map(String.init) ?? "nil", source: shadowBubbleSource),
+                signal("correctionRecommended", String(correction?.correctionRecommended ?? false), source: "bubbleAssignmentCorrectionReport")
+            ]
+            let safeAreaSignals: [MangaKoharuBubbleIndexSignal] = [
+                signal("currentSafeLayoutSource", block.safeLayoutSource ?? "nil", source: "blocks.safeLayoutSource"),
+                signal("currentVsShadowSafeRectIoU", safeIoU?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "koharuBubbleIndexShadowLedgerReport"),
+                signal("renderStatus", render?.renderStatus ?? "nil", source: "koharuRenderRegressionLockReport")
+            ]
+            let decisionSignals: [MangaKoharuBubbleIndexSignal] = [
+                signal("assignmentVerdict", assignment, source: "koharuBubbleIndexShadowLedgerReport"),
+                signal("safeAreaVerdict", safeArea, source: "koharuBubbleIndexShadowLedgerReport"),
+                signal("siblingPartitionVerdict", sibling, source: "koharuBubbleIndexShadowLedgerReport"),
+                signal("nextAction", action, source: "koharuBubbleIndexShadowLedgerReport")
+            ]
+            let ocrSimilaritySignalValue = block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+            let evaluationSignals: [MangaKoharuBubbleIndexSignal] = [
+                signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
+                signal("ocrSimilarityForEvaluation", ocrSimilaritySignalValue, source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+            ]
             blockLedgers.append(
                 MangaKoharuBubbleIndexBlockLedger(
                     blockIndex: block.index,
@@ -15419,39 +15458,22 @@ final class TranslationSessionStore: ObservableObject {
                     shadowBubbleSource: shadowBubbleSource,
                     shadowAssignmentConfidence: mask?.maskDominantCoverageRatio ?? scoreboard?.maskDominantCoverageRatio,
                     assignmentVerdict: assignment,
-                    assignmentSignals: [
-                        signal("currentBubbleID", block.bubbleID.map(String.init) ?? "nil", source: "blocks.bubbleID"),
-                        signal("maskDominantBubbleID", shadowBubbleID.map(String.init) ?? "nil", source: shadowBubbleSource),
-                        signal("correctionRecommended", String(correction?.correctionRecommended ?? false), source: "bubbleAssignmentCorrectionReport")
-                    ],
+                    assignmentSignals: assignmentSignals,
                     shadowSafeLayoutRect: shadowSafeRect,
-                    shadowSafeLayoutSource: shadowSafeRect == nil ? "missing" : "bubbleMaskReport.maskSafeRect",
+                    shadowSafeLayoutSource: shadowSafeLayoutSource,
                     currentVsShadowSafeRectIoU: safeIoU,
                     safeAreaVerdict: safeArea,
-                    safeAreaSignals: [
-                        signal("currentSafeLayoutSource", block.safeLayoutSource ?? "nil", source: "blocks.safeLayoutSource"),
-                        signal("currentVsShadowSafeRectIoU", safeIoU?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "koharuBubbleIndexShadowLedgerReport"),
-                        signal("renderStatus", render?.renderStatus ?? "nil", source: "koharuRenderRegressionLockReport")
-                    ],
+                    safeAreaSignals: safeAreaSignals,
                     siblingBubbleID: block.bubbleID,
                     siblingBlockIndexes: siblings,
-                    siblingPartitionID: block.bubbleID.map { "BI-\($0)" },
+                    siblingPartitionID: siblingPartitionID,
                     siblingPartitionVerdict: sibling,
                     splitCandidateIDs: splitIDs,
                     renderLockVerdict: renderVerdict,
-                    primaryBottleneck: replay?.primaryBottleneck ?? scoreboard?.primaryBubbleBottleneck ?? block.failureCategory,
+                    primaryBottleneck: primaryBottleneck,
                     nextAction: action,
-                    decisionSignals: [
-                        signal("assignmentVerdict", assignment, source: "koharuBubbleIndexShadowLedgerReport"),
-                        signal("safeAreaVerdict", safeArea, source: "koharuBubbleIndexShadowLedgerReport"),
-                        signal("siblingPartitionVerdict", sibling, source: "koharuBubbleIndexShadowLedgerReport"),
-                        signal("nextAction", action, source: "koharuBubbleIndexShadowLedgerReport")
-                    ],
-                    evaluationSignals: [
-                        signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
-                        signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
-                        signal("ocrSimilarityForEvaluation", block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
-                    ],
+                    decisionSignals: decisionSignals,
+                    evaluationSignals: evaluationSignals,
                     groundTruthUsedForDecision: false,
                     wouldChangeMainFlow: false,
                     diagnosticOnly: true
