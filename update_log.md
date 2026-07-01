@@ -115,6 +115,43 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.34：Koharu 本地算法复刻执行矩阵与探针评估账本
+日期：2026-07-01
+依据：`md/prompt/v1（漫画探针）/v1.34（Koharu本地算法复刻执行矩阵与探针评估账本）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuNativeAlgorithmReplayMatrixReport`，从 resolver、work order router、external artifact request packet、convergence、TextBox / BubbleMask / SegmentMask scoreboards、translation floor、render lock、diagnostics 和最终 blocks 聚合 Koharu 本地算法复刻执行矩阵。
+- 报告固定输出 canonical stage matrix，覆盖 `SourceImage`、`ContentCrop`、`TextBoxes`、`BubbleMask`、`SegmentMask`、`OcrText`、`Translations`、`RenderedSprites`、`FinalRender` 和 `ExternalArtifacts`。
+- 报告固定输出 replay candidates，覆盖融合主流程审计、post-fusion / OCR 质量路由、TextBox stoplist、BubbleMask 归属 / 分割、SegmentMask 覆盖、translation model floor、render lock 和 external artifact handoff。
+- 每块新增 replay route，记录 primary candidate、primary Koharu stage、bottleneck、external / model floor / render lock / stoplist 状态和 next action。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuNativeAlgorithmReplayMatrixReport`；convergence 新增 `WI-koharu-native-algorithm-replay-matrix` 和 `G-koharu-native-algorithm-replay-matrix-executed`。
+- `1_ocr_probe_text.txt` 新增 replay matrix summary、`candidateQueue`、`stageMatrix` 和逐块 `koharuNativeReplayRoute`。
+- 报告只做 report-only 诊断；不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、safe layout、glyph mask、背景填充、active artifacts 或 `configuration.currentBlockSource`。ground truth 只进入 evaluation signals，不参与 candidate status、budget、gate、route 或 next action。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.34（Koharu本地算法复刻执行矩阵与探针评估账本）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuNativeAlgorithmReplayMatrixReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`stageCount >= 10`、`candidateCount >= 9`、`blockRouteCount == totalBlocksDetected`、`gateCount >= 14`，固定 candidate queue 存在，缺 active artifact 时 external candidate blocked，crop / line / deskew stoplist 仍关闭，model floor / OCR / render lock 分开路由，convergence 包含 replay matrix reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、candidate queue、stage matrix 和逐块 route。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.34 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.33：Koharu 外部 Artifact 请求包与准入缺口账本
 日期：2026-07-01
 依据：`md/prompt/v1（漫画探针）/v1.33（Koharu外部Artifact请求包与准入缺口账本）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
