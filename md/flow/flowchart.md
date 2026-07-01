@@ -106,7 +106,8 @@ flowchart TD
   SMS --> KRL["koharuRenderRegressionLockReport<br/>RenderedSprites / FinalRender lock ledger"]
   KRL --> KPR["koharuPipelineResolverReport<br/>needs / produces DAG resolver / op preview"]
   KPR --> KWR["koharuWorkOrderRouterReport<br/>work orders / routes / budget gates"]
-  KWR --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
+  KWR --> KER["koharuExternalArtifactRequestPacketReport<br/>required files / artifact requests / gate ledger"]
+  KER --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
   TMF --> KAC
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
@@ -136,6 +137,7 @@ flowchart TD
   KRL --> R
   KPR --> R
   KWR --> R
+  KER --> R
   KAC --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
@@ -161,6 +163,7 @@ flowchart TD
   KRL --> T
   KPR --> T
   KWR --> T
+  KER --> T
   KAC --> T
 ```
 

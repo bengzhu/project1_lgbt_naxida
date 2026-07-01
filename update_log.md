@@ -115,6 +115,43 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.33：Koharu 外部 Artifact 请求包与准入缺口账本
+日期：2026-07-01
+依据：`md/prompt/v1（漫画探针）/v1.33（Koharu外部Artifact请求包与准入缺口账本）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuExternalArtifactRequestPacketReport`，从 v1.32 `koharuWorkOrderRouterReport`、external readiness gate、external TextBox shadow OCR、TextBox / BubbleMask / SegmentMask scoreboards、render lock、translation floor、convergence 和最终 blocks 聚合真实外部 artifact 请求包。
+- 固定枚举 active `test/koharu_artifacts/` 四件套：`1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`，并为每个 required file 写出 schema 字段、坐标系、解析/契约状态、validator command、blocked reason、next action 和 forbidden sources。
+- 新增 `artifactRequirements[]` 覆盖真实 `TextBoxes`、`BubbleMask`、`SegmentMask`，明确当前 proxy 只能作为 why-needed / current limitation 证据，不能冒充 Koharu detector artifact。
+- 新增逐块 `blockRequests[]`，每块记录 primary work order、primary bottleneck、needs TextBoxes / BubbleMask / SegmentMask、external readiness、external shadow OCR gate、stoplist、model floor、render lock、manual review、current proxy evidence、missing real artifact reasons、forbidden local actions 和 next action。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuExternalArtifactRequestPacketReport`；convergence 新增 `WI-koharu-external-artifact-request-packet` 和 `G-koharu-external-artifact-request-packet-executed`。
+- `1_ocr_probe_text.txt` 新增 request packet summary、`requiredFiles` 摘要、`artifactRequirements` 摘要和逐块 `koharuExternalArtifactRequest` 行。
+- 报告只做 report-only 诊断；不创建、复制、修改或提交 active `test/koharu_artifacts/`，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、safe layout、glyph mask、背景填充、渲染逻辑或 `configuration.currentBlockSource`。ground truth 只进入 evaluation signals，不参与 request、gate、next action 或 promotion 决策。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.33（Koharu外部Artifact请求包与准入缺口账本）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuExternalArtifactRequestPacketReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`requiredFileCount >= 4`、`artifactRequirementCount >= 3`、`blockRequestCount == totalBlocksDetected`、`gateCount >= 13`，缺 active artifact 时 verdict 为 missing / waiting / blocked 类状态，required files 覆盖四件套，requirements 覆盖 TextBoxes / BubbleMask / SegmentMask，forbidden sources 非空，convergence 包含 request packet reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 request packet summary、required files、artifact requirements 和逐块 request。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.33 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.32：Koharu WorkOrder Router 执行工作单与收益预算
 日期：2026-07-01
 依据：`md/prompt/v1（漫画探针）/v1.32（KoharuWorkOrderRouter执行工作单与收益预算）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。

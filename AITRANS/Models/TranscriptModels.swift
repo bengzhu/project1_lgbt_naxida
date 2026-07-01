@@ -2433,6 +2433,140 @@ struct MangaKoharuWorkOrderRouterReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuExternalArtifactRequestSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuExternalArtifactRequiredFile: Equatable, Codable, Sendable {
+    var path: String
+    var artifactKind: String
+    var required: Bool
+    var present: Bool
+    var parseStatus: String
+    var contractStatus: String
+    var requiredFields: [String]
+    var optionalFields: [String]
+    var coordinateSpace: String
+    var expectedSourceImage: String
+    var currentBlocker: String?
+    var nextAction: String
+    var validatorCommand: String
+    var forbiddenSources: [String]
+}
+
+struct MangaKoharuExternalArtifactRequirement: Equatable, Codable, Sendable {
+    var artifactKind: String
+    var referenceKoharuArtifact: String
+    var requiredFilePath: String
+    var requiredForShadowOCR: Bool
+    var requiredForMainFlowPromotion: Bool
+    var status: String
+    var targetBlocks: [Int]
+    var sourceWorkOrderIDs: [String]
+    var sourceReports: [String]
+    var schemaVersion: String
+    var coordinateSpace: String
+    var expectedImageWidth: Int
+    var expectedImageHeight: Int
+    var requiredFields: [String]
+    var optionalFields: [String]
+    var acceptanceGates: [String]
+    var currentProxySignals: [MangaKoharuExternalArtifactRequestSignal]
+    var missingCapabilities: [String]
+    var blockedReasons: [String]
+    var nextAction: String
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuExternalArtifactBlockRequest: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bbox: [Double]
+    var bubbleID: Int?
+    var finalTextUsedForTranslation: String
+    var failureCategory: String
+    var blockPassed: Bool
+    var primaryWorkOrderID: String
+    var primaryBottleneck: String
+    var needsTextBoxes: Bool
+    var needsBubbleMask: Bool
+    var needsSegmentMask: Bool
+    var requiresExternalArtifact: Bool
+    var externalArtifactReadinessVerdict: String
+    var externalTextBoxShadowOCRStatus: String
+    var stoplistedLocalTuning: Bool
+    var modelFloorLimited: Bool
+    var renderLocked: Bool
+    var manualReviewRequired: Bool
+    var currentProxyEvidence: [MangaKoharuExternalArtifactRequestSignal]
+    var missingRealArtifactReasons: [String]
+    var forbiddenLocalActions: [String]
+    var nextAction: String
+    var decisionSignals: [MangaKoharuExternalArtifactRequestSignal]
+    var evaluationSignals: [MangaKoharuExternalArtifactRequestSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuExternalArtifactRequestGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var failureMeans: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuExternalArtifactRequestSignal]
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuExternalArtifactRequestPacketReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var evaluatedBlockCount: Int
+    var requiredFileCount: Int
+    var artifactRequirementCount: Int
+    var blockRequestCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var requestPacketVerdict: String
+    var requestPacketVerdictBreakdown: [String: Int]
+    var readinessVerdict: String
+    var activeArtifactsDirectory: Bool
+    var contractExampleOnly: Bool
+    var externalTextBoxesShadowOCRAllowed: Bool
+    var requiredFileStatusBreakdown: [String: Int]
+    var artifactRequirementStatusBreakdown: [String: Int]
+    var targetArtifactBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var blockedByMissingRealArtifactBlocks: [Int]
+    var readyForExternalShadowOCRBlocks: [Int]
+    var stoplistedLocalTuningBlocks: [Int]
+    var modelFloorLimitedBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var requiredFiles: [MangaKoharuExternalArtifactRequiredFile]
+    var artifactRequirements: [MangaKoharuExternalArtifactRequirement]
+    var blockRequests: [MangaKoharuExternalArtifactBlockRequest]
+    var gateLedger: [MangaKoharuExternalArtifactRequestGate]
+    var validatorCommands: [String]
+    var forbiddenActiveSources: [String]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -3585,6 +3719,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
     var koharuPipelineResolverReport: MangaKoharuPipelineResolverReport?
     var koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport?
+    var koharuExternalArtifactRequestPacketReport: MangaKoharuExternalArtifactRequestPacketReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
