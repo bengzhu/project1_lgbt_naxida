@@ -1585,6 +1585,7 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport?
                 var koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport?
                 var nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?
+                var bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -1995,6 +1996,17 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
                     cleanTextDiagnostic: cleanTextDiagnostic
                 )
+                bubbleMaskAssignmentSplitScoreboardReport = Self.makeBubbleMaskAssignmentSplitScoreboardReport(
+                    blocks: probeBlocks,
+                    diagnostics: makeMangaOverlayProbeDiagnostics(blocks: probeBlocks),
+                    bubbleMaskReport: bubbleMaskReport,
+                    bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                    bubbleSplitCandidateReport: bubbleSplitCandidateReport,
+                    readingOrderStructureAuditReport: readingOrderStructureAuditReport,
+                    structureActionCandidateReport: structureActionCandidateReport,
+                    koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
+                    nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport
+                )
                 let deterministicDecodingCheck: MangaDeterministicDecodingCheck?
                 if runOptions.runDeterministicDecodingCheck {
                     self.writeMangaProbeProgress(stage: "deterministic-decoding-check-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
@@ -2030,6 +2042,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuStageGapReplicationReport: koharuStageGapReplicationReport,
                     koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
                     nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+                    bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -2099,6 +2112,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuStageGapReplicationReport: koharuStageGapReplicationReport,
                     koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
                     nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+                    bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7209,6 +7223,7 @@ final class TranslationSessionStore: ObservableObject {
         koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport? = nil,
         koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport? = nil,
         nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport? = nil,
+        bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7288,6 +7303,7 @@ final class TranslationSessionStore: ObservableObject {
             koharuStageGapReplicationReport: koharuStageGapReplicationReport,
             koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
             nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+            bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -11509,6 +11525,520 @@ final class TranslationSessionStore: ObservableObject {
                 "ground-truth-free signals decide qualityStatus, freeze reasons, candidate ordering, and nextAction; ground truth metrics are evaluationSignals only.",
                 "crop, line, and deskew candidates that hit stoplist or word preservation blockers remain frozen until future shadow-only evidence satisfies the listed expiresWhen conditions.",
                 "does not change finalTextUsedForTranslation, blockPassed, failureCategory, overlay rendering, post-fusion cleanup, candidate selection, or currentBlockSource."
+            ]
+        )
+    }
+
+    private static func makeBubbleMaskAssignmentSplitScoreboardReport(
+        blocks: [MangaOverlayProbeBlock],
+        diagnostics: MangaOverlayProbeDiagnostics,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
+        readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?,
+        structureActionCandidateReport: MangaStructureActionCandidateReport?,
+        koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport?,
+        nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?
+    ) -> MangaBubbleMaskAssignmentSplitScoreboardReport {
+        func uniqueSorted(_ values: [Int]) -> [Int] {
+            Array(Set(values)).sorted()
+        }
+        func countBy(_ values: [String]) -> [String: Int] {
+            values.reduce(into: [:]) { partial, value in
+                partial[value, default: 0] += 1
+            }
+        }
+        func joined(_ values: [Int]) -> String {
+            values.map(String.init).joined(separator: ",")
+        }
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaBubbleMaskDecisionSignal {
+            MangaBubbleMaskDecisionSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+        func sortedUniqueStrings(_ values: [String]) -> [String] {
+            Array(Set(values)).sorted()
+        }
+
+        let maskByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let correctionByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleAssignmentCorrectionReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let readingByBlock = Dictionary(
+            uniqueKeysWithValues: (readingOrderStructureAuditReport?.cases ?? []).map { ($0.blockIndex, $0) }
+        )
+        let structureByBlock = Dictionary(
+            uniqueKeysWithValues: (structureActionCandidateReport?.cases ?? []).map { ($0.blockIndex, $0) }
+        )
+        let nativeScorecardByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuNativeReplicationScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
+        )
+        let textBoxLedgerByBlock = Dictionary(
+            uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        var splitCandidatesByBlock: [Int: [MangaOverlayBubbleSplitCandidateDiagnostic]] = [:]
+        for candidate in bubbleSplitCandidateReport?.diagnostics ?? [] {
+            for blockIndex in candidate.seedBlockIndexes {
+                splitCandidatesByBlock[blockIndex, default: []].append(candidate)
+            }
+        }
+        let blocksByBubble = Dictionary(grouping: blocks.compactMap { block -> (Int, Int)? in
+            guard let bubbleID = block.bubbleID else { return nil }
+            return (bubbleID, block.index)
+        }) { $0.0 }
+            .mapValues { pairs in pairs.map(\.1).sorted() }
+
+        func blockAssignmentStatus(
+            block: MangaOverlayProbeBlock,
+            mask: MangaOverlayBubbleMaskBlockDiagnostic?,
+            correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+            reading: MangaReadingOrderStructureAuditCase?
+        ) -> String {
+            if block.bubbleID == nil {
+                return "unassignedNeedsManualReview"
+            }
+            if correction?.correctionAppliedToCropClamp == true {
+                return "correctionAppliedToCropClampOnly"
+            }
+            if correction?.correctionRecommended == true {
+                return "correctionRecommendedReportOnly"
+            }
+            if correction?.riskFlags.contains("protectedShortText") == true {
+                return "protectedShortTextNoCorrection"
+            }
+            if correction?.riskFlags.contains("decorativeTitle") == true || reading?.decorativeProtectionApplied == true {
+                return "decorativeTitleNoCorrection"
+            }
+            if mask == nil {
+                return "missingMaskEvidence"
+            }
+            if mask?.bubbleIDConsistent == false || reading?.bubbleAssignmentRisk == "maskConflict" {
+                return "maskConflict"
+            }
+            return "consistent"
+        }
+
+        func blockSplitRisk(
+            block: MangaOverlayProbeBlock,
+            splits: [MangaOverlayBubbleSplitCandidateDiagnostic],
+            reading: MangaReadingOrderStructureAuditCase?
+        ) -> String {
+            if block.crossBubbleMergeRejected {
+                return "crossBubbleMergeRejected"
+            }
+            if let readingRisk = reading?.splitOrMergeRisk, readingRisk != "none" {
+                return readingRisk
+            }
+            if splits.contains(where: \.clampEligible) {
+                return "splitCandidateEligibleReportOnly"
+            }
+            if !splits.isEmpty {
+                return "splitCandidateRejected"
+            }
+            if reading?.sameBubbleSiblingBlockIndexes.isEmpty == false {
+                return "sameBubblePotentialOverSplit"
+            }
+            return "none"
+        }
+
+        func siblingLayoutStatus(
+            block: MangaOverlayProbeBlock,
+            siblings: [Int],
+            splits: [MangaOverlayBubbleSplitCandidateDiagnostic],
+            reading: MangaReadingOrderStructureAuditCase?
+        ) -> String {
+            if siblings.isEmpty {
+                return "singleBlockBubble"
+            }
+            if splits.contains(where: { $0.siblingOverlapRatio >= 0.36 }) {
+                return "siblingOverlapTooHigh"
+            }
+            if reading?.recommendedStructureAction == "provideRealKoharuArtifact" {
+                return "needsRealBubbleMask"
+            }
+            if block.safeLayoutRect != nil {
+                return "partitionedSafeRectStable"
+            }
+            if reading?.splitOrMergeRisk == "none" || reading?.splitOrMergeRisk == nil {
+                return "sameBubbleSiblingLayoutStable"
+            }
+            return "sameBubbleSiblingLayoutRisk"
+        }
+
+        func renderMaskStatus(block: MangaOverlayProbeBlock, mask: MangaOverlayBubbleMaskBlockDiagnostic?) -> String {
+            if block.renderMaskOverflowPixelCount > 0 {
+                return "renderMaskOverflow"
+            }
+            if block.renderMaskCollisionChecked && block.renderMaskCollisionResolved {
+                return "renderMaskStable"
+            }
+            if mask?.renderMaskCollisionChecked == true {
+                return mask?.renderMaskCollisionResolved == true ? "renderMaskStable" : "renderMaskUnresolved"
+            }
+            return "notChecked"
+        }
+
+        func nextAction(
+            assignmentStatus: String,
+            splitRisk: String,
+            siblingStatus: String,
+            renderStatus: String,
+            correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?,
+            reading: MangaReadingOrderStructureAuditCase?
+        ) -> String {
+            if renderStatus == "renderMaskStable" && siblingStatus == "singleBlockBubble" && assignmentStatus == "consistent" {
+                return "lockRenderSafeArea"
+            }
+            if assignmentStatus == "correctionAppliedToCropClampOnly" || correction?.correctionAppliedToCropClamp == true {
+                return "keepCorrectionCropClampOnly"
+            }
+            if assignmentStatus == "protectedShortTextNoCorrection" || assignmentStatus == "decorativeTitleNoCorrection" {
+                return "protectShortOrDecorativeText"
+            }
+            if siblingStatus == "needsRealBubbleMask" || reading?.recommendedStructureAction == "provideRealKoharuArtifact" {
+                return "collectRealBubbleMaskArtifact"
+            }
+            if splitRisk != "none" && splitRisk != "sameBubblePotentialOverSplit" {
+                return "evaluateSplitShadowOnly"
+            }
+            if assignmentStatus == "unassignedNeedsManualReview" || splitRisk == "manualReviewOnly" {
+                return "manualReviewOnly"
+            }
+            return "keepReportOnly"
+        }
+
+        func evaluationSignals(for block: MangaOverlayProbeBlock) -> [MangaBubbleMaskDecisionSignal] {
+            [
+                signal("ocrGroundTruthSimilarity", block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true),
+                signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
+                signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                signal("wordOrderPreserved", block.wordOrderPreserved.map(String.init) ?? "nil", source: "blocks.wordOrderPreserved", decision: false, evaluation: true)
+            ]
+        }
+
+        var blockScorecards: [MangaBubbleMaskAssignmentSplitBlockScorecard] = []
+        blockScorecards.reserveCapacity(blocks.count)
+        for block in blocks {
+            let mask = maskByBlock[block.index]
+            let correction = correctionByBlock[block.index]
+            let reading = readingByBlock[block.index]
+            let structure = structureByBlock[block.index]
+            let native = nativeScorecardByBlock[block.index]
+            let textBoxLedger = textBoxLedgerByBlock[block.index]
+            let splits = splitCandidatesByBlock[block.index] ?? []
+            let siblings = reading?.sameBubbleSiblingBlockIndexes ?? block.bubbleID.flatMap { blocksByBubble[$0] }?.filter { $0 != block.index } ?? []
+            let assignment = blockAssignmentStatus(block: block, mask: mask, correction: correction, reading: reading)
+            let splitRisk = blockSplitRisk(block: block, splits: splits, reading: reading)
+            let siblingStatus = siblingLayoutStatus(block: block, siblings: siblings, splits: splits, reading: reading)
+            let renderStatus = renderMaskStatus(block: block, mask: mask)
+            let action = nextAction(
+                assignmentStatus: assignment,
+                splitRisk: splitRisk,
+                siblingStatus: siblingStatus,
+                renderStatus: renderStatus,
+                correction: correction,
+                reading: reading
+            )
+            var mustNotPromote = reading?.mustNotPromoteReasons ?? []
+            mustNotPromote.append(contentsOf: structure?.candidates.flatMap(\.mustNotPromoteReasons) ?? [])
+            mustNotPromote.append(contentsOf: native?.mustNotPromoteReasons ?? [])
+            mustNotPromote.append(contentsOf: textBoxLedger?.mustNotPromoteReasons ?? [])
+            mustNotPromote.append("bubbleMaskScoreboardReportOnly")
+            mustNotPromote.append("doesNotChangeSafeLayoutRect")
+            mustNotPromote.append("groundTruthUsedOnlyForEvaluationSignals")
+            let decisionSignals = [
+                signal("bubbleIDConsistent", mask.map { String($0.bubbleIDConsistent) } ?? "nil", source: "bubbleMaskReport.blockDiagnostics"),
+                signal("maskDominantCoverageRatio", mask?.maskDominantCoverageRatio.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "bubbleMaskReport.blockDiagnostics"),
+                signal("cropMaskCoverageRatio", mask?.cropMaskCoverageRatio?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "bubbleMaskReport.blockDiagnostics"),
+                signal("assignmentDecision", correction?.decision ?? "nil", source: "bubbleAssignmentCorrectionReport.diagnostics"),
+                signal("splitCandidateIDs", splits.map(\.id).map(String.init).joined(separator: ","), source: "bubbleSplitCandidateReport.diagnostics"),
+                signal("sameBubbleSiblings", joined(siblings), source: "readingOrderStructureAuditReport.cases"),
+                signal("candidateTypes", structure?.candidateTypes.joined(separator: ",") ?? "nil", source: "structureActionCandidateReport.cases"),
+                signal("textBoxBubbleConstraint", textBoxLedger?.bubbleConstraintStatus ?? "nil", source: "nativeTextBoxProxyLedgerReport.blockLedgers"),
+                signal("renderMaskStatus", renderStatus, source: "blocks.renderMaskDiagnostics")
+            ]
+            blockScorecards.append(
+                MangaBubbleMaskAssignmentSplitBlockScorecard(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    maskDominantBubbleID: mask?.maskDominantBubbleID,
+                    maskDominantCoverageRatio: mask?.maskDominantCoverageRatio ?? 0,
+                    maskIDsUnderSeed: mask?.maskIDsUnderSeed ?? [:],
+                    assignmentStatus: assignment,
+                    assignmentDecision: correction?.decision ?? "notEvaluated",
+                    correctionRecommended: correction?.correctionRecommended ?? false,
+                    correctionAppliedToCropClamp: correction?.correctionAppliedToCropClamp ?? false,
+                    correctionAppliedToSafeLayout: correction?.correctionAppliedToSafeLayout ?? false,
+                    splitRisk: splitRisk,
+                    splitCandidateIDs: splits.map(\.id).sorted(),
+                    splitCandidateClampEligible: splits.contains(where: \.clampEligible),
+                    siblingBlockIndexes: siblings.sorted(),
+                    siblingLayoutStatus: siblingStatus,
+                    safeLayoutSourceBeforeMask: mask?.safeLayoutSourceBeforeMask ?? block.safeLayoutSourceBeforeMask,
+                    safeLayoutSourceAfterMask: mask?.safeLayoutSourceAfterMask ?? block.safeLayoutSource,
+                    maskSafeRect: mask?.maskSafeRect ?? block.maskSafeRect,
+                    cropMaskCoverageRatio: mask?.cropMaskCoverageRatio,
+                    renderMaskCollisionChecked: mask?.renderMaskCollisionChecked ?? block.renderMaskCollisionChecked,
+                    renderMaskCollisionResolved: mask?.renderMaskCollisionResolved ?? block.renderMaskCollisionResolved,
+                    renderMaskOverflowPixelCount: mask?.renderMaskOverflowPixelCount ?? block.renderMaskOverflowPixelCount,
+                    renderMaskStatus: renderStatus,
+                    textBoxLedgerStatus: textBoxLedger?.qualityStatus,
+                    primaryBubbleBottleneck: native?.bubbleGateStatus ?? reading?.bubbleAssignmentRisk ?? "notEvaluated",
+                    decisionSignals: decisionSignals,
+                    evaluationSignals: evaluationSignals(for: block),
+                    mustNotPromoteReasons: sortedUniqueStrings(mustNotPromote),
+                    nextAction: action,
+                    groundTruthUsedForDecision: false,
+                    diagnosticOnly: true,
+                    wouldChangeMainFlow: false
+                )
+            )
+        }
+
+        let blockScorecardByIndex = Dictionary(uniqueKeysWithValues: blockScorecards.map { ($0.blockIndex, $0) })
+        let splitCandidateLedgers = (bubbleSplitCandidateReport?.diagnostics ?? []).map { candidate in
+            let blockers = candidate.rejectionReasons + candidate.riskFlags
+            let verdict: String
+            if candidate.clampEligible {
+                verdict = "reportOnlyEligible"
+            } else if candidate.siblingOverlapRatio >= 0.36 {
+                verdict = "rejectedSiblingOverlap"
+            } else if candidate.seedCoverageRatio < 0.94 {
+                verdict = "rejectedSeedCoverage"
+            } else if blockers.contains("protectedShortText") {
+                verdict = "rejectedProtectedText"
+            } else if blockers.contains("decorativeTitle") {
+                verdict = "rejectedDecorativeTitle"
+            } else {
+                verdict = "manualReviewOnly"
+            }
+            return MangaBubbleMaskSplitCandidateLedger(
+                candidateID: candidate.id,
+                parentBubbleID: candidate.parentBubbleID,
+                seedBlockIndexes: candidate.seedBlockIndexes,
+                bbox: candidate.bbox,
+                safeRect: candidate.safeRect,
+                parentMaskCoverageRatio: candidate.parentMaskCoverageRatio,
+                seedCoverageRatio: candidate.seedCoverageRatio,
+                siblingOverlapRatio: candidate.siblingOverlapRatio,
+                clampEligible: candidate.clampEligible,
+                appliedToCropClampBlocks: candidate.appliedToBlockIndexes,
+                promotionVerdict: verdict,
+                promotionBlockers: sortedUniqueStrings(blockers + ["reportOnlyDoesNotChangeTextRegionCropGuardrail"]),
+                decisionSignals: [
+                    signal("parentMaskCoverageRatio", candidate.parentMaskCoverageRatio.formatted(.number.precision(.fractionLength(4))), source: "bubbleSplitCandidateReport.diagnostics"),
+                    signal("seedCoverageRatio", candidate.seedCoverageRatio.formatted(.number.precision(.fractionLength(4))), source: "bubbleSplitCandidateReport.diagnostics"),
+                    signal("siblingOverlapRatio", candidate.siblingOverlapRatio.formatted(.number.precision(.fractionLength(4))), source: "bubbleSplitCandidateReport.diagnostics"),
+                    signal("clampEligible", String(candidate.clampEligible), source: "bubbleSplitCandidateReport.diagnostics")
+                ],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false
+            )
+        }
+
+        var siblingLayoutScorecards: [MangaBubbleMaskSiblingLayoutScorecard] = []
+        for (bubbleID, indexes) in blocksByBubble.sorted(by: { $0.key < $1.key }) where indexes.count > 1 {
+            let cards = indexes.compactMap { blockScorecardByIndex[$0] }
+            let readingIndexes = indexes.compactMap { readingByBlock[$0]?.proposedReadingOrderIndex }
+            let safeRects = cards.compactMap(\.maskSafeRect)
+            let maxOverlap = splitCandidateLedgers
+                .filter { $0.parentBubbleID == bubbleID }
+                .map(\.siblingOverlapRatio)
+                .max() ?? 0
+            let renderBlocked = cards.contains { $0.renderMaskStatus != "renderMaskStable" && $0.renderMaskStatus != "notChecked" }
+            let layoutStatus: String
+            if cards.contains(where: { $0.siblingLayoutStatus == "siblingOverlapTooHigh" }) {
+                layoutStatus = "siblingOverlapTooHigh"
+            } else if cards.contains(where: { $0.siblingLayoutStatus == "needsRealBubbleMask" }) {
+                layoutStatus = "needsRealBubbleMask"
+            } else if !safeRects.isEmpty {
+                layoutStatus = "partitionedSafeRectStable"
+            } else {
+                layoutStatus = "sameBubbleSiblingLayoutStable"
+            }
+            var risks: [String] = []
+            if maxOverlap >= 0.36 { risks.append("siblingOverlapTooHigh") }
+            if renderBlocked { risks.append("renderMaskIssue") }
+            if splitCandidateLedgers.contains(where: { $0.parentBubbleID == bubbleID }) { risks.append("splitCandidatePresent") }
+            siblingLayoutScorecards.append(
+                MangaBubbleMaskSiblingLayoutScorecard(
+                    bubbleID: bubbleID,
+                    blockIndexes: indexes,
+                    proposedReadingOrderIndexes: readingIndexes,
+                    safeRects: safeRects,
+                    siblingOverlapSummary: maxOverlap.formatted(.number.precision(.fractionLength(4))),
+                    layoutStatus: layoutStatus,
+                    layoutRiskFlags: sortedUniqueStrings(risks),
+                    renderStatus: renderBlocked ? "renderMaskIssue" : "renderStable",
+                    decisionSignals: [
+                        signal("blockIndexes", joined(indexes), source: "blocks.bubbleID"),
+                        signal("maxSiblingOverlapRatio", maxOverlap.formatted(.number.precision(.fractionLength(4))), source: "bubbleSplitCandidateReport.diagnostics"),
+                        signal("safeRectCount", String(safeRects.count), source: "bubbleMaskReport.blockDiagnostics")
+                    ],
+                    mustNotPromoteReasons: ["sameBubbleSiblingLayoutReportOnly", "doesNotReorderBlocks", "doesNotChangeSafeLayoutRect"],
+                    nextAction: layoutStatus == "needsRealBubbleMask" ? "collectRealBubbleMaskArtifact" : "keepReportOnly"
+                )
+            )
+        }
+
+        let siblingGroups = siblingLayoutScorecards.map(\.blockIndexes)
+        let bubbleScorecards = (bubbleMaskReport?.instances ?? []).map { instance in
+            let indexes = blocksByBubble[instance.bubbleID] ?? []
+            let cards = indexes.compactMap { blockScorecardByIndex[$0] }
+            let splitLedgers = splitCandidateLedgers.filter { $0.parentBubbleID == instance.bubbleID }
+            let conflictIndexes = cards.filter { $0.assignmentStatus == "maskConflict" }.map(\.blockIndex)
+            let correctionIndexes = cards.filter(\.correctionRecommended).map(\.blockIndex)
+            let overflowIndexes = cards.filter { $0.renderMaskOverflowPixelCount > 0 }.map(\.blockIndex)
+            let splitEligible = splitLedgers.filter(\.clampEligible).flatMap(\.seedBlockIndexes)
+            let instanceStatus: String
+            if !conflictIndexes.isEmpty {
+                instanceStatus = "assignmentConflict"
+            } else if !splitLedgers.isEmpty && splitEligible.isEmpty {
+                instanceStatus = "oversizedNeedsSplitReview"
+            } else if !splitEligible.isEmpty {
+                instanceStatus = "splitCandidateReportOnly"
+            } else if indexes.count > 1 {
+                instanceStatus = "stableMultiBlock"
+            } else if !overflowIndexes.isEmpty {
+                instanceStatus = "manualReviewOnly"
+            } else {
+                instanceStatus = "stableSingleBlock"
+            }
+            let primaryRisk: String
+            if !conflictIndexes.isEmpty {
+                primaryRisk = "assignmentConflict"
+            } else if !splitLedgers.isEmpty {
+                primaryRisk = "splitCandidateReportOnly"
+            } else if !overflowIndexes.isEmpty {
+                primaryRisk = "renderMaskOverflow"
+            } else {
+                primaryRisk = "none"
+            }
+            return MangaBubbleMaskInstanceScorecard(
+                bubbleID: instance.bubbleID,
+                bbox: instance.bbox,
+                maskPixelCount: instance.maskPixelCount,
+                maskCoverageRatio: instance.maskCoverageRatio,
+                safeRect: instance.safeRect,
+                safeRectCoverageRatio: instance.safeRectCoverageRatio,
+                blockIndexes: indexes,
+                conflictBlockIndexes: conflictIndexes,
+                correctionRecommendedBlockIndexes: correctionIndexes,
+                splitCandidateIDs: splitLedgers.map(\.candidateID).sorted(),
+                splitEligibleBlockIndexes: uniqueSorted(splitEligible),
+                sameBubbleSiblingGroups: siblingGroups.filter { group in !Set(group).isDisjoint(with: indexes) },
+                renderOverflowBlockIndexes: overflowIndexes,
+                instanceStatus: instanceStatus,
+                primaryRisk: primaryRisk,
+                decisionSignals: [
+                    signal("maskCoverageRatio", instance.maskCoverageRatio.formatted(.number.precision(.fractionLength(4))), source: "bubbleMaskReport.instances"),
+                    signal("safeRectCoverageRatio", instance.safeRectCoverageRatio.formatted(.number.precision(.fractionLength(4))), source: "bubbleMaskReport.instances"),
+                    signal("riskFlags", instance.riskFlags.joined(separator: ","), source: "bubbleMaskReport.instances"),
+                    signal("blockIndexes", joined(indexes), source: "blocks.bubbleID")
+                ],
+                mustNotPromoteReasons: sortedUniqueStrings(instance.riskFlags + ["approximateBubbleMaskProxy", "realKoharuBubbleMaskRequiredForPromotion"]),
+                nextAction: instanceStatus == "assignmentConflict" || instanceStatus == "oversizedNeedsSplitReview" ? "collectRealBubbleMaskArtifact" : "keepReportOnly"
+            )
+        }
+
+        let conflictBlocks = uniqueSorted((bubbleMaskReport?.inconsistentBubbleAssignmentBlocks ?? []) + blockScorecards.filter { $0.assignmentStatus == "maskConflict" }.map(\.blockIndex))
+        let correctionRecommendedBlocks = uniqueSorted(bubbleAssignmentCorrectionReport?.recommendedCorrectionBlocks ?? [])
+        let splitRiskBlocks = uniqueSorted((readingOrderStructureAuditReport?.splitRiskBlocks ?? []) + blockScorecards.filter { $0.splitRisk != "none" }.map(\.blockIndex))
+        let sameBubbleSiblingBlocks = uniqueSorted(blockScorecards.filter { !$0.siblingBlockIndexes.isEmpty }.map(\.blockIndex))
+        let maskSafeLayoutBlocks = uniqueSorted(blockScorecards.filter { ($0.safeLayoutSourceAfterMask ?? "").hasPrefix("maskSafe") || $0.maskSafeRect != nil }.map(\.blockIndex))
+        let renderBlockedBlocks = uniqueSorted(blockScorecards.filter { $0.renderMaskStatus == "renderMaskOverflow" || $0.renderMaskStatus == "renderMaskUnresolved" }.map(\.blockIndex))
+        let needsRealBubbleMaskBlocks = uniqueSorted(blockScorecards.filter { $0.nextAction == "collectRealBubbleMaskArtifact" || $0.siblingLayoutStatus == "needsRealBubbleMask" }.map(\.blockIndex))
+        let manualReviewBlocks = uniqueSorted(blockScorecards.filter { $0.nextAction == "manualReviewOnly" || $0.assignmentStatus == "unassignedNeedsManualReview" }.map(\.blockIndex))
+
+        func gate(
+            _ id: String,
+            name: String,
+            scope: String,
+            status: String,
+            threshold: String,
+            affected: [Int],
+            failureMeans: String,
+            action: String,
+            signals: [MangaBubbleMaskDecisionSignal]
+        ) -> MangaBubbleMaskAssignmentGate {
+            MangaBubbleMaskAssignmentGate(
+                gateID: id,
+                gateName: name,
+                scope: scope,
+                status: status,
+                threshold: threshold,
+                affectedBlocks: uniqueSorted(affected),
+                decisionSignals: signals,
+                failureMeans: failureMeans,
+                recommendedAction: action,
+                groundTruthUsedForDecision: false
+            )
+        }
+        let protectedBlocks = uniqueSorted(blockScorecards.filter { $0.assignmentStatus == "protectedShortTextNoCorrection" || $0.assignmentStatus == "decorativeTitleNoCorrection" }.map(\.blockIndex))
+        let splitEligibleBlocks = uniqueSorted(splitCandidateLedgers.filter(\.clampEligible).flatMap(\.seedBlockIndexes))
+        let gateLedger = [
+            gate("G-bubblemask-no-main-flow-mutation", name: "No main flow mutation", scope: "report", status: "passed", threshold: "wouldChangeMainFlow=false", affected: [], failureMeans: "scoreboard mutates OCR, translation, overlay, cleanup, safeLayoutRect, or blockPassed", action: "revertBehavioralChange", signals: [signal("wouldChangeMainFlow", "false", source: "bubbleMaskAssignmentSplitScoreboardReport")]),
+            gate("G-bubblemask-no-ground-truth-decision", name: "No ground truth decision", scope: "report", status: "passed", threshold: "groundTruthUsedForDecision=false", affected: [], failureMeans: "ground truth influences assignment, split, sibling layout, or promotion", action: "removeGroundTruthFromDecisionPath", signals: [signal("groundTruthUsedForDecision", "false", source: "bubbleMaskAssignmentSplitScoreboardReport")]),
+            gate("G-bubblemask-assignment-consistency", name: "Assignment consistency", scope: "BubbleMask", status: conflictBlocks.isEmpty ? "passed" : "warning", threshold: "bubbleID matches dominant mask ID", affected: conflictBlocks, failureMeans: "bubble assignment conflict is silently promoted", action: "keepReportOnlyOrCollectRealBubbleMaskArtifact", signals: [signal("conflictBlocks", joined(conflictBlocks), source: "bubbleMaskReport")]),
+            gate("G-bubblemask-correction-report-only", name: "Correction report only", scope: "BubbleMask", status: correctionRecommendedBlocks.isEmpty ? "passed" : "reportOnly", threshold: "assignment corrections stay diagnostic or crop-clamp-only", affected: correctionRecommendedBlocks, failureMeans: "assignment correction changes safe layout, block order, or final OCR text", action: "keepCorrectionCropClampOnly", signals: [signal("correctionRecommendedBlocks", joined(correctionRecommendedBlocks), source: "bubbleAssignmentCorrectionReport")]),
+            gate("G-bubblemask-split-report-only", name: "Split report only", scope: "BubbleMask", status: splitEligibleBlocks.isEmpty ? "passed" : "reportOnly", threshold: "split candidates do not create/delete blocks or loosen crop guardrails", affected: splitEligibleBlocks, failureMeans: "split candidate mutates main OCR or crop adoption", action: "evaluateSplitShadowOnly", signals: [signal("splitEligibleBlocks", joined(splitEligibleBlocks), source: "bubbleSplitCandidateReport")]),
+            gate("G-bubblemask-sibling-layout", name: "Sibling layout", scope: "renderLayout", status: sameBubbleSiblingBlocks.isEmpty ? "passed" : "reportOnly", threshold: "same-bubble siblings are audited without reordering blocks", affected: sameBubbleSiblingBlocks, failureMeans: "sibling layout changes block order or safeLayoutRect", action: "keepReportOnly", signals: [signal("sameBubbleSiblingBlocks", joined(sameBubbleSiblingBlocks), source: "readingOrderStructureAuditReport")]),
+            gate("G-bubblemask-render-mask-collision", name: "Render mask collision", scope: "finalRender", status: renderBlockedBlocks.isEmpty ? "passed" : "blocked", threshold: "no unresolved mask overflow", affected: renderBlockedBlocks, failureMeans: "render overflow is ignored or hidden", action: "lockRenderSafeArea", signals: [signal("renderBlockedBlocks", joined(renderBlockedBlocks), source: "blocks.renderMaskDiagnostics")]),
+            gate("G-bubblemask-protected-text", name: "Protected text", scope: "BubbleMask", status: protectedBlocks.isEmpty ? "passed" : "reportOnly", threshold: "decorative and protected short text cannot be auto-corrected or deleted", affected: protectedBlocks, failureMeans: "protected content is promoted into split/delete/correction", action: "protectShortOrDecorativeText", signals: [signal("protectedBlocks", joined(protectedBlocks), source: "bubbleAssignmentCorrectionReport,readingOrderStructureAuditReport")]),
+            gate("G-bubblemask-textbox-ledger-boundary", name: "TextBox ledger boundary", scope: "nativeTextBoxes", status: "passed", threshold: "BubbleMask scorecard can read TextBox ledger but cannot thaw crop/line stoplist", affected: nativeTextBoxProxyLedgerReport?.stoplistBlocks ?? [], failureMeans: "BubbleMask work reopens frozen crop/line/deskew tuning", action: "respectNativeTextBoxProxyLedgerStoplist", signals: [signal("nativeTextBoxStoplistBlocks", joined(nativeTextBoxProxyLedgerReport?.stoplistBlocks ?? []), source: "nativeTextBoxProxyLedgerReport")]),
+            gate("G-bubblemask-real-artifact-boundary", name: "Real BubbleMask artifact boundary", scope: "externalArtifacts", status: needsRealBubbleMaskBlocks.isEmpty ? "reportOnly" : "needsRealArtifact", threshold: "AITRANS proxy BubbleMask is not promoted as real Koharu BubbleMask", affected: needsRealBubbleMaskBlocks, failureMeans: "proxy mask is mislabeled as real Koharu artifact", action: "collectRealBubbleMaskArtifact", signals: [signal("referenceKoharuArtifact", "BubbleMask", source: "bubbleMaskAssignmentSplitScoreboardReport"), signal("proxySource", "AITRANS roundedRectApproximation", source: "bubbleMaskReport.instances")])
+        ]
+
+        return MangaBubbleMaskAssignmentSplitScoreboardReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referenceWorkItemID: "WI-bubblemask-assignment-split-scorecard",
+            referenceKoharuArtifact: "BubbleMask",
+            evaluatedBlockCount: blocks.count,
+            evaluatedBubbleCount: bubbleMaskReport?.instanceCount ?? bubbleScorecards.count,
+            splitCandidateCount: splitCandidateLedgers.count,
+            siblingGroupCount: siblingLayoutScorecards.count,
+            gateCount: gateLedger.count,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            assignmentStatusBreakdown: countBy(blockScorecards.map(\.assignmentStatus)),
+            splitRiskBreakdown: countBy(blockScorecards.map(\.splitRisk)),
+            siblingLayoutStatusBreakdown: countBy(blockScorecards.map(\.siblingLayoutStatus)),
+            renderMaskStatusBreakdown: countBy(blockScorecards.map(\.renderMaskStatus)),
+            nextActionBreakdown: countBy(blockScorecards.map(\.nextAction)),
+            conflictBlocks: conflictBlocks,
+            correctionRecommendedBlocks: correctionRecommendedBlocks,
+            splitRiskBlocks: splitRiskBlocks,
+            sameBubbleSiblingBlocks: sameBubbleSiblingBlocks,
+            maskSafeLayoutBlocks: maskSafeLayoutBlocks,
+            renderBlockedBlocks: renderBlockedBlocks,
+            needsRealBubbleMaskBlocks: needsRealBubbleMaskBlocks,
+            manualReviewBlocks: manualReviewBlocks,
+            blockScorecards: blockScorecards,
+            bubbleScorecards: bubbleScorecards,
+            splitCandidateLedgers: splitCandidateLedgers,
+            siblingLayoutScorecards: siblingLayoutScorecards,
+            gateLedger: gateLedger,
+            notes: [
+                "bubbleMaskAssignmentSplitScoreboardReport executes WI-bubblemask-assignment-split-scorecard as report-only scoreboard.",
+                "It aggregates existing BubbleMask proxy, assignment correction, split candidate, reading order, structure action, native scoreboard, and TextBox ledger evidence without new OCR or LLM calls.",
+                "Assignment, split, sibling layout, nextAction, and promotion blockers use ground-truth-free decision signals only; OCR ground truth metrics appear only in evaluationSignals.",
+                "AITRANS BubbleMask is an internal proxy derived from existing bubble geometry, not a real Koharu BubbleMask artifact.",
+                "This report does not change finalTextUsedForTranslation, blockPassed, failureCategory, safeLayoutRect, overlay rendering, post-fusion cleanup, candidate selection, or currentBlockSource."
             ]
         )
     }
