@@ -2299,6 +2299,140 @@ struct MangaKoharuPipelineResolverReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuWorkOrderSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuWorkOrderGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuWorkOrderSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuWorkOrder: Equatable, Codable, Sendable {
+    var workOrderID: String
+    var title: String
+    var targetStage: String
+    var targetKoharuArtifact: String
+    var sourceExecutionItemIDs: [String]
+    var sourceReports: [String]
+    var priority: String
+    var status: String
+    var budgetClass: String
+    var targetBlocks: [Int]
+    var blockedByWorkOrderIDs: [String]
+    var remainingBlockers: [String]
+    var canRunInCIFast: Bool
+    var requiresFullProbe: Bool
+    var requiresExternalArtifact: Bool
+    var requiresModelChange: Bool
+    var requiresMainFlowChange: Bool
+    var allowedInThisVersion: Bool
+    var forbiddenActions: [String]
+    var promotionGates: [MangaKoharuWorkOrderGate]
+    var decisionSignals: [MangaKoharuWorkOrderSignal]
+    var evaluationSignals: [MangaKoharuWorkOrderSignal]
+    var recommendedNextAction: String
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuWorkOrderBlockRoute: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var resolverFirstBlockedNodeID: String
+    var resolverRecommendedExecutionItemID: String
+    var primaryWorkOrderID: String
+    var secondaryWorkOrderIDs: [String]
+    var primaryBottleneck: String
+    var modelFloorLimited: Bool
+    var renderLocked: Bool
+    var stoplistedLocalTuning: Bool
+    var requiresRealTextBoxes: Bool
+    var requiresRealBubbleMask: Bool
+    var requiresRealSegmentMask: Bool
+    var requiresExternalArtifact: Bool
+    var canRunInCIFast: Bool
+    var requiresFullProbe: Bool
+    var budgetClass: String
+    var recommendedNextAction: String
+    var decisionSignals: [MangaKoharuWorkOrderSignal]
+    var evaluationSignals: [MangaKoharuWorkOrderSignal]
+    var mustNotPromoteReasons: [String]
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuWorkOrderBudgetLedger: Equatable, Codable, Sendable {
+    var ciFastRunnableWorkOrderIDs: [String]
+    var fullProbeRequiredWorkOrderIDs: [String]
+    var externalArtifactRequiredWorkOrderIDs: [String]
+    var modelComparisonFutureWorkOrderIDs: [String]
+    var stoplistWorkOrderIDs: [String]
+    var manualReviewWorkOrderIDs: [String]
+    var ciFastRunnableBlockCount: Int
+    var externalArtifactBlockedBlockCount: Int
+    var stoplistedBlockCount: Int
+    var modelFloorLimitedBlockCount: Int
+    var renderLockedBlockCount: Int
+    var notes: [String]
+}
+
+struct MangaKoharuWorkOrderRouterReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var evaluatedBlockCount: Int
+    var workOrderCount: Int
+    var blockRouteCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var routerVerdict: String
+    var routerVerdictBreakdown: [String: Int]
+    var workOrderStatusBreakdown: [String: Int]
+    var workOrderPriorityBreakdown: [String: Int]
+    var targetStageBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var budgetClassBreakdown: [String: Int]
+    var blockedByMissingRealArtifactBlocks: [Int]
+    var stoplistedLocalTuningBlocks: [Int]
+    var modelFloorLimitedBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var ciFastRunnableWorkOrders: [String]
+    var fullProbeRequiredWorkOrders: [String]
+    var externalArtifactRequiredWorkOrders: [String]
+    var mustNotRunLocalTuningWorkOrders: [String]
+    var workOrders: [MangaKoharuWorkOrder]
+    var blockRoutes: [MangaKoharuWorkOrderBlockRoute]
+    var budgetLedger: MangaKoharuWorkOrderBudgetLedger
+    var gateLedger: [MangaKoharuWorkOrderGate]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -3450,6 +3584,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
     var koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
     var koharuPipelineResolverReport: MangaKoharuPipelineResolverReport?
+    var koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?

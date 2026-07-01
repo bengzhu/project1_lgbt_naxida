@@ -1589,6 +1589,7 @@ final class TranslationSessionStore: ObservableObject {
                 var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
                 var koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
                 var koharuPipelineResolverReport: MangaKoharuPipelineResolverReport?
+                var koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -2045,7 +2046,8 @@ final class TranslationSessionStore: ObservableObject {
                     cleanTextDiagnostic: cleanTextDiagnostic,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: nil,
-                    koharuPipelineResolverReport: nil
+                    koharuPipelineResolverReport: nil,
+                    koharuWorkOrderRouterReport: nil
                 )
                 let deterministicDecodingCheck: MangaDeterministicDecodingCheck?
                 if runOptions.runDeterministicDecodingCheck {
@@ -2146,7 +2148,8 @@ final class TranslationSessionStore: ObservableObject {
                     cleanTextDiagnostic: cleanTextDiagnostic,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
-                    koharuPipelineResolverReport: nil
+                    koharuPipelineResolverReport: nil,
+                    koharuWorkOrderRouterReport: nil
                 )
                 koharuPipelineResolverReport = Self.makeKoharuPipelineResolverReport(
                     blocks: probeBlocks,
@@ -2159,6 +2162,18 @@ final class TranslationSessionStore: ObservableObject {
                     bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
                     segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                     koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
+                    translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+                    koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
+                )
+                koharuWorkOrderRouterReport = Self.makeKoharuWorkOrderRouterReport(
+                    blocks: probeBlocks,
+                    diagnostics: makeMangaOverlayProbeDiagnostics(blocks: probeBlocks),
+                    externalArtifactReadinessReport: externalArtifactReadinessReport,
+                    nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+                    bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+                    segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+                    koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
+                    koharuPipelineResolverReport: koharuPipelineResolverReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
                 )
@@ -2176,7 +2191,8 @@ final class TranslationSessionStore: ObservableObject {
                     cleanTextDiagnostic: cleanTextDiagnostic,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
-                    koharuPipelineResolverReport: koharuPipelineResolverReport
+                    koharuPipelineResolverReport: koharuPipelineResolverReport,
+                    koharuWorkOrderRouterReport: koharuWorkOrderRouterReport
                 )
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
                     try MangaOverlayProbeService.writeOCRProbeText(
@@ -2204,6 +2220,7 @@ final class TranslationSessionStore: ObservableObject {
                         segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                         koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
                         koharuPipelineResolverReport: koharuPipelineResolverReport,
+                        koharuWorkOrderRouterReport: koharuWorkOrderRouterReport,
                         translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                         koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                         bubbleMaskReport: bubbleMaskReport,
@@ -2248,6 +2265,7 @@ final class TranslationSessionStore: ObservableObject {
                     segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                     koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
                     koharuPipelineResolverReport: koharuPipelineResolverReport,
+                    koharuWorkOrderRouterReport: koharuWorkOrderRouterReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
@@ -7840,6 +7858,7 @@ final class TranslationSessionStore: ObservableObject {
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport? = nil,
         koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport? = nil,
         koharuPipelineResolverReport: MangaKoharuPipelineResolverReport? = nil,
+        koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
@@ -7895,7 +7914,8 @@ final class TranslationSessionStore: ObservableObject {
             cleanTextDiagnostic: cleanTextDiagnostic,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
-            koharuPipelineResolverReport: koharuPipelineResolverReport
+            koharuPipelineResolverReport: koharuPipelineResolverReport,
+            koharuWorkOrderRouterReport: nil
         )
         let resolverReport = koharuPipelineResolverReport ?? Self.makeKoharuPipelineResolverReport(
             blocks: blocks,
@@ -7910,6 +7930,35 @@ final class TranslationSessionStore: ObservableObject {
             koharuArtifactConvergenceReport: convergenceReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
+        )
+        let workOrderRouterReport = koharuWorkOrderRouterReport ?? Self.makeKoharuWorkOrderRouterReport(
+            blocks: blocks,
+            diagnostics: diagnostics,
+            externalArtifactReadinessReport: externalArtifactReadinessReport,
+            nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+            bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+            segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+            koharuArtifactConvergenceReport: convergenceReport,
+            koharuPipelineResolverReport: resolverReport,
+            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
+        )
+        let finalConvergenceReport = koharuArtifactConvergenceReport ?? Self.makeKoharuArtifactConvergenceReport(
+            blocks: blocks,
+            diagnostics: diagnostics,
+            koharuArtifactDAGReport: koharuArtifactDAGReport,
+            koharuStageGapReplicationReport: koharuStageGapReplicationReport,
+            koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
+            nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+            bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+            segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+            externalArtifactReadinessReport: externalArtifactReadinessReport,
+            externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+            cleanTextDiagnostic: cleanTextDiagnostic,
+            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
+            koharuPipelineResolverReport: resolverReport,
+            koharuWorkOrderRouterReport: workOrderRouterReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -7953,8 +8002,9 @@ final class TranslationSessionStore: ObservableObject {
             nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
             bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
             segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
-            koharuArtifactConvergenceReport: convergenceReport,
+            koharuArtifactConvergenceReport: finalConvergenceReport,
             koharuPipelineResolverReport: resolverReport,
+            koharuWorkOrderRouterReport: workOrderRouterReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
@@ -13940,6 +13990,424 @@ final class TranslationSessionStore: ObservableObject {
         )
     }
 
+    private static func makeKoharuWorkOrderRouterReport(
+        blocks: [MangaOverlayProbeBlock],
+        diagnostics: MangaOverlayProbeDiagnostics,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
+        nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?,
+        bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?,
+        segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?,
+        koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?,
+        koharuPipelineResolverReport: MangaKoharuPipelineResolverReport?,
+        translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
+    ) -> MangaKoharuWorkOrderRouterReport {
+        func uniqueSorted(_ values: [Int]) -> [Int] {
+            Array(Set(values)).sorted()
+        }
+
+        func sortedUniqueStrings(_ values: [String]) -> [String] {
+            Array(Set(values)).sorted()
+        }
+
+        func joined(_ values: [Int]) -> String {
+            uniqueSorted(values).map(String.init).joined(separator: ",")
+        }
+
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaKoharuWorkOrderSignal {
+            MangaKoharuWorkOrderSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+
+        func gate(
+            _ id: String,
+            name: String,
+            scope: String,
+            status: String,
+            threshold: String,
+            affected: [Int],
+            failureMeans: String,
+            action: String,
+            signals: [MangaKoharuWorkOrderSignal]
+        ) -> MangaKoharuWorkOrderGate {
+            MangaKoharuWorkOrderGate(
+                gateID: id,
+                gateName: name,
+                scope: scope,
+                status: status,
+                threshold: threshold,
+                affectedBlocks: uniqueSorted(affected),
+                decisionSignals: signals,
+                failureMeans: failureMeans,
+                recommendedAction: action,
+                groundTruthUsedForDecision: false
+            )
+        }
+
+        let allBlockIndexes = blocks.map(\.index)
+        let resolverByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuPipelineResolverReport?.blockTraces ?? []).map { ($0.blockIndex, $0) }
+        )
+        let convergenceByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuArtifactConvergenceReport?.blockPaths ?? []).map { ($0.blockIndex, $0) }
+        )
+        let textBoxByBlock = Dictionary(
+            uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let bubbleByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskAssignmentSplitScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentMaskProxyCoverageScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
+        )
+        let translationFloorByBlock = Dictionary(
+            uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let renderLockByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) }
+        )
+
+        let externalReady = externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed == true
+        let externalVerdict = externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing"
+        let resolverInputPresent = koharuPipelineResolverReport?.enabled == true
+        let stoplistBlocks = uniqueSorted(
+            (koharuPipelineResolverReport?.stoplistedLocalTuningBlocks ?? []) +
+            (nativeTextBoxProxyLedgerReport?.stoplistBlocks ?? [])
+        )
+        let modelFloorBlocks = uniqueSorted(
+            (koharuPipelineResolverReport?.modelFloorLimitedBlocks ?? []) +
+            (translationModelFloorComparisonReport?.noisyModelFloorBlocks ?? []) +
+            blocks.filter { $0.failureCategory == "modelOutputFailure" || $0.failureCategory == "translationLanguageQualityFailure" }.map(\.index)
+        )
+        let renderIssueBlocks = uniqueSorted(koharuRenderRegressionLockReport?.renderIssueBlocks ?? [])
+        let renderLockedBlocks = uniqueSorted(
+            (koharuRenderRegressionLockReport?.blockLocks ?? [])
+                .filter { !renderIssueBlocks.contains($0.blockIndex) }
+                .map(\.blockIndex)
+        )
+        let needsRealTextBoxBlocks = uniqueSorted(
+            stoplistBlocks +
+            diagnostics.likelyOCRIssueBlocks +
+            (nativeTextBoxProxyLedgerReport?.blockLedgers ?? [])
+                .filter { $0.nextAction == "collectRealTextBoxArtifact" }
+                .map(\.blockIndex)
+        )
+        let needsRealBubbleMaskBlocks = uniqueSorted(bubbleMaskAssignmentSplitScoreboardReport?.needsRealBubbleMaskBlocks ?? [])
+        let needsRealSegmentMaskBlocks = uniqueSorted(segmentMaskProxyCoverageScoreboardReport?.needsRealSegmentMaskBlocks ?? [])
+        let externalBlockedBlocks = externalReady ? [] : uniqueSorted(needsRealTextBoxBlocks + needsRealBubbleMaskBlocks + needsRealSegmentMaskBlocks)
+
+        func route(for block: MangaOverlayProbeBlock) -> MangaKoharuWorkOrderBlockRoute {
+            let resolver = resolverByBlock[block.index]
+            let convergence = convergenceByBlock[block.index]
+            let textBox = textBoxByBlock[block.index]
+            let bubble = bubbleByBlock[block.index]
+            let segment = segmentByBlock[block.index]
+            let floor = translationFloorByBlock[block.index]
+            let render = renderLockByBlock[block.index]
+            let renderIssue = renderIssueBlocks.contains(block.index)
+            let modelLimited = modelFloorBlocks.contains(block.index) || floor?.modelFloorLimited == true
+            let stoplisted = stoplistBlocks.contains(block.index) || resolver?.stoplistedLocalTuning == true || textBox?.stoplistHit == true
+            let needsTextBoxes = needsRealTextBoxBlocks.contains(block.index)
+            let needsBubbleMask = needsRealBubbleMaskBlocks.contains(block.index)
+                || bubble?.nextAction == "collectRealBubbleMaskArtifact"
+                || bubble?.assignmentStatus == "maskConflict"
+            let needsSegmentMask = needsRealSegmentMaskBlocks.contains(block.index)
+                || segment?.nextAction == "collectRealSegmentMaskArtifact"
+                || segment?.coverageStatus == "needsRealSegmentMask"
+            let renderLocked = renderLockedBlocks.contains(block.index)
+                || render?.renderStatus == "renderLocked"
+                || convergence?.renderLocked == true
+            let requiresExternal = !externalReady && (needsTextBoxes || needsBubbleMask || needsSegmentMask)
+
+            let primary: String
+            var secondary: [String] = []
+            let budget: String
+            let nextAction: String
+            if renderIssue {
+                primary = "WO-v132-keep-render-lock"
+                budget = "ciFastReportOnly"
+                nextAction = "inspectRenderLockGateLedger"
+            } else if modelLimited {
+                primary = "WO-v132-translation-model-floor-handoff"
+                budget = "futureModelComparison"
+                nextAction = "considerFutureModelComparison"
+            } else if stoplisted || needsTextBoxes || block.failureCategory == "ocrInputSuspect" {
+                primary = "WO-v132-request-real-textboxes"
+                budget = requiresExternal ? "externalArtifactRequired" : "ciFastReportOnly"
+                nextAction = requiresExternal ? "collectRealKoharuArtifact" : "keepTextBoxRequestReportOnly"
+                if stoplisted {
+                    secondary.append("WO-v132-stop-local-crop-line-deskew")
+                }
+            } else if needsBubbleMask {
+                primary = "WO-v132-request-real-bubblemask"
+                budget = requiresExternal ? "externalArtifactRequired" : "ciFastReportOnly"
+                nextAction = requiresExternal ? "collectRealKoharuArtifact" : "keepBubbleMaskRequestReportOnly"
+            } else if needsSegmentMask {
+                primary = "WO-v132-request-real-segmentmask"
+                budget = requiresExternal ? "externalArtifactRequired" : "ciFastReportOnly"
+                nextAction = requiresExternal ? "collectRealKoharuArtifact" : "keepSegmentMaskRequestReportOnly"
+            } else if block.blockPassed && renderLocked {
+                primary = "WO-v132-close-resolver-ledger"
+                secondary.append("WO-v132-keep-render-lock")
+                budget = "ciFastReportOnly"
+                nextAction = "keepResolverAndRenderLockReportOnly"
+            } else if resolverInputPresent {
+                primary = "WO-v132-close-resolver-ledger"
+                budget = "ciFastReportOnly"
+                nextAction = "keepResolverReportOnly"
+            } else {
+                primary = "WO-v132-manual-review-unclassified"
+                budget = "manualReview"
+                nextAction = "manualReviewOnly"
+            }
+            if requiresExternal && primary != "WO-v132-external-artifact-package-handoff" {
+                secondary.append("WO-v132-external-artifact-package-handoff")
+            }
+            if !resolverInputPresent && !secondary.contains("WO-v132-manual-review-unclassified") {
+                secondary.append("WO-v132-manual-review-unclassified")
+            }
+
+            let primaryBottleneck = convergence?.primaryStructuralBottleneck
+                ?? resolver?.primaryBottleneck
+                ?? textBox?.qualityStatus
+                ?? bubble?.primaryBubbleBottleneck
+                ?? segment?.primarySegmentBottleneck
+                ?? block.failureCategory
+            return MangaKoharuWorkOrderBlockRoute(
+                blockIndex: block.index,
+                bubbleID: block.bubbleID,
+                blockPassed: block.blockPassed,
+                failureCategory: block.failureCategory,
+                groundTruthMatch: block.groundTruthMatch,
+                bestGroundTruthType: block.bestGroundTruthType,
+                ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
+                resolverFirstBlockedNodeID: resolver?.firstBlockedNodeID ?? "missingResolverInput",
+                resolverRecommendedExecutionItemID: resolver?.recommendedExecutionItemID ?? "missingResolverInput",
+                primaryWorkOrderID: primary,
+                secondaryWorkOrderIDs: sortedUniqueStrings(secondary),
+                primaryBottleneck: primaryBottleneck,
+                modelFloorLimited: modelLimited,
+                renderLocked: renderLocked,
+                stoplistedLocalTuning: stoplisted,
+                requiresRealTextBoxes: needsTextBoxes,
+                requiresRealBubbleMask: needsBubbleMask,
+                requiresRealSegmentMask: needsSegmentMask,
+                requiresExternalArtifact: requiresExternal,
+                canRunInCIFast: true,
+                requiresFullProbe: false,
+                budgetClass: budget,
+                recommendedNextAction: nextAction,
+                decisionSignals: [
+                    signal("failureCategory", block.failureCategory, source: "blocks.failureCategory"),
+                    signal("resolverFirstBlockedNodeID", resolver?.firstBlockedNodeID ?? "nil", source: "koharuPipelineResolverReport"),
+                    signal("stoplistedLocalTuning", String(stoplisted), source: "nativeTextBoxProxyLedgerReport,koharuPipelineResolverReport"),
+                    signal("modelFloorLimited", String(modelLimited), source: "translationModelFloorComparisonReport"),
+                    signal("requiresExternalArtifact", String(requiresExternal), source: "externalArtifactReadinessReport")
+                ],
+                evaluationSignals: [
+                    signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                    signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
+                    signal("ocrSimilarityForEvaluation", block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+                ],
+                mustNotPromoteReasons: sortedUniqueStrings([
+                    "workOrderRouterDiagnosticOnly",
+                    "groundTruthUsedOnlyForEvaluationSignals",
+                    "doNotChangeMainOCRTranslationOverlayOrFailureClassification"
+                ] + (resolver?.mustNotPromoteReasons ?? []) + (textBox?.mustNotPromoteReasons ?? []) + (bubble?.mustNotPromoteReasons ?? []) + (segment?.mustNotPromoteReasons ?? [])),
+                groundTruthUsedForDecision: false,
+                diagnosticOnly: true,
+                wouldChangeMainFlow: false
+            )
+        }
+
+        let blockRoutes = blocks.map(route(for:)).sorted { $0.blockIndex < $1.blockIndex }
+        let manualReviewBlocks = uniqueSorted(blockRoutes.filter { $0.primaryWorkOrderID == "WO-v132-manual-review-unclassified" }.map(\.blockIndex))
+
+        func workOrder(
+            _ id: String,
+            title: String,
+            stage: String,
+            artifact: String,
+            sourceExecutionItems: [String],
+            sourceReports: [String],
+            priority: String,
+            status: String,
+            budget: String,
+            blocks targetBlocks: [Int],
+            blockers: [String],
+            ciFast: Bool,
+            full: Bool,
+            external: Bool,
+            modelChange: Bool = false,
+            allowed: Bool = true,
+            forbidden: [String],
+            action: String
+        ) -> MangaKoharuWorkOrder {
+            let gates = [
+                gate("G-\(id)-report-only", name: "Report-only work order", scope: id, status: "passed", threshold: "wouldChangeMainFlow=false", affected: targetBlocks, failureMeans: "work order mutates OCR, translation, overlay, blockPassed, or candidate selection", action: "revertBehavioralChange", signals: [signal("wouldChangeMainFlow", "false", source: "koharuWorkOrderRouterReport")]),
+                gate("G-\(id)-no-ground-truth-decision", name: "No ground truth decision", scope: id, status: "passed", threshold: "groundTruthUsedForDecision=false", affected: targetBlocks, failureMeans: "ground truth changes priority, status, budget, or next action", action: "moveGroundTruthToEvaluationSignalsOnly", signals: [signal("groundTruthUsedForDecision", "false", source: "koharuWorkOrderRouterReport")])
+            ]
+            return MangaKoharuWorkOrder(
+                workOrderID: id,
+                title: title,
+                targetStage: stage,
+                targetKoharuArtifact: artifact,
+                sourceExecutionItemIDs: sourceExecutionItems,
+                sourceReports: sourceReports,
+                priority: priority,
+                status: status,
+                budgetClass: budget,
+                targetBlocks: uniqueSorted(targetBlocks),
+                blockedByWorkOrderIDs: [],
+                remainingBlockers: sortedUniqueStrings(blockers),
+                canRunInCIFast: ciFast,
+                requiresFullProbe: full,
+                requiresExternalArtifact: external,
+                requiresModelChange: modelChange,
+                requiresMainFlowChange: false,
+                allowedInThisVersion: allowed,
+                forbiddenActions: forbidden,
+                promotionGates: gates,
+                decisionSignals: [
+                    signal("status", status, source: "koharuWorkOrderRouterReport.workOrders"),
+                    signal("budgetClass", budget, source: "koharuWorkOrderRouterReport.workOrders"),
+                    signal("targetBlocks", joined(targetBlocks), source: "koharuWorkOrderRouterReport.workOrders")
+                ],
+                evaluationSignals: [],
+                recommendedNextAction: action,
+                groundTruthUsedForDecision: false,
+                diagnosticOnly: true,
+                wouldChangeMainFlow: false
+            )
+        }
+
+        let resolverStatus = resolverInputPresent ? "closedReportOnly" : "manualReviewOnly"
+        let textBoxStatus = needsRealTextBoxBlocks.isEmpty ? "closedReportOnly" : (externalReady ? "readyReportOnly" : "blockedMissingExternalArtifact")
+        let bubbleStatus = needsRealBubbleMaskBlocks.isEmpty ? "closedReportOnly" : (externalReady ? "readyReportOnly" : "blockedMissingExternalArtifact")
+        let segmentStatus = needsRealSegmentMaskBlocks.isEmpty ? "closedReportOnly" : (externalReady ? "readyReportOnly" : "blockedMissingExternalArtifact")
+        let renderStatus = renderIssueBlocks.isEmpty ? "closedReportOnly" : "blockedByRenderIssue"
+        let modelStatus = modelFloorBlocks.isEmpty ? "closedReportOnly" : "blockedByModelFloor"
+        let externalStatus = externalReady ? "readyReportOnly" : "blockedMissingExternalArtifact"
+        let workOrders = [
+            workOrder("WO-v132-close-resolver-ledger", title: "Close resolver ledger", stage: "DAGResolver", artifact: "PipelineResolverReport", sourceExecutionItems: ["EX-resolver-native-proxy-scoreboards-closed"], sourceReports: ["koharuPipelineResolverReport"], priority: "P1", status: resolverStatus, budget: "ciFastReportOnly", blocks: allBlockIndexes, blockers: resolverInputPresent ? [] : ["koharuPipelineResolverReport missing"], ciFast: true, full: false, external: false, forbidden: ["doNotChangeResolverDecisions"], action: resolverInputPresent ? "keepResolverReportOnly" : "restoreKoharuPipelineResolverReport"),
+            workOrder("WO-v132-stop-local-crop-line-deskew", title: "Stop local crop line deskew tuning", stage: "TextBoxes", artifact: "TextBoxes", sourceExecutionItems: ["EX-resolver-stop-crop-line-deskew"], sourceReports: ["nativeTextBoxProxyLedgerReport", "textBoxPlanFailureReport", "lineCropExperimentReport"], priority: "P0", status: stoplistBlocks.isEmpty ? "closedReportOnly" : "closedStoplist", budget: "stoplistDoNotRun", blocks: stoplistBlocks, blockers: stoplistBlocks.isEmpty ? [] : ["v20/v1.25 stoplist blocks must not be tuned locally"], ciFast: true, full: false, external: false, forbidden: ["doNotTuneCropLineDeskewAgain", "doNotPromoteShadowOCR"], action: "stopLocalCropLineDeskewTuning"),
+            workOrder("WO-v132-request-real-textboxes", title: "Request real TextBoxes", stage: "TextBoxes", artifact: "TextBoxes", sourceExecutionItems: ["EX-resolver-next-real-textboxes-needed"], sourceReports: ["externalArtifactReadinessReport", "nativeTextBoxProxyLedgerReport", "koharuPipelineResolverReport"], priority: "P0", status: textBoxStatus, budget: needsRealTextBoxBlocks.isEmpty ? "ciFastReportOnly" : "externalArtifactRequired", blocks: needsRealTextBoxBlocks, blockers: externalReady || needsRealTextBoxBlocks.isEmpty ? [] : ["real TextBoxes missing: \(externalVerdict)"], ciFast: true, full: false, external: !needsRealTextBoxBlocks.isEmpty, forbidden: ["doNotUseVisionOCRAsRealTextBoxes", "doNotUseGroundTruthForTextBoxRouting"], action: needsRealTextBoxBlocks.isEmpty ? "keepTextBoxRequestReportOnly" : "collectRealKoharuArtifact"),
+            workOrder("WO-v132-request-real-bubblemask", title: "Request real BubbleMask", stage: "BubbleMask", artifact: "BubbleMask", sourceExecutionItems: ["EX-resolver-next-real-bubblemask-needed"], sourceReports: ["bubbleMaskAssignmentSplitScoreboardReport", "externalArtifactReadinessReport"], priority: "P1", status: bubbleStatus, budget: needsRealBubbleMaskBlocks.isEmpty ? "ciFastReportOnly" : "externalArtifactRequired", blocks: needsRealBubbleMaskBlocks, blockers: externalReady || needsRealBubbleMaskBlocks.isEmpty ? [] : ["real BubbleMask missing: \(externalVerdict)"], ciFast: true, full: false, external: !needsRealBubbleMaskBlocks.isEmpty, forbidden: ["doNotPromoteBubbleMaskProxyAsRealBubbleMask"], action: needsRealBubbleMaskBlocks.isEmpty ? "keepBubbleMaskProxyReportOnly" : "collectRealKoharuArtifact"),
+            workOrder("WO-v132-request-real-segmentmask", title: "Request real SegmentMask", stage: "SegmentMask", artifact: "SegmentMask", sourceExecutionItems: ["EX-resolver-next-real-segmentmask-needed"], sourceReports: ["segmentMaskProxyCoverageScoreboardReport", "externalArtifactReadinessReport"], priority: "P1", status: segmentStatus, budget: needsRealSegmentMaskBlocks.isEmpty ? "ciFastReportOnly" : "externalArtifactRequired", blocks: needsRealSegmentMaskBlocks, blockers: externalReady || needsRealSegmentMaskBlocks.isEmpty ? [] : ["real SegmentMask missing: \(externalVerdict)"], ciFast: true, full: false, external: !needsRealSegmentMaskBlocks.isEmpty, forbidden: ["doNotPromoteGlyphMaskAsRealSegmentMask"], action: needsRealSegmentMaskBlocks.isEmpty ? "keepSegmentMaskProxyReportOnly" : "collectRealKoharuArtifact"),
+            workOrder("WO-v132-keep-render-lock", title: "Keep render lock", stage: "FinalRender", artifact: "RenderedSprites/FinalRender", sourceExecutionItems: ["EX-resolver-render-lock-linked"], sourceReports: ["koharuRenderRegressionLockReport"], priority: renderIssueBlocks.isEmpty ? "P2" : "P0", status: renderStatus, budget: "ciFastReportOnly", blocks: renderIssueBlocks.isEmpty ? renderLockedBlocks : renderIssueBlocks, blockers: renderIssueBlocks.isEmpty ? [] : ["render issue blocks present"], ciFast: true, full: false, external: false, forbidden: ["doNotChangeOverlayRendererInRouter"], action: renderIssueBlocks.isEmpty ? "keepRenderLockReportOnly" : "inspectRenderLockGateLedger"),
+            workOrder("WO-v132-translation-model-floor-handoff", title: "Translation model floor handoff", stage: "Translations", artifact: "Translations", sourceExecutionItems: ["EX-resolver-translation-floor-linked"], sourceReports: ["translationModelFloorComparisonReport", "cleanTextDiagnostic"], priority: modelFloorBlocks.isEmpty ? "P2" : "P0", status: modelStatus, budget: modelFloorBlocks.isEmpty ? "ciFastReportOnly" : "futureModelComparison", blocks: modelFloorBlocks, blockers: modelFloorBlocks.isEmpty ? [] : ["current model floor remains open"], ciFast: true, full: false, external: false, modelChange: !modelFloorBlocks.isEmpty, allowed: modelFloorBlocks.isEmpty, forbidden: ["doNotChangeModelOrPromptInRouter"], action: modelFloorBlocks.isEmpty ? "keepTranslationLedger" : "considerFutureModelComparison"),
+            workOrder("WO-v132-external-artifact-package-handoff", title: "External artifact package handoff", stage: "ExternalArtifacts", artifact: "test/koharu_artifacts", sourceExecutionItems: ["EX-resolver-external-artifact-handoff"], sourceReports: ["externalArtifactReadinessReport"], priority: "P0", status: externalStatus, budget: "externalArtifactRequired", blocks: externalBlockedBlocks, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalVerdict)"], ciFast: true, full: false, external: true, forbidden: ["doNotCreateCopyOrModifyActiveKoharuArtifacts", "doNotUseContractExamplesAsActiveArtifacts"], action: externalReady ? "keepExternalArtifactGateReady" : "collectRealKoharuArtifact"),
+            workOrder("WO-v132-manual-review-unclassified", title: "Manual review unclassified", stage: "ManualReview", artifact: "ManualReview", sourceExecutionItems: [], sourceReports: ["blocks", "koharuWorkOrderRouterReport"], priority: manualReviewBlocks.isEmpty ? "P3" : "P1", status: manualReviewBlocks.isEmpty ? "closedReportOnly" : "manualReviewOnly", budget: manualReviewBlocks.isEmpty ? "ciFastReportOnly" : "manualReview", blocks: manualReviewBlocks, blockers: manualReviewBlocks.isEmpty ? [] : ["unclassified failure blocks need human review"], ciFast: true, full: false, external: false, forbidden: ["doNotHideUnclassifiedBlocks"], action: manualReviewBlocks.isEmpty ? "noManualReviewNeeded" : "manualReviewOnly")
+        ]
+
+        let ciFastRunnable = workOrders.filter { $0.canRunInCIFast && !$0.requiresExternalArtifact && $0.budgetClass != "futureModelComparison" }.map(\.workOrderID).sorted()
+        let fullRequired = workOrders.filter(\.requiresFullProbe).map(\.workOrderID).sorted()
+        let externalRequired = workOrders.filter(\.requiresExternalArtifact).map(\.workOrderID).sorted()
+        let modelComparison = workOrders.filter { $0.budgetClass == "futureModelComparison" }.map(\.workOrderID).sorted()
+        let stoplistWorkOrders = workOrders.filter { $0.budgetClass == "stoplistDoNotRun" }.map(\.workOrderID).sorted()
+        let manualReviewWorkOrders = workOrders.filter { $0.budgetClass == "manualReview" }.map(\.workOrderID).sorted()
+        let budgetLedger = MangaKoharuWorkOrderBudgetLedger(
+            ciFastRunnableWorkOrderIDs: ciFastRunnable,
+            fullProbeRequiredWorkOrderIDs: fullRequired,
+            externalArtifactRequiredWorkOrderIDs: externalRequired,
+            modelComparisonFutureWorkOrderIDs: modelComparison,
+            stoplistWorkOrderIDs: stoplistWorkOrders,
+            manualReviewWorkOrderIDs: manualReviewWorkOrders,
+            ciFastRunnableBlockCount: uniqueSorted(blockRoutes.filter(\.canRunInCIFast).map(\.blockIndex)).count,
+            externalArtifactBlockedBlockCount: externalBlockedBlocks.count,
+            stoplistedBlockCount: stoplistBlocks.count,
+            modelFloorLimitedBlockCount: modelFloorBlocks.count,
+            renderLockedBlockCount: renderLockedBlocks.count,
+            notes: [
+                "ci-fast can validate router JSON/TXT consistency but cannot satisfy missing real external artifacts.",
+                "stoplistDoNotRun records local crop/line/deskew paths that should not be tuned again.",
+                "futureModelComparison records model floor handoff only; v1.32 does not change model or prompt."
+            ]
+        )
+
+        let gateLedger = [
+            gate("G-workorder-no-main-flow-mutation", name: "No main flow mutation", scope: "report", status: "passed", threshold: "wouldChangeMainFlow=false", affected: [], failureMeans: "router changes OCR, translation, overlay, blockPassed, failureCategory, cleanup, candidate selection, or rendering", action: "revertBehavioralChange", signals: [signal("wouldChangeMainFlow", "false", source: "koharuWorkOrderRouterReport")]),
+            gate("G-workorder-no-ground-truth-decision", name: "No ground truth decision", scope: "report", status: "passed", threshold: "groundTruthUsedForDecision=false", affected: allBlockIndexes, failureMeans: "ground truth selects work order, priority, budget, or next action", action: "moveGroundTruthToEvaluationSignalsOnly", signals: [signal("groundTruthUsedForDecision", "false", source: "koharuWorkOrderRouterReport")]),
+            gate("G-workorder-resolver-input-present", name: "Resolver input present", scope: "DAGResolver", status: resolverInputPresent ? "passed" : "warning", threshold: "koharuPipelineResolverReport.enabled=true", affected: allBlockIndexes, failureMeans: "router cannot derive execution queue and must degrade", action: "restoreKoharuPipelineResolverReport", signals: [signal("resolverInputPresent", String(resolverInputPresent), source: "koharuPipelineResolverReport")]),
+            gate("G-workorder-block-route-count", name: "Block route count", scope: "blocks", status: blockRoutes.count == blocks.count ? "passed" : "warning", threshold: "blockRouteCount==totalBlocksDetected", affected: allBlockIndexes, failureMeans: "not every final block has a work order route", action: "restorePerBlockRoutes", signals: [signal("blockRouteCount", String(blockRoutes.count), source: "koharuWorkOrderRouterReport")]),
+            gate("G-workorder-stoplist-respected", name: "Stoplist respected", scope: "TextBoxes", status: stoplistBlocks.isEmpty ? "passed" : "stop", threshold: "stoplist blocks route away from local crop/line/deskew tuning", affected: stoplistBlocks, failureMeans: "router reopens known failed local tuning", action: "stopLocalCropLineDeskewTuning", signals: [signal("stoplistedBlocks", joined(stoplistBlocks), source: "nativeTextBoxProxyLedgerReport,koharuPipelineResolverReport")]),
+            gate("G-workorder-external-artifact-boundary", name: "External artifact boundary", scope: "ExternalArtifacts", status: externalReady ? "ready" : "blocked", threshold: "missing active artifacts stay blocked and are not faked by proxies", affected: externalBlockedBlocks, failureMeans: "router promotes proxy Vision/TextBox/BubbleMask/SegmentMask as real Koharu artifact", action: "collectRealKoharuArtifact", signals: [signal("readinessVerdict", externalVerdict, source: "externalArtifactReadinessReport")]),
+            gate("G-workorder-model-floor-boundary", name: "Model floor boundary", scope: "Translations", status: modelFloorBlocks.isEmpty ? "passed" : "warning", threshold: "translation/model failures route to model floor handoff", affected: modelFloorBlocks, failureMeans: "model quality failure is misattributed to OCR geometry", action: "considerFutureModelComparison", signals: [signal("modelFloorLimitedBlocks", joined(modelFloorBlocks), source: "translationModelFloorComparisonReport")]),
+            gate("G-workorder-render-lock-boundary", name: "Render lock boundary", scope: "FinalRender", status: renderIssueBlocks.isEmpty ? "passed" : "warning", threshold: "render stable blocks stay locked; render issues route only to render lock", affected: renderIssueBlocks, failureMeans: "router changes overlay renderer or treats render lock as OCR gain", action: renderIssueBlocks.isEmpty ? "keepRenderLockReportOnly" : "inspectRenderLockGateLedger", signals: [signal("renderIssueBlocks", joined(renderIssueBlocks), source: "koharuRenderRegressionLockReport")]),
+            gate("G-workorder-ci-fast-budget", name: "CI fast budget", scope: "budget", status: ciFastRunnable.isEmpty ? "warning" : "passed", threshold: "at least one report-only work order can run in ci-fast", affected: allBlockIndexes, failureMeans: "router requires full/local tuning for every action", action: "restoreReportOnlyCIFastBudget", signals: [signal("ciFastRunnableWorkOrders", ciFastRunnable.joined(separator: ","), source: "koharuWorkOrderRouterReport.budgetLedger")]),
+            gate("G-workorder-convergence-linked", name: "Convergence linked", scope: "convergence", status: "passed", threshold: "WI-koharu-workorder-router and G-koharu-workorder-router-executed are emitted in refreshed convergence", affected: allBlockIndexes, failureMeans: "v1.32 router is not traceable from convergence", action: "refreshConvergenceAfterRouter", signals: [signal("referenceReport", "koharuWorkOrderRouterReport", source: "koharuArtifactConvergenceReport")]
+            )
+        ]
+
+        let routerVerdict: String
+        if !resolverInputPresent {
+            routerVerdict = "insufficientResolverInput"
+        } else if !renderIssueBlocks.isEmpty {
+            routerVerdict = "blockedByRenderIssue"
+        } else if !modelFloorBlocks.isEmpty {
+            routerVerdict = "blockedByModelFloor"
+        } else if !externalBlockedBlocks.isEmpty {
+            routerVerdict = stoplistBlocks.isEmpty ? "blockedByMissingRealArtifacts" : "stopLocalTuningAndWaitForArtifact"
+        } else if !manualReviewBlocks.isEmpty {
+            routerVerdict = "manualReviewOnly"
+        } else {
+            routerVerdict = "readyReportOnlyWorkOrders"
+        }
+
+        return MangaKoharuWorkOrderRouterReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referencePipeline: "Koharu",
+            referenceConcept: "ResolverExecutionQueue.WorkOrderRouter.BudgetGate",
+            evaluatedBlockCount: blocks.count,
+            workOrderCount: workOrders.count,
+            blockRouteCount: blockRoutes.count,
+            gateCount: gateLedger.count,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            externalArtifactsRequiredForThisReport: false,
+            routerVerdict: routerVerdict,
+            routerVerdictBreakdown: countBy([routerVerdict]),
+            workOrderStatusBreakdown: countBy(workOrders.map(\.status)),
+            workOrderPriorityBreakdown: countBy(workOrders.map(\.priority)),
+            targetStageBreakdown: countBy(workOrders.map(\.targetStage)),
+            nextActionBreakdown: countBy(blockRoutes.map(\.recommendedNextAction)),
+            budgetClassBreakdown: countBy(workOrders.map(\.budgetClass)),
+            blockedByMissingRealArtifactBlocks: externalBlockedBlocks,
+            stoplistedLocalTuningBlocks: stoplistBlocks,
+            modelFloorLimitedBlocks: modelFloorBlocks,
+            renderLockedBlocks: renderLockedBlocks,
+            manualReviewBlocks: manualReviewBlocks,
+            ciFastRunnableWorkOrders: ciFastRunnable,
+            fullProbeRequiredWorkOrders: fullRequired,
+            externalArtifactRequiredWorkOrders: externalRequired,
+            mustNotRunLocalTuningWorkOrders: stoplistWorkOrders,
+            workOrders: workOrders,
+            blockRoutes: blockRoutes,
+            budgetLedger: budgetLedger,
+            gateLedger: gateLedger,
+            notes: [
+                "koharuWorkOrderRouterReport derives report-only work orders from v1.31 resolver, convergence, model floor, render lock, external artifact gate, and final blocks.",
+                "It does not add OCR or LLM calls and does not change OCR, translation prompt, model, overlay, blockPassed, failureCategory, cleanup, candidate selection, safe layout, glyph mask, or currentBlockSource.",
+                "Ground truth appears only in evaluationSignals and never selects work order, priority, status, budget, gate, or next action.",
+                "Missing test/koharu_artifacts remains an external artifact handoff; proxy Vision/TextBox/BubbleMask/SegmentMask evidence is not promoted as real Koharu artifact."
+            ]
+        )
+    }
+
     private static func makeKoharuArtifactConvergenceReport(
         blocks: [MangaOverlayProbeBlock],
         diagnostics: MangaOverlayProbeDiagnostics,
@@ -13954,7 +14422,8 @@ final class TranslationSessionStore: ObservableObject {
         cleanTextDiagnostic: MangaCleanTextDiagnosticReport?,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
-        koharuPipelineResolverReport: MangaKoharuPipelineResolverReport?
+        koharuPipelineResolverReport: MangaKoharuPipelineResolverReport?,
+        koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport?
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -14048,6 +14517,25 @@ final class TranslationSessionStore: ObservableObject {
         let pipelineResolverNextAction = pipelineResolverExecuted
             ? (koharuPipelineResolverReport?.executionQueue.first { $0.executionItemID == "EX-resolver-external-artifact-handoff" }?.recommendedNextAction ?? "keepResolverReportOnly")
             : "generateKoharuPipelineResolverReport"
+        let workOrderRouterExecuted = koharuWorkOrderRouterReport?.enabled == true
+        let workOrderRouterVerdict = koharuWorkOrderRouterReport?.routerVerdict ?? "notExecuted"
+        let workOrderRouterBlocks = uniqueSorted(koharuWorkOrderRouterReport?.blockRoutes.map(\.blockIndex) ?? allBlockIndexes)
+        let workOrderRouterStatus: String
+        if !workOrderRouterExecuted {
+            workOrderRouterStatus = "openWorkOrderRouter"
+        } else if workOrderRouterVerdict == "blockedByMissingRealArtifacts" {
+            workOrderRouterStatus = "blockedByMissingRealArtifact"
+        } else if workOrderRouterVerdict == "stopLocalTuningAndWaitForArtifact" {
+            workOrderRouterStatus = "closedStoplist"
+        } else {
+            workOrderRouterStatus = "closedReportOnly"
+        }
+        let workOrderRouterBlockers = workOrderRouterExecuted
+            ? (koharuWorkOrderRouterReport?.workOrders.flatMap(\.remainingBlockers) ?? [])
+            : ["koharuWorkOrderRouterReport not generated before convergence refresh"]
+        let workOrderRouterNextAction = workOrderRouterExecuted
+            ? (koharuWorkOrderRouterReport?.workOrders.first { $0.workOrderID == "WO-v132-external-artifact-package-handoff" }?.recommendedNextAction ?? "keepWorkOrderRouterReportOnly")
+            : "generateKoharuWorkOrderRouterReport"
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -14394,6 +14882,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-translation-model-floor-comparison", title: "Translation model floor comparison", status: translationFloorStatus, sourceReport: translationFloorExecuted ? "translationModelFloorComparisonReport" : "cleanTextDiagnostic", stages: ["Translations"], blocks: modelFloorLimitedBlocks, version: translationFloorExecuted ? "v1.29" : nil, blockers: translationFloorBlockers, nextAction: translationFloorNextAction, ciFast: true, full: false, external: false, decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic"), signal("translationFloorVerdict", translationFloorVerdict, source: "translationModelFloorComparisonReport")]),
             workItem("WI-render-regression-lock", title: "Render regression lock", status: renderLockStatus, sourceReport: renderLockExecuted ? "koharuRenderRegressionLockReport" : "blocks.renderDiagnostics", stages: ["RenderedSprites", "FinalRender"], blocks: renderLockStatus == "openRenderIssueDetected" ? renderIssueBlocks : renderRegressionLockBlocks, version: renderLockExecuted ? "v1.30" : nil, blockers: renderLockBlockers, nextAction: renderLockNextAction, ciFast: true, full: false, external: false, decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics"), signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport")]),
             workItem("WI-koharu-pipeline-resolver-shadow-dag", title: "Koharu pipeline resolver shadow DAG", status: pipelineResolverStatus, sourceReport: pipelineResolverExecuted ? "koharuPipelineResolverReport" : "koharuArtifactConvergenceReport", stages: ["EngineInfo", "DAGResolver", "OpPreview"], blocks: pipelineResolverBlocks, version: pipelineResolverExecuted ? "v1.31" : nil, blockers: pipelineResolverBlockers, nextAction: pipelineResolverNextAction, ciFast: true, full: false, external: false, decisions: [signal("resolverVerdict", pipelineResolverVerdict, source: "koharuPipelineResolverReport"), signal("executionQueueCount", koharuPipelineResolverReport.map { String($0.executionQueueCount) } ?? "nil", source: "koharuPipelineResolverReport")]),
+            workItem("WI-koharu-workorder-router", title: "Koharu work order router", status: workOrderRouterStatus, sourceReport: workOrderRouterExecuted ? "koharuWorkOrderRouterReport" : "koharuArtifactConvergenceReport", stages: ["WorkOrderRouter", "BudgetGate"], blocks: workOrderRouterBlocks, version: workOrderRouterExecuted ? "v1.32" : nil, blockers: workOrderRouterBlockers, nextAction: workOrderRouterNextAction, ciFast: true, full: false, external: false, decisions: [signal("routerVerdict", workOrderRouterVerdict, source: "koharuWorkOrderRouterReport"), signal("workOrderCount", koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil", source: "koharuWorkOrderRouterReport")]),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
@@ -14443,6 +14932,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-translation-model-floor-executed", name: "Translation model floor comparison executed", scope: "Translations", status: translationFloorExecuted ? (translationFloorStatus == "closedReportOnly" ? "passed" : "warning") : "open", threshold: "translationModelFloorComparisonReport.enabled=true without prompt/model mutation", affected: modelFloorLimitedBlocks, failureMeans: "convergence report silently changes translation path or leaves v1.29 floor ledger unlinked", action: translationFloorNextAction, decisions: [signal("modelFloorLimitedBlocks", joined(modelFloorLimitedBlocks), source: "blocks,cleanTextDiagnostic"), signal("translationFloorVerdict", translationFloorVerdict, source: "translationModelFloorComparisonReport")]),
             gate("G-render-regression-lock-executed", name: "Render regression lock executed", scope: "FinalRender", status: renderLockExecuted ? (renderLockStatus == "closedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuRenderRegressionLockReport.enabled=true without renderer mutation", affected: renderLockStatus == "openRenderIssueDetected" ? renderIssueBlocks : renderRegressionLockBlocks, failureMeans: "convergence report changes overlay rendering or leaves v1.30 render lock unlinked", action: renderLockNextAction, decisions: [signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport"), signal("renderIssueBlocks", joined(renderIssueBlocks), source: "koharuRenderRegressionLockReport")]),
             gate("G-koharu-pipeline-resolver-executed", name: "Koharu pipeline resolver executed", scope: "DAGResolver", status: pipelineResolverExecuted ? "passed" : "open", threshold: "koharuPipelineResolverReport.enabled=true without main flow mutation or ground truth decision", affected: pipelineResolverBlocks, failureMeans: "resolver shadow DAG is missing or mutates OCR, translation, render, blockPassed, or candidate selection", action: pipelineResolverNextAction, decisions: [signal("resolverVerdict", pipelineResolverVerdict, source: "koharuPipelineResolverReport"), signal("groundTruthUsedForDecision", koharuPipelineResolverReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuPipelineResolverReport")]),
+            gate("G-koharu-workorder-router-executed", name: "Koharu work order router executed", scope: "WorkOrderRouter", status: workOrderRouterExecuted ? "passed" : "open", threshold: "koharuWorkOrderRouterReport.enabled=true without main flow mutation or ground truth decision", affected: workOrderRouterBlocks, failureMeans: "work order router is missing or mutates OCR, translation, render, blockPassed, or candidate selection", action: workOrderRouterNextAction, decisions: [signal("routerVerdict", workOrderRouterVerdict, source: "koharuWorkOrderRouterReport"), signal("groundTruthUsedForDecision", koharuWorkOrderRouterReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuWorkOrderRouterReport")]),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
             gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
@@ -14461,12 +14951,13 @@ final class TranslationSessionStore: ObservableObject {
             "translationModelFloorComparisonReport",
             "koharuRenderRegressionLockReport",
             "koharuPipelineResolverReport",
+            "koharuWorkOrderRouterReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, and v1.31 resolver shadow DAG report-only scoreboards into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, and v1.32 work order router report-only scoreboards into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
