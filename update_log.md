@@ -115,6 +115,42 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.30：Koharu Render Regression Lock 覆盖渲染回归锁与 FinalRender 账本
+日期：2026-07-01
+依据：`md/prompt/v1（漫画探针）/v1.30（KoharuRenderRegressionLock覆盖渲染回归锁与FinalRender账本）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuRenderRegressionLockReport`，执行 v1.28 未闭合的 `WI-render-regression-lock`。
+- 报告聚合现有 final blocks、`safeLayoutRect`、mask-safe rect、render collision、render mask overflow、glyph mask、background fill、失败块 fallback 覆盖文本和 App 沙盒输出文件状态，输出 RenderedSprites / FinalRender 回归锁。
+- 顶层输出 `renderLockVerdict`、render / safe layout / background fill / glyph mask / failure overlay / output file breakdown、核心输出文件状态、逐块 `blockLocks[]`、`artifactStages[]`、`outputFileChecks[]` 和 `gateLedger[]`。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuRenderRegressionLockReport`；`WI-render-regression-lock` 可从 v1.28 的未执行 open 状态推进为 `closedReportOnly` 或 `openRenderIssueDetected`，并同步 `G-render-regression-lock-executed` gate。
+- `1_ocr_probe_text.txt` 新增报告级 render lock summary、render issue / output file 摘要、convergence render work item 摘要和逐块 `renderLock` 行。
+- 报告只做 report-only 诊断；不重新渲染、不解析 PNG 像素证明逐块文字、不新增 OCR / LLM、不改变主 OCR、主翻译、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect`、`glyphMaskFillRects`、背景填充行为、渲染逻辑或 `configuration.currentBlockSource`。`proxyNotRealKoharuRenderer = true` 表示 AITRANS 当前不是 Koharu 真实 renderer、RenderedSprites artifact 或 inpainting。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.30（KoharuRenderRegressionLock覆盖渲染回归锁与FinalRender账本）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuRenderRegressionLockReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`blockLocks.count == totalBlocksDetected`、`artifactStages.count >= 5`、`gateLedger.count >= 13`、`outputFileChecks` 覆盖核心 JSON/TXT/PNG，`failureOverlayRequiredBlocks` 覆盖所有失败块，`koharuArtifactConvergenceReport.referenceReports` 包含新 report，`WI-render-regression-lock` 不再只是 v1.28 未执行 open 状态，且 `1_ocr_probe_text.txt` 包含新 summary、逐块 `renderLock` 和 convergence render work item 摘要。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.30 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.29：Translation Model Floor 对照矩阵与 Koharu 翻译地板账本
 日期：2026-07-01
 依据：`md/prompt/v1（漫画探针）/v1.29（TranslationModelFloor对照矩阵与Koharu翻译地板账本）.md`。本轮修改 Swift 探针报告模型、deterministic clean text strict prompt 诊断、Koharu convergence work item 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。

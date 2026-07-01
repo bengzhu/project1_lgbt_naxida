@@ -103,7 +103,8 @@ flowchart TD
   KNS --> NTB["nativeTextBoxProxyLedgerReport<br/>TextBox proxy quality ledger / gates / stoplist"]
   NTB --> BMS["bubbleMaskAssignmentSplitScoreboardReport<br/>assignment / split / sibling layout scorecard"]
   BMS --> SMS["segmentMaskProxyCoverageScoreboardReport<br/>glyph cleanup / coverage / render mask ledger"]
-  SMS --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
+  SMS --> KRL["koharuRenderRegressionLockReport<br/>RenderedSprites / FinalRender lock ledger"]
+  KRL --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
   TMF --> KAC
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
@@ -130,6 +131,7 @@ flowchart TD
   NTB --> R
   BMS --> R
   SMS --> R
+  KRL --> R
   KAC --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
@@ -152,6 +154,7 @@ flowchart TD
   NTB --> T
   BMS --> T
   SMS --> T
+  KRL --> T
   KAC --> T
 ```
 

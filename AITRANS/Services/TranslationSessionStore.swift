@@ -1589,6 +1589,7 @@ final class TranslationSessionStore: ObservableObject {
                 var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
                 var koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
+                var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -2041,7 +2042,8 @@ final class TranslationSessionStore: ObservableObject {
                     externalArtifactReadinessReport: externalArtifactReadinessReport,
                     externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
                     cleanTextDiagnostic: cleanTextDiagnostic,
-                    translationModelFloorComparisonReport: translationModelFloorComparisonReport
+                    translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+                    koharuRenderRegressionLockReport: nil
                 )
                 let deterministicDecodingCheck: MangaDeterministicDecodingCheck?
                 if runOptions.runDeterministicDecodingCheck {
@@ -2082,6 +2084,7 @@ final class TranslationSessionStore: ObservableObject {
                     segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                     koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+                    koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -2117,6 +2120,62 @@ final class TranslationSessionStore: ObservableObject {
                     outputFiles.probeContactSheetImage = try MangaOverlayProbeService.renderContactSheet(
                         outputFiles: outputFiles,
                         outputDirectory: self.mangaOverlayOutputDirectory
+                    )
+                }
+                koharuRenderRegressionLockReport = Self.makeKoharuRenderRegressionLockReport(
+                    blocks: probeBlocks,
+                    diagnostics: makeMangaOverlayProbeDiagnostics(blocks: probeBlocks),
+                    outputFiles: outputFiles,
+                    outputDirectory: self.mangaOverlayOutputDirectory,
+                    bubbleMaskReport: bubbleMaskReport,
+                    segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport
+                )
+                koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
+                    blocks: probeBlocks,
+                    diagnostics: makeMangaOverlayProbeDiagnostics(blocks: probeBlocks),
+                    koharuArtifactDAGReport: koharuArtifactDAGReport,
+                    koharuStageGapReplicationReport: koharuStageGapReplicationReport,
+                    koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
+                    nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+                    bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+                    segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport,
+                    externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+                    cleanTextDiagnostic: cleanTextDiagnostic,
+                    translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+                    koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
+                )
+                if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
+                    try MangaOverlayProbeService.writeOCRProbeText(
+                        blocks: probeBlocks,
+                        textRegionCropReport: textRegionCropReport,
+                        textBoxCandidateReport: textBoxCandidateReport,
+                        segmentMaskReport: segmentMaskReport,
+                        preCropTextBoxPlanReport: preCropTextBoxPlanReport,
+                        cropExperimentReport: cropExperimentReport,
+                        textBoxPlanFailureReport: textBoxPlanFailureReport,
+                        lineTextBoxPlanReport: lineTextBoxPlanReport,
+                        lineCropExperimentReport: lineCropExperimentReport,
+                        externalArtifactReadinessReport: externalArtifactReadinessReport,
+                        externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+                        internalStructureBottleneckReport: internalStructureBottleneckReport,
+                        routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
+                        ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
+                        readingOrderStructureAuditReport: readingOrderStructureAuditReport,
+                        structureActionCandidateReport: structureActionCandidateReport,
+                        koharuArtifactDAGReport: koharuArtifactDAGReport,
+                        koharuStageGapReplicationReport: koharuStageGapReplicationReport,
+                        koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
+                        nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+                        bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+                        segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+                        koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
+                        translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+                        koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
+                        bubbleMaskReport: bubbleMaskReport,
+                        bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                        bubbleSplitCandidateReport: bubbleSplitCandidateReport,
+                        to: URL(fileURLWithPath: ocrProbeTextPath)
                     )
                 }
                 let report = self.makeMangaOverlayProbeReport(
@@ -2155,6 +2214,7 @@ final class TranslationSessionStore: ObservableObject {
                     segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                     koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+                    koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7745,6 +7805,7 @@ final class TranslationSessionStore: ObservableObject {
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport? = nil,
         koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7796,7 +7857,8 @@ final class TranslationSessionStore: ObservableObject {
             externalArtifactReadinessReport: externalArtifactReadinessReport,
             externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
             cleanTextDiagnostic: cleanTextDiagnostic,
-            translationModelFloorComparisonReport: translationModelFloorComparisonReport
+            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -7842,6 +7904,7 @@ final class TranslationSessionStore: ObservableObject {
             segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
             koharuArtifactConvergenceReport: convergenceReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -13059,6 +13122,393 @@ final class TranslationSessionStore: ObservableObject {
         )
     }
 
+    private static func makeKoharuRenderRegressionLockReport(
+        blocks: [MangaOverlayProbeBlock],
+        diagnostics: MangaOverlayProbeDiagnostics,
+        outputFiles: MangaOverlayProbeOutputFiles,
+        outputDirectory: URL,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
+    ) -> MangaKoharuRenderRegressionLockReport {
+        func uniqueSorted(_ values: [Int]) -> [Int] {
+            Array(Set(values)).sorted()
+        }
+
+        func joined(_ values: [Int]) -> String {
+            uniqueSorted(values).map(String.init).joined(separator: ",")
+        }
+
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaKoharuRenderSignal {
+            MangaKoharuRenderSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+
+        let retainedFiles = retainedProbeOutputFiles(from: outputFiles)
+        let existingFiles = currentProbeOutputFileNames(in: outputDirectory)
+        let retainedSet = Set(retainedFiles + existingFiles)
+        let bubbleMaskByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentMaskProxyCoverageScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
+        )
+
+        func outputPath(for fileName: String) -> String {
+            switch fileName {
+            case "probe_report.json":
+                return outputDirectory.appendingPathComponent(fileName).path
+            case "clean_text_diagnostic.json":
+                return outputFiles.cleanTextDiagnosticFile ?? outputDirectory.appendingPathComponent(fileName).path
+            case "1_ocr_probe_text.txt":
+                return outputFiles.ocrProbeTextFile ?? outputDirectory.appendingPathComponent(fileName).path
+            case "1_debug_boxes.png":
+                return outputFiles.debugBoxesImage
+            case "1_translated_overlay.png":
+                return outputFiles.overlayImage
+            case "manga_probe_progress.json":
+                return outputDirectory.appendingPathComponent(fileName).path
+            default:
+                return outputDirectory.appendingPathComponent(fileName).path
+            }
+        }
+
+        func outputCheck(
+            _ fileName: String,
+            requiredInCIFast: Bool,
+            requiredInFull: Bool,
+            source: String
+        ) -> MangaKoharuRenderOutputFileCheck {
+            let path = outputPath(for: fileName)
+            let plannedFinalReport = fileName == "probe_report.json"
+            let retained = retainedSet.contains(fileName) || plannedFinalReport
+            let nonEmpty = fileIsNonEmpty(path: path) || plannedFinalReport
+            let status: String
+            if plannedFinalReport && !fileIsNonEmpty(path: path) {
+                status = "plannedFinalReportWrite"
+            } else if retained && nonEmpty {
+                status = "presentNonEmpty"
+            } else if retained {
+                status = "presentButEmptyOrUnchecked"
+            } else if fileName == "manga_probe_progress.json" {
+                status = "notCheckedInApp"
+            } else {
+                status = "missing"
+            }
+            return MangaKoharuRenderOutputFileCheck(
+                fileName: fileName,
+                requiredInCIFast: requiredInCIFast,
+                requiredInFull: requiredInFull,
+                presentInRetainedOutputFiles: retained,
+                nonEmpty: nonEmpty,
+                source: source,
+                status: status,
+                failureMeans: "CI artifact or App sandbox output is missing \(fileName)",
+                recommendedAction: status == "presentNonEmpty" ? "keepReportOnly" : "inspectRenderOutputExport"
+            )
+        }
+
+        func renderStatus(for block: MangaOverlayProbeBlock, failureOverlayLocked: Bool) -> String {
+            if block.renderTextTruncated {
+                return "textTruncated"
+            }
+            if block.renderMaskOverflowPixelCount > 0 {
+                return "maskOverflowUnresolved"
+            }
+            if block.safeLayoutRect == nil {
+                return "safeLayoutMissing"
+            }
+            if block.renderCollisionChecked && !block.renderCollisionResolved {
+                return "renderCollisionUnresolved"
+            }
+            if !block.blockPassed && failureOverlayLocked {
+                return "failureOverlayStable"
+            }
+            if block.glyphMaskPixelCount <= 0 {
+                return "glyphMaskMissingButAllowed"
+            }
+            if block.backgroundFillApplied {
+                return "backgroundFillGuarded"
+            }
+            return "renderStable"
+        }
+
+        func primaryRisk(for block: MangaOverlayProbeBlock, failureOverlayLocked: Bool) -> String {
+            if block.renderTextTruncated { return "textTruncated" }
+            if block.renderMaskOverflowPixelCount > 0 { return "maskOverflowUnresolved" }
+            if block.renderCollisionChecked && !block.renderCollisionResolved { return "renderCollisionUnresolved" }
+            if block.safeLayoutRect == nil { return "safeLayoutMissing" }
+            if !block.blockPassed && !failureOverlayLocked { return "failureOverlayMissing" }
+            if block.glyphMaskPixelCount <= 0 { return "glyphMaskMissingAllowed" }
+            return "none"
+        }
+
+        var blockLocks: [MangaKoharuRenderBlockLock] = []
+        blockLocks.reserveCapacity(blocks.count)
+        for block in blocks {
+            let mask = bubbleMaskByBlock[block.index]
+            let segment = segmentByBlock[block.index]
+            let failureOverlayRequired = !block.blockPassed
+            let expectedFallback = "翻译失败\n\(block.finalTextUsedForTranslation)"
+            let failureOverlayLocked = !failureOverlayRequired
+                || block.translatedText.trimmingCharacters(in: .whitespacesAndNewlines) == expectedFallback
+            let status = renderStatus(for: block, failureOverlayLocked: failureOverlayLocked)
+            let risk = primaryRisk(for: block, failureOverlayLocked: failureOverlayLocked)
+            let nextAction = risk == "none" || risk == "glyphMaskMissingAllowed"
+                ? "keepRenderLockReportOnly"
+                : "inspectRenderLockGateLedger"
+            blockLocks.append(
+                MangaKoharuRenderBlockLock(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    blockPassed: block.blockPassed,
+                    failureCategory: block.failureCategory,
+                    failureReasons: block.failureReasons,
+                    safeLayoutRect: block.safeLayoutRect,
+                    safeLayoutSource: block.safeLayoutSource,
+                    maskSafeRect: block.maskSafeRect ?? mask?.maskSafeRect,
+                    maskDominantBubbleID: mask?.maskDominantBubbleID,
+                    maskDominantCoverage: mask?.maskDominantCoverageRatio,
+                    maskBubbleIDConsistent: mask?.bubbleIDConsistent,
+                    renderCollisionChecked: block.renderCollisionChecked,
+                    renderCollisionInitialOverflow: block.renderCollisionInitialOverflow,
+                    renderCollisionResolved: block.renderCollisionResolved,
+                    renderMaskCollisionChecked: block.renderMaskCollisionChecked,
+                    renderMaskCollisionResolved: block.renderMaskCollisionResolved,
+                    renderMaskOverflowPixelCount: block.renderMaskOverflowPixelCount,
+                    renderFontSize: block.renderFontSize,
+                    renderMinFontSizeReached: block.renderMinFontSizeReached,
+                    renderTextTruncated: block.renderTextTruncated,
+                    renderNonTransparentBounds: block.renderNonTransparentBounds,
+                    glyphMaskPixelCount: block.glyphMaskPixelCount,
+                    glyphMaskFillRectCount: block.glyphMaskFillRects.count,
+                    backgroundFillApplied: block.backgroundFillApplied,
+                    backgroundFillColor: block.backgroundFillColor,
+                    failureOverlayRequired: failureOverlayRequired,
+                    failureOverlayLocked: failureOverlayLocked,
+                    translationCandidateForRender: block.translationCandidate,
+                    fallbackTextForRender: expectedFallback,
+                    renderStatus: status,
+                    primaryRenderRisk: risk,
+                    recommendedNextAction: nextAction,
+                    decisionSignals: [
+                        signal("safeLayoutSource", block.safeLayoutSource ?? "nil", source: "blocks.safeLayoutSource"),
+                        signal("renderCollisionResolved", String(block.renderCollisionResolved), source: "blocks.renderDiagnostics"),
+                        signal("renderMaskOverflowPixelCount", String(block.renderMaskOverflowPixelCount), source: "blocks.renderDiagnostics"),
+                        signal("failureOverlayLocked", String(failureOverlayLocked), source: "blocks.translatedText"),
+                        signal("segmentRenderMaskStatus", segment?.renderMaskStatus ?? "nil", source: "segmentMaskProxyCoverageScoreboardReport.blockScorecards")
+                    ],
+                    evaluationSignals: [
+                        signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                        signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
+                        signal("ocrSimilarityForEvaluation", block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    diagnosticOnly: true,
+                    wouldChangeMainFlow: false
+                )
+            )
+        }
+
+        let outputChecks = [
+            outputCheck("probe_report.json", requiredInCIFast: true, requiredInFull: true, source: "probeReportWrite"),
+            outputCheck("clean_text_diagnostic.json", requiredInCIFast: true, requiredInFull: true, source: "cleanTextDiagnosticWrite"),
+            outputCheck("1_ocr_probe_text.txt", requiredInCIFast: true, requiredInFull: true, source: "renderOutputs.writeOCRProbeText"),
+            outputCheck("1_debug_boxes.png", requiredInCIFast: true, requiredInFull: true, source: "renderOutputs.debugBoxesImage"),
+            outputCheck("1_translated_overlay.png", requiredInCIFast: true, requiredInFull: true, source: "renderOutputs.overlayImage"),
+            outputCheck("manga_probe_progress.json", requiredInCIFast: false, requiredInFull: false, source: "writeMangaProbeProgress")
+        ]
+
+        let renderCollisionCheckedBlocks = uniqueSorted(blockLocks.filter(\.renderCollisionChecked).map(\.blockIndex))
+        let renderCollisionResolvedBlocks = uniqueSorted(blockLocks.filter { $0.renderCollisionChecked && $0.renderCollisionResolved }.map(\.blockIndex))
+        let renderCollisionUnresolvedBlocks = uniqueSorted(blockLocks.filter { $0.renderCollisionChecked && !$0.renderCollisionResolved }.map(\.blockIndex))
+        let renderMaskCollisionCheckedBlocks = uniqueSorted(blockLocks.filter(\.renderMaskCollisionChecked).map(\.blockIndex))
+        let renderMaskCollisionResolvedBlocks = uniqueSorted(blockLocks.filter { $0.renderMaskCollisionChecked && $0.renderMaskCollisionResolved }.map(\.blockIndex))
+        let renderMaskOverflowBlocks = uniqueSorted(blockLocks.filter { $0.renderMaskOverflowPixelCount > 0 }.map(\.blockIndex))
+        let renderTextTruncatedBlocks = uniqueSorted(blockLocks.filter(\.renderTextTruncated).map(\.blockIndex))
+        let failureOverlayRequiredBlocks = uniqueSorted(blockLocks.filter(\.failureOverlayRequired).map(\.blockIndex))
+        let failureOverlayLockedBlocks = uniqueSorted(blockLocks.filter { $0.failureOverlayRequired && $0.failureOverlayLocked }.map(\.blockIndex))
+        let safeLayoutRectBlocks = uniqueSorted(blockLocks.filter { $0.safeLayoutRect != nil }.map(\.blockIndex))
+        let maskSafeRectBlocks = uniqueSorted(blockLocks.filter { $0.maskSafeRect != nil }.map(\.blockIndex))
+        let glyphMaskBlocks = uniqueSorted(blockLocks.filter { $0.glyphMaskPixelCount > 0 }.map(\.blockIndex))
+        let backgroundFillAppliedBlocks = uniqueSorted(blockLocks.filter(\.backgroundFillApplied).map(\.blockIndex))
+        let outputRequiredFailures = outputChecks.filter { $0.requiredInCIFast && !$0.nonEmpty }.map(\.fileName)
+        let renderIssueBlocks = uniqueSorted(blockLocks.filter { lock in
+            lock.renderTextTruncated
+                || lock.renderMaskOverflowPixelCount > 0
+                || (lock.renderCollisionChecked && !lock.renderCollisionResolved)
+                || lock.safeLayoutRect == nil
+                || (lock.failureOverlayRequired && !lock.failureOverlayLocked)
+        }.map(\.blockIndex))
+        let coreOutputFilesPresent = outputChecks
+            .filter(\.requiredInCIFast)
+            .allSatisfy(\.presentInRetainedOutputFiles)
+        let coreOutputFilesNonEmpty = outputChecks
+            .filter(\.requiredInCIFast)
+            .allSatisfy(\.nonEmpty)
+
+        let renderLockVerdict: String
+        if !coreOutputFilesPresent || !coreOutputFilesNonEmpty {
+            renderLockVerdict = "blockedByMissingOutputFile"
+        } else if renderCollisionCheckedBlocks.isEmpty && !blocks.isEmpty {
+            renderLockVerdict = "blockedByMissingRenderDiagnostics"
+        } else if !renderIssueBlocks.isEmpty {
+            renderLockVerdict = "openRenderIssueDetected"
+        } else if glyphMaskBlocks.count < blocks.count || backgroundFillAppliedBlocks.isEmpty {
+            renderLockVerdict = "renderStableWithProxyBoundaries"
+        } else {
+            renderLockVerdict = "renderLockedReportOnly"
+        }
+
+        func stage(
+            _ name: String,
+            artifact: String,
+            current: String,
+            status: String,
+            proxyOnly: Bool,
+            realAvailable: Bool,
+            reports: [String],
+            affected: [Int],
+            missing: [String],
+            locked: [String],
+            mustNot: [String],
+            decisions: [MangaKoharuRenderSignal],
+            evaluations: [MangaKoharuRenderSignal] = []
+        ) -> MangaKoharuRenderArtifactStage {
+            MangaKoharuRenderArtifactStage(
+                stageName: name,
+                referenceKoharuArtifact: artifact,
+                currentAITRANSArtifact: current,
+                stageStatus: status,
+                proxyOnly: proxyOnly,
+                realArtifactAvailable: realAvailable,
+                sourceReports: reports,
+                affectedBlocks: uniqueSorted(affected),
+                decisionSignals: decisions,
+                evaluationSignals: evaluations,
+                missingKoharuCapabilities: missing,
+                lockedInvariants: locked,
+                mustNotPromoteReasons: mustNot,
+                groundTruthUsedForDecision: false,
+                diagnosticOnly: true,
+                wouldChangeMainFlow: false
+            )
+        }
+
+        let renderedSpritesStatus = renderIssueBlocks.isEmpty ? "proxyStableReportOnly" : "openRenderIssueDetected"
+        let finalRenderStatus = outputRequiredFailures.isEmpty && renderIssueBlocks.isEmpty
+            ? "finalRenderLockedReportOnly"
+            : "openRenderIssueDetected"
+        let artifactStages = [
+            stage("RenderedSprites", artifact: "RenderedSprites", current: "AITRANS safeLayoutRect text drawing with offscreen collision diagnostics", status: renderedSpritesStatus, proxyOnly: true, realAvailable: false, reports: ["blocks.renderDiagnostics"], affected: renderIssueBlocks, missing: ["real Koharu RenderedSprites artifact", "font direction prediction", "sprite alpha mask export"], locked: ["safeLayoutRect present before overlay draw", "text truncation recorded", "offscreen collision diagnostics preserved"], mustNot: ["doNotChangeOverlayRenderer", "doNotPromoteAsRealKoharuRenderer"], decisions: [signal("renderIssueBlocks", joined(renderIssueBlocks), source: "koharuRenderRegressionLockReport")]),
+            stage("FinalRender", artifact: "FinalRender", current: "AITRANS debug boxes and translated overlay PNG", status: finalRenderStatus, proxyOnly: true, realAvailable: false, reports: ["outputFiles", "renderOutputs"], affected: renderIssueBlocks, missing: ["real Koharu FinalRender artifact", "pixel-level text presence proof"], locked: ["1_debug_boxes.png retained", "1_translated_overlay.png retained", "failed blocks still use fallback overlay text"], mustNot: ["doNotParseGroundTruthForRenderGate"], decisions: [signal("coreOutputFilesNonEmpty", String(coreOutputFilesNonEmpty), source: "outputFileChecks")]),
+            stage("BubbleIndexProxy", artifact: "BubbleIndex", current: "BubbleMask instance ID approximation and mask-safe rect", status: bubbleMaskReport == nil ? "missingUpstreamReport" : "proxyStableReportOnly", proxyOnly: true, realAvailable: false, reports: ["bubbleMaskReport"], affected: diagnostics.renderCollisionUnresolvedBlocks, missing: ["real BubbleMask distance transform", "real BubbleIndex artifact"], locked: ["maskSafeRect remains report-only safe layout evidence"], mustNot: ["doNotTreatBubbleMaskProxyAsRealArtifact"], decisions: [signal("maskSafeRectBlocks", joined(maskSafeRectBlocks), source: "blocks.maskSafeRect")]),
+            stage("GlyphEraseProxy", artifact: "SegmentMask", current: "glyph mask fill rects and guarded background fill", status: glyphMaskBlocks.isEmpty ? "proxyMissingButAllowed" : "proxyStableReportOnly", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport", "blocks.glyphMask"], affected: uniqueSorted(blocks.map(\.index).filter { !glyphMaskBlocks.contains($0) }), missing: ["real SegmentMask", "real inpainting"], locked: ["glyphMaskFillRects do not alter main OCR or translation", "background fill remains guarded by sampled color"], mustNot: ["doNotUseGlyphMaskAsRealSegmentMask"], decisions: [signal("glyphMaskBlocks", joined(glyphMaskBlocks), source: "blocks.glyphMask")]),
+            stage("OutputArtifacts", artifact: "FinalRender", current: "App sandbox retained JSON/TXT/PNG files", status: outputRequiredFailures.isEmpty ? "coreOutputsLocked" : "missingRequiredOutput", proxyOnly: false, realAvailable: outputRequiredFailures.isEmpty, reports: ["outputFileChecks"], affected: outputRequiredFailures.isEmpty ? [] : blocks.map(\.index), missing: outputRequiredFailures, locked: ["probe_report.json", "clean_text_diagnostic.json", "1_ocr_probe_text.txt", "1_debug_boxes.png", "1_translated_overlay.png"], mustNot: ["doNotDependOnRepositoryRootOutputPath"], decisions: [signal("missingOutputFiles", outputRequiredFailures.joined(separator: ","), source: "outputFileChecks")])
+        ]
+
+        func gate(
+            _ id: String,
+            name: String,
+            scope: String,
+            status: String,
+            threshold: String,
+            affected: [Int],
+            failureMeans: String,
+            action: String,
+            decisions: [MangaKoharuRenderSignal]
+        ) -> MangaKoharuRenderGate {
+            MangaKoharuRenderGate(
+                gateID: id,
+                gateName: name,
+                scope: scope,
+                status: status,
+                threshold: threshold,
+                affectedBlocks: uniqueSorted(affected),
+                decisionSignals: decisions,
+                failureMeans: failureMeans,
+                recommendedAction: action,
+                groundTruthUsedForDecision: false
+            )
+        }
+
+        let missingSafeLayoutBlocks = uniqueSorted(blocks.map(\.index).filter { !safeLayoutRectBlocks.contains($0) })
+        let gateLedger = [
+            gate("G-render-lock-no-main-flow-mutation", name: "No main flow mutation", scope: "report", status: "passed", threshold: "wouldChangeMainFlow=false", affected: [], failureMeans: "render lock changes OCR, translation, safe layout, glyph mask, background fill, or PNG drawing", action: "revertBehavioralChange", decisions: [signal("wouldChangeMainFlow", "false", source: "koharuRenderRegressionLockReport")]),
+            gate("G-render-lock-no-ground-truth-decision", name: "No ground truth decision", scope: "report", status: "passed", threshold: "groundTruthUsedForDecision=false", affected: [], failureMeans: "ground truth influences render verdict, status, or next action", action: "moveGroundTruthToEvaluationSignalsOnly", decisions: [signal("groundTruthUsedForDecision", "false", source: "koharuRenderRegressionLockReport")]),
+            gate("G-render-failure-overlay-contract", name: "Failure overlay contract", scope: "FinalRender", status: failureOverlayRequiredBlocks == failureOverlayLockedBlocks ? "passed" : "blocked", threshold: "every failed block has fallback overlay text", affected: uniqueSorted(failureOverlayRequiredBlocks.filter { !failureOverlayLockedBlocks.contains($0) }), failureMeans: "failed block may disappear from translated overlay", action: "inspectFailureOverlayFallback", decisions: [signal("failureOverlayRequiredBlocks", joined(failureOverlayRequiredBlocks), source: "blocks.blockPassed"), signal("failureOverlayLockedBlocks", joined(failureOverlayLockedBlocks), source: "blocks.translatedText")]),
+            gate("G-render-safe-layout-present", name: "Safe layout present", scope: "RenderedSprites", status: missingSafeLayoutBlocks.isEmpty ? "passed" : "blocked", threshold: "safeLayoutRect present for every final block", affected: missingSafeLayoutBlocks, failureMeans: "overlay falls back to expanded OCR bbox without safe layout evidence", action: "inspectSafeLayoutDiagnostics", decisions: [signal("safeLayoutRectBlocks", joined(safeLayoutRectBlocks), source: "blocks.safeLayoutRect")]),
+            gate("G-render-no-unresolved-overflow", name: "No unresolved overflow", scope: "RenderedSprites", status: renderCollisionUnresolvedBlocks.isEmpty && renderMaskOverflowBlocks.isEmpty ? "passed" : "blocked", threshold: "render collision and mask overflow resolved", affected: uniqueSorted(renderCollisionUnresolvedBlocks + renderMaskOverflowBlocks), failureMeans: "rendered text or mask may overflow the target safe area", action: "inspectRenderCollisionDiagnostics", decisions: [signal("renderCollisionUnresolvedBlocks", joined(renderCollisionUnresolvedBlocks), source: "blocks.renderDiagnostics"), signal("renderMaskOverflowBlocks", joined(renderMaskOverflowBlocks), source: "blocks.renderMaskDiagnostics")]),
+            gate("G-render-no-text-truncation", name: "No text truncation", scope: "RenderedSprites", status: renderTextTruncatedBlocks.isEmpty ? "passed" : "blocked", threshold: "renderTextTruncated=false", affected: renderTextTruncatedBlocks, failureMeans: "translated overlay text is clipped after min font fallback", action: "inspectRenderFontSizing", decisions: [signal("renderTextTruncatedBlocks", joined(renderTextTruncatedBlocks), source: "blocks.renderDiagnostics")]),
+            gate("G-render-mask-collision-resolved", name: "Render mask collision resolved", scope: "FinalRender", status: renderMaskCollisionCheckedBlocks.count == renderMaskCollisionResolvedBlocks.count ? "passed" : "blocked", threshold: "all checked render mask collisions resolved", affected: uniqueSorted(renderMaskCollisionCheckedBlocks.filter { !renderMaskCollisionResolvedBlocks.contains($0) }), failureMeans: "mask-safe layout still collides with bubble mask", action: "inspectMaskSafeRect", decisions: [signal("renderMaskCollisionCheckedBlocks", joined(renderMaskCollisionCheckedBlocks), source: "blocks.renderMaskDiagnostics")]),
+            gate("G-render-core-png-retained", name: "Core PNG retained", scope: "OutputArtifacts", status: coreOutputFilesNonEmpty ? "passed" : "blocked", threshold: "required ci-fast files are retained and non-empty", affected: outputRequiredFailures.isEmpty ? [] : blocks.map(\.index), failureMeans: "CI artifact cannot validate core render outputs", action: "inspectRenderOutputExport", decisions: [signal("missingOutputFiles", outputRequiredFailures.joined(separator: ","), source: "outputFileChecks")]),
+            gate("G-render-glyph-mask-boundary", name: "Glyph mask boundary", scope: "GlyphEraseProxy", status: "proxyOnly", threshold: "proxyNotRealKoharuRenderer=true", affected: uniqueSorted(blocks.map(\.index).filter { !glyphMaskBlocks.contains($0) }), failureMeans: "glyph mask proxy is promoted as real SegmentMask or inpainting", action: "keepProxyBoundary", decisions: [signal("glyphMaskBlocks", joined(glyphMaskBlocks), source: "blocks.glyphMask")]),
+            gate("G-render-background-fill-guardrail", name: "Background fill guardrail", scope: "GlyphEraseProxy", status: "reportOnly", threshold: "background fill is existing renderer behavior only", affected: backgroundFillAppliedBlocks, failureMeans: "render lock changes fill behavior or claims real inpainting", action: "keepBackgroundFillReportOnly", decisions: [signal("backgroundFillAppliedBlocks", joined(backgroundFillAppliedBlocks), source: "blocks.backgroundFill")]),
+            gate("G-render-proxy-boundary", name: "Proxy boundary", scope: "Koharu", status: "passed", threshold: "proxyNotRealKoharuRenderer=true", affected: blocks.map(\.index), failureMeans: "AITRANS native renderer is mislabeled as real Koharu renderer", action: "keepProxyLabel", decisions: [signal("proxyNotRealKoharuRenderer", "true", source: "koharuRenderRegressionLockReport")]),
+            gate("G-koharu-convergence-workitem-linked", name: "Koharu convergence work item linked", scope: "convergence", status: "passed", threshold: "WI-render-regression-lock has source report", affected: renderIssueBlocks, failureMeans: "v1.28 convergence remains open without v1.30 ledger", action: "linkRenderLockInConvergence", decisions: [signal("referenceWorkItemID", "WI-render-regression-lock", source: "koharuRenderRegressionLockReport")]),
+            gate("G-ci-fast-render-lock-availability", name: "CI fast render lock availability", scope: "ci-fast", status: "passed", threshold: "report can run in ci-fast without full contact sheet", affected: [], failureMeans: "render lock depends on full-only diagnostics", action: "keepCIFastInputsOnly", decisions: [signal("requiredOutputChecks", outputChecks.filter(\.requiredInCIFast).map(\.fileName).joined(separator: ","), source: "outputFileChecks")])
+        ]
+
+        return MangaKoharuRenderRegressionLockReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referenceWorkItemID: "WI-render-regression-lock",
+            referencePipeline: "Koharu",
+            evaluatedBlockCount: blocks.count,
+            renderedSpritesStageStatus: renderedSpritesStatus,
+            finalRenderStageStatus: finalRenderStatus,
+            renderLockVerdict: renderLockVerdict,
+            renderLockVerdictBreakdown: countBy([renderLockVerdict]),
+            renderStatusBreakdown: countBy(blockLocks.map(\.renderStatus)),
+            safeLayoutSourceBreakdown: countBy(blockLocks.map { $0.safeLayoutSource ?? "nil" }),
+            backgroundFillStatusBreakdown: countBy(blockLocks.map { $0.backgroundFillApplied ? "backgroundFillApplied" : "sampledBackgroundFill" }),
+            glyphMaskStatusBreakdown: countBy(blockLocks.map { $0.glyphMaskPixelCount > 0 ? "glyphMaskAvailable" : "glyphMaskMissingButAllowed" }),
+            failureOverlayStatusBreakdown: countBy(blockLocks.map { $0.failureOverlayRequired ? ($0.failureOverlayLocked ? "failureOverlayLocked" : "failureOverlayMissing") : "notRequired" }),
+            outputFileStatusBreakdown: countBy(outputChecks.map(\.status)),
+            renderCollisionCheckedBlocks: renderCollisionCheckedBlocks,
+            renderCollisionResolvedBlocks: renderCollisionResolvedBlocks,
+            renderCollisionUnresolvedBlocks: renderCollisionUnresolvedBlocks,
+            renderMaskCollisionCheckedBlocks: renderMaskCollisionCheckedBlocks,
+            renderMaskCollisionResolvedBlocks: renderMaskCollisionResolvedBlocks,
+            renderMaskOverflowBlocks: renderMaskOverflowBlocks,
+            renderTextTruncatedBlocks: renderTextTruncatedBlocks,
+            renderIssueBlocks: renderIssueBlocks,
+            failureOverlayRequiredBlocks: failureOverlayRequiredBlocks,
+            failureOverlayLockedBlocks: failureOverlayLockedBlocks,
+            safeLayoutRectBlocks: safeLayoutRectBlocks,
+            maskSafeRectBlocks: maskSafeRectBlocks,
+            glyphMaskBlocks: glyphMaskBlocks,
+            backgroundFillAppliedBlocks: backgroundFillAppliedBlocks,
+            coreOutputFilesPresent: coreOutputFilesPresent,
+            coreOutputFilesNonEmpty: coreOutputFilesNonEmpty,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            proxyNotRealKoharuRenderer: true,
+            blockLocks: blockLocks,
+            artifactStages: artifactStages,
+            outputFileChecks: outputChecks,
+            gateLedger: gateLedger,
+            notes: [
+                "koharuRenderRegressionLockReport executes WI-render-regression-lock as a report-only RenderedSprites / FinalRender ledger.",
+                "The report uses existing safeLayoutRect, render diagnostics, glyph mask, background fill, failure overlay text, and App sandbox output paths only.",
+                "It does not change overlay rendering, safeLayoutRect, glyphMaskFillRects, background fill behavior, OCR, translation, blockPassed, failureCategory, currentBlockSource, or metrics history.",
+                "proxyNotRealKoharuRenderer=true: AITRANS native/proxy renderer is not a real Koharu renderer, BubbleMask distance transform, SegmentMask, RenderedSprites artifact, or inpainting implementation."
+            ]
+        )
+    }
+
     private static func makeKoharuArtifactConvergenceReport(
         blocks: [MangaOverlayProbeBlock],
         diagnostics: MangaOverlayProbeDiagnostics,
@@ -13071,7 +13521,8 @@ final class TranslationSessionStore: ObservableObject {
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
         externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?,
         cleanTextDiagnostic: MangaCleanTextDiagnosticReport?,
-        translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
+        translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -13124,6 +13575,30 @@ final class TranslationSessionStore: ObservableObject {
         let translationFloorNextAction = translationFloorVerdict == "promptVariantPromisingReportOnly"
             ? "openPromptPromotionShadowGate"
             : "keepModelFloorOpenAndConsiderModelComparison"
+        let renderLockExecuted = koharuRenderRegressionLockReport?.enabled == true
+        let renderLockVerdict = koharuRenderRegressionLockReport?.renderLockVerdict ?? "notExecuted"
+        let renderIssueBlocks = uniqueSorted(koharuRenderRegressionLockReport?.renderIssueBlocks ?? [])
+        let renderLockStatus: String
+        if !renderLockExecuted {
+            renderLockStatus = "openRenderRegressionLock"
+        } else if renderLockVerdict == "openRenderIssueDetected"
+            || renderLockVerdict == "blockedByMissingOutputFile"
+            || renderLockVerdict == "blockedByMissingRenderDiagnostics" {
+            renderLockStatus = "openRenderIssueDetected"
+        } else {
+            renderLockStatus = "closedReportOnly"
+        }
+        let renderLockBlockers: [String]
+        if !renderLockExecuted {
+            renderLockBlockers = ["not implemented before v1.30", "must not change overlay renderer in convergence report"]
+        } else if renderLockStatus == "openRenderIssueDetected" {
+            renderLockBlockers = ["render lock gates affected blocks: \(joined(renderIssueBlocks))"]
+        } else {
+            renderLockBlockers = []
+        }
+        let renderLockNextAction = renderLockStatus == "closedReportOnly"
+            ? "keepRenderLockReportOnly"
+            : "inspectRenderLockGateLedger"
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -13289,14 +13764,18 @@ final class TranslationSessionStore: ObservableObject {
                 renderLocked: renderLock,
                 needsReal: realArtifactNeeded
             )
-            let closedWorkItems = [
+            var closedWorkItems = [
                 nativeTextBoxProxyLedgerReport == nil ? nil : "WI-native-textbox-artifact-scorecard",
                 bubbleMaskAssignmentSplitScoreboardReport == nil ? nil : "WI-bubblemask-assignment-split-scorecard",
                 segmentMaskProxyCoverageScoreboardReport == nil ? nil : "WI-segmentmask-proxy-coverage-scorecard"
             ].compactMap { $0 }
             var openWorkItems: [String] = []
             if modelLimited { openWorkItems.append("WI-translation-model-floor-comparison") }
-            if renderLock || nextAction == "routeToRenderRegressionLock" { openWorkItems.append("WI-render-regression-lock") }
+            if renderLockStatus == "closedReportOnly" {
+                closedWorkItems.append("WI-render-regression-lock")
+            } else if renderLock || nextAction == "routeToRenderRegressionLock" {
+                openWorkItems.append("WI-render-regression-lock")
+            }
             if realArtifactNeeded { openWorkItems.append("WI-external-artifact-optional-handoff") }
             var mustNotPromote: [String] = []
             mustNotPromote.append(contentsOf: textBox?.mustNotPromoteReasons ?? [])
@@ -13418,8 +13897,8 @@ final class TranslationSessionStore: ObservableObject {
             stage("OcrText", artifact: "OcrText", current: "fused whole-page + bubble-first OCR", status: diagnostics.likelyOCRIssueBlocks.isEmpty ? "proxyStableReportOnly" : "proxyBlocked", proxyOnly: false, realAvailable: true, reports: ["diagnostics", "nativeTextBoxProxyLedgerReport"], affected: diagnostics.likelyOCRIssueBlocks, firstBlocking: diagnostics.likelyOCRIssueBlocks.isEmpty ? "none" : "OcrText", closed: [], blocked: textBoxStopBlocks.isEmpty ? [] : ["WI-native-textbox-artifact-scorecard"], nextAction: textBoxStopBlocks.isEmpty ? "keepReportOnly" : "stopLocalCropLineDeskewTuning", decisions: [signal("likelyOCRIssueBlocks", joined(diagnostics.likelyOCRIssueBlocks), source: "diagnostics"), signal("textBoxStoplistBlocks", joined(textBoxStopBlocks), source: "nativeTextBoxProxyLedgerReport")], evaluations: evaluationSignals, mustNot: ["doNotUseGroundTruthToSelectOCRCandidate"]),
             stage("Translations", artifact: "Translations", current: "Local GGUF deterministic block translation plus v1.29 clean text floor comparison", status: translationFloorExecuted ? translationFloorStatus : (modelFloorLimitedBlocks.isEmpty ? "proxyStableReportOnly" : "modelLimited"), proxyOnly: false, realAvailable: true, reports: ["cleanTextDiagnostic", "translationModelFloorComparisonReport", "diagnostics"], affected: modelFloorLimitedBlocks, firstBlocking: modelFloorLimitedBlocks.isEmpty ? "none" : "Translations", closed: translationFloorStatus == "closedReportOnly" ? ["WI-translation-model-floor-comparison"] : [], blocked: translationFloorStatus == "closedReportOnly" ? [] : ["WI-translation-model-floor-comparison"], nextAction: translationFloorNextAction, decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic"), signal("translationFloorVerdict", translationFloorVerdict, source: "translationModelFloorComparisonReport"), signal("translationFailureBreakdown", diagnostics.translationFailureBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "diagnostics")], mustNot: ["doNotChangePromptOrModelInConvergenceReport"]),
             stage("Inpainted", artifact: "Inpainted", current: "glyph erase/background fill proxy", status: "proxyStableReportOnly", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport", "blocks.backgroundFill"], affected: segmentMaskProxyCoverageScoreboardReport?.backgroundFillAppliedBlocks ?? [], firstBlocking: "none", closed: segmentMaskProxyCoverageScoreboardReport == nil ? [] : ["WI-segmentmask-proxy-coverage-scorecard"], blocked: [], nextAction: "keepReportOnly", decisions: [signal("inpaintingImplemented", "false", source: "segmentMaskProxyCoverageScoreboardReport.cleanupLedgers")], mustNot: ["doNotImplementInpaintingInThisReport"]),
-            stage("RenderedSprites", artifact: "RenderedSprites", current: "safeLayoutRect overlay text renderer", status: "renderStableLocked", proxyOnly: false, realAvailable: true, reports: ["blocks.renderDiagnostics"], affected: renderRegressionLockBlocks, firstBlocking: "none", closed: [], blocked: ["WI-render-regression-lock"], nextAction: "routeToRenderRegressionLock", decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics")], mustNot: ["doNotChangeOverlayRendererInConvergenceReport"]),
-            stage("FinalRender", artifact: "FinalRender", current: "debug boxes and translated overlay PNG", status: "renderStableLocked", proxyOnly: false, realAvailable: true, reports: ["outputFiles", "blocks.renderDiagnostics"], affected: renderRegressionLockBlocks, firstBlocking: "none", closed: [], blocked: ["WI-render-regression-lock"], nextAction: "routeToRenderRegressionLock", decisions: [signal("renderTextTruncatedBlocks", joined(diagnostics.renderTextTruncatedBlocks), source: "diagnostics"), signal("renderCollisionUnresolvedBlocks", joined(diagnostics.renderCollisionUnresolvedBlocks), source: "diagnostics")], mustNot: ["doNotChangePNGRenderingInConvergenceReport"]),
+            stage("RenderedSprites", artifact: "RenderedSprites", current: "safeLayoutRect overlay text renderer plus v1.30 render lock", status: renderLockStatus == "closedReportOnly" ? "renderLockedReportOnly" : "renderIssueDetected", proxyOnly: true, realAvailable: false, reports: ["blocks.renderDiagnostics", "koharuRenderRegressionLockReport"], affected: renderLockStatus == "closedReportOnly" ? renderRegressionLockBlocks : renderIssueBlocks, firstBlocking: renderLockStatus == "closedReportOnly" ? "none" : "RenderedSprites", closed: renderLockStatus == "closedReportOnly" ? ["WI-render-regression-lock"] : [], blocked: renderLockStatus == "closedReportOnly" ? [] : ["WI-render-regression-lock"], nextAction: renderLockNextAction, decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics"), signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport")], mustNot: ["doNotChangeOverlayRendererInConvergenceReport", "doNotPromoteAITRANSRendererAsKoharuRenderedSprites"]),
+            stage("FinalRender", artifact: "FinalRender", current: "debug boxes and translated overlay PNG plus v1.30 output file ledger", status: renderLockStatus == "closedReportOnly" ? "finalRenderLockedReportOnly" : "renderIssueDetected", proxyOnly: true, realAvailable: false, reports: ["outputFiles", "blocks.renderDiagnostics", "koharuRenderRegressionLockReport"], affected: renderLockStatus == "closedReportOnly" ? renderRegressionLockBlocks : renderIssueBlocks, firstBlocking: renderLockStatus == "closedReportOnly" ? "none" : "FinalRender", closed: renderLockStatus == "closedReportOnly" ? ["WI-render-regression-lock"] : [], blocked: renderLockStatus == "closedReportOnly" ? [] : ["WI-render-regression-lock"], nextAction: renderLockNextAction, decisions: [signal("renderTextTruncatedBlocks", joined(diagnostics.renderTextTruncatedBlocks), source: "diagnostics"), signal("renderCollisionUnresolvedBlocks", joined(diagnostics.renderCollisionUnresolvedBlocks), source: "diagnostics"), signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport")], mustNot: ["doNotChangePNGRenderingInConvergenceReport", "doNotTreatOutputFileLedgerAsPixelProof"]),
             stage("ExternalArtifacts", artifact: "ExternalArtifacts", current: "test/koharu_artifacts readiness gate", status: externalReady ? "nativeReady" : "externalOptionalMissing", proxyOnly: false, realAvailable: externalReady, reports: ["externalArtifactReadinessReport", "externalTextBoxShadowOCRReport"], affected: needsRealArtifactBlocks, firstBlocking: externalReady ? "none" : "ExternalArtifacts", closed: [], blocked: ["WI-external-artifact-optional-handoff"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"), signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport")], mustNot: ["doNotCreateOrCopyActiveExternalArtifact"])
         ]
 
@@ -13464,7 +13943,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-bubblemask-assignment-split-scorecard", title: "BubbleMask assignment and split scoreboard", status: bubbleMaskAssignmentSplitScoreboardReport == nil ? "manualReviewOnly" : "closedReportOnly", sourceReport: "bubbleMaskAssignmentSplitScoreboardReport", stages: ["BubbleMask"], blocks: bubbleNeedBlocks, version: bubbleMaskAssignmentSplitScoreboardReport == nil ? nil : "v1.26", blockers: bubbleNeedBlocks.isEmpty ? [] : ["real BubbleMask artifact needed for promotion"], nextAction: bubbleNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(bubbleMaskAssignmentSplitScoreboardReport != nil), source: "bubbleMaskAssignmentSplitScoreboardReport")]),
             workItem("WI-segmentmask-proxy-coverage-scorecard", title: "SegmentMask proxy coverage and cleanup ledger", status: segmentMaskProxyCoverageScoreboardReport == nil ? "manualReviewOnly" : "closedReportOnly", sourceReport: "segmentMaskProxyCoverageScoreboardReport", stages: ["SegmentMask", "Inpainted"], blocks: segmentNeedBlocks, version: segmentMaskProxyCoverageScoreboardReport == nil ? nil : "v1.27", blockers: segmentNeedBlocks.isEmpty ? [] : ["real SegmentMask artifact needed for promotion"], nextAction: segmentNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(segmentMaskProxyCoverageScoreboardReport != nil), source: "segmentMaskProxyCoverageScoreboardReport"), signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
             workItem("WI-translation-model-floor-comparison", title: "Translation model floor comparison", status: translationFloorStatus, sourceReport: translationFloorExecuted ? "translationModelFloorComparisonReport" : "cleanTextDiagnostic", stages: ["Translations"], blocks: modelFloorLimitedBlocks, version: translationFloorExecuted ? "v1.29" : nil, blockers: translationFloorBlockers, nextAction: translationFloorNextAction, ciFast: true, full: false, external: false, decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic"), signal("translationFloorVerdict", translationFloorVerdict, source: "translationModelFloorComparisonReport")]),
-            workItem("WI-render-regression-lock", title: "Render regression lock", status: "openRenderRegressionLock", sourceReport: "blocks.renderDiagnostics", stages: ["RenderedSprites", "FinalRender"], blocks: renderRegressionLockBlocks, version: nil, blockers: ["not implemented in v1.28", "must not change overlay renderer in convergence report"], nextAction: "routeToRenderRegressionLock", ciFast: true, full: false, external: false, decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics")]),
+            workItem("WI-render-regression-lock", title: "Render regression lock", status: renderLockStatus, sourceReport: renderLockExecuted ? "koharuRenderRegressionLockReport" : "blocks.renderDiagnostics", stages: ["RenderedSprites", "FinalRender"], blocks: renderLockStatus == "openRenderIssueDetected" ? renderIssueBlocks : renderRegressionLockBlocks, version: renderLockExecuted ? "v1.30" : nil, blockers: renderLockBlockers, nextAction: renderLockNextAction, ciFast: true, full: false, external: false, decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics"), signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport")]),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
@@ -13476,7 +13955,8 @@ final class TranslationSessionStore: ObservableObject {
             nativeTextBoxProxyLedgerReport == nil ? "nativeTextBoxProxyLedgerReport" : nil,
             bubbleMaskAssignmentSplitScoreboardReport == nil ? "bubbleMaskAssignmentSplitScoreboardReport" : nil,
             segmentMaskProxyCoverageScoreboardReport == nil ? "segmentMaskProxyCoverageScoreboardReport" : nil,
-            translationModelFloorComparisonReport == nil ? "translationModelFloorComparisonReport" : nil
+            translationModelFloorComparisonReport == nil ? "translationModelFloorComparisonReport" : nil,
+            koharuRenderRegressionLockReport == nil ? "koharuRenderRegressionLockReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -13511,7 +13991,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-bubblemask-workitem-closed-report-only", name: "BubbleMask work item closed report-only", scope: "BubbleMask", status: bubbleMaskAssignmentSplitScoreboardReport == nil ? "warning" : "passed", threshold: "bubbleMaskAssignmentSplitScoreboardReport present", affected: bubbleNeedBlocks, failureMeans: "v1.26 BubbleMask scoreboard is missing from convergence inputs", action: "restoreBubbleMaskAssignmentSplitScoreboardReport", decisions: [signal("reportAvailable", String(bubbleMaskAssignmentSplitScoreboardReport != nil), source: "bubbleMaskAssignmentSplitScoreboardReport")]),
             gate("G-segmentmask-workitem-closed-report-only", name: "SegmentMask work item closed report-only", scope: "SegmentMask", status: segmentMaskProxyCoverageScoreboardReport == nil ? "warning" : "passed", threshold: "segmentMaskProxyCoverageScoreboardReport present", affected: segmentNeedBlocks, failureMeans: "v1.27 SegmentMask scoreboard is missing from convergence inputs", action: "restoreSegmentMaskProxyCoverageScoreboardReport", decisions: [signal("reportAvailable", String(segmentMaskProxyCoverageScoreboardReport != nil), source: "segmentMaskProxyCoverageScoreboardReport")]),
             gate("G-translation-model-floor-executed", name: "Translation model floor comparison executed", scope: "Translations", status: translationFloorExecuted ? (translationFloorStatus == "closedReportOnly" ? "passed" : "warning") : "open", threshold: "translationModelFloorComparisonReport.enabled=true without prompt/model mutation", affected: modelFloorLimitedBlocks, failureMeans: "convergence report silently changes translation path or leaves v1.29 floor ledger unlinked", action: translationFloorNextAction, decisions: [signal("modelFloorLimitedBlocks", joined(modelFloorLimitedBlocks), source: "blocks,cleanTextDiagnostic"), signal("translationFloorVerdict", translationFloorVerdict, source: "translationModelFloorComparisonReport")]),
-            gate("G-render-regression-lock-open", name: "Render regression lock remains open", scope: "FinalRender", status: "open", threshold: "render diagnostics summarized without renderer mutation", affected: renderRegressionLockBlocks, failureMeans: "convergence report changes overlay rendering", action: "routeToRenderRegressionLock", decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics")]),
+            gate("G-render-regression-lock-executed", name: "Render regression lock executed", scope: "FinalRender", status: renderLockExecuted ? (renderLockStatus == "closedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuRenderRegressionLockReport.enabled=true without renderer mutation", affected: renderLockStatus == "openRenderIssueDetected" ? renderIssueBlocks : renderRegressionLockBlocks, failureMeans: "convergence report changes overlay rendering or leaves v1.30 render lock unlinked", action: renderLockNextAction, decisions: [signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport"), signal("renderIssueBlocks", joined(renderIssueBlocks), source: "koharuRenderRegressionLockReport")]),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
             gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
@@ -13528,12 +14008,13 @@ final class TranslationSessionStore: ObservableObject {
             "externalTextBoxShadowOCRReport",
             "cleanTextDiagnostic",
             "translationModelFloorComparisonReport",
+            "koharuRenderRegressionLockReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, and v1.29 translation model floor report-only scoreboards into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, and v1.30 render regression lock report-only scoreboards into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
