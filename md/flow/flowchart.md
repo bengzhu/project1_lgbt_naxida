@@ -102,6 +102,7 @@ flowchart TD
   KNS --> NTB["nativeTextBoxProxyLedgerReport<br/>TextBox proxy quality ledger / gates / stoplist"]
   NTB --> BMS["bubbleMaskAssignmentSplitScoreboardReport<br/>assignment / split / sibling layout scorecard"]
   BMS --> SMS["segmentMaskProxyCoverageScoreboardReport<br/>glyph cleanup / coverage / render mask ledger"]
+  SMS --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
   X --> R
@@ -126,6 +127,7 @@ flowchart TD
   NTB --> R
   BMS --> R
   SMS --> R
+  KAC --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
   M --> T["1_ocr_probe_text.txt<br/>逐块文本快照"]
@@ -145,6 +147,7 @@ flowchart TD
   NTB --> T
   BMS --> T
   SMS --> T
+  KAC --> T
 ```
 
 ## 3. Agent 迭代流程图
