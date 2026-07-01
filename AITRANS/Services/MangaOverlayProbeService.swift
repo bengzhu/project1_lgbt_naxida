@@ -754,6 +754,7 @@ struct MangaOverlayProbeService: Sendable {
         bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport? = nil,
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport? = nil,
         koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport? = nil,
+        translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -819,6 +820,7 @@ struct MangaOverlayProbeService: Sendable {
                 bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
                 segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                 koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
+                translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1486,6 +1488,7 @@ struct MangaOverlayProbeService: Sendable {
         bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?,
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?,
         koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?,
+        translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1568,6 +1571,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let koharuConvergencePathByBlock = Dictionary(
             uniqueKeysWithValues: (koharuArtifactConvergenceReport?.blockPaths ?? []).map { ($0.blockIndex, $0) }
+        )
+        let translationFloorNoisyByBlock = Dictionary(
+            uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1783,6 +1789,7 @@ struct MangaOverlayProbeService: Sendable {
             let segmentMaskProxySafeRectCoverage = segmentMaskProxyScoreboard?.safeRectCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let segmentMaskProxyMustNotPromote = segmentMaskProxyScoreboard?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
             let koharuArtifactPath = koharuConvergencePathByBlock[block.index]
+            let translationFloorNoisy = translationFloorNoisyByBlock[block.index]
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1846,6 +1853,7 @@ struct MangaOverlayProbeService: Sendable {
             bubbleMaskScoreboard: assignmentStatus=\(bubbleMaskScoreboard?.assignmentStatus ?? "nil") maskDominantBubbleID=\(bubbleMaskScoreboard?.maskDominantBubbleID.map(String.init) ?? "nil") splitRisk=\(bubbleMaskScoreboard?.splitRisk ?? "nil") splitCandidateIDs=[\(bubbleMaskScoreboardSplitIDs)] siblings=[\(bubbleMaskScoreboardSiblings)] siblingLayoutStatus=\(bubbleMaskScoreboard?.siblingLayoutStatus ?? "nil") renderMaskStatus=\(bubbleMaskScoreboard?.renderMaskStatus ?? "nil") nextAction=\(bubbleMaskScoreboard?.nextAction ?? "nil") mustNotPromote=\(bubbleMaskScoreboardMustNotPromote)
             segmentMaskProxyScoreboard: coverage=\(segmentMaskProxyScoreboard?.coverageStatus ?? "nil") cleanup=\(segmentMaskProxyScoreboard?.cleanupStatus ?? "nil") renderMask=\(segmentMaskProxyScoreboard?.renderMaskStatus ?? "nil") glyphPixels=\(segmentMaskProxyScoreboard.map { String($0.glyphMaskPixelCount) } ?? "nil") textBoxCoverage=\(segmentMaskProxyTextBoxCoverage) bubbleCoverage=\(segmentMaskProxyBubbleCoverage) safeRectCoverage=\(segmentMaskProxySafeRectCoverage) backgroundFill=\(segmentMaskProxyScoreboard.map { String($0.backgroundFillApplied) } ?? "nil") nextAction=\(segmentMaskProxyScoreboard?.nextAction ?? "nil") mustNotPromote=\(segmentMaskProxyMustNotPromote)
             koharuArtifactPath: firstBlockingArtifact=\(koharuArtifactPath?.firstBlockingArtifact ?? "nil") textBox=\(koharuArtifactPath?.textBoxStatus ?? "nil") bubble=\(koharuArtifactPath?.bubbleMaskStatus ?? "nil") segment=\(koharuArtifactPath?.segmentMaskStatus ?? "nil") translation=\(koharuArtifactPath?.translationStatus ?? "nil") render=\(koharuArtifactPath?.renderStatus ?? "nil") modelFloorLimited=\(koharuArtifactPath.map { String($0.modelFloorLimited) } ?? "nil") renderLocked=\(koharuArtifactPath.map { String($0.renderLocked) } ?? "nil") needsRealArtifact=\(koharuArtifactPath.map { String($0.needsRealArtifact) } ?? "nil") nextAction=\(koharuArtifactPath?.primaryNextAction ?? "nil")
+            translationFloorNoisyBlock: modelFloorLimited=\(translationFloorNoisy.map { String($0.modelFloorLimited) } ?? "nil") ocrInputSuspect=\(translationFloorNoisy.map { String($0.ocrInputSuspect) } ?? "nil") languageQualityFailure=\(translationFloorNoisy.map { String($0.translationLanguageQualityFailure) } ?? "nil") routingOutcome=\(translationFloorNoisy?.routingComparisonOutcome ?? "nil") nextAction=\(translationFloorNoisy?.recommendedNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1876,7 +1884,23 @@ struct MangaOverlayProbeService: Sendable {
             """
         }
         .joined(separator: "\n\n")
+        let translationFloorCleanCaseSummary = (translationModelFloorComparisonReport?.cleanCases ?? [])
+            .map { cleanCase in
+                let baseline = cleanCase.baselineCandidate.replacing("\n", with: " / ")
+                let variant = cleanCase.variantCandidate.replacing("\n", with: " / ")
+                return "translationFloorCleanCase: gtIndex=\(cleanCase.groundTruthIndex) baselinePassed=\(cleanCase.baselinePassed) variantPassed=\(cleanCase.variantPassed) outcome=\(cleanCase.promptVariantOutcome) baselineCandidate=\(baseline) variantCandidate=\(variant)"
+            }
+            .joined(separator: "\n")
+        let translationFloorPromptOutcomes = translationModelFloorComparisonReport?.promptVariantOutcomeBreakdown
+            .map { "\($0.key)=\($0.value)" }
+            .sorted()
+            .joined(separator: ",") ?? "nil"
         let externalSummary = """
+        translationModelFloorComparisonReport: enabled=\(translationModelFloorComparisonReport.map { String($0.enabled) } ?? "nil") cleanCases=\(translationModelFloorComparisonReport.map { String($0.evaluatedCleanCaseCount) } ?? "nil") noisyBlocks=\(translationModelFloorComparisonReport.map { String($0.evaluatedNoisyBlockCount) } ?? "nil") baselinePassRate=\(translationModelFloorComparisonReport.map { $0.baselinePassRate.formatted(.number.precision(.fractionLength(4))) } ?? "nil") variantPassRate=\(translationModelFloorComparisonReport.map { $0.variantPassRate.formatted(.number.precision(.fractionLength(4))) } ?? "nil") delta=\(translationModelFloorComparisonReport.map { $0.passRateDelta.formatted(.number.precision(.fractionLength(4))) } ?? "nil") floorVerdict=\(translationModelFloorComparisonReport?.floorVerdict ?? "nil")
+        promptVariantOutcome=\(translationFloorPromptOutcomes)
+        modelFloorBlocks=\(translationModelFloorComparisonReport?.noisyModelFloorBlocks.map(String.init).joined(separator: ",") ?? "nil") ocrSuspectBlocks=\(translationModelFloorComparisonReport?.noisyOCRSuspectBlocks.map(String.init).joined(separator: ",") ?? "nil") languageQualityBlocks=\(translationModelFloorComparisonReport?.noisyTranslationLanguageQualityBlocks.map(String.init).joined(separator: ",") ?? "nil")
+        batchFormatFailure=\(translationModelFloorComparisonReport.map { String($0.batchFormatFailure) } ?? "nil")
+        \(translationFloorCleanCaseSummary)
         externalArtifactReadiness: activeDirectory=\(externalArtifactReadinessReport.map { String($0.activeArtifactsDirectory) } ?? "nil") contractExampleOnly=\(externalArtifactReadinessReport.map { String($0.contractExampleOnly) } ?? "nil") shadowOCRAllowed=\(externalArtifactReadinessReport.map { String($0.externalTextBoxesShadowOCRAllowed) } ?? "nil") manifestFound=\(externalArtifactReadinessReport.map { String($0.manifestFound) } ?? "nil") textBoxesFound=\(externalArtifactReadinessReport.map { String($0.textBoxesFound) } ?? "nil") bubbleMaskFound=\(externalArtifactReadinessReport.map { String($0.bubbleMaskFound) } ?? "nil") segmentMaskFound=\(externalArtifactReadinessReport.map { String($0.segmentMaskFound) } ?? "nil") verdict=\(externalArtifactReadinessReport?.readinessVerdict ?? "nil") nextAction=\(externalArtifactReadinessReport?.nextAction ?? "nil") missing=\(externalArtifactReadinessReport?.missingArtifacts.joined(separator: ",") ?? "nil")
         externalTextBoxShadowOCR: enabled=\(externalTextBoxShadowOCRReport.map { String($0.enabled) } ?? "nil") executed=\(externalTextBoxShadowOCRReport.map { String($0.executed) } ?? "nil") gateVerdict=\(externalTextBoxShadowOCRReport?.gateVerdict ?? "nil") candidates=\(externalTextBoxShadowOCRReport.map { String($0.candidateCount) } ?? "nil") ocrExecuted=\(externalTextBoxShadowOCRReport.map { String($0.ocrExecutedCount) } ?? "nil") betterThanControl=\(externalTextBoxShadowOCRReport.map { String($0.betterThanControlCount) } ?? "nil") skipped=\(externalTextBoxShadowOCRReport?.skippedBlocks.map(String.init).joined(separator: ",") ?? "nil")
         internalStructureBottleneckReport: evaluated=\(internalStructureBottleneckReport.map { String($0.evaluatedBlockCount) } ?? "nil") primary=\(internalStructureBottleneckReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") recommended=\(internalStructureBottleneckReport?.recommendedActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") duplicateOrFragment=\(internalStructureBottleneckReport?.duplicateOrFragmentBlocks.map(String.init).joined(separator: ",") ?? "nil")

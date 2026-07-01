@@ -2945,6 +2945,123 @@ struct MangaCleanTextDiagnosticReport: Equatable, Codable, Sendable {
     var cases: [MangaCleanTextDiagnosticCase]
 }
 
+struct MangaTranslationModelFloorSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaTranslationModelFloorCleanCase: Equatable, Codable, Sendable {
+    var groundTruthIndex: Int
+    var groundTruthType: String
+    var sourceText: String
+    var baselinePrompt: String
+    var baselineRawOutput: String
+    var baselineCandidate: String
+    var baselineRawOutputClassification: String
+    var baselineCandidateClassification: String
+    var baselinePassed: Bool
+    var baselineFailureReasons: [String]
+    var variantPromptID: String
+    var variantPrompt: String
+    var variantRawOutput: String
+    var variantCandidate: String
+    var variantRawOutputClassification: String
+    var variantCandidateClassification: String
+    var variantPassed: Bool
+    var variantFailureReasons: [String]
+    var promptVariantOutcome: String
+    var latinLeakReduced: Bool
+    var emptyOutputFixed: Bool
+    var placeholderFixed: Bool
+    var shortChineseFixed: Bool
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaTranslationModelFloorNoisyBlockSummary: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var failureReasons: [String]
+    var finalTextUsedForTranslation: String
+    var translationCandidate: String
+    var rawOutputClassification: String
+    var candidateClassification: String
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var primaryBottleneckFromConvergence: String?
+    var routingComparisonOutcome: String?
+    var modelFloorLimited: Bool
+    var ocrInputSuspect: Bool
+    var translationLanguageQualityFailure: Bool
+    var recommendedNextAction: String
+    var decisionSignals: [MangaTranslationModelFloorSignal]
+    var evaluationSignals: [MangaTranslationModelFloorSignal]
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaTranslationModelFloorGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedCases: [Int]
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaTranslationModelFloorSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaTranslationModelFloorComparisonReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referenceWorkItemID: String
+    var evaluatedCleanCaseCount: Int
+    var evaluatedNoisyBlockCount: Int
+    var baselinePromptID: String
+    var variantPromptID: String
+    var decodingMode: String
+    var decodingSeed: UInt32?
+    var baselinePassRate: Double
+    var variantPassRate: Double
+    var passRateDelta: Double
+    var baselinePassedCases: [Int]
+    var variantPassedCases: [Int]
+    var variantFixedCases: [Int]
+    var variantRegressedCases: [Int]
+    var latinLeakReducedCases: [Int]
+    var emptyOutputFixedCases: [Int]
+    var placeholderFixedCases: [Int]
+    var formatFollowingFailureCases: [Int]
+    var noisyModelFloorBlocks: [Int]
+    var noisyOCRSuspectBlocks: [Int]
+    var noisyTranslationLanguageQualityBlocks: [Int]
+    var batchFormatFailure: Bool
+    var floorVerdict: String
+    var floorVerdictBreakdown: [String: Int]
+    var promptVariantOutcomeBreakdown: [String: Int]
+    var failureReasonBreakdown: [String: Int]
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var cleanTextGroundTruthUsedForModelFloorOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var cleanCases: [MangaTranslationModelFloorCleanCase]
+    var noisyBlockSummaries: [MangaTranslationModelFloorNoisyBlockSummary]
+    var gateLedger: [MangaTranslationModelFloorGate]
+    var notes: [String]
+}
+
 struct MangaBatchTranslationCase: Equatable, Codable, Sendable {
     var index: Int
     var tag: String
@@ -3028,6 +3145,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?
     var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
     var koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
+    var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
