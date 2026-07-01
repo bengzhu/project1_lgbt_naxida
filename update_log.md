@@ -145,6 +145,7 @@
 验证计划：
 
 - 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 退回修复：云端 run `28489045515` 在 `TranslationSessionStore.swift` 触发 Swift 编译失败，原因是 v1.26 scoreboard helper 对 `Bool` 字段 `bubbleIDConsistent` 调用了 `map`；已改为对可选 mask 本身转换为 `"true"` / `"false"` / `"nil"`，不改变报告语义或主流程。
 - 未跑本机 build / 探针，按规则交给云端验证。
 - 云端 `AITRANS CI Results` `ci-fast` 应证明 `bubbleMaskAssignmentSplitScoreboardReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`evaluatedBubbleCount == bubbleMaskReport.instanceCount`、`blockScorecards.count == totalBlocksDetected`、`bubbleScorecards.count == bubbleMaskReport.instanceCount`、`splitCandidateLedgers.count == bubbleSplitCandidateReport.candidateCount`、`gateLedger.count >= 10`，关键 breakdown 非空，且 `1_ocr_probe_text.txt` 包含新 summary 和逐块 `bubbleMaskScoreboard`。
 

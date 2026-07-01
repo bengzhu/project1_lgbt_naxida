@@ -11759,7 +11759,7 @@ final class TranslationSessionStore: ObservableObject {
             mustNotPromote.append("doesNotChangeSafeLayoutRect")
             mustNotPromote.append("groundTruthUsedOnlyForEvaluationSignals")
             let decisionSignals = [
-                signal("bubbleIDConsistent", mask?.bubbleIDConsistent.map(String.init) ?? "nil", source: "bubbleMaskReport.blockDiagnostics"),
+                signal("bubbleIDConsistent", mask.map { String($0.bubbleIDConsistent) } ?? "nil", source: "bubbleMaskReport.blockDiagnostics"),
                 signal("maskDominantCoverageRatio", mask?.maskDominantCoverageRatio.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "bubbleMaskReport.blockDiagnostics"),
                 signal("cropMaskCoverageRatio", mask?.cropMaskCoverageRatio?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "bubbleMaskReport.blockDiagnostics"),
                 signal("assignmentDecision", correction?.decision ?? "nil", source: "bubbleAssignmentCorrectionReport.diagnostics"),
