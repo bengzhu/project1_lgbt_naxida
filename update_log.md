@@ -115,6 +115,42 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.31：Koharu Pipeline Resolver 影子 DAG 阶段调度与阻塞传播
+日期：2026-07-01
+依据：`md/prompt/v1（漫画探针）/v1.31（KoharuPipelineResolver影子DAG阶段调度与阻塞传播）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuPipelineResolverReport`，用 Koharu `EngineInfo.needs / produces`、DAG resolver 和 Op preview 的结构组织现有 AITRANS 探针证据。
+- 报告输出 `nodes[]`、`edges[]`、逐块 `blockTraces[]`、`executionQueue[]`、`opPreviews[]` 和 `gateLedger[]`，覆盖 SourceImage、ContentCrop、Vision OCR、BubbleCandidates、BubbleMask/TextBox/SegmentMask proxy、OcrText、FusionCleanup、Translations、GlyphErase proxy、RenderedSprites proxy、FinalRender 和 ExternalArtifacts。
+- 逐块 trace 输出 `firstBlockedNodeID`、`firstBlockedReason`、downstream blocked nodes、recommended execution item、next action、requires external artifact 和 stoplisted local tuning 状态。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuPipelineResolverReport`；convergence 新增 `WI-koharu-pipeline-resolver-shadow-dag` 和 `G-koharu-pipeline-resolver-executed`。
+- `1_ocr_probe_text.txt` 新增 resolver report summary、`resolverExecutionQueue` 摘要和逐块 `koharuPipelineResolverTrace` 行。
+- 报告只做 report-only 诊断；不新增 OCR / LLM、不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、safe layout、glyph mask、背景填充或 `configuration.currentBlockSource`。ground truth 只进入 evaluation signals，不参与 resolver 决策。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.31（KoharuPipelineResolver影子DAG阶段调度与阻塞传播）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuPipelineResolverReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`nodeCount >= 12`、`edgeCount >= 12`、`blockTraceCount == totalBlocksDetected`、`executionQueueCount >= 6`、`opPreviewCount >= 4`、`gateCount >= 8`，breakdown 非空，`externalArtifacts` 缺 active artifact 时保持 blocked/missing，convergence 包含 resolver reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 resolver summary、execution queue 和逐块 trace。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.31 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.30：Koharu Render Regression Lock 覆盖渲染回归锁与 FinalRender 账本
 日期：2026-07-01
 依据：`md/prompt/v1（漫画探针）/v1.30（KoharuRenderRegressionLock覆盖渲染回归锁与FinalRender账本）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
