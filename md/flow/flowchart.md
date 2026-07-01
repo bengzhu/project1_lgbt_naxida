@@ -93,6 +93,7 @@ flowchart TD
   EAR --> ETS["externalTextBoxShadowOCRReport<br/>ready 后每块最多 1 个 externalArtifact.textBoxCrop / shadow-only"]
   ETS --> ISR["internalStructureBottleneckReport<br/>OCR / bubble / crop / translation / render 路由诊断"]
   ISR --> RTA["routingDrivenTranslationComparisonReport<br/>modelTranslationQuality 块 strict prompt 对照 / report-only"]
+  RTA --> TMF["translationModelFloorComparisonReport<br/>clean text baseline + strict prompt 地板对照"]
   ISR --> ODA["ocrCharacterDamageAuditReport<br/>OCR 损坏 token 审计 / report-only"]
   ISR --> ROA["readingOrderStructureAuditReport<br/>阅读顺序 / 气泡归属 / 结构动作审计 / report-only"]
   ROA --> SAC["structureActionCandidateReport<br/>结构动作候选矩阵 / shadow 执行评估 / report-only"]
@@ -103,6 +104,7 @@ flowchart TD
   NTB --> BMS["bubbleMaskAssignmentSplitScoreboardReport<br/>assignment / split / sibling layout scorecard"]
   BMS --> SMS["segmentMaskProxyCoverageScoreboardReport<br/>glyph cleanup / coverage / render mask ledger"]
   SMS --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
+  TMF --> KAC
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
   X --> R
@@ -118,6 +120,7 @@ flowchart TD
   ETS --> R
   ISR --> R
   RTA --> R
+  TMF --> R
   ODA --> R
   ROA --> R
   SAC --> R
@@ -130,6 +133,7 @@ flowchart TD
   KAC --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
+  S --> TMF
   M --> T["1_ocr_probe_text.txt<br/>逐块文本快照"]
   CE --> T
   TBF --> T
@@ -138,6 +142,7 @@ flowchart TD
   ETS --> T
   ISR --> T
   RTA --> T
+  TMF --> T
   ODA --> T
   ROA --> T
   SAC --> T
