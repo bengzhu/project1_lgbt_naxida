@@ -751,6 +751,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport? = nil,
         koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport? = nil,
         nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport? = nil,
+        bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -813,6 +814,7 @@ struct MangaOverlayProbeService: Sendable {
                 koharuStageGapReplicationReport: koharuStageGapReplicationReport,
                 koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
                 nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+                bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1477,6 +1479,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport?,
         koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport?,
         nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?,
+        bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1550,6 +1553,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let nativeTextBoxLedgerByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let bubbleMaskScoreboardByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskAssignmentSplitScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1755,6 +1761,10 @@ struct MangaOverlayProbeService: Sendable {
                 "model=\(nativeTextBoxLedger?.translationModelFloorStatus ?? "nil")",
                 "render=\(nativeTextBoxLedger?.renderStatus ?? "nil")"
             ].joined(separator: ",")
+            let bubbleMaskScoreboard = bubbleMaskScoreboardByBlock[block.index]
+            let bubbleMaskScoreboardSiblings = bubbleMaskScoreboard?.siblingBlockIndexes.map(String.init).joined(separator: ",") ?? "nil"
+            let bubbleMaskScoreboardSplitIDs = bubbleMaskScoreboard?.splitCandidateIDs.map(String.init).joined(separator: ",") ?? "nil"
+            let bubbleMaskScoreboardMustNotPromote = bubbleMaskScoreboard?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1815,6 +1825,7 @@ struct MangaOverlayProbeService: Sendable {
             koharuStageGapPlan: firstBlocking=\(koharuStageGapPlan?.firstBlockingStageFromDAG ?? "nil") targetStage=\(koharuStageGapPlan?.targetCanonicalStage ?? "nil") gap=\(koharuStageGapPlan?.primaryGapCategory ?? "nil") workPackage=\(koharuStageGapPlan?.recommendedWorkPackageID ?? "nil") requiresRealArtifact=\(koharuStageGapPlan.map { String($0.requiresRealExternalArtifact) } ?? "nil") requiresFullProbe=\(koharuStageGapPlan.map { String($0.requiresFullProbe) } ?? "nil") canCIFast=\(koharuStageGapPlan.map { String($0.canBeEvaluatedInCIFast) } ?? "nil") nextAction=\(koharuStageGapPlan?.nextAction ?? "nil") evidence=\(koharuStageGapEvidence) mustNotPromote=\(koharuStageGapMustNotPromote)
             koharuNativeBlockScorecard: primaryStage=\(koharuNativeScorecard?.primaryNativeStage ?? "nil") bottleneck=\(koharuNativeScorecard?.primaryBottleneck ?? "nil") priority=\(koharuNativeScorecard?.recommendedPriority ?? "nil") ocrGate=\(koharuNativeScorecard?.ocrGateStatus ?? "nil") bubbleGate=\(koharuNativeScorecard?.bubbleGateStatus ?? "nil") segmentGate=\(koharuNativeScorecard?.segmentGateStatus ?? "nil") translationGate=\(koharuNativeScorecard?.translationGateStatus ?? "nil") renderGate=\(koharuNativeScorecard?.renderGateStatus ?? "nil") stopLocalCropOrLine=\(koharuNativeScorecard.map { String($0.stopLocalCropOrLineTuning) } ?? "nil") stopEvidence=\(koharuNativeStopEvidence) workItem=\(koharuNativeScorecard?.recommendedWorkItemID ?? "nil") nextAction=\(koharuNativeScorecard?.nextAction ?? "nil") prioritySignals=\(koharuNativePrioritySignals) mustNotPromote=\(koharuNativeMustNotPromote)
             nativeTextBoxProxyLedger: qualityStatus=\(nativeTextBoxLedger?.qualityStatus ?? "nil") sources=\(nativeTextBoxSources) stoplistHit=\(nativeTextBoxLedger.map { String($0.stoplistHit) } ?? "nil") primaryFreezeReason=\(nativeTextBoxLedger?.primaryFreezeReason ?? "nil") gates=\(nativeTextBoxGates) nextAction=\(nativeTextBoxLedger?.nextAction ?? "nil") stopReasons=\(nativeTextBoxStopReasons)
+            bubbleMaskScoreboard: assignmentStatus=\(bubbleMaskScoreboard?.assignmentStatus ?? "nil") maskDominantBubbleID=\(bubbleMaskScoreboard?.maskDominantBubbleID.map(String.init) ?? "nil") splitRisk=\(bubbleMaskScoreboard?.splitRisk ?? "nil") splitCandidateIDs=[\(bubbleMaskScoreboardSplitIDs)] siblings=[\(bubbleMaskScoreboardSiblings)] siblingLayoutStatus=\(bubbleMaskScoreboard?.siblingLayoutStatus ?? "nil") renderMaskStatus=\(bubbleMaskScoreboard?.renderMaskStatus ?? "nil") nextAction=\(bubbleMaskScoreboard?.nextAction ?? "nil") mustNotPromote=\(bubbleMaskScoreboardMustNotPromote)
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1857,6 +1868,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuStageGapReplicationReport: enabled=\(koharuStageGapReplicationReport.map { String($0.enabled) } ?? "nil") stages=\(koharuStageGapReplicationReport.map { String($0.canonicalStageCount) } ?? "nil") gaps=\(koharuStageGapReplicationReport.map { String($0.gapCount) } ?? "nil") workPackages=\(koharuStageGapReplicationReport.map { String($0.workPackageCount) } ?? "nil") readiness=\(koharuStageGapReplicationReport?.replicationReadinessBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") blockedByRealArtifact=\(koharuStageGapReplicationReport?.blockedByRealArtifactStages.joined(separator: ",") ?? "nil") stopTuning=\(koharuStageGapReplicationReport?.stopTuningStages.joined(separator: ",") ?? "nil") mustWaitForExternalArtifact=\(koharuStageGapReplicationReport?.mustWaitForExternalArtifactStages.joined(separator: ",") ?? "nil")
         koharuNativeReplicationScoreboardReport: enabled=\(koharuNativeReplicationScoreboardReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeReplicationScoreboardReport.map { String($0.stageScorecardCount) } ?? "nil") gates=\(koharuNativeReplicationScoreboardReport.map { String($0.gateCount) } ?? "nil") workItems=\(koharuNativeReplicationScoreboardReport.map { String($0.workItemCount) } ?? "nil") stageStatus=\(koharuNativeReplicationScoreboardReport?.stageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") gateStatus=\(koharuNativeReplicationScoreboardReport?.gateStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") stopLocalTuningBlocks=\(koharuNativeReplicationScoreboardReport?.stopLocalTuningBlocks.map(String.init).joined(separator: ",") ?? "nil") externalRequired=\(koharuNativeReplicationScoreboardReport.map { String($0.externalArtifactsRequiredForThisReport) } ?? "nil")
         nativeTextBoxProxyLedgerReport: enabled=\(nativeTextBoxProxyLedgerReport.map { String($0.enabled) } ?? "nil") evaluated=\(nativeTextBoxProxyLedgerReport.map { String($0.evaluatedBlockCount) } ?? "nil") qualityStatus=\(nativeTextBoxProxyLedgerReport?.qualityStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") freezeReasons=\(nativeTextBoxProxyLedgerReport?.freezeReasonBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") stoplistBlocks=\(nativeTextBoxProxyLedgerReport?.stoplistBlocks.map(String.init).joined(separator: ",") ?? "nil") shadowOnlyEligibleBlocks=\(nativeTextBoxProxyLedgerReport?.shadowOnlyEligibleBlocks.map(String.init).joined(separator: ",") ?? "nil") gates=\(nativeTextBoxProxyLedgerReport.map { String($0.gateCount) } ?? "nil") candidates=\(nativeTextBoxProxyLedgerReport.map { String($0.candidateLedgerCount) } ?? "nil")
+        bubbleMaskAssignmentSplitScoreboardReport: enabled=\(bubbleMaskAssignmentSplitScoreboardReport.map { String($0.enabled) } ?? "nil") evaluatedBlocks=\(bubbleMaskAssignmentSplitScoreboardReport.map { String($0.evaluatedBlockCount) } ?? "nil") evaluatedBubbles=\(bubbleMaskAssignmentSplitScoreboardReport.map { String($0.evaluatedBubbleCount) } ?? "nil") assignmentStatus=\(bubbleMaskAssignmentSplitScoreboardReport?.assignmentStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") splitRisk=\(bubbleMaskAssignmentSplitScoreboardReport?.splitRiskBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") siblingLayout=\(bubbleMaskAssignmentSplitScoreboardReport?.siblingLayoutStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") renderMask=\(bubbleMaskAssignmentSplitScoreboardReport?.renderMaskStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") conflictBlocks=\(bubbleMaskAssignmentSplitScoreboardReport?.conflictBlocks.map(String.init).joined(separator: ",") ?? "nil") splitRiskBlocks=\(bubbleMaskAssignmentSplitScoreboardReport?.splitRiskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealBubbleMaskBlocks=\(bubbleMaskAssignmentSplitScoreboardReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") gates=\(bubbleMaskAssignmentSplitScoreboardReport.map { String($0.gateCount) } ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)

@@ -115,6 +115,44 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.26：BubbleMask 归属分割评分板与 Sibling 布局账本
+日期：2026-07-01
+依据：`md/prompt/v1（漫画探针）/v1.26（BubbleMask归属分割评分板与Sibling布局账本）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `bubbleMaskAssignmentSplitScoreboardReport`，执行 v1.24 的 `WI-bubblemask-assignment-split-scorecard`，聚合现有 BubbleMask proxy、归属修正、split candidate、reading order、structure action、Koharu native scoreboard 和 Native TextBox ledger 证据。
+- 报告顶层输出 `source = AITRANSProbe`、`referenceWorkItemID = WI-bubblemask-assignment-split-scorecard`、`referenceKoharuArtifact = BubbleMask`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false` 和 `diagnosticOnly = true`。
+- `blockScorecards[]` 为每个最终块输出 assignment status、split risk、same-bubble sibling layout、mask safe rect、render mask status、TextBox ledger status、decision / evaluation signals、must-not-promote reasons 和 nextAction。
+- `bubbleScorecards[]` 为每个 BubbleMask proxy 实例输出 blocks、冲突块、归属修正块、split candidate、same-bubble sibling groups、render overflow、instance status 和 primary risk。
+- `splitCandidateLedgers[]` 和 `siblingLayoutScorecards[]` 把既有 split candidate 与同气泡 sibling 布局整理成 report-only 账本，不扩大 crop clamp，不改 `safeLayoutRect`。
+- `gateLedger[]` 固定包含 no-main-flow-mutation、no-ground-truth-decision、assignment consistency、correction report-only、split report-only、sibling layout、render mask collision、protected text、TextBox ledger boundary 和 real artifact boundary。
+- `1_ocr_probe_text.txt` 新增报告级 `bubbleMaskAssignmentSplitScoreboardReport` summary 和逐块 `bubbleMaskScoreboard` 摘要。
+- 报告只复用既有探针证据，不新增 OCR / LLM 调用；不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect` 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.26（BubbleMask归属分割评分板与Sibling布局账本）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `bubbleMaskAssignmentSplitScoreboardReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`evaluatedBubbleCount == bubbleMaskReport.instanceCount`、`blockScorecards.count == totalBlocksDetected`、`bubbleScorecards.count == bubbleMaskReport.instanceCount`、`splitCandidateLedgers.count == bubbleSplitCandidateReport.candidateCount`、`gateLedger.count >= 10`，关键 breakdown 非空，且 `1_ocr_probe_text.txt` 包含新 summary 和逐块 `bubbleMaskScoreboard`。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.26 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.25：Native TextBox Proxy 质量账本与候选冻结
 日期：2026-06-30
 依据：`md/prompt/v1（漫画探针）/v1.25（NativeTextBoxProxy质量账本与候选冻结）.md`。本轮修改 Swift 探针报告模型、诊断 TXT 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
