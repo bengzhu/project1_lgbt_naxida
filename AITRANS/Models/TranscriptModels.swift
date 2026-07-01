@@ -2131,6 +2131,174 @@ struct MangaKoharuArtifactConvergenceReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuPipelineResolverSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuPipelineResolverNode: Equatable, Codable, Sendable {
+    var nodeID: String
+    var stageName: String
+    var referenceKoharuArtifact: String
+    var currentAITRANSArtifact: String
+    var needs: [String]
+    var produces: [String]
+    var sourceReports: [String]
+    var nodeStatus: String
+    var artifactAvailability: String
+    var executableInCurrentRun: Bool
+    var canRunInCIFast: Bool
+    var requiresFullProbe: Bool
+    var requiresExternalArtifact: Bool
+    var blockedByNodeIDs: [String]
+    var blocksDownstreamNodeIDs: [String]
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuPipelineResolverSignal]
+    var evaluationSignals: [MangaKoharuPipelineResolverSignal]
+    var missingCapabilities: [String]
+    var mustNotPromoteReasons: [String]
+    var recommendedNextAction: String
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuPipelineResolverEdge: Equatable, Codable, Sendable {
+    var fromNodeID: String
+    var toNodeID: String
+    var artifactName: String
+    var required: Bool
+    var edgeStatus: String
+    var blockedReason: String?
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuPipelineResolverSignal]
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuPipelineResolverBlockNodeState: Equatable, Codable, Sendable {
+    var nodeID: String
+    var status: String
+    var artifactAvailability: String
+    var blockedReason: String?
+    var sourceReports: [String]
+    var decisionSignals: [MangaKoharuPipelineResolverSignal]
+    var evaluationSignals: [MangaKoharuPipelineResolverSignal]
+}
+
+struct MangaKoharuPipelineResolverBlockTrace: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var nodeStates: [MangaKoharuPipelineResolverBlockNodeState]
+    var criticalPathNodeIDs: [String]
+    var firstBlockedNodeID: String
+    var firstBlockedStage: String
+    var firstBlockedReason: String
+    var downstreamBlockedNodeIDs: [String]
+    var primaryBottleneck: String
+    var recommendedExecutionItemID: String
+    var recommendedNextAction: String
+    var canRunInCIFast: Bool
+    var requiresFullProbe: Bool
+    var requiresExternalArtifact: Bool
+    var stoplistedLocalTuning: Bool
+    var mustNotPromoteReasons: [String]
+    var decisionSignals: [MangaKoharuPipelineResolverSignal]
+    var evaluationSignals: [MangaKoharuPipelineResolverSignal]
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuPipelineResolverExecutionItem: Equatable, Codable, Sendable {
+    var executionItemID: String
+    var title: String
+    var targetNodeID: String
+    var targetStages: [String]
+    var targetBlocks: [Int]
+    var status: String
+    var priority: String
+    var sourceReports: [String]
+    var blockedByExecutionItemIDs: [String]
+    var remainingBlockers: [String]
+    var canRunInCIFast: Bool
+    var requiresFullProbe: Bool
+    var requiresExternalArtifact: Bool
+    var wouldChangeMainFlow: Bool
+    var groundTruthUsedForDecision: Bool
+    var recommendedNextAction: String
+}
+
+struct MangaKoharuPipelineResolverOpPreview: Equatable, Codable, Sendable {
+    var opID: String
+    var opKind: String
+    var targetArtifact: String
+    var targetBlocks: [Int]
+    var wouldApply: Bool
+    var applyBlockedReason: String
+    var sourceExecutionItemID: String
+    var previewOnly: Bool
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuPipelineResolverGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuPipelineResolverSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuPipelineResolverReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var evaluatedBlockCount: Int
+    var nodeCount: Int
+    var edgeCount: Int
+    var blockTraceCount: Int
+    var executionQueueCount: Int
+    var opPreviewCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var resolverVerdict: String
+    var resolverVerdictBreakdown: [String: Int]
+    var nodeStatusBreakdown: [String: Int]
+    var artifactAvailabilityBreakdown: [String: Int]
+    var firstBlockedNodeBreakdown: [String: Int]
+    var executionItemStatusBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var blockedByMissingRealArtifactBlocks: [Int]
+    var stoplistedLocalTuningBlocks: [Int]
+    var modelFloorLimitedBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var nodes: [MangaKoharuPipelineResolverNode]
+    var edges: [MangaKoharuPipelineResolverEdge]
+    var blockTraces: [MangaKoharuPipelineResolverBlockTrace]
+    var executionQueue: [MangaKoharuPipelineResolverExecutionItem]
+    var opPreviews: [MangaKoharuPipelineResolverOpPreview]
+    var gateLedger: [MangaKoharuPipelineResolverGate]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -3281,6 +3449,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?
     var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
     var koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
+    var koharuPipelineResolverReport: MangaKoharuPipelineResolverReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
