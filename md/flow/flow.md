@@ -213,6 +213,7 @@ test/1.png
   -> Koharu Pipeline Resolver shadow DAG（needs / produces / dependency propagation / execution queue / op preview）
   -> Koharu WorkOrder Router（执行工作单、逐块路由、预算和 gate 账本）
   -> Koharu External Artifact Request Packet（真实 TextBoxes / BubbleMask / SegmentMask 请求包、required files、逐块缺口和准入 gate）
+  -> Koharu Native Algorithm Replay Matrix（本地算法复刻候选、stage matrix、逐块 route、budget gate，report-only）
   -> Koharu Artifact convergence report（canonical artifact 收敛矩阵、逐块 path、work item closure、gate ledger）
   -> JSON / TXT / PNG 输出
 ```

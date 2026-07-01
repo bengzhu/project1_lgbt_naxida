@@ -2567,6 +2567,136 @@ struct MangaKoharuExternalArtifactRequestPacketReport: Equatable, Codable, Senda
     var notes: [String]
 }
 
+struct MangaKoharuNativeReplaySignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuNativeReplayStage: Equatable, Codable, Sendable {
+    var stageName: String
+    var referenceKoharuArtifact: String
+    var aitransCurrentEvidence: String
+    var sourceReports: [String]
+    var status: String
+    var candidateIDs: [String]
+    var affectedBlocks: [Int]
+    var primaryMetric: String
+    var currentMetricValue: String
+    var desiredDirection: String
+    var decisionSignals: [MangaKoharuNativeReplaySignal]
+    var evaluationSignals: [MangaKoharuNativeReplaySignal]
+    var blockedReasons: [String]
+    var nextAction: String
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeReplayCandidate: Equatable, Codable, Sendable {
+    var candidateID: String
+    var candidateType: String
+    var title: String
+    var status: String
+    var targetStage: String
+    var targetBlocks: [Int]
+    var sourceReports: [String]
+    var controlEvidence: [MangaKoharuNativeReplaySignal]
+    var candidateEvidence: [MangaKoharuNativeReplaySignal]
+    var expectedMetricImpact: [String]
+    var risk: [String]
+    var budgetClass: String
+    var promotionGate: [String]
+    var promotionGateStatus: String
+    var blockers: [String]
+    var nextAction: String
+    var mustNotChange: [String]
+    var decisionSignals: [MangaKoharuNativeReplaySignal]
+    var evaluationSignals: [MangaKoharuNativeReplaySignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeReplayBlockRoute: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var bbox: [Double]
+    var blockPassed: Bool
+    var failureCategory: String
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var primaryReplayCandidateID: String
+    var secondaryReplayCandidateIDs: [String]
+    var primaryKoharuStage: String
+    var primaryBottleneck: String
+    var nativeReplayAllowed: Bool
+    var shadowOnlyAllowed: Bool
+    var requiresExternalArtifact: Bool
+    var modelFloorLimited: Bool
+    var renderLocked: Bool
+    var stoplistedLocalTuning: Bool
+    var manualReviewRequired: Bool
+    var nextAction: String
+    var decisionSignals: [MangaKoharuNativeReplaySignal]
+    var evaluationSignals: [MangaKoharuNativeReplaySignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeReplayGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var name: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var failureMeans: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuNativeReplaySignal]
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuNativeAlgorithmReplayMatrixReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var evaluatedBlockCount: Int
+    var stageCount: Int
+    var candidateCount: Int
+    var blockRouteCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var matrixVerdict: String
+    var matrixVerdictBreakdown: [String: Int]
+    var stageStatusBreakdown: [String: Int]
+    var candidateTypeBreakdown: [String: Int]
+    var candidateStatusBreakdown: [String: Int]
+    var budgetClassBreakdown: [String: Int]
+    var promotionGateBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var nativeExecutableNowCandidates: [String]
+    var shadowOnlyCandidates: [String]
+    var stoplistedCandidates: [String]
+    var externalArtifactBlockedCandidates: [String]
+    var modelFloorBlockedCandidates: [String]
+    var renderLockedCandidates: [String]
+    var stages: [MangaKoharuNativeReplayStage]
+    var candidates: [MangaKoharuNativeReplayCandidate]
+    var blockRoutes: [MangaKoharuNativeReplayBlockRoute]
+    var gateLedger: [MangaKoharuNativeReplayGate]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -3720,6 +3850,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuPipelineResolverReport: MangaKoharuPipelineResolverReport?
     var koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport?
     var koharuExternalArtifactRequestPacketReport: MangaKoharuExternalArtifactRequestPacketReport?
+    var koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
