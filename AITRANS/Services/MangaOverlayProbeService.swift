@@ -753,6 +753,7 @@ struct MangaOverlayProbeService: Sendable {
         nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport? = nil,
         bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport? = nil,
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport? = nil,
+        koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport? = nil,
@@ -817,6 +818,7 @@ struct MangaOverlayProbeService: Sendable {
                 nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
                 bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
                 segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+                koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
                 bubbleMaskReport: bubbleMaskReport,
                 bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                 bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -1483,6 +1485,7 @@ struct MangaOverlayProbeService: Sendable {
         nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?,
         bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?,
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?,
+        koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
         bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
@@ -1562,6 +1565,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let segmentMaskProxyScoreboardByBlock = Dictionary(
             uniqueKeysWithValues: (segmentMaskProxyCoverageScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
+        )
+        let koharuConvergencePathByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuArtifactConvergenceReport?.blockPaths ?? []).map { ($0.blockIndex, $0) }
         )
         let maskByBlock = Dictionary(
             uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
@@ -1776,6 +1782,7 @@ struct MangaOverlayProbeService: Sendable {
             let segmentMaskProxyBubbleCoverage = segmentMaskProxyScoreboard?.bubbleMaskCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let segmentMaskProxySafeRectCoverage = segmentMaskProxyScoreboard?.safeRectCoverageRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let segmentMaskProxyMustNotPromote = segmentMaskProxyScoreboard?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
+            let koharuArtifactPath = koharuConvergencePathByBlock[block.index]
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
             return """
             #\(block.index) bbox=[\(bbox)] bubbleID=\(bubbleID) bubbleAssignmentMethod=\(block.bubbleAssignmentMethod) crossBubbleMergeRejected=\(block.crossBubbleMergeRejected) sliceIndex=\(sliceIndex) sliceOverlapDeduped=\(block.sliceOverlapDeduped) angle=\(block.rotationAngleUsed) groundTruthMatch=\(block.groundTruthMatch) ocrSimilarity=\(similarity) legacySimilarity=\(legacySimilarity) wordOrder=\(block.wordOrderPreserved.map(String.init) ?? "nil") blockPassed=\(block.blockPassed)
@@ -1838,6 +1845,7 @@ struct MangaOverlayProbeService: Sendable {
             nativeTextBoxProxyLedger: qualityStatus=\(nativeTextBoxLedger?.qualityStatus ?? "nil") sources=\(nativeTextBoxSources) stoplistHit=\(nativeTextBoxLedger.map { String($0.stoplistHit) } ?? "nil") primaryFreezeReason=\(nativeTextBoxLedger?.primaryFreezeReason ?? "nil") gates=\(nativeTextBoxGates) nextAction=\(nativeTextBoxLedger?.nextAction ?? "nil") stopReasons=\(nativeTextBoxStopReasons)
             bubbleMaskScoreboard: assignmentStatus=\(bubbleMaskScoreboard?.assignmentStatus ?? "nil") maskDominantBubbleID=\(bubbleMaskScoreboard?.maskDominantBubbleID.map(String.init) ?? "nil") splitRisk=\(bubbleMaskScoreboard?.splitRisk ?? "nil") splitCandidateIDs=[\(bubbleMaskScoreboardSplitIDs)] siblings=[\(bubbleMaskScoreboardSiblings)] siblingLayoutStatus=\(bubbleMaskScoreboard?.siblingLayoutStatus ?? "nil") renderMaskStatus=\(bubbleMaskScoreboard?.renderMaskStatus ?? "nil") nextAction=\(bubbleMaskScoreboard?.nextAction ?? "nil") mustNotPromote=\(bubbleMaskScoreboardMustNotPromote)
             segmentMaskProxyScoreboard: coverage=\(segmentMaskProxyScoreboard?.coverageStatus ?? "nil") cleanup=\(segmentMaskProxyScoreboard?.cleanupStatus ?? "nil") renderMask=\(segmentMaskProxyScoreboard?.renderMaskStatus ?? "nil") glyphPixels=\(segmentMaskProxyScoreboard.map { String($0.glyphMaskPixelCount) } ?? "nil") textBoxCoverage=\(segmentMaskProxyTextBoxCoverage) bubbleCoverage=\(segmentMaskProxyBubbleCoverage) safeRectCoverage=\(segmentMaskProxySafeRectCoverage) backgroundFill=\(segmentMaskProxyScoreboard.map { String($0.backgroundFillApplied) } ?? "nil") nextAction=\(segmentMaskProxyScoreboard?.nextAction ?? "nil") mustNotPromote=\(segmentMaskProxyMustNotPromote)
+            koharuArtifactPath: firstBlockingArtifact=\(koharuArtifactPath?.firstBlockingArtifact ?? "nil") textBox=\(koharuArtifactPath?.textBoxStatus ?? "nil") bubble=\(koharuArtifactPath?.bubbleMaskStatus ?? "nil") segment=\(koharuArtifactPath?.segmentMaskStatus ?? "nil") translation=\(koharuArtifactPath?.translationStatus ?? "nil") render=\(koharuArtifactPath?.renderStatus ?? "nil") modelFloorLimited=\(koharuArtifactPath.map { String($0.modelFloorLimited) } ?? "nil") renderLocked=\(koharuArtifactPath.map { String($0.renderLocked) } ?? "nil") needsRealArtifact=\(koharuArtifactPath.map { String($0.needsRealArtifact) } ?? "nil") nextAction=\(koharuArtifactPath?.primaryNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
             safeLayoutRect: [\(safeLayout)]
             safeLayoutSource: \(block.safeLayoutSource ?? "nil")
@@ -1882,6 +1890,11 @@ struct MangaOverlayProbeService: Sendable {
         nativeTextBoxProxyLedgerReport: enabled=\(nativeTextBoxProxyLedgerReport.map { String($0.enabled) } ?? "nil") evaluated=\(nativeTextBoxProxyLedgerReport.map { String($0.evaluatedBlockCount) } ?? "nil") qualityStatus=\(nativeTextBoxProxyLedgerReport?.qualityStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") freezeReasons=\(nativeTextBoxProxyLedgerReport?.freezeReasonBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") stoplistBlocks=\(nativeTextBoxProxyLedgerReport?.stoplistBlocks.map(String.init).joined(separator: ",") ?? "nil") shadowOnlyEligibleBlocks=\(nativeTextBoxProxyLedgerReport?.shadowOnlyEligibleBlocks.map(String.init).joined(separator: ",") ?? "nil") gates=\(nativeTextBoxProxyLedgerReport.map { String($0.gateCount) } ?? "nil") candidates=\(nativeTextBoxProxyLedgerReport.map { String($0.candidateLedgerCount) } ?? "nil")
         bubbleMaskAssignmentSplitScoreboardReport: enabled=\(bubbleMaskAssignmentSplitScoreboardReport.map { String($0.enabled) } ?? "nil") evaluatedBlocks=\(bubbleMaskAssignmentSplitScoreboardReport.map { String($0.evaluatedBlockCount) } ?? "nil") evaluatedBubbles=\(bubbleMaskAssignmentSplitScoreboardReport.map { String($0.evaluatedBubbleCount) } ?? "nil") assignmentStatus=\(bubbleMaskAssignmentSplitScoreboardReport?.assignmentStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") splitRisk=\(bubbleMaskAssignmentSplitScoreboardReport?.splitRiskBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") siblingLayout=\(bubbleMaskAssignmentSplitScoreboardReport?.siblingLayoutStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") renderMask=\(bubbleMaskAssignmentSplitScoreboardReport?.renderMaskStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") conflictBlocks=\(bubbleMaskAssignmentSplitScoreboardReport?.conflictBlocks.map(String.init).joined(separator: ",") ?? "nil") splitRiskBlocks=\(bubbleMaskAssignmentSplitScoreboardReport?.splitRiskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealBubbleMaskBlocks=\(bubbleMaskAssignmentSplitScoreboardReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") gates=\(bubbleMaskAssignmentSplitScoreboardReport.map { String($0.gateCount) } ?? "nil")
         segmentMaskProxyCoverageScoreboardReport: enabled=\(segmentMaskProxyCoverageScoreboardReport.map { String($0.enabled) } ?? "nil") evaluated=\(segmentMaskProxyCoverageScoreboardReport.map { String($0.evaluatedBlockCount) } ?? "nil") glyphMaskBlocks=\(segmentMaskProxyCoverageScoreboardReport.map { String($0.glyphMaskBlockCount) } ?? "nil") usableCleanup=\(segmentMaskProxyCoverageScoreboardReport.map { String($0.usableForCleanupBlockCount) } ?? "nil") usableCropEvidence=\(segmentMaskProxyCoverageScoreboardReport.map { String($0.usableForCropEvidenceBlockCount) } ?? "nil") weak=\(segmentMaskProxyCoverageScoreboardReport.map { String($0.weakSegmentBlockCount) } ?? "nil") coverageStatus=\(segmentMaskProxyCoverageScoreboardReport?.coverageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") cleanupStatus=\(segmentMaskProxyCoverageScoreboardReport?.cleanupStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") renderMask=\(segmentMaskProxyCoverageScoreboardReport?.renderMaskStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") backgroundFill=\(segmentMaskProxyCoverageScoreboardReport?.backgroundFillStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") needsRealSegmentMask=\(segmentMaskProxyCoverageScoreboardReport?.needsRealSegmentMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") gates=\(segmentMaskProxyCoverageScoreboardReport.map { String($0.gateCount) } ?? "nil")
+        koharuArtifactConvergenceReport: enabled=\(koharuArtifactConvergenceReport.map { String($0.enabled) } ?? "nil") stages=\(koharuArtifactConvergenceReport.map { String($0.stageCount) } ?? "nil") blockPaths=\(koharuArtifactConvergenceReport.map { String($0.blockPathCount) } ?? "nil") workItems=\(koharuArtifactConvergenceReport.map { String($0.workItemLedgerCount) } ?? "nil") gates=\(koharuArtifactConvergenceReport.map { String($0.gateCount) } ?? "nil")
+        convergenceStatus=\(koharuArtifactConvergenceReport?.convergenceStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        firstBlockingArtifact=\(koharuArtifactConvergenceReport?.firstBlockingArtifactBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        primaryNextAction=\(koharuArtifactConvergenceReport?.primaryNextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        closedWorkItems=\(koharuArtifactConvergenceReport?.closedWorkItems.joined(separator: ",") ?? "nil") openWorkItems=\(koharuArtifactConvergenceReport?.openWorkItems.joined(separator: ",") ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)

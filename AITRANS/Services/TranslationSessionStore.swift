@@ -1587,6 +1587,7 @@ final class TranslationSessionStore: ObservableObject {
                 var nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?
                 var bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?
                 var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
+                var koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -2018,6 +2019,19 @@ final class TranslationSessionStore: ObservableObject {
                     nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
                     bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport
                 )
+                koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
+                    blocks: probeBlocks,
+                    diagnostics: makeMangaOverlayProbeDiagnostics(blocks: probeBlocks),
+                    koharuArtifactDAGReport: koharuArtifactDAGReport,
+                    koharuStageGapReplicationReport: koharuStageGapReplicationReport,
+                    koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
+                    nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+                    bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+                    segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport,
+                    externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+                    cleanTextDiagnostic: cleanTextDiagnostic
+                )
                 let deterministicDecodingCheck: MangaDeterministicDecodingCheck?
                 if runOptions.runDeterministicDecodingCheck {
                     self.writeMangaProbeProgress(stage: "deterministic-decoding-check-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
@@ -2055,6 +2069,7 @@ final class TranslationSessionStore: ObservableObject {
                     nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
                     bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
                     segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+                    koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -2126,6 +2141,7 @@ final class TranslationSessionStore: ObservableObject {
                     nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
                     bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
                     segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+                    koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7238,6 +7254,7 @@ final class TranslationSessionStore: ObservableObject {
         nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport? = nil,
         bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport? = nil,
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport? = nil,
+        koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7277,6 +7294,19 @@ final class TranslationSessionStore: ObservableObject {
         let filesPresent = Self.fileIsNonEmpty(path: outputFiles.debugBoxesImage)
             && Self.fileIsNonEmpty(path: outputFiles.overlayImage)
         let diagnostics = makeMangaOverlayProbeDiagnostics(blocks: blocks)
+        let convergenceReport = koharuArtifactConvergenceReport ?? Self.makeKoharuArtifactConvergenceReport(
+            blocks: blocks,
+            diagnostics: diagnostics,
+            koharuArtifactDAGReport: koharuArtifactDAGReport,
+            koharuStageGapReplicationReport: koharuStageGapReplicationReport,
+            koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
+            nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+            bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+            segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+            externalArtifactReadinessReport: externalArtifactReadinessReport,
+            externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+            cleanTextDiagnostic: cleanTextDiagnostic
+        )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
             original: "XQZ 12 ///",
@@ -7319,6 +7349,7 @@ final class TranslationSessionStore: ObservableObject {
             nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
             bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
             segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+            koharuArtifactConvergenceReport: convergenceReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -12533,6 +12564,498 @@ final class TranslationSessionStore: ObservableObject {
                 "AITRANS SegmentMask is a glyph-mask proxy, not a real Koharu SegmentMask artifact.",
                 "This report does not change finalTextUsedForTranslation, blockPassed, failureCategory, overlay rendering, safeLayoutRect, glyphMaskFillRects, background fill behavior, post-fusion cleanup, candidate selection, textRegionCropReport.adoptedCount, or currentBlockSource."
             ]
+        )
+    }
+
+    private static func makeKoharuArtifactConvergenceReport(
+        blocks: [MangaOverlayProbeBlock],
+        diagnostics: MangaOverlayProbeDiagnostics,
+        koharuArtifactDAGReport: MangaKoharuArtifactDAGReport?,
+        koharuStageGapReplicationReport: MangaKoharuStageGapReplicationReport?,
+        koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport?,
+        nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?,
+        bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?,
+        segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
+        externalTextBoxShadowOCRReport: MangaOverlayExternalTextBoxShadowOCRReport?,
+        cleanTextDiagnostic: MangaCleanTextDiagnosticReport?
+    ) -> MangaKoharuArtifactConvergenceReport {
+        func uniqueSorted(_ values: [Int]) -> [Int] {
+            Array(Set(values)).sorted()
+        }
+
+        func sortedUniqueStrings(_ values: [String]) -> [String] {
+            Array(Set(values)).sorted()
+        }
+
+        func joined(_ values: [Int]) -> String {
+            uniqueSorted(values).map(String.init).joined(separator: ",")
+        }
+
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaKoharuArtifactConvergenceSignal {
+            MangaKoharuArtifactConvergenceSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+
+        let allBlockIndexes = blocks.map(\.index)
+        let cleanPassRate = cleanTextDiagnostic?.passRate ?? 0
+        let textBoxByBlock = Dictionary(
+            uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let bubbleByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskAssignmentSplitScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentMaskProxyCoverageScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
+        )
+        let dagByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuArtifactDAGReport?.blockTraces ?? []).map { ($0.blockIndex, $0) }
+        )
+        let nativeByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuNativeReplicationScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
+        )
+
+        func ocrTextStatus(for block: MangaOverlayProbeBlock) -> String {
+            if diagnostics.likelyOCRIssueBlocks.contains(block.index) || block.failureCategory == "ocrInputSuspect" {
+                return "ocrInputSuspect"
+            }
+            if block.finalTextUsedForTranslation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return "emptyOCRText"
+            }
+            if block.blockPassed {
+                return "usable"
+            }
+            return "usableButTranslationFailed"
+        }
+
+        func translationStatus(for block: MangaOverlayProbeBlock) -> String {
+            if block.blockPassed {
+                return "passed"
+            }
+            if block.failureCategory == "modelOutputFailure" {
+                return "modelOutputFailure"
+            }
+            if block.failureCategory == "translationLanguageQualityFailure" {
+                return "languageQualityFailure"
+            }
+            if cleanPassRate > 0, cleanPassRate < 0.60 {
+                return "modelFloorLimited"
+            }
+            return "blockedByUpstreamOCR"
+        }
+
+        func renderStatus(for block: MangaOverlayProbeBlock) -> String {
+            if block.renderTextTruncated {
+                return "renderTextTruncated"
+            }
+            if block.renderMaskOverflowPixelCount > 0 {
+                return "renderMaskOverflow"
+            }
+            if block.renderCollisionChecked && block.renderCollisionResolved {
+                return "renderStableLocked"
+            }
+            if block.safeLayoutRect != nil {
+                return "safeLayoutAvailable"
+            }
+            return "notChecked"
+        }
+
+        func modelFloorLimited(block: MangaOverlayProbeBlock) -> Bool {
+            if block.failureCategory == "modelOutputFailure" || block.failureCategory == "translationLanguageQualityFailure" {
+                return true
+            }
+            return cleanPassRate > 0 && cleanPassRate < 0.60 && !block.blockPassed
+        }
+
+        func renderLocked(block: MangaOverlayProbeBlock) -> Bool {
+            let status = renderStatus(for: block)
+            return status == "renderStableLocked" || status == "safeLayoutAvailable"
+        }
+
+        func needsRealArtifact(
+            textBox: MangaNativeTextBoxProxyBlockLedger?,
+            bubble: MangaBubbleMaskAssignmentSplitBlockScorecard?,
+            segment: MangaSegmentMaskProxyBlockScorecard?,
+            dag: MangaKoharuArtifactBlockTrace?
+        ) -> Bool {
+            if dag?.recommendedNextAction == "collectRealKoharuArtifact" {
+                return true
+            }
+            if textBox?.nextAction == "collectRealTextBoxArtifact" {
+                return true
+            }
+            if bubble?.nextAction == "collectRealBubbleMaskArtifact" {
+                return true
+            }
+            if segment?.nextAction == "collectRealSegmentMaskArtifact" {
+                return true
+            }
+            return false
+        }
+
+        func firstBlockingArtifact(
+            block: MangaOverlayProbeBlock,
+            textBox: MangaNativeTextBoxProxyBlockLedger?,
+            bubble: MangaBubbleMaskAssignmentSplitBlockScorecard?,
+            segment: MangaSegmentMaskProxyBlockScorecard?,
+            dag: MangaKoharuArtifactBlockTrace?
+        ) -> String {
+            if block.blockPassed && renderLocked(block: block) {
+                return "none"
+            }
+            if let textBox, textBox.stoplistHit || textBox.qualityStatus.contains("blocked") {
+                return "TextBoxes"
+            }
+            if let bubble, bubble.nextAction == "collectRealBubbleMaskArtifact" || bubble.assignmentStatus == "maskConflict" {
+                return "BubbleMask"
+            }
+            if let segment, segment.nextAction == "collectRealSegmentMaskArtifact" || segment.coverageStatus == "needsRealSegmentMask" {
+                return "SegmentMask"
+            }
+            if block.failureCategory == "ocrInputSuspect" {
+                return "OcrText"
+            }
+            if modelFloorLimited(block: block) {
+                return "Translations"
+            }
+            if renderStatus(for: block) == "renderTextTruncated" || renderStatus(for: block) == "renderMaskOverflow" {
+                return "FinalRender"
+            }
+            if needsRealArtifact(textBox: textBox, bubble: bubble, segment: segment, dag: dag) {
+                return "ExternalArtifacts"
+            }
+            return block.blockPassed ? "none" : "OcrText"
+        }
+
+        func primaryNextAction(firstBlocking: String, modelLimited: Bool, renderLocked: Bool, needsReal: Bool) -> String {
+            if firstBlocking == "none" && renderLocked {
+                return "routeToRenderRegressionLock"
+            }
+            if modelLimited {
+                return "routeToTranslationModelFloorComparison"
+            }
+            if needsReal {
+                return "collectRealKoharuArtifact"
+            }
+            if firstBlocking == "TextBoxes" || firstBlocking == "OcrText" {
+                return "stopLocalCropLineDeskewTuning"
+            }
+            if firstBlocking == "FinalRender" || firstBlocking == "RenderedSprites" {
+                return "routeToRenderRegressionLock"
+            }
+            return "keepReportOnly"
+        }
+
+        var blockPaths: [MangaKoharuArtifactConvergenceBlockPath] = []
+        blockPaths.reserveCapacity(blocks.count)
+        for block in blocks {
+            let textBox = textBoxByBlock[block.index]
+            let bubble = bubbleByBlock[block.index]
+            let segment = segmentByBlock[block.index]
+            let dag = dagByBlock[block.index]
+            let native = nativeByBlock[block.index]
+            let modelLimited = modelFloorLimited(block: block)
+            let renderLock = renderLocked(block: block)
+            let realArtifactNeeded = needsRealArtifact(textBox: textBox, bubble: bubble, segment: segment, dag: dag)
+            let firstBlocking = firstBlockingArtifact(block: block, textBox: textBox, bubble: bubble, segment: segment, dag: dag)
+            let nextAction = primaryNextAction(
+                firstBlocking: firstBlocking,
+                modelLimited: modelLimited,
+                renderLocked: renderLock,
+                needsReal: realArtifactNeeded
+            )
+            let closedWorkItems = [
+                nativeTextBoxProxyLedgerReport == nil ? nil : "WI-native-textbox-artifact-scorecard",
+                bubbleMaskAssignmentSplitScoreboardReport == nil ? nil : "WI-bubblemask-assignment-split-scorecard",
+                segmentMaskProxyCoverageScoreboardReport == nil ? nil : "WI-segmentmask-proxy-coverage-scorecard"
+            ].compactMap { $0 }
+            var openWorkItems: [String] = []
+            if modelLimited { openWorkItems.append("WI-translation-model-floor-comparison") }
+            if renderLock || nextAction == "routeToRenderRegressionLock" { openWorkItems.append("WI-render-regression-lock") }
+            if realArtifactNeeded { openWorkItems.append("WI-external-artifact-optional-handoff") }
+            var mustNotPromote: [String] = []
+            mustNotPromote.append(contentsOf: textBox?.mustNotPromoteReasons ?? [])
+            mustNotPromote.append(contentsOf: bubble?.mustNotPromoteReasons ?? [])
+            mustNotPromote.append(contentsOf: segment?.mustNotPromoteReasons ?? [])
+            mustNotPromote.append("convergenceReportDiagnosticOnly")
+            mustNotPromote.append("groundTruthUsedOnlyForEvaluationSignals")
+
+            blockPaths.append(
+                MangaKoharuArtifactConvergenceBlockPath(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    blockPassed: block.blockPassed,
+                    failureCategory: block.failureCategory,
+                    groundTruthMatch: block.groundTruthMatch,
+                    bestGroundTruthType: block.bestGroundTruthType,
+                    ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
+                    textBoxStatus: textBox?.qualityStatus ?? "missingUpstreamReport",
+                    bubbleMaskStatus: bubble?.assignmentStatus ?? "missingUpstreamReport",
+                    segmentMaskStatus: segment?.coverageStatus ?? "missingUpstreamReport",
+                    ocrTextStatus: ocrTextStatus(for: block),
+                    translationStatus: translationStatus(for: block),
+                    renderStatus: renderStatus(for: block),
+                    firstBlockingArtifact: firstBlocking,
+                    primaryStructuralBottleneck: native?.primaryBottleneck ?? dag?.firstBlockingReason ?? firstBlocking,
+                    modelFloorLimited: modelLimited,
+                    renderLocked: renderLock,
+                    needsRealArtifact: realArtifactNeeded,
+                    closedWorkItems: closedWorkItems,
+                    openWorkItems: sortedUniqueStrings(openWorkItems),
+                    decisionSignals: [
+                        signal("failureCategory", block.failureCategory, source: "blocks.failureCategory"),
+                        signal("blockPassed", String(block.blockPassed), source: "blocks.blockPassed"),
+                        signal("textBoxQualityStatus", textBox?.qualityStatus ?? "nil", source: "nativeTextBoxProxyLedgerReport.blockLedgers"),
+                        signal("textBoxStoplistHit", textBox.map { String($0.stoplistHit) } ?? "nil", source: "nativeTextBoxProxyLedgerReport.blockLedgers"),
+                        signal("bubbleAssignmentStatus", bubble?.assignmentStatus ?? "nil", source: "bubbleMaskAssignmentSplitScoreboardReport.blockScorecards"),
+                        signal("bubbleSplitRisk", bubble?.splitRisk ?? "nil", source: "bubbleMaskAssignmentSplitScoreboardReport.blockScorecards"),
+                        signal("segmentCoverageStatus", segment?.coverageStatus ?? "nil", source: "segmentMaskProxyCoverageScoreboardReport.blockScorecards"),
+                        signal("segmentCleanupStatus", segment?.cleanupStatus ?? "nil", source: "segmentMaskProxyCoverageScoreboardReport.blockScorecards"),
+                        signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic"),
+                        signal("renderStatus", renderStatus(for: block), source: "blocks.renderDiagnostics")
+                    ],
+                    evaluationSignals: [
+                        signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                        signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
+                        signal("ocrSimilarityForEvaluation", block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true),
+                        signal("wordOrderPreserved", block.wordOrderPreserved.map(String.init) ?? "nil", source: "blocks.wordOrderPreserved", decision: false, evaluation: true)
+                    ],
+                    mustNotPromoteReasons: sortedUniqueStrings(mustNotPromote),
+                    primaryNextAction: nextAction,
+                    groundTruthUsedForDecision: false,
+                    diagnosticOnly: true,
+                    wouldChangeMainFlow: false
+                )
+            )
+        }
+
+        let needsRealArtifactBlocks = uniqueSorted(blockPaths.filter(\.needsRealArtifact).map(\.blockIndex))
+        let modelFloorLimitedBlocks = uniqueSorted(blockPaths.filter(\.modelFloorLimited).map(\.blockIndex))
+        let renderRegressionLockBlocks = uniqueSorted(blockPaths.filter(\.renderLocked).map(\.blockIndex))
+        let manualReviewBlocks = uniqueSorted(blockPaths.filter { $0.primaryNextAction == "manualReviewOnly" }.map(\.blockIndex))
+        let textBoxStopBlocks = uniqueSorted(nativeTextBoxProxyLedgerReport?.stoplistBlocks ?? [])
+        let bubbleNeedBlocks = uniqueSorted(bubbleMaskAssignmentSplitScoreboardReport?.needsRealBubbleMaskBlocks ?? [])
+        let segmentNeedBlocks = uniqueSorted(segmentMaskProxyCoverageScoreboardReport?.needsRealSegmentMaskBlocks ?? [])
+        let externalReady = externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed == true
+        let externalMissing = externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing"
+
+        func stage(
+            _ name: String,
+            artifact: String,
+            current: String,
+            status: String,
+            proxyOnly: Bool,
+            realAvailable: Bool,
+            reports: [String],
+            affected: [Int],
+            firstBlocking: String,
+            closed: [String],
+            blocked: [String],
+            nextAction: String,
+            decisions: [MangaKoharuArtifactConvergenceSignal],
+            evaluations: [MangaKoharuArtifactConvergenceSignal] = [],
+            mustNot: [String]
+        ) -> MangaKoharuArtifactConvergenceStage {
+            MangaKoharuArtifactConvergenceStage(
+                stageName: name,
+                referenceKoharuArtifact: artifact,
+                currentAITRANSArtifact: current,
+                convergenceStatus: status,
+                proxyOnly: proxyOnly,
+                realArtifactAvailable: realAvailable,
+                sourceReports: reports,
+                decisionSignals: decisions,
+                evaluationSignals: evaluations,
+                affectedBlocks: uniqueSorted(affected),
+                firstBlockingArtifact: firstBlocking,
+                closedByWorkItems: closed,
+                blockedByWorkItems: blocked,
+                primaryNextAction: nextAction,
+                mustNotPromoteReasons: sortedUniqueStrings(mustNot),
+                groundTruthUsedForDecision: false,
+                diagnosticOnly: true,
+                wouldChangeMainFlow: false
+            )
+        }
+
+        let evaluationSignals = [
+            signal("averageCoreDialogueOCRSimilarity", diagnostics.averageCoreDialogueOCRSimilarity.formatted(.number.precision(.fractionLength(4))), source: "diagnostics", decision: false, evaluation: true),
+            signal("averageDecorativeOCRSimilarity", diagnostics.averageDecorativeOCRSimilarity.formatted(.number.precision(.fractionLength(4))), source: "diagnostics", decision: false, evaluation: true),
+            signal("groundTruthMatchedBlocks", String(diagnostics.groundTruthMatchedBlocks), source: "diagnostics", decision: false, evaluation: true)
+        ]
+
+        let stages: [MangaKoharuArtifactConvergenceStage] = [
+            stage("SourceImage", artifact: "SourceImage", current: "test/1.png bundle image", status: "nativeReady", proxyOnly: false, realAvailable: true, reports: ["configuration"], affected: allBlockIndexes, firstBlocking: "none", closed: [], blocked: [], nextAction: "keepReportOnly", decisions: [signal("sourceImage", "test/1.png", source: "probeConfiguration")], mustNot: ["doNotChangeSourceImageForThisReport"]),
+            stage("ContentCrop", artifact: "ContentCrop", current: "configured browser UI crop", status: "nativeReady", proxyOnly: false, realAvailable: true, reports: ["configuration"], affected: allBlockIndexes, firstBlocking: "none", closed: [], blocked: [], nextAction: "keepReportOnly", decisions: [signal("currentBlockSource", "fusedWholePageBubble", source: "configuration.currentBlockSource")], mustNot: ["doNotChangeCropRatiosForThisReport"]),
+            stage("TextBoxes", artifact: "TextBoxes", current: "Native TextBox proxy ledger", status: textBoxStopBlocks.isEmpty ? "proxyStableReportOnly" : "stopLocalTuning", proxyOnly: true, realAvailable: false, reports: ["nativeTextBoxProxyLedgerReport"], affected: uniqueSorted(textBoxStopBlocks + diagnostics.likelyOCRIssueBlocks), firstBlocking: textBoxStopBlocks.isEmpty ? "none" : "TextBoxes", closed: nativeTextBoxProxyLedgerReport == nil ? [] : ["WI-native-textbox-artifact-scorecard"], blocked: textBoxStopBlocks.isEmpty ? [] : ["WI-native-textbox-artifact-scorecard"], nextAction: textBoxStopBlocks.isEmpty ? "closeNativeProxyScoreboards" : "stopLocalCropLineDeskewTuning", decisions: [signal("stoplistBlocks", joined(textBoxStopBlocks), source: "nativeTextBoxProxyLedgerReport")], evaluations: evaluationSignals, mustNot: ["doNotPromoteTextBoxProxyAsRealKoharuArtifact"]),
+            stage("BubbleMask", artifact: "BubbleMask", current: "BubbleMask assignment and split proxy scoreboard", status: bubbleNeedBlocks.isEmpty ? "proxyStableReportOnly" : "requiresRealArtifact", proxyOnly: true, realAvailable: false, reports: ["bubbleMaskAssignmentSplitScoreboardReport"], affected: bubbleNeedBlocks, firstBlocking: bubbleNeedBlocks.isEmpty ? "none" : "BubbleMask", closed: bubbleMaskAssignmentSplitScoreboardReport == nil ? [] : ["WI-bubblemask-assignment-split-scorecard"], blocked: bubbleNeedBlocks.isEmpty ? [] : ["WI-external-artifact-optional-handoff"], nextAction: bubbleNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", decisions: [signal("needsRealBubbleMaskBlocks", joined(bubbleNeedBlocks), source: "bubbleMaskAssignmentSplitScoreboardReport")], mustNot: ["doNotUseProxyMaskAsRealBubbleMask"]),
+            stage("SegmentMask", artifact: "SegmentMask", current: "Glyph mask SegmentMask proxy scoreboard", status: segmentNeedBlocks.isEmpty ? "proxyStableReportOnly" : "requiresRealArtifact", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport"], affected: segmentNeedBlocks, firstBlocking: segmentNeedBlocks.isEmpty ? "none" : "SegmentMask", closed: segmentMaskProxyCoverageScoreboardReport == nil ? [] : ["WI-segmentmask-proxy-coverage-scorecard"], blocked: segmentNeedBlocks.isEmpty ? [] : ["WI-external-artifact-optional-handoff"], nextAction: segmentNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport"), signal("needsRealSegmentMaskBlocks", joined(segmentNeedBlocks), source: "segmentMaskProxyCoverageScoreboardReport")], mustNot: ["doNotUseGlyphMaskProxyAsRealSegmentMask"]),
+            stage("OcrText", artifact: "OcrText", current: "fused whole-page + bubble-first OCR", status: diagnostics.likelyOCRIssueBlocks.isEmpty ? "proxyStableReportOnly" : "proxyBlocked", proxyOnly: false, realAvailable: true, reports: ["diagnostics", "nativeTextBoxProxyLedgerReport"], affected: diagnostics.likelyOCRIssueBlocks, firstBlocking: diagnostics.likelyOCRIssueBlocks.isEmpty ? "none" : "OcrText", closed: [], blocked: textBoxStopBlocks.isEmpty ? [] : ["WI-native-textbox-artifact-scorecard"], nextAction: textBoxStopBlocks.isEmpty ? "keepReportOnly" : "stopLocalCropLineDeskewTuning", decisions: [signal("likelyOCRIssueBlocks", joined(diagnostics.likelyOCRIssueBlocks), source: "diagnostics"), signal("textBoxStoplistBlocks", joined(textBoxStopBlocks), source: "nativeTextBoxProxyLedgerReport")], evaluations: evaluationSignals, mustNot: ["doNotUseGroundTruthToSelectOCRCandidate"]),
+            stage("Translations", artifact: "Translations", current: "Local GGUF deterministic block translation", status: modelFloorLimitedBlocks.isEmpty ? "proxyStableReportOnly" : "modelLimited", proxyOnly: false, realAvailable: true, reports: ["cleanTextDiagnostic", "diagnostics"], affected: modelFloorLimitedBlocks, firstBlocking: modelFloorLimitedBlocks.isEmpty ? "none" : "Translations", closed: [], blocked: ["WI-translation-model-floor-comparison"], nextAction: "routeToTranslationModelFloorComparison", decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic"), signal("translationFailureBreakdown", diagnostics.translationFailureBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "diagnostics")], mustNot: ["doNotChangePromptOrModelInConvergenceReport"]),
+            stage("Inpainted", artifact: "Inpainted", current: "glyph erase/background fill proxy", status: "proxyStableReportOnly", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport", "blocks.backgroundFill"], affected: segmentMaskProxyCoverageScoreboardReport?.backgroundFillAppliedBlocks ?? [], firstBlocking: "none", closed: segmentMaskProxyCoverageScoreboardReport == nil ? [] : ["WI-segmentmask-proxy-coverage-scorecard"], blocked: [], nextAction: "keepReportOnly", decisions: [signal("inpaintingImplemented", "false", source: "segmentMaskProxyCoverageScoreboardReport.cleanupLedgers")], mustNot: ["doNotImplementInpaintingInThisReport"]),
+            stage("RenderedSprites", artifact: "RenderedSprites", current: "safeLayoutRect overlay text renderer", status: "renderStableLocked", proxyOnly: false, realAvailable: true, reports: ["blocks.renderDiagnostics"], affected: renderRegressionLockBlocks, firstBlocking: "none", closed: [], blocked: ["WI-render-regression-lock"], nextAction: "routeToRenderRegressionLock", decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics")], mustNot: ["doNotChangeOverlayRendererInConvergenceReport"]),
+            stage("FinalRender", artifact: "FinalRender", current: "debug boxes and translated overlay PNG", status: "renderStableLocked", proxyOnly: false, realAvailable: true, reports: ["outputFiles", "blocks.renderDiagnostics"], affected: renderRegressionLockBlocks, firstBlocking: "none", closed: [], blocked: ["WI-render-regression-lock"], nextAction: "routeToRenderRegressionLock", decisions: [signal("renderTextTruncatedBlocks", joined(diagnostics.renderTextTruncatedBlocks), source: "diagnostics"), signal("renderCollisionUnresolvedBlocks", joined(diagnostics.renderCollisionUnresolvedBlocks), source: "diagnostics")], mustNot: ["doNotChangePNGRenderingInConvergenceReport"]),
+            stage("ExternalArtifacts", artifact: "ExternalArtifacts", current: "test/koharu_artifacts readiness gate", status: externalReady ? "nativeReady" : "externalOptionalMissing", proxyOnly: false, realAvailable: externalReady, reports: ["externalArtifactReadinessReport", "externalTextBoxShadowOCRReport"], affected: needsRealArtifactBlocks, firstBlocking: externalReady ? "none" : "ExternalArtifacts", closed: [], blocked: ["WI-external-artifact-optional-handoff"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"), signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport")], mustNot: ["doNotCreateOrCopyActiveExternalArtifact"])
+        ]
+
+        func workItem(
+            _ id: String,
+            title: String,
+            status: String,
+            sourceReport: String,
+            stages: [String],
+            blocks: [Int],
+            version: String?,
+            blockers: [String],
+            nextAction: String,
+            ciFast: Bool,
+            full: Bool,
+            external: Bool,
+            decisions: [MangaKoharuArtifactConvergenceSignal],
+            evaluations: [MangaKoharuArtifactConvergenceSignal] = []
+        ) -> MangaKoharuArtifactConvergenceWorkItemLedger {
+            MangaKoharuArtifactConvergenceWorkItemLedger(
+                workItemID: id,
+                title: title,
+                status: status,
+                sourceReport: sourceReport,
+                targetStages: stages,
+                targetBlocks: uniqueSorted(blocks),
+                closedByVersion: version,
+                remainingBlockers: sortedUniqueStrings(blockers),
+                decisionSignals: decisions,
+                evaluationSignals: evaluations,
+                nextAction: nextAction,
+                canRunInCIFast: ciFast,
+                requiresFullProbe: full,
+                requiresExternalArtifact: external,
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false
+            )
+        }
+
+        let workItemLedger = [
+            workItem("WI-native-textbox-artifact-scorecard", title: "Native TextBox proxy quality ledger", status: nativeTextBoxProxyLedgerReport == nil ? "manualReviewOnly" : (textBoxStopBlocks.isEmpty ? "closedReportOnly" : "closedStoplist"), sourceReport: "nativeTextBoxProxyLedgerReport", stages: ["TextBoxes", "OcrText"], blocks: uniqueSorted(textBoxStopBlocks + diagnostics.likelyOCRIssueBlocks), version: nativeTextBoxProxyLedgerReport == nil ? nil : "v1.25", blockers: textBoxStopBlocks.isEmpty ? [] : ["local crop/line/deskew tuning is stoplisted"], nextAction: "stopLocalCropLineDeskewTuning", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(nativeTextBoxProxyLedgerReport != nil), source: "nativeTextBoxProxyLedgerReport")], evaluations: evaluationSignals),
+            workItem("WI-bubblemask-assignment-split-scorecard", title: "BubbleMask assignment and split scoreboard", status: bubbleMaskAssignmentSplitScoreboardReport == nil ? "manualReviewOnly" : "closedReportOnly", sourceReport: "bubbleMaskAssignmentSplitScoreboardReport", stages: ["BubbleMask"], blocks: bubbleNeedBlocks, version: bubbleMaskAssignmentSplitScoreboardReport == nil ? nil : "v1.26", blockers: bubbleNeedBlocks.isEmpty ? [] : ["real BubbleMask artifact needed for promotion"], nextAction: bubbleNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(bubbleMaskAssignmentSplitScoreboardReport != nil), source: "bubbleMaskAssignmentSplitScoreboardReport")]),
+            workItem("WI-segmentmask-proxy-coverage-scorecard", title: "SegmentMask proxy coverage and cleanup ledger", status: segmentMaskProxyCoverageScoreboardReport == nil ? "manualReviewOnly" : "closedReportOnly", sourceReport: "segmentMaskProxyCoverageScoreboardReport", stages: ["SegmentMask", "Inpainted"], blocks: segmentNeedBlocks, version: segmentMaskProxyCoverageScoreboardReport == nil ? nil : "v1.27", blockers: segmentNeedBlocks.isEmpty ? [] : ["real SegmentMask artifact needed for promotion"], nextAction: segmentNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(segmentMaskProxyCoverageScoreboardReport != nil), source: "segmentMaskProxyCoverageScoreboardReport"), signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
+            workItem("WI-translation-model-floor-comparison", title: "Translation model floor comparison", status: "openModelFloor", sourceReport: "cleanTextDiagnostic", stages: ["Translations"], blocks: modelFloorLimitedBlocks, version: nil, blockers: ["not implemented in v1.28", "must not change prompt or model in convergence report"], nextAction: "routeToTranslationModelFloorComparison", ciFast: true, full: false, external: false, decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic")]),
+            workItem("WI-render-regression-lock", title: "Render regression lock", status: "openRenderRegressionLock", sourceReport: "blocks.renderDiagnostics", stages: ["RenderedSprites", "FinalRender"], blocks: renderRegressionLockBlocks, version: nil, blockers: ["not implemented in v1.28", "must not change overlay renderer in convergence report"], nextAction: "routeToRenderRegressionLock", ciFast: true, full: false, external: false, decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics")]),
+            workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
+        ]
+
+        let closedWorkItems = workItemLedger.filter { $0.status == "closedReportOnly" || $0.status == "closedStoplist" }.map(\.workItemID).sorted()
+        let openWorkItems = workItemLedger.filter { $0.status.hasPrefix("open") || $0.status == "blockedByMissingRealArtifact" }.map(\.workItemID).sorted()
+        let stopWorkItems = workItemLedger.filter { $0.status == "closedStoplist" }.map(\.workItemID).sorted()
+        let missingReports = [
+            koharuNativeReplicationScoreboardReport == nil ? "koharuNativeReplicationScoreboardReport" : nil,
+            nativeTextBoxProxyLedgerReport == nil ? "nativeTextBoxProxyLedgerReport" : nil,
+            bubbleMaskAssignmentSplitScoreboardReport == nil ? "bubbleMaskAssignmentSplitScoreboardReport" : nil,
+            segmentMaskProxyCoverageScoreboardReport == nil ? "segmentMaskProxyCoverageScoreboardReport" : nil
+        ].compactMap { $0 }
+
+        func gate(
+            _ id: String,
+            name: String,
+            scope: String,
+            status: String,
+            threshold: String,
+            affected: [Int],
+            failureMeans: String,
+            action: String,
+            decisions: [MangaKoharuArtifactConvergenceSignal]
+        ) -> MangaKoharuArtifactConvergenceGate {
+            MangaKoharuArtifactConvergenceGate(
+                gateID: id,
+                gateName: name,
+                scope: scope,
+                status: status,
+                threshold: threshold,
+                affectedBlocks: uniqueSorted(affected),
+                decisionSignals: decisions,
+                failureMeans: failureMeans,
+                recommendedAction: action,
+                groundTruthUsedForDecision: false
+            )
+        }
+
+        let gateLedger = [
+            gate("G-convergence-no-main-flow-mutation", name: "No main flow mutation", scope: "report", status: "passed", threshold: "wouldChangeMainFlow=false", affected: [], failureMeans: "convergence report changes OCR, translation, layout, rendering, cleanup, or block pass state", action: "revertBehavioralChange", decisions: [signal("wouldChangeMainFlow", "false", source: "koharuArtifactConvergenceReport")]),
+            gate("G-convergence-no-ground-truth-decision", name: "No ground truth decision", scope: "report", status: "passed", threshold: "groundTruthUsedForDecision=false", affected: [], failureMeans: "ground truth influences firstBlockingArtifact, nextAction, or work item state", action: "moveGroundTruthToEvaluationSignalsOnly", decisions: [signal("groundTruthUsedForDecision", "false", source: "koharuArtifactConvergenceReport")]),
+            gate("G-textbox-workitem-closed-report-only", name: "TextBox work item closed report-only", scope: "TextBoxes", status: nativeTextBoxProxyLedgerReport == nil ? "warning" : "passed", threshold: "nativeTextBoxProxyLedgerReport present", affected: textBoxStopBlocks, failureMeans: "v1.25 TextBox ledger is missing from convergence inputs", action: "restoreNativeTextBoxProxyLedgerReport", decisions: [signal("reportAvailable", String(nativeTextBoxProxyLedgerReport != nil), source: "nativeTextBoxProxyLedgerReport")]),
+            gate("G-bubblemask-workitem-closed-report-only", name: "BubbleMask work item closed report-only", scope: "BubbleMask", status: bubbleMaskAssignmentSplitScoreboardReport == nil ? "warning" : "passed", threshold: "bubbleMaskAssignmentSplitScoreboardReport present", affected: bubbleNeedBlocks, failureMeans: "v1.26 BubbleMask scoreboard is missing from convergence inputs", action: "restoreBubbleMaskAssignmentSplitScoreboardReport", decisions: [signal("reportAvailable", String(bubbleMaskAssignmentSplitScoreboardReport != nil), source: "bubbleMaskAssignmentSplitScoreboardReport")]),
+            gate("G-segmentmask-workitem-closed-report-only", name: "SegmentMask work item closed report-only", scope: "SegmentMask", status: segmentMaskProxyCoverageScoreboardReport == nil ? "warning" : "passed", threshold: "segmentMaskProxyCoverageScoreboardReport present", affected: segmentNeedBlocks, failureMeans: "v1.27 SegmentMask scoreboard is missing from convergence inputs", action: "restoreSegmentMaskProxyCoverageScoreboardReport", decisions: [signal("reportAvailable", String(segmentMaskProxyCoverageScoreboardReport != nil), source: "segmentMaskProxyCoverageScoreboardReport")]),
+            gate("G-translation-model-floor-open", name: "Translation model floor remains open", scope: "Translations", status: "open", threshold: "no prompt/model/quality-rule mutation in v1.28", affected: modelFloorLimitedBlocks, failureMeans: "convergence report silently changes translation path", action: "routeToTranslationModelFloorComparison", decisions: [signal("modelFloorLimitedBlocks", joined(modelFloorLimitedBlocks), source: "blocks,cleanTextDiagnostic")]),
+            gate("G-render-regression-lock-open", name: "Render regression lock remains open", scope: "FinalRender", status: "open", threshold: "render diagnostics summarized without renderer mutation", affected: renderRegressionLockBlocks, failureMeans: "convergence report changes overlay rendering", action: "routeToRenderRegressionLock", decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics")]),
+            gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
+            gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
+            gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
+        ]
+
+        let referenceReports = [
+            "koharuArtifactDAGReport",
+            "koharuStageGapReplicationReport",
+            "koharuNativeReplicationScoreboardReport",
+            "nativeTextBoxProxyLedgerReport",
+            "bubbleMaskAssignmentSplitScoreboardReport",
+            "segmentMaskProxyCoverageScoreboardReport",
+            "externalArtifactReadinessReport",
+            "externalTextBoxShadowOCRReport",
+            "cleanTextDiagnostic",
+            "diagnostics",
+            "blocks"
+        ]
+        var notes = [
+            "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, and v1.27 SegmentMask report-only scoreboards into a next-step decision ledger.",
+            "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
+            "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
+        ]
+        if !missingReports.isEmpty {
+            notes.append("Missing upstream reports in this run: \(missingReports.joined(separator: ",")). Report still generated with G-ci-fast-report-availability warning.")
+        }
+
+        return MangaKoharuArtifactConvergenceReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referencePipeline: "Koharu",
+            referenceReports: referenceReports,
+            evaluatedBlockCount: blocks.count,
+            stageCount: stages.count,
+            blockPathCount: blockPaths.count,
+            workItemLedgerCount: workItemLedger.count,
+            gateCount: gateLedger.count,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            externalArtifactsRequiredForThisReport: false,
+            convergenceStatusBreakdown: countBy(stages.map(\.convergenceStatus)),
+            firstBlockingArtifactBreakdown: countBy(blockPaths.map(\.firstBlockingArtifact)),
+            primaryNextActionBreakdown: countBy(blockPaths.map(\.primaryNextAction)),
+            workItemStatusBreakdown: countBy(workItemLedger.map(\.status)),
+            closedWorkItems: closedWorkItems,
+            openWorkItems: openWorkItems,
+            stopWorkItems: stopWorkItems,
+            needsRealArtifactBlocks: needsRealArtifactBlocks,
+            modelFloorLimitedBlocks: modelFloorLimitedBlocks,
+            renderRegressionLockBlocks: renderRegressionLockBlocks,
+            manualReviewBlocks: manualReviewBlocks,
+            stages: stages,
+            blockPaths: blockPaths.sorted { $0.blockIndex < $1.blockIndex },
+            workItemLedger: workItemLedger,
+            gateLedger: gateLedger,
+            notes: notes
         )
     }
 
