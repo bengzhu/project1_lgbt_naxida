@@ -1888,6 +1888,125 @@ struct MangaBubbleMaskAssignmentSplitScoreboardReport: Equatable, Codable, Senda
     var notes: [String]
 }
 
+struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaSegmentMaskProxyBlockScorecard: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var textBoxCandidateID: Int?
+    var glyphMaskPixelCount: Int
+    var glyphMaskRect: [Double]?
+    var glyphMaskFillRectCount: Int
+    var textBoxCoverageRatio: Double?
+    var bubbleMaskCoverageRatio: Double?
+    var safeRectCoverageRatio: Double?
+    var glyphEscapesTextBox: Bool
+    var glyphEscapesBubble: Bool
+    var usableForCleanup: Bool
+    var usableForCropEvidence: Bool
+    var segmentRejectionReasons: [String]
+    var segmentRiskFlags: [String]
+    var coverageStatus: String
+    var cleanupStatus: String
+    var renderMaskStatus: String
+    var backgroundFillApplied: Bool
+    var backgroundColorStdDev: Double?
+    var renderMaskCollisionChecked: Bool
+    var renderMaskCollisionResolved: Bool
+    var renderMaskOverflowPixelCount: Int
+    var renderCollisionResolved: Bool
+    var renderTextTruncated: Bool
+    var textBoxLedgerStatus: String?
+    var bubbleMaskScoreboardStatus: String?
+    var primarySegmentBottleneck: String
+    var decisionSignals: [MangaSegmentMaskProxyDecisionSignal]
+    var evaluationSignals: [MangaSegmentMaskProxyDecisionSignal]
+    var mustNotPromoteReasons: [String]
+    var nextAction: String
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaSegmentMaskProxyCleanupLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var cleanupLedgerID: String
+    var glyphMaskAvailable: Bool
+    var glyphMaskPixelCount: Int
+    var fillRectCount: Int
+    var backgroundFillApplied: Bool
+    var backgroundFillGuardrailStatus: String
+    var backgroundStdDev: Double?
+    var cleanupCoverageStatus: String
+    var allowedCleanupUse: String
+    var blockedCleanupReasons: [String]
+    var wouldNeedInpainting: Bool
+    var inpaintingImplemented: Bool
+    var proxyOnly: Bool
+    var sourceReports: [String]
+    var decisionSignals: [MangaSegmentMaskProxyDecisionSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaSegmentMaskProxyGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaSegmentMaskProxyDecisionSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaSegmentMaskProxyCoverageScoreboardReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referenceWorkItemID: String
+    var referenceKoharuArtifact: String
+    var evaluatedBlockCount: Int
+    var glyphMaskBlockCount: Int
+    var usableForCleanupBlockCount: Int
+    var usableForCropEvidenceBlockCount: Int
+    var weakSegmentBlockCount: Int
+    var cleanupLedgerCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var proxyNotRealSegmentMask: Bool
+    var coverageStatusBreakdown: [String: Int]
+    var cleanupStatusBreakdown: [String: Int]
+    var renderMaskStatusBreakdown: [String: Int]
+    var backgroundFillStatusBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var glyphMaskBlocks: [Int]
+    var usableForCleanupBlocks: [Int]
+    var usableForCropEvidenceBlocks: [Int]
+    var weakSegmentBlocks: [Int]
+    var glyphEscapesTextBoxBlocks: [Int]
+    var glyphEscapesBubbleBlocks: [Int]
+    var safeRectCoverageLowBlocks: [Int]
+    var backgroundFillAppliedBlocks: [Int]
+    var renderBlockedBlocks: [Int]
+    var needsRealSegmentMaskBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var blockScorecards: [MangaSegmentMaskProxyBlockScorecard]
+    var cleanupLedgers: [MangaSegmentMaskProxyCleanupLedger]
+    var gateLedger: [MangaSegmentMaskProxyGate]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -2783,6 +2902,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport?
     var nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?
     var bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?
+    var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?

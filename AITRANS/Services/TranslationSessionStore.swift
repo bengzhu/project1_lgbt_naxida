@@ -1586,6 +1586,7 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport?
                 var nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?
                 var bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?
+                var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
                 var bubbleMaskReport: MangaOverlayBubbleMaskReport?
                 var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
@@ -2007,6 +2008,16 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
                     nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport
                 )
+                segmentMaskProxyCoverageScoreboardReport = Self.makeSegmentMaskProxyCoverageScoreboardReport(
+                    blocks: probeBlocks,
+                    diagnostics: makeMangaOverlayProbeDiagnostics(blocks: probeBlocks),
+                    segmentMaskReport: segmentMaskReport,
+                    textBoxCandidateReport: textBoxCandidateReport,
+                    bubbleMaskReport: bubbleMaskReport,
+                    koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
+                    nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+                    bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport
+                )
                 let deterministicDecodingCheck: MangaDeterministicDecodingCheck?
                 if runOptions.runDeterministicDecodingCheck {
                     self.writeMangaProbeProgress(stage: "deterministic-decoding-check-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
@@ -2043,6 +2054,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
                     nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
                     bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+                    segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
@@ -2113,6 +2125,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
                     nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
                     bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+                    segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
                     bubbleMaskReport: bubbleMaskReport,
                     bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -7224,6 +7237,7 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport? = nil,
         nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport? = nil,
         bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport? = nil,
+        segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
         bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport? = nil,
@@ -7304,6 +7318,7 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
             nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
             bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+            segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
             bubbleMaskReport: bubbleMaskReport,
             bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
@@ -12039,6 +12054,484 @@ final class TranslationSessionStore: ObservableObject {
                 "Assignment, split, sibling layout, nextAction, and promotion blockers use ground-truth-free decision signals only; OCR ground truth metrics appear only in evaluationSignals.",
                 "AITRANS BubbleMask is an internal proxy derived from existing bubble geometry, not a real Koharu BubbleMask artifact.",
                 "This report does not change finalTextUsedForTranslation, blockPassed, failureCategory, safeLayoutRect, overlay rendering, post-fusion cleanup, candidate selection, or currentBlockSource."
+            ]
+        )
+    }
+
+    private static func makeSegmentMaskProxyCoverageScoreboardReport(
+        blocks: [MangaOverlayProbeBlock],
+        diagnostics: MangaOverlayProbeDiagnostics,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?,
+        textBoxCandidateReport: MangaOverlayTextBoxCandidateReport?,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        koharuNativeReplicationScoreboardReport: MangaKoharuNativeReplicationScoreboardReport?,
+        nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?,
+        bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?
+    ) -> MangaSegmentMaskProxyCoverageScoreboardReport {
+        func uniqueSorted(_ values: [Int]) -> [Int] {
+            Array(Set(values)).sorted()
+        }
+        func sortedUniqueStrings(_ values: [String]) -> [String] {
+            Array(Set(values)).sorted()
+        }
+        func countBy(_ values: [String]) -> [String: Int] {
+            values.reduce(into: [:]) { partial, value in
+                partial[value, default: 0] += 1
+            }
+        }
+        func joined(_ values: [Int]) -> String {
+            values.map(String.init).joined(separator: ",")
+        }
+        func ratioString(_ value: Double?) -> String {
+            value?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+        }
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaSegmentMaskProxyDecisionSignal {
+            MangaSegmentMaskProxyDecisionSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let textBoxByBlock = Dictionary(
+            uniqueKeysWithValues: (textBoxCandidateReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let maskByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
+        )
+        let nativeScorecardByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuNativeReplicationScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
+        )
+        let textBoxLedgerByBlock = Dictionary(
+            uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let bubbleScoreboardByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleMaskAssignmentSplitScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
+        )
+
+        func fallbackSegment(for block: MangaOverlayProbeBlock) -> MangaOverlaySegmentMaskDiagnostic {
+            MangaOverlaySegmentMaskDiagnostic(
+                blockIndex: block.index,
+                textBoxCandidateID: textBoxByBlock[block.index]?.id,
+                glyphMaskPixelCount: block.glyphMaskPixelCount,
+                glyphMaskRect: block.glyphMaskRect,
+                glyphMaskFillRectCount: block.glyphMaskFillRects.count,
+                textBoxCoverageRatio: textBoxByBlock[block.index]?.glyphOverlapRatio,
+                bubbleMaskCoverageRatio: maskByBlock[block.index]?.cropMaskCoverageRatio,
+                safeRectCoverageRatio: textBoxByBlock[block.index]?.safeRectOverlapRatio,
+                glyphEscapesBubble: false,
+                glyphEscapesTextBox: false,
+                usableForCleanup: block.glyphMaskPixelCount > 0,
+                usableForCropEvidence: false,
+                rejectionReasons: block.glyphMaskPixelCount > 0 ? [] : ["missingGlyphMask"],
+                riskFlags: ["segmentMaskReportMissing"],
+                notes: ["fallbackDiagnosticForSegmentMaskProxyCoverageScoreboard"]
+            )
+        }
+
+        func isDecorativeProxyCase(block: MangaOverlayProbeBlock, segment: MangaOverlaySegmentMaskDiagnostic) -> Bool {
+            if segment.riskFlags.contains("decorativeTitle") || segment.rejectionReasons.contains("decorativeTitleDiagnosticOnly") {
+                return true
+            }
+            guard block.bubbleID == nil else { return false }
+            let normalized = block.finalTextUsedForTranslation.lowercased()
+            return normalized.contains("city battler") || normalized.contains("offline tournament")
+        }
+
+        func coverageStatus(block: MangaOverlayProbeBlock, segment: MangaOverlaySegmentMaskDiagnostic) -> String {
+            if segment.glyphMaskPixelCount <= 0 {
+                return "weakMissingGlyphMask"
+            }
+            if isDecorativeProxyCase(block: block, segment: segment) {
+                return "decorativeDiagnosticOnly"
+            }
+            if block.bubbleID == nil {
+                return "unassignedDiagnosticOnly"
+            }
+            if segment.glyphEscapesTextBox || (segment.textBoxCoverageRatio ?? 1) < 0.42 {
+                return "weakTextBoxCoverageLow"
+            }
+            if segment.glyphEscapesBubble || (segment.bubbleMaskCoverageRatio ?? 1) < 0.45 {
+                return "weakBubbleCoverageLow"
+            }
+            if (segment.safeRectCoverageRatio ?? 1) < 0.38 {
+                return "weakSafeRectCoverageLow"
+            }
+            if segment.usableForCropEvidence {
+                return "usableProxyCoverage"
+            }
+            if segment.usableForCleanup {
+                return "usableForCleanupOnly"
+            }
+            return "needsRealSegmentMask"
+        }
+
+        func cleanupStatus(block: MangaOverlayProbeBlock, segment: MangaOverlaySegmentMaskDiagnostic, coverage: String) -> String {
+            if segment.glyphMaskPixelCount <= 0 {
+                return "glyphMaskMissing"
+            }
+            if segment.glyphEscapesTextBox {
+                return "glyphMaskEscapesTextBox"
+            }
+            if segment.glyphEscapesBubble {
+                return "glyphMaskEscapesBubble"
+            }
+            if block.backgroundFillApplied {
+                return "backgroundFillApplied"
+            }
+            if let stdDev = block.backgroundColorStdDev, stdDev > 34 {
+                return "backgroundTooComplex"
+            }
+            if coverage == "needsRealSegmentMask" || coverage == "unassignedDiagnosticOnly" || coverage == "decorativeDiagnosticOnly" {
+                return "cleanupBlockedProxyOnly"
+            }
+            return "cleanupEvidenceStable"
+        }
+
+        func renderMaskStatus(block: MangaOverlayProbeBlock) -> String {
+            if block.renderTextTruncated {
+                return "renderTruncated"
+            }
+            if block.renderMaskOverflowPixelCount > 0 {
+                return "renderMaskOverflow"
+            }
+            if block.renderMaskCollisionChecked {
+                return block.renderMaskCollisionResolved ? "renderMaskStable" : "renderMaskUnresolved"
+            }
+            return "renderNotChecked"
+        }
+
+        func backgroundFillStatus(card: MangaSegmentMaskProxyBlockScorecard) -> String {
+            if card.backgroundFillApplied {
+                return "backgroundFillApplied"
+            }
+            if card.cleanupStatus == "backgroundTooComplex" {
+                return "backgroundFillGuardedComplex"
+            }
+            if card.glyphMaskPixelCount <= 0 {
+                return "backgroundFillBlockedMissingGlyph"
+            }
+            return "backgroundFillNotApplied"
+        }
+
+        func primaryBottleneck(
+            coverage: String,
+            cleanup: String,
+            render: String,
+            textBoxStatus: String?,
+            bubbleStatus: String?
+        ) -> String {
+            if coverage == "weakMissingGlyphMask" {
+                return "glyphMaskMissing"
+            }
+            if coverage == "weakTextBoxCoverageLow" || cleanup == "glyphMaskEscapesTextBox" {
+                return "textBoxCoverageLow"
+            }
+            if coverage == "weakBubbleCoverageLow" || cleanup == "glyphMaskEscapesBubble" {
+                return "bubbleMaskCoverageLow"
+            }
+            if coverage == "weakSafeRectCoverageLow" {
+                return "safeRectCoverageLow"
+            }
+            if render == "renderMaskOverflow" || render == "renderMaskUnresolved" || render == "renderTruncated" {
+                return "renderMaskCollision"
+            }
+            if textBoxStatus == "blockedByWeakSegmentMask" {
+                return "nativeTextBoxSegmentBoundary"
+            }
+            if bubbleStatus == "needsRealBubbleMask" {
+                return "bubbleMaskBoundary"
+            }
+            if coverage == "needsRealSegmentMask" {
+                return "needsRealSegmentMask"
+            }
+            return "proxyCoverageStable"
+        }
+
+        func nextAction(coverage: String, cleanup: String, render: String, block: MangaOverlayProbeBlock) -> String {
+            if render == "renderMaskOverflow" || render == "renderMaskUnresolved" || render == "renderTruncated" {
+                return "routeToRenderRegressionLock"
+            }
+            if block.backgroundFillApplied || cleanup == "backgroundTooComplex" {
+                return "keepBackgroundFillGuardrail"
+            }
+            if coverage == "usableProxyCoverage" && cleanup == "cleanupEvidenceStable" {
+                return "lockRenderCleanupBoundary"
+            }
+            if coverage == "weakMissingGlyphMask" || coverage == "needsRealSegmentMask" {
+                return "collectRealSegmentMaskArtifact"
+            }
+            if coverage == "unassignedDiagnosticOnly" || coverage == "decorativeDiagnosticOnly" {
+                return "manualReviewOnly"
+            }
+            if coverage == "usableForCleanupOnly" {
+                return "doNotUseForCropPromotion"
+            }
+            return "keepReportOnly"
+        }
+
+        func evaluationSignals(for block: MangaOverlayProbeBlock) -> [MangaSegmentMaskProxyDecisionSignal] {
+            [
+                signal("ocrGroundTruthSimilarity", ratioString(block.ocrGroundTruthSimilarity), source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true),
+                signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
+                signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                signal("wordOrderPreserved", block.wordOrderPreserved.map(String.init) ?? "nil", source: "blocks.wordOrderPreserved", decision: false, evaluation: true)
+            ]
+        }
+
+        var blockScorecards: [MangaSegmentMaskProxyBlockScorecard] = []
+        blockScorecards.reserveCapacity(blocks.count)
+        for block in blocks {
+            let segment = segmentByBlock[block.index] ?? fallbackSegment(for: block)
+            let nativeScorecard = nativeScorecardByBlock[block.index]
+            let textBoxLedger = textBoxLedgerByBlock[block.index]
+            let bubbleScoreboard = bubbleScoreboardByBlock[block.index]
+            let coverage = coverageStatus(block: block, segment: segment)
+            let cleanup = cleanupStatus(block: block, segment: segment, coverage: coverage)
+            let render = renderMaskStatus(block: block)
+            let bottleneck = primaryBottleneck(
+                coverage: coverage,
+                cleanup: cleanup,
+                render: render,
+                textBoxStatus: textBoxLedger?.qualityStatus,
+                bubbleStatus: bubbleScoreboard?.siblingLayoutStatus
+            )
+            let action = nextAction(coverage: coverage, cleanup: cleanup, render: render, block: block)
+            var mustNotPromote = [
+                "segmentMaskProxyReportOnly",
+                "proxyNotRealSegmentMask",
+                "doesNotChangeGlyphMaskFillRects",
+                "doesNotChangeBackgroundFillBehavior",
+                "doesNotChangeSafeLayoutRect",
+                "doesNotChangeTextRegionCropAdoptedCount",
+                "groundTruthUsedOnlyForEvaluationSignals"
+            ]
+            mustNotPromote.append(contentsOf: segment.rejectionReasons)
+            mustNotPromote.append(contentsOf: segment.riskFlags)
+            mustNotPromote.append(contentsOf: nativeScorecard?.mustNotPromoteReasons ?? [])
+            mustNotPromote.append(contentsOf: textBoxLedger?.mustNotPromoteReasons ?? [])
+            mustNotPromote.append(contentsOf: bubbleScoreboard?.mustNotPromoteReasons ?? [])
+            let decisionSignals = [
+                signal("glyphMaskPixelCount", String(segment.glyphMaskPixelCount), source: "segmentMaskReport.diagnostics"),
+                signal("glyphMaskFillRectCount", String(segment.glyphMaskFillRectCount), source: "segmentMaskReport.diagnostics"),
+                signal("textBoxCoverageRatio", ratioString(segment.textBoxCoverageRatio), source: "segmentMaskReport.diagnostics"),
+                signal("bubbleMaskCoverageRatio", ratioString(segment.bubbleMaskCoverageRatio), source: "segmentMaskReport.diagnostics"),
+                signal("safeRectCoverageRatio", ratioString(segment.safeRectCoverageRatio), source: "segmentMaskReport.diagnostics"),
+                signal("usableForCleanup", String(segment.usableForCleanup), source: "segmentMaskReport.diagnostics"),
+                signal("usableForCropEvidence", String(segment.usableForCropEvidence), source: "segmentMaskReport.diagnostics"),
+                signal("backgroundFillApplied", String(block.backgroundFillApplied), source: "blocks.backgroundFillApplied"),
+                signal("backgroundColorStdDev", ratioString(block.backgroundColorStdDev), source: "blocks.backgroundColorStdDev"),
+                signal("renderMaskOverflowPixelCount", String(block.renderMaskOverflowPixelCount), source: "blocks.renderMaskDiagnostics"),
+                signal("nativeTextBoxLedgerStatus", textBoxLedger?.qualityStatus ?? "nil", source: "nativeTextBoxProxyLedgerReport.blockLedgers"),
+                signal("bubbleMaskRenderStatus", bubbleScoreboard?.renderMaskStatus ?? "nil", source: "bubbleMaskAssignmentSplitScoreboardReport.blockScorecards")
+            ]
+            blockScorecards.append(
+                MangaSegmentMaskProxyBlockScorecard(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    textBoxCandidateID: segment.textBoxCandidateID,
+                    glyphMaskPixelCount: segment.glyphMaskPixelCount,
+                    glyphMaskRect: segment.glyphMaskRect,
+                    glyphMaskFillRectCount: segment.glyphMaskFillRectCount,
+                    textBoxCoverageRatio: segment.textBoxCoverageRatio,
+                    bubbleMaskCoverageRatio: segment.bubbleMaskCoverageRatio,
+                    safeRectCoverageRatio: segment.safeRectCoverageRatio,
+                    glyphEscapesTextBox: segment.glyphEscapesTextBox,
+                    glyphEscapesBubble: segment.glyphEscapesBubble,
+                    usableForCleanup: segment.usableForCleanup,
+                    usableForCropEvidence: segment.usableForCropEvidence,
+                    segmentRejectionReasons: segment.rejectionReasons,
+                    segmentRiskFlags: segment.riskFlags,
+                    coverageStatus: coverage,
+                    cleanupStatus: cleanup,
+                    renderMaskStatus: render,
+                    backgroundFillApplied: block.backgroundFillApplied,
+                    backgroundColorStdDev: block.backgroundColorStdDev,
+                    renderMaskCollisionChecked: block.renderMaskCollisionChecked,
+                    renderMaskCollisionResolved: block.renderMaskCollisionResolved,
+                    renderMaskOverflowPixelCount: block.renderMaskOverflowPixelCount,
+                    renderCollisionResolved: block.renderCollisionResolved,
+                    renderTextTruncated: block.renderTextTruncated,
+                    textBoxLedgerStatus: textBoxLedger?.qualityStatus,
+                    bubbleMaskScoreboardStatus: bubbleScoreboard?.renderMaskStatus,
+                    primarySegmentBottleneck: bottleneck,
+                    decisionSignals: decisionSignals,
+                    evaluationSignals: evaluationSignals(for: block),
+                    mustNotPromoteReasons: sortedUniqueStrings(mustNotPromote),
+                    nextAction: action,
+                    groundTruthUsedForDecision: false,
+                    diagnosticOnly: true,
+                    wouldChangeMainFlow: false
+                )
+            )
+        }
+
+        let glyphMaskBlocks = uniqueSorted(blockScorecards.filter { $0.glyphMaskPixelCount > 0 }.map(\.blockIndex))
+        let usableForCleanupBlocks = uniqueSorted(segmentMaskReport?.usableForCleanupBlocks ?? blockScorecards.filter(\.usableForCleanup).map(\.blockIndex))
+        let usableForCropEvidenceBlocks = uniqueSorted(segmentMaskReport?.usableForCropEvidenceBlocks ?? blockScorecards.filter(\.usableForCropEvidence).map(\.blockIndex))
+        let weakSegmentBlocks = uniqueSorted(segmentMaskReport?.weakSegmentBlocks ?? blockScorecards.filter { !$0.usableForCropEvidence }.map(\.blockIndex))
+        let glyphEscapesTextBoxBlocks = uniqueSorted(blockScorecards.filter(\.glyphEscapesTextBox).map(\.blockIndex))
+        let glyphEscapesBubbleBlocks = uniqueSorted(blockScorecards.filter(\.glyphEscapesBubble).map(\.blockIndex))
+        let safeRectCoverageLowBlocks = uniqueSorted(blockScorecards.filter { ($0.safeRectCoverageRatio ?? 1) < 0.38 }.map(\.blockIndex))
+        let backgroundFillAppliedBlocks = uniqueSorted(blockScorecards.filter(\.backgroundFillApplied).map(\.blockIndex))
+        let renderBlockedBlocks = uniqueSorted(blockScorecards.filter {
+            $0.renderMaskStatus == "renderMaskOverflow"
+                || $0.renderMaskStatus == "renderMaskUnresolved"
+                || $0.renderMaskStatus == "renderTruncated"
+        }.map(\.blockIndex))
+        let needsRealSegmentMaskBlocks = uniqueSorted(blockScorecards.filter { $0.nextAction == "collectRealSegmentMaskArtifact" || $0.coverageStatus == "needsRealSegmentMask" }.map(\.blockIndex))
+        let manualReviewBlocks = uniqueSorted(blockScorecards.filter { $0.nextAction == "manualReviewOnly" }.map(\.blockIndex))
+
+        func backgroundGuardrailStatus(block: MangaSegmentMaskProxyBlockScorecard) -> String {
+            if block.backgroundFillApplied {
+                return "appliedByExistingGuardrail"
+            }
+            if block.cleanupStatus == "backgroundTooComplex" {
+                return "blockedByComplexBackground"
+            }
+            return "notApplied"
+        }
+
+        let cleanupLedgers = blockScorecards.map { card -> MangaSegmentMaskProxyCleanupLedger in
+            let glyphAvailable = card.glyphMaskPixelCount > 0
+            var blocked: [String] = []
+            if !glyphAvailable { blocked.append("missingGlyphMask") }
+            if card.glyphEscapesTextBox { blocked.append("glyphMaskEscapesTextBox") }
+            if card.glyphEscapesBubble { blocked.append("glyphMaskEscapesBubble") }
+            if card.cleanupStatus == "backgroundTooComplex" { blocked.append("backgroundTooComplex") }
+            if card.coverageStatus == "needsRealSegmentMask" { blocked.append("needsRealSegmentMask") }
+            if card.coverageStatus == "unassignedDiagnosticOnly" { blocked.append("unassignedDiagnosticOnly") }
+            if card.coverageStatus == "decorativeDiagnosticOnly" { blocked.append("decorativeDiagnosticOnly") }
+            let allowedUse: String
+            if card.backgroundFillApplied {
+                allowedUse = "backgroundFillAlreadyApplied"
+            } else if !glyphAvailable {
+                allowedUse = "blockedMissingGlyphMask"
+            } else if card.cleanupStatus == "backgroundTooComplex" {
+                allowedUse = "blockedComplexBackground"
+            } else if card.cleanupStatus == "cleanupBlockedProxyOnly" || card.coverageStatus == "needsRealSegmentMask" {
+                allowedUse = "blockedNeedsRealSegmentMask"
+            } else if card.renderMaskStatus == "renderMaskStable" {
+                allowedUse = "renderBoundaryEvidence"
+            } else {
+                allowedUse = "reportOnlyGlyphBoundary"
+            }
+            return MangaSegmentMaskProxyCleanupLedger(
+                blockIndex: card.blockIndex,
+                cleanupLedgerID: "segmentMaskProxyCleanup-\(card.blockIndex)",
+                glyphMaskAvailable: glyphAvailable,
+                glyphMaskPixelCount: card.glyphMaskPixelCount,
+                fillRectCount: card.glyphMaskFillRectCount,
+                backgroundFillApplied: card.backgroundFillApplied,
+                backgroundFillGuardrailStatus: backgroundGuardrailStatus(block: card),
+                backgroundStdDev: card.backgroundColorStdDev,
+                cleanupCoverageStatus: card.cleanupStatus,
+                allowedCleanupUse: allowedUse,
+                blockedCleanupReasons: sortedUniqueStrings(blocked + card.segmentRejectionReasons),
+                wouldNeedInpainting: allowedUse == "blockedNeedsRealSegmentMask" || card.cleanupStatus == "backgroundTooComplex",
+                inpaintingImplemented: false,
+                proxyOnly: true,
+                sourceReports: ["segmentMaskReport", "blocks.glyphMask", "blocks.backgroundFill", "renderDiagnostics"],
+                decisionSignals: card.decisionSignals.filter(\.groundTruthFreeDecisionSignal),
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false
+            )
+        }
+
+        func gate(
+            _ id: String,
+            name: String,
+            scope: String,
+            status: String,
+            threshold: String,
+            affected: [Int],
+            failureMeans: String,
+            action: String,
+            signals: [MangaSegmentMaskProxyDecisionSignal]
+        ) -> MangaSegmentMaskProxyGate {
+            MangaSegmentMaskProxyGate(
+                gateID: id,
+                gateName: name,
+                scope: scope,
+                status: status,
+                threshold: threshold,
+                affectedBlocks: uniqueSorted(affected),
+                decisionSignals: signals,
+                failureMeans: failureMeans,
+                recommendedAction: action,
+                groundTruthUsedForDecision: false
+            )
+        }
+
+        let gateLedger = [
+            gate("G-segmentmask-no-main-flow-mutation", name: "No main flow mutation", scope: "report", status: "passed", threshold: "wouldChangeMainFlow=false", affected: [], failureMeans: "scoreboard mutates OCR, translation, overlay, cleanup, safeLayoutRect, blockPassed, or currentBlockSource", action: "revertBehavioralChange", signals: [signal("wouldChangeMainFlow", "false", source: "segmentMaskProxyCoverageScoreboardReport")]),
+            gate("G-segmentmask-no-ground-truth-decision", name: "No ground truth decision", scope: "report", status: "passed", threshold: "groundTruthUsedForDecision=false", affected: [], failureMeans: "ground truth influences coverage, cleanup, nextAction, or gate status", action: "removeGroundTruthFromDecisionPath", signals: [signal("groundTruthUsedForDecision", "false", source: "segmentMaskProxyCoverageScoreboardReport")]),
+            gate("G-segmentmask-proxy-boundary", name: "Proxy boundary", scope: "SegmentMask", status: "proxyOnly", threshold: "proxyNotRealSegmentMask=true", affected: blocks.map(\.index), failureMeans: "AITRANS glyph proxy is mislabeled as real Koharu SegmentMask", action: "keepProxyLabelOrCollectRealSegmentMaskArtifact", signals: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
+            gate("G-segmentmask-glyph-available", name: "Glyph mask available", scope: "glyphCleanup", status: glyphMaskBlocks.count == blocks.count ? "passed" : "warning", threshold: "glyphMaskPixelCount > 0", affected: uniqueSorted(blocks.map(\.index).filter { !glyphMaskBlocks.contains($0) }), failureMeans: "cleanup boundary is assumed without glyph evidence", action: "collectRealSegmentMaskArtifact", signals: [signal("glyphMaskBlocks", joined(glyphMaskBlocks), source: "segmentMaskReport")]),
+            gate("G-segmentmask-textbox-coverage", name: "TextBox coverage", scope: "nativeTextBoxes", status: glyphEscapesTextBoxBlocks.isEmpty ? "passed" : "warning", threshold: "glyph remains inside TextBox proxy", affected: glyphEscapesTextBoxBlocks, failureMeans: "glyph cleanup crosses TextBox boundary", action: "keepReportOnly", signals: [signal("glyphEscapesTextBoxBlocks", joined(glyphEscapesTextBoxBlocks), source: "segmentMaskReport")]),
+            gate("G-segmentmask-bubble-coverage", name: "Bubble coverage", scope: "BubbleMask", status: glyphEscapesBubbleBlocks.isEmpty ? "passed" : "warning", threshold: "glyph remains inside BubbleMask proxy", affected: glyphEscapesBubbleBlocks, failureMeans: "glyph cleanup crosses bubble mask", action: "collectRealSegmentMaskArtifact", signals: [signal("glyphEscapesBubbleBlocks", joined(glyphEscapesBubbleBlocks), source: "segmentMaskReport")]),
+            gate("G-segmentmask-safe-rect-coverage", name: "Safe rect coverage", scope: "renderLayout", status: safeRectCoverageLowBlocks.isEmpty ? "passed" : "warning", threshold: "safeRectCoverageRatio >= 0.38", affected: safeRectCoverageLowBlocks, failureMeans: "render cleanup boundary is outside safe text area", action: "routeToRenderRegressionLock", signals: [signal("safeRectCoverageLowBlocks", joined(safeRectCoverageLowBlocks), source: "segmentMaskReport")]),
+            gate("G-segmentmask-background-fill-guardrail", name: "Background fill guardrail", scope: "glyphCleanup", status: backgroundFillAppliedBlocks.isEmpty ? "reportOnly" : "passed", threshold: "existing background fill behavior only", affected: backgroundFillAppliedBlocks, failureMeans: "scoreboard changes background fill threshold or behavior", action: "keepBackgroundFillGuardrail", signals: [signal("backgroundFillAppliedBlocks", joined(backgroundFillAppliedBlocks), source: "blocks.backgroundFillApplied")]),
+            gate("G-segmentmask-render-mask-collision", name: "Render mask collision", scope: "finalRender", status: renderBlockedBlocks.isEmpty ? "passed" : "blocked", threshold: "no unresolved mask overflow or truncation", affected: renderBlockedBlocks, failureMeans: "render overflow is hidden or ignored", action: "routeToRenderRegressionLock", signals: [signal("renderBlockedBlocks", joined(renderBlockedBlocks), source: "blocks.renderMaskDiagnostics")]),
+            gate("G-segmentmask-textbox-ledger-boundary", name: "TextBox ledger boundary", scope: "nativeTextBoxes", status: "passed", threshold: "SegmentMask scorecard cannot thaw crop/line stoplist", affected: nativeTextBoxProxyLedgerReport?.stoplistBlocks ?? [], failureMeans: "SegmentMask proxy work reopens frozen crop/line/deskew tuning", action: "respectNativeTextBoxProxyLedgerStoplist", signals: [signal("nativeTextBoxStoplistBlocks", joined(nativeTextBoxProxyLedgerReport?.stoplistBlocks ?? []), source: "nativeTextBoxProxyLedgerReport")]),
+            gate("G-segmentmask-bubblemask-boundary", name: "BubbleMask boundary", scope: "BubbleMask", status: (bubbleMaskAssignmentSplitScoreboardReport?.needsRealBubbleMaskBlocks.isEmpty ?? true) ? "passed" : "warning", threshold: "SegmentMask proxy cannot override BubbleMask scorecard", affected: bubbleMaskAssignmentSplitScoreboardReport?.needsRealBubbleMaskBlocks ?? [], failureMeans: "SegmentMask cleanup bypasses BubbleMask assignment or split blockers", action: "respectBubbleMaskScoreboardBoundary", signals: [signal("needsRealBubbleMaskBlocks", joined(bubbleMaskAssignmentSplitScoreboardReport?.needsRealBubbleMaskBlocks ?? []), source: "bubbleMaskAssignmentSplitScoreboardReport")]),
+            gate("G-segmentmask-real-artifact-boundary", name: "Real SegmentMask artifact boundary", scope: "externalArtifacts", status: needsRealSegmentMaskBlocks.isEmpty ? "reportOnly" : "needsRealArtifact", threshold: "proxy evidence is not a real Koharu SegmentMask", affected: needsRealSegmentMaskBlocks, failureMeans: "internal glyph proxy is promoted as learned segmentation", action: "collectRealSegmentMaskArtifact", signals: [signal("referenceKoharuArtifact", "SegmentMask", source: "segmentMaskProxyCoverageScoreboardReport"), signal("needsRealSegmentMaskBlocks", joined(needsRealSegmentMaskBlocks), source: "segmentMaskProxyCoverageScoreboardReport")])
+        ]
+
+        return MangaSegmentMaskProxyCoverageScoreboardReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referenceWorkItemID: "WI-segmentmask-proxy-coverage-scorecard",
+            referenceKoharuArtifact: "SegmentMask",
+            evaluatedBlockCount: blocks.count,
+            glyphMaskBlockCount: segmentMaskReport?.glyphMaskBlocks ?? glyphMaskBlocks.count,
+            usableForCleanupBlockCount: usableForCleanupBlocks.count,
+            usableForCropEvidenceBlockCount: usableForCropEvidenceBlocks.count,
+            weakSegmentBlockCount: weakSegmentBlocks.count,
+            cleanupLedgerCount: cleanupLedgers.count,
+            gateCount: gateLedger.count,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            proxyNotRealSegmentMask: true,
+            coverageStatusBreakdown: countBy(blockScorecards.map(\.coverageStatus)),
+            cleanupStatusBreakdown: countBy(blockScorecards.map(\.cleanupStatus)),
+            renderMaskStatusBreakdown: countBy(blockScorecards.map(\.renderMaskStatus)),
+            backgroundFillStatusBreakdown: countBy(blockScorecards.map { backgroundFillStatus(card: $0) }),
+            nextActionBreakdown: countBy(blockScorecards.map(\.nextAction)),
+            glyphMaskBlocks: glyphMaskBlocks,
+            usableForCleanupBlocks: usableForCleanupBlocks,
+            usableForCropEvidenceBlocks: usableForCropEvidenceBlocks,
+            weakSegmentBlocks: weakSegmentBlocks,
+            glyphEscapesTextBoxBlocks: glyphEscapesTextBoxBlocks,
+            glyphEscapesBubbleBlocks: glyphEscapesBubbleBlocks,
+            safeRectCoverageLowBlocks: safeRectCoverageLowBlocks,
+            backgroundFillAppliedBlocks: backgroundFillAppliedBlocks,
+            renderBlockedBlocks: renderBlockedBlocks,
+            needsRealSegmentMaskBlocks: needsRealSegmentMaskBlocks,
+            manualReviewBlocks: manualReviewBlocks,
+            blockScorecards: blockScorecards.sorted { $0.blockIndex < $1.blockIndex },
+            cleanupLedgers: cleanupLedgers.sorted { $0.blockIndex < $1.blockIndex },
+            gateLedger: gateLedger,
+            notes: [
+                "segmentMaskProxyCoverageScoreboardReport executes WI-segmentmask-proxy-coverage-scorecard as report-only SegmentMask proxy scoreboard.",
+                "cleanupLedgers use one ledger per final block so cleanupLedgerCount is stable and always >= glyphMaskBlockCount.",
+                "It aggregates existing glyph mask, SegmentMask proxy, TextBox, BubbleMask, native ledger, background fill, and render collision evidence without new OCR or LLM calls.",
+                "coverageStatus, cleanupStatus, renderMaskStatus, nextAction, and gates use ground-truth-free decision signals only; OCR ground truth metrics appear only in evaluationSignals.",
+                "AITRANS SegmentMask is a glyph-mask proxy, not a real Koharu SegmentMask artifact.",
+                "This report does not change finalTextUsedForTranslation, blockPassed, failureCategory, overlay rendering, safeLayoutRect, glyphMaskFillRects, background fill behavior, post-fusion cleanup, candidate selection, textRegionCropReport.adoptedCount, or currentBlockSource."
             ]
         )
     }
