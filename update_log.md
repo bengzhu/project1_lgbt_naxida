@@ -143,6 +143,7 @@
 验证计划：
 
 - 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 退回修复：PR #25 云端 run `28523199970` 在 `TranslationSessionStore.swift` 的 `MangaKoharuWorkOrderBlockRoute` 大表达式 type-check 超时；本轮拆分 work order route 与 BubbleIndex block ledger 的 signal / evaluation / mustNotPromote 子表达式，保持 report-only 语义不变。
 - 未跑本机 build / 探针，按规则交给云端验证。
 - 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuBubbleIndexShadowLedgerReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`evaluatedBubbleCount == bubbleMaskReport.instanceCount`、`bubbleLedgerCount == bubbleMaskReport.instanceCount`、`gateCount >= 12`，breakdown 非空，`proxyNotRealBubbleMask = true`，convergence 包含 BubbleIndex reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、bubble ledger、sibling ledger 和逐块 block ledger。
 
