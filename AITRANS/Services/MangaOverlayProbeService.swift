@@ -755,6 +755,7 @@ struct MangaOverlayProbeService: Sendable {
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport? = nil,
         koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport? = nil,
         koharuPipelineResolverReport: MangaKoharuPipelineResolverReport? = nil,
+        koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
@@ -823,6 +824,7 @@ struct MangaOverlayProbeService: Sendable {
                 segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
                 koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
                 koharuPipelineResolverReport: koharuPipelineResolverReport,
+                koharuWorkOrderRouterReport: koharuWorkOrderRouterReport,
                 translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                 koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                 bubbleMaskReport: bubbleMaskReport,
@@ -1493,6 +1495,7 @@ struct MangaOverlayProbeService: Sendable {
         segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?,
         koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?,
         koharuPipelineResolverReport: MangaKoharuPipelineResolverReport?,
+        koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport?,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -1580,6 +1583,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let koharuResolverTraceByBlock = Dictionary(
             uniqueKeysWithValues: (koharuPipelineResolverReport?.blockTraces ?? []).map { ($0.blockIndex, $0) }
+        )
+        let koharuWorkOrderRouteByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuWorkOrderRouterReport?.blockRoutes ?? []).map { ($0.blockIndex, $0) }
         )
         let translationFloorNoisyByBlock = Dictionary(
             uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
@@ -1802,6 +1808,7 @@ struct MangaOverlayProbeService: Sendable {
             let segmentMaskProxyMustNotPromote = segmentMaskProxyScoreboard?.mustNotPromoteReasons.joined(separator: " | ") ?? "nil"
             let koharuArtifactPath = koharuConvergencePathByBlock[block.index]
             let koharuResolverTrace = koharuResolverTraceByBlock[block.index]
+            let koharuWorkOrderRoute = koharuWorkOrderRouteByBlock[block.index]
             let translationFloorNoisy = translationFloorNoisyByBlock[block.index]
             let renderLock = renderLockByBlock[block.index]
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
@@ -1868,6 +1875,7 @@ struct MangaOverlayProbeService: Sendable {
             segmentMaskProxyScoreboard: coverage=\(segmentMaskProxyScoreboard?.coverageStatus ?? "nil") cleanup=\(segmentMaskProxyScoreboard?.cleanupStatus ?? "nil") renderMask=\(segmentMaskProxyScoreboard?.renderMaskStatus ?? "nil") glyphPixels=\(segmentMaskProxyScoreboard.map { String($0.glyphMaskPixelCount) } ?? "nil") textBoxCoverage=\(segmentMaskProxyTextBoxCoverage) bubbleCoverage=\(segmentMaskProxyBubbleCoverage) safeRectCoverage=\(segmentMaskProxySafeRectCoverage) backgroundFill=\(segmentMaskProxyScoreboard.map { String($0.backgroundFillApplied) } ?? "nil") nextAction=\(segmentMaskProxyScoreboard?.nextAction ?? "nil") mustNotPromote=\(segmentMaskProxyMustNotPromote)
             koharuArtifactPath: firstBlockingArtifact=\(koharuArtifactPath?.firstBlockingArtifact ?? "nil") textBox=\(koharuArtifactPath?.textBoxStatus ?? "nil") bubble=\(koharuArtifactPath?.bubbleMaskStatus ?? "nil") segment=\(koharuArtifactPath?.segmentMaskStatus ?? "nil") translation=\(koharuArtifactPath?.translationStatus ?? "nil") render=\(koharuArtifactPath?.renderStatus ?? "nil") modelFloorLimited=\(koharuArtifactPath.map { String($0.modelFloorLimited) } ?? "nil") renderLocked=\(koharuArtifactPath.map { String($0.renderLocked) } ?? "nil") needsRealArtifact=\(koharuArtifactPath.map { String($0.needsRealArtifact) } ?? "nil") nextAction=\(koharuArtifactPath?.primaryNextAction ?? "nil")
             koharuPipelineResolverTrace: firstBlockedNodeID=\(koharuResolverTrace?.firstBlockedNodeID ?? "nil") primaryBottleneck=\(koharuResolverTrace?.primaryBottleneck ?? "nil") recommendedExecutionItemID=\(koharuResolverTrace?.recommendedExecutionItemID ?? "nil") recommendedNextAction=\(koharuResolverTrace?.recommendedNextAction ?? "nil") requiresExternalArtifact=\(koharuResolverTrace.map { String($0.requiresExternalArtifact) } ?? "nil") stoplistedLocalTuning=\(koharuResolverTrace.map { String($0.stoplistedLocalTuning) } ?? "nil")
+            koharuWorkOrderRoute: primaryWorkOrder=\(koharuWorkOrderRoute?.primaryWorkOrderID ?? "nil") secondary=\(koharuWorkOrderRoute?.secondaryWorkOrderIDs.joined(separator: ",") ?? "nil") bottleneck=\(koharuWorkOrderRoute?.primaryBottleneck ?? "nil") budget=\(koharuWorkOrderRoute?.budgetClass ?? "nil") external=\(koharuWorkOrderRoute.map { String($0.requiresExternalArtifact) } ?? "nil") stoplisted=\(koharuWorkOrderRoute.map { String($0.stoplistedLocalTuning) } ?? "nil") modelFloor=\(koharuWorkOrderRoute.map { String($0.modelFloorLimited) } ?? "nil") renderLocked=\(koharuWorkOrderRoute.map { String($0.renderLocked) } ?? "nil") nextAction=\(koharuWorkOrderRoute?.recommendedNextAction ?? "nil")
             translationFloorNoisyBlock: modelFloorLimited=\(translationFloorNoisy.map { String($0.modelFloorLimited) } ?? "nil") ocrInputSuspect=\(translationFloorNoisy.map { String($0.ocrInputSuspect) } ?? "nil") languageQualityFailure=\(translationFloorNoisy.map { String($0.translationLanguageQualityFailure) } ?? "nil") routingOutcome=\(translationFloorNoisy?.routingComparisonOutcome ?? "nil") nextAction=\(translationFloorNoisy?.recommendedNextAction ?? "nil")
             renderLock: status=\(renderLock?.renderStatus ?? "nil") failureOverlayRequired=\(renderLock.map { String($0.failureOverlayRequired) } ?? "nil") failureOverlayLocked=\(renderLock.map { String($0.failureOverlayLocked) } ?? "nil") safeLayoutSource=\(renderLock?.safeLayoutSource ?? "nil") maskOverflowPixels=\(renderLock.map { String($0.renderMaskOverflowPixelCount) } ?? "nil") truncated=\(renderLock.map { String($0.renderTextTruncated) } ?? "nil") nextAction=\(renderLock?.recommendedNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
@@ -1921,7 +1929,15 @@ struct MangaOverlayProbeService: Sendable {
         let resolverQueueSummary = (koharuPipelineResolverReport?.executionQueue ?? [])
             .map { "\($0.executionItemID):status=\($0.status):next=\($0.recommendedNextAction)" }
             .joined(separator: " | ")
+        let workOrderQueueSummary = (koharuWorkOrderRouterReport?.workOrders ?? [])
+            .map { "\($0.workOrderID):status=\($0.status):priority=\($0.priority):next=\($0.recommendedNextAction)" }
+            .joined(separator: " | ")
         let externalSummary = """
+        koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
+        workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        workOrderBudget=\(koharuWorkOrderRouterReport?.budgetClassBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        workOrderQueue: \(workOrderQueueSummary.isEmpty ? "nil" : workOrderQueueSummary)
         koharuPipelineResolverReport: enabled=\(koharuPipelineResolverReport.map { String($0.enabled) } ?? "nil") nodes=\(koharuPipelineResolverReport.map { String($0.nodeCount) } ?? "nil") edges=\(koharuPipelineResolverReport.map { String($0.edgeCount) } ?? "nil") blockTraces=\(koharuPipelineResolverReport.map { String($0.blockTraceCount) } ?? "nil") executionQueue=\(koharuPipelineResolverReport.map { String($0.executionQueueCount) } ?? "nil") opPreviews=\(koharuPipelineResolverReport.map { String($0.opPreviewCount) } ?? "nil") gates=\(koharuPipelineResolverReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuPipelineResolverReport?.resolverVerdict ?? "nil")
         resolverNodeStatus=\(koharuPipelineResolverReport?.nodeStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         resolverArtifactAvailability=\(koharuPipelineResolverReport?.artifactAvailabilityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
