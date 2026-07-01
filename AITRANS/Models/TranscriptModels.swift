@@ -2007,6 +2007,130 @@ struct MangaSegmentMaskProxyCoverageScoreboardReport: Equatable, Codable, Sendab
     var notes: [String]
 }
 
+struct MangaKoharuArtifactConvergenceSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuArtifactConvergenceStage: Equatable, Codable, Sendable {
+    var stageName: String
+    var referenceKoharuArtifact: String
+    var currentAITRANSArtifact: String
+    var convergenceStatus: String
+    var proxyOnly: Bool
+    var realArtifactAvailable: Bool
+    var sourceReports: [String]
+    var decisionSignals: [MangaKoharuArtifactConvergenceSignal]
+    var evaluationSignals: [MangaKoharuArtifactConvergenceSignal]
+    var affectedBlocks: [Int]
+    var firstBlockingArtifact: String
+    var closedByWorkItems: [String]
+    var blockedByWorkItems: [String]
+    var primaryNextAction: String
+    var mustNotPromoteReasons: [String]
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuArtifactConvergenceBlockPath: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var textBoxStatus: String
+    var bubbleMaskStatus: String
+    var segmentMaskStatus: String
+    var ocrTextStatus: String
+    var translationStatus: String
+    var renderStatus: String
+    var firstBlockingArtifact: String
+    var primaryStructuralBottleneck: String
+    var modelFloorLimited: Bool
+    var renderLocked: Bool
+    var needsRealArtifact: Bool
+    var closedWorkItems: [String]
+    var openWorkItems: [String]
+    var decisionSignals: [MangaKoharuArtifactConvergenceSignal]
+    var evaluationSignals: [MangaKoharuArtifactConvergenceSignal]
+    var mustNotPromoteReasons: [String]
+    var primaryNextAction: String
+    var groundTruthUsedForDecision: Bool
+    var diagnosticOnly: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuArtifactConvergenceWorkItemLedger: Equatable, Codable, Sendable {
+    var workItemID: String
+    var title: String
+    var status: String
+    var sourceReport: String
+    var targetStages: [String]
+    var targetBlocks: [Int]
+    var closedByVersion: String?
+    var remainingBlockers: [String]
+    var decisionSignals: [MangaKoharuArtifactConvergenceSignal]
+    var evaluationSignals: [MangaKoharuArtifactConvergenceSignal]
+    var nextAction: String
+    var canRunInCIFast: Bool
+    var requiresFullProbe: Bool
+    var requiresExternalArtifact: Bool
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+}
+
+struct MangaKoharuArtifactConvergenceGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuArtifactConvergenceSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuArtifactConvergenceReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceReports: [String]
+    var evaluatedBlockCount: Int
+    var stageCount: Int
+    var blockPathCount: Int
+    var workItemLedgerCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var convergenceStatusBreakdown: [String: Int]
+    var firstBlockingArtifactBreakdown: [String: Int]
+    var primaryNextActionBreakdown: [String: Int]
+    var workItemStatusBreakdown: [String: Int]
+    var closedWorkItems: [String]
+    var openWorkItems: [String]
+    var stopWorkItems: [String]
+    var needsRealArtifactBlocks: [Int]
+    var modelFloorLimitedBlocks: [Int]
+    var renderRegressionLockBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var stages: [MangaKoharuArtifactConvergenceStage]
+    var blockPaths: [MangaKoharuArtifactConvergenceBlockPath]
+    var workItemLedger: [MangaKoharuArtifactConvergenceWorkItemLedger]
+    var gateLedger: [MangaKoharuArtifactConvergenceGate]
+    var notes: [String]
+}
+
 struct MangaOverlayFusionComparison: Equatable, Codable, Sendable {
     var comparisonUnit: String
     var wholePage: MangaOverlayFrameworkMetrics
@@ -2903,6 +3027,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var nativeTextBoxProxyLedgerReport: MangaNativeTextBoxProxyLedgerReport?
     var bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?
     var segmentMaskProxyCoverageScoreboardReport: MangaSegmentMaskProxyCoverageScoreboardReport?
+    var koharuArtifactConvergenceReport: MangaKoharuArtifactConvergenceReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
     var bubbleMaskReport: MangaOverlayBubbleMaskReport?
     var bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?
