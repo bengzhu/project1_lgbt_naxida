@@ -2592,6 +2592,125 @@ struct MangaKoharuNativeTextBoxDetectorLiteReport: Equatable, Codable, Sendable 
     var notes: [String]
 }
 
+struct MangaKoharuNativeTextBoxDetectorLiteShadowOCRSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteShadowOCRCandidate: Equatable, Codable, Sendable {
+    var candidateID: String
+    var sourceCandidateID: String
+    var source: String
+    var sourceBubbleID: Int?
+    var relatedBlockIndex: Int
+    var bbox: [Double]
+    var directionHint: String
+    var cropPadding: [Double]
+    var scaleFactor: Double
+    var rotationApplied: Double
+    var ocrRawText: String?
+    var ocrNormalizedText: String
+    var ocrSucceeded: Bool
+    var ocrEmpty: Bool
+    var ocrErrorCode: String?
+    var wordPreservationVsCurrent: Double
+    var qualityScoreCurrent: Double
+    var qualityScoreShadow: Double
+    var qualityDeltaVsCurrent: Double
+    var groundTruthSimilarityCurrentForEvaluation: Double?
+    var groundTruthSimilarityShadowForEvaluation: Double?
+    var groundTruthSimilarityDeltaForEvaluation: Double?
+    var outcome: String
+    var promotionVerdict: String
+    var decisionSignals: [MangaKoharuNativeTextBoxDetectorLiteShadowOCRSignal]
+    var evaluationSignals: [MangaKoharuNativeTextBoxDetectorLiteShadowOCRSignal]
+    var rejectionReasons: [String]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteShadowOCRBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var finalTextUsedForTranslation: String
+    var selectedCandidateID: String?
+    var selectedCandidateBBox: [Double]?
+    var shadowOCRText: String?
+    var shadowOCRNormalizedText: String?
+    var currentOCRQualityScore: Double
+    var shadowOCRQualityScore: Double?
+    var qualityDeltaVsCurrent: Double?
+    var ocrSimilarityDeltaForEvaluation: Double?
+    var shadowOutcome: String
+    var wouldHaveImprovedOCRForEvaluation: Bool
+    var whyNotPromoted: [String]
+    var primaryBottleneck: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuNativeTextBoxDetectorLiteShadowOCRSignal]
+    var evaluationSignals: [MangaKoharuNativeTextBoxDetectorLiteShadowOCRSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteShadowOCRGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuNativeTextBoxDetectorLiteShadowOCRSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
+    var evaluatedBlockCount: Int
+    var inputCandidateCount: Int
+    var selectedCandidateCount: Int
+    var ocrExecutedCount: Int
+    var ocrSucceededCount: Int
+    var emptyOCRCount: Int
+    var betterThanCurrentCount: Int
+    var worseThanCurrentCount: Int
+    var sameAsCurrentCount: Int
+    var blockLedgerCount: Int
+    var gateCount: Int
+    var candidateSelectionLimitCIFast: Int
+    var candidateSelectionLimitFull: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var proxyNotRealKoharuTextBoxes: Bool
+    var proxyNotRealKoharuOCR: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var shadowOCRVerdict: String
+    var ocrOutcomeBreakdown: [String: Int]
+    var qualityDeltaBreakdown: [String: Int]
+    var candidateSourceBreakdown: [String: Int]
+    var directionHintBreakdown: [String: Int]
+    var primaryBottleneckBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var candidates: [MangaKoharuNativeTextBoxDetectorLiteShadowOCRCandidate]
+    var blockLedgers: [MangaKoharuNativeTextBoxDetectorLiteShadowOCRBlockLedger]
+    var gateLedger: [MangaKoharuNativeTextBoxDetectorLiteShadowOCRGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -4560,6 +4679,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport?
     var koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport?
     var koharuNativeTextBoxDetectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport?
+    var koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
