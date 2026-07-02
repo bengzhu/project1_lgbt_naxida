@@ -2455,6 +2455,143 @@ struct MangaKoharuRenderSpriteFitPlannerReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuNativeTextBoxDetectorLiteSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteCandidate: Equatable, Codable, Sendable {
+    var candidateID: String
+    var source: String
+    var sourceBubbleID: Int?
+    var bbox: [Double]
+    var candidateArea: Double
+    var directionHint: String
+    var generationSignals: [String]
+    var bubbleCoverageRatio: Double
+    var segmentGlyphOverlapRatio: Double
+    var darkPixelDensity: Double
+    var componentCount: Int
+    var projectionPeakCount: Int
+    var aspectRatio: Double
+    var score: Double
+    var candidateVerdict: String
+    var shadowOCREligible: Bool
+    var matchedBlockIndexes: [Int]
+    var relatedCurrentBlockIndexes: [Int]
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var groundTruthUsedForDecision: Bool
+    var decisionSignals: [MangaKoharuNativeTextBoxDetectorLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeTextBoxDetectorLiteSignal]
+    var rejectionReasons: [String]
+    var notes: [String]
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bbox: [Double]
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var finalTextUsedForTranslation: String
+    var ocrGroundTruthSimilarity: Double?
+    var currentTextBoxSource: String
+    var candidateIDs: [String]
+    var bestCandidateID: String?
+    var bestCandidateBBox: [Double]?
+    var bestCandidateScore: Double?
+    var candidateCoverageVerdict: String
+    var directionHint: String
+    var bubbleAssignmentRisk: String
+    var segmentEvidenceVerdict: String
+    var ocrInputRisk: String
+    var modelFloorLimited: Bool
+    var renderLocked: Bool
+    var primaryBottleneck: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuNativeTextBoxDetectorLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeTextBoxDetectorLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteBubbleLedger: Equatable, Codable, Sendable {
+    var bubbleID: Int
+    var bubbleBBox: [Double]
+    var currentBlockIndexes: [Int]
+    var candidateIDs: [String]
+    var candidateCount: Int
+    var acceptedCandidateCount: Int
+    var directionHintBreakdown: [String: Int]
+    var splitRisk: String
+    var sameBubbleSiblingRisk: String
+    var needsRealBubbleMask: Bool
+    var nativeTextBoxCoverageVerdict: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuNativeTextBoxDetectorLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeTextBoxDetectorLiteSignal]
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuNativeTextBoxDetectorLiteSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
+    var evaluatedBlockCount: Int
+    var evaluatedBubbleCount: Int
+    var candidateCount: Int
+    var acceptedCandidateCount: Int
+    var rejectedCandidateCount: Int
+    var shadowOCREligibleCandidateCount: Int
+    var blockLedgerCount: Int
+    var bubbleLedgerCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var proxyNotRealKoharuTextBoxes: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var detectorLiteVerdict: String
+    var candidateSourceBreakdown: [String: Int]
+    var directionHintBreakdown: [String: Int]
+    var candidateVerdictBreakdown: [String: Int]
+    var rejectionReasonBreakdown: [String: Int]
+    var primaryBottleneckBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var ocrInputSuspectBlocks: [Int]
+    var bubbleAssignmentRiskBlocks: [Int]
+    var segmentEvidenceWeakBlocks: [Int]
+    var modelFloorLimitedBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var needsRealTextBoxesBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var candidates: [MangaKoharuNativeTextBoxDetectorLiteCandidate]
+    var blockLedgers: [MangaKoharuNativeTextBoxDetectorLiteBlockLedger]
+    var bubbleLedgers: [MangaKoharuNativeTextBoxDetectorLiteBubbleLedger]
+    var gateLedger: [MangaKoharuNativeTextBoxDetectorLiteGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -4422,6 +4559,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport?
     var koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport?
     var koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport?
+    var koharuNativeTextBoxDetectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
