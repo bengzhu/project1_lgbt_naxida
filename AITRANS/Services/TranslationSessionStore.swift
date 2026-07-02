@@ -1595,6 +1595,7 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport?
                 var koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport?
                 var koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport?
+                var koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -2269,6 +2270,15 @@ final class TranslationSessionStore: ObservableObject {
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-bubble-adjacency-seam-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-render-sprite-fit-planner-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                koharuRenderSpriteFitPlannerReport = await self.mangaOverlayProbeService.makeKoharuRenderSpriteFitPlannerReport(
+                    blocks: probeBlocks,
+                    koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
+                    koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
+                    koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
+                    koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
+                )
+                self.writeMangaProbeProgress(stage: "koharu-render-sprite-fit-planner-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
                     blocks: probeBlocks,
@@ -2290,7 +2300,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
                     koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                     koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
-                    koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport
+                    koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
+                    koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
@@ -2326,6 +2337,7 @@ final class TranslationSessionStore: ObservableObject {
                         koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                         koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
                         koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
+                        koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
                         translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                         koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                         bubbleMaskReport: bubbleMaskReport,
@@ -2378,6 +2390,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                     koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
                     koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
+                    koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
@@ -7976,6 +7989,7 @@ final class TranslationSessionStore: ObservableObject {
         koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
         koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil,
         koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport? = nil,
+        koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
@@ -8037,7 +8051,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeAlgorithmReplayMatrixReport: nil,
             koharuBubbleIndexShadowLedgerReport: nil,
             koharuDistanceFieldSafeAreaReport: nil,
-            koharuBubbleAdjacencySeamReport: nil
+            koharuBubbleAdjacencySeamReport: nil,
+            koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport
         )
         let resolverReport = koharuPipelineResolverReport ?? Self.makeKoharuPipelineResolverReport(
             blocks: blocks,
@@ -8127,7 +8142,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeAlgorithmReplayMatrixReport: replayMatrixReport,
             koharuBubbleIndexShadowLedgerReport: bubbleIndexShadowLedgerReport,
             koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
-            koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport
+            koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
+            koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -8179,6 +8195,7 @@ final class TranslationSessionStore: ObservableObject {
             koharuBubbleIndexShadowLedgerReport: bubbleIndexShadowLedgerReport,
             koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
             koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
+            koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
@@ -15743,7 +15760,8 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport? = nil,
         koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
         koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil,
-        koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport? = nil
+        koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport? = nil,
+        koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport? = nil
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -15958,6 +15976,29 @@ final class TranslationSessionStore: ObservableObject {
         let bubbleAdjacencySeamNextAction = bubbleAdjacencySeamExecuted
             ? (koharuBubbleAdjacencySeamReport?.nextActionBreakdown.keys.sorted().first ?? "keepBubbleAdjacencySeamReportOnly")
             : "generateKoharuBubbleAdjacencySeamReport"
+        let renderSpriteFitExecuted = koharuRenderSpriteFitPlannerReport?.enabled == true
+        let renderSpriteFitVerdict = koharuRenderSpriteFitPlannerReport?.fitPlannerVerdict ?? "notExecuted"
+        let renderSpriteFitBlocks = uniqueSorted(koharuRenderSpriteFitPlannerReport?.blockLedgers.map(\.blockIndex) ?? allBlockIndexes)
+        let renderSpriteFitStatus: String
+        if !renderSpriteFitExecuted {
+            renderSpriteFitStatus = "openRenderSpriteFitPlanner"
+        } else if renderSpriteFitVerdict == "needsRealBubbleMaskArtifact" {
+            renderSpriteFitStatus = "needsRealArtifact"
+        } else if renderSpriteFitVerdict == "renderLockedNoPromotion" {
+            renderSpriteFitStatus = "renderLockedReportOnly"
+        } else if renderSpriteFitVerdict == "manualReviewOnly" {
+            renderSpriteFitStatus = "manualReviewOnly"
+        } else if renderSpriteFitVerdict == "blockedByMissingRenderDiagnostics" {
+            renderSpriteFitStatus = "openRenderIssueDetected"
+        } else {
+            renderSpriteFitStatus = "closedReportOnly"
+        }
+        let renderSpriteFitBlockers = renderSpriteFitExecuted
+            ? (koharuRenderSpriteFitPlannerReport?.gateLedger.filter { $0.status == "warning" || $0.status == "blocked" }.map(\.failureMeans) ?? [])
+            : ["koharuRenderSpriteFitPlannerReport not generated before convergence refresh"]
+        let renderSpriteFitNextAction = renderSpriteFitExecuted
+            ? (koharuRenderSpriteFitPlannerReport?.nextActionBreakdown.keys.sorted().first ?? "keepRenderSpriteFitPlannerReportOnly")
+            : "generateKoharuRenderSpriteFitPlannerReport"
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -16310,6 +16351,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-koharu-bubble-index-shadow-ledger", title: "Koharu BubbleIndex shadow ledger", status: bubbleIndexLedgerStatus, sourceReport: bubbleIndexLedgerExecuted ? "koharuBubbleIndexShadowLedgerReport" : "koharuArtifactConvergenceReport", stages: ["BubbleMask", "RenderedSprites", "FinalRender"], blocks: bubbleIndexLedgerBlocks, version: bubbleIndexLedgerExecuted ? "v1.35" : nil, blockers: bubbleIndexLedgerBlockers, nextAction: bubbleIndexLedgerNextAction, ciFast: true, full: false, external: false, decisions: [signal("ledgerVerdict", bubbleIndexLedgerVerdict, source: "koharuBubbleIndexShadowLedgerReport"), signal("blockLedgerCount", koharuBubbleIndexShadowLedgerReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuBubbleIndexShadowLedgerReport")]),
             workItem("WI-koharu-distance-field-safe-area", title: "Koharu DistanceField safe area shadow report", status: distanceFieldStatus, sourceReport: distanceFieldExecuted ? "koharuDistanceFieldSafeAreaReport" : "koharuArtifactConvergenceReport", stages: ["BubbleIndex", "RenderedSprites", "FinalRender"], blocks: distanceFieldBlocks, version: distanceFieldExecuted ? "v1.36" : nil, blockers: distanceFieldBlockers, nextAction: distanceFieldNextAction, ciFast: true, full: false, external: false, decisions: [signal("distanceFieldVerdict", distanceFieldVerdict, source: "koharuDistanceFieldSafeAreaReport"), signal("blockLedgerCount", koharuDistanceFieldSafeAreaReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuDistanceFieldSafeAreaReport")]),
             workItem("WI-koharu-bubble-adjacency-seam", title: "Koharu Bubble adjacency seam shadow report", status: bubbleAdjacencySeamStatus, sourceReport: bubbleAdjacencySeamExecuted ? "koharuBubbleAdjacencySeamReport" : "koharuArtifactConvergenceReport", stages: ["BubbleMask", "BubbleIndex", "RenderedSprites", "FinalRender"], blocks: bubbleAdjacencySeamBlocks, version: bubbleAdjacencySeamExecuted ? "v1.37" : nil, blockers: bubbleAdjacencySeamBlockers, nextAction: bubbleAdjacencySeamNextAction, ciFast: true, full: false, external: false, decisions: [signal("adjacencyVerdict", bubbleAdjacencySeamVerdict, source: "koharuBubbleAdjacencySeamReport"), signal("blockLedgerCount", koharuBubbleAdjacencySeamReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuBubbleAdjacencySeamReport")]),
+            workItem("WI-koharu-render-sprite-fit-planner", title: "Koharu RenderSprite fit planner", status: renderSpriteFitStatus, sourceReport: renderSpriteFitExecuted ? "koharuRenderSpriteFitPlannerReport" : "koharuArtifactConvergenceReport", stages: ["RenderedSprites", "FinalRender"], blocks: renderSpriteFitBlocks, version: renderSpriteFitExecuted ? "v1.38" : nil, blockers: renderSpriteFitBlockers, nextAction: renderSpriteFitNextAction, ciFast: true, full: false, external: false, decisions: [signal("fitPlannerVerdict", renderSpriteFitVerdict, source: "koharuRenderSpriteFitPlannerReport"), signal("blockLedgerCount", koharuRenderSpriteFitPlannerReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuRenderSpriteFitPlannerReport")]),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
@@ -16326,7 +16368,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeAlgorithmReplayMatrixReport == nil ? "koharuNativeAlgorithmReplayMatrixReport" : nil,
             koharuBubbleIndexShadowLedgerReport == nil ? "koharuBubbleIndexShadowLedgerReport" : nil,
             koharuDistanceFieldSafeAreaReport == nil ? "koharuDistanceFieldSafeAreaReport" : nil,
-            koharuBubbleAdjacencySeamReport == nil ? "koharuBubbleAdjacencySeamReport" : nil
+            koharuBubbleAdjacencySeamReport == nil ? "koharuBubbleAdjacencySeamReport" : nil,
+            koharuRenderSpriteFitPlannerReport == nil ? "koharuRenderSpriteFitPlannerReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -16369,6 +16412,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-bubble-index-shadow-ledger-executed", name: "Koharu BubbleIndex shadow ledger executed", scope: "BubbleIndex", status: bubbleIndexLedgerExecuted ? (bubbleIndexLedgerStatus == "closedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuBubbleIndexShadowLedgerReport.enabled=true without safeLayoutRect, renderer, OCR, or ground truth decision mutation", affected: bubbleIndexLedgerBlocks, failureMeans: "BubbleIndex ledger is missing or mutates OCR, translation, safe layout, render, blockPassed, candidate selection, or active artifacts", action: bubbleIndexLedgerNextAction, decisions: [signal("ledgerVerdict", bubbleIndexLedgerVerdict, source: "koharuBubbleIndexShadowLedgerReport"), signal("groundTruthUsedForDecision", koharuBubbleIndexShadowLedgerReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuBubbleIndexShadowLedgerReport")]),
             gate("G-koharu-distance-field-safe-area-executed", name: "Koharu DistanceField safe area executed", scope: "BubbleIndex", status: distanceFieldExecuted ? (distanceFieldStatus == "closedReportOnly" || distanceFieldStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuDistanceFieldSafeAreaReport.enabled=true without safeLayoutRect, renderer, OCR, LLM, or ground truth decision mutation", affected: distanceFieldBlocks, failureMeans: "DistanceField safe area report is missing or mutates OCR, translation, safe layout, render, blockPassed, candidate selection, or active artifacts", action: distanceFieldNextAction, decisions: [signal("distanceFieldVerdict", distanceFieldVerdict, source: "koharuDistanceFieldSafeAreaReport"), signal("groundTruthUsedForDecision", koharuDistanceFieldSafeAreaReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuDistanceFieldSafeAreaReport")]),
             gate("G-koharu-bubble-adjacency-seam-executed", name: "Koharu Bubble adjacency seam executed", scope: "BubbleMask", status: bubbleAdjacencySeamExecuted ? (bubbleAdjacencySeamStatus == "closedReportOnly" || bubbleAdjacencySeamStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuBubbleAdjacencySeamReport.enabled=true without OCR, LLM, safeLayoutRect, renderer, blockPassed, candidate selection, or ground truth decision mutation", affected: bubbleAdjacencySeamBlocks, failureMeans: "Bubble adjacency seam report is missing or mutates OCR, translation, layout, render, blockPassed, candidate selection, or active artifacts", action: bubbleAdjacencySeamNextAction, decisions: [signal("adjacencyVerdict", bubbleAdjacencySeamVerdict, source: "koharuBubbleAdjacencySeamReport"), signal("groundTruthUsedForDecision", koharuBubbleAdjacencySeamReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuBubbleAdjacencySeamReport")]),
+            gate("G-koharu-render-sprite-fit-planner-executed", name: "Koharu RenderSprite fit planner executed", scope: "RenderedSprites", status: renderSpriteFitExecuted ? (renderSpriteFitStatus == "closedReportOnly" || renderSpriteFitStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuRenderSpriteFitPlannerReport.enabled=true without OCR, LLM, safeLayoutRect, renderer, blockPassed, candidate selection, or ground truth decision mutation", affected: renderSpriteFitBlocks, failureMeans: "RenderSprite fit planner is missing or mutates OCR, translation, safe layout, render, blockPassed, candidate selection, or active artifacts", action: renderSpriteFitNextAction, decisions: [signal("fitPlannerVerdict", renderSpriteFitVerdict, source: "koharuRenderSpriteFitPlannerReport"), signal("groundTruthUsedForDecision", koharuRenderSpriteFitPlannerReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuRenderSpriteFitPlannerReport")]),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
             gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
@@ -16393,12 +16437,13 @@ final class TranslationSessionStore: ObservableObject {
             "koharuBubbleIndexShadowLedgerReport",
             "koharuDistanceFieldSafeAreaReport",
             "koharuBubbleAdjacencySeamReport",
+            "koharuRenderSpriteFitPlannerReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, and v1.37 Bubble adjacency seam report-only ledgers into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, and v1.38 RenderSprite fit planner report-only ledgers into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
