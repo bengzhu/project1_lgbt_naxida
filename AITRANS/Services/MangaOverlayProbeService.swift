@@ -760,6 +760,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport? = nil,
         koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
         koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil,
+        koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
@@ -833,6 +834,7 @@ struct MangaOverlayProbeService: Sendable {
                 koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
                 koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                 koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
+                koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
                 translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                 koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                 bubbleMaskReport: bubbleMaskReport,
@@ -1727,6 +1729,608 @@ struct MangaOverlayProbeService: Sendable {
         }.value
     }
 
+    func makeKoharuBubbleAdjacencySeamReport(
+        image: CGImage,
+        blocks: [MangaOverlayProbeBlock],
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
+        koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport?,
+        koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport?,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
+    ) async -> MangaKoharuBubbleAdjacencySeamReport {
+        await Task.detached(priority: .userInitiated) {
+            func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
+            func uniqueSortedStrings(_ values: [String]) -> [String] { Array(Set(values)).sorted() }
+            func countBy(_ values: [String]) -> [String: Int] { values.reduce(into: [:]) { $0[$1, default: 0] += 1 } }
+            func joined(_ values: [Int]) -> String { uniqueSorted(values).map(String.init).joined(separator: ",") }
+            func area(_ rect: CGRect?) -> Double {
+                guard let rect, !rect.isNull, rect.width > 0, rect.height > 0 else { return 0 }
+                return Double(rect.width * rect.height)
+            }
+            func center(_ rect: CGRect) -> CGPoint { CGPoint(x: rect.midX, y: rect.midY) }
+            func rectGap(_ lhs: CGRect, _ rhs: CGRect) -> Double {
+                let dx = max(0, max(lhs.minX - rhs.maxX, rhs.minX - lhs.maxX))
+                let dy = max(0, max(lhs.minY - rhs.maxY, rhs.minY - lhs.maxY))
+                return hypot(Double(dx), Double(dy))
+            }
+            func rectOverlapArea(_ lhs: CGRect, _ rhs: CGRect) -> Double {
+                area(lhs.intersection(rhs))
+            }
+            func signal(
+                _ name: String,
+                _ value: String,
+                source: String,
+                decision: Bool = true,
+                evaluation: Bool = false
+            ) -> MangaKoharuBubbleAdjacencySeamSignal {
+                MangaKoharuBubbleAdjacencySeamSignal(
+                    name: name,
+                    value: value,
+                    sourceReport: source,
+                    groundTruthFreeDecisionSignal: decision,
+                    groundTruthUsedForEvaluationOnly: evaluation
+                )
+            }
+            func formatted(_ value: Double?) -> String {
+                value?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+            }
+
+            let allBlocks = blocks.map(\.index)
+            let runtime = Self.makeApproximateBubbleMaskRuntime(image: image, bubbleGeometry: bubbleGeometry)
+            let splitCandidates = bubbleSplitCandidateReport?.diagnostics ?? []
+            let splitCandidatesByParent = Dictionary(grouping: splitCandidates, by: \.parentBubbleID)
+            let splitCandidatesByBlock = Dictionary(grouping: splitCandidates.flatMap { candidate in
+                candidate.seedBlockIndexes.map { (blockIndex: $0, candidate: candidate) }
+            }) { $0.blockIndex }
+            let bubbleIndexByBlock = Dictionary(uniqueKeysWithValues: (koharuBubbleIndexShadowLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) })
+            let distanceFieldByBlock = Dictionary(uniqueKeysWithValues: (koharuDistanceFieldSafeAreaReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) })
+            let renderByBlock = Dictionary(uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) })
+            let blocksByBubble = Dictionary(grouping: blocks.compactMap { block -> (Int, MangaOverlayProbeBlock)? in
+                guard let bubbleID = block.bubbleID else { return nil }
+                return (bubbleID, block)
+            }) { $0.0 }.mapValues { $0.map(\.1).sorted { $0.index < $1.index } }
+            let siblingGroups = blocksByBubble
+                .filter { $0.value.count > 1 }
+                .map { (bubbleID: $0.key, groupID: "SEAM-\($0.key)", blocks: $0.value) }
+                .sorted { $0.bubbleID < $1.bubbleID }
+            let siblingGroupIDsByBubble = Dictionary(uniqueKeysWithValues: siblingGroups.map { ($0.bubbleID, [$0.groupID]) })
+            let siblingBlocksByBlock = Dictionary(uniqueKeysWithValues: blocks.map { block in
+                let siblings = block.bubbleID.flatMap { blocksByBubble[$0] }?.map(\.index).filter { $0 != block.index } ?? []
+                return (block.index, siblings)
+            })
+            let assignmentConflictBlocks = uniqueSorted(
+                (bubbleMaskReport?.inconsistentBubbleAssignmentBlocks ?? [])
+                + (koharuBubbleIndexShadowLedgerReport?.conflictBlocks ?? [])
+            )
+            let renderLockedBlocks = uniqueSorted(
+                (koharuRenderRegressionLockReport?.blockLocks.filter { $0.renderStatus == "renderLocked" }.map(\.blockIndex) ?? [])
+                + (koharuRenderRegressionLockReport?.renderIssueBlocks ?? [])
+                + blocks.filter { $0.renderCollisionChecked && $0.renderCollisionResolved }.map(\.index)
+            )
+            let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(runtime.width), height: CGFloat(runtime.height))
+            let bubbleRectsByID = Dictionary(
+                uniqueKeysWithValues: bubbleGeometry.bubbles.map { bubble in
+                    (bubble.id, Self.rect(from: bubble.bbox).intersection(imageBounds).integral)
+                }
+            )
+
+            func proxyBoundarySamples(for bubbleID: Int, maxSamples: Int = 384) -> [(Int, Int)] {
+                guard let rect = bubbleRectsByID[bubbleID],
+                      !rect.isNull,
+                      rect.width >= 1,
+                      rect.height >= 1 else {
+                    return []
+                }
+                let targetID = bubbleID + 1
+                let minX = max(0, Int(rect.minX))
+                let maxX = min(runtime.width, Int(rect.maxX))
+                let minY = max(0, Int(rect.minY))
+                let maxY = min(runtime.height, Int(rect.maxY))
+                guard minX < maxX, minY < maxY else { return [] }
+                let areaPixels = max(1, (maxX - minX) * (maxY - minY))
+                let sampleStride = max(1, Int(ceil(sqrt(Double(areaPixels) / Double(maxSamples)))))
+                func maskID(at x: Int, _ y: Int) -> Int {
+                    guard x >= 0, x < runtime.width, y >= 0, y < runtime.height else { return 0 }
+                    return runtime.ids[y * runtime.width + x]
+                }
+                func isBoundary(_ x: Int, _ y: Int) -> Bool {
+                    maskID(at: x - 1, y) != targetID
+                    || maskID(at: x + 1, y) != targetID
+                    || maskID(at: x, y - 1) != targetID
+                    || maskID(at: x, y + 1) != targetID
+                }
+
+                var samples: [(Int, Int)] = []
+                var y = minY
+                while y < maxY {
+                    var x = minX
+                    while x < maxX {
+                        if maskID(at: x, y) == targetID, isBoundary(x, y) {
+                            samples.append((x, y))
+                        }
+                        x += sampleStride
+                    }
+                    y += sampleStride
+                }
+                if samples.isEmpty {
+                    y = minY
+                    while y < maxY {
+                        var x = minX
+                        while x < maxX {
+                            if maskID(at: x, y) == targetID {
+                                samples.append((x, y))
+                            }
+                            x += sampleStride
+                        }
+                        y += sampleStride
+                    }
+                }
+                guard samples.count > maxSamples else { return samples }
+                let pickStride = max(1, Int(ceil(Double(samples.count) / Double(maxSamples))))
+                return stride(from: 0, to: samples.count, by: pickStride).prefix(maxSamples).map { samples[$0] }
+            }
+
+            func proxyMaskGapBetweenBubbleIDs(_ lhs: Int, _ rhs: Int, bboxGap: Double, threshold: Double) -> Double {
+                if bboxGap > max(32.0, threshold * 3.0) {
+                    return bboxGap
+                }
+                let lhsSamples = proxyBoundarySamples(for: lhs)
+                let rhsSamples = proxyBoundarySamples(for: rhs)
+                guard !lhsSamples.isEmpty, !rhsSamples.isEmpty else { return .infinity }
+                var bestSquared = Double.infinity
+                let earlyExitSquared = max(1.0, min(2.0, max(1.0, threshold * 0.25)))
+                for a in lhsSamples {
+                    for b in rhsSamples {
+                        let dx = Double(a.0 - b.0)
+                        let dy = Double(a.1 - b.1)
+                        let squared = dx * dx + dy * dy
+                        if squared < bestSquared {
+                            bestSquared = squared
+                        }
+                        if bestSquared <= earlyExitSquared {
+                            return sqrt(bestSquared)
+                        }
+                    }
+                }
+                return sqrt(bestSquared)
+            }
+
+            func seamGeometry(for seedBlocks: [MangaOverlayProbeBlock], parentRect: CGRect?) -> (String, [Double]?, [Double]?, [Int], [Int], Double) {
+                guard seedBlocks.count > 1 else {
+                    let rect = parentRect ?? seedBlocks.first.map { Self.rect(from: $0.bbox) } ?? .zero
+                    let line = rect.isNull ? nil : [Double(rect.midX), Double(rect.minY), Double(rect.midX), Double(rect.maxY)]
+                    return ("unknown", line, rect.isNull ? nil : Self.bboxArray(from: rect), seedBlocks.map(\.index), [], 0)
+                }
+                let sortedX = seedBlocks.sorted { center(Self.rect(from: $0.bbox)).x < center(Self.rect(from: $1.bbox)).x }
+                let sortedY = seedBlocks.sorted { center(Self.rect(from: $0.bbox)).y < center(Self.rect(from: $1.bbox)).y }
+                func largestGap(_ sorted: [MangaOverlayProbeBlock], axis: String) -> (Int, Double, CGFloat) {
+                    var bestIndex = 1
+                    var bestGap = -Double.infinity
+                    var bestValue = CGFloat.zero
+                    for index in 1..<sorted.count {
+                        let lhs = Self.rect(from: sorted[index - 1].bbox)
+                        let rhs = Self.rect(from: sorted[index].bbox)
+                        let gap: Double
+                        let value: CGFloat
+                        if axis == "x" {
+                            gap = Double(rhs.minX - lhs.maxX)
+                            value = (lhs.maxX + rhs.minX) / 2
+                        } else {
+                            gap = Double(rhs.minY - lhs.maxY)
+                            value = (lhs.maxY + rhs.minY) / 2
+                        }
+                        if gap > bestGap {
+                            bestGap = gap
+                            bestIndex = index
+                            bestValue = value
+                        }
+                    }
+                    return (bestIndex, max(0, bestGap), bestValue)
+                }
+                let xGap = largestGap(sortedX, axis: "x")
+                let yGap = largestGap(sortedY, axis: "y")
+                let rect = parentRect ?? seedBlocks.map { Self.rect(from: $0.bbox) }.reduce(CGRect.null) { $0.union($1) }
+                if xGap.1 >= yGap.1 {
+                    let left = sortedX.prefix(xGap.0).map(\.index)
+                    let right = sortedX.suffix(sortedX.count - xGap.0).map(\.index)
+                    let corridor = CGRect(x: xGap.2 - 2, y: rect.minY, width: 4, height: rect.height)
+                    return ("vertical", [Double(xGap.2), Double(rect.minY), Double(xGap.2), Double(rect.maxY)], Self.bboxArray(from: corridor), Array(left), Array(right), xGap.1)
+                } else {
+                    let top = sortedY.prefix(yGap.0).map(\.index)
+                    let bottom = sortedY.suffix(sortedY.count - yGap.0).map(\.index)
+                    let corridor = CGRect(x: rect.minX, y: yGap.2 - 2, width: rect.width, height: 4)
+                    return ("horizontal", [Double(rect.minX), Double(yGap.2), Double(rect.maxX), Double(yGap.2)], Self.bboxArray(from: corridor), Array(top), Array(bottom), yGap.1)
+                }
+            }
+
+            let sortedBubbles = bubbleGeometry.bubbles.sorted { $0.id < $1.id }
+            var pairLedgers: [MangaKoharuBubbleAdjacencyPairLedger] = []
+            for lhsIndex in sortedBubbles.indices {
+                for rhsIndex in sortedBubbles.indices where rhsIndex > lhsIndex {
+                    let lhs = sortedBubbles[lhsIndex]
+                    let rhs = sortedBubbles[rhsIndex]
+                    let lhsRect = Self.rect(from: lhs.bbox)
+                    let rhsRect = Self.rect(from: rhs.bbox)
+                    let gap = rectGap(lhsRect, rhsRect)
+                    let threshold = max(8.0, Double(min(min(lhsRect.width, lhsRect.height), min(rhsRect.width, rhsRect.height))) * 0.04)
+                    let overlap = rectOverlapArea(lhsRect, rhsRect)
+                    let expanded = lhsRect.insetBy(dx: CGFloat(-threshold), dy: CGFloat(-threshold)).intersects(rhsRect)
+                    let pairSplitCandidates = (splitCandidatesByParent[lhs.id] ?? []) + (splitCandidatesByParent[rhs.id] ?? [])
+                    let sharedSplitIDs = uniqueSorted(pairSplitCandidates.map(\.id))
+                    let sharedSiblingIDs = uniqueSortedStrings((siblingGroupIDsByBubble[lhs.id] ?? []) + (siblingGroupIDsByBubble[rhs.id] ?? []))
+                    let lhsBlocks = Set(blocksByBubble[lhs.id]?.map(\.index) ?? [])
+                    let rhsBlocks = Set(blocksByBubble[rhs.id]?.map(\.index) ?? [])
+                    let conflictShared = assignmentConflictBlocks.filter { lhsBlocks.contains($0) || rhsBlocks.contains($0) }
+                    let relatedByStructure = !sharedSplitIDs.isEmpty || !sharedSiblingIDs.isEmpty || !conflictShared.isEmpty
+                    guard overlap > 0 || expanded || gap <= threshold || relatedByStructure else { continue }
+                    let maskGap = proxyMaskGapBetweenBubbleIDs(lhs.id, rhs.id, bboxGap: gap, threshold: threshold)
+                    let proxyTouching = maskGap.isFinite && maskGap <= max(2.0, threshold * 0.5)
+                    let relatedBlocks = uniqueSorted(Array(lhsBlocks.union(rhsBlocks)).filter { assignmentConflictBlocks.contains($0) || renderLockedBlocks.contains($0) || !(splitCandidatesByBlock[$0] ?? []).isEmpty })
+                    let distanceConflict = relatedBlocks.contains { distanceFieldByBlock[$0]?.safeRectComparisonVerdict != "distanceRectMatchesCurrentLayout" && distanceFieldByBlock[$0] != nil }
+                    let renderInvolved = relatedBlocks.contains { renderLockedBlocks.contains($0) }
+                    let verdict: String
+                    if overlap > 0 {
+                        verdict = "overlappingProxyBBoxes"
+                    } else if proxyTouching {
+                        verdict = "touchingProxyMasks"
+                    } else if !sharedSplitIDs.isEmpty {
+                        verdict = "sameParentSplitCandidate"
+                    } else if !sharedSiblingIDs.isEmpty {
+                        verdict = "siblingLayoutOnly"
+                    } else if distanceConflict || !conflictShared.isEmpty {
+                        verdict = "needsRealBubbleMask"
+                    } else {
+                        verdict = "adjacentButSeparated"
+                    }
+                    let action: String
+                    if verdict == "needsRealBubbleMask" || verdict == "touchingProxyMasks" || verdict == "overlappingProxyBBoxes" {
+                        action = "collectRealBubbleMaskArtifact"
+                    } else if verdict == "sameParentSplitCandidate" {
+                        action = "reviewSeamCandidateReportOnly"
+                    } else {
+                        action = "keepAdjacencyLedgerReportOnly"
+                    }
+                    let pairID = "P-\(lhs.id)-\(rhs.id)"
+                    pairLedgers.append(MangaKoharuBubbleAdjacencyPairLedger(
+                        pairID: pairID,
+                        bubbleAID: lhs.id,
+                        bubbleBID: rhs.id,
+                        bubbleABBox: lhs.bbox,
+                        bubbleBBBox: rhs.bbox,
+                        bboxOverlapArea: overlap,
+                        bboxGapPx: gap,
+                        expandedBBoxIntersects: expanded,
+                        proxyMaskTouching: proxyTouching,
+                        proxyMaskMinimumGapPx: maskGap.isFinite ? maskGap : gap,
+                        maskGapAlgorithm: "roundedRectProxyMaskSampled",
+                        sharedBlockIndexes: relatedBlocks,
+                        sameBubbleSiblingGroupIDs: sharedSiblingIDs,
+                        splitCandidateIDs: sharedSplitIDs,
+                        distanceFieldSafeRectConflict: distanceConflict,
+                        renderLockInvolved: renderInvolved,
+                        pairVerdict: verdict,
+                        nextAction: action,
+                        decisionSignals: [
+                            signal("bboxGapPx", formatted(gap), source: "bubbleGeometry"),
+                            signal("bboxOverlapArea", formatted(overlap), source: "bubbleGeometry"),
+                            signal("proxyMaskMinimumGapPx", formatted(maskGap.isFinite ? maskGap : nil), source: "koharuBubbleAdjacencySeamReport")
+                        ],
+                        evaluationSignals: [
+                            signal("relatedDialogueBlocks", String(blocks.filter { relatedBlocks.contains($0.index) && $0.bestGroundTruthType == "dialogue" }.count), source: "blocks.bestGroundTruthType", decision: false, evaluation: true)
+                        ],
+                        groundTruthUsedForDecision: false,
+                        wouldChangeMainFlow: false,
+                        diagnosticOnly: true
+                    ))
+                }
+            }
+
+            var seamCandidates: [MangaKoharuBubbleSeamCandidateLedger] = []
+            for candidate in splitCandidates.sorted(by: { $0.id < $1.id }) {
+                let seedBlocks = candidate.seedBlockIndexes.compactMap { blockIndex in blocks.first { $0.index == blockIndex } }
+                let parentRect = bubbleGeometry.bubbles.first { $0.id == candidate.parentBubbleID }.map { Self.rect(from: $0.bbox) }
+                let geometry = seamGeometry(for: seedBlocks, parentRect: parentRect)
+                let blockIndexes = uniqueSorted(candidate.seedBlockIndexes)
+                let ocrDamage = blockIndexes.filter { blockIndex in
+                    let block = blocks.first { $0.index == blockIndex }
+                    return block?.failureCategory == "ocrInputSuspect" || (block?.ocrGroundTruthSimilarity ?? 1) < 0.65
+                }
+                let safeRisk = blockIndexes.filter { distanceFieldByBlock[$0]?.safeRectComparisonVerdict != "distanceRectMatchesCurrentLayout" && distanceFieldByBlock[$0] != nil }
+                let renderRisk = blockIndexes.filter { renderLockedBlocks.contains($0) }
+                let conflict = blockIndexes.filter { assignmentConflictBlocks.contains($0) }
+                let score = min(1.0, (geometry.5 / max(1.0, Double(max(parentRect?.width ?? 0, parentRect?.height ?? 0)))) + (conflict.isEmpty ? 0 : 0.25) + (safeRisk.isEmpty ? 0 : 0.15))
+                let verdict: String
+                if !renderRisk.isEmpty {
+                    verdict = "renderLockedNoSplit"
+                } else if !conflict.isEmpty {
+                    verdict = "assignmentConflictNeedsReview"
+                } else if !safeRisk.isEmpty {
+                    verdict = "splitCandidateNeedsRealBubbleMask"
+                } else {
+                    verdict = "reportOnlySeamCandidate"
+                }
+                let action = verdict == "reportOnlySeamCandidate" ? "keepSeamCandidateReportOnly" : (verdict == "renderLockedNoSplit" ? "inspectRenderLockGateLedger" : "collectRealBubbleMaskArtifact")
+                seamCandidates.append(MangaKoharuBubbleSeamCandidateLedger(
+                    seamCandidateID: "SC-split-\(candidate.id)",
+                    source: "bubbleSplitCandidateReport",
+                    parentBubbleID: candidate.parentBubbleID,
+                    relatedBubbleIDs: [candidate.parentBubbleID],
+                    blockIndexes: blockIndexes,
+                    splitCandidateIDs: [candidate.id],
+                    siblingGroupID: nil,
+                    seamOrientation: geometry.0,
+                    seamLine: geometry.1,
+                    seamCorridorRect: geometry.2,
+                    leftOrTopBlockIndexes: geometry.3,
+                    rightOrBottomBlockIndexes: geometry.4,
+                    protectedBlockIndexes: blockIndexes,
+                    wouldIsolateBlocks: uniqueSorted(geometry.3 + geometry.4),
+                    ocrDamageBlocks: ocrDamage,
+                    assignmentConflictBlocks: conflict,
+                    safeAreaRiskBlocks: safeRisk,
+                    renderLockedBlocks: renderRisk,
+                    seamScore: score,
+                    seamCandidateVerdict: verdict,
+                    promotionBlockedReasons: ["reportOnly", "proxyNotRealBubbleMask"] + (renderRisk.isEmpty ? [] : ["renderLockInvolved"]),
+                    nextAction: action,
+                    decisionSignals: [
+                        signal("sourceCandidateID", String(candidate.id), source: "bubbleSplitCandidateReport"),
+                        signal("seamGapPx", formatted(geometry.5), source: "blocks.bbox"),
+                        signal("assignmentConflictBlocks", joined(conflict), source: "bubbleMaskReport")
+                    ],
+                    evaluationSignals: [
+                        signal("ocrDamageBlocks", joined(ocrDamage), source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                ))
+            }
+            for group in siblingGroups {
+                let parentRect = bubbleGeometry.bubbles.first { $0.id == group.bubbleID }.map { Self.rect(from: $0.bbox) }
+                let geometry = seamGeometry(for: group.blocks, parentRect: parentRect)
+                let blockIndexes = group.blocks.map(\.index)
+                let splitIDs = uniqueSorted(blockIndexes.flatMap { (splitCandidatesByBlock[$0] ?? []).map { $0.candidate.id } })
+                let safeRisk = blockIndexes.filter { distanceFieldByBlock[$0]?.safeRectComparisonVerdict == "distanceRectWouldRiskSprite" }
+                let verdict = splitIDs.isEmpty && safeRisk.isEmpty ? "siblingLayoutNoSplit" : "distanceFieldTooSmallForSplit"
+                let action = verdict == "siblingLayoutNoSplit" ? "keepSiblingLayoutReportOnly" : "reviewSeamCandidateReportOnly"
+                seamCandidates.append(MangaKoharuBubbleSeamCandidateLedger(
+                    seamCandidateID: "SC-sibling-\(group.bubbleID)",
+                    source: "sameBubbleSiblingGroup",
+                    parentBubbleID: group.bubbleID,
+                    relatedBubbleIDs: [group.bubbleID],
+                    blockIndexes: blockIndexes,
+                    splitCandidateIDs: splitIDs,
+                    siblingGroupID: group.groupID,
+                    seamOrientation: geometry.0,
+                    seamLine: geometry.1,
+                    seamCorridorRect: geometry.2,
+                    leftOrTopBlockIndexes: geometry.3,
+                    rightOrBottomBlockIndexes: geometry.4,
+                    protectedBlockIndexes: blockIndexes,
+                    wouldIsolateBlocks: [],
+                    ocrDamageBlocks: blockIndexes.filter { blockIndex in
+                        blocks.first { $0.index == blockIndex }?.failureCategory == "ocrInputSuspect"
+                    },
+                    assignmentConflictBlocks: blockIndexes.filter { assignmentConflictBlocks.contains($0) },
+                    safeAreaRiskBlocks: safeRisk,
+                    renderLockedBlocks: blockIndexes.filter { renderLockedBlocks.contains($0) },
+                    seamScore: min(1.0, geometry.5 / max(1.0, Double(max(parentRect?.width ?? 0, parentRect?.height ?? 0)))),
+                    seamCandidateVerdict: verdict,
+                    promotionBlockedReasons: ["siblingLayoutReportOnly", "wouldChangeMainFlow=false"],
+                    nextAction: action,
+                    decisionSignals: [
+                        signal("siblingGroupID", group.groupID, source: "koharuBubbleAdjacencySeamReport"),
+                        signal("seamGapPx", formatted(geometry.5), source: "blocks.bbox")
+                    ],
+                    evaluationSignals: [
+                        signal("groundTruthTypes", uniqueSortedStrings(group.blocks.compactMap(\.bestGroundTruthType)).joined(separator: ","), source: "blocks.bestGroundTruthType", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                ))
+            }
+
+            let pairIDsByBlock = Dictionary(grouping: pairLedgers.flatMap { pair in
+                pair.sharedBlockIndexes.map { (blockIndex: $0, pairID: pair.pairID) }
+            }) { $0.blockIndex }.mapValues { uniqueSortedStrings($0.map(\.pairID)) }
+            let seamIDsByBlock = Dictionary(grouping: seamCandidates.flatMap { seam in
+                seam.blockIndexes.map { (blockIndex: $0, seamID: seam.seamCandidateID) }
+            }) { $0.blockIndex }.mapValues { uniqueSortedStrings($0.map(\.seamID)) }
+
+            let blockLedgers: [MangaKoharuBubbleSeamBlockLedger] = blocks.map { block in
+                let splitIDs = uniqueSorted((splitCandidatesByBlock[block.index] ?? []).map { $0.candidate.id })
+                let siblings = siblingBlocksByBlock[block.index] ?? []
+                let conflict = assignmentConflictBlocks.contains(block.index)
+                let renderVerdict = renderLockedBlocks.contains(block.index) ? "renderLocked" : "renderStableOrNotInvolved"
+                let ocrRisk: String
+                if block.failureCategory == "ocrInputSuspect" || (block.ocrGroundTruthSimilarity ?? 1) < 0.65 {
+                    ocrRisk = "ocrDamageRisk"
+                } else if block.groundTruthMatch == "unmatched" {
+                    ocrRisk = "unmatchedEvaluationOnly"
+                } else {
+                    ocrRisk = "noOcrDamageSignal"
+                }
+                let seamRisk: String
+                if conflict {
+                    seamRisk = "assignmentConflict"
+                } else if !splitIDs.isEmpty {
+                    seamRisk = "splitCandidate"
+                } else if !siblings.isEmpty {
+                    seamRisk = "sameBubbleSibling"
+                } else if !(pairIDsByBlock[block.index] ?? []).isEmpty {
+                    seamRisk = "adjacentBubbleContext"
+                } else {
+                    seamRisk = "noSeamRisk"
+                }
+                let verdict: String
+                if renderVerdict == "renderLocked" {
+                    verdict = "renderLockedNoSeamAction"
+                } else if conflict {
+                    verdict = "assignmentConflictReportOnly"
+                } else if !splitIDs.isEmpty {
+                    verdict = "splitCandidateReportOnly"
+                } else if !siblings.isEmpty {
+                    verdict = "sameBubbleSiblingLayoutOnly"
+                } else if seamRisk == "adjacentBubbleContext" {
+                    verdict = "needsRealBubbleMask"
+                } else {
+                    verdict = "noSeamRisk"
+                }
+                let action: String
+                if verdict == "needsRealBubbleMask" || verdict == "assignmentConflictReportOnly" {
+                    action = "collectRealBubbleMaskArtifact"
+                } else if verdict == "renderLockedNoSeamAction" {
+                    action = "inspectRenderLockGateLedger"
+                } else if verdict == "splitCandidateReportOnly" {
+                    action = "reviewSeamCandidateReportOnly"
+                } else {
+                    action = "keepBubbleAdjacencySeamReportOnly"
+                }
+                return MangaKoharuBubbleSeamBlockLedger(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    bbox: block.bbox,
+                    blockPassed: block.blockPassed,
+                    failureCategory: block.failureCategory,
+                    groundTruthMatch: block.groundTruthMatch,
+                    bestGroundTruthType: block.bestGroundTruthType,
+                    ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
+                    currentSafeLayoutRect: block.safeLayoutRect,
+                    bubbleIndexShadowBubbleID: bubbleIndexByBlock[block.index]?.shadowBubbleID,
+                    distanceFieldSafeRect: distanceFieldByBlock[block.index]?.distanceFieldSafeRect,
+                    relatedPairIDs: pairIDsByBlock[block.index] ?? [],
+                    relatedSeamCandidateIDs: seamIDsByBlock[block.index] ?? [],
+                    splitCandidateIDs: splitIDs,
+                    sameBubbleSiblingBlockIndexes: siblings,
+                    assignmentConflict: conflict,
+                    ocrDamageRisk: ocrRisk,
+                    renderLockVerdict: renderVerdict,
+                    blockSeamRisk: seamRisk,
+                    blockSeamVerdict: verdict,
+                    primaryBottleneck: bubbleIndexByBlock[block.index]?.primaryBottleneck ?? block.failureCategory,
+                    nextAction: action,
+                    decisionSignals: [
+                        signal("blockSeamRisk", seamRisk, source: "koharuBubbleAdjacencySeamReport"),
+                        signal("assignmentConflict", String(conflict), source: "bubbleMaskReport"),
+                        signal("splitCandidateIDs", joined(splitIDs), source: "bubbleSplitCandidateReport")
+                    ],
+                    evaluationSignals: [
+                        signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                        signal("ocrSimilarityForEvaluation", formatted(block.ocrGroundTruthSimilarity), source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            }.sorted { $0.blockIndex < $1.blockIndex }
+
+            let seamRiskBlocks = uniqueSorted(blockLedgers.filter { $0.blockSeamRisk != "noSeamRisk" }.map(\.blockIndex))
+            let splitReviewBlocks = uniqueSorted(blockLedgers.filter { !$0.splitCandidateIDs.isEmpty }.map(\.blockIndex))
+            let sameBubbleSiblingBlocks = uniqueSorted(blockLedgers.filter { !$0.sameBubbleSiblingBlockIndexes.isEmpty }.map(\.blockIndex))
+            let needsRealBubbleMaskBlocks = uniqueSorted(blockLedgers.filter { $0.nextAction == "collectRealBubbleMaskArtifact" }.map(\.blockIndex))
+            let manualReviewBlocks = uniqueSorted(blockLedgers.filter { $0.blockSeamVerdict == "manualReviewOnly" || $0.nextAction == "manualReviewOnly" }.map(\.blockIndex))
+
+            func gate(
+                _ id: String,
+                _ name: String,
+                _ scope: String,
+                _ status: String,
+                _ threshold: String,
+                _ affected: [Int],
+                _ failure: String,
+                _ action: String,
+                _ signals: [MangaKoharuBubbleAdjacencySeamSignal]
+            ) -> MangaKoharuBubbleAdjacencySeamGate {
+                MangaKoharuBubbleAdjacencySeamGate(
+                    gateID: id,
+                    gateName: name,
+                    scope: scope,
+                    status: status,
+                    threshold: threshold,
+                    affectedBlocks: uniqueSorted(affected),
+                    decisionSignals: signals,
+                    failureMeans: failure,
+                    recommendedAction: action,
+                    groundTruthUsedForDecision: false
+                )
+            }
+
+            let gateLedger = [
+                gate("G-bubble-adjacency-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "adjacency seam report mutates OCR, translation, layout, renderer, blockPassed, or candidate selection", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuBubbleAdjacencySeamReport")]),
+                gate("G-bubble-adjacency-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlocks, "ground truth influences adjacency, seam, assignment, split, gate, or nextAction", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuBubbleAdjacencySeamReport")]),
+                gate("G-bubble-adjacency-proxy-boundary", "Proxy boundary", "BubbleMask", "passed", "proxyNotRealBubbleMask=true and usesRoundedRectProxyMask=true", allBlocks, "rounded-rect proxy is promoted as real Koharu BubbleMask instance ID", "collectRealBubbleMaskArtifact", [signal("proxyNotRealBubbleMask", "true", source: "koharuBubbleAdjacencySeamReport")]),
+                gate("G-bubble-adjacency-pair-ledger", "Pair ledger count", "BubbleMask", pairLedgers.isEmpty ? "warning" : "passed", "pairLedgerCount>=1 for current manga page", allBlocks, "adjacent or conflicting bubbles are hidden", "restoreBubblePairLedger", [signal("pairLedgerCount", String(pairLedgers.count), source: "koharuBubbleAdjacencySeamReport")]),
+                gate("G-bubble-adjacency-seam-candidates", "Seam candidates", "BubbleMask", seamCandidates.count >= (bubbleSplitCandidateReport?.candidateCount ?? 0) ? "passed" : "warning", "seamCandidateCount>=bubbleSplitCandidateReport.candidateCount", splitReviewBlocks, "split candidates lack seam ledger rows", "restoreSeamCandidateLedger", [signal("seamCandidateCount", String(seamCandidates.count), source: "koharuBubbleAdjacencySeamReport")]),
+                gate("G-bubble-adjacency-block-ledger", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlocks, "some final blocks lack seam ledger rows", "restoreBlockSeamLedger", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuBubbleAdjacencySeamReport")]),
+                gate("G-bubble-adjacency-assignment-conflicts", "Assignment conflicts surfaced", "BubbleIndex", assignmentConflictBlocks.isEmpty ? "passed" : "warning", "assignment conflicts explicitly listed", assignmentConflictBlocks, "assignment conflict blocks are silently hidden or corrected", "reviewRealBubbleMaskNeed", [signal("assignmentConflictBlocks", joined(assignmentConflictBlocks), source: "bubbleMaskReport,koharuBubbleIndexShadowLedgerReport")]),
+                gate("G-bubble-adjacency-sibling-layout", "Sibling layout audited", "BubbleIndex", siblingGroups.isEmpty || !sameBubbleSiblingBlocks.isEmpty ? "passed" : "warning", "same-bubble sibling groups produce seam ledger rows", sameBubbleSiblingBlocks, "sibling layout is mistaken for applied split", "keepSiblingLayoutReportOnly", [signal("siblingGroupCount", String(siblingGroups.count), source: "blocks.bubbleID")]),
+                gate("G-bubble-adjacency-render-lock-respected", "Render lock respected", "FinalRender", koharuRenderRegressionLockReport == nil ? "warning" : "passed", "render lock remains evidence only", renderLockedBlocks, "seam report changes overlay or safeLayoutRect despite render lock", "inspectRenderLockGateLedger", [signal("renderLockedBlocks", joined(renderLockedBlocks), source: "koharuRenderRegressionLockReport,blocks.renderDiagnostics")]),
+                gate("G-bubble-adjacency-distance-field-linked", "DistanceField linked", "BubbleIndex", koharuDistanceFieldSafeAreaReport == nil ? "warning" : "passed", "v1.36 DistanceField report is available as seam evidence", allBlocks, "seam report cannot explain safe-area conflict evidence", "restoreKoharuDistanceFieldSafeAreaReport", [signal("distanceFieldReportAvailable", String(koharuDistanceFieldSafeAreaReport != nil), source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-bubble-adjacency-ci-fast-ready", "CI fast ready", "ci-fast", "passed", "uses existing reports only", allBlocks, "seam report adds OCR/LLM/full-only dependency", "keepCIFastReportOnly", [signal("inputReports", "bubbleGeometry,bubbleMaskReport,bubbleSplitCandidateReport,koharuBubbleIndexShadowLedgerReport,koharuDistanceFieldSafeAreaReport,koharuRenderRegressionLockReport", source: "koharuBubbleAdjacencySeamReport")])
+            ]
+
+            let adjacencyVerdict: String
+            if bubbleMaskReport == nil {
+                adjacencyVerdict = "blockedByMissingBubbleMaskProxy"
+            } else if !needsRealBubbleMaskBlocks.isEmpty {
+                adjacencyVerdict = "needsRealBubbleMaskArtifact"
+            } else if !manualReviewBlocks.isEmpty {
+                adjacencyVerdict = "manualReviewOnly"
+            } else if seamCandidates.isEmpty {
+                adjacencyVerdict = "adjacencySeamLedgerReady"
+            } else {
+                adjacencyVerdict = "reportOnlySeamCandidatesReady"
+            }
+
+            return MangaKoharuBubbleAdjacencySeamReport(
+                enabled: true,
+                source: "AITRANSProbe",
+                referencePipeline: "Koharu",
+                referenceConcept: "BubbleMask.InstanceAdjacency.SeamPartition",
+                evaluatedBlockCount: blocks.count,
+                evaluatedBubbleCount: bubbleMaskReport?.instanceCount ?? bubbleGeometry.bubbles.count,
+                pairLedgerCount: pairLedgers.count,
+                seamCandidateCount: seamCandidates.count,
+                blockLedgerCount: blockLedgers.count,
+                gateCount: gateLedger.count,
+                groundTruthUsedForDecision: false,
+                groundTruthUsedForEvaluationOnly: true,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true,
+                proxyNotRealBubbleMask: true,
+                usesRoundedRectProxyMask: true,
+                externalArtifactsRequiredForThisReport: false,
+                adjacencyVerdict: adjacencyVerdict,
+                pairVerdictBreakdown: countBy(pairLedgers.map(\.pairVerdict)),
+                seamCandidateVerdictBreakdown: countBy(seamCandidates.map(\.seamCandidateVerdict)),
+                blockSeamRiskBreakdown: countBy(blockLedgers.map(\.blockSeamRisk)),
+                assignmentRiskBreakdown: countBy(blockLedgers.map { $0.assignmentConflict ? "assignmentConflict" : "assignmentStableOrUnrelated" }),
+                nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
+                adjacentBubblePairs: pairLedgers.map(\.pairID).sorted(),
+                seamCandidateIDs: seamCandidates.map(\.seamCandidateID).sorted(),
+                seamRiskBlocks: seamRiskBlocks,
+                assignmentConflictBlocks: assignmentConflictBlocks,
+                splitReviewBlocks: splitReviewBlocks,
+                sameBubbleSiblingBlocks: sameBubbleSiblingBlocks,
+                needsRealBubbleMaskBlocks: needsRealBubbleMaskBlocks,
+                manualReviewBlocks: manualReviewBlocks,
+                pairLedgers: pairLedgers.sorted { $0.pairID < $1.pairID },
+                seamCandidateLedgers: seamCandidates.sorted { $0.seamCandidateID < $1.seamCandidateID },
+                blockLedgers: blockLedgers,
+                gateLedger: gateLedger,
+                notes: [
+                    "koharuBubbleAdjacencySeamReport is a report-only Koharu BubbleMask instance adjacency and seam shadow ledger.",
+                    "It uses AITRANS rounded-rect BubbleMask proxy, BubbleIndex, DistanceField, split candidate, sibling, OCR damage, and render lock evidence; it does not use real Koharu BubbleMask artifacts.",
+                    "Ground truth appears only in evaluationSignals; adjacency, seam, split, assignment, gate, and nextAction decisions use ground-truth-free geometry/render signals.",
+                    "The report does not add OCR or LLM calls and does not change OCR, translation input, safeLayoutRect, DistanceField safe rect, glyphMaskFillRects, background fill, overlay rendering, blockPassed, failureCategory, active artifacts, currentBlockSource, or PNG output behavior."
+                ]
+            )
+        }.value
+    }
+
     private static func makeApproximateBubbleMaskRuntime(
         image: CGImage,
         bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics
@@ -2112,6 +2716,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport? = nil,
         koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
         koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil,
+        koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -2214,6 +2819,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let koharuDistanceFieldBlockLedgerByBlock = Dictionary(
             uniqueKeysWithValues: (koharuDistanceFieldSafeAreaReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let koharuBubbleSeamBlockLedgerByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuBubbleAdjacencySeamReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
         let translationFloorNoisyByBlock = Dictionary(
             uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
@@ -2441,6 +3049,7 @@ struct MangaOverlayProbeService: Sendable {
             let koharuNativeReplayRoute = koharuNativeReplayRouteByBlock[block.index]
             let koharuBubbleIndexBlockLedger = koharuBubbleIndexBlockLedgerByBlock[block.index]
             let koharuDistanceFieldBlockLedger = koharuDistanceFieldBlockLedgerByBlock[block.index]
+            let koharuBubbleSeamBlockLedger = koharuBubbleSeamBlockLedgerByBlock[block.index]
             let translationFloorNoisy = translationFloorNoisyByBlock[block.index]
             let renderLock = renderLockByBlock[block.index]
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
@@ -2512,6 +3121,7 @@ struct MangaOverlayProbeService: Sendable {
             koharuNativeReplayRoute: primary=\(koharuNativeReplayRoute?.primaryReplayCandidateID ?? "nil") secondary=\(koharuNativeReplayRoute?.secondaryReplayCandidateIDs.joined(separator: ",") ?? "nil") stage=\(koharuNativeReplayRoute?.primaryKoharuStage ?? "nil") bottleneck=\(koharuNativeReplayRoute?.primaryBottleneck ?? "nil") nextAction=\(koharuNativeReplayRoute?.nextAction ?? "nil") requiresExternalArtifact=\(koharuNativeReplayRoute.map { String($0.requiresExternalArtifact) } ?? "nil") modelFloorLimited=\(koharuNativeReplayRoute.map { String($0.modelFloorLimited) } ?? "nil") renderLocked=\(koharuNativeReplayRoute.map { String($0.renderLocked) } ?? "nil") stoplistedLocalTuning=\(koharuNativeReplayRoute.map { String($0.stoplistedLocalTuning) } ?? "nil")
             koharuBubbleIndexBlockLedger: block=\(koharuBubbleIndexBlockLedger.map { String($0.blockIndex) } ?? "nil") bubbleID=\(koharuBubbleIndexBlockLedger?.bubbleID.map(String.init) ?? "nil") shadowBubbleID=\(koharuBubbleIndexBlockLedger?.shadowBubbleID.map(String.init) ?? "nil") assignment=\(koharuBubbleIndexBlockLedger?.assignmentVerdict ?? "nil") safeArea=\(koharuBubbleIndexBlockLedger?.safeAreaVerdict ?? "nil") sibling=\(koharuBubbleIndexBlockLedger?.siblingPartitionVerdict ?? "nil") render=\(koharuBubbleIndexBlockLedger?.renderLockVerdict ?? "nil") next=\(koharuBubbleIndexBlockLedger?.nextAction ?? "nil")
             distanceFieldBlockLedger: block=\(koharuDistanceFieldBlockLedger.map { String($0.blockIndex) } ?? "nil") bubbleID=\(koharuDistanceFieldBlockLedger?.bubbleID.map(String.init) ?? "nil") currentIoU=\(koharuDistanceFieldBlockLedger?.currentVsDistanceSafeRectIoU?.formatted(.number.precision(.fractionLength(3))) ?? "nil") spriteCurrent=\(koharuDistanceFieldBlockLedger?.spriteContainedByCurrentSafeRect.map(String.init) ?? "nil") spriteDistance=\(koharuDistanceFieldBlockLedger?.spriteContainedByDistanceSafeRect.map(String.init) ?? "nil") verdict=\(koharuDistanceFieldBlockLedger?.safeRectComparisonVerdict ?? "nil") next=\(koharuDistanceFieldBlockLedger?.nextAction ?? "nil")
+            bubbleSeamBlockLedger: block=\(koharuBubbleSeamBlockLedger.map { String($0.blockIndex) } ?? "nil") bubbleID=\(koharuBubbleSeamBlockLedger?.bubbleID.map(String.init) ?? "nil") pairs=[\(koharuBubbleSeamBlockLedger?.relatedPairIDs.joined(separator: ",") ?? "nil")] seams=[\(koharuBubbleSeamBlockLedger?.relatedSeamCandidateIDs.joined(separator: ",") ?? "nil")] risk=\(koharuBubbleSeamBlockLedger?.blockSeamRisk ?? "nil") verdict=\(koharuBubbleSeamBlockLedger?.blockSeamVerdict ?? "nil") next=\(koharuBubbleSeamBlockLedger?.nextAction ?? "nil")
             translationFloorNoisyBlock: modelFloorLimited=\(translationFloorNoisy.map { String($0.modelFloorLimited) } ?? "nil") ocrInputSuspect=\(translationFloorNoisy.map { String($0.ocrInputSuspect) } ?? "nil") languageQualityFailure=\(translationFloorNoisy.map { String($0.translationLanguageQualityFailure) } ?? "nil") routingOutcome=\(translationFloorNoisy?.routingComparisonOutcome ?? "nil") nextAction=\(translationFloorNoisy?.recommendedNextAction ?? "nil")
             renderLock: status=\(renderLock?.renderStatus ?? "nil") failureOverlayRequired=\(renderLock.map { String($0.failureOverlayRequired) } ?? "nil") failureOverlayLocked=\(renderLock.map { String($0.failureOverlayLocked) } ?? "nil") safeLayoutSource=\(renderLock?.safeLayoutSource ?? "nil") maskOverflowPixels=\(renderLock.map { String($0.renderMaskOverflowPixelCount) } ?? "nil") truncated=\(renderLock.map { String($0.renderTextTruncated) } ?? "nil") nextAction=\(renderLock?.recommendedNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
@@ -2592,6 +3202,12 @@ struct MangaOverlayProbeService: Sendable {
         let distanceFieldSiblingLedgerSummary = (koharuDistanceFieldSafeAreaReport?.siblingLedgers ?? [])
             .map { "distanceFieldSiblingLedger: group=\($0.siblingGroupID) bubbleID=\($0.bubbleID) blocks=[\($0.blockIndexes.map(String.init).joined(separator: ","))] verdict=\($0.siblingDistanceVerdict) next=\($0.nextAction)" }
             .joined(separator: "\n")
+        let bubbleAdjacencyPairSummary = (koharuBubbleAdjacencySeamReport?.pairLedgers ?? [])
+            .map { "bubbleAdjacencyPair: pair=\($0.pairID) bubbles=\($0.bubbleAID)-\($0.bubbleBID) gap=\($0.bboxGapPx.formatted(.number.precision(.fractionLength(2)))) overlap=\($0.bboxOverlapArea.formatted(.number.precision(.fractionLength(2)))) verdict=\($0.pairVerdict) next=\($0.nextAction)" }
+            .joined(separator: "\n")
+        let bubbleSeamCandidateSummary = (koharuBubbleAdjacencySeamReport?.seamCandidateLedgers ?? [])
+            .map { "bubbleSeamCandidate: id=\($0.seamCandidateID) parent=\($0.parentBubbleID.map(String.init) ?? "nil") orientation=\($0.seamOrientation) blocks=[\($0.blockIndexes.map(String.init).joined(separator: ","))] score=\($0.seamScore.formatted(.number.precision(.fractionLength(3)))) verdict=\($0.seamCandidateVerdict) next=\($0.nextAction)" }
+            .joined(separator: "\n")
         let externalSummary = """
         koharuNativeAlgorithmReplayMatrixReport: enabled=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.stageCount) } ?? "nil") candidates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil") blockRoutes=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict ?? "nil")
         nativeReplayStageStatus=\(koharuNativeAlgorithmReplayMatrixReport?.stageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -2613,6 +3229,13 @@ struct MangaOverlayProbeService: Sendable {
         distanceFieldNextAction=\(koharuDistanceFieldSafeAreaReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         \(distanceFieldBubbleLedgerSummary.isEmpty ? "distanceFieldBubbleLedger: nil" : distanceFieldBubbleLedgerSummary)
         \(distanceFieldSiblingLedgerSummary.isEmpty ? "distanceFieldSiblingLedger: nil" : distanceFieldSiblingLedgerSummary)
+        koharuBubbleAdjacencySeamReport: enabled=\(koharuBubbleAdjacencySeamReport.map { String($0.enabled) } ?? "nil") bubbles=\(koharuBubbleAdjacencySeamReport.map { String($0.evaluatedBubbleCount) } ?? "nil") pairs=\(koharuBubbleAdjacencySeamReport.map { String($0.pairLedgerCount) } ?? "nil") seams=\(koharuBubbleAdjacencySeamReport.map { String($0.seamCandidateCount) } ?? "nil") blocks=\(koharuBubbleAdjacencySeamReport.map { String($0.blockLedgerCount) } ?? "nil") gates=\(koharuBubbleAdjacencySeamReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuBubbleAdjacencySeamReport?.adjacencyVerdict ?? "nil")
+        bubbleAdjacencyPairVerdict=\(koharuBubbleAdjacencySeamReport?.pairVerdictBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        bubbleSeamCandidateVerdict=\(koharuBubbleAdjacencySeamReport?.seamCandidateVerdictBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        bubbleSeamRisk=\(koharuBubbleAdjacencySeamReport?.blockSeamRiskBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        bubbleSeamNextAction=\(koharuBubbleAdjacencySeamReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        \(bubbleAdjacencyPairSummary.isEmpty ? "bubbleAdjacencyPair: nil" : bubbleAdjacencyPairSummary)
+        \(bubbleSeamCandidateSummary.isEmpty ? "bubbleSeamCandidate: nil" : bubbleSeamCandidateSummary)
         koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
         workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")

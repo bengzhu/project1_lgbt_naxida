@@ -1594,6 +1594,7 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport?
                 var koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport?
                 var koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport?
+                var koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -2233,6 +2234,7 @@ final class TranslationSessionStore: ObservableObject {
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
                 )
+                self.writeMangaProbeProgress(stage: "koharu-bubble-index-shadow-ledger-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuBubbleIndexShadowLedgerReport = Self.makeKoharuBubbleIndexShadowLedgerReport(
                     blocks: probeBlocks,
                     bubbleMaskReport: bubbleMaskReport,
@@ -2243,6 +2245,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport
                 )
+                self.writeMangaProbeProgress(stage: "koharu-bubble-index-shadow-ledger-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-distance-field-safe-area-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuDistanceFieldSafeAreaReport = await self.mangaOverlayProbeService.makeKoharuDistanceFieldSafeAreaReport(
                     image: recognized.image,
                     blocks: probeBlocks,
@@ -2252,6 +2256,20 @@ final class TranslationSessionStore: ObservableObject {
                     koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
                 )
+                self.writeMangaProbeProgress(stage: "koharu-distance-field-safe-area-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-bubble-adjacency-seam-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                koharuBubbleAdjacencySeamReport = await self.mangaOverlayProbeService.makeKoharuBubbleAdjacencySeamReport(
+                    image: recognized.image,
+                    blocks: probeBlocks,
+                    bubbleGeometry: recognized.bubbleGeometry,
+                    bubbleMaskReport: bubbleMaskReport,
+                    bubbleSplitCandidateReport: bubbleSplitCandidateReport,
+                    koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
+                    koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
+                    koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
+                )
+                self.writeMangaProbeProgress(stage: "koharu-bubble-adjacency-seam-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
                     blocks: probeBlocks,
                     diagnostics: makeMangaOverlayProbeDiagnostics(blocks: probeBlocks),
@@ -2271,9 +2289,12 @@ final class TranslationSessionStore: ObservableObject {
                     koharuExternalArtifactRequestPacketReport: koharuExternalArtifactRequestPacketReport,
                     koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
                     koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
-                    koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport
+                    koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
+                    koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport
                 )
+                self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
+                    self.writeMangaProbeProgress(stage: "ocr-probe-text-final-rewrite-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                     try MangaOverlayProbeService.writeOCRProbeText(
                         blocks: probeBlocks,
                         textRegionCropReport: textRegionCropReport,
@@ -2304,6 +2325,7 @@ final class TranslationSessionStore: ObservableObject {
                         koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
                         koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                         koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
+                        koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
                         translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                         koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                         bubbleMaskReport: bubbleMaskReport,
@@ -2311,7 +2333,9 @@ final class TranslationSessionStore: ObservableObject {
                         bubbleSplitCandidateReport: bubbleSplitCandidateReport,
                         to: URL(fileURLWithPath: ocrProbeTextPath)
                     )
+                    self.writeMangaProbeProgress(stage: "ocr-probe-text-final-rewrite-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 }
+                self.writeMangaProbeProgress(stage: "probe-report-write-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 let report = self.makeMangaOverlayProbeReport(
                     blocks: probeBlocks,
                     outputFiles: outputFiles,
@@ -2353,6 +2377,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
                     koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                     koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
+                    koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
@@ -7950,6 +7975,7 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport? = nil,
         koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
         koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil,
+        koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
@@ -8010,7 +8036,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuExternalArtifactRequestPacketReport: nil,
             koharuNativeAlgorithmReplayMatrixReport: nil,
             koharuBubbleIndexShadowLedgerReport: nil,
-            koharuDistanceFieldSafeAreaReport: nil
+            koharuDistanceFieldSafeAreaReport: nil,
+            koharuBubbleAdjacencySeamReport: nil
         )
         let resolverReport = koharuPipelineResolverReport ?? Self.makeKoharuPipelineResolverReport(
             blocks: blocks,
@@ -8099,7 +8126,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuExternalArtifactRequestPacketReport: requestPacketReport,
             koharuNativeAlgorithmReplayMatrixReport: replayMatrixReport,
             koharuBubbleIndexShadowLedgerReport: bubbleIndexShadowLedgerReport,
-            koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport
+            koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
+            koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -8150,6 +8178,7 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeAlgorithmReplayMatrixReport: replayMatrixReport,
             koharuBubbleIndexShadowLedgerReport: bubbleIndexShadowLedgerReport,
             koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
+            koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
@@ -15713,7 +15742,8 @@ final class TranslationSessionStore: ObservableObject {
         koharuExternalArtifactRequestPacketReport: MangaKoharuExternalArtifactRequestPacketReport?,
         koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport? = nil,
         koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
-        koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil
+        koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil,
+        koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport? = nil
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -15906,6 +15936,28 @@ final class TranslationSessionStore: ObservableObject {
         let distanceFieldNextAction = distanceFieldExecuted
             ? (koharuDistanceFieldSafeAreaReport?.nextActionBreakdown.keys.sorted().first ?? "keepDistanceFieldSafeAreaReportOnly")
             : "generateKoharuDistanceFieldSafeAreaReport"
+        let bubbleAdjacencySeamExecuted = koharuBubbleAdjacencySeamReport?.enabled == true
+        let bubbleAdjacencySeamVerdict = koharuBubbleAdjacencySeamReport?.adjacencyVerdict ?? "notExecuted"
+        let bubbleAdjacencySeamBlocks = uniqueSorted(koharuBubbleAdjacencySeamReport?.blockLedgers.map(\.blockIndex) ?? allBlockIndexes)
+        let bubbleAdjacencySeamStatus: String
+        if !bubbleAdjacencySeamExecuted {
+            bubbleAdjacencySeamStatus = "openBubbleAdjacencySeam"
+        } else if bubbleAdjacencySeamVerdict == "blockedByMissingBubbleMaskProxy"
+            || bubbleAdjacencySeamVerdict == "needsRealBubbleMaskArtifact" {
+            bubbleAdjacencySeamStatus = "needsRealArtifact"
+        } else if bubbleAdjacencySeamVerdict == "renderLockedNoPromotion" {
+            bubbleAdjacencySeamStatus = "renderLockedReportOnly"
+        } else if bubbleAdjacencySeamVerdict == "manualReviewOnly" {
+            bubbleAdjacencySeamStatus = "manualReviewOnly"
+        } else {
+            bubbleAdjacencySeamStatus = "closedReportOnly"
+        }
+        let bubbleAdjacencySeamBlockers = bubbleAdjacencySeamExecuted
+            ? (koharuBubbleAdjacencySeamReport?.gateLedger.filter { $0.status == "warning" || $0.status == "blocked" }.map(\.failureMeans) ?? [])
+            : ["koharuBubbleAdjacencySeamReport not generated before convergence refresh"]
+        let bubbleAdjacencySeamNextAction = bubbleAdjacencySeamExecuted
+            ? (koharuBubbleAdjacencySeamReport?.nextActionBreakdown.keys.sorted().first ?? "keepBubbleAdjacencySeamReportOnly")
+            : "generateKoharuBubbleAdjacencySeamReport"
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -16257,6 +16309,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-koharu-native-algorithm-replay-matrix", title: "Koharu native algorithm replay matrix", status: nativeReplayMatrixStatus, sourceReport: nativeReplayMatrixExecuted ? "koharuNativeAlgorithmReplayMatrixReport" : "koharuArtifactConvergenceReport", stages: ["SourceImage", "ContentCrop", "TextBoxes", "BubbleMask", "SegmentMask", "OcrText", "Translations", "RenderedSprites", "FinalRender", "ExternalArtifacts"], blocks: nativeReplayMatrixBlocks, version: nativeReplayMatrixExecuted ? "v1.34" : nil, blockers: nativeReplayMatrixBlockers, nextAction: nativeReplayMatrixNextAction, ciFast: true, full: false, external: false, decisions: [signal("matrixVerdict", nativeReplayMatrixVerdict, source: "koharuNativeAlgorithmReplayMatrixReport"), signal("candidateCount", koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil", source: "koharuNativeAlgorithmReplayMatrixReport")]),
             workItem("WI-koharu-bubble-index-shadow-ledger", title: "Koharu BubbleIndex shadow ledger", status: bubbleIndexLedgerStatus, sourceReport: bubbleIndexLedgerExecuted ? "koharuBubbleIndexShadowLedgerReport" : "koharuArtifactConvergenceReport", stages: ["BubbleMask", "RenderedSprites", "FinalRender"], blocks: bubbleIndexLedgerBlocks, version: bubbleIndexLedgerExecuted ? "v1.35" : nil, blockers: bubbleIndexLedgerBlockers, nextAction: bubbleIndexLedgerNextAction, ciFast: true, full: false, external: false, decisions: [signal("ledgerVerdict", bubbleIndexLedgerVerdict, source: "koharuBubbleIndexShadowLedgerReport"), signal("blockLedgerCount", koharuBubbleIndexShadowLedgerReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuBubbleIndexShadowLedgerReport")]),
             workItem("WI-koharu-distance-field-safe-area", title: "Koharu DistanceField safe area shadow report", status: distanceFieldStatus, sourceReport: distanceFieldExecuted ? "koharuDistanceFieldSafeAreaReport" : "koharuArtifactConvergenceReport", stages: ["BubbleIndex", "RenderedSprites", "FinalRender"], blocks: distanceFieldBlocks, version: distanceFieldExecuted ? "v1.36" : nil, blockers: distanceFieldBlockers, nextAction: distanceFieldNextAction, ciFast: true, full: false, external: false, decisions: [signal("distanceFieldVerdict", distanceFieldVerdict, source: "koharuDistanceFieldSafeAreaReport"), signal("blockLedgerCount", koharuDistanceFieldSafeAreaReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuDistanceFieldSafeAreaReport")]),
+            workItem("WI-koharu-bubble-adjacency-seam", title: "Koharu Bubble adjacency seam shadow report", status: bubbleAdjacencySeamStatus, sourceReport: bubbleAdjacencySeamExecuted ? "koharuBubbleAdjacencySeamReport" : "koharuArtifactConvergenceReport", stages: ["BubbleMask", "BubbleIndex", "RenderedSprites", "FinalRender"], blocks: bubbleAdjacencySeamBlocks, version: bubbleAdjacencySeamExecuted ? "v1.37" : nil, blockers: bubbleAdjacencySeamBlockers, nextAction: bubbleAdjacencySeamNextAction, ciFast: true, full: false, external: false, decisions: [signal("adjacencyVerdict", bubbleAdjacencySeamVerdict, source: "koharuBubbleAdjacencySeamReport"), signal("blockLedgerCount", koharuBubbleAdjacencySeamReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuBubbleAdjacencySeamReport")]),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
@@ -16272,7 +16325,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuRenderRegressionLockReport == nil ? "koharuRenderRegressionLockReport" : nil,
             koharuNativeAlgorithmReplayMatrixReport == nil ? "koharuNativeAlgorithmReplayMatrixReport" : nil,
             koharuBubbleIndexShadowLedgerReport == nil ? "koharuBubbleIndexShadowLedgerReport" : nil,
-            koharuDistanceFieldSafeAreaReport == nil ? "koharuDistanceFieldSafeAreaReport" : nil
+            koharuDistanceFieldSafeAreaReport == nil ? "koharuDistanceFieldSafeAreaReport" : nil,
+            koharuBubbleAdjacencySeamReport == nil ? "koharuBubbleAdjacencySeamReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -16314,6 +16368,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-native-algorithm-replay-matrix-executed", name: "Koharu native algorithm replay matrix executed", scope: "NativeReplayMatrix", status: nativeReplayMatrixExecuted ? "passed" : "open", threshold: "koharuNativeAlgorithmReplayMatrixReport.enabled=true without main flow mutation or ground truth decision", affected: nativeReplayMatrixBlocks, failureMeans: "native replay matrix is missing or mutates OCR, translation, render, blockPassed, candidate selection, or active artifacts", action: nativeReplayMatrixNextAction, decisions: [signal("matrixVerdict", nativeReplayMatrixVerdict, source: "koharuNativeAlgorithmReplayMatrixReport"), signal("groundTruthUsedForDecision", koharuNativeAlgorithmReplayMatrixReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeAlgorithmReplayMatrixReport")]),
             gate("G-koharu-bubble-index-shadow-ledger-executed", name: "Koharu BubbleIndex shadow ledger executed", scope: "BubbleIndex", status: bubbleIndexLedgerExecuted ? (bubbleIndexLedgerStatus == "closedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuBubbleIndexShadowLedgerReport.enabled=true without safeLayoutRect, renderer, OCR, or ground truth decision mutation", affected: bubbleIndexLedgerBlocks, failureMeans: "BubbleIndex ledger is missing or mutates OCR, translation, safe layout, render, blockPassed, candidate selection, or active artifacts", action: bubbleIndexLedgerNextAction, decisions: [signal("ledgerVerdict", bubbleIndexLedgerVerdict, source: "koharuBubbleIndexShadowLedgerReport"), signal("groundTruthUsedForDecision", koharuBubbleIndexShadowLedgerReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuBubbleIndexShadowLedgerReport")]),
             gate("G-koharu-distance-field-safe-area-executed", name: "Koharu DistanceField safe area executed", scope: "BubbleIndex", status: distanceFieldExecuted ? (distanceFieldStatus == "closedReportOnly" || distanceFieldStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuDistanceFieldSafeAreaReport.enabled=true without safeLayoutRect, renderer, OCR, LLM, or ground truth decision mutation", affected: distanceFieldBlocks, failureMeans: "DistanceField safe area report is missing or mutates OCR, translation, safe layout, render, blockPassed, candidate selection, or active artifacts", action: distanceFieldNextAction, decisions: [signal("distanceFieldVerdict", distanceFieldVerdict, source: "koharuDistanceFieldSafeAreaReport"), signal("groundTruthUsedForDecision", koharuDistanceFieldSafeAreaReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuDistanceFieldSafeAreaReport")]),
+            gate("G-koharu-bubble-adjacency-seam-executed", name: "Koharu Bubble adjacency seam executed", scope: "BubbleMask", status: bubbleAdjacencySeamExecuted ? (bubbleAdjacencySeamStatus == "closedReportOnly" || bubbleAdjacencySeamStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuBubbleAdjacencySeamReport.enabled=true without OCR, LLM, safeLayoutRect, renderer, blockPassed, candidate selection, or ground truth decision mutation", affected: bubbleAdjacencySeamBlocks, failureMeans: "Bubble adjacency seam report is missing or mutates OCR, translation, layout, render, blockPassed, candidate selection, or active artifacts", action: bubbleAdjacencySeamNextAction, decisions: [signal("adjacencyVerdict", bubbleAdjacencySeamVerdict, source: "koharuBubbleAdjacencySeamReport"), signal("groundTruthUsedForDecision", koharuBubbleAdjacencySeamReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuBubbleAdjacencySeamReport")]),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
             gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
@@ -16337,12 +16392,13 @@ final class TranslationSessionStore: ObservableObject {
             "koharuNativeAlgorithmReplayMatrixReport",
             "koharuBubbleIndexShadowLedgerReport",
             "koharuDistanceFieldSafeAreaReport",
+            "koharuBubbleAdjacencySeamReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, and v1.36 DistanceField safe-area report-only ledgers into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, and v1.37 Bubble adjacency seam report-only ledgers into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
