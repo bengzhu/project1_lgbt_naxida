@@ -115,6 +115,45 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.40：Native TextBox Detector-Lite Shadow OCR 评估闭环
+日期：2026-07-02
+依据：`md/prompt/v1（漫画探针）/v1.40（NativeTextBoxDetectorLiteShadowOCR评估闭环）.md`。本轮修改 Swift 探针报告模型、受限 detector-lite crop OCR 评估链路、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuNativeTextBoxDetectorLiteShadowOCRReport`，只消费 v1.39 `koharuNativeTextBoxDetectorLiteReport.candidates` 中 `shadowOCREligible = true` 的 `nativeDetectorLite` 候选。
+- `ci-fast` 每块最多执行 1 个 detector-lite bbox OCR，`full` 每块最多 2 个；候选选择只使用 detector-lite score、bubble / glyph / block 关系、direction hint 和 ledger 信号。
+- candidate ledger 输出 source candidate、bbox、crop padding、scale、OCR raw / normalized text、empty / failed / succeeded、word preservation、quality delta、evaluation-only ground truth similarity delta、outcome 和 report-only rejection reasons。
+- block ledger 覆盖所有最终 blocks，记录 selected candidate、shadow OCR text、当前 / shadow OCR quality、better / worse / same / empty / failed / notSelected、primary bottleneck、nextAction 和 whyNotPromoted。
+- 报告明确 `groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealKoharuTextBoxes = true`、`proxyNotRealKoharuOCR = true`；ground truth 只进 evaluation signals。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuNativeTextBoxDetectorLiteShadowOCRReport`；convergence 新增 `WI-koharu-native-textbox-detector-lite-shadow-ocr` 和 `G-koharu-native-textbox-detector-lite-shadow-ocr-executed`。
+- `1_ocr_probe_text.txt` 新增 detector-lite shadow OCR report summary、candidate OCR ledger 和逐块 `nativeTextBoxDetectorLiteShadowOCRBlockLedger`。
+- 本轮不新增 LLM 调用，不更换模型，不使用 ground truth 决定候选、排序、OCR 执行、nextAction 或 gate，不改变主 OCR、翻译输入、覆盖图、`finalTextUsedForTranslation`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.40（NativeTextBoxDetectorLiteShadowOCR评估闭环）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `git diff --check`、JSON 解析、Koharu validator smoke，并用轻量 Swift 解析检查新增 Swift 语法。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuNativeTextBoxDetectorLiteShadowOCRReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`selectedCandidateCount <= totalBlocksDetected`、`ocrExecutedCount == selectedCandidateCount`、`gateCount >= 8`，核心 breakdown 非空或无候选时明确 blocked ledger，convergence 包含 v1.40 reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、candidate ledger 和逐块 block ledger。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.35-v1.40 新字段；以 PR 后云端结果包为准。
+- shadow OCR 可能全部 empty / worse；这属于本轮要显式记录的评估结果，不能静默跳过，也不能因此替换主流程。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.39：Koharu Native TextBox Detector-Lite 预 OCR 影子复刻
 日期：2026-07-02
 依据：`md/prompt/v1（漫画探针）/v1.39（KoharuNativeTextBoxDetectorLite预OCR影子复刻）.md`。本轮修改 Swift 探针报告模型、像素 / 几何候选层、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。

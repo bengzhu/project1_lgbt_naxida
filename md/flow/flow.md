@@ -219,6 +219,7 @@ test/1.png
   -> Koharu Bubble Adjacency Seam shadow report（BubbleMask proxy adjacency graph / seam candidate / block seam ledger，report-only）
   -> Koharu RenderSprite Fit Planner report（RenderedSprites 字体预算 / layout candidate / sibling fit / failure fallback 风险账本，report-only）
   -> Koharu Native TextBox Detector-Lite report（source image 像素 / bubble geometry 生成预 OCR TextBox 候选，shadow-only）
+  -> Koharu Native TextBox Detector-Lite Shadow OCR report（受限 detector-lite crop OCR 闭环评估，report-only）
   -> Koharu Artifact convergence report（canonical artifact 收敛矩阵、逐块 path、work item closure、gate ledger）
   -> JSON / TXT / PNG 输出
 ```
