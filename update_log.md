@@ -115,6 +115,42 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.38：Koharu RenderSprite 排版适配影子复刻
+日期：2026-07-02
+依据：`md/prompt/v1（漫画探针）/v1.38（KoharuRenderSprite排版适配影子复刻）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuRenderSpriteFitPlannerReport`，只基于 AITRANS 现有 `safeLayoutRect`、`renderFontSize`、`renderNonTransparentBounds`、render collision、失败 fallback 文本、v1.30 Render Regression Lock、v1.35 BubbleIndex、v1.36 DistanceField 和 v1.37 seam 证据，构建 RenderedSprites 字体预算、换行压力、sprite containment、layout candidate、same-bubble sibling fit 和 failure overlay fit 账本。
+- 报告输出 `blockLedgers[]`、`layoutCandidateLedgers[]`、`siblingLedgers[]` 和 `gateLedger[]`，记录 `translationCandidate` / `failureFallback` 渲染文本来源、字符统计、候选 rect、字体预算、seam / sibling / render lock 风险、proxy boundary 和 report-only next action。
+- 报告明确 `groundTruthUsedForDecision = false`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealKoharuRenderer = true`、`proxyNotRealBubbleMask = true`；ground truth 只进入 evaluation signals。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuRenderSpriteFitPlannerReport`；convergence 新增 `WI-koharu-render-sprite-fit-planner` 和 `G-koharu-render-sprite-fit-planner-executed`。
+- `1_ocr_probe_text.txt` 新增 RenderSprite fit planner summary、layout candidate、sibling fit group 和逐块 `renderSpriteFit`。
+- 报告只做 report-only 诊断；不新增 OCR / LLM，不重新渲染 PNG，不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、DistanceField safe rect、`renderFontSize`、`renderNonTransparentBounds`、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、post-fusion cleanup、候选选择、active artifacts 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.38（KoharuRenderSprite排版适配影子复刻）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuRenderSpriteFitPlannerReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`layoutCandidateCount >= totalBlocksDetected`、`gateCount >= 10`，breakdown 非空，`proxyNotRealKoharuRenderer = true`、`proxyNotRealBubbleMask = true`，convergence 包含 RenderSprite fit planner reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、layout candidate、sibling fit 和逐块 block ledger。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.35-v1.38 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.37：Koharu 气泡邻接切缝影子复刻
 日期：2026-07-02
 依据：`md/prompt/v1（漫画探针）/v1.37（Koharu气泡邻接切缝影子复刻）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
