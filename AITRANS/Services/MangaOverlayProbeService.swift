@@ -2585,7 +2585,85 @@ struct MangaOverlayProbeService: Sendable {
             }.sorted { $0.blockIndex < $1.blockIndex }
 
             let blockLedgerByIndex = Dictionary(uniqueKeysWithValues: blockLedgers.map { ($0.blockIndex, $0) })
-            let layoutCandidateLedgers: [MangaKoharuRenderSpriteLayoutCandidateLedger] = blocks.flatMap { block in
+            func makeLayoutCandidateLedger(
+                block: MangaOverlayProbeBlock,
+                ledger: MangaKoharuRenderSpriteFitBlockLedger?,
+                candidateSource: String,
+                candidateRect: [Double]?,
+                siblingCurrentRects: [[Double]],
+                siblingDistanceRects: [[Double]],
+                currentArea: Double
+            ) -> MangaKoharuRenderSpriteLayoutCandidateLedger {
+                let contained: Bool? = containment(ledger?.renderNonTransparentBounds, in: candidateRect)
+                let currentOverlap: Bool = siblingCurrentRects.contains { siblingRect in
+                    overlapRatio(candidateRect, siblingRect) >= 0.08
+                }
+                let distanceOverlap: Bool = siblingDistanceRects.contains { siblingRect in
+                    overlapRatio(candidateRect, siblingRect) >= 0.08
+                }
+                let relatedSeams: [String] = ledger?.relatedSeamCandidateIDs ?? []
+                let verdict: String
+                if candidateRect == nil {
+                    verdict = "missingCandidateRect"
+                } else if currentOverlap || distanceOverlap {
+                    verdict = "siblingOverlapRisk"
+                } else if !relatedSeams.isEmpty && candidateSource != "currentSafeLayoutRect" {
+                    verdict = "seamConstrainedNeedsRealBubbleMask"
+                } else if contained == true && candidateSource == "currentSafeLayoutRect" {
+                    verdict = "currentRendererBaseline"
+                } else if contained == true {
+                    verdict = "containedButRequiresRendererTask"
+                } else {
+                    verdict = "reportOnlyCandidateNoPromotion"
+                }
+                let action: String = verdict == "seamConstrainedNeedsRealBubbleMask"
+                    ? "collectRealBubbleMaskArtifact"
+                    : "keepLayoutCandidateReportOnly"
+                var blockers: [String] = ["reportOnly", "wouldChangeMainFlow=false"]
+                if candidateSource != "currentSafeLayoutRect" {
+                    blockers.append("notPromotedToRenderer")
+                }
+                if verdict == "missingCandidateRect" {
+                    blockers.append("missingCandidateRect")
+                }
+                let candidateID = "RSF-\(block.index)-\(candidateSource)"
+                let candidateArea = area(candidateRect.map(Self.rect(from:)))
+                let areaDeltaValue: Double? = currentArea > 0
+                    ? areaDelta(candidate: candidateRect, current: ledger?.currentSafeLayoutRect)
+                    : nil
+                let decisionSignals: [MangaKoharuRenderSpriteFitSignal] = [
+                    signal("candidateSource", candidateSource, source: "koharuRenderSpriteFitPlannerReport"),
+                    signal("spriteContained", contained.map(String.init) ?? "nil", source: "blocks.renderNonTransparentBounds"),
+                    signal("candidateVerdict", verdict, source: "koharuRenderSpriteFitPlannerReport")
+                ]
+                let evaluationSignals: [MangaKoharuRenderSpriteFitSignal] = [
+                    signal("blockPassed", String(block.blockPassed), source: "blocks.blockPassed", decision: false, evaluation: true)
+                ]
+                return MangaKoharuRenderSpriteLayoutCandidateLedger(
+                    candidateID: candidateID,
+                    blockIndex: block.index,
+                    candidateSource: candidateSource,
+                    candidateRect: candidateRect,
+                    candidateArea: candidateArea,
+                    currentSpriteBounds: ledger?.renderNonTransparentBounds,
+                    spriteContained: contained,
+                    areaDeltaVsCurrent: areaDeltaValue,
+                    overlapsSiblingCurrentSafeRect: currentOverlap,
+                    overlapsSiblingDistanceFieldRect: distanceOverlap,
+                    relatedSeamCandidateIDs: relatedSeams,
+                    candidateVerdict: verdict,
+                    promotionBlockedReasons: blockers,
+                    nextAction: action,
+                    decisionSignals: decisionSignals,
+                    evaluationSignals: evaluationSignals,
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            }
+
+            var layoutCandidateLedgers: [MangaKoharuRenderSpriteLayoutCandidateLedger] = []
+            for block in blocks {
                 let ledger = blockLedgerByIndex[block.index]
                 let siblings = siblingIndexesByBlock[block.index] ?? []
                 let siblingCurrentRects = siblings.compactMap { blockLedgerByIndex[$0]?.currentSafeLayoutRect }
@@ -2596,60 +2674,20 @@ struct MangaOverlayProbeService: Sendable {
                     ("distanceFieldSafeRect", ledger?.distanceFieldSafeRect),
                     ("bubbleIndexShadowSafeRect", ledger?.bubbleIndexShadowSafeRect)
                 ]
-                return candidates.map { source, rect in
-                    let contained = containment(ledger?.renderNonTransparentBounds, in: rect)
-                    let currentOverlap = siblingCurrentRects.contains { overlapRatio(rect, $0) >= 0.08 }
-                    let distanceOverlap = siblingDistanceRects.contains { overlapRatio(rect, $0) >= 0.08 }
-                    let relatedSeams = ledger?.relatedSeamCandidateIDs ?? []
-                    let verdict: String
-                    if rect == nil {
-                        verdict = "missingCandidateRect"
-                    } else if currentOverlap || distanceOverlap {
-                        verdict = "siblingOverlapRisk"
-                    } else if !relatedSeams.isEmpty && source != "currentSafeLayoutRect" {
-                        verdict = "seamConstrainedNeedsRealBubbleMask"
-                    } else if contained == true && source == "currentSafeLayoutRect" {
-                        verdict = "currentRendererBaseline"
-                    } else if contained == true {
-                        verdict = "containedButRequiresRendererTask"
-                    } else {
-                        verdict = "reportOnlyCandidateNoPromotion"
-                    }
-                    let action = verdict == "seamConstrainedNeedsRealBubbleMask"
-                        ? "collectRealBubbleMaskArtifact"
-                        : "keepLayoutCandidateReportOnly"
-                    var blockers = ["reportOnly", "wouldChangeMainFlow=false"]
-                    if source != "currentSafeLayoutRect" { blockers.append("notPromotedToRenderer") }
-                    if verdict == "missingCandidateRect" { blockers.append("missingCandidateRect") }
-                    return MangaKoharuRenderSpriteLayoutCandidateLedger(
-                        candidateID: "RSF-\(block.index)-\(source)",
-                        blockIndex: block.index,
+                for (source, rect) in candidates {
+                    let candidateLedger = makeLayoutCandidateLedger(
+                        block: block,
+                        ledger: ledger,
                         candidateSource: source,
                         candidateRect: rect,
-                        candidateArea: area(rect.map(Self.rect(from:))),
-                        currentSpriteBounds: ledger?.renderNonTransparentBounds,
-                        spriteContained: contained,
-                        areaDeltaVsCurrent: currentArea > 0 ? areaDelta(candidate: rect, current: ledger?.currentSafeLayoutRect) : nil,
-                        overlapsSiblingCurrentSafeRect: currentOverlap,
-                        overlapsSiblingDistanceFieldRect: distanceOverlap,
-                        relatedSeamCandidateIDs: relatedSeams,
-                        candidateVerdict: verdict,
-                        promotionBlockedReasons: blockers,
-                        nextAction: action,
-                        decisionSignals: [
-                            signal("candidateSource", source, source: "koharuRenderSpriteFitPlannerReport"),
-                            signal("spriteContained", contained.map(String.init) ?? "nil", source: "blocks.renderNonTransparentBounds"),
-                            signal("candidateVerdict", verdict, source: "koharuRenderSpriteFitPlannerReport")
-                        ],
-                        evaluationSignals: [
-                            signal("blockPassed", String(block.blockPassed), source: "blocks.blockPassed", decision: false, evaluation: true)
-                        ],
-                        groundTruthUsedForDecision: false,
-                        wouldChangeMainFlow: false,
-                        diagnosticOnly: true
+                        siblingCurrentRects: siblingCurrentRects,
+                        siblingDistanceRects: siblingDistanceRects,
+                        currentArea: currentArea
                     )
+                    layoutCandidateLedgers.append(candidateLedger)
                 }
-            }.sorted { lhs, rhs in
+            }
+            layoutCandidateLedgers.sort { lhs, rhs in
                 lhs.blockIndex == rhs.blockIndex ? lhs.candidateID < rhs.candidateID : lhs.blockIndex < rhs.blockIndex
             }
 

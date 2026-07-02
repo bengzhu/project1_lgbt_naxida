@@ -119,6 +119,12 @@
 日期：2026-07-02
 依据：`md/prompt/v1（漫画探针）/v1.38（KoharuRenderSprite排版适配影子复刻）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
 
+退回修复：
+
+- PR #28 云端 run `28571459833` 在 Xcode build 阶段失败，`xcodebuild.log` 指向 `MangaOverlayProbeService.swift` 中 `MangaKoharuRenderSpriteLayoutCandidateLedger(...)` 大表达式 type-check 超时，后续模拟器安装因缺 bundle ID 连带失败，探针未运行且结果包只保留 `output/probe-not-run.txt`。
+- 修复方式是把 RenderSprite layout candidate ledger 的嵌套 `flatMap` / `map` / struct 初始化拆成显式局部 helper 和 `for` 循环，先落地 `candidateID`、`candidateArea`、`areaDeltaVsCurrent`、`decisionSignals`、`evaluationSignals` 等中间变量；字段语义和 report-only 输出不变。
+- 本修复不改主 OCR、翻译输入、覆盖绘制、`safeLayoutRect`、DistanceField safe rect、`renderFontSize`、`renderNonTransparentBounds`、`blockPassed`、失败分类、active artifacts 或 `configuration.currentBlockSource`。
+
 核心变更：
 
 - 新增 `koharuRenderSpriteFitPlannerReport`，只基于 AITRANS 现有 `safeLayoutRect`、`renderFontSize`、`renderNonTransparentBounds`、render collision、失败 fallback 文本、v1.30 Render Regression Lock、v1.35 BubbleIndex、v1.36 DistanceField 和 v1.37 seam 证据，构建 RenderedSprites 字体预算、换行压力、sprite containment、layout candidate、same-bubble sibling fit 和 failure overlay fit 账本。
