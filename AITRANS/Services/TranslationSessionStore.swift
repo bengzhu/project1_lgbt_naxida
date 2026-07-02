@@ -1592,6 +1592,7 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport?
                 var koharuExternalArtifactRequestPacketReport: MangaKoharuExternalArtifactRequestPacketReport?
                 var koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport?
+                var koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -2231,6 +2232,16 @@ final class TranslationSessionStore: ObservableObject {
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
                 )
+                koharuBubbleIndexShadowLedgerReport = Self.makeKoharuBubbleIndexShadowLedgerReport(
+                    blocks: probeBlocks,
+                    bubbleMaskReport: bubbleMaskReport,
+                    bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+                    bubbleSplitCandidateReport: bubbleSplitCandidateReport,
+                    readingOrderStructureAuditReport: readingOrderStructureAuditReport,
+                    bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+                    koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
+                    koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport
+                )
                 koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
                     blocks: probeBlocks,
                     diagnostics: makeMangaOverlayProbeDiagnostics(blocks: probeBlocks),
@@ -2248,7 +2259,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuPipelineResolverReport: koharuPipelineResolverReport,
                     koharuWorkOrderRouterReport: koharuWorkOrderRouterReport,
                     koharuExternalArtifactRequestPacketReport: koharuExternalArtifactRequestPacketReport,
-                    koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport
+                    koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
+                    koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport
                 )
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
                     try MangaOverlayProbeService.writeOCRProbeText(
@@ -2279,6 +2291,7 @@ final class TranslationSessionStore: ObservableObject {
                         koharuWorkOrderRouterReport: koharuWorkOrderRouterReport,
                         koharuExternalArtifactRequestPacketReport: koharuExternalArtifactRequestPacketReport,
                         koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
+                        koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                         translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                         koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                         bubbleMaskReport: bubbleMaskReport,
@@ -2326,6 +2339,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuWorkOrderRouterReport: koharuWorkOrderRouterReport,
                     koharuExternalArtifactRequestPacketReport: koharuExternalArtifactRequestPacketReport,
                     koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
+                    koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
@@ -7921,6 +7935,7 @@ final class TranslationSessionStore: ObservableObject {
         koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport? = nil,
         koharuExternalArtifactRequestPacketReport: MangaKoharuExternalArtifactRequestPacketReport? = nil,
         koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport? = nil,
+        koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
@@ -7978,7 +7993,9 @@ final class TranslationSessionStore: ObservableObject {
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             koharuPipelineResolverReport: koharuPipelineResolverReport,
             koharuWorkOrderRouterReport: nil,
-            koharuExternalArtifactRequestPacketReport: nil
+            koharuExternalArtifactRequestPacketReport: nil,
+            koharuNativeAlgorithmReplayMatrixReport: nil,
+            koharuBubbleIndexShadowLedgerReport: nil
         )
         let resolverReport = koharuPipelineResolverReport ?? Self.makeKoharuPipelineResolverReport(
             blocks: blocks,
@@ -8038,6 +8055,16 @@ final class TranslationSessionStore: ObservableObject {
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
         )
+        let bubbleIndexShadowLedgerReport = koharuBubbleIndexShadowLedgerReport ?? Self.makeKoharuBubbleIndexShadowLedgerReport(
+            blocks: blocks,
+            bubbleMaskReport: bubbleMaskReport,
+            bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
+            bubbleSplitCandidateReport: bubbleSplitCandidateReport,
+            readingOrderStructureAuditReport: readingOrderStructureAuditReport,
+            bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
+            koharuNativeAlgorithmReplayMatrixReport: replayMatrixReport
+        )
         let finalConvergenceReport = koharuArtifactConvergenceReport ?? Self.makeKoharuArtifactConvergenceReport(
             blocks: blocks,
             diagnostics: diagnostics,
@@ -8055,7 +8082,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuPipelineResolverReport: resolverReport,
             koharuWorkOrderRouterReport: workOrderRouterReport,
             koharuExternalArtifactRequestPacketReport: requestPacketReport,
-            koharuNativeAlgorithmReplayMatrixReport: replayMatrixReport
+            koharuNativeAlgorithmReplayMatrixReport: replayMatrixReport,
+            koharuBubbleIndexShadowLedgerReport: bubbleIndexShadowLedgerReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -8104,6 +8132,7 @@ final class TranslationSessionStore: ObservableObject {
             koharuWorkOrderRouterReport: workOrderRouterReport,
             koharuExternalArtifactRequestPacketReport: requestPacketReport,
             koharuNativeAlgorithmReplayMatrixReport: replayMatrixReport,
+            koharuBubbleIndexShadowLedgerReport: bubbleIndexShadowLedgerReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
@@ -14283,6 +14312,34 @@ final class TranslationSessionStore: ObservableObject {
                 ?? bubble?.primaryBubbleBottleneck
                 ?? segment?.primarySegmentBottleneck
                 ?? block.failureCategory
+            let resolverFirstBlockedNodeID = resolver?.firstBlockedNodeID ?? "missingResolverInput"
+            let resolverRecommendedExecutionItemID = resolver?.recommendedExecutionItemID ?? "missingResolverInput"
+            let secondaryWorkOrderIDs = sortedUniqueStrings(secondary)
+            let decisionSignals: [MangaKoharuWorkOrderSignal] = [
+                signal("failureCategory", block.failureCategory, source: "blocks.failureCategory"),
+                signal("resolverFirstBlockedNodeID", resolver?.firstBlockedNodeID ?? "nil", source: "koharuPipelineResolverReport"),
+                signal("stoplistedLocalTuning", String(stoplisted), source: "nativeTextBoxProxyLedgerReport,koharuPipelineResolverReport"),
+                signal("modelFloorLimited", String(modelLimited), source: "translationModelFloorComparisonReport"),
+                signal("requiresExternalArtifact", String(requiresExternal), source: "externalArtifactReadinessReport")
+            ]
+            let ocrSimilarityForEvaluation = block.ocrGroundTruthSimilarity
+            let ocrSimilaritySignalValue = ocrSimilarityForEvaluation?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+            let evaluationSignals: [MangaKoharuWorkOrderSignal] = [
+                signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
+                signal("ocrSimilarityForEvaluation", ocrSimilaritySignalValue, source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+            ]
+            var mustNotPromoteReasons = [
+                "workOrderRouterDiagnosticOnly",
+                "groundTruthUsedOnlyForEvaluationSignals",
+                "doNotChangeMainOCRTranslationOverlayOrFailureClassification"
+            ]
+            mustNotPromoteReasons.append(contentsOf: resolver?.mustNotPromoteReasons ?? [])
+            mustNotPromoteReasons.append(contentsOf: textBox?.mustNotPromoteReasons ?? [])
+            mustNotPromoteReasons.append(contentsOf: bubble?.mustNotPromoteReasons ?? [])
+            mustNotPromoteReasons.append(contentsOf: segment?.mustNotPromoteReasons ?? [])
+            let uniqueMustNotPromoteReasons = sortedUniqueStrings(mustNotPromoteReasons)
+
             return MangaKoharuWorkOrderBlockRoute(
                 blockIndex: block.index,
                 bubbleID: block.bubbleID,
@@ -14290,11 +14347,11 @@ final class TranslationSessionStore: ObservableObject {
                 failureCategory: block.failureCategory,
                 groundTruthMatch: block.groundTruthMatch,
                 bestGroundTruthType: block.bestGroundTruthType,
-                ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
-                resolverFirstBlockedNodeID: resolver?.firstBlockedNodeID ?? "missingResolverInput",
-                resolverRecommendedExecutionItemID: resolver?.recommendedExecutionItemID ?? "missingResolverInput",
+                ocrSimilarityForEvaluation: ocrSimilarityForEvaluation,
+                resolverFirstBlockedNodeID: resolverFirstBlockedNodeID,
+                resolverRecommendedExecutionItemID: resolverRecommendedExecutionItemID,
                 primaryWorkOrderID: primary,
-                secondaryWorkOrderIDs: sortedUniqueStrings(secondary),
+                secondaryWorkOrderIDs: secondaryWorkOrderIDs,
                 primaryBottleneck: primaryBottleneck,
                 modelFloorLimited: modelLimited,
                 renderLocked: renderLocked,
@@ -14307,23 +14364,9 @@ final class TranslationSessionStore: ObservableObject {
                 requiresFullProbe: false,
                 budgetClass: budget,
                 recommendedNextAction: nextAction,
-                decisionSignals: [
-                    signal("failureCategory", block.failureCategory, source: "blocks.failureCategory"),
-                    signal("resolverFirstBlockedNodeID", resolver?.firstBlockedNodeID ?? "nil", source: "koharuPipelineResolverReport"),
-                    signal("stoplistedLocalTuning", String(stoplisted), source: "nativeTextBoxProxyLedgerReport,koharuPipelineResolverReport"),
-                    signal("modelFloorLimited", String(modelLimited), source: "translationModelFloorComparisonReport"),
-                    signal("requiresExternalArtifact", String(requiresExternal), source: "externalArtifactReadinessReport")
-                ],
-                evaluationSignals: [
-                    signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
-                    signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
-                    signal("ocrSimilarityForEvaluation", block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
-                ],
-                mustNotPromoteReasons: sortedUniqueStrings([
-                    "workOrderRouterDiagnosticOnly",
-                    "groundTruthUsedOnlyForEvaluationSignals",
-                    "doNotChangeMainOCRTranslationOverlayOrFailureClassification"
-                ] + (resolver?.mustNotPromoteReasons ?? []) + (textBox?.mustNotPromoteReasons ?? []) + (bubble?.mustNotPromoteReasons ?? []) + (segment?.mustNotPromoteReasons ?? [])),
+                decisionSignals: decisionSignals,
+                evaluationSignals: evaluationSignals,
+                mustNotPromoteReasons: uniqueMustNotPromoteReasons,
                 groundTruthUsedForDecision: false,
                 diagnosticOnly: true,
                 wouldChangeMainFlow: false
@@ -15213,6 +15256,427 @@ final class TranslationSessionStore: ObservableObject {
         )
     }
 
+    private static func makeKoharuBubbleIndexShadowLedgerReport(
+        blocks: [MangaOverlayProbeBlock],
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
+        readingOrderStructureAuditReport: MangaReadingOrderStructureAuditReport?,
+        bubbleMaskAssignmentSplitScoreboardReport: MangaBubbleMaskAssignmentSplitScoreboardReport?,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
+        koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport?
+    ) -> MangaKoharuBubbleIndexShadowLedgerReport {
+        func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
+        func joined(_ values: [Int]) -> String { uniqueSorted(values).map(String.init).joined(separator: ",") }
+        func countBy(_ values: [String]) -> [String: Int] { values.reduce(into: [:]) { $0[$1, default: 0] += 1 } }
+        func signal(_ name: String, _ value: String, source: String, decision: Bool = true, evaluation: Bool = false) -> MangaKoharuBubbleIndexSignal {
+            MangaKoharuBubbleIndexSignal(name: name, value: value, sourceReport: source, groundTruthFreeDecisionSignal: decision, groundTruthUsedForEvaluationOnly: evaluation)
+        }
+
+        func rectIoU(_ lhs: [Double]?, _ rhs: [Double]?) -> Double? {
+            guard let lhs, let rhs else { return nil }
+            let lhsRect = rect(from: lhs)
+            let rhsRect = rect(from: rhs)
+            guard area(of: lhsRect) > 0, area(of: rhsRect) > 0 else { return nil }
+            let intersection = lhsRect.intersection(rhsRect)
+            let intersectionArea = area(of: intersection)
+            let unionArea = area(of: lhsRect) + area(of: rhsRect) - intersectionArea
+            guard unionArea > 0 else { return nil }
+            return intersectionArea / unionArea
+        }
+
+        func overlapRatio(_ lhs: [Double], _ rhs: [Double]) -> Double {
+            let lhsRect = rect(from: lhs)
+            let rhsRect = rect(from: rhs)
+            guard area(of: lhsRect) > 0, area(of: rhsRect) > 0 else { return 0 }
+            let intersection = lhsRect.intersection(rhsRect)
+            return area(of: intersection) / max(min(area(of: lhsRect), area(of: rhsRect)), 1)
+        }
+
+        func maxOverlap(_ rects: [[Double]]) -> Double {
+            guard rects.count > 1 else { return 0 }
+            var result = 0.0
+            for lhsIndex in 0..<rects.count {
+                for rhsIndex in (lhsIndex + 1)..<rects.count {
+                    result = max(result, overlapRatio(rects[lhsIndex], rects[rhsIndex]))
+                }
+            }
+            return result
+        }
+
+        let allBlocks = blocks.map(\.index)
+        let maskByBlock = Dictionary(uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) })
+        let correctionByBlock = Dictionary(uniqueKeysWithValues: (bubbleAssignmentCorrectionReport?.diagnostics ?? []).map { ($0.blockIndex, $0) })
+        let readingByBlock = Dictionary(uniqueKeysWithValues: (readingOrderStructureAuditReport?.cases ?? []).map { ($0.blockIndex, $0) })
+        let scoreboardByBlock = Dictionary(uniqueKeysWithValues: (bubbleMaskAssignmentSplitScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) })
+        let renderByBlock = Dictionary(uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) })
+        let replayByBlock = Dictionary(uniqueKeysWithValues: (koharuNativeAlgorithmReplayMatrixReport?.blockRoutes ?? []).map { ($0.blockIndex, $0) })
+        let splitCandidates = bubbleSplitCandidateReport?.diagnostics ?? []
+        let splitCandidatesByBlock = Dictionary(grouping: splitCandidates.flatMap { candidate in
+            candidate.seedBlockIndexes.map { (blockIndex: $0, candidate: candidate) }
+        }) { $0.blockIndex }
+
+        let groupedByBubble = Dictionary(grouping: blocks) { block in
+            block.bubbleID
+        }
+        let siblingGroups = groupedByBubble.compactMap { bubbleID, group -> (bubbleID: Int, blocks: [MangaOverlayProbeBlock])? in
+            guard let bubbleID, group.count > 1 else { return nil }
+            return (bubbleID, group.sorted { $0.index < $1.index })
+        }.sorted { $0.bubbleID < $1.bubbleID }
+
+        func siblingIndexes(for block: MangaOverlayProbeBlock) -> [Int] {
+            guard let bubbleID = block.bubbleID else { return [] }
+            return (groupedByBubble[bubbleID] ?? [])
+                .map(\.index)
+                .filter { $0 != block.index }
+                .sorted()
+        }
+
+        func assignmentVerdict(block: MangaOverlayProbeBlock, mask: MangaOverlayBubbleMaskBlockDiagnostic?, correction: MangaOverlayBubbleAssignmentCorrectionDiagnostic?, scoreboard: MangaBubbleMaskAssignmentSplitBlockScorecard?) -> String {
+            let normalized = block.finalTextUsedForTranslation.lowercased()
+            if normalized.contains("city battler") || normalized.contains("offline") || normalized.contains("tournament") {
+                return "decorativeTitleNoCorrection"
+            }
+            if normalized.contains("let") && normalized.contains("battler") {
+                return "protectedTextNoCorrection"
+            }
+            if block.bubbleID == nil { return "unassignedNeedsManualReview" }
+            if scoreboard?.splitRisk == "splitReviewNeeded" || scoreboard?.splitRisk == "splitCandidatePresent" {
+                return "splitCandidateNeedsReview"
+            }
+            if correction?.correctionRecommended == true || mask?.bubbleIDConsistent == false {
+                return "dominantProxyBubbleConflict"
+            }
+            if let mask, mask.maskDominantBubbleID == block.bubbleID, mask.maskDominantCoverageRatio >= 0.70 {
+                return "dominantProxyBubbleAgrees"
+            }
+            if mask == nil || bubbleMaskReport == nil {
+                return "needsRealBubbleMask"
+            }
+            return "stableCurrentBubbleID"
+        }
+
+        func safeAreaVerdict(block: MangaOverlayProbeBlock, shadowRect: [Double]?, iou: Double?, render: MangaKoharuRenderBlockLock?) -> String {
+            if render?.renderStatus == "textTruncated" || render?.renderStatus == "maskOverflowUnresolved" || render?.renderStatus == "renderCollisionUnresolved" {
+                return "renderLockOwnsDecision"
+            }
+            if block.safeLayoutRect == nil { return "safeAreaMissing" }
+            if shadowRect == nil {
+                return bubbleMaskReport == nil ? "needsRealBubbleMask" : "maskSafeRectMissing"
+            }
+            if let iou, iou < 0.72 {
+                return "shadowSafeAreaDiffersReportOnly"
+            }
+            if block.safeLayoutSource?.hasPrefix("maskSafe") == true {
+                return "currentSafeAreaStable"
+            }
+            return "shadowSafeAreaComparable"
+        }
+
+        func siblingVerdict(block: MangaOverlayProbeBlock, siblings: [Int], splitIDs: [Int], render: MangaKoharuRenderBlockLock?) -> String {
+            if siblings.isEmpty { return "singleBlockBubble" }
+            if render?.renderStatus == "textTruncated" || render?.renderStatus == "maskOverflowUnresolved" {
+                return "manualReviewOnly"
+            }
+            if !splitIDs.isEmpty { return "splitCandidatePresent" }
+            if bubbleMaskReport == nil { return "needsRealBubbleMask" }
+            let groupRects = (groupedByBubble[block.bubbleID] ?? []).compactMap(\.safeLayoutRect)
+            if maxOverlap(groupRects) >= 0.18 {
+                return "partitionOverlapRisk"
+            }
+            return "partitionStable"
+        }
+
+        func nextAction(assignment: String, safeArea: String, sibling: String, render: String) -> String {
+            if render == "renderIssueOpen" || safeArea == "renderLockOwnsDecision" { return "inspectRenderLockGateLedger" }
+            if assignment == "dominantProxyBubbleConflict" || assignment == "splitCandidateNeedsReview" || sibling == "splitCandidatePresent" { return "reviewBubbleIndexAssignmentAndSplit" }
+            if assignment == "needsRealBubbleMask" || safeArea == "needsRealBubbleMask" || sibling == "needsRealBubbleMask" { return "collectRealBubbleMaskArtifact" }
+            if assignment == "unassignedNeedsManualReview" || sibling == "manualReviewOnly" { return "manualReviewOnly" }
+            if safeArea == "shadowSafeAreaDiffersReportOnly" || sibling == "partitionOverlapRisk" { return "keepBubbleIndexShadowLedgerReportOnly" }
+            return "keepBubbleIndexLedgerReportOnly"
+        }
+
+        var blockLedgers: [MangaKoharuBubbleIndexBlockLedger] = []
+        blockLedgers.reserveCapacity(blocks.count)
+        for block in blocks {
+            let mask = maskByBlock[block.index]
+            let correction = correctionByBlock[block.index]
+            let scoreboard = scoreboardByBlock[block.index]
+            let render = renderByBlock[block.index]
+            let replay = replayByBlock[block.index]
+            let splitIDs = uniqueSorted((splitCandidatesByBlock[block.index] ?? []).map { $0.candidate.id })
+            let shadowBubbleID = mask?.maskDominantBubbleID ?? scoreboard?.maskDominantBubbleID
+            let shadowBubbleSource = mask?.maskDominantBubbleID != nil ? "bubbleMaskReport.majoritySeed" : (scoreboard?.maskDominantBubbleID != nil ? "bubbleMaskAssignmentSplitScoreboardReport" : "unassigned")
+            let shadowSafeRect = mask?.maskSafeRect ?? block.maskSafeRect ?? render?.maskSafeRect
+            let safeIoU = rectIoU(block.safeLayoutRect, shadowSafeRect)
+            let siblings = siblingIndexes(for: block)
+            let assignment = assignmentVerdict(block: block, mask: mask, correction: correction, scoreboard: scoreboard)
+            let safeArea = safeAreaVerdict(block: block, shadowRect: shadowSafeRect, iou: safeIoU, render: render)
+            let sibling = siblingVerdict(block: block, siblings: siblings, splitIDs: splitIDs, render: render)
+            let renderVerdict = render?.renderStatus == "textTruncated" || render?.renderStatus == "maskOverflowUnresolved" || render?.renderStatus == "renderCollisionUnresolved"
+                ? "renderIssueOpen"
+                : "renderLocked"
+            let action = nextAction(assignment: assignment, safeArea: safeArea, sibling: sibling, render: renderVerdict)
+            let shadowSafeLayoutSource = shadowSafeRect == nil ? "missing" : "bubbleMaskReport.maskSafeRect"
+            let siblingPartitionID = block.bubbleID.map { "BI-\($0)" }
+            let primaryBottleneck = replay?.primaryBottleneck ?? scoreboard?.primaryBubbleBottleneck ?? block.failureCategory
+            let assignmentSignals: [MangaKoharuBubbleIndexSignal] = [
+                signal("currentBubbleID", block.bubbleID.map(String.init) ?? "nil", source: "blocks.bubbleID"),
+                signal("maskDominantBubbleID", shadowBubbleID.map(String.init) ?? "nil", source: shadowBubbleSource),
+                signal("correctionRecommended", String(correction?.correctionRecommended ?? false), source: "bubbleAssignmentCorrectionReport")
+            ]
+            let safeAreaSignals: [MangaKoharuBubbleIndexSignal] = [
+                signal("currentSafeLayoutSource", block.safeLayoutSource ?? "nil", source: "blocks.safeLayoutSource"),
+                signal("currentVsShadowSafeRectIoU", safeIoU?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "koharuBubbleIndexShadowLedgerReport"),
+                signal("renderStatus", render?.renderStatus ?? "nil", source: "koharuRenderRegressionLockReport")
+            ]
+            let decisionSignals: [MangaKoharuBubbleIndexSignal] = [
+                signal("assignmentVerdict", assignment, source: "koharuBubbleIndexShadowLedgerReport"),
+                signal("safeAreaVerdict", safeArea, source: "koharuBubbleIndexShadowLedgerReport"),
+                signal("siblingPartitionVerdict", sibling, source: "koharuBubbleIndexShadowLedgerReport"),
+                signal("nextAction", action, source: "koharuBubbleIndexShadowLedgerReport")
+            ]
+            let ocrSimilaritySignalValue = block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+            let evaluationSignals: [MangaKoharuBubbleIndexSignal] = [
+                signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
+                signal("ocrSimilarityForEvaluation", ocrSimilaritySignalValue, source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+            ]
+            blockLedgers.append(
+                MangaKoharuBubbleIndexBlockLedger(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    bbox: block.bbox,
+                    blockPassed: block.blockPassed,
+                    failureCategory: block.failureCategory,
+                    groundTruthMatch: block.groundTruthMatch,
+                    bestGroundTruthType: block.bestGroundTruthType,
+                    ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
+                    currentSafeLayoutRect: block.safeLayoutRect,
+                    currentSafeLayoutSource: block.safeLayoutSource,
+                    shadowBubbleID: shadowBubbleID,
+                    shadowBubbleSource: shadowBubbleSource,
+                    shadowAssignmentConfidence: mask?.maskDominantCoverageRatio ?? scoreboard?.maskDominantCoverageRatio,
+                    assignmentVerdict: assignment,
+                    assignmentSignals: assignmentSignals,
+                    shadowSafeLayoutRect: shadowSafeRect,
+                    shadowSafeLayoutSource: shadowSafeLayoutSource,
+                    currentVsShadowSafeRectIoU: safeIoU,
+                    safeAreaVerdict: safeArea,
+                    safeAreaSignals: safeAreaSignals,
+                    siblingBubbleID: block.bubbleID,
+                    siblingBlockIndexes: siblings,
+                    siblingPartitionID: siblingPartitionID,
+                    siblingPartitionVerdict: sibling,
+                    splitCandidateIDs: splitIDs,
+                    renderLockVerdict: renderVerdict,
+                    primaryBottleneck: primaryBottleneck,
+                    nextAction: action,
+                    decisionSignals: decisionSignals,
+                    evaluationSignals: evaluationSignals,
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            )
+        }
+
+        let blockLedgerByIndex = Dictionary(uniqueKeysWithValues: blockLedgers.map { ($0.blockIndex, $0) })
+        let siblingLedgers: [MangaKoharuBubbleIndexSiblingLedger] = siblingGroups.map { group in
+            let blockIndexes = group.blocks.map(\.index)
+            let currentRects = group.blocks.compactMap(\.safeLayoutRect)
+            let shadowRects = group.blocks.compactMap { blockLedgerByIndex[$0.index]?.shadowSafeLayoutRect ?? $0.safeLayoutRect }
+            let splitIDs = uniqueSorted(blockIndexes.flatMap { blockIndex in
+                (splitCandidatesByBlock[blockIndex] ?? []).map { $0.candidate.id }
+            })
+            let readingIndexes = group.blocks.map { readingByBlock[$0.index]?.proposedReadingOrderIndex ?? $0.index }
+            let currentOverlap = maxOverlap(currentRects)
+            let shadowOverlap = maxOverlap(shadowRects)
+            let renderIssue = group.blocks.contains { block in
+                let status = renderByBlock[block.index]?.renderStatus
+                return status == "textTruncated" || status == "maskOverflowUnresolved" || status == "renderCollisionUnresolved"
+            }
+            let verdict: String
+            if renderIssue {
+                verdict = "manualReviewOnly"
+            } else if !splitIDs.isEmpty {
+                verdict = "splitCandidatePresent"
+            } else if bubbleMaskReport == nil {
+                verdict = "needsRealBubbleMask"
+            } else if currentOverlap >= 0.18 || shadowOverlap >= 0.18 {
+                verdict = "partitionOverlapRisk"
+            } else {
+                verdict = "partitionStable"
+            }
+            let action = verdict == "partitionStable" ? "keepSiblingPartitionReportOnly" : (verdict == "needsRealBubbleMask" ? "collectRealBubbleMaskArtifact" : "reviewBubbleIndexSiblingPartition")
+            return MangaKoharuBubbleIndexSiblingLedger(
+                siblingGroupID: "BI-\(group.bubbleID)",
+                bubbleID: group.bubbleID,
+                blockIndexes: blockIndexes,
+                readingOrderIndexes: readingIndexes,
+                currentSafeLayoutRects: currentRects,
+                shadowPartitionRects: shadowRects,
+                maxCurrentSafeRectOverlapRatio: currentOverlap,
+                maxShadowPartitionOverlapRatio: shadowOverlap,
+                partitionVerdict: verdict,
+                splitCandidateIDs: splitIDs,
+                renderLockVerdict: renderIssue ? "renderIssueOpen" : "renderLocked",
+                nextAction: action,
+                decisionSignals: [
+                    signal("maxCurrentSafeRectOverlapRatio", currentOverlap.formatted(.number.precision(.fractionLength(4))), source: "blocks.safeLayoutRect"),
+                    signal("splitCandidateIDs", splitIDs.map(String.init).joined(separator: ","), source: "bubbleSplitCandidateReport")
+                ],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            )
+        }
+
+        let siblingGroupIDsByBubble = Dictionary(grouping: siblingLedgers, by: \.bubbleID).mapValues { ledgers in
+            ledgers.map(\.siblingGroupID).sorted()
+        }
+        let bubbleLedgers: [MangaKoharuBubbleIndexBubbleLedger] = (bubbleMaskReport?.instances ?? []).map { instance in
+            let blockIndexes = blockLedgers.filter { ($0.shadowBubbleID ?? $0.bubbleID) == instance.bubbleID }.map(\.blockIndex).sorted()
+            let conflictBlocks = blockLedgers.filter { ($0.shadowBubbleID ?? $0.bubbleID) == instance.bubbleID && $0.assignmentVerdict == "dominantProxyBubbleConflict" }.map(\.blockIndex)
+            let correctionBlocks = uniqueSorted((bubbleAssignmentCorrectionReport?.diagnostics ?? []).filter { $0.correctedBubbleID == instance.bubbleID && $0.correctionRecommended }.map(\.blockIndex))
+            let splitIDs = uniqueSorted(splitCandidates.filter { $0.parentBubbleID == instance.bubbleID }.map(\.id))
+            let renderLockedBlocks = blockLedgers.filter { ($0.shadowBubbleID ?? $0.bubbleID) == instance.bubbleID && $0.renderLockVerdict == "renderLocked" }.map(\.blockIndex)
+            let layoutVerdict: String
+            if blockIndexes.count <= 1, conflictBlocks.isEmpty, splitIDs.isEmpty {
+                layoutVerdict = "stableSingleBlockBubble"
+            } else if !conflictBlocks.isEmpty {
+                layoutVerdict = "assignmentConflict"
+            } else if !splitIDs.isEmpty {
+                layoutVerdict = "splitReviewNeeded"
+            } else if siblingLedgers.contains(where: { $0.bubbleID == instance.bubbleID && $0.partitionVerdict == "partitionStable" }) {
+                layoutVerdict = "siblingPartitionStable"
+            } else if bubbleMaskReport == nil {
+                layoutVerdict = "needsRealBubbleMask"
+            } else if blockIndexes.count > 1 {
+                layoutVerdict = "stableMultiBlockBubble"
+            } else {
+                layoutVerdict = "manualReviewOnly"
+            }
+            let primaryRisk = !conflictBlocks.isEmpty ? "assignmentConflict" : (!splitIDs.isEmpty ? "splitRisk" : (layoutVerdict == "needsRealBubbleMask" ? "proxyOnly" : "none"))
+            let action = layoutVerdict == "assignmentConflict" || layoutVerdict == "splitReviewNeeded"
+                ? "reviewBubbleIndexAssignmentAndSplit"
+                : (layoutVerdict == "needsRealBubbleMask" ? "collectRealBubbleMaskArtifact" : "keepBubbleIndexLedgerReportOnly")
+            return MangaKoharuBubbleIndexBubbleLedger(
+                bubbleID: instance.bubbleID,
+                bbox: instance.bbox,
+                maskPixelCount: instance.maskPixelCount,
+                maskCoverageRatio: instance.maskCoverageRatio,
+                safeRect: instance.safeRect,
+                safeRectCoverageRatio: instance.safeRectCoverageRatio,
+                blockIndexes: blockIndexes,
+                siblingGroupIDs: siblingGroupIDsByBubble[instance.bubbleID] ?? [],
+                splitCandidateIDs: splitIDs,
+                assignmentConflictBlocks: uniqueSorted(conflictBlocks),
+                correctionRecommendedBlocks: correctionBlocks,
+                renderLockedBlocks: uniqueSorted(renderLockedBlocks),
+                layoutVerdict: layoutVerdict,
+                primaryRisk: primaryRisk,
+                nextAction: action,
+                decisionSignals: [
+                    signal("maskCoverageRatio", instance.maskCoverageRatio.formatted(.number.precision(.fractionLength(4))), source: "bubbleMaskReport.instances"),
+                    signal("blockIndexes", joined(blockIndexes), source: "koharuBubbleIndexShadowLedgerReport.blockLedgers")
+                ],
+                evaluationSignals: [
+                    signal("dialogueBlockCount", String(blocks.filter { blockIndexes.contains($0.index) && $0.bestGroundTruthType == "dialogue" }.count), source: "blocks.bestGroundTruthType", decision: false, evaluation: true)
+                ],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            )
+        }.sorted { $0.bubbleID < $1.bubbleID }
+
+        let conflictBlocks = uniqueSorted(blockLedgers.filter { $0.assignmentVerdict == "dominantProxyBubbleConflict" }.map(\.blockIndex))
+        let splitReviewBlocks = uniqueSorted(blockLedgers.filter { $0.assignmentVerdict == "splitCandidateNeedsReview" || $0.siblingPartitionVerdict == "splitCandidatePresent" }.map(\.blockIndex))
+        let sameBubbleSiblingBlocks = uniqueSorted(blockLedgers.filter { !$0.siblingBlockIndexes.isEmpty }.map(\.blockIndex))
+        let safeAreaCompareBlocks = uniqueSorted(blockLedgers.filter { $0.currentVsShadowSafeRectIoU != nil }.map(\.blockIndex))
+        let needsRealBubbleMaskBlocks = uniqueSorted(blockLedgers.filter { $0.assignmentVerdict == "needsRealBubbleMask" || $0.safeAreaVerdict == "needsRealBubbleMask" || $0.siblingPartitionVerdict == "needsRealBubbleMask" }.map(\.blockIndex))
+        let renderLockedBlocks = uniqueSorted(blockLedgers.filter { $0.renderLockVerdict == "renderLocked" }.map(\.blockIndex))
+        let manualReviewBlocks = uniqueSorted(blockLedgers.filter { $0.nextAction == "manualReviewOnly" || $0.siblingPartitionVerdict == "manualReviewOnly" }.map(\.blockIndex))
+
+        func gate(_ id: String, _ name: String, _ scope: String, _ status: String, _ threshold: String, _ affected: [Int], _ failure: String, _ action: String, _ signals: [MangaKoharuBubbleIndexSignal]) -> MangaKoharuBubbleIndexGate {
+            MangaKoharuBubbleIndexGate(gateID: id, gateName: name, scope: scope, status: status, threshold: threshold, affectedBlocks: uniqueSorted(affected), decisionSignals: signals, failureMeans: failure, recommendedAction: action, groundTruthUsedForDecision: false)
+        }
+
+        let gateLedger = [
+            gate("G-bubble-index-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "BubbleIndex ledger mutates OCR, translation, safeLayoutRect, render, or block pass state", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuBubbleIndexShadowLedgerReport")]),
+            gate("G-bubble-index-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlocks, "ground truth changes assignment, safe-area, sibling, or next action decisions", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuBubbleIndexShadowLedgerReport")]),
+            gate("G-bubble-index-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlocks, "some final blocks lack BubbleIndex ledger rows", "restorePerBlockBubbleIndexLedger", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuBubbleIndexShadowLedgerReport")]),
+            gate("G-bubble-index-bubble-ledger-count", "Bubble ledger count", "BubbleMask", bubbleLedgers.count == (bubbleMaskReport?.instanceCount ?? 0) ? "passed" : "warning", "bubbleLedgerCount==bubbleMaskReport.instanceCount", allBlocks, "BubbleMask instance ledger count does not match upstream proxy instances", "inspectBubbleMaskReportInputs", [signal("bubbleLedgerCount", String(bubbleLedgers.count), source: "koharuBubbleIndexShadowLedgerReport")]),
+            gate("G-bubble-index-proxy-boundary", "Proxy boundary", "BubbleMask", "passed", "proxyNotRealBubbleMask=true", allBlocks, "BubbleMask proxy is promoted as real Koharu BubbleMask or BubbleIndex", "keepProxyBoundaryOrCollectRealArtifact", [signal("proxyNotRealBubbleMask", "true", source: "koharuBubbleIndexShadowLedgerReport")]),
+            gate("G-bubble-index-assignment-audited", "Assignment audited", "BubbleIndex", conflictBlocks.isEmpty ? "passed" : "warning", "assignment conflicts explicitly listed", conflictBlocks, "dominant bubble conflicts are hidden or silently corrected", "reviewBubbleIndexAssignmentAndSplit", [signal("conflictBlocks", joined(conflictBlocks), source: "koharuBubbleIndexShadowLedgerReport")]),
+            gate("G-bubble-index-safe-area-compared", "Safe area compared", "BubbleIndex", safeAreaCompareBlocks.isEmpty && !blocks.isEmpty ? "warning" : "passed", "current safeLayoutRect compared against shadow mask-safe rect where available", safeAreaCompareBlocks, "safe-area shadow ledger cannot compare existing and mask-safe geometry", "inspectMaskSafeRectInputs", [signal("safeAreaCompareBlocks", joined(safeAreaCompareBlocks), source: "koharuBubbleIndexShadowLedgerReport")]),
+            gate("G-bubble-index-sibling-partition-audited", "Sibling partition audited", "BubbleIndex", siblingLedgers.isEmpty && !sameBubbleSiblingBlocks.isEmpty ? "warning" : "passed", "same-bubble sibling groups have ledgers", sameBubbleSiblingBlocks, "multi-block bubble sibling partition is missing", "restoreSiblingPartitionLedgers", [signal("siblingLedgerCount", String(siblingLedgers.count), source: "koharuBubbleIndexShadowLedgerReport")]),
+            gate("G-bubble-index-split-review-preserved", "Split review preserved", "BubbleIndex", splitReviewBlocks.isEmpty ? "passed" : "warning", "split candidates remain report-only review", splitReviewBlocks, "split candidate mutates block grouping or safeLayoutRect", "keepSplitReviewReportOnly", [signal("splitReviewBlocks", joined(splitReviewBlocks), source: "koharuBubbleIndexShadowLedgerReport")]),
+            gate("G-bubble-index-render-lock-respected", "Render lock respected", "FinalRender", koharuRenderRegressionLockReport == nil ? "warning" : "passed", "render lock report remains upstream evidence only", koharuRenderRegressionLockReport?.renderIssueBlocks ?? [], "BubbleIndex ledger changes overlay renderer or ignores render lock", "inspectRenderLockGateLedger", [signal("renderLockVerdict", koharuRenderRegressionLockReport?.renderLockVerdict ?? "nil", source: "koharuRenderRegressionLockReport")]),
+            gate("G-bubble-index-real-artifact-gated", "Real artifact gated", "ExternalArtifacts", needsRealBubbleMaskBlocks.isEmpty ? "passed" : "warning", "real BubbleMask needs are explicit and not fabricated", needsRealBubbleMaskBlocks, "missing real BubbleMask is treated as ready or generated locally", "collectRealBubbleMaskArtifact", [signal("needsRealBubbleMaskBlocks", joined(needsRealBubbleMaskBlocks), source: "koharuBubbleIndexShadowLedgerReport")]),
+            gate("G-bubble-index-ci-fast-ready", "CI fast ready", "ci-fast", "passed", "ledger uses existing reports only", allBlocks, "BubbleIndex ledger adds OCR/LLM or full-only dependency", "keepCIFastReportOnly", [signal("inputReports", "blocks,bubbleMaskReport,bubbleScoreboard,renderLock,nativeReplay", source: "koharuBubbleIndexShadowLedgerReport")])
+        ]
+
+        let ledgerVerdict: String
+        if bubbleMaskReport == nil {
+            ledgerVerdict = "blockedByMissingBubbleMaskProxy"
+        } else if bubbleMaskAssignmentSplitScoreboardReport == nil {
+            ledgerVerdict = "blockedByMissingBubbleScoreboard"
+        } else if !needsRealBubbleMaskBlocks.isEmpty {
+            ledgerVerdict = "needsRealBubbleMaskArtifact"
+        } else if !manualReviewBlocks.isEmpty {
+            ledgerVerdict = "manualReviewOnly"
+        } else if !splitReviewBlocks.isEmpty || !conflictBlocks.isEmpty {
+            ledgerVerdict = "reportOnlyBubbleIndexReady"
+        } else {
+            ledgerVerdict = "bubbleIndexShadowLedgerReady"
+        }
+
+        return MangaKoharuBubbleIndexShadowLedgerReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referencePipeline: "Koharu",
+            referenceConcept: "BubbleIndex.MajorityMaskSafeAreaSiblingPartition",
+            evaluatedBlockCount: blocks.count,
+            evaluatedBubbleCount: bubbleMaskReport?.instanceCount ?? 0,
+            blockLedgerCount: blockLedgers.count,
+            bubbleLedgerCount: bubbleLedgers.count,
+            siblingLedgerCount: siblingLedgers.count,
+            gateCount: gateLedger.count,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            proxyNotRealBubbleMask: true,
+            externalArtifactsRequiredForThisReport: false,
+            ledgerVerdict: ledgerVerdict,
+            assignmentVerdictBreakdown: countBy(blockLedgers.map(\.assignmentVerdict)),
+            safeAreaVerdictBreakdown: countBy(blockLedgers.map(\.safeAreaVerdict)),
+            siblingPartitionVerdictBreakdown: countBy(blockLedgers.map(\.siblingPartitionVerdict)),
+            renderLockVerdictBreakdown: countBy(blockLedgers.map(\.renderLockVerdict)),
+            bubbleLayoutVerdictBreakdown: countBy(bubbleLedgers.map(\.layoutVerdict)),
+            nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
+            conflictBlocks: conflictBlocks,
+            splitReviewBlocks: splitReviewBlocks,
+            sameBubbleSiblingBlocks: sameBubbleSiblingBlocks,
+            safeAreaCompareBlocks: safeAreaCompareBlocks,
+            needsRealBubbleMaskBlocks: needsRealBubbleMaskBlocks,
+            renderLockedBlocks: renderLockedBlocks,
+            manualReviewBlocks: manualReviewBlocks,
+            blockLedgers: blockLedgers.sorted { $0.blockIndex < $1.blockIndex },
+            bubbleLedgers: bubbleLedgers,
+            siblingLedgers: siblingLedgers,
+            gateLedger: gateLedger,
+            notes: [
+                "koharuBubbleIndexShadowLedgerReport is a report-only Koharu BubbleIndex shadow ledger built from existing AITRANS probe evidence.",
+                "It audits majority mask assignment, mask-safe area comparison, same-bubble sibling partition, split risk, and render lock without writing back to safeLayoutRect or overlay rendering.",
+                "Ground truth appears only in evaluationSignals; assignmentVerdict, safeAreaVerdict, siblingPartitionVerdict, gate status, and nextAction use ground-truth-free signals.",
+                "proxyNotRealBubbleMask=true: AITRANS BubbleMask is a proxy and must not be promoted as real Koharu BubbleMask/BubbleIndex without external artifacts.",
+                "The report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, cleanup, safeLayoutRect, glyphMaskFillRects, background fill, active artifacts, currentBlockSource, or PNG output behavior."
+            ]
+        )
+    }
+
     private static func makeKoharuArtifactConvergenceReport(
         blocks: [MangaOverlayProbeBlock],
         diagnostics: MangaOverlayProbeDiagnostics,
@@ -15230,7 +15694,8 @@ final class TranslationSessionStore: ObservableObject {
         koharuPipelineResolverReport: MangaKoharuPipelineResolverReport?,
         koharuWorkOrderRouterReport: MangaKoharuWorkOrderRouterReport?,
         koharuExternalArtifactRequestPacketReport: MangaKoharuExternalArtifactRequestPacketReport?,
-        koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport? = nil
+        koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport? = nil,
+        koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -15379,6 +15844,27 @@ final class TranslationSessionStore: ObservableObject {
         let nativeReplayMatrixNextAction = nativeReplayMatrixExecuted
             ? (koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict == "externalArtifactBlocked" ? "collectRealKoharuArtifact" : "keepNativeReplayMatrixReportOnly")
             : "generateKoharuNativeAlgorithmReplayMatrixReport"
+        let bubbleIndexLedgerExecuted = koharuBubbleIndexShadowLedgerReport?.enabled == true
+        let bubbleIndexLedgerVerdict = koharuBubbleIndexShadowLedgerReport?.ledgerVerdict ?? "notExecuted"
+        let bubbleIndexLedgerBlocks = uniqueSorted(koharuBubbleIndexShadowLedgerReport?.blockLedgers.map(\.blockIndex) ?? allBlockIndexes)
+        let bubbleIndexLedgerStatus: String
+        if !bubbleIndexLedgerExecuted {
+            bubbleIndexLedgerStatus = "openBubbleIndexShadowLedger"
+        } else if bubbleIndexLedgerVerdict == "needsRealBubbleMaskArtifact"
+            || bubbleIndexLedgerVerdict == "blockedByMissingBubbleMaskProxy"
+            || bubbleIndexLedgerVerdict == "blockedByMissingBubbleScoreboard" {
+            bubbleIndexLedgerStatus = "needsRealArtifact"
+        } else if bubbleIndexLedgerVerdict == "manualReviewOnly" {
+            bubbleIndexLedgerStatus = "manualReviewOnly"
+        } else {
+            bubbleIndexLedgerStatus = "closedReportOnly"
+        }
+        let bubbleIndexLedgerBlockers = bubbleIndexLedgerExecuted
+            ? (koharuBubbleIndexShadowLedgerReport?.gateLedger.filter { $0.status == "warning" || $0.status == "blocked" }.map(\.failureMeans) ?? [])
+            : ["koharuBubbleIndexShadowLedgerReport not generated before convergence refresh"]
+        let bubbleIndexLedgerNextAction = bubbleIndexLedgerExecuted
+            ? (koharuBubbleIndexShadowLedgerReport?.nextActionBreakdown.keys.sorted().first ?? "keepBubbleIndexLedgerReportOnly")
+            : "generateKoharuBubbleIndexShadowLedgerReport"
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -15728,6 +16214,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-koharu-workorder-router", title: "Koharu work order router", status: workOrderRouterStatus, sourceReport: workOrderRouterExecuted ? "koharuWorkOrderRouterReport" : "koharuArtifactConvergenceReport", stages: ["WorkOrderRouter", "BudgetGate"], blocks: workOrderRouterBlocks, version: workOrderRouterExecuted ? "v1.32" : nil, blockers: workOrderRouterBlockers, nextAction: workOrderRouterNextAction, ciFast: true, full: false, external: false, decisions: [signal("routerVerdict", workOrderRouterVerdict, source: "koharuWorkOrderRouterReport"), signal("workOrderCount", koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil", source: "koharuWorkOrderRouterReport")]),
             workItem("WI-koharu-external-artifact-request-packet", title: "Koharu external artifact request packet", status: externalRequestPacketStatus, sourceReport: externalRequestPacketExecuted ? "koharuExternalArtifactRequestPacketReport" : "koharuArtifactConvergenceReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: externalRequestPacketBlocks, version: externalRequestPacketExecuted ? "v1.33" : nil, blockers: externalRequestPacketBlockers, nextAction: externalRequestPacketNextAction, ciFast: true, full: false, external: true, decisions: [signal("requestPacketVerdict", externalRequestPacketVerdict, source: "koharuExternalArtifactRequestPacketReport"), signal("requiredFileCount", koharuExternalArtifactRequestPacketReport.map { String($0.requiredFileCount) } ?? "nil", source: "koharuExternalArtifactRequestPacketReport")]),
             workItem("WI-koharu-native-algorithm-replay-matrix", title: "Koharu native algorithm replay matrix", status: nativeReplayMatrixStatus, sourceReport: nativeReplayMatrixExecuted ? "koharuNativeAlgorithmReplayMatrixReport" : "koharuArtifactConvergenceReport", stages: ["SourceImage", "ContentCrop", "TextBoxes", "BubbleMask", "SegmentMask", "OcrText", "Translations", "RenderedSprites", "FinalRender", "ExternalArtifacts"], blocks: nativeReplayMatrixBlocks, version: nativeReplayMatrixExecuted ? "v1.34" : nil, blockers: nativeReplayMatrixBlockers, nextAction: nativeReplayMatrixNextAction, ciFast: true, full: false, external: false, decisions: [signal("matrixVerdict", nativeReplayMatrixVerdict, source: "koharuNativeAlgorithmReplayMatrixReport"), signal("candidateCount", koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil", source: "koharuNativeAlgorithmReplayMatrixReport")]),
+            workItem("WI-koharu-bubble-index-shadow-ledger", title: "Koharu BubbleIndex shadow ledger", status: bubbleIndexLedgerStatus, sourceReport: bubbleIndexLedgerExecuted ? "koharuBubbleIndexShadowLedgerReport" : "koharuArtifactConvergenceReport", stages: ["BubbleMask", "RenderedSprites", "FinalRender"], blocks: bubbleIndexLedgerBlocks, version: bubbleIndexLedgerExecuted ? "v1.35" : nil, blockers: bubbleIndexLedgerBlockers, nextAction: bubbleIndexLedgerNextAction, ciFast: true, full: false, external: false, decisions: [signal("ledgerVerdict", bubbleIndexLedgerVerdict, source: "koharuBubbleIndexShadowLedgerReport"), signal("blockLedgerCount", koharuBubbleIndexShadowLedgerReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuBubbleIndexShadowLedgerReport")]),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
@@ -15741,7 +16228,8 @@ final class TranslationSessionStore: ObservableObject {
             segmentMaskProxyCoverageScoreboardReport == nil ? "segmentMaskProxyCoverageScoreboardReport" : nil,
             translationModelFloorComparisonReport == nil ? "translationModelFloorComparisonReport" : nil,
             koharuRenderRegressionLockReport == nil ? "koharuRenderRegressionLockReport" : nil,
-            koharuNativeAlgorithmReplayMatrixReport == nil ? "koharuNativeAlgorithmReplayMatrixReport" : nil
+            koharuNativeAlgorithmReplayMatrixReport == nil ? "koharuNativeAlgorithmReplayMatrixReport" : nil,
+            koharuBubbleIndexShadowLedgerReport == nil ? "koharuBubbleIndexShadowLedgerReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -15781,6 +16269,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-workorder-router-executed", name: "Koharu work order router executed", scope: "WorkOrderRouter", status: workOrderRouterExecuted ? "passed" : "open", threshold: "koharuWorkOrderRouterReport.enabled=true without main flow mutation or ground truth decision", affected: workOrderRouterBlocks, failureMeans: "work order router is missing or mutates OCR, translation, render, blockPassed, or candidate selection", action: workOrderRouterNextAction, decisions: [signal("routerVerdict", workOrderRouterVerdict, source: "koharuWorkOrderRouterReport"), signal("groundTruthUsedForDecision", koharuWorkOrderRouterReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuWorkOrderRouterReport")]),
             gate("G-koharu-external-artifact-request-packet-executed", name: "Koharu external artifact request packet executed", scope: "ExternalArtifacts", status: externalRequestPacketExecuted ? "passed" : "open", threshold: "koharuExternalArtifactRequestPacketReport.enabled=true without active artifact generation", affected: externalRequestPacketBlocks, failureMeans: "request packet is missing or creates/copies/changes active Koharu artifacts", action: externalRequestPacketNextAction, decisions: [signal("requestPacketVerdict", externalRequestPacketVerdict, source: "koharuExternalArtifactRequestPacketReport"), signal("groundTruthUsedForDecision", koharuExternalArtifactRequestPacketReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuExternalArtifactRequestPacketReport")]),
             gate("G-koharu-native-algorithm-replay-matrix-executed", name: "Koharu native algorithm replay matrix executed", scope: "NativeReplayMatrix", status: nativeReplayMatrixExecuted ? "passed" : "open", threshold: "koharuNativeAlgorithmReplayMatrixReport.enabled=true without main flow mutation or ground truth decision", affected: nativeReplayMatrixBlocks, failureMeans: "native replay matrix is missing or mutates OCR, translation, render, blockPassed, candidate selection, or active artifacts", action: nativeReplayMatrixNextAction, decisions: [signal("matrixVerdict", nativeReplayMatrixVerdict, source: "koharuNativeAlgorithmReplayMatrixReport"), signal("groundTruthUsedForDecision", koharuNativeAlgorithmReplayMatrixReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeAlgorithmReplayMatrixReport")]),
+            gate("G-koharu-bubble-index-shadow-ledger-executed", name: "Koharu BubbleIndex shadow ledger executed", scope: "BubbleIndex", status: bubbleIndexLedgerExecuted ? (bubbleIndexLedgerStatus == "closedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuBubbleIndexShadowLedgerReport.enabled=true without safeLayoutRect, renderer, OCR, or ground truth decision mutation", affected: bubbleIndexLedgerBlocks, failureMeans: "BubbleIndex ledger is missing or mutates OCR, translation, safe layout, render, blockPassed, candidate selection, or active artifacts", action: bubbleIndexLedgerNextAction, decisions: [signal("ledgerVerdict", bubbleIndexLedgerVerdict, source: "koharuBubbleIndexShadowLedgerReport"), signal("groundTruthUsedForDecision", koharuBubbleIndexShadowLedgerReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuBubbleIndexShadowLedgerReport")]),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
             gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
@@ -15802,12 +16291,13 @@ final class TranslationSessionStore: ObservableObject {
             "koharuWorkOrderRouterReport",
             "koharuExternalArtifactRequestPacketReport",
             "koharuNativeAlgorithmReplayMatrixReport",
+            "koharuBubbleIndexShadowLedgerReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, and v1.34 native replay matrix report-only ledgers into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, and v1.35 BubbleIndex shadow ledger report-only ledgers into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
