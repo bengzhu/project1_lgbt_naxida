@@ -2025,6 +2025,145 @@ struct MangaKoharuBubbleIndexShadowLedgerReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuDistanceFieldSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuDistanceFieldBubbleLedger: Equatable, Codable, Sendable {
+    var bubbleID: Int
+    var bbox: [Double]
+    var maskPixelCount: Int
+    var edgePixelCount: Int
+    var distanceMetric: String
+    var safeThresholdPx: Double
+    var maxDistancePx: Double
+    var maxDistancePoint: [Double]?
+    var centroidPoint: [Double]?
+    var centroidDistancePx: Double?
+    var safePixelCount: Int
+    var safePixelCoverageRatio: Double
+    var safePixelBBox: [Double]?
+    var maximumSafeRect: [Double]?
+    var maximumSafeRectAlgorithm: String
+    var maximumSafeRectArea: Double
+    var safeRectCoverageRatio: Double
+    var currentMaskSafeRect: [Double]?
+    var currentVsDistanceSafeRectIoU: Double?
+    var blockIndexes: [Int]
+    var siblingGroupIDs: [String]
+    var safePixelVerdict: String
+    var fallbackReason: String?
+    var nextAction: String
+    var decisionSignals: [MangaKoharuDistanceFieldSignal]
+    var evaluationSignals: [MangaKoharuDistanceFieldSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuDistanceFieldBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var bbox: [Double]
+    var blockPassed: Bool
+    var failureCategory: String
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var currentSafeLayoutRect: [Double]?
+    var currentSafeLayoutSource: String?
+    var bubbleIndexShadowSafeRect: [Double]?
+    var distanceFieldSafeRect: [Double]?
+    var distanceFieldSafeRectSource: String
+    var currentVsDistanceSafeRectIoU: Double?
+    var currentVsDistanceAreaDeltaRatio: Double?
+    var spriteBounds: [Double]?
+    var spriteContainedByCurrentSafeRect: Bool?
+    var spriteContainedByDistanceSafeRect: Bool?
+    var renderLockVerdict: String
+    var safeRectComparisonVerdict: String
+    var safeRectComparisonSignals: [MangaKoharuDistanceFieldSignal]
+    var primaryBottleneck: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuDistanceFieldSignal]
+    var evaluationSignals: [MangaKoharuDistanceFieldSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuDistanceFieldSiblingLedger: Equatable, Codable, Sendable {
+    var siblingGroupID: String
+    var bubbleID: Int
+    var blockIndexes: [Int]
+    var currentSafeLayoutRects: [[Double]]
+    var distanceFieldSafeRect: [Double]?
+    var currentMaxOverlapRatio: Double
+    var distanceRectSharedAreaRatio: Double
+    var minimumPerBlockAreaRatio: Double
+    var splitCandidateIDs: [Int]
+    var siblingDistanceVerdict: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuDistanceFieldSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuDistanceFieldGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuDistanceFieldSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuDistanceFieldSafeAreaReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var evaluatedBlockCount: Int
+    var evaluatedBubbleCount: Int
+    var bubbleLedgerCount: Int
+    var blockLedgerCount: Int
+    var siblingLedgerCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var proxyNotRealBubbleMask: Bool
+    var usesRoundedRectProxyMask: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var distanceFieldVerdict: String
+    var safePixelVerdictBreakdown: [String: Int]
+    var safeRectComparisonBreakdown: [String: Int]
+    var spriteContainmentBreakdown: [String: Int]
+    var siblingDistanceVerdictBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var safeRectDiffBlocks: [Int]
+    var spriteRiskBlocks: [Int]
+    var siblingRiskBlocks: [Int]
+    var needsRealBubbleMaskBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var bubbleLedgers: [MangaKoharuDistanceFieldBubbleLedger]
+    var blockLedgers: [MangaKoharuDistanceFieldBlockLedger]
+    var siblingLedgers: [MangaKoharuDistanceFieldSiblingLedger]
+    var gateLedger: [MangaKoharuDistanceFieldGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -3989,6 +4128,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuExternalArtifactRequestPacketReport: MangaKoharuExternalArtifactRequestPacketReport?
     var koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport?
     var koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport?
+    var koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
