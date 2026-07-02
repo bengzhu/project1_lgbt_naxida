@@ -1598,6 +1598,7 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport?
                 var koharuNativeTextBoxDetectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport?
                 var koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport?
+                var koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -2302,6 +2303,19 @@ final class TranslationSessionStore: ObservableObject {
                     candidateLimitPerBlock: runOptions.mode == .full ? 2 : 1
                 )
                 self.writeMangaProbeProgress(stage: "koharu-native-textbox-detector-lite-shadow-ocr-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-native-textbox-detector-lite-refinement-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                koharuNativeTextBoxDetectorLiteRefinementReport = try await self.makeKoharuNativeTextBoxDetectorLiteRefinementReport(
+                    blocks: probeBlocks,
+                    image: recognized.image,
+                    bubbleGeometry: recognized.bubbleGeometry,
+                    detectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
+                    shadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+                    groundTruth: groundTruth,
+                    preprocessing: probeConfiguration.preprocessing,
+                    candidateLimitPerBlock: runOptions.mode == .full ? 2 : 1,
+                    totalCandidateLimit: runOptions.mode == .full ? max(1, probeBlocks.count * 2) : min(6, probeBlocks.count)
+                )
+                self.writeMangaProbeProgress(stage: "koharu-native-textbox-detector-lite-refinement-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
                     blocks: probeBlocks,
@@ -2326,7 +2340,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
                     koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
                     koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
-                    koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport
+                    koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+                    koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
@@ -2365,6 +2380,7 @@ final class TranslationSessionStore: ObservableObject {
                         koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
                         koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
                         koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+                        koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
                         translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                         koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                         bubbleMaskReport: bubbleMaskReport,
@@ -2420,6 +2436,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
                     koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
                     koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+                    koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
@@ -8021,6 +8038,7 @@ final class TranslationSessionStore: ObservableObject {
         koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport? = nil,
         koharuNativeTextBoxDetectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport? = nil,
         koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport? = nil,
+        koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
@@ -8085,7 +8103,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuBubbleAdjacencySeamReport: nil,
             koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
             koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
-            koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport
+            koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+            koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport
         )
         let resolverReport = koharuPipelineResolverReport ?? Self.makeKoharuPipelineResolverReport(
             blocks: blocks,
@@ -8178,7 +8197,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
             koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
             koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
-            koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport
+            koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+            koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -8233,6 +8253,7 @@ final class TranslationSessionStore: ObservableObject {
             koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
             koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
             koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+            koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
@@ -9124,6 +9145,753 @@ final class TranslationSessionStore: ObservableObject {
                 "Candidate selection uses detector-lite score, eligibility, bubble coverage, glyph overlap, block relation, and direction hint; ground truth is evaluation-only.",
                 "Shadow OCR output is not written to finalTextUsedForTranslation and does not change translation, overlay, blockPassed, failureCategory, currentBlockSource, or textRegionCropReport.adoptedCount.",
                 "proxyNotRealKoharuTextBoxes=true and proxyNotRealKoharuOCR=true: this is not a real Koharu TextBoxes/OcrText artifact."
+            ]
+        )
+    }
+
+    private func makeKoharuNativeTextBoxDetectorLiteRefinementReport(
+        blocks: [MangaOverlayProbeBlock],
+        image: CGImage,
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        detectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport?,
+        shadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport?,
+        groundTruth: [MangaGroundTruthEntry],
+        preprocessing: MangaOverlayPreprocessingOptions,
+        candidateLimitPerBlock: Int,
+        totalCandidateLimit: Int
+    ) async throws -> MangaKoharuNativeTextBoxDetectorLiteRefinementReport {
+        func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
+        func countBy(_ values: [String]) -> [String: Int] {
+            values.reduce(into: [:]) { partial, value in partial[value, default: 0] += 1 }
+        }
+        func formatted(_ value: Double?) -> String {
+            value?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+        }
+        func area(_ rect: CGRect) -> Double {
+            Double(max(0, rect.width) * max(0, rect.height))
+        }
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaKoharuNativeTextBoxDetectorLiteRefinementSignal {
+            MangaKoharuNativeTextBoxDetectorLiteRefinementSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+        func gate(
+            _ id: String,
+            _ name: String,
+            _ scope: String,
+            _ status: String,
+            _ threshold: String,
+            _ affected: [Int],
+            _ failure: String,
+            _ action: String,
+            _ signals: [MangaKoharuNativeTextBoxDetectorLiteRefinementSignal]
+        ) -> MangaKoharuNativeTextBoxDetectorLiteRefinementGate {
+            MangaKoharuNativeTextBoxDetectorLiteRefinementGate(
+                gateID: id,
+                gateName: name,
+                scope: scope,
+                status: status,
+                threshold: threshold,
+                affectedBlocks: uniqueSorted(affected),
+                decisionSignals: signals,
+                failureMeans: failure,
+                recommendedAction: action,
+                groundTruthUsedForDecision: false
+            )
+        }
+        func emptyLedger(
+            for block: MangaOverlayProbeBlock,
+            shadow: MangaKoharuNativeTextBoxDetectorLiteShadowOCRBlockLedger?,
+            targetReason: String,
+            outcome: String,
+            bottleneck: String,
+            nextAction: String,
+            reasons: [String]
+        ) -> MangaKoharuNativeTextBoxDetectorLiteRefinementBlockLedger {
+            MangaKoharuNativeTextBoxDetectorLiteRefinementBlockLedger(
+                blockIndex: block.index,
+                bubbleID: block.bubbleID,
+                blockPassed: block.blockPassed,
+                failureCategory: block.failureCategory,
+                finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                detectorLiteShadowOutcome: shadow?.shadowOutcome,
+                detectorLiteShadowText: shadow?.shadowOCRNormalizedText,
+                selectedRefinedCandidateID: nil,
+                baseCandidateID: shadow?.selectedCandidateID,
+                baseBBox: shadow?.selectedCandidateBBox,
+                refinedBBox: nil,
+                refinementStrategy: nil,
+                refinedOCRText: nil,
+                refinedOCRNormalizedText: nil,
+                currentOCRQualityScore: Self.ocrCandidateQualityScore(block.finalTextUsedForTranslation),
+                detectorLiteShadowOCRQualityScore: shadow?.shadowOCRQualityScore,
+                refinedOCRQualityScore: nil,
+                qualityDeltaVsCurrent: nil,
+                qualityDeltaVsDetectorLiteShadow: nil,
+                ocrSimilarityDeltaForEvaluation: nil,
+                targetReason: targetReason,
+                refinementOutcome: outcome,
+                wouldHaveImprovedOCRForEvaluation: false,
+                primaryBottleneck: bottleneck,
+                nextAction: nextAction,
+                whyNotPromoted: reasons,
+                decisionSignals: [
+                    signal("targetReason", targetReason, source: "koharuNativeTextBoxDetectorLiteRefinementReport"),
+                    signal("refinementOutcome", outcome, source: "koharuNativeTextBoxDetectorLiteRefinementReport")
+                ],
+                evaluationSignals: [
+                    signal("groundTruthSimilarityCurrentForEvaluation", formatted(block.ocrGroundTruthSimilarity), source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+                ],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            )
+        }
+
+        let allBlockIndexes = blocks.map(\.index)
+        let ciFastLimit = min(6, blocks.count)
+        let fullLimit = max(1, blocks.count * 2)
+        let limitPerBlock = max(1, candidateLimitPerBlock)
+        let maxExecutions = max(0, totalCandidateLimit)
+        let shadowByBlock = Dictionary(
+            uniqueKeysWithValues: (shadowOCRReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+
+        guard let detectorLiteReport, detectorLiteReport.enabled,
+              let shadowOCRReport, shadowOCRReport.enabled else {
+            let ledgers = blocks.map { block in
+                emptyLedger(
+                    for: block,
+                    shadow: shadowByBlock[block.index],
+                    targetReason: "missingUpstreamDetectorLiteShadowOCR",
+                    outcome: "notEligible",
+                    bottleneck: "needsRealTextBoxes",
+                    nextAction: "generateDetectorLiteShadowOCRFirst",
+                    reasons: ["detectorLiteOrShadowOCRReportMissing", "reportOnlyNoPromotionGate"]
+                )
+            }
+            let gates = [
+                gate("G-native-textbox-detector-lite-refinement-input-reports", "Input reports", "TextBoxes/OcrText", "blocked", "v1.39 and v1.40 reports enabled", allBlockIndexes, "refinement has no detector-lite parent candidate or shadow OCR baseline", "generateDetectorLiteAndShadowOCRReports", [signal("detectorLiteReportPresent", String(detectorLiteReport != nil), source: "koharuNativeTextBoxDetectorLiteReport"), signal("shadowOCRReportPresent", String(shadowOCRReport != nil), source: "koharuNativeTextBoxDetectorLiteShadowOCRReport")]),
+                gate("G-native-textbox-detector-lite-refinement-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "refinement mutates main OCR, translation, overlay, blockPassed, failureCategory, currentBlockSource, or crop adoption", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeTextBoxDetectorLiteRefinementReport")])
+            ]
+            return MangaKoharuNativeTextBoxDetectorLiteRefinementReport(
+                enabled: true,
+                source: "AITRANSProbe",
+                referencePipeline: "Koharu",
+                referenceConcept: "TextBoxes.NativeDetectorLite.ClosedLoopRefinement",
+                referenceWorkItemID: "WI-koharu-native-textbox-detector-lite-refinement",
+                evaluatedBlockCount: blocks.count,
+                inputDetectorLiteCandidateCount: detectorLiteReport?.candidateCount ?? 0,
+                inputShadowOCRCandidateCount: shadowOCRReport?.selectedCandidateCount ?? 0,
+                targetBlockCount: 0,
+                refinedCandidateCount: 0,
+                ocrExecutedCount: 0,
+                ocrSucceededCount: 0,
+                emptyOCRCount: 0,
+                refinedBetterThanDetectorLiteCount: 0,
+                refinedBetterThanCurrentCount: 0,
+                refinedWorseThanDetectorLiteCount: 0,
+                sameAsDetectorLiteCount: 0,
+                blockLedgerCount: ledgers.count,
+                gateCount: gates.count,
+                candidateSelectionLimitCIFast: ciFastLimit,
+                candidateSelectionLimitFull: fullLimit,
+                groundTruthUsedForDecision: false,
+                groundTruthUsedForEvaluationOnly: true,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true,
+                proxyNotRealKoharuTextBoxes: true,
+                proxyNotRealKoharuOCR: true,
+                externalArtifactsRequiredForThisReport: false,
+                refinementVerdict: "blockedByMissingDetectorLiteShadowOCR",
+                targetReasonBreakdown: countBy(ledgers.map(\.targetReason)),
+                refinementStrategyBreakdown: [:],
+                ocrOutcomeBreakdown: countBy(ledgers.map(\.refinementOutcome)),
+                qualityDeltaBreakdown: [:],
+                primaryBottleneckBreakdown: countBy(ledgers.map(\.primaryBottleneck)),
+                nextActionBreakdown: countBy(ledgers.map(\.nextAction)),
+                candidates: [],
+                blockLedgers: ledgers,
+                gateLedger: gates,
+                notes: ["v1.41 refinement report emitted blocked ledger because v1.39/v1.40 upstream report was unavailable."]
+            )
+        }
+
+        guard let providerData = image.dataProvider?.data,
+              let bytes = CFDataGetBytePtr(providerData),
+              image.bitsPerPixel == 32 else {
+            let ledgers = blocks.map { block in
+                emptyLedger(
+                    for: block,
+                    shadow: shadowByBlock[block.index],
+                    targetReason: "sourceImagePixelsUnavailable",
+                    outcome: "notEligible",
+                    bottleneck: "manualReviewOnly",
+                    nextAction: "restoreProbeImageByteAccess",
+                    reasons: ["sourceImageBytesUnavailable", "reportOnlyNoPromotionGate"]
+                )
+            }
+            let gates = [
+                gate("G-native-textbox-detector-lite-refinement-image-bytes", "Image bytes available", "SourceImage", "blocked", "32-bit CGImage provider bytes readable", allBlockIndexes, "refinement cannot compute dark component envelope", "restoreProbeImageByteAccess", [signal("imageBytesAvailable", "false", source: "SourceImage")])
+            ]
+            return MangaKoharuNativeTextBoxDetectorLiteRefinementReport(
+                enabled: true,
+                source: "AITRANSProbe",
+                referencePipeline: "Koharu",
+                referenceConcept: "TextBoxes.NativeDetectorLite.ClosedLoopRefinement",
+                referenceWorkItemID: "WI-koharu-native-textbox-detector-lite-refinement",
+                evaluatedBlockCount: blocks.count,
+                inputDetectorLiteCandidateCount: detectorLiteReport.candidateCount,
+                inputShadowOCRCandidateCount: shadowOCRReport.selectedCandidateCount,
+                targetBlockCount: 0,
+                refinedCandidateCount: 0,
+                ocrExecutedCount: 0,
+                ocrSucceededCount: 0,
+                emptyOCRCount: 0,
+                refinedBetterThanDetectorLiteCount: 0,
+                refinedBetterThanCurrentCount: 0,
+                refinedWorseThanDetectorLiteCount: 0,
+                sameAsDetectorLiteCount: 0,
+                blockLedgerCount: ledgers.count,
+                gateCount: gates.count,
+                candidateSelectionLimitCIFast: ciFastLimit,
+                candidateSelectionLimitFull: fullLimit,
+                groundTruthUsedForDecision: false,
+                groundTruthUsedForEvaluationOnly: true,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true,
+                proxyNotRealKoharuTextBoxes: true,
+                proxyNotRealKoharuOCR: true,
+                externalArtifactsRequiredForThisReport: false,
+                refinementVerdict: "manualReviewOnly",
+                targetReasonBreakdown: countBy(ledgers.map(\.targetReason)),
+                refinementStrategyBreakdown: [:],
+                ocrOutcomeBreakdown: countBy(ledgers.map(\.refinementOutcome)),
+                qualityDeltaBreakdown: [:],
+                primaryBottleneckBreakdown: countBy(ledgers.map(\.primaryBottleneck)),
+                nextActionBreakdown: countBy(ledgers.map(\.nextAction)),
+                candidates: [],
+                blockLedgers: ledgers,
+                gateLedger: gates,
+                notes: ["Source image pixels were unavailable; refinement did not execute OCR."]
+            )
+        }
+
+        let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+        let bytesPerRow = image.bytesPerRow
+        let bubbleRectByID = Dictionary(
+            uniqueKeysWithValues: bubbleGeometry.bubbles.map { ($0.id, Self.rect(from: $0.bbox)) }
+        )
+        let detectorCandidateByID = Dictionary(
+            uniqueKeysWithValues: detectorLiteReport.candidates.map { ($0.candidateID, $0) }
+        )
+        var detectorCandidatesByBlock: [Int: [MangaKoharuNativeTextBoxDetectorLiteCandidate]] = [:]
+        for candidate in detectorLiteReport.candidates {
+            for blockIndex in candidate.relatedCurrentBlockIndexes {
+                detectorCandidatesByBlock[blockIndex, default: []].append(candidate)
+            }
+        }
+        for blockIndex in detectorCandidatesByBlock.keys {
+            detectorCandidatesByBlock[blockIndex]?.sort { lhs, rhs in
+                if lhs.score == rhs.score {
+                    return lhs.candidateID < rhs.candidateID
+                }
+                return lhs.score > rhs.score
+            }
+        }
+        let shadowCandidateByBlock = Dictionary(grouping: shadowOCRReport.candidates) { $0.relatedBlockIndex }
+
+        func projectionPeakCount(_ values: [Int], threshold: Int) -> Int {
+            var peaks = 0
+            var inPeak = false
+            for value in values {
+                if value >= threshold {
+                    if !inPeak { peaks += 1 }
+                    inPeak = true
+                } else {
+                    inPeak = false
+                }
+            }
+            return peaks
+        }
+
+        func analyze(_ rect: CGRect) -> (envelope: CGRect?, density: Double, peaks: Int, components: Int) {
+            let scanRect = Self.clamp(rect.integral, to: imageBounds)
+            let width = Int(scanRect.width)
+            let height = Int(scanRect.height)
+            guard width > 0, height > 0 else { return (nil, 0, 0, 0) }
+            var gray = [UInt8](repeating: 255, count: width * height)
+            var sum = 0
+            for localY in 0..<height {
+                let y = Int(scanRect.minY) + localY
+                for localX in 0..<width {
+                    let x = Int(scanRect.minX) + localX
+                    guard x >= 0, y >= 0, x < image.width, y < image.height else { continue }
+                    let offset = y * bytesPerRow + x * 4
+                    let luminance = (Int(bytes[offset]) * 299 + Int(bytes[offset + 1]) * 587 + Int(bytes[offset + 2]) * 114) / 1000
+                    gray[localY * width + localX] = UInt8(max(0, min(255, luminance)))
+                    sum += luminance
+                }
+            }
+            let threshold = max(28, min(210, Int(Double(sum) / Double(max(1, width * height)) - 24)))
+            var foreground = [Bool](repeating: false, count: width * height)
+            var minX = width
+            var minY = height
+            var maxX = -1
+            var maxY = -1
+            var darkPixels = 0
+            var horizontal = [Int](repeating: 0, count: height)
+            var vertical = [Int](repeating: 0, count: width)
+            for y in 0..<height {
+                for x in 0..<width {
+                    let index = y * width + x
+                    if Int(gray[index]) <= threshold {
+                        foreground[index] = true
+                        minX = min(minX, x)
+                        minY = min(minY, y)
+                        maxX = max(maxX, x)
+                        maxY = max(maxY, y)
+                        darkPixels += 1
+                        horizontal[y] += 1
+                        vertical[x] += 1
+                    }
+                }
+            }
+            guard darkPixels > 0, maxX >= minX, maxY >= minY else { return (nil, 0, 0, 0) }
+            var visited = [Bool](repeating: false, count: width * height)
+            var componentCount = 0
+            for startY in 0..<height {
+                for startX in 0..<width {
+                    let start = startY * width + startX
+                    guard foreground[start], !visited[start] else { continue }
+                    componentCount += 1
+                    var queue = [start]
+                    var cursor = 0
+                    visited[start] = true
+                    while cursor < queue.count {
+                        let current = queue[cursor]
+                        cursor += 1
+                        let cy = current / width
+                        let cx = current % width
+                        for ny in max(0, cy - 1)...min(height - 1, cy + 1) {
+                            for nx in max(0, cx - 1)...min(width - 1, cx + 1) {
+                                let next = ny * width + nx
+                                if foreground[next], !visited[next] {
+                                    visited[next] = true
+                                    queue.append(next)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            let envelope = CGRect(
+                x: scanRect.minX + CGFloat(minX),
+                y: scanRect.minY + CGFloat(minY),
+                width: CGFloat(maxX - minX + 1),
+                height: CGFloat(maxY - minY + 1)
+            )
+            let peakThresholdX = max(1, Int(Double(width) * 0.08))
+            let peakThresholdY = max(1, Int(Double(height) * 0.08))
+            let peaks = max(
+                projectionPeakCount(horizontal, threshold: peakThresholdX),
+                projectionPeakCount(vertical, threshold: peakThresholdY)
+            )
+            return (Self.clamp(envelope, to: scanRect), Double(darkPixels) / max(1, area(scanRect)), peaks, componentCount)
+        }
+
+        func targetReason(block: MangaOverlayProbeBlock, shadow: MangaKoharuNativeTextBoxDetectorLiteShadowOCRBlockLedger?) -> (reason: String, eligible: Bool, bottleneck: String, nextAction: String) {
+            if block.blockPassed && block.renderCollisionResolved {
+                return ("passedRenderLocked", false, "renderLocked", "keepRenderLockReportOnly")
+            }
+            if block.failureCategory == "modelOutputFailure" || block.failureCategory == "translationLanguageQualityFailure" {
+                return ("modelFloorDominates", false, "modelTranslationFloor", "keepModelFloorSeparate")
+            }
+            guard let shadow else {
+                return ("missingDetectorLiteShadowOCR", false, "needsRealTextBoxes", "generateDetectorLiteShadowOCRFirst")
+            }
+            switch shadow.shadowOutcome {
+            case "emptyOCR", "ocrFailed":
+                return (shadow.shadowOutcome, true, "nativeTextBoxRefinementEmpty", "inspectDetectorLiteBBoxGeometry")
+            case "worseThanCurrent", "sameAsCurrent":
+                return (shadow.shadowOutcome, true, "nativeTextBoxRefinementPromising", "reviewRefinedCandidateInFullProbe")
+            case "betterThanCurrent":
+                return ("keepDetectorLiteShadowOCRReportOnly", false, "nativeTextBoxRefinementNoNetBenefit", "keepDetectorLiteShadowOCRReportOnly")
+            default:
+                if block.failureCategory == "ocrInputSuspect" {
+                    return ("ocrInputSuspect", true, "ocrInputDamageStillOpen", "collectRealTextBoxesOrSegmentMask")
+                }
+                return ("notEligible", false, "manualReviewOnly", "manualReviewOnly")
+            }
+        }
+
+        func sourceCandidate(for block: MangaOverlayProbeBlock, shadow: MangaKoharuNativeTextBoxDetectorLiteShadowOCRBlockLedger?) -> MangaKoharuNativeTextBoxDetectorLiteCandidate? {
+            if let selectedID = shadow?.selectedCandidateID,
+               let shadowCandidate = shadowOCRReport.candidates.first(where: { $0.candidateID == selectedID }),
+               let source = detectorCandidateByID[shadowCandidate.sourceCandidateID] {
+                return source
+            }
+            return detectorCandidatesByBlock[block.index]?.first { $0.shadowOCREligible }
+        }
+
+        func refinedRect(from source: MangaKoharuNativeTextBoxDetectorLiteCandidate, for block: MangaOverlayProbeBlock) -> (rect: CGRect, strategy: String, before: (CGRect?, Double, Int, Int), after: (CGRect?, Double, Int, Int), reasons: [String]) {
+            let baseRect = Self.clamp(Self.rect(from: source.bbox), to: imageBounds).integral
+            let before = analyze(baseRect)
+            var reasons: [String] = []
+            guard let envelope = before.envelope else {
+                reasons.append("noDarkComponentEnvelope")
+                return (baseRect, "directionalPaddingByHint", before, analyze(baseRect), reasons)
+            }
+            var candidate = envelope
+            var strategy = "trimToDarkComponentEnvelope"
+            if source.directionHint == "horizontal" {
+                candidate = CGRect(x: baseRect.minX, y: envelope.minY, width: baseRect.width, height: envelope.height)
+                strategy = "projectionBandTighten"
+            } else if source.directionHint == "verticalCandidate" {
+                candidate = CGRect(x: envelope.minX, y: baseRect.minY, width: envelope.width, height: baseRect.height)
+                strategy = "projectionBandTighten"
+            }
+            let paddingX = source.directionHint == "verticalCandidate" ? max(3, candidate.width * 0.14) : max(3, candidate.width * 0.08)
+            let paddingY = source.directionHint == "horizontal" ? max(3, candidate.height * 0.14) : max(3, candidate.height * 0.08)
+            candidate = Self.clamp(candidate.insetBy(dx: -paddingX, dy: -paddingY).integral, to: baseRect)
+            if let bubbleID = block.bubbleID,
+               bubbleID == source.sourceBubbleID,
+               let bubbleRect = bubbleRectByID[bubbleID] {
+                let clipped = candidate.intersection(Self.clamp(bubbleRect, to: imageBounds))
+                if !clipped.isNull, clipped.width >= 4, clipped.height >= 4 {
+                    candidate = clipped.integral
+                    strategy += "+bubbleSafeClip"
+                }
+            } else if block.bubbleID != source.sourceBubbleID {
+                reasons.append("bubbleClipConflict")
+            }
+            let after = analyze(candidate)
+            return (candidate, strategy, before, after, reasons)
+        }
+
+        var candidates: [MangaKoharuNativeTextBoxDetectorLiteRefinementCandidate] = []
+        var ledgers: [MangaKoharuNativeTextBoxDetectorLiteRefinementBlockLedger] = []
+        var executedCount = 0
+        var targetCount = 0
+
+        for block in blocks.sorted(by: { $0.index < $1.index }) {
+            let shadow = shadowByBlock[block.index]
+            let target = targetReason(block: block, shadow: shadow)
+            guard target.eligible else {
+                ledgers.append(
+                    emptyLedger(
+                        for: block,
+                        shadow: shadow,
+                        targetReason: target.reason,
+                        outcome: "notEligible",
+                        bottleneck: target.bottleneck,
+                        nextAction: target.nextAction,
+                        reasons: ["notSelectedForRefinement", "reportOnlyNoPromotionGate"]
+                    )
+                )
+                continue
+            }
+            targetCount += 1
+            guard executedCount < maxExecutions else {
+                ledgers.append(
+                    emptyLedger(
+                        for: block,
+                        shadow: shadow,
+                        targetReason: target.reason,
+                        outcome: "notExecutedBudget",
+                        bottleneck: target.bottleneck,
+                        nextAction: "reviewRefinedCandidateInFullProbe",
+                        reasons: ["ciFastRefinementBudgetExhausted", "reportOnlyNoPromotionGate"]
+                    )
+                )
+                continue
+            }
+            guard let source = sourceCandidate(for: block, shadow: shadow) else {
+                ledgers.append(
+                    emptyLedger(
+                        for: block,
+                        shadow: shadow,
+                        targetReason: target.reason,
+                        outcome: "notEligible",
+                        bottleneck: "needsRealTextBoxes",
+                        nextAction: "inspectDetectorLiteBBoxGeometry",
+                        reasons: ["noDetectorLiteParentCandidate", "reportOnlyNoPromotionGate"]
+                    )
+                )
+                continue
+            }
+
+            let currentText = block.finalTextUsedForTranslation
+            let currentQuality = Self.ocrCandidateQualityScore(currentText)
+            let detectorText = shadow?.shadowOCRNormalizedText ?? ""
+            let detectorQuality = shadow?.shadowOCRQualityScore
+            let refined = refinedRect(from: source, for: block)
+            let refinedBBox = Self.bboxArray(from: refined.rect)
+            let sourceShadowCandidateID = shadowCandidateByBlock[block.index]?.first?.candidateID
+            var errorCode: String?
+            let crop: (text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double)
+            do {
+                crop = try await mangaOverlayProbeService.recognizeExternalTextBoxCrop(
+                    in: image,
+                    textBoxBBox: refinedBBox,
+                    options: preprocessing
+                )
+            } catch {
+                errorCode = "\(type(of: error))"
+                crop = (nil, refinedBBox, 0, 0)
+            }
+            executedCount += 1
+            let rawText = crop.text
+            let normalizedText = (rawText ?? "")
+                .replacingOccurrences(of: "\r", with: "\n")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let refinedQuality = Self.ocrCandidateQualityScore(normalizedText)
+            let deltaCurrent = refinedQuality - currentQuality
+            let deltaDetector = detectorQuality.map { refinedQuality - $0 }
+            let preservationCurrent = Self.wordPreservationRatio(
+                sourceWords: Self.ocrCandidateWords(currentText),
+                candidateWords: Self.ocrCandidateWords(normalizedText)
+            )
+            let preservationDetector = detectorText.isEmpty ? nil : Self.wordPreservationRatio(
+                sourceWords: Self.ocrCandidateWords(detectorText),
+                candidateWords: Self.ocrCandidateWords(normalizedText)
+            )
+            let refinedMatch = MangaOverlayProbeService.bestGroundTruthMatch(text: normalizedText, groundTruth: groundTruth)
+            let refinedSimilarity = normalizedText.isEmpty ? nil : refinedMatch.similarity
+            let detectorSimilarity = shadowCandidateByBlock[block.index]?.first?.groundTruthSimilarityShadowForEvaluation
+            let similarityDelta = refinedSimilarity.flatMap { refined in block.ocrGroundTruthSimilarity.map { refined - $0 } }
+            var reasons = refined.reasons
+            if errorCode != nil { reasons.append("refinedOCRFailed") }
+            if normalizedText.isEmpty { reasons.append("emptyRefinedOCR") }
+            if preservationCurrent < 0.55 { reasons.append("wordPreservationVsCurrentLow") }
+            if let deltaDetector, deltaDetector <= 0.03 { reasons.append("qualityDeltaVsDetectorLiteInsufficient") }
+            if deltaCurrent <= 0.03 { reasons.append("qualityDeltaVsCurrentInsufficient") }
+            reasons.append(contentsOf: ["reportOnlyNoPromotionGate", "mainFlowMutationForbidden", "groundTruthEvaluationOnly"])
+            let outcome: String
+            if errorCode != nil {
+                outcome = "refinedOCRFailed"
+            } else if normalizedText.isEmpty {
+                outcome = "emptyRefinedOCR"
+            } else if deltaCurrent > 0.03 {
+                outcome = "refinedBetterThanCurrent"
+            } else if let deltaDetector, deltaDetector > 0.03 {
+                outcome = "refinedBetterThanDetectorLite"
+            } else if let deltaDetector, deltaDetector < -0.03 {
+                outcome = "worseThanDetectorLite"
+            } else {
+                outcome = "sameAsDetectorLite"
+            }
+            let primary: String
+            let nextAction: String
+            switch outcome {
+            case "refinedBetterThanCurrent", "refinedBetterThanDetectorLite":
+                primary = "nativeTextBoxRefinementPromising"
+                nextAction = "reviewRefinedCandidateInFullProbe"
+            case "emptyRefinedOCR":
+                primary = "nativeTextBoxRefinementEmpty"
+                nextAction = "inspectDetectorLiteBBoxGeometry"
+            case "worseThanDetectorLite":
+                primary = "nativeTextBoxRefinementWorse"
+                nextAction = "keepCurrentFusedOCR"
+            default:
+                primary = target.bottleneck
+                nextAction = target.nextAction
+            }
+            let candidateID = "NTBDL-REF-\(block.index)-\(source.candidateID)"
+            let bboxRatio = area(Self.rect(from: refinedBBox)) / max(1, area(Self.rect(from: source.bbox)))
+            let candidate = MangaKoharuNativeTextBoxDetectorLiteRefinementCandidate(
+                candidateID: candidateID,
+                sourceCandidateID: source.candidateID,
+                sourceShadowOCRCandidateID: sourceShadowCandidateID,
+                source: "nativeDetectorLite.refinementShadowOCR",
+                blockIndex: block.index,
+                sourceBubbleID: source.sourceBubbleID,
+                baseBBox: source.bbox,
+                refinedBBox: refinedBBox,
+                refinementStrategy: refined.strategy,
+                directionHint: source.directionHint,
+                targetReason: target.reason,
+                bboxAreaRatioVsBase: bboxRatio,
+                bubbleCoverageBefore: source.bubbleCoverageRatio,
+                bubbleCoverageAfter: source.bubbleCoverageRatio,
+                glyphOverlapBefore: source.segmentGlyphOverlapRatio,
+                glyphOverlapAfter: nil,
+                darkPixelDensityBefore: refined.before.1,
+                darkPixelDensityAfter: refined.after.1,
+                projectionPeakCount: refined.after.2,
+                connectedComponentCount: refined.after.3,
+                cropPadding: [crop.paddingX, crop.paddingY],
+                scaleFactor: preprocessing.cropUpscaleEnabled ? preprocessing.cropScale : 1,
+                rotationApplied: 0,
+                ocrRawText: rawText,
+                ocrNormalizedText: normalizedText,
+                ocrSucceeded: errorCode == nil && !normalizedText.isEmpty,
+                ocrEmpty: normalizedText.isEmpty,
+                ocrErrorCode: errorCode,
+                qualityScoreCurrent: currentQuality,
+                qualityScoreDetectorLiteShadow: detectorQuality,
+                qualityScoreRefined: refinedQuality,
+                qualityDeltaVsCurrent: deltaCurrent,
+                qualityDeltaVsDetectorLiteShadow: deltaDetector,
+                wordPreservationVsCurrent: preservationCurrent,
+                wordPreservationVsDetectorLiteShadow: preservationDetector,
+                groundTruthSimilarityCurrentForEvaluation: block.ocrGroundTruthSimilarity,
+                groundTruthSimilarityDetectorLiteForEvaluation: detectorSimilarity,
+                groundTruthSimilarityRefinedForEvaluation: refinedSimilarity,
+                groundTruthSimilarityDeltaForEvaluation: similarityDelta,
+                outcome: outcome,
+                promotionVerdict: "reportOnlyNoPromotion",
+                decisionSignals: [
+                    signal("sourceCandidateID", source.candidateID, source: "koharuNativeTextBoxDetectorLiteReport"),
+                    signal("detectorLiteShadowOutcome", shadow?.shadowOutcome ?? "nil", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"),
+                    signal("targetReason", target.reason, source: "koharuNativeTextBoxDetectorLiteRefinementReport"),
+                    signal("candidateLimitPerBlock", String(limitPerBlock), source: "probeRunMode")
+                ],
+                evaluationSignals: [
+                    signal("qualityDeltaVsCurrent", formatted(deltaCurrent), source: "refinementOCRQuality", decision: false, evaluation: true),
+                    signal("qualityDeltaVsDetectorLiteShadow", formatted(deltaDetector), source: "refinementOCRQuality", decision: false, evaluation: true),
+                    signal("groundTruthSimilarityDeltaForEvaluation", formatted(similarityDelta), source: "test/1.ground_truth.json", decision: false, evaluation: true)
+                ],
+                rejectionReasons: Array(Set(reasons)).sorted(),
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            )
+            candidates.append(candidate)
+            ledgers.append(
+                MangaKoharuNativeTextBoxDetectorLiteRefinementBlockLedger(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    blockPassed: block.blockPassed,
+                    failureCategory: block.failureCategory,
+                    finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                    detectorLiteShadowOutcome: shadow?.shadowOutcome,
+                    detectorLiteShadowText: shadow?.shadowOCRNormalizedText,
+                    selectedRefinedCandidateID: candidateID,
+                    baseCandidateID: source.candidateID,
+                    baseBBox: source.bbox,
+                    refinedBBox: refinedBBox,
+                    refinementStrategy: refined.strategy,
+                    refinedOCRText: rawText,
+                    refinedOCRNormalizedText: normalizedText,
+                    currentOCRQualityScore: currentQuality,
+                    detectorLiteShadowOCRQualityScore: detectorQuality,
+                    refinedOCRQualityScore: refinedQuality,
+                    qualityDeltaVsCurrent: deltaCurrent,
+                    qualityDeltaVsDetectorLiteShadow: deltaDetector,
+                    ocrSimilarityDeltaForEvaluation: similarityDelta,
+                    targetReason: target.reason,
+                    refinementOutcome: outcome,
+                    wouldHaveImprovedOCRForEvaluation: (similarityDelta ?? 0) > 0.03 || deltaCurrent > 0.03 || (deltaDetector ?? 0) > 0.03,
+                    primaryBottleneck: primary,
+                    nextAction: nextAction,
+                    whyNotPromoted: candidate.rejectionReasons,
+                    decisionSignals: [
+                        signal("sourceCandidateID", source.candidateID, source: "koharuNativeTextBoxDetectorLiteReport"),
+                        signal("refinementOutcome", outcome, source: "koharuNativeTextBoxDetectorLiteRefinementReport")
+                    ],
+                    evaluationSignals: [
+                        signal("ocrSimilarityDeltaForEvaluation", formatted(similarityDelta), source: "test/1.ground_truth.json", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            )
+        }
+
+        let betterDetector = candidates.filter { ($0.qualityDeltaVsDetectorLiteShadow ?? 0) > 0.03 }.count
+        let betterCurrent = candidates.filter { $0.qualityDeltaVsCurrent > 0.03 }.count
+        let worseDetector = candidates.filter { ($0.qualityDeltaVsDetectorLiteShadow ?? 0) < -0.03 }.count
+        let sameDetector = candidates.filter { candidate in
+            guard let delta = candidate.qualityDeltaVsDetectorLiteShadow else { return false }
+            return abs(delta) <= 0.03 && !candidate.ocrEmpty && candidate.ocrErrorCode == nil
+        }.count
+        let empty = candidates.filter(\.ocrEmpty).count
+        let succeeded = candidates.filter(\.ocrSucceeded).count
+        let gates = [
+            gate("G-native-textbox-detector-lite-refinement-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "refinement mutates main OCR, translation, overlay, blockPassed, failureCategory, currentBlockSource, or crop adoption", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeTextBoxDetectorLiteRefinementReport")]),
+            gate("G-native-textbox-detector-lite-refinement-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth drives target selection, bbox generation, OCR execution, nextAction, or gate status", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeTextBoxDetectorLiteRefinementReport")]),
+            gate("G-native-textbox-detector-lite-refinement-parent-source", "Detector-lite parent source", "TextBoxes", "passed", "source=nativeDetectorLite.refinementShadowOCR", allBlockIndexes, "refinement falls back to Vision bbox, crop plan, line plan, external artifact, or ground truth box", "keepDetectorLiteParentBBoxOnly", [signal("candidateSource", "nativeDetectorLite.refinementShadowOCR", source: "koharuNativeTextBoxDetectorLiteRefinementReport")]),
+            gate("G-native-textbox-detector-lite-refinement-ci-fast-budget", "CI fast budget", "ci-fast", candidates.count <= ciFastLimit ? "passed" : "warning", "ocrExecutedCount<=min(6,totalBlocksDetected) in ci-fast", allBlockIndexes, "ci-fast refinement OCR exceeds budget", "reduceRefinementCandidateLimit", [signal("ocrExecutedCount", String(candidates.count), source: "koharuNativeTextBoxDetectorLiteRefinementReport"), signal("ciFastLimit", String(ciFastLimit), source: "probeRunMode")]),
+            gate("G-native-textbox-detector-lite-refinement-block-ledger-count", "Block ledger count", "blocks", ledgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack refinement ledger rows", "restoreBlockLedgerCoverage", [signal("blockLedgerCount", String(ledgers.count), source: "koharuNativeTextBoxDetectorLiteRefinementReport")]),
+            gate("G-native-textbox-detector-lite-refinement-proxy-boundary", "Proxy boundary", "TextBoxes/OCR", "passed", "proxyNotRealKoharuTextBoxes=true and proxyNotRealKoharuOCR=true", allBlockIndexes, "refinement is promoted as real Koharu TextBoxes or OCR", "keepProxyBoundaryOrCollectRealArtifact", [signal("proxyNotRealKoharuTextBoxes", "true", source: "koharuNativeTextBoxDetectorLiteRefinementReport"), signal("proxyNotRealKoharuOCR", "true", source: "koharuNativeTextBoxDetectorLiteRefinementReport")]),
+            gate("G-native-textbox-detector-lite-refinement-no-llm", "No LLM", "Translations", "passed", "no LLM calls added", [], "refinement triggers translation model calls or prompt changes", "removeLLMFromRefinementOCR", [signal("llmCalls", "0", source: "koharuNativeTextBoxDetectorLiteRefinementReport")]),
+            gate("G-native-textbox-detector-lite-refinement-visible-failures", "Visible failures", "report", candidates.isEmpty || !countBy(candidates.map(\.outcome)).isEmpty ? "passed" : "warning", "empty/failed/worse outcomes recorded", allBlockIndexes, "refinement OCR failures are silently skipped", "writeFailureLedgers", [signal("ocrOutcomeBreakdown", countBy(candidates.map(\.outcome)).map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "koharuNativeTextBoxDetectorLiteRefinementReport")])
+        ]
+        let verdict: String
+        if targetCount == 0 {
+            verdict = "blockedByNoEligibleTargets"
+        } else if betterCurrent > 0 || betterDetector > 0 {
+            verdict = "refinementImprovesSomeBlocksReportOnly"
+        } else if empty + worseDetector >= max(1, candidates.count) {
+            verdict = "refinementEmptyOrWorse"
+        } else if ledgers.filter({ $0.primaryBottleneck == "modelTranslationFloor" }).count >= max(1, blocks.count / 2) {
+            verdict = "modelFloorDominates"
+        } else {
+            verdict = "refinementNoNetBenefit"
+        }
+        return MangaKoharuNativeTextBoxDetectorLiteRefinementReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referencePipeline: "Koharu",
+            referenceConcept: "TextBoxes.NativeDetectorLite.ClosedLoopRefinement",
+            referenceWorkItemID: "WI-koharu-native-textbox-detector-lite-refinement",
+            evaluatedBlockCount: blocks.count,
+            inputDetectorLiteCandidateCount: detectorLiteReport.candidateCount,
+            inputShadowOCRCandidateCount: shadowOCRReport.selectedCandidateCount,
+            targetBlockCount: targetCount,
+            refinedCandidateCount: candidates.count,
+            ocrExecutedCount: candidates.count,
+            ocrSucceededCount: succeeded,
+            emptyOCRCount: empty,
+            refinedBetterThanDetectorLiteCount: betterDetector,
+            refinedBetterThanCurrentCount: betterCurrent,
+            refinedWorseThanDetectorLiteCount: worseDetector,
+            sameAsDetectorLiteCount: sameDetector,
+            blockLedgerCount: ledgers.count,
+            gateCount: gates.count,
+            candidateSelectionLimitCIFast: ciFastLimit,
+            candidateSelectionLimitFull: fullLimit,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            proxyNotRealKoharuTextBoxes: true,
+            proxyNotRealKoharuOCR: true,
+            externalArtifactsRequiredForThisReport: false,
+            refinementVerdict: verdict,
+            targetReasonBreakdown: countBy(ledgers.map(\.targetReason)),
+            refinementStrategyBreakdown: countBy(candidates.map(\.refinementStrategy)),
+            ocrOutcomeBreakdown: countBy(candidates.map(\.outcome) + ledgers.filter { $0.selectedRefinedCandidateID == nil }.map(\.refinementOutcome)),
+            qualityDeltaBreakdown: countBy(candidates.map {
+                if $0.ocrEmpty || $0.ocrErrorCode != nil { return $0.outcome }
+                if $0.qualityDeltaVsCurrent > 0.03 { return "positiveVsCurrent" }
+                if let delta = $0.qualityDeltaVsDetectorLiteShadow, delta > 0.03 { return "positiveVsDetectorLite" }
+                if let delta = $0.qualityDeltaVsDetectorLiteShadow, delta < -0.03 { return "negativeVsDetectorLite" }
+                return "neutral"
+            }),
+            primaryBottleneckBreakdown: countBy(ledgers.map(\.primaryBottleneck)),
+            nextActionBreakdown: countBy(ledgers.map(\.nextAction)),
+            candidates: candidates.sorted { $0.candidateID < $1.candidateID },
+            blockLedgers: ledgers.sorted { $0.blockIndex < $1.blockIndex },
+            gateLedger: gates,
+            notes: [
+                "koharuNativeTextBoxDetectorLiteRefinementReport is a shadow-only detector-lite closed-loop refinement path.",
+                "Target selection uses v1.40 shadow OCR outcome, block failure category, model-floor routing, render lock, and detector-lite relation signals only; ground truth is evaluation-only.",
+                "Refined bboxes start from v1.39 nativeDetectorLite parent bboxes and are tightened with source image dark component envelope, projection bands, directional padding, and conservative bubble clipping when bubble IDs agree.",
+                "Refined OCR output is not written to finalTextUsedForTranslation and does not change translation, overlay, blockPassed, failureCategory, currentBlockSource, textRegionCropReport.adoptedCount, active artifacts, prompt, or model.",
+                "proxyNotRealKoharuTextBoxes=true and proxyNotRealKoharuOCR=true: v1.41 is not a real Koharu TextBoxes/OcrText artifact."
             ]
         )
     }
@@ -16249,7 +17017,8 @@ final class TranslationSessionStore: ObservableObject {
         koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport? = nil,
         koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport? = nil,
         koharuNativeTextBoxDetectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport? = nil,
-        koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport? = nil
+        koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport? = nil,
+        koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport? = nil
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -16534,6 +17303,31 @@ final class TranslationSessionStore: ObservableObject {
         let nativeDetectorLiteShadowOCRNextAction = nativeDetectorLiteShadowOCRExecuted
             ? (koharuNativeTextBoxDetectorLiteShadowOCRReport?.nextActionBreakdown.keys.sorted().first ?? "keepDetectorLiteShadowOCRReportOnly")
             : "generateKoharuNativeTextBoxDetectorLiteShadowOCRReport"
+        let nativeDetectorLiteRefinementExecuted = koharuNativeTextBoxDetectorLiteRefinementReport?.enabled == true
+        let nativeDetectorLiteRefinementVerdict = koharuNativeTextBoxDetectorLiteRefinementReport?.refinementVerdict ?? "notExecuted"
+        let nativeDetectorLiteRefinementBlocks = uniqueSorted(koharuNativeTextBoxDetectorLiteRefinementReport?.blockLedgers.map(\.blockIndex) ?? allBlockIndexes)
+        let nativeDetectorLiteRefinementStatus: String
+        if !nativeDetectorLiteRefinementExecuted {
+            nativeDetectorLiteRefinementStatus = "openNativeTextBoxRefinement"
+        } else if nativeDetectorLiteRefinementVerdict == "refinementImprovesSomeBlocksReportOnly" {
+            nativeDetectorLiteRefinementStatus = "closedReportOnly"
+        } else if nativeDetectorLiteRefinementVerdict == "blockedByNoEligibleTargets"
+            || nativeDetectorLiteRefinementVerdict == "blockedByMissingDetectorLiteShadowOCR" {
+            nativeDetectorLiteRefinementStatus = "openNativeTextBoxRefinement"
+        } else if nativeDetectorLiteRefinementVerdict == "refinementEmptyOrWorse"
+            || nativeDetectorLiteRefinementVerdict == "refinementNoNetBenefit" {
+            nativeDetectorLiteRefinementStatus = "closedStoplist"
+        } else if nativeDetectorLiteRefinementVerdict == "modelFloorDominates" {
+            nativeDetectorLiteRefinementStatus = "modelFloorBlocked"
+        } else {
+            nativeDetectorLiteRefinementStatus = "manualReviewOnly"
+        }
+        let nativeDetectorLiteRefinementBlockers = nativeDetectorLiteRefinementExecuted
+            ? (koharuNativeTextBoxDetectorLiteRefinementReport?.gateLedger.filter { $0.status == "warning" || $0.status == "blocked" }.map(\.failureMeans) ?? [])
+            : ["koharuNativeTextBoxDetectorLiteRefinementReport not generated before convergence refresh"]
+        let nativeDetectorLiteRefinementNextAction = nativeDetectorLiteRefinementExecuted
+            ? (koharuNativeTextBoxDetectorLiteRefinementReport?.nextActionBreakdown.keys.sorted().first ?? "keepCurrentFusedOCR")
+            : "generateKoharuNativeTextBoxDetectorLiteRefinementReport"
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -16889,6 +17683,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-koharu-render-sprite-fit-planner", title: "Koharu RenderSprite fit planner", status: renderSpriteFitStatus, sourceReport: renderSpriteFitExecuted ? "koharuRenderSpriteFitPlannerReport" : "koharuArtifactConvergenceReport", stages: ["RenderedSprites", "FinalRender"], blocks: renderSpriteFitBlocks, version: renderSpriteFitExecuted ? "v1.38" : nil, blockers: renderSpriteFitBlockers, nextAction: renderSpriteFitNextAction, ciFast: true, full: false, external: false, decisions: [signal("fitPlannerVerdict", renderSpriteFitVerdict, source: "koharuRenderSpriteFitPlannerReport"), signal("blockLedgerCount", koharuRenderSpriteFitPlannerReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuRenderSpriteFitPlannerReport")]),
             workItem("WI-koharu-native-textbox-detector-lite", title: "Koharu Native TextBox detector-lite", status: nativeDetectorLiteStatus, sourceReport: nativeDetectorLiteExecuted ? "koharuNativeTextBoxDetectorLiteReport" : "koharuArtifactConvergenceReport", stages: ["SourceImage", "TextBoxes", "OcrText"], blocks: nativeDetectorLiteBlocks, version: nativeDetectorLiteExecuted ? "v1.39" : nil, blockers: nativeDetectorLiteBlockers, nextAction: nativeDetectorLiteNextAction, ciFast: true, full: false, external: false, decisions: [signal("detectorLiteVerdict", nativeDetectorLiteVerdict, source: "koharuNativeTextBoxDetectorLiteReport"), signal("candidateCount", koharuNativeTextBoxDetectorLiteReport.map { String($0.candidateCount) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport"), signal("proxyNotRealKoharuTextBoxes", koharuNativeTextBoxDetectorLiteReport.map { String($0.proxyNotRealKoharuTextBoxes) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport")]),
             workItem("WI-koharu-native-textbox-detector-lite-shadow-ocr", title: "Koharu Native TextBox detector-lite shadow OCR", status: nativeDetectorLiteShadowOCRStatus, sourceReport: nativeDetectorLiteShadowOCRExecuted ? "koharuNativeTextBoxDetectorLiteShadowOCRReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "OcrText"], blocks: nativeDetectorLiteShadowOCRBlocks, version: nativeDetectorLiteShadowOCRExecuted ? "v1.40" : nil, blockers: nativeDetectorLiteShadowOCRBlockers, nextAction: nativeDetectorLiteShadowOCRNextAction, ciFast: true, full: false, external: false, decisions: [signal("shadowOCRVerdict", nativeDetectorLiteShadowOCRVerdict, source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"), signal("ocrExecutedCount", koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.ocrExecutedCount) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"), signal("proxyNotRealKoharuOCR", koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.proxyNotRealKoharuOCR) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport")]),
+            workItem("WI-koharu-native-textbox-detector-lite-refinement", title: "Koharu Native TextBox detector-lite refinement shadow OCR", status: nativeDetectorLiteRefinementStatus, sourceReport: nativeDetectorLiteRefinementExecuted ? "koharuNativeTextBoxDetectorLiteRefinementReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "OcrText"], blocks: nativeDetectorLiteRefinementBlocks, version: nativeDetectorLiteRefinementExecuted ? "v1.41" : nil, blockers: nativeDetectorLiteRefinementBlockers, nextAction: nativeDetectorLiteRefinementNextAction, ciFast: true, full: false, external: false, decisions: [signal("refinementVerdict", nativeDetectorLiteRefinementVerdict, source: "koharuNativeTextBoxDetectorLiteRefinementReport"), signal("ocrExecutedCount", koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.ocrExecutedCount) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteRefinementReport"), signal("proxyNotRealKoharuOCR", koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.proxyNotRealKoharuOCR) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteRefinementReport")]),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
@@ -16908,7 +17703,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuBubbleAdjacencySeamReport == nil ? "koharuBubbleAdjacencySeamReport" : nil,
             koharuRenderSpriteFitPlannerReport == nil ? "koharuRenderSpriteFitPlannerReport" : nil,
             koharuNativeTextBoxDetectorLiteReport == nil ? "koharuNativeTextBoxDetectorLiteReport" : nil,
-            koharuNativeTextBoxDetectorLiteShadowOCRReport == nil ? "koharuNativeTextBoxDetectorLiteShadowOCRReport" : nil
+            koharuNativeTextBoxDetectorLiteShadowOCRReport == nil ? "koharuNativeTextBoxDetectorLiteShadowOCRReport" : nil,
+            koharuNativeTextBoxDetectorLiteRefinementReport == nil ? "koharuNativeTextBoxDetectorLiteRefinementReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -16954,6 +17750,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-render-sprite-fit-planner-executed", name: "Koharu RenderSprite fit planner executed", scope: "RenderedSprites", status: renderSpriteFitExecuted ? (renderSpriteFitStatus == "closedReportOnly" || renderSpriteFitStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuRenderSpriteFitPlannerReport.enabled=true without OCR, LLM, safeLayoutRect, renderer, blockPassed, candidate selection, or ground truth decision mutation", affected: renderSpriteFitBlocks, failureMeans: "RenderSprite fit planner is missing or mutates OCR, translation, safe layout, render, blockPassed, candidate selection, or active artifacts", action: renderSpriteFitNextAction, decisions: [signal("fitPlannerVerdict", renderSpriteFitVerdict, source: "koharuRenderSpriteFitPlannerReport"), signal("groundTruthUsedForDecision", koharuRenderSpriteFitPlannerReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuRenderSpriteFitPlannerReport")]),
             gate("G-koharu-native-textbox-detector-lite-executed", name: "Koharu Native TextBox detector-lite executed", scope: "TextBoxes", status: nativeDetectorLiteExecuted ? (nativeDetectorLiteStatus == "closedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeTextBoxDetectorLiteReport.enabled=true with pre-OCR pixel/geometric candidates and no main-flow mutation", affected: nativeDetectorLiteBlocks, failureMeans: "Native detector-lite report is missing, uses OCR text/ground truth as detector output, mutates OCR/translation/render state, or is promoted as real Koharu TextBoxes", action: nativeDetectorLiteNextAction, decisions: [signal("detectorLiteVerdict", nativeDetectorLiteVerdict, source: "koharuNativeTextBoxDetectorLiteReport"), signal("groundTruthUsedForDecision", koharuNativeTextBoxDetectorLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport"), signal("proxyNotRealKoharuTextBoxes", koharuNativeTextBoxDetectorLiteReport.map { String($0.proxyNotRealKoharuTextBoxes) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport")]),
             gate("G-koharu-native-textbox-detector-lite-shadow-ocr-executed", name: "Koharu Native TextBox detector-lite shadow OCR executed", scope: "OcrText", status: nativeDetectorLiteShadowOCRExecuted ? (nativeDetectorLiteShadowOCRStatus == "closedReportOnly" || nativeDetectorLiteShadowOCRStatus == "closedStoplist" ? "passed" : "warning") : "open", threshold: "koharuNativeTextBoxDetectorLiteShadowOCRReport.enabled=true without main-flow mutation or ground truth decision", affected: nativeDetectorLiteShadowOCRBlocks, failureMeans: "Native detector-lite shadow OCR report is missing, uses non-detector-lite bbox sources, mutates OCR/translation/render state, or is promoted as real Koharu OCR", action: nativeDetectorLiteShadowOCRNextAction, decisions: [signal("shadowOCRVerdict", nativeDetectorLiteShadowOCRVerdict, source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"), signal("groundTruthUsedForDecision", koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"), signal("proxyNotRealKoharuOCR", koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.proxyNotRealKoharuOCR) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport")]),
+            gate("G-koharu-native-textbox-detector-lite-refinement-executed", name: "Koharu Native TextBox detector-lite refinement executed", scope: "OcrText", status: nativeDetectorLiteRefinementExecuted ? (nativeDetectorLiteRefinementStatus == "closedReportOnly" || nativeDetectorLiteRefinementStatus == "closedStoplist" ? "passed" : "warning") : "open", threshold: "koharuNativeTextBoxDetectorLiteRefinementReport.enabled=true without main-flow mutation or ground truth decision", affected: nativeDetectorLiteRefinementBlocks, failureMeans: "Native detector-lite refinement report is missing, uses non-detector-lite bbox sources, mutates OCR/translation/render state, or is promoted as real Koharu OCR", action: nativeDetectorLiteRefinementNextAction, decisions: [signal("refinementVerdict", nativeDetectorLiteRefinementVerdict, source: "koharuNativeTextBoxDetectorLiteRefinementReport"), signal("groundTruthUsedForDecision", koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteRefinementReport"), signal("proxyNotRealKoharuOCR", koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.proxyNotRealKoharuOCR) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteRefinementReport")]),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
             gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
@@ -16981,12 +17778,13 @@ final class TranslationSessionStore: ObservableObject {
             "koharuRenderSpriteFitPlannerReport",
             "koharuNativeTextBoxDetectorLiteReport",
             "koharuNativeTextBoxDetectorLiteShadowOCRReport",
+            "koharuNativeTextBoxDetectorLiteRefinementReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, and v1.40 detector-lite shadow OCR report-only ledgers into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, and v1.41 detector-lite refinement report-only ledgers into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
