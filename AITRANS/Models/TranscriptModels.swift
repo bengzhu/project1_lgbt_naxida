@@ -2310,6 +2310,151 @@ struct MangaKoharuBubbleAdjacencySeamReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuRenderSpriteFitSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuRenderSpriteFitBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var bbox: [Double]
+    var blockPassed: Bool
+    var failureCategory: String
+    var textSourceForRender: String
+    var renderTextCharacterCount: Int
+    var renderTextCJKCount: Int
+    var renderTextLatinCount: Int
+    var currentSafeLayoutRect: [Double]?
+    var bubbleIndexShadowSafeRect: [Double]?
+    var distanceFieldSafeRect: [Double]?
+    var selectedReportOnlyFitRectSource: String
+    var selectedReportOnlyFitRect: [Double]?
+    var currentRenderFontSize: Double?
+    var renderNonTransparentBounds: [Double]?
+    var renderCollisionChecked: Bool
+    var renderCollisionResolved: Bool
+    var renderTextTruncated: Bool
+    var spriteContainedByCurrentSafeRect: Bool?
+    var spriteContainedByDistanceFieldSafeRect: Bool?
+    var estimatedLineCount: Int
+    var estimatedCharsPerLine: Int
+    var fontBudgetVerdict: String
+    var fitVerdict: String
+    var failureOverlayRequired: Bool
+    var failureOverlayFitVerdict: String
+    var relatedSeamCandidateIDs: [String]
+    var sameBubbleSiblingBlockIndexes: [Int]
+    var siblingOverlapRisk: Bool
+    var renderLockVerdict: String
+    var primaryRenderBottleneck: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuRenderSpriteFitSignal]
+    var evaluationSignals: [MangaKoharuRenderSpriteFitSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuRenderSpriteLayoutCandidateLedger: Equatable, Codable, Sendable {
+    var candidateID: String
+    var blockIndex: Int
+    var candidateSource: String
+    var candidateRect: [Double]?
+    var candidateArea: Double
+    var currentSpriteBounds: [Double]?
+    var spriteContained: Bool?
+    var areaDeltaVsCurrent: Double?
+    var overlapsSiblingCurrentSafeRect: Bool
+    var overlapsSiblingDistanceFieldRect: Bool
+    var relatedSeamCandidateIDs: [String]
+    var candidateVerdict: String
+    var promotionBlockedReasons: [String]
+    var nextAction: String
+    var decisionSignals: [MangaKoharuRenderSpriteFitSignal]
+    var evaluationSignals: [MangaKoharuRenderSpriteFitSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuRenderSpriteSiblingFitLedger: Equatable, Codable, Sendable {
+    var siblingGroupID: String
+    var bubbleID: Int
+    var blockIndexes: [Int]
+    var currentSafeRectMaxOverlapRatio: Double
+    var distanceFieldSafeRectMaxOverlapRatio: Double
+    var currentSpriteBoundsOverlapRatio: Double
+    var relatedSeamCandidateIDs: [String]
+    var sameBubbleSiblingPartitionVerdict: String
+    var fitVerdict: String
+    var affectedBlocks: [Int]
+    var nextAction: String
+    var decisionSignals: [MangaKoharuRenderSpriteFitSignal]
+    var evaluationSignals: [MangaKoharuRenderSpriteFitSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuRenderSpriteFitGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuRenderSpriteFitSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuRenderSpriteFitPlannerReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
+    var evaluatedBlockCount: Int
+    var layoutCandidateCount: Int
+    var blockLedgerCount: Int
+    var siblingLedgerCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var proxyNotRealKoharuRenderer: Bool
+    var proxyNotRealBubbleMask: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var fitPlannerVerdict: String
+    var textSourceBreakdown: [String: Int]
+    var layoutRectSourceBreakdown: [String: Int]
+    var fitVerdictBreakdown: [String: Int]
+    var fontBudgetBreakdown: [String: Int]
+    var spriteContainmentBreakdown: [String: Int]
+    var siblingFitVerdictBreakdown: [String: Int]
+    var failureOverlayFitBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var fontBudgetRiskBlocks: [Int]
+    var spriteContainmentRiskBlocks: [Int]
+    var siblingOverlapRiskBlocks: [Int]
+    var failureOverlayRiskBlocks: [Int]
+    var seamConstrainedBlocks: [Int]
+    var needsRealBubbleMaskBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var layoutCandidateLedgers: [MangaKoharuRenderSpriteLayoutCandidateLedger]
+    var blockLedgers: [MangaKoharuRenderSpriteFitBlockLedger]
+    var siblingLedgers: [MangaKoharuRenderSpriteSiblingFitLedger]
+    var gateLedger: [MangaKoharuRenderSpriteFitGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -4276,6 +4421,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport?
     var koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport?
     var koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport?
+    var koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
