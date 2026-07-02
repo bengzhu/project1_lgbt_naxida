@@ -115,6 +115,42 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.37：Koharu 气泡邻接切缝影子复刻
+日期：2026-07-02
+依据：`md/prompt/v1（漫画探针）/v1.37（Koharu气泡邻接切缝影子复刻）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuBubbleAdjacencySeamReport`，只基于 AITRANS 现有 rounded-rect BubbleMask proxy、BubbleIndex、DistanceField、split candidate、same-bubble sibling、OCR damage 和 render lock 证据，构建 bubble adjacency graph、seam candidate ledger 和逐块 seam 风险账本。
+- 报告输出 `pairLedgers[]`、`seamCandidateLedgers[]`、`blockLedgers[]` 和 `gateLedger[]`，记录 bbox gap / overlap、proxy mask gap、shared split / sibling / conflict 信号、seam orientation / corridor、assignment conflict、safe-area risk、render lock 和 report-only next action。
+- 报告明确 `proxyNotRealBubbleMask = true`、`usesRoundedRectProxyMask = true`、`groundTruthUsedForDecision = false`、`wouldChangeMainFlow = false` 和 `diagnosticOnly = true`；ground truth 只进入 evaluation signals。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuBubbleAdjacencySeamReport`；convergence 新增 `WI-koharu-bubble-adjacency-seam` 和 `G-koharu-bubble-adjacency-seam-executed`。
+- `1_ocr_probe_text.txt` 新增 Bubble adjacency seam summary、pair ledger、seam candidate ledger 和逐块 `bubbleSeamBlockLedger`。
+- 报告只做 report-only 诊断；不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、DistanceField safe rect、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、post-fusion cleanup、候选选择、active artifacts 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.37（Koharu气泡邻接切缝影子复刻）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse`、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuBubbleAdjacencySeamReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`evaluatedBubbleCount == bubbleMaskReport.instanceCount`、`blockLedgerCount == totalBlocksDetected`、`pairLedgerCount >= 1`、`seamCandidateCount >= bubbleSplitCandidateReport.candidateCount`、`gateCount >= 10`，breakdown 非空，`proxyNotRealBubbleMask = true`、`usesRoundedRectProxyMask = true`，convergence 包含 Bubble adjacency seam reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、pair ledger、seam candidate 和逐块 block ledger。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.37 新字段；以 PR 后云端结果包为准。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.36：Koharu DistanceField 安全区影子复刻
 日期：2026-07-02
 依据：`md/prompt/v1（漫画探针）/v1.36（KoharuDistanceField安全区影子复刻）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
