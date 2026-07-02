@@ -2164,6 +2164,152 @@ struct MangaKoharuDistanceFieldSafeAreaReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuBubbleAdjacencySeamSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuBubbleAdjacencyPairLedger: Equatable, Codable, Sendable {
+    var pairID: String
+    var bubbleAID: Int
+    var bubbleBID: Int
+    var bubbleABBox: [Double]
+    var bubbleBBBox: [Double]
+    var bboxOverlapArea: Double
+    var bboxGapPx: Double
+    var expandedBBoxIntersects: Bool
+    var proxyMaskTouching: Bool
+    var proxyMaskMinimumGapPx: Double
+    var maskGapAlgorithm: String
+    var sharedBlockIndexes: [Int]
+    var sameBubbleSiblingGroupIDs: [String]
+    var splitCandidateIDs: [Int]
+    var distanceFieldSafeRectConflict: Bool
+    var renderLockInvolved: Bool
+    var pairVerdict: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuBubbleAdjacencySeamSignal]
+    var evaluationSignals: [MangaKoharuBubbleAdjacencySeamSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuBubbleSeamCandidateLedger: Equatable, Codable, Sendable {
+    var seamCandidateID: String
+    var source: String
+    var parentBubbleID: Int?
+    var relatedBubbleIDs: [Int]
+    var blockIndexes: [Int]
+    var splitCandidateIDs: [Int]
+    var siblingGroupID: String?
+    var seamOrientation: String
+    var seamLine: [Double]?
+    var seamCorridorRect: [Double]?
+    var leftOrTopBlockIndexes: [Int]
+    var rightOrBottomBlockIndexes: [Int]
+    var protectedBlockIndexes: [Int]
+    var wouldIsolateBlocks: [Int]
+    var ocrDamageBlocks: [Int]
+    var assignmentConflictBlocks: [Int]
+    var safeAreaRiskBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var seamScore: Double
+    var seamCandidateVerdict: String
+    var promotionBlockedReasons: [String]
+    var nextAction: String
+    var decisionSignals: [MangaKoharuBubbleAdjacencySeamSignal]
+    var evaluationSignals: [MangaKoharuBubbleAdjacencySeamSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuBubbleSeamBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var bbox: [Double]
+    var blockPassed: Bool
+    var failureCategory: String
+    var groundTruthMatch: String
+    var bestGroundTruthType: String?
+    var ocrSimilarityForEvaluation: Double?
+    var currentSafeLayoutRect: [Double]?
+    var bubbleIndexShadowBubbleID: Int?
+    var distanceFieldSafeRect: [Double]?
+    var relatedPairIDs: [String]
+    var relatedSeamCandidateIDs: [String]
+    var splitCandidateIDs: [Int]
+    var sameBubbleSiblingBlockIndexes: [Int]
+    var assignmentConflict: Bool
+    var ocrDamageRisk: String
+    var renderLockVerdict: String
+    var blockSeamRisk: String
+    var blockSeamVerdict: String
+    var primaryBottleneck: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuBubbleAdjacencySeamSignal]
+    var evaluationSignals: [MangaKoharuBubbleAdjacencySeamSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuBubbleAdjacencySeamGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuBubbleAdjacencySeamSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuBubbleAdjacencySeamReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var evaluatedBlockCount: Int
+    var evaluatedBubbleCount: Int
+    var pairLedgerCount: Int
+    var seamCandidateCount: Int
+    var blockLedgerCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var proxyNotRealBubbleMask: Bool
+    var usesRoundedRectProxyMask: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var adjacencyVerdict: String
+    var pairVerdictBreakdown: [String: Int]
+    var seamCandidateVerdictBreakdown: [String: Int]
+    var blockSeamRiskBreakdown: [String: Int]
+    var assignmentRiskBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var adjacentBubblePairs: [String]
+    var seamCandidateIDs: [String]
+    var seamRiskBlocks: [Int]
+    var assignmentConflictBlocks: [Int]
+    var splitReviewBlocks: [Int]
+    var sameBubbleSiblingBlocks: [Int]
+    var needsRealBubbleMaskBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var pairLedgers: [MangaKoharuBubbleAdjacencyPairLedger]
+    var seamCandidateLedgers: [MangaKoharuBubbleSeamCandidateLedger]
+    var blockLedgers: [MangaKoharuBubbleSeamBlockLedger]
+    var gateLedger: [MangaKoharuBubbleAdjacencySeamGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -4129,6 +4275,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport?
     var koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport?
     var koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport?
+    var koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
