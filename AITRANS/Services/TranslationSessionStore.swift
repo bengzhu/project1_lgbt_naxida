@@ -9395,10 +9395,20 @@ final class TranslationSessionStore: ObservableObject {
         let detectorCandidateByID = Dictionary(
             uniqueKeysWithValues: detectorLiteReport.candidates.map { ($0.candidateID, $0) }
         )
-        let detectorCandidatesByBlock = Dictionary(grouping: detectorLiteReport.candidates.flatMap { candidate in
-            candidate.relatedCurrentBlockIndexes.map { (blockIndex: $0, candidate: candidate) }
-        }) { $0.blockIndex }
-            .mapValues { $0.map(\.candidate).sorted { lhs, rhs in lhs.score == rhs.score ? lhs.candidateID < rhs.candidateID : lhs.score > rhs.score } }
+        var detectorCandidatesByBlock: [Int: [MangaKoharuNativeTextBoxDetectorLiteCandidate]] = [:]
+        for candidate in detectorLiteReport.candidates {
+            for blockIndex in candidate.relatedCurrentBlockIndexes {
+                detectorCandidatesByBlock[blockIndex, default: []].append(candidate)
+            }
+        }
+        for blockIndex in detectorCandidatesByBlock.keys {
+            detectorCandidatesByBlock[blockIndex]?.sort { lhs, rhs in
+                if lhs.score == rhs.score {
+                    return lhs.candidateID < rhs.candidateID
+                }
+                return lhs.score > rhs.score
+            }
+        }
         let shadowCandidateByBlock = Dictionary(grouping: shadowOCRReport.candidates) { $0.relatedBlockIndex }
 
         func projectionPeakCount(_ values: [Int], threshold: Int) -> Int {
