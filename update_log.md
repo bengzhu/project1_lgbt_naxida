@@ -119,6 +119,12 @@
 日期：2026-07-02
 依据：`md/prompt/v1（漫画探针）/v1.37（Koharu气泡邻接切缝影子复刻）.md`。本轮修改 Swift 探针报告模型、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
 
+退回修复：
+
+- PR #27 云端 run `28564459237` 中 static checks、Xcode build 和 simulator build 通过，但 `mangaProbeOutcome=failure`；`manga-probe.log` 停在 `render-output-start` 后，最终未生成 `probe_report.json`。
+- 修复 `koharuBubbleAdjacencySeamReport` 的 proxy mask gap 计算：从整图 mask 像素全量收集 + 双重循环，改为 bubble bbox 内边界采样、样本上限和远距离 bbox gap 近似，保持 report-only 语义和字段含义。
+- 在 render 后 Koharu 后置报告链新增进度点，覆盖 BubbleIndex、DistanceField、Bubble adjacency seam、最终 convergence refresh、TXT 重写和 `probe_report` 写入起点，便于云端失败时定位具体卡点。
+
 核心变更：
 
 - 新增 `koharuBubbleAdjacencySeamReport`，只基于 AITRANS 现有 rounded-rect BubbleMask proxy、BubbleIndex、DistanceField、split candidate、same-bubble sibling、OCR damage 和 render lock 证据，构建 bubble adjacency graph、seam candidate ledger 和逐块 seam 风险账本。
