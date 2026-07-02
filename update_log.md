@@ -124,6 +124,7 @@
 - PR #28 云端 run `28571459833` 在 Xcode build 阶段失败，`xcodebuild.log` 指向 `MangaOverlayProbeService.swift` 中 `MangaKoharuRenderSpriteLayoutCandidateLedger(...)` 大表达式 type-check 超时，后续模拟器安装因缺 bundle ID 连带失败，探针未运行且结果包只保留 `output/probe-not-run.txt`。
 - 修复方式是把 RenderSprite layout candidate ledger 的嵌套 `flatMap` / `map` / struct 初始化拆成显式局部 helper 和 `for` 循环，先落地 `candidateID`、`candidateArea`、`areaDeltaVsCurrent`、`decisionSignals`、`evaluationSignals` 等中间变量；字段语义和 report-only 输出不变。
 - 本修复不改主 OCR、翻译输入、覆盖绘制、`safeLayoutRect`、DistanceField safe rect、`renderFontSize`、`renderNonTransparentBounds`、`blockPassed`、失败分类、active artifacts 或 `configuration.currentBlockSource`。
+- Build IPA #94 run `28574373590` 在合并 commit `902e836` 的 Release archive / `iphoneos` / whole-module optimization 阶段失败，`xcodebuild-archive.log` 指向 `MangaOverlayProbeService.swift:1744` 的 `Task.detached` 大闭包 type-check 超时，并提示该 `await` 内没有 async 操作。本次修复移除 `makeKoharuBubbleAdjacencySeamReport` 外层无必要 `Task.detached` / `.value` 包装，保留原报告计算、字段和 report-only 语义；不改主 OCR、翻译输入、覆盖绘制、`safeLayoutRect`、DistanceField safe rect、RenderSprite fit planner、`blockPassed`、失败分类、active artifacts 或 `configuration.currentBlockSource`。
 
 核心变更：
 
