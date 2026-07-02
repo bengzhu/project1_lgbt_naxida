@@ -1808,35 +1808,92 @@ struct MangaOverlayProbeService: Sendable {
                 + (koharuRenderRegressionLockReport?.renderIssueBlocks ?? [])
                 + blocks.filter { $0.renderCollisionChecked && $0.renderCollisionResolved }.map(\.index)
             )
+            let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(runtime.width), height: CGFloat(runtime.height))
+            let bubbleRectsByID = Dictionary(
+                uniqueKeysWithValues: bubbleGeometry.bubbles.map { bubble in
+                    (bubble.id, Self.rect(from: bubble.bbox).intersection(imageBounds).integral)
+                }
+            )
 
-            func proxyMaskGapBetweenBubbleIDs(_ lhs: Int, _ rhs: Int) -> Double {
-                let lhsID = lhs + 1
-                let rhsID = rhs + 1
-                var lhsPixels: [(Int, Int)] = []
-                var rhsPixels: [(Int, Int)] = []
-                let sampleStride = max(1, min(runtime.width, runtime.height) / 420)
-                var y = 0
-                while y < runtime.height {
-                    var x = 0
-                    while x < runtime.width {
-                        let value = runtime.ids[y * runtime.width + x]
-                        if value == lhsID { lhsPixels.append((x, y)) }
-                        if value == rhsID { rhsPixels.append((x, y)) }
+            func proxyBoundarySamples(for bubbleID: Int, maxSamples: Int = 384) -> [(Int, Int)] {
+                guard let rect = bubbleRectsByID[bubbleID],
+                      !rect.isNull,
+                      rect.width >= 1,
+                      rect.height >= 1 else {
+                    return []
+                }
+                let targetID = bubbleID + 1
+                let minX = max(0, Int(rect.minX))
+                let maxX = min(runtime.width, Int(rect.maxX))
+                let minY = max(0, Int(rect.minY))
+                let maxY = min(runtime.height, Int(rect.maxY))
+                guard minX < maxX, minY < maxY else { return [] }
+                let areaPixels = max(1, (maxX - minX) * (maxY - minY))
+                let sampleStride = max(1, Int(ceil(sqrt(Double(areaPixels) / Double(maxSamples)))))
+                func maskID(at x: Int, _ y: Int) -> Int {
+                    guard x >= 0, x < runtime.width, y >= 0, y < runtime.height else { return 0 }
+                    return runtime.ids[y * runtime.width + x]
+                }
+                func isBoundary(_ x: Int, _ y: Int) -> Bool {
+                    maskID(at: x - 1, y) != targetID
+                    || maskID(at: x + 1, y) != targetID
+                    || maskID(at: x, y - 1) != targetID
+                    || maskID(at: x, y + 1) != targetID
+                }
+
+                var samples: [(Int, Int)] = []
+                var y = minY
+                while y < maxY {
+                    var x = minX
+                    while x < maxX {
+                        if maskID(at: x, y) == targetID, isBoundary(x, y) {
+                            samples.append((x, y))
+                        }
                         x += sampleStride
                     }
                     y += sampleStride
                 }
-                guard !lhsPixels.isEmpty, !rhsPixels.isEmpty else { return .infinity }
-                var best = Double.infinity
-                for a in lhsPixels {
-                    for b in rhsPixels {
-                        let dx = Double(a.0 - b.0)
-                        let dy = Double(a.1 - b.1)
-                        best = min(best, sqrt(dx * dx + dy * dy))
-                        if best <= Double(sampleStride) { return best }
+                if samples.isEmpty {
+                    y = minY
+                    while y < maxY {
+                        var x = minX
+                        while x < maxX {
+                            if maskID(at: x, y) == targetID {
+                                samples.append((x, y))
+                            }
+                            x += sampleStride
+                        }
+                        y += sampleStride
                     }
                 }
-                return best
+                guard samples.count > maxSamples else { return samples }
+                let pickStride = max(1, Int(ceil(Double(samples.count) / Double(maxSamples))))
+                return stride(from: 0, to: samples.count, by: pickStride).prefix(maxSamples).map { samples[$0] }
+            }
+
+            func proxyMaskGapBetweenBubbleIDs(_ lhs: Int, _ rhs: Int, bboxGap: Double, threshold: Double) -> Double {
+                if bboxGap > max(32.0, threshold * 3.0) {
+                    return bboxGap
+                }
+                let lhsSamples = proxyBoundarySamples(for: lhs)
+                let rhsSamples = proxyBoundarySamples(for: rhs)
+                guard !lhsSamples.isEmpty, !rhsSamples.isEmpty else { return .infinity }
+                var bestSquared = Double.infinity
+                let earlyExitSquared = max(1.0, min(2.0, max(1.0, threshold * 0.25)))
+                for a in lhsSamples {
+                    for b in rhsSamples {
+                        let dx = Double(a.0 - b.0)
+                        let dy = Double(a.1 - b.1)
+                        let squared = dx * dx + dy * dy
+                        if squared < bestSquared {
+                            bestSquared = squared
+                        }
+                        if bestSquared <= earlyExitSquared {
+                            return sqrt(bestSquared)
+                        }
+                    }
+                }
+                return sqrt(bestSquared)
             }
 
             func seamGeometry(for seedBlocks: [MangaOverlayProbeBlock], parentRect: CGRect?) -> (String, [Double]?, [Double]?, [Int], [Int], Double) {
@@ -1907,7 +1964,7 @@ struct MangaOverlayProbeService: Sendable {
                     let conflictShared = assignmentConflictBlocks.filter { lhsBlocks.contains($0) || rhsBlocks.contains($0) }
                     let relatedByStructure = !sharedSplitIDs.isEmpty || !sharedSiblingIDs.isEmpty || !conflictShared.isEmpty
                     guard overlap > 0 || expanded || gap <= threshold || relatedByStructure else { continue }
-                    let maskGap = proxyMaskGapBetweenBubbleIDs(lhs.id, rhs.id)
+                    let maskGap = proxyMaskGapBetweenBubbleIDs(lhs.id, rhs.id, bboxGap: gap, threshold: threshold)
                     let proxyTouching = maskGap.isFinite && maskGap <= max(2.0, threshold * 0.5)
                     let relatedBlocks = uniqueSorted(Array(lhsBlocks.union(rhsBlocks)).filter { assignmentConflictBlocks.contains($0) || renderLockedBlocks.contains($0) || !(splitCandidatesByBlock[$0] ?? []).isEmpty })
                     let distanceConflict = relatedBlocks.contains { distanceFieldByBlock[$0]?.safeRectComparisonVerdict != "distanceRectMatchesCurrentLayout" && distanceFieldByBlock[$0] != nil }

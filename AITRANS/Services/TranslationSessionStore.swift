@@ -2234,6 +2234,7 @@ final class TranslationSessionStore: ObservableObject {
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
                 )
+                self.writeMangaProbeProgress(stage: "koharu-bubble-index-shadow-ledger-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuBubbleIndexShadowLedgerReport = Self.makeKoharuBubbleIndexShadowLedgerReport(
                     blocks: probeBlocks,
                     bubbleMaskReport: bubbleMaskReport,
@@ -2244,6 +2245,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport
                 )
+                self.writeMangaProbeProgress(stage: "koharu-bubble-index-shadow-ledger-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-distance-field-safe-area-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuDistanceFieldSafeAreaReport = await self.mangaOverlayProbeService.makeKoharuDistanceFieldSafeAreaReport(
                     image: recognized.image,
                     blocks: probeBlocks,
@@ -2253,6 +2256,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
                 )
+                self.writeMangaProbeProgress(stage: "koharu-distance-field-safe-area-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-bubble-adjacency-seam-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuBubbleAdjacencySeamReport = await self.mangaOverlayProbeService.makeKoharuBubbleAdjacencySeamReport(
                     image: recognized.image,
                     blocks: probeBlocks,
@@ -2263,6 +2268,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
                 )
+                self.writeMangaProbeProgress(stage: "koharu-bubble-adjacency-seam-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
                     blocks: probeBlocks,
                     diagnostics: makeMangaOverlayProbeDiagnostics(blocks: probeBlocks),
@@ -2285,7 +2292,9 @@ final class TranslationSessionStore: ObservableObject {
                     koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
                     koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport
                 )
+                self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
+                    self.writeMangaProbeProgress(stage: "ocr-probe-text-final-rewrite-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                     try MangaOverlayProbeService.writeOCRProbeText(
                         blocks: probeBlocks,
                         textRegionCropReport: textRegionCropReport,
@@ -2324,7 +2333,9 @@ final class TranslationSessionStore: ObservableObject {
                         bubbleSplitCandidateReport: bubbleSplitCandidateReport,
                         to: URL(fileURLWithPath: ocrProbeTextPath)
                     )
+                    self.writeMangaProbeProgress(stage: "ocr-probe-text-final-rewrite-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 }
+                self.writeMangaProbeProgress(stage: "probe-report-write-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 let report = self.makeMangaOverlayProbeReport(
                     blocks: probeBlocks,
                     outputFiles: outputFiles,
