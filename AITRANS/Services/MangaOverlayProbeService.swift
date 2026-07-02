@@ -764,6 +764,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport? = nil,
         koharuNativeTextBoxDetectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport? = nil,
         koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport? = nil,
+        koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
@@ -841,6 +842,7 @@ struct MangaOverlayProbeService: Sendable {
                 koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
                 koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
                 koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+                koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
                 translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                 koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                 bubbleMaskReport: bubbleMaskReport,
@@ -3850,6 +3852,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport? = nil,
         koharuNativeTextBoxDetectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport? = nil,
         koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport? = nil,
+        koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -3964,6 +3967,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let nativeTextBoxDetectorLiteShadowOCRByBlock = Dictionary(
             uniqueKeysWithValues: (koharuNativeTextBoxDetectorLiteShadowOCRReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let nativeTextBoxDetectorLiteRefinementByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuNativeTextBoxDetectorLiteRefinementReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
         let translationFloorNoisyByBlock = Dictionary(
             uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
@@ -4195,6 +4201,7 @@ struct MangaOverlayProbeService: Sendable {
             let renderSpriteFit = renderSpriteFitByBlock[block.index]
             let nativeTextBoxDetectorLite = nativeTextBoxDetectorLiteByBlock[block.index]
             let nativeTextBoxDetectorLiteShadowOCR = nativeTextBoxDetectorLiteShadowOCRByBlock[block.index]
+            let nativeTextBoxDetectorLiteRefinement = nativeTextBoxDetectorLiteRefinementByBlock[block.index]
             let translationFloorNoisy = translationFloorNoisyByBlock[block.index]
             let renderLock = renderLockByBlock[block.index]
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
@@ -4270,6 +4277,7 @@ struct MangaOverlayProbeService: Sendable {
             renderSpriteFit: block=\(renderSpriteFit.map { String($0.blockIndex) } ?? "nil") source=\(renderSpriteFit?.textSourceForRender ?? "nil") chars=\(renderSpriteFit.map { String($0.renderTextCharacterCount) } ?? "nil") cjk=\(renderSpriteFit.map { String($0.renderTextCJKCount) } ?? "nil") latin=\(renderSpriteFit.map { String($0.renderTextLatinCount) } ?? "nil") rectSource=\(renderSpriteFit?.selectedReportOnlyFitRectSource ?? "nil") fontBudget=\(renderSpriteFit?.fontBudgetVerdict ?? "nil") fit=\(renderSpriteFit?.fitVerdict ?? "nil") failureOverlayFit=\(renderSpriteFit?.failureOverlayFitVerdict ?? "nil") seams=[\(renderSpriteFit?.relatedSeamCandidateIDs.joined(separator: ",") ?? "nil")] siblings=[\(renderSpriteFit?.sameBubbleSiblingBlockIndexes.map(String.init).joined(separator: ",") ?? "nil")] next=\(renderSpriteFit?.nextAction ?? "nil")
             nativeTextBoxDetectorLiteBlockLedger: block=\(nativeTextBoxDetectorLite.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLite?.bubbleID.map(String.init) ?? "nil") candidates=[\(nativeTextBoxDetectorLite?.candidateIDs.joined(separator: ",") ?? "nil")] best=\(nativeTextBoxDetectorLite?.bestCandidateID ?? "nil") score=\(nativeTextBoxDetectorLite?.bestCandidateScore?.formatted(.number.precision(.fractionLength(3))) ?? "nil") coverage=\(nativeTextBoxDetectorLite?.candidateCoverageVerdict ?? "nil") direction=\(nativeTextBoxDetectorLite?.directionHint ?? "nil") bottleneck=\(nativeTextBoxDetectorLite?.primaryBottleneck ?? "nil") next=\(nativeTextBoxDetectorLite?.nextAction ?? "nil")
             nativeTextBoxDetectorLiteShadowOCRBlockLedger: block=\(nativeTextBoxDetectorLiteShadowOCR.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLiteShadowOCR?.bubbleID.map(String.init) ?? "nil") selected=\(nativeTextBoxDetectorLiteShadowOCR?.selectedCandidateID ?? "nil") outcome=\(nativeTextBoxDetectorLiteShadowOCR?.shadowOutcome ?? "nil") shadowText=\(nativeTextBoxDetectorLiteShadowOCR?.shadowOCRNormalizedText?.replacing("\n", with: " / ") ?? "nil") qualityDelta=\(nativeTextBoxDetectorLiteShadowOCR?.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") similarityDelta=\(nativeTextBoxDetectorLiteShadowOCR?.ocrSimilarityDeltaForEvaluation?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bottleneck=\(nativeTextBoxDetectorLiteShadowOCR?.primaryBottleneck ?? "nil") next=\(nativeTextBoxDetectorLiteShadowOCR?.nextAction ?? "nil")
+            nativeTextBoxDetectorLiteRefinementBlockLedger: block=\(nativeTextBoxDetectorLiteRefinement.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLiteRefinement?.bubbleID.map(String.init) ?? "nil") target=\(nativeTextBoxDetectorLiteRefinement?.targetReason ?? "nil") base=\(nativeTextBoxDetectorLiteRefinement?.baseCandidateID ?? "nil") refined=[\(nativeTextBoxDetectorLiteRefinement?.refinedBBox?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")] strategy=\(nativeTextBoxDetectorLiteRefinement?.refinementStrategy ?? "nil") outcome=\(nativeTextBoxDetectorLiteRefinement?.refinementOutcome ?? "nil") refinedText=\(nativeTextBoxDetectorLiteRefinement?.refinedOCRNormalizedText?.replacing("\n", with: " / ") ?? "nil") qualityDeltaCurrent=\(nativeTextBoxDetectorLiteRefinement?.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") qualityDeltaDetector=\(nativeTextBoxDetectorLiteRefinement?.qualityDeltaVsDetectorLiteShadow?.formatted(.number.precision(.fractionLength(3))) ?? "nil") similarityDelta=\(nativeTextBoxDetectorLiteRefinement?.ocrSimilarityDeltaForEvaluation?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bottleneck=\(nativeTextBoxDetectorLiteRefinement?.primaryBottleneck ?? "nil") next=\(nativeTextBoxDetectorLiteRefinement?.nextAction ?? "nil")
             translationFloorNoisyBlock: modelFloorLimited=\(translationFloorNoisy.map { String($0.modelFloorLimited) } ?? "nil") ocrInputSuspect=\(translationFloorNoisy.map { String($0.ocrInputSuspect) } ?? "nil") languageQualityFailure=\(translationFloorNoisy.map { String($0.translationLanguageQualityFailure) } ?? "nil") routingOutcome=\(translationFloorNoisy?.routingComparisonOutcome ?? "nil") nextAction=\(translationFloorNoisy?.recommendedNextAction ?? "nil")
             renderLock: status=\(renderLock?.renderStatus ?? "nil") failureOverlayRequired=\(renderLock.map { String($0.failureOverlayRequired) } ?? "nil") failureOverlayLocked=\(renderLock.map { String($0.failureOverlayLocked) } ?? "nil") safeLayoutSource=\(renderLock?.safeLayoutSource ?? "nil") maskOverflowPixels=\(renderLock.map { String($0.renderMaskOverflowPixelCount) } ?? "nil") truncated=\(renderLock.map { String($0.renderTextTruncated) } ?? "nil") nextAction=\(renderLock?.recommendedNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
@@ -4367,6 +4375,10 @@ struct MangaOverlayProbeService: Sendable {
             .prefix(32)
             .map { "nativeTextBoxDetectorLiteShadowOCRCandidate: id=\($0.candidateID) source=\($0.sourceCandidateID) block=\($0.relatedBlockIndex) bubble=\($0.sourceBubbleID.map(String.init) ?? "nil") bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))] dir=\($0.directionHint) succeeded=\($0.ocrSucceeded) outcome=\($0.outcome) qualityDelta=\($0.qualityDeltaVsCurrent.formatted(.number.precision(.fractionLength(3)))) wordPreservation=\($0.wordPreservationVsCurrent.formatted(.number.precision(.fractionLength(3)))) text=\($0.ocrNormalizedText.replacing("\n", with: " / "))" }
             .joined(separator: "\n")
+        let nativeTextBoxDetectorLiteRefinementCandidateSummary = (koharuNativeTextBoxDetectorLiteRefinementReport?.candidates ?? [])
+            .prefix(24)
+            .map { "nativeTextBoxDetectorLiteRefinementCandidate: id=\($0.candidateID) source=\($0.source) block=\($0.blockIndex) bubble=\($0.sourceBubbleID.map(String.init) ?? "nil") base=[\($0.baseBBox.map { String(Int($0.rounded())) }.joined(separator: ","))] refined=[\($0.refinedBBox.map { String(Int($0.rounded())) }.joined(separator: ","))] strategy=\($0.refinementStrategy) target=\($0.targetReason) succeeded=\($0.ocrSucceeded) outcome=\($0.outcome) qualityDeltaCurrent=\($0.qualityDeltaVsCurrent.formatted(.number.precision(.fractionLength(3)))) qualityDeltaDetector=\($0.qualityDeltaVsDetectorLiteShadow?.formatted(.number.precision(.fractionLength(3))) ?? "nil") text=\($0.ocrNormalizedText.replacing("\n", with: " / "))" }
+            .joined(separator: "\n")
         let externalSummary = """
         koharuNativeAlgorithmReplayMatrixReport: enabled=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.stageCount) } ?? "nil") candidates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil") blockRoutes=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict ?? "nil")
         nativeReplayStageStatus=\(koharuNativeAlgorithmReplayMatrixReport?.stageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -4415,6 +4427,11 @@ struct MangaOverlayProbeService: Sendable {
         nativeTextBoxDetectorLiteShadowOCRQualityDelta=\(koharuNativeTextBoxDetectorLiteShadowOCRReport?.qualityDeltaBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeTextBoxDetectorLiteShadowOCRNextAction=\(koharuNativeTextBoxDetectorLiteShadowOCRReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         \(nativeTextBoxDetectorLiteShadowOCRCandidateSummary.isEmpty ? "nativeTextBoxDetectorLiteShadowOCRCandidate: nil" : nativeTextBoxDetectorLiteShadowOCRCandidateSummary)
+        koharuNativeTextBoxDetectorLiteRefinementReport: enabled=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.enabled) } ?? "nil") targets=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.targetBlockCount) } ?? "nil") candidates=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.refinedCandidateCount) } ?? "nil") ocrExecuted=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.ocrExecutedCount) } ?? "nil") succeeded=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.ocrSucceededCount) } ?? "nil") empty=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.emptyOCRCount) } ?? "nil") betterCurrent=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.refinedBetterThanCurrentCount) } ?? "nil") betterDetectorLite=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.refinedBetterThanDetectorLiteCount) } ?? "nil") worse=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.refinedWorseThanDetectorLiteCount) } ?? "nil") verdict=\(koharuNativeTextBoxDetectorLiteRefinementReport?.refinementVerdict ?? "nil")
+        nativeTextBoxDetectorLiteRefinementOutcome=\(koharuNativeTextBoxDetectorLiteRefinementReport?.ocrOutcomeBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeTextBoxDetectorLiteRefinementStrategy=\(koharuNativeTextBoxDetectorLiteRefinementReport?.refinementStrategyBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeTextBoxDetectorLiteRefinementNextAction=\(koharuNativeTextBoxDetectorLiteRefinementReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        \(nativeTextBoxDetectorLiteRefinementCandidateSummary.isEmpty ? "nativeTextBoxDetectorLiteRefinementCandidate: nil" : nativeTextBoxDetectorLiteRefinementCandidateSummary)
         koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
         workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
