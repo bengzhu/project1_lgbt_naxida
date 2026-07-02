@@ -761,6 +761,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
         koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil,
         koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport? = nil,
+        koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
@@ -835,6 +836,7 @@ struct MangaOverlayProbeService: Sendable {
                 koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
                 koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
                 koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
+                koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
                 translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                 koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                 bubbleMaskReport: bubbleMaskReport,
@@ -2331,6 +2333,539 @@ struct MangaOverlayProbeService: Sendable {
         }.value
     }
 
+    func makeKoharuRenderSpriteFitPlannerReport(
+        blocks: [MangaOverlayProbeBlock],
+        koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport?,
+        koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport?,
+        koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport?,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
+    ) async -> MangaKoharuRenderSpriteFitPlannerReport {
+        await Task.detached(priority: .userInitiated) {
+            func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
+            func uniqueSortedStrings(_ values: [String]) -> [String] { Array(Set(values)).sorted() }
+            func countBy(_ values: [String]) -> [String: Int] { values.reduce(into: [:]) { $0[$1, default: 0] += 1 } }
+            func joined(_ values: [Int]) -> String { uniqueSorted(values).map(String.init).joined(separator: ",") }
+            func area(_ rect: CGRect?) -> Double {
+                guard let rect, !rect.isNull, rect.width > 0, rect.height > 0 else { return 0 }
+                return Double(rect.width * rect.height)
+            }
+            func areaDelta(candidate: [Double]?, current: [Double]?) -> Double? {
+                let currentArea = area(current.map(Self.rect(from:)))
+                guard currentArea > 0 else { return nil }
+                return (area(candidate.map(Self.rect(from:))) - currentArea) / currentArea
+            }
+            func containment(_ inner: [Double]?, in outer: [Double]?) -> Bool? {
+                guard let inner, let outer else { return nil }
+                return Self.rectContainmentRatio(inner: Self.rect(from: inner), outer: Self.rect(from: outer)) >= 0.995
+            }
+            func overlapRatio(_ lhs: [Double]?, _ rhs: [Double]?) -> Double {
+                guard let lhs, let rhs else { return 0 }
+                let lhsRect = Self.rect(from: lhs)
+                let rhsRect = Self.rect(from: rhs)
+                let base = max(min(area(lhsRect), area(rhsRect)), 1)
+                return area(lhsRect.intersection(rhsRect)) / base
+            }
+            func maxOverlap(_ rects: [[Double]]) -> Double {
+                guard rects.count > 1 else { return 0 }
+                var result = 0.0
+                for lhs in 0..<rects.count {
+                    for rhs in (lhs + 1)..<rects.count {
+                        result = max(result, overlapRatio(rects[lhs], rects[rhs]))
+                    }
+                }
+                return result
+            }
+            func signal(
+                _ name: String,
+                _ value: String,
+                source: String,
+                decision: Bool = true,
+                evaluation: Bool = false
+            ) -> MangaKoharuRenderSpriteFitSignal {
+                MangaKoharuRenderSpriteFitSignal(
+                    name: name,
+                    value: value,
+                    sourceReport: source,
+                    groundTruthFreeDecisionSignal: decision,
+                    groundTruthUsedForEvaluationOnly: evaluation
+                )
+            }
+            func formatted(_ value: Double?) -> String {
+                value?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+            }
+            func cjkCount(_ text: String) -> Int {
+                text.unicodeScalars.filter { scalar in
+                    (0x4E00...0x9FFF).contains(Int(scalar.value))
+                    || (0x3400...0x4DBF).contains(Int(scalar.value))
+                    || (0x3040...0x30FF).contains(Int(scalar.value))
+                }.count
+            }
+            func latinCount(_ text: String) -> Int {
+                text.unicodeScalars.filter { scalar in
+                    (65...90).contains(Int(scalar.value)) || (97...122).contains(Int(scalar.value))
+                }.count
+            }
+            func renderText(for block: MangaOverlayProbeBlock, lock: MangaKoharuRenderBlockLock?) -> (source: String, text: String) {
+                if block.blockPassed, !block.translationCandidate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    return ("translationCandidate", block.translationCandidate)
+                }
+                if let fallback = lock?.fallbackTextForRender, !fallback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    return ("failureFallback", fallback)
+                }
+                if !block.finalTextUsedForTranslation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    return ("failureFallback", "翻译失败\n\(block.finalTextUsedForTranslation)")
+                }
+                return ("emptyCandidateFallback", "翻译失败")
+            }
+            func estimateTextBudget(text: String, fontSize: Double?, rect: [Double]?) -> (lineCount: Int, charsPerLine: Int, verdict: String) {
+                guard let rect else {
+                    return (max(1, text.count), 1, "renderDiagnosticsMissing")
+                }
+                let width = max(1, Self.rect(from: rect).width)
+                let height = max(1, Self.rect(from: rect).height)
+                let font = max(8, fontSize ?? min(18, Double(height) * 0.35))
+                let charsPerLine = max(1, Int((Double(width) / (font * 0.62)).rounded(.down)))
+                let lineCount = max(1, Int(ceil(Double(max(text.count, 1)) / Double(charsPerLine))))
+                let maxLines = max(1, Int((Double(height) / (font * 1.18)).rounded(.down)))
+                let verdict: String
+                if lineCount > maxLines + 1 {
+                    verdict = "fontBudgetOverflowRisk"
+                } else if lineCount >= maxLines {
+                    verdict = "fontBudgetTight"
+                } else {
+                    verdict = "fontBudgetComfortable"
+                }
+                return (lineCount, charsPerLine, verdict)
+            }
+
+            let allBlocks = blocks.map(\.index)
+            let bubbleIndexByBlock = Dictionary(uniqueKeysWithValues: (koharuBubbleIndexShadowLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) })
+            let distanceFieldByBlock = Dictionary(uniqueKeysWithValues: (koharuDistanceFieldSafeAreaReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) })
+            let seamByBlock = Dictionary(uniqueKeysWithValues: (koharuBubbleAdjacencySeamReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) })
+            let renderByBlock = Dictionary(uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) })
+            let blocksByBubble = Dictionary(grouping: blocks.compactMap { block -> (Int, MangaOverlayProbeBlock)? in
+                guard let bubbleID = block.bubbleID else { return nil }
+                return (bubbleID, block)
+            }) { $0.0 }.mapValues { $0.map(\.1).sorted { $0.index < $1.index } }
+            let siblingIndexesByBlock = Dictionary(uniqueKeysWithValues: blocks.map { block in
+                let siblings = block.bubbleID.flatMap { blocksByBubble[$0] }?.map(\.index).filter { $0 != block.index } ?? []
+                return (block.index, siblings)
+            })
+
+            let blockLedgers: [MangaKoharuRenderSpriteFitBlockLedger] = blocks.map { block in
+                let renderLock = renderByBlock[block.index]
+                let textInfo = renderText(for: block, lock: renderLock)
+                let currentRect = block.safeLayoutRect ?? renderLock?.safeLayoutRect
+                let bubbleIndexRect = bubbleIndexByBlock[block.index]?.shadowSafeLayoutRect
+                let distanceRect = distanceFieldByBlock[block.index]?.distanceFieldSafeRect
+                let spriteBounds = renderLock?.renderNonTransparentBounds ?? block.renderNonTransparentBounds
+                let selectedSource: String
+                let selectedRect: [Double]?
+                if containment(spriteBounds, in: currentRect) == true {
+                    selectedSource = "currentSafeLayoutRect"
+                    selectedRect = currentRect
+                } else if containment(spriteBounds, in: distanceRect) == true {
+                    selectedSource = "distanceFieldSafeRect"
+                    selectedRect = distanceRect
+                } else if bubbleIndexRect != nil {
+                    selectedSource = "bubbleIndexShadowSafeRect"
+                    selectedRect = bubbleIndexRect
+                } else {
+                    selectedSource = "currentSafeLayoutRect"
+                    selectedRect = currentRect
+                }
+                let budget = estimateTextBudget(text: textInfo.text, fontSize: block.renderFontSize ?? renderLock?.renderFontSize, rect: selectedRect)
+                let spriteCurrent = containment(spriteBounds, in: currentRect)
+                let spriteDistance = containment(spriteBounds, in: distanceRect)
+                let siblings = siblingIndexesByBlock[block.index] ?? []
+                let siblingOverlap = siblings.contains { siblingIndex in
+                    guard let sibling = blocks.first(where: { $0.index == siblingIndex }) else { return false }
+                    return overlapRatio(currentRect, sibling.safeLayoutRect) >= 0.08
+                }
+                let relatedSeams = seamByBlock[block.index]?.relatedSeamCandidateIDs ?? []
+                let renderVerdict = renderLock?.renderStatus ?? (block.renderCollisionChecked ? "renderDiagnosticsAvailable" : "renderDiagnosticsMissing")
+                let failureRequired = renderLock?.failureOverlayRequired ?? !block.blockPassed
+                let failureFit: String
+                if !failureRequired {
+                    failureFit = "notRequired"
+                } else if budget.verdict == "fontBudgetOverflowRisk" {
+                    failureFit = "failureFallbackLongTextRisk"
+                } else if spriteCurrent == false {
+                    failureFit = "failureFallbackSpriteContainmentRisk"
+                } else {
+                    failureFit = "failureFallbackAccounted"
+                }
+                let fitVerdict: String
+                if block.safeLayoutRect == nil || spriteBounds == nil {
+                    fitVerdict = "renderDiagnosticsMissing"
+                } else if !relatedSeams.isEmpty && (seamByBlock[block.index]?.blockSeamVerdict == "needsRealBubbleMask") {
+                    fitVerdict = "seamConstrainedNeedsRealBubbleMask"
+                } else if siblingOverlap {
+                    fitVerdict = "siblingOverlapRisk"
+                } else if failureFit == "failureFallbackLongTextRisk" {
+                    fitVerdict = "failureFallbackLongTextRisk"
+                } else if budget.verdict == "fontBudgetTight" || budget.verdict == "fontBudgetOverflowRisk" {
+                    fitVerdict = "fontBudgetTight"
+                } else if spriteDistance == true && spriteCurrent != true {
+                    fitVerdict = "distanceFieldCandidateFitsReportOnly"
+                } else if spriteCurrent == true {
+                    fitVerdict = "currentSpriteFits"
+                } else {
+                    fitVerdict = "manualReviewOnly"
+                }
+                let action: String
+                if fitVerdict == "seamConstrainedNeedsRealBubbleMask" {
+                    action = "collectRealBubbleMaskArtifact"
+                } else if fitVerdict == "renderDiagnosticsMissing" {
+                    action = "restoreRenderDiagnostics"
+                } else if fitVerdict == "manualReviewOnly" || fitVerdict == "siblingOverlapRisk" || fitVerdict == "fontBudgetTight" {
+                    action = "manualReviewOnly"
+                } else {
+                    action = "keepRenderSpriteFitPlannerReportOnly"
+                }
+                let bottleneck: String
+                if fitVerdict == "currentSpriteFits" {
+                    bottleneck = "noneRenderLocked"
+                } else if failureFit.hasPrefix("failureFallback") && failureFit != "failureFallbackAccounted" {
+                    bottleneck = "failureFallbackFit"
+                } else if siblingOverlap {
+                    bottleneck = "sameBubbleSiblingFit"
+                } else if !relatedSeams.isEmpty {
+                    bottleneck = "seamConstrainedSafeArea"
+                } else {
+                    bottleneck = budget.verdict
+                }
+                return MangaKoharuRenderSpriteFitBlockLedger(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    bbox: block.bbox,
+                    blockPassed: block.blockPassed,
+                    failureCategory: block.failureCategory,
+                    textSourceForRender: textInfo.source,
+                    renderTextCharacterCount: textInfo.text.count,
+                    renderTextCJKCount: cjkCount(textInfo.text),
+                    renderTextLatinCount: latinCount(textInfo.text),
+                    currentSafeLayoutRect: currentRect,
+                    bubbleIndexShadowSafeRect: bubbleIndexRect,
+                    distanceFieldSafeRect: distanceRect,
+                    selectedReportOnlyFitRectSource: selectedSource,
+                    selectedReportOnlyFitRect: selectedRect,
+                    currentRenderFontSize: block.renderFontSize ?? renderLock?.renderFontSize,
+                    renderNonTransparentBounds: spriteBounds,
+                    renderCollisionChecked: block.renderCollisionChecked || (renderLock?.renderCollisionChecked ?? false),
+                    renderCollisionResolved: block.renderCollisionResolved || (renderLock?.renderCollisionResolved ?? false),
+                    renderTextTruncated: block.renderTextTruncated || (renderLock?.renderTextTruncated ?? false),
+                    spriteContainedByCurrentSafeRect: spriteCurrent,
+                    spriteContainedByDistanceFieldSafeRect: spriteDistance,
+                    estimatedLineCount: budget.lineCount,
+                    estimatedCharsPerLine: budget.charsPerLine,
+                    fontBudgetVerdict: budget.verdict,
+                    fitVerdict: fitVerdict,
+                    failureOverlayRequired: failureRequired,
+                    failureOverlayFitVerdict: failureFit,
+                    relatedSeamCandidateIDs: relatedSeams,
+                    sameBubbleSiblingBlockIndexes: siblings,
+                    siblingOverlapRisk: siblingOverlap,
+                    renderLockVerdict: renderVerdict,
+                    primaryRenderBottleneck: bottleneck,
+                    nextAction: action,
+                    decisionSignals: [
+                        signal("selectedReportOnlyFitRectSource", selectedSource, source: "koharuRenderSpriteFitPlannerReport"),
+                        signal("fontBudgetVerdict", budget.verdict, source: "blocks.renderFontSize,safeLayoutRect"),
+                        signal("fitVerdict", fitVerdict, source: "koharuRenderSpriteFitPlannerReport")
+                    ],
+                    evaluationSignals: [
+                        signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                        signal("ocrSimilarityForEvaluation", formatted(block.ocrGroundTruthSimilarity), source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            }.sorted { $0.blockIndex < $1.blockIndex }
+
+            let blockLedgerByIndex = Dictionary(uniqueKeysWithValues: blockLedgers.map { ($0.blockIndex, $0) })
+            func makeLayoutCandidateLedger(
+                block: MangaOverlayProbeBlock,
+                ledger: MangaKoharuRenderSpriteFitBlockLedger?,
+                candidateSource: String,
+                candidateRect: [Double]?,
+                siblingCurrentRects: [[Double]],
+                siblingDistanceRects: [[Double]],
+                currentArea: Double
+            ) -> MangaKoharuRenderSpriteLayoutCandidateLedger {
+                let contained: Bool? = containment(ledger?.renderNonTransparentBounds, in: candidateRect)
+                let currentOverlap: Bool = siblingCurrentRects.contains { siblingRect in
+                    overlapRatio(candidateRect, siblingRect) >= 0.08
+                }
+                let distanceOverlap: Bool = siblingDistanceRects.contains { siblingRect in
+                    overlapRatio(candidateRect, siblingRect) >= 0.08
+                }
+                let relatedSeams: [String] = ledger?.relatedSeamCandidateIDs ?? []
+                let verdict: String
+                if candidateRect == nil {
+                    verdict = "missingCandidateRect"
+                } else if currentOverlap || distanceOverlap {
+                    verdict = "siblingOverlapRisk"
+                } else if !relatedSeams.isEmpty && candidateSource != "currentSafeLayoutRect" {
+                    verdict = "seamConstrainedNeedsRealBubbleMask"
+                } else if contained == true && candidateSource == "currentSafeLayoutRect" {
+                    verdict = "currentRendererBaseline"
+                } else if contained == true {
+                    verdict = "containedButRequiresRendererTask"
+                } else {
+                    verdict = "reportOnlyCandidateNoPromotion"
+                }
+                let action: String = verdict == "seamConstrainedNeedsRealBubbleMask"
+                    ? "collectRealBubbleMaskArtifact"
+                    : "keepLayoutCandidateReportOnly"
+                var blockers: [String] = ["reportOnly", "wouldChangeMainFlow=false"]
+                if candidateSource != "currentSafeLayoutRect" {
+                    blockers.append("notPromotedToRenderer")
+                }
+                if verdict == "missingCandidateRect" {
+                    blockers.append("missingCandidateRect")
+                }
+                let candidateID = "RSF-\(block.index)-\(candidateSource)"
+                let candidateArea = area(candidateRect.map(Self.rect(from:)))
+                let areaDeltaValue: Double? = currentArea > 0
+                    ? areaDelta(candidate: candidateRect, current: ledger?.currentSafeLayoutRect)
+                    : nil
+                let decisionSignals: [MangaKoharuRenderSpriteFitSignal] = [
+                    signal("candidateSource", candidateSource, source: "koharuRenderSpriteFitPlannerReport"),
+                    signal("spriteContained", contained.map(String.init) ?? "nil", source: "blocks.renderNonTransparentBounds"),
+                    signal("candidateVerdict", verdict, source: "koharuRenderSpriteFitPlannerReport")
+                ]
+                let evaluationSignals: [MangaKoharuRenderSpriteFitSignal] = [
+                    signal("blockPassed", String(block.blockPassed), source: "blocks.blockPassed", decision: false, evaluation: true)
+                ]
+                return MangaKoharuRenderSpriteLayoutCandidateLedger(
+                    candidateID: candidateID,
+                    blockIndex: block.index,
+                    candidateSource: candidateSource,
+                    candidateRect: candidateRect,
+                    candidateArea: candidateArea,
+                    currentSpriteBounds: ledger?.renderNonTransparentBounds,
+                    spriteContained: contained,
+                    areaDeltaVsCurrent: areaDeltaValue,
+                    overlapsSiblingCurrentSafeRect: currentOverlap,
+                    overlapsSiblingDistanceFieldRect: distanceOverlap,
+                    relatedSeamCandidateIDs: relatedSeams,
+                    candidateVerdict: verdict,
+                    promotionBlockedReasons: blockers,
+                    nextAction: action,
+                    decisionSignals: decisionSignals,
+                    evaluationSignals: evaluationSignals,
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            }
+
+            var layoutCandidateLedgers: [MangaKoharuRenderSpriteLayoutCandidateLedger] = []
+            for block in blocks {
+                let ledger = blockLedgerByIndex[block.index]
+                let siblings = siblingIndexesByBlock[block.index] ?? []
+                let siblingCurrentRects = siblings.compactMap { blockLedgerByIndex[$0]?.currentSafeLayoutRect }
+                let siblingDistanceRects = siblings.compactMap { blockLedgerByIndex[$0]?.distanceFieldSafeRect }
+                let currentArea = area(ledger?.currentSafeLayoutRect.map(Self.rect(from:)))
+                let candidates: [(String, [Double]?)] = [
+                    ("currentSafeLayoutRect", ledger?.currentSafeLayoutRect),
+                    ("distanceFieldSafeRect", ledger?.distanceFieldSafeRect),
+                    ("bubbleIndexShadowSafeRect", ledger?.bubbleIndexShadowSafeRect)
+                ]
+                for (source, rect) in candidates {
+                    let candidateLedger = makeLayoutCandidateLedger(
+                        block: block,
+                        ledger: ledger,
+                        candidateSource: source,
+                        candidateRect: rect,
+                        siblingCurrentRects: siblingCurrentRects,
+                        siblingDistanceRects: siblingDistanceRects,
+                        currentArea: currentArea
+                    )
+                    layoutCandidateLedgers.append(candidateLedger)
+                }
+            }
+            layoutCandidateLedgers.sort { lhs, rhs in
+                lhs.blockIndex == rhs.blockIndex ? lhs.candidateID < rhs.candidateID : lhs.blockIndex < rhs.blockIndex
+            }
+
+            let siblingLedgers: [MangaKoharuRenderSpriteSiblingFitLedger] = blocksByBubble
+                .filter { $0.value.count > 1 }
+                .map { bubbleID, groupBlocks in
+                    let indexes = groupBlocks.map(\.index)
+                    let ledgers = indexes.compactMap { blockLedgerByIndex[$0] }
+                    let currentOverlap = maxOverlap(ledgers.compactMap(\.currentSafeLayoutRect))
+                    let distanceOverlap = maxOverlap(ledgers.compactMap(\.distanceFieldSafeRect))
+                    let spriteOverlap = maxOverlap(ledgers.compactMap(\.renderNonTransparentBounds))
+                    let seamIDs = uniqueSortedStrings(ledgers.flatMap(\.relatedSeamCandidateIDs))
+                    let verdict: String
+                    if !seamIDs.isEmpty {
+                        verdict = "seamConstrainedSiblingGroup"
+                    } else if currentOverlap >= 0.08 {
+                        verdict = "currentSafeRectOverlapRisk"
+                    } else if distanceOverlap >= 0.08 {
+                        verdict = "distanceFieldSiblingOverlapRisk"
+                    } else if koharuBubbleIndexShadowLedgerReport == nil {
+                        verdict = "needsRealBubbleMaskArtifact"
+                    } else {
+                        verdict = "siblingPartitionStable"
+                    }
+                    let fitVerdict = (verdict == "siblingPartitionStable") ? "currentSiblingFitStable" : "siblingOverlapRisk"
+                    let action = verdict == "needsRealBubbleMaskArtifact" || verdict == "seamConstrainedSiblingGroup"
+                        ? "collectRealBubbleMaskArtifact"
+                        : (verdict == "siblingPartitionStable" ? "keepSiblingFitReportOnly" : "manualReviewOnly")
+                    return MangaKoharuRenderSpriteSiblingFitLedger(
+                        siblingGroupID: "RSF-\(bubbleID)",
+                        bubbleID: bubbleID,
+                        blockIndexes: indexes,
+                        currentSafeRectMaxOverlapRatio: currentOverlap,
+                        distanceFieldSafeRectMaxOverlapRatio: distanceOverlap,
+                        currentSpriteBoundsOverlapRatio: spriteOverlap,
+                        relatedSeamCandidateIDs: seamIDs,
+                        sameBubbleSiblingPartitionVerdict: verdict,
+                        fitVerdict: fitVerdict,
+                        affectedBlocks: verdict == "siblingPartitionStable" ? [] : indexes,
+                        nextAction: action,
+                        decisionSignals: [
+                            signal("currentSafeRectMaxOverlapRatio", formatted(currentOverlap), source: "blocks.safeLayoutRect"),
+                            signal("distanceFieldSafeRectMaxOverlapRatio", formatted(distanceOverlap), source: "koharuDistanceFieldSafeAreaReport"),
+                            signal("sameBubbleSiblingPartitionVerdict", verdict, source: "koharuRenderSpriteFitPlannerReport")
+                        ],
+                        evaluationSignals: [
+                            signal("blockCount", String(indexes.count), source: "blocks.bubbleID", decision: false, evaluation: true)
+                        ],
+                        groundTruthUsedForDecision: false,
+                        wouldChangeMainFlow: false,
+                        diagnosticOnly: true
+                    )
+                }
+                .sorted { $0.bubbleID < $1.bubbleID }
+
+            let fontRiskBlocks = uniqueSorted(blockLedgers.filter {
+                $0.fontBudgetVerdict == "fontBudgetTight" || $0.fontBudgetVerdict == "fontBudgetOverflowRisk"
+            }.map(\.blockIndex))
+            let spriteRiskBlocks = uniqueSorted(blockLedgers.filter {
+                $0.spriteContainedByCurrentSafeRect == false || $0.spriteContainedByDistanceFieldSafeRect == false
+            }.map(\.blockIndex))
+            let siblingRiskBlocks = uniqueSorted(blockLedgers.filter(\.siblingOverlapRisk).map(\.blockIndex) + siblingLedgers.flatMap(\.affectedBlocks))
+            let failureRiskBlocks = uniqueSorted(blockLedgers.filter {
+                $0.failureOverlayFitVerdict == "failureFallbackLongTextRisk" || $0.failureOverlayFitVerdict == "failureFallbackSpriteContainmentRisk"
+            }.map(\.blockIndex))
+            let seamBlocks = uniqueSorted(blockLedgers.filter { !$0.relatedSeamCandidateIDs.isEmpty }.map(\.blockIndex))
+            let needsRealBubbleMaskBlocks = uniqueSorted(blockLedgers.filter { $0.nextAction == "collectRealBubbleMaskArtifact" }.map(\.blockIndex) + siblingLedgers.filter { $0.nextAction == "collectRealBubbleMaskArtifact" }.flatMap(\.blockIndexes))
+            let renderLockedBlocks = uniqueSorted(blockLedgers.filter { $0.renderLockVerdict == "renderLocked" || $0.fitVerdict == "currentSpriteFits" }.map(\.blockIndex))
+            let manualReviewBlocks = uniqueSorted(blockLedgers.filter { $0.nextAction == "manualReviewOnly" }.map(\.blockIndex) + siblingLedgers.filter { $0.nextAction == "manualReviewOnly" }.flatMap(\.blockIndexes))
+
+            func gate(
+                _ id: String,
+                _ name: String,
+                _ scope: String,
+                _ status: String,
+                _ threshold: String,
+                _ affected: [Int],
+                _ failure: String,
+                _ action: String,
+                _ signals: [MangaKoharuRenderSpriteFitSignal]
+            ) -> MangaKoharuRenderSpriteFitGate {
+                MangaKoharuRenderSpriteFitGate(
+                    gateID: id,
+                    gateName: name,
+                    scope: scope,
+                    status: status,
+                    threshold: threshold,
+                    affectedBlocks: uniqueSorted(affected),
+                    decisionSignals: signals,
+                    failureMeans: failure,
+                    recommendedAction: action,
+                    groundTruthUsedForDecision: false
+                )
+            }
+
+            let gateLedger = [
+                gate("G-render-sprite-fit-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "fit planner mutates renderer, safeLayoutRect, OCR, translation, or block pass state", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuRenderSpriteFitPlannerReport")]),
+                gate("G-render-sprite-fit-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlocks, "ground truth influences fit verdict, candidate choice, sibling risk, gate, or next action", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuRenderSpriteFitPlannerReport")]),
+                gate("G-render-sprite-fit-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlocks, "some final blocks lack render sprite fit ledger rows", "restoreRenderSpriteFitBlockLedger", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuRenderSpriteFitPlannerReport")]),
+                gate("G-render-sprite-fit-layout-candidates", "Layout candidates", "RenderedSprites", layoutCandidateLedgers.count >= blocks.count ? "passed" : "warning", "layoutCandidateCount>=totalBlocksDetected", allBlocks, "layout candidate ledger is missing current/distance/bubble-index candidates", "restoreLayoutCandidateLedger", [signal("layoutCandidateCount", String(layoutCandidateLedgers.count), source: "koharuRenderSpriteFitPlannerReport")]),
+                gate("G-render-sprite-fit-current-render-lock-linked", "Render lock linked", "FinalRender", koharuRenderRegressionLockReport == nil ? "warning" : "passed", "koharuRenderRegressionLockReport available as upstream evidence", allBlocks, "fit planner ignores render regression lock or changes overlay renderer", "inspectRenderLockGateLedger", [signal("renderLockAvailable", String(koharuRenderRegressionLockReport != nil), source: "koharuRenderRegressionLockReport")]),
+                gate("G-render-sprite-fit-distance-field-linked", "DistanceField linked", "BubbleIndex", koharuDistanceFieldSafeAreaReport == nil ? "warning" : "passed", "koharuDistanceFieldSafeAreaReport available", allBlocks, "fit planner cannot compare distance-field candidate rects", "restoreDistanceFieldSafeAreaReport", [signal("distanceFieldAvailable", String(koharuDistanceFieldSafeAreaReport != nil), source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-render-sprite-fit-bubble-index-linked", "BubbleIndex linked", "BubbleIndex", koharuBubbleIndexShadowLedgerReport == nil ? "warning" : "passed", "koharuBubbleIndexShadowLedgerReport available", allBlocks, "fit planner cannot compare BubbleIndex shadow safe rects", "restoreBubbleIndexShadowLedgerReport", [signal("bubbleIndexAvailable", String(koharuBubbleIndexShadowLedgerReport != nil), source: "koharuBubbleIndexShadowLedgerReport")]),
+                gate("G-render-sprite-fit-seam-linked", "Seam linked", "BubbleMask", koharuBubbleAdjacencySeamReport == nil ? "warning" : "passed", "koharuBubbleAdjacencySeamReport available", seamBlocks, "fit planner hides seam-constrained layout risk", "restoreBubbleAdjacencySeamReport", [signal("seamReportAvailable", String(koharuBubbleAdjacencySeamReport != nil), source: "koharuBubbleAdjacencySeamReport")]),
+                gate("G-render-sprite-fit-failure-overlay-accounted", "Failure overlay accounted", "RenderedSprites", failureRiskBlocks.isEmpty ? "passed" : "warning", "failure fallback text fit risk is explicit", failureRiskBlocks, "failed blocks are silently skipped or their fallback text budget is hidden", "reviewFailureFallbackFit", [signal("failureOverlayRiskBlocks", joined(failureRiskBlocks), source: "koharuRenderSpriteFitPlannerReport")]),
+                gate("G-render-sprite-fit-no-renderer-mutation", "No renderer mutation", "FinalRender", "passed", "overlay renderer and PNG behavior unchanged", [], "fit planner writes back safeLayoutRect, glyph mask, background fill, or overlay PNG", "revertRendererMutation", [signal("proxyNotRealKoharuRenderer", "true", source: "koharuRenderSpriteFitPlannerReport")]),
+                gate("G-render-sprite-fit-ci-fast-ready", "CI fast ready", "ci-fast", "passed", "uses existing reports only", allBlocks, "fit planner adds OCR/LLM/full-only dependency", "keepCIFastReportOnly", [signal("inputReports", "blocks,koharuRenderRegressionLockReport,koharuBubbleIndexShadowLedgerReport,koharuDistanceFieldSafeAreaReport,koharuBubbleAdjacencySeamReport", source: "koharuRenderSpriteFitPlannerReport")])
+            ]
+
+            let plannerVerdict: String
+            if koharuRenderRegressionLockReport == nil {
+                plannerVerdict = "blockedByMissingRenderDiagnostics"
+            } else if !needsRealBubbleMaskBlocks.isEmpty {
+                plannerVerdict = "needsRealBubbleMaskArtifact"
+            } else if !manualReviewBlocks.isEmpty || !fontRiskBlocks.isEmpty || !siblingRiskBlocks.isEmpty || !failureRiskBlocks.isEmpty {
+                plannerVerdict = "manualReviewOnly"
+            } else if renderLockedBlocks.count == blocks.count {
+                plannerVerdict = "renderLockedNoPromotion"
+            } else if layoutCandidateLedgers.contains(where: { $0.candidateSource != "currentSafeLayoutRect" && $0.candidateVerdict == "containedButRequiresRendererTask" }) {
+                plannerVerdict = "reportOnlyLayoutCandidatesReady"
+            } else {
+                plannerVerdict = "renderSpriteFitLedgerReady"
+            }
+
+            return MangaKoharuRenderSpriteFitPlannerReport(
+                enabled: true,
+                source: "AITRANSProbe",
+                referencePipeline: "Koharu",
+                referenceConcept: "RenderedSprites.FontSizeSearch.SpriteFitBudget",
+                referenceWorkItemID: "WI-koharu-render-sprite-fit-planner",
+                evaluatedBlockCount: blocks.count,
+                layoutCandidateCount: layoutCandidateLedgers.count,
+                blockLedgerCount: blockLedgers.count,
+                siblingLedgerCount: siblingLedgers.count,
+                gateCount: gateLedger.count,
+                groundTruthUsedForDecision: false,
+                groundTruthUsedForEvaluationOnly: true,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true,
+                proxyNotRealKoharuRenderer: true,
+                proxyNotRealBubbleMask: true,
+                externalArtifactsRequiredForThisReport: false,
+                fitPlannerVerdict: plannerVerdict,
+                textSourceBreakdown: countBy(blockLedgers.map(\.textSourceForRender)),
+                layoutRectSourceBreakdown: countBy(blockLedgers.map(\.selectedReportOnlyFitRectSource)),
+                fitVerdictBreakdown: countBy(blockLedgers.map(\.fitVerdict)),
+                fontBudgetBreakdown: countBy(blockLedgers.map(\.fontBudgetVerdict)),
+                spriteContainmentBreakdown: countBy(blockLedgers.map { ledger in
+                    if ledger.spriteContainedByCurrentSafeRect == true && ledger.spriteContainedByDistanceFieldSafeRect == true { return "containedByBoth" }
+                    if ledger.spriteContainedByCurrentSafeRect == true { return "containedByCurrentOnly" }
+                    if ledger.spriteContainedByDistanceFieldSafeRect == true { return "containedByDistanceOnly" }
+                    return "uncontainedOrMissingSpriteBounds"
+                }),
+                siblingFitVerdictBreakdown: countBy(siblingLedgers.map(\.sameBubbleSiblingPartitionVerdict)),
+                failureOverlayFitBreakdown: countBy(blockLedgers.map(\.failureOverlayFitVerdict)),
+                nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
+                fontBudgetRiskBlocks: fontRiskBlocks,
+                spriteContainmentRiskBlocks: spriteRiskBlocks,
+                siblingOverlapRiskBlocks: siblingRiskBlocks,
+                failureOverlayRiskBlocks: failureRiskBlocks,
+                seamConstrainedBlocks: seamBlocks,
+                needsRealBubbleMaskBlocks: needsRealBubbleMaskBlocks,
+                renderLockedBlocks: renderLockedBlocks,
+                manualReviewBlocks: manualReviewBlocks,
+                layoutCandidateLedgers: layoutCandidateLedgers,
+                blockLedgers: blockLedgers,
+                siblingLedgers: siblingLedgers,
+                gateLedger: gateLedger,
+                notes: [
+                    "koharuRenderSpriteFitPlannerReport is a report-only Koharu RenderedSprites fit planner ledger.",
+                    "It estimates font budget, line pressure, layout candidates, sibling overlap, seam constraints, sprite containment, and failure fallback fit from existing render diagnostics and Koharu shadow reports only.",
+                    "Ground truth appears only in evaluationSignals; fit verdicts, layout candidate status, sibling fit, gates, and nextAction use ground-truth-free render and geometry signals.",
+                    "The report does not add OCR or LLM calls and does not change OCR, translation input, safeLayoutRect, DistanceField safe rect, glyphMaskFillRects, background fill, overlay rendering, blockPassed, failureCategory, active artifacts, currentBlockSource, or PNG output behavior."
+                ]
+            )
+        }.value
+    }
+
     private static func makeApproximateBubbleMaskRuntime(
         image: CGImage,
         bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics
@@ -2717,6 +3252,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
         koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil,
         koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport? = nil,
+        koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -2822,6 +3358,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let koharuBubbleSeamBlockLedgerByBlock = Dictionary(
             uniqueKeysWithValues: (koharuBubbleAdjacencySeamReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let renderSpriteFitByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuRenderSpriteFitPlannerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
         let translationFloorNoisyByBlock = Dictionary(
             uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
@@ -3050,6 +3589,7 @@ struct MangaOverlayProbeService: Sendable {
             let koharuBubbleIndexBlockLedger = koharuBubbleIndexBlockLedgerByBlock[block.index]
             let koharuDistanceFieldBlockLedger = koharuDistanceFieldBlockLedgerByBlock[block.index]
             let koharuBubbleSeamBlockLedger = koharuBubbleSeamBlockLedgerByBlock[block.index]
+            let renderSpriteFit = renderSpriteFitByBlock[block.index]
             let translationFloorNoisy = translationFloorNoisyByBlock[block.index]
             let renderLock = renderLockByBlock[block.index]
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
@@ -3122,6 +3662,7 @@ struct MangaOverlayProbeService: Sendable {
             koharuBubbleIndexBlockLedger: block=\(koharuBubbleIndexBlockLedger.map { String($0.blockIndex) } ?? "nil") bubbleID=\(koharuBubbleIndexBlockLedger?.bubbleID.map(String.init) ?? "nil") shadowBubbleID=\(koharuBubbleIndexBlockLedger?.shadowBubbleID.map(String.init) ?? "nil") assignment=\(koharuBubbleIndexBlockLedger?.assignmentVerdict ?? "nil") safeArea=\(koharuBubbleIndexBlockLedger?.safeAreaVerdict ?? "nil") sibling=\(koharuBubbleIndexBlockLedger?.siblingPartitionVerdict ?? "nil") render=\(koharuBubbleIndexBlockLedger?.renderLockVerdict ?? "nil") next=\(koharuBubbleIndexBlockLedger?.nextAction ?? "nil")
             distanceFieldBlockLedger: block=\(koharuDistanceFieldBlockLedger.map { String($0.blockIndex) } ?? "nil") bubbleID=\(koharuDistanceFieldBlockLedger?.bubbleID.map(String.init) ?? "nil") currentIoU=\(koharuDistanceFieldBlockLedger?.currentVsDistanceSafeRectIoU?.formatted(.number.precision(.fractionLength(3))) ?? "nil") spriteCurrent=\(koharuDistanceFieldBlockLedger?.spriteContainedByCurrentSafeRect.map(String.init) ?? "nil") spriteDistance=\(koharuDistanceFieldBlockLedger?.spriteContainedByDistanceSafeRect.map(String.init) ?? "nil") verdict=\(koharuDistanceFieldBlockLedger?.safeRectComparisonVerdict ?? "nil") next=\(koharuDistanceFieldBlockLedger?.nextAction ?? "nil")
             bubbleSeamBlockLedger: block=\(koharuBubbleSeamBlockLedger.map { String($0.blockIndex) } ?? "nil") bubbleID=\(koharuBubbleSeamBlockLedger?.bubbleID.map(String.init) ?? "nil") pairs=[\(koharuBubbleSeamBlockLedger?.relatedPairIDs.joined(separator: ",") ?? "nil")] seams=[\(koharuBubbleSeamBlockLedger?.relatedSeamCandidateIDs.joined(separator: ",") ?? "nil")] risk=\(koharuBubbleSeamBlockLedger?.blockSeamRisk ?? "nil") verdict=\(koharuBubbleSeamBlockLedger?.blockSeamVerdict ?? "nil") next=\(koharuBubbleSeamBlockLedger?.nextAction ?? "nil")
+            renderSpriteFit: block=\(renderSpriteFit.map { String($0.blockIndex) } ?? "nil") source=\(renderSpriteFit?.textSourceForRender ?? "nil") chars=\(renderSpriteFit.map { String($0.renderTextCharacterCount) } ?? "nil") cjk=\(renderSpriteFit.map { String($0.renderTextCJKCount) } ?? "nil") latin=\(renderSpriteFit.map { String($0.renderTextLatinCount) } ?? "nil") rectSource=\(renderSpriteFit?.selectedReportOnlyFitRectSource ?? "nil") fontBudget=\(renderSpriteFit?.fontBudgetVerdict ?? "nil") fit=\(renderSpriteFit?.fitVerdict ?? "nil") failureOverlayFit=\(renderSpriteFit?.failureOverlayFitVerdict ?? "nil") seams=[\(renderSpriteFit?.relatedSeamCandidateIDs.joined(separator: ",") ?? "nil")] siblings=[\(renderSpriteFit?.sameBubbleSiblingBlockIndexes.map(String.init).joined(separator: ",") ?? "nil")] next=\(renderSpriteFit?.nextAction ?? "nil")
             translationFloorNoisyBlock: modelFloorLimited=\(translationFloorNoisy.map { String($0.modelFloorLimited) } ?? "nil") ocrInputSuspect=\(translationFloorNoisy.map { String($0.ocrInputSuspect) } ?? "nil") languageQualityFailure=\(translationFloorNoisy.map { String($0.translationLanguageQualityFailure) } ?? "nil") routingOutcome=\(translationFloorNoisy?.routingComparisonOutcome ?? "nil") nextAction=\(translationFloorNoisy?.recommendedNextAction ?? "nil")
             renderLock: status=\(renderLock?.renderStatus ?? "nil") failureOverlayRequired=\(renderLock.map { String($0.failureOverlayRequired) } ?? "nil") failureOverlayLocked=\(renderLock.map { String($0.failureOverlayLocked) } ?? "nil") safeLayoutSource=\(renderLock?.safeLayoutSource ?? "nil") maskOverflowPixels=\(renderLock.map { String($0.renderMaskOverflowPixelCount) } ?? "nil") truncated=\(renderLock.map { String($0.renderTextTruncated) } ?? "nil") nextAction=\(renderLock?.recommendedNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
@@ -3208,6 +3749,13 @@ struct MangaOverlayProbeService: Sendable {
         let bubbleSeamCandidateSummary = (koharuBubbleAdjacencySeamReport?.seamCandidateLedgers ?? [])
             .map { "bubbleSeamCandidate: id=\($0.seamCandidateID) parent=\($0.parentBubbleID.map(String.init) ?? "nil") orientation=\($0.seamOrientation) blocks=[\($0.blockIndexes.map(String.init).joined(separator: ","))] score=\($0.seamScore.formatted(.number.precision(.fractionLength(3)))) verdict=\($0.seamCandidateVerdict) next=\($0.nextAction)" }
             .joined(separator: "\n")
+        let renderSpriteLayoutCandidateSummary = (koharuRenderSpriteFitPlannerReport?.layoutCandidateLedgers ?? [])
+            .prefix(40)
+            .map { "renderSpriteLayoutCandidate: id=\($0.candidateID) block=\($0.blockIndex) source=\($0.candidateSource) area=\($0.candidateArea.formatted(.number.precision(.fractionLength(1)))) contained=\($0.spriteContained.map(String.init) ?? "nil") verdict=\($0.candidateVerdict) next=\($0.nextAction)" }
+            .joined(separator: "\n")
+        let renderSpriteSiblingFitSummary = (koharuRenderSpriteFitPlannerReport?.siblingLedgers ?? [])
+            .map { "renderSpriteSiblingFit: group=\($0.siblingGroupID) bubbleID=\($0.bubbleID) blocks=[\($0.blockIndexes.map(String.init).joined(separator: ","))] currentOverlap=\($0.currentSafeRectMaxOverlapRatio.formatted(.number.precision(.fractionLength(3)))) distanceOverlap=\($0.distanceFieldSafeRectMaxOverlapRatio.formatted(.number.precision(.fractionLength(3)))) verdict=\($0.sameBubbleSiblingPartitionVerdict) next=\($0.nextAction)" }
+            .joined(separator: "\n")
         let externalSummary = """
         koharuNativeAlgorithmReplayMatrixReport: enabled=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.stageCount) } ?? "nil") candidates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil") blockRoutes=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict ?? "nil")
         nativeReplayStageStatus=\(koharuNativeAlgorithmReplayMatrixReport?.stageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -3236,6 +3784,14 @@ struct MangaOverlayProbeService: Sendable {
         bubbleSeamNextAction=\(koharuBubbleAdjacencySeamReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         \(bubbleAdjacencyPairSummary.isEmpty ? "bubbleAdjacencyPair: nil" : bubbleAdjacencyPairSummary)
         \(bubbleSeamCandidateSummary.isEmpty ? "bubbleSeamCandidate: nil" : bubbleSeamCandidateSummary)
+        koharuRenderSpriteFitPlannerReport: enabled=\(koharuRenderSpriteFitPlannerReport.map { String($0.enabled) } ?? "nil") blocks=\(koharuRenderSpriteFitPlannerReport.map { String($0.blockLedgerCount) } ?? "nil") layoutCandidates=\(koharuRenderSpriteFitPlannerReport.map { String($0.layoutCandidateCount) } ?? "nil") siblings=\(koharuRenderSpriteFitPlannerReport.map { String($0.siblingLedgerCount) } ?? "nil") gates=\(koharuRenderSpriteFitPlannerReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuRenderSpriteFitPlannerReport?.fitPlannerVerdict ?? "nil")
+        renderSpriteTextSource=\(koharuRenderSpriteFitPlannerReport?.textSourceBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        renderSpriteFitVerdict=\(koharuRenderSpriteFitPlannerReport?.fitVerdictBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        renderSpriteFontBudget=\(koharuRenderSpriteFitPlannerReport?.fontBudgetBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        renderSpriteFailureOverlayFit=\(koharuRenderSpriteFitPlannerReport?.failureOverlayFitBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        renderSpriteNextAction=\(koharuRenderSpriteFitPlannerReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        \(renderSpriteLayoutCandidateSummary.isEmpty ? "renderSpriteLayoutCandidate: nil" : renderSpriteLayoutCandidateSummary)
+        \(renderSpriteSiblingFitSummary.isEmpty ? "renderSpriteSiblingFit: nil" : renderSpriteSiblingFitSummary)
         koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
         workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
