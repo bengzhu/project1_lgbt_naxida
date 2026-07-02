@@ -759,6 +759,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuExternalArtifactRequestPacketReport: MangaKoharuExternalArtifactRequestPacketReport? = nil,
         koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport? = nil,
         koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
+        koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
@@ -831,6 +832,7 @@ struct MangaOverlayProbeService: Sendable {
                 koharuExternalArtifactRequestPacketReport: koharuExternalArtifactRequestPacketReport,
                 koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
                 koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
+                koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
                 translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                 koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                 bubbleMaskReport: bubbleMaskReport,
@@ -1116,6 +1118,610 @@ struct MangaOverlayProbeService: Sendable {
                     "lightweight BubbleMask instance-ID approximation, not a real segmentation model",
                     "mask is used for diagnostics and safe-layout preference only",
                     "TextRegion crop adoption guardrails are unchanged"
+                ]
+            )
+        }.value
+    }
+
+    func makeKoharuDistanceFieldSafeAreaReport(
+        image: CGImage,
+        blocks: [MangaOverlayProbeBlock],
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
+        koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport?,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
+    ) async -> MangaKoharuDistanceFieldSafeAreaReport {
+        await Task.detached(priority: .userInitiated) {
+            struct DistanceSummary {
+                var bubbleID: Int
+                var bbox: [Double]
+                var maskPixelCount: Int
+                var edgePixelCount: Int
+                var safeThresholdPx: Double
+                var maxDistancePx: Double
+                var maxDistancePoint: [Double]?
+                var centroidPoint: [Double]?
+                var centroidDistancePx: Double?
+                var safePixelCount: Int
+                var safePixelBBox: [Double]?
+                var maximumSafeRect: [Double]?
+                var maximumSafeRectArea: Double
+                var fallbackReason: String?
+            }
+
+            func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
+            func joined(_ values: [Int]) -> String { uniqueSorted(values).map(String.init).joined(separator: ",") }
+            func countBy(_ values: [String]) -> [String: Int] { values.reduce(into: [:]) { $0[$1, default: 0] += 1 } }
+            func area(_ rect: CGRect?) -> Double {
+                guard let rect, !rect.isNull, rect.width > 0, rect.height > 0 else { return 0 }
+                return Double(rect.width * rect.height)
+            }
+            func rectIoU(_ lhs: [Double]?, _ rhs: [Double]?) -> Double? {
+                guard let lhs, let rhs else { return nil }
+                let lhsRect = Self.rect(from: lhs)
+                let rhsRect = Self.rect(from: rhs)
+                guard area(lhsRect) > 0, area(rhsRect) > 0 else { return nil }
+                let intersection = lhsRect.intersection(rhsRect)
+                let intersectionArea = area(intersection)
+                let unionArea = area(lhsRect) + area(rhsRect) - intersectionArea
+                guard unionArea > 0 else { return nil }
+                return intersectionArea / unionArea
+            }
+            func containment(_ inner: [Double]?, in outer: [Double]?) -> Bool? {
+                guard let inner, let outer else { return nil }
+                return Self.rectContainmentRatio(inner: Self.rect(from: inner), outer: Self.rect(from: outer)) >= 0.995
+            }
+            func overlapRatio(_ lhs: [Double], _ rhs: [Double]) -> Double {
+                let lhsRect = Self.rect(from: lhs)
+                let rhsRect = Self.rect(from: rhs)
+                guard area(lhsRect) > 0, area(rhsRect) > 0 else { return 0 }
+                return area(lhsRect.intersection(rhsRect)) / max(min(area(lhsRect), area(rhsRect)), 1)
+            }
+            func maxOverlap(_ rects: [[Double]]) -> Double {
+                guard rects.count > 1 else { return 0 }
+                var result = 0.0
+                for lhs in 0..<rects.count {
+                    for rhs in (lhs + 1)..<rects.count {
+                        result = max(result, overlapRatio(rects[lhs], rects[rhs]))
+                    }
+                }
+                return result
+            }
+            func signal(
+                _ name: String,
+                _ value: String,
+                source: String,
+                decision: Bool = true,
+                evaluation: Bool = false
+            ) -> MangaKoharuDistanceFieldSignal {
+                MangaKoharuDistanceFieldSignal(
+                    name: name,
+                    value: value,
+                    sourceReport: source,
+                    groundTruthFreeDecisionSignal: decision,
+                    groundTruthUsedForEvaluationOnly: evaluation
+                )
+            }
+
+            func maximumSafeRect(in safe: [Bool], width: Int, height: Int, originX: Int, originY: Int) -> CGRect? {
+                guard width > 0, height > 0 else { return nil }
+                var heights = [Int](repeating: 0, count: width)
+                var best = CGRect.zero
+                var bestArea = 0
+                for y in 0..<height {
+                    for x in 0..<width {
+                        heights[x] = safe[y * width + x] ? heights[x] + 1 : 0
+                    }
+                    var stack: [Int] = []
+                    for x in 0...width {
+                        let current = x == width ? 0 : heights[x]
+                        while let last = stack.last, heights[last] > current {
+                            _ = stack.removeLast()
+                            let h = heights[last]
+                            let start = (stack.last ?? -1) + 1
+                            let rectWidth = x - start
+                            let rectArea = h * rectWidth
+                            if rectArea > bestArea {
+                                bestArea = rectArea
+                                best = CGRect(x: originX + start, y: originY + y - h + 1, width: rectWidth, height: h)
+                            }
+                        }
+                        stack.append(x)
+                    }
+                }
+                return bestArea > 0 ? best.integral : nil
+            }
+
+            func distanceSummary(for bubble: MangaOverlayProbeBubble, runtime: MangaOverlayBubbleMaskRuntime) -> DistanceSummary {
+                let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+                let bubbleRect = Self.clamp(Self.rect(from: bubble.bbox).integral, to: imageBounds)
+                let minX = max(0, Int(bubbleRect.minX))
+                let maxX = min(runtime.width, Int(bubbleRect.maxX))
+                let minY = max(0, Int(bubbleRect.minY))
+                let maxY = min(runtime.height, Int(bubbleRect.maxY))
+                let localWidth = max(0, maxX - minX)
+                let localHeight = max(0, maxY - minY)
+                guard localWidth > 0, localHeight > 0 else {
+                    return DistanceSummary(bubbleID: bubble.id, bbox: bubble.bbox, maskPixelCount: 0, edgePixelCount: 0, safeThresholdPx: 0, maxDistancePx: 0, maxDistancePoint: nil, centroidPoint: nil, centroidDistancePx: nil, safePixelCount: 0, safePixelBBox: nil, maximumSafeRect: nil, maximumSafeRectArea: 0, fallbackReason: "emptyBubbleBBox")
+                }
+
+                let targetID = bubble.id + 1
+                var mask = [Bool](repeating: false, count: localWidth * localHeight)
+                var maskPixels: [(x: Int, y: Int)] = []
+                maskPixels.reserveCapacity(localWidth * localHeight / 2)
+                for y in 0..<localHeight {
+                    for x in 0..<localWidth where runtime.ids[(minY + y) * runtime.width + (minX + x)] == targetID {
+                        mask[y * localWidth + x] = true
+                        maskPixels.append((x, y))
+                    }
+                }
+                guard !maskPixels.isEmpty else {
+                    return DistanceSummary(bubbleID: bubble.id, bbox: bubble.bbox, maskPixelCount: 0, edgePixelCount: 0, safeThresholdPx: 0, maxDistancePx: 0, maxDistancePoint: nil, centroidPoint: nil, centroidDistancePx: nil, safePixelCount: 0, safePixelBBox: nil, maximumSafeRect: nil, maximumSafeRectArea: 0, fallbackReason: "emptyProxyMask")
+                }
+
+                let large = 1_000_000
+                var distances = [Int](repeating: large, count: localWidth * localHeight)
+                var edgeCount = 0
+                for pixel in maskPixels {
+                    let x = pixel.x
+                    let y = pixel.y
+                    let index = y * localWidth + x
+                    var edge = false
+                    for dy in -1...1 {
+                        for dx in -1...1 where dx != 0 || dy != 0 {
+                            let nx = x + dx
+                            let ny = y + dy
+                            if nx < 0 || ny < 0 || nx >= localWidth || ny >= localHeight || !mask[ny * localWidth + nx] {
+                                edge = true
+                            }
+                        }
+                    }
+                    if edge {
+                        edgeCount += 1
+                        distances[index] = 0
+                    }
+                }
+
+                if edgeCount == 0 {
+                    for pixel in maskPixels {
+                        distances[pixel.y * localWidth + pixel.x] = 0
+                    }
+                } else {
+                    for y in 0..<localHeight {
+                        for x in 0..<localWidth where mask[y * localWidth + x] {
+                            let index = y * localWidth + x
+                            if x > 0 { distances[index] = min(distances[index], distances[index - 1] + 10) }
+                            if y > 0 { distances[index] = min(distances[index], distances[index - localWidth] + 10) }
+                            if x > 0 && y > 0 { distances[index] = min(distances[index], distances[index - localWidth - 1] + 14) }
+                            if x + 1 < localWidth && y > 0 { distances[index] = min(distances[index], distances[index - localWidth + 1] + 14) }
+                        }
+                    }
+                    if localHeight > 0 {
+                        for y in stride(from: localHeight - 1, through: 0, by: -1) {
+                            for x in stride(from: localWidth - 1, through: 0, by: -1) where mask[y * localWidth + x] {
+                                let index = y * localWidth + x
+                                if x + 1 < localWidth { distances[index] = min(distances[index], distances[index + 1] + 10) }
+                                if y + 1 < localHeight { distances[index] = min(distances[index], distances[index + localWidth] + 10) }
+                                if x + 1 < localWidth && y + 1 < localHeight { distances[index] = min(distances[index], distances[index + localWidth + 1] + 14) }
+                                if x > 0 && y + 1 < localHeight { distances[index] = min(distances[index], distances[index + localWidth - 1] + 14) }
+                            }
+                        }
+                    }
+                }
+
+                var maxDistance = 0
+                var maxPoint: (x: Int, y: Int)?
+                var sumX = 0
+                var sumY = 0
+                let threshold = max(3.0, Double(min(localWidth, localHeight)) * 0.12)
+                var safe = [Bool](repeating: false, count: localWidth * localHeight)
+                var safeCount = 0
+                var safeMinX = localWidth
+                var safeMinY = localHeight
+                var safeMaxX = -1
+                var safeMaxY = -1
+                for pixel in maskPixels {
+                    let index = pixel.y * localWidth + pixel.x
+                    let distance = distances[index]
+                    sumX += pixel.x
+                    sumY += pixel.y
+                    if distance > maxDistance {
+                        maxDistance = distance
+                        maxPoint = pixel
+                    }
+                    if Double(distance) / 10.0 >= threshold {
+                        safe[index] = true
+                        safeCount += 1
+                        safeMinX = min(safeMinX, pixel.x)
+                        safeMinY = min(safeMinY, pixel.y)
+                        safeMaxX = max(safeMaxX, pixel.x)
+                        safeMaxY = max(safeMaxY, pixel.y)
+                    }
+                }
+
+                let centroidX = Int((Double(sumX) / Double(maskPixels.count)).rounded())
+                let centroidY = Int((Double(sumY) / Double(maskPixels.count)).rounded())
+                let centroidIndex = centroidY >= 0 && centroidY < localHeight && centroidX >= 0 && centroidX < localWidth
+                    ? centroidY * localWidth + centroidX
+                    : nil
+                let centroidDistance = centroidIndex.flatMap { mask[$0] ? Double(distances[$0]) / 10.0 : nil }
+                let safeBBox: CGRect? = safeCount > 0
+                    ? CGRect(x: minX + safeMinX, y: minY + safeMinY, width: safeMaxX - safeMinX + 1, height: safeMaxY - safeMinY + 1)
+                    : nil
+                let maxRect = maximumSafeRect(in: safe, width: localWidth, height: localHeight, originX: minX, originY: minY)
+                let fallbackReason = safeCount == 0 ? "safePixelThresholdTooHighForProxyMask" : (maxRect == nil ? "maximumSafeRectUnavailable" : nil)
+                return DistanceSummary(
+                    bubbleID: bubble.id,
+                    bbox: bubble.bbox,
+                    maskPixelCount: maskPixels.count,
+                    edgePixelCount: edgeCount,
+                    safeThresholdPx: threshold,
+                    maxDistancePx: Double(maxDistance) / 10.0,
+                    maxDistancePoint: maxPoint.map { [Double(minX + $0.x), Double(minY + $0.y)] },
+                    centroidPoint: [Double(minX + centroidX), Double(minY + centroidY)],
+                    centroidDistancePx: centroidDistance,
+                    safePixelCount: safeCount,
+                    safePixelBBox: safeBBox.map(Self.bboxArray(from:)),
+                    maximumSafeRect: maxRect.map(Self.bboxArray(from:)),
+                    maximumSafeRectArea: area(maxRect),
+                    fallbackReason: fallbackReason
+                )
+            }
+
+            let runtime = Self.makeApproximateBubbleMaskRuntime(image: image, bubbleGeometry: bubbleGeometry)
+            let summaries = Dictionary(uniqueKeysWithValues: bubbleGeometry.bubbles.map { bubble in
+                (bubble.id, distanceSummary(for: bubble, runtime: runtime))
+            })
+            let maskInstancesByBubble = Dictionary(uniqueKeysWithValues: (bubbleMaskReport?.instances ?? []).map { ($0.bubbleID, $0) })
+            let bubbleIndexByBlock = Dictionary(uniqueKeysWithValues: (koharuBubbleIndexShadowLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) })
+            let renderByBlock = Dictionary(uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) })
+            let splitCandidates = bubbleSplitCandidateReport?.diagnostics ?? []
+            let splitCandidatesByBlock = Dictionary(grouping: splitCandidates.flatMap { candidate in
+                candidate.seedBlockIndexes.map { (blockIndex: $0, candidate: candidate) }
+            }) { $0.blockIndex }
+            let blocksByBubble = Dictionary(grouping: blocks.compactMap { block -> (Int, MangaOverlayProbeBlock)? in
+                guard let bubbleID = block.bubbleID else { return nil }
+                return (bubbleID, block)
+            }) { $0.0 }.mapValues { $0.map(\.1).sorted { $0.index < $1.index } }
+
+            let siblingGroups = blocksByBubble
+                .filter { $0.value.count > 1 }
+                .map { (bubbleID: $0.key, blocks: $0.value) }
+                .sorted { $0.bubbleID < $1.bubbleID }
+            let siblingGroupIDsByBubble = Dictionary(uniqueKeysWithValues: siblingGroups.map { ($0.bubbleID, ["DF-\($0.bubbleID)"]) })
+
+            let bubbleLedgers: [MangaKoharuDistanceFieldBubbleLedger] = bubbleGeometry.bubbles.map { bubble in
+                let summary = summaries[bubble.id]
+                let currentMaskSafeRect = maskInstancesByBubble[bubble.id]?.safeRect ?? runtime.safeRectsByBubbleID[bubble.id].map(Self.bboxArray(from:))
+                let distanceRect = summary?.maximumSafeRect ?? currentMaskSafeRect
+                let iou = rectIoU(currentMaskSafeRect, distanceRect)
+                let maskPixels = max(summary?.maskPixelCount ?? 0, 1)
+                let safeCount = summary?.safePixelCount ?? 0
+                let verdict: String
+                if bubbleMaskReport == nil {
+                    verdict = "needsRealBubbleMask"
+                } else if safeCount == 0 {
+                    verdict = "fallbackToCurrentMaskSafeRect"
+                } else if (summary?.maximumSafeRect) != nil {
+                    verdict = "maximumSafeRectAvailable"
+                } else if (summary?.safePixelBBox) != nil {
+                    verdict = "safePixelBBoxFallback"
+                } else {
+                    verdict = "safeAreaTooSmall"
+                }
+                let action: String
+                if verdict == "needsRealBubbleMask" {
+                    action = "collectRealBubbleMaskArtifact"
+                } else if verdict == "fallbackToCurrentMaskSafeRect" || verdict == "safeAreaTooSmall" {
+                    action = "keepCurrentSafeLayoutReportOnly"
+                } else {
+                    action = "keepDistanceFieldSafeAreaReportOnly"
+                }
+                let blockIndexes = blocksByBubble[bubble.id]?.map(\.index) ?? []
+                return MangaKoharuDistanceFieldBubbleLedger(
+                    bubbleID: bubble.id,
+                    bbox: bubble.bbox,
+                    maskPixelCount: summary?.maskPixelCount ?? 0,
+                    edgePixelCount: summary?.edgePixelCount ?? 0,
+                    distanceMetric: "twoPassChamfer8Neighbor",
+                    safeThresholdPx: summary?.safeThresholdPx ?? 0,
+                    maxDistancePx: summary?.maxDistancePx ?? 0,
+                    maxDistancePoint: summary?.maxDistancePoint,
+                    centroidPoint: summary?.centroidPoint,
+                    centroidDistancePx: summary?.centroidDistancePx,
+                    safePixelCount: safeCount,
+                    safePixelCoverageRatio: Double(safeCount) / Double(maskPixels),
+                    safePixelBBox: summary?.safePixelBBox,
+                    maximumSafeRect: distanceRect,
+                    maximumSafeRectAlgorithm: summary?.maximumSafeRect == nil ? "safePixelBBoxOrCurrentMaskSafeRectFallback" : "histogramMaxRectangleOnSafePixels",
+                    maximumSafeRectArea: summary?.maximumSafeRectArea ?? area(currentMaskSafeRect.map(Self.rect(from:))),
+                    safeRectCoverageRatio: area(distanceRect.map(Self.rect(from:))) / Double(maskPixels),
+                    currentMaskSafeRect: currentMaskSafeRect,
+                    currentVsDistanceSafeRectIoU: iou,
+                    blockIndexes: blockIndexes,
+                    siblingGroupIDs: siblingGroupIDsByBubble[bubble.id] ?? [],
+                    safePixelVerdict: verdict,
+                    fallbackReason: summary?.fallbackReason,
+                    nextAction: action,
+                    decisionSignals: [
+                        signal("distanceMetric", "twoPassChamfer8Neighbor", source: "koharuDistanceFieldSafeAreaReport"),
+                        signal("safePixelCount", String(safeCount), source: "koharuDistanceFieldSafeAreaReport"),
+                        signal("currentVsDistanceSafeRectIoU", iou?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "koharuDistanceFieldSafeAreaReport")
+                    ],
+                    evaluationSignals: [
+                        signal("dialogueBlockCount", String(blocks.filter { blockIndexes.contains($0.index) && $0.bestGroundTruthType == "dialogue" }.count), source: "blocks.bestGroundTruthType", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            }.sorted { $0.bubbleID < $1.bubbleID }
+            let bubbleLedgerByID = Dictionary(uniqueKeysWithValues: bubbleLedgers.map { ($0.bubbleID, $0) })
+
+            let blockLedgers: [MangaKoharuDistanceFieldBlockLedger] = blocks.map { block in
+                let bubbleLedger = block.bubbleID.flatMap { bubbleLedgerByID[$0] }
+                let distanceRect = bubbleLedger?.maximumSafeRect ?? block.safeLayoutRect
+                let currentRect = block.safeLayoutRect
+                let currentArea = area(currentRect.map(Self.rect(from:)))
+                let distanceArea = area(distanceRect.map(Self.rect(from:)))
+                let areaDelta = currentArea > 0 ? (distanceArea - currentArea) / currentArea : nil
+                let iou = rectIoU(currentRect, distanceRect)
+                let spriteBounds = renderByBlock[block.index]?.renderNonTransparentBounds ?? block.renderNonTransparentBounds
+                let spriteCurrent = containment(spriteBounds, in: currentRect)
+                let spriteDistance = containment(spriteBounds, in: distanceRect)
+                let render = renderByBlock[block.index]
+                let renderVerdict = render?.renderStatus == "textTruncated" || render?.renderStatus == "maskOverflowUnresolved" || render?.renderStatus == "renderCollisionUnresolved" ? "renderIssueOpen" : "renderLocked"
+                let comparison: String
+                if renderVerdict == "renderIssueOpen" {
+                    comparison = "currentRectAlreadyRenderLocked"
+                } else if bubbleMaskReport == nil || block.bubbleID == nil {
+                    comparison = "needsRealBubbleMask"
+                } else if distanceRect == nil {
+                    comparison = "missingDistanceRect"
+                } else if spriteDistance == false {
+                    comparison = "distanceRectWouldRiskSprite"
+                } else if let iou, iou >= 0.86 {
+                    comparison = "distanceRectMatchesCurrent"
+                } else if let areaDelta, areaDelta > 0.12 {
+                    comparison = "distanceRectLargerReportOnly"
+                } else if let areaDelta, areaDelta < -0.12 {
+                    comparison = "distanceRectSmallerReportOnly"
+                } else {
+                    comparison = "manualReviewOnly"
+                }
+                let action: String
+                if comparison == "needsRealBubbleMask" {
+                    action = "collectRealBubbleMaskArtifact"
+                } else if comparison == "currentRectAlreadyRenderLocked" {
+                    action = "inspectRenderLockGateLedger"
+                } else if comparison == "distanceRectWouldRiskSprite" {
+                    action = "keepCurrentSafeLayoutReportOnly"
+                } else if comparison == "manualReviewOnly" {
+                    action = "manualReviewOnly"
+                } else {
+                    action = "keepDistanceFieldSafeAreaReportOnly"
+                }
+                let spriteContainmentValue: String
+                if spriteCurrent == true && spriteDistance == true {
+                    spriteContainmentValue = "containedByBoth"
+                } else if spriteCurrent == true && spriteDistance == false {
+                    spriteContainmentValue = "distanceRectRisk"
+                } else if spriteCurrent == false && spriteDistance == true {
+                    spriteContainmentValue = "distanceRectImprovesContainment"
+                } else {
+                    spriteContainmentValue = "spriteBoundsUnavailableOrUncontained"
+                }
+                return MangaKoharuDistanceFieldBlockLedger(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    bbox: block.bbox,
+                    blockPassed: block.blockPassed,
+                    failureCategory: block.failureCategory,
+                    groundTruthMatch: block.groundTruthMatch,
+                    bestGroundTruthType: block.bestGroundTruthType,
+                    ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
+                    currentSafeLayoutRect: currentRect,
+                    currentSafeLayoutSource: block.safeLayoutSource,
+                    bubbleIndexShadowSafeRect: bubbleIndexByBlock[block.index]?.shadowSafeLayoutRect,
+                    distanceFieldSafeRect: distanceRect,
+                    distanceFieldSafeRectSource: bubbleLedger?.maximumSafeRect == nil ? "fallbackCurrentSafeLayoutRect" : "koharuDistanceFieldSafeAreaReport.maximumSafeRect",
+                    currentVsDistanceSafeRectIoU: iou,
+                    currentVsDistanceAreaDeltaRatio: areaDelta,
+                    spriteBounds: spriteBounds,
+                    spriteContainedByCurrentSafeRect: spriteCurrent,
+                    spriteContainedByDistanceSafeRect: spriteDistance,
+                    renderLockVerdict: renderVerdict,
+                    safeRectComparisonVerdict: comparison,
+                    safeRectComparisonSignals: [
+                        signal("currentVsDistanceSafeRectIoU", iou?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "koharuDistanceFieldSafeAreaReport"),
+                        signal("areaDeltaRatio", areaDelta?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "koharuDistanceFieldSafeAreaReport"),
+                        signal("spriteContainment", spriteContainmentValue, source: "koharuDistanceFieldSafeAreaReport")
+                    ],
+                    primaryBottleneck: bubbleIndexByBlock[block.index]?.primaryBottleneck ?? block.failureCategory,
+                    nextAction: action,
+                    decisionSignals: [
+                        signal("safeRectComparisonVerdict", comparison, source: "koharuDistanceFieldSafeAreaReport"),
+                        signal("renderLockVerdict", renderVerdict, source: "koharuRenderRegressionLockReport"),
+                        signal("nextAction", action, source: "koharuDistanceFieldSafeAreaReport")
+                    ],
+                    evaluationSignals: [
+                        signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
+                        signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks.bestGroundTruthType", decision: false, evaluation: true),
+                        signal("ocrSimilarityForEvaluation", block.ocrGroundTruthSimilarity?.formatted(.number.precision(.fractionLength(4))) ?? "nil", source: "blocks.ocrGroundTruthSimilarity", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            }.sorted { $0.blockIndex < $1.blockIndex }
+
+            let siblingLedgers: [MangaKoharuDistanceFieldSiblingLedger] = siblingGroups.map { group in
+                let blockIndexes = group.blocks.map(\.index)
+                let currentRects = group.blocks.compactMap(\.safeLayoutRect)
+                let distanceRect = bubbleLedgerByID[group.bubbleID]?.maximumSafeRect
+                let currentOverlap = maxOverlap(currentRects)
+                let distanceArea = area(distanceRect.map(Self.rect(from:)))
+                let currentTotalArea = currentRects.reduce(0.0) { $0 + area(Self.rect(from: $1)) }
+                let sharedRatio = currentTotalArea > 0 ? distanceArea / currentTotalArea : 0
+                let minPerBlockRatio = group.blocks.reduce(1.0) { partial, block in
+                    let blockArea = area(block.safeLayoutRect.map(Self.rect(from:)))
+                    let ratio = blockArea > 0 ? distanceArea / (blockArea * Double(group.blocks.count)) : 0
+                    return min(partial, ratio)
+                }
+                let splitIDs = uniqueSorted(blockIndexes.flatMap { blockIndex in
+                    (splitCandidatesByBlock[blockIndex] ?? []).map { $0.candidate.id }
+                })
+                let verdict: String
+                if bubbleMaskReport == nil {
+                    verdict = "needsRealBubbleMask"
+                } else if !splitIDs.isEmpty {
+                    verdict = "splitCandidatePresent"
+                } else if currentOverlap >= 0.18 {
+                    verdict = "partitionOverlapRisk"
+                } else if distanceRect == nil || minPerBlockRatio < 0.55 {
+                    verdict = "distanceSafeAreaTooSmallForSiblings"
+                } else {
+                    verdict = "distanceSafeAreaSupportsCurrentPartitions"
+                }
+                let action = verdict == "distanceSafeAreaSupportsCurrentPartitions"
+                    ? "keepSiblingDistanceLedgerReportOnly"
+                    : (verdict == "needsRealBubbleMask" ? "collectRealBubbleMaskArtifact" : "reviewDistanceFieldSiblingPartition")
+                return MangaKoharuDistanceFieldSiblingLedger(
+                    siblingGroupID: "DF-\(group.bubbleID)",
+                    bubbleID: group.bubbleID,
+                    blockIndexes: blockIndexes,
+                    currentSafeLayoutRects: currentRects,
+                    distanceFieldSafeRect: distanceRect,
+                    currentMaxOverlapRatio: currentOverlap,
+                    distanceRectSharedAreaRatio: sharedRatio,
+                    minimumPerBlockAreaRatio: minPerBlockRatio,
+                    splitCandidateIDs: splitIDs,
+                    siblingDistanceVerdict: verdict,
+                    nextAction: action,
+                    decisionSignals: [
+                        signal("currentMaxOverlapRatio", currentOverlap.formatted(.number.precision(.fractionLength(4))), source: "blocks.safeLayoutRect"),
+                        signal("distanceRectSharedAreaRatio", sharedRatio.formatted(.number.precision(.fractionLength(4))), source: "koharuDistanceFieldSafeAreaReport"),
+                        signal("splitCandidateIDs", splitIDs.map(String.init).joined(separator: ","), source: "bubbleSplitCandidateReport")
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            }
+
+            let safeRectDiffBlocks = uniqueSorted(blockLedgers.filter {
+                guard let iou = $0.currentVsDistanceSafeRectIoU else { return false }
+                return iou < 0.86
+            }.map(\.blockIndex))
+            let spriteRiskBlocks = uniqueSorted(blockLedgers.filter { $0.safeRectComparisonVerdict == "distanceRectWouldRiskSprite" }.map(\.blockIndex))
+            let siblingRiskBlocks = uniqueSorted(siblingLedgers.filter { $0.siblingDistanceVerdict != "distanceSafeAreaSupportsCurrentPartitions" }.flatMap(\.blockIndexes))
+            let needsRealBubbleMaskBlocks = uniqueSorted(blockLedgers.filter { $0.safeRectComparisonVerdict == "needsRealBubbleMask" }.map(\.blockIndex))
+            let renderLockedBlocks = uniqueSorted(blockLedgers.filter { $0.renderLockVerdict == "renderLocked" }.map(\.blockIndex))
+            let manualReviewBlocks = uniqueSorted(blockLedgers.filter { $0.nextAction == "manualReviewOnly" }.map(\.blockIndex))
+
+            func gate(
+                _ id: String,
+                _ name: String,
+                _ scope: String,
+                _ status: String,
+                _ threshold: String,
+                _ affected: [Int],
+                _ failure: String,
+                _ action: String,
+                _ signals: [MangaKoharuDistanceFieldSignal]
+            ) -> MangaKoharuDistanceFieldGate {
+                MangaKoharuDistanceFieldGate(
+                    gateID: id,
+                    gateName: name,
+                    scope: scope,
+                    status: status,
+                    threshold: threshold,
+                    affectedBlocks: uniqueSorted(affected),
+                    decisionSignals: signals,
+                    failureMeans: failure,
+                    recommendedAction: action,
+                    groundTruthUsedForDecision: false
+                )
+            }
+
+            let allBlocks = blocks.map(\.index)
+            let gateLedger = [
+                gate("G-distance-field-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "DistanceField safe area mutates OCR, translation, safeLayoutRect, renderer, or block pass state", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-distance-field-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlocks, "ground truth influences safe pixels, maximum rect, sibling verdict, gate, or next action", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-distance-field-rounded-proxy-boundary", "Rounded proxy boundary", "BubbleMask", "passed", "proxyNotRealBubbleMask=true and usesRoundedRectProxyMask=true", allBlocks, "rounded-rect proxy is promoted as real Koharu BubbleMask", "keepProxyBoundaryOrCollectRealArtifact", [signal("usesRoundedRectProxyMask", "true", source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-distance-field-bubble-ledger-count", "Bubble ledger count", "BubbleIndex", bubbleLedgers.count == (bubbleMaskReport?.instanceCount ?? bubbleGeometry.bubbles.count) ? "passed" : "warning", "bubbleLedgerCount==bubbleMaskReport.instanceCount", allBlocks, "distance field bubble ledger count does not match proxy bubble instances", "inspectBubbleMaskRuntime", [signal("bubbleLedgerCount", String(bubbleLedgers.count), source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-distance-field-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlocks, "some final blocks lack distance-field safe area comparison", "restoreDistanceFieldBlockLedger", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-distance-field-safe-pixels-computed", "Safe pixels computed", "BubbleIndex", bubbleLedgers.contains { $0.safePixelCount > 0 } ? "passed" : "warning", "at least one proxy bubble has safe pixels", allBlocks, "distance field never finds safe pixels and only falls back", "inspectSafeThreshold", [signal("safePixelBubbleCount", String(bubbleLedgers.filter { $0.safePixelCount > 0 }.count), source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-distance-field-maximum-safe-rect", "Maximum safe rect", "BubbleIndex", bubbleLedgers.contains { $0.maximumSafeRect != nil } ? "passed" : "warning", "maximumSafeRect available or fallback reason explicit", allBlocks, "safe pixels exist but no safe rect or fallback reason is recorded", "inspectMaximumSafeRectAlgorithm", [signal("maximumSafeRectCount", String(bubbleLedgers.filter { $0.maximumSafeRect != nil }.count), source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-distance-field-sprite-containment", "Sprite containment", "RenderedSprites", spriteRiskBlocks.isEmpty ? "passed" : "warning", "distance rect must not be promoted when sprite containment regresses", spriteRiskBlocks, "distance-field safe rect would clip existing rendered sprite", "keepCurrentSafeLayoutReportOnly", [signal("spriteRiskBlocks", joined(spriteRiskBlocks), source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-distance-field-sibling-audited", "Sibling audited", "BubbleIndex", siblingLedgers.isEmpty || siblingRiskBlocks.isEmpty ? "passed" : "warning", "same-bubble sibling groups have report-only distance safe-area comparison", siblingRiskBlocks, "sibling distance safe area conflicts are hidden or applied to renderer", "reviewDistanceFieldSiblingPartition", [signal("siblingLedgerCount", String(siblingLedgers.count), source: "koharuDistanceFieldSafeAreaReport")]),
+                gate("G-distance-field-render-lock-respected", "Render lock respected", "FinalRender", koharuRenderRegressionLockReport == nil ? "warning" : "passed", "render lock remains upstream evidence only", koharuRenderRegressionLockReport?.renderIssueBlocks ?? [], "DistanceField report ignores render lock or changes overlay output", "inspectRenderLockGateLedger", [signal("renderLockVerdict", koharuRenderRegressionLockReport?.renderLockVerdict ?? "nil", source: "koharuRenderRegressionLockReport")]),
+                gate("G-distance-field-bubble-index-linked", "BubbleIndex linked", "BubbleIndex", koharuBubbleIndexShadowLedgerReport == nil ? "warning" : "passed", "v1.35 BubbleIndex shadow ledger is available as comparison input", allBlocks, "distance-field report cannot compare against BubbleIndex shadow ledger", "restoreKoharuBubbleIndexShadowLedgerReport", [signal("bubbleIndexReportAvailable", String(koharuBubbleIndexShadowLedgerReport != nil), source: "koharuBubbleIndexShadowLedgerReport")]),
+                gate("G-distance-field-ci-fast-ready", "CI fast ready", "ci-fast", "passed", "uses existing proxy mask and reports only", allBlocks, "DistanceField report adds OCR/LLM/full-only dependency", "keepCIFastReportOnly", [signal("inputReports", "bubbleGeometry,bubbleMaskReport,koharuBubbleIndexShadowLedgerReport,koharuRenderRegressionLockReport", source: "koharuDistanceFieldSafeAreaReport")])
+            ]
+
+            let distanceFieldVerdict: String
+            if bubbleMaskReport == nil {
+                distanceFieldVerdict = "blockedByMissingBubbleMaskProxy"
+            } else if koharuBubbleIndexShadowLedgerReport == nil {
+                distanceFieldVerdict = "blockedByMissingBubbleIndexLedger"
+            } else if !needsRealBubbleMaskBlocks.isEmpty {
+                distanceFieldVerdict = "needsRealBubbleMaskArtifact"
+            } else if !spriteRiskBlocks.isEmpty {
+                distanceFieldVerdict = "renderLockedNoPromotion"
+            } else if !manualReviewBlocks.isEmpty || !siblingRiskBlocks.isEmpty {
+                distanceFieldVerdict = "manualReviewOnly"
+            } else if safeRectDiffBlocks.isEmpty {
+                distanceFieldVerdict = "distanceFieldShadowReady"
+            } else {
+                distanceFieldVerdict = "reportOnlySafeAreaCandidateReady"
+            }
+
+            return MangaKoharuDistanceFieldSafeAreaReport(
+                enabled: true,
+                source: "AITRANSProbe",
+                referencePipeline: "Koharu",
+                referenceConcept: "BubbleIndex.DistanceFieldSafePixels.MaximumSafeRect",
+                evaluatedBlockCount: blocks.count,
+                evaluatedBubbleCount: bubbleMaskReport?.instanceCount ?? bubbleGeometry.bubbles.count,
+                bubbleLedgerCount: bubbleLedgers.count,
+                blockLedgerCount: blockLedgers.count,
+                siblingLedgerCount: siblingLedgers.count,
+                gateCount: gateLedger.count,
+                groundTruthUsedForDecision: false,
+                groundTruthUsedForEvaluationOnly: true,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true,
+                proxyNotRealBubbleMask: true,
+                usesRoundedRectProxyMask: true,
+                externalArtifactsRequiredForThisReport: false,
+                distanceFieldVerdict: distanceFieldVerdict,
+                safePixelVerdictBreakdown: countBy(bubbleLedgers.map(\.safePixelVerdict)),
+                safeRectComparisonBreakdown: countBy(blockLedgers.map(\.safeRectComparisonVerdict)),
+                spriteContainmentBreakdown: countBy(blockLedgers.map { ledger in
+                    if ledger.spriteContainedByCurrentSafeRect == true && ledger.spriteContainedByDistanceSafeRect == true { return "containedByBoth" }
+                    if ledger.spriteContainedByCurrentSafeRect == true && ledger.spriteContainedByDistanceSafeRect == false { return "distanceRectRisk" }
+                    if ledger.spriteContainedByCurrentSafeRect == false && ledger.spriteContainedByDistanceSafeRect == true { return "distanceRectImprovesContainment" }
+                    return "spriteBoundsUnavailableOrUncontained"
+                }),
+                siblingDistanceVerdictBreakdown: countBy(siblingLedgers.map(\.siblingDistanceVerdict)),
+                nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
+                safeRectDiffBlocks: safeRectDiffBlocks,
+                spriteRiskBlocks: spriteRiskBlocks,
+                siblingRiskBlocks: siblingRiskBlocks,
+                needsRealBubbleMaskBlocks: needsRealBubbleMaskBlocks,
+                renderLockedBlocks: renderLockedBlocks,
+                manualReviewBlocks: manualReviewBlocks,
+                bubbleLedgers: bubbleLedgers,
+                blockLedgers: blockLedgers,
+                siblingLedgers: siblingLedgers,
+                gateLedger: gateLedger,
+                notes: [
+                    "koharuDistanceFieldSafeAreaReport is a report-only Koharu BubbleIndex distance-field safe area shadow report.",
+                    "It computes safe pixels and maximum safe rectangles from AITRANS rounded-rect BubbleMask proxy IDs inside each bubble bbox; it does not use real Koharu BubbleMask artifacts.",
+                    "Ground truth appears only in evaluationSignals; safe pixel verdicts, safe rect comparison, sibling verdicts, gates, and nextAction use ground-truth-free geometry/render signals.",
+                    "The report does not add OCR or LLM calls and does not change OCR, translation input, safeLayoutRect, glyphMaskFillRects, background fill, overlay rendering, blockPassed, failureCategory, active artifacts, currentBlockSource, or PNG output behavior."
                 ]
             )
         }.value
@@ -1505,6 +2111,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuExternalArtifactRequestPacketReport: MangaKoharuExternalArtifactRequestPacketReport?,
         koharuNativeAlgorithmReplayMatrixReport: MangaKoharuNativeAlgorithmReplayMatrixReport? = nil,
         koharuBubbleIndexShadowLedgerReport: MangaKoharuBubbleIndexShadowLedgerReport? = nil,
+        koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -1604,6 +2211,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let koharuBubbleIndexBlockLedgerByBlock = Dictionary(
             uniqueKeysWithValues: (koharuBubbleIndexShadowLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let koharuDistanceFieldBlockLedgerByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuDistanceFieldSafeAreaReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
         let translationFloorNoisyByBlock = Dictionary(
             uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
@@ -1830,6 +2440,7 @@ struct MangaOverlayProbeService: Sendable {
             let koharuExternalArtifactRequest = koharuExternalArtifactRequestByBlock[block.index]
             let koharuNativeReplayRoute = koharuNativeReplayRouteByBlock[block.index]
             let koharuBubbleIndexBlockLedger = koharuBubbleIndexBlockLedgerByBlock[block.index]
+            let koharuDistanceFieldBlockLedger = koharuDistanceFieldBlockLedgerByBlock[block.index]
             let translationFloorNoisy = translationFloorNoisyByBlock[block.index]
             let renderLock = renderLockByBlock[block.index]
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
@@ -1900,6 +2511,7 @@ struct MangaOverlayProbeService: Sendable {
             koharuExternalArtifactRequest: primary=\(koharuExternalArtifactRequest?.primaryWorkOrderID ?? "nil") needsTextBoxes=\(koharuExternalArtifactRequest.map { String($0.needsTextBoxes) } ?? "nil") needsBubbleMask=\(koharuExternalArtifactRequest.map { String($0.needsBubbleMask) } ?? "nil") needsSegmentMask=\(koharuExternalArtifactRequest.map { String($0.needsSegmentMask) } ?? "nil") nextAction=\(koharuExternalArtifactRequest?.nextAction ?? "nil") stoplistedLocalTuning=\(koharuExternalArtifactRequest.map { String($0.stoplistedLocalTuning) } ?? "nil") readiness=\(koharuExternalArtifactRequest?.externalArtifactReadinessVerdict ?? "nil") shadowOCR=\(koharuExternalArtifactRequest?.externalTextBoxShadowOCRStatus ?? "nil") missing=\(koharuExternalArtifactRequest?.missingRealArtifactReasons.joined(separator: " | ") ?? "nil")
             koharuNativeReplayRoute: primary=\(koharuNativeReplayRoute?.primaryReplayCandidateID ?? "nil") secondary=\(koharuNativeReplayRoute?.secondaryReplayCandidateIDs.joined(separator: ",") ?? "nil") stage=\(koharuNativeReplayRoute?.primaryKoharuStage ?? "nil") bottleneck=\(koharuNativeReplayRoute?.primaryBottleneck ?? "nil") nextAction=\(koharuNativeReplayRoute?.nextAction ?? "nil") requiresExternalArtifact=\(koharuNativeReplayRoute.map { String($0.requiresExternalArtifact) } ?? "nil") modelFloorLimited=\(koharuNativeReplayRoute.map { String($0.modelFloorLimited) } ?? "nil") renderLocked=\(koharuNativeReplayRoute.map { String($0.renderLocked) } ?? "nil") stoplistedLocalTuning=\(koharuNativeReplayRoute.map { String($0.stoplistedLocalTuning) } ?? "nil")
             koharuBubbleIndexBlockLedger: block=\(koharuBubbleIndexBlockLedger.map { String($0.blockIndex) } ?? "nil") bubbleID=\(koharuBubbleIndexBlockLedger?.bubbleID.map(String.init) ?? "nil") shadowBubbleID=\(koharuBubbleIndexBlockLedger?.shadowBubbleID.map(String.init) ?? "nil") assignment=\(koharuBubbleIndexBlockLedger?.assignmentVerdict ?? "nil") safeArea=\(koharuBubbleIndexBlockLedger?.safeAreaVerdict ?? "nil") sibling=\(koharuBubbleIndexBlockLedger?.siblingPartitionVerdict ?? "nil") render=\(koharuBubbleIndexBlockLedger?.renderLockVerdict ?? "nil") next=\(koharuBubbleIndexBlockLedger?.nextAction ?? "nil")
+            distanceFieldBlockLedger: block=\(koharuDistanceFieldBlockLedger.map { String($0.blockIndex) } ?? "nil") bubbleID=\(koharuDistanceFieldBlockLedger?.bubbleID.map(String.init) ?? "nil") currentIoU=\(koharuDistanceFieldBlockLedger?.currentVsDistanceSafeRectIoU?.formatted(.number.precision(.fractionLength(3))) ?? "nil") spriteCurrent=\(koharuDistanceFieldBlockLedger?.spriteContainedByCurrentSafeRect.map(String.init) ?? "nil") spriteDistance=\(koharuDistanceFieldBlockLedger?.spriteContainedByDistanceSafeRect.map(String.init) ?? "nil") verdict=\(koharuDistanceFieldBlockLedger?.safeRectComparisonVerdict ?? "nil") next=\(koharuDistanceFieldBlockLedger?.nextAction ?? "nil")
             translationFloorNoisyBlock: modelFloorLimited=\(translationFloorNoisy.map { String($0.modelFloorLimited) } ?? "nil") ocrInputSuspect=\(translationFloorNoisy.map { String($0.ocrInputSuspect) } ?? "nil") languageQualityFailure=\(translationFloorNoisy.map { String($0.translationLanguageQualityFailure) } ?? "nil") routingOutcome=\(translationFloorNoisy?.routingComparisonOutcome ?? "nil") nextAction=\(translationFloorNoisy?.recommendedNextAction ?? "nil")
             renderLock: status=\(renderLock?.renderStatus ?? "nil") failureOverlayRequired=\(renderLock.map { String($0.failureOverlayRequired) } ?? "nil") failureOverlayLocked=\(renderLock.map { String($0.failureOverlayLocked) } ?? "nil") safeLayoutSource=\(renderLock?.safeLayoutSource ?? "nil") maskOverflowPixels=\(renderLock.map { String($0.renderMaskOverflowPixelCount) } ?? "nil") truncated=\(renderLock.map { String($0.renderTextTruncated) } ?? "nil") nextAction=\(renderLock?.recommendedNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
@@ -1974,6 +2586,12 @@ struct MangaOverlayProbeService: Sendable {
         let bubbleIndexSiblingLedgerSummary = (koharuBubbleIndexShadowLedgerReport?.siblingLedgers ?? [])
             .map { "bubbleIndexSiblingLedger: group=\($0.siblingGroupID) bubbleID=\($0.bubbleID) blocks=[\($0.blockIndexes.map(String.init).joined(separator: ","))] verdict=\($0.partitionVerdict) next=\($0.nextAction)" }
             .joined(separator: "\n")
+        let distanceFieldBubbleLedgerSummary = (koharuDistanceFieldSafeAreaReport?.bubbleLedgers ?? [])
+            .map { "distanceFieldBubbleLedger: bubbleID=\($0.bubbleID) maxDistance=\($0.maxDistancePx.formatted(.number.precision(.fractionLength(2)))) safePixels=\($0.safePixelCount) maxRect=[\($0.maximumSafeRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")] verdict=\($0.safePixelVerdict) next=\($0.nextAction)" }
+            .joined(separator: "\n")
+        let distanceFieldSiblingLedgerSummary = (koharuDistanceFieldSafeAreaReport?.siblingLedgers ?? [])
+            .map { "distanceFieldSiblingLedger: group=\($0.siblingGroupID) bubbleID=\($0.bubbleID) blocks=[\($0.blockIndexes.map(String.init).joined(separator: ","))] verdict=\($0.siblingDistanceVerdict) next=\($0.nextAction)" }
+            .joined(separator: "\n")
         let externalSummary = """
         koharuNativeAlgorithmReplayMatrixReport: enabled=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.stageCount) } ?? "nil") candidates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil") blockRoutes=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict ?? "nil")
         nativeReplayStageStatus=\(koharuNativeAlgorithmReplayMatrixReport?.stageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -1988,6 +2606,13 @@ struct MangaOverlayProbeService: Sendable {
         bubbleIndexNextAction=\(koharuBubbleIndexShadowLedgerReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         \(bubbleIndexBubbleLedgerSummary.isEmpty ? "bubbleIndexBubbleLedger: nil" : bubbleIndexBubbleLedgerSummary)
         \(bubbleIndexSiblingLedgerSummary.isEmpty ? "bubbleIndexSiblingLedger: nil" : bubbleIndexSiblingLedgerSummary)
+        koharuDistanceFieldSafeAreaReport: enabled=\(koharuDistanceFieldSafeAreaReport.map { String($0.enabled) } ?? "nil") bubbles=\(koharuDistanceFieldSafeAreaReport.map { String($0.bubbleLedgerCount) } ?? "nil") blocks=\(koharuDistanceFieldSafeAreaReport.map { String($0.blockLedgerCount) } ?? "nil") siblings=\(koharuDistanceFieldSafeAreaReport.map { String($0.siblingLedgerCount) } ?? "nil") gates=\(koharuDistanceFieldSafeAreaReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuDistanceFieldSafeAreaReport?.distanceFieldVerdict ?? "nil")
+        distanceFieldSafePixel=\(koharuDistanceFieldSafeAreaReport?.safePixelVerdictBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        distanceFieldSafeRectComparison=\(koharuDistanceFieldSafeAreaReport?.safeRectComparisonBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        distanceFieldSpriteContainment=\(koharuDistanceFieldSafeAreaReport?.spriteContainmentBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        distanceFieldNextAction=\(koharuDistanceFieldSafeAreaReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        \(distanceFieldBubbleLedgerSummary.isEmpty ? "distanceFieldBubbleLedger: nil" : distanceFieldBubbleLedgerSummary)
+        \(distanceFieldSiblingLedgerSummary.isEmpty ? "distanceFieldSiblingLedger: nil" : distanceFieldSiblingLedgerSummary)
         koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
         workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
