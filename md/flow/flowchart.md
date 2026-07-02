@@ -114,7 +114,8 @@ flowchart TD
   KAS --> KRS["koharuRenderSpriteFitPlannerReport<br/>font budget / layout candidate / sibling fit ledger"]
   KRS --> KNT["koharuNativeTextBoxDetectorLiteReport<br/>pre-OCR pixel / bubble TextBox candidates"]
   KNT --> KNSO["koharuNativeTextBoxDetectorLiteShadowOCRReport<br/>detector-lite TextBoxes -> OCR shadow loop"]
-  KNSO --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
+  KNSO --> KNTR["koharuNativeTextBoxDetectorLiteRefinementReport<br/>detector-lite parent bbox refinement + shadow OCR"]
+  KNTR --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
   TMF --> KAC
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
@@ -152,6 +153,7 @@ flowchart TD
   KRS --> R
   KNT --> R
   KNSO --> R
+  KNTR --> R
   KAC --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
@@ -185,6 +187,7 @@ flowchart TD
   KRS --> T
   KNT --> T
   KNSO --> T
+  KNTR --> T
   KAC --> T
 ```
 
