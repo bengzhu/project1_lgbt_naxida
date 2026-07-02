@@ -110,7 +110,8 @@ flowchart TD
   KER --> KNR["koharuNativeAlgorithmReplayMatrixReport<br/>native replay candidates / stage matrix / block routes"]
   KNR --> KBI["koharuBubbleIndexShadowLedgerReport<br/>BubbleIndex majority mask / safe area / sibling partition"]
   KBI --> KDF["koharuDistanceFieldSafeAreaReport<br/>distance field / safe pixels / maximum safe rect"]
-  KDF --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
+  KDF --> KAS["koharuBubbleAdjacencySeamReport<br/>adjacency graph / seam candidate ledger"]
+  KAS --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
   TMF --> KAC
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
@@ -143,6 +144,8 @@ flowchart TD
   KER --> R
   KNR --> R
   KBI --> R
+  KDF --> R
+  KAS --> R
   KAC --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
@@ -172,6 +175,7 @@ flowchart TD
   KNR --> T
   KBI --> T
   KDF --> T
+  KAS --> T
   KAC --> T
 ```
 
