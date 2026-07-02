@@ -1741,7 +1741,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     ) async -> MangaKoharuBubbleAdjacencySeamReport {
-        await Task.detached(priority: .userInitiated) {
+        do {
             func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
             func uniqueSortedStrings(_ values: [String]) -> [String] { Array(Set(values)).sorted() }
             func countBy(_ values: [String]) -> [String: Int] { values.reduce(into: [:]) { $0[$1, default: 0] += 1 } }
@@ -2330,7 +2330,7 @@ struct MangaOverlayProbeService: Sendable {
                     "The report does not add OCR or LLM calls and does not change OCR, translation input, safeLayoutRect, DistanceField safe rect, glyphMaskFillRects, background fill, overlay rendering, blockPassed, failureCategory, active artifacts, currentBlockSource, or PNG output behavior."
                 ]
             )
-        }.value
+        }
     }
 
     func makeKoharuRenderSpriteFitPlannerReport(
