@@ -3144,6 +3144,156 @@ struct MangaKoharuNativeBubbleMaskInstanceLiteReport: Equatable, Codable, Sendab
     var notes: [String]
 }
 
+struct MangaKoharuNativeSegmentMaskRefinementLiteSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger: Equatable, Codable, Sendable {
+    var candidateID: String
+    var blockIndex: Int
+    var source: String
+    var sourceTextBoxCandidateID: String?
+    var sourceBubbleID: Int?
+    var sourceInstanceLiteID: Int?
+    var bbox: [Double]
+    var expandedTextBoxRect: [Double]
+    var directionHint: String
+    var paddingX: Double
+    var paddingY: Double
+    var rawPixelCount: Int
+    var afterTextBoxClampPixelCount: Int
+    var afterBubbleClampPixelCount: Int
+    var connectedComponentCount: Int
+    var largestComponentArea: Int
+    var maskBBox: [Double]?
+    var maskFillRatio: Double
+    var textboxCoverage: Double
+    var bubbleCoverage: Double
+    var existingGlyphOverlap: Double
+    var segmentProxyAgreement: Double
+    var candidateVerdict: String
+    var rejectionReasons: [String]
+    var decisionSignals: [MangaKoharuNativeSegmentMaskRefinementLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeSegmentMaskRefinementLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeSegmentMaskRefinementLiteBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var instanceLiteMajorityID: Int?
+    var bbox: [Double]
+    var finalTextUsedForTranslation: String
+    var failureCategory: String
+    var blockPassed: Bool
+    var selectedCandidateID: String?
+    var candidateCount: Int
+    var maskBBox: [Double]?
+    var rawPixelCount: Int
+    var afterTextBoxClampPixelCount: Int
+    var afterBubbleClampPixelCount: Int
+    var componentCount: Int
+    var textboxCoverage: Double
+    var bubbleCoverage: Double
+    var existingGlyphOverlap: Double
+    var segmentProxyAgreement: Double
+    var maskContainedByTextBox: Bool
+    var maskContainedByBubble: Bool
+    var wouldBeUsableForClearTextMask: Bool
+    var wouldBeUsableForOCRCropConstraint: Bool
+    var wouldBeUsableForRenderContainment: Bool
+    var primaryBottleneck: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuNativeSegmentMaskRefinementLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeSegmentMaskRefinementLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeSegmentMaskRefinementLiteSiblingLedger: Equatable, Codable, Sendable {
+    var bubbleID: Int?
+    var instanceLiteID: Int?
+    var blockIndexes: [Int]
+    var maskBBoxOverlapCount: Int
+    var pixelOverlapEstimate: Int
+    var sameBubbleSiblingRisk: String
+    var seamRisk: String
+    var needsRealSegmentMask: Bool
+    var needsRealBubbleMask: Bool
+    var nextAction: String
+    var decisionSignals: [MangaKoharuNativeSegmentMaskRefinementLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeSegmentMaskRefinementLiteGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuNativeSegmentMaskRefinementLiteSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuNativeSegmentMaskRefinementLiteReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
+    var evaluatedBlockCount: Int
+    var sourceImageWidth: Int
+    var sourceImageHeight: Int
+    var contentCropBBox: [Double]
+    var candidateLedgerCount: Int
+    var blockLedgerCount: Int
+    var siblingLedgerCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var nativeRefinementLite: Bool
+    var proxyNotRealKoharuSegmentMask: Bool
+    var usesSourceImagePixels: Bool
+    var usesTextBoxConstraints: Bool
+    var usesBubbleMaskConstraints: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var refinementLiteVerdict: String
+    var candidateSourceBreakdown: [String: Int]
+    var candidateVerdictBreakdown: [String: Int]
+    var pixelEvidenceBreakdown: [String: Int]
+    var textboxClampBreakdown: [String: Int]
+    var bubbleClampBreakdown: [String: Int]
+    var componentFilteringBreakdown: [String: Int]
+    var maskContainmentBreakdown: [String: Int]
+    var siblingMaskOverlapBreakdown: [String: Int]
+    var primaryBottleneckBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var needsRealSegmentMaskBlocks: [Int]
+    var needsRealTextBoxesBlocks: [Int]
+    var needsRealBubbleMaskBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var candidateLedgers: [MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger]
+    var blockLedgers: [MangaKoharuNativeSegmentMaskRefinementLiteBlockLedger]
+    var siblingLedgers: [MangaKoharuNativeSegmentMaskRefinementLiteSiblingLedger]
+    var gateLedger: [MangaKoharuNativeSegmentMaskRefinementLiteGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -5116,6 +5266,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport?
     var koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport?
     var koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport?
+    var koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
