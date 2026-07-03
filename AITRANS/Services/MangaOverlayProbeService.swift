@@ -810,51 +810,6 @@ struct MangaOverlayProbeService: Sendable {
                 deterministicTranslationPath = deterministicTranslationURL.path
                 cropsPath = cropsURL.path
             }
-            try Self.writeOCRProbeText(
-                blocks: blocks,
-                textRegionCropReport: textRegionCropReport,
-                textBoxCandidateReport: textBoxCandidateReport,
-                segmentMaskReport: segmentMaskReport,
-                preCropTextBoxPlanReport: preCropTextBoxPlanReport,
-                cropExperimentReport: cropExperimentReport,
-                textBoxPlanFailureReport: textBoxPlanFailureReport,
-                lineTextBoxPlanReport: lineTextBoxPlanReport,
-                lineCropExperimentReport: lineCropExperimentReport,
-                externalArtifactReadinessReport: externalArtifactReadinessReport,
-                externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
-                internalStructureBottleneckReport: internalStructureBottleneckReport,
-                routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
-                ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
-                readingOrderStructureAuditReport: readingOrderStructureAuditReport,
-                structureActionCandidateReport: structureActionCandidateReport,
-                koharuArtifactDAGReport: koharuArtifactDAGReport,
-                koharuStageGapReplicationReport: koharuStageGapReplicationReport,
-                koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
-                nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
-                bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
-                segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
-                koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
-                koharuPipelineResolverReport: koharuPipelineResolverReport,
-                koharuWorkOrderRouterReport: koharuWorkOrderRouterReport,
-                koharuExternalArtifactRequestPacketReport: koharuExternalArtifactRequestPacketReport,
-                koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
-                koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
-                koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
-                koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
-                koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
-                koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
-                koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
-                koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
-                koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
-                koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
-                translationModelFloorComparisonReport: translationModelFloorComparisonReport,
-                koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
-                bubbleMaskReport: bubbleMaskReport,
-                bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
-                bubbleSplitCandidateReport: bubbleSplitCandidateReport,
-                to: ocrProbeTextURL
-            )
-
             var preprocessedPath: String?
             if preprocessing.enabled && renderDiagnosticPNGs {
                 let contentRect = Self.contentCropRect(for: image, cropping: cropping)
@@ -5505,18 +5460,24 @@ struct MangaOverlayProbeService: Sendable {
         let bytesPerRow = width * bytesPerPixel
         guard width > 0, height > 0 else { return nil }
         var pixels = [UInt8](repeating: 255, count: height * bytesPerRow)
-        guard let context = CGContext(
-            data: &pixels,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: bytesPerRow,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
-            return nil
+        let rendered = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let baseAddress = buffer.baseAddress,
+                  let context = CGContext(
+                      data: baseAddress,
+                      width: width,
+                      height: height,
+                      bitsPerComponent: 8,
+                      bytesPerRow: bytesPerRow,
+                      space: CGColorSpaceCreateDeviceRGB(),
+                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                  ) else {
+                return false
+            }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+            context.flush()
+            return true
         }
-        context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+        guard rendered else { return nil }
         return RGBA8Bitmap(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
     }
 
