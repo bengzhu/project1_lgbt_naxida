@@ -1262,9 +1262,7 @@ struct MangaOverlayProbeService: Sendable {
             let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
             let contentCrop = Self.contentCropRect(for: image, cropping: .defaultValue).integral
             let contentBBox = Self.bboxArray(from: Self.clamp(contentCrop, to: imageBounds))
-            guard let providerData = image.dataProvider?.data,
-                  let bytes = CFDataGetBytePtr(providerData),
-                  image.bitsPerPixel == 32 else {
+            guard let bitmap = Self.makeRGBA8Bitmap(from: image) else {
                 let ledgers = blocks.map {
                     makeEmptyBlockLedger(for: $0, reason: "sourceImageBytesUnavailable", nextAction: "restoreProbeImageByteAccess")
                 }
@@ -1319,7 +1317,8 @@ struct MangaOverlayProbeService: Sendable {
                 )
             }
 
-            let bytesPerRow = image.bytesPerRow
+            let bytes = bitmap.pixels
+            let bytesPerRow = bitmap.bytesPerRow
             let cropRect = Self.clamp(contentCrop, to: imageBounds)
             let minX = max(0, Int(cropRect.minX.rounded(.down)))
             let maxX = min(image.width, Int(cropRect.maxX.rounded(.up)))
@@ -1334,6 +1333,7 @@ struct MangaOverlayProbeService: Sendable {
                     for localX in 0..<cropWidth {
                         let x = minX + localX
                         let offset = y * bytesPerRow + x * 4
+                        guard offset + 2 < bytes.count else { continue }
                         let r = Int(bytes[offset])
                         let g = Int(bytes[offset + 1])
                         let b = Int(bytes[offset + 2])
@@ -1362,9 +1362,6 @@ struct MangaOverlayProbeService: Sendable {
             }
             let seamByBlock = Dictionary(
                 uniqueKeysWithValues: (koharuBubbleAdjacencySeamReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
-            )
-            let distanceByBlock = Dictionary(
-                uniqueKeysWithValues: (koharuDistanceFieldSafeAreaReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
             )
             let renderFitByBlock = Dictionary(
                 uniqueKeysWithValues: (koharuRenderSpriteFitPlannerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
@@ -5491,6 +5488,35 @@ struct MangaOverlayProbeService: Sendable {
             throw MangaOverlayProbeServiceError.imageDecodeFailed
         }
         return image
+    }
+
+    private struct RGBA8Bitmap {
+        var width: Int
+        var height: Int
+        var bytesPerRow: Int
+        var pixels: [UInt8]
+    }
+
+    private static func makeRGBA8Bitmap(from image: CGImage) -> RGBA8Bitmap? {
+        let width = image.width
+        let height = image.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+        guard width > 0, height > 0 else { return nil }
+        var pixels = [UInt8](repeating: 255, count: height * bytesPerRow)
+        guard let context = CGContext(
+            data: &pixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+        return RGBA8Bitmap(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
     }
 
     private static func contentCropRect(for image: CGImage, cropping: MangaOverlayProbeCropping) -> CGRect {
