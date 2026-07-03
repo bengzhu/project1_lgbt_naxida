@@ -5255,6 +5255,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport? = nil,
         koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil,
         koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
+        koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -5820,6 +5821,19 @@ struct MangaOverlayProbeService: Sendable {
             .prefix(24)
             .map { "nativeSegmentMaskRefinementLiteSiblingLedger: bubble=\($0.bubbleID.map(String.init) ?? "nil") instance=\($0.instanceLiteID.map(String.init) ?? "nil") blocks=[\($0.blockIndexes.map(String.init).joined(separator: ","))] overlaps=\($0.maskBBoxOverlapCount) pixels=\($0.pixelOverlapEstimate) risk=\($0.sameBubbleSiblingRisk) seam=\($0.seamRisk) needsRealSegmentMask=\($0.needsRealSegmentMask) needsRealBubbleMask=\($0.needsRealBubbleMask) next=\($0.nextAction)" }
             .joined(separator: "\n")
+        let nativeArtifactBundleLiteBlockSummary = (koharuNativeArtifactBundleLiteReport?.blockLedgers ?? [])
+            .prefix(32)
+            .map { ledger in
+                "nativeArtifactBundleLiteBlockLedger: block=\(ledger.blockIndex) bubble=\(ledger.bubbleID.map(String.init) ?? "nil") textBox=\(ledger.selectedTextBoxLite.componentID):\(ledger.selectedTextBoxLite.componentSource):\(ledger.selectedTextBoxLite.readinessStatus) bubbleComponent=\(ledger.selectedBubbleInstanceLite.componentID):\(ledger.selectedBubbleInstanceLite.componentSource):\(ledger.selectedBubbleInstanceLite.readinessStatus) segment=\(ledger.selectedSegmentMaskLite.componentID):\(ledger.selectedSegmentMaskLite.componentSource):\(ledger.selectedSegmentMaskLite.readinessStatus) consistency=\(ledger.artifactConsistencyVerdict) primary=\(ledger.primaryBlockingArtifact) next=\(ledger.nextAction)"
+            }
+            .joined(separator: "\n")
+        let nativeArtifactBundleLiteEdgeSummary = (koharuNativeArtifactBundleLiteReport?.consistencyEdges ?? [])
+            .prefix(48)
+            .map { "nativeArtifactBundleLiteConsistencyEdge: id=\($0.edgeID) type=\($0.edgeType) status=\($0.status) severity=\($0.severity) blocks=[\($0.affectedBlocks.map(String.init).joined(separator: ","))] evidence=\($0.evidence.joined(separator: " | "))" }
+            .joined(separator: "\n")
+        let nativeArtifactBundleLiteWorkItemSummary = (koharuNativeArtifactBundleLiteReport?.workItems ?? [])
+            .map { "nativeArtifactBundleLiteWorkItem: id=\($0.workItemID) target=\($0.targetArtifact) status=\($0.status) priority=\($0.priority) blocks=[\($0.affectedBlocks.map(String.init).joined(separator: ","))] next=\($0.nextAction)" }
+            .joined(separator: "\n")
         let externalSummary = """
         koharuNativeAlgorithmReplayMatrixReport: enabled=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.stageCount) } ?? "nil") candidates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil") blockRoutes=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict ?? "nil")
         nativeReplayStageStatus=\(koharuNativeAlgorithmReplayMatrixReport?.stageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -5902,6 +5916,15 @@ struct MangaOverlayProbeService: Sendable {
         needsRealSegmentMaskBlocks=\(koharuNativeSegmentMaskRefinementLiteReport?.needsRealSegmentMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealTextBoxesBlocks=\(koharuNativeSegmentMaskRefinementLiteReport?.needsRealTextBoxesBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealBubbleMaskBlocks=\(koharuNativeSegmentMaskRefinementLiteReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil")
         \(nativeSegmentMaskRefinementCandidateSummary.isEmpty ? "nativeSegmentMaskRefinementLiteCandidate: nil" : nativeSegmentMaskRefinementCandidateSummary)
         \(nativeSegmentMaskRefinementSiblingSummary.isEmpty ? "nativeSegmentMaskRefinementLiteSiblingLedger: nil" : nativeSegmentMaskRefinementSiblingSummary)
+        koharuNativeArtifactBundleLiteReport: enabled=\(koharuNativeArtifactBundleLiteReport.map { String($0.enabled) } ?? "nil") bundles=\(koharuNativeArtifactBundleLiteReport.map { String($0.bundleLedgerCount) } ?? "nil") edges=\(koharuNativeArtifactBundleLiteReport.map { String($0.consistencyEdgeCount) } ?? "nil") workItems=\(koharuNativeArtifactBundleLiteReport.map { String($0.workItemCount) } ?? "nil") gates=\(koharuNativeArtifactBundleLiteReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeArtifactBundleLiteReport?.bundleLiteVerdict ?? "nil") nativeBundleLite=\(koharuNativeArtifactBundleLiteReport.map { String($0.nativeBundleLite) } ?? "nil") proxyTextBoxes=\(koharuNativeArtifactBundleLiteReport.map { String($0.proxyNotRealKoharuTextBoxes) } ?? "nil") proxyBubbleMask=\(koharuNativeArtifactBundleLiteReport.map { String($0.proxyNotRealKoharuBubbleMask) } ?? "nil") proxySegmentMask=\(koharuNativeArtifactBundleLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil") groundTruthUsedForDecision=\(koharuNativeArtifactBundleLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil") wouldChangeMainFlow=\(koharuNativeArtifactBundleLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil")
+        nativeArtifactBundleLiteComponentReadiness=\(koharuNativeArtifactBundleLiteReport?.componentReadinessBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeArtifactBundleLiteConsistency=\(koharuNativeArtifactBundleLiteReport?.artifactConsistencyBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeArtifactBundleLiteBlockingArtifact=\(koharuNativeArtifactBundleLiteReport?.primaryBlockingArtifactBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeArtifactBundleLiteNextAction=\(koharuNativeArtifactBundleLiteReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeArtifactBundleLiteReadyForFullProbe=\(koharuNativeArtifactBundleLiteReport?.readyForFullProbeReviewBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealTextBoxes=\(koharuNativeArtifactBundleLiteReport?.needsRealTextBoxesBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealBubbleMask=\(koharuNativeArtifactBundleLiteReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealSegmentMask=\(koharuNativeArtifactBundleLiteReport?.needsRealSegmentMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") modelFloor=\(koharuNativeArtifactBundleLiteReport?.modelFloorBlockedBlocks.map(String.init).joined(separator: ",") ?? "nil") renderLocked=\(koharuNativeArtifactBundleLiteReport?.renderLockedBlocks.map(String.init).joined(separator: ",") ?? "nil")
+        \(nativeArtifactBundleLiteBlockSummary.isEmpty ? "nativeArtifactBundleLiteBlockLedger: nil" : nativeArtifactBundleLiteBlockSummary)
+        \(nativeArtifactBundleLiteEdgeSummary.isEmpty ? "nativeArtifactBundleLiteConsistencyEdge: nil" : nativeArtifactBundleLiteEdgeSummary)
+        \(nativeArtifactBundleLiteWorkItemSummary.isEmpty ? "nativeArtifactBundleLiteWorkItem: nil" : nativeArtifactBundleLiteWorkItemSummary)
         koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
         workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")

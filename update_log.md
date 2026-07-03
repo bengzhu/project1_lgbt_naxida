@@ -115,6 +115,44 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.45：Koharu Native Artifact Bundle-Lite 结构一致性闭环
+日期：2026-07-03
+依据：`md/prompt/v1（漫画探针）/v1.45（KoharuNativeArtifactBundleLite结构一致性闭环）.md`。本轮修改 Swift 探针报告模型、native-lite artifact bundle 聚合账本、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuNativeArtifactBundleLiteReport`，在 v1.44 SegmentMask refinement-lite 后、最终 convergence 刷新前生成。
+- 报告只消费 final blocks、v1.39-v1.42 detector-lite / shadow OCR / refinement / closed-loop、v1.43 BubbleMask instance-lite、v1.44 SegmentMask refinement-lite、RenderSprite fit、Render Regression Lock、Translation Model Floor、external artifact readiness 和 diagnostics。
+- 每个 final block 组装 report-only bundle：selected TextBox / Bubble / Segment component、OCR evidence、translation route、render evidence、artifact consistency verdict、primary blocking artifact 和 nextAction。
+- 新增逐块 consistency edges，覆盖 TextBoxWithinBubble、SegmentMaskWithinTextBox、SegmentMaskWithinBubble、FinalOCRBBoxAlignedWithTextBox、SameBubbleSiblingMaskNonOverlap、SeamOrSplitRiskExplainsConflict、RenderSpriteContainedByBundleSafeArea 和 ModelFloorSeparatesGeometryFromTranslation。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuNativeArtifactBundleLiteReport`；convergence 新增 `WI-koharu-native-artifact-bundle-lite` 和 `G-koharu-native-artifact-bundle-lite-executed`。
+- `1_ocr_probe_text.txt` 新增 bundle-lite summary、逐块 block ledger、consistency edge 和 work item 摘要。
+- 本轮不新增 OCR / LLM / PNG，不更换模型，不创建或接入 active Koharu artifact，不改变主 OCR、翻译输入、覆盖图、renderer、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.45（KoharuNativeArtifactBundleLite结构一致性闭环）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `swiftc -parse` 轻量 Swift 语法检查、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuNativeArtifactBundleLiteReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`bundleLedgerCount == totalBlocksDetected`、`consistencyEdgeCount >= totalBlocksDetected`、`workItemCount >= 1`、`gateCount >= 8`、`nativeBundleLite = true`、TextBoxes / BubbleMask / SegmentMask proxy 边界为 true、`externalArtifactsRequiredForThisReport = false`、`groundTruthUsedForDecision = false`，核心 breakdown 非空或上游缺失时明确 warning / blocked gate，convergence 包含 v1.45 reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、逐块 block ledger、consistency edge 和 work item。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.45 新字段；以 PR 后云端结果包为准。
+- v1.45 仍是 native artifact bundle-lite report-only 结构一致性闭环，不代表真实 Koharu `TextBoxes` / `BubbleMask` / `SegmentMask` / `RenderedSprites` 已接入，也不代表 OCR 或翻译质量改善。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.44：Koharu Native SegmentMask Refinement-Lite 文字像素掩码影子复刻
 日期：2026-07-03
 依据：`md/prompt/v1（漫画探针）/v1.44（KoharuNativeSegmentMaskRefinementLite文字像素掩码影子复刻）.md`。本轮修改 Swift 探针报告模型、TextBox 约束文字像素 mask refinement-lite 账本、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
