@@ -887,6 +887,7 @@ struct MangaOverlayProbeService: Sendable {
     ) async -> [MangaOverlayProbeBlock] {
         await Task.detached(priority: .userInitiated) {
             let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            let imageBitmap = Self.makeRGBA8Bitmap(from: image)
             let bubbleRects = Dictionary(
                 uniqueKeysWithValues: bubbleGeometry.bubbles.map { bubble in
                     (bubble.id, Self.clamp(Self.rect(from: bubble.bbox), to: imageBounds))
@@ -971,6 +972,7 @@ struct MangaOverlayProbeService: Sendable {
                 updated.maskSafeRect = safeSource.hasPrefix("maskSafe") ? Self.bboxArray(from: safeRect) : nil
                 let glyphPlan = Self.makeGlyphMaskPlan(
                     image: image,
+                    bitmap: imageBitmap,
                     blockRect: blockRect,
                     bubbleRect: block.bubbleID.flatMap { bubbleRects[$0] }
                 )
@@ -3725,9 +3727,7 @@ struct MangaOverlayProbeService: Sendable {
                 return ("manualReviewOnly", false, reasons)
             }
 
-            guard let providerData = image.dataProvider?.data,
-                  let bytes = CFDataGetBytePtr(providerData),
-                  image.bitsPerPixel == 32 else {
+            guard let bitmap = Self.makeRGBA8Bitmap(from: image) else {
                 let gate = MangaKoharuNativeTextBoxDetectorLiteGate(
                     gateID: "G-native-textbox-detector-lite-image-bytes",
                     gateName: "Image bytes available",
@@ -3783,8 +3783,9 @@ struct MangaOverlayProbeService: Sendable {
                 )
             }
 
+            let bytes = bitmap.pixels
             let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
-            let bytesPerRow = image.bytesPerRow
+            let bytesPerRow = bitmap.bytesPerRow
             let maskRuntime = Self.makeApproximateBubbleMaskRuntime(image: image, bubbleGeometry: bubbleGeometry)
             let segmentRects = (segmentMaskReport?.diagnostics ?? []).compactMap { diagnostic -> CGRect? in
                 guard let rect = diagnostic.glyphMaskRect else { return nil }
@@ -3818,6 +3819,7 @@ struct MangaOverlayProbeService: Sendable {
                         let x = Int(bubbleRect.minX) + localX
                         guard x >= 0, y >= 0, x < image.width, y < image.height else { continue }
                         let offset = y * bytesPerRow + x * 4
+                        guard offset + 2 < bytes.count else { continue }
                         let luminance = (Int(bytes[offset]) * 299 + Int(bytes[offset + 1]) * 587 + Int(bytes[offset + 2]) * 114) / 1000
                         gray[localY * width + localX] = UInt8(max(0, min(255, luminance)))
                         sum += luminance
@@ -7098,6 +7100,7 @@ struct MangaOverlayProbeService: Sendable {
     }
 
     private static func drawTranslatedOverlay(on image: CGImage, blocks: [MangaOverlayProbeBlock]) throws -> CGImage {
+        let backgroundBitmap = makeRGBA8Bitmap(from: image)
         try draw(on: image) { context, _ in
             for block in blocks where !block.translatedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
@@ -7118,7 +7121,7 @@ struct MangaOverlayProbeService: Sendable {
                         context.fill(clamp(rect(from: fillRect), to: bounds))
                     }
                 } else {
-                    let background = sampleBackgroundColor(image: image, near: expanded)
+                    let background = sampleBackgroundColor(bitmap: backgroundBitmap, near: expanded)
                     context.setFillColor(background)
                     context.fill(expanded)
                 }
@@ -7589,22 +7592,22 @@ struct MangaOverlayProbeService: Sendable {
         }
     }
 
-    private static func sampleBackgroundColor(image: CGImage, near rect: CGRect) -> CGColor {
-        guard let providerData = image.dataProvider?.data,
-              let bytes = CFDataGetBytePtr(providerData),
-              image.bitsPerPixel == 32 else {
+    private static func sampleBackgroundColor(bitmap: RGBA8Bitmap?, near rect: CGRect) -> CGColor {
+        guard let bitmap else {
             return CGColor(red: 1, green: 1, blue: 1, alpha: 0.94)
         }
 
-        let bytesPerRow = image.bytesPerRow
-        let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+        let bytes = bitmap.pixels
+        let bytesPerRow = bitmap.bytesPerRow
+        let bounds = CGRect(x: 0, y: 0, width: CGFloat(bitmap.width), height: CGFloat(bitmap.height))
         let ring = expand(rect, by: 0.24, bounds: bounds)
         var samples: [(Int, Int, Int)] = []
         let step = max(1, Int(min(ring.width, ring.height) / 12))
         for y in stride(from: Int(ring.minY), through: Int(ring.maxY), by: step) {
             for x in stride(from: Int(ring.minX), through: Int(ring.maxX), by: step) {
-                guard !rect.contains(CGPoint(x: CGFloat(x), y: CGFloat(y))), x >= 0, y >= 0, x < image.width, y < image.height else { continue }
+                guard !rect.contains(CGPoint(x: CGFloat(x), y: CGFloat(y))), x >= 0, y >= 0, x < bitmap.width, y < bitmap.height else { continue }
                 let offset = y * bytesPerRow + x * 4
+                guard offset + 2 < bytes.count else { continue }
                 samples.append((Int(bytes[offset]), Int(bytes[offset + 1]), Int(bytes[offset + 2])))
             }
         }
@@ -7626,16 +7629,18 @@ struct MangaOverlayProbeService: Sendable {
 
     private static func makeGlyphMaskPlan(
         image: CGImage,
+        bitmap: RGBA8Bitmap?,
         blockRect: CGRect,
         bubbleRect: CGRect?
     ) -> MangaOverlayGlyphMaskPlan? {
         guard let bubbleRect else { return nil }
-        guard let providerData = image.dataProvider?.data,
-              let bytes = CFDataGetBytePtr(providerData),
-              image.bitsPerPixel == 32 else {
+        guard let bitmap,
+              bitmap.width == image.width,
+              bitmap.height == image.height else {
             return nil
         }
 
+        let bytes = bitmap.pixels
         let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
         let bubbleBounds = clamp(bubbleRect.integral, to: imageBounds)
         let ocrBounds = clamp(expand(blockRect, by: 0.08, bounds: imageBounds).integral, to: bubbleBounds)
@@ -7647,7 +7652,7 @@ struct MangaOverlayProbeService: Sendable {
         let height = Int(bubbleBounds.height)
         guard width > 0, height > 0 else { return nil }
 
-        let bytesPerRow = image.bytesPerRow
+        let bytesPerRow = bitmap.bytesPerRow
         var gray = [UInt8](repeating: 255, count: width * height)
         for localY in 0..<height {
             let y = Int(bubbleBounds.minY) + localY
@@ -7655,6 +7660,7 @@ struct MangaOverlayProbeService: Sendable {
                 let x = Int(bubbleBounds.minX) + localX
                 guard x >= 0, y >= 0, x < image.width, y < image.height else { continue }
                 let offset = y * bytesPerRow + x * 4
+                guard offset + 2 < bytes.count else { continue }
                 let red = Double(bytes[offset])
                 let green = Double(bytes[offset + 1])
                 let blue = Double(bytes[offset + 2])
@@ -7759,8 +7765,7 @@ struct MangaOverlayProbeService: Sendable {
             maxRects: 5_000
         )
         let background = glyphBackgroundEstimate(
-            image: image,
-            bytes: bytes,
+            bitmap: bitmap,
             bubbleBounds: bubbleBounds,
             excludedOffsets: dilatedOffsets
         )
@@ -7873,8 +7878,7 @@ struct MangaOverlayProbeService: Sendable {
     }
 
     private static func glyphBackgroundEstimate(
-        image: CGImage,
-        bytes: UnsafePointer<UInt8>,
+        bitmap: RGBA8Bitmap,
         bubbleBounds: CGRect,
         excludedOffsets: Set<Int>
     ) -> (color: [Double], stdDev: Double)? {
@@ -7882,7 +7886,8 @@ struct MangaOverlayProbeService: Sendable {
         let height = Int(bubbleBounds.height)
         guard width > 0, height > 0 else { return nil }
 
-        let bytesPerRow = image.bytesPerRow
+        let bytes = bitmap.pixels
+        let bytesPerRow = bitmap.bytesPerRow
         var redValues: [Int] = []
         var greenValues: [Int] = []
         var blueValues: [Int] = []
@@ -7920,8 +7925,9 @@ struct MangaOverlayProbeService: Sendable {
             let localX = localOffset % width
             let y = Int(bubbleBounds.minY) + localY
             let x = Int(bubbleBounds.minX) + localX
-            guard x >= 0, y >= 0, x < image.width, y < image.height else { continue }
+            guard x >= 0, y >= 0, x < bitmap.width, y < bitmap.height else { continue }
             let offset = y * bytesPerRow + x * 4
+            guard offset + 2 < bytes.count else { continue }
             redValues.append(Int(bytes[offset]))
             greenValues.append(Int(bytes[offset + 1]))
             blueValues.append(Int(bytes[offset + 2]))
