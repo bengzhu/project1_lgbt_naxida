@@ -115,6 +115,46 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.47：Koharu Native Shadow Artifact Export-Lite 候选 artifact 影子导出
+日期：2026-07-03
+依据：`md/prompt/v1（漫画探针）/v1.47（KoharuNativeShadowArtifactExportLite候选artifact影子导出）.md`。本轮修改 Swift 探针报告模型、非 active shadow artifact JSON 导出、Koharu convergence 联动、TXT 快照、shadow validator 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuNativeShadowArtifactExportLiteReport`，在 v1.46 Native Promotion Gate-Lite 后、最终 convergence 刷新前生成。
+- 新增 App 沙盒 `Output/koharu_native_shadow_artifacts/` 非 active 输出目录，写出 `1.native_manifest.json`、`1.native_textboxes.json`、`1.native_bubbles.json`、`1.native_segment_mask.json`、`1.native_artifact_bundle.json`。
+- Shadow manifest 和记录显式标记 `shadowOnly = true`、`contractExampleOnly = true`、`forbiddenAsActiveArtifact = true`、`readyForActiveArtifact = false`、`activeArtifactsWritten = false`、`wouldCreateActiveArtifact = false`。
+- 报告记录 exported files、record counts、field completeness、coordinate validation、record source、逐块 export ledger、active-artifact forbidden gate、proxy boundary gate 和 external readiness unchanged gate。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuNativeShadowArtifactExportLiteReport`；convergence 新增 `WI-koharu-native-shadow-artifact-export-lite` 和 `G-koharu-native-shadow-artifact-export-lite-executed`。
+- `1_ocr_probe_text.txt` 新增 shadow export summary、文件清单、逐块 `nativeShadowArtifactExportBlockLedger`、`nativeShadowArtifactGate` 和 external readiness 摘要。
+- 新增只读 `scripts/validate-koharu-shadow-artifacts.py`，用于校验 shadow export 目录；它不复制、不迁移、不生成 active `test/koharu_artifacts/`。
+- 本轮不新增 OCR / LLM / PNG，不更换模型，不创建或修改 active `test/koharu_artifacts/`，不替换主 OCR、翻译输入、覆盖图、renderer、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `scripts/validate-koharu-shadow-artifacts.py`
+- `md/prompt/v1（漫画探针）/v1.47（KoharuNativeShadowArtifactExportLite候选artifact影子导出）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行轻量 Swift parse、`git diff --check`、JSON 解析、Koharu validator smoke 和 shadow validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuNativeShadowArtifactExportLiteReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`exportedFileCount >= 5`、`textBoxRecordCount == totalBlocksDetected`、`bundleRecordCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`gateCount >= 10`、shadow / forbidden / not-active-ready flags 正确、`activeArtifactsWritten = false`、`wouldCreateActiveArtifact = false`、`groundTruthUsedForDecision = false`，convergence 包含 v1.47 reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、文件清单、逐块 ledger 和 gate。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.47 新字段和 shadow 目录；以 PR 后云端结果包为准。
+- v1.47 仍是 native-lite shadow artifact export report-only 输出包，不代表真实 Koharu `TextBoxes` / `BubbleMask` / `SegmentMask` / `OcrText` / `RenderedSprites` 已接入，也不代表 OCR 或翻译质量改善。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.46：Koharu Native Promotion Gate-Lite 探针驱动晋级门槛
 日期：2026-07-03
 依据：`md/prompt/v1（漫画探针）/v1.46（KoharuNativePromotionGateLite探针驱动晋级门槛）.md`。本轮修改 Swift 探针报告模型、native-lite promotion gate 聚合账本、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。

@@ -1604,6 +1604,7 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?
                 var koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?
                 var koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport?
+                var koharuNativeShadowArtifactExportLiteReport: MangaKoharuNativeShadowArtifactExportLiteReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -2394,6 +2395,17 @@ final class TranslationSessionStore: ObservableObject {
                     cleanTextDiagnostic: cleanTextDiagnostic
                 )
                 self.writeMangaProbeProgress(stage: "koharu-native-promotion-gate-lite-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-native-shadow-artifact-export-lite-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                koharuNativeShadowArtifactExportLiteReport = try Self.makeKoharuNativeShadowArtifactExportLiteReport(
+                    blocks: probeBlocks,
+                    outputDirectory: self.mangaOverlayOutputDirectory,
+                    artifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
+                    promotionGateLiteReport: koharuNativePromotionGateLiteReport,
+                    bubbleInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+                    segmentRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport
+                )
+                self.writeMangaProbeProgress(stage: "koharu-native-shadow-artifact-export-lite-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
                     blocks: probeBlocks,
@@ -2424,7 +2436,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
                     koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
                     koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
-                    koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport
+                    koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
+                    koharuNativeShadowArtifactExportLiteReport: koharuNativeShadowArtifactExportLiteReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
@@ -2469,6 +2482,7 @@ final class TranslationSessionStore: ObservableObject {
                         koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
                         koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                         koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
+                        koharuNativeShadowArtifactExportLiteReport: koharuNativeShadowArtifactExportLiteReport,
                         translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                         koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                         bubbleMaskReport: bubbleMaskReport,
@@ -2530,6 +2544,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
                     koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                     koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
+                    koharuNativeShadowArtifactExportLiteReport: koharuNativeShadowArtifactExportLiteReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
@@ -8137,6 +8152,7 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
         koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
         koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport? = nil,
+        koharuNativeShadowArtifactExportLiteReport: MangaKoharuNativeShadowArtifactExportLiteReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
@@ -8207,7 +8223,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
             koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
             koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
-            koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport
+            koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
+            koharuNativeShadowArtifactExportLiteReport: koharuNativeShadowArtifactExportLiteReport
         )
         let artifactBundleLiteReport = koharuNativeArtifactBundleLiteReport ?? Self.makeKoharuNativeArtifactBundleLiteReport(
             blocks: blocks,
@@ -8394,6 +8411,7 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
             koharuNativeArtifactBundleLiteReport: artifactBundleLiteReport,
             koharuNativePromotionGateLiteReport: promotionGateLiteReport,
+            koharuNativeShadowArtifactExportLiteReport: koharuNativeShadowArtifactExportLiteReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
@@ -11632,6 +11650,512 @@ final class TranslationSessionStore: ObservableObject {
                 "It defines report-only promotion gates and candidate export previews; it never creates active test/koharu_artifacts or promotes proxy evidence as real Koharu artifacts.",
                 "Ground truth appears only in evaluationSignals and never drives promotionEligibility, stageReadiness, candidateExportPreviews, nextAction, workItems, or gate status.",
                 "No OCR, LLM, PNG, prompt, model, renderer, safeLayoutRect, glyphMaskFillRects, finalTextUsedForTranslation, blockPassed, failureCategory, currentBlockSource, or textRegionCropReport.adoptedCount behavior changes are made by v1.46."
+            ]
+        )
+    }
+
+    private static func makeKoharuNativeShadowArtifactExportLiteReport(
+        blocks: [MangaOverlayProbeBlock],
+        outputDirectory: URL,
+        artifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?,
+        promotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport?,
+        bubbleInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport?,
+        segmentRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
+    ) throws -> MangaKoharuNativeShadowArtifactExportLiteReport {
+        func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
+        func countBy(_ values: [String]) -> [String: Int] {
+            values.reduce(into: [:]) { partial, value in partial[value, default: 0] += 1 }
+        }
+        func formatted(_ value: Double?) -> String {
+            value?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+        }
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaKoharuNativeShadowArtifactExportLiteSignal {
+            MangaKoharuNativeShadowArtifactExportLiteSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+        func gate(
+            _ id: String,
+            _ name: String,
+            _ scope: String,
+            _ status: String,
+            _ threshold: String,
+            _ affected: [Int],
+            _ failure: String,
+            _ action: String,
+            _ signals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+        ) -> MangaKoharuNativeShadowArtifactGate {
+            MangaKoharuNativeShadowArtifactGate(
+                gateID: id,
+                gateName: name,
+                scope: scope,
+                status: status,
+                threshold: threshold,
+                affectedBlocks: uniqueSorted(affected),
+                decisionSignals: signals,
+                failureMeans: failure,
+                recommendedAction: action,
+                groundTruthUsedForDecision: false
+            )
+        }
+        func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(value)
+            try data.write(to: url, options: .atomic)
+        }
+        func fileRecord(fileName: String, kind: String, recordCount: Int) -> MangaKoharuNativeShadowArtifactFileRecord {
+            let relativePath = "koharu_native_shadow_artifacts/\(fileName)"
+            let url = outputDirectory.appendingPathComponent(relativePath)
+            let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+            let byteCount = (attributes?[.size] as? NSNumber)?.intValue ?? 0
+            return MangaKoharuNativeShadowArtifactFileRecord(
+                fileName: fileName,
+                relativePath: relativePath,
+                artifactKind: kind,
+                exists: FileManager.default.fileExists(atPath: url.path),
+                nonEmpty: byteCount > 0,
+                byteCount: byteCount,
+                recordCount: recordCount,
+                shadowOnly: true,
+                forbiddenAsActiveArtifact: true,
+                readyForActiveArtifact: false,
+                wouldCreateActiveArtifact: false,
+                notes: [
+                    "contractExampleOnly=true",
+                    "readyForActiveArtifact=false",
+                    "doNotCopyToTestKoharuArtifacts"
+                ]
+            )
+        }
+        func coordinateValid(_ bbox: [Double]?) -> Bool {
+            guard let bbox, bbox.count == 4 else { return false }
+            let rect = Self.rect(from: bbox)
+            guard rect.width > 0, rect.height > 0 else { return false }
+            let bounds = CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
+            return rect.minX >= bounds.minX
+                && rect.minY >= bounds.minY
+                && rect.maxX <= bounds.maxX
+                && rect.maxY <= bounds.maxY
+        }
+        func coordinateStatus(_ bbox: [Double]?) -> String {
+            coordinateValid(bbox) ? "validOriginalImageTopLeftPixels" : "invalidOrOutOfBounds"
+        }
+        func recordIDForBubble(block: MangaOverlayProbeBlock, bubble: MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger?) -> String {
+            if let instanceID = bubble?.instanceLiteMajorityID {
+                return "shadow.bubble.instance.\(instanceID)"
+            }
+            if let bubbleID = block.bubbleID {
+                return "shadow.bubble.current.\(bubbleID)"
+            }
+            return "shadow.bubble.block.\(block.index)"
+        }
+
+        let relativeDirectory = "koharu_native_shadow_artifacts"
+        let shadowDirectory = outputDirectory.appendingPathComponent(relativeDirectory, isDirectory: true)
+        if FileManager.default.fileExists(atPath: shadowDirectory.path) {
+            try FileManager.default.removeItem(at: shadowDirectory)
+        }
+        try FileManager.default.createDirectory(at: shadowDirectory, withIntermediateDirectories: true)
+
+        let imageWidth = Double(segmentRefinementLiteReport?.sourceImageWidth ?? bubbleInstanceLiteReport?.sourceImageWidth ?? 576)
+        let imageHeight = Double(segmentRefinementLiteReport?.sourceImageHeight ?? bubbleInstanceLiteReport?.sourceImageHeight ?? 1280)
+        let allBlockIndexes = blocks.map(\.index)
+        let bundleByBlock = Dictionary(
+            uniqueKeysWithValues: (artifactBundleLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let promotionByBlock = Dictionary(
+            uniqueKeysWithValues: (promotionGateLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let textBoxPreviewByBlock = Dictionary(
+            (promotionGateLiteReport?.candidateExportPreviews ?? [])
+                .filter { $0.targetArtifactStage == "TextBoxes" }
+                .map { ($0.blockIndex, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let bubbleByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleInstanceLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentRefinementLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+
+        var textBoxRecords: [MangaKoharuNativeShadowArtifactTextBoxRecord] = []
+        var bundleRecords: [MangaKoharuNativeShadowArtifactBundleRecord] = []
+        var blockLedgers: [MangaKoharuNativeShadowArtifactBlockLedger] = []
+
+        for block in blocks.sorted(by: { $0.index < $1.index }) {
+            let bundle = bundleByBlock[block.index]
+            let promotion = promotionByBlock[block.index]
+            let preview = textBoxPreviewByBlock[block.index]
+            let bubble = bubbleByBlock[block.index]
+            let segment = segmentByBlock[block.index]
+            let textBoxID = "shadow.textbox.block.\(block.index)"
+            let segmentID = segment?.selectedCandidateID ?? "shadow.segment.block.\(block.index)"
+            let bubbleRecordID = recordIDForBubble(block: block, bubble: bubble)
+            let textBoxBBox = preview?.bbox ?? bundle?.selectedTextBoxLite.bbox ?? block.bbox
+            let textCoordinateValid = coordinateValid(textBoxBBox)
+            let bubbleBBox = bubble?.instanceLiteSafeRect
+                ?? bubble?.distanceFieldSafeRectFromInstanceLite
+                ?? block.safeLayoutRect
+                ?? block.bbox
+            let bubbleCoordinateValid = coordinateValid(bubbleBBox)
+            let segmentBBox = segment?.maskBBox ?? block.glyphMaskRect ?? block.bbox
+            let segmentCoordinateValid = coordinateValid(segmentBBox)
+            let sourceReport = preview?.sourceReport ?? bundle?.selectedTextBoxLite.sourceReport ?? "blocks"
+            let sourceCandidateID = preview?.previewID ?? bundle?.selectedTextBoxLite.componentID ?? "block\(block.index).finalBBox"
+            let fieldCompleteness: String
+            if textCoordinateValid, preview?.confidence != nil || bundle?.selectedTextBoxLite.confidence != nil {
+                fieldCompleteness = "completeShadowTextBoxRecord"
+            } else if textCoordinateValid {
+                fieldCompleteness = "missingOptionalConfidence"
+            } else {
+                fieldCompleteness = "invalidCoordinateFields"
+            }
+            let shadowEligibility: String
+            if promotion == nil {
+                shadowEligibility = "blockedByMissingPromotionPreview"
+            } else if !textCoordinateValid {
+                shadowEligibility = "blockedByInvalidCoordinates"
+            } else if bundle?.selectedTextBoxLite.fallbackUsed == true
+                || bundle?.selectedBubbleInstanceLite.fallbackUsed == true
+                || bundle?.selectedSegmentMaskLite.fallbackUsed == true {
+                shadowEligibility = "blockedByProxyBoundary"
+            } else {
+                shadowEligibility = "exportedShadowOnly"
+            }
+            let decisionSignals = [
+                signal("sourceReport", sourceReport, source: "koharuNativeShadowArtifactExportLiteReport"),
+                signal("promotionEligibility", promotion?.promotionEligibility ?? "nil", source: "koharuNativePromotionGateLiteReport"),
+                signal("bundleLiteVerdict", artifactBundleLiteReport?.bundleLiteVerdict ?? "nil", source: "koharuNativeArtifactBundleLiteReport"),
+                signal("externalReadinessVerdict", externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing", source: "externalArtifactReadinessReport")
+            ]
+            let evaluationSignals = [
+                signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
+                signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true),
+                signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true)
+            ]
+
+            textBoxRecords.append(
+                MangaKoharuNativeShadowArtifactTextBoxRecord(
+                    blockIndex: block.index,
+                    textBoxID: textBoxID,
+                    bbox: textBoxBBox,
+                    sourceReport: sourceReport,
+                    sourceCandidateID: sourceCandidateID,
+                    sourceDirection: Self.estimatedOrientation(for: textBoxBBox),
+                    confidence: preview?.confidence ?? bundle?.selectedTextBoxLite.confidence ?? 0,
+                    fieldCompleteness: fieldCompleteness,
+                    coordinateValid: textCoordinateValid,
+                    promotionStatus: promotion?.textBoxesPromotionStatus ?? "missingPromotionLedger",
+                    exportEligibility: shadowEligibility,
+                    shadowOnly: true,
+                    contractExampleOnly: true,
+                    forbiddenAsActiveArtifact: true,
+                    readyForActiveArtifact: false,
+                    wouldCreateActiveArtifact: false,
+                    proxyNotRealKoharuTextBox: true,
+                    decisionSignals: decisionSignals,
+                    evaluationSignals: evaluationSignals
+                )
+            )
+
+            let renderFitStatus = bundle?.renderFitEvidence.first { $0.name == "fitVerdict" }?.value
+                ?? (block.renderTextTruncated ? "renderTextTruncated" : "renderStatusReportOnly")
+            bundleRecords.append(
+                MangaKoharuNativeShadowArtifactBundleRecord(
+                    blockIndex: block.index,
+                    textBoxID: textBoxID,
+                    bubbleID: bubble?.instanceLiteMajorityID ?? block.bubbleID,
+                    segmentMaskCandidateID: segmentID,
+                    finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                    translationCandidate: block.translationCandidate,
+                    failureCategory: block.failureCategory,
+                    blockPassed: block.blockPassed,
+                    renderSafeRect: block.safeLayoutRect,
+                    renderFitStatus: renderFitStatus,
+                    promotionEligibility: promotion?.promotionEligibility ?? "missingPromotionLedger",
+                    primaryBlockingArtifact: promotion?.primaryBlockingArtifact ?? bundle?.primaryBlockingArtifact ?? "unknown",
+                    nextAction: promotion?.nextAction ?? bundle?.nextAction ?? "manualReviewOnly",
+                    shadowOnly: true,
+                    contractExampleOnly: true,
+                    forbiddenAsActiveArtifact: true,
+                    readyForActiveArtifact: false,
+                    wouldCreateActiveArtifact: false,
+                    wouldChangeMainFlow: false,
+                    groundTruthUsedForDecision: false,
+                    decisionSignals: decisionSignals + [
+                        signal("renderFitStatus", renderFitStatus, source: "koharuNativeArtifactBundleLiteReport"),
+                        signal("blockPassed", String(block.blockPassed), source: "blocks")
+                    ],
+                    evaluationSignals: evaluationSignals
+                )
+            )
+
+            blockLedgers.append(
+                MangaKoharuNativeShadowArtifactBlockLedger(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    blockPassed: block.blockPassed,
+                    failureCategory: block.failureCategory,
+                    finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                    textBoxExportRecordID: textBoxID,
+                    bubbleExportRecordID: bubbleRecordID,
+                    segmentMaskExportRecordID: segmentID,
+                    bundleExportRecordID: "shadow.bundle.block.\(block.index)",
+                    textBoxCoordinateStatus: coordinateStatus(textBoxBBox),
+                    bubbleCoordinateStatus: coordinateStatus(bubbleBBox),
+                    segmentMaskSummaryStatus: segmentCoordinateValid ? "summaryAvailable" : "summaryInvalidOrOutOfBounds",
+                    fieldCompletenessStatus: fieldCompleteness,
+                    promotionGateStatusFromV146: promotion?.promotionEligibility ?? "missingPromotionLedger",
+                    shadowExportEligibility: shadowEligibility,
+                    primaryBlockingArtifact: promotion?.primaryBlockingArtifact ?? bundle?.primaryBlockingArtifact ?? "unknown",
+                    nextAction: promotion?.nextAction ?? bundle?.nextAction ?? "manualReviewOnly",
+                    mustNotUseAsActiveArtifactReasons: [
+                        "shadowOnly=true",
+                        "contractExampleOnly=true",
+                        "forbiddenAsActiveArtifact=true",
+                        "readyForActiveArtifact=false",
+                        "wouldCreateActiveArtifact=false",
+                        "proxyNotRealKoharuArtifacts=true",
+                        "doNotCopyToTestKoharuArtifacts"
+                    ],
+                    decisionSignals: decisionSignals + [
+                        signal("textBoxCoordinateStatus", coordinateStatus(textBoxBBox), source: "koharuNativeShadowArtifactExportLiteReport"),
+                        signal("bubbleCoordinateStatus", coordinateStatus(bubbleBBox), source: "koharuNativeShadowArtifactExportLiteReport"),
+                        signal("segmentCoordinateStatus", coordinateStatus(segmentBBox), source: "koharuNativeShadowArtifactExportLiteReport")
+                    ],
+                    evaluationSignals: evaluationSignals,
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            )
+        }
+
+        let groupedBubbleKeys = Dictionary(grouping: blocks.sorted(by: { $0.index < $1.index })) { block in
+            recordIDForBubble(block: block, bubble: bubbleByBlock[block.index])
+        }
+        let bubbleRecords: [MangaKoharuNativeShadowArtifactBubbleRecord] = groupedBubbleKeys.keys.sorted().compactMap { key in
+            guard let groupedBlocks = groupedBubbleKeys[key], let firstBlock = groupedBlocks.first else { return nil }
+            let firstBubble = bubbleByBlock[firstBlock.index]
+            let bbox = firstBubble?.instanceLiteSafeRect
+                ?? firstBubble?.distanceFieldSafeRectFromInstanceLite
+                ?? firstBlock.safeLayoutRect
+                ?? firstBlock.bbox
+            let majorityIndexes = uniqueSorted(groupedBlocks.map(\.index))
+            let pixelCount = groupedBlocks.reduce(0) { total, block in
+                total + (bubbleByBlock[block.index]?.instanceLiteMajorityPixelCount ?? 0)
+            }
+            return MangaKoharuNativeShadowArtifactBubbleRecord(
+                bubbleID: firstBlock.bubbleID,
+                instanceLiteID: firstBubble?.instanceLiteMajorityID,
+                bbox: bbox,
+                sourceReport: firstBubble?.instanceLiteMajorityID == nil ? "blocks/currentBubbleGeometry" : "koharuNativeBubbleMaskInstanceLiteReport",
+                majorityBlockIndexes: majorityIndexes,
+                maskValue: firstBubble?.instanceLiteMajorityID,
+                pixelCount: pixelCount,
+                safeRectSummary: "instanceLiteSafeRect=\(firstBubble?.instanceLiteSafeRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")",
+                assignmentStatus: firstBubble?.assignmentAgreement ?? "fallbackCurrentBubbleGeometry",
+                splitRisk: firstBubble?.splitRisk ?? "unknown",
+                shadowOnly: true,
+                contractExampleOnly: true,
+                forbiddenAsActiveArtifact: true,
+                readyForActiveArtifact: false,
+                wouldCreateActiveArtifact: false,
+                proxyNotRealKoharuBubbleMask: true,
+                decisionSignals: [
+                    signal("bubbleRecordID", key, source: "koharuNativeShadowArtifactExportLiteReport"),
+                    signal("assignmentStatus", firstBubble?.assignmentAgreement ?? "fallbackCurrentBubbleGeometry", source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                    signal("coordinateStatus", coordinateStatus(bbox), source: "koharuNativeShadowArtifactExportLiteReport")
+                ],
+                evaluationSignals: groupedBlocks.map {
+                    signal("block\($0.index).groundTruthMatch", $0.groundTruthMatch, source: "blocks", decision: false, evaluation: true)
+                }
+            )
+        }
+
+        let segmentRecords: [MangaKoharuNativeShadowArtifactSegmentMaskRecord] = blocks.sorted(by: { $0.index < $1.index }).map { block in
+            let segment = segmentByBlock[block.index]
+            let candidateCount = segment?.candidateCount ?? 0
+            return MangaKoharuNativeShadowArtifactSegmentMaskRecord(
+                segmentMaskID: segment?.selectedCandidateID ?? "shadow.segment.block.\(block.index)",
+                blockIndex: block.index,
+                width: Int(imageWidth),
+                height: Int(imageHeight),
+                sourceReport: segment?.selectedCandidateID == nil ? "blocks/glyphMaskProxy" : "koharuNativeSegmentMaskRefinementLiteReport",
+                candidateCount: candidateCount,
+                glyphPixelCount: segment?.rawPixelCount ?? block.glyphMaskPixelCount,
+                connectedComponentCount: segment?.componentCount ?? 0,
+                blockSummaries: [
+                    "maskBBox=\(segment?.maskBBox?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")",
+                    "textboxConstrained=\(segment != nil)",
+                    "bubbleConstrained=\(segment != nil)",
+                    "wouldBeUsableForClearTextMask=\(segment.map { String($0.wouldBeUsableForClearTextMask) } ?? "nil")"
+                ],
+                textboxConstrained: segment != nil,
+                bubbleConstrained: segment != nil,
+                shadowOnly: true,
+                contractExampleOnly: true,
+                forbiddenAsActiveArtifact: true,
+                readyForActiveArtifact: false,
+                wouldCreateActiveArtifact: false,
+                proxyNotRealKoharuSegmentMask: true,
+                decisionSignals: [
+                    signal("candidateCount", String(candidateCount), source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                    signal("coordinateStatus", coordinateStatus(segment?.maskBBox ?? block.glyphMaskRect ?? block.bbox), source: "koharuNativeShadowArtifactExportLiteReport")
+                ],
+                evaluationSignals: [
+                    signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true),
+                    signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true)
+                ]
+            )
+        }
+
+        let manifest = MangaKoharuNativeShadowArtifactManifest(
+            schemaVersion: "aitrans.koharu_native_shadow_artifact.v1",
+            sourceImage: "test/1.png",
+            coordinateSpace: "originalImageTopLeftPixels",
+            generatedBy: "AITRANS native-lite probe",
+            shadowOnly: true,
+            contractExampleOnly: true,
+            forbiddenAsActiveArtifact: true,
+            readyForActiveArtifact: false,
+            activeArtifactsDirectory: false,
+            activeArtifactsWritten: false,
+            groundTruthUsedForDecision: false,
+            wouldChangeMainFlow: false,
+            wouldCreateActiveArtifact: false,
+            textBoxesPath: "1.native_textboxes.json",
+            bubbleMaskPath: "1.native_bubbles.json",
+            segmentMaskPath: "1.native_segment_mask.json",
+            bundlePath: "1.native_artifact_bundle.json",
+            sourceReports: [
+                "koharuNativeTextBoxDetectorLiteReport",
+                "koharuNativeTextBoxDetectorLiteShadowOCRReport",
+                "koharuNativeTextBoxDetectorLiteRefinementReport",
+                "koharuNativeTextBoxDetectorLiteClosedLoopReport",
+                "koharuNativeBubbleMaskInstanceLiteReport",
+                "koharuNativeSegmentMaskRefinementLiteReport",
+                "koharuNativeArtifactBundleLiteReport",
+                "koharuNativePromotionGateLiteReport",
+                "blocks"
+            ],
+            notes: [
+                "This directory is a non-active shadow export packet.",
+                "Do not copy these files to test/koharu_artifacts/.",
+                "It keeps externalArtifactReadinessReport governed only by real active artifacts.",
+                "All records are proxy/native-lite report artifacts and cannot be used as real Koharu detector output."
+            ]
+        )
+
+        try writeJSON(manifest, to: shadowDirectory.appendingPathComponent("1.native_manifest.json"))
+        try writeJSON(textBoxRecords, to: shadowDirectory.appendingPathComponent("1.native_textboxes.json"))
+        try writeJSON(bubbleRecords, to: shadowDirectory.appendingPathComponent("1.native_bubbles.json"))
+        try writeJSON(segmentRecords, to: shadowDirectory.appendingPathComponent("1.native_segment_mask.json"))
+        try writeJSON(bundleRecords, to: shadowDirectory.appendingPathComponent("1.native_artifact_bundle.json"))
+
+        let files = [
+            fileRecord(fileName: "1.native_manifest.json", kind: "Manifest", recordCount: 1),
+            fileRecord(fileName: "1.native_textboxes.json", kind: "TextBoxes", recordCount: textBoxRecords.count),
+            fileRecord(fileName: "1.native_bubbles.json", kind: "BubbleMask", recordCount: bubbleRecords.count),
+            fileRecord(fileName: "1.native_segment_mask.json", kind: "SegmentMask", recordCount: segmentRecords.count),
+            fileRecord(fileName: "1.native_artifact_bundle.json", kind: "ArtifactBundle", recordCount: bundleRecords.count)
+        ]
+        let outputFilesOK = files.allSatisfy { $0.exists && $0.nonEmpty }
+        let blockCoverageOK = blockLedgers.count == blocks.count
+        let coordinateOK = textBoxRecords.allSatisfy(\.coordinateValid)
+        let externalStillMissing = externalArtifactReadinessReport?.readinessVerdict == nil
+            || externalArtifactReadinessReport?.readinessVerdict == "manifestMissing"
+            || externalArtifactReadinessReport?.readinessVerdict == "stopUntilArtifactsProvided"
+        let gates = [
+            gate("G-native-shadow-artifact-export-lite-output-files", "Output files", "files", outputFilesOK ? "passed" : "blocked", "five shadow JSON files exist and are non-empty", allBlockIndexes, "shadow export files are missing or empty", "restoreShadowExportWrites", [signal("exportedFileCount", String(files.filter { $0.exists && $0.nonEmpty }.count), source: "koharuNativeShadowArtifactExportLiteReport")]),
+            gate("G-native-shadow-artifact-export-lite-no-active-write", "No active write", "activeArtifacts", "passed", "activeArtifactsWritten=false and output directory is not test/koharu_artifacts", [], "shadow export writes active test/koharu_artifacts", "removeActiveWrites", [signal("activeArtifactsWritten", "false", source: "koharuNativeShadowArtifactExportLiteReport")]),
+            gate("G-native-shadow-artifact-export-lite-forbidden-active", "Forbidden active", "manifest/records", "passed", "manifest and records are shadow-only and forbidden as active artifacts", allBlockIndexes, "shadow records can be mistaken for active artifacts", "restoreForbiddenFlags", [signal("forbiddenAsActiveArtifact", "true", source: "koharuNativeShadowArtifactExportLiteReport")]),
+            gate("G-native-shadow-artifact-export-lite-no-ground-truth-decision", "No ground truth decision", "decisionSignals", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth affects export rows, bbox, ranking, gates, or nextAction", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeShadowArtifactExportLiteReport")]),
+            gate("G-native-shadow-artifact-export-lite-block-coverage", "Block coverage", "blocks", blockCoverageOK ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack shadow export ledgers", "restoreBlockLedgerCoverage", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuNativeShadowArtifactExportLiteReport")]),
+            gate("G-native-shadow-artifact-export-lite-coordinate-validation", "Coordinate validation", "bbox", coordinateOK ? "passed" : "warning", "positive bbox within 576x1280 original-image top-left pixels or explicit blocked reason", blockLedgers.filter { $0.textBoxCoordinateStatus != "validOriginalImageTopLeftPixels" }.map(\.blockIndex), "invalid bbox is silently treated as active-ready", "keepInvalidCoordinatesBlocked", [signal("coordinateValidation", coordinateOK ? "allValid" : "hasInvalidCoordinates", source: "koharuNativeShadowArtifactExportLiteReport")]),
+            gate("G-native-shadow-artifact-export-lite-proxy-boundary", "Proxy boundary", "proxyBoundary", "passed", "proxy-not-real flags are true", allBlockIndexes, "native-lite proxy output is promoted as real Koharu artifacts", "collectRealArtifactsBeforeActiveUse", [signal("proxyNotRealKoharuTextBoxes", "true", source: "koharuNativeShadowArtifactExportLiteReport"), signal("proxyNotRealKoharuBubbleMask", "true", source: "koharuNativeShadowArtifactExportLiteReport"), signal("proxyNotRealKoharuSegmentMask", "true", source: "koharuNativeShadowArtifactExportLiteReport")]),
+            gate("G-native-shadow-artifact-export-lite-no-main-flow-mutation", "No main flow mutation", "mainFlow", "passed", "wouldChangeMainFlow=false", [], "shadow export changes OCR, translation, overlay, renderer, blockPassed, failureCategory, or currentBlockSource", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeShadowArtifactExportLiteReport")]),
+            gate("G-native-shadow-artifact-export-lite-external-readiness-unchanged", "External readiness unchanged", "ExternalArtifacts", externalStillMissing ? "passed" : "warning", "missing active artifacts stay manifestMissing/blocked unless real active files exist", allBlockIndexes, "shadow export makes external readiness ready", "keepShadowExportSeparateFromActiveReadiness", [signal("readinessVerdict", externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing", source: "externalArtifactReadinessReport")]),
+            gate("G-native-shadow-artifact-export-lite-ci-retained", "CI retained", "artifact", "passed", "shadow paths are reported in probe_report.json and TXT", allBlockIndexes, "CI artifact omits shadow export file list", "keepFileRecordsAndTXT", [signal("relativeOutputDirectory", relativeDirectory, source: "koharuNativeShadowArtifactExportLiteReport")])
+        ]
+        let exportVerdict: String
+        if !outputFilesOK {
+            exportVerdict = "blockedByMissingOutputFiles"
+        } else if !blockCoverageOK {
+            exportVerdict = "blockedByMissingBlockLedgers"
+        } else if !coordinateOK {
+            exportVerdict = "shadowOnlyExportWrittenWithInvalidCoordinates"
+        } else if blockLedgers.contains(where: { $0.shadowExportEligibility == "blockedByProxyBoundary" }) {
+            exportVerdict = "shadowOnlyExportWrittenWithProxyBoundary"
+        } else {
+            exportVerdict = "shadowOnlyExportWritten"
+        }
+
+        return MangaKoharuNativeShadowArtifactExportLiteReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referencePipeline: "Koharu",
+            referenceConcept: "NativeShadowArtifactExportLite.ReportOnlyCandidatePacket",
+            referenceWorkItemID: "WI-koharu-native-shadow-artifact-export-lite",
+            evaluatedBlockCount: blocks.count,
+            exportedFileCount: files.filter { $0.exists && $0.nonEmpty }.count,
+            textBoxRecordCount: textBoxRecords.count,
+            bubbleRecordCount: bubbleRecords.count,
+            segmentMaskRecordCount: segmentRecords.count,
+            bundleRecordCount: bundleRecords.count,
+            blockLedgerCount: blockLedgers.count,
+            gateCount: gates.count,
+            outputDirectory: shadowDirectory.path,
+            relativeOutputDirectory: relativeDirectory,
+            activeArtifactsDirectory: false,
+            activeArtifactsWritten: false,
+            shadowOnly: true,
+            forbiddenAsActiveArtifact: true,
+            readyForActiveArtifact: false,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            wouldCreateActiveArtifact: false,
+            diagnosticOnly: true,
+            nativeShadowExportLite: true,
+            proxyNotRealKoharuTextBoxes: true,
+            proxyNotRealKoharuBubbleMask: true,
+            proxyNotRealKoharuSegmentMask: true,
+            proxyNotRealKoharuOCR: true,
+            proxyNotRealKoharuRenderer: true,
+            externalArtifactsRequiredForThisReport: false,
+            exportVerdict: exportVerdict,
+            fieldCompletenessBreakdown: countBy(textBoxRecords.map(\.fieldCompleteness)),
+            coordinateValidationBreakdown: countBy(blockLedgers.flatMap { [$0.textBoxCoordinateStatus, $0.bubbleCoordinateStatus, $0.segmentMaskSummaryStatus] }),
+            recordSourceBreakdown: countBy(textBoxRecords.map(\.sourceReport) + bubbleRecords.map(\.sourceReport) + segmentRecords.map(\.sourceReport)),
+            primaryBlockingArtifactBreakdown: countBy(blockLedgers.map(\.primaryBlockingArtifact)),
+            nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
+            files: files,
+            textBoxRecords: textBoxRecords,
+            bubbleRecords: bubbleRecords,
+            segmentMaskRecords: segmentRecords,
+            bundleRecords: bundleRecords,
+            blockLedgers: blockLedgers,
+            gateLedger: gates,
+            notes: [
+                "koharuNativeShadowArtifactExportLiteReport writes a non-active shadow JSON packet under Output/koharu_native_shadow_artifacts/.",
+                "The packet is contractExampleOnly and forbiddenAsActiveArtifact; it must not be copied to test/koharu_artifacts/.",
+                "It consumes final blocks and v1.43-v1.46 native-lite ledgers only; it does not add OCR, LLM, PNG, model, prompt, renderer, overlay, blockPassed, failureCategory, currentBlockSource, or active artifact changes.",
+                "Ground truth appears only in evaluationSignals and never decides export rows, bbox, grouping, gates, nextAction, or work items.",
+                "externalArtifactReadinessReport remains controlled by real active artifacts and is not made ready by this shadow export."
             ]
         )
     }
@@ -18763,7 +19287,8 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil,
         koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
         koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
-        koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport? = nil
+        koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport? = nil,
+        koharuNativeShadowArtifactExportLiteReport: MangaKoharuNativeShadowArtifactExportLiteReport? = nil
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -19205,6 +19730,30 @@ final class TranslationSessionStore: ObservableObject {
         let nativePromotionGateLiteNextAction = nativePromotionGateLiteExecuted
             ? (koharuNativePromotionGateLiteReport?.nextActionBreakdown.keys.sorted().first ?? "keepNativePromotionGateLiteReportOnly")
             : "generateKoharuNativePromotionGateLiteReport"
+        let nativeShadowArtifactExportLiteExecuted = koharuNativeShadowArtifactExportLiteReport?.enabled == true
+        let nativeShadowArtifactExportLiteVerdict = koharuNativeShadowArtifactExportLiteReport?.exportVerdict ?? "notExecuted"
+        let nativeShadowArtifactExportLiteBlocks = uniqueSorted(koharuNativeShadowArtifactExportLiteReport?.blockLedgers.map(\.blockIndex) ?? allBlockIndexes)
+        let nativeShadowArtifactExportLiteStatus: String
+        if !nativeShadowArtifactExportLiteExecuted {
+            nativeShadowArtifactExportLiteStatus = "blockedByMissingNativeLiteInputs"
+        } else if nativeShadowArtifactExportLiteVerdict == "blockedByMissingOutputFiles"
+            || nativeShadowArtifactExportLiteVerdict == "blockedByMissingBlockLedgers" {
+            nativeShadowArtifactExportLiteStatus = "blockedByMissingNativeLiteInputs"
+        } else if nativeShadowArtifactExportLiteVerdict == "shadowOnlyExportWrittenWithInvalidCoordinates" {
+            nativeShadowArtifactExportLiteStatus = "blockedByInvalidCoordinates"
+        } else if nativeShadowArtifactExportLiteVerdict == "shadowOnlyExportWrittenWithProxyBoundary" {
+            nativeShadowArtifactExportLiteStatus = "blockedByProxyBoundary"
+        } else if nativeShadowArtifactExportLiteVerdict == "shadowOnlyExportWritten" {
+            nativeShadowArtifactExportLiteStatus = "closedShadowExportOnly"
+        } else {
+            nativeShadowArtifactExportLiteStatus = "manualReviewOnly"
+        }
+        let nativeShadowArtifactExportLiteBlockers = nativeShadowArtifactExportLiteExecuted
+            ? (koharuNativeShadowArtifactExportLiteReport?.gateLedger.filter { $0.status == "warning" || $0.status == "blocked" }.map(\.failureMeans) ?? [])
+            : ["koharuNativeShadowArtifactExportLiteReport not generated before convergence refresh"]
+        let nativeShadowArtifactExportLiteNextAction = nativeShadowArtifactExportLiteExecuted
+            ? "keepShadowExportNonActiveAndReviewCIArtifact"
+            : "generateKoharuNativeShadowArtifactExportLiteReport"
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -19566,11 +20115,18 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-koharu-native-segmentmask-refinement-lite", title: "Koharu Native SegmentMask refinement-lite", status: nativeSegmentMaskRefinementLiteStatus, sourceReport: nativeSegmentMaskRefinementLiteExecuted ? "koharuNativeSegmentMaskRefinementLiteReport" : "koharuArtifactConvergenceReport", stages: ["SourceImage", "TextBoxes", "SegmentMask", "BubbleMask", "RenderedSprites"], blocks: nativeSegmentMaskRefinementLiteBlocks, version: nativeSegmentMaskRefinementLiteExecuted ? "v1.44" : nil, blockers: nativeSegmentMaskRefinementLiteBlockers, nextAction: nativeSegmentMaskRefinementLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("refinementLiteVerdict", nativeSegmentMaskRefinementLiteVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("blockLedgerCount", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("proxyNotRealKoharuSegmentMask", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
             workItem("WI-koharu-native-artifact-bundle-lite", title: "Koharu Native Artifact bundle-lite consistency closure", status: nativeArtifactBundleLiteStatus, sourceReport: nativeArtifactBundleLiteExecuted ? "koharuNativeArtifactBundleLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "BubbleMask", "SegmentMask", "OcrText", "Translations", "RenderedSprites", "FinalRender"], blocks: nativeArtifactBundleLiteBlocks, version: nativeArtifactBundleLiteExecuted ? "v1.45" : nil, blockers: nativeArtifactBundleLiteBlockers, nextAction: nativeArtifactBundleLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("bundleLiteVerdict", nativeArtifactBundleLiteVerdict, source: "koharuNativeArtifactBundleLiteReport"), signal("bundleLedgerCount", koharuNativeArtifactBundleLiteReport.map { String($0.bundleLedgerCount) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("consistencyEdgeCount", koharuNativeArtifactBundleLiteReport.map { String($0.consistencyEdgeCount) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("nativeBundleLite", koharuNativeArtifactBundleLiteReport.map { String($0.nativeBundleLite) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport")]),
             workItem("WI-koharu-native-promotion-gate-lite", title: "Koharu Native Promotion Gate-Lite", status: nativePromotionGateLiteStatus, sourceReport: nativePromotionGateLiteExecuted ? "koharuNativePromotionGateLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "BubbleMask", "SegmentMask", "OcrText", "Translations", "RenderedSprites", "FinalRender", "ExternalArtifacts"], blocks: nativePromotionGateLiteBlocks, version: nativePromotionGateLiteExecuted ? "v1.46" : nil, blockers: nativePromotionGateLiteBlockers, nextAction: nativePromotionGateLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("promotionVerdict", nativePromotionGateLiteVerdict, source: "koharuNativePromotionGateLiteReport"), signal("blockLedgerCount", koharuNativePromotionGateLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("stageGateCount", koharuNativePromotionGateLiteReport.map { String($0.stageGateCount) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("candidateExportPreviewCount", koharuNativePromotionGateLiteReport.map { String($0.candidateExportPreviewCount) } ?? "nil", source: "koharuNativePromotionGateLiteReport")]),
+            workItem("WI-koharu-native-shadow-artifact-export-lite", title: "Koharu Native shadow artifact export-lite", status: nativeShadowArtifactExportLiteStatus, sourceReport: nativeShadowArtifactExportLiteExecuted ? "koharuNativeShadowArtifactExportLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "BubbleMask", "SegmentMask", "OcrText", "Translations", "RenderedSprites", "FinalRender"], blocks: nativeShadowArtifactExportLiteBlocks, version: nativeShadowArtifactExportLiteExecuted ? "v1.47" : nil, blockers: nativeShadowArtifactExportLiteBlockers, nextAction: nativeShadowArtifactExportLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("exportVerdict", nativeShadowArtifactExportLiteVerdict, source: "koharuNativeShadowArtifactExportLiteReport"), signal("exportedFileCount", koharuNativeShadowArtifactExportLiteReport.map { String($0.exportedFileCount) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport"), signal("blockLedgerCount", koharuNativeShadowArtifactExportLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport"), signal("activeArtifactsWritten", koharuNativeShadowArtifactExportLiteReport.map { String($0.activeArtifactsWritten) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport")]),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
-        let closedWorkItems = workItemLedger.filter { $0.status == "closedReportOnly" || $0.status == "closedStoplist" }.map(\.workItemID).sorted()
-        let openWorkItems = workItemLedger.filter { $0.status.hasPrefix("open") || $0.status == "blockedByMissingRealArtifact" }.map(\.workItemID).sorted()
+        let closedWorkItems = workItemLedger.filter { $0.status == "closedReportOnly" || $0.status == "closedStoplist" || $0.status == "closedShadowExportOnly" }.map(\.workItemID).sorted()
+        let openWorkItems = workItemLedger.filter {
+            $0.status.hasPrefix("open")
+                || $0.status == "blockedByMissingRealArtifact"
+                || $0.status == "blockedByMissingNativeLiteInputs"
+                || $0.status == "blockedByInvalidCoordinates"
+                || $0.status == "blockedByProxyBoundary"
+        }.map(\.workItemID).sorted()
         let stopWorkItems = workItemLedger.filter { $0.status == "closedStoplist" }.map(\.workItemID).sorted()
         let missingReports = [
             koharuNativeReplicationScoreboardReport == nil ? "koharuNativeReplicationScoreboardReport" : nil,
@@ -19591,7 +20147,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeBubbleMaskInstanceLiteReport == nil ? "koharuNativeBubbleMaskInstanceLiteReport" : nil,
             koharuNativeSegmentMaskRefinementLiteReport == nil ? "koharuNativeSegmentMaskRefinementLiteReport" : nil,
             koharuNativeArtifactBundleLiteReport == nil ? "koharuNativeArtifactBundleLiteReport" : nil,
-            koharuNativePromotionGateLiteReport == nil ? "koharuNativePromotionGateLiteReport" : nil
+            koharuNativePromotionGateLiteReport == nil ? "koharuNativePromotionGateLiteReport" : nil,
+            koharuNativeShadowArtifactExportLiteReport == nil ? "koharuNativeShadowArtifactExportLiteReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -19643,6 +20200,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-native-segmentmask-refinement-lite-executed", name: "Koharu Native SegmentMask refinement-lite executed", scope: "SegmentMask", status: nativeSegmentMaskRefinementLiteExecuted ? (nativeSegmentMaskRefinementLiteStatus == "closedReportOnly" || nativeSegmentMaskRefinementLiteStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeSegmentMaskRefinementLiteReport.enabled=true with TextBox-constrained source pixels and no main-flow mutation", affected: nativeSegmentMaskRefinementLiteBlocks, failureMeans: "Native SegmentMask refinement-lite report is missing, mutates OCR/translation/render/glyph fill/layout state, routes using ground truth, or is promoted as real Koharu SegmentMask", action: nativeSegmentMaskRefinementLiteNextAction, decisions: [signal("refinementLiteVerdict", nativeSegmentMaskRefinementLiteVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("groundTruthUsedForDecision", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("proxyNotRealKoharuSegmentMask", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
             gate("G-koharu-native-artifact-bundle-lite-executed", name: "Koharu Native Artifact bundle-lite executed", scope: "TextBoxes/BubbleMask/SegmentMask/OcrText/Render", status: nativeArtifactBundleLiteExecuted ? (nativeArtifactBundleLiteStatus == "closedReportOnly" || nativeArtifactBundleLiteStatus == "modelFloorBlocked" || nativeArtifactBundleLiteStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeArtifactBundleLiteReport.enabled=true with bundleLedgerCount==totalBlocksDetected and no main-flow mutation", affected: nativeArtifactBundleLiteBlocks, failureMeans: "Native Artifact bundle-lite report is missing, emits empty bundle ledgers, mutates main OCR/translation/render state, routes using ground truth, or promotes proxy artifacts as real Koharu outputs", action: nativeArtifactBundleLiteNextAction, decisions: [signal("bundleLiteVerdict", nativeArtifactBundleLiteVerdict, source: "koharuNativeArtifactBundleLiteReport"), signal("groundTruthUsedForDecision", koharuNativeArtifactBundleLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("wouldChangeMainFlow", koharuNativeArtifactBundleLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("nativeBundleLite", koharuNativeArtifactBundleLiteReport.map { String($0.nativeBundleLite) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport")]),
             gate("G-koharu-native-promotion-gate-lite-executed", name: "Koharu Native Promotion Gate-Lite executed", scope: "TextBoxes/BubbleMask/SegmentMask/OcrText/Translation/Render/ExternalArtifacts", status: nativePromotionGateLiteExecuted ? (nativePromotionGateLiteStatus == "closedReportOnly" || nativePromotionGateLiteStatus == "modelFloorBlocked" || nativePromotionGateLiteStatus == "renderLockedReportOnly" || nativePromotionGateLiteStatus == "closedStoplist" ? "passed" : "warning") : "open", threshold: "koharuNativePromotionGateLiteReport.enabled=true with blockLedgerCount==totalBlocksDetected, stageGateCount>=8, preview-only candidates, and no main-flow mutation", affected: nativePromotionGateLiteBlocks, failureMeans: "Native Promotion Gate-Lite report is missing, emits empty ledgers, mutates main OCR/translation/render state, routes using ground truth, or exports active artifacts", action: nativePromotionGateLiteNextAction, decisions: [signal("promotionVerdict", nativePromotionGateLiteVerdict, source: "koharuNativePromotionGateLiteReport"), signal("groundTruthUsedForDecision", koharuNativePromotionGateLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("wouldChangeMainFlow", koharuNativePromotionGateLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("nativePromotionPreviewOnly", koharuNativePromotionGateLiteReport.map { String($0.nativePromotionPreviewOnly) } ?? "nil", source: "koharuNativePromotionGateLiteReport")]),
+            gate("G-koharu-native-shadow-artifact-export-lite-executed", name: "Koharu Native shadow artifact export-lite executed", scope: "TextBoxes/BubbleMask/SegmentMask/OcrText/Translation/Render", status: nativeShadowArtifactExportLiteExecuted ? (nativeShadowArtifactExportLiteStatus == "closedShadowExportOnly" || nativeShadowArtifactExportLiteStatus == "blockedByProxyBoundary" || nativeShadowArtifactExportLiteStatus == "blockedByInvalidCoordinates" ? "passed" : "warning") : "open", threshold: "koharuNativeShadowArtifactExportLiteReport.enabled=true with five non-active JSON files, blockLedgerCount==totalBlocksDetected, and no active artifact write", affected: nativeShadowArtifactExportLiteBlocks, failureMeans: "Native shadow artifact export-lite is missing, mutates main OCR/translation/render state, uses ground truth for decisions, or writes active test/koharu_artifacts", action: nativeShadowArtifactExportLiteNextAction, decisions: [signal("exportVerdict", nativeShadowArtifactExportLiteVerdict, source: "koharuNativeShadowArtifactExportLiteReport"), signal("groundTruthUsedForDecision", koharuNativeShadowArtifactExportLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport"), signal("activeArtifactsWritten", koharuNativeShadowArtifactExportLiteReport.map { String($0.activeArtifactsWritten) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport"), signal("readyForActiveArtifact", koharuNativeShadowArtifactExportLiteReport.map { String($0.readyForActiveArtifact) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport")]),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
             gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
@@ -19676,12 +20234,13 @@ final class TranslationSessionStore: ObservableObject {
             "koharuNativeSegmentMaskRefinementLiteReport",
             "koharuNativeArtifactBundleLiteReport",
             "koharuNativePromotionGateLiteReport",
+            "koharuNativeShadowArtifactExportLiteReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, v1.44 native SegmentMask refinement-lite, v1.45 native Artifact bundle-lite, and v1.46 native promotion gate-lite report-only ledgers into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, v1.44 native SegmentMask refinement-lite, v1.45 native Artifact bundle-lite, v1.46 native promotion gate-lite, and v1.47 native shadow artifact export-lite report-only ledgers into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
@@ -20589,7 +21148,22 @@ final class TranslationSessionStore: ObservableObject {
             .compactMap { $0 }
             .filter { !$0.isEmpty }
             .map { URL(fileURLWithPath: $0).lastPathComponent }
-        return Array(Set(fileNames)).sorted()
+        let outputDirectory = [outputFiles.debugBoxesImage, outputFiles.overlayImage, outputFiles.ocrProbeTextFile]
+            .compactMap { $0 }
+            .first { !$0.isEmpty }
+            .map { URL(fileURLWithPath: $0).deletingLastPathComponent() }
+        let shadowFiles = [
+            "1.native_manifest.json",
+            "1.native_textboxes.json",
+            "1.native_bubbles.json",
+            "1.native_segment_mask.json",
+            "1.native_artifact_bundle.json"
+        ].map { "koharu_native_shadow_artifacts/\($0)" }
+            .filter { relativePath in
+                guard let outputDirectory else { return false }
+                return FileManager.default.fileExists(atPath: outputDirectory.appendingPathComponent(relativePath).path)
+            }
+        return Array(Set(fileNames + shadowFiles)).sorted()
     }
 
     private static func mangaOCRProbeNotes(

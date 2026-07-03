@@ -3575,6 +3575,229 @@ struct MangaKoharuNativePromotionGateLiteReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuNativeShadowArtifactExportLiteSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuNativeShadowArtifactFileRecord: Equatable, Codable, Sendable {
+    var fileName: String
+    var relativePath: String
+    var artifactKind: String
+    var exists: Bool
+    var nonEmpty: Bool
+    var byteCount: Int
+    var recordCount: Int
+    var shadowOnly: Bool
+    var forbiddenAsActiveArtifact: Bool
+    var readyForActiveArtifact: Bool
+    var wouldCreateActiveArtifact: Bool
+    var notes: [String]
+}
+
+struct MangaKoharuNativeShadowArtifactTextBoxRecord: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var textBoxID: String
+    var bbox: [Double]
+    var sourceReport: String
+    var sourceCandidateID: String
+    var sourceDirection: String
+    var confidence: Double
+    var fieldCompleteness: String
+    var coordinateValid: Bool
+    var promotionStatus: String
+    var exportEligibility: String
+    var shadowOnly: Bool
+    var contractExampleOnly: Bool
+    var forbiddenAsActiveArtifact: Bool
+    var readyForActiveArtifact: Bool
+    var wouldCreateActiveArtifact: Bool
+    var proxyNotRealKoharuTextBox: Bool
+    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+}
+
+struct MangaKoharuNativeShadowArtifactBubbleRecord: Equatable, Codable, Sendable {
+    var bubbleID: Int?
+    var instanceLiteID: Int?
+    var bbox: [Double]
+    var sourceReport: String
+    var majorityBlockIndexes: [Int]
+    var maskValue: Int?
+    var pixelCount: Int
+    var safeRectSummary: String
+    var assignmentStatus: String
+    var splitRisk: String
+    var shadowOnly: Bool
+    var contractExampleOnly: Bool
+    var forbiddenAsActiveArtifact: Bool
+    var readyForActiveArtifact: Bool
+    var wouldCreateActiveArtifact: Bool
+    var proxyNotRealKoharuBubbleMask: Bool
+    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+}
+
+struct MangaKoharuNativeShadowArtifactSegmentMaskRecord: Equatable, Codable, Sendable {
+    var segmentMaskID: String
+    var blockIndex: Int?
+    var width: Int
+    var height: Int
+    var sourceReport: String
+    var candidateCount: Int
+    var glyphPixelCount: Int
+    var connectedComponentCount: Int
+    var blockSummaries: [String]
+    var textboxConstrained: Bool
+    var bubbleConstrained: Bool
+    var shadowOnly: Bool
+    var contractExampleOnly: Bool
+    var forbiddenAsActiveArtifact: Bool
+    var readyForActiveArtifact: Bool
+    var wouldCreateActiveArtifact: Bool
+    var proxyNotRealKoharuSegmentMask: Bool
+    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+}
+
+struct MangaKoharuNativeShadowArtifactBundleRecord: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var textBoxID: String?
+    var bubbleID: Int?
+    var segmentMaskCandidateID: String?
+    var finalTextUsedForTranslation: String
+    var translationCandidate: String
+    var failureCategory: String
+    var blockPassed: Bool
+    var renderSafeRect: [Double]?
+    var renderFitStatus: String
+    var promotionEligibility: String
+    var primaryBlockingArtifact: String
+    var nextAction: String
+    var shadowOnly: Bool
+    var contractExampleOnly: Bool
+    var forbiddenAsActiveArtifact: Bool
+    var readyForActiveArtifact: Bool
+    var wouldCreateActiveArtifact: Bool
+    var wouldChangeMainFlow: Bool
+    var groundTruthUsedForDecision: Bool
+    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+}
+
+struct MangaKoharuNativeShadowArtifactBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var finalTextUsedForTranslation: String
+    var textBoxExportRecordID: String?
+    var bubbleExportRecordID: String?
+    var segmentMaskExportRecordID: String?
+    var bundleExportRecordID: String
+    var textBoxCoordinateStatus: String
+    var bubbleCoordinateStatus: String
+    var segmentMaskSummaryStatus: String
+    var fieldCompletenessStatus: String
+    var promotionGateStatusFromV146: String
+    var shadowExportEligibility: String
+    var primaryBlockingArtifact: String
+    var nextAction: String
+    var mustNotUseAsActiveArtifactReasons: [String]
+    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeShadowArtifactGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuNativeShadowArtifactManifest: Equatable, Codable, Sendable {
+    var schemaVersion: String
+    var sourceImage: String
+    var coordinateSpace: String
+    var generatedBy: String
+    var shadowOnly: Bool
+    var contractExampleOnly: Bool
+    var forbiddenAsActiveArtifact: Bool
+    var readyForActiveArtifact: Bool
+    var activeArtifactsDirectory: Bool
+    var activeArtifactsWritten: Bool
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var wouldCreateActiveArtifact: Bool
+    var textBoxesPath: String
+    var bubbleMaskPath: String
+    var segmentMaskPath: String
+    var bundlePath: String
+    var sourceReports: [String]
+    var notes: [String]
+}
+
+struct MangaKoharuNativeShadowArtifactExportLiteReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
+    var evaluatedBlockCount: Int
+    var exportedFileCount: Int
+    var textBoxRecordCount: Int
+    var bubbleRecordCount: Int
+    var segmentMaskRecordCount: Int
+    var bundleRecordCount: Int
+    var blockLedgerCount: Int
+    var gateCount: Int
+    var outputDirectory: String
+    var relativeOutputDirectory: String
+    var activeArtifactsDirectory: Bool
+    var activeArtifactsWritten: Bool
+    var shadowOnly: Bool
+    var forbiddenAsActiveArtifact: Bool
+    var readyForActiveArtifact: Bool
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var wouldCreateActiveArtifact: Bool
+    var diagnosticOnly: Bool
+    var nativeShadowExportLite: Bool
+    var proxyNotRealKoharuTextBoxes: Bool
+    var proxyNotRealKoharuBubbleMask: Bool
+    var proxyNotRealKoharuSegmentMask: Bool
+    var proxyNotRealKoharuOCR: Bool
+    var proxyNotRealKoharuRenderer: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var exportVerdict: String
+    var fieldCompletenessBreakdown: [String: Int]
+    var coordinateValidationBreakdown: [String: Int]
+    var recordSourceBreakdown: [String: Int]
+    var primaryBlockingArtifactBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var files: [MangaKoharuNativeShadowArtifactFileRecord]
+    var textBoxRecords: [MangaKoharuNativeShadowArtifactTextBoxRecord]
+    var bubbleRecords: [MangaKoharuNativeShadowArtifactBubbleRecord]
+    var segmentMaskRecords: [MangaKoharuNativeShadowArtifactSegmentMaskRecord]
+    var bundleRecords: [MangaKoharuNativeShadowArtifactBundleRecord]
+    var blockLedgers: [MangaKoharuNativeShadowArtifactBlockLedger]
+    var gateLedger: [MangaKoharuNativeShadowArtifactGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -5550,6 +5773,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?
     var koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?
     var koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport?
+    var koharuNativeShadowArtifactExportLiteReport: MangaKoharuNativeShadowArtifactExportLiteReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
