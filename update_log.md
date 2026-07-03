@@ -115,6 +115,45 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.46：Koharu Native Promotion Gate-Lite 探针驱动晋级门槛
+日期：2026-07-03
+依据：`md/prompt/v1（漫画探针）/v1.46（KoharuNativePromotionGateLite探针驱动晋级门槛）.md`。本轮修改 Swift 探针报告模型、native-lite promotion gate 聚合账本、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuNativePromotionGateLiteReport`，在 v1.45 Native Artifact Bundle-Lite 后、最终 convergence 刷新前生成。
+- 报告只消费 final blocks、diagnostics、v1.39-v1.45 native-lite reports、RenderSprite fit、Render Regression Lock、Translation Model Floor、clean text diagnostic 和 external artifact readiness。
+- 每个 final block 输出 report-only promotion ledger，覆盖 TextBoxes / BubbleMask / SegmentMask / OcrText / Translations / RenderedSprites / FinalRender 的晋级状态、primary blocking artifact、probe bottleneck、promotion eligibility、nextAction 和 `mustNotPromoteReasons`。
+- 新增 canonical stage gates，覆盖 TextBoxes、BubbleMask、SegmentMask、OcrText、Translations、RenderedSprites、FinalRender 和 ExternalArtifacts。
+- 新增 `nativeCandidateExportPreview`，只在 JSON / TXT 中预览未来 AITRANS-native candidate artifact 可能需要的字段、来源、bbox、风险和 validator 要求；本轮不创建、不复制、不修改 active `test/koharu_artifacts/`。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuNativePromotionGateLiteReport`；convergence 新增 `WI-koharu-native-promotion-gate-lite` 和 `G-koharu-native-promotion-gate-lite-executed`。
+- `1_ocr_probe_text.txt` 新增 promotion gate summary、stage gate、逐块 block ledger、candidate export preview 和 work item 摘要。
+- 本轮不新增 OCR / LLM / PNG，不更换模型，不接 active artifact，不改变主 OCR、翻译输入、覆盖图、renderer、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.46（KoharuNativePromotionGateLite探针驱动晋级门槛）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行轻量 Swift 语法检查、`git diff --check`、JSON 解析和 Koharu validator smoke。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuNativePromotionGateLiteReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`stageGateCount >= 8`、`candidateExportPreviewCount >= 1` 或明确 blocked / warning reason、`workItemCount >= 1`、`gateCount >= 8`、`promotionGateLite = true`、`nativePromotionPreviewOnly = true`、所有 proxy-not-real 边界为 true、`externalArtifactsRequiredForThisReport = false`、`groundTruthUsedForDecision = false`，核心 breakdown 非空或上游缺失时明确 warning / blocked gate，convergence 包含 v1.46 reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、stage gate、逐块 promotion ledger、candidate preview 和 work item。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.46 新字段；以 PR 后云端结果包为准。
+- v1.46 仍是 native promotion gate-lite report-only 晋级门槛层，不代表真实 Koharu `TextBoxes` / `BubbleMask` / `SegmentMask` / `OcrText` / `RenderedSprites` 已接入，也不代表 OCR 或翻译质量改善。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.45：Koharu Native Artifact Bundle-Lite 结构一致性闭环
 日期：2026-07-03
 依据：`md/prompt/v1（漫画探针）/v1.45（KoharuNativeArtifactBundleLite结构一致性闭环）.md`。本轮修改 Swift 探针报告模型、native-lite artifact bundle 聚合账本、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
