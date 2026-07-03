@@ -2858,6 +2858,134 @@ struct MangaKoharuNativeTextBoxDetectorLiteRefinementReport: Equatable, Codable,
     var notes: [String]
 }
 
+struct MangaKoharuNativeTextBoxDetectorLiteClosedLoopSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteCandidateFamilyLedger: Equatable, Codable, Sendable {
+    var familyID: String
+    var blockIndex: Int
+    var bubbleID: Int?
+    var currentFinalText: String
+    var detectorLiteCandidateIDs: [String]
+    var shadowOCRCandidateIDs: [String]
+    var refinementCandidateIDs: [String]
+    var bestReportOnlyCandidateID: String?
+    var bestReportOnlyCandidateSource: String?
+    var bestReportOnlyText: String?
+    var currentQualityScore: Double
+    var bestShadowQualityScore: Double?
+    var qualityDeltaVsCurrent: Double?
+    var wordPreservationBest: Double?
+    var groundTruthSimilarityCurrentForEvaluation: Double?
+    var groundTruthSimilarityBestForEvaluation: Double?
+    var groundTruthSimilarityDeltaForEvaluation: Double?
+    var candidateFamilyVerdict: String
+    var whyNotPromoted: [String]
+    var decisionSignals: [MangaKoharuNativeTextBoxDetectorLiteClosedLoopSignal]
+    var evaluationSignals: [MangaKoharuNativeTextBoxDetectorLiteClosedLoopSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteClosedLoopBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var finalTextUsedForTranslation: String
+    var currentOCRQualityScore: Double
+    var detectorLiteVerdict: String
+    var detectorLiteShadowOutcome: String
+    var refinementOutcome: String
+    var bestReportOnlyCandidateID: String?
+    var bestReportOnlyCandidateSource: String?
+    var bestReportOnlyOCRText: String?
+    var qualityDeltaVsCurrent: Double?
+    var ocrSimilarityDeltaForEvaluation: Double?
+    var bubbleAssignmentStatus: String
+    var bubbleSplitRisk: String
+    var sameBubbleSiblingRisk: String
+    var segmentGlyphEvidenceStatus: String
+    var translationFailureRoute: String
+    var renderLockStatus: String
+    var externalArtifactNeed: String
+    var primaryBottleneck: String
+    var closedLoopRoute: String
+    var nextAction: String
+    var stopReasons: [String]
+    var fullProbeReviewReasons: [String]
+    var whyNotPromoted: [String]
+    var decisionSignals: [MangaKoharuNativeTextBoxDetectorLiteClosedLoopSignal]
+    var evaluationSignals: [MangaKoharuNativeTextBoxDetectorLiteClosedLoopSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteClosedLoopGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuNativeTextBoxDetectorLiteClosedLoopSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
+    var evaluatedBlockCount: Int
+    var detectorLiteCandidateCount: Int
+    var detectorLiteShadowOCRCandidateCount: Int
+    var refinementCandidateCount: Int
+    var candidateFamilyCount: Int
+    var blockLedgerCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var proxyNotRealKoharuTextBoxes: Bool
+    var proxyNotRealKoharuOCR: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var closedLoopVerdict: String
+    var routeBreakdown: [String: Int]
+    var candidateFamilyVerdictBreakdown: [String: Int]
+    var ocrOutcomeRollup: [String: Int]
+    var bubbleStructureBreakdown: [String: Int]
+    var segmentGlyphEvidenceBreakdown: [String: Int]
+    var translationFailureRouteBreakdown: [String: Int]
+    var renderLockRouteBreakdown: [String: Int]
+    var primaryBottleneckBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var stopReasonBreakdown: [String: Int]
+    var fullProbeReviewReasonBreakdown: [String: Int]
+    var stopBlockIndexes: [Int]
+    var fullProbeReviewBlockIndexes: [Int]
+    var realTextBoxesNeededBlocks: [Int]
+    var realBubbleMaskNeededBlocks: [Int]
+    var realSegmentMaskNeededBlocks: [Int]
+    var modelFloorRoutedBlocks: [Int]
+    var renderLockRoutedBlocks: [Int]
+    var candidateFamilyLedgers: [MangaKoharuNativeTextBoxDetectorLiteCandidateFamilyLedger]
+    var blockLedgers: [MangaKoharuNativeTextBoxDetectorLiteClosedLoopBlockLedger]
+    var gateLedger: [MangaKoharuNativeTextBoxDetectorLiteClosedLoopGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -4828,6 +4956,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuNativeTextBoxDetectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport?
     var koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport?
     var koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport?
+    var koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
