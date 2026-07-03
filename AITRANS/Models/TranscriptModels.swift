@@ -3294,6 +3294,145 @@ struct MangaKoharuNativeSegmentMaskRefinementLiteReport: Equatable, Codable, Sen
     var notes: [String]
 }
 
+struct MangaKoharuNativeArtifactBundleLiteSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuNativeArtifactBundleLiteComponent: Equatable, Codable, Sendable {
+    var componentID: String
+    var artifactStage: String
+    var componentSource: String
+    var sourceReport: String
+    var bbox: [Double]?
+    var confidence: Double?
+    var readinessStatus: String
+    var proxyOnly: Bool
+    var fallbackUsed: Bool
+    var evidence: [String]
+    var decisionSignals: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeArtifactBundleLiteConsistencyEdge: Equatable, Codable, Sendable {
+    var edgeID: String
+    var edgeType: String
+    var status: String
+    var severity: String
+    var evidence: [String]
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeArtifactBundleLiteBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var finalTextUsedForTranslation: String
+    var selectedTextBoxLite: MangaKoharuNativeArtifactBundleLiteComponent
+    var selectedBubbleInstanceLite: MangaKoharuNativeArtifactBundleLiteComponent
+    var selectedSegmentMaskLite: MangaKoharuNativeArtifactBundleLiteComponent
+    var ocrEvidence: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var translationFailureRoute: String
+    var renderFitEvidence: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var artifactConsistencyVerdict: String
+    var primaryBlockingArtifact: String
+    var nextAction: String
+    var readyForFullProbeShadowReview: Bool
+    var needsRealTextBoxes: Bool
+    var needsRealBubbleMask: Bool
+    var needsRealSegmentMask: Bool
+    var modelFloorBlocked: Bool
+    var renderLocked: Bool
+    var manualReviewRequired: Bool
+    var decisionSignals: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeArtifactBundleLiteWorkItem: Equatable, Codable, Sendable {
+    var workItemID: String
+    var title: String
+    var targetArtifact: String
+    var status: String
+    var priority: String
+    var affectedBlocks: [Int]
+    var nextAction: String
+    var decisionSignals: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var evaluationSignals: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeArtifactBundleLiteGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuNativeArtifactBundleLiteSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuNativeArtifactBundleLiteReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
+    var evaluatedBlockCount: Int
+    var bundleLedgerCount: Int
+    var consistencyEdgeCount: Int
+    var workItemCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var nativeBundleLite: Bool
+    var proxyNotRealKoharuTextBoxes: Bool
+    var proxyNotRealKoharuBubbleMask: Bool
+    var proxyNotRealKoharuSegmentMask: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var bundleLiteVerdict: String
+    var componentReadinessBreakdown: [String: Int]
+    var artifactConsistencyBreakdown: [String: Int]
+    var primaryBlockingArtifactBreakdown: [String: Int]
+    var ocrRouteBreakdown: [String: Int]
+    var translationRouteBreakdown: [String: Int]
+    var renderRouteBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var readyForFullProbeReviewBlocks: [Int]
+    var needsRealTextBoxesBlocks: [Int]
+    var needsRealBubbleMaskBlocks: [Int]
+    var needsRealSegmentMaskBlocks: [Int]
+    var modelFloorBlockedBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var blockLedgers: [MangaKoharuNativeArtifactBundleLiteBlockLedger]
+    var consistencyEdges: [MangaKoharuNativeArtifactBundleLiteConsistencyEdge]
+    var workItems: [MangaKoharuNativeArtifactBundleLiteWorkItem]
+    var gateLedger: [MangaKoharuNativeArtifactBundleLiteGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -5267,6 +5406,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport?
     var koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport?
     var koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?
+    var koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
