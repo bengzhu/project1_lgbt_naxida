@@ -2569,7 +2569,6 @@ struct MangaOverlayProbeService: Sendable {
             }) { $0.blockIndex }
             let bubbleIndexByBlock = Dictionary(uniqueKeysWithValues: (koharuBubbleIndexShadowLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) })
             let distanceFieldByBlock = Dictionary(uniqueKeysWithValues: (koharuDistanceFieldSafeAreaReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) })
-            let renderByBlock = Dictionary(uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) })
             let blocksByBubble = Dictionary(grouping: blocks.compactMap { block -> (Int, MangaOverlayProbeBlock)? in
                 guard let bubbleID = block.bubbleID else { return nil }
                 return (bubbleID, block)
