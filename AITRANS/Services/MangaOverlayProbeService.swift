@@ -766,6 +766,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport? = nil,
         koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport? = nil,
         koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport? = nil,
+        koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleMaskReport: MangaOverlayBubbleMaskReport? = nil,
@@ -809,50 +810,6 @@ struct MangaOverlayProbeService: Sendable {
                 deterministicTranslationPath = deterministicTranslationURL.path
                 cropsPath = cropsURL.path
             }
-            try Self.writeOCRProbeText(
-                blocks: blocks,
-                textRegionCropReport: textRegionCropReport,
-                textBoxCandidateReport: textBoxCandidateReport,
-                segmentMaskReport: segmentMaskReport,
-                preCropTextBoxPlanReport: preCropTextBoxPlanReport,
-                cropExperimentReport: cropExperimentReport,
-                textBoxPlanFailureReport: textBoxPlanFailureReport,
-                lineTextBoxPlanReport: lineTextBoxPlanReport,
-                lineCropExperimentReport: lineCropExperimentReport,
-                externalArtifactReadinessReport: externalArtifactReadinessReport,
-                externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
-                internalStructureBottleneckReport: internalStructureBottleneckReport,
-                routingDrivenTranslationComparisonReport: routingDrivenTranslationComparisonReport,
-                ocrCharacterDamageAuditReport: ocrCharacterDamageAuditReport,
-                readingOrderStructureAuditReport: readingOrderStructureAuditReport,
-                structureActionCandidateReport: structureActionCandidateReport,
-                koharuArtifactDAGReport: koharuArtifactDAGReport,
-                koharuStageGapReplicationReport: koharuStageGapReplicationReport,
-                koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
-                nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
-                bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
-                segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
-                koharuArtifactConvergenceReport: koharuArtifactConvergenceReport,
-                koharuPipelineResolverReport: koharuPipelineResolverReport,
-                koharuWorkOrderRouterReport: koharuWorkOrderRouterReport,
-                koharuExternalArtifactRequestPacketReport: koharuExternalArtifactRequestPacketReport,
-                koharuNativeAlgorithmReplayMatrixReport: koharuNativeAlgorithmReplayMatrixReport,
-                koharuBubbleIndexShadowLedgerReport: koharuBubbleIndexShadowLedgerReport,
-                koharuDistanceFieldSafeAreaReport: koharuDistanceFieldSafeAreaReport,
-                koharuBubbleAdjacencySeamReport: koharuBubbleAdjacencySeamReport,
-                koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
-                koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
-                koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
-                koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
-                koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
-                translationModelFloorComparisonReport: translationModelFloorComparisonReport,
-                koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
-                bubbleMaskReport: bubbleMaskReport,
-                bubbleAssignmentCorrectionReport: bubbleAssignmentCorrectionReport,
-                bubbleSplitCandidateReport: bubbleSplitCandidateReport,
-                to: ocrProbeTextURL
-            )
-
             var preprocessedPath: String?
             if preprocessing.enabled && renderDiagnosticPNGs {
                 let contentRect = Self.contentCropRect(for: image, cropping: cropping)
@@ -885,6 +842,7 @@ struct MangaOverlayProbeService: Sendable {
     ) async -> [MangaOverlayProbeBlock] {
         await Task.detached(priority: .userInitiated) {
             let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            let imageBitmap = Self.makeRGBA8Bitmap(from: image)
             let bubbleRects = Dictionary(
                 uniqueKeysWithValues: bubbleGeometry.bubbles.map { bubble in
                     (bubble.id, Self.clamp(Self.rect(from: bubble.bbox), to: imageBounds))
@@ -969,6 +927,7 @@ struct MangaOverlayProbeService: Sendable {
                 updated.maskSafeRect = safeSource.hasPrefix("maskSafe") ? Self.bboxArray(from: safeRect) : nil
                 let glyphPlan = Self.makeGlyphMaskPlan(
                     image: image,
+                    bitmap: imageBitmap,
                     blockRect: blockRect,
                     bubbleRect: block.bubbleID.flatMap { bubbleRects[$0] }
                 )
@@ -1130,6 +1089,778 @@ struct MangaOverlayProbeService: Sendable {
                     "lightweight BubbleMask instance-ID approximation, not a real segmentation model",
                     "mask is used for diagnostics and safe-layout preference only",
                     "TextRegion crop adoption guardrails are unchanged"
+                ]
+            )
+        }.value
+    }
+
+    func makeKoharuNativeBubbleMaskInstanceLiteReport(
+        image: CGImage,
+        blocks: [MangaOverlayProbeBlock],
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        bubbleMaskReport: MangaOverlayBubbleMaskReport?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?,
+        bubbleAssignmentCorrectionReport: MangaOverlayBubbleAssignmentCorrectionReport?,
+        bubbleSplitCandidateReport: MangaOverlayBubbleSplitCandidateReport?,
+        koharuDistanceFieldSafeAreaReport: MangaKoharuDistanceFieldSafeAreaReport?,
+        koharuBubbleAdjacencySeamReport: MangaKoharuBubbleAdjacencySeamReport?,
+        koharuRenderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport?,
+        koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport?,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
+    ) async -> MangaKoharuNativeBubbleMaskInstanceLiteReport {
+        await Task.detached(priority: .userInitiated) {
+            func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
+            func countBy(_ values: [String]) -> [String: Int] {
+                values.reduce(into: [:]) { partial, value in partial[value, default: 0] += 1 }
+            }
+            func formatted(_ value: Double?) -> String {
+                value?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+            }
+            func area(_ rect: CGRect) -> Double {
+                Double(max(0, rect.width) * max(0, rect.height))
+            }
+            func iou(_ lhs: CGRect, _ rhs: CGRect) -> Double {
+                let intersection = lhs.intersection(rhs)
+                guard !intersection.isNull else { return 0 }
+                return area(intersection) / max(1, area(lhs) + area(rhs) - area(intersection))
+            }
+            func gap(_ lhs: CGRect, _ rhs: CGRect) -> Double {
+                if lhs.intersects(rhs) { return 0 }
+                let dx = max(max(lhs.minX - rhs.maxX, rhs.minX - lhs.maxX), 0)
+                let dy = max(max(lhs.minY - rhs.maxY, rhs.minY - lhs.maxY), 0)
+                return Double(sqrt(dx * dx + dy * dy))
+            }
+            func signal(
+                _ name: String,
+                _ value: String,
+                source: String,
+                decision: Bool = true,
+                evaluation: Bool = false
+            ) -> MangaKoharuNativeBubbleMaskInstanceLiteSignal {
+                MangaKoharuNativeBubbleMaskInstanceLiteSignal(
+                    name: name,
+                    value: value,
+                    sourceReport: source,
+                    groundTruthFreeDecisionSignal: decision,
+                    groundTruthUsedForEvaluationOnly: evaluation
+                )
+            }
+            func gate(
+                _ id: String,
+                _ name: String,
+                _ scope: String,
+                _ status: String,
+                _ threshold: String,
+                _ affected: [Int],
+                _ failure: String,
+                _ action: String,
+                _ signals: [MangaKoharuNativeBubbleMaskInstanceLiteSignal]
+            ) -> MangaKoharuNativeBubbleMaskInstanceLiteGate {
+                MangaKoharuNativeBubbleMaskInstanceLiteGate(
+                    gateID: id,
+                    gateName: name,
+                    scope: scope,
+                    status: status,
+                    threshold: threshold,
+                    affectedBlocks: uniqueSorted(affected),
+                    decisionSignals: signals,
+                    failureMeans: failure,
+                    recommendedAction: action,
+                    groundTruthUsedForDecision: false
+                )
+            }
+            func makeEmptyBlockLedger(
+                for block: MangaOverlayProbeBlock,
+                reason: String,
+                nextAction: String
+            ) -> MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger {
+                MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger(
+                    blockIndex: block.index,
+                    currentBubbleID: block.bubbleID,
+                    instanceLiteMajorityID: nil,
+                    instanceLiteMajorityPixelCount: 0,
+                    instanceLiteMajorityCoverage: 0,
+                    instanceLiteSecondaryIDs: [:],
+                    assignmentAgreement: "outsideAcceptedInstances",
+                    assignmentConflictReason: reason,
+                    bbox: block.bbox,
+                    seedRect: block.bbox,
+                    currentSafeLayoutRect: block.safeLayoutRect,
+                    instanceLiteSafeRect: nil,
+                    distanceFieldSafeRectFromInstanceLite: nil,
+                    distanceFieldSafeRectSource: "nativeBubbleMaskInstanceLite",
+                    currentRenderNonTransparentBounds: block.renderNonTransparentBounds,
+                    spriteContainedByInstanceLiteMask: false,
+                    siblingPartitionStatus: "manualReviewOnly",
+                    splitRisk: "manualReviewOnly",
+                    adjacencyRisk: "manualReviewOnly",
+                    segmentGlyphEvidenceStatus: "unknown",
+                    translationFailureCategory: block.failureCategory,
+                    translationFailureRoute: block.blockPassed ? "translationPassed" : block.failureCategory,
+                    detectorLiteClosedLoopRoute: nil,
+                    renderLockStatus: block.renderCollisionResolved ? "renderCollisionResolved" : "renderLockOpen",
+                    primaryBottleneck: "bubbleMaskInstanceMissing",
+                    nextAction: nextAction,
+                    decisionSignals: [
+                        signal("instanceLiteMajorityID", "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                        signal("blockedReason", reason, source: "koharuNativeBubbleMaskInstanceLiteReport")
+                    ],
+                    evaluationSignals: [
+                        signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
+                        signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            }
+
+            let allBlockIndexes = blocks.map(\.index)
+            let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            let contentCrop = Self.contentCropRect(for: image, cropping: .defaultValue).integral
+            let contentBBox = Self.bboxArray(from: Self.clamp(contentCrop, to: imageBounds))
+            guard let bitmap = Self.makeRGBA8Bitmap(from: image) else {
+                let ledgers = blocks.map {
+                    makeEmptyBlockLedger(for: $0, reason: "sourceImageBytesUnavailable", nextAction: "restoreProbeImageByteAccess")
+                }
+                let gates = [
+                    gate("G-native-bubblemask-instance-lite-image-bytes", "Image bytes available", "SourceImage", "blocked", "32-bit CGImage provider bytes readable", allBlockIndexes, "instance-lite mask cannot inspect source pixels", "restoreProbeImageByteAccess", [signal("imageBytesAvailable", "false", source: "SourceImage")]),
+                    gate("G-native-bubblemask-instance-lite-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "instance-lite mask mutates OCR, translation, safeLayoutRect, renderer, blockPassed, or currentBlockSource", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeBubbleMaskInstanceLiteReport")])
+                ]
+                return MangaKoharuNativeBubbleMaskInstanceLiteReport(
+                    enabled: true,
+                    source: "AITRANSProbe",
+                    referencePipeline: "Koharu",
+                    referenceConcept: "BubbleMask.NativeInstanceLite.PixelIDMask",
+                    referenceWorkItemID: "WI-koharu-native-bubblemask-instance-lite",
+                    evaluatedBlockCount: blocks.count,
+                    sourceImageWidth: image.width,
+                    sourceImageHeight: image.height,
+                    contentCropBBox: contentBBox,
+                    instanceCount: 0,
+                    blockLedgerCount: ledgers.count,
+                    siblingLedgerCount: 0,
+                    adjacencyLedgerCount: 0,
+                    gateCount: gates.count,
+                    groundTruthUsedForDecision: false,
+                    groundTruthUsedForEvaluationOnly: true,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true,
+                    nativeInstanceLite: true,
+                    proxyNotRealKoharuBubbleMask: true,
+                    usesSourceImagePixels: true,
+                    externalArtifactsRequiredForThisReport: false,
+                    instanceLiteVerdict: "blockedByInsufficientPixelEvidence",
+                    instanceQualityBreakdown: [:],
+                    assignmentAgreementBreakdown: countBy(ledgers.map(\.assignmentAgreement)),
+                    splitRiskBreakdown: countBy(ledgers.map(\.splitRisk)),
+                    siblingPartitionBreakdown: countBy(ledgers.map(\.siblingPartitionStatus)),
+                    safeRectComparisonBreakdown: [:],
+                    spriteContainmentBreakdown: countBy(ledgers.map { $0.spriteContainedByInstanceLiteMask ? "contained" : "notContained" }),
+                    adjacencyRiskBreakdown: countBy(ledgers.map(\.adjacencyRisk)),
+                    primaryBottleneckBreakdown: countBy(ledgers.map(\.primaryBottleneck)),
+                    nextActionBreakdown: countBy(ledgers.map(\.nextAction)),
+                    needsRealBubbleMaskBlocks: allBlockIndexes,
+                    needsRealSegmentMaskBlocks: [],
+                    needsRealTextBoxesBlocks: [],
+                    manualReviewBlocks: allBlockIndexes,
+                    renderLockedBlocks: blocks.filter(\.renderCollisionResolved).map(\.index),
+                    instances: [],
+                    blockLedgers: ledgers,
+                    siblingLedgers: [],
+                    adjacencyLedgers: [],
+                    gateLedger: gates,
+                    notes: ["Source image pixels were unavailable; native BubbleMask instance-lite emitted blocked ledger only."]
+                )
+            }
+
+            let bytes = bitmap.pixels
+            let bytesPerRow = bitmap.bytesPerRow
+            let cropRect = Self.clamp(contentCrop, to: imageBounds)
+            let minX = max(0, Int(cropRect.minX.rounded(.down)))
+            let maxX = min(image.width, Int(cropRect.maxX.rounded(.up)))
+            let minY = max(0, Int(cropRect.minY.rounded(.down)))
+            let maxY = min(image.height, Int(cropRect.maxY.rounded(.up)))
+            let cropWidth = max(0, maxX - minX)
+            let cropHeight = max(0, maxY - minY)
+            var candidatePixels = [Bool](repeating: false, count: cropWidth * cropHeight)
+            if cropWidth > 0, cropHeight > 0 {
+                for localY in 0..<cropHeight {
+                    let y = minY + localY
+                    for localX in 0..<cropWidth {
+                        let x = minX + localX
+                        let offset = y * bytesPerRow + x * 4
+                        guard offset + 2 < bytes.count else { continue }
+                        let r = Int(bytes[offset])
+                        let g = Int(bytes[offset + 1])
+                        let b = Int(bytes[offset + 2])
+                        let maxChannel = max(r, g, b)
+                        let minChannel = min(r, g, b)
+                        let luminance = (r * 299 + g * 587 + b * 114) / 1000
+                        candidatePixels[localY * cropWidth + localX] = luminance >= 222 && (maxChannel - minChannel) <= 42
+                    }
+                }
+            }
+
+            let bubbleRects = bubbleGeometry.bubbles.map { bubble in
+                (bubble: bubble, rect: Self.clamp(Self.rect(from: bubble.bbox), to: imageBounds))
+            }
+            let segmentByBlock = Dictionary(
+                uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+            )
+            let maskByBlock = Dictionary(
+                uniqueKeysWithValues: (bubbleMaskReport?.blockDiagnostics ?? []).map { ($0.blockIndex, $0) }
+            )
+            var splitByBlock: [Int: [Int]] = [:]
+            for diagnostic in bubbleSplitCandidateReport?.diagnostics ?? [] {
+                for blockIndex in diagnostic.seedBlockIndexes {
+                    splitByBlock[blockIndex, default: []].append(diagnostic.id)
+                }
+            }
+            let seamByBlock = Dictionary(
+                uniqueKeysWithValues: (koharuBubbleAdjacencySeamReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+            )
+            let renderFitByBlock = Dictionary(
+                uniqueKeysWithValues: (koharuRenderSpriteFitPlannerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+            )
+            let closedLoopByBlock = Dictionary(
+                uniqueKeysWithValues: (koharuNativeTextBoxDetectorLiteClosedLoopReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+            )
+            let renderLockByBlock = Dictionary(
+                uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) }
+            )
+
+            var visited = [Bool](repeating: false, count: candidatePixels.count)
+            struct PixelComponent {
+                var bbox: CGRect
+                var pixelOffsets: Set<Int>
+                var pixelCount: Int
+                var rejectionReasons: [String]
+                var matchedBubbleID: Int?
+                var matchedIoU: Double?
+            }
+            var components: [PixelComponent] = []
+            let minArea = 180
+            let maxArea = max(1_000, Int(Double(cropWidth * cropHeight) * 0.22))
+            for startY in 0..<cropHeight {
+                for startX in 0..<cropWidth {
+                    let start = startY * cropWidth + startX
+                    guard candidatePixels.indices.contains(start), candidatePixels[start], !visited[start] else { continue }
+                    var queue = [start]
+                    var cursor = 0
+                    visited[start] = true
+                    var offsets = Set<Int>()
+                    var localMinX = startX
+                    var localMaxX = startX
+                    var localMinY = startY
+                    var localMaxY = startY
+                    while cursor < queue.count {
+                        let current = queue[cursor]
+                        cursor += 1
+                        let cy = current / cropWidth
+                        let cx = current % cropWidth
+                        let globalX = minX + cx
+                        let globalY = minY + cy
+                        offsets.insert(globalY * image.width + globalX)
+                        localMinX = min(localMinX, cx)
+                        localMaxX = max(localMaxX, cx)
+                        localMinY = min(localMinY, cy)
+                        localMaxY = max(localMaxY, cy)
+                        let neighbors = [
+                            (cx - 1, cy), (cx + 1, cy), (cx, cy - 1), (cx, cy + 1)
+                        ]
+                        for (nx, ny) in neighbors where nx >= 0 && ny >= 0 && nx < cropWidth && ny < cropHeight {
+                            let next = ny * cropWidth + nx
+                            if candidatePixels[next], !visited[next] {
+                                visited[next] = true
+                                queue.append(next)
+                            }
+                        }
+                    }
+                    let rect = CGRect(
+                        x: minX + localMinX,
+                        y: minY + localMinY,
+                        width: localMaxX - localMinX + 1,
+                        height: localMaxY - localMinY + 1
+                    ).integral
+                    let pixelCount = offsets.count
+                    var rejectionReasons: [String] = []
+                    if pixelCount < minArea { rejectionReasons.append("tooSmall") }
+                    if pixelCount > maxArea { rejectionReasons.append("tooLargeOrPanelBackground") }
+                    if rect.width < 10 || rect.height < 10 { rejectionReasons.append("bboxTooSmall") }
+                    let bboxArea = max(1, Int((rect.width * rect.height).rounded()))
+                    let fillRatio = Double(pixelCount) / Double(bboxArea)
+                    if fillRatio < 0.18 { rejectionReasons.append("lowFillRatio") }
+                    let bestBubble = bubbleRects.max { lhs, rhs in
+                        iou(rect, lhs.rect) < iou(rect, rhs.rect)
+                    }
+                    let bestIoU = bestBubble.map { iou(rect, $0.rect) } ?? 0
+                    let containsBlock = blocks.contains { block in
+                        rect.intersects(Self.rect(from: block.bbox))
+                    }
+                    if bestIoU < 0.03 && !containsBlock {
+                        rejectionReasons.append("notNearTextOrBubbleGeometry")
+                    }
+                    if !rejectionReasons.contains("tooSmall") {
+                        components.append(
+                            PixelComponent(
+                                bbox: rect,
+                                pixelOffsets: offsets,
+                                pixelCount: pixelCount,
+                                rejectionReasons: rejectionReasons,
+                                matchedBubbleID: bestBubble?.bubble.id,
+                                matchedIoU: bestIoU
+                            )
+                        )
+                    }
+                }
+            }
+
+            let acceptedComponents = components
+                .filter { component in
+                    !component.rejectionReasons.contains("tooLargeOrPanelBackground")
+                        && !component.rejectionReasons.contains("notNearTextOrBubbleGeometry")
+                        && !component.rejectionReasons.contains("bboxTooSmall")
+                }
+                .sorted { lhs, rhs in
+                    if abs(lhs.bbox.minY - rhs.bbox.minY) > 4 { return lhs.bbox.minY < rhs.bbox.minY }
+                    return lhs.bbox.minX < rhs.bbox.minX
+                }
+
+            var pixelOffsetsByInstanceID: [Int: Set<Int>] = [:]
+            var instanceRectsByID: [Int: CGRect] = [:]
+            var sourceBubbleByInstanceID: [Int: Int?] = [:]
+            for (offset, component) in acceptedComponents.enumerated() {
+                let id = offset + 1
+                pixelOffsetsByInstanceID[id] = component.pixelOffsets
+                instanceRectsByID[id] = component.bbox
+                sourceBubbleByInstanceID[id] = component.matchedBubbleID
+            }
+
+            func majority(in rect: CGRect) -> (id: Int?, count: Int, coverage: Double, secondary: [String: Int]) {
+                let clamped = Self.clamp(rect.integral, to: imageBounds)
+                let x0 = max(0, Int(clamped.minX.rounded(.down)))
+                let x1 = min(image.width, Int(clamped.maxX.rounded(.up)))
+                let y0 = max(0, Int(clamped.minY.rounded(.down)))
+                let y1 = min(image.height, Int(clamped.maxY.rounded(.up)))
+                guard x0 < x1, y0 < y1 else { return (nil, 0, 0, [:]) }
+                var counts: [Int: Int] = [:]
+                var total = 0
+                for y in y0..<y1 {
+                    for x in x0..<x1 {
+                        total += 1
+                        let key = y * image.width + x
+                        for (id, offsets) in pixelOffsetsByInstanceID where offsets.contains(key) {
+                            counts[id, default: 0] += 1
+                            break
+                        }
+                    }
+                }
+                let secondary = Dictionary(uniqueKeysWithValues: counts.map { (String($0.key), $0.value) })
+                guard let winner = counts.max(by: { $0.value < $1.value }) else {
+                    return (nil, 0, 0, secondary)
+                }
+                return (winner.key, winner.value, Double(winner.value) / Double(max(1, total)), secondary)
+            }
+
+            func pixelCoverage(of rect: CGRect, instanceID: Int?) -> Double {
+                guard let instanceID, let offsets = pixelOffsetsByInstanceID[instanceID] else { return 0 }
+                let clamped = Self.clamp(rect.integral, to: imageBounds)
+                let x0 = max(0, Int(clamped.minX.rounded(.down)))
+                let x1 = min(image.width, Int(clamped.maxX.rounded(.up)))
+                let y0 = max(0, Int(clamped.minY.rounded(.down)))
+                let y1 = min(image.height, Int(clamped.maxY.rounded(.up)))
+                guard x0 < x1, y0 < y1 else { return 0 }
+                var covered = 0
+                var total = 0
+                for y in y0..<y1 {
+                    for x in x0..<x1 {
+                        total += 1
+                        if offsets.contains(y * image.width + x) { covered += 1 }
+                    }
+                }
+                return Double(covered) / Double(max(1, total))
+            }
+
+            let blockMajorities = Dictionary(uniqueKeysWithValues: blocks.map { block in
+                (block.index, majority(in: Self.rect(from: block.bbox)))
+            })
+            var blocksByInstance: [Int: [MangaOverlayProbeBlock]] = [:]
+            for block in blocks {
+                if let id = blockMajorities[block.index]?.id {
+                    blocksByInstance[id, default: []].append(block)
+                }
+            }
+
+            var instances: [MangaKoharuNativeBubbleMaskInstanceLiteInstanceLedger] = []
+            for (offset, component) in acceptedComponents.enumerated() {
+                let id = offset + 1
+                let relatedBlocks = blocks.filter { block in
+                    component.bbox.intersects(Self.rect(from: block.bbox))
+                }.map(\.index)
+                let siblingBlocks = blocksByInstance[id]?.map(\.index) ?? []
+                let bboxArea = max(1, Int((component.bbox.width * component.bbox.height).rounded()))
+                let fillRatio = Double(component.pixelCount) / Double(bboxArea)
+                let edgeClosure = min(1, max(0, fillRatio * 1.35))
+                let interiorConfidence = min(1, max(0, fillRatio * 0.75 + Double(relatedBlocks.count) * 0.08 + (component.matchedIoU ?? 0) * 0.4))
+                var rejectionReasons = component.rejectionReasons
+                if siblingBlocks.count > 1 { rejectionReasons.append("sameInstanceMultipleBlocks") }
+                if (component.matchedIoU ?? 0) < 0.08 { rejectionReasons.append("weakExistingBubbleAssociation") }
+                let quality: String
+                if rejectionReasons.contains("weakExistingBubbleAssociation") {
+                    quality = "needsRealBubbleMaskArtifact"
+                } else if interiorConfidence >= 0.62, component.pixelCount >= minArea {
+                    quality = "nativeBubbleMaskInstanceLiteReportOnly"
+                } else {
+                    quality = "manualReviewOnly"
+                }
+                let needReason = quality == "needsRealBubbleMaskArtifact" || siblingBlocks.count > 1
+                    ? "instance-lite cannot prove true Koharu BubbleMask boundary for this bubble"
+                    : nil
+                instances.append(
+                    MangaKoharuNativeBubbleMaskInstanceLiteInstanceLedger(
+                        instanceID: id,
+                        maskValue: id,
+                        bbox: Self.bboxArray(from: component.bbox),
+                        pixelCount: component.pixelCount,
+                        bboxArea: bboxArea,
+                        fillRatio: fillRatio,
+                        interiorConfidence: interiorConfidence,
+                        edgeClosureScore: edgeClosure,
+                        sourceBubbleID: component.matchedBubbleID,
+                        matchedExistingBubbleID: component.matchedBubbleID,
+                        matchedBubbleIoU: component.matchedIoU,
+                        relatedBlockIndexes: uniqueSorted(relatedBlocks),
+                        sameBubbleSiblingBlockIndexes: uniqueSorted(siblingBlocks),
+                        adjacentInstanceIDs: [],
+                        pixelMaskSource: "sourceImageThresholdConnectedComponent",
+                        generationSignals: [
+                            signal("pixelCount", String(component.pixelCount), source: "SourceImage"),
+                            signal("fillRatio", formatted(fillRatio), source: "SourceImage"),
+                            signal("matchedBubbleIoU", formatted(component.matchedIoU), source: "bubbleGeometry")
+                        ],
+                        rejectionReasons: Array(Set(rejectionReasons)).sorted(),
+                        instanceQualityVerdict: quality,
+                        needsRealBubbleMaskReason: needReason,
+                        groundTruthUsedForDecision: false,
+                        wouldChangeMainFlow: false,
+                        diagnosticOnly: true
+                    )
+                )
+            }
+
+            var adjacencyLedgers: [MangaKoharuNativeBubbleMaskInstanceLiteAdjacencyLedger] = []
+            for lhs in instances {
+                for rhs in instances where lhs.instanceID < rhs.instanceID {
+                    guard let lhsRect = instanceRectsByID[lhs.instanceID],
+                          let rhsRect = instanceRectsByID[rhs.instanceID] else { continue }
+                    let bboxGap = gap(lhsRect, rhsRect)
+                    guard bboxGap <= 18 || lhsRect.insetBy(dx: -8, dy: -8).intersects(rhsRect) else { continue }
+                    let affected = uniqueSorted(lhs.relatedBlockIndexes + rhs.relatedBlockIndexes)
+                    let seamRisk = bboxGap <= 3 ? "touchingOrOverlappingInstances" : "nearbySeparatedInstances"
+                    adjacencyLedgers.append(
+                        MangaKoharuNativeBubbleMaskInstanceLiteAdjacencyLedger(
+                            instanceAID: lhs.instanceID,
+                            instanceBID: rhs.instanceID,
+                            bboxGap: bboxGap,
+                            maskGap: bboxGap,
+                            adjacencyStatus: bboxGap <= 3 ? "touchingOrOverlapping" : "nearbySeparated",
+                            seamRisk: seamRisk,
+                            relatedSplitCandidateIDs: uniqueSorted(affected.flatMap { splitByBlock[$0] ?? [] }),
+                            affectedBlocks: affected,
+                            nextAction: "keepInstanceLiteReportOnlyAndCollectRealBubbleMask",
+                            decisionSignals: [
+                                signal("bboxGap", formatted(bboxGap), source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                                signal("seamRisk", seamRisk, source: "koharuNativeBubbleMaskInstanceLiteReport")
+                            ],
+                            groundTruthUsedForDecision: false,
+                            wouldChangeMainFlow: false,
+                            diagnosticOnly: true
+                        )
+                    )
+                }
+            }
+            let adjacentByID = adjacencyLedgers.reduce(into: [Int: [Int]]()) { partial, ledger in
+                partial[ledger.instanceAID, default: []].append(ledger.instanceBID)
+                partial[ledger.instanceBID, default: []].append(ledger.instanceAID)
+            }
+            for index in instances.indices {
+                instances[index].adjacentInstanceIDs = uniqueSorted(adjacentByID[instances[index].instanceID] ?? [])
+            }
+
+            func rectOverlapCount(_ rects: [CGRect]) -> Int {
+                var count = 0
+                for i in rects.indices {
+                    for j in rects.indices where j > i {
+                        if rects[i].intersects(rects[j]) { count += 1 }
+                    }
+                }
+                return count
+            }
+
+            var siblingLedgers: [MangaKoharuNativeBubbleMaskInstanceLiteSiblingLedger] = []
+            for (instanceID, siblingBlocks) in blocksByInstance.sorted(by: { $0.key < $1.key }) {
+                guard siblingBlocks.count > 1 else { continue }
+                let currentRects = siblingBlocks.compactMap { block in block.safeLayoutRect.map(Self.rect(from:)) }
+                let instanceRect = instanceRectsByID[instanceID]
+                let instanceSafeRects = siblingBlocks.compactMap { _ in instanceRect?.insetBy(dx: max(2, (instanceRect?.width ?? 0) * 0.12), dy: max(2, (instanceRect?.height ?? 0) * 0.12)) }
+                let seamRelated = adjacencyLedgers.contains { ledger in
+                    ledger.affectedBlocks.contains { blockIndex in siblingBlocks.map(\.index).contains(blockIndex) }
+                }
+                let status = seamRelated || siblingBlocks.count > 1 ? "needsSiblingPartition" : "singleBlockStable"
+                siblingLedgers.append(
+                    MangaKoharuNativeBubbleMaskInstanceLiteSiblingLedger(
+                        instanceID: instanceID,
+                        blockIndexes: uniqueSorted(siblingBlocks.map(\.index)),
+                        currentBubbleID: sourceBubbleByInstanceID[instanceID] ?? nil,
+                        currentSafeRectOverlapCount: rectOverlapCount(currentRects),
+                        instanceLiteSafeRectOverlapCount: rectOverlapCount(instanceSafeRects),
+                        seamCandidateRelated: seamRelated,
+                        siblingPartitionStatus: status,
+                        needsRealBubbleMask: true,
+                        nextAction: "collectRealBubbleMaskForSiblingPartition",
+                        decisionSignals: [
+                            signal("blockCount", String(siblingBlocks.count), source: "blocks"),
+                            signal("seamCandidateRelated", String(seamRelated), source: "koharuBubbleAdjacencySeamReport")
+                        ],
+                        groundTruthUsedForDecision: false,
+                        wouldChangeMainFlow: false,
+                        diagnosticOnly: true
+                    )
+                )
+            }
+
+            let siblingStatusByInstance = Dictionary(uniqueKeysWithValues: siblingLedgers.map { ($0.instanceID ?? -1, $0.siblingPartitionStatus) })
+            let adjacencyRiskByInstance = adjacencyLedgers.reduce(into: [Int: String]()) { partial, ledger in
+                partial[ledger.instanceAID] = ledger.seamRisk
+                partial[ledger.instanceBID] = ledger.seamRisk
+            }
+
+            var blockLedgers: [MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger] = []
+            for block in blocks.sorted(by: { $0.index < $1.index }) {
+                let seedRect = Self.clamp(Self.rect(from: block.bbox), to: imageBounds)
+                let maj = blockMajorities[block.index] ?? (id: nil, count: 0, coverage: 0, secondary: [:])
+                let matchedBubble = maj.id.flatMap { sourceBubbleByInstanceID[$0] ?? nil }
+                let assignment: String
+                let conflict: String?
+                if maj.id == nil {
+                    assignment = "noMajorityMaskPixels"
+                    conflict = "seed bbox contains no accepted instance-lite mask pixels"
+                } else if block.bubbleID == nil {
+                    assignment = "missingCurrentBubbleID"
+                    conflict = "current block has no bubbleID to compare"
+                } else if matchedBubble == block.bubbleID {
+                    assignment = "agreesWithCurrentBubbleID"
+                    conflict = nil
+                } else if maj.secondary.count > 1 {
+                    assignment = "multipleInstanceOverlap"
+                    conflict = "seed bbox overlaps multiple instance-lite masks"
+                } else {
+                    assignment = "majorityMaskDiffersFromCurrentBubbleID"
+                    conflict = "instance-lite majority maps to \(matchedBubble.map(String.init) ?? "nil") while current bubbleID is \(block.bubbleID.map(String.init) ?? "nil")"
+                }
+                let instanceRect = maj.id.flatMap { instanceRectsByID[$0] }
+                let safeRect = instanceRect.map { rect in
+                    let insetX = max(2, rect.width * 0.12)
+                    let insetY = max(2, rect.height * 0.12)
+                    return Self.clamp(rect.insetBy(dx: insetX, dy: insetY).integral, to: imageBounds)
+                }
+                let currentSafe = block.safeLayoutRect.map(Self.rect(from:))
+                let safeRectComparison: String
+                if safeRect == nil {
+                    safeRectComparison = "missingInstanceLiteSafeRect"
+                } else if let currentSafe, let safeRect, area(currentSafe.intersection(safeRect)) / max(1, min(area(currentSafe), area(safeRect))) >= 0.55 {
+                    safeRectComparison = "similarToCurrentSafeRect"
+                } else {
+                    safeRectComparison = "differsFromCurrentSafeRect"
+                }
+                let renderRect = block.renderNonTransparentBounds.map(Self.rect(from:))
+                let renderCoverage = renderRect.map { pixelCoverage(of: $0, instanceID: maj.id) } ?? 0
+                let spriteContained = renderCoverage >= 0.72
+                let segmentStatus: String
+                if let segment = segmentByBlock[block.index] {
+                    if segment.usableForCropEvidence { segmentStatus = "segmentGlyphEvidenceUsable" }
+                    else if !segment.rejectionReasons.isEmpty { segmentStatus = "segmentGlyphEvidenceWeak" }
+                    else { segmentStatus = "segmentGlyphEvidenceUnknown" }
+                } else {
+                    segmentStatus = "segmentGlyphEvidenceMissing"
+                }
+                let splitRisk = splitByBlock[block.index]?.isEmpty == false
+                    ? "bubbleSplitRisk"
+                    : (maskByBlock[block.index]?.bubbleIDConsistent == false ? "assignmentConflictSplitRisk" : "noSplitRiskDetected")
+                let siblingStatus = maj.id.flatMap { siblingStatusByInstance[$0] } ?? "singleBlockOrNoInstance"
+                let adjacencyRisk = maj.id.flatMap { adjacencyRiskByInstance[$0] } ?? (seamByBlock[block.index]?.blockSeamRisk ?? "noAdjacencyRiskDetected")
+                let translationRoute = block.blockPassed ? "translationPassed" : block.failureCategory
+                let detectorRoute = closedLoopByBlock[block.index]?.closedLoopRoute
+                let renderStatus: String
+                if renderLockByBlock[block.index]?.renderCollisionResolved == false || !block.renderCollisionResolved {
+                    renderStatus = "renderLockOpen"
+                } else if renderFitByBlock[block.index]?.fitVerdict == "renderLockedNoPromotion" {
+                    renderStatus = "renderLockedNoPromotion"
+                } else {
+                    renderStatus = "renderStable"
+                }
+                let primary: String
+                if renderStatus != "renderStable" {
+                    primary = "renderLocked"
+                } else if block.failureCategory == "modelOutputFailure" || block.failureCategory == "translationLanguageQualityFailure" {
+                    primary = "translationModelFloor"
+                } else if segmentStatus == "segmentGlyphEvidenceWeak" || segmentStatus == "segmentGlyphEvidenceMissing" {
+                    primary = "segmentGlyphEvidenceWeak"
+                } else if splitRisk != "noSplitRiskDetected" {
+                    primary = "bubbleSplitRisk"
+                } else if siblingStatus == "needsSiblingPartition" {
+                    primary = "sameBubbleSiblingPartitionRisk"
+                } else if assignment != "agreesWithCurrentBubbleID" {
+                    primary = assignment == "noMajorityMaskPixels" ? "bubbleMaskInstanceMissing" : "bubbleMaskAssignmentConflict"
+                } else if detectorRoute == "needsRealKoharuTextBoxes" || detectorRoute == "waitForRealTextBoxes" {
+                    primary = "detectorLiteClosedLoopNeedsTextBoxes"
+                } else if block.failureCategory == "ocrInputSuspect" {
+                    primary = "currentFusedOCRStable"
+                } else {
+                    primary = "manualReviewOnly"
+                }
+                let nextAction: String
+                switch primary {
+                case "renderLocked": nextAction = "keepRenderLockReportOnly"
+                case "translationModelFloor": nextAction = "keepModelFloorSeparate"
+                case "segmentGlyphEvidenceWeak": nextAction = "collectRealSegmentMask"
+                case "bubbleSplitRisk", "sameBubbleSiblingPartitionRisk", "bubbleMaskAssignmentConflict", "bubbleMaskInstanceMissing":
+                    nextAction = "collectRealBubbleMaskOrReviewInstanceLiteFullProbe"
+                case "detectorLiteClosedLoopNeedsTextBoxes": nextAction = "collectRealTextBoxes"
+                case "currentFusedOCRStable": nextAction = "keepCurrentFusedOCR"
+                default: nextAction = "manualReviewOnly"
+                }
+                blockLedgers.append(
+                    MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger(
+                        blockIndex: block.index,
+                        currentBubbleID: block.bubbleID,
+                        instanceLiteMajorityID: maj.id,
+                        instanceLiteMajorityPixelCount: maj.count,
+                        instanceLiteMajorityCoverage: maj.coverage,
+                        instanceLiteSecondaryIDs: maj.secondary,
+                        assignmentAgreement: assignment,
+                        assignmentConflictReason: conflict,
+                        bbox: block.bbox,
+                        seedRect: Self.bboxArray(from: seedRect),
+                        currentSafeLayoutRect: block.safeLayoutRect,
+                        instanceLiteSafeRect: safeRect.map(Self.bboxArray(from:)),
+                        distanceFieldSafeRectFromInstanceLite: safeRect.map(Self.bboxArray(from:)),
+                        distanceFieldSafeRectSource: "nativeBubbleMaskInstanceLite",
+                        currentRenderNonTransparentBounds: block.renderNonTransparentBounds,
+                        spriteContainedByInstanceLiteMask: spriteContained,
+                        siblingPartitionStatus: siblingStatus,
+                        splitRisk: splitRisk,
+                        adjacencyRisk: adjacencyRisk,
+                        segmentGlyphEvidenceStatus: segmentStatus,
+                        translationFailureCategory: block.failureCategory,
+                        translationFailureRoute: translationRoute,
+                        detectorLiteClosedLoopRoute: detectorRoute,
+                        renderLockStatus: renderStatus,
+                        primaryBottleneck: primary,
+                        nextAction: nextAction,
+                        decisionSignals: [
+                            signal("currentBubbleID", block.bubbleID.map(String.init) ?? "nil", source: "blocks"),
+                            signal("instanceLiteMajorityID", maj.id.map(String.init) ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("assignmentAgreement", assignment, source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("safeRectComparison", safeRectComparison, source: "koharuNativeBubbleMaskInstanceLiteReport")
+                        ],
+                        evaluationSignals: [
+                            signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
+                            signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true),
+                            signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true)
+                        ],
+                        groundTruthUsedForDecision: false,
+                        wouldChangeMainFlow: false,
+                        diagnosticOnly: true
+                    )
+                )
+            }
+
+            let needsRealBubbleMaskBlocks = uniqueSorted(blockLedgers.filter {
+                ["bubbleMaskInstanceMissing", "bubbleMaskAssignmentConflict", "bubbleSplitRisk", "sameBubbleSiblingPartitionRisk"].contains($0.primaryBottleneck)
+            }.map(\.blockIndex))
+            let needsRealSegmentMaskBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "segmentGlyphEvidenceWeak" }.map(\.blockIndex))
+            let needsRealTextBoxesBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "detectorLiteClosedLoopNeedsTextBoxes" }.map(\.blockIndex))
+            let manualReviewBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "manualReviewOnly" }.map(\.blockIndex))
+            let renderLockedBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "renderLocked" }.map(\.blockIndex))
+            let instanceVerdict: String
+            if instances.isEmpty {
+                instanceVerdict = "blockedByInsufficientPixelEvidence"
+            } else if !needsRealBubbleMaskBlocks.isEmpty {
+                instanceVerdict = "needsRealBubbleMaskArtifact"
+            } else if !renderLockedBlocks.isEmpty {
+                instanceVerdict = "renderLockedNoPromotion"
+            } else {
+                instanceVerdict = "nativeBubbleMaskInstanceLiteReportOnly"
+            }
+            let gates = [
+                gate("G-native-bubblemask-instance-lite-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "instance-lite mask mutates OCR, translation, safeLayoutRect, renderer, blockPassed, failureCategory, candidate selection, active artifacts, or currentBlockSource", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+                gate("G-native-bubblemask-instance-lite-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth influences mask generation, majority assignment, route, nextAction, verdict, or gate", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+                gate("G-native-bubblemask-instance-lite-source-pixels", "Source pixels", "SourceImage", instances.isEmpty ? "warning" : "passed", "usesSourceImagePixels=true and pixelMaskSource=sourceImageThresholdConnectedComponent", allBlockIndexes, "report copies rounded-rect proxy instead of using source image pixels", "restorePixelConnectedComponentMask", [signal("usesSourceImagePixels", "true", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("instanceCount", String(instances.count), source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+                gate("G-native-bubblemask-instance-lite-proxy-boundary", "Proxy boundary", "BubbleMask", "passed", "proxyNotRealKoharuBubbleMask=true", allBlockIndexes, "instance-lite mask is promoted as real Koharu BubbleMask", "keepProxyBoundaryOrCollectRealArtifact", [signal("proxyNotRealKoharuBubbleMask", "true", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+                gate("G-native-bubblemask-instance-lite-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack majority assignment ledger rows", "restoreBlockLedgerCoverage", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+                gate("G-native-bubblemask-instance-lite-instance-ledger-visible", "Instance ledger visible", "BubbleMask", instances.isEmpty ? "warning" : "passed", "instanceCount>=1 or blockedByInsufficientPixelEvidence", allBlockIndexes, "instance-lite silently emits empty report without blocked verdict", "writeBlockedPixelEvidenceGate", [signal("instanceLiteVerdict", instanceVerdict, source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+                gate("G-native-bubblemask-instance-lite-safe-rect-report-only", "Safe rect report-only", "RenderedSprites", "passed", "distanceFieldSafeRectSource=nativeBubbleMaskInstanceLite and not written back", allBlockIndexes, "instance-lite safe rect mutates block.safeLayoutRect or distanceField report", "keepSafeRectComparisonReportOnly", [signal("safeRectWriteBack", "false", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+                gate("G-native-bubblemask-instance-lite-no-ocr-llm-png", "No OCR LLM PNG", "budget", "passed", "no OCR/LLM calls and no PNG output", [], "instance-lite adds OCR, LLM, or new PNG output", "removeHeavyWorkFromInstanceLite", [signal("ocrCalls", "0", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("llmCalls", "0", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("pngOutputs", "0", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+                gate("G-native-bubblemask-instance-lite-real-artifact-boundary", "External artifact boundary", "ExternalArtifacts", "passed", "externalArtifactsRequiredForThisReport=false and active artifacts unchanged", [], "instance-lite creates, copies, or modifies active Koharu artifacts", "doNotCreateActiveArtifacts", [signal("externalArtifactsRequiredForThisReport", "false", source: "koharuNativeBubbleMaskInstanceLiteReport")])
+            ]
+
+            return MangaKoharuNativeBubbleMaskInstanceLiteReport(
+                enabled: true,
+                source: "AITRANSProbe",
+                referencePipeline: "Koharu",
+                referenceConcept: "BubbleMask.NativeInstanceLite.PixelIDMask",
+                referenceWorkItemID: "WI-koharu-native-bubblemask-instance-lite",
+                evaluatedBlockCount: blocks.count,
+                sourceImageWidth: image.width,
+                sourceImageHeight: image.height,
+                contentCropBBox: contentBBox,
+                instanceCount: instances.count,
+                blockLedgerCount: blockLedgers.count,
+                siblingLedgerCount: siblingLedgers.count,
+                adjacencyLedgerCount: adjacencyLedgers.count,
+                gateCount: gates.count,
+                groundTruthUsedForDecision: false,
+                groundTruthUsedForEvaluationOnly: true,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true,
+                nativeInstanceLite: true,
+                proxyNotRealKoharuBubbleMask: true,
+                usesSourceImagePixels: true,
+                externalArtifactsRequiredForThisReport: false,
+                instanceLiteVerdict: instanceVerdict,
+                instanceQualityBreakdown: countBy(instances.map(\.instanceQualityVerdict)),
+                assignmentAgreementBreakdown: countBy(blockLedgers.map(\.assignmentAgreement)),
+                splitRiskBreakdown: countBy(blockLedgers.map(\.splitRisk)),
+                siblingPartitionBreakdown: countBy(blockLedgers.map(\.siblingPartitionStatus)),
+                safeRectComparisonBreakdown: countBy(blockLedgers.map {
+                    if $0.instanceLiteSafeRect == nil { return "missingInstanceLiteSafeRect" }
+                    if $0.currentSafeLayoutRect == $0.instanceLiteSafeRect { return "sameAsCurrentSafeRect" }
+                    return "comparedReportOnly"
+                }),
+                spriteContainmentBreakdown: countBy(blockLedgers.map { $0.spriteContainedByInstanceLiteMask ? "contained" : "notContainedOrUnproven" }),
+                adjacencyRiskBreakdown: countBy(blockLedgers.map(\.adjacencyRisk)),
+                primaryBottleneckBreakdown: countBy(blockLedgers.map(\.primaryBottleneck)),
+                nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
+                needsRealBubbleMaskBlocks: needsRealBubbleMaskBlocks,
+                needsRealSegmentMaskBlocks: needsRealSegmentMaskBlocks,
+                needsRealTextBoxesBlocks: needsRealTextBoxesBlocks,
+                manualReviewBlocks: manualReviewBlocks,
+                renderLockedBlocks: renderLockedBlocks,
+                instances: instances.sorted { $0.instanceID < $1.instanceID },
+                blockLedgers: blockLedgers,
+                siblingLedgers: siblingLedgers.sorted { ($0.instanceID ?? -1) < ($1.instanceID ?? -1) },
+                adjacencyLedgers: adjacencyLedgers.sorted {
+                    if $0.instanceAID == $1.instanceAID { return $0.instanceBID < $1.instanceBID }
+                    return $0.instanceAID < $1.instanceAID
+                },
+                gateLedger: gates,
+                notes: [
+                    "koharuNativeBubbleMaskInstanceLiteReport builds a shadow-only BubbleMask instance-lite ledger from source image near-white connected components inside the existing content crop.",
+                    "Existing bubble geometry is used only for association, validation, and routing; this report is not a real Koharu BubbleMask and does not create active external artifacts.",
+                    "Ground truth appears only in evaluationSignals and never drives mask generation, majority assignment, route, nextAction, verdict, or gates.",
+                    "Instance-lite safe rect and sprite containment are report-only comparisons and are not written to safeLayoutRect, DistanceField reports, renderer state, overlay PNGs, OCR input, translation input, or crop adoption."
                 ]
             )
         }.value
@@ -1795,7 +2526,6 @@ struct MangaOverlayProbeService: Sendable {
             }) { $0.blockIndex }
             let bubbleIndexByBlock = Dictionary(uniqueKeysWithValues: (koharuBubbleIndexShadowLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) })
             let distanceFieldByBlock = Dictionary(uniqueKeysWithValues: (koharuDistanceFieldSafeAreaReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) })
-            let renderByBlock = Dictionary(uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) })
             let blocksByBubble = Dictionary(grouping: blocks.compactMap { block -> (Int, MangaOverlayProbeBlock)? in
                 guard let bubbleID = block.bubbleID else { return nil }
                 return (bubbleID, block)
@@ -2952,9 +3682,7 @@ struct MangaOverlayProbeService: Sendable {
                 return ("manualReviewOnly", false, reasons)
             }
 
-            guard let providerData = image.dataProvider?.data,
-                  let bytes = CFDataGetBytePtr(providerData),
-                  image.bitsPerPixel == 32 else {
+            guard let bitmap = Self.makeRGBA8Bitmap(from: image) else {
                 let gate = MangaKoharuNativeTextBoxDetectorLiteGate(
                     gateID: "G-native-textbox-detector-lite-image-bytes",
                     gateName: "Image bytes available",
@@ -3010,8 +3738,9 @@ struct MangaOverlayProbeService: Sendable {
                 )
             }
 
+            let bytes = bitmap.pixels
             let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
-            let bytesPerRow = image.bytesPerRow
+            let bytesPerRow = bitmap.bytesPerRow
             let maskRuntime = Self.makeApproximateBubbleMaskRuntime(image: image, bubbleGeometry: bubbleGeometry)
             let segmentRects = (segmentMaskReport?.diagnostics ?? []).compactMap { diagnostic -> CGRect? in
                 guard let rect = diagnostic.glyphMaskRect else { return nil }
@@ -3045,6 +3774,7 @@ struct MangaOverlayProbeService: Sendable {
                         let x = Int(bubbleRect.minX) + localX
                         guard x >= 0, y >= 0, x < image.width, y < image.height else { continue }
                         let offset = y * bytesPerRow + x * 4
+                        guard offset + 2 < bytes.count else { continue }
                         let luminance = (Int(bytes[offset]) * 299 + Int(bytes[offset + 1]) * 587 + Int(bytes[offset + 2]) * 114) / 1000
                         gray[localY * width + localX] = UInt8(max(0, min(255, luminance)))
                         sum += luminance
@@ -3856,6 +4586,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport? = nil,
         koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport? = nil,
         koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport? = nil,
+        koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -3976,6 +4707,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let nativeTextBoxDetectorLiteClosedLoopByBlock = Dictionary(
             uniqueKeysWithValues: (koharuNativeTextBoxDetectorLiteClosedLoopReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let nativeBubbleMaskInstanceLiteByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuNativeBubbleMaskInstanceLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
         let translationFloorNoisyByBlock = Dictionary(
             uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
@@ -4209,6 +4943,7 @@ struct MangaOverlayProbeService: Sendable {
             let nativeTextBoxDetectorLiteShadowOCR = nativeTextBoxDetectorLiteShadowOCRByBlock[block.index]
             let nativeTextBoxDetectorLiteRefinement = nativeTextBoxDetectorLiteRefinementByBlock[block.index]
             let nativeTextBoxDetectorLiteClosedLoop = nativeTextBoxDetectorLiteClosedLoopByBlock[block.index]
+            let nativeBubbleMaskInstanceLite = nativeBubbleMaskInstanceLiteByBlock[block.index]
             let translationFloorNoisy = translationFloorNoisyByBlock[block.index]
             let renderLock = renderLockByBlock[block.index]
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
@@ -4286,6 +5021,7 @@ struct MangaOverlayProbeService: Sendable {
             nativeTextBoxDetectorLiteShadowOCRBlockLedger: block=\(nativeTextBoxDetectorLiteShadowOCR.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLiteShadowOCR?.bubbleID.map(String.init) ?? "nil") selected=\(nativeTextBoxDetectorLiteShadowOCR?.selectedCandidateID ?? "nil") outcome=\(nativeTextBoxDetectorLiteShadowOCR?.shadowOutcome ?? "nil") shadowText=\(nativeTextBoxDetectorLiteShadowOCR?.shadowOCRNormalizedText?.replacing("\n", with: " / ") ?? "nil") qualityDelta=\(nativeTextBoxDetectorLiteShadowOCR?.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") similarityDelta=\(nativeTextBoxDetectorLiteShadowOCR?.ocrSimilarityDeltaForEvaluation?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bottleneck=\(nativeTextBoxDetectorLiteShadowOCR?.primaryBottleneck ?? "nil") next=\(nativeTextBoxDetectorLiteShadowOCR?.nextAction ?? "nil")
             nativeTextBoxDetectorLiteRefinementBlockLedger: block=\(nativeTextBoxDetectorLiteRefinement.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLiteRefinement?.bubbleID.map(String.init) ?? "nil") target=\(nativeTextBoxDetectorLiteRefinement?.targetReason ?? "nil") base=\(nativeTextBoxDetectorLiteRefinement?.baseCandidateID ?? "nil") refined=[\(nativeTextBoxDetectorLiteRefinement?.refinedBBox?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")] strategy=\(nativeTextBoxDetectorLiteRefinement?.refinementStrategy ?? "nil") outcome=\(nativeTextBoxDetectorLiteRefinement?.refinementOutcome ?? "nil") refinedText=\(nativeTextBoxDetectorLiteRefinement?.refinedOCRNormalizedText?.replacing("\n", with: " / ") ?? "nil") qualityDeltaCurrent=\(nativeTextBoxDetectorLiteRefinement?.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") qualityDeltaDetector=\(nativeTextBoxDetectorLiteRefinement?.qualityDeltaVsDetectorLiteShadow?.formatted(.number.precision(.fractionLength(3))) ?? "nil") similarityDelta=\(nativeTextBoxDetectorLiteRefinement?.ocrSimilarityDeltaForEvaluation?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bottleneck=\(nativeTextBoxDetectorLiteRefinement?.primaryBottleneck ?? "nil") next=\(nativeTextBoxDetectorLiteRefinement?.nextAction ?? "nil")
             nativeTextBoxDetectorLiteClosedLoopBlockLedger: block=\(nativeTextBoxDetectorLiteClosedLoop.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLiteClosedLoop?.bubbleID.map(String.init) ?? "nil") failure=\(nativeTextBoxDetectorLiteClosedLoop?.failureCategory ?? "nil") shadow=\(nativeTextBoxDetectorLiteClosedLoop?.detectorLiteShadowOutcome ?? "nil") refinement=\(nativeTextBoxDetectorLiteClosedLoop?.refinementOutcome ?? "nil") best=\(nativeTextBoxDetectorLiteClosedLoop?.bestReportOnlyCandidateID ?? "nil") delta=\(nativeTextBoxDetectorLiteClosedLoop?.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bubble=\(nativeTextBoxDetectorLiteClosedLoop?.bubbleAssignmentStatus ?? "nil") segment=\(nativeTextBoxDetectorLiteClosedLoop?.segmentGlyphEvidenceStatus ?? "nil") translationRoute=\(nativeTextBoxDetectorLiteClosedLoop?.translationFailureRoute ?? "nil") render=\(nativeTextBoxDetectorLiteClosedLoop?.renderLockStatus ?? "nil") bottleneck=\(nativeTextBoxDetectorLiteClosedLoop?.primaryBottleneck ?? "nil") route=\(nativeTextBoxDetectorLiteClosedLoop?.closedLoopRoute ?? "nil") next=\(nativeTextBoxDetectorLiteClosedLoop?.nextAction ?? "nil")
+            nativeBubbleMaskInstanceLiteBlockLedger: block=\(nativeBubbleMaskInstanceLite.map { String($0.blockIndex) } ?? "nil") currentBubbleID=\(nativeBubbleMaskInstanceLite?.currentBubbleID.map(String.init) ?? "nil") majorityID=\(nativeBubbleMaskInstanceLite?.instanceLiteMajorityID.map(String.init) ?? "nil") majorityCoverage=\(nativeBubbleMaskInstanceLite?.instanceLiteMajorityCoverage.formatted(.number.precision(.fractionLength(3))) ?? "nil") agreement=\(nativeBubbleMaskInstanceLite?.assignmentAgreement ?? "nil") conflict=\(nativeBubbleMaskInstanceLite?.assignmentConflictReason ?? "nil") safeRect=[\(nativeBubbleMaskInstanceLite?.instanceLiteSafeRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")] distanceFieldSource=\(nativeBubbleMaskInstanceLite?.distanceFieldSafeRectSource ?? "nil") spriteContained=\(nativeBubbleMaskInstanceLite.map { String($0.spriteContainedByInstanceLiteMask) } ?? "nil") sibling=\(nativeBubbleMaskInstanceLite?.siblingPartitionStatus ?? "nil") split=\(nativeBubbleMaskInstanceLite?.splitRisk ?? "nil") adjacency=\(nativeBubbleMaskInstanceLite?.adjacencyRisk ?? "nil") segment=\(nativeBubbleMaskInstanceLite?.segmentGlyphEvidenceStatus ?? "nil") translationRoute=\(nativeBubbleMaskInstanceLite?.translationFailureRoute ?? "nil") detectorRoute=\(nativeBubbleMaskInstanceLite?.detectorLiteClosedLoopRoute ?? "nil") render=\(nativeBubbleMaskInstanceLite?.renderLockStatus ?? "nil") bottleneck=\(nativeBubbleMaskInstanceLite?.primaryBottleneck ?? "nil") next=\(nativeBubbleMaskInstanceLite?.nextAction ?? "nil")
             translationFloorNoisyBlock: modelFloorLimited=\(translationFloorNoisy.map { String($0.modelFloorLimited) } ?? "nil") ocrInputSuspect=\(translationFloorNoisy.map { String($0.ocrInputSuspect) } ?? "nil") languageQualityFailure=\(translationFloorNoisy.map { String($0.translationLanguageQualityFailure) } ?? "nil") routingOutcome=\(translationFloorNoisy?.routingComparisonOutcome ?? "nil") nextAction=\(translationFloorNoisy?.recommendedNextAction ?? "nil")
             renderLock: status=\(renderLock?.renderStatus ?? "nil") failureOverlayRequired=\(renderLock.map { String($0.failureOverlayRequired) } ?? "nil") failureOverlayLocked=\(renderLock.map { String($0.failureOverlayLocked) } ?? "nil") safeLayoutSource=\(renderLock?.safeLayoutSource ?? "nil") maskOverflowPixels=\(renderLock.map { String($0.renderMaskOverflowPixelCount) } ?? "nil") truncated=\(renderLock.map { String($0.renderTextTruncated) } ?? "nil") nextAction=\(renderLock?.recommendedNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
@@ -4391,6 +5127,18 @@ struct MangaOverlayProbeService: Sendable {
             .prefix(24)
             .map { "nativeTextBoxDetectorLiteCandidateFamily: family=\($0.familyID) block=\($0.blockIndex) bubble=\($0.bubbleID.map(String.init) ?? "nil") best=\($0.bestReportOnlyCandidateID ?? "nil") source=\($0.bestReportOnlyCandidateSource ?? "nil") delta=\($0.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") evalSimilarityDelta=\($0.groundTruthSimilarityDeltaForEvaluation?.formatted(.number.precision(.fractionLength(3))) ?? "nil") verdict=\($0.candidateFamilyVerdict) whyNotPromoted=\($0.whyNotPromoted.joined(separator: " | "))" }
             .joined(separator: "\n")
+        let nativeBubbleMaskInstanceSummary = (koharuNativeBubbleMaskInstanceLiteReport?.instances ?? [])
+            .prefix(24)
+            .map { "nativeBubbleMaskInstanceLiteInstance: id=\($0.instanceID) mask=\($0.maskValue) bubble=\($0.matchedExistingBubbleID.map(String.init) ?? "nil") bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))] pixels=\($0.pixelCount) fill=\($0.fillRatio.formatted(.number.precision(.fractionLength(3)))) confidence=\($0.interiorConfidence.formatted(.number.precision(.fractionLength(3)))) source=\($0.pixelMaskSource) verdict=\($0.instanceQualityVerdict) related=\($0.relatedBlockIndexes.map(String.init).joined(separator: ",")) siblings=\($0.sameBubbleSiblingBlockIndexes.map(String.init).joined(separator: ",")) adjacent=\($0.adjacentInstanceIDs.map(String.init).joined(separator: ",")) rejections=\($0.rejectionReasons.joined(separator: " | "))" }
+            .joined(separator: "\n")
+        let nativeBubbleMaskSiblingSummary = (koharuNativeBubbleMaskInstanceLiteReport?.siblingLedgers ?? [])
+            .prefix(24)
+            .map { "nativeBubbleMaskInstanceLiteSiblingLedger: instance=\($0.instanceID.map(String.init) ?? "nil") blocks=\($0.blockIndexes.map(String.init).joined(separator: ",")) currentOverlap=\($0.currentSafeRectOverlapCount) instanceOverlap=\($0.instanceLiteSafeRectOverlapCount) seam=\($0.seamCandidateRelated) status=\($0.siblingPartitionStatus) needsRealBubbleMask=\($0.needsRealBubbleMask) next=\($0.nextAction)" }
+            .joined(separator: "\n")
+        let nativeBubbleMaskAdjacencySummary = (koharuNativeBubbleMaskInstanceLiteReport?.adjacencyLedgers ?? [])
+            .prefix(24)
+            .map { "nativeBubbleMaskInstanceLiteAdjacencyLedger: pair=\($0.instanceAID)-\($0.instanceBID) bboxGap=\($0.bboxGap.formatted(.number.precision(.fractionLength(2)))) maskGap=\($0.maskGap.formatted(.number.precision(.fractionLength(2)))) status=\($0.adjacencyStatus) seamRisk=\($0.seamRisk) blocks=\($0.affectedBlocks.map(String.init).joined(separator: ",")) splitCandidates=\($0.relatedSplitCandidateIDs.map(String.init).joined(separator: ",")) next=\($0.nextAction)" }
+            .joined(separator: "\n")
         let externalSummary = """
         koharuNativeAlgorithmReplayMatrixReport: enabled=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.stageCount) } ?? "nil") candidates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil") blockRoutes=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict ?? "nil")
         nativeReplayStageStatus=\(koharuNativeAlgorithmReplayMatrixReport?.stageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -4449,6 +5197,18 @@ struct MangaOverlayProbeService: Sendable {
         detectorLiteClosedLoopBottleneck=\(koharuNativeTextBoxDetectorLiteClosedLoopReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         detectorLiteClosedLoopNextAction=\(koharuNativeTextBoxDetectorLiteClosedLoopReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         \(nativeTextBoxDetectorLiteClosedLoopFamilySummary.isEmpty ? "nativeTextBoxDetectorLiteCandidateFamily: nil" : nativeTextBoxDetectorLiteClosedLoopFamilySummary)
+        koharuNativeBubbleMaskInstanceLiteReport: enabled=\(koharuNativeBubbleMaskInstanceLiteReport.map { String($0.enabled) } ?? "nil") instances=\(koharuNativeBubbleMaskInstanceLiteReport.map { String($0.instanceCount) } ?? "nil") blocks=\(koharuNativeBubbleMaskInstanceLiteReport.map { String($0.blockLedgerCount) } ?? "nil") siblings=\(koharuNativeBubbleMaskInstanceLiteReport.map { String($0.siblingLedgerCount) } ?? "nil") adjacency=\(koharuNativeBubbleMaskInstanceLiteReport.map { String($0.adjacencyLedgerCount) } ?? "nil") gates=\(koharuNativeBubbleMaskInstanceLiteReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeBubbleMaskInstanceLiteReport?.instanceLiteVerdict ?? "nil") proxyNotRealKoharuBubbleMask=\(koharuNativeBubbleMaskInstanceLiteReport.map { String($0.proxyNotRealKoharuBubbleMask) } ?? "nil") nativeInstanceLite=\(koharuNativeBubbleMaskInstanceLiteReport.map { String($0.nativeInstanceLite) } ?? "nil") groundTruthUsedForDecision=\(koharuNativeBubbleMaskInstanceLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil") wouldChangeMainFlow=\(koharuNativeBubbleMaskInstanceLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil")
+        nativeBubbleMaskInstanceLiteQuality=\(koharuNativeBubbleMaskInstanceLiteReport?.instanceQualityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeBubbleMaskInstanceLiteAssignment=\(koharuNativeBubbleMaskInstanceLiteReport?.assignmentAgreementBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeBubbleMaskInstanceLiteSplit=\(koharuNativeBubbleMaskInstanceLiteReport?.splitRiskBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeBubbleMaskInstanceLiteSibling=\(koharuNativeBubbleMaskInstanceLiteReport?.siblingPartitionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeBubbleMaskInstanceLiteSafeRect=\(koharuNativeBubbleMaskInstanceLiteReport?.safeRectComparisonBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeBubbleMaskInstanceLiteBottleneck=\(koharuNativeBubbleMaskInstanceLiteReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeBubbleMaskInstanceLiteNextAction=\(koharuNativeBubbleMaskInstanceLiteReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        needsRealBubbleMaskBlocks=\(koharuNativeBubbleMaskInstanceLiteReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealSegmentMaskBlocks=\(koharuNativeBubbleMaskInstanceLiteReport?.needsRealSegmentMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealTextBoxesBlocks=\(koharuNativeBubbleMaskInstanceLiteReport?.needsRealTextBoxesBlocks.map(String.init).joined(separator: ",") ?? "nil")
+        \(nativeBubbleMaskInstanceSummary.isEmpty ? "nativeBubbleMaskInstanceLiteInstance: nil" : nativeBubbleMaskInstanceSummary)
+        \(nativeBubbleMaskSiblingSummary.isEmpty ? "nativeBubbleMaskInstanceLiteSiblingLedger: nil" : nativeBubbleMaskSiblingSummary)
+        \(nativeBubbleMaskAdjacencySummary.isEmpty ? "nativeBubbleMaskInstanceLiteAdjacencyLedger: nil" : nativeBubbleMaskAdjacencySummary)
         koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
         workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -4684,6 +5444,41 @@ struct MangaOverlayProbeService: Sendable {
             throw MangaOverlayProbeServiceError.imageDecodeFailed
         }
         return image
+    }
+
+    private struct RGBA8Bitmap {
+        var width: Int
+        var height: Int
+        var bytesPerRow: Int
+        var pixels: [UInt8]
+    }
+
+    private static func makeRGBA8Bitmap(from image: CGImage) -> RGBA8Bitmap? {
+        let width = image.width
+        let height = image.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+        guard width > 0, height > 0 else { return nil }
+        var pixels = [UInt8](repeating: 255, count: height * bytesPerRow)
+        let rendered = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let baseAddress = buffer.baseAddress,
+                  let context = CGContext(
+                      data: baseAddress,
+                      width: width,
+                      height: height,
+                      bitsPerComponent: 8,
+                      bytesPerRow: bytesPerRow,
+                      space: CGColorSpaceCreateDeviceRGB(),
+                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                  ) else {
+                return false
+            }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+            context.flush()
+            return true
+        }
+        guard rendered else { return nil }
+        return RGBA8Bitmap(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
     }
 
     private static func contentCropRect(for image: CGImage, cropping: MangaOverlayProbeCropping) -> CGRect {
@@ -6266,7 +7061,8 @@ struct MangaOverlayProbeService: Sendable {
     }
 
     private static func drawTranslatedOverlay(on image: CGImage, blocks: [MangaOverlayProbeBlock]) throws -> CGImage {
-        try draw(on: image) { context, _ in
+        let backgroundBitmap = makeRGBA8Bitmap(from: image)
+        return try draw(on: image) { context, _ in
             for block in blocks where !block.translatedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
                 let layoutRect = block.safeLayoutRect.map { rect(from: $0) }
@@ -6286,7 +7082,7 @@ struct MangaOverlayProbeService: Sendable {
                         context.fill(clamp(rect(from: fillRect), to: bounds))
                     }
                 } else {
-                    let background = sampleBackgroundColor(image: image, near: expanded)
+                    let background = sampleBackgroundColor(bitmap: backgroundBitmap, near: expanded)
                     context.setFillColor(background)
                     context.fill(expanded)
                 }
@@ -6757,22 +7553,22 @@ struct MangaOverlayProbeService: Sendable {
         }
     }
 
-    private static func sampleBackgroundColor(image: CGImage, near rect: CGRect) -> CGColor {
-        guard let providerData = image.dataProvider?.data,
-              let bytes = CFDataGetBytePtr(providerData),
-              image.bitsPerPixel == 32 else {
+    private static func sampleBackgroundColor(bitmap: RGBA8Bitmap?, near rect: CGRect) -> CGColor {
+        guard let bitmap else {
             return CGColor(red: 1, green: 1, blue: 1, alpha: 0.94)
         }
 
-        let bytesPerRow = image.bytesPerRow
-        let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+        let bytes = bitmap.pixels
+        let bytesPerRow = bitmap.bytesPerRow
+        let bounds = CGRect(x: 0, y: 0, width: CGFloat(bitmap.width), height: CGFloat(bitmap.height))
         let ring = expand(rect, by: 0.24, bounds: bounds)
         var samples: [(Int, Int, Int)] = []
         let step = max(1, Int(min(ring.width, ring.height) / 12))
         for y in stride(from: Int(ring.minY), through: Int(ring.maxY), by: step) {
             for x in stride(from: Int(ring.minX), through: Int(ring.maxX), by: step) {
-                guard !rect.contains(CGPoint(x: CGFloat(x), y: CGFloat(y))), x >= 0, y >= 0, x < image.width, y < image.height else { continue }
+                guard !rect.contains(CGPoint(x: CGFloat(x), y: CGFloat(y))), x >= 0, y >= 0, x < bitmap.width, y < bitmap.height else { continue }
                 let offset = y * bytesPerRow + x * 4
+                guard offset + 2 < bytes.count else { continue }
                 samples.append((Int(bytes[offset]), Int(bytes[offset + 1]), Int(bytes[offset + 2])))
             }
         }
@@ -6794,16 +7590,18 @@ struct MangaOverlayProbeService: Sendable {
 
     private static func makeGlyphMaskPlan(
         image: CGImage,
+        bitmap: RGBA8Bitmap?,
         blockRect: CGRect,
         bubbleRect: CGRect?
     ) -> MangaOverlayGlyphMaskPlan? {
         guard let bubbleRect else { return nil }
-        guard let providerData = image.dataProvider?.data,
-              let bytes = CFDataGetBytePtr(providerData),
-              image.bitsPerPixel == 32 else {
+        guard let bitmap,
+              bitmap.width == image.width,
+              bitmap.height == image.height else {
             return nil
         }
 
+        let bytes = bitmap.pixels
         let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
         let bubbleBounds = clamp(bubbleRect.integral, to: imageBounds)
         let ocrBounds = clamp(expand(blockRect, by: 0.08, bounds: imageBounds).integral, to: bubbleBounds)
@@ -6815,7 +7613,7 @@ struct MangaOverlayProbeService: Sendable {
         let height = Int(bubbleBounds.height)
         guard width > 0, height > 0 else { return nil }
 
-        let bytesPerRow = image.bytesPerRow
+        let bytesPerRow = bitmap.bytesPerRow
         var gray = [UInt8](repeating: 255, count: width * height)
         for localY in 0..<height {
             let y = Int(bubbleBounds.minY) + localY
@@ -6823,6 +7621,7 @@ struct MangaOverlayProbeService: Sendable {
                 let x = Int(bubbleBounds.minX) + localX
                 guard x >= 0, y >= 0, x < image.width, y < image.height else { continue }
                 let offset = y * bytesPerRow + x * 4
+                guard offset + 2 < bytes.count else { continue }
                 let red = Double(bytes[offset])
                 let green = Double(bytes[offset + 1])
                 let blue = Double(bytes[offset + 2])
@@ -6927,8 +7726,7 @@ struct MangaOverlayProbeService: Sendable {
             maxRects: 5_000
         )
         let background = glyphBackgroundEstimate(
-            image: image,
-            bytes: bytes,
+            bitmap: bitmap,
             bubbleBounds: bubbleBounds,
             excludedOffsets: dilatedOffsets
         )
@@ -7041,8 +7839,7 @@ struct MangaOverlayProbeService: Sendable {
     }
 
     private static func glyphBackgroundEstimate(
-        image: CGImage,
-        bytes: UnsafePointer<UInt8>,
+        bitmap: RGBA8Bitmap,
         bubbleBounds: CGRect,
         excludedOffsets: Set<Int>
     ) -> (color: [Double], stdDev: Double)? {
@@ -7050,7 +7847,8 @@ struct MangaOverlayProbeService: Sendable {
         let height = Int(bubbleBounds.height)
         guard width > 0, height > 0 else { return nil }
 
-        let bytesPerRow = image.bytesPerRow
+        let bytes = bitmap.pixels
+        let bytesPerRow = bitmap.bytesPerRow
         var redValues: [Int] = []
         var greenValues: [Int] = []
         var blueValues: [Int] = []
@@ -7088,8 +7886,9 @@ struct MangaOverlayProbeService: Sendable {
             let localX = localOffset % width
             let y = Int(bubbleBounds.minY) + localY
             let x = Int(bubbleBounds.minX) + localX
-            guard x >= 0, y >= 0, x < image.width, y < image.height else { continue }
+            guard x >= 0, y >= 0, x < bitmap.width, y < bitmap.height else { continue }
             let offset = y * bytesPerRow + x * 4
+            guard offset + 2 < bytes.count else { continue }
             redValues.append(Int(bytes[offset]))
             greenValues.append(Int(bytes[offset + 1]))
             blueValues.append(Int(bytes[offset + 2]))
