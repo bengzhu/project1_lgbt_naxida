@@ -7101,7 +7101,7 @@ struct MangaOverlayProbeService: Sendable {
 
     private static func drawTranslatedOverlay(on image: CGImage, blocks: [MangaOverlayProbeBlock]) throws -> CGImage {
         let backgroundBitmap = makeRGBA8Bitmap(from: image)
-        try draw(on: image) { context, _ in
+        return try draw(on: image) { context, _ in
             for block in blocks where !block.translatedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
                 let layoutRect = block.safeLayoutRect.map { rect(from: $0) }
