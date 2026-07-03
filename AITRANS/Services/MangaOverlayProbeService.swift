@@ -5256,6 +5256,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil,
         koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
         koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
+        koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -5834,6 +5835,22 @@ struct MangaOverlayProbeService: Sendable {
         let nativeArtifactBundleLiteWorkItemSummary = (koharuNativeArtifactBundleLiteReport?.workItems ?? [])
             .map { "nativeArtifactBundleLiteWorkItem: id=\($0.workItemID) target=\($0.targetArtifact) status=\($0.status) priority=\($0.priority) blocks=[\($0.affectedBlocks.map(String.init).joined(separator: ","))] next=\($0.nextAction)" }
             .joined(separator: "\n")
+        let nativePromotionBlockSummary = (koharuNativePromotionGateLiteReport?.blockLedgers ?? [])
+            .prefix(32)
+            .map {
+                "nativePromotionBlockLedger: block=\($0.blockIndex) bubble=\($0.bubbleID.map(String.init) ?? "nil") eligibility=\($0.promotionEligibility) textBoxes=\($0.textBoxesPromotionStatus) bubbleMask=\($0.bubbleMaskPromotionStatus) segmentMask=\($0.segmentMaskPromotionStatus) ocr=\($0.ocrTextPromotionStatus) translation=\($0.translationPromotionStatus) render=\($0.renderPromotionStatus) primary=\($0.primaryBlockingArtifact) bottleneck=\($0.probeBottleneckCategory) next=\($0.nextAction) mustNotPromote=\($0.mustNotPromoteReasons.joined(separator: " | "))"
+            }
+            .joined(separator: "\n")
+        let nativePromotionStageGateSummary = (koharuNativePromotionGateLiteReport?.stageGates ?? [])
+            .map { "nativePromotionStageGate: stage=\($0.stageName) artifact=\($0.referenceKoharuArtifact) readiness=\($0.stageReadiness) eligible=[\($0.eligibleBlocks.map(String.init).joined(separator: ","))] blocked=[\($0.blockedBlocks.map(String.init).joined(separator: ","))] stop=[\($0.stopBlocks.map(String.init).joined(separator: ","))] missing=\($0.missingEvidence.joined(separator: " | "))" }
+            .joined(separator: "\n")
+        let nativePromotionPreviewSummary = (koharuNativePromotionGateLiteReport?.candidateExportPreviews ?? [])
+            .prefix(32)
+            .map { "nativeCandidateExportPreview: id=\($0.previewID) block=\($0.blockIndex) stage=\($0.targetArtifactStage) source=\($0.candidateSource) sourceReport=\($0.sourceReport) canExport=\($0.canBeExportedNow) wouldCreateActiveArtifact=\($0.wouldCreateActiveArtifact) reason=\($0.reasonNotExported)" }
+            .joined(separator: "\n")
+        let nativePromotionWorkItemSummary = (koharuNativePromotionGateLiteReport?.workItems ?? [])
+            .map { "nativePromotionWorkItem: id=\($0.workItemID) target=\($0.targetArtifact) status=\($0.status) priority=\($0.priority) blocks=[\($0.affectedBlocks.map(String.init).joined(separator: ","))] next=\($0.nextAction)" }
+            .joined(separator: "\n")
         let externalSummary = """
         koharuNativeAlgorithmReplayMatrixReport: enabled=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.stageCount) } ?? "nil") candidates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil") blockRoutes=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict ?? "nil")
         nativeReplayStageStatus=\(koharuNativeAlgorithmReplayMatrixReport?.stageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -5925,6 +5942,17 @@ struct MangaOverlayProbeService: Sendable {
         \(nativeArtifactBundleLiteBlockSummary.isEmpty ? "nativeArtifactBundleLiteBlockLedger: nil" : nativeArtifactBundleLiteBlockSummary)
         \(nativeArtifactBundleLiteEdgeSummary.isEmpty ? "nativeArtifactBundleLiteConsistencyEdge: nil" : nativeArtifactBundleLiteEdgeSummary)
         \(nativeArtifactBundleLiteWorkItemSummary.isEmpty ? "nativeArtifactBundleLiteWorkItem: nil" : nativeArtifactBundleLiteWorkItemSummary)
+        koharuNativePromotionGateLiteReport: enabled=\(koharuNativePromotionGateLiteReport.map { String($0.enabled) } ?? "nil") blocks=\(koharuNativePromotionGateLiteReport.map { String($0.blockLedgerCount) } ?? "nil") stageGates=\(koharuNativePromotionGateLiteReport.map { String($0.stageGateCount) } ?? "nil") previews=\(koharuNativePromotionGateLiteReport.map { String($0.candidateExportPreviewCount) } ?? "nil") workItems=\(koharuNativePromotionGateLiteReport.map { String($0.workItemCount) } ?? "nil") gates=\(koharuNativePromotionGateLiteReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativePromotionGateLiteReport?.promotionVerdict ?? "nil") promotionGateLite=\(koharuNativePromotionGateLiteReport.map { String($0.promotionGateLite) } ?? "nil") previewOnly=\(koharuNativePromotionGateLiteReport.map { String($0.nativePromotionPreviewOnly) } ?? "nil") groundTruthUsedForDecision=\(koharuNativePromotionGateLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil") wouldChangeMainFlow=\(koharuNativePromotionGateLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil")
+        nativePromotionStageReadiness=\(koharuNativePromotionGateLiteReport?.stageReadinessBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativePromotionEligibility=\(koharuNativePromotionGateLiteReport?.promotionEligibilityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativePromotionBlockingArtifact=\(koharuNativePromotionGateLiteReport?.primaryBlockingArtifactBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativePromotionBottleneck=\(koharuNativePromotionGateLiteReport?.probeBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativePromotionNextAction=\(koharuNativePromotionGateLiteReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativePromotionShadowReviewEligible=\(koharuNativePromotionGateLiteReport?.shadowReviewEligibleBlocks.map(String.init).joined(separator: ",") ?? "nil") stopLocalTuning=\(koharuNativePromotionGateLiteReport?.stopLocalTuningBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealTextBoxes=\(koharuNativePromotionGateLiteReport?.needsRealTextBoxesBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealBubbleMask=\(koharuNativePromotionGateLiteReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealSegmentMask=\(koharuNativePromotionGateLiteReport?.needsRealSegmentMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") modelFloor=\(koharuNativePromotionGateLiteReport?.modelFloorBlockedBlocks.map(String.init).joined(separator: ",") ?? "nil") renderLocked=\(koharuNativePromotionGateLiteReport?.renderLockedBlocks.map(String.init).joined(separator: ",") ?? "nil")
+        \(nativePromotionStageGateSummary.isEmpty ? "nativePromotionStageGate: nil" : nativePromotionStageGateSummary)
+        \(nativePromotionBlockSummary.isEmpty ? "nativePromotionBlockLedger: nil" : nativePromotionBlockSummary)
+        \(nativePromotionPreviewSummary.isEmpty ? "nativeCandidateExportPreview: nil" : nativePromotionPreviewSummary)
+        \(nativePromotionWorkItemSummary.isEmpty ? "nativePromotionWorkItem: nil" : nativePromotionWorkItemSummary)
         koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
         workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")

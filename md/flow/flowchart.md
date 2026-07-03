@@ -119,7 +119,8 @@ flowchart TD
   KNTCL --> KNBM["koharuNativeBubbleMaskInstanceLiteReport<br/>pixel instance-lite mask / majority assignment"]
   KNBM --> KNSMR["koharuNativeSegmentMaskRefinementLiteReport<br/>TextBox-constrained glyph pixel mask"]
   KNSMR --> KNABL["koharuNativeArtifactBundleLiteReport<br/>TextBoxes / BubbleMask / SegmentMask consistency closure"]
-  KNABL --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
+  KNABL --> KNPG["koharuNativePromotionGateLiteReport<br/>probe-driven promotion gates / candidate preview"]
+  KNPG --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
   TMF --> KAC
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
@@ -162,6 +163,7 @@ flowchart TD
   KNBM --> R
   KNSMR --> R
   KNABL --> R
+  KNPG --> R
   KAC --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
@@ -200,6 +202,7 @@ flowchart TD
   KNBM --> T
   KNSMR --> T
   KNABL --> T
+  KNPG --> T
   KAC --> T
 ```
 

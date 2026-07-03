@@ -3433,6 +3433,148 @@ struct MangaKoharuNativeArtifactBundleLiteReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
+struct MangaKoharuNativePromotionGateLiteSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuNativePromotionStageGate: Equatable, Codable, Sendable {
+    var stageName: String
+    var referenceKoharuArtifact: String
+    var currentAITRANSSourceReports: [String]
+    var stageReadiness: String
+    var eligibleBlocks: [Int]
+    var blockedBlocks: [Int]
+    var stopBlocks: [Int]
+    var requiredEvidence: [String]
+    var missingEvidence: [String]
+    var decisionSignals: [MangaKoharuNativePromotionGateLiteSignal]
+    var evaluationSignals: [MangaKoharuNativePromotionGateLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativePromotionBlockLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var bubbleID: Int?
+    var blockPassed: Bool
+    var failureCategory: String
+    var finalTextUsedForTranslation: String
+    var bundleLiteVerdict: String
+    var artifactConsistencyVerdict: String
+    var textBoxesPromotionStatus: String
+    var bubbleMaskPromotionStatus: String
+    var segmentMaskPromotionStatus: String
+    var ocrTextPromotionStatus: String
+    var translationPromotionStatus: String
+    var renderPromotionStatus: String
+    var primaryBlockingArtifact: String
+    var probeBottleneckCategory: String
+    var promotionEligibility: String
+    var nextAction: String
+    var mustNotPromoteReasons: [String]
+    var decisionSignals: [MangaKoharuNativePromotionGateLiteSignal]
+    var evaluationSignals: [MangaKoharuNativePromotionGateLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativeCandidateExportPreview: Equatable, Codable, Sendable {
+    var previewID: String
+    var blockIndex: Int
+    var targetArtifactStage: String
+    var candidateSource: String
+    var sourceReport: String
+    var bbox: [Double]?
+    var confidence: Double?
+    var requiredFieldsForFutureExport: [String]
+    var knownRisks: [String]
+    var validatorRequirements: [String]
+    var canBeExportedNow: Bool
+    var reasonNotExported: String
+    var groundTruthUsedForDecision: Bool
+    var wouldCreateActiveArtifact: Bool
+}
+
+struct MangaKoharuNativePromotionWorkItem: Equatable, Codable, Sendable {
+    var workItemID: String
+    var title: String
+    var targetArtifact: String
+    var status: String
+    var priority: String
+    var affectedBlocks: [Int]
+    var nextAction: String
+    var decisionSignals: [MangaKoharuNativePromotionGateLiteSignal]
+    var evaluationSignals: [MangaKoharuNativePromotionGateLiteSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+}
+
+struct MangaKoharuNativePromotionGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var decisionSignals: [MangaKoharuNativePromotionGateLiteSignal]
+    var failureMeans: String
+    var recommendedAction: String
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuNativePromotionGateLiteReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
+    var evaluatedBlockCount: Int
+    var blockLedgerCount: Int
+    var stageGateCount: Int
+    var candidateExportPreviewCount: Int
+    var workItemCount: Int
+    var gateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var promotionGateLite: Bool
+    var nativePromotionPreviewOnly: Bool
+    var proxyNotRealKoharuTextBoxes: Bool
+    var proxyNotRealKoharuBubbleMask: Bool
+    var proxyNotRealKoharuSegmentMask: Bool
+    var proxyNotRealKoharuOCR: Bool
+    var proxyNotRealKoharuRenderer: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var promotionVerdict: String
+    var stageReadinessBreakdown: [String: Int]
+    var promotionEligibilityBreakdown: [String: Int]
+    var primaryBlockingArtifactBreakdown: [String: Int]
+    var probeBottleneckBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var shadowReviewEligibleBlocks: [Int]
+    var stopLocalTuningBlocks: [Int]
+    var needsRealTextBoxesBlocks: [Int]
+    var needsRealBubbleMaskBlocks: [Int]
+    var needsRealSegmentMaskBlocks: [Int]
+    var modelFloorBlockedBlocks: [Int]
+    var renderLockedBlocks: [Int]
+    var manualReviewBlocks: [Int]
+    var blockLedgers: [MangaKoharuNativePromotionBlockLedger]
+    var stageGates: [MangaKoharuNativePromotionStageGate]
+    var candidateExportPreviews: [MangaKoharuNativeCandidateExportPreview]
+    var workItems: [MangaKoharuNativePromotionWorkItem]
+    var gateLedger: [MangaKoharuNativePromotionGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -5407,6 +5549,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport?
     var koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?
     var koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?
+    var koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
