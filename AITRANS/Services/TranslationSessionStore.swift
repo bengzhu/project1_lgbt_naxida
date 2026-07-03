@@ -1601,6 +1601,7 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport?
                 var koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport?
                 var koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport?
+                var koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -2349,6 +2350,17 @@ final class TranslationSessionStore: ObservableObject {
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-native-bubblemask-instance-lite-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-native-segmentmask-refinement-lite-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                koharuNativeSegmentMaskRefinementLiteReport = await self.mangaOverlayProbeService.makeKoharuNativeSegmentMaskRefinementLiteReport(
+                    image: recognized.image,
+                    blocks: probeBlocks,
+                    bubbleGeometry: recognized.bubbleGeometry,
+                    detectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
+                    koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+                    segmentMaskReport: segmentMaskReport,
+                    koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
+                )
+                self.writeMangaProbeProgress(stage: "koharu-native-segmentmask-refinement-lite-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
                     blocks: probeBlocks,
@@ -2376,7 +2388,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
                     koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
                     koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
-                    koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport
+                    koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+                    koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
@@ -2418,6 +2431,7 @@ final class TranslationSessionStore: ObservableObject {
                         koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
                         koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
                         koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+                        koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
                         translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                         koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                         bubbleMaskReport: bubbleMaskReport,
@@ -2476,6 +2490,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
                     koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
                     koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+                    koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
@@ -8080,6 +8095,7 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport? = nil,
         koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport? = nil,
         koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil,
+        koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
@@ -8147,7 +8163,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
             koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
             koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
-            koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport
+            koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+            koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport
         )
         let resolverReport = koharuPipelineResolverReport ?? Self.makeKoharuPipelineResolverReport(
             blocks: blocks,
@@ -8243,7 +8260,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
             koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
             koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
-            koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport
+            koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+            koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -8301,6 +8319,7 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
             koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
             koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+            koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
@@ -17533,7 +17552,8 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeTextBoxDetectorLiteShadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport? = nil,
         koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport? = nil,
         koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport? = nil,
-        koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil
+        koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil,
+        koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -17897,6 +17917,31 @@ final class TranslationSessionStore: ObservableObject {
         let nativeBubbleMaskInstanceLiteNextAction = nativeBubbleMaskInstanceLiteExecuted
             ? (koharuNativeBubbleMaskInstanceLiteReport?.nextActionBreakdown.keys.sorted().first ?? "keepNativeBubbleMaskInstanceLiteReportOnly")
             : "generateKoharuNativeBubbleMaskInstanceLiteReport"
+        let nativeSegmentMaskRefinementLiteExecuted = koharuNativeSegmentMaskRefinementLiteReport?.enabled == true
+        let nativeSegmentMaskRefinementLiteVerdict = koharuNativeSegmentMaskRefinementLiteReport?.refinementLiteVerdict ?? "notExecuted"
+        let nativeSegmentMaskRefinementLiteBlocks = uniqueSorted(koharuNativeSegmentMaskRefinementLiteReport?.blockLedgers.map(\.blockIndex) ?? allBlockIndexes)
+        let nativeSegmentMaskRefinementLiteStatus: String
+        if !nativeSegmentMaskRefinementLiteExecuted {
+            nativeSegmentMaskRefinementLiteStatus = "openNativeSegmentMaskRefinementLite"
+        } else if nativeSegmentMaskRefinementLiteVerdict == "blockedByMissingTextBoxCandidates"
+            || nativeSegmentMaskRefinementLiteVerdict == "blockedByMissingSourcePixels"
+            || nativeSegmentMaskRefinementLiteVerdict == "blockedByInsufficientPixelEvidence" {
+            nativeSegmentMaskRefinementLiteStatus = "openNativeSegmentMaskRefinementLite"
+        } else if nativeSegmentMaskRefinementLiteVerdict == "needsRealTextBoxesArtifact"
+            || nativeSegmentMaskRefinementLiteVerdict == "needsRealBubbleMaskArtifact"
+            || nativeSegmentMaskRefinementLiteVerdict == "needsRealSegmentMaskArtifact" {
+            nativeSegmentMaskRefinementLiteStatus = "needsRealArtifact"
+        } else if nativeSegmentMaskRefinementLiteVerdict == "renderLockedNoPromotion" {
+            nativeSegmentMaskRefinementLiteStatus = "renderLockedReportOnly"
+        } else {
+            nativeSegmentMaskRefinementLiteStatus = "closedReportOnly"
+        }
+        let nativeSegmentMaskRefinementLiteBlockers = nativeSegmentMaskRefinementLiteExecuted
+            ? (koharuNativeSegmentMaskRefinementLiteReport?.gateLedger.filter { $0.status == "warning" || $0.status == "blocked" }.map(\.failureMeans) ?? [])
+            : ["koharuNativeSegmentMaskRefinementLiteReport not generated before convergence refresh"]
+        let nativeSegmentMaskRefinementLiteNextAction = nativeSegmentMaskRefinementLiteExecuted
+            ? (koharuNativeSegmentMaskRefinementLiteReport?.nextActionBreakdown.keys.sorted().first ?? "keepSegmentMaskRefinementLiteReportOnly")
+            : "generateKoharuNativeSegmentMaskRefinementLiteReport"
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -18255,6 +18300,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-koharu-native-textbox-detector-lite-refinement", title: "Koharu Native TextBox detector-lite refinement shadow OCR", status: nativeDetectorLiteRefinementStatus, sourceReport: nativeDetectorLiteRefinementExecuted ? "koharuNativeTextBoxDetectorLiteRefinementReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "OcrText"], blocks: nativeDetectorLiteRefinementBlocks, version: nativeDetectorLiteRefinementExecuted ? "v1.41" : nil, blockers: nativeDetectorLiteRefinementBlockers, nextAction: nativeDetectorLiteRefinementNextAction, ciFast: true, full: false, external: false, decisions: [signal("refinementVerdict", nativeDetectorLiteRefinementVerdict, source: "koharuNativeTextBoxDetectorLiteRefinementReport"), signal("ocrExecutedCount", koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.ocrExecutedCount) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteRefinementReport"), signal("proxyNotRealKoharuOCR", koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.proxyNotRealKoharuOCR) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteRefinementReport")]),
             workItem("WI-koharu-native-textbox-detector-lite-closed-loop-router", title: "Koharu Native TextBox detector-lite closed-loop router", status: nativeDetectorLiteClosedLoopStatus, sourceReport: nativeDetectorLiteClosedLoopExecuted ? "koharuNativeTextBoxDetectorLiteClosedLoopReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "OcrText", "BubbleMask", "SegmentMask", "Translations", "RenderedSprites"], blocks: nativeDetectorLiteClosedLoopBlocks, version: nativeDetectorLiteClosedLoopExecuted ? "v1.42" : nil, blockers: nativeDetectorLiteClosedLoopBlockers, nextAction: nativeDetectorLiteClosedLoopNextAction, ciFast: true, full: true, external: false, decisions: [signal("closedLoopVerdict", nativeDetectorLiteClosedLoopVerdict, source: "koharuNativeTextBoxDetectorLiteClosedLoopReport"), signal("blockLedgerCount", koharuNativeTextBoxDetectorLiteClosedLoopReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteClosedLoopReport"), signal("proxyNotRealKoharuOCR", koharuNativeTextBoxDetectorLiteClosedLoopReport.map { String($0.proxyNotRealKoharuOCR) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteClosedLoopReport")]),
             workItem("WI-koharu-native-bubblemask-instance-lite", title: "Koharu Native BubbleMask instance-lite", status: nativeBubbleMaskInstanceLiteStatus, sourceReport: nativeBubbleMaskInstanceLiteExecuted ? "koharuNativeBubbleMaskInstanceLiteReport" : "koharuArtifactConvergenceReport", stages: ["SourceImage", "BubbleMask", "BubbleIndex", "RenderedSprites"], blocks: nativeBubbleMaskInstanceLiteBlocks, version: nativeBubbleMaskInstanceLiteExecuted ? "v1.43" : nil, blockers: nativeBubbleMaskInstanceLiteBlockers, nextAction: nativeBubbleMaskInstanceLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("instanceLiteVerdict", nativeBubbleMaskInstanceLiteVerdict, source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("blockLedgerCount", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("proxyNotRealKoharuBubbleMask", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.proxyNotRealKoharuBubbleMask) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+            workItem("WI-koharu-native-segmentmask-refinement-lite", title: "Koharu Native SegmentMask refinement-lite", status: nativeSegmentMaskRefinementLiteStatus, sourceReport: nativeSegmentMaskRefinementLiteExecuted ? "koharuNativeSegmentMaskRefinementLiteReport" : "koharuArtifactConvergenceReport", stages: ["SourceImage", "TextBoxes", "SegmentMask", "BubbleMask", "RenderedSprites"], blocks: nativeSegmentMaskRefinementLiteBlocks, version: nativeSegmentMaskRefinementLiteExecuted ? "v1.44" : nil, blockers: nativeSegmentMaskRefinementLiteBlockers, nextAction: nativeSegmentMaskRefinementLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("refinementLiteVerdict", nativeSegmentMaskRefinementLiteVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("blockLedgerCount", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("proxyNotRealKoharuSegmentMask", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
@@ -18277,7 +18323,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeTextBoxDetectorLiteShadowOCRReport == nil ? "koharuNativeTextBoxDetectorLiteShadowOCRReport" : nil,
             koharuNativeTextBoxDetectorLiteRefinementReport == nil ? "koharuNativeTextBoxDetectorLiteRefinementReport" : nil,
             koharuNativeTextBoxDetectorLiteClosedLoopReport == nil ? "koharuNativeTextBoxDetectorLiteClosedLoopReport" : nil,
-            koharuNativeBubbleMaskInstanceLiteReport == nil ? "koharuNativeBubbleMaskInstanceLiteReport" : nil
+            koharuNativeBubbleMaskInstanceLiteReport == nil ? "koharuNativeBubbleMaskInstanceLiteReport" : nil,
+            koharuNativeSegmentMaskRefinementLiteReport == nil ? "koharuNativeSegmentMaskRefinementLiteReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -18326,6 +18373,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-native-textbox-detector-lite-refinement-executed", name: "Koharu Native TextBox detector-lite refinement executed", scope: "OcrText", status: nativeDetectorLiteRefinementExecuted ? (nativeDetectorLiteRefinementStatus == "closedReportOnly" || nativeDetectorLiteRefinementStatus == "closedStoplist" ? "passed" : "warning") : "open", threshold: "koharuNativeTextBoxDetectorLiteRefinementReport.enabled=true without main-flow mutation or ground truth decision", affected: nativeDetectorLiteRefinementBlocks, failureMeans: "Native detector-lite refinement report is missing, uses non-detector-lite bbox sources, mutates OCR/translation/render state, or is promoted as real Koharu OCR", action: nativeDetectorLiteRefinementNextAction, decisions: [signal("refinementVerdict", nativeDetectorLiteRefinementVerdict, source: "koharuNativeTextBoxDetectorLiteRefinementReport"), signal("groundTruthUsedForDecision", koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteRefinementReport"), signal("proxyNotRealKoharuOCR", koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.proxyNotRealKoharuOCR) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteRefinementReport")]),
             gate("G-koharu-native-textbox-detector-lite-closed-loop-router-executed", name: "Koharu Native TextBox detector-lite closed-loop router executed", scope: "TextBoxes/OcrText/Structure", status: nativeDetectorLiteClosedLoopExecuted ? (nativeDetectorLiteClosedLoopStatus == "blockedByMissingUpstreamReports" ? "blocked" : "passed") : "open", threshold: "koharuNativeTextBoxDetectorLiteClosedLoopReport.enabled=true without main-flow mutation or ground truth decision", affected: nativeDetectorLiteClosedLoopBlocks, failureMeans: "Native detector-lite closed-loop router is missing, mutates main OCR/translation/render state, or routes using ground truth", action: nativeDetectorLiteClosedLoopNextAction, decisions: [signal("closedLoopVerdict", nativeDetectorLiteClosedLoopVerdict, source: "koharuNativeTextBoxDetectorLiteClosedLoopReport"), signal("groundTruthUsedForDecision", koharuNativeTextBoxDetectorLiteClosedLoopReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteClosedLoopReport"), signal("wouldChangeMainFlow", koharuNativeTextBoxDetectorLiteClosedLoopReport.map { String($0.wouldChangeMainFlow) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteClosedLoopReport")]),
             gate("G-koharu-native-bubblemask-instance-lite-executed", name: "Koharu Native BubbleMask instance-lite executed", scope: "BubbleMask", status: nativeBubbleMaskInstanceLiteExecuted ? (nativeBubbleMaskInstanceLiteStatus == "closedReportOnly" || nativeBubbleMaskInstanceLiteStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeBubbleMaskInstanceLiteReport.enabled=true with source pixels and no main-flow mutation", affected: nativeBubbleMaskInstanceLiteBlocks, failureMeans: "Native BubbleMask instance-lite report is missing, mutates OCR/translation/render/layout state, routes using ground truth, or is promoted as real Koharu BubbleMask", action: nativeBubbleMaskInstanceLiteNextAction, decisions: [signal("instanceLiteVerdict", nativeBubbleMaskInstanceLiteVerdict, source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("groundTruthUsedForDecision", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("proxyNotRealKoharuBubbleMask", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.proxyNotRealKoharuBubbleMask) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+            gate("G-koharu-native-segmentmask-refinement-lite-executed", name: "Koharu Native SegmentMask refinement-lite executed", scope: "SegmentMask", status: nativeSegmentMaskRefinementLiteExecuted ? (nativeSegmentMaskRefinementLiteStatus == "closedReportOnly" || nativeSegmentMaskRefinementLiteStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeSegmentMaskRefinementLiteReport.enabled=true with TextBox-constrained source pixels and no main-flow mutation", affected: nativeSegmentMaskRefinementLiteBlocks, failureMeans: "Native SegmentMask refinement-lite report is missing, mutates OCR/translation/render/glyph fill/layout state, routes using ground truth, or is promoted as real Koharu SegmentMask", action: nativeSegmentMaskRefinementLiteNextAction, decisions: [signal("refinementLiteVerdict", nativeSegmentMaskRefinementLiteVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("groundTruthUsedForDecision", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("proxyNotRealKoharuSegmentMask", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
             gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
@@ -18356,12 +18404,13 @@ final class TranslationSessionStore: ObservableObject {
             "koharuNativeTextBoxDetectorLiteRefinementReport",
             "koharuNativeTextBoxDetectorLiteClosedLoopReport",
             "koharuNativeBubbleMaskInstanceLiteReport",
+            "koharuNativeSegmentMaskRefinementLiteReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, and v1.43 native BubbleMask instance-lite report-only ledgers into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, and v1.44 native SegmentMask refinement-lite report-only ledgers into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]

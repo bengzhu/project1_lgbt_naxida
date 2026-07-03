@@ -115,6 +115,43 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.44：Koharu Native SegmentMask Refinement-Lite 文字像素掩码影子复刻
+日期：2026-07-03
+依据：`md/prompt/v1（漫画探针）/v1.44（KoharuNativeSegmentMaskRefinementLite文字像素掩码影子复刻）.md`。本轮修改 Swift 探针报告模型、TextBox 约束文字像素 mask refinement-lite 账本、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuNativeSegmentMaskRefinementLiteReport`，在 v1.43 instance-lite BubbleMask 之后、最终 convergence 刷新前生成。
+- 报告只使用源图像像素、detector-lite TextBox 候选、final blocks、v1.43 instance-lite BubbleMask、现有 glyph / SegmentMask proxy、render lock 和翻译失败分类，生成 TextBox-constrained glyph pixel mask 的 candidate / block / sibling / gate 账本。
+- `groundTruthUsedForDecision = false`，ground truth 只进入 evaluation signals；像素阈值、TextBox 选择、mask 生成、route、nextAction、verdict 和 gate 都不使用真值。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuNativeSegmentMaskRefinementLiteReport`；convergence 新增 `WI-koharu-native-segmentmask-refinement-lite` 和 `G-koharu-native-segmentmask-refinement-lite-executed`。
+- `1_ocr_probe_text.txt` 新增 SegmentMask refinement-lite report summary、candidate ledger、逐块 block ledger 和 same-bubble sibling ledger 摘要。
+- 本轮不新增 OCR / LLM / PNG，不更换模型，不创建 active Koharu artifact，不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、renderer、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.44（KoharuNativeSegmentMaskRefinementLite文字像素掩码影子复刻）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `git diff --check`、JSON 解析、Koharu validator smoke，并用轻量 Swift parse 检查新增 Swift 语法。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuNativeSegmentMaskRefinementLiteReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`candidateLedgerCount >= totalBlocksDetected`、`gateCount >= 8`、`nativeRefinementLite = true`、`proxyNotRealKoharuSegmentMask = true`、`usesSourceImagePixels = true`、`usesTextBoxConstraints = true`、`usesBubbleMaskConstraints = true`、`groundTruthUsedForDecision = false`，核心 breakdown 非空或像素证据不足时明确 blocked / warning gate，convergence 包含 v1.44 reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、candidate ledger、逐块 block ledger 和 sibling ledger。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.44 新字段；以 PR 后云端结果包为准。
+- v1.44 仍是 native SegmentMask refinement-lite report-only 影子复刻，不代表真实 Koharu `SegmentMask` / `TextBoxes` / `BubbleMask` 已接入，也不代表 OCR 或翻译质量改善。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.43：Koharu Native BubbleMask Instance-Lite 像素实例掩码影子复刻
 日期：2026-07-03
 依据：`md/prompt/v1（漫画探针）/v1.43（KoharuNativeBubbleMaskInstanceLite像素实例掩码影子复刻）.md`。本轮修改 Swift 探针报告模型、像素 instance-lite BubbleMask 账本、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
