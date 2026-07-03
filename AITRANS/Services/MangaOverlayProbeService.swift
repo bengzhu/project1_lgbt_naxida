@@ -1866,6 +1866,673 @@ struct MangaOverlayProbeService: Sendable {
         }.value
     }
 
+    func makeKoharuNativeSegmentMaskRefinementLiteReport(
+        image: CGImage,
+        blocks: [MangaOverlayProbeBlock],
+        bubbleGeometry: MangaOverlayBubbleGeometryDiagnostics,
+        detectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport?,
+        koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport?,
+        segmentMaskReport: MangaOverlaySegmentMaskReport?,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
+    ) async -> MangaKoharuNativeSegmentMaskRefinementLiteReport {
+        await Task.detached(priority: .userInitiated) {
+            func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
+            func countBy(_ values: [String]) -> [String: Int] {
+                values.reduce(into: [:]) { partial, value in partial[value, default: 0] += 1 }
+            }
+            func area(_ rect: CGRect) -> Double {
+                Double(max(0, rect.width) * max(0, rect.height))
+            }
+            func formatted(_ value: Double?) -> String {
+                value?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+            }
+            func signal(
+                _ name: String,
+                _ value: String,
+                source: String,
+                decision: Bool = true,
+                evaluation: Bool = false
+            ) -> MangaKoharuNativeSegmentMaskRefinementLiteSignal {
+                MangaKoharuNativeSegmentMaskRefinementLiteSignal(
+                    name: name,
+                    value: value,
+                    sourceReport: source,
+                    groundTruthFreeDecisionSignal: decision,
+                    groundTruthUsedForEvaluationOnly: evaluation
+                )
+            }
+            func gate(
+                _ id: String,
+                _ name: String,
+                _ scope: String,
+                _ status: String,
+                _ threshold: String,
+                _ affected: [Int],
+                _ failure: String,
+                _ action: String,
+                _ signals: [MangaKoharuNativeSegmentMaskRefinementLiteSignal]
+            ) -> MangaKoharuNativeSegmentMaskRefinementLiteGate {
+                MangaKoharuNativeSegmentMaskRefinementLiteGate(
+                    gateID: id,
+                    gateName: name,
+                    scope: scope,
+                    status: status,
+                    threshold: threshold,
+                    affectedBlocks: uniqueSorted(affected),
+                    decisionSignals: signals,
+                    failureMeans: failure,
+                    recommendedAction: action,
+                    groundTruthUsedForDecision: false
+                )
+            }
+            func expandedTextBoxRect(_ rect: CGRect, direction: String, bounds: CGRect) -> (rect: CGRect, paddingX: Double, paddingY: Double) {
+                let shortSide = max(1, min(rect.width, rect.height))
+                let longSide = max(rect.width, rect.height)
+                let vertical = direction.lowercased().contains("vertical")
+                let paddingX = vertical ? max(3, shortSide * 0.18) : max(2, longSide * 0.06)
+                let paddingY = vertical ? max(2, longSide * 0.06) : max(3, shortSide * 0.22)
+                return (Self.clamp(rect.insetBy(dx: -paddingX, dy: -paddingY).integral, to: bounds), Double(paddingX), Double(paddingY))
+            }
+
+            let allBlockIndexes = blocks.map(\.index)
+            let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+            let contentCrop = Self.clamp(Self.contentCropRect(for: image, cropping: .defaultValue).integral, to: imageBounds)
+            let contentBBox = Self.bboxArray(from: contentCrop)
+            let segmentByBlock = Dictionary(
+                uniqueKeysWithValues: (segmentMaskReport?.diagnostics ?? []).map { ($0.blockIndex, $0) }
+            )
+            let renderLockByBlock = Dictionary(
+                uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) }
+            )
+            let instanceLiteByBlock = Dictionary(
+                uniqueKeysWithValues: (koharuNativeBubbleMaskInstanceLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+            )
+            let instanceRectByID = Dictionary(
+                uniqueKeysWithValues: (koharuNativeBubbleMaskInstanceLiteReport?.instances ?? []).map { ($0.instanceID, Self.rect(from: $0.bbox)) }
+            )
+            let bubbleRectByID = Dictionary(
+                uniqueKeysWithValues: bubbleGeometry.bubbles.map { ($0.id, Self.rect(from: $0.bbox)) }
+            )
+            var detectorCandidatesByBlock: [Int: [MangaKoharuNativeTextBoxDetectorLiteCandidate]] = [:]
+            for candidate in detectorLiteReport?.candidates ?? [] {
+                for blockIndex in candidate.relatedCurrentBlockIndexes {
+                    detectorCandidatesByBlock[blockIndex, default: []].append(candidate)
+                }
+            }
+            for blockIndex in detectorCandidatesByBlock.keys {
+                detectorCandidatesByBlock[blockIndex]?.sort {
+                    if $0.score == $1.score { return $0.candidateID < $1.candidateID }
+                    return $0.score > $1.score
+                }
+            }
+
+            func emptyCandidate(
+                block: MangaOverlayProbeBlock,
+                reason: String,
+                source: String = "currentFinalBlockBBoxFallback"
+            ) -> MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger {
+                let rect = Self.clamp(Self.rect(from: block.bbox), to: imageBounds)
+                return MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger(
+                    candidateID: "segmentMaskRefinementLite.block\(block.index).fallback",
+                    blockIndex: block.index,
+                    source: source,
+                    sourceTextBoxCandidateID: nil,
+                    sourceBubbleID: block.bubbleID,
+                    sourceInstanceLiteID: instanceLiteByBlock[block.index]?.instanceLiteMajorityID,
+                    bbox: Self.bboxArray(from: rect),
+                    expandedTextBoxRect: Self.bboxArray(from: rect),
+                    directionHint: "unknown",
+                    paddingX: 0,
+                    paddingY: 0,
+                    rawPixelCount: 0,
+                    afterTextBoxClampPixelCount: 0,
+                    afterBubbleClampPixelCount: 0,
+                    connectedComponentCount: 0,
+                    largestComponentArea: 0,
+                    maskBBox: nil,
+                    maskFillRatio: 0,
+                    textboxCoverage: 0,
+                    bubbleCoverage: 0,
+                    existingGlyphOverlap: 0,
+                    segmentProxyAgreement: 0,
+                    candidateVerdict: reason,
+                    rejectionReasons: [reason],
+                    decisionSignals: [signal("blockedReason", reason, source: "koharuNativeSegmentMaskRefinementLiteReport")],
+                    evaluationSignals: [
+                        signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
+                        signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            }
+
+            guard let bitmap = Self.makeRGBA8Bitmap(from: image) else {
+                let candidates = blocks.map { emptyCandidate(block: $0, reason: "blockedByMissingSourcePixels") }
+                let blockLedgers = blocks.map { block in
+                    MangaKoharuNativeSegmentMaskRefinementLiteBlockLedger(
+                        blockIndex: block.index,
+                        bubbleID: block.bubbleID,
+                        instanceLiteMajorityID: instanceLiteByBlock[block.index]?.instanceLiteMajorityID,
+                        bbox: block.bbox,
+                        finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                        failureCategory: block.failureCategory,
+                        blockPassed: block.blockPassed,
+                        selectedCandidateID: nil,
+                        candidateCount: 1,
+                        maskBBox: nil,
+                        rawPixelCount: 0,
+                        afterTextBoxClampPixelCount: 0,
+                        afterBubbleClampPixelCount: 0,
+                        componentCount: 0,
+                        textboxCoverage: 0,
+                        bubbleCoverage: 0,
+                        existingGlyphOverlap: 0,
+                        segmentProxyAgreement: 0,
+                        maskContainedByTextBox: false,
+                        maskContainedByBubble: false,
+                        wouldBeUsableForClearTextMask: false,
+                        wouldBeUsableForOCRCropConstraint: false,
+                        wouldBeUsableForRenderContainment: false,
+                        primaryBottleneck: "segmentMaskPixelEvidenceWeak",
+                        nextAction: "manualReviewOnly",
+                        decisionSignals: [signal("sourcePixelsAvailable", "false", source: "SourceImage")],
+                        evaluationSignals: [signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true)],
+                        groundTruthUsedForDecision: false,
+                        wouldChangeMainFlow: false,
+                        diagnosticOnly: true
+                    )
+                }
+                let gates = [
+                    gate("G-native-segmentmask-refinement-lite-source-pixels", "Source pixels", "SourceImage", "blocked", "source image pixels readable", allBlockIndexes, "SegmentMask refinement-lite cannot inspect source pixels", "restoreProbeImageByteAccess", [signal("sourcePixelsAvailable", "false", source: "SourceImage")]),
+                    gate("G-native-segmentmask-refinement-lite-no-main-flow-writeback", "No main flow writeback", "report", "passed", "wouldChangeMainFlow=false", [], "refinement-lite mutates OCR, translation, rendering, glyph fill, safeLayoutRect, or currentBlockSource", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeSegmentMaskRefinementLiteReport")])
+                ]
+                return MangaKoharuNativeSegmentMaskRefinementLiteReport(
+                    enabled: true,
+                    source: "AITRANSProbe",
+                    referencePipeline: "Koharu",
+                    referenceConcept: "SegmentMask.NativeRefinementLite.TextBoxConstrainedGlyphMask",
+                    referenceWorkItemID: "WI-koharu-native-segmentmask-refinement-lite",
+                    evaluatedBlockCount: blocks.count,
+                    sourceImageWidth: image.width,
+                    sourceImageHeight: image.height,
+                    contentCropBBox: contentBBox,
+                    candidateLedgerCount: candidates.count,
+                    blockLedgerCount: blockLedgers.count,
+                    siblingLedgerCount: 0,
+                    gateCount: gates.count,
+                    groundTruthUsedForDecision: false,
+                    groundTruthUsedForEvaluationOnly: true,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true,
+                    nativeRefinementLite: true,
+                    proxyNotRealKoharuSegmentMask: true,
+                    usesSourceImagePixels: true,
+                    usesTextBoxConstraints: true,
+                    usesBubbleMaskConstraints: true,
+                    externalArtifactsRequiredForThisReport: false,
+                    refinementLiteVerdict: "blockedByMissingSourcePixels",
+                    candidateSourceBreakdown: countBy(candidates.map(\.source)),
+                    candidateVerdictBreakdown: countBy(candidates.map(\.candidateVerdict)),
+                    pixelEvidenceBreakdown: ["missingSourcePixels": candidates.count],
+                    textboxClampBreakdown: [:],
+                    bubbleClampBreakdown: [:],
+                    componentFilteringBreakdown: [:],
+                    maskContainmentBreakdown: [:],
+                    siblingMaskOverlapBreakdown: [:],
+                    primaryBottleneckBreakdown: countBy(blockLedgers.map(\.primaryBottleneck)),
+                    nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
+                    needsRealSegmentMaskBlocks: allBlockIndexes,
+                    needsRealTextBoxesBlocks: [],
+                    needsRealBubbleMaskBlocks: [],
+                    manualReviewBlocks: allBlockIndexes,
+                    renderLockedBlocks: [],
+                    candidateLedgers: candidates,
+                    blockLedgers: blockLedgers,
+                    siblingLedgers: [],
+                    gateLedger: gates,
+                    notes: ["Source image pixels were unavailable; SegmentMask refinement-lite emitted blocked report-only ledgers."]
+                )
+            }
+
+            func analyzeCandidate(
+                block: MangaOverlayProbeBlock,
+                candidateID: String,
+                source: String,
+                sourceTextBoxCandidateID: String?,
+                sourceRect: CGRect,
+                directionHint: String,
+                sourceBubbleID: Int?
+            ) -> MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger {
+                let (expandedRect, paddingX, paddingY) = expandedTextBoxRect(sourceRect, direction: directionHint, bounds: contentCrop)
+                let instanceID = instanceLiteByBlock[block.index]?.instanceLiteMajorityID
+                let instanceRect = instanceID.flatMap { instanceRectByID[$0] }
+                let bubbleRect = block.bubbleID.flatMap { bubbleRectByID[$0] }
+                let bubbleConstraint = instanceRect ?? bubbleRect
+                let glyphRect = (segmentByBlock[block.index]?.glyphMaskRect ?? block.glyphMaskRect).map(Self.rect(from:))
+                let x0 = max(0, Int(expandedRect.minX.rounded(.down)))
+                let x1 = min(image.width, Int(expandedRect.maxX.rounded(.up)))
+                let y0 = max(0, Int(expandedRect.minY.rounded(.down)))
+                let y1 = min(image.height, Int(expandedRect.maxY.rounded(.up)))
+                var foreground = [Bool](repeating: false, count: max(0, x1 - x0) * max(0, y1 - y0))
+                var bubbleForeground = [Bool](repeating: false, count: foreground.count)
+                var rawPixelCount = 0
+                var bubblePixelCount = 0
+                var minMaskX = Int.max
+                var minMaskY = Int.max
+                var maxMaskX = Int.min
+                var maxMaskY = Int.min
+                let scanWidth = max(0, x1 - x0)
+                let scanHeight = max(0, y1 - y0)
+                if scanWidth > 0, scanHeight > 0 {
+                    for localY in 0..<scanHeight {
+                        let y = y0 + localY
+                        for localX in 0..<scanWidth {
+                            let x = x0 + localX
+                            let offset = y * bitmap.bytesPerRow + x * 4
+                            guard offset + 2 < bitmap.pixels.count else { continue }
+                            let r = Int(bitmap.pixels[offset])
+                            let g = Int(bitmap.pixels[offset + 1])
+                            let b = Int(bitmap.pixels[offset + 2])
+                            let luminance = (r * 299 + g * 587 + b * 114) / 1000
+                            let contrast = max(r, g, b) - min(r, g, b)
+                            let isTextPixel = luminance <= 150 || (luminance <= 190 && contrast >= 36)
+                            guard isTextPixel else { continue }
+                            let idx = localY * scanWidth + localX
+                            foreground[idx] = true
+                            rawPixelCount += 1
+                            let pointRect = CGRect(x: x, y: y, width: 1, height: 1)
+                            let insideBubble = bubbleConstraint.map { $0.intersects(pointRect) } ?? false
+                            if insideBubble || bubbleConstraint == nil {
+                                bubbleForeground[idx] = true
+                                bubblePixelCount += 1
+                                minMaskX = min(minMaskX, x)
+                                minMaskY = min(minMaskY, y)
+                                maxMaskX = max(maxMaskX, x)
+                                maxMaskY = max(maxMaskY, y)
+                            }
+                        }
+                    }
+                }
+                var visited = [Bool](repeating: false, count: bubbleForeground.count)
+                var componentCount = 0
+                var largestComponentArea = 0
+                if scanWidth > 0, scanHeight > 0 {
+                    for startY in 0..<scanHeight {
+                        for startX in 0..<scanWidth {
+                            let start = startY * scanWidth + startX
+                            guard bubbleForeground[start], !visited[start] else { continue }
+                            componentCount += 1
+                            var queue = [start]
+                            var cursor = 0
+                            var componentArea = 0
+                            visited[start] = true
+                            while cursor < queue.count {
+                                let current = queue[cursor]
+                                cursor += 1
+                                componentArea += 1
+                                let cy = current / scanWidth
+                                let cx = current % scanWidth
+                                for ny in max(0, cy - 1)...min(scanHeight - 1, cy + 1) {
+                                    for nx in max(0, cx - 1)...min(scanWidth - 1, cx + 1) {
+                                        let next = ny * scanWidth + nx
+                                        if bubbleForeground[next], !visited[next] {
+                                            visited[next] = true
+                                            queue.append(next)
+                                        }
+                                    }
+                                }
+                            }
+                            largestComponentArea = max(largestComponentArea, componentArea)
+                        }
+                    }
+                }
+                let maskRect: CGRect? = maxMaskX >= minMaskX && maxMaskY >= minMaskY
+                    ? CGRect(x: minMaskX, y: minMaskY, width: maxMaskX - minMaskX + 1, height: maxMaskY - minMaskY + 1).integral
+                    : nil
+                let maskArea = maskRect.map(area) ?? 0
+                let textBoxArea = max(1, area(expandedRect))
+                let bubbleArea = max(1, area(bubbleConstraint ?? expandedRect))
+                let glyphOverlap: Double
+                if let maskRect, let glyphRect {
+                    let intersection = maskRect.intersection(glyphRect)
+                    glyphOverlap = intersection.isNull ? 0 : area(intersection) / max(1, min(area(maskRect), area(glyphRect)))
+                } else {
+                    glyphOverlap = 0
+                }
+                let textCoverage = maskArea / textBoxArea
+                let bubbleCoverage = Double(bubblePixelCount) / max(1, Double(rawPixelCount))
+                let segmentAgreement = glyphOverlap > 0 ? glyphOverlap : min(1, Double(block.glyphMaskPixelCount) / max(1, Double(rawPixelCount)))
+                var rejectionReasons: [String] = []
+                if sourceTextBoxCandidateID == nil && source == "currentFinalBlockBBoxFallback" {
+                    rejectionReasons.append("textBoxConstraintMissing")
+                }
+                if bubbleConstraint == nil {
+                    rejectionReasons.append("bubbleConstraintMissing")
+                }
+                if rawPixelCount < 12 {
+                    rejectionReasons.append("maskTooSparse")
+                }
+                if textCoverage > 0.55 {
+                    rejectionReasons.append("maskTooLargeLikelyBackground")
+                }
+                if componentCount == 0 {
+                    rejectionReasons.append("componentFilteringRejected")
+                }
+                let verdict: String
+                if rejectionReasons.contains("textBoxConstraintMissing") {
+                    verdict = "textBoxConstraintMissing"
+                } else if rejectionReasons.contains("bubbleConstraintMissing") {
+                    verdict = "bubbleConstraintMissing"
+                } else if rejectionReasons.contains("maskTooSparse") {
+                    verdict = "maskTooSparse"
+                } else if rejectionReasons.contains("maskTooLargeLikelyBackground") {
+                    verdict = "maskTooLargeLikelyBackground"
+                } else if rejectionReasons.contains("componentFilteringRejected") {
+                    verdict = "componentFilteringRejected"
+                } else if segmentAgreement < 0.15 {
+                    verdict = "weakPixelEvidence"
+                } else {
+                    verdict = "refinementLiteUsableForReport"
+                }
+                return MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger(
+                    candidateID: candidateID,
+                    blockIndex: block.index,
+                    source: source,
+                    sourceTextBoxCandidateID: sourceTextBoxCandidateID,
+                    sourceBubbleID: sourceBubbleID,
+                    sourceInstanceLiteID: instanceID,
+                    bbox: Self.bboxArray(from: sourceRect),
+                    expandedTextBoxRect: Self.bboxArray(from: expandedRect),
+                    directionHint: directionHint,
+                    paddingX: paddingX,
+                    paddingY: paddingY,
+                    rawPixelCount: rawPixelCount,
+                    afterTextBoxClampPixelCount: rawPixelCount,
+                    afterBubbleClampPixelCount: bubblePixelCount,
+                    connectedComponentCount: componentCount,
+                    largestComponentArea: largestComponentArea,
+                    maskBBox: maskRect.map(Self.bboxArray(from:)),
+                    maskFillRatio: maskArea > 0 ? Double(bubblePixelCount) / max(1, maskArea) : 0,
+                    textboxCoverage: textCoverage,
+                    bubbleCoverage: bubbleCoverage,
+                    existingGlyphOverlap: glyphOverlap,
+                    segmentProxyAgreement: segmentAgreement,
+                    candidateVerdict: verdict,
+                    rejectionReasons: rejectionReasons,
+                    decisionSignals: [
+                        signal("source", source, source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                        signal("sourceTextBoxCandidateID", sourceTextBoxCandidateID ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport"),
+                        signal("sourceInstanceLiteID", instanceID.map(String.init) ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                        signal("rawPixelCount", String(rawPixelCount), source: "SourceImage"),
+                        signal("afterBubbleClampPixelCount", String(bubblePixelCount), source: "koharuNativeSegmentMaskRefinementLiteReport")
+                    ],
+                    evaluationSignals: [
+                        signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
+                        signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true),
+                        signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            }
+
+            var candidateLedgers: [MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger] = []
+            var blockLedgers: [MangaKoharuNativeSegmentMaskRefinementLiteBlockLedger] = []
+            for block in blocks.sorted(by: { $0.index < $1.index }) {
+                var perBlockCandidates: [MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger] = []
+                let detectorCandidates = Array((detectorCandidatesByBlock[block.index] ?? []).prefix(2))
+                for (offset, detectorCandidate) in detectorCandidates.enumerated() {
+                    let source = detectorCandidate.candidateID.contains("refinement") ? "nativeDetectorLiteRefinedTextBox" : "nativeDetectorLiteTextBox"
+                    perBlockCandidates.append(
+                        analyzeCandidate(
+                            block: block,
+                            candidateID: "segmentMaskRefinementLite.block\(block.index).detector\(offset)",
+                            source: source,
+                            sourceTextBoxCandidateID: detectorCandidate.candidateID,
+                            sourceRect: Self.rect(from: detectorCandidate.bbox),
+                            directionHint: detectorCandidate.directionHint,
+                            sourceBubbleID: detectorCandidate.sourceBubbleID
+                        )
+                    )
+                }
+                if perBlockCandidates.isEmpty {
+                    perBlockCandidates.append(
+                        analyzeCandidate(
+                            block: block,
+                            candidateID: "segmentMaskRefinementLite.block\(block.index).fallback",
+                            source: "currentFinalBlockBBoxFallback",
+                            sourceTextBoxCandidateID: nil,
+                            sourceRect: Self.rect(from: block.bbox),
+                            directionHint: "unknown",
+                            sourceBubbleID: block.bubbleID
+                        )
+                    )
+                }
+                candidateLedgers.append(contentsOf: perBlockCandidates)
+                let selected = perBlockCandidates.first { $0.candidateVerdict == "refinementLiteUsableForReport" } ?? perBlockCandidates.first
+                let renderLocked = renderLockByBlock[block.index]?.renderCollisionResolved == false || !block.renderCollisionResolved
+                let instanceID = instanceLiteByBlock[block.index]?.instanceLiteMajorityID
+                let segment = segmentByBlock[block.index]
+                let containedByTextBox = selected?.maskBBox != nil && !(selected?.rejectionReasons.contains("textBoxConstraintMissing") ?? true)
+                let containedByBubble = selected?.maskBBox != nil && !(selected?.rejectionReasons.contains("bubbleConstraintMissing") ?? true)
+                let usableClear = selected?.candidateVerdict == "refinementLiteUsableForReport" && (selected?.afterBubbleClampPixelCount ?? 0) >= 24
+                let usableOCRCrop = usableClear && (selected?.textboxCoverage ?? 0) < 0.45
+                let usableRender = usableClear && containedByBubble && !renderLocked
+                let primary: String
+                if renderLocked {
+                    primary = "renderLocked"
+                } else if block.failureCategory == "modelOutputFailure" || block.failureCategory == "translationLanguageQualityFailure" {
+                    primary = "translationModelFloor"
+                } else if selected?.rejectionReasons.contains("textBoxConstraintMissing") == true {
+                    primary = "textBoxConstraintMissing"
+                } else if selected?.rejectionReasons.contains("bubbleConstraintMissing") == true {
+                    primary = "bubbleMaskConstraintMissing"
+                } else if selected?.candidateVerdict != "refinementLiteUsableForReport" {
+                    primary = "segmentMaskPixelEvidenceWeak"
+                } else if segment?.usableForCropEvidence == true {
+                    primary = "segmentMaskProxyStableReportOnly"
+                } else if block.failureCategory == "ocrInputSuspect" {
+                    primary = "ocrInputStillDominant"
+                } else {
+                    primary = "manualReviewOnly"
+                }
+                let nextAction: String
+                switch primary {
+                case "renderLocked": nextAction = "keepRenderLockReportOnly"
+                case "translationModelFloor": nextAction = "keepModelFloorSeparate"
+                case "textBoxConstraintMissing": nextAction = "collectRealTextBoxes"
+                case "bubbleMaskConstraintMissing": nextAction = "collectRealBubbleMask"
+                case "segmentMaskPixelEvidenceWeak": nextAction = "collectRealSegmentMask"
+                case "ocrInputStillDominant": nextAction = "keepSegmentMaskRefinementLiteReportOnly"
+                case "segmentMaskProxyStableReportOnly": nextAction = "keepSegmentMaskRefinementLiteReportOnly"
+                default: nextAction = "manualReviewOnly"
+                }
+                blockLedgers.append(
+                    MangaKoharuNativeSegmentMaskRefinementLiteBlockLedger(
+                        blockIndex: block.index,
+                        bubbleID: block.bubbleID,
+                        instanceLiteMajorityID: instanceID,
+                        bbox: block.bbox,
+                        finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                        failureCategory: block.failureCategory,
+                        blockPassed: block.blockPassed,
+                        selectedCandidateID: selected?.candidateID,
+                        candidateCount: perBlockCandidates.count,
+                        maskBBox: selected?.maskBBox,
+                        rawPixelCount: selected?.rawPixelCount ?? 0,
+                        afterTextBoxClampPixelCount: selected?.afterTextBoxClampPixelCount ?? 0,
+                        afterBubbleClampPixelCount: selected?.afterBubbleClampPixelCount ?? 0,
+                        componentCount: selected?.connectedComponentCount ?? 0,
+                        textboxCoverage: selected?.textboxCoverage ?? 0,
+                        bubbleCoverage: selected?.bubbleCoverage ?? 0,
+                        existingGlyphOverlap: selected?.existingGlyphOverlap ?? 0,
+                        segmentProxyAgreement: selected?.segmentProxyAgreement ?? 0,
+                        maskContainedByTextBox: containedByTextBox,
+                        maskContainedByBubble: containedByBubble,
+                        wouldBeUsableForClearTextMask: usableClear,
+                        wouldBeUsableForOCRCropConstraint: usableOCRCrop,
+                        wouldBeUsableForRenderContainment: usableRender,
+                        primaryBottleneck: primary,
+                        nextAction: nextAction,
+                        decisionSignals: [
+                            signal("selectedCandidateID", selected?.candidateID ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                            signal("candidateVerdict", selected?.candidateVerdict ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                            signal("instanceLiteMajorityID", instanceID.map(String.init) ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("renderLocked", String(renderLocked), source: "koharuRenderRegressionLockReport,blocks")
+                        ],
+                        evaluationSignals: [
+                            signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
+                            signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true),
+                            signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true)
+                        ],
+                        groundTruthUsedForDecision: false,
+                        wouldChangeMainFlow: false,
+                        diagnosticOnly: true
+                    )
+                )
+            }
+
+            var siblingLedgers: [MangaKoharuNativeSegmentMaskRefinementLiteSiblingLedger] = []
+            let grouped = Dictionary(grouping: blockLedgers) { ledger in
+                "\(ledger.bubbleID.map(String.init) ?? "nil"):\(ledger.instanceLiteMajorityID.map(String.init) ?? "nil")"
+            }
+            for group in grouped.values where group.count > 1 {
+                var overlapCount = 0
+                var pixelOverlapEstimate = 0
+                let sorted = group.sorted { $0.blockIndex < $1.blockIndex }
+                for i in sorted.indices {
+                    for j in sorted.indices where j > i {
+                        guard let a = sorted[i].maskBBox.map(Self.rect(from:)),
+                              let b = sorted[j].maskBBox.map(Self.rect(from:)) else { continue }
+                        let intersection = a.intersection(b)
+                        if !intersection.isNull, area(intersection) > 0 {
+                            overlapCount += 1
+                            pixelOverlapEstimate += Int(area(intersection).rounded())
+                        }
+                    }
+                }
+                let needsSegment = overlapCount > 0 || sorted.contains { !$0.wouldBeUsableForClearTextMask }
+                let needsBubble = sorted.contains { $0.instanceLiteMajorityID == nil }
+                let siblingRisk = overlapCount > 0 ? "maskOverlapRisk" : "sameBubbleSiblingReportOnly"
+                siblingLedgers.append(
+                    MangaKoharuNativeSegmentMaskRefinementLiteSiblingLedger(
+                        bubbleID: sorted.first?.bubbleID,
+                        instanceLiteID: sorted.first?.instanceLiteMajorityID,
+                        blockIndexes: sorted.map(\.blockIndex),
+                        maskBBoxOverlapCount: overlapCount,
+                        pixelOverlapEstimate: pixelOverlapEstimate,
+                        sameBubbleSiblingRisk: siblingRisk,
+                        seamRisk: overlapCount > 0 ? "needsSeamPartitionEvidence" : "noSeamRiskDetected",
+                        needsRealSegmentMask: needsSegment,
+                        needsRealBubbleMask: needsBubble,
+                        nextAction: needsSegment ? "collectRealSegmentMask" : (needsBubble ? "collectRealBubbleMask" : "keepSegmentMaskRefinementLiteReportOnly"),
+                        decisionSignals: [
+                            signal("maskBBoxOverlapCount", String(overlapCount), source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                            signal("pixelOverlapEstimate", String(pixelOverlapEstimate), source: "koharuNativeSegmentMaskRefinementLiteReport")
+                        ],
+                        groundTruthUsedForDecision: false,
+                        wouldChangeMainFlow: false,
+                        diagnosticOnly: true
+                    )
+                )
+            }
+
+            let needsRealSegmentMaskBlocks = uniqueSorted(blockLedgers.filter {
+                $0.primaryBottleneck == "segmentMaskPixelEvidenceWeak" || !$0.wouldBeUsableForClearTextMask
+            }.map(\.blockIndex))
+            let needsRealTextBoxesBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "textBoxConstraintMissing" }.map(\.blockIndex))
+            let needsRealBubbleMaskBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "bubbleMaskConstraintMissing" }.map(\.blockIndex))
+            let manualReviewBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "manualReviewOnly" }.map(\.blockIndex))
+            let renderLockedBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "renderLocked" }.map(\.blockIndex))
+            let verdict: String
+            if candidateLedgers.isEmpty {
+                verdict = "blockedByMissingTextBoxCandidates"
+            } else if candidateLedgers.allSatisfy({ $0.rawPixelCount == 0 }) {
+                verdict = "blockedByInsufficientPixelEvidence"
+            } else if !needsRealTextBoxesBlocks.isEmpty {
+                verdict = "needsRealTextBoxesArtifact"
+            } else if !needsRealBubbleMaskBlocks.isEmpty {
+                verdict = "needsRealBubbleMaskArtifact"
+            } else if !needsRealSegmentMaskBlocks.isEmpty {
+                verdict = "needsRealSegmentMaskArtifact"
+            } else if !renderLockedBlocks.isEmpty {
+                verdict = "renderLockedNoPromotion"
+            } else {
+                verdict = "nativeSegmentMaskRefinementLiteReportOnly"
+            }
+            let gates = [
+                gate("G-native-segmentmask-refinement-lite-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "SegmentMask refinement-lite mutates OCR, translation, renderer, cleanup, glyphMaskFillRects, safeLayoutRect, blockPassed, or currentBlockSource", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth drives threshold, TextBox choice, mask, route, nextAction, verdict, or gate", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-source-pixels", "Source pixels", "SourceImage", "passed", "usesSourceImagePixels=true", allBlockIndexes, "report is pure bbox copy without source pixel evidence", "restorePixelScan", [signal("usesSourceImagePixels", "true", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-textbox-constrained", "TextBox constrained", "TextBoxes", needsRealTextBoxesBlocks.isEmpty ? "passed" : "warning", "usesTextBoxConstraints=true and fallback is explicit", needsRealTextBoxesBlocks, "TextBox constraints are missing or fake-promoted as real Koharu TextBoxes", "collectRealTextBoxes", [signal("usesTextBoxConstraints", "true", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-bubble-constrained", "Bubble constrained", "BubbleMask", needsRealBubbleMaskBlocks.isEmpty ? "passed" : "warning", "usesBubbleMaskConstraints=true with instance-lite or bubble geometry fallback", needsRealBubbleMaskBlocks, "glyph mask can leak across bubbles without explicit blocker", "collectRealBubbleMask", [signal("usesBubbleMaskConstraints", "true", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-proxy-boundary", "Proxy boundary", "SegmentMask", "passed", "proxyNotRealKoharuSegmentMask=true", allBlockIndexes, "refinement-lite mask is promoted as real Koharu SegmentMask", "keepProxyBoundaryOrCollectRealArtifact", [signal("proxyNotRealKoharuSegmentMask", "true", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack SegmentMask refinement ledger rows", "restoreBlockLedgerCoverage", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-no-ocr-llm-png", "No OCR LLM PNG", "budget", "passed", "no OCR/LLM calls and no PNG output", [], "refinement-lite adds OCR, LLM, or new PNG outputs", "removeHeavyWorkFromSegmentMaskRefinement", [signal("ocrCalls", "0", source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("llmCalls", "0", source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("pngOutputs", "0", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-no-main-flow-writeback", "No main flow writeback", "report", "passed", "diagnosticOnly=true", [], "refinement-lite writes into TextRegion crop, overlay renderer, glyph fill, blockPassed, failureCategory, or currentBlockSource", "keepReportOnly", [signal("diagnosticOnly", "true", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-real-artifact-boundary", "Real artifact boundary", "ExternalArtifacts", "passed", "externalArtifactsRequiredForThisReport=false and active artifacts unchanged", [], "refinement-lite creates or edits active test/koharu_artifacts", "doNotCreateActiveArtifacts", [signal("externalArtifactsRequiredForThisReport", "false", source: "koharuNativeSegmentMaskRefinementLiteReport")])
+            ]
+
+            return MangaKoharuNativeSegmentMaskRefinementLiteReport(
+                enabled: true,
+                source: "AITRANSProbe",
+                referencePipeline: "Koharu",
+                referenceConcept: "SegmentMask.NativeRefinementLite.TextBoxConstrainedGlyphMask",
+                referenceWorkItemID: "WI-koharu-native-segmentmask-refinement-lite",
+                evaluatedBlockCount: blocks.count,
+                sourceImageWidth: image.width,
+                sourceImageHeight: image.height,
+                contentCropBBox: contentBBox,
+                candidateLedgerCount: candidateLedgers.count,
+                blockLedgerCount: blockLedgers.count,
+                siblingLedgerCount: siblingLedgers.count,
+                gateCount: gates.count,
+                groundTruthUsedForDecision: false,
+                groundTruthUsedForEvaluationOnly: true,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true,
+                nativeRefinementLite: true,
+                proxyNotRealKoharuSegmentMask: true,
+                usesSourceImagePixels: true,
+                usesTextBoxConstraints: true,
+                usesBubbleMaskConstraints: true,
+                externalArtifactsRequiredForThisReport: false,
+                refinementLiteVerdict: verdict,
+                candidateSourceBreakdown: countBy(candidateLedgers.map(\.source)),
+                candidateVerdictBreakdown: countBy(candidateLedgers.map(\.candidateVerdict)),
+                pixelEvidenceBreakdown: countBy(candidateLedgers.map { $0.rawPixelCount >= 24 ? "pixelEvidencePresent" : "pixelEvidenceWeak" }),
+                textboxClampBreakdown: countBy(candidateLedgers.map { $0.sourceTextBoxCandidateID == nil ? "fallbackFinalBlockBBoxConstraint" : "nativeDetectorLiteConstraint" }),
+                bubbleClampBreakdown: countBy(candidateLedgers.map { $0.sourceInstanceLiteID == nil ? "bubbleGeometryFallback" : "instanceLiteConstraint" }),
+                componentFilteringBreakdown: countBy(candidateLedgers.map { $0.connectedComponentCount > 0 ? "componentsPresent" : "componentFilteringRejected" }),
+                maskContainmentBreakdown: countBy(blockLedgers.map { $0.maskContainedByTextBox && $0.maskContainedByBubble ? "containedByTextBoxAndBubble" : "containmentUnproven" }),
+                siblingMaskOverlapBreakdown: countBy(siblingLedgers.map(\.sameBubbleSiblingRisk)),
+                primaryBottleneckBreakdown: countBy(blockLedgers.map(\.primaryBottleneck)),
+                nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
+                needsRealSegmentMaskBlocks: needsRealSegmentMaskBlocks,
+                needsRealTextBoxesBlocks: needsRealTextBoxesBlocks,
+                needsRealBubbleMaskBlocks: needsRealBubbleMaskBlocks,
+                manualReviewBlocks: manualReviewBlocks,
+                renderLockedBlocks: renderLockedBlocks,
+                candidateLedgers: candidateLedgers.sorted { $0.candidateID < $1.candidateID },
+                blockLedgers: blockLedgers.sorted { $0.blockIndex < $1.blockIndex },
+                siblingLedgers: siblingLedgers.sorted { lhs, rhs in
+                    if lhs.bubbleID == rhs.bubbleID { return (lhs.instanceLiteID ?? -1) < (rhs.instanceLiteID ?? -1) }
+                    return (lhs.bubbleID ?? -1) < (rhs.bubbleID ?? -1)
+                },
+                gateLedger: gates,
+                notes: [
+                    "koharuNativeSegmentMaskRefinementLiteReport builds a TextBox-constrained glyph pixel mask ledger from source image pixels inside the existing content crop.",
+                    "Detector-lite TextBoxes are preferred; final block bbox fallback is explicit and never promoted as real Koharu TextBoxes.",
+                    "Instance-lite BubbleMask or current bubble geometry constrains glyph pixels report-only; no crop, OCR, renderer, clear-text, glyph fill, safeLayoutRect, or overlay state is changed.",
+                    "Ground truth appears only in evaluationSignals and never drives thresholds, candidate choice, mask generation, route, nextAction, verdict, or gates."
+                ]
+            )
+        }.value
+    }
+
     func makeKoharuDistanceFieldSafeAreaReport(
         image: CGImage,
         blocks: [MangaOverlayProbeBlock],
@@ -4587,6 +5254,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport? = nil,
         koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport? = nil,
         koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil,
+        koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -4710,6 +5378,9 @@ struct MangaOverlayProbeService: Sendable {
         )
         let nativeBubbleMaskInstanceLiteByBlock = Dictionary(
             uniqueKeysWithValues: (koharuNativeBubbleMaskInstanceLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let nativeSegmentMaskRefinementLiteByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuNativeSegmentMaskRefinementLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
         let translationFloorNoisyByBlock = Dictionary(
             uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
@@ -4944,6 +5615,7 @@ struct MangaOverlayProbeService: Sendable {
             let nativeTextBoxDetectorLiteRefinement = nativeTextBoxDetectorLiteRefinementByBlock[block.index]
             let nativeTextBoxDetectorLiteClosedLoop = nativeTextBoxDetectorLiteClosedLoopByBlock[block.index]
             let nativeBubbleMaskInstanceLite = nativeBubbleMaskInstanceLiteByBlock[block.index]
+            let nativeSegmentMaskRefinementLite = nativeSegmentMaskRefinementLiteByBlock[block.index]
             let translationFloorNoisy = translationFloorNoisyByBlock[block.index]
             let renderLock = renderLockByBlock[block.index]
             let cropAttribution = textRegion?.failureAttribution.joined(separator: " | ") ?? "nil"
@@ -5022,6 +5694,7 @@ struct MangaOverlayProbeService: Sendable {
             nativeTextBoxDetectorLiteRefinementBlockLedger: block=\(nativeTextBoxDetectorLiteRefinement.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLiteRefinement?.bubbleID.map(String.init) ?? "nil") target=\(nativeTextBoxDetectorLiteRefinement?.targetReason ?? "nil") base=\(nativeTextBoxDetectorLiteRefinement?.baseCandidateID ?? "nil") refined=[\(nativeTextBoxDetectorLiteRefinement?.refinedBBox?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")] strategy=\(nativeTextBoxDetectorLiteRefinement?.refinementStrategy ?? "nil") outcome=\(nativeTextBoxDetectorLiteRefinement?.refinementOutcome ?? "nil") refinedText=\(nativeTextBoxDetectorLiteRefinement?.refinedOCRNormalizedText?.replacing("\n", with: " / ") ?? "nil") qualityDeltaCurrent=\(nativeTextBoxDetectorLiteRefinement?.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") qualityDeltaDetector=\(nativeTextBoxDetectorLiteRefinement?.qualityDeltaVsDetectorLiteShadow?.formatted(.number.precision(.fractionLength(3))) ?? "nil") similarityDelta=\(nativeTextBoxDetectorLiteRefinement?.ocrSimilarityDeltaForEvaluation?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bottleneck=\(nativeTextBoxDetectorLiteRefinement?.primaryBottleneck ?? "nil") next=\(nativeTextBoxDetectorLiteRefinement?.nextAction ?? "nil")
             nativeTextBoxDetectorLiteClosedLoopBlockLedger: block=\(nativeTextBoxDetectorLiteClosedLoop.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLiteClosedLoop?.bubbleID.map(String.init) ?? "nil") failure=\(nativeTextBoxDetectorLiteClosedLoop?.failureCategory ?? "nil") shadow=\(nativeTextBoxDetectorLiteClosedLoop?.detectorLiteShadowOutcome ?? "nil") refinement=\(nativeTextBoxDetectorLiteClosedLoop?.refinementOutcome ?? "nil") best=\(nativeTextBoxDetectorLiteClosedLoop?.bestReportOnlyCandidateID ?? "nil") delta=\(nativeTextBoxDetectorLiteClosedLoop?.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bubble=\(nativeTextBoxDetectorLiteClosedLoop?.bubbleAssignmentStatus ?? "nil") segment=\(nativeTextBoxDetectorLiteClosedLoop?.segmentGlyphEvidenceStatus ?? "nil") translationRoute=\(nativeTextBoxDetectorLiteClosedLoop?.translationFailureRoute ?? "nil") render=\(nativeTextBoxDetectorLiteClosedLoop?.renderLockStatus ?? "nil") bottleneck=\(nativeTextBoxDetectorLiteClosedLoop?.primaryBottleneck ?? "nil") route=\(nativeTextBoxDetectorLiteClosedLoop?.closedLoopRoute ?? "nil") next=\(nativeTextBoxDetectorLiteClosedLoop?.nextAction ?? "nil")
             nativeBubbleMaskInstanceLiteBlockLedger: block=\(nativeBubbleMaskInstanceLite.map { String($0.blockIndex) } ?? "nil") currentBubbleID=\(nativeBubbleMaskInstanceLite?.currentBubbleID.map(String.init) ?? "nil") majorityID=\(nativeBubbleMaskInstanceLite?.instanceLiteMajorityID.map(String.init) ?? "nil") majorityCoverage=\(nativeBubbleMaskInstanceLite?.instanceLiteMajorityCoverage.formatted(.number.precision(.fractionLength(3))) ?? "nil") agreement=\(nativeBubbleMaskInstanceLite?.assignmentAgreement ?? "nil") conflict=\(nativeBubbleMaskInstanceLite?.assignmentConflictReason ?? "nil") safeRect=[\(nativeBubbleMaskInstanceLite?.instanceLiteSafeRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")] distanceFieldSource=\(nativeBubbleMaskInstanceLite?.distanceFieldSafeRectSource ?? "nil") spriteContained=\(nativeBubbleMaskInstanceLite.map { String($0.spriteContainedByInstanceLiteMask) } ?? "nil") sibling=\(nativeBubbleMaskInstanceLite?.siblingPartitionStatus ?? "nil") split=\(nativeBubbleMaskInstanceLite?.splitRisk ?? "nil") adjacency=\(nativeBubbleMaskInstanceLite?.adjacencyRisk ?? "nil") segment=\(nativeBubbleMaskInstanceLite?.segmentGlyphEvidenceStatus ?? "nil") translationRoute=\(nativeBubbleMaskInstanceLite?.translationFailureRoute ?? "nil") detectorRoute=\(nativeBubbleMaskInstanceLite?.detectorLiteClosedLoopRoute ?? "nil") render=\(nativeBubbleMaskInstanceLite?.renderLockStatus ?? "nil") bottleneck=\(nativeBubbleMaskInstanceLite?.primaryBottleneck ?? "nil") next=\(nativeBubbleMaskInstanceLite?.nextAction ?? "nil")
+            nativeSegmentMaskRefinementLiteBlockLedger: block=\(nativeSegmentMaskRefinementLite.map { String($0.blockIndex) } ?? "nil") selected=\(nativeSegmentMaskRefinementLite?.selectedCandidateID ?? "nil") pixels=\(nativeSegmentMaskRefinementLite.map { String($0.afterBubbleClampPixelCount) } ?? "nil") textBoxCoverage=\(nativeSegmentMaskRefinementLite?.textboxCoverage.formatted(.number.precision(.fractionLength(3))) ?? "nil") bubbleCoverage=\(nativeSegmentMaskRefinementLite?.bubbleCoverage.formatted(.number.precision(.fractionLength(3))) ?? "nil") glyphOverlap=\(nativeSegmentMaskRefinementLite?.existingGlyphOverlap.formatted(.number.precision(.fractionLength(3))) ?? "nil") segmentAgreement=\(nativeSegmentMaskRefinementLite?.segmentProxyAgreement.formatted(.number.precision(.fractionLength(3))) ?? "nil") containedTextBox=\(nativeSegmentMaskRefinementLite.map { String($0.maskContainedByTextBox) } ?? "nil") containedBubble=\(nativeSegmentMaskRefinementLite.map { String($0.maskContainedByBubble) } ?? "nil") clearText=\(nativeSegmentMaskRefinementLite.map { String($0.wouldBeUsableForClearTextMask) } ?? "nil") ocrCrop=\(nativeSegmentMaskRefinementLite.map { String($0.wouldBeUsableForOCRCropConstraint) } ?? "nil") render=\(nativeSegmentMaskRefinementLite.map { String($0.wouldBeUsableForRenderContainment) } ?? "nil") bottleneck=\(nativeSegmentMaskRefinementLite?.primaryBottleneck ?? "nil") next=\(nativeSegmentMaskRefinementLite?.nextAction ?? "nil")
             translationFloorNoisyBlock: modelFloorLimited=\(translationFloorNoisy.map { String($0.modelFloorLimited) } ?? "nil") ocrInputSuspect=\(translationFloorNoisy.map { String($0.ocrInputSuspect) } ?? "nil") languageQualityFailure=\(translationFloorNoisy.map { String($0.translationLanguageQualityFailure) } ?? "nil") routingOutcome=\(translationFloorNoisy?.routingComparisonOutcome ?? "nil") nextAction=\(translationFloorNoisy?.recommendedNextAction ?? "nil")
             renderLock: status=\(renderLock?.renderStatus ?? "nil") failureOverlayRequired=\(renderLock.map { String($0.failureOverlayRequired) } ?? "nil") failureOverlayLocked=\(renderLock.map { String($0.failureOverlayLocked) } ?? "nil") safeLayoutSource=\(renderLock?.safeLayoutSource ?? "nil") maskOverflowPixels=\(renderLock.map { String($0.renderMaskOverflowPixelCount) } ?? "nil") truncated=\(renderLock.map { String($0.renderTextTruncated) } ?? "nil") nextAction=\(renderLock?.recommendedNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
@@ -5139,6 +5812,14 @@ struct MangaOverlayProbeService: Sendable {
             .prefix(24)
             .map { "nativeBubbleMaskInstanceLiteAdjacencyLedger: pair=\($0.instanceAID)-\($0.instanceBID) bboxGap=\($0.bboxGap.formatted(.number.precision(.fractionLength(2)))) maskGap=\($0.maskGap.formatted(.number.precision(.fractionLength(2)))) status=\($0.adjacencyStatus) seamRisk=\($0.seamRisk) blocks=\($0.affectedBlocks.map(String.init).joined(separator: ",")) splitCandidates=\($0.relatedSplitCandidateIDs.map(String.init).joined(separator: ",")) next=\($0.nextAction)" }
             .joined(separator: "\n")
+        let nativeSegmentMaskRefinementCandidateSummary = (koharuNativeSegmentMaskRefinementLiteReport?.candidateLedgers ?? [])
+            .prefix(24)
+            .map { "nativeSegmentMaskRefinementLiteCandidate: id=\($0.candidateID) block=\($0.blockIndex) source=\($0.source) textBox=\($0.sourceTextBoxCandidateID ?? "nil") bubble=\($0.sourceBubbleID.map(String.init) ?? "nil") instance=\($0.sourceInstanceLiteID.map(String.init) ?? "nil") bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))] expanded=[\($0.expandedTextBoxRect.map { String(Int($0.rounded())) }.joined(separator: ","))] pixels=\($0.afterBubbleClampPixelCount) components=\($0.connectedComponentCount) textBoxCoverage=\($0.textboxCoverage.formatted(.number.precision(.fractionLength(3)))) bubbleCoverage=\($0.bubbleCoverage.formatted(.number.precision(.fractionLength(3)))) glyphOverlap=\($0.existingGlyphOverlap.formatted(.number.precision(.fractionLength(3)))) segmentAgreement=\($0.segmentProxyAgreement.formatted(.number.precision(.fractionLength(3)))) verdict=\($0.candidateVerdict) rejections=\($0.rejectionReasons.joined(separator: " | "))" }
+            .joined(separator: "\n")
+        let nativeSegmentMaskRefinementSiblingSummary = (koharuNativeSegmentMaskRefinementLiteReport?.siblingLedgers ?? [])
+            .prefix(24)
+            .map { "nativeSegmentMaskRefinementLiteSiblingLedger: bubble=\($0.bubbleID.map(String.init) ?? "nil") instance=\($0.instanceLiteID.map(String.init) ?? "nil") blocks=[\($0.blockIndexes.map(String.init).joined(separator: ","))] overlaps=\($0.maskBBoxOverlapCount) pixels=\($0.pixelOverlapEstimate) risk=\($0.sameBubbleSiblingRisk) seam=\($0.seamRisk) needsRealSegmentMask=\($0.needsRealSegmentMask) needsRealBubbleMask=\($0.needsRealBubbleMask) next=\($0.nextAction)" }
+            .joined(separator: "\n")
         let externalSummary = """
         koharuNativeAlgorithmReplayMatrixReport: enabled=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.stageCount) } ?? "nil") candidates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil") blockRoutes=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict ?? "nil")
         nativeReplayStageStatus=\(koharuNativeAlgorithmReplayMatrixReport?.stageStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -5209,6 +5890,18 @@ struct MangaOverlayProbeService: Sendable {
         \(nativeBubbleMaskInstanceSummary.isEmpty ? "nativeBubbleMaskInstanceLiteInstance: nil" : nativeBubbleMaskInstanceSummary)
         \(nativeBubbleMaskSiblingSummary.isEmpty ? "nativeBubbleMaskInstanceLiteSiblingLedger: nil" : nativeBubbleMaskSiblingSummary)
         \(nativeBubbleMaskAdjacencySummary.isEmpty ? "nativeBubbleMaskInstanceLiteAdjacencyLedger: nil" : nativeBubbleMaskAdjacencySummary)
+        koharuNativeSegmentMaskRefinementLiteReport: enabled=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.enabled) } ?? "nil") candidates=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.candidateLedgerCount) } ?? "nil") blocks=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.blockLedgerCount) } ?? "nil") siblings=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.siblingLedgerCount) } ?? "nil") gates=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeSegmentMaskRefinementLiteReport?.refinementLiteVerdict ?? "nil") proxyNotRealKoharuSegmentMask=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil") nativeRefinementLite=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.nativeRefinementLite) } ?? "nil") groundTruthUsedForDecision=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil") wouldChangeMainFlow=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil")
+        nativeSegmentMaskRefinementLiteSource=\(koharuNativeSegmentMaskRefinementLiteReport?.candidateSourceBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeSegmentMaskRefinementLiteVerdict=\(koharuNativeSegmentMaskRefinementLiteReport?.candidateVerdictBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeSegmentMaskRefinementLitePixels=\(koharuNativeSegmentMaskRefinementLiteReport?.pixelEvidenceBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeSegmentMaskRefinementLiteTextBoxClamp=\(koharuNativeSegmentMaskRefinementLiteReport?.textboxClampBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeSegmentMaskRefinementLiteBubbleClamp=\(koharuNativeSegmentMaskRefinementLiteReport?.bubbleClampBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeSegmentMaskRefinementLiteContainment=\(koharuNativeSegmentMaskRefinementLiteReport?.maskContainmentBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeSegmentMaskRefinementLiteBottleneck=\(koharuNativeSegmentMaskRefinementLiteReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeSegmentMaskRefinementLiteNextAction=\(koharuNativeSegmentMaskRefinementLiteReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        needsRealSegmentMaskBlocks=\(koharuNativeSegmentMaskRefinementLiteReport?.needsRealSegmentMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealTextBoxesBlocks=\(koharuNativeSegmentMaskRefinementLiteReport?.needsRealTextBoxesBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealBubbleMaskBlocks=\(koharuNativeSegmentMaskRefinementLiteReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil")
+        \(nativeSegmentMaskRefinementCandidateSummary.isEmpty ? "nativeSegmentMaskRefinementLiteCandidate: nil" : nativeSegmentMaskRefinementCandidateSummary)
+        \(nativeSegmentMaskRefinementSiblingSummary.isEmpty ? "nativeSegmentMaskRefinementLiteSiblingLedger: nil" : nativeSegmentMaskRefinementSiblingSummary)
         koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
         workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
