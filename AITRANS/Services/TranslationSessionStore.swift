@@ -10694,6 +10694,7 @@ final class TranslationSessionStore: ObservableObject {
                     signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true)
                 ]
             )
+            let bubbleSafeRectComparison = bubble?.decisionSignals.first { $0.name == "safeRectComparison" }?.value ?? "nil"
             let selectedBubble = component(
                 id: bubble?.instanceLiteMajorityID.map { "instanceLite.\($0)" } ?? "block\(block.index).currentBubble.\(block.bubbleID.map(String.init) ?? "nil")",
                 stage: "BubbleMask",
@@ -10706,7 +10707,7 @@ final class TranslationSessionStore: ObservableObject {
                 evidence: [
                     "instanceLiteMajorityID=\(bubble?.instanceLiteMajorityID.map(String.init) ?? "nil")",
                     "assignmentAgreement=\(bubble?.assignmentAgreement ?? "nil")",
-                    "safeRectComparison=\(bubble?.safeRectComparison ?? "nil")"
+                    "safeRectComparison=\(bubbleSafeRectComparison)"
                 ],
                 decisions: [
                     signal("componentSource", bubbleSource, source: "koharuNativeArtifactBundleLiteReport"),
