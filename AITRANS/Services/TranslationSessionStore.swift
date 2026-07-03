@@ -1602,6 +1602,7 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport?
                 var koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport?
                 var koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?
+                var koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -2361,6 +2362,21 @@ final class TranslationSessionStore: ObservableObject {
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-native-segmentmask-refinement-lite-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-native-artifact-bundle-lite-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                koharuNativeArtifactBundleLiteReport = Self.makeKoharuNativeArtifactBundleLiteReport(
+                    blocks: probeBlocks,
+                    detectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
+                    shadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+                    refinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
+                    closedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
+                    bubbleInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+                    segmentRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+                    renderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
+                    koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
+                    translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport
+                )
+                self.writeMangaProbeProgress(stage: "koharu-native-artifact-bundle-lite-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
                     blocks: probeBlocks,
@@ -2389,7 +2405,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
                     koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
                     koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
-                    koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport
+                    koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+                    koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
@@ -2432,6 +2449,7 @@ final class TranslationSessionStore: ObservableObject {
                         koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
                         koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
                         koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+                        koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                         translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                         koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                         bubbleMaskReport: bubbleMaskReport,
@@ -2491,6 +2509,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
                     koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
                     koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+                    koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
@@ -8096,6 +8115,7 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport? = nil,
         koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil,
         koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
+        koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
@@ -8164,7 +8184,21 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
             koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
             koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
-            koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport
+            koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+            koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport
+        )
+        let artifactBundleLiteReport = koharuNativeArtifactBundleLiteReport ?? Self.makeKoharuNativeArtifactBundleLiteReport(
+            blocks: blocks,
+            detectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
+            shadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+            refinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
+            closedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
+            bubbleInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+            segmentRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+            renderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
+            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
+            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+            externalArtifactReadinessReport: externalArtifactReadinessReport
         )
         let resolverReport = koharuPipelineResolverReport ?? Self.makeKoharuPipelineResolverReport(
             blocks: blocks,
@@ -8261,7 +8295,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
             koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
             koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
-            koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport
+            koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+            koharuNativeArtifactBundleLiteReport: artifactBundleLiteReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -8320,6 +8355,7 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
             koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
             koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+            koharuNativeArtifactBundleLiteReport: artifactBundleLiteReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
@@ -10424,6 +10460,566 @@ final class TranslationSessionStore: ObservableObject {
                 "Ground truth similarity appears only in evaluationSignals and never drives route, nextAction, gate, or candidate family verdict.",
                 "Missing active test/koharu_artifacts remains readiness=\(externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing"); detector-lite proxy output is not real Koharu TextBoxes/OcrText.",
                 "v17-v20 TextRegion crop / line / deskew local tuning remains stoplisted unless a separate full-probe promotion task proves benefit."
+            ]
+        )
+    }
+
+    private static func makeKoharuNativeArtifactBundleLiteReport(
+        blocks: [MangaOverlayProbeBlock],
+        detectorLiteReport: MangaKoharuNativeTextBoxDetectorLiteReport?,
+        shadowOCRReport: MangaKoharuNativeTextBoxDetectorLiteShadowOCRReport?,
+        refinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport?,
+        closedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport?,
+        bubbleInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport?,
+        segmentRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?,
+        renderSpriteFitPlannerReport: MangaKoharuRenderSpriteFitPlannerReport?,
+        koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
+        translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
+    ) -> MangaKoharuNativeArtifactBundleLiteReport {
+        func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
+        func countBy(_ values: [String]) -> [String: Int] {
+            values.reduce(into: [:]) { partial, value in partial[value, default: 0] += 1 }
+        }
+        func formatted(_ value: Double?) -> String {
+            value?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
+        }
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaKoharuNativeArtifactBundleLiteSignal {
+            MangaKoharuNativeArtifactBundleLiteSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+        func rectContains(_ outer: [Double]?, _ inner: [Double]?, tolerance: CGFloat = 2) -> Bool {
+            guard let outer, let inner else { return false }
+            let outerRect = Self.rect(from: outer).insetBy(dx: -tolerance, dy: -tolerance)
+            let innerRect = Self.rect(from: inner)
+            return innerRect.minX >= outerRect.minX
+                && innerRect.minY >= outerRect.minY
+                && innerRect.maxX <= outerRect.maxX
+                && innerRect.maxY <= outerRect.maxY
+        }
+        func rectAligned(_ lhs: [Double]?, _ rhs: [Double]?) -> Bool {
+            guard let lhs, let rhs else { return false }
+            return Self.rectIoU(Self.rect(from: lhs), Self.rect(from: rhs)) >= 0.18
+        }
+        func component(
+            id: String,
+            stage: String,
+            source: String,
+            sourceReport: String,
+            bbox: [Double]?,
+            confidence: Double?,
+            readiness: String,
+            fallback: Bool,
+            evidence: [String],
+            decisions: [MangaKoharuNativeArtifactBundleLiteSignal],
+            evaluations: [MangaKoharuNativeArtifactBundleLiteSignal] = []
+        ) -> MangaKoharuNativeArtifactBundleLiteComponent {
+            MangaKoharuNativeArtifactBundleLiteComponent(
+                componentID: id,
+                artifactStage: stage,
+                componentSource: source,
+                sourceReport: sourceReport,
+                bbox: bbox,
+                confidence: confidence,
+                readinessStatus: readiness,
+                proxyOnly: true,
+                fallbackUsed: fallback,
+                evidence: evidence,
+                decisionSignals: decisions,
+                evaluationSignals: evaluations,
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            )
+        }
+        func edge(
+            blockIndex: Int,
+            type: String,
+            status: String,
+            severity: String,
+            evidence: [String],
+            decisions: [MangaKoharuNativeArtifactBundleLiteSignal],
+            evaluations: [MangaKoharuNativeArtifactBundleLiteSignal] = []
+        ) -> MangaKoharuNativeArtifactBundleLiteConsistencyEdge {
+            MangaKoharuNativeArtifactBundleLiteConsistencyEdge(
+                edgeID: "NABL.block\(blockIndex).\(type)",
+                edgeType: type,
+                status: status,
+                severity: severity,
+                evidence: evidence,
+                affectedBlocks: [blockIndex],
+                decisionSignals: decisions,
+                evaluationSignals: evaluations,
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            )
+        }
+        func gate(
+            _ id: String,
+            _ name: String,
+            _ scope: String,
+            _ status: String,
+            _ threshold: String,
+            _ affected: [Int],
+            _ failure: String,
+            _ action: String,
+            _ signals: [MangaKoharuNativeArtifactBundleLiteSignal]
+        ) -> MangaKoharuNativeArtifactBundleLiteGate {
+            MangaKoharuNativeArtifactBundleLiteGate(
+                gateID: id,
+                gateName: name,
+                scope: scope,
+                status: status,
+                threshold: threshold,
+                affectedBlocks: uniqueSorted(affected),
+                decisionSignals: signals,
+                failureMeans: failure,
+                recommendedAction: action,
+                groundTruthUsedForDecision: false
+            )
+        }
+
+        let allBlockIndexes = blocks.map(\.index)
+        let detectorByBlock = Dictionary(
+            uniqueKeysWithValues: (detectorLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let closedLoopByBlock = Dictionary(
+            uniqueKeysWithValues: (closedLoopReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let shadowByBlock = Dictionary(
+            uniqueKeysWithValues: (shadowOCRReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let refinementByBlock = Dictionary(
+            uniqueKeysWithValues: (refinementReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let bubbleByBlock = Dictionary(
+            uniqueKeysWithValues: (bubbleInstanceLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentByBlock = Dictionary(
+            uniqueKeysWithValues: (segmentRefinementLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let renderFitByBlock = Dictionary(
+            uniqueKeysWithValues: (renderSpriteFitPlannerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let renderLockByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuRenderRegressionLockReport?.blockLocks ?? []).map { ($0.blockIndex, $0) }
+        )
+        let modelFloorByBlock = Dictionary(
+            uniqueKeysWithValues: (translationModelFloorComparisonReport?.noisyBlockSummaries ?? []).map { ($0.blockIndex, $0) }
+        )
+        let segmentSiblings = segmentRefinementLiteReport?.siblingLedgers ?? []
+        let bubbleSiblings = bubbleInstanceLiteReport?.siblingLedgers ?? []
+        let seamLedgers = renderSpriteFitPlannerReport?.siblingLedgers ?? []
+
+        var blockLedgers: [MangaKoharuNativeArtifactBundleLiteBlockLedger] = []
+        var edges: [MangaKoharuNativeArtifactBundleLiteConsistencyEdge] = []
+
+        for block in blocks.sorted(by: { $0.index < $1.index }) {
+            let detector = detectorByBlock[block.index]
+            let closedLoop = closedLoopByBlock[block.index]
+            let shadow = shadowByBlock[block.index]
+            let refinement = refinementByBlock[block.index]
+            let bubble = bubbleByBlock[block.index]
+            let segment = segmentByBlock[block.index]
+            let renderFit = renderFitByBlock[block.index]
+            let renderLock = renderLockByBlock[block.index]
+            let modelFloor = modelFloorByBlock[block.index]
+            let textBoxBBox = segment?.selectedCandidateID.flatMap { selectedID in
+                segmentRefinementLiteReport?.candidateLedgers.first { $0.candidateID == selectedID }?.bbox
+            } ?? detector?.bestCandidateBBox ?? block.bbox
+            let textBoxSource = segment?.selectedCandidateID != nil
+                ? "nativeSegmentMaskRefinementLiteSelectedTextBox"
+                : (detector?.bestCandidateBBox != nil ? "nativeDetectorLiteCandidate" : "fallbackFinalBlockBBox")
+            let textBoxReady = textBoxSource == "fallbackFinalBlockBBox" ? "fallbackProxyReady" : "nativeLiteReady"
+            let bubbleBBox = bubble?.instanceLiteSafeRect
+                ?? bubble?.distanceFieldSafeRectFromInstanceLite
+                ?? block.safeLayoutRect
+                ?? block.bbox
+            let bubbleSource = bubble?.instanceLiteMajorityID != nil
+                ? "nativeBubbleMaskInstanceLiteMajority"
+                : "fallbackCurrentBubbleGeometry"
+            let bubbleReady = bubble?.instanceLiteMajorityID != nil ? "nativeLiteReady" : "fallbackProxyReady"
+            let segmentBBox = segment?.maskBBox ?? block.glyphMaskRect
+            let segmentSource = segment?.selectedCandidateID != nil
+                ? "nativeSegmentMaskRefinementLiteSelectedCandidate"
+                : (block.glyphMaskRect != nil ? "fallbackGlyphMaskProxy" : "fallbackMissingSegmentMaskProxy")
+            let segmentReady: String
+            if segment?.wouldBeUsableForClearTextMask == true {
+                segmentReady = "nativeLiteReady"
+            } else if segmentBBox != nil {
+                segmentReady = "fallbackProxyReady"
+            } else {
+                segmentReady = "blockedMissingSegmentMaskLite"
+            }
+            let renderLocked = renderLock?.renderCollisionResolved == false
+                || renderLock?.renderTextTruncated == true
+                || renderFit?.fitVerdict == "renderLockedNoPromotion"
+                || block.renderTextTruncated
+            let modelBlocked = modelFloor?.modelFloorLimited == true
+                || block.failureCategory == "modelOutputFailure"
+                || block.failureCategory == "translationLanguageQualityFailure"
+
+            let selectedTextBox = component(
+                id: detector?.bestCandidateID ?? "block\(block.index).finalBBox",
+                stage: "TextBoxes",
+                source: textBoxSource,
+                sourceReport: textBoxSource == "nativeDetectorLiteCandidate" ? "koharuNativeTextBoxDetectorLiteReport" : "koharuNativeSegmentMaskRefinementLiteReport",
+                bbox: textBoxBBox,
+                confidence: detector?.bestCandidateScore,
+                readiness: textBoxReady,
+                fallback: textBoxSource == "fallbackFinalBlockBBox",
+                evidence: [
+                    "detectorLiteBest=\(detector?.bestCandidateID ?? "nil")",
+                    "segmentSelectedCandidate=\(segment?.selectedCandidateID ?? "nil")",
+                    "closedLoopRoute=\(closedLoop?.closedLoopRoute ?? "nil")"
+                ],
+                decisions: [
+                    signal("componentSource", textBoxSource, source: "koharuNativeArtifactBundleLiteReport"),
+                    signal("detectorLiteBestCandidateID", detector?.bestCandidateID ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport")
+                ],
+                evaluations: [
+                    signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true),
+                    signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true)
+                ]
+            )
+            let selectedBubble = component(
+                id: bubble?.instanceLiteMajorityID.map { "instanceLite.\($0)" } ?? "block\(block.index).currentBubble.\(block.bubbleID.map(String.init) ?? "nil")",
+                stage: "BubbleMask",
+                source: bubbleSource,
+                sourceReport: bubble?.instanceLiteMajorityID != nil ? "koharuNativeBubbleMaskInstanceLiteReport" : "bubbleGeometry",
+                bbox: bubbleBBox,
+                confidence: bubble?.instanceLiteMajorityCoverage,
+                readiness: bubbleReady,
+                fallback: bubble?.instanceLiteMajorityID == nil,
+                evidence: [
+                    "instanceLiteMajorityID=\(bubble?.instanceLiteMajorityID.map(String.init) ?? "nil")",
+                    "assignmentAgreement=\(bubble?.assignmentAgreement ?? "nil")",
+                    "safeRectComparison=\(bubble?.safeRectComparison ?? "nil")"
+                ],
+                decisions: [
+                    signal("componentSource", bubbleSource, source: "koharuNativeArtifactBundleLiteReport"),
+                    signal("assignmentAgreement", bubble?.assignmentAgreement ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport")
+                ]
+            )
+            let selectedSegment = component(
+                id: segment?.selectedCandidateID ?? "block\(block.index).glyphMaskProxy",
+                stage: "SegmentMask",
+                source: segmentSource,
+                sourceReport: segment?.selectedCandidateID != nil ? "koharuNativeSegmentMaskRefinementLiteReport" : "segmentMaskReport/blocks",
+                bbox: segmentBBox,
+                confidence: segment?.segmentProxyAgreement,
+                readiness: segmentReady,
+                fallback: segment?.selectedCandidateID == nil,
+                evidence: [
+                    "selectedCandidateID=\(segment?.selectedCandidateID ?? "nil")",
+                    "maskContainedByTextBox=\(segment.map { String($0.maskContainedByTextBox) } ?? "nil")",
+                    "maskContainedByBubble=\(segment.map { String($0.maskContainedByBubble) } ?? "nil")"
+                ],
+                decisions: [
+                    signal("componentSource", segmentSource, source: "koharuNativeArtifactBundleLiteReport"),
+                    signal("segmentMaskReady", segmentReady, source: "koharuNativeSegmentMaskRefinementLiteReport")
+                ]
+            )
+
+            let textBoxWithinBubble = rectContains(bubbleBBox, textBoxBBox)
+            let segmentWithinTextBox = rectContains(textBoxBBox, segmentBBox)
+            let segmentWithinBubble = rectContains(bubbleBBox, segmentBBox)
+            let ocrAligned = rectAligned(block.bbox, textBoxBBox)
+            let segmentSibling = segmentSiblings.first { $0.blockIndexes.contains(block.index) }
+            let bubbleSibling = bubbleSiblings.first { $0.blockIndexes.contains(block.index) }
+            let sameBubbleSiblingOK = (segmentSibling?.maskBBoxOverlapCount ?? 0) == 0
+                && (bubbleSibling?.instanceLiteSafeRectOverlapCount ?? 0) == 0
+            let seamExplains = segmentSibling?.seamRisk == "needsSeamPartitionEvidence"
+                || bubbleSibling?.siblingPartitionStatus.contains("Risk") == true
+                || seamLedgers.contains { $0.blockIndexes.contains(block.index) && !$0.relatedSeamCandidateIDs.isEmpty }
+            let spriteContained = renderFit?.spriteContainedByDistanceFieldSafeRect
+                ?? renderFit?.spriteContainedByCurrentSafeRect
+                ?? (renderLock?.renderCollisionResolved == true ? true : nil)
+            let modelSeparates = modelBlocked
+                || modelFloor?.modelFloorLimited == true
+                || closedLoop?.translationFailureRoute.contains("ModelFloor") == true
+                || closedLoop?.closedLoopRoute == "routeToModelFloor"
+            let finalOCRTextBoxIoU = Self.rectIoU(Self.rect(from: block.bbox), Self.rect(from: textBoxBBox))
+
+            let blockEdges = [
+                edge(blockIndex: block.index, type: "TextBoxWithinBubble", status: textBoxWithinBubble ? "passed" : "warning", severity: textBoxWithinBubble ? "info" : "medium", evidence: ["textBoxSource=\(textBoxSource)", "bubbleSource=\(bubbleSource)"], decisions: [signal("textBoxWithinBubble", String(textBoxWithinBubble), source: "koharuNativeArtifactBundleLiteReport")]),
+                edge(blockIndex: block.index, type: "SegmentMaskWithinTextBox", status: segmentWithinTextBox ? "passed" : "warning", severity: segmentWithinTextBox ? "info" : "medium", evidence: ["segmentSource=\(segmentSource)", "textBoxSource=\(textBoxSource)"], decisions: [signal("segmentMaskWithinTextBox", String(segmentWithinTextBox), source: "koharuNativeArtifactBundleLiteReport")]),
+                edge(blockIndex: block.index, type: "SegmentMaskWithinBubble", status: segmentWithinBubble ? "passed" : "warning", severity: segmentWithinBubble ? "info" : "medium", evidence: ["segmentSource=\(segmentSource)", "bubbleSource=\(bubbleSource)"], decisions: [signal("segmentMaskWithinBubble", String(segmentWithinBubble), source: "koharuNativeArtifactBundleLiteReport")]),
+                edge(blockIndex: block.index, type: "FinalOCRBBoxAlignedWithTextBox", status: ocrAligned ? "passed" : "warning", severity: ocrAligned ? "info" : "low", evidence: ["finalBlockBBoxVsTextBoxIoU=\(formatted(finalOCRTextBoxIoU))"], decisions: [signal("finalOCRBBoxAlignedWithTextBox", String(ocrAligned), source: "koharuNativeArtifactBundleLiteReport")]),
+                edge(blockIndex: block.index, type: "SameBubbleSiblingMaskNonOverlap", status: sameBubbleSiblingOK ? "passed" : "warning", severity: sameBubbleSiblingOK ? "info" : "medium", evidence: ["segmentSiblingOverlap=\(segmentSibling?.maskBBoxOverlapCount ?? 0)", "bubbleSafeRectOverlap=\(bubbleSibling?.instanceLiteSafeRectOverlapCount ?? 0)"], decisions: [signal("sameBubbleSiblingMaskNonOverlap", String(sameBubbleSiblingOK), source: "koharuNativeArtifactBundleLiteReport")]),
+                edge(blockIndex: block.index, type: "SeamOrSplitRiskExplainsConflict", status: seamExplains || sameBubbleSiblingOK ? "passed" : "warning", severity: seamExplains || sameBubbleSiblingOK ? "info" : "medium", evidence: ["seamRisk=\(segmentSibling?.seamRisk ?? "nil")", "siblingPartition=\(bubbleSibling?.siblingPartitionStatus ?? "nil")"], decisions: [signal("seamOrSplitRiskExplainsConflict", String(seamExplains), source: "koharuNativeArtifactBundleLiteReport")]),
+                edge(blockIndex: block.index, type: "RenderSpriteContainedByBundleSafeArea", status: spriteContained == true ? "passed" : (renderLocked ? "blocked" : "warning"), severity: spriteContained == true ? "info" : "medium", evidence: ["fitVerdict=\(renderFit?.fitVerdict ?? "nil")", "renderStatus=\(renderLock?.renderStatus ?? "nil")"], decisions: [signal("renderSpriteContainedByBundleSafeArea", spriteContained.map(String.init) ?? "nil", source: "koharuRenderSpriteFitPlannerReport")]),
+                edge(blockIndex: block.index, type: "ModelFloorSeparatesGeometryFromTranslation", status: "passed", severity: "info", evidence: ["failureCategory=\(block.failureCategory)", "modelFloorLimited=\((modelFloor?.modelFloorLimited).map(String.init) ?? "nil")"], decisions: [signal("modelFloorSeparated", String(modelSeparates), source: "translationModelFloorComparisonReport,blocks")])
+            ]
+            edges.append(contentsOf: blockEdges)
+
+            let consistencyVerdict: String
+            if blockEdges.contains(where: { $0.status == "blocked" }) {
+                consistencyVerdict = "blockedByCrossArtifactConflict"
+            } else if blockEdges.contains(where: { $0.status == "warning" }) {
+                consistencyVerdict = "nativeArtifactBundleLiteInconsistent"
+            } else {
+                consistencyVerdict = "nativeArtifactBundleLiteConsistent"
+            }
+            let primaryBlockingArtifact: String
+            let nextAction: String
+            if modelBlocked {
+                primaryBlockingArtifact = "Translations"
+                nextAction = "modelFloorNoGeometryAction"
+            } else if renderLocked {
+                primaryBlockingArtifact = "RenderedSprites"
+                nextAction = "renderLockNoOCRAction"
+            } else if selectedTextBox.fallbackUsed || closedLoop?.closedLoopRoute == "routeToRealTextBoxesArtifact" {
+                primaryBlockingArtifact = "TextBoxes"
+                nextAction = "collectRealTextBoxesArtifact"
+            } else if selectedBubble.fallbackUsed || !textBoxWithinBubble || closedLoop?.closedLoopRoute == "routeToRealBubbleMaskArtifact" {
+                primaryBlockingArtifact = "BubbleMask"
+                nextAction = "collectRealBubbleMaskArtifact"
+            } else if selectedSegment.fallbackUsed || !segmentWithinTextBox || !segmentWithinBubble || closedLoop?.closedLoopRoute == "routeToRealSegmentMaskArtifact" {
+                primaryBlockingArtifact = "SegmentMask"
+                nextAction = "collectRealSegmentMaskArtifact"
+            } else if closedLoop?.closedLoopRoute == "reviewPromisingCandidateInFullProbe" {
+                primaryBlockingArtifact = "OcrText"
+                nextAction = "readyForFullProbeShadowReview"
+            } else if consistencyVerdict == "nativeArtifactBundleLiteConsistent" {
+                primaryBlockingArtifact = "NoneReportOnlyConsistent"
+                nextAction = "keepMainFusedOCR"
+            } else {
+                primaryBlockingArtifact = "ManualReview"
+                nextAction = "manualReviewOnly"
+            }
+            let readyForFullProbe = nextAction == "readyForFullProbeShadowReview"
+            let needsRealTextBoxes = nextAction == "collectRealTextBoxesArtifact"
+            let needsRealBubble = nextAction == "collectRealBubbleMaskArtifact"
+            let needsRealSegment = nextAction == "collectRealSegmentMaskArtifact"
+            let manual = nextAction == "manualReviewOnly"
+
+            blockLedgers.append(
+                MangaKoharuNativeArtifactBundleLiteBlockLedger(
+                    blockIndex: block.index,
+                    bubbleID: block.bubbleID,
+                    blockPassed: block.blockPassed,
+                    failureCategory: block.failureCategory,
+                    finalTextUsedForTranslation: block.finalTextUsedForTranslation,
+                    selectedTextBoxLite: selectedTextBox,
+                    selectedBubbleInstanceLite: selectedBubble,
+                    selectedSegmentMaskLite: selectedSegment,
+                    ocrEvidence: [
+                        signal("finalOCRTextLength", String(block.finalTextUsedForTranslation.count), source: "blocks"),
+                        signal("shadowOutcome", shadow?.shadowOutcome ?? "nil", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"),
+                        signal("refinementOutcome", refinement?.refinementOutcome ?? "nil", source: "koharuNativeTextBoxDetectorLiteRefinementReport"),
+                        signal("closedLoopRoute", closedLoop?.closedLoopRoute ?? "nil", source: "koharuNativeTextBoxDetectorLiteClosedLoopReport")
+                    ],
+                    translationFailureRoute: closedLoop?.translationFailureRoute ?? (modelBlocked ? "modelFloorRoute" : "notModelFloor"),
+                    renderFitEvidence: [
+                        signal("fitVerdict", renderFit?.fitVerdict ?? "nil", source: "koharuRenderSpriteFitPlannerReport"),
+                        signal("renderStatus", renderLock?.renderStatus ?? "nil", source: "koharuRenderRegressionLockReport"),
+                        signal("spriteContainedByDistanceFieldSafeRect", renderFit?.spriteContainedByDistanceFieldSafeRect.map(String.init) ?? "nil", source: "koharuRenderSpriteFitPlannerReport")
+                    ],
+                    artifactConsistencyVerdict: consistencyVerdict,
+                    primaryBlockingArtifact: primaryBlockingArtifact,
+                    nextAction: nextAction,
+                    readyForFullProbeShadowReview: readyForFullProbe,
+                    needsRealTextBoxes: needsRealTextBoxes,
+                    needsRealBubbleMask: needsRealBubble,
+                    needsRealSegmentMask: needsRealSegment,
+                    modelFloorBlocked: modelBlocked,
+                    renderLocked: renderLocked,
+                    manualReviewRequired: manual,
+                    decisionSignals: [
+                        signal("artifactConsistencyVerdict", consistencyVerdict, source: "koharuNativeArtifactBundleLiteReport"),
+                        signal("primaryBlockingArtifact", primaryBlockingArtifact, source: "koharuNativeArtifactBundleLiteReport"),
+                        signal("nextAction", nextAction, source: "koharuNativeArtifactBundleLiteReport")
+                    ],
+                    evaluationSignals: [
+                        signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
+                        signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true),
+                        signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true)
+                    ],
+                    groundTruthUsedForDecision: false,
+                    wouldChangeMainFlow: false,
+                    diagnosticOnly: true
+                )
+            )
+        }
+
+        func affected(_ nextAction: String) -> [Int] {
+            uniqueSorted(blockLedgers.filter { $0.nextAction == nextAction }.map(\.blockIndex))
+        }
+        let readyForFullProbeReviewBlocks = uniqueSorted(blockLedgers.filter(\.readyForFullProbeShadowReview).map(\.blockIndex))
+        let needsRealTextBoxesBlocks = uniqueSorted(blockLedgers.filter(\.needsRealTextBoxes).map(\.blockIndex))
+        let needsRealBubbleMaskBlocks = uniqueSorted(blockLedgers.filter(\.needsRealBubbleMask).map(\.blockIndex))
+        let needsRealSegmentMaskBlocks = uniqueSorted(blockLedgers.filter(\.needsRealSegmentMask).map(\.blockIndex))
+        let modelFloorBlockedBlocks = uniqueSorted(blockLedgers.filter(\.modelFloorBlocked).map(\.blockIndex))
+        let renderLockedBlocks = uniqueSorted(blockLedgers.filter(\.renderLocked).map(\.blockIndex))
+        let manualReviewBlocks = uniqueSorted(blockLedgers.filter(\.manualReviewRequired).map(\.blockIndex))
+        let workItems = [
+            MangaKoharuNativeArtifactBundleLiteWorkItem(
+                workItemID: "WI-koharu-native-artifact-bundle-lite-full-probe-review",
+                title: "Full-probe review for promising native-lite bundles",
+                targetArtifact: "OcrText",
+                status: readyForFullProbeReviewBlocks.isEmpty ? "notRequired" : "openReportOnly",
+                priority: readyForFullProbeReviewBlocks.isEmpty ? "low" : "medium",
+                affectedBlocks: readyForFullProbeReviewBlocks,
+                nextAction: "readyForFullProbeShadowReview",
+                decisionSignals: [signal("readyForFullProbeReviewBlocks", readyForFullProbeReviewBlocks.map(String.init).joined(separator: ","), source: "koharuNativeArtifactBundleLiteReport")],
+                evaluationSignals: [],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            ),
+            MangaKoharuNativeArtifactBundleLiteWorkItem(
+                workItemID: "WI-koharu-native-artifact-bundle-lite-real-textboxes",
+                title: "Collect real TextBoxes for fallback bundles",
+                targetArtifact: "TextBoxes",
+                status: needsRealTextBoxesBlocks.isEmpty ? "notRequired" : "blockedByMissingRealArtifact",
+                priority: needsRealTextBoxesBlocks.isEmpty ? "low" : "high",
+                affectedBlocks: needsRealTextBoxesBlocks,
+                nextAction: "collectRealTextBoxesArtifact",
+                decisionSignals: [signal("needsRealTextBoxesBlocks", needsRealTextBoxesBlocks.map(String.init).joined(separator: ","), source: "koharuNativeArtifactBundleLiteReport")],
+                evaluationSignals: [],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            ),
+            MangaKoharuNativeArtifactBundleLiteWorkItem(
+                workItemID: "WI-koharu-native-artifact-bundle-lite-real-bubblemask",
+                title: "Collect real BubbleMask for bundle conflicts",
+                targetArtifact: "BubbleMask",
+                status: needsRealBubbleMaskBlocks.isEmpty ? "notRequired" : "blockedByMissingRealArtifact",
+                priority: needsRealBubbleMaskBlocks.isEmpty ? "low" : "high",
+                affectedBlocks: needsRealBubbleMaskBlocks,
+                nextAction: "collectRealBubbleMaskArtifact",
+                decisionSignals: [signal("needsRealBubbleMaskBlocks", needsRealBubbleMaskBlocks.map(String.init).joined(separator: ","), source: "koharuNativeArtifactBundleLiteReport")],
+                evaluationSignals: [],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            ),
+            MangaKoharuNativeArtifactBundleLiteWorkItem(
+                workItemID: "WI-koharu-native-artifact-bundle-lite-real-segmentmask",
+                title: "Collect real SegmentMask for bundle conflicts",
+                targetArtifact: "SegmentMask",
+                status: needsRealSegmentMaskBlocks.isEmpty ? "notRequired" : "blockedByMissingRealArtifact",
+                priority: needsRealSegmentMaskBlocks.isEmpty ? "low" : "high",
+                affectedBlocks: needsRealSegmentMaskBlocks,
+                nextAction: "collectRealSegmentMaskArtifact",
+                decisionSignals: [signal("needsRealSegmentMaskBlocks", needsRealSegmentMaskBlocks.map(String.init).joined(separator: ","), source: "koharuNativeArtifactBundleLiteReport")],
+                evaluationSignals: [],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            ),
+            MangaKoharuNativeArtifactBundleLiteWorkItem(
+                workItemID: "WI-koharu-native-artifact-bundle-lite-model-render-stop",
+                title: "Stop geometry tuning for model floor or render lock",
+                targetArtifact: "Translations/RenderedSprites",
+                status: modelFloorBlockedBlocks.isEmpty && renderLockedBlocks.isEmpty ? "notRequired" : "closedReportOnly",
+                priority: modelFloorBlockedBlocks.isEmpty && renderLockedBlocks.isEmpty ? "low" : "medium",
+                affectedBlocks: uniqueSorted(modelFloorBlockedBlocks + renderLockedBlocks),
+                nextAction: "modelFloorNoGeometryAction/renderLockNoOCRAction",
+                decisionSignals: [
+                    signal("modelFloorBlockedBlocks", modelFloorBlockedBlocks.map(String.init).joined(separator: ","), source: "translationModelFloorComparisonReport"),
+                    signal("renderLockedBlocks", renderLockedBlocks.map(String.init).joined(separator: ","), source: "koharuRenderRegressionLockReport")
+                ],
+                evaluationSignals: [],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            )
+        ].filter { !$0.affectedBlocks.isEmpty || $0.workItemID == "WI-koharu-native-artifact-bundle-lite-full-probe-review" }
+        let missingUpstream = [
+            detectorLiteReport?.enabled == true ? nil : "koharuNativeTextBoxDetectorLiteReport",
+            closedLoopReport?.enabled == true ? nil : "koharuNativeTextBoxDetectorLiteClosedLoopReport",
+            bubbleInstanceLiteReport?.enabled == true ? nil : "koharuNativeBubbleMaskInstanceLiteReport",
+            segmentRefinementLiteReport?.enabled == true ? nil : "koharuNativeSegmentMaskRefinementLiteReport"
+        ].compactMap { $0 }
+        let gates = [
+            gate("G-native-artifact-bundle-lite-input-reports", "Input reports", "TextBoxes/BubbleMask/SegmentMask", missingUpstream.isEmpty ? "passed" : "warning", "v1.39-v1.44 native-lite reports available", allBlockIndexes, "bundle-lite cannot aggregate native-lite structures or silently emits an empty shell", "restoreNativeLiteUpstreamReports", [signal("missingUpstreamReports", missingUpstream.joined(separator: ","), source: "koharuNativeArtifactBundleLiteReport")]),
+            gate("G-native-artifact-bundle-lite-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "bundle-lite mutates OCR, translation, overlay, renderer, blockPassed, failureCategory, safeLayoutRect, glyph masks, or currentBlockSource", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeArtifactBundleLiteReport")]),
+            gate("G-native-artifact-bundle-lite-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth selects bundle components, edges, verdict, gate, worklist, or nextAction", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeArtifactBundleLiteReport")]),
+            gate("G-native-artifact-bundle-lite-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "bundleLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack artifact bundle ledger rows", "restoreBundleLedgerCoverage", [signal("bundleLedgerCount", String(blockLedgers.count), source: "koharuNativeArtifactBundleLiteReport")]),
+            gate("G-native-artifact-bundle-lite-edge-coverage", "Consistency edge coverage", "artifactEdges", edges.count >= blocks.count ? "passed" : "warning", "consistencyEdgeCount>=totalBlocksDetected", allBlockIndexes, "bundle report lacks per-block cross-artifact consistency edges", "restoreConsistencyEdges", [signal("consistencyEdgeCount", String(edges.count), source: "koharuNativeArtifactBundleLiteReport")]),
+            gate("G-native-artifact-bundle-lite-proxy-boundary", "Proxy boundary", "proxyBoundary", "passed", "proxyNotRealKoharuTextBoxes/BubbleMask/SegmentMask=true", allBlockIndexes, "bundle-lite is promoted as real Koharu artifact bundle", "keepProxyBoundaryOrCollectRealArtifacts", [signal("proxyNotRealKoharuTextBoxes", "true", source: "koharuNativeArtifactBundleLiteReport"), signal("proxyNotRealKoharuBubbleMask", "true", source: "koharuNativeArtifactBundleLiteReport"), signal("proxyNotRealKoharuSegmentMask", "true", source: "koharuNativeArtifactBundleLiteReport")]),
+            gate("G-native-artifact-bundle-lite-worklist", "Worklist", "nextAction", workItems.isEmpty ? "warning" : "passed", "workItemCount>=1", allBlockIndexes, "bundle report repeats block rows without aggregated worklist", "restoreAggregatedWorkItems", [signal("workItemCount", String(workItems.count), source: "koharuNativeArtifactBundleLiteReport")]),
+            gate("G-native-artifact-bundle-lite-no-ocr-llm-png", "No OCR LLM PNG", "budget", "passed", "no OCR/LLM calls and no PNG output", [], "bundle-lite adds OCR, LLM, model, prompt, or PNG work", "removeHeavyWorkFromBundleLite", [signal("ocrCalls", "0", source: "koharuNativeArtifactBundleLiteReport"), signal("llmCalls", "0", source: "koharuNativeArtifactBundleLiteReport"), signal("pngOutputs", "0", source: "koharuNativeArtifactBundleLiteReport")]),
+            gate("G-native-artifact-bundle-lite-external-boundary", "External artifact boundary", "ExternalArtifacts", "passed", "externalArtifactsRequiredForThisReport=false", [], "bundle-lite creates, copies, edits, or requires active test/koharu_artifacts", "doNotCreateActiveArtifacts", [signal("externalArtifactsRequiredForThisReport", "false", source: "koharuNativeArtifactBundleLiteReport"), signal("readinessVerdict", externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing", source: "externalArtifactReadinessReport")])
+        ]
+        let verdict: String
+        if !needsRealTextBoxesBlocks.isEmpty {
+            verdict = "blockedByMissingTextBoxesLite"
+        } else if !needsRealBubbleMaskBlocks.isEmpty {
+            verdict = "blockedByMissingBubbleMaskLite"
+        } else if !needsRealSegmentMaskBlocks.isEmpty {
+            verdict = "blockedByMissingSegmentMaskLite"
+        } else if !modelFloorBlockedBlocks.isEmpty {
+            verdict = "modelFloorBlocked"
+        } else if !renderLockedBlocks.isEmpty {
+            verdict = "renderLockedNoPromotion"
+        } else if !manualReviewBlocks.isEmpty {
+            verdict = "manualReviewOnly"
+        } else if blockLedgers.contains(where: { $0.artifactConsistencyVerdict == "nativeArtifactBundleLiteInconsistent" || $0.artifactConsistencyVerdict == "blockedByCrossArtifactConflict" }) {
+            verdict = "nativeArtifactBundleLiteInconsistent"
+        } else {
+            verdict = "nativeArtifactBundleLiteReportOnly"
+        }
+
+        return MangaKoharuNativeArtifactBundleLiteReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referencePipeline: "Koharu",
+            referenceConcept: "ArtifactBundle.NativeLite.TextBoxesBubbleMaskSegmentMaskConsistency",
+            referenceWorkItemID: "WI-koharu-native-artifact-bundle-lite",
+            evaluatedBlockCount: blocks.count,
+            bundleLedgerCount: blockLedgers.count,
+            consistencyEdgeCount: edges.count,
+            workItemCount: workItems.count,
+            gateCount: gates.count,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            nativeBundleLite: true,
+            proxyNotRealKoharuTextBoxes: true,
+            proxyNotRealKoharuBubbleMask: true,
+            proxyNotRealKoharuSegmentMask: true,
+            externalArtifactsRequiredForThisReport: false,
+            bundleLiteVerdict: verdict,
+            componentReadinessBreakdown: countBy(blockLedgers.flatMap { [$0.selectedTextBoxLite.readinessStatus, $0.selectedBubbleInstanceLite.readinessStatus, $0.selectedSegmentMaskLite.readinessStatus] }),
+            artifactConsistencyBreakdown: countBy(blockLedgers.map(\.artifactConsistencyVerdict)),
+            primaryBlockingArtifactBreakdown: countBy(blockLedgers.map(\.primaryBlockingArtifact)),
+            ocrRouteBreakdown: countBy(blockLedgers.map { $0.ocrEvidence.first { $0.name == "closedLoopRoute" }?.value ?? "nil" }),
+            translationRouteBreakdown: countBy(blockLedgers.map(\.translationFailureRoute)),
+            renderRouteBreakdown: countBy(blockLedgers.map { $0.renderFitEvidence.first { $0.name == "fitVerdict" }?.value ?? "nil" }),
+            nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
+            readyForFullProbeReviewBlocks: readyForFullProbeReviewBlocks,
+            needsRealTextBoxesBlocks: needsRealTextBoxesBlocks,
+            needsRealBubbleMaskBlocks: needsRealBubbleMaskBlocks,
+            needsRealSegmentMaskBlocks: needsRealSegmentMaskBlocks,
+            modelFloorBlockedBlocks: modelFloorBlockedBlocks,
+            renderLockedBlocks: renderLockedBlocks,
+            manualReviewBlocks: manualReviewBlocks,
+            blockLedgers: blockLedgers,
+            consistencyEdges: edges,
+            workItems: workItems,
+            gateLedger: gates,
+            notes: [
+                "koharuNativeArtifactBundleLiteReport aggregates v1.39-v1.44 native-lite TextBoxes, shadow OCR, closed-loop routes, BubbleMask instance-lite, SegmentMask refinement-lite, render fit, render lock, translation floor, and external readiness into a report-only artifact bundle ledger.",
+                "Bundle components remain proxy/native-lite only and are never promoted as real Koharu TextBoxes, BubbleMask, SegmentMask, OcrText, RenderedSprites, or FinalRender artifacts.",
+                "Ground truth is stored only in evaluationSignals; component choice, consistency edges, verdict, workItems, gates, and nextAction use ground-truth-free signals.",
+                "This report does not add OCR, LLM, PNG output, prompt/model changes, active artifact changes, finalTextUsedForTranslation updates, blockPassed changes, failureCategory changes, safeLayoutRect writes, glyph mask writes, renderer changes, or currentBlockSource changes."
             ]
         )
     }
@@ -17553,7 +18149,8 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeTextBoxDetectorLiteRefinementReport: MangaKoharuNativeTextBoxDetectorLiteRefinementReport? = nil,
         koharuNativeTextBoxDetectorLiteClosedLoopReport: MangaKoharuNativeTextBoxDetectorLiteClosedLoopReport? = nil,
         koharuNativeBubbleMaskInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport? = nil,
-        koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil
+        koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
+        koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -17942,6 +18539,32 @@ final class TranslationSessionStore: ObservableObject {
         let nativeSegmentMaskRefinementLiteNextAction = nativeSegmentMaskRefinementLiteExecuted
             ? (koharuNativeSegmentMaskRefinementLiteReport?.nextActionBreakdown.keys.sorted().first ?? "keepSegmentMaskRefinementLiteReportOnly")
             : "generateKoharuNativeSegmentMaskRefinementLiteReport"
+        let nativeArtifactBundleLiteExecuted = koharuNativeArtifactBundleLiteReport?.enabled == true
+        let nativeArtifactBundleLiteVerdict = koharuNativeArtifactBundleLiteReport?.bundleLiteVerdict ?? "notExecuted"
+        let nativeArtifactBundleLiteBlocks = uniqueSorted(koharuNativeArtifactBundleLiteReport?.blockLedgers.map(\.blockIndex) ?? allBlockIndexes)
+        let nativeArtifactBundleLiteStatus: String
+        if !nativeArtifactBundleLiteExecuted {
+            nativeArtifactBundleLiteStatus = "openNativeArtifactBundleLite"
+        } else if nativeArtifactBundleLiteVerdict == "blockedByMissingTextBoxesLite"
+            || nativeArtifactBundleLiteVerdict == "blockedByMissingBubbleMaskLite"
+            || nativeArtifactBundleLiteVerdict == "blockedByMissingSegmentMaskLite"
+            || nativeArtifactBundleLiteVerdict == "needsRealKoharuArtifacts" {
+            nativeArtifactBundleLiteStatus = "needsRealArtifact"
+        } else if nativeArtifactBundleLiteVerdict == "modelFloorBlocked" {
+            nativeArtifactBundleLiteStatus = "modelFloorBlocked"
+        } else if nativeArtifactBundleLiteVerdict == "renderLockedNoPromotion" {
+            nativeArtifactBundleLiteStatus = "renderLockedReportOnly"
+        } else if nativeArtifactBundleLiteVerdict == "manualReviewOnly" {
+            nativeArtifactBundleLiteStatus = "manualReviewOnly"
+        } else {
+            nativeArtifactBundleLiteStatus = "closedReportOnly"
+        }
+        let nativeArtifactBundleLiteBlockers = nativeArtifactBundleLiteExecuted
+            ? (koharuNativeArtifactBundleLiteReport?.gateLedger.filter { $0.status == "warning" || $0.status == "blocked" }.map(\.failureMeans) ?? [])
+            : ["koharuNativeArtifactBundleLiteReport not generated before convergence refresh"]
+        let nativeArtifactBundleLiteNextAction = nativeArtifactBundleLiteExecuted
+            ? (koharuNativeArtifactBundleLiteReport?.nextActionBreakdown.keys.sorted().first ?? "keepNativeArtifactBundleLiteReportOnly")
+            : "generateKoharuNativeArtifactBundleLiteReport"
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -18301,6 +18924,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-koharu-native-textbox-detector-lite-closed-loop-router", title: "Koharu Native TextBox detector-lite closed-loop router", status: nativeDetectorLiteClosedLoopStatus, sourceReport: nativeDetectorLiteClosedLoopExecuted ? "koharuNativeTextBoxDetectorLiteClosedLoopReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "OcrText", "BubbleMask", "SegmentMask", "Translations", "RenderedSprites"], blocks: nativeDetectorLiteClosedLoopBlocks, version: nativeDetectorLiteClosedLoopExecuted ? "v1.42" : nil, blockers: nativeDetectorLiteClosedLoopBlockers, nextAction: nativeDetectorLiteClosedLoopNextAction, ciFast: true, full: true, external: false, decisions: [signal("closedLoopVerdict", nativeDetectorLiteClosedLoopVerdict, source: "koharuNativeTextBoxDetectorLiteClosedLoopReport"), signal("blockLedgerCount", koharuNativeTextBoxDetectorLiteClosedLoopReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteClosedLoopReport"), signal("proxyNotRealKoharuOCR", koharuNativeTextBoxDetectorLiteClosedLoopReport.map { String($0.proxyNotRealKoharuOCR) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteClosedLoopReport")]),
             workItem("WI-koharu-native-bubblemask-instance-lite", title: "Koharu Native BubbleMask instance-lite", status: nativeBubbleMaskInstanceLiteStatus, sourceReport: nativeBubbleMaskInstanceLiteExecuted ? "koharuNativeBubbleMaskInstanceLiteReport" : "koharuArtifactConvergenceReport", stages: ["SourceImage", "BubbleMask", "BubbleIndex", "RenderedSprites"], blocks: nativeBubbleMaskInstanceLiteBlocks, version: nativeBubbleMaskInstanceLiteExecuted ? "v1.43" : nil, blockers: nativeBubbleMaskInstanceLiteBlockers, nextAction: nativeBubbleMaskInstanceLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("instanceLiteVerdict", nativeBubbleMaskInstanceLiteVerdict, source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("blockLedgerCount", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("proxyNotRealKoharuBubbleMask", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.proxyNotRealKoharuBubbleMask) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
             workItem("WI-koharu-native-segmentmask-refinement-lite", title: "Koharu Native SegmentMask refinement-lite", status: nativeSegmentMaskRefinementLiteStatus, sourceReport: nativeSegmentMaskRefinementLiteExecuted ? "koharuNativeSegmentMaskRefinementLiteReport" : "koharuArtifactConvergenceReport", stages: ["SourceImage", "TextBoxes", "SegmentMask", "BubbleMask", "RenderedSprites"], blocks: nativeSegmentMaskRefinementLiteBlocks, version: nativeSegmentMaskRefinementLiteExecuted ? "v1.44" : nil, blockers: nativeSegmentMaskRefinementLiteBlockers, nextAction: nativeSegmentMaskRefinementLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("refinementLiteVerdict", nativeSegmentMaskRefinementLiteVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("blockLedgerCount", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("proxyNotRealKoharuSegmentMask", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+            workItem("WI-koharu-native-artifact-bundle-lite", title: "Koharu Native Artifact bundle-lite consistency closure", status: nativeArtifactBundleLiteStatus, sourceReport: nativeArtifactBundleLiteExecuted ? "koharuNativeArtifactBundleLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "BubbleMask", "SegmentMask", "OcrText", "Translations", "RenderedSprites", "FinalRender"], blocks: nativeArtifactBundleLiteBlocks, version: nativeArtifactBundleLiteExecuted ? "v1.45" : nil, blockers: nativeArtifactBundleLiteBlockers, nextAction: nativeArtifactBundleLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("bundleLiteVerdict", nativeArtifactBundleLiteVerdict, source: "koharuNativeArtifactBundleLiteReport"), signal("bundleLedgerCount", koharuNativeArtifactBundleLiteReport.map { String($0.bundleLedgerCount) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("consistencyEdgeCount", koharuNativeArtifactBundleLiteReport.map { String($0.consistencyEdgeCount) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("nativeBundleLite", koharuNativeArtifactBundleLiteReport.map { String($0.nativeBundleLite) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport")]),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
@@ -18324,7 +18948,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeTextBoxDetectorLiteRefinementReport == nil ? "koharuNativeTextBoxDetectorLiteRefinementReport" : nil,
             koharuNativeTextBoxDetectorLiteClosedLoopReport == nil ? "koharuNativeTextBoxDetectorLiteClosedLoopReport" : nil,
             koharuNativeBubbleMaskInstanceLiteReport == nil ? "koharuNativeBubbleMaskInstanceLiteReport" : nil,
-            koharuNativeSegmentMaskRefinementLiteReport == nil ? "koharuNativeSegmentMaskRefinementLiteReport" : nil
+            koharuNativeSegmentMaskRefinementLiteReport == nil ? "koharuNativeSegmentMaskRefinementLiteReport" : nil,
+            koharuNativeArtifactBundleLiteReport == nil ? "koharuNativeArtifactBundleLiteReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -18374,6 +18999,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-native-textbox-detector-lite-closed-loop-router-executed", name: "Koharu Native TextBox detector-lite closed-loop router executed", scope: "TextBoxes/OcrText/Structure", status: nativeDetectorLiteClosedLoopExecuted ? (nativeDetectorLiteClosedLoopStatus == "blockedByMissingUpstreamReports" ? "blocked" : "passed") : "open", threshold: "koharuNativeTextBoxDetectorLiteClosedLoopReport.enabled=true without main-flow mutation or ground truth decision", affected: nativeDetectorLiteClosedLoopBlocks, failureMeans: "Native detector-lite closed-loop router is missing, mutates main OCR/translation/render state, or routes using ground truth", action: nativeDetectorLiteClosedLoopNextAction, decisions: [signal("closedLoopVerdict", nativeDetectorLiteClosedLoopVerdict, source: "koharuNativeTextBoxDetectorLiteClosedLoopReport"), signal("groundTruthUsedForDecision", koharuNativeTextBoxDetectorLiteClosedLoopReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteClosedLoopReport"), signal("wouldChangeMainFlow", koharuNativeTextBoxDetectorLiteClosedLoopReport.map { String($0.wouldChangeMainFlow) } ?? "nil", source: "koharuNativeTextBoxDetectorLiteClosedLoopReport")]),
             gate("G-koharu-native-bubblemask-instance-lite-executed", name: "Koharu Native BubbleMask instance-lite executed", scope: "BubbleMask", status: nativeBubbleMaskInstanceLiteExecuted ? (nativeBubbleMaskInstanceLiteStatus == "closedReportOnly" || nativeBubbleMaskInstanceLiteStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeBubbleMaskInstanceLiteReport.enabled=true with source pixels and no main-flow mutation", affected: nativeBubbleMaskInstanceLiteBlocks, failureMeans: "Native BubbleMask instance-lite report is missing, mutates OCR/translation/render/layout state, routes using ground truth, or is promoted as real Koharu BubbleMask", action: nativeBubbleMaskInstanceLiteNextAction, decisions: [signal("instanceLiteVerdict", nativeBubbleMaskInstanceLiteVerdict, source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("groundTruthUsedForDecision", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("proxyNotRealKoharuBubbleMask", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.proxyNotRealKoharuBubbleMask) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
             gate("G-koharu-native-segmentmask-refinement-lite-executed", name: "Koharu Native SegmentMask refinement-lite executed", scope: "SegmentMask", status: nativeSegmentMaskRefinementLiteExecuted ? (nativeSegmentMaskRefinementLiteStatus == "closedReportOnly" || nativeSegmentMaskRefinementLiteStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeSegmentMaskRefinementLiteReport.enabled=true with TextBox-constrained source pixels and no main-flow mutation", affected: nativeSegmentMaskRefinementLiteBlocks, failureMeans: "Native SegmentMask refinement-lite report is missing, mutates OCR/translation/render/glyph fill/layout state, routes using ground truth, or is promoted as real Koharu SegmentMask", action: nativeSegmentMaskRefinementLiteNextAction, decisions: [signal("refinementLiteVerdict", nativeSegmentMaskRefinementLiteVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("groundTruthUsedForDecision", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("proxyNotRealKoharuSegmentMask", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+            gate("G-koharu-native-artifact-bundle-lite-executed", name: "Koharu Native Artifact bundle-lite executed", scope: "TextBoxes/BubbleMask/SegmentMask/OcrText/Render", status: nativeArtifactBundleLiteExecuted ? (nativeArtifactBundleLiteStatus == "closedReportOnly" || nativeArtifactBundleLiteStatus == "modelFloorBlocked" || nativeArtifactBundleLiteStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeArtifactBundleLiteReport.enabled=true with bundleLedgerCount==totalBlocksDetected and no main-flow mutation", affected: nativeArtifactBundleLiteBlocks, failureMeans: "Native Artifact bundle-lite report is missing, emits empty bundle ledgers, mutates main OCR/translation/render state, routes using ground truth, or promotes proxy artifacts as real Koharu outputs", action: nativeArtifactBundleLiteNextAction, decisions: [signal("bundleLiteVerdict", nativeArtifactBundleLiteVerdict, source: "koharuNativeArtifactBundleLiteReport"), signal("groundTruthUsedForDecision", koharuNativeArtifactBundleLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("wouldChangeMainFlow", koharuNativeArtifactBundleLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("nativeBundleLite", koharuNativeArtifactBundleLiteReport.map { String($0.nativeBundleLite) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport")]),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
             gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
@@ -18405,12 +19031,13 @@ final class TranslationSessionStore: ObservableObject {
             "koharuNativeTextBoxDetectorLiteClosedLoopReport",
             "koharuNativeBubbleMaskInstanceLiteReport",
             "koharuNativeSegmentMaskRefinementLiteReport",
+            "koharuNativeArtifactBundleLiteReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, and v1.44 native SegmentMask refinement-lite report-only ledgers into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, v1.44 native SegmentMask refinement-lite, and v1.45 native Artifact bundle-lite report-only ledgers into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
