@@ -2106,6 +2106,7 @@ final class TranslationSessionStore: ObservableObject {
                     bubbleSplitCandidateReport: bubbleSplitCandidateReport,
                     renderDiagnosticPNGs: runOptions.renderDiagnosticPNGs
                 )
+                self.writeMangaProbeProgress(stage: "render-output-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 outputFiles.debugBoxesImage = renderedOutputFiles.debugBoxesImage
                 outputFiles.overlayImage = renderedOutputFiles.overlayImage
                 outputFiles.ocrTextOverlayImage = runOptions.renderDiagnosticPNGs ? renderedOutputFiles.ocrTextOverlayImage : nil
