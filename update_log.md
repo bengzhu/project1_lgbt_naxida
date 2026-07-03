@@ -115,6 +115,43 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.42：Native TextBox Detector-Lite 闭环裁决与结构路由
+日期：2026-07-03
+依据：`md/prompt/v1（漫画探针）/v1.42（NativeTextBoxDetectorLite闭环裁决与结构路由）.md`。本轮修改 Swift 探针报告模型、detector-lite 闭环裁决与结构路由账本、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuNativeTextBoxDetectorLiteClosedLoopReport`，在 v1.41 refinement 之后、最终 convergence 刷新前生成。
+- 报告消费 v1.39 detector-lite、v1.40 shadow OCR、v1.41 refinement、final blocks、BubbleMask / SegmentMask proxy、翻译失败分类、Translation Model Floor、Render Regression Lock 和 external artifact readiness，产出 candidate family ledger、逐块 closed-loop route、stoplist、full-probe review、真实 artifact 需求、模型地板和 render lock 路由。
+- route / nextAction / gate / candidate family verdict 只使用 ground-truth-free decision signals；ground truth 只写入 evaluationSignals。
+- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuNativeTextBoxDetectorLiteClosedLoopReport`；convergence 新增 `WI-koharu-native-textbox-detector-lite-closed-loop-router` 和 `G-koharu-native-textbox-detector-lite-closed-loop-router-executed`。
+- `1_ocr_probe_text.txt` 新增 detector-lite closed-loop report summary、candidate family rollup 和逐块 `nativeTextBoxDetectorLiteClosedLoopBlockLedger`。
+- 本轮不新增 OCR / LLM / PNG，不更换模型，不接入外部 artifact，不改变主 OCR、翻译输入、覆盖图、`finalTextUsedForTranslation`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+- `md/prompt/v1（漫画探针）/v1.42（NativeTextBoxDetectorLite闭环裁决与结构路由）.md`
+
+验证计划：
+
+- 本轮 Agent B 本地运行 `git diff --check`、JSON 解析、Koharu validator smoke，并用轻量 Swift 解析检查新增 Swift 语法。
+- 未跑本机 build / 探针，按规则交给云端验证。
+- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuNativeTextBoxDetectorLiteClosedLoopReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`candidateFamilyCount == totalBlocksDetected`、`gateCount >= 8`，核心 route / verdict / bottleneck / nextAction breakdown 非空或上游缺失时明确 `blockedByMissingUpstreamReports`，convergence 包含 v1.42 reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、candidate family 和逐块 block ledger。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.42 新字段；以 PR 后云端结果包为准。
+- v1.42 仍是 detector-lite report-only 路由，不代表真实 Koharu TextBoxes / BubbleMask / SegmentMask 已接入，也不代表模型质量改善。
+- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+
 ### v1.41：Native TextBox Detector-Lite 闭环二次候选与 Refinement Shadow OCR
 日期：2026-07-02
 依据：`md/prompt/v1（漫画探针）/v1.41（NativeTextBoxDetectorLite闭环二次候选与RefinementShadowOCR）.md`。本轮修改 Swift 探针报告模型、detector-lite refinement shadow OCR 链路、Koharu convergence 联动、TXT 快照和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
