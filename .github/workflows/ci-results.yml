@@ -865,7 +865,7 @@ jobs:
           tree.write(os.path.join(os.environ["RESULT_ROOT"], "junit.xml"), encoding="utf-8", xml_declaration=True)
           PY
 
-      - name: Write manifest and failure summary
+      - name: Write manifest
         if: always()
         shell: bash
         run: |
@@ -1152,6 +1152,12 @@ jobs:
               json.dump(manifest, f, ensure_ascii=False, indent=2)
               f.write("\n")
           PY
+
+      - name: Write failure summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
           {
             echo "# AITRANS CI Failure Summary"
             echo
