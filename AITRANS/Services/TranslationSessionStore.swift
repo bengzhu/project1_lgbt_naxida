@@ -1606,6 +1606,7 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?
                 var koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport?
                 var koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport?
+                var koharuArtifactIdentityReconciliationReport: MangaKoharuArtifactIdentityReconciliationReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -2403,6 +2404,13 @@ final class TranslationSessionStore: ObservableObject {
                     externalArtifactReadinessReport: externalArtifactReadinessReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-native-artifact-contract-dry-run-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-artifact-identity-reconciliation-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                koharuArtifactIdentityReconciliationReport = Self.makeKoharuArtifactIdentityReconciliationReport(
+                    blocks: probeBlocks,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport,
+                    koharuNativeArtifactContractDryRunReport: koharuNativeArtifactContractDryRunReport
+                )
+                self.writeMangaProbeProgress(stage: "koharu-artifact-identity-reconciliation-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
                     blocks: probeBlocks,
@@ -2434,7 +2442,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
                     koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                     koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
-                    koharuNativeArtifactContractDryRunReport: koharuNativeArtifactContractDryRunReport
+                    koharuNativeArtifactContractDryRunReport: koharuNativeArtifactContractDryRunReport,
+                    koharuArtifactIdentityReconciliationReport: koharuArtifactIdentityReconciliationReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
@@ -2480,6 +2489,7 @@ final class TranslationSessionStore: ObservableObject {
                         koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                         koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
                         koharuNativeArtifactContractDryRunReport: koharuNativeArtifactContractDryRunReport,
+                        koharuArtifactIdentityReconciliationReport: koharuArtifactIdentityReconciliationReport,
                         translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                         koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                         bubbleMaskReport: bubbleMaskReport,
@@ -2542,6 +2552,7 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                     koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
                     koharuNativeArtifactContractDryRunReport: koharuNativeArtifactContractDryRunReport,
+                    koharuArtifactIdentityReconciliationReport: koharuArtifactIdentityReconciliationReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
@@ -8150,6 +8161,7 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
         koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport? = nil,
         koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport? = nil,
+        koharuArtifactIdentityReconciliationReport: MangaKoharuArtifactIdentityReconciliationReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
@@ -8191,38 +8203,6 @@ final class TranslationSessionStore: ObservableObject {
         let filesPresent = Self.fileIsNonEmpty(path: outputFiles.debugBoxesImage)
             && Self.fileIsNonEmpty(path: outputFiles.overlayImage)
         let diagnostics = makeMangaOverlayProbeDiagnostics(blocks: blocks)
-        let convergenceReport = koharuArtifactConvergenceReport ?? Self.makeKoharuArtifactConvergenceReport(
-            blocks: blocks,
-            diagnostics: diagnostics,
-            koharuArtifactDAGReport: koharuArtifactDAGReport,
-            koharuStageGapReplicationReport: koharuStageGapReplicationReport,
-            koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
-            nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
-            bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
-            segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
-            externalArtifactReadinessReport: externalArtifactReadinessReport,
-            externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
-            cleanTextDiagnostic: cleanTextDiagnostic,
-            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
-            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
-            koharuPipelineResolverReport: koharuPipelineResolverReport,
-            koharuWorkOrderRouterReport: nil,
-            koharuExternalArtifactRequestPacketReport: nil,
-            koharuNativeAlgorithmReplayMatrixReport: nil,
-            koharuBubbleIndexShadowLedgerReport: nil,
-            koharuDistanceFieldSafeAreaReport: nil,
-            koharuBubbleAdjacencySeamReport: nil,
-            koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
-            koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
-            koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
-            koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
-            koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
-            koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
-            koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
-            koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
-            koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
-            koharuNativeArtifactContractDryRunReport: koharuNativeArtifactContractDryRunReport
-        )
         let artifactBundleLiteReport = koharuNativeArtifactBundleLiteReport ?? Self.makeKoharuNativeArtifactBundleLiteReport(
             blocks: blocks,
             detectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
@@ -8254,6 +8234,44 @@ final class TranslationSessionStore: ObservableObject {
             blocks: blocks,
             promotionGateLiteReport: promotionGateLiteReport,
             externalArtifactReadinessReport: externalArtifactReadinessReport
+        )
+        let artifactIdentityReconciliationReport = koharuArtifactIdentityReconciliationReport ?? Self.makeKoharuArtifactIdentityReconciliationReport(
+            blocks: blocks,
+            externalArtifactReadinessReport: externalArtifactReadinessReport,
+            koharuNativeArtifactContractDryRunReport: artifactContractDryRunReport
+        )
+        let convergenceReport = koharuArtifactConvergenceReport ?? Self.makeKoharuArtifactConvergenceReport(
+            blocks: blocks,
+            diagnostics: diagnostics,
+            koharuArtifactDAGReport: koharuArtifactDAGReport,
+            koharuStageGapReplicationReport: koharuStageGapReplicationReport,
+            koharuNativeReplicationScoreboardReport: koharuNativeReplicationScoreboardReport,
+            nativeTextBoxProxyLedgerReport: nativeTextBoxProxyLedgerReport,
+            bubbleMaskAssignmentSplitScoreboardReport: bubbleMaskAssignmentSplitScoreboardReport,
+            segmentMaskProxyCoverageScoreboardReport: segmentMaskProxyCoverageScoreboardReport,
+            externalArtifactReadinessReport: externalArtifactReadinessReport,
+            externalTextBoxShadowOCRReport: externalTextBoxShadowOCRReport,
+            cleanTextDiagnostic: cleanTextDiagnostic,
+            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
+            koharuPipelineResolverReport: koharuPipelineResolverReport,
+            koharuWorkOrderRouterReport: nil,
+            koharuExternalArtifactRequestPacketReport: nil,
+            koharuNativeAlgorithmReplayMatrixReport: nil,
+            koharuBubbleIndexShadowLedgerReport: nil,
+            koharuDistanceFieldSafeAreaReport: nil,
+            koharuBubbleAdjacencySeamReport: nil,
+            koharuRenderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
+            koharuNativeTextBoxDetectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
+            koharuNativeTextBoxDetectorLiteShadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+            koharuNativeTextBoxDetectorLiteRefinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
+            koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
+            koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+            koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+            koharuNativeArtifactBundleLiteReport: artifactBundleLiteReport,
+            koharuNativePromotionGateLiteReport: promotionGateLiteReport,
+            koharuNativeArtifactContractDryRunReport: artifactContractDryRunReport,
+            koharuArtifactIdentityReconciliationReport: artifactIdentityReconciliationReport
         )
         let resolverReport = koharuPipelineResolverReport ?? Self.makeKoharuPipelineResolverReport(
             blocks: blocks,
@@ -8353,7 +8371,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
             koharuNativeArtifactBundleLiteReport: artifactBundleLiteReport,
             koharuNativePromotionGateLiteReport: promotionGateLiteReport,
-            koharuNativeArtifactContractDryRunReport: artifactContractDryRunReport
+            koharuNativeArtifactContractDryRunReport: artifactContractDryRunReport,
+            koharuArtifactIdentityReconciliationReport: artifactIdentityReconciliationReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -8415,6 +8434,7 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeArtifactBundleLiteReport: artifactBundleLiteReport,
             koharuNativePromotionGateLiteReport: promotionGateLiteReport,
             koharuNativeArtifactContractDryRunReport: artifactContractDryRunReport,
+            koharuArtifactIdentityReconciliationReport: artifactIdentityReconciliationReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
@@ -19804,6 +19824,266 @@ final class TranslationSessionStore: ObservableObject {
         )
     }
 
+    private static func makeKoharuArtifactIdentityReconciliationReport(
+        blocks: [MangaOverlayProbeBlock],
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
+        koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport?
+    ) -> MangaKoharuArtifactIdentityReconciliationReport {
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaKoharuArtifactIdentityReconciliationSignal {
+            MangaKoharuArtifactIdentityReconciliationSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+
+        func gate(
+            _ id: String,
+            _ name: String,
+            _ status: String,
+            _ scope: String,
+            _ threshold: String,
+            _ affected: [Int],
+            _ failureMeans: String,
+            _ action: String,
+            _ decisions: [MangaKoharuArtifactIdentityReconciliationSignal]
+        ) -> MangaKoharuArtifactIdentityReconciliationGate {
+            MangaKoharuArtifactIdentityReconciliationGate(
+                gateID: id,
+                name: name,
+                status: status,
+                scope: scope,
+                threshold: threshold,
+                affectedBlocks: Array(Set(affected)).sorted(),
+                failureMeans: failureMeans,
+                recommendedAction: action,
+                decisionSignals: decisions
+            )
+        }
+
+        let receipt = externalArtifactReadinessReport?.artifactIdentityReceipt
+        var contractFilesByKind: [String: MangaKoharuNativeArtifactContractDryRunFile] = [:]
+        for file in koharuNativeArtifactContractDryRunReport?.requiredFiles ?? [] {
+            let key = file.artifactKind.lowercased()
+            if contractFilesByKind[key] == nil {
+                contractFilesByKind[key] = file
+            }
+        }
+        var receiptFilesByKind: [String: MangaOverlayExternalArtifactFileIdentityReceipt] = [:]
+        for file in receipt?.files ?? [] {
+            let key = file.artifactKind.lowercased()
+            if receiptFilesByKind[key] == nil {
+                receiptFilesByKind[key] = file
+            }
+        }
+
+        struct FileSpec {
+            let kind: String
+            let receiptKey: String
+            let ciSizePath: String
+            let ciSHAPath: String
+        }
+
+        let fileSpecs = [
+            FileSpec(
+                kind: "SourceImage",
+                receiptKey: "sourceimage",
+                ciSizePath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.sourceImage.sizeBytes",
+                ciSHAPath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.sourceImage.sha256"
+            ),
+            FileSpec(
+                kind: "manifest",
+                receiptKey: "manifest",
+                ciSizePath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.manifest.sizeBytes",
+                ciSHAPath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.manifest.sha256"
+            ),
+            FileSpec(
+                kind: "TextBoxes",
+                receiptKey: "textboxes",
+                ciSizePath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.TextBoxes.sizeBytes",
+                ciSHAPath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.TextBoxes.sha256"
+            ),
+            FileSpec(
+                kind: "BubbleMask",
+                receiptKey: "bubblemask",
+                ciSizePath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.BubbleMask.sizeBytes",
+                ciSHAPath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.BubbleMask.sha256"
+            ),
+            FileSpec(
+                kind: "SegmentMask",
+                receiptKey: "segmentmask",
+                ciSizePath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.SegmentMask.sizeBytes",
+                ciSHAPath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.SegmentMask.sha256"
+            )
+        ]
+
+        let rows = fileSpecs.map { spec -> MangaKoharuArtifactIdentityReconciliationFileRow in
+            let fileReceipt = receiptFilesByKind[spec.receiptKey]
+            let contractFile = contractFilesByKind[spec.receiptKey]
+            let appIdentityStatus: String
+            if receipt == nil {
+                appIdentityStatus = "artifactIdentityReceiptMissing"
+            } else if fileReceipt == nil {
+                appIdentityStatus = "appReceiptFileRowMissing"
+            } else if fileReceipt?.exists != true {
+                appIdentityStatus = "appReceiptFileMissing"
+            } else if fileReceipt?.sha256?.isEmpty != false {
+                appIdentityStatus = "appReceiptHashMissing"
+            } else if fileReceipt?.sizeBytes == nil {
+                appIdentityStatus = "appReceiptSizeMissing"
+            } else {
+                appIdentityStatus = "appReceiptReady"
+            }
+            let comparisonStatus: String
+            switch appIdentityStatus {
+            case "appReceiptReady":
+                comparisonStatus = "appReceiptReady"
+            case "artifactIdentityReceiptMissing", "appReceiptFileRowMissing", "appReceiptFileMissing":
+                comparisonStatus = "appReceiptMissing"
+            case "appReceiptHashMissing":
+                comparisonStatus = "appHashMissing"
+            case "appReceiptSizeMissing":
+                comparisonStatus = "appSizeMissing"
+            default:
+                comparisonStatus = "awaitingCIManifest"
+            }
+            let nextAction = comparisonStatus == "appReceiptReady"
+                ? "compareWithCIManifestIdentitySummary"
+                : "runProbeWithActiveKoharuArtifactsAndAppSideIdentityReceipt"
+            return MangaKoharuArtifactIdentityReconciliationFileRow(
+                artifactKind: spec.kind,
+                appReceiptPath: fileReceipt?.path,
+                appRequired: fileReceipt?.required ?? true,
+                appExists: fileReceipt?.exists ?? false,
+                appSizeBytes: fileReceipt?.sizeBytes,
+                appSHA256: fileReceipt?.sha256,
+                appIdentityStatus: appIdentityStatus,
+                contractDryRunStatus: contractFile?.identityStatus,
+                ciManifestFieldPathForSize: spec.ciSizePath,
+                ciManifestFieldPathForSHA256: spec.ciSHAPath,
+                comparisonStatus: comparisonStatus,
+                nextAction: nextAction,
+                decisionSignals: [
+                    signal("artifactKind", spec.kind, source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("appExists", String(fileReceipt?.exists == true), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("appSizeBytesPresent", String(fileReceipt?.sizeBytes != nil), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("appSHA256Present", String(fileReceipt?.sha256?.isEmpty == false), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("ciManifestFieldPathForSHA256", spec.ciSHAPath, source: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary")
+                ]
+            )
+        }
+
+        let allBlockIndexes = blocks.map(\.index)
+        let allRowsReady = rows.allSatisfy { $0.comparisonStatus == "appReceiptReady" }
+        let appReceiptVerdict = receipt?.identityVerdict ?? "notRecorded"
+        let contractVerdict = koharuNativeArtifactContractDryRunReport?.contractDryRunVerdict ?? "notExecuted"
+        let readyForCIManifestComparison = appReceiptVerdict == "activeArtifactIdentityRecorded"
+            && allRowsReady
+            && koharuNativeArtifactContractDryRunReport?.appSideArtifactIdentityFilesPresent == true
+            && koharuNativeArtifactContractDryRunReport?.appSideArtifactIdentityHashesPresent == true
+        let identityReconciliationVerdict: String
+        if readyForCIManifestComparison {
+            identityReconciliationVerdict = "readyForCIManifestComparison"
+        } else if receipt == nil {
+            identityReconciliationVerdict = "appReceiptMissing"
+        } else if !allRowsReady {
+            identityReconciliationVerdict = "appReceiptIncomplete"
+        } else if appReceiptVerdict != "activeArtifactIdentityRecorded" {
+            identityReconciliationVerdict = "appReceiptNotActiveArtifactIdentityRecorded"
+        } else {
+            identityReconciliationVerdict = "awaitingCIManifestComparison"
+        }
+        let gates = [
+            gate(
+                "G-koharu-artifact-identity-reconciliation-report-only",
+                "Report only",
+                "passed",
+                "policy",
+                "does not read CI manifest, mutate active artifacts, or alter OCR/translation/render flow",
+                [],
+                "identity reconciliation changes production candidate selection or writes active artifacts",
+                "keepIdentityReconciliationReportOnly",
+                [signal("wouldChangeMainFlow", "false", source: "koharuArtifactIdentityReconciliationReport")]
+            ),
+            gate(
+                "G-koharu-artifact-identity-reconciliation-app-receipt",
+                "App receipt ready",
+                readyForCIManifestComparison ? "passed" : "blocked",
+                "ExternalArtifacts",
+                "App runtime receipt has SourceImage plus four required artifact size/SHA256 rows",
+                allBlockIndexes,
+                "Agent C cannot prove App consumed the same files validated by CI",
+                "runProbeWithActiveKoharuArtifactsAndAppSideIdentityReceipt",
+                [
+                    signal("appReceiptVerdict", appReceiptVerdict, source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("allRowsReady", String(allRowsReady), source: "koharuArtifactIdentityReconciliationReport"),
+                    signal("contractDryRunVerdict", contractVerdict, source: "koharuNativeArtifactContractDryRunReport")
+                ]
+            ),
+            gate(
+                "G-koharu-artifact-identity-reconciliation-ready",
+                "Ready for CI manifest comparison",
+                readyForCIManifestComparison ? "passed" : "blocked",
+                "CIReview",
+                "fileRows expose ci-artifact-manifest.koharuArtifactValidationIdentitySummary field paths for size and SHA256 comparison",
+                allBlockIndexes,
+                "CI manifest identity and App runtime receipt cannot be compared mechanically",
+                readyForCIManifestComparison ? "compareAppReceiptWithCIManifestIdentitySummary" : "restoreAppSideArtifactIdentityReceipt",
+                [
+                    signal("readyForCIManifestComparison", String(readyForCIManifestComparison), source: "koharuArtifactIdentityReconciliationReport"),
+                    signal("manualCIComparisonRequired", "true", source: "koharuArtifactIdentityReconciliationReport")
+                ]
+            )
+        ]
+        return MangaKoharuArtifactIdentityReconciliationReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referencePipeline: "Koharu",
+            referenceConcept: "ArtifactIdentityReconciliation.CIManifestAppReceipt",
+            referenceWorkItemID: "WI-koharu-artifact-identity-reconciliation",
+            evaluatedBlockCount: blocks.count,
+            fileRowCount: rows.count,
+            gateCount: gates.count,
+            sourceImage: receipt?.sourceImage ?? "test/1.png",
+            activeInputDirectory: "test/koharu_artifacts",
+            appReceiptVerdict: appReceiptVerdict,
+            contractDryRunVerdict: contractVerdict,
+            identityReconciliationVerdict: identityReconciliationVerdict,
+            readyForCIManifestComparison: readyForCIManifestComparison,
+            manualCIComparisonRequired: true,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            dryRunOnly: true,
+            activeExportAllowed: false,
+            externalArtifactsRequiredForThisReport: false,
+            appReceiptStatusBreakdown: countBy(rows.map(\.appIdentityStatus)),
+            comparisonStatusBreakdown: countBy(rows.map(\.comparisonStatus)),
+            nextActionBreakdown: countBy(rows.map(\.nextAction)),
+            readyFileKinds: rows.filter { $0.comparisonStatus == "appReceiptReady" }.map(\.artifactKind),
+            missingFileKinds: rows.filter { $0.comparisonStatus == "appReceiptMissing" }.map(\.artifactKind),
+            hashMissingFileKinds: rows.filter { $0.comparisonStatus == "appHashMissing" || $0.comparisonStatus == "appSizeMissing" }.map(\.artifactKind),
+            fileRows: rows,
+            gateLedger: gates,
+            notes: [
+                "koharuArtifactIdentityReconciliationReport converts the App-side runtime artifactIdentityReceipt into a stable Agent C / CI comparison ledger.",
+                "The report intentionally does not read ci-artifact-manifest.json; GitHub Actions or Agent C compare the listed field paths against App receipt size/SHA256 values after export.",
+                "SourceImage plus manifest, TextBoxes, BubbleMask, and SegmentMask are all required before readyForCIManifestComparison can become true.",
+                "This is a P0 real-artifact handoff evidence gate, not a detector, OCR, translation, renderer, or active artifact promotion.",
+                "No OCR, LLM, PNG, prompt/model, renderer, safeLayoutRect, glyphMaskFillRects, finalTextUsedForTranslation, blockPassed, failureCategory, currentBlockSource, or active test/koharu_artifacts behavior changes are made."
+            ]
+        )
+    }
+
     private static func makeKoharuArtifactConvergenceReport(
         blocks: [MangaOverlayProbeBlock],
         diagnostics: MangaOverlayProbeDiagnostics,
@@ -19834,7 +20114,8 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
         koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
         koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport? = nil,
-        koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport? = nil
+        koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport? = nil,
+        koharuArtifactIdentityReconciliationReport: MangaKoharuArtifactIdentityReconciliationReport? = nil
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -20320,6 +20601,49 @@ final class TranslationSessionStore: ObservableObject {
         } else {
             nativeArtifactContractDryRunNextAction = "collectRealKoharuArtifactFourPack"
         }
+        let artifactIdentityReconciliationExecuted = koharuArtifactIdentityReconciliationReport?.enabled == true
+        let artifactIdentityReconciliationVerdict = koharuArtifactIdentityReconciliationReport?.identityReconciliationVerdict ?? "notExecuted"
+        let artifactIdentityReconciliationReady = artifactIdentityReconciliationExecuted
+            && koharuArtifactIdentityReconciliationReport?.readyForCIManifestComparison == true
+            && koharuArtifactIdentityReconciliationReport?.dryRunOnly == true
+            && koharuArtifactIdentityReconciliationReport?.activeExportAllowed == false
+        let artifactIdentityReconciliationBlocks = allBlockIndexes
+        let artifactIdentityReconciliationStatus: String
+        if !artifactIdentityReconciliationExecuted {
+            artifactIdentityReconciliationStatus = "openIdentityReconciliation"
+        } else if koharuArtifactIdentityReconciliationReport?.dryRunOnly != true
+            || koharuArtifactIdentityReconciliationReport?.activeExportAllowed == true {
+            artifactIdentityReconciliationStatus = "blockedByUnsafeActiveExport"
+        } else if artifactIdentityReconciliationReady {
+            artifactIdentityReconciliationStatus = "readyForCIManifestComparison"
+        } else if artifactIdentityReconciliationVerdict == "appReceiptMissing"
+            || artifactIdentityReconciliationVerdict == "appReceiptIncomplete"
+            || artifactIdentityReconciliationVerdict == "appReceiptNotActiveArtifactIdentityRecorded" {
+            artifactIdentityReconciliationStatus = "blockedByAppReceipt"
+        } else {
+            artifactIdentityReconciliationStatus = "manualCIComparisonRequired"
+        }
+        let artifactIdentityReconciliationBlockers: [String]
+        if artifactIdentityReconciliationExecuted {
+            let gateBlockers = koharuArtifactIdentityReconciliationReport?.gateLedger
+                .filter { $0.status == "warning" || $0.status == "blocked" }
+                .map(\.failureMeans) ?? []
+            let missingKinds = koharuArtifactIdentityReconciliationReport?.missingFileKinds
+                .map { "missingAppReceipt:\($0)" } ?? []
+            let hashMissingKinds = koharuArtifactIdentityReconciliationReport?.hashMissingFileKinds
+                .map { "missingAppReceiptHashOrSize:\($0)" } ?? []
+            artifactIdentityReconciliationBlockers = gateBlockers + missingKinds + hashMissingKinds
+        } else {
+            artifactIdentityReconciliationBlockers = ["koharuArtifactIdentityReconciliationReport not generated before convergence refresh"]
+        }
+        let artifactIdentityReconciliationNextAction: String
+        if artifactIdentityReconciliationReady {
+            artifactIdentityReconciliationNextAction = "compareAppReceiptWithCIManifestIdentitySummary"
+        } else if artifactIdentityReconciliationStatus == "blockedByUnsafeActiveExport" {
+            artifactIdentityReconciliationNextAction = "restoreReportOnlyIdentityReconciliationBoundary"
+        } else {
+            artifactIdentityReconciliationNextAction = "runProbeWithActiveKoharuArtifactsAndAppSideIdentityReceipt"
+        }
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -20502,6 +20826,7 @@ final class TranslationSessionStore: ObservableObject {
             return "keepReportOnly"
         }
 
+        let externalReadyForBlockPath = externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed == true
         var blockPaths: [MangaKoharuArtifactConvergenceBlockPath] = []
         blockPaths.reserveCapacity(blocks.count)
         for block in blocks {
@@ -20543,6 +20868,9 @@ final class TranslationSessionStore: ObservableObject {
                 openWorkItems.append("WI-render-regression-lock")
             }
             if realArtifactNeeded { openWorkItems.append("WI-external-artifact-optional-handoff") }
+            if externalReadyForBlockPath && !artifactIdentityReconciliationReady {
+                openWorkItems.append("WI-koharu-artifact-identity-reconciliation")
+            }
             var mustNotPromote: [String] = []
             mustNotPromote.append(contentsOf: textBox?.mustNotPromoteReasons ?? [])
             mustNotPromote.append(contentsOf: bubble?.mustNotPromoteReasons ?? [])
@@ -20629,6 +20957,7 @@ final class TranslationSessionStore: ObservableObject {
             && nativeArtifactContractDryRunVerdict == "activeArtifactsReadyForShadowOCR"
             && koharuNativeArtifactContractDryRunReport?.dryRunOnly == true
             && koharuNativeArtifactContractDryRunReport?.activeExportAllowed == false
+        let externalIdentityReconciliationReady = artifactIdentityReconciliationReady
         let externalShadowOCRExecuted = externalTextBoxShadowOCRReport?.executed == true
         let externalShadowCandidateCount = externalTextBoxShadowOCRReport?.candidateCount ?? 0
         let externalShadowOCRExecutedCount = externalTextBoxShadowOCRReport?.ocrExecutedCount ?? 0
@@ -20636,7 +20965,7 @@ final class TranslationSessionStore: ObservableObject {
         let externalShadowCoverageBlockedBlocks: [Int]
         if !externalReady {
             externalShadowCoverageBlockedBlocks = []
-        } else if !externalContractDryRunReady || externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted || externalShadowCandidateCount <= 0 {
+        } else if !externalContractDryRunReady || !externalIdentityReconciliationReady || externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted || externalShadowCandidateCount <= 0 {
             externalShadowCoverageBlockedBlocks = allBlockIndexes
         } else {
             externalShadowCoverageBlockedBlocks = []
@@ -20646,6 +20975,8 @@ final class TranslationSessionStore: ObservableObject {
             externalShadowCoverageNextAction = "provideRealKoharuArtifactsBeforeShadowOCRCoverageGate"
         } else if !externalContractDryRunReady {
             externalShadowCoverageNextAction = nativeArtifactContractDryRunNextAction
+        } else if !externalIdentityReconciliationReady {
+            externalShadowCoverageNextAction = artifactIdentityReconciliationNextAction
         } else if externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted {
             externalShadowCoverageNextAction = "runExternalTextBoxShadowOCR"
         } else if externalShadowCandidateCount <= 0 {
@@ -20658,6 +20989,8 @@ final class TranslationSessionStore: ObservableObject {
             externalShadowCoverageWorkItemStatus = "notEvaluatedUntilExternalArtifactReady"
         } else if !externalContractDryRunReady {
             externalShadowCoverageWorkItemStatus = "blockedByNativeArtifactContractDryRun"
+        } else if !externalIdentityReconciliationReady {
+            externalShadowCoverageWorkItemStatus = "blockedByArtifactIdentityReconciliation"
         } else if externalTextBoxShadowOCRReport == nil {
             externalShadowCoverageWorkItemStatus = "blockedByMissingExternalShadowOCRReport"
         } else if !externalShadowOCRExecuted {
@@ -20670,6 +21003,7 @@ final class TranslationSessionStore: ObservableObject {
         let externalShadowCoverageBlockers = sortedUniqueStrings(
             (externalReady ? [] : ["real external TextBox artifacts are not ready for shadow OCR coverage evaluation"])
             + (externalReady && !externalContractDryRunReady ? ["koharuNativeArtifactContractDryRunReport must be activeArtifactsReadyForShadowOCR with dryRunOnly=true and activeExportAllowed=false before external shadow OCR coverage can close"] : [])
+            + (externalReady && externalContractDryRunReady && !externalIdentityReconciliationReady ? ["koharuArtifactIdentityReconciliationReport must expose App receipt size/SHA256 rows for CI manifest comparison before external shadow OCR coverage can close"] : [])
             + (externalTextBoxShadowOCRReport == nil && externalReady ? ["externalTextBoxShadowOCRReport missing despite ready external artifacts"] : [])
             + (externalTextBoxShadowOCRReport != nil && externalReady && !externalShadowOCRExecuted ? ["externalTextBoxShadowOCRReport.executed is false despite ready external artifacts"] : [])
             + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowCandidateCount <= 0 ? ["external TextBoxes did not produce any block-matched shadow OCR candidates"] : [])
@@ -20687,6 +21021,9 @@ final class TranslationSessionStore: ObservableObject {
             signal("appSideArtifactIdentityVerdict", koharuNativeArtifactContractDryRunReport?.appSideArtifactIdentityVerdict ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
             signal("appSideArtifactIdentityFilesPresent", koharuNativeArtifactContractDryRunReport.map { String($0.appSideArtifactIdentityFilesPresent) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
             signal("appSideArtifactIdentityHashesPresent", koharuNativeArtifactContractDryRunReport.map { String($0.appSideArtifactIdentityHashesPresent) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
+            signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport"),
+            signal("readyForCIManifestComparison", String(externalIdentityReconciliationReady), source: "koharuArtifactIdentityReconciliationReport"),
+            signal("manualCIComparisonRequired", koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"),
             signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
             signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
             signal("shadowExecuted", String(externalShadowOCRExecuted), source: "externalTextBoxShadowOCRReport"),
@@ -20802,7 +21139,7 @@ final class TranslationSessionStore: ObservableObject {
             stage("Inpainted", artifact: "Inpainted", current: "glyph erase/background fill proxy", status: "proxyStableReportOnly", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport", "blocks.backgroundFill"], affected: segmentMaskProxyCoverageScoreboardReport?.backgroundFillAppliedBlocks ?? [], firstBlocking: "none", closed: segmentMaskProxyCoverageScoreboardReport == nil ? [] : ["WI-segmentmask-proxy-coverage-scorecard"], blocked: [], nextAction: "keepReportOnly", decisions: [signal("inpaintingImplemented", "false", source: "segmentMaskProxyCoverageScoreboardReport.cleanupLedgers")], mustNot: ["doNotImplementInpaintingInThisReport"]),
             stage("RenderedSprites", artifact: "RenderedSprites", current: "safeLayoutRect overlay text renderer plus v1.30 render lock", status: renderLockStatus == "closedReportOnly" ? "renderLockedReportOnly" : "renderIssueDetected", proxyOnly: true, realAvailable: false, reports: ["blocks.renderDiagnostics", "koharuRenderRegressionLockReport"], affected: renderLockStatus == "closedReportOnly" ? renderRegressionLockBlocks : renderIssueBlocks, firstBlocking: renderLockStatus == "closedReportOnly" ? "none" : "RenderedSprites", closed: renderLockStatus == "closedReportOnly" ? ["WI-render-regression-lock"] : [], blocked: renderLockStatus == "closedReportOnly" ? [] : ["WI-render-regression-lock"], nextAction: renderLockNextAction, decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics"), signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport")], mustNot: ["doNotChangeOverlayRendererInConvergenceReport", "doNotPromoteAITRANSRendererAsKoharuRenderedSprites"]),
             stage("FinalRender", artifact: "FinalRender", current: "debug boxes and translated overlay PNG plus v1.30 output file ledger", status: renderLockStatus == "closedReportOnly" ? "finalRenderLockedReportOnly" : "renderIssueDetected", proxyOnly: true, realAvailable: false, reports: ["outputFiles", "blocks.renderDiagnostics", "koharuRenderRegressionLockReport"], affected: renderLockStatus == "closedReportOnly" ? renderRegressionLockBlocks : renderIssueBlocks, firstBlocking: renderLockStatus == "closedReportOnly" ? "none" : "FinalRender", closed: renderLockStatus == "closedReportOnly" ? ["WI-render-regression-lock"] : [], blocked: renderLockStatus == "closedReportOnly" ? [] : ["WI-render-regression-lock"], nextAction: renderLockNextAction, decisions: [signal("renderTextTruncatedBlocks", joined(diagnostics.renderTextTruncatedBlocks), source: "diagnostics"), signal("renderCollisionUnresolvedBlocks", joined(diagnostics.renderCollisionUnresolvedBlocks), source: "diagnostics"), signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport")], mustNot: ["doNotChangePNGRenderingInConvergenceReport", "doNotTreatOutputFileLedgerAsPixelProof"]),
-            stage("ExternalArtifacts", artifact: "ExternalArtifacts", current: "test/koharu_artifacts readiness gate + shadow OCR coverage + orientation-aware shadow OCR ledger", status: externalReady ? (!externalShadowCoverageBlockedBlocks.isEmpty ? "externalShadowOCRCoverageBlocked" : (externalOrientationBlockedBlocks.isEmpty ? "nativeReady" : "orientationShadowPathBlocked")) : "externalOptionalMissing", proxyOnly: false, realAvailable: externalReady, reports: ["externalArtifactReadinessReport", "externalTextBoxShadowOCRReport", "koharuNativeArtifactContractDryRunReport"], affected: uniqueSorted(needsRealArtifactBlocks + externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), firstBlocking: externalReady ? (externalShadowCoverageBlockedBlocks.isEmpty && externalOrientationBlockedBlocks.isEmpty ? "none" : "ExternalArtifacts") : "ExternalArtifacts", closed: [], blocked: externalReady ? sortedUniqueStrings((externalShadowCoverageBlockedBlocks.isEmpty ? [] : ["WI-external-textbox-shadow-ocr-coverage"]) + (externalOrientationBlockedBlocks.isEmpty ? [] : ["WI-external-textbox-orientation-shadow-path"])) : ["WI-external-artifact-optional-handoff", "WI-koharu-native-artifact-contract-dry-run"], nextAction: externalReady ? (!externalShadowCoverageBlockedBlocks.isEmpty ? externalShadowCoverageNextAction : externalOrientationNextAction) : nativeArtifactContractDryRunNextAction, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"), signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport"), signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport")] + externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals, mustNot: ["doNotCreateOrCopyActiveExternalArtifact", "doNotTreatReadyArtifactAsClosedWithoutShadowOCRCandidates", "doNotPromoteVerticalOrLinePolygonTextBoxWithoutCompleteOrientationShadowPath"])
+            stage("ExternalArtifacts", artifact: "ExternalArtifacts", current: "test/koharu_artifacts readiness gate + identity reconciliation + shadow OCR coverage + orientation-aware shadow OCR ledger", status: externalReady ? (!externalShadowCoverageBlockedBlocks.isEmpty ? "externalShadowOCRCoverageBlocked" : (externalOrientationBlockedBlocks.isEmpty ? "nativeReady" : "orientationShadowPathBlocked")) : "externalOptionalMissing", proxyOnly: false, realAvailable: externalReady, reports: ["externalArtifactReadinessReport", "externalTextBoxShadowOCRReport", "koharuNativeArtifactContractDryRunReport", "koharuArtifactIdentityReconciliationReport"], affected: uniqueSorted(needsRealArtifactBlocks + externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), firstBlocking: externalReady ? (externalShadowCoverageBlockedBlocks.isEmpty && externalOrientationBlockedBlocks.isEmpty ? "none" : "ExternalArtifacts") : "ExternalArtifacts", closed: [], blocked: externalReady ? sortedUniqueStrings((externalShadowCoverageBlockedBlocks.isEmpty ? [] : ["WI-external-textbox-shadow-ocr-coverage"]) + (externalOrientationBlockedBlocks.isEmpty ? [] : ["WI-external-textbox-orientation-shadow-path"]) + (externalIdentityReconciliationReady ? [] : ["WI-koharu-artifact-identity-reconciliation"])) : ["WI-external-artifact-optional-handoff", "WI-koharu-native-artifact-contract-dry-run", "WI-koharu-artifact-identity-reconciliation"], nextAction: externalReady ? (!externalShadowCoverageBlockedBlocks.isEmpty ? externalShadowCoverageNextAction : externalOrientationNextAction) : nativeArtifactContractDryRunNextAction, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"), signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport"), signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport")] + externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals, mustNot: ["doNotCreateOrCopyActiveExternalArtifact", "doNotTreatReadyArtifactAsClosedWithoutAppReceiptCIIdentityReconciliation", "doNotTreatReadyArtifactAsClosedWithoutShadowOCRCandidates", "doNotPromoteVerticalOrLinePolygonTextBoxWithoutCompleteOrientationShadowPath"])
         ]
 
         func workItem(
@@ -20866,6 +21203,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-koharu-native-promotion-gate-lite", title: "Koharu Native Promotion Gate-Lite", status: nativePromotionGateLiteStatus, sourceReport: nativePromotionGateLiteExecuted ? "koharuNativePromotionGateLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "BubbleMask", "SegmentMask", "OcrText", "Translations", "RenderedSprites", "FinalRender", "ExternalArtifacts"], blocks: nativePromotionGateLiteBlocks, version: nativePromotionGateLiteExecuted ? "v1.46" : nil, blockers: nativePromotionGateLiteBlockers, nextAction: nativePromotionGateLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("promotionVerdict", nativePromotionGateLiteVerdict, source: "koharuNativePromotionGateLiteReport"), signal("blockLedgerCount", koharuNativePromotionGateLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("stageGateCount", koharuNativePromotionGateLiteReport.map { String($0.stageGateCount) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("candidateExportPreviewCount", koharuNativePromotionGateLiteReport.map { String($0.candidateExportPreviewCount) } ?? "nil", source: "koharuNativePromotionGateLiteReport")]),
             workItem("WI-koharu-native-promotion-gate-lite-textbox-segment-linkage", title: "Koharu Native Promotion Gate-Lite TextBox SegmentMask linkage", status: nativePromotionGateLiteExecuted ? (promotionLinkageBlockedBlocks.isEmpty ? "closedReportOnly" : "blockedByWeakTextBoxSegmentLinkage") : "openNativePromotionGateLite", sourceReport: nativePromotionGateLiteExecuted ? "koharuNativePromotionGateLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "SegmentMask", "ExternalArtifacts"], blocks: promotionLinkageBlockedBlocks, version: nativePromotionGateLiteExecuted ? "v1.58" : nil, blockers: promotionLinkageBlockedBlocks.isEmpty ? [] : ["promotion must not export or preview SegmentMask readiness while TextBox SegmentMask linkage is weak/fallback/rejected/wrong-bubble"], nextAction: promotionLinkageBlockedBlocks.isEmpty ? "keepNativePromotionGateLiteReportOnly" : "auditTextBoxSegmentLinkageBeforePromotion", ciFast: true, full: true, external: false, decisions: [signal("textBoxSegmentLinkageBlockedBlocks", joined(promotionLinkageBlockedBlocks), source: "koharuNativePromotionGateLiteReport"), signal("textBoxSegmentLinkBreakdown", joinedBreakdown(koharuNativePromotionGateLiteReport?.textBoxSegmentLinkBreakdown ?? [:]), source: "koharuNativePromotionGateLiteReport")]),
             workItem("WI-koharu-native-artifact-contract-dry-run", title: "Koharu Native Artifact contract dry-run", status: nativeArtifactContractDryRunStatus, sourceReport: nativeArtifactContractDryRunExecuted ? "koharuNativeArtifactContractDryRunReport" : "koharuArtifactConvergenceReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: nativeArtifactContractDryRunBlocks, version: nativeArtifactContractDryRunExecuted ? "v1.47" : nil, blockers: nativeArtifactContractDryRunBlockers, nextAction: nativeArtifactContractDryRunNextAction, ciFast: true, full: false, external: true, decisions: [signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("requiredFileCount", koharuNativeArtifactContractDryRunReport.map { String($0.requiredFileCount) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("contractGateCount", koharuNativeArtifactContractDryRunReport.map { String($0.contractGateCount) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport")]),
+            workItem("WI-koharu-artifact-identity-reconciliation", title: "Koharu artifact identity reconciliation", status: artifactIdentityReconciliationStatus, sourceReport: artifactIdentityReconciliationExecuted ? "koharuArtifactIdentityReconciliationReport" : "koharuArtifactConvergenceReport", stages: ["ExternalArtifacts", "CIReview"], blocks: artifactIdentityReconciliationBlocks, version: artifactIdentityReconciliationExecuted ? "v1.68" : nil, blockers: artifactIdentityReconciliationBlockers, nextAction: artifactIdentityReconciliationNextAction, ciFast: true, full: true, external: true, decisions: [signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport"), signal("readyForCIManifestComparison", koharuArtifactIdentityReconciliationReport.map { String($0.readyForCIManifestComparison) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("manualCIComparisonRequired", koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("fileRowCount", koharuArtifactIdentityReconciliationReport.map { String($0.fileRowCount) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport")]),
             workItem("WI-external-textbox-shadow-ocr-coverage", title: "External TextBox shadow OCR coverage", status: externalShadowCoverageWorkItemStatus, sourceReport: "externalTextBoxShadowOCRReport", stages: ["ExternalArtifacts", "TextBoxes", "OcrText"], blocks: externalShadowCoverageBlockedBlocks, version: externalTextBoxShadowOCRReport == nil ? nil : "v1.65", blockers: externalShadowCoverageBlockers, nextAction: externalShadowCoverageNextAction, ciFast: true, full: true, external: true, decisions: externalShadowCoverageDecisionSignals),
             workItem("WI-external-textbox-orientation-shadow-path", title: "External TextBox orientation shadow path", status: externalOrientationWorkItemStatus, sourceReport: "externalTextBoxShadowOCRReport", stages: ["ExternalArtifacts", "TextBoxes", "OcrText"], blocks: uniqueSorted(externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), version: externalTextBoxShadowOCRReport == nil ? nil : "v1.65", blockers: externalOrientationBlockers, nextAction: externalOrientationNextAction, ciFast: true, full: true, external: true, decisions: externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
@@ -20903,7 +21241,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeSegmentMaskRefinementLiteReport == nil ? "koharuNativeSegmentMaskRefinementLiteReport" : nil,
             koharuNativeArtifactBundleLiteReport == nil ? "koharuNativeArtifactBundleLiteReport" : nil,
             koharuNativePromotionGateLiteReport == nil ? "koharuNativePromotionGateLiteReport" : nil,
-            koharuNativeArtifactContractDryRunReport == nil ? "koharuNativeArtifactContractDryRunReport" : nil
+            koharuNativeArtifactContractDryRunReport == nil ? "koharuNativeArtifactContractDryRunReport" : nil,
+            koharuArtifactIdentityReconciliationReport == nil ? "koharuArtifactIdentityReconciliationReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -20958,6 +21297,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-native-promotion-gate-lite-executed", name: "Koharu Native Promotion Gate-Lite executed", scope: "TextBoxes/BubbleMask/SegmentMask/OcrText/Translation/Render/ExternalArtifacts", status: nativePromotionGateLiteExecuted ? (nativePromotionGateLiteStatus == "closedReportOnly" || nativePromotionGateLiteStatus == "modelFloorBlocked" || nativePromotionGateLiteStatus == "renderLockedReportOnly" || nativePromotionGateLiteStatus == "closedStoplist" ? "passed" : "warning") : "open", threshold: "koharuNativePromotionGateLiteReport.enabled=true with blockLedgerCount==totalBlocksDetected, stageGateCount>=8, preview-only candidates, and no main-flow mutation", affected: nativePromotionGateLiteBlocks, failureMeans: "Native Promotion Gate-Lite report is missing, emits empty ledgers, mutates main OCR/translation/render state, routes using ground truth, or exports active artifacts", action: nativePromotionGateLiteNextAction, decisions: [signal("promotionVerdict", nativePromotionGateLiteVerdict, source: "koharuNativePromotionGateLiteReport"), signal("groundTruthUsedForDecision", koharuNativePromotionGateLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("wouldChangeMainFlow", koharuNativePromotionGateLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("nativePromotionPreviewOnly", koharuNativePromotionGateLiteReport.map { String($0.nativePromotionPreviewOnly) } ?? "nil", source: "koharuNativePromotionGateLiteReport")]),
             gate("G-koharu-convergence-promotion-lite-textbox-segment-linkage", name: "Convergence promotion-lite TextBox SegmentMask linkage", scope: "TextBoxes->SegmentMask", status: promotionLinkageBlockedBlocks.isEmpty ? "passed" : "warning", threshold: "promotion linkage blocked blocks are surfaced in convergence work items and block paths", affected: promotionLinkageBlockedBlocks, failureMeans: "convergence hides SegmentMask promotion blockers caused by weak/fallback/rejected/wrong-bubble TextBox linkage", action: promotionLinkageBlockedBlocks.isEmpty ? "keepNativePromotionGateLiteReportOnly" : "auditTextBoxSegmentLinkageBeforePromotion", decisions: [signal("textBoxSegmentLinkageBlockedBlocks", joined(promotionLinkageBlockedBlocks), source: "koharuNativePromotionGateLiteReport"), signal("textBoxSegmentLinkBreakdown", joinedBreakdown(koharuNativePromotionGateLiteReport?.textBoxSegmentLinkBreakdown ?? [:]), source: "koharuNativePromotionGateLiteReport")]),
             gate("G-koharu-native-artifact-contract-dry-run-executed", name: "Koharu Native Artifact contract dry-run executed", scope: "ExternalArtifacts", status: nativeArtifactContractDryRunExecuted ? (nativeArtifactContractDryRunStatus == "blockedByUnsafeActiveExport" ? "blocked" : (nativeArtifactContractDryRunStatus == "blockedByMissingRealArtifact" ? "warning" : "passed")) : "open", threshold: "koharuNativeArtifactContractDryRunReport.enabled=true with requiredFileCount>=4, contractGateCount>=6, dryRunOnly=true, activeExportAllowed=false, and no active artifact mutation", affected: nativeArtifactContractDryRunBlocks, failureMeans: "Native Artifact contract dry-run is missing, unsafe for active export, or hides missing real Koharu artifact files", action: nativeArtifactContractDryRunNextAction, decisions: [signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("groundTruthUsedForDecision", koharuNativeArtifactContractDryRunReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport")]),
+            gate("G-koharu-artifact-identity-reconciliation-ready", name: "Koharu artifact identity reconciliation ready", scope: "ExternalArtifacts/CIReview", status: artifactIdentityReconciliationReady ? "passed" : (externalReady ? "warning" : "open"), threshold: "koharuArtifactIdentityReconciliationReport.enabled=true with SourceImage plus four artifact file rows ready for ci-artifact-manifest.koharuArtifactValidationIdentitySummary size/SHA256 comparison", affected: artifactIdentityReconciliationBlocks, failureMeans: "convergence treats injected artifact handoff as closed without a machine-readable App receipt to CI manifest identity reconciliation ledger", action: artifactIdentityReconciliationNextAction, decisions: [signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport"), signal("readyForCIManifestComparison", koharuArtifactIdentityReconciliationReport.map { String($0.readyForCIManifestComparison) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("manualCIComparisonRequired", koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport")]),
             gate("G-external-textbox-shadow-ocr-coverage", name: "External TextBox shadow OCR coverage", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalShadowCoverageGateStatus, threshold: "ready external artifacts must produce an executed externalTextBoxShadowOCRReport with candidateCount > 0 before ExternalArtifacts can be considered closed", affected: externalShadowCoverageBlockedBlocks, failureMeans: "convergence treats ready artifact files as an OCR coverage closure even though shadow OCR did not run or produced no block-matched candidates", action: externalShadowCoverageNextAction, decisions: externalShadowCoverageDecisionSignals),
             gate("G-external-textbox-orientation-shadow-path", name: "External TextBox orientation shadow path", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalOrientationGateStatus, threshold: "vertical, rotated, arbitrary-rotation, or line-polygon external TextBoxes must not be treated as fully closed until external shadow OCR coverage exists, orientation OCR is executed, and unsupported orientation features are surfaced", affected: uniqueSorted(externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), failureMeans: "convergence hides missing coverage or unsupported external TextBox orientation-aware shadow OCR work", action: externalOrientationNextAction, decisions: externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
@@ -20994,12 +21334,13 @@ final class TranslationSessionStore: ObservableObject {
             "koharuNativeArtifactBundleLiteReport",
             "koharuNativePromotionGateLiteReport",
             "koharuNativeArtifactContractDryRunReport",
+            "koharuArtifactIdentityReconciliationReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
             "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, v1.44 native SegmentMask refinement-lite, v1.45 native Artifact bundle-lite, v1.46 native promotion gate-lite, v1.47 native artifact contract dry-run, and v1.58 TextBox SegmentMask linkage convergence gates into a next-step decision ledger.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, v1.44 native SegmentMask refinement-lite, v1.45 native Artifact bundle-lite, v1.46 native promotion gate-lite, v1.47 native artifact contract dry-run, v1.58 TextBox SegmentMask linkage convergence gates, and v1.68 artifact identity reconciliation into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]

@@ -3744,6 +3744,76 @@ struct MangaKoharuNativeArtifactContractDryRunReport: Equatable, Codable, Sendab
     var notes: [String]
 }
 
+struct MangaKoharuArtifactIdentityReconciliationSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuArtifactIdentityReconciliationFileRow: Equatable, Codable, Sendable {
+    var artifactKind: String
+    var appReceiptPath: String?
+    var appRequired: Bool
+    var appExists: Bool
+    var appSizeBytes: Int?
+    var appSHA256: String?
+    var appIdentityStatus: String
+    var contractDryRunStatus: String?
+    var ciManifestFieldPathForSize: String
+    var ciManifestFieldPathForSHA256: String
+    var comparisonStatus: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuArtifactIdentityReconciliationSignal]
+}
+
+struct MangaKoharuArtifactIdentityReconciliationGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var name: String
+    var status: String
+    var scope: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var failureMeans: String
+    var recommendedAction: String
+    var decisionSignals: [MangaKoharuArtifactIdentityReconciliationSignal]
+}
+
+struct MangaKoharuArtifactIdentityReconciliationReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
+    var evaluatedBlockCount: Int
+    var fileRowCount: Int
+    var gateCount: Int
+    var sourceImage: String
+    var activeInputDirectory: String
+    var appReceiptVerdict: String
+    var contractDryRunVerdict: String
+    var identityReconciliationVerdict: String
+    var readyForCIManifestComparison: Bool
+    var manualCIComparisonRequired: Bool
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var dryRunOnly: Bool
+    var activeExportAllowed: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var appReceiptStatusBreakdown: [String: Int]
+    var comparisonStatusBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var readyFileKinds: [String]
+    var missingFileKinds: [String]
+    var hashMissingFileKinds: [String]
+    var fileRows: [MangaKoharuArtifactIdentityReconciliationFileRow]
+    var gateLedger: [MangaKoharuArtifactIdentityReconciliationGate]
+    var notes: [String]
+}
+
 struct MangaSegmentMaskProxyDecisionSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
@@ -5780,6 +5850,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?
     var koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport?
     var koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport?
+    var koharuArtifactIdentityReconciliationReport: MangaKoharuArtifactIdentityReconciliationReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?

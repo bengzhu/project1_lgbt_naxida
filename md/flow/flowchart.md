@@ -91,7 +91,7 @@ flowchart TD
   TBF --> LTB["lineTextBoxPlanReport / lineCropExperimentReport<br/>目标块行级 TextBox / deskew shadow 验证"]
   LTB --> EAR["externalArtifactReadinessReport<br/>真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门 + App-side identity receipt"]
   EAR --> ETS["externalTextBoxShadowOCRReport<br/>ready 后每块最多 1 个 externalArtifact.textBoxCrop / shadow-only"]
-  ETS --> ESC["external TextBox shadow OCR coverage gate<br/>ready 后要求 identity + contract dry-run + executed + candidateCount > 0"]
+  ETS --> ESC["external TextBox shadow OCR coverage gate<br/>ready 后要求 identity reconciliation + contract dry-run + executed + candidateCount > 0"]
   ESC --> ETO["external TextBox orientation-aware shadow OCR<br/>bounded rotation OCR / partial 与 unsupported 进入 convergence blockers"]
   ETO --> ISR["internalStructureBottleneckReport<br/>OCR / bubble / crop / translation / render 路由诊断"]
   ISR --> RTA["routingDrivenTranslationComparisonReport<br/>modelTranslationQuality 块 strict prompt 对照 / report-only"]
@@ -123,7 +123,8 @@ flowchart TD
   KNSMR --> KNABL["koharuNativeArtifactBundleLiteReport<br/>TextBoxes / BubbleMask / SegmentMask consistency + linkage closure"]
   KNABL --> KNPG["koharuNativePromotionGateLiteReport<br/>probe-driven promotion gates / linkage-blocked preview"]
   KNPG --> KNCD["koharuNativeArtifactContractDryRunReport<br/>four-file contract dry-run / App-side identity receipt / validator commands"]
-  KNCD --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / linkage + external shadow coverage + orientation gates"]
+  KNCD --> KIR["koharuArtifactIdentityReconciliationReport<br/>App receipt -> CI manifest identity field paths / size-SHA ledger"]
+  KIR --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / linkage + identity reconciliation + external shadow coverage + orientation gates"]
   TMF --> KAC
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
@@ -169,6 +170,7 @@ flowchart TD
   KNSMR --> R
   KNABL --> R
   KNPG --> R
+  KIR --> R
   KAC --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
@@ -210,6 +212,7 @@ flowchart TD
   KNSMR --> T
   KNABL --> T
   KNPG --> T
+  KIR --> T
   KAC --> T
 ```
 
