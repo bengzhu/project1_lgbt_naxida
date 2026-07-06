@@ -116,8 +116,46 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.65：External TextBox Shadow OCR Coverage / Validator Orientation Summary
+日期：2026-07-06
+
+依据：v1.64 已能防止 external TextBox orientation partial / unsupported path 被 convergence 误判为闭环，但仍有两类证据缺口：一是 validator 只校验方向元数据是否合法，没有在 CI 结果包中汇总 TextBox 的竖排、旋转、line polygon 与 unsupported 风险；二是 artifact `readyForShadowOCR` 只证明四件套可解析，不证明 App 侧 external shadow OCR 已执行并产生 block-matched candidate。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 `orientationMetadataSummary`，汇总 sourceDirection / orientation category / rotation plan / line polygon / vertical / right-angle rotation / arbitrary rotation / unsupported reason，缺 active artifact 时也稳定输出空摘要。
+- `ci-artifact-manifest.json` 新增 `koharuArtifactValidationOrientationSummary`，`ci-failure-summary.md` 的 Koharu artifact gate 区块同步打印 validator orientation 摘要，方便 Agent C 在模拟器探针前核对外部 TextBox 方向风险。
+- `koharuArtifactConvergenceReport` 新增 `WI-external-textbox-shadow-ocr-coverage` / `G-external-textbox-shadow-ocr-coverage`。真实 artifact ready 后，若 `externalTextBoxShadowOCRReport` 缺失、`executed=false` 或 `candidateCount=0`，ExternalArtifacts stage 会进入 `externalShadowOCRCoverageBlocked`，orientation gate 也不会被误判为 passed / closed。
+- `1_ocr_probe_text.txt` 追加 `convergenceExternalShadowOCRCoverage` 和 `convergenceExternalTextBoxOrientation` 摘要。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮本地轻量验证见最终回复。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked / validator empty orientation summary。
+- 该版本不新增 OCR / LLM / PNG，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.64：External TextBox Orientation Partial / Unsupported Convergence Gate
-日期：2026-07-07
+日期：2026-07-06
 
 依据：v1.63 已能在真实 artifact ready 后对竖排或接近 90/180/270 度的 external TextBox 执行有上限 rotation shadow OCR，并在候选 / block summary 写出 unsupported reason。但 `koharuArtifactConvergenceReport` 仍主要消费 `orientationShadowPathNotExecutedBlocks`，存在“orientation path 已部分执行但仍因 line polygon warp 或任意角度 deskew unsupported 而未闭环，却被 convergence 看成 closed/passed”的风险。
 

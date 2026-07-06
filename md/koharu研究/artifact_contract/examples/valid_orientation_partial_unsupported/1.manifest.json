@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "aitrans.koharu_artifact_contract.v1",
+  "sourceImage": "test/1.png",
+  "coordinateSpace": "originalImageTopLeftPixels",
+  "contractExampleOnly": true,
+  "generatedBy": "manual-contract-fixture",
+  "generatedAt": "2026-07-06T00:00:00Z",
+  "textBoxesPath": "1.textboxes.json",
+  "bubbleMaskPath": "1.bubbles.json",
+  "segmentMaskPath": "1.segment_mask.json",
+  "notes": [
+    "contractExampleOnly=true",
+    "legal orientation metadata fixture only",
+    "not real detector output"
+  ]
+}

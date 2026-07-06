@@ -1,0 +1,20 @@
+{
+  "bubbleInstances": [
+    {
+      "id": "orientation-fixture-bubble-1",
+      "bbox": [80, 120, 180, 220],
+      "confidence": 0.73,
+      "maskValue": 1,
+      "pixelCount": 24840,
+      "notes": ["contractExampleOnly=true", "summary only"]
+    },
+    {
+      "id": "orientation-fixture-bubble-2",
+      "bbox": [250, 360, 212, 136],
+      "confidence": 0.68,
+      "maskValue": 2,
+      "pixelCount": 17620,
+      "notes": ["contractExampleOnly=true", "summary only"]
+    }
+  ]
+}

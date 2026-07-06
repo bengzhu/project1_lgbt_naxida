@@ -87,6 +87,13 @@ REQUIRED_ARTIFACT_FILES = [
 ]
 
 
+def count_strings(values: list[str]) -> dict[str, int]:
+    result: dict[str, int] = {}
+    for value in values:
+        result[value] = result.get(value, 0) + 1
+    return dict(sorted(result.items()))
+
+
 def is_active_artifacts_root(root: Path) -> bool:
     return root.resolve() == ACTIVE_ARTIFACT_ROOT.resolve()
 
@@ -218,6 +225,137 @@ def rotation_degrees_for(item: dict[str, Any]) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return math.nan
+
+
+def nearest_supported_rotation(value: float) -> int | None:
+    normalized = math.fmod(value, 360)
+    positive = normalized + 360 if normalized < 0 else normalized
+    supported = [0, 90, 180, 270, 360]
+    nearest = min(supported, key=lambda candidate: abs(candidate - positive))
+    if abs(nearest - positive) > 7.5:
+        return None
+    return 0 if nearest == 360 else nearest
+
+
+def orientation_category_for(item: dict[str, Any]) -> str:
+    if "sourceDirection" not in item:
+        return "unspecified"
+    normalized = normalized_source_direction(item.get("sourceDirection"))
+    if normalized is None:
+        return "invalid"
+    if normalized.startswith("vertical"):
+        return "vertical"
+    if normalized.startswith("horizontal"):
+        return "horizontal"
+    if normalized == "unknown":
+        return "unknown"
+    return "invalid"
+
+
+def orientation_shadow_plan_for(item: dict[str, Any]) -> tuple[list[int], list[str]]:
+    rotation_angles = [0]
+    unsupported_reasons: list[str] = []
+    normalized_direction = normalized_source_direction(item.get("sourceDirection"))
+    orientation_category = orientation_category_for(item)
+    if orientation_category == "vertical":
+        rotation_angles.append(270 if normalized_direction == "vertical-lr" else 90)
+
+    rotation = rotation_degrees_for(item)
+    if rotation is not None and math.isfinite(rotation) and abs(rotation) > 0.001:
+        supported_rotation = nearest_supported_rotation(rotation)
+        if supported_rotation is None:
+            unsupported_reasons.append("arbitraryRotationUnsupported")
+        elif supported_rotation != 0:
+            rotation_angles.append(supported_rotation)
+
+    line_polygons = item.get("linePolygons")
+    if isinstance(line_polygons, list) and line_polygons:
+        unsupported_reasons.append("linePolygonWarpUnsupported")
+
+    unique_angles: list[int] = []
+    seen: set[int] = set()
+    for angle in rotation_angles:
+        if angle not in seen:
+            unique_angles.append(angle)
+            seen.add(angle)
+    return unique_angles, sorted(set(unsupported_reasons))
+
+
+def summarize_orientation_metadata(text_boxes: list[dict[str, Any]]) -> dict[str, Any]:
+    text_box_count = len(text_boxes)
+    source_directions: list[str] = []
+    orientation_categories: list[str] = []
+    line_polygon_ids: list[str] = []
+    rotation_ids: list[str] = []
+    vertical_ids: list[str] = []
+    right_angle_rotation_ids: list[str] = []
+    arbitrary_rotation_ids: list[str] = []
+    orientation_needed_ids: list[str] = []
+    rotation_shadow_supported_ids: list[str] = []
+    orientation_partial_ids: list[str] = []
+    unsupported_ids: list[str] = []
+    unsupported_reasons: list[str] = []
+    rotation_plan_values: list[str] = []
+
+    for index, item in enumerate(text_boxes):
+        item_id = str(item.get("id") or f"textBox-{index}")
+        normalized_direction = normalized_source_direction(item.get("sourceDirection")) if "sourceDirection" in item else None
+        source_directions.append(normalized_direction or "unspecified")
+        orientation_category = orientation_category_for(item)
+        orientation_categories.append(orientation_category)
+        if orientation_category == "vertical":
+            vertical_ids.append(item_id)
+
+        line_polygons = item.get("linePolygons")
+        line_polygons_present = isinstance(line_polygons, list) and bool(line_polygons)
+        if line_polygons_present:
+            line_polygon_ids.append(item_id)
+
+        rotation = rotation_degrees_for(item)
+        has_nonzero_rotation = rotation is not None and math.isfinite(rotation) and abs(rotation) > 0.001
+        supported_rotation = nearest_supported_rotation(rotation) if has_nonzero_rotation else None
+        if has_nonzero_rotation:
+            rotation_ids.append(item_id)
+            if supported_rotation is None:
+                arbitrary_rotation_ids.append(item_id)
+            else:
+                right_angle_rotation_ids.append(item_id)
+
+        orientation_needed = orientation_category == "vertical" or line_polygons_present or has_nonzero_rotation
+        rotation_angles, reasons = orientation_shadow_plan_for(item)
+        rotation_plan_values.append(",".join(str(angle) for angle in rotation_angles))
+        if orientation_needed:
+            orientation_needed_ids.append(item_id)
+        if orientation_needed and any(abs(angle) > 0 for angle in rotation_angles):
+            rotation_shadow_supported_ids.append(item_id)
+        if reasons:
+            unsupported_ids.append(item_id)
+            unsupported_reasons.extend(reasons)
+        if reasons and any(abs(angle) > 0 for angle in rotation_angles):
+            orientation_partial_ids.append(item_id)
+
+    return {
+        "textBoxCount": text_box_count,
+        "sourceDirectionBreakdown": count_strings(source_directions),
+        "orientationCategoryBreakdown": count_strings(orientation_categories),
+        "rotationPlanBreakdown": count_strings(rotation_plan_values),
+        "linePolygonTextBoxIDs": sorted(set(line_polygon_ids)),
+        "rotationTextBoxIDs": sorted(set(rotation_ids)),
+        "verticalTextBoxIDs": sorted(set(vertical_ids)),
+        "rightAngleRotationTextBoxIDs": sorted(set(right_angle_rotation_ids)),
+        "arbitraryRotationTextBoxIDs": sorted(set(arbitrary_rotation_ids)),
+        "orientationShadowPathNeededTextBoxIDs": sorted(set(orientation_needed_ids)),
+        "orientationRotationShadowSupportedTextBoxIDs": sorted(set(rotation_shadow_supported_ids)),
+        "orientationPartialTextBoxIDs": sorted(set(orientation_partial_ids)),
+        "orientationUnsupportedTextBoxIDs": sorted(set(unsupported_ids)),
+        "orientationUnsupportedReasonBreakdown": count_strings(unsupported_reasons),
+        "currentShadowOCRSupport": {
+            "boundedRightAngleRotationOCR": True,
+            "verticalRotationOCR": True,
+            "linePolygonWarp": False,
+            "arbitraryAngleDeskew": False,
+        },
+    }
 
 
 def validate_textbox_metadata(
@@ -458,15 +596,16 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
 
     coordinate_space = manifest.get("coordinateSpace") if manifest else None
     schema_version = manifest.get("schemaVersion") if manifest else None
-    if schema_version is None:
-        coordinate_errors.append("schemaVersionMissing")
-    elif schema_version != EXPECTED_SCHEMA_VERSION:
-        coordinate_errors.append(f"schemaVersionMismatch:{schema_version}")
+    if manifest is not None:
+        if schema_version is None:
+            coordinate_errors.append("schemaVersionMissing")
+        elif schema_version != EXPECTED_SCHEMA_VERSION:
+            coordinate_errors.append(f"schemaVersionMismatch:{schema_version}")
 
-    if coordinate_space is None:
-        coordinate_errors.append("coordinateSpaceMissing")
-    elif coordinate_space != EXPECTED_COORDINATE_SPACE:
-        coordinate_errors.append(f"coordinateSpaceMismatch:{coordinate_space}")
+        if coordinate_space is None:
+            coordinate_errors.append("coordinateSpaceMissing")
+        elif coordinate_space != EXPECTED_COORDINATE_SPACE:
+            coordinate_errors.append(f"coordinateSpaceMismatch:{coordinate_space}")
 
     source_image = manifest.get("sourceImage") if manifest else None
     if source_image not in (None, EXPECTED_SOURCE_IMAGE):
@@ -476,6 +615,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
     source_policy_errors = generated_by_policy_errors(manifest, contract_example_only)
     invalid_text_box_ids = validate_boxes(text_boxes, "textBox", image_width, image_height, coordinate_errors)
     invalid_bubble_ids = validate_boxes(bubbles, "bubble", image_width, image_height, coordinate_errors)
+    orientation_metadata_summary = summarize_orientation_metadata(text_boxes)
 
     segment_size_matches = None
     if segment_mask is not None:
@@ -559,6 +699,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         "segmentMaskSizeMatches": segment_size_matches,
         "invalidTextBoxIDs": invalid_text_box_ids,
         "invalidBubbleInstanceIDs": invalid_bubble_ids,
+        "orientationMetadataSummary": orientation_metadata_summary,
     }
 
 
@@ -585,6 +726,7 @@ def main() -> int:
                 "contractExampleOnly == false",
                 "externalTextBoxesShadowOCRAllowed == true",
                 "TextBox optional direction metadata is valid when present",
+                "orientationMetadataSummary unsupported line polygon / arbitrary rotation risks are reviewed before treating shadow OCR as closed",
             ],
             "forbiddenActiveSources": [
                 "contract examples",
@@ -628,6 +770,7 @@ def main() -> int:
             "textBoxCount": 0,
             "bubbleInstanceCount": 0,
             "segmentMaskSizeMatches": None,
+            "orientationMetadataSummary": summarize_orientation_metadata([]),
         }
     else:
         summary = validate(root, args.allow_missing, image_path)
