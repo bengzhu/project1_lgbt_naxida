@@ -2463,6 +2463,14 @@ struct MangaKoharuNativeTextBoxDetectorLiteSignal: Equatable, Codable, Sendable 
     var groundTruthUsedForEvaluationOnly: Bool
 }
 
+struct MangaKoharuNativeTextBoxDetectorLiteBlockRelation: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var overlapRatio: Double
+    var centerContained: Bool
+    var sameBubble: Bool
+    var relationReason: String
+}
+
 struct MangaKoharuNativeTextBoxDetectorLiteCandidate: Equatable, Codable, Sendable {
     var candidateID: String
     var source: String
@@ -2482,6 +2490,7 @@ struct MangaKoharuNativeTextBoxDetectorLiteCandidate: Equatable, Codable, Sendab
     var shadowOCREligible: Bool
     var matchedBlockIndexes: [Int]
     var relatedCurrentBlockIndexes: [Int]
+    var relatedBlockRelations: [MangaKoharuNativeTextBoxDetectorLiteBlockRelation]
     var wouldChangeMainFlow: Bool
     var diagnosticOnly: Bool
     var groundTruthUsedForDecision: Bool
@@ -2504,6 +2513,11 @@ struct MangaKoharuNativeTextBoxDetectorLiteBlockLedger: Equatable, Codable, Send
     var bestCandidateID: String?
     var bestCandidateBBox: [Double]?
     var bestCandidateScore: Double?
+    var bestCandidateCoverageRatio: Double
+    var bestCandidateCenterContained: Bool
+    var bestCandidateSameBubble: Bool
+    var bestCandidateVerdict: String?
+    var bestCandidateShadowOCREligible: Bool
     var candidateCoverageVerdict: String
     var directionHint: String
     var bubbleAssignmentRisk: String
@@ -2575,6 +2589,7 @@ struct MangaKoharuNativeTextBoxDetectorLiteReport: Equatable, Codable, Sendable 
     var candidateSourceBreakdown: [String: Int]
     var directionHintBreakdown: [String: Int]
     var candidateVerdictBreakdown: [String: Int]
+    var blockRelationBreakdown: [String: Int]
     var rejectionReasonBreakdown: [String: Int]
     var primaryBottleneckBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
@@ -3032,10 +3047,17 @@ struct MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger: Equatable, Codable, S
     var seedRect: [Double]
     var currentSafeLayoutRect: [Double]?
     var instanceLiteSafeRect: [Double]?
+    var instanceLiteBlockScopedSafeRect: [Double]?
+    var instanceLiteSafeRectPolicy: String
     var distanceFieldSafeRectFromInstanceLite: [Double]?
     var distanceFieldSafeRectSource: String
     var currentRenderNonTransparentBounds: [Double]?
     var spriteContainedByInstanceLiteMask: Bool
+    var spriteBlockScopedSafeRectContainmentRatio: Double
+    var spriteContainedByBlockScopedSafeRect: Bool
+    var spriteContainmentPolicy: String
+    var sameInstanceRenderSpriteOverlapCount: Int
+    var spriteSiblingCollisionPolicy: String
     var siblingPartitionStatus: String
     var splitRisk: String
     var adjacencyRisk: String
@@ -3059,6 +3081,10 @@ struct MangaKoharuNativeBubbleMaskInstanceLiteSiblingLedger: Equatable, Codable,
     var currentBubbleID: Int?
     var currentSafeRectOverlapCount: Int
     var instanceLiteSafeRectOverlapCount: Int
+    var blockScopedSafeRectOverlapCount: Int
+    var renderSpriteOverlapCount: Int
+    var sameBubbleSafeRectPolicy: String
+    var sameBubbleSpriteCollisionPolicy: String
     var seamCandidateRelated: Bool
     var siblingPartitionStatus: String
     var needsRealBubbleMask: Bool
@@ -3127,7 +3153,10 @@ struct MangaKoharuNativeBubbleMaskInstanceLiteReport: Equatable, Codable, Sendab
     var splitRiskBreakdown: [String: Int]
     var siblingPartitionBreakdown: [String: Int]
     var safeRectComparisonBreakdown: [String: Int]
+    var safeRectPolicyBreakdown: [String: Int]
     var spriteContainmentBreakdown: [String: Int]
+    var spriteBlockScopedContainmentBreakdown: [String: Int]
+    var spriteSiblingCollisionBreakdown: [String: Int]
     var adjacencyRiskBreakdown: [String: Int]
     var primaryBottleneckBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
@@ -3173,6 +3202,18 @@ struct MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger: Equatable, Cod
     var maskFillRatio: Double
     var textboxCoverage: Double
     var bubbleCoverage: Double
+    var maskContainedByTextBoxRatio: Double
+    var maskContainedByBubbleRatio: Double
+    var maskMajorityInstanceLiteID: Int?
+    var maskMajorityBubbleID: Int?
+    var maskMajorityCoverage: Double
+    var maskMajorityAgreement: String
+    var sourceTextBoxCandidateVerdict: String?
+    var sourceTextBoxShadowOCREligible: Bool?
+    var sourceTextBoxBlockOverlapRatio: Double
+    var sourceTextBoxSameBubble: Bool
+    var sourceTextBoxAcceptedForSegmentMask: Bool
+    var sourceTextBoxLinkVerdict: String
     var existingGlyphOverlap: Double
     var segmentProxyAgreement: Double
     var candidateVerdict: String
@@ -3193,6 +3234,8 @@ struct MangaKoharuNativeSegmentMaskRefinementLiteBlockLedger: Equatable, Codable
     var failureCategory: String
     var blockPassed: Bool
     var selectedCandidateID: String?
+    var selectedSourceTextBoxCandidateID: String?
+    var selectedSourceTextBoxLinkVerdict: String
     var candidateCount: Int
     var maskBBox: [Double]?
     var rawPixelCount: Int
@@ -3201,6 +3244,12 @@ struct MangaKoharuNativeSegmentMaskRefinementLiteBlockLedger: Equatable, Codable
     var componentCount: Int
     var textboxCoverage: Double
     var bubbleCoverage: Double
+    var maskContainedByTextBoxRatio: Double
+    var maskContainedByBubbleRatio: Double
+    var maskMajorityInstanceLiteID: Int?
+    var maskMajorityBubbleID: Int?
+    var maskMajorityCoverage: Double
+    var maskMajorityAgreement: String
     var existingGlyphOverlap: Double
     var segmentProxyAgreement: Double
     var maskContainedByTextBox: Bool
@@ -3279,6 +3328,11 @@ struct MangaKoharuNativeSegmentMaskRefinementLiteReport: Equatable, Codable, Sen
     var bubbleClampBreakdown: [String: Int]
     var componentFilteringBreakdown: [String: Int]
     var maskContainmentBreakdown: [String: Int]
+    var maskMajorityAgreementBreakdown: [String: Int]
+    var textBoxSegmentLinkBreakdown: [String: Int]
+    var segmentFromAcceptedTextBoxCount: Int
+    var segmentFromRejectedTextBoxCount: Int
+    var segmentFromFallbackBBoxCount: Int
     var siblingMaskOverlapBreakdown: [String: Int]
     var primaryBottleneckBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
@@ -3343,6 +3397,9 @@ struct MangaKoharuNativeArtifactBundleLiteBlockLedger: Equatable, Codable, Senda
     var selectedTextBoxLite: MangaKoharuNativeArtifactBundleLiteComponent
     var selectedBubbleInstanceLite: MangaKoharuNativeArtifactBundleLiteComponent
     var selectedSegmentMaskLite: MangaKoharuNativeArtifactBundleLiteComponent
+    var selectedTextBoxSegmentLinkVerdict: String
+    var textBoxSegmentLinkageStatus: String
+    var textBoxSegmentLinkageRisk: Bool
     var ocrEvidence: [MangaKoharuNativeArtifactBundleLiteSignal]
     var translationFailureRoute: String
     var renderFitEvidence: [MangaKoharuNativeArtifactBundleLiteSignal]
@@ -3418,8 +3475,10 @@ struct MangaKoharuNativeArtifactBundleLiteReport: Equatable, Codable, Sendable {
     var ocrRouteBreakdown: [String: Int]
     var translationRouteBreakdown: [String: Int]
     var renderRouteBreakdown: [String: Int]
+    var textBoxSegmentLinkBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
     var readyForFullProbeReviewBlocks: [Int]
+    var textBoxSegmentLinkageReviewBlocks: [Int]
     var needsRealTextBoxesBlocks: [Int]
     var needsRealBubbleMaskBlocks: [Int]
     var needsRealSegmentMaskBlocks: [Int]
@@ -3469,6 +3528,8 @@ struct MangaKoharuNativePromotionBlockLedger: Equatable, Codable, Sendable {
     var textBoxesPromotionStatus: String
     var bubbleMaskPromotionStatus: String
     var segmentMaskPromotionStatus: String
+    var textBoxSegmentLinkVerdict: String
+    var textBoxSegmentLinkagePromotionStatus: String
     var ocrTextPromotionStatus: String
     var translationPromotionStatus: String
     var renderPromotionStatus: String
@@ -3558,8 +3619,10 @@ struct MangaKoharuNativePromotionGateLiteReport: Equatable, Codable, Sendable {
     var promotionEligibilityBreakdown: [String: Int]
     var primaryBlockingArtifactBreakdown: [String: Int]
     var probeBottleneckBreakdown: [String: Int]
+    var textBoxSegmentLinkBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
     var shadowReviewEligibleBlocks: [Int]
+    var textBoxSegmentLinkageBlockedBlocks: [Int]
     var stopLocalTuningBlocks: [Int]
     var needsRealTextBoxesBlocks: [Int]
     var needsRealBubbleMaskBlocks: [Int]
@@ -3572,6 +3635,106 @@ struct MangaKoharuNativePromotionGateLiteReport: Equatable, Codable, Sendable {
     var candidateExportPreviews: [MangaKoharuNativeCandidateExportPreview]
     var workItems: [MangaKoharuNativePromotionWorkItem]
     var gateLedger: [MangaKoharuNativePromotionGate]
+    var notes: [String]
+}
+
+struct MangaKoharuNativeArtifactContractDryRunSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuNativeArtifactContractDryRunFile: Equatable, Codable, Sendable {
+    var path: String
+    var artifactKind: String
+    var required: Bool
+    var activeFileFound: Bool
+    var dryRunPreviewCount: Int
+    var status: String
+    var requiredFields: [String]
+    var missingRequiredFields: [String]
+    var forbiddenSourceCount: Int
+    var nextAction: String
+    var decisionSignals: [MangaKoharuNativeArtifactContractDryRunSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldCreateActiveArtifact: Bool
+}
+
+struct MangaKoharuNativeArtifactContractDryRunPreview: Equatable, Codable, Sendable {
+    var previewID: String
+    var blockIndex: Int
+    var targetArtifactStage: String
+    var candidateSource: String
+    var sourceReport: String
+    var destinationPath: String
+    var bbox: [Double]?
+    var confidence: Double?
+    var requiredFields: [String]
+    var missingRequiredFields: [String]
+    var forbiddenSourceReasons: [String]
+    var canSatisfyContractDryRun: Bool
+    var activeExportAllowed: Bool
+    var reasonNotExported: String
+    var decisionSignals: [MangaKoharuNativeArtifactContractDryRunSignal]
+    var groundTruthUsedForDecision: Bool
+    var wouldCreateActiveArtifact: Bool
+}
+
+struct MangaKoharuNativeArtifactContractDryRunGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var gateName: String
+    var scope: String
+    var status: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var failureMeans: String
+    var recommendedAction: String
+    var decisionSignals: [MangaKoharuNativeArtifactContractDryRunSignal]
+    var groundTruthUsedForDecision: Bool
+}
+
+struct MangaKoharuNativeArtifactContractDryRunReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
+    var sourceImage: String
+    var coordinateSpace: String
+    var imageWidth: Int
+    var imageHeight: Int
+    var activeInputDirectory: String
+    var examplesDirectory: String
+    var evaluatedBlockCount: Int
+    var requiredFileCount: Int
+    var dryRunPreviewCount: Int
+    var contractGateCount: Int
+    var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+    var wouldChangeMainFlow: Bool
+    var diagnosticOnly: Bool
+    var dryRunOnly: Bool
+    var activeExportAllowed: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var contractDryRunVerdict: String
+    var readinessVerdict: String
+    var activeArtifactsDirectory: Bool
+    var contractExampleOnly: Bool
+    var externalTextBoxesShadowOCRAllowed: Bool
+    var requiredFileStatusBreakdown: [String: Int]
+    var targetArtifactBreakdown: [String: Int]
+    var missingRequiredFieldBreakdown: [String: Int]
+    var forbiddenSourceBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var contractReadyDryRunPreviewIDs: [String]
+    var blockedPreviewIDs: [String]
+    var requiredFiles: [MangaKoharuNativeArtifactContractDryRunFile]
+    var previews: [MangaKoharuNativeArtifactContractDryRunPreview]
+    var gateLedger: [MangaKoharuNativeArtifactContractDryRunGate]
+    var validatorCommands: [String]
+    var forbiddenActiveSources: [String]
     var notes: [String]
 }
 
@@ -4921,6 +5084,9 @@ struct MangaOverlayExternalSegmentMaskSummary: Equatable, Codable, Sendable {
 }
 
 struct MangaOverlayExternalArtifactCoordinateValidation: Equatable, Codable, Sendable {
+    var schemaVersion: String?
+    var expectedSchemaVersion: String
+    var schemaVersionMatches: Bool
     var coordinateSpace: String?
     var expectedCoordinateSpace: String
     var sourceImageMatches: Bool
@@ -5550,6 +5716,7 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?
     var koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?
     var koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport?
+    var koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?

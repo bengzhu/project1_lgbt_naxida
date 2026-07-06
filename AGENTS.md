@@ -5,10 +5,12 @@
 - 用户消息以 `agenta`、`a:` 或 `A:` 开头，表示召唤 Agent A。
 - 用户消息以 `agentb`、`b:` 或 `B:` 开头，表示召唤 Agent B。
 - 用户消息以 `agentc`、`c:` 或 `C:` 开头，表示召唤 Agent C。
+- 用户消息以 `agentx`、`x:` 或 `X:` 开头，表示召唤 Agent X；Agent X 面向大目标，自动循环调度 Agent A/B/C 和并发子 agent 协作推进、验证、修复与再迭代，单轮最多开启 6 个子 agent，并及时重分配任务以加速收口。
 - 没有这些前缀时，按普通 Codex 任务处理；若任务需要 A/B/C 边界，先提醒用户指定角色或说明本轮按普通任务执行。
 - Agent A 最终回复第一行必须写：`我是 Agent A。`
 - Agent B 最终回复第一行必须写：`我是 Agent B。`
 - Agent C 最终回复第一行必须写：`我是 Agent C。`
+- Agent X 最终回复第一行必须写：`我是 Agent X。`
 
 ## 1. 项目核心事实
 AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR、本地翻译、覆盖合成和探针诊断链路。
@@ -17,7 +19,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - `Local` 模式通过 `GemmaLocalService` + `LlamaRuntime` + `llama.cpp` 加载 GGUF。
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
-- GGUF 不进仓库。云端 GGUF 依赖后续由人工通过 GitHub Release + workflow 下载 + 缓存解决，本轮流程改造不处理模型分发。
+- GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
 ## 2. 每轮必读
@@ -98,9 +100,13 @@ test/1.png
 
 - 除非人工明确要求“本机测试”“本地 build”“本地跑探针”“本地 xcodebuild”，否则完整 build、Xcode 测试、漫画探针、报告生成和重验证默认交给 GitHub Actions。
 - 本地仍可做 `git diff --check`、JSON 解析、YAML smoke 等轻量检查；这些不算重负载本机测试。
-- Swift / Xcode / 漫画探针相关任务完成后，默认 push `codeb/...`，由 GitHub Actions 跑 build、静态检查、可用报告检查和 artifact 上传。
+- Swift / Xcode / 漫画探针相关任务完成后，默认 push `codeb/...`，由 GitHub Actions 跑静态检查、Xcode build 快验和 artifact 上传。
+- GitHub Actions push 会先做变更范围检测：非 App 构建相关变更走更快的 build-skip CI，只保留静态检查、manifest 和 skip 日志；Swift、Xcode 工程、资源、`test/` 素材、手动 `ci-fast/full` 或 Koharu artifact 注入仍必须跑 Xcode build。
+- Koharu artifact validator 的完整 invalid fixture 矩阵只在 validator、artifact contract 或 workflow 相关文件变化时跑；普通 push 只跑核心 active/valid 校验以加速。
+- GitHub Actions push 默认 `probe_mode=skip`，不启动模拟器漫画探针；需要云端探针验收时手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。
 - 现有加密打包 workflow 只产出受密码保护的软件包；Agent C 不以该包验收。
-- 独立 CI 结果包必须未加密，至少包含 `.xcresult`、`junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`，以及可用的 `output/` 报告。
+- 独立 CI 结果包必须未加密，至少包含 `junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`；`xcodeBuildRequired=true` 时还必须包含 `.xcresult`，手动探针运行还必须包含可用的 `output/` 报告。
+- 若 `workflow_dispatch` 注入 Koharu artifact archive，Agent C 必须核对 `koharuArtifactInjection*` manifest 字段、Release tag / asset / SHA、validator verdict 和 external readiness，不得只看注入步骤日志。
 - 若云端失败，Agent B 根据结果包中的失败摘要、日志路径和 manifest 修复后继续 push，不改回默认本机循环。
 
 ## 6. Agent A/B/C 职责
@@ -127,9 +133,10 @@ test/1.png
 - 合并完成后删除远端 `codeb/...` 候选分支，或在最终回复说明未删除原因。
 
 ## 7. 测试选择
-- 文档-only 修改至少运行 `git diff --check`，可加 JSON/YAML smoke。
-- Swift 或 Xcode 工程修改默认不在本机跑完整 build；按规则推分支交给 GitHub Actions。
-- 漫画探针、翻译链路或报告模型修改必须由云端能稳定运行的探针生成报告；若当前云端因模拟器、GGUF、App 容器或外部 artifact 缺失不能稳定运行，必须在最终回复和文档中列明未验证范围、缺失依赖、是否影响验收和需要人工提供什么。
+- 非 App 构建相关修改至少运行 `git diff --check`，可加 JSON/YAML smoke。
+- 非 App 构建相关变更的云端 CI 可接受 `xcodeBuildRequired=false` 的 build-skip 结果包；Agent C 必须核对 manifest 的 skip reason，不能把它当作 Swift/Xcode 编译证据。
+- Swift 或 Xcode 工程修改默认不在本机跑完整 build；按规则推分支交给 GitHub Actions 快验。
+- 漫画探针、翻译链路或报告模型修改需要云端探针证据时，手动 `workflow_dispatch` 运行 `ci-fast` 或 `full` 生成报告；若当前云端因模拟器、GGUF、App 容器或外部 artifact 缺失不能稳定运行，必须在最终回复和文档中列明未验证范围、缺失依赖、是否影响验收和需要人工提供什么。
 - 不得伪造测试结果，不得把旧 artifact 当新结果。
 
 本地轻量命令：

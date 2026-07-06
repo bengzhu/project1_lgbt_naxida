@@ -1,0 +1,12 @@
+{
+  "bubbleInstances": [
+    {
+      "id": "schema-mismatch-bubble-1",
+      "bbox": [96, 144, 182, 112],
+      "confidence": 0.71,
+      "maskValue": 1,
+      "pixelCount": 12840,
+      "notes": ["schema mismatch fixture"]
+    }
+  ]
+}

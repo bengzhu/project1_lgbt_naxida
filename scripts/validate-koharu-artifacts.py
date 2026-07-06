@@ -13,8 +13,25 @@ from typing import Any
 
 EXPECTED_COORDINATE_SPACE = "originalImageTopLeftPixels"
 EXPECTED_SOURCE_IMAGE = "test/1.png"
+EXPECTED_SCHEMA_VERSION = "aitrans.koharu_artifact_contract.v1"
 DEFAULT_IMAGE_PATH = Path("test/1.png")
 ACTIVE_ARTIFACT_ROOT = Path("test/koharu_artifacts")
+FORBIDDEN_GENERATED_BY_TERMS = [
+    "contract example",
+    "fixture",
+    "manual",
+    "vision ocr",
+    "visionocr",
+    "pre-crop",
+    "precrop",
+    "line plan",
+    "bubblemask proxy",
+    "bubble mask proxy",
+    "segmentmask proxy",
+    "segment mask proxy",
+    "ground truth",
+    "handwritten",
+]
 REQUIRED_ARTIFACT_FILES = [
     {
         "path": "test/koharu_artifacts/1.manifest.json",
@@ -59,8 +76,7 @@ REQUIRED_ARTIFACT_FILES = [
 
 
 def is_active_artifacts_root(root: Path) -> bool:
-    normalized = Path(str(root).rstrip("/"))
-    return normalized == ACTIVE_ARTIFACT_ROOT or tuple(normalized.parts[-2:]) == tuple(ACTIVE_ARTIFACT_ROOT.parts)
+    return root.resolve() == ACTIVE_ARTIFACT_ROOT.resolve()
 
 
 def read_image_size(path: Path) -> tuple[int, int]:
@@ -109,11 +125,20 @@ def load_json(path: Path, label: str, parse_errors: list[str]) -> Any | None:
         return None
 
 
-def resolve_path(root: Path, manifest: dict[str, Any] | None, key: str, fallback: str) -> Path:
+def resolve_path(
+    root: Path,
+    manifest: dict[str, Any] | None,
+    key: str,
+    fallback: str,
+    parse_errors: list[str],
+) -> Path:
     value = manifest.get(key) if isinstance(manifest, dict) else None
     if isinstance(value, str) and value.strip():
         candidate = Path(value)
-        return candidate if candidate.is_absolute() else root / candidate
+        if candidate.is_absolute() or ".." in candidate.parts:
+            parse_errors.append(f"manifest:{key}:pathEscapesActiveArtifactRoot")
+            return root / fallback
+        return root / candidate
     return root / fallback
 
 
@@ -198,11 +223,26 @@ def validate_boxes(
     return sorted(set(invalid_ids))
 
 
+def generated_by_policy_errors(manifest: dict[str, Any] | None, contract_example_only: bool) -> list[str]:
+    if manifest is None or contract_example_only:
+        return []
+    generated_by = manifest.get("generatedBy")
+    if not isinstance(generated_by, str) or not generated_by.strip():
+        return ["generatedByMissing"]
+    normalized = generated_by.strip().lower().replace("_", "-")
+    errors = []
+    for term in FORBIDDEN_GENERATED_BY_TERMS:
+        if term in normalized:
+            errors.append(f"forbiddenGeneratedBy:{term}")
+    return errors
+
+
 def verdict_for(
     manifest_found: bool,
     missing_artifacts: list[str],
     parse_errors: list[str],
     coordinate_errors: list[str],
+    source_policy_errors: list[str],
     text_boxes: list[dict[str, Any]],
     bubbles: list[dict[str, Any]],
     segment_mask: dict[str, Any] | None,
@@ -212,6 +252,10 @@ def verdict_for(
         return "manifestMissing"
     if parse_errors:
         return "parseFailed"
+    if any(error.startswith("schemaVersionMissing") for error in coordinate_errors):
+        return "schemaVersionMissing"
+    if any(error.startswith("schemaVersionMismatch") for error in coordinate_errors):
+        return "schemaVersionMismatch"
     if any(error.startswith("coordinateSpaceMissing") for error in coordinate_errors):
         return "coordinateSpaceMissing"
     if any(error.startswith("coordinateSpaceMismatch") for error in coordinate_errors):
@@ -220,6 +264,10 @@ def verdict_for(
         return "sourceImageMismatch"
     if coordinate_errors:
         return "coordinateValidationFailed"
+    if any(error.startswith("generatedByMissing") for error in source_policy_errors):
+        return "generatedByMissing"
+    if any(error.startswith("forbiddenGeneratedBy") for error in source_policy_errors):
+        return "forbiddenGeneratedBy"
     if missing_artifacts:
         return "artifactFilesMissing"
     if not text_boxes:
@@ -240,7 +288,11 @@ def next_action_for(verdict: str) -> str:
         return "stopUntilParserFixed"
     if verdict == "contractExampleOnly":
         return "stopBecauseFixtureIsNotDetectorOutput"
+    if verdict in {"generatedByMissing", "forbiddenGeneratedBy"}:
+        return "stopUntilRealDetectorSourceDeclared"
     if verdict in {
+        "schemaVersionMissing",
+        "schemaVersionMismatch",
         "coordinateSpaceMissing",
         "coordinateSpaceMismatch",
         "sourceImageMismatch",
@@ -255,6 +307,7 @@ def readiness_blockers(
     missing_artifacts: list[str],
     parse_errors: list[str],
     coordinate_errors: list[str],
+    source_policy_errors: list[str],
     contract_example_only: bool,
     active_artifacts_directory: bool,
 ) -> list[str]:
@@ -268,6 +321,7 @@ def readiness_blockers(
     blockers.extend(f"missing:{item}" for item in missing_artifacts)
     blockers.extend(f"parse:{item}" for item in parse_errors)
     blockers.extend(f"coordinate:{item}" for item in coordinate_errors)
+    blockers.extend(f"sourcePolicy:{item}" for item in source_policy_errors)
     if not blockers:
         blockers.append(verdict)
     return blockers
@@ -283,9 +337,9 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
     if manifest_raw is not None and manifest is None:
         parse_errors.append("manifest: expected object")
 
-    textboxes_path = resolve_path(root, manifest, "textBoxesPath", "1.textboxes.json")
-    bubbles_path = resolve_path(root, manifest, "bubbleMaskPath", "1.bubbles.json")
-    segment_path = resolve_path(root, manifest, "segmentMaskPath", "1.segment_mask.json")
+    textboxes_path = resolve_path(root, manifest, "textBoxesPath", "1.textboxes.json", parse_errors)
+    bubbles_path = resolve_path(root, manifest, "bubbleMaskPath", "1.bubbles.json", parse_errors)
+    segment_path = resolve_path(root, manifest, "segmentMaskPath", "1.segment_mask.json", parse_errors)
 
     missing_artifacts = []
     if not manifest_path.is_file():
@@ -313,6 +367,12 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
     )
 
     coordinate_space = manifest.get("coordinateSpace") if manifest else None
+    schema_version = manifest.get("schemaVersion") if manifest else None
+    if schema_version is None:
+        coordinate_errors.append("schemaVersionMissing")
+    elif schema_version != EXPECTED_SCHEMA_VERSION:
+        coordinate_errors.append(f"schemaVersionMismatch:{schema_version}")
+
     if coordinate_space is None:
         coordinate_errors.append("coordinateSpaceMissing")
     elif coordinate_space != EXPECTED_COORDINATE_SPACE:
@@ -323,6 +383,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         coordinate_errors.append(f"sourceImageMismatch:{source_image}")
 
     contract_example_only = bool(manifest.get("contractExampleOnly")) if manifest else False
+    source_policy_errors = generated_by_policy_errors(manifest, contract_example_only)
     invalid_text_box_ids = validate_boxes(text_boxes, "textBox", image_width, image_height, coordinate_errors)
     invalid_bubble_ids = validate_boxes(bubbles, "bubble", image_width, image_height, coordinate_errors)
 
@@ -345,6 +406,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         missing_artifacts=missing_artifacts,
         parse_errors=parse_errors,
         coordinate_errors=coordinate_errors,
+        source_policy_errors=source_policy_errors,
         text_boxes=text_boxes,
         bubbles=bubbles,
         segment_mask=segment_mask,
@@ -357,6 +419,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         missing_artifacts,
         parse_errors,
         coordinate_errors,
+        source_policy_errors,
         contract_example_only,
         active_artifacts_directory,
     )
@@ -390,7 +453,10 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         "missingArtifacts": missing_artifacts,
         "parseErrors": parse_errors,
         "coordinateErrors": coordinate_errors,
+        "sourcePolicyErrors": source_policy_errors,
         "sourceImage": source_image,
+        "schemaVersion": schema_version,
+        "expectedSchemaVersion": EXPECTED_SCHEMA_VERSION,
         "coordinateSpace": coordinate_space,
         "imageWidth": image_width,
         "imageHeight": image_height,
@@ -420,6 +486,7 @@ def main() -> int:
         summary = {
             "activeInputDirectory": str(ACTIVE_ARTIFACT_ROOT),
             "sourceImage": EXPECTED_SOURCE_IMAGE,
+            "schemaVersion": EXPECTED_SCHEMA_VERSION,
             "coordinateSpace": EXPECTED_COORDINATE_SPACE,
             "requiredFiles": REQUIRED_ARTIFACT_FILES,
             "readyForShadowOCRRequires": [

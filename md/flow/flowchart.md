@@ -112,15 +112,16 @@ flowchart TD
   KBI --> KDF["koharuDistanceFieldSafeAreaReport<br/>distance field / safe pixels / maximum safe rect"]
   KDF --> KAS["koharuBubbleAdjacencySeamReport<br/>adjacency graph / seam candidate ledger"]
   KAS --> KRS["koharuRenderSpriteFitPlannerReport<br/>font budget / layout candidate / sibling fit ledger"]
-  KRS --> KNT["koharuNativeTextBoxDetectorLiteReport<br/>pre-OCR pixel / bubble TextBox candidates"]
-  KNT --> KNSO["koharuNativeTextBoxDetectorLiteShadowOCRReport<br/>detector-lite TextBoxes -> OCR shadow loop"]
+  KRS --> KNT["koharuNativeTextBoxDetectorLiteReport<br/>pre-OCR TextBox candidates + block relation"]
+  KNT --> KNSO["koharuNativeTextBoxDetectorLiteShadowOCRReport<br/>detector-lite TextBoxes -> OCR / vertical rotation shadow loop"]
   KNSO --> KNTR["koharuNativeTextBoxDetectorLiteRefinementReport<br/>detector-lite parent bbox refinement + shadow OCR"]
   KNTR --> KNTCL["koharuNativeTextBoxDetectorLiteClosedLoopReport<br/>closed-loop route / stoplist / artifact routing"]
-  KNTCL --> KNBM["koharuNativeBubbleMaskInstanceLiteReport<br/>pixel instance-lite mask / majority assignment"]
-  KNBM --> KNSMR["koharuNativeSegmentMaskRefinementLiteReport<br/>TextBox-constrained glyph pixel mask"]
-  KNSMR --> KNABL["koharuNativeArtifactBundleLiteReport<br/>TextBoxes / BubbleMask / SegmentMask consistency closure"]
-  KNABL --> KNPG["koharuNativePromotionGateLiteReport<br/>probe-driven promotion gates / candidate preview"]
-  KNPG --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
+  KNTCL --> KNBM["koharuNativeBubbleMaskInstanceLiteReport<br/>instance mask / scoped safe rect / sprite + sibling collision"]
+  KNBM --> KNSMR["koharuNativeSegmentMaskRefinementLiteReport<br/>TextBox-linked SegmentMask refinement / containment ratio"]
+  KNSMR --> KNABL["koharuNativeArtifactBundleLiteReport<br/>TextBoxes / BubbleMask / SegmentMask consistency + linkage closure"]
+  KNABL --> KNPG["koharuNativePromotionGateLiteReport<br/>probe-driven promotion gates / linkage-blocked preview"]
+  KNPG --> KNCD["koharuNativeArtifactContractDryRunReport<br/>four-file contract dry-run / validator commands"]
+  KNCD --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / linkage work item gates"]
   TMF --> KAC
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
@@ -226,7 +227,7 @@ flowchart TD
   B3 --> B4["创建 PR<br/>base=smalldata_test / head=codeb/..."]
 
   %% 云端验证和结果包
-  B4 --> G1["GitHub Actions<br/>单次 Debug simulator build / JSON / 静态检查 / ci-fast 探针"]
+  B4 --> G1["GitHub Actions<br/>变更范围检测 / 静态检查 / 必要时 Xcode build / 手动 ci-fast 探针"]
   G0["workflow_dispatch<br/>可选 full 或 skip"] --> G1
   G1 --> G2["未加密 CI 结果包<br/>xcresult / junit.xml / xcodebuild.log / manifest / failure summary / Koharu gate 摘要"]
   G1 --> G3["加密打包 workflow<br/>软件包交付，Agent C 不以此验收"]

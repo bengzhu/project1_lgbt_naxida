@@ -50,6 +50,8 @@ manifest 可指定等价相对路径：
 - BubbleMask 当前契约先接收 instance summary：`id`、`bbox`、`maskValue`、`pixelCount`，不要求提交真实 mask PNG。
 - SegmentMask 当前契约先接收 summary：`width`、`height`、`glyphPixelCount`、`connectedComponentCount`，不要求提交真实 mask PNG。
 - `linePolygons`、`sourceDirection`、`rotationDegrees` / `rotationDeg`、`detectedFontSizePx` 是可选字段；有则校验 JSON 结构，不作为 readiness 必填。
+- manifest 中 `textBoxesPath`、`bubbleMaskPath`、`segmentMaskPath` 必须是 active artifact 目录内的相对路径；绝对路径和包含 `..` 的路径会被 validator 和 Swift readiness 阻塞。
+- active manifest 的 `generatedBy` 必须声明真实 detector / segmenter 来源；缺失或包含 `manual`、`fixture`、`Vision OCR`、`pre-crop`、`line plan`、`BubbleMask proxy`、`SegmentMask proxy`、`ground truth`、`handwritten` 等禁用来源词时，validator 和 Swift readiness 都会阻塞，不允许进入 `readyForShadowOCR`。
 
 ## 离线校验
 
@@ -59,12 +61,17 @@ python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_con
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
 ```
 
 validator 只读指定目录，不复制、不生成 active artifact。输出 JSON 摘要包含 `verdict`、`readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed`、`nextAction`、`readinessBlockers`、缺失文件、解析错误、坐标错误、TextBox 数量、Bubble instance 数量和 SegmentMask 尺寸匹配结果。
 
 `--print-required-files` 只打印 Koharu / 外部 detector 侧需要交付的 active 文件清单，不读取或写入 `test/koharu_artifacts/`。缺少真实 active 目录时，`--allow-missing` 的正确结果是 `verdict = manifestMissing`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`，并列出 `manifest`、`TextBoxes`、`BubbleMask`、`SegmentMask` 的阻塞项。
+
+云端手动 workflow 可选从 Release archive 注入真实四件套：填写 `koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256` 后，CI 会在 Xcode build 前下载、校验、解压并只复制四个固定 JSON 到 `test/koharu_artifacts/`；`koharu_artifact_required=true` 时注入或 validator 失败会直接失败。
 
 ## 从 Koharu 导出到 AITRANS contract
 
@@ -76,6 +83,7 @@ validator 只读指定目录，不复制、不生成 active artifact。输出 JS
 - 将 speech bubble instance 结果转成 `1.bubbles.json`，每个 instance 至少包含 `id`、`bbox`，建议包含 `maskValue` 和 `pixelCount`。
 - 将文字像素 mask 统计转成 `1.segment_mask.json`，至少包含与 `test/1.png` 一致的 `width = 576`、`height = 1280`；建议包含 `glyphPixelCount` 和 `connectedComponentCount`。
 - `1.manifest.json` 必须声明 `schemaVersion = aitrans.koharu_artifact_contract.v1`、`sourceImage = test/1.png`、`coordinateSpace = originalImageTopLeftPixels`、`contractExampleOnly = false`，并记录 `generatedBy`。
+- manifest 路径字段不得使用绝对路径或 `..` 逃逸 active 目录。
 - 转换后先运行 validator；只有 `readyForShadowOCR = true` 且 `externalTextBoxesShadowOCRAllowed = true`，App 探针才允许执行 external TextBoxes shadow OCR。
 
 ## v1.15 真实交付包清单

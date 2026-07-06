@@ -8,14 +8,38 @@ on:
   workflow_dispatch:
     inputs:
       probe_mode:
-        description: 'Manga probe mode: ci-fast, full, or skip'
+        description: 'Manga probe mode: skip for fast build-only CI, ci-fast/full for probe validation'
         required: false
-        default: ci-fast
+        default: skip
         type: choice
         options:
+          - skip
           - ci-fast
           - full
-          - skip
+      koharu_artifact_release_tag:
+        description: 'Optional Release tag containing a real Koharu artifact archive'
+        required: false
+        type: string
+      koharu_artifact_asset:
+        description: 'Optional Release asset archive with 1.manifest/textboxes/bubbles/segment_mask JSON'
+        required: false
+        type: string
+      koharu_artifact_sha256:
+        description: 'SHA256 for the optional Koharu artifact archive'
+        required: false
+        type: string
+      koharu_artifact_required:
+        description: 'Fail when the optional Koharu artifact archive is absent or invalid'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+concurrency:
+  group: ci-results-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci-results:
@@ -50,20 +74,51 @@ jobs:
           short_sha="${GITHUB_SHA:0:12}"
           requested_probe_mode="${{ github.event.inputs.probe_mode }}"
           if [ -z "$requested_probe_mode" ]; then
-            requested_probe_mode="ci-fast"
+            requested_probe_mode="skip"
+          fi
+          koharu_artifact_release_tag="${{ github.event.inputs.koharu_artifact_release_tag }}"
+          koharu_artifact_asset="${{ github.event.inputs.koharu_artifact_asset }}"
+          koharu_artifact_sha256="${{ github.event.inputs.koharu_artifact_sha256 }}"
+          koharu_artifact_required="${{ github.event.inputs.koharu_artifact_required }}"
+          if [ -z "$koharu_artifact_required" ]; then
+            koharu_artifact_required="false"
+          fi
+          case "$koharu_artifact_required" in
+            true|false) ;;
+            *)
+              echo "Invalid koharu_artifact_required=$koharu_artifact_required" >&2
+              exit 1
+              ;;
+          esac
+          koharu_artifact_requested=false
+          if [ -n "$koharu_artifact_release_tag$koharu_artifact_asset$koharu_artifact_sha256" ]; then
+            koharu_artifact_requested=true
+          fi
+          if [ "$koharu_artifact_requested" = "true" ]; then
+            if [ -z "$koharu_artifact_release_tag" ] || [ -z "$koharu_artifact_asset" ] || [ -z "$koharu_artifact_sha256" ]; then
+              echo "koharu_artifact_release_tag, koharu_artifact_asset, and koharu_artifact_sha256 must be provided together" >&2
+              exit 1
+            fi
+          fi
+          if [ "$koharu_artifact_required" = "true" ] && [ "$koharu_artifact_requested" != "true" ]; then
+            echo "koharu_artifact_required=true requires a release tag, asset, and sha256" >&2
+            exit 1
           fi
           case "$requested_probe_mode" in
             ci-fast)
               probe_timeout_seconds=1800
               probe_stall_timeout_seconds=300
+              probe_no_progress_timeout_seconds=180
               ;;
             full)
               probe_timeout_seconds=3600
               probe_stall_timeout_seconds=600
+              probe_no_progress_timeout_seconds=300
               ;;
             skip)
               probe_timeout_seconds=0
               probe_stall_timeout_seconds=0
+              probe_no_progress_timeout_seconds=0
               ;;
             *)
               echo "Invalid probe_mode=$requested_probe_mode" >&2
@@ -86,15 +141,75 @@ jobs:
             echo "probe_mode=$requested_probe_mode"
             echo "probe_timeout_seconds=$probe_timeout_seconds"
             echo "probe_stall_timeout_seconds=$probe_stall_timeout_seconds"
+            echo "probe_no_progress_timeout_seconds=$probe_no_progress_timeout_seconds"
+            echo "koharu_artifact_requested=$koharu_artifact_requested"
+            echo "koharu_artifact_required=$koharu_artifact_required"
+            echo "koharu_artifact_release_tag=$koharu_artifact_release_tag"
+            echo "koharu_artifact_asset=$koharu_artifact_asset"
+            echo "koharu_artifact_sha256=$koharu_artifact_sha256"
           } >> "$GITHUB_OUTPUT"
           {
             echo "PROBE_MODE=$requested_probe_mode"
             echo "PROBE_TIMEOUT_SECONDS=$probe_timeout_seconds"
             echo "PROBE_STALL_TIMEOUT_SECONDS=$probe_stall_timeout_seconds"
+            echo "PROBE_NO_PROGRESS_TIMEOUT_SECONDS=$probe_no_progress_timeout_seconds"
+            echo "KOHARU_ARTIFACT_RELEASE_TAG=$koharu_artifact_release_tag"
+            echo "KOHARU_ARTIFACT_ASSET=$koharu_artifact_asset"
+            echo "KOHARU_ARTIFACT_SHA256=$koharu_artifact_sha256"
           } >> "$GITHUB_ENV"
+
+      - name: Detect CI scope
+        id: ci_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RESULT_ROOT"
+          before="${{ github.event.before }}"
+          if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            before="$(git rev-parse HEAD^ 2>/dev/null || true)"
+          fi
+          if [ -n "$before" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then
+            git diff --name-only "$before" "$GITHUB_SHA" > "$RESULT_ROOT/changed-files.txt"
+          else
+            git ls-files > "$RESULT_ROOT/changed-files.txt"
+          fi
+
+          xcode_build_required=false
+          xcode_build_skip_reason="non_app_build_related_fast_path"
+          if [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ]; then
+            xcode_build_required=true
+            xcode_build_skip_reason=""
+          elif [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ]; then
+            xcode_build_required=true
+            xcode_build_skip_reason=""
+          elif grep -E '^(AITRANS/|AITRANS\.xcodeproj/|build-apple/|test/)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            xcode_build_required=true
+            xcode_build_skip_reason=""
+          fi
+
+          koharu_validator_extended_required=false
+          if [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ] || grep -E '^(\.github/workflows/ci-results\.yml|scripts/validate-koharu-artifacts\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            koharu_validator_extended_required=true
+          fi
+
+          {
+            echo "xcode_build_required=$xcode_build_required"
+            echo "xcode_build_skip_reason=$xcode_build_skip_reason"
+            echo "koharu_validator_extended_required=$koharu_validator_extended_required"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "XCODE_BUILD_REQUIRED=$xcode_build_required"
+            echo "XCODE_BUILD_SKIP_REASON=$xcode_build_skip_reason"
+            echo "KOHARU_VALIDATOR_EXTENDED_REQUIRED=$koharu_validator_extended_required"
+          } >> "$GITHUB_ENV"
+          echo "Changed files:"
+          cat "$RESULT_ROOT/changed-files.txt"
+          echo "xcode_build_required=$xcode_build_required"
+          echo "koharu_validator_extended_required=$koharu_validator_extended_required"
 
       - name: Restore GGUF model cache
         id: gguf_cache
+        if: steps.meta.outputs.probe_mode != 'skip'
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.MODEL_CACHE_DIR }}
@@ -102,7 +217,7 @@ jobs:
 
       - name: Download GGUF from GitHub Release
         id: download_model
-        if: steps.gguf_cache.outputs.cache-hit != 'true'
+        if: steps.meta.outputs.probe_mode != 'skip' && steps.gguf_cache.outputs.cache-hit != 'true'
         shell: bash
         continue-on-error: true
         env:
@@ -120,6 +235,7 @@ jobs:
 
       - name: Verify GGUF model
         id: verify_model
+        if: steps.meta.outputs.probe_mode != 'skip'
         shell: bash
         continue-on-error: true
         run: |
@@ -133,11 +249,88 @@ jobs:
           } 2>&1 | tee "$RESULT_ROOT/model-verify.log"
 
       - name: Save GGUF model cache
-        if: steps.gguf_cache.outputs.cache-hit != 'true'
+        if: steps.meta.outputs.probe_mode != 'skip' && steps.gguf_cache.outputs.cache-hit != 'true' && steps.verify_model.outcome == 'success'
         uses: actions/cache/save@v4
         with:
           path: ${{ env.MODEL_CACHE_DIR }}
           key: gguf-${{ env.MODEL_TAG }}-${{ env.MODEL_SHA256 }}
+
+      - name: Prepare Koharu active artifacts
+        id: koharu_artifacts
+        if: steps.meta.outputs.koharu_artifact_requested == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          archive_dir="$RUNNER_TEMP/koharu-artifact-archive"
+          extract_dir="$RUNNER_TEMP/koharu-artifact-extract"
+          archive_path="$archive_dir/${KOHARU_ARTIFACT_ASSET}"
+          mkdir -p "$archive_dir" "$extract_dir" "$RESULT_ROOT"
+
+          fail_or_skip() {
+            reason="$1"
+            echo "status=$reason" >> "$GITHUB_OUTPUT"
+            echo "injected=false" >> "$GITHUB_OUTPUT"
+            echo "Koharu artifact injection failed: $reason" >&2
+            if [ "${{ steps.meta.outputs.koharu_artifact_required }}" = "true" ]; then
+              exit 1
+            fi
+            exit 0
+          }
+
+          {
+            echo "Downloading Koharu artifact $KOHARU_ARTIFACT_ASSET from release $KOHARU_ARTIFACT_RELEASE_TAG"
+            gh release download "$KOHARU_ARTIFACT_RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --pattern "$KOHARU_ARTIFACT_ASSET" \
+              --dir "$archive_dir"
+            test -f "$archive_path"
+            echo "$KOHARU_ARTIFACT_SHA256  $archive_path" | shasum -a 256 -c -
+            case "$KOHARU_ARTIFACT_ASSET" in
+              *.zip)
+                unzip -q "$archive_path" -d "$extract_dir"
+                ;;
+              *.tar.gz|*.tgz)
+                tar -xzf "$archive_path" -C "$extract_dir"
+                ;;
+              *.tar)
+                tar -xf "$archive_path" -C "$extract_dir"
+                ;;
+              *)
+                echo "unsupported archive type: $KOHARU_ARTIFACT_ASSET" >&2
+                exit 42
+                ;;
+            esac
+            python3 - "$extract_dir" <<'PY'
+          import shutil
+          import sys
+          from pathlib import Path
+
+          extract_dir = Path(sys.argv[1])
+          destination = Path("test/koharu_artifacts")
+          required = [
+              "1.manifest.json",
+              "1.textboxes.json",
+              "1.bubbles.json",
+              "1.segment_mask.json",
+          ]
+          if destination.exists():
+              shutil.rmtree(destination)
+          destination.mkdir(parents=True, exist_ok=True)
+          for name in required:
+              matches = sorted(path for path in extract_dir.rglob(name) if path.is_file())
+              if not matches:
+                  raise SystemExit(f"missing required Koharu artifact file in archive: {name}")
+              shutil.copy2(matches[0], destination / name)
+          PY
+            python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts > "$RESULT_ROOT/koharu-active-artifacts-validation.json"
+            cat "$RESULT_ROOT/koharu-active-artifacts-validation.json"
+          } 2>&1 | tee "$RESULT_ROOT/koharu-artifact-injection.log" || fail_or_skip "download_or_validation_failed"
+
+          echo "status=injected" >> "$GITHUB_OUTPUT"
+          echo "injected=true" >> "$GITHUB_OUTPUT"
+          echo "archive_path=$archive_path" >> "$GITHUB_OUTPUT"
 
       - name: Static checks
         id: static_checks
@@ -160,16 +353,25 @@ jobs:
               echo "output/clean_text_diagnostic.json not present; skipping existing clean text parse"
             fi
             python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid
-            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
-            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
-            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
-            python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --print-required-files
+            python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files
             python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing > "$RESULT_ROOT/koharu-active-artifacts-validation.json"
             cat "$RESULT_ROOT/koharu-active-artifacts-validation.json"
+            if [ "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" = "true" ]; then
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
+            else
+              echo "Skipping extended Koharu invalid fixture matrix for fast CI scope"
+            fi
           } 2>&1 | tee "$RESULT_ROOT/static-checks.log"
 
       - name: Xcode build
         id: xcode_build
+        if: steps.ci_scope.outputs.xcode_build_required == 'true'
+        timeout-minutes: 20
         shell: bash
         continue-on-error: true
         run: |
@@ -183,13 +385,29 @@ jobs:
             -destination "$DESTINATION" \
             -derivedDataPath "$DERIVED_DATA" \
             -resultBundlePath "${{ steps.meta.outputs.result_bundle }}" \
+            -quiet \
             CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             build \
           2>&1 | tee "$RESULT_ROOT/xcodebuild.log"
           exit ${PIPESTATUS[0]}
 
+      - name: Write skipped Xcode build log
+        if: steps.ci_scope.outputs.xcode_build_required != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$TEST_RESULTS_DIR"
+          {
+            echo "Xcode build skipped by fast CI scope."
+            echo "reason=${{ steps.ci_scope.outputs.xcode_build_skip_reason }}"
+            echo "This run changed only docs, metadata, or validator-independent files."
+            echo "Choose workflow_dispatch probe_mode=ci-fast/full or change Swift/Xcode/resources/test files to force build validation."
+          } > "$RESULT_ROOT/xcodebuild.log"
+
       - name: Locate simulator app for manga probe
         id: simulator_build
+        if: steps.meta.outputs.probe_mode != 'skip' && steps.ci_scope.outputs.xcode_build_required == 'true' && steps.xcode_build.outcome == 'success' && steps.verify_model.outcome == 'success'
         shell: bash
         continue-on-error: true
         run: |
@@ -208,7 +426,7 @@ jobs:
 
       - name: Run cloud manga probe
         id: manga_probe
-        if: steps.meta.outputs.probe_mode != 'skip'
+        if: steps.meta.outputs.probe_mode != 'skip' && steps.xcode_build.outcome == 'success' && steps.verify_model.outcome == 'success' && steps.simulator_build.outcome == 'success'
         shell: bash
         continue-on-error: true
         run: |
@@ -267,7 +485,7 @@ jobs:
             echo "$container" > "$RESULT_ROOT/probe-app-container.txt"
             model_dir="$container/Library/Application Support/Models/Gemma-1.5B"
             mkdir -p "$model_dir"
-            cp "$MODEL_CACHE_DIR/$MODEL_ASSET" "$model_dir/model.gguf"
+            cp -c "$MODEL_CACHE_DIR/$MODEL_ASSET" "$model_dir/model.gguf" 2>/dev/null || cp "$MODEL_CACHE_DIR/$MODEL_ASSET" "$model_dir/model.gguf"
             echo "Imported Release model asset=$MODEL_ASSET into legacy app model directory=$model_dir"
             echo "$MODEL_SHA256  $model_dir/model.gguf" | shasum -a 256 -c -
             wc -c "$model_dir/model.gguf"
@@ -297,6 +515,7 @@ jobs:
             progress="$output_dir/manga_probe_progress.json"
             last_status_print=0
             last_progress_mtime=0
+            launch_started_at="$SECONDS"
             stalled_progress_seconds=0
             while [ "$SECONDS" -lt "$deadline" ]; do
               if [ $((SECONDS - last_status_print)) -ge 30 ]; then
@@ -313,6 +532,10 @@ jobs:
                     last_progress_mtime="$progress_mtime"
                     stalled_progress_seconds=0
                   fi
+                fi
+                if [ ! -f "$progress" ] && [ "$PROBE_NO_PROGRESS_TIMEOUT_SECONDS" -gt 0 ] && [ $((SECONDS - launch_started_at)) -ge "$PROBE_NO_PROGRESS_TIMEOUT_SECONDS" ]; then
+                  echo "Probe progress file was not created within ${PROBE_NO_PROGRESS_TIMEOUT_SECONDS}s" >&2
+                  break
                 fi
                 if [ -d "$output_dir" ]; then
                   echo "Current output files:"
@@ -389,6 +612,83 @@ jobs:
           missing = [name for name in required if not pathlib.Path("output", name).is_file()]
           if missing:
               raise SystemExit(f"missing exported probe outputs: {missing}")
+          import json
+          report = json.load(open("output/probe_report.json", encoding="utf-8"))
+          external = report.get("externalArtifactReadinessReport") or {}
+          external_shadow = report.get("externalTextBoxShadowOCRReport") or {}
+          contract = report.get("koharuNativeArtifactContractDryRunReport") or {}
+          bundle = report.get("koharuNativeArtifactBundleLiteReport") or {}
+          promotion = report.get("koharuNativePromotionGateLiteReport") or {}
+          convergence = report.get("koharuArtifactConvergenceReport") or {}
+          required_report_fields = [
+              ("koharuNativeArtifactBundleLiteReport.textBoxSegmentLinkBreakdown", bundle.get("textBoxSegmentLinkBreakdown")),
+              ("koharuNativeArtifactBundleLiteReport.textBoxSegmentLinkageReviewBlocks", bundle.get("textBoxSegmentLinkageReviewBlocks")),
+              ("koharuNativePromotionGateLiteReport.textBoxSegmentLinkBreakdown", promotion.get("textBoxSegmentLinkBreakdown")),
+              ("koharuNativePromotionGateLiteReport.textBoxSegmentLinkageBlockedBlocks", promotion.get("textBoxSegmentLinkageBlockedBlocks")),
+              ("koharuArtifactConvergenceReport.workItemLedger", convergence.get("workItemLedger")),
+              ("koharuArtifactConvergenceReport.gateLedger", convergence.get("gateLedger")),
+          ]
+          missing_report_fields = [name for name, value in required_report_fields if value is None]
+          if missing_report_fields:
+              raise SystemExit(f"missing linkage report fields: {missing_report_fields}")
+          if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
+              external_expected = {
+                  "readinessVerdict": "readyForShadowOCR",
+                  "activeArtifactsDirectory": True,
+                  "contractExampleOnly": False,
+                  "externalTextBoxesShadowOCRAllowed": True,
+                  "manifestFound": True,
+                  "textBoxesFound": True,
+                  "bubbleMaskFound": True,
+                  "segmentMaskFound": True,
+              }
+              mismatches = {
+                  key: {"expected": expected, "actual": external.get(key)}
+                  for key, expected in external_expected.items()
+                  if external.get(key) != expected
+              }
+              if mismatches:
+                  raise SystemExit(f"injected Koharu artifact not visible in App readiness report: {mismatches}")
+              if external_shadow.get("executed") is not True:
+                  raise SystemExit(f"externalTextBoxShadowOCRReport.executed={external_shadow.get('executed')!r}")
+              if int(external_shadow.get("candidateCount") or 0) <= 0:
+                  raise SystemExit(f"externalTextBoxShadowOCRReport.candidateCount={external_shadow.get('candidateCount')!r}")
+              if contract.get("contractDryRunVerdict") != "activeArtifactsReadyForShadowOCR":
+                  raise SystemExit(f"contractDryRunVerdict={contract.get('contractDryRunVerdict')!r}")
+              if contract.get("activeExportAllowed") is not False or contract.get("dryRunOnly") is not True:
+                  raise SystemExit("contract dry-run active export boundary was not preserved")
+          work_item_ids = {item.get("workItemID") for item in convergence.get("workItemLedger", [])}
+          gate_ids = {item.get("gateID") for item in convergence.get("gateLedger", [])}
+          for required_id in [
+              "WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage",
+              "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage",
+          ]:
+              if required_id not in work_item_ids:
+                  raise SystemExit(f"missing convergence linkage work item: {required_id}")
+          for required_id in [
+              "G-koharu-convergence-bundle-lite-textbox-segment-linkage",
+              "G-koharu-convergence-promotion-lite-textbox-segment-linkage",
+          ]:
+              if required_id not in gate_ids:
+                  raise SystemExit(f"missing convergence linkage gate: {required_id}")
+          txt = pathlib.Path("output", "1_ocr_probe_text.txt").read_text(encoding="utf-8")
+          for needle in [
+              "nativeArtifactBundleLiteTextBoxSegmentLink",
+              "nativePromotionTextBoxSegmentLink",
+              "convergenceBundleTextBoxSegmentLinkage",
+              "convergencePromotionTextBoxSegmentLinkage",
+          ]:
+              if needle not in txt:
+                  raise SystemExit(f"missing linkage TXT summary: {needle}")
+          if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
+              for needle in [
+                  "externalArtifacts: readiness=readyForShadowOCR",
+                  "shadowOCRAllowed=true",
+                  "nativeArtifactContractDryRunReport",
+                  "nativeArtifactContractDryRunPreview",
+              ]:
+                  if needle not in txt:
+                      raise SystemExit(f"missing injected artifact TXT summary: {needle}")
           PY
           } 2>&1 | tee "$RESULT_ROOT/manga-probe.log"
 
@@ -403,7 +703,11 @@ jobs:
             find output -maxdepth 1 -type f \( -name '*.json' -o -name '*.txt' -o -name '*.png' \) -print -exec cp {} "$OUTPUT_COPY_DIR/" \;
           fi
           if [ ! -f "$OUTPUT_COPY_DIR/probe_report.json" ]; then
-            echo "probe_report.json not available from this workflow run; cloud manga probe did not complete successfully" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
+            if [ "${{ steps.meta.outputs.probe_mode }}" = "skip" ]; then
+              echo "probe_mode=skip fast CI did not run cloud manga probe; trigger workflow_dispatch with ci-fast or full when probe artifacts are required" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
+            else
+              echo "probe_report.json not available from this workflow run; cloud manga probe did not complete successfully" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
+            fi
           fi
           find "$OUTPUT_COPY_DIR" -maxdepth 1 -type f -print | while read -r file; do basename "$file"; done | sort > "$RESULT_ROOT/probe-output-retained-files.txt"
 
@@ -412,20 +716,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
+          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" XCODE_BUILD_REQUIRED="${{ steps.ci_scope.outputs.xcode_build_required }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" SIMULATOR_BUILD_STATUS="${{ steps.simulator_build.outcome }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
           import os
           import xml.etree.ElementTree as ET
 
           root = ET.Element("testsuite", name="AITRANS CI Results", tests="2")
           failures = 0
+          model_status = os.environ["MODEL_STATUS"]
           probe_status = os.environ["MANGA_PROBE_STATUS"]
+          simulator_status = os.environ["SIMULATOR_BUILD_STATUS"]
+          if os.environ["PROBE_MODE"] == "skip" and model_status == "skipped":
+              model_status = "success"
           if os.environ["PROBE_MODE"] == "skip" and probe_status == "skipped":
               probe_status = "success"
+          if os.environ["PROBE_MODE"] == "skip" and simulator_status == "skipped":
+              simulator_status = "success"
+          build_status = os.environ["BUILD_STATUS"]
+          if os.environ["XCODE_BUILD_REQUIRED"] != "true" and build_status == "skipped":
+              build_status = "success"
           cases = [
-              ("gguf-model", os.environ["MODEL_STATUS"], "GGUF model setup failed"),
+              ("gguf-model", model_status, "GGUF model setup failed"),
               ("static-checks", os.environ["STATIC_STATUS"], "static checks failed"),
-              ("xcode-build", os.environ["BUILD_STATUS"], "xcode build failed"),
-              ("simulator-build", "${{ steps.simulator_build.outcome }}", "simulator build failed"),
+              ("xcode-build", build_status, "xcode build failed"),
+              ("simulator-build", simulator_status, "simulator build failed"),
               ("manga-probe", probe_status, "manga probe failed"),
           ]
           root.set("tests", str(len(cases)))
@@ -459,6 +772,8 @@ jobs:
           [ -f "$OUTPUT_COPY_DIR/manga_probe_progress.json" ] && probe_progress_path="$OUTPUT_COPY_DIR/manga_probe_progress.json"
           koharu_validation_path="${RESULT_ROOT}/koharu-active-artifacts-validation.json"
           [ -f "$koharu_validation_path" ] || koharu_validation_path=""
+          koharu_injection_log_path="${RESULT_ROOT}/koharu-artifact-injection.log"
+          [ -f "$koharu_injection_log_path" ] || koharu_injection_log_path=""
           if [ -d test/koharu_artifacts ]; then
             koharu_active_artifacts_present=true
           else
@@ -500,7 +815,11 @@ jobs:
               "scheme": "${SCHEME}",
               "destination": "${DESTINATION}",
               "resultBundlePath": "${{ steps.meta.outputs.result_bundle }}",
-              "simulatorAppReusedFromXcodeBuild": True,
+              "changedFilesPath": "${RESULT_ROOT}/changed-files.txt",
+              "xcodeBuildRequired": "${{ steps.ci_scope.outputs.xcode_build_required }}" == "true",
+              "xcodeBuildSkippedReason": "${{ steps.ci_scope.outputs.xcode_build_skip_reason }}",
+              "koharuValidatorExtendedRequired": "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" == "true",
+              "simulatorAppReusedFromXcodeBuild": "${{ steps.meta.outputs.probe_mode }}" != "skip" and "${{ steps.simulator_build.outcome }}" == "success",
               "simulatorAppPath": "${{ steps.simulator_build.outputs.simulator_app_path }}",
               "junitPath": "${RESULT_ROOT}/junit.xml",
               "xcodebuildLogPath": "${RESULT_ROOT}/xcodebuild.log",
@@ -508,6 +827,15 @@ jobs:
               "mangaProbeLogPath": "${RESULT_ROOT}/manga-probe.log",
               "appConsoleLogPath": "${RESULT_ROOT}/app-console.log",
               "staticChecksLogPath": "${RESULT_ROOT}/static-checks.log",
+              "koharuArtifactInjectionRequested": "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true",
+              "koharuArtifactInjectionRequired": "${{ steps.meta.outputs.koharu_artifact_required }}" == "true",
+              "koharuArtifactInjectionStatus": "${{ steps.koharu_artifacts.outputs.status }}",
+              "koharuArtifactInjectionOutcome": "${{ steps.koharu_artifacts.outcome }}",
+              "koharuArtifactInjected": "${{ steps.koharu_artifacts.outputs.injected }}" == "true",
+              "koharuArtifactInjectionLogPath": "$koharu_injection_log_path",
+              "koharuArtifactReleaseTag": "${{ steps.meta.outputs.koharu_artifact_release_tag }}",
+              "koharuArtifactAsset": "${{ steps.meta.outputs.koharu_artifact_asset }}",
+              "koharuArtifactSha256": "${{ steps.meta.outputs.koharu_artifact_sha256 }}",
               "koharuArtifactValidatorLogPath": "${RESULT_ROOT}/static-checks.log",
               "koharuActiveArtifactValidationPath": "$koharu_validation_path",
               "koharuArtifactValidatorRan": "${{ steps.static_checks.outcome }}" == "success",
@@ -547,9 +875,10 @@ jobs:
               "probeProgressPath": "$probe_progress_path",
               "probeMode": "${{ steps.meta.outputs.probe_mode }}",
               "probeFastPathEnabled": "${{ steps.meta.outputs.probe_mode }}" == "ci-fast",
-              "probeSkippedReason": "workflow_dispatch_or_document_only_skip" if "${{ steps.meta.outputs.probe_mode }}" == "skip" else None,
+              "probeSkippedReason": "default_push_fast_ci_or_manual_skip" if "${{ steps.meta.outputs.probe_mode }}" == "skip" else None,
               "probeTimeoutSeconds": int("${{ steps.meta.outputs.probe_timeout_seconds }}"),
               "probeStallTimeoutSeconds": int("${{ steps.meta.outputs.probe_stall_timeout_seconds }}"),
+              "probeNoProgressTimeoutSeconds": int("${{ steps.meta.outputs.probe_no_progress_timeout_seconds }}"),
               "probeDurationSeconds": (probe_progress or {}).get("elapsedSeconds"),
               "probeStageDurationsSeconds": (probe_progress or {}).get("stageDurationsSeconds"),
               "probeSkippedDiagnostics": probe_configuration.get("skippedDiagnostics") or (probe_progress or {}).get("skippedDiagnostics") or [],
@@ -592,6 +921,7 @@ jobs:
               "modelCacheKey": "gguf-${MODEL_TAG}-${MODEL_SHA256}",
               "modelCacheHit": "${{ steps.gguf_cache.outputs.cache-hit }}",
               "modelLocalPath": "${MODEL_CACHE_DIR}/${MODEL_ASSET}",
+              "modelSetupSkippedReason": "probe_mode_skip_fast_ci_does_not_need_model" if "${{ steps.meta.outputs.probe_mode }}" == "skip" else None,
               "modelDownloadOutcome": "${{ steps.download_model.outcome }}",
               "modelVerifyOutcome": "${{ steps.verify_model.outcome }}",
               "staticChecksOutcome": "${{ steps.static_checks.outcome }}",
@@ -599,7 +929,7 @@ jobs:
               "simulatorBuildOutcome": "${{ steps.simulator_build.outcome }}",
               "mangaProbeOutcome": "${{ steps.manga_probe.outcome }}",
               "probeRunInWorkflow": "${{ steps.manga_probe.outcome }}" == "success",
-              "probeRunNote": "Cloud manga probe installs the reused simulator app, imports model.gguf into the app container, launches with AITRANS_RUN_MANGA_PROBE=1 and AITRANS_MANGA_PROBE_MODE, and exports output/ when successful.",
+              "probeRunNote": "probe_mode=skip runs fast CI without simulator probe; ci-fast/full install the reused simulator app, import model.gguf into the app container, launch with AITRANS_RUN_MANGA_PROBE=1 and AITRANS_MANGA_PROBE_MODE, and export output/ when successful.",
               "encryptedPackageArtifactUsedForReview": False
           }
           with open("${RESULT_ROOT}/ci-artifact-manifest.json", "w", encoding="utf-8") as f:
@@ -617,6 +947,13 @@ jobs:
             echo "- probe mode: ${{ steps.meta.outputs.probe_mode }}"
             echo "- probe timeout seconds: ${{ steps.meta.outputs.probe_timeout_seconds }}"
             echo "- probe stall timeout seconds: ${{ steps.meta.outputs.probe_stall_timeout_seconds }}"
+            echo "- probe no-progress timeout seconds: ${{ steps.meta.outputs.probe_no_progress_timeout_seconds }}"
+            echo "- Koharu artifact injection requested: ${{ steps.meta.outputs.koharu_artifact_requested }}"
+            echo "- Koharu artifact injection required: ${{ steps.meta.outputs.koharu_artifact_required }}"
+            echo "- Koharu artifact injection: ${{ steps.koharu_artifacts.outcome }} / ${{ steps.koharu_artifacts.outputs.status }}"
+            echo "- Xcode build required: ${{ steps.ci_scope.outputs.xcode_build_required }}"
+            echo "- Xcode build skip reason: ${{ steps.ci_scope.outputs.xcode_build_skip_reason }}"
+            echo "- extended Koharu validator matrix: ${{ steps.ci_scope.outputs.koharu_validator_extended_required }}"
             echo "- GGUF cache hit: ${{ steps.gguf_cache.outputs.cache-hit }}"
             echo "- GGUF download: ${{ steps.download_model.outcome }}"
             echo "- GGUF verify: ${{ steps.verify_model.outcome }}"
@@ -626,6 +963,7 @@ jobs:
             echo "- manga probe: ${{ steps.manga_probe.outcome }}"
             echo
             echo "## Logs for Agent B"
+            echo "- Koharu artifact injection: ${RESULT_ROOT}/koharu-artifact-injection.log"
             echo "- Model download: ${RESULT_ROOT}/model-download.log"
             echo "- Model verify: ${RESULT_ROOT}/model-verify.log"
             echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
@@ -641,7 +979,8 @@ jobs:
             echo
             echo "## Probe status"
             if [ "${{ steps.meta.outputs.probe_mode }}" = "skip" ]; then
-              echo "Cloud manga probe was skipped by probe_mode=skip. This is only acceptable for document-only or explicitly skipped validation; inspect manifest probeSkippedReason."
+              echo "Cloud manga probe was skipped by probe_mode=skip. This is the default fast push CI path; use workflow_dispatch probe_mode=ci-fast or full for probe validation."
+              echo "GGUF model setup was also skipped because the fast path does not launch Local GGUF inference."
             elif [ "${{ steps.manga_probe.outcome }}" = "success" ]; then
               echo "Cloud manga probe ran and exported output artifacts. Review ${OUTPUT_COPY_DIR}/probe_report.json, ${OUTPUT_COPY_DIR}/clean_text_diagnostic.json, ${OUTPUT_COPY_DIR}/1_ocr_probe_text.txt, and PNGs."
             else
@@ -664,12 +1003,16 @@ jobs:
               echo "- active artifact validator output missing; inspect static checks."
             fi
             echo
-            if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ] || [ "${{ steps.simulator_build.outcome }}" != "success" ] || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
               echo "## Return to Agent B"
               echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
             else
               echo "## Result"
-              echo "Static checks and Xcode build passed. Agent C still needs to inspect the diff, manifest, logs, and available output artifacts."
+              if [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ]; then
+                echo "Static checks and Xcode build passed. Agent C still needs to inspect the diff, manifest, logs, and available output artifacts."
+              else
+                echo "Static checks passed. Xcode build was skipped by scope detection; Agent C must not treat this run as Swift/Xcode compile evidence."
+              fi
             fi
           } > "$RESULT_ROOT/ci-failure-summary.md"
 
@@ -685,7 +1028,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ] || [ "${{ steps.simulator_build.outcome }}" != "success" ] || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi
