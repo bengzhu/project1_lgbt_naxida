@@ -116,6 +116,33 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### CI 维护：Build IPA archive artifact handoff
+日期：2026-07-06
+
+依据：`AITRANS - Build IPA` workflow 在 `Build using xcodebuild` job 已成功归档并上传 xcarchive，但 `Fakesign and package IPA` job 固定下载 `archive.xcarchive.tar.zip`，当 `IPA_PASSWORD` 为空或 secret 不可用导致上游实际上传 `archive.xcarchive.tar` 时，下游会报 `Artifact not found for name: archive.xcarchive.tar.zip`。
+
+核心变更：
+
+- `.github/workflows/build.yml` 将上游实际生成的 xcarchive artifact 文件名写入 step output，并作为 build job output 传给 package job。
+- `Download xcarchive` 不再固定下载 `.zip`，而是使用 `needs.build.outputs.archive_artifact`。
+- `Extract xcarchive` 同时支持 `.tar.zip` 和 `.tar`，保持有密码和无密码两种打包路径。
+
+关键文件：
+
+- `.github/workflows/build.yml`
+- `update_log.md`
+
+验证结果：
+
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/build.yml"); puts "yaml ok"'`
+- `git diff --check`
+
+未跑本机 Xcode build / 模拟器漫画探针；该维护只修 GitHub Actions 打包 artifact 交接，按规则交给云端 workflow 验证。
+
+遗留事项：
+
+- 该维护项不改变未加密 `AITRANS CI Results` 验收口径，不改变漫画探针质量，不追加 `metrics/version_history.csv`。
+
 ### v1.60：Koharu Artifact GeneratedBy Source Policy Gate
 日期：2026-07-06
 
