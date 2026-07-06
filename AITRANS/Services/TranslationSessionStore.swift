@@ -12353,6 +12353,67 @@ final class TranslationSessionStore: ObservableObject {
             .map { "forbiddenGeneratedBy:\($0)" }
     }
 
+    private static func normalizedExternalSourceDirection(_ value: String) -> String {
+        var normalized = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+            .replacingOccurrences(of: " ", with: "-")
+        while normalized.contains("--") {
+            normalized = normalized.replacingOccurrences(of: "--", with: "-")
+        }
+        return normalized
+    }
+
+    private static func isValidExternalSourceDirection(_ value: String) -> Bool {
+        let allowed = Set(["horizontal", "horizontal-lr", "vertical", "vertical-rl", "vertical-lr", "unknown"])
+        return allowed.contains(normalizedExternalSourceDirection(value))
+    }
+
+    private static func externalTextBoxMetadataErrors(
+        textBox: MangaOverlayExternalTextBox,
+        imageWidth: Int,
+        imageHeight: Int
+    ) -> [String] {
+        var errors: [String] = []
+        if let sourceDirection = textBox.sourceDirection,
+           !isValidExternalSourceDirection(sourceDirection) {
+            errors.append("sourceDirectionInvalid")
+        }
+        if let rotation = textBox.rotationDegrees {
+            if !rotation.isFinite {
+                errors.append("rotationDegreesInvalid")
+            } else if rotation < -360 || rotation > 360 {
+                errors.append("rotationDegreesOutOfRange")
+            }
+        }
+        if let linePolygons = textBox.linePolygons {
+            if linePolygons.isEmpty {
+                errors.append("linePolygonsInvalid")
+            }
+            for (polygonIndex, polygon) in linePolygons.enumerated() {
+                if polygon.count < 4 {
+                    errors.append("linePolygonInvalid:\(polygonIndex)")
+                    continue
+                }
+                for (pointIndex, point) in polygon.enumerated() {
+                    if point.count != 2 {
+                        errors.append("linePolygonPointInvalid:\(polygonIndex):\(pointIndex)")
+                        continue
+                    }
+                    let x = point[0]
+                    let y = point[1]
+                    if !x.isFinite || !y.isFinite {
+                        errors.append("linePolygonPointInvalid:\(polygonIndex):\(pointIndex)")
+                    } else if x < 0 || y < 0 || x > Double(imageWidth) || y > Double(imageHeight) {
+                        errors.append("linePolygonPointOutOfBounds:\(polygonIndex):\(pointIndex)")
+                    }
+                }
+            }
+        }
+        return errors
+    }
+
     private static func validateExternalArtifactCoordinates(
         manifest: MangaOverlayExternalArtifactManifest?,
         textBoxes: [MangaOverlayExternalTextBox],
@@ -12382,16 +12443,29 @@ final class TranslationSessionStore: ObservableObject {
             errors.append("sourceImageMismatch:\(manifest?.sourceImage ?? "nil")")
         }
         let bounds = CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
-        let invalidTextBoxes = textBoxes.compactMap { textBox -> String? in
+        var invalidTextBoxes: [String] = []
+        for textBox in textBoxes {
             let rect = rect(from: textBox.bbox)
             guard rect.width > 0, rect.height > 0, rect.minX >= 0, rect.minY >= 0,
                   rect.maxX <= bounds.maxX, rect.maxY <= bounds.maxY else {
-                return textBox.id
+                invalidTextBoxes.append(textBox.id)
+                continue
             }
             if let confidence = textBox.confidence, !(0...1).contains(confidence) {
-                return textBox.id
+                invalidTextBoxes.append(textBox.id)
+                continue
             }
-            return nil
+            let metadataErrors = externalTextBoxMetadataErrors(
+                textBox: textBox,
+                imageWidth: imageWidth,
+                imageHeight: imageHeight
+            )
+            if !metadataErrors.isEmpty {
+                invalidTextBoxes.append(textBox.id)
+                for metadataError in metadataErrors {
+                    errors.append("textBox:\(textBox.id):\(metadataError)")
+                }
+            }
         }
         let invalidBubbles = bubbleInstances.compactMap { bubble -> String? in
             let rect = rect(from: bubble.bbox)
@@ -12405,7 +12479,7 @@ final class TranslationSessionStore: ObservableObject {
             return nil
         }
         if !invalidTextBoxes.isEmpty {
-            errors.append("invalidTextBoxBBoxes=\(invalidTextBoxes.joined(separator: ","))")
+            errors.append("invalidTextBoxes=\(Array(Set(invalidTextBoxes)).sorted().joined(separator: ","))")
         }
         if !invalidBubbles.isEmpty {
             errors.append("invalidBubbleBBoxes=\(invalidBubbles.joined(separator: ","))")

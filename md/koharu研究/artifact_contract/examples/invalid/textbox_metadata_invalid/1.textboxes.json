@@ -1,0 +1,28 @@
+{
+  "textBoxes": [
+    {
+      "id": "bad-textbox-direction-metadata",
+      "bbox": [118, 172, 120, 46],
+      "confidence": 0.82,
+      "detector": "koharu-real-detector-export",
+      "sourceDirection": "diagonal",
+      "rotationDegrees": 720,
+      "linePolygons": [
+        [[118, 172], [238, 172], [238, 196]]
+      ],
+      "notes": ["bbox valid, optional direction metadata invalid"]
+    },
+    {
+      "id": "bad-textbox-line-polygon-point",
+      "bbox": [278, 394, 146, 58],
+      "confidence": 0.76,
+      "detector": "koharu-real-detector-export",
+      "sourceDirection": "vertical-rl",
+      "rotationDeg": 90,
+      "linePolygons": [
+        [[278, 394], [424, 394], [424, 452], [700, 452]]
+      ],
+      "notes": ["line polygon point is outside source image bounds"]
+    }
+  ]
+}

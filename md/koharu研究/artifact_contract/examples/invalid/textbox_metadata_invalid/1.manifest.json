@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "aitrans.koharu_artifact_contract.v1",
+  "sourceImage": "test/1.png",
+  "coordinateSpace": "originalImageTopLeftPixels",
+  "contractExampleOnly": false,
+  "generatedBy": "koharu-real-detector-export",
+  "generatedAt": "2026-07-06T00:00:00Z",
+  "textBoxesPath": "1.textboxes.json",
+  "bubbleMaskPath": "1.bubbles.json",
+  "segmentMaskPath": "1.segment_mask.json",
+  "notes": [
+    "invalid fixture for optional TextBox direction metadata",
+    "bbox is valid; sourceDirection, rotationDegrees, and linePolygons are intentionally invalid"
+  ]
+}

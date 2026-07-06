@@ -116,6 +116,55 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.61：Koharu TextBox Direction Metadata Gate
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 明确 AITRANS 距 Koharu 的关键差距包括真实 TextBoxes、line polygon 和竖排方向主路径。v1.60 已拦住伪造来源，但 TextBox 可选 `sourceDirection`、`rotationDegrees` / `rotationDeg`、`linePolygons` 仍主要是透传或浅校验，真实四件套即使带坏方向元数据也可能进入 App readiness。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 TextBox 可选方向元数据校验：`sourceDirection` 必须落在 horizontal / vertical / vertical-rl / vertical-lr / unknown 等枚举内，`rotationDegrees` / `rotationDeg` 必须是有限数值且在 `[-360, 360]`，`linePolygons` 必须是非空 polygon 数组且点位在 `test/1.png` 原图范围内。
+- Swift `externalArtifactReadinessReport` 使用同类校验，把 TextBox metadata 错误并入 coordinate validation，阻止离线 validator 和 App readiness 口径分叉。
+- 新增 invalid fixture `md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid/`，并加入 CI extended validator matrix。
+- artifact contract README、README、flow 和 test 文档同步说明：方向/旋转/line polygon 仍是可选字段，但提供时必须有效，供后续竖排 / line polygon shadow path 使用。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid/`
+- `md/koharu研究/artifact_contract/README.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `git diff --check`
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `python3 -m py_compile scripts/validate-koharu-artifacts.py`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail`
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；只加强真实四件套方向元数据准入。
+- 该版本不执行 rotation / deskew / line polygon crop OCR；下一步可在 `externalTextBoxShadowOCRReport` 中做 report-only vertical / line polygon shadow path。
+- 该版本不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### CI 维护：Build IPA archive artifact handoff
 日期：2026-07-06
 

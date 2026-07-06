@@ -49,7 +49,10 @@ manifest 可指定等价相对路径：
 - TextBoxes 支持 `bbox` 或 `x/y/width/height` 两种输入；报告统一输出 `bbox`。
 - BubbleMask 当前契约先接收 instance summary：`id`、`bbox`、`maskValue`、`pixelCount`，不要求提交真实 mask PNG。
 - SegmentMask 当前契约先接收 summary：`width`、`height`、`glyphPixelCount`、`connectedComponentCount`，不要求提交真实 mask PNG。
-- `linePolygons`、`sourceDirection`、`rotationDegrees` / `rotationDeg`、`detectedFontSizePx` 是可选字段；有则校验 JSON 结构，不作为 readiness 必填。
+- `linePolygons`、`sourceDirection`、`rotationDegrees` / `rotationDeg`、`detectedFontSizePx` 是可选字段，不作为 readiness 必填；但一旦提供，validator 和 Swift readiness 会校验方向枚举、旋转范围和 line polygon 点位。
+- `sourceDirection` 支持 `horizontal`、`horizontal-lr`、`vertical`、`vertical-rl`、`vertical-lr`、`unknown`，大小写、空格和下划线会规范化后比较。
+- `rotationDegrees` / `rotationDeg` 必须是有限数值，范围为 `[-360, 360]`。
+- `linePolygons` 必须是非空 polygon 数组；每个 polygon 至少 4 个 `[x, y]` 点，点位必须在 `test/1.png` 原图范围内。
 - manifest 中 `textBoxesPath`、`bubbleMaskPath`、`segmentMaskPath` 必须是 active artifact 目录内的相对路径；绝对路径和包含 `..` 的路径会被 validator 和 Swift readiness 阻塞。
 - active manifest 的 `generatedBy` 必须声明真实 detector / segmenter 来源；缺失或包含 `manual`、`fixture`、`Vision OCR`、`pre-crop`、`line plan`、`BubbleMask proxy`、`SegmentMask proxy`、`ground truth`、`handwritten` 等禁用来源词时，validator 和 Swift readiness 都会阻塞，不允许进入 `readyForShadowOCR`。
 
@@ -64,6 +67,7 @@ python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_con
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
 ```
 
@@ -123,7 +127,7 @@ test/koharu_artifacts/
 - 坐标必须是 `test/1.png` 原图左上角像素坐标，原图尺寸固定为 `576 x 1280`。
 - bbox 宽高必须为正，不能越界。
 - `confidence` 如存在，必须在 `[0, 1]`。
-- 可选保留 `linePolygons`、`sourceDirection`、`rotationDegrees` / `rotationDeg`、`detectedFontSizePx`、`detector`。
+- 可选保留 `linePolygons`、`sourceDirection`、`rotationDegrees` / `rotationDeg`、`detectedFontSizePx`、`detector`；提供时必须通过方向枚举、旋转范围和 line polygon 点位校验。
 
 `1.bubbles.json` 最低要求：
 

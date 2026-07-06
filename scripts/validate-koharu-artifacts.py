@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import struct
 import sys
 from pathlib import Path
@@ -32,6 +33,14 @@ FORBIDDEN_GENERATED_BY_TERMS = [
     "ground truth",
     "handwritten",
 ]
+ALLOWED_SOURCE_DIRECTIONS = {
+    "horizontal",
+    "horizontal-lr",
+    "vertical",
+    "vertical-rl",
+    "vertical-lr",
+    "unknown",
+}
 REQUIRED_ARTIFACT_FILES = [
     {
         "path": "test/koharu_artifacts/1.manifest.json",
@@ -52,6 +61,9 @@ REQUIRED_ARTIFACT_FILES = [
             "array or object with textBoxes/textboxes/items",
             "each bbox is [x, y, width, height] in original image top-left pixels",
             "confidence, when present, must be in [0, 1]",
+            "sourceDirection, when present, must be horizontal/vertical/vertical-rl/vertical-lr/unknown",
+            "rotationDegrees or rotationDeg, when present, must be finite and within [-360, 360]",
+            "linePolygons, when present, must contain point pairs within source image bounds",
         ],
     },
     {
@@ -187,6 +199,79 @@ def bbox_for(item: dict[str, Any]) -> list[float] | None:
     return None
 
 
+def normalized_source_direction(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().lower().replace("_", "-").replace(" ", "-")
+    while "--" in normalized:
+        normalized = normalized.replace("--", "-")
+    return normalized
+
+
+def rotation_degrees_for(item: dict[str, Any]) -> float | None:
+    value = item.get("rotationDegrees")
+    if value is None:
+        value = item.get("rotationDeg")
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return math.nan
+
+
+def validate_textbox_metadata(
+    item: dict[str, Any],
+    item_id: str,
+    image_width: int,
+    image_height: int,
+    coordinate_errors: list[str],
+) -> bool:
+    valid = True
+    if "sourceDirection" in item:
+        source_direction = normalized_source_direction(item.get("sourceDirection"))
+        if source_direction not in ALLOWED_SOURCE_DIRECTIONS:
+            coordinate_errors.append(f"textBox:{item_id}:sourceDirectionInvalid")
+            valid = False
+    rotation = rotation_degrees_for(item)
+    if rotation is not None:
+        if not math.isfinite(rotation):
+            coordinate_errors.append(f"textBox:{item_id}:rotationDegreesInvalid")
+            valid = False
+        elif rotation < -360 or rotation > 360:
+            coordinate_errors.append(f"textBox:{item_id}:rotationDegreesOutOfRange")
+            valid = False
+    line_polygons = item.get("linePolygons")
+    if line_polygons is not None:
+        if not isinstance(line_polygons, list) or not line_polygons:
+            coordinate_errors.append(f"textBox:{item_id}:linePolygonsInvalid")
+            return False
+        for polygon_index, polygon in enumerate(line_polygons):
+            if not isinstance(polygon, list) or len(polygon) < 4:
+                coordinate_errors.append(f"textBox:{item_id}:linePolygonInvalid:{polygon_index}")
+                valid = False
+                continue
+            for point_index, point in enumerate(polygon):
+                if not isinstance(point, list) or len(point) != 2:
+                    coordinate_errors.append(f"textBox:{item_id}:linePolygonPointInvalid:{polygon_index}:{point_index}")
+                    valid = False
+                    continue
+                try:
+                    x = float(point[0])
+                    y = float(point[1])
+                except (TypeError, ValueError):
+                    coordinate_errors.append(f"textBox:{item_id}:linePolygonPointInvalid:{polygon_index}:{point_index}")
+                    valid = False
+                    continue
+                if not math.isfinite(x) or not math.isfinite(y):
+                    coordinate_errors.append(f"textBox:{item_id}:linePolygonPointInvalid:{polygon_index}:{point_index}")
+                    valid = False
+                elif x < 0 or y < 0 or x > image_width or y > image_height:
+                    coordinate_errors.append(f"textBox:{item_id}:linePolygonPointOutOfBounds:{polygon_index}:{point_index}")
+                    valid = False
+    return valid
+
+
 def validate_boxes(
     items: list[dict[str, Any]],
     label: str,
@@ -217,9 +302,14 @@ def validate_boxes(
                 if not 0 <= confidence_value <= 1:
                     invalid_ids.append(item_id)
                     coordinate_errors.append(f"{label}:{item_id}:confidenceOutOfRange")
-        line_polygons = item.get("linePolygons")
-        if line_polygons is not None and not isinstance(line_polygons, list):
-            coordinate_errors.append(f"{label}:{item_id}:linePolygonsInvalid")
+        if label == "textBox" and not validate_textbox_metadata(
+            item,
+            item_id,
+            image_width,
+            image_height,
+            coordinate_errors,
+        ):
+            invalid_ids.append(item_id)
     return sorted(set(invalid_ids))
 
 
@@ -494,6 +584,7 @@ def main() -> int:
                 "activeArtifactsDirectory == true",
                 "contractExampleOnly == false",
                 "externalTextBoxesShadowOCRAllowed == true",
+                "TextBox optional direction metadata is valid when present",
             ],
             "forbiddenActiveSources": [
                 "contract examples",
