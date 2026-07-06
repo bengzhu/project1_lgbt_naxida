@@ -5158,9 +5158,14 @@ struct MangaOverlayExternalTextBoxShadowOCRCandidate: Equatable, Codable, Sendab
     var bubbleAlignmentMatched: Bool
     var areaRatioToBlock: Double?
     var linePolygonsPresent: Bool
+    var linePolygonCount: Int
     var sourceDirection: String?
+    var normalizedSourceDirection: String?
+    var orientationCategory: String
     var rotationDegrees: Double?
     var deskewExecuted: Bool
+    var orientationShadowPathNeeded: Bool
+    var orientationShadowPathExecuted: Bool
     var ocrExecuted: Bool
     var ocrSucceeded: Bool
     var controlText: String
@@ -5181,6 +5186,13 @@ struct MangaOverlayExternalTextBoxShadowOCRBlockSummary: Equatable, Codable, Sen
     var selectedCandidateID: Int?
     var selectedTextBoxID: String?
     var candidateBBox: [Double]?
+    var selectedSourceDirection: String?
+    var selectedOrientationCategory: String?
+    var selectedLinePolygonsPresent: Bool
+    var selectedRotationDegrees: Double?
+    var orientationShadowPathNeeded: Bool
+    var orientationShadowPathExecuted: Bool
+    var orientationReadinessVerdict: String
     var ocrExecuted: Bool
     var ocrSucceeded: Bool
     var ocrText: String?
@@ -5209,6 +5221,15 @@ struct MangaOverlayExternalTextBoxShadowOCRReport: Equatable, Codable, Sendable 
     var promotedExternalShadowBlocks: [Int]
     var wouldPromoteByExistingGateBlocks: [Int]
     var skippedBlocks: [Int]
+    var sourceDirectionBreakdown: [String: Int]
+    var orientationCategoryBreakdown: [String: Int]
+    var linePolygonCandidateBlocks: [Int]
+    var rotationCandidateBlocks: [Int]
+    var verticalCandidateBlocks: [Int]
+    var orientationShadowPathNeededBlocks: [Int]
+    var orientationShadowPathExecutedBlocks: [Int]
+    var orientationShadowPathNotExecutedBlocks: [Int]
+    var orientationReadinessVerdict: String
     var blockSummaries: [MangaOverlayExternalTextBoxShadowOCRBlockSummary]
     var candidates: [MangaOverlayExternalTextBoxShadowOCRCandidate]
     var notes: [String]

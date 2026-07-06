@@ -116,6 +116,56 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.62：External TextBox Orientation Shadow Ledger
+日期：2026-07-06
+
+依据：v1.61 已把 external TextBox 可选 `sourceDirection`、`rotationDegrees` / `rotationDeg`、`linePolygons` 纳入 validator 和 Swift readiness，但 ready 后的 `externalTextBoxShadowOCRReport` 仍只透传少量 metadata，未把“竖排 / line polygon / rotation 需要 orientation-aware shadow path，而当前未执行”作为可审计 gate。`md/koharu研究/v1.38-current-gap-to-koharu.md` 明确 line polygon 和竖排方向主路径是 AITRANS 距 Koharu 的关键差距。
+
+核心变更：
+
+- `MangaOverlayExternalTextBoxShadowOCRCandidate`、`BlockSummary` 和 `Report` 新增 external TextBox orientation ledger：规范化 `sourceDirection`、orientation 分类、line polygon 数量、rotation blocks、vertical blocks、orientation shadow path needed / executed / not executed blocks 和 report verdict。
+- `makeExternalTextBoxShadowOCRReport` 在选择 external TextBox 后记录方向元数据；当 TextBox 声明 vertical / linePolygons / non-zero rotation 时，写入 `orientationShadowPathNeededNotExecuted` blocker，阻止其进入 `wouldPromoteByExistingGateReportOnly`。
+- `koharuArtifactConvergenceReport` 新增 `WI-external-textbox-orientation-shadow-path` 和 `G-external-textbox-orientation-shadow-path`，把缺失 orientation-aware shadow OCR 路径暴露到 convergence work item / gate。
+- `1_ocr_probe_text.txt` external shadow OCR 明细和汇总追加 sourceDirection、orientation、linePolygons、rotation、orientation shadow needed / executed / verdict。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `git diff --check`
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `python3 -m json.tool test/1.ground_truth.json`
+- `python3 -m json.tool output/probe_report.json`
+- `python3 -m json.tool output/clean_text_diagnostic.json`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail`
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不执行 rotation / deskew / line polygon crop OCR，只记录 orientation shadow path 缺口并阻止 report-only promote 预览误判。
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`。
+- 该版本不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.61：Koharu TextBox Direction Metadata Gate
 日期：2026-07-06
 
