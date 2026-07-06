@@ -16988,10 +16988,6 @@ final class TranslationSessionStore: ObservableObject {
             uniqueSorted(values).map(String.init).joined(separator: ",")
         }
 
-        func joinedBreakdown(_ values: [String: Int]) -> String {
-            values.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",")
-        }
-
         func signal(
             _ name: String,
             _ value: String,
@@ -17764,6 +17760,10 @@ final class TranslationSessionStore: ObservableObject {
 
         func joined(_ values: [Int]) -> String {
             uniqueSorted(values).map(String.init).joined(separator: ",")
+        }
+
+        func joinedBreakdown(_ values: [String: Int]) -> String {
+            values.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",")
         }
 
         func signal(
@@ -19345,6 +19345,10 @@ final class TranslationSessionStore: ObservableObject {
             uniqueSorted(values).map(String.init).joined(separator: ",")
         }
 
+        func joinedBreakdown(_ values: [String: Int]) -> String {
+            values.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",")
+        }
+
         func signal(
             _ name: String,
             _ value: String,
@@ -20214,7 +20218,7 @@ final class TranslationSessionStore: ObservableObject {
             )
         }
 
-        let workItemLedger = [
+        let workItemLedger: [MangaKoharuArtifactConvergenceWorkItemLedger] = [
             workItem("WI-native-textbox-artifact-scorecard", title: "Native TextBox proxy quality ledger", status: nativeTextBoxProxyLedgerReport == nil ? "manualReviewOnly" : (textBoxStopBlocks.isEmpty ? "closedReportOnly" : "closedStoplist"), sourceReport: "nativeTextBoxProxyLedgerReport", stages: ["TextBoxes", "OcrText"], blocks: uniqueSorted(textBoxStopBlocks + diagnostics.likelyOCRIssueBlocks), version: nativeTextBoxProxyLedgerReport == nil ? nil : "v1.25", blockers: textBoxStopBlocks.isEmpty ? [] : ["local crop/line/deskew tuning is stoplisted"], nextAction: "stopLocalCropLineDeskewTuning", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(nativeTextBoxProxyLedgerReport != nil), source: "nativeTextBoxProxyLedgerReport")], evaluations: evaluationSignals),
             workItem("WI-bubblemask-assignment-split-scorecard", title: "BubbleMask assignment and split scoreboard", status: bubbleMaskAssignmentSplitScoreboardReport == nil ? "manualReviewOnly" : "closedReportOnly", sourceReport: "bubbleMaskAssignmentSplitScoreboardReport", stages: ["BubbleMask"], blocks: bubbleNeedBlocks, version: bubbleMaskAssignmentSplitScoreboardReport == nil ? nil : "v1.26", blockers: bubbleNeedBlocks.isEmpty ? [] : ["real BubbleMask artifact needed for promotion"], nextAction: bubbleNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(bubbleMaskAssignmentSplitScoreboardReport != nil), source: "bubbleMaskAssignmentSplitScoreboardReport")]),
             workItem("WI-segmentmask-proxy-coverage-scorecard", title: "SegmentMask proxy coverage and cleanup ledger", status: segmentMaskProxyCoverageScoreboardReport == nil ? "manualReviewOnly" : "closedReportOnly", sourceReport: "segmentMaskProxyCoverageScoreboardReport", stages: ["SegmentMask", "Inpainted"], blocks: segmentNeedBlocks, version: segmentMaskProxyCoverageScoreboardReport == nil ? nil : "v1.27", blockers: segmentNeedBlocks.isEmpty ? [] : ["real SegmentMask artifact needed for promotion"], nextAction: segmentNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(segmentMaskProxyCoverageScoreboardReport != nil), source: "segmentMaskProxyCoverageScoreboardReport"), signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
@@ -20242,9 +20246,18 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
-        let closedWorkItems = workItemLedger.filter { $0.status == "closedReportOnly" || $0.status == "closedStoplist" }.map(\.workItemID).sorted()
-        let openWorkItems = workItemLedger.filter { $0.status.hasPrefix("open") || $0.status.hasPrefix("blocked") }.map(\.workItemID).sorted()
-        let stopWorkItems = workItemLedger.filter { $0.status == "closedStoplist" }.map(\.workItemID).sorted()
+        let closedWorkItems = workItemLedger
+            .filter { item in item.status == "closedReportOnly" || item.status == "closedStoplist" }
+            .map { item in item.workItemID }
+            .sorted()
+        let openWorkItems = workItemLedger
+            .filter { item in item.status.hasPrefix("open") || item.status.hasPrefix("blocked") }
+            .map { item in item.workItemID }
+            .sorted()
+        let stopWorkItems = workItemLedger
+            .filter { item in item.status == "closedStoplist" }
+            .map { item in item.workItemID }
+            .sorted()
         let missingReports = [
             koharuNativeReplicationScoreboardReport == nil ? "koharuNativeReplicationScoreboardReport" : nil,
             nativeTextBoxProxyLedgerReport == nil ? "nativeTextBoxProxyLedgerReport" : nil,
@@ -20293,7 +20306,7 @@ final class TranslationSessionStore: ObservableObject {
             )
         }
 
-        let gateLedger = [
+        let gateLedger: [MangaKoharuArtifactConvergenceGate] = [
             gate("G-convergence-no-main-flow-mutation", name: "No main flow mutation", scope: "report", status: "passed", threshold: "wouldChangeMainFlow=false", affected: [], failureMeans: "convergence report changes OCR, translation, layout, rendering, cleanup, or block pass state", action: "revertBehavioralChange", decisions: [signal("wouldChangeMainFlow", "false", source: "koharuArtifactConvergenceReport")]),
             gate("G-convergence-no-ground-truth-decision", name: "No ground truth decision", scope: "report", status: "passed", threshold: "groundTruthUsedForDecision=false", affected: [], failureMeans: "ground truth influences firstBlockingArtifact, nextAction, or work item state", action: "moveGroundTruthToEvaluationSignalsOnly", decisions: [signal("groundTruthUsedForDecision", "false", source: "koharuArtifactConvergenceReport")]),
             gate("G-textbox-workitem-closed-report-only", name: "TextBox work item closed report-only", scope: "TextBoxes", status: nativeTextBoxProxyLedgerReport == nil ? "warning" : "passed", threshold: "nativeTextBoxProxyLedgerReport present", affected: textBoxStopBlocks, failureMeans: "v1.25 TextBox ledger is missing from convergence inputs", action: "restoreNativeTextBoxProxyLedgerReport", decisions: [signal("reportAvailable", String(nativeTextBoxProxyLedgerReport != nil), source: "nativeTextBoxProxyLedgerReport")]),
@@ -20385,7 +20398,7 @@ final class TranslationSessionStore: ObservableObject {
             convergenceStatusBreakdown: countBy(stages.map(\.convergenceStatus)),
             firstBlockingArtifactBreakdown: countBy(blockPaths.map(\.firstBlockingArtifact)),
             primaryNextActionBreakdown: countBy(blockPaths.map(\.primaryNextAction)),
-            workItemStatusBreakdown: countBy(workItemLedger.map(\.status)),
+            workItemStatusBreakdown: countBy(workItemLedger.map { item in item.status }),
             closedWorkItems: closedWorkItems,
             openWorkItems: openWorkItems,
             stopWorkItems: stopWorkItems,
