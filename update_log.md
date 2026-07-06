@@ -116,6 +116,57 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.64：External TextBox Orientation Partial / Unsupported Convergence Gate
+日期：2026-07-07
+
+依据：v1.63 已能在真实 artifact ready 后对竖排或接近 90/180/270 度的 external TextBox 执行有上限 rotation shadow OCR，并在候选 / block summary 写出 unsupported reason。但 `koharuArtifactConvergenceReport` 仍主要消费 `orientationShadowPathNotExecutedBlocks`，存在“orientation path 已部分执行但仍因 line polygon warp 或任意角度 deskew unsupported 而未闭环，却被 convergence 看成 closed/passed”的风险。
+
+核心变更：
+
+- `externalTextBoxShadowOCRReport` 新增 `orientationShadowPathPartialBlocks`、`orientationUnsupportedBlocks`、`orientationUnsupportedReasonBreakdown`，把“已执行 rotation OCR 但仍有 unsupported orientation feature”的块提升到 report 级摘要。
+- `orientationReadinessVerdict = orientationShadowPathExecuted` 现在要求无 not-executed blocks 且无 unsupported blocks；部分执行会保持 `orientationShadowPathPartiallyExecuted`。
+- `koharuArtifactConvergenceReport` 的 ExternalArtifacts stage、`WI-external-textbox-orientation-shadow-path` 和 `G-external-textbox-orientation-shadow-path` 改为同时消费 executed / partial / notExecuted / unsupported / unsupported reason breakdown，line polygon warp 与任意角度 deskew 会继续作为 convergence blockers 暴露。
+- `1_ocr_probe_text.txt` 的 external TextBox shadow OCR 汇总追加 `orientationPartial`、`orientationUnsupported` 和 `orientationUnsupportedReasons`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `git diff --check`
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `python3 -m json.tool test/1.ground_truth.json`
+- `python3 -m json.tool output/probe_report.json`
+- `python3 -m json.tool output/clean_text_diagnostic.json`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail`
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked 报告。
+- 该版本仍不实现 line polygon crop / warp 或任意角度 deskew，只防止这类 unsupported orientation path 被 convergence 误判为已闭环。
+- 该版本不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed` 或 active artifact，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.63：External TextBox Orientation Rotation Shadow OCR
 日期：2026-07-06
 

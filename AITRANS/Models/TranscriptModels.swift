@@ -5236,7 +5236,10 @@ struct MangaOverlayExternalTextBoxShadowOCRReport: Equatable, Codable, Sendable 
     var verticalCandidateBlocks: [Int]
     var orientationShadowPathNeededBlocks: [Int]
     var orientationShadowPathExecutedBlocks: [Int]
+    var orientationShadowPathPartialBlocks: [Int]
     var orientationShadowPathNotExecutedBlocks: [Int]
+    var orientationUnsupportedBlocks: [Int]
+    var orientationUnsupportedReasonBreakdown: [String: Int]
     var orientationReadinessVerdict: String
     var blockSummaries: [MangaOverlayExternalTextBoxShadowOCRBlockSummary]
     var candidates: [MangaOverlayExternalTextBoxShadowOCRCandidate]

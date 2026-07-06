@@ -91,7 +91,7 @@ flowchart TD
   TBF --> LTB["lineTextBoxPlanReport / lineCropExperimentReport<br/>目标块行级 TextBox / deskew shadow 验证"]
   LTB --> EAR["externalArtifactReadinessReport<br/>真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门"]
   EAR --> ETS["externalTextBoxShadowOCRReport<br/>ready 后每块最多 1 个 externalArtifact.textBoxCrop / shadow-only"]
-  ETS --> ETO["external TextBox orientation-aware shadow OCR<br/>bounded rotation OCR / line polygon 与任意角度仍阻塞"]
+  ETS --> ETO["external TextBox orientation-aware shadow OCR<br/>bounded rotation OCR / partial 与 unsupported 进入 convergence blockers"]
   ETO --> ISR["internalStructureBottleneckReport<br/>OCR / bubble / crop / translation / render 路由诊断"]
   ISR --> RTA["routingDrivenTranslationComparisonReport<br/>modelTranslationQuality 块 strict prompt 对照 / report-only"]
   RTA --> TMF["translationModelFloorComparisonReport<br/>clean text baseline + strict prompt 地板对照"]
@@ -122,7 +122,7 @@ flowchart TD
   KNSMR --> KNABL["koharuNativeArtifactBundleLiteReport<br/>TextBoxes / BubbleMask / SegmentMask consistency + linkage closure"]
   KNABL --> KNPG["koharuNativePromotionGateLiteReport<br/>probe-driven promotion gates / linkage-blocked preview"]
   KNPG --> KNCD["koharuNativeArtifactContractDryRunReport<br/>four-file contract dry-run / validator commands"]
-  KNCD --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / linkage work item gates"]
+  KNCD --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / linkage + orientation partial/unsupported gates"]
   TMF --> KAC
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
