@@ -8909,7 +8909,7 @@ final class TranslationSessionStore: ObservableObject {
             .map(\.blockIndex)
             .sorted()
         let rotationBlocks = candidates
-            .filter { $0.rotationDegrees != nil }
+            .filter { ($0.rotationDegrees.map { abs($0) > 0.001 }) ?? false }
             .map(\.blockIndex)
             .sorted()
         let verticalBlocks = candidates
@@ -12284,7 +12284,7 @@ final class TranslationSessionStore: ObservableObject {
             if textBox.linePolygons?.isEmpty == false {
                 riskFlags.append("linePolygonsPresentDeskewNotExecuted")
             }
-            if textBox.rotationDegrees != nil {
+            if let rotationDegrees = textBox.rotationDegrees, abs(rotationDegrees) > 0.001 {
                 riskFlags.append("rotationRecordedDeskewNotExecuted")
             }
             guard rejectionReasons.isEmpty else { return nil }
