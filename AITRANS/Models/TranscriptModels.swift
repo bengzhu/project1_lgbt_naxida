@@ -3651,6 +3651,9 @@ struct MangaKoharuNativeArtifactContractDryRunFile: Equatable, Codable, Sendable
     var artifactKind: String
     var required: Bool
     var activeFileFound: Bool
+    var fileSizeBytes: Int?
+    var sha256: String?
+    var identityStatus: String
     var dryRunPreviewCount: Int
     var status: String
     var requiredFields: [String]
@@ -3718,6 +3721,9 @@ struct MangaKoharuNativeArtifactContractDryRunReport: Equatable, Codable, Sendab
     var dryRunOnly: Bool
     var activeExportAllowed: Bool
     var externalArtifactsRequiredForThisReport: Bool
+    var appSideArtifactIdentityVerdict: String
+    var appSideArtifactIdentityFilesPresent: Bool
+    var appSideArtifactIdentityHashesPresent: Bool
     var contractDryRunVerdict: String
     var readinessVerdict: String
     var activeArtifactsDirectory: Bool
@@ -5100,6 +5106,30 @@ struct MangaOverlayExternalArtifactCoordinateValidation: Equatable, Codable, Sen
     var notes: [String]
 }
 
+struct MangaOverlayExternalArtifactFileIdentityReceipt: Equatable, Codable, Sendable {
+    var artifactKind: String
+    var path: String?
+    var required: Bool
+    var exists: Bool
+    var sizeBytes: Int?
+    var sha256: String?
+}
+
+struct MangaOverlayExternalArtifactIdentityReceipt: Equatable, Codable, Sendable {
+    var sourceImage: String
+    var schemaVersion: String?
+    var coordinateSpace: String?
+    var contractExampleOnly: Bool
+    var generatedBy: String?
+    var generatedAt: String?
+    var activeArtifactsDirectory: Bool
+    var allRequiredFilesPresent: Bool
+    var allRequiredFilesHaveSHA256: Bool
+    var identityVerdict: String
+    var files: [MangaOverlayExternalArtifactFileIdentityReceipt]
+    var notes: [String]
+}
+
 struct MangaOverlayExternalArtifactBlockAlignment: Equatable, Codable, Sendable {
     var blockIndex: Int
     var blockBBox: [Double]
@@ -5138,6 +5168,7 @@ struct MangaOverlayExternalArtifactReadinessReport: Equatable, Codable, Sendable
     var parseErrors: [String]
     var missingArtifacts: [String]
     var coordinateValidation: MangaOverlayExternalArtifactCoordinateValidation
+    var artifactIdentityReceipt: MangaOverlayExternalArtifactIdentityReceipt?
     var blockAlignment: [MangaOverlayExternalArtifactBlockAlignment]
     var readinessVerdict: String
     var nextAction: String

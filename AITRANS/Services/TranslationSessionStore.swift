@@ -1,5 +1,6 @@
 import Combine
 import AVFoundation
+import CryptoKit
 import Foundation
 import ImageIO
 import Speech
@@ -8496,6 +8497,15 @@ final class TranslationSessionStore: ObservableObject {
             label: "segmentMaskPath",
             parseErrors: &parseErrors
         )
+        let artifactIdentityReceipt = Self.externalArtifactIdentityReceipt(
+            sourceImageURL: bundledTestDirectory?.appendingPathComponent("1.png"),
+            manifestURL: manifestURL,
+            textBoxesURL: textBoxesURL,
+            bubbleMaskURL: bubbleMaskURL,
+            segmentMaskURL: segmentMaskURL,
+            manifest: manifest,
+            activeArtifactsDirectory: activeArtifactsDirectory
+        )
         let textBoxes = Self.decodeExternalArtifactList(
             MangaOverlayExternalTextBox.self,
             from: textBoxesURL,
@@ -8564,6 +8574,7 @@ final class TranslationSessionStore: ObservableObject {
         if readinessVerdict != "readyForShadowOCR" {
             notes.append("external detector artifact evidence is insufficient; stop before shadow OCR")
         }
+        notes.append("artifactIdentityReceipt=\(artifactIdentityReceipt.identityVerdict)")
         let shadowAllowed = readinessVerdict == "readyForShadowOCR"
             && activeArtifactsDirectory
             && manifest?.contractExampleOnly != true
@@ -8590,10 +8601,100 @@ final class TranslationSessionStore: ObservableObject {
             parseErrors: parseErrors,
             missingArtifacts: missingArtifacts,
             coordinateValidation: coordinateValidation,
+            artifactIdentityReceipt: artifactIdentityReceipt,
             blockAlignment: blockAlignment,
             readinessVerdict: readinessVerdict,
             nextAction: nextAction,
             notes: notes
+        )
+    }
+
+    private static func externalArtifactIdentityReceipt(
+        sourceImageURL: URL?,
+        manifestURL: URL?,
+        textBoxesURL: URL?,
+        bubbleMaskURL: URL?,
+        segmentMaskURL: URL?,
+        manifest: MangaOverlayExternalArtifactManifest?,
+        activeArtifactsDirectory: Bool
+    ) -> MangaOverlayExternalArtifactIdentityReceipt {
+        let files = [
+            externalArtifactFileIdentityReceipt(kind: "SourceImage", url: sourceImageURL, required: true),
+            externalArtifactFileIdentityReceipt(kind: "Manifest", url: manifestURL, required: true),
+            externalArtifactFileIdentityReceipt(kind: "TextBoxes", url: textBoxesURL, required: true),
+            externalArtifactFileIdentityReceipt(kind: "BubbleMask", url: bubbleMaskURL, required: true),
+            externalArtifactFileIdentityReceipt(kind: "SegmentMask", url: segmentMaskURL, required: true)
+        ]
+        let requiredFiles = files.filter(\.required)
+        let allRequiredFilesPresent = requiredFiles.allSatisfy(\.exists)
+        let allRequiredFilesHaveSHA256 = requiredFiles.allSatisfy { $0.sha256?.isEmpty == false }
+        let identityVerdict: String
+        if !activeArtifactsDirectory {
+            identityVerdict = "activeDirectoryMissing"
+        } else if !allRequiredFilesPresent {
+            identityVerdict = "requiredIdentityFilesMissing"
+        } else if !allRequiredFilesHaveSHA256 {
+            identityVerdict = "requiredIdentityHashMissing"
+        } else if manifest?.contractExampleOnly == true {
+            identityVerdict = "blockedContractExampleOnly"
+        } else {
+            identityVerdict = "activeArtifactIdentityRecorded"
+        }
+        return MangaOverlayExternalArtifactIdentityReceipt(
+            sourceImage: manifest?.sourceImage ?? "test/1.png",
+            schemaVersion: manifest?.schemaVersion,
+            coordinateSpace: manifest?.coordinateSpace,
+            contractExampleOnly: manifest?.contractExampleOnly ?? false,
+            generatedBy: manifest?.generatedBy,
+            generatedAt: manifest?.generatedAt,
+            activeArtifactsDirectory: activeArtifactsDirectory,
+            allRequiredFilesPresent: allRequiredFilesPresent,
+            allRequiredFilesHaveSHA256: allRequiredFilesHaveSHA256,
+            identityVerdict: identityVerdict,
+            files: files,
+            notes: [
+                "App-side receipt records the active bundle files actually visible to the probe runtime.",
+                "Compare these SHA256 values with ci-artifact-manifest.koharuArtifactValidationIdentitySummary before treating injected artifacts as consumed by the App.",
+                "This receipt is report-only and does not create, copy, modify, or promote active artifacts."
+            ]
+        )
+    }
+
+    private static func externalArtifactFileIdentityReceipt(
+        kind: String,
+        url: URL?,
+        required: Bool
+    ) -> MangaOverlayExternalArtifactFileIdentityReceipt {
+        guard let url else {
+            return MangaOverlayExternalArtifactFileIdentityReceipt(
+                artifactKind: kind,
+                path: nil,
+                required: required,
+                exists: false,
+                sizeBytes: nil,
+                sha256: nil
+            )
+        }
+        let exists = FileManager.default.fileExists(atPath: url.path)
+        var sizeBytes: Int?
+        var sha256: String?
+        if exists {
+            if let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+               let size = attributes[.size] as? NSNumber {
+                sizeBytes = size.intValue
+            }
+            if let data = try? Data(contentsOf: url) {
+                let digest = SHA256.hash(data: data)
+                sha256 = digest.map { String(format: "%02x", $0) }.joined()
+            }
+        }
+        return MangaOverlayExternalArtifactFileIdentityReceipt(
+            artifactKind: kind,
+            path: url.path,
+            required: required,
+            exists: exists,
+            sizeBytes: sizeBytes,
+            sha256: sha256
         )
     }
 
@@ -12217,6 +12318,17 @@ final class TranslationSessionStore: ObservableObject {
             )
         }
         let previewsByStage = Dictionary(grouping: previews, by: \.targetArtifactStage)
+        let appSideArtifactIdentityReceipt = externalArtifactReadinessReport?.artifactIdentityReceipt
+        let identityReceiptByKind = Dictionary(
+            uniqueKeysWithValues: (appSideArtifactIdentityReceipt?.files ?? []).map { ($0.artifactKind.lowercased(), $0) }
+        )
+        let appSideArtifactIdentityVerdict = appSideArtifactIdentityReceipt?.identityVerdict ?? "notRecorded"
+        let appSideArtifactIdentityFilesPresent = appSideArtifactIdentityReceipt?.allRequiredFilesPresent ?? false
+        let appSideArtifactIdentityHashesPresent = appSideArtifactIdentityReceipt?.allRequiredFilesHaveSHA256 ?? false
+        let appSideArtifactIdentityReady = appSideArtifactIdentityVerdict == "activeArtifactIdentityRecorded"
+            && appSideArtifactIdentityFilesPresent
+            && appSideArtifactIdentityHashesPresent
+
         func file(
             path: String,
             kind: String,
@@ -12226,6 +12338,20 @@ final class TranslationSessionStore: ObservableObject {
             let stagePreviews = previewsByStage[kind] ?? []
             let missing = Array(Set(stagePreviews.flatMap(\.missingRequiredFields))).sorted()
             let forbiddenCount = stagePreviews.reduce(0) { $0 + $1.forbiddenSourceReasons.count }
+            let identityKind = kind == "manifest" ? "manifest" : kind.lowercased()
+            let identityReceipt = identityReceiptByKind[identityKind]
+            let identityStatus: String
+            if !found {
+                identityStatus = "notApplicableMissingActiveFile"
+            } else if identityReceipt == nil {
+                identityStatus = "identityReceiptMissing"
+            } else if identityReceipt?.exists != true {
+                identityStatus = "identityReceiptFileMissing"
+            } else if identityReceipt?.sha256?.isEmpty != false {
+                identityStatus = "identityReceiptHashMissing"
+            } else {
+                identityStatus = "identityReceiptRecorded"
+            }
             let status: String
             if found {
                 status = "activeFileFound"
@@ -12241,6 +12367,9 @@ final class TranslationSessionStore: ObservableObject {
                 artifactKind: kind,
                 required: true,
                 activeFileFound: found,
+                fileSizeBytes: identityReceipt?.sizeBytes,
+                sha256: identityReceipt?.sha256,
+                identityStatus: identityStatus,
                 dryRunPreviewCount: stagePreviews.count,
                 status: status,
                 requiredFields: fields,
@@ -12249,6 +12378,8 @@ final class TranslationSessionStore: ObservableObject {
                 nextAction: found ? "validateActiveArtifactWithContract" : "collectRealKoharu\(kind)Artifact",
                 decisionSignals: [
                     signal("activeFileFound", String(found), source: "externalArtifactReadinessReport"),
+                    signal("identityStatus", identityStatus, source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("sha256Present", String(identityReceipt?.sha256?.isEmpty == false), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
                     signal("dryRunPreviewCount", String(stagePreviews.count), source: "koharuNativeArtifactContractDryRunReport"),
                     signal("missingRequiredFields", missing.joined(separator: ","), source: "koharuNativeArtifactContractDryRunReport"),
                     signal("forbiddenSourceCount", String(forbiddenCount), source: "koharuNativeArtifactContractDryRunReport")
@@ -12273,6 +12404,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-native-artifact-contract-dry-run-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "dry-run mutates OCR, translation, renderer, output files, active artifacts, or currentBlockSource", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-native-artifact-contract-dry-run-no-ground-truth", "No ground truth decision", "policy", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth selects export previews, file readiness, verdict, or next action", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-native-artifact-contract-dry-run-required-files", "Required files", "test/koharu_artifacts", requiredFiles.allSatisfy(\.activeFileFound) ? "passed" : "blocked", "manifest/TextBoxes/BubbleMask/SegmentMask active files are present", allBlockIndexes, "active four-file artifact contract is incomplete", "collectRealKoharuArtifactFourPack", [signal("missingArtifacts", (externalArtifactReadinessReport?.missingArtifacts ?? ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]).joined(separator: ","), source: "externalArtifactReadinessReport")]),
+            gate("G-native-artifact-contract-dry-run-app-side-identity", "App-side identity receipt", "ExternalArtifacts", appSideArtifactIdentityReady ? "passed" : "blocked", "App runtime records source image and active four-file size/SHA256 identity", allBlockIndexes, "CI validator identity cannot be matched to the files actually visible inside the App probe runtime", "compareAppReceiptWithCIManifestIdentity", [signal("appSideArtifactIdentityVerdict", appSideArtifactIdentityVerdict, source: "externalArtifactReadinessReport.artifactIdentityReceipt"), signal("appSideArtifactIdentityFilesPresent", String(appSideArtifactIdentityFilesPresent), source: "externalArtifactReadinessReport.artifactIdentityReceipt"), signal("appSideArtifactIdentityHashesPresent", String(appSideArtifactIdentityHashesPresent), source: "externalArtifactReadinessReport.artifactIdentityReceipt")]),
             gate("G-native-artifact-contract-dry-run-preview-blocked", "Preview export blocked", "candidateExportPreview", previews.allSatisfy { !$0.activeExportAllowed && !$0.wouldCreateActiveArtifact } ? "passed" : "blocked", "native-lite previews never create active artifacts", previews.map(\.blockIndex), "candidate preview writes test/koharu_artifacts or marks proxy exportable", "keepDryRunOnly", [signal("dryRunPreviewCount", String(previews.count), source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-native-artifact-contract-dry-run-validator-command", "Validator command", "validator", "passed", "validator commands are explicit and non-mutating", [], "Agent C cannot reproduce artifact contract readiness", "keepValidatorCommandsInReport", [signal("validatorCommands", "2", source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-native-artifact-contract-dry-run-active-readiness", "Active readiness", "ExternalArtifacts", activeReady ? "passed" : "blocked", "readinessVerdict=readyForShadowOCR and externalTextBoxesShadowOCRAllowed=true", allBlockIndexes, "Swift readiness and validator contract are not ready for shadow OCR", "collectAndValidateRealArtifacts", [signal("readinessVerdict", externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing", source: "externalArtifactReadinessReport")])
@@ -12280,10 +12412,12 @@ final class TranslationSessionStore: ObservableObject {
         let verdict: String
         if !activeReady {
             verdict = "blockedByMissingActiveArtifacts"
-        } else if !blockedPreviewIDs.isEmpty {
-            verdict = "dryRunPreviewsBlockedByContract"
+        } else if !appSideArtifactIdentityReady {
+            verdict = "blockedByMissingAppSideArtifactIdentity"
         } else if requiredFiles.allSatisfy(\.activeFileFound) {
             verdict = "activeArtifactsReadyForShadowOCR"
+        } else if !blockedPreviewIDs.isEmpty {
+            verdict = "dryRunPreviewsBlockedByContract"
         } else {
             verdict = "manualReviewOnly"
         }
@@ -12311,6 +12445,9 @@ final class TranslationSessionStore: ObservableObject {
             dryRunOnly: true,
             activeExportAllowed: false,
             externalArtifactsRequiredForThisReport: false,
+            appSideArtifactIdentityVerdict: appSideArtifactIdentityVerdict,
+            appSideArtifactIdentityFilesPresent: appSideArtifactIdentityFilesPresent,
+            appSideArtifactIdentityHashesPresent: appSideArtifactIdentityHashesPresent,
             contractDryRunVerdict: verdict,
             readinessVerdict: externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing",
             activeArtifactsDirectory: externalArtifactReadinessReport?.activeArtifactsDirectory ?? false,
@@ -12333,6 +12470,7 @@ final class TranslationSessionStore: ObservableObject {
             forbiddenActiveSources: forbiddenActiveSources,
             notes: [
                 "koharuNativeArtifactContractDryRunReport maps v1.46 candidate export previews onto the four-file Koharu artifact contract without writing files.",
+                "App-side artifact identity receipt is included so Agent C can compare runtime-visible source image and active artifact SHA256 values with ci-artifact-manifest.koharuArtifactValidationIdentitySummary.",
                 "Active export remains false because native-lite/proxy previews are not real Koharu detector output.",
                 "The report is intended to make the next real-artifact handoff mechanically verifiable by Agent C and GitHub Actions artifacts.",
                 "No OCR, LLM, PNG, prompt/model, renderer, safeLayoutRect, glyphMaskFillRects, finalTextUsedForTranslation, blockPassed, failureCategory, currentBlockSource, or active test/koharu_artifacts behavior changes are made."
@@ -20546,6 +20684,9 @@ final class TranslationSessionStore: ObservableObject {
             signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport"),
             signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"),
             signal("contractDryRunReadyForShadowOCR", String(externalContractDryRunReady), source: "koharuNativeArtifactContractDryRunReport"),
+            signal("appSideArtifactIdentityVerdict", koharuNativeArtifactContractDryRunReport?.appSideArtifactIdentityVerdict ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
+            signal("appSideArtifactIdentityFilesPresent", koharuNativeArtifactContractDryRunReport.map { String($0.appSideArtifactIdentityFilesPresent) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
+            signal("appSideArtifactIdentityHashesPresent", koharuNativeArtifactContractDryRunReport.map { String($0.appSideArtifactIdentityHashesPresent) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
             signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
             signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
             signal("shadowExecuted", String(externalShadowOCRExecuted), source: "externalTextBoxShadowOCRReport"),
