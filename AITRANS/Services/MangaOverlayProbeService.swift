@@ -5770,6 +5770,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
         koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport? = nil,
         koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport? = nil,
+        koharuArtifactIdentityReconciliationReport: MangaKoharuArtifactIdentityReconciliationReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -6285,6 +6286,9 @@ struct MangaOverlayProbeService: Sendable {
         let convergenceExternalOrientationWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
             $0.workItemID == "WI-external-textbox-orientation-shadow-path"
         }
+        let convergenceArtifactIdentityReconciliationWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
+            $0.workItemID == "WI-koharu-artifact-identity-reconciliation"
+        }
         let resolverQueueSummary = (koharuPipelineResolverReport?.executionQueue ?? [])
             .map { "\($0.executionItemID):status=\($0.status):next=\($0.recommendedNextAction)" }
             .joined(separator: " | ")
@@ -6406,6 +6410,12 @@ struct MangaOverlayProbeService: Sendable {
             .joined(separator: "\n")
         let nativeArtifactContractDryRunGateSummary = (koharuNativeArtifactContractDryRunReport?.gateLedger ?? [])
             .map { "nativeArtifactContractDryRunGate: id=\($0.gateID) status=\($0.status) scope=\($0.scope) affected=[\($0.affectedBlocks.map(String.init).joined(separator: ","))] action=\($0.recommendedAction)" }
+            .joined(separator: "\n")
+        let artifactIdentityReconciliationFileSummary = (koharuArtifactIdentityReconciliationReport?.fileRows ?? [])
+            .map { "artifactIdentityReconciliationFile: kind=\($0.artifactKind) appExists=\($0.appExists) appSize=\($0.appSizeBytes.map(String.init) ?? "nil") appSHA=\($0.appSHA256 ?? "nil") appStatus=\($0.appIdentityStatus) contractStatus=\($0.contractDryRunStatus ?? "nil") ciSizePath=\($0.ciManifestFieldPathForSize) ciSHAPath=\($0.ciManifestFieldPathForSHA256) status=\($0.comparisonStatus) next=\($0.nextAction)" }
+            .joined(separator: "\n")
+        let artifactIdentityReconciliationGateSummary = (koharuArtifactIdentityReconciliationReport?.gateLedger ?? [])
+            .map { "artifactIdentityReconciliationGate: id=\($0.gateID) status=\($0.status) scope=\($0.scope) affected=[\($0.affectedBlocks.map(String.init).joined(separator: ","))] action=\($0.recommendedAction)" }
             .joined(separator: "\n")
         let externalSummary = """
         koharuNativeAlgorithmReplayMatrixReport: enabled=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.stageCount) } ?? "nil") candidates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil") blockRoutes=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict ?? "nil")
@@ -6529,6 +6539,11 @@ struct MangaOverlayProbeService: Sendable {
         \(nativeArtifactContractDryRunFileSummary.isEmpty ? "nativeArtifactContractDryRunRequiredFile: nil" : nativeArtifactContractDryRunFileSummary)
         \(nativeArtifactContractDryRunPreviewSummary.isEmpty ? "nativeArtifactContractDryRunPreview: nil" : nativeArtifactContractDryRunPreviewSummary)
         \(nativeArtifactContractDryRunGateSummary.isEmpty ? "nativeArtifactContractDryRunGate: nil" : nativeArtifactContractDryRunGateSummary)
+        koharuArtifactIdentityReconciliationReport: enabled=\(koharuArtifactIdentityReconciliationReport.map { String($0.enabled) } ?? "nil") fileRows=\(koharuArtifactIdentityReconciliationReport.map { String($0.fileRowCount) } ?? "nil") gates=\(koharuArtifactIdentityReconciliationReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuArtifactIdentityReconciliationReport?.identityReconciliationVerdict ?? "nil") appReceipt=\(koharuArtifactIdentityReconciliationReport?.appReceiptVerdict ?? "nil") contractVerdict=\(koharuArtifactIdentityReconciliationReport?.contractDryRunVerdict ?? "nil") readyForCIManifestComparison=\(koharuArtifactIdentityReconciliationReport.map { String($0.readyForCIManifestComparison) } ?? "nil") manualCIComparisonRequired=\(koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil") dryRunOnly=\(koharuArtifactIdentityReconciliationReport.map { String($0.dryRunOnly) } ?? "nil") activeExportAllowed=\(koharuArtifactIdentityReconciliationReport.map { String($0.activeExportAllowed) } ?? "nil") groundTruthUsedForDecision=\(koharuArtifactIdentityReconciliationReport.map { String($0.groundTruthUsedForDecision) } ?? "nil") wouldChangeMainFlow=\(koharuArtifactIdentityReconciliationReport.map { String($0.wouldChangeMainFlow) } ?? "nil")
+        artifactIdentityReconciliationStatus=\(koharuArtifactIdentityReconciliationReport?.comparisonStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        artifactIdentityReconciliationReadyFiles=\(koharuArtifactIdentityReconciliationReport?.readyFileKinds.joined(separator: ",") ?? "nil") missing=\(koharuArtifactIdentityReconciliationReport?.missingFileKinds.joined(separator: ",") ?? "nil") hashMissing=\(koharuArtifactIdentityReconciliationReport?.hashMissingFileKinds.joined(separator: ",") ?? "nil")
+        \(artifactIdentityReconciliationFileSummary.isEmpty ? "artifactIdentityReconciliationFile: nil" : artifactIdentityReconciliationFileSummary)
+        \(artifactIdentityReconciliationGateSummary.isEmpty ? "artifactIdentityReconciliationGate: nil" : artifactIdentityReconciliationGateSummary)
         koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
         workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -6576,6 +6591,7 @@ struct MangaOverlayProbeService: Sendable {
         convergencePromotionTextBoxSegmentLinkage=status:\(convergencePromotionLinkageWorkItem?.status ?? "nil"):blocks=\(convergencePromotionLinkageWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergencePromotionLinkageWorkItem?.nextAction ?? "nil")
         convergenceExternalShadowOCRCoverage=status:\(convergenceExternalShadowCoverageWorkItem?.status ?? "nil"):blocks=\(convergenceExternalShadowCoverageWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergenceExternalShadowCoverageWorkItem?.nextAction ?? "nil")
         convergenceExternalTextBoxOrientation=status:\(convergenceExternalOrientationWorkItem?.status ?? "nil"):blocks=\(convergenceExternalOrientationWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergenceExternalOrientationWorkItem?.nextAction ?? "nil")
+        convergenceArtifactIdentityReconciliation=status:\(convergenceArtifactIdentityReconciliationWorkItem?.status ?? "nil"):blocks=\(convergenceArtifactIdentityReconciliationWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergenceArtifactIdentityReconciliationWorkItem?.nextAction ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)

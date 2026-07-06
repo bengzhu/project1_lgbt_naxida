@@ -116,6 +116,43 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.68：Koharu Artifact Identity Reconciliation Gate
+日期：2026-07-06
+
+依据：v1.67 已把 App 探针 runtime 可见的 source image 与四件套 size / SHA256 写入 `artifactIdentityReceipt`，但 Agent C 仍需要手工把这些值与 `ci-artifact-manifest.koharuArtifactValidationIdentitySummary` 对齐。真实 artifact handoff 需要一个可机器核对的对账表和 CI match verdict，防止 validator 校验的是一组文件、App 消费的是另一组文件。
+
+核心变更：
+
+- 新增 `koharuArtifactIdentityReconciliationReport`，把 App receipt 规范化为 SourceImage + manifest / TextBoxes / BubbleMask / SegmentMask 五行 ledger，逐行写出 App size / SHA256、receipt 状态、contract dry-run identity status，以及 CI manifest identity 的 size / SHA 字段路径。
+- `koharuArtifactConvergenceReport` 新增 `WI-koharu-artifact-identity-reconciliation` / `G-koharu-artifact-identity-reconciliation-ready`，并让 external shadow OCR coverage gate 在真实 artifact ready 后同时要求 reconciliation ready。
+- GitHub Actions 在注入真实 Koharu artifact 并跑 `ci-fast/full` 后，会比较 validator identity 与 App reconciliation rows 的 size / SHA256，失败时阻断；`ci-artifact-manifest.json` 新增 App receipt summary、reconciliation summary 和 `koharuArtifactIdentityReconciliationMatch`。
+- `1_ocr_probe_text.txt` 新增 reconciliation report、逐文件对账行和 convergence work item 摘要，方便 Agent C 直接核对。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮本地轻量验证见最终回复。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时 reconciliation 会保持 App receipt incomplete / not ready。
+- 该版本不新增 OCR / LLM / PNG，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.67：App-Side Koharu Artifact Identity Receipt
 日期：2026-07-06
 

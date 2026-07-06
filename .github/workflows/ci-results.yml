@@ -332,6 +332,15 @@ jobs:
           PY
             python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts > "$RESULT_ROOT/koharu-active-artifacts-validation.json"
             cat "$RESULT_ROOT/koharu-active-artifacts-validation.json"
+            python3 - <<'PY'
+          import json
+          with open("ci-results/koharu-active-artifacts-validation.json", "r", encoding="utf-8") as handle:
+              data = json.load(handle)
+          if data.get("verdict") != "readyForShadowOCR":
+              raise SystemExit(f"injected Koharu artifact verdict={data.get('verdict')!r}; expected readyForShadowOCR")
+          if data.get("readyForShadowOCR") is not True or data.get("externalTextBoxesShadowOCRAllowed") is not True:
+              raise SystemExit(f"injected Koharu artifact is not shadow-OCR ready: {data}")
+          PY
           } 2>&1 | tee "$RESULT_ROOT/koharu-artifact-injection.log" || fail_or_skip "download_or_validation_failed"
 
           echo "status=injected" >> "$GITHUB_OUTPUT"
@@ -663,6 +672,7 @@ jobs:
           external = report.get("externalArtifactReadinessReport") or {}
           external_shadow = report.get("externalTextBoxShadowOCRReport") or {}
           contract = report.get("koharuNativeArtifactContractDryRunReport") or {}
+          reconciliation = report.get("koharuArtifactIdentityReconciliationReport") or {}
           bundle = report.get("koharuNativeArtifactBundleLiteReport") or {}
           promotion = report.get("koharuNativePromotionGateLiteReport") or {}
           convergence = report.get("koharuArtifactConvergenceReport") or {}
@@ -671,6 +681,9 @@ jobs:
               ("koharuNativeArtifactBundleLiteReport.textBoxSegmentLinkageReviewBlocks", bundle.get("textBoxSegmentLinkageReviewBlocks")),
               ("koharuNativePromotionGateLiteReport.textBoxSegmentLinkBreakdown", promotion.get("textBoxSegmentLinkBreakdown")),
               ("koharuNativePromotionGateLiteReport.textBoxSegmentLinkageBlockedBlocks", promotion.get("textBoxSegmentLinkageBlockedBlocks")),
+              ("koharuArtifactIdentityReconciliationReport.enabled", reconciliation.get("enabled")),
+              ("koharuArtifactIdentityReconciliationReport.fileRows", reconciliation.get("fileRows")),
+              ("koharuArtifactIdentityReconciliationReport.gateLedger", reconciliation.get("gateLedger")),
               ("koharuArtifactConvergenceReport.workItemLedger", convergence.get("workItemLedger")),
               ("koharuArtifactConvergenceReport.gateLedger", convergence.get("gateLedger")),
           ]
@@ -699,33 +712,85 @@ jobs:
                   raise SystemExit(f"externalTextBoxShadowOCRReport.executed={external_shadow.get('executed')!r}")
               if int(external_shadow.get("candidateCount") or 0) <= 0:
                   raise SystemExit(f"externalTextBoxShadowOCRReport.candidateCount={external_shadow.get('candidateCount')!r}")
+              if int(external_shadow.get("ocrExecutedCount") or 0) <= 0:
+                  raise SystemExit(f"externalTextBoxShadowOCRReport.ocrExecutedCount={external_shadow.get('ocrExecutedCount')!r}")
               if contract.get("contractDryRunVerdict") != "activeArtifactsReadyForShadowOCR":
                   raise SystemExit(f"contractDryRunVerdict={contract.get('contractDryRunVerdict')!r}")
               if contract.get("activeExportAllowed") is not False or contract.get("dryRunOnly") is not True:
                   raise SystemExit("contract dry-run active export boundary was not preserved")
+              receipt = external.get("artifactIdentityReceipt") or {}
+              if receipt.get("identityVerdict") != "activeArtifactIdentityRecorded":
+                  raise SystemExit(f"artifactIdentityReceipt.identityVerdict={receipt.get('identityVerdict')!r}")
+              if receipt.get("allRequiredFilesPresent") is not True or receipt.get("allRequiredFilesHaveSHA256") is not True:
+                  raise SystemExit(f"artifactIdentityReceipt files/hashes not ready: {receipt}")
+              if contract.get("appSideArtifactIdentityVerdict") != "activeArtifactIdentityRecorded":
+                  raise SystemExit(f"contract appSideArtifactIdentityVerdict={contract.get('appSideArtifactIdentityVerdict')!r}")
+              if contract.get("appSideArtifactIdentityFilesPresent") is not True or contract.get("appSideArtifactIdentityHashesPresent") is not True:
+                  raise SystemExit("contract app-side identity files/hashes are not present")
+              if reconciliation.get("enabled") is not True:
+                  raise SystemExit("koharuArtifactIdentityReconciliationReport missing or disabled")
+              if reconciliation.get("readyForCIManifestComparison") is not True:
+                  raise SystemExit(f"identity reconciliation not ready: {reconciliation.get('identityReconciliationVerdict')!r}")
+              rows = reconciliation.get("fileRows") or []
+              if len(rows) < 5:
+                  raise SystemExit(f"identity reconciliation fileRows too small: {len(rows)}")
+              bad_rows = [row for row in rows if row.get("comparisonStatus") != "appReceiptReady"]
+              if bad_rows:
+                  raise SystemExit(f"identity reconciliation rows not appReceiptReady: {bad_rows}")
+              validation_path = pathlib.Path("ci-results/koharu-active-artifacts-validation.json")
+              if not validation_path.is_file():
+                  raise SystemExit("koharu-active-artifacts-validation.json missing for identity comparison")
+              validator = json.loads(validation_path.read_text(encoding="utf-8"))
+              validator_identity = validator.get("artifactIdentitySummary") or {}
+              artifact_files = validator_identity.get("artifactFiles") or {}
+              def validator_item(kind):
+                  if kind == "SourceImage":
+                      return validator_identity.get("sourceImage") or {}
+                  if kind == "manifest":
+                      return artifact_files.get("manifest") or {}
+                  return artifact_files.get(kind) or {}
+              mismatches = []
+              for row in rows:
+                  kind = row.get("artifactKind")
+                  item = validator_item(kind)
+                  if item.get("sizeBytes") != row.get("appSizeBytes") or item.get("sha256") != row.get("appSHA256"):
+                      mismatches.append({
+                          "artifactKind": kind,
+                          "validatorSize": item.get("sizeBytes"),
+                          "appSize": row.get("appSizeBytes"),
+                          "validatorSHA256": item.get("sha256"),
+                          "appSHA256": row.get("appSHA256"),
+                      })
+              if mismatches:
+                  raise SystemExit(f"CI validator identity does not match App receipt: {mismatches}")
           work_item_ids = {item.get("workItemID") for item in convergence.get("workItemLedger", [])}
           gate_ids = {item.get("gateID") for item in convergence.get("gateLedger", [])}
           for required_id in [
               "WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage",
               "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage",
+              "WI-koharu-artifact-identity-reconciliation",
           ]:
               if required_id not in work_item_ids:
-                  raise SystemExit(f"missing convergence linkage work item: {required_id}")
+                  raise SystemExit(f"missing convergence work item: {required_id}")
           for required_id in [
               "G-koharu-convergence-bundle-lite-textbox-segment-linkage",
               "G-koharu-convergence-promotion-lite-textbox-segment-linkage",
+              "G-koharu-artifact-identity-reconciliation-ready",
           ]:
               if required_id not in gate_ids:
-                  raise SystemExit(f"missing convergence linkage gate: {required_id}")
+                  raise SystemExit(f"missing convergence gate: {required_id}")
           txt = pathlib.Path("output", "1_ocr_probe_text.txt").read_text(encoding="utf-8")
           for needle in [
               "nativeArtifactBundleLiteTextBoxSegmentLink",
               "nativePromotionTextBoxSegmentLink",
               "convergenceBundleTextBoxSegmentLinkage",
               "convergencePromotionTextBoxSegmentLinkage",
+              "koharuArtifactIdentityReconciliationReport",
+              "artifactIdentityReconciliationFile",
+              "convergenceArtifactIdentityReconciliation",
           ]:
               if needle not in txt:
-                  raise SystemExit(f"missing linkage TXT summary: {needle}")
+                  raise SystemExit(f"missing probe TXT summary: {needle}")
           if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
               for needle in [
                   "externalArtifacts: readiness=readyForShadowOCR",
@@ -847,9 +912,74 @@ jobs:
               retained_output_files = [line.strip() for line in retained_path.read_text(encoding="utf-8").splitlines() if line.strip()]
           external_readiness = (probe_report or {}).get("externalArtifactReadinessReport")
           external_shadow = (probe_report or {}).get("externalTextBoxShadowOCRReport")
+          identity_reconciliation = (probe_report or {}).get("koharuArtifactIdentityReconciliationReport")
+          app_identity_receipt = (external_readiness or {}).get("artifactIdentityReceipt") if external_readiness else None
           validator_orientation = (koharu_validation or {}).get("orientationMetadataSummary") if koharu_validation else None
           validator_identity = (koharu_validation or {}).get("artifactIdentitySummary") if koharu_validation else None
           probe_configuration = (probe_report or {}).get("configuration") or {}
+
+          def identity_match_summary(validator_identity, reconciliation):
+              rows = (reconciliation or {}).get("fileRows") or []
+              artifact_files = (validator_identity or {}).get("artifactFiles") or {}
+              def valid_sha(value):
+                  return isinstance(value, str) and len(value) == 64 and all(ch in "0123456789abcdefABCDEF" for ch in value)
+              def validator_item(kind):
+                  if kind == "SourceImage":
+                      return (validator_identity or {}).get("sourceImage") or {}
+                  if kind == "manifest":
+                      return artifact_files.get("manifest") or {}
+                  return artifact_files.get(kind) or {}
+              row_summaries = []
+              mismatches = []
+              for row in rows:
+                  kind = row.get("artifactKind")
+                  item = validator_item(kind)
+                  app_ready = row.get("comparisonStatus") == "appReceiptReady"
+                  validator_ready = item.get("exists") is True and item.get("sizeBytes") is not None and valid_sha(item.get("sha256"))
+                  app_identity_ready = row.get("appSizeBytes") is not None and valid_sha(row.get("appSHA256"))
+                  size_match = item.get("sizeBytes") == row.get("appSizeBytes")
+                  sha_match = item.get("sha256") == row.get("appSHA256")
+                  summary = {
+                      "artifactKind": kind,
+                      "appReceiptReady": app_ready,
+                      "validatorIdentityReady": validator_ready,
+                      "appIdentityReady": app_identity_ready,
+                      "appSizeBytes": row.get("appSizeBytes"),
+                      "validatorSizeBytes": item.get("sizeBytes"),
+                      "sizeMatches": size_match,
+                      "appSHA256": row.get("appSHA256"),
+                      "validatorSHA256": item.get("sha256"),
+                      "sha256Matches": sha_match,
+                      "comparisonStatus": row.get("comparisonStatus"),
+                      "ciManifestFieldPathForSize": row.get("ciManifestFieldPathForSize"),
+                      "ciManifestFieldPathForSHA256": row.get("ciManifestFieldPathForSHA256"),
+                  }
+                  row_summaries.append(summary)
+                  if not app_ready or not validator_ready or not app_identity_ready or not size_match or not sha_match:
+                      mismatches.append(summary)
+              if not rows:
+                  verdict = "notEvaluatedNoAppReconciliationRows"
+              elif not validator_identity:
+                  verdict = "notEvaluatedNoValidatorIdentity"
+              elif any(not row.get("appReceiptReady") for row in row_summaries):
+                  verdict = "notEvaluatedAppReceiptRowsNotReady"
+              elif any(not row.get("validatorIdentityReady") for row in row_summaries):
+                  verdict = "notEvaluatedValidatorIdentityIncomplete"
+              elif any(not row.get("appIdentityReady") for row in row_summaries):
+                  verdict = "notEvaluatedAppIdentityIncomplete"
+              elif mismatches:
+                  verdict = "mismatch"
+              else:
+                  verdict = "matched"
+              return {
+                  "matchVerdict": verdict,
+                  "rowCount": len(rows),
+                  "mismatchCount": len(mismatches),
+                  "rows": row_summaries,
+                  "mismatches": mismatches,
+              }
+
+          identity_reconciliation_match = identity_match_summary(validator_identity, identity_reconciliation)
           manifest = {
               "version": "${{ steps.meta.outputs.version }}",
               "branch": "${{ steps.meta.outputs.branch }}",
@@ -891,6 +1021,30 @@ jobs:
               "koharuArtifactValidation": koharu_validation,
               "koharuArtifactValidationIdentitySummary": validator_identity,
               "koharuArtifactValidationOrientationSummary": validator_orientation,
+              "appSideArtifactIdentityReceiptSummary": {
+                  "identityVerdict": (app_identity_receipt or {}).get("identityVerdict"),
+                  "allRequiredFilesPresent": (app_identity_receipt or {}).get("allRequiredFilesPresent"),
+                  "allRequiredFilesHaveSHA256": (app_identity_receipt or {}).get("allRequiredFilesHaveSHA256"),
+                  "sourceImage": (app_identity_receipt or {}).get("sourceImage"),
+                  "schemaVersion": (app_identity_receipt or {}).get("schemaVersion"),
+                  "coordinateSpace": (app_identity_receipt or {}).get("coordinateSpace"),
+                  "contractExampleOnly": (app_identity_receipt or {}).get("contractExampleOnly"),
+                  "files": (app_identity_receipt or {}).get("files"),
+              },
+              "koharuArtifactIdentityReconciliationSummary": {
+                  "enabled": (identity_reconciliation or {}).get("enabled"),
+                  "identityReconciliationVerdict": (identity_reconciliation or {}).get("identityReconciliationVerdict"),
+                  "appReceiptVerdict": (identity_reconciliation or {}).get("appReceiptVerdict"),
+                  "contractDryRunVerdict": (identity_reconciliation or {}).get("contractDryRunVerdict"),
+                  "readyForCIManifestComparison": (identity_reconciliation or {}).get("readyForCIManifestComparison"),
+                  "manualCIComparisonRequired": (identity_reconciliation or {}).get("manualCIComparisonRequired"),
+                  "fileRowCount": (identity_reconciliation or {}).get("fileRowCount"),
+                  "comparisonStatusBreakdown": (identity_reconciliation or {}).get("comparisonStatusBreakdown"),
+                  "readyFileKinds": (identity_reconciliation or {}).get("readyFileKinds"),
+                  "missingFileKinds": (identity_reconciliation or {}).get("missingFileKinds"),
+                  "hashMissingFileKinds": (identity_reconciliation or {}).get("hashMissingFileKinds"),
+              },
+              "koharuArtifactIdentityReconciliationMatch": identity_reconciliation_match,
               "externalArtifactReadinessSummary": {
                   "readinessVerdict": (external_readiness or {}).get("readinessVerdict"),
                   "activeArtifactsDirectory": (external_readiness or {}).get("activeArtifactsDirectory"),
@@ -1053,6 +1207,7 @@ jobs:
             if [ -f "${RESULT_ROOT}/koharu-active-artifacts-validation.json" ]; then
               python3 - <<PY
           import json
+          from pathlib import Path
           with open("${RESULT_ROOT}/koharu-active-artifacts-validation.json", "r", encoding="utf-8") as f:
               data = json.load(f)
           print(f"- activeArtifactsDirectory: {data.get('activeArtifactsDirectory')}")
@@ -1069,6 +1224,18 @@ jobs:
           for key in ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]:
               item = files.get(key) or {}
               print(f"- identity {key}: exists={item.get('exists')} size={item.get('sizeBytes')} sha256={item.get('sha256')}")
+          probe_path = "${OUTPUT_COPY_DIR}/probe_report.json"
+          if Path(probe_path).is_file():
+              probe = json.load(open(probe_path, encoding="utf-8"))
+              external = probe.get("externalArtifactReadinessReport") or {}
+              receipt = external.get("artifactIdentityReceipt") or {}
+              reconciliation = probe.get("koharuArtifactIdentityReconciliationReport") or {}
+              print(f"- app receipt verdict: {receipt.get('identityVerdict')}")
+              print(f"- app receipt files present: {receipt.get('allRequiredFilesPresent')} hashes present: {receipt.get('allRequiredFilesHaveSHA256')}")
+              print(f"- identity reconciliation verdict: {reconciliation.get('identityReconciliationVerdict')}")
+              print(f"- identity reconciliation readyForCIManifestComparison: {reconciliation.get('readyForCIManifestComparison')}")
+              for row in reconciliation.get("fileRows") or []:
+                  print(f"- identity reconciliation {row.get('artifactKind')}: appSize={row.get('appSizeBytes')} appSHA256={row.get('appSHA256')} status={row.get('comparisonStatus')}")
           orientation = data.get("orientationMetadataSummary") or {}
           print(f"- orientation sourceDirectionBreakdown: {orientation.get('sourceDirectionBreakdown')}")
           print(f"- orientation categoryBreakdown: {orientation.get('orientationCategoryBreakdown')}")
