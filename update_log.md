@@ -116,6 +116,42 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.67：App-Side Koharu Artifact Identity Receipt
+日期：2026-07-06
+
+依据：v1.66 已在 validator / CI manifest 中记录 Release archive 注入的四件套 identity，但 App 侧探针报告仍缺少运行时实际可见文件的 size / SHA256 receipt。Agent C 需要同时核对 CI manifest identity 与 `probe_report.json` 中 App runtime receipt，才能确认不是只下载 / 校验了 archive，而是 App 探针确实消费到同一组 active artifact 文件。
+
+核心变更：
+
+- `externalArtifactReadinessReport` 新增 `artifactIdentityReceipt`，记录 App bundle / runtime 中 `test/1.png`、manifest、TextBoxes、BubbleMask、SegmentMask 的存在性、size、SHA256、manifest schema / coordinate space / generatedBy / generatedAt / contractExampleOnly 和 `identityVerdict`。
+- `koharuNativeArtifactContractDryRunReport` 新增 App 侧 identity 顶层摘要，并把每个 required file 的 `fileSizeBytes`、`sha256`、`identityStatus` 写入 dry-run file ledger；真实 artifact ready 时，contract dry-run ready 现在要求 App 侧 receipt 完整。
+- `koharuArtifactConvergenceReport` 的 external shadow OCR coverage decision signals 透传 App 侧 identity verdict / files / hashes，`1_ocr_probe_text.txt` 同步打印 App 侧 identity 摘要和 required file SHA，方便 Agent C 对齐 `ci-artifact-manifest.koharuArtifactValidationIdentitySummary`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮本地轻量验证见最终回复。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时 App 侧 receipt 会稳定记录 active 目录缺失 / required identity files missing。
+- 该版本不新增 OCR / LLM / PNG，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.66：Koharu Artifact Identity / Contract Dry-Run Coverage Gate
 日期：2026-07-06
 
