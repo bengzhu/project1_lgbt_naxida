@@ -16988,6 +16988,10 @@ final class TranslationSessionStore: ObservableObject {
             uniqueSorted(values).map(String.init).joined(separator: ",")
         }
 
+        func joinedBreakdown(_ values: [String: Int]) -> String {
+            values.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",")
+        }
+
         func signal(
             _ name: String,
             _ value: String,
@@ -17760,10 +17764,6 @@ final class TranslationSessionStore: ObservableObject {
 
         func joined(_ values: [Int]) -> String {
             uniqueSorted(values).map(String.init).joined(separator: ",")
-        }
-
-        func joinedBreakdown(_ values: [String: Int]) -> String {
-            values.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",")
         }
 
         func signal(
