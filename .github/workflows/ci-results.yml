@@ -353,6 +353,27 @@ jobs:
               echo "output/clean_text_diagnostic.json not present; skipping existing clean text parse"
             fi
             python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid
+            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported > "$RESULT_ROOT/koharu-orientation-fixture-validation.json"
+            python3 - <<'PY'
+          import json
+          with open("ci-results/koharu-orientation-fixture-validation.json", "r", encoding="utf-8") as handle:
+              data = json.load(handle)
+          orientation = data.get("orientationMetadataSummary") or {}
+          if data.get("verdict") != "contractExampleOnly":
+              raise SystemExit(f"orientation fixture verdict={data.get('verdict')!r}")
+          expected_partial = {"orientation-partial-vertical-linepolygon"}
+          expected_unsupported = {"orientation-partial-vertical-linepolygon", "orientation-unsupported-arbitrary-rotation"}
+          partial = set(orientation.get("orientationPartialTextBoxIDs") or [])
+          unsupported = set(orientation.get("orientationUnsupportedTextBoxIDs") or [])
+          reasons = orientation.get("orientationUnsupportedReasonBreakdown") or {}
+          if not expected_partial.issubset(partial):
+              raise SystemExit(f"orientation fixture missing partial IDs: {orientation}")
+          if not expected_unsupported.issubset(unsupported):
+              raise SystemExit(f"orientation fixture missing unsupported IDs: {orientation}")
+          for key in ["linePolygonWarpUnsupported", "arbitraryRotationUnsupported"]:
+              if int(reasons.get(key) or 0) <= 0:
+                  raise SystemExit(f"orientation fixture missing unsupported reason {key}: {orientation}")
+          PY
             python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files
             python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing > "$RESULT_ROOT/koharu-active-artifacts-validation.json"
             cat "$RESULT_ROOT/koharu-active-artifacts-validation.json"
@@ -802,6 +823,7 @@ jobs:
               retained_output_files = [line.strip() for line in retained_path.read_text(encoding="utf-8").splitlines() if line.strip()]
           external_readiness = (probe_report or {}).get("externalArtifactReadinessReport")
           external_shadow = (probe_report or {}).get("externalTextBoxShadowOCRReport")
+          validator_orientation = (koharu_validation or {}).get("orientationMetadataSummary") if koharu_validation else None
           probe_configuration = (probe_report or {}).get("configuration") or {}
           manifest = {
               "version": "${{ steps.meta.outputs.version }}",
@@ -842,6 +864,7 @@ jobs:
               "koharuArtifactValidatorRan": "${{ steps.static_checks.outcome }}" == "success",
               "koharuActiveArtifactsDirectoryPresent": "$koharu_active_artifacts_present" == "true",
               "koharuArtifactValidation": koharu_validation,
+              "koharuArtifactValidationOrientationSummary": validator_orientation,
               "externalArtifactReadinessSummary": {
                   "readinessVerdict": (external_readiness or {}).get("readinessVerdict"),
                   "activeArtifactsDirectory": (external_readiness or {}).get("activeArtifactsDirectory"),
@@ -866,6 +889,18 @@ jobs:
                   "promotedExternalShadowBlocks": (external_shadow or {}).get("promotedExternalShadowBlocks"),
                   "wouldPromoteByExistingGateBlocks": (external_shadow or {}).get("wouldPromoteByExistingGateBlocks"),
                   "skippedBlocks": (external_shadow or {}).get("skippedBlocks"),
+                  "sourceDirectionBreakdown": (external_shadow or {}).get("sourceDirectionBreakdown"),
+                  "orientationCategoryBreakdown": (external_shadow or {}).get("orientationCategoryBreakdown"),
+                  "linePolygonCandidateBlocks": (external_shadow or {}).get("linePolygonCandidateBlocks"),
+                  "rotationCandidateBlocks": (external_shadow or {}).get("rotationCandidateBlocks"),
+                  "verticalCandidateBlocks": (external_shadow or {}).get("verticalCandidateBlocks"),
+                  "orientationReadinessVerdict": (external_shadow or {}).get("orientationReadinessVerdict"),
+                  "orientationShadowPathNeededBlocks": (external_shadow or {}).get("orientationShadowPathNeededBlocks"),
+                  "orientationShadowPathExecutedBlocks": (external_shadow or {}).get("orientationShadowPathExecutedBlocks"),
+                  "orientationShadowPathPartialBlocks": (external_shadow or {}).get("orientationShadowPathPartialBlocks"),
+                  "orientationShadowPathNotExecutedBlocks": (external_shadow or {}).get("orientationShadowPathNotExecutedBlocks"),
+                  "orientationUnsupportedBlocks": (external_shadow or {}).get("orientationUnsupportedBlocks"),
+                  "orientationUnsupportedReasonBreakdown": (external_shadow or {}).get("orientationUnsupportedReasonBreakdown"),
               },
               "modelDownloadLogPath": "${RESULT_ROOT}/model-download.log",
               "modelVerifyLogPath": "${RESULT_ROOT}/model-verify.log",
@@ -999,6 +1034,13 @@ jobs:
           print(f"- externalTextBoxesShadowOCRAllowed: {data.get('externalTextBoxesShadowOCRAllowed')}")
           print(f"- nextAction: {data.get('nextAction')}")
           print(f"- readinessBlockers: {data.get('readinessBlockers')}")
+          orientation = data.get("orientationMetadataSummary") or {}
+          print(f"- orientation sourceDirectionBreakdown: {orientation.get('sourceDirectionBreakdown')}")
+          print(f"- orientation categoryBreakdown: {orientation.get('orientationCategoryBreakdown')}")
+          print(f"- orientation needed TextBoxes: {orientation.get('orientationShadowPathNeededTextBoxIDs')}")
+          print(f"- orientation partial TextBoxes: {orientation.get('orientationPartialTextBoxIDs')}")
+          print(f"- orientation unsupported TextBoxes: {orientation.get('orientationUnsupportedTextBoxIDs')}")
+          print(f"- orientation unsupported reasons: {orientation.get('orientationUnsupportedReasonBreakdown')}")
           PY
             else
               echo "- active artifact validator output missing; inspect static checks."

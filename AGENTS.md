@@ -106,8 +106,8 @@ test/1.png
 - GitHub Actions push 默认 `probe_mode=skip`，不启动模拟器漫画探针；需要云端探针验收时手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。
 - 现有加密打包 workflow 只产出受密码保护的软件包；Agent C 不以该包验收。
 - 独立 CI 结果包必须未加密，至少包含 `junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`；`xcodeBuildRequired=true` 时还必须包含 `.xcresult`，手动探针运行还必须包含可用的 `output/` 报告。
-- 若 `workflow_dispatch` 注入 Koharu artifact archive，Agent C 必须核对 `koharuArtifactInjection*` manifest 字段、Release tag / asset / SHA、validator verdict 和 external readiness，不得只看注入步骤日志。
-- 若注入 artifact 的 TextBox 带 `sourceDirection`、`linePolygons` 或 `rotationDegrees`，Agent C 还必须核对 `orientationShadowPathPartialBlocks`、`orientationUnsupportedBlocks`、`orientationUnsupportedReasonBreakdown` 和 convergence 的 `WI/G-external-textbox-orientation-shadow-path`，确认 partial / unsupported 未被误判为 `closedReportOnly` 或 passed。
+- 若 `workflow_dispatch` 注入 Koharu artifact archive，Agent C 必须核对 `koharuArtifactInjection*` manifest 字段、Release tag / asset / SHA、validator verdict、`koharuArtifactValidationOrientationSummary`、external readiness、`externalTextBoxShadowOCRReport.executed = true` 和 `candidateCount > 0`，不得只看注入步骤日志。
+- 若注入 artifact 的 TextBox 带 `sourceDirection`、`linePolygons` 或 `rotationDegrees`，Agent C 还必须核对 `orientationShadowPathPartialBlocks`、`orientationUnsupportedBlocks`、`orientationUnsupportedReasonBreakdown`、convergence 的 `WI/G-external-textbox-shadow-ocr-coverage` 和 `WI/G-external-textbox-orientation-shadow-path`，确认 no-candidate / partial / unsupported 未被误判为 `closedReportOnly` 或 passed。
 - 若云端失败，Agent B 根据结果包中的失败摘要、日志路径和 manifest 修复后继续 push，不改回默认本机循环。
 
 ## 6. Agent A/B/C 职责
@@ -128,7 +128,7 @@ test/1.png
 - 拉取 `codeb/...` 分支，查看实际 diff、文档同步、架构边界、GitHub Actions 结论、日志和 artifacts。
 - 只能验收与当前 `codeb/...` HEAD 完全一致的 `commitSha`。
 - 必须核对 `ci-artifact-manifest.json` 中的 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`，确认没有拿旧包、错包或其他分支的包。
-- 必须查看 `.xcresult` 或摘要、`junit.xml`、`xcodebuild.log`、`ci-failure-summary.md`；涉及探针时还必须检查云端生成或上传的 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和关键 PNG。涉及 external TextBox orientation 时，还必须检查 orientation partial / unsupported 摘要及 convergence gate 状态。
+- 必须查看 `.xcresult` 或摘要、`junit.xml`、`xcodebuild.log`、`ci-failure-summary.md`；涉及探针时还必须检查云端生成或上传的 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和关键 PNG。涉及 external TextBox 时，还必须检查 shadow OCR coverage、orientation partial / unsupported 摘要及 convergence gate 状态。
 - 有 bug 或云端验证失败时，输出退回清单，说明应由 Agent B 修复的日志位置和失败原因，不合并。
 - 通过后更新版本号和核心文档，通过 PR merge 合并到 `smalldata_test`，push。严禁合并到 `main`。
 - 合并完成后删除远端 `codeb/...` 候选分支，或在最终回复说明未删除原因。

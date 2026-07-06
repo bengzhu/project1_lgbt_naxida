@@ -6279,6 +6279,12 @@ struct MangaOverlayProbeService: Sendable {
         let convergencePromotionLinkageWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
             $0.workItemID == "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage"
         }
+        let convergenceExternalShadowCoverageWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
+            $0.workItemID == "WI-external-textbox-shadow-ocr-coverage"
+        }
+        let convergenceExternalOrientationWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
+            $0.workItemID == "WI-external-textbox-orientation-shadow-path"
+        }
         let resolverQueueSummary = (koharuPipelineResolverReport?.executionQueue ?? [])
             .map { "\($0.executionItemID):status=\($0.status):next=\($0.recommendedNextAction)" }
             .joined(separator: " | ")
@@ -6568,6 +6574,8 @@ struct MangaOverlayProbeService: Sendable {
         closedWorkItems=\(koharuArtifactConvergenceReport?.closedWorkItems.joined(separator: ",") ?? "nil") openWorkItems=\(koharuArtifactConvergenceReport?.openWorkItems.joined(separator: ",") ?? "nil")
         convergenceBundleTextBoxSegmentLinkage=status:\(convergenceBundleLinkageWorkItem?.status ?? "nil"):blocks=\(convergenceBundleLinkageWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergenceBundleLinkageWorkItem?.nextAction ?? "nil")
         convergencePromotionTextBoxSegmentLinkage=status:\(convergencePromotionLinkageWorkItem?.status ?? "nil"):blocks=\(convergencePromotionLinkageWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergencePromotionLinkageWorkItem?.nextAction ?? "nil")
+        convergenceExternalShadowOCRCoverage=status:\(convergenceExternalShadowCoverageWorkItem?.status ?? "nil"):blocks=\(convergenceExternalShadowCoverageWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergenceExternalShadowCoverageWorkItem?.nextAction ?? "nil")
+        convergenceExternalTextBoxOrientation=status:\(convergenceExternalOrientationWorkItem?.status ?? "nil"):blocks=\(convergenceExternalOrientationWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergenceExternalOrientationWorkItem?.nextAction ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)
