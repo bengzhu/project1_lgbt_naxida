@@ -116,6 +116,43 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.66：Koharu Artifact Identity / Contract Dry-Run Coverage Gate
+日期：2026-07-06
+
+依据：v1.65 已把 orientation summary 和 external shadow OCR coverage gate 接进 CI / convergence，但真实 Koharu archive 注入仍缺少两个验收细节：一是 Agent C 不能快速核对 active 四件套的文件身份是否与本轮 Release archive / source image 对齐；二是 `WI/G-external-textbox-shadow-ocr-coverage` 只要求 readiness 与 shadow OCR executed / candidateCount，还没有把 contract dry-run verdict 和 dry-run 边界安全纳入同一个闭环。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 `artifactIdentitySummary`，输出 source image、manifest、TextBoxes、BubbleMask、SegmentMask 的路径、存在性、size、SHA256，并透传 `generatedBy`、`generatedAt`、`contractExampleOnly`、schema、source image 和 coordinate space。
+- GitHub Actions 注入 Koharu artifact archive 时只接受唯一一个同时包含四件套的目录，避免从多个目录各取一个 `rglob()[0]` 拼出错包；`ci-artifact-manifest.json` 透传 `koharuArtifactValidationIdentitySummary`，`ci-failure-summary.md` 打印 identity 摘要。
+- `koharuArtifactConvergenceReport` 的 `WI-external-textbox-shadow-ocr-coverage` / `G-external-textbox-shadow-ocr-coverage` 在真实 artifact ready 后新增 contract dry-run 前置条件：`contractDryRunVerdict = activeArtifactsReadyForShadowOCR`、`dryRunOnly = true`、`activeExportAllowed = false`，再要求 `externalTextBoxShadowOCRReport.executed = true` 且 `candidateCount > 0`。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮本地轻量验证见最终回复。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked / identity empty-or-missing / orientation summary。
+- 该版本不新增 OCR / LLM / PNG，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.65：External TextBox Shadow OCR Coverage / Validator Orientation Summary
 日期：2026-07-06
 

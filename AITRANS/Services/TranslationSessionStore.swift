@@ -20487,6 +20487,10 @@ final class TranslationSessionStore: ObservableObject {
         let segmentNeedBlocks = uniqueSorted(segmentMaskProxyCoverageScoreboardReport?.needsRealSegmentMaskBlocks ?? [])
         let externalReady = externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed == true
         let externalMissing = externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing"
+        let externalContractDryRunReady = nativeArtifactContractDryRunExecuted
+            && nativeArtifactContractDryRunVerdict == "activeArtifactsReadyForShadowOCR"
+            && koharuNativeArtifactContractDryRunReport?.dryRunOnly == true
+            && koharuNativeArtifactContractDryRunReport?.activeExportAllowed == false
         let externalShadowOCRExecuted = externalTextBoxShadowOCRReport?.executed == true
         let externalShadowCandidateCount = externalTextBoxShadowOCRReport?.candidateCount ?? 0
         let externalShadowOCRExecutedCount = externalTextBoxShadowOCRReport?.ocrExecutedCount ?? 0
@@ -20494,7 +20498,7 @@ final class TranslationSessionStore: ObservableObject {
         let externalShadowCoverageBlockedBlocks: [Int]
         if !externalReady {
             externalShadowCoverageBlockedBlocks = []
-        } else if externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted || externalShadowCandidateCount <= 0 {
+        } else if !externalContractDryRunReady || externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted || externalShadowCandidateCount <= 0 {
             externalShadowCoverageBlockedBlocks = allBlockIndexes
         } else {
             externalShadowCoverageBlockedBlocks = []
@@ -20502,6 +20506,8 @@ final class TranslationSessionStore: ObservableObject {
         let externalShadowCoverageNextAction: String
         if !externalReady {
             externalShadowCoverageNextAction = "provideRealKoharuArtifactsBeforeShadowOCRCoverageGate"
+        } else if !externalContractDryRunReady {
+            externalShadowCoverageNextAction = nativeArtifactContractDryRunNextAction
         } else if externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted {
             externalShadowCoverageNextAction = "runExternalTextBoxShadowOCR"
         } else if externalShadowCandidateCount <= 0 {
@@ -20512,6 +20518,8 @@ final class TranslationSessionStore: ObservableObject {
         let externalShadowCoverageWorkItemStatus: String
         if !externalReady {
             externalShadowCoverageWorkItemStatus = "notEvaluatedUntilExternalArtifactReady"
+        } else if !externalContractDryRunReady {
+            externalShadowCoverageWorkItemStatus = "blockedByNativeArtifactContractDryRun"
         } else if externalTextBoxShadowOCRReport == nil {
             externalShadowCoverageWorkItemStatus = "blockedByMissingExternalShadowOCRReport"
         } else if !externalShadowOCRExecuted {
@@ -20523,6 +20531,7 @@ final class TranslationSessionStore: ObservableObject {
         }
         let externalShadowCoverageBlockers = sortedUniqueStrings(
             (externalReady ? [] : ["real external TextBox artifacts are not ready for shadow OCR coverage evaluation"])
+            + (externalReady && !externalContractDryRunReady ? ["koharuNativeArtifactContractDryRunReport must be activeArtifactsReadyForShadowOCR with dryRunOnly=true and activeExportAllowed=false before external shadow OCR coverage can close"] : [])
             + (externalTextBoxShadowOCRReport == nil && externalReady ? ["externalTextBoxShadowOCRReport missing despite ready external artifacts"] : [])
             + (externalTextBoxShadowOCRReport != nil && externalReady && !externalShadowOCRExecuted ? ["externalTextBoxShadowOCRReport.executed is false despite ready external artifacts"] : [])
             + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowCandidateCount <= 0 ? ["external TextBoxes did not produce any block-matched shadow OCR candidates"] : [])
@@ -20531,6 +20540,14 @@ final class TranslationSessionStore: ObservableObject {
             ? (externalShadowCoverageBlockedBlocks.isEmpty ? "passed" : "warning")
             : "open"
         let externalShadowCoverageDecisionSignals = [
+            signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"),
+            signal("activeArtifactsDirectory", externalArtifactReadinessReport.map { String($0.activeArtifactsDirectory) } ?? "nil", source: "externalArtifactReadinessReport"),
+            signal("contractExampleOnly", externalArtifactReadinessReport.map { String($0.contractExampleOnly) } ?? "nil", source: "externalArtifactReadinessReport"),
+            signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport"),
+            signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"),
+            signal("contractDryRunReadyForShadowOCR", String(externalContractDryRunReady), source: "koharuNativeArtifactContractDryRunReport"),
+            signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
+            signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
             signal("shadowExecuted", String(externalShadowOCRExecuted), source: "externalTextBoxShadowOCRReport"),
             signal("candidateCount", String(externalShadowCandidateCount), source: "externalTextBoxShadowOCRReport"),
             signal("ocrExecutedCount", String(externalShadowOCRExecutedCount), source: "externalTextBoxShadowOCRReport"),

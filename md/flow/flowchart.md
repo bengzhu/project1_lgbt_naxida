@@ -91,7 +91,7 @@ flowchart TD
   TBF --> LTB["lineTextBoxPlanReport / lineCropExperimentReport<br/>目标块行级 TextBox / deskew shadow 验证"]
   LTB --> EAR["externalArtifactReadinessReport<br/>真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门"]
   EAR --> ETS["externalTextBoxShadowOCRReport<br/>ready 后每块最多 1 个 externalArtifact.textBoxCrop / shadow-only"]
-  ETS --> ESC["external TextBox shadow OCR coverage gate<br/>ready 后要求 executed + candidateCount > 0"]
+  ETS --> ESC["external TextBox shadow OCR coverage gate<br/>ready 后要求 identity + contract dry-run + executed + candidateCount > 0"]
   ESC --> ETO["external TextBox orientation-aware shadow OCR<br/>bounded rotation OCR / partial 与 unsupported 进入 convergence blockers"]
   ETO --> ISR["internalStructureBottleneckReport<br/>OCR / bubble / crop / translation / render 路由诊断"]
   ISR --> RTA["routingDrivenTranslationComparisonReport<br/>modelTranslationQuality 块 strict prompt 对照 / report-only"]

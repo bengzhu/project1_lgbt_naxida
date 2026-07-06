@@ -72,11 +72,11 @@ python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_con
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
 ```
 
-validator 只读指定目录，不复制、不生成 active artifact。输出 JSON 摘要包含 `verdict`、`readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed`、`nextAction`、`readinessBlockers`、缺失文件、解析错误、坐标错误、TextBox 数量、Bubble instance 数量、SegmentMask 尺寸匹配结果和 `orientationMetadataSummary`。`orientationMetadataSummary` 会汇总 sourceDirection、orientation category、rotation plan、line polygon TextBox、竖排 TextBox、近 90 度倍数 rotation、任意角度 rotation、orientation partial TextBox 和 unsupported reason breakdown。
+validator 只读指定目录，不复制、不生成 active artifact。输出 JSON 摘要包含 `verdict`、`readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed`、`nextAction`、`readinessBlockers`、缺失文件、解析错误、坐标错误、TextBox 数量、Bubble instance 数量、SegmentMask 尺寸匹配结果、`artifactIdentitySummary` 和 `orientationMetadataSummary`。`artifactIdentitySummary` 会记录 source image 以及 manifest / TextBoxes / BubbleMask / SegmentMask 的路径、存在性、size、SHA256，并透传 manifest 的 `generatedBy`、`generatedAt`、`contractExampleOnly`、schema、source image 和 coordinate space；用于 Agent C 核对当前云端结果包里的四件套是否就是被审查的 archive 内容。`orientationMetadataSummary` 会汇总 sourceDirection、orientation category、rotation plan、line polygon TextBox、竖排 TextBox、近 90 度倍数 rotation、任意角度 rotation、orientation partial TextBox 和 unsupported reason breakdown。
 
 `--print-required-files` 只打印 Koharu / 外部 detector 侧需要交付的 active 文件清单，不读取或写入 `test/koharu_artifacts/`。缺少真实 active 目录时，`--allow-missing` 的正确结果是 `verdict = manifestMissing`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`，并列出 `manifest`、`TextBoxes`、`BubbleMask`、`SegmentMask` 的阻塞项；不应额外混入 schema / coordinate 缺失噪音。
 
-云端手动 workflow 可选从 Release archive 注入真实四件套：填写 `koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256` 后，CI 会在 Xcode build 前下载、校验、解压并只复制四个固定 JSON 到 `test/koharu_artifacts/`；`koharu_artifact_required=true` 时注入或 validator 失败会直接失败。
+云端手动 workflow 可选从 Release archive 注入真实四件套：填写 `koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256` 后，CI 会在 Xcode build 前下载、校验、解压，并且只接受唯一一个同时包含 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json` 的目录；找到 0 个或多个候选目录都会失败，避免从不同目录拼出错包。通过后 CI 只复制该目录下四个固定 JSON 到 `test/koharu_artifacts/`，并把 validator identity / orientation 摘要写入未加密结果包；`koharu_artifact_required=true` 时下载、SHA、解压、唯一目录检查或 validator 失败会直接失败。
 
 ## 从 Koharu 导出到 AITRANS contract
 

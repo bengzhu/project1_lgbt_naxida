@@ -315,14 +315,20 @@ jobs:
               "1.bubbles.json",
               "1.segment_mask.json",
           ]
+          candidate_dirs = []
+          for candidate in sorted({path.parent for path in extract_dir.rglob("1.manifest.json") if path.is_file()}):
+              if all((candidate / name).is_file() for name in required):
+                  candidate_dirs.append(candidate)
+          if len(candidate_dirs) != 1:
+              details = ", ".join(str(path.relative_to(extract_dir)) for path in candidate_dirs) or "none"
+              raise SystemExit(f"expected exactly one Koharu artifact directory containing the four-file contract, found {len(candidate_dirs)}: {details}")
+          source_dir = candidate_dirs[0]
+          print(f"Koharu artifact source directory: {source_dir.relative_to(extract_dir)}")
           if destination.exists():
               shutil.rmtree(destination)
           destination.mkdir(parents=True, exist_ok=True)
           for name in required:
-              matches = sorted(path for path in extract_dir.rglob(name) if path.is_file())
-              if not matches:
-                  raise SystemExit(f"missing required Koharu artifact file in archive: {name}")
-              shutil.copy2(matches[0], destination / name)
+              shutil.copy2(source_dir / name, destination / name)
           PY
             python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts > "$RESULT_ROOT/koharu-active-artifacts-validation.json"
             cat "$RESULT_ROOT/koharu-active-artifacts-validation.json"
@@ -352,7 +358,25 @@ jobs:
             else
               echo "output/clean_text_diagnostic.json not present; skipping existing clean text parse"
             fi
-            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid
+            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
+            python3 - <<'PY'
+          import json
+          with open("ci-results/koharu-valid-fixture-validation.json", "r", encoding="utf-8") as handle:
+              data = json.load(handle)
+          identity = data.get("artifactIdentitySummary") or {}
+          source_image = identity.get("sourceImage") or {}
+          files = identity.get("artifactFiles") or {}
+          if data.get("verdict") != "contractExampleOnly":
+              raise SystemExit(f"valid fixture verdict={data.get('verdict')!r}")
+          if identity.get("contractExampleOnly") is not True:
+              raise SystemExit(f"valid fixture identity missing contractExampleOnly: {identity}")
+          if len(str(source_image.get("sha256") or "")) != 64:
+              raise SystemExit(f"valid fixture source image sha missing: {identity}")
+          for key in ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]:
+              item = files.get(key) or {}
+              if item.get("exists") is not True or len(str(item.get("sha256") or "")) != 64:
+                  raise SystemExit(f"valid fixture missing file identity {key}: {identity}")
+          PY
             python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported > "$RESULT_ROOT/koharu-orientation-fixture-validation.json"
             python3 - <<'PY'
           import json
@@ -824,6 +848,7 @@ jobs:
           external_readiness = (probe_report or {}).get("externalArtifactReadinessReport")
           external_shadow = (probe_report or {}).get("externalTextBoxShadowOCRReport")
           validator_orientation = (koharu_validation or {}).get("orientationMetadataSummary") if koharu_validation else None
+          validator_identity = (koharu_validation or {}).get("artifactIdentitySummary") if koharu_validation else None
           probe_configuration = (probe_report or {}).get("configuration") or {}
           manifest = {
               "version": "${{ steps.meta.outputs.version }}",
@@ -864,6 +889,7 @@ jobs:
               "koharuArtifactValidatorRan": "${{ steps.static_checks.outcome }}" == "success",
               "koharuActiveArtifactsDirectoryPresent": "$koharu_active_artifacts_present" == "true",
               "koharuArtifactValidation": koharu_validation,
+              "koharuArtifactValidationIdentitySummary": validator_identity,
               "koharuArtifactValidationOrientationSummary": validator_orientation,
               "externalArtifactReadinessSummary": {
                   "readinessVerdict": (external_readiness or {}).get("readinessVerdict"),
@@ -1034,6 +1060,15 @@ jobs:
           print(f"- externalTextBoxesShadowOCRAllowed: {data.get('externalTextBoxesShadowOCRAllowed')}")
           print(f"- nextAction: {data.get('nextAction')}")
           print(f"- readinessBlockers: {data.get('readinessBlockers')}")
+          identity = data.get("artifactIdentitySummary") or {}
+          source_image = identity.get("sourceImage") or {}
+          print(f"- identity generatedBy: {identity.get('generatedBy')}")
+          print(f"- identity generatedAt: {identity.get('generatedAt')}")
+          print(f"- identity sourceImageSha256: {source_image.get('sha256')}")
+          files = identity.get("artifactFiles") or {}
+          for key in ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]:
+              item = files.get(key) or {}
+              print(f"- identity {key}: exists={item.get('exists')} size={item.get('sizeBytes')} sha256={item.get('sha256')}")
           orientation = data.get("orientationMetadataSummary") or {}
           print(f"- orientation sourceDirectionBreakdown: {orientation.get('sourceDirectionBreakdown')}")
           print(f"- orientation categoryBreakdown: {orientation.get('orientationCategoryBreakdown')}")
