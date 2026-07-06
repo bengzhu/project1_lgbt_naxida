@@ -5166,6 +5166,10 @@ struct MangaOverlayExternalTextBoxShadowOCRCandidate: Equatable, Codable, Sendab
     var deskewExecuted: Bool
     var orientationShadowPathNeeded: Bool
     var orientationShadowPathExecuted: Bool
+    var orientationAttemptedRotations: [Double]
+    var orientationSelectedRotation: Double?
+    var orientationRecognitionLanguages: [String]
+    var orientationUnsupportedReason: String?
     var ocrExecuted: Bool
     var ocrSucceeded: Bool
     var controlText: String
@@ -5192,6 +5196,10 @@ struct MangaOverlayExternalTextBoxShadowOCRBlockSummary: Equatable, Codable, Sen
     var selectedRotationDegrees: Double?
     var orientationShadowPathNeeded: Bool
     var orientationShadowPathExecuted: Bool
+    var orientationAttemptedRotations: [Double]
+    var orientationSelectedRotation: Double?
+    var orientationRecognitionLanguages: [String]
+    var orientationUnsupportedReason: String?
     var orientationReadinessVerdict: String
     var ocrExecuted: Bool
     var ocrSucceeded: Bool

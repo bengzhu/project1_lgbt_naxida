@@ -200,7 +200,7 @@ test/1.png
   -> line-level TextBox / deskew shadow 验证（仅目标块，不替换主输入）
   -> external artifact readiness gate（真实 TextBoxes / BubbleMask / SegmentMask 输入解析、校验和阻塞报告）
   -> external TextBoxes shadow OCR（仅 readiness ready 时执行，每块最多 1 个 externalArtifact.textBoxCrop，不替换主输入）
-  -> external TextBox orientation ledger（记录 sourceDirection / linePolygons / rotation；未执行 orientation-aware shadow path 时阻止 would-promote 预览）
+  -> external TextBox orientation-aware shadow OCR（真实 artifact ready 后对竖排 / 近 90 度倍数旋转 TextBox 执行有上限 rotation OCR；line polygon / 任意角度仍阻塞 would-promote 预览）
   -> internal structure bottleneck routing（聚合 OCR / bubble / crop / translation / render 证据，只写报告和 TXT）
   -> reading order structure audit（审计阅读顺序、气泡归属、多块气泡和结构动作，只写报告和 TXT）
   -> structure action candidate matrix（把结构建议转成 report-only work candidates）
@@ -238,7 +238,7 @@ test/1.png
 - `ci-fast`：手动 `workflow_dispatch` 快速探针模式，使用真实 simulator、Local GGUF、`test/1.png`、deterministic 解码、whole-page OCR、bubble-first 融合、逐块翻译、失败块覆盖、clean text diagnostic 和 external artifact gate；跳过 lexicon / Vision API / slice / TextRegion crop shadow / crop experiment / line shadow / tagged batch / 模型纠错 / 纠错翻译对照 / contact sheet 等高成本诊断。
 - `full`：开发页按钮和人工 full 回归默认模式，运行完整 shadow-only 对照、diagnostic PNG 和 contact sheet。
 
-手动 workflow 可选提供 Koharu artifact Release archive：`koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256`。CI 会在 Xcode build 前下载、校验、解压并只复制 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json` 到 `test/koharu_artifacts/`，随后跑 validator；`koharu_artifact_required=true` 时任一失败都会阻断工作流。该路径只接收真实 detector / segmenter 输出，不从 examples、Vision OCR、pre-crop、line、proxy、ground truth 或手写框生成 active artifact。v1.59 起，注入 archive 后的 `ci-fast/full` 还必须在 App 侧探针产物中证明 `externalArtifactReadinessReport.readinessVerdict = readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed = true`、`externalTextBoxShadowOCRReport.executed = true` 和 contract dry-run ready，避免只验证下载 / 解压 / validator 而没有证明 App 真消费到 artifact。v1.62 起，若真实 TextBox 带 vertical source direction、line polygon 或 rotation，`externalTextBoxShadowOCRReport` 会把 orientation shadow path needed / executed / not executed 写入 JSON / TXT 和 convergence gate；当前仍不执行 deskew / line polygon OCR。
+手动 workflow 可选提供 Koharu artifact Release archive：`koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256`。CI 会在 Xcode build 前下载、校验、解压并只复制 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json` 到 `test/koharu_artifacts/`，随后跑 validator；`koharu_artifact_required=true` 时任一失败都会阻断工作流。该路径只接收真实 detector / segmenter 输出，不从 examples、Vision OCR、pre-crop、line、proxy、ground truth 或手写框生成 active artifact。v1.59 起，注入 archive 后的 `ci-fast/full` 还必须在 App 侧探针产物中证明 `externalArtifactReadinessReport.readinessVerdict = readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed = true`、`externalTextBoxShadowOCRReport.executed = true` 和 contract dry-run ready，避免只验证下载 / 解压 / validator 而没有证明 App 真消费到 artifact。v1.63 起，若真实 TextBox 带 vertical source direction 或近 90/180/270 度 rotation，`externalTextBoxShadowOCRReport` 会执行有上限的 rotation OCR 并写入 attempted rotations、selected rotation、language profile、orientation shadow path needed / executed / not executed；line polygon warp 和任意角度 deskew 仍不执行，继续作为 blockers。
 
 报告会在 `configuration.probeRunMode`、`configuration.probeFastPathEnabled`、`configuration.skippedDiagnostics` 和 `manga_probe_progress.json` 中记录模式、跳过项、保留输出文件和阶段耗时。
 

@@ -8635,6 +8635,10 @@ final class TranslationSessionStore: ObservableObject {
                     selectedRotationDegrees: nil,
                     orientationShadowPathNeeded: false,
                     orientationShadowPathExecuted: false,
+                    orientationAttemptedRotations: [],
+                    orientationSelectedRotation: nil,
+                    orientationRecognitionLanguages: [],
+                    orientationUnsupportedReason: nil,
                     orientationReadinessVerdict: "blockedByReadinessGate",
                     ocrExecuted: false,
                     ocrSucceeded: false,
@@ -8747,6 +8751,10 @@ final class TranslationSessionStore: ObservableObject {
                         selectedRotationDegrees: nil,
                         orientationShadowPathNeeded: false,
                         orientationShadowPathExecuted: false,
+                        orientationAttemptedRotations: [],
+                        orientationSelectedRotation: nil,
+                        orientationRecognitionLanguages: [],
+                        orientationUnsupportedReason: nil,
                         orientationReadinessVerdict: "skippedNoMatchingExternalTextBox",
                         ocrExecuted: false,
                         ocrSucceeded: false,
@@ -8761,48 +8769,105 @@ final class TranslationSessionStore: ObservableObject {
                 continue
             }
 
-            let crop = try await mangaOverlayProbeService.recognizeExternalTextBoxCrop(
-                in: image,
-                textBoxBBox: selected.textBox.bbox,
-                options: preprocessing
-            )
             let controlText = block.finalTextUsedForTranslation
             let controlQuality = Self.ocrCandidateQualityScore(controlText)
+            let controlWords = Self.ocrCandidateWords(controlText)
+            let normalizedSourceDirection = selected.textBox.sourceDirection.map(Self.normalizedExternalSourceDirection)
+            let orientationCategory = Self.externalTextBoxOrientationCategory(selected.textBox)
+            let linePolygonCount = selected.textBox.linePolygons?.count ?? 0
+            let orientationShadowPathNeeded = Self.externalTextBoxNeedsOrientationShadowPath(selected.textBox)
+            let orientationPlan = Self.externalTextBoxOrientationShadowOCRPlan(selected.textBox)
+            var attempts: [(text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double, rotationApplied: Double, errorCode: String?)] = []
+            for rotationAngle in orientationPlan.rotationAngles {
+                do {
+                    let crop = try await mangaOverlayProbeService.recognizeExternalTextBoxCrop(
+                        in: image,
+                        textBoxBBox: selected.textBox.bbox,
+                        options: preprocessing,
+                        rotationAngle: rotationAngle,
+                        recognitionLanguages: orientationPlan.recognitionLanguages
+                    )
+                    attempts.append((crop.text, crop.cropBBox, crop.paddingX, crop.paddingY, crop.rotationApplied, nil))
+                } catch {
+                    attempts.append((nil, selected.textBox.bbox, 0, 0, Double(rotationAngle), "\(type(of: error))"))
+                }
+            }
+            let crop = attempts.max { lhs, rhs in
+                let lhsText = (lhs.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                let rhsText = (rhs.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                if (lhs.errorCode == nil) != (rhs.errorCode == nil) {
+                    return lhs.errorCode != nil
+                }
+                if lhsText.isEmpty != rhsText.isEmpty {
+                    return lhsText.isEmpty
+                }
+                let lhsQuality = Self.ocrCandidateQualityScore(lhsText)
+                let rhsQuality = Self.ocrCandidateQualityScore(rhsText)
+                if abs(lhsQuality - rhsQuality) > 0.0001 {
+                    return lhsQuality < rhsQuality
+                }
+                let lhsPreservation = Self.wordPreservationRatio(
+                    sourceWords: controlWords,
+                    candidateWords: Self.ocrCandidateWords(lhsText)
+                )
+                let rhsPreservation = Self.wordPreservationRatio(
+                    sourceWords: controlWords,
+                    candidateWords: Self.ocrCandidateWords(rhsText)
+                )
+                if abs(lhsPreservation - rhsPreservation) > 0.0001 {
+                    return lhsPreservation < rhsPreservation
+                }
+                return lhs.rotationApplied > rhs.rotationApplied
+            } ?? (nil, selected.textBox.bbox, 0, 0, 0, "noExternalTextBoxShadowOCRAttempt")
             let ocrText = crop.text?.trimmingCharacters(in: .whitespacesAndNewlines)
             let ocrTextValue = ocrText ?? ""
             let candidateQuality = Self.ocrCandidateQualityScore(ocrTextValue)
             let preservation = Self.wordPreservationRatio(
-                sourceWords: Self.ocrCandidateWords(controlText),
+                sourceWords: controlWords,
                 candidateWords: Self.ocrCandidateWords(ocrTextValue)
             )
             let qualityDelta = candidateQuality - controlQuality
             var blockers = selected.rejectionReasons
+            if crop.errorCode != nil {
+                blockers.append("ocrExecutionFailed")
+            }
             if ocrTextValue.isEmpty {
                 blockers.append("emptyLocalOCR")
             }
-            if Self.ocrCandidateWords(controlText).count >= 3, preservation < 0.55 {
+            if controlWords.count >= 3, preservation < 0.55 {
                 blockers.append("rawWordsLost")
             }
-            if Self.ocrCandidateWords(controlText).count >= 2,
-               Self.ocrCandidateWords(ocrTextValue).count < max(2, Int(ceil(Double(Self.ocrCandidateWords(controlText).count) * 0.55))) {
+            if controlWords.count >= 2,
+               Self.ocrCandidateWords(ocrTextValue).count < max(2, Int(ceil(Double(controlWords.count) * 0.55))) {
                 blockers.append("wordCountRegression")
             }
-            if Self.ocrCandidateWords(ocrTextValue).joined(separator: " ") == Self.ocrCandidateWords(controlText).joined(separator: " ") {
+            if Self.ocrCandidateWords(ocrTextValue).joined(separator: " ") == controlWords.joined(separator: " ") {
                 blockers.append("sameAsFusedText")
             }
             if Self.containsLikelyOCRError(in: ocrTextValue), !Self.containsLikelyOCRError(in: controlText), candidateQuality <= controlQuality + 0.08 {
                 blockers.append("introducedLikelyOCRError")
             }
-            let normalizedSourceDirection = selected.textBox.sourceDirection.map(Self.normalizedExternalSourceDirection)
-            let orientationCategory = Self.externalTextBoxOrientationCategory(selected.textBox)
-            let linePolygonCount = selected.textBox.linePolygons?.count ?? 0
-            let orientationShadowPathNeeded = Self.externalTextBoxNeedsOrientationShadowPath(selected.textBox)
-            let orientationReadinessVerdict = orientationShadowPathNeeded
-                ? "orientationShadowPathNeededNotExecuted"
-                : "orientationMetadataCaptured"
-            if orientationShadowPathNeeded {
+            let orientationRotationExecuted = attempts.contains { attempt in
+                attempt.errorCode == nil && abs(attempt.rotationApplied) > 0.001
+            }
+            let orientationShadowPathExecuted = orientationShadowPathNeeded && orientationRotationExecuted
+            let orientationUnsupportedReason = orientationPlan.unsupportedReasons.isEmpty
+                ? nil
+                : orientationPlan.unsupportedReasons.joined(separator: ",")
+            let orientationReadinessVerdict: String
+            if !orientationShadowPathNeeded {
+                orientationReadinessVerdict = "orientationMetadataCaptured"
+            } else if orientationShadowPathExecuted && orientationPlan.unsupportedReasons.isEmpty {
+                orientationReadinessVerdict = "orientationShadowPathExecuted"
+            } else if orientationShadowPathExecuted {
+                orientationReadinessVerdict = "orientationShadowPathPartiallyExecuted"
+            } else {
+                orientationReadinessVerdict = "orientationShadowPathNeededNotExecuted"
+            }
+            if orientationShadowPathNeeded && !orientationShadowPathExecuted {
                 blockers.append("orientationShadowPathNeededNotExecuted")
             }
+            blockers.append(contentsOf: orientationPlan.unsupportedReasons)
             let betterThanControl = candidateQuality > controlQuality + 0.03
             let wouldPromote = !ocrTextValue.isEmpty
                 && preservation >= 0.80
@@ -8813,16 +8878,21 @@ final class TranslationSessionStore: ObservableObject {
                 && !blockers.contains("bubbleAlignmentMismatch")
                 && !blockers.contains("textBoxAreaTooLarge")
                 && !blockers.contains("orientationShadowPathNeededNotExecuted")
+                && !blockers.contains("linePolygonWarpUnsupported")
+                && !blockers.contains("arbitraryRotationUnsupported")
             let verdict = wouldPromote ? "wouldPromoteByExistingGateReportOnly" : (betterThanControl ? "betterThanControlButBlocked" : "controlStillBest")
             let candidateID = nextCandidateID
             nextCandidateID += 1
             var riskFlags = selected.riskFlags
-            if orientationCategory == "vertical" {
+            if orientationCategory == "vertical" && orientationShadowPathExecuted {
+                riskFlags.append("verticalSourceDirectionShadowExecuted")
+            } else if orientationCategory == "vertical" {
                 riskFlags.append("verticalSourceDirectionShadowNotExecuted")
             }
-            if orientationShadowPathNeeded {
+            if orientationShadowPathNeeded && !orientationShadowPathExecuted {
                 riskFlags.append("orientationShadowPathNeededNotExecuted")
             }
+            riskFlags.append(contentsOf: orientationPlan.unsupportedReasons)
             candidates.append(
                 MangaOverlayExternalTextBoxShadowOCRCandidate(
                     candidateID: candidateID,
@@ -8845,7 +8915,11 @@ final class TranslationSessionStore: ObservableObject {
                     rotationDegrees: selected.textBox.rotationDegrees,
                     deskewExecuted: false,
                     orientationShadowPathNeeded: orientationShadowPathNeeded,
-                    orientationShadowPathExecuted: false,
+                    orientationShadowPathExecuted: orientationShadowPathExecuted,
+                    orientationAttemptedRotations: orientationPlan.rotationAngles.map(Double.init),
+                    orientationSelectedRotation: crop.rotationApplied,
+                    orientationRecognitionLanguages: orientationPlan.recognitionLanguages ?? [],
+                    orientationUnsupportedReason: orientationUnsupportedReason,
                     ocrExecuted: true,
                     ocrSucceeded: !ocrTextValue.isEmpty,
                     controlText: controlText,
@@ -8862,8 +8936,12 @@ final class TranslationSessionStore: ObservableObject {
                         "shadowOnly=true",
                         "variantName=externalArtifact.textBoxCrop",
                         "deskewExecuted=false",
-                        "orientationShadowPathExecuted=false",
+                        "orientationShadowPathExecuted=\(orientationShadowPathExecuted)",
                         "orientationReadinessVerdict=\(orientationReadinessVerdict)",
+                        "orientationAttemptedRotations=\(orientationPlan.rotationAngles.map(String.init).joined(separator: ","))",
+                        "orientationSelectedRotation=\(crop.rotationApplied.formatted(.number.precision(.fractionLength(1))))",
+                        "orientationRecognitionLanguages=\(orientationPlan.recognitionLanguages?.joined(separator: ",") ?? "default")",
+                        "orientationUnsupportedReason=\(orientationUnsupportedReason ?? "none")",
                         "paddingX=\(crop.paddingX.formatted(.number.precision(.fractionLength(1))))",
                         "paddingY=\(crop.paddingY.formatted(.number.precision(.fractionLength(1))))",
                         "groundTruthUsedForSelection=false",
@@ -8882,7 +8960,11 @@ final class TranslationSessionStore: ObservableObject {
                     selectedLinePolygonsPresent: linePolygonCount > 0,
                     selectedRotationDegrees: selected.textBox.rotationDegrees,
                     orientationShadowPathNeeded: orientationShadowPathNeeded,
-                    orientationShadowPathExecuted: false,
+                    orientationShadowPathExecuted: orientationShadowPathExecuted,
+                    orientationAttemptedRotations: orientationPlan.rotationAngles.map(Double.init),
+                    orientationSelectedRotation: crop.rotationApplied,
+                    orientationRecognitionLanguages: orientationPlan.recognitionLanguages ?? [],
+                    orientationUnsupportedReason: orientationUnsupportedReason,
                     orientationReadinessVerdict: orientationReadinessVerdict,
                     ocrExecuted: true,
                     ocrSucceeded: !ocrTextValue.isEmpty,
@@ -8893,8 +8975,11 @@ final class TranslationSessionStore: ObservableObject {
                     blockers: Array(Set(blockers)).sorted(),
                     notes: [
                         "externalArtifact.textBoxCrop shadow candidate; not written to finalTextUsedForTranslation",
-                        "orientationShadowPathExecuted=false",
-                        "orientationReadinessVerdict=\(orientationReadinessVerdict)"
+                        "orientationShadowPathExecuted=\(orientationShadowPathExecuted)",
+                        "orientationReadinessVerdict=\(orientationReadinessVerdict)",
+                        "orientationAttemptedRotations=\(orientationPlan.rotationAngles.map(String.init).joined(separator: ","))",
+                        "orientationSelectedRotation=\(crop.rotationApplied.formatted(.number.precision(.fractionLength(1))))",
+                        "orientationUnsupportedReason=\(orientationUnsupportedReason ?? "none")"
                     ]
                 )
             )
@@ -8928,11 +9013,20 @@ final class TranslationSessionStore: ObservableObject {
             .filter { $0.orientationShadowPathNeeded && !$0.orientationShadowPathExecuted }
             .map(\.blockIndex)
             .sorted()
-        let reportOrientationVerdict = orientationNotExecutedBlocks.isEmpty
-            ? "orientationMetadataCaptured"
-            : "orientationShadowPathNeededNotExecuted"
+        let reportOrientationVerdict: String
+        if orientationNotExecutedBlocks.isEmpty,
+           candidates.contains(where: { $0.orientationShadowPathExecuted && $0.orientationUnsupportedReason == nil }) {
+            reportOrientationVerdict = "orientationShadowPathExecuted"
+        } else if orientationNotExecutedBlocks.isEmpty,
+                  candidates.contains(where: \.orientationShadowPathExecuted) {
+            reportOrientationVerdict = "orientationShadowPathPartiallyExecuted"
+        } else if orientationNotExecutedBlocks.isEmpty {
+            reportOrientationVerdict = "orientationMetadataCaptured"
+        } else {
+            reportOrientationVerdict = "orientationShadowPathNeededNotExecuted"
+        }
         notes.append("promotedExternalShadowBlocks intentionally remains empty; wouldPromoteByExistingGateBlocks is report-only")
-        notes.append("orientation metadata is captured for external TextBox shadow OCR, but rotation/deskew/line-polygon OCR is not executed in this report")
+        notes.append("orientation-aware shadow OCR runs bounded 90-degree rotation variants for vertical or near-right-angle external TextBoxes; arbitrary deskew and line-polygon warp remain unsupported")
         return MangaOverlayExternalTextBoxShadowOCRReport(
             enabled: true,
             executed: true,
@@ -12489,6 +12583,55 @@ final class TranslationSessionStore: ObservableObject {
             return true
         }
         return false
+    }
+
+    private static func externalTextBoxOrientationShadowOCRPlan(
+        _ textBox: MangaOverlayExternalTextBox
+    ) -> (rotationAngles: [Int], recognitionLanguages: [String]?, unsupportedReasons: [String]) {
+        var rotationAngles = [0]
+        var unsupportedReasons: [String] = []
+        let normalizedDirection = textBox.sourceDirection.map(normalizedExternalSourceDirection)
+        let orientationCategory = externalTextBoxOrientationCategory(textBox)
+        if orientationCategory == "vertical" {
+            if normalizedDirection == "vertical-lr" {
+                rotationAngles.append(270)
+            } else {
+                rotationAngles.append(90)
+            }
+        }
+        if let rotation = textBox.rotationDegrees, abs(rotation) > 0.001 {
+            if let supportedRotation = nearestSupportedExternalTextBoxRotation(rotation) {
+                if supportedRotation != 0 {
+                    rotationAngles.append(supportedRotation)
+                }
+            } else {
+                unsupportedReasons.append("arbitraryRotationUnsupported")
+            }
+        }
+        if textBox.linePolygons?.isEmpty == false {
+            unsupportedReasons.append("linePolygonWarpUnsupported")
+        }
+        var seen = Set<Int>()
+        let uniqueAngles = rotationAngles.filter { angle in
+            if seen.contains(angle) { return false }
+            seen.insert(angle)
+            return true
+        }
+        let recognitionLanguages = orientationCategory == "vertical" ? ["ja-JP", "ja", "en-US", "en"] : nil
+        return (uniqueAngles, recognitionLanguages, Array(Set(unsupportedReasons)).sorted())
+    }
+
+    private static func nearestSupportedExternalTextBoxRotation(_ value: Double) -> Int? {
+        let normalized = value.truncatingRemainder(dividingBy: 360)
+        let positive = normalized < 0 ? normalized + 360 : normalized
+        let supported = [0, 90, 180, 270, 360]
+        let nearest = supported.min { lhs, rhs in
+            abs(Double(lhs) - positive) < abs(Double(rhs) - positive)
+        } ?? 0
+        guard abs(Double(nearest) - positive) <= 7.5 else {
+            return nil
+        }
+        return nearest == 360 ? 0 : nearest
     }
 
     private static func countStrings(_ values: [String]) -> [String: Int] {
