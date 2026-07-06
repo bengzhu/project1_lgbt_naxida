@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import struct
@@ -92,6 +93,26 @@ def count_strings(values: list[str]) -> dict[str, int]:
     for value in values:
         result[value] = result.get(value, 0) + 1
     return dict(sorted(result.items()))
+
+
+def file_identity(path: Path) -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "path": str(path),
+        "exists": path.is_file(),
+        "sizeBytes": None,
+        "sha256": None,
+    }
+    if not path.is_file():
+        return summary
+    digest = hashlib.sha256()
+    size = 0
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            size += len(chunk)
+            digest.update(chunk)
+    summary["sizeBytes"] = size
+    summary["sha256"] = digest.hexdigest()
+    return summary
 
 
 def is_active_artifacts_root(root: Path) -> bool:
@@ -354,6 +375,36 @@ def summarize_orientation_metadata(text_boxes: list[dict[str, Any]]) -> dict[str
             "verticalRotationOCR": True,
             "linePolygonWarp": False,
             "arbitraryAngleDeskew": False,
+        },
+    }
+
+
+def summarize_artifact_identity(
+    root: Path,
+    image_path: Path,
+    manifest_path: Path,
+    textboxes_path: Path,
+    bubbles_path: Path,
+    segment_path: Path,
+    manifest: dict[str, Any] | None,
+    active_artifacts_directory: bool,
+) -> dict[str, Any]:
+    return {
+        "root": str(root),
+        "activeArtifactsDirectory": active_artifacts_directory,
+        "sourceImageExpected": EXPECTED_SOURCE_IMAGE,
+        "sourceImageDeclared": manifest.get("sourceImage") if manifest else None,
+        "schemaVersionDeclared": manifest.get("schemaVersion") if manifest else None,
+        "coordinateSpaceDeclared": manifest.get("coordinateSpace") if manifest else None,
+        "contractExampleOnly": bool(manifest.get("contractExampleOnly")) if manifest else False,
+        "generatedBy": manifest.get("generatedBy") if manifest else None,
+        "generatedAt": manifest.get("generatedAt") if manifest else None,
+        "sourceImage": file_identity(image_path),
+        "artifactFiles": {
+            "manifest": file_identity(manifest_path),
+            "TextBoxes": file_identity(textboxes_path),
+            "BubbleMask": file_identity(bubbles_path),
+            "SegmentMask": file_identity(segment_path),
         },
     }
 
@@ -631,6 +682,18 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
     if allow_missing and not root.exists():
         missing_artifacts = ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]
 
+    active_artifacts_directory = is_active_artifacts_root(root) and root.exists()
+    artifact_identity_summary = summarize_artifact_identity(
+        root,
+        image_path,
+        manifest_path,
+        textboxes_path,
+        bubbles_path,
+        segment_path,
+        manifest,
+        active_artifacts_directory,
+    )
+
     verdict = verdict_for(
         manifest_found=manifest is not None,
         missing_artifacts=missing_artifacts,
@@ -642,7 +705,6 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         segment_mask=segment_mask,
         contract_example_only=contract_example_only,
     )
-    active_artifacts_directory = is_active_artifacts_root(root) and root.exists()
     shadow_allowed = verdict == "readyForShadowOCR" and active_artifacts_directory and not contract_example_only
     blockers = readiness_blockers(
         verdict,
@@ -699,6 +761,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         "segmentMaskSizeMatches": segment_size_matches,
         "invalidTextBoxIDs": invalid_text_box_ids,
         "invalidBubbleInstanceIDs": invalid_bubble_ids,
+        "artifactIdentitySummary": artifact_identity_summary,
         "orientationMetadataSummary": orientation_metadata_summary,
     }
 
@@ -725,6 +788,7 @@ def main() -> int:
                 "activeArtifactsDirectory == true",
                 "contractExampleOnly == false",
                 "externalTextBoxesShadowOCRAllowed == true",
+                "artifactIdentitySummary source image and artifact SHA256 values match the reviewed archive",
                 "TextBox optional direction metadata is valid when present",
                 "orientationMetadataSummary unsupported line polygon / arbitrary rotation risks are reviewed before treating shadow OCR as closed",
             ],
@@ -770,6 +834,16 @@ def main() -> int:
             "textBoxCount": 0,
             "bubbleInstanceCount": 0,
             "segmentMaskSizeMatches": None,
+            "artifactIdentitySummary": summarize_artifact_identity(
+                root,
+                image_path,
+                root / "1.manifest.json",
+                root / "1.textboxes.json",
+                root / "1.bubbles.json",
+                root / "1.segment_mask.json",
+                None,
+                active_artifacts_directory,
+            ),
             "orientationMetadataSummary": summarize_orientation_metadata([]),
         }
     else:
