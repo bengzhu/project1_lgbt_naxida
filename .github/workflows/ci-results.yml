@@ -1351,6 +1351,7 @@ jobs:
           python3 - <<'PY'
           import hashlib
           import json
+          import os
           from pathlib import Path
 
           manifest_path = Path("ci-results/ci-artifact-manifest.json")
@@ -1367,12 +1368,14 @@ jobs:
                   if line.strip()
               ]
           changed_files_hash = hashlib.sha256(("\n".join(changed_files) + ("\n" if changed_files else "")).encode("utf-8")).hexdigest()
+          repository = os.environ["GITHUB_REPOSITORY"]
+          run_id = os.environ["GITHUB_RUN_ID"]
           manifest.update({
-              "eventName": "${GITHUB_EVENT_NAME}",
-              "repository": "${GITHUB_REPOSITORY}",
-              "ref": "${GITHUB_REF}",
-              "refName": "${GITHUB_REF_NAME}",
-              "runUrl": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
+              "eventName": os.environ["GITHUB_EVENT_NAME"],
+              "repository": repository,
+              "ref": os.environ["GITHUB_REF"],
+              "refName": os.environ["GITHUB_REF_NAME"],
+              "runUrl": f"https://github.com/{repository}/actions/runs/{run_id}",
               "artifactName": "${{ steps.meta.outputs.artifact_name }}",
               "changedFilesCount": len(changed_files),
               "changedFilesSHA256": changed_files_hash,
