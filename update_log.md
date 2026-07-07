@@ -116,6 +116,38 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.81：Koharu Release Handoff Packet Preflight
+日期：2026-07-07
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 已明确当前下一步仍是 P0：拿真实 `TextBoxes / BubbleMask / SegmentMask` 四件套，通过 Release archive 注入手动 `ci-fast/full`，看 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates。v1.79-v1.80 已收紧 source image SHA contract，但外部 detector 输出到 GitHub Release / workflow_dispatch 的交付路径仍需要人工拼 zip、算 SHA、填参数，容易错包或漏填。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 `--emit-handoff-packet`，在 validator 摘要外输出 Release upload / `workflow_dispatch` handoff 清单，包含 source image SHA、四件套 size/SHA、orientation summary、建议的 `probe_mode=ci-fast`、`koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256`、`koharu_artifact_required=true` 和 `gh workflow run` 模板。
+- 新增 `--package-release-archive <zip>`，把当前 root 下解析出的四件套打成一个 zip；zip 内只包含一个目录和四个标准 JSON，贴合 CI 的唯一目录检查。
+- 打包默认只接受 `verdict = readyForShadowOCR`；`contractExampleOnly` examples 不会被标记为 handoff ready，`--allow-fixture-package` 仅用于本地 smoke。
+- handoff packet 区分当前离线 root 的 `externalTextBoxesShadowOCRAllowed` 与 CI 注入 active 目录后的 expected readiness，避免把非 active 路径误读成 App 已消费 artifact。
+- 打包路径增加源文件覆盖保护，`ghWorkflowDispatchCommand` 对 tag / asset / SHA 参数做 shell quote。
+- `AITRANS CI Results` static checks 增加 package smoke：验证 `contractExampleOnly` fixture 默认拒绝打包、`--allow-fixture-package` 生成单目录四标准 JSON，并检查带空格 dispatch 参数 quote。
+- artifact contract README 和测试规范同步新的 preflight / package 命令与 CI package smoke 预期。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：本版本只改 Python validator、workflow static checks 和文档，预期 push CI 走 build-skip 或至少不需要 Swift 编译；workflow / contract 相关变更会触发 Koharu validator matrix 与 package smoke。
+
+遗留事项：
+
+- 本版本不生成真实 Koharu 四件套，不上传 Release，不触发手动 `ci-fast/full`，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 真实验收仍必须由人工提供外部 detector 输出，运行 handoff packet 生成 zip，上传 Release 后手动 dispatch，并核对云端 App runtime 证据。
+
 ### v1.80：App Runtime Source Image SHA Gate
 日期：2026-07-07
 
@@ -142,7 +174,9 @@
 
 验证结果：
 
-- 待本轮本地轻量验证与 push 后云端结果包确认：由于修改 Swift 和 workflow，预期 push CI 需要 `xcodeBuildRequired = true`，默认 `probeMode = skip` 不会运行 App 探针；App runtime source image SHA smoke 会在后续手动 `ci-fast/full` 且注入 Koharu artifact 时生效。
+- 本地轻量验证通过：`git diff --check`、JSON 解析、workflow YAML parse、workflow Python heredoc 编译、Koharu validator valid / invalid fixture 矩阵。
+- 云端 `AITRANS CI Results` run `28851345305` 通过，artifact `aitrans-ci-unversioned-smalldata_test--5668ab847c01-run28851345305-attempt1` 已核对：`branch = smalldata_test`、`commitSha = 5668ab847c0148201e26010a95de2a92306a92a4`、`xcodeBuildRequired = true`、`xcode build = success`、`probeMode = skip`、`scopeDiffMethod = checkout_before`、`scopeDiffFallbackUsed = false`、`changedFiles = ["AITRANS/Models/TranscriptModels.swift"]`。
+- 同轮 `AITRANS - Build IPA` archive 编译阶段已成功，但上传 archive log 时 GitHub artifact service 多次 timeout，属于打包 artifact 上传失败，不是 Swift 编译失败。
 
 遗留事项：
 

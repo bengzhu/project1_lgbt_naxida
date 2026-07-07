@@ -7,8 +7,10 @@ import argparse
 import hashlib
 import json
 import math
+import shlex
 import struct
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -87,6 +89,12 @@ REQUIRED_ARTIFACT_FILES = [
         ],
     },
 ]
+CANONICAL_ARTIFACT_FILENAMES = {
+    "manifest": "1.manifest.json",
+    "TextBoxes": "1.textboxes.json",
+    "BubbleMask": "1.bubbles.json",
+    "SegmentMask": "1.segment_mask.json",
+}
 
 
 def count_strings(values: list[str]) -> dict[str, int]:
@@ -114,6 +122,151 @@ def file_identity(path: Path) -> dict[str, Any]:
     summary["sizeBytes"] = size
     summary["sha256"] = digest.hexdigest()
     return summary
+
+
+def stable_archive_dir_name(root: Path, archive_path: Path) -> str:
+    raw = archive_path.stem or root.name or "koharu_artifacts"
+    normalized = "".join(char if char.isalnum() or char in "._-" else "-" for char in raw)
+    normalized = normalized.strip(".-_")
+    return normalized or "koharu_artifacts"
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def package_release_archive(
+    summary: dict[str, Any],
+    archive_path: Path,
+    root: Path,
+    *,
+    allow_fixture_package: bool,
+) -> dict[str, Any]:
+    verdict = summary.get("verdict")
+    if verdict != "readyForShadowOCR" and not (allow_fixture_package and verdict == "contractExampleOnly"):
+        raise SystemExit(
+            "Refusing to package Koharu handoff archive because verdict is "
+            f"{verdict!r}; expected readyForShadowOCR."
+        )
+
+    source_paths = {
+        "manifest": Path(str(summary.get("manifestPath") or root / "1.manifest.json")),
+        "TextBoxes": Path(str(summary.get("textBoxesPath") or root / "1.textboxes.json")),
+        "BubbleMask": Path(str(summary.get("bubbleMaskPath") or root / "1.bubbles.json")),
+        "SegmentMask": Path(str(summary.get("segmentMaskPath") or root / "1.segment_mask.json")),
+    }
+    missing = [kind for kind, path in source_paths.items() if not path.is_file()]
+    if missing:
+        raise SystemExit(f"Refusing to package Koharu handoff archive; missing files: {missing}")
+
+    archive_resolved = archive_path.resolve(strict=False)
+    source_collisions = [
+        str(path)
+        for path in source_paths.values()
+        if archive_resolved == path.resolve(strict=False)
+    ]
+    if source_collisions:
+        raise SystemExit(
+            "Refusing to package Koharu handoff archive because archive path would overwrite source artifact file: "
+            f"{source_collisions[0]}"
+        )
+
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_dir = stable_archive_dir_name(root, archive_path)
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for kind, filename in CANONICAL_ARTIFACT_FILENAMES.items():
+            archive.write(source_paths[kind], f"{archive_dir}/{filename}")
+
+    archive_members = []
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        archive_members = archive.namelist()
+    archive_sha = sha256_file(archive_path)
+    return {
+        "path": str(archive_path),
+        "exists": archive_path.is_file(),
+        "sizeBytes": archive_path.stat().st_size,
+        "sha256": archive_sha,
+        "layout": {
+            "singleDirectory": archive_dir,
+            "canonicalFiles": [
+                f"{archive_dir}/{CANONICAL_ARTIFACT_FILENAMES[kind]}"
+                for kind in ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]
+            ],
+            "members": archive_members,
+            "uniqueDirectoryCheckExpected": True,
+        },
+        "sourceFiles": {
+            kind: file_identity(path)
+            for kind, path in source_paths.items()
+        },
+    }
+
+
+def handoff_packet(
+    summary: dict[str, Any],
+    *,
+    release_tag: str,
+    release_asset: str | None,
+    archive_identity: dict[str, Any] | None,
+) -> dict[str, Any]:
+    archive_sha = (archive_identity or {}).get("sha256")
+    archive_asset = release_asset or Path(str((archive_identity or {}).get("path") or "koharu-artifacts.zip")).name
+    workflow_args = [
+        "gh",
+        "workflow",
+        "run",
+        "ci-results.yml",
+        "--ref",
+        "smalldata_test",
+        "-f",
+        "probe_mode=ci-fast",
+        "-f",
+        f"koharu_artifact_release_tag={release_tag}",
+        "-f",
+        f"koharu_artifact_asset={archive_asset}",
+        "-f",
+        f"koharu_artifact_sha256={archive_sha or '<archive-sha256>'}",
+        "-f",
+        "koharu_artifact_required=true",
+    ]
+    return {
+        "handoffReadyForReleaseUpload": summary.get("verdict") == "readyForShadowOCR",
+        "handoffReadyForWorkflowDispatch": summary.get("verdict") == "readyForShadowOCR" and bool(archive_sha),
+        "validationVerdict": summary.get("verdict"),
+        "readyForShadowOCR": summary.get("readyForShadowOCR"),
+        "externalTextBoxesShadowOCRAllowed": summary.get("externalTextBoxesShadowOCRAllowed"),
+        "afterCIInjectionExpectedExternalTextBoxesShadowOCRAllowed": summary.get("verdict") == "readyForShadowOCR",
+        "readinessBlockers": summary.get("readinessBlockers"),
+        "sourceImage": summary.get("sourceImage"),
+        "sourceImageSHA256": summary.get("sourceImageSHA256"),
+        "expectedSourceImageSHA256": summary.get("expectedSourceImageSHA256"),
+        "sourceImageSHA256Matches": summary.get("sourceImageSHA256Matches"),
+        "artifactCounts": {
+            "textBoxCount": summary.get("textBoxCount"),
+            "bubbleInstanceCount": summary.get("bubbleInstanceCount"),
+            "segmentMaskSizeMatches": summary.get("segmentMaskSizeMatches"),
+        },
+        "artifactIdentitySummary": summary.get("artifactIdentitySummary"),
+        "orientationMetadataSummary": summary.get("orientationMetadataSummary"),
+        "releaseArchive": archive_identity,
+        "workflowDispatchInputs": {
+            "probe_mode": "ci-fast",
+            "koharu_artifact_release_tag": release_tag,
+            "koharu_artifact_asset": archive_asset,
+            "koharu_artifact_sha256": archive_sha or "<archive-sha256>",
+            "koharu_artifact_required": "true",
+        },
+        "ghWorkflowDispatchCommand": shlex.join(workflow_args),
+        "notes": [
+            "Upload releaseArchive.path to the named GitHub Release before running workflow_dispatch.",
+            "CI will reject archives that do not contain exactly one directory with the four canonical JSON files.",
+            "Agent C must still verify App runtime readiness, identity reconciliation, shadow OCR coverage, and orientation gates from the CI result artifact.",
+        ],
+    }
 
 
 def declared_source_image_sha256(manifest: dict[str, Any] | None) -> Any:
@@ -855,6 +1008,11 @@ def main() -> int:
     parser.add_argument("--allow-missing", action="store_true", help="Return success when the root is missing, with a blocking verdict.")
     parser.add_argument("--expect-fail", action="store_true", help="Return success only when validation fails.")
     parser.add_argument("--print-required-files", action="store_true", help="Print the required active artifact file checklist and exit.")
+    parser.add_argument("--emit-handoff-packet", action="store_true", help="Print Release upload and workflow_dispatch handoff guidance.")
+    parser.add_argument("--package-release-archive", help="Write a zip archive with exactly one directory containing the four canonical artifact JSON files.")
+    parser.add_argument("--release-tag", default="<release-tag>", help="Release tag to include in the emitted workflow_dispatch inputs.")
+    parser.add_argument("--release-asset", help="Release asset name to include in the emitted workflow_dispatch inputs.")
+    parser.add_argument("--allow-fixture-package", action="store_true", help="Allow packaging contractExampleOnly examples for local smoke tests only.")
     parser.add_argument("--image", default=str(DEFAULT_IMAGE_PATH), help="Probe source image used for coordinate bounds.")
     args = parser.parse_args()
 
@@ -940,7 +1098,28 @@ def main() -> int:
     else:
         summary = validate(root, args.allow_missing, image_path)
 
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    archive_identity = None
+    if args.package_release_archive:
+        archive_identity = package_release_archive(
+            summary,
+            Path(args.package_release_archive),
+            root,
+            allow_fixture_package=args.allow_fixture_package,
+        )
+
+    output = summary
+    if args.emit_handoff_packet or archive_identity is not None:
+        output = {
+            "validation": summary,
+            "handoffPacket": handoff_packet(
+                summary,
+                release_tag=args.release_tag,
+                release_asset=args.release_asset,
+                archive_identity=archive_identity,
+            ),
+        }
+
+    print(json.dumps(output, ensure_ascii=False, indent=2))
     print()
     failed = not bool(summary.get("validationPassed"))
     if args.expect_fail:
