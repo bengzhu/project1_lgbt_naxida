@@ -1154,9 +1154,6 @@ jobs:
                   "allRequiredFilesPresent": (app_identity_receipt or {}).get("allRequiredFilesPresent"),
                   "allRequiredFilesHaveSHA256": (app_identity_receipt or {}).get("allRequiredFilesHaveSHA256"),
                   "sourceImage": (app_identity_receipt or {}).get("sourceImage"),
-                  "sourceImageSHA256Declared": (app_identity_receipt or {}).get("sourceImageSHA256Declared"),
-                  "sourceImageSHA256Expected": (app_identity_receipt or {}).get("sourceImageSHA256Expected"),
-                  "sourceImageSHA256Matches": (app_identity_receipt or {}).get("sourceImageSHA256Matches"),
                   "schemaVersion": (app_identity_receipt or {}).get("schemaVersion"),
                   "coordinateSpace": (app_identity_receipt or {}).get("coordinateSpace"),
                   "contractExampleOnly": (app_identity_receipt or {}).get("contractExampleOnly"),
@@ -1178,9 +1175,6 @@ jobs:
                   "identityReconciliationVerdict": (identity_reconciliation or {}).get("identityReconciliationVerdict"),
                   "appReceiptVerdict": (identity_reconciliation or {}).get("appReceiptVerdict"),
                   "contractDryRunVerdict": (identity_reconciliation or {}).get("contractDryRunVerdict"),
-                  "sourceImageSHA256Declared": (identity_reconciliation or {}).get("sourceImageSHA256Declared"),
-                  "sourceImageSHA256Expected": (identity_reconciliation or {}).get("sourceImageSHA256Expected"),
-                  "sourceImageSHA256Matches": (identity_reconciliation or {}).get("sourceImageSHA256Matches"),
                   "readyForCIManifestComparison": (identity_reconciliation or {}).get("readyForCIManifestComparison"),
                   "manualCIComparisonRequired": (identity_reconciliation or {}).get("manualCIComparisonRequired"),
                   "fileRowCount": (identity_reconciliation or {}).get("fileRowCount"),
@@ -1411,6 +1405,23 @@ jobs:
               raise SystemExit("ci-artifact-manifest.json missing before provenance append")
 
           manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          probe_path = Path("ci-results/output/probe_report.json")
+          probe = json.loads(probe_path.read_text(encoding="utf-8")) if probe_path.is_file() else {}
+          external = probe.get("externalArtifactReadinessReport") or {}
+          receipt = external.get("artifactIdentityReceipt") or {}
+          reconciliation = probe.get("koharuArtifactIdentityReconciliationReport") or {}
+          receipt_summary = manifest.setdefault("appSideArtifactIdentityReceiptSummary", {})
+          receipt_summary.update({
+              "sourceImageSHA256Declared": receipt.get("sourceImageSHA256Declared"),
+              "sourceImageSHA256Expected": receipt.get("sourceImageSHA256Expected"),
+              "sourceImageSHA256Matches": receipt.get("sourceImageSHA256Matches"),
+          })
+          reconciliation_summary = manifest.setdefault("koharuArtifactIdentityReconciliationSummary", {})
+          reconciliation_summary.update({
+              "sourceImageSHA256Declared": reconciliation.get("sourceImageSHA256Declared"),
+              "sourceImageSHA256Expected": reconciliation.get("sourceImageSHA256Expected"),
+              "sourceImageSHA256Matches": reconciliation.get("sourceImageSHA256Matches"),
+          })
           changed_files_path = Path("ci-results/changed-files.txt")
           changed_files = []
           if changed_files_path.is_file():
