@@ -5048,6 +5048,27 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
         segmentMaskPath = try container.decodeIfPresent(String.self, forKey: .segmentMaskPath)
         notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(sourceImage, forKey: .sourceImage)
+        try container.encode(sourceImageFieldPresent, forKey: .sourceImageFieldPresent)
+        try container.encode(sourceImageTypeValid, forKey: .sourceImageTypeValid)
+        try container.encodeIfPresent(sourceImageSHA256, forKey: .sourceImageSHA256)
+        try container.encode(sourceImageSHA256FieldPresent, forKey: .sourceImageSHA256FieldPresent)
+        try container.encode(sourceImageSHA256TypeValid, forKey: .sourceImageSHA256TypeValid)
+        try container.encode(coordinateSpace, forKey: .coordinateSpace)
+        try container.encode(contractExampleOnly, forKey: .contractExampleOnly)
+        try container.encode(contractExampleOnlyFieldPresent, forKey: .contractExampleOnlyFieldPresent)
+        try container.encode(contractExampleOnlyTypeValid, forKey: .contractExampleOnlyTypeValid)
+        try container.encodeIfPresent(generatedBy, forKey: .generatedBy)
+        try container.encodeIfPresent(generatedAt, forKey: .generatedAt)
+        try container.encodeIfPresent(textBoxesPath, forKey: .textBoxesPath)
+        try container.encodeIfPresent(bubbleMaskPath, forKey: .bubbleMaskPath)
+        try container.encodeIfPresent(segmentMaskPath, forKey: .segmentMaskPath)
+        try container.encode(notes, forKey: .notes)
+    }
 }
 
 struct MangaOverlayExternalTextBox: Equatable, Codable, Sendable {
