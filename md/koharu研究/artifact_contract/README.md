@@ -61,6 +61,8 @@ manifest 可指定等价相对路径：
 ## 离线校验
 
 ```sh
+python3 scripts/make-koharu-native-draft-artifacts.py --out build/koharu_native_draft
+python3 scripts/validate-koharu-artifacts.py --root build/koharu_native_draft
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --print-required-files
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --emit-handoff-packet
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --package-release-archive /tmp/koharu-artifacts.zip --emit-handoff-packet --release-tag <release-tag> --release-asset koharu-artifacts.zip
@@ -80,6 +82,8 @@ python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_con
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
 ```
+
+`scripts/make-koharu-native-draft-artifacts.py` 会从当前 `output/probe_report.json` 生成 `build/koharu_native_draft/` 四件套草稿，用于外部 detector / handoff 开发时快速查看 AITRANS 现有 block、bubble 和 glyph-mask proxy 如何映射到 contract 形状。该目录永远是非 active 输出，manifest 固定 `contractExampleOnly=true`，validator 正确结果必须是 `verdict = contractExampleOnly`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`。禁止把该草稿复制到 `test/koharu_artifacts/` 冒充真实 Koharu detector 输出。
 
 validator 默认校验模式只读指定目录，不复制、不生成 active artifact；`--package-release-archive` 只写指定 zip。输出 JSON 摘要包含 `verdict`、`readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed`、`nextAction`、`readinessBlockers`、缺失文件、解析错误、坐标错误、TextBox 数量、Bubble instance 数量、SegmentMask 尺寸匹配结果、`artifactIdentitySummary` 和 `orientationMetadataSummary`。`artifactIdentitySummary` 会记录 source image 以及 manifest / TextBoxes / BubbleMask / SegmentMask 的路径、存在性、size、SHA256，并透传 manifest 的 `generatedBy`、`generatedAt`、`contractExampleOnly`、schema、source image、`sourceImageSHA256Declared`、`sourceImageSHA256Expected`、`sourceImageSHA256Matches` 和 coordinate space；用于 Agent C 核对当前云端结果包里的四件套是否就是被审查的 archive 内容。`orientationMetadataSummary` 会汇总 sourceDirection、orientation category、rotation plan、line polygon TextBox、竖排 TextBox、近 90 度倍数 rotation、任意角度 rotation、orientation partial TextBox 和 unsupported reason breakdown。
 

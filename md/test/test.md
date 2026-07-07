@@ -64,6 +64,8 @@ git diff --check
 python3 -m json.tool test/1.ground_truth.json
 python3 -m json.tool output/probe_report.json
 python3 -m json.tool output/clean_text_diagnostic.json
+python3 scripts/make-koharu-native-draft-artifacts.py --out build/koharu_native_draft
+python3 scripts/validate-koharu-artifacts.py --root build/koharu_native_draft
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
@@ -82,6 +84,8 @@ python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allo
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --emit-handoff-packet
 ```
+
+`build/koharu_native_draft/` 是 `scripts/make-koharu-native-draft-artifacts.py` 生成的非 active 四件套草稿，只用于 contract shape / validator smoke。它必须保持 `contractExampleOnly=true`，validator 应输出 `verdict = contractExampleOnly`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`；不得复制到 `test/koharu_artifacts/`，不得作为真实 detector / SegmentMask / BubbleMask 验收证据。
 
 当前基线：
 

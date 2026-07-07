@@ -116,6 +116,34 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.85：Koharu Native Draft Artifact Tool
+日期：2026-07-07
+
+依据：v1.84 已把真实 Koharu handoff 后的 CI 结果核对清单补齐，但本地仍缺一个低风险工具，把 AITRANS 当前 probe block / bubble / glyph-mask proxy 以四件套 contract 形状导出，供外部 detector / handoff 开发快速对齐字段。该工具必须保持非 active、非真实 detector 输出，避免把 proxy 冒充为 `test/koharu_artifacts/`。
+
+核心变更：
+
+- 新增 `scripts/make-koharu-native-draft-artifacts.py`，从 `output/probe_report.json` 生成 `build/koharu_native_draft/1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`。
+- draft manifest 固定 `contractExampleOnly=true`，记录当前 `test/1.png` SHA256、生成来源、TextBox / Bubble / SegmentMask 来源和 count；当前旧 probe_report 缺 detector-lite 字段时，TextBoxes / BubbleMask 会从最终 probe blocks fallback 生成。
+- 生成的草稿目录只用于 contract shape / validator smoke，validator 正确结果是 `verdict = contractExampleOnly`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`，不得复制到 active `test/koharu_artifacts/`。
+- artifact contract README 和测试规范同步该工具的用途、命令和禁止项。
+
+关键文件：
+
+- `scripts/make-koharu-native-draft-artifacts.py`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`python3 -B -m py_compile scripts/make-koharu-native-draft-artifacts.py`、`python3 scripts/make-koharu-native-draft-artifacts.py --out build/koharu_native_draft`、`python3 scripts/validate-koharu-artifacts.py --root build/koharu_native_draft`。草稿生成 13 个 TextBox、10 个 bubble summary、`segmentGlyphPixelCount = 92827`，validator 输出 `verdict = contractExampleOnly`、`sourceImageSHA256Matches = true`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`。
+
+遗留事项：
+
+- 本版本不生成真实 Koharu 四件套、不写入 `test/koharu_artifacts/`、不上传 Release、不触发手动 `ci-fast/full`，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 真正复刻效果仍需要外部 detector / Koharu 真实 TextBoxes、BubbleMask、SegmentMask 注入后跑 `ci-fast/full`；后续编译提速建议单独拆 `writeOCRProbeText` 到扩展文件，再云端 Xcode build 验证。
+
 ### v1.84：Koharu Handoff CI Result Review Packet
 日期：2026-07-07
 
