@@ -174,9 +174,25 @@ jobs:
           if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
             before="$(git rev-parse HEAD^ 2>/dev/null || true)"
           fi
+          scope_diff_method="none"
+          scope_diff_base_sha="$before"
+          scope_diff_fallback_used=false
+          if [ -n "$before" ] && ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+            echo "Before commit $before is not present in checkout; attempting targeted fetch."
+            if git fetch --no-tags --depth=1 origin "$before" 2>/dev/null; then
+              scope_diff_method="targeted_fetch"
+            else
+              echo "Targeted fetch for before commit $before failed; falling back to full repo file list." >&2
+            fi
+          fi
           if [ -n "$before" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then
+            if [ "$scope_diff_method" = "none" ]; then
+              scope_diff_method="checkout_before"
+            fi
             git diff --name-only "$before" "$GITHUB_SHA" > "$RESULT_ROOT/changed-files.txt"
           else
+            scope_diff_method="full_repo_fallback"
+            scope_diff_fallback_used=true
             git ls-files > "$RESULT_ROOT/changed-files.txt"
           fi
 
@@ -202,14 +218,23 @@ jobs:
             echo "xcode_build_required=$xcode_build_required"
             echo "xcode_build_skip_reason=$xcode_build_skip_reason"
             echo "koharu_validator_extended_required=$koharu_validator_extended_required"
+            echo "scope_diff_method=$scope_diff_method"
+            echo "scope_diff_base_sha=$scope_diff_base_sha"
+            echo "scope_diff_fallback_used=$scope_diff_fallback_used"
           } >> "$GITHUB_OUTPUT"
           {
             echo "XCODE_BUILD_REQUIRED=$xcode_build_required"
             echo "XCODE_BUILD_SKIP_REASON=$xcode_build_skip_reason"
             echo "KOHARU_VALIDATOR_EXTENDED_REQUIRED=$koharu_validator_extended_required"
+            echo "SCOPE_DIFF_METHOD=$scope_diff_method"
+            echo "SCOPE_DIFF_BASE_SHA=$scope_diff_base_sha"
+            echo "SCOPE_DIFF_FALLBACK_USED=$scope_diff_fallback_used"
           } >> "$GITHUB_ENV"
           echo "Changed files:"
           cat "$RESULT_ROOT/changed-files.txt"
+          echo "scope_diff_method=$scope_diff_method"
+          echo "scope_diff_base_sha=$scope_diff_base_sha"
+          echo "scope_diff_fallback_used=$scope_diff_fallback_used"
           echo "xcode_build_required=$xcode_build_required"
           echo "koharu_validator_extended_required=$koharu_validator_extended_required"
 
@@ -1377,6 +1402,9 @@ jobs:
               "refName": os.environ["GITHUB_REF_NAME"],
               "runUrl": f"https://github.com/{repository}/actions/runs/{run_id}",
               "artifactName": "${{ steps.meta.outputs.artifact_name }}",
+              "scopeDiffMethod": os.environ.get("SCOPE_DIFF_METHOD"),
+              "scopeDiffBaseSha": os.environ.get("SCOPE_DIFF_BASE_SHA"),
+              "scopeDiffFallbackUsed": os.environ.get("SCOPE_DIFF_FALLBACK_USED") == "true",
               "changedFilesCount": len(changed_files),
               "changedFilesSHA256": changed_files_hash,
               "changedFiles": changed_files,
@@ -1401,6 +1429,9 @@ jobs:
             echo "- ref: ${GITHUB_REF}"
             echo "- repository: ${GITHUB_REPOSITORY}"
             echo "- artifact: ${{ steps.meta.outputs.artifact_name }}"
+            echo "- scope diff method: ${{ steps.ci_scope.outputs.scope_diff_method }}"
+            echo "- scope diff base sha: ${{ steps.ci_scope.outputs.scope_diff_base_sha }}"
+            echo "- scope diff fallback used: ${{ steps.ci_scope.outputs.scope_diff_fallback_used }}"
             if [ -f "${RESULT_ROOT}/changed-files.txt" ]; then
               changed_count="$(wc -l < "${RESULT_ROOT}/changed-files.txt" | tr -d '[:space:]')"
               changed_hash="$(python3 - <<'PY'

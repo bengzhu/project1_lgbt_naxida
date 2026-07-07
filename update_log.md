@@ -116,6 +116,33 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.78：CI Scope Targeted Fetch Closure
+日期：2026-07-07
+
+依据：v1.76 用 `fetch-depth: 2` 修复了普通单提交 push 的 scope diff，但遗留事项仍指出：如果一次 push 包含多提交且 `github.event.before` 不在最近 2 个提交内，`Detect CI scope` 仍会回退 `git ls-files`，把 `changed-files.txt` 变成全仓列表，进而误触发 Xcode build 和 extended Koharu validator。v1.77 已让结果包可追溯，本轮继续把 scope diff 方法本身变成可审计证据。
+
+核心变更：
+
+- `Detect CI scope` 在 checkout 内找不到 `github.event.before` 时，先执行定向 `git fetch --no-tags --depth=1 origin <before>`，成功后继续按真实 before SHA diff。
+- 只有 checkout 和 targeted fetch 都无法拿到 before commit 时，才回退 `git ls-files` 全仓列表。
+- CI 输出、manifest 和 failure summary 新增 `scopeDiffMethod`、`scopeDiffBaseSha`、`scopeDiffFallbackUsed`，Agent C 可判断 changed-files 是否来自 `checkout_before`、`targeted_fetch` 或 `full_repo_fallback`。
+- `md/test/test.md` 同步多提交 push 的 scope diff 验收口径。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：普通单提交 push 预期 `scopeDiffMethod = checkout_before`、`scopeDiffFallbackUsed = false`；若后续出现多提交 push 且 before 不在浅克隆内，预期使用 `targeted_fetch` 而不是全仓 fallback。
+
+遗留事项：
+
+- 本版本不新增真实 Koharu 四件套，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 若极端情况下 GitHub 不允许按 SHA 定向 fetch，workflow 仍会显式记录 `full_repo_fallback`，避免 Agent C 把全仓 changed-files 误认为精确 diff。
+
 ### v1.77：CI Artifact Provenance Self-Trace
 日期：2026-07-07
 
