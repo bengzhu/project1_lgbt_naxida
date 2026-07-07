@@ -116,6 +116,36 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.71：Convergence Dependency Span / CI Handoff Documentation Closure
+日期：2026-07-07
+
+依据：v1.70 已完成 App/CI artifact handoff strict closure 并通过云端 push 快验，但 `koharuArtifactConvergenceReport`、测试规范和 artifact contract README 仍有少量 v1.68 / v1.69 口径残留，容易让后续 Agent C 按旧 dependency span 或 validator-only preflight 验收。
+
+核心变更：
+
+- `G-ci-fast-report-availability` 的 threshold、`requiredReportSpan` 和 notes 从 `v1.24-v1.68` 更新为 `v1.24-v1.70`，纳入 shadow OCR coverage closure 与 App/CI handoff strict closure。
+- `README.md`、`md/flow/flow.md`、`md/test/test.md` 明确：填写 Koharu artifact archive 时必须跑 `ci-fast` 或 `full`，不能用 `probe_mode=skip`；coverage / orientation work item 与 gate ID、status、TXT 摘要和 App-side identity 都是验收证据。
+- `md/koharu研究/artifact_contract/README.md` 将旧 v1.15 清单改成 v1.70+ active artifact / validator preflight 清单，并明确 validator 通过不等于 Agent C 可验收，云端闭环还必须核对 contract dry-run、identity reconciliation、shadow OCR coverage 和 orientation blockers。
+- `md/koharu研究/v1.38-current-gap-to-koharu.md` 补 v1.70 云端 run 证据和 v1.71 后补充。
+
+关键文件：
+
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/test/test.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`python3 -m json.tool test/1.ground_truth.json`、`python3 -m json.tool output/probe_report.json`、`python3 -m json.tool output/clean_text_diagnostic.json`、`swiftc -parse $(rg --files AITRANS -g '*.swift')`、`scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`、valid fixture validator、`contract_example_only_invalid --expect-fail`。
+
+遗留事项：
+
+- 该版本不新增 detector、OCR、LLM、PNG、renderer 或 active Koharu artifact；未重新跑完整漫画探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.70：Koharu Artifact App / CI Handoff Strict Closure
 日期：2026-07-07
 
@@ -146,9 +176,10 @@
 
 验证结果：
 
-- 本轮本地轻量验证见最终回复。
-
-未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+- 本地轻量验证通过：`git diff --check`、YAML smoke、JSON 解析、Swift `swiftc -parse`、Koharu validator matrix。
+- 云端 push 快验通过：commit `6b53da9bb3005afbc9bc4bd5d1a8d05e06ca37cf`；`AITRANS CI Results` run `28840108595` 成功，manifest 匹配 `branch = smalldata_test`、`commitSha = 6b53da9bb3005afbc9bc4bd5d1a8d05e06ca37cf`、`xcodeBuildRequired = true`、`xcodeBuildOutcome = success`、`.xcresult` 存在，JUnit `5` tests / `0` failures，默认 push `probeMode = skip`、`mangaProbeOutcome = skipped`，extended validator required 并正确拒绝 `contract_example_only_invalid`。
+- 云端打包通过：`Build IPA` run `28840108614` 成功。
+- 未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
 
 遗留事项：
 

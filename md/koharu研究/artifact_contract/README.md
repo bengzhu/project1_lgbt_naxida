@@ -92,9 +92,9 @@ validator 只读指定目录，不复制、不生成 active artifact。输出 JS
 - manifest 路径字段不得使用绝对路径或 `..` 逃逸 active 目录。
 - 转换后先运行 validator；只有 `readyForShadowOCR = true` 且 `externalTextBoxesShadowOCRAllowed = true`，App 探针才允许执行 external TextBoxes shadow OCR。
 
-## v1.15 真实交付包清单
+## v1.70+ active artifact 交付 / validator preflight 清单
 
-当前 active 目录仍不存在，validator 的正确阻塞结果是 `verdict = manifestMissing`、`nextAction = stopUntilArtifactsProvided`。v1.15 不再接受继续补 Vision crop、line deskew 或 fake fixture；下一步只等待真实 Koharu / 外部 detector 交付包。
+当前 active 目录仍不存在，validator 的正确阻塞结果是 `verdict = manifestMissing`、`nextAction = stopUntilArtifactsProvided`。本清单只定义真实 Koharu / 外部 detector 交付包和离线 validator preflight；Agent C 不能只凭 validator 通过验收，还必须核对云端 App runtime、identity reconciliation、dry-run 边界、shadow OCR coverage 和 orientation convergence gate 证据。
 
 Koharu / 人工必须交付以下四个文件：
 
@@ -152,7 +152,7 @@ python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --prin
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts
 ```
 
-必须达到：
+离线 validator preflight 必须达到：
 
 ```text
 verdict = readyForShadowOCR
@@ -191,10 +191,21 @@ externalTextBoxShadowOCRSummary.executed = true
 externalTextBoxShadowOCRSummary.candidateCount > 0
 externalTextBoxShadowOCRSummary.ocrExecutedCount > 0
 externalTextBoxShadowOCRSummary.ocrSucceededCount > 0
+koharuNativeArtifactContractDryRunReport.contractDryRunVerdict = activeArtifactsReadyForShadowOCR
+koharuNativeArtifactContractDryRunReport.appSideArtifactIdentityVerdict = activeArtifactIdentityRecorded
+koharuNativeArtifactContractDryRunReport.appSideArtifactIdentityHashesPresent = true
+koharuNativeArtifactContractDryRunReport.dryRunOnly = true
+koharuNativeArtifactContractDryRunReport.activeExportAllowed = false
+koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison = true
 koharuArtifactIdentityReconciliationMatch.matchVerdict = matched
+WI-external-textbox-shadow-ocr-coverage.status = closedReportOnly
+WI-external-textbox-shadow-ocr-coverage.targetBlocks = []
 G-external-textbox-shadow-ocr-coverage.status = passed
+G-external-textbox-shadow-ocr-coverage.affectedBlocks = []
 koharuArtifactValidationOrientationSummary 可用于审计 TextBox 方向风险
 externalTextBoxShadowOCRSummary.orientationReadinessVerdict 已按 App 探针结果填充
+orientationShadowPathPartialBlocks / orientationUnsupportedBlocks / orientationUnsupportedReasonBreakdown 必须可审计
+WI/G-external-textbox-orientation-shadow-path 在 partial 或 unsupported blockers 存在时不得 closedReportOnly / passed
 ```
 
 该路径仍是 shadow-only：external OCR 结果只写入 `probe_report.json` 和 `1_ocr_probe_text.txt`，不得改变 `finalTextUsedForTranslation`、主覆盖图、`blockPassed`、`configuration.currentBlockSource` 或 `textRegionCropReport.adoptedCount`。
@@ -215,12 +226,19 @@ externalTextBoxesShadowOCRAllowed == true
 ready 只表示允许进入 external TextBoxes shadow OCR。云端闭环验收还必须满足：
 
 ```text
+probe_mode != "skip"
+ci-artifact-manifest.koharuArtifactIdentityReconciliationMatch.matchVerdict == "matched"
+koharuNativeArtifactContractDryRunReport.contractDryRunVerdict == "activeArtifactsReadyForShadowOCR"
+koharuNativeArtifactContractDryRunReport.dryRunOnly == true
+koharuNativeArtifactContractDryRunReport.activeExportAllowed == false
+externalArtifactReadinessReport.artifactIdentityReceipt.identityVerdict == "activeArtifactIdentityRecorded"
 externalTextBoxShadowOCRReport.executed == true
 externalTextBoxShadowOCRReport.candidateCount > 0
 externalTextBoxShadowOCRReport.ocrExecutedCount > 0
 externalTextBoxShadowOCRReport.ocrSucceededCount > 0
-koharuArtifactIdentityReconciliationMatch.matchVerdict == "matched"
+WI-external-textbox-shadow-ocr-coverage.status == "closedReportOnly"
 G-external-textbox-shadow-ocr-coverage.status == "passed"
+WI/G-external-textbox-orientation-shadow-path 不得在 partial / unsupported blockers 存在时 passed
 ```
 
 若 TextBox 带 `sourceDirection`、`linePolygons`、`rotationDegrees` / `rotationDeg`，orientation partial / unsupported 必须进入 `WI/G-external-textbox-orientation-shadow-path`，不能把相关块判为 `closedReportOnly` 或把 gate 判为 `passed`。
