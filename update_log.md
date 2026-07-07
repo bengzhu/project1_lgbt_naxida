@@ -116,6 +116,37 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.74：Native-Lite CI Summary / Gap Roadmap Refresh
+日期：2026-07-07
+
+依据：v1.39-v1.46 的 detector-lite、shadow OCR、refinement、closed-loop、BubbleMask instance-lite、SegmentMask refinement-lite、bundle-lite 和 promotion gate-lite 已进入 Swift 报告与 convergence，但云端 `ci-artifact-manifest.json` / `ci-failure-summary.md` 仍主要汇总 external artifact handoff、contract dry-run、identity 和 external shadow OCR。Agent C 若要判断 native-lite 阻塞，仍需深挖完整 `probe_report.json`；同时 `md/koharu研究/v1.38-current-gap-to-koharu.md` 的推荐路线仍把部分已完成 report-only 层写成未来任务。
+
+核心变更：
+
+- `AITRANS CI Results` manifest 新增 `koharuNativeLiteReportSummary`，直接汇总 v1.39-v1.46 native-lite report 的 verdict、关键 count、TextBox -> SegmentMask linkage breakdown、needs-real-artifact blocks 和 promotion preview 状态。
+- manifest 新增 `koharuNativeLiteConvergenceGateSummary`，直接摘出 detector-lite、shadow OCR、refinement、closed-loop、BubbleMask instance-lite、SegmentMask refinement-lite、bundle-lite、promotion gate-lite 及 linkage work item / gate 的 status、blocks、nextAction 和 decision signals。
+- `ci-failure-summary.md` 的 Koharu artifact gate 区块新增 native-lite report / convergence gate 摘要，方便 Agent C 在失败摘要里直接看到 native-lite 阻塞位置。
+- `ci-fast/full` smoke 扩展 `1_ocr_probe_text.txt` needles，要求 native-lite report summary 存在，防止 TXT 快照悄悄丢失 v1.39-v1.46 证据。
+- `md/koharu研究/v1.38-current-gap-to-koharu.md` 标注原推荐版本路线为历史判断，说明 v1.39-v1.46 已以 report-only / proxy 形式完成；当前下一步仍是注入真实四件套跑 `ci-fast/full`，不是重复实现同名 detector-lite / promotion gate。
+- README 与测试规范同步 v1.74 manifest 字段和验收口径。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/test/test.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`.github/workflows/ci-results.yml` YAML parse、workflow 内 11 个 Python heredoc 语法编译、`python3 -m json.tool` 解析 `test/1.ground_truth.json` / `output/probe_report.json` / `output/clean_text_diagnostic.json`、基于云端 `ci-fast` run `28842227463` artifact 的 native-lite manifest summary helper 离线 smoke。
+
+遗留事项：
+
+- 本版本不新增 detector、OCR、LLM、PNG、renderer 或 active Koharu artifact，不改变主 OCR、翻译、覆盖图、report-only 账本语义或漫画质量指标，不追加 `metrics/version_history.csv`。
+- 缺真实 `test/koharu_artifacts/` 时，native-lite 仍是 proxy / report-only；真实收益仍必须等外部四件套注入后看 external shadow OCR、orientation 和 identity handoff。
+
 ### v1.73：Cloud ci-fast Evidence / Swift Warning Cleanup
 日期：2026-07-07
 

@@ -820,6 +820,14 @@ jobs:
                   raise SystemExit(f"orientation gate passed despite blockers: workItem={orientation_work_item} gate={orientation_gate}")
           txt = pathlib.Path("output", "1_ocr_probe_text.txt").read_text(encoding="utf-8")
           for needle in [
+              "koharuNativeTextBoxDetectorLiteReport",
+              "koharuNativeTextBoxDetectorLiteShadowOCRReport",
+              "koharuNativeTextBoxDetectorLiteRefinementReport",
+              "koharuNativeTextBoxDetectorLiteClosedLoopReport",
+              "koharuNativeBubbleMaskInstanceLiteReport",
+              "koharuNativeSegmentMaskRefinementLiteReport",
+              "koharuNativeArtifactBundleLiteReport",
+              "koharuNativePromotionGateLiteReport",
               "nativeArtifactBundleLiteTextBoxSegmentLink",
               "nativePromotionTextBoxSegmentLink",
               "convergenceBundleTextBoxSegmentLinkage",
@@ -1052,6 +1060,19 @@ jobs:
               summary["decisionSignals"] = signal_map(item)
               return summary
 
+          def report_field_summary(report, fields):
+              data = report or {}
+              return {field: data.get(field) for field in fields}
+
+          detector_lite = (probe_report or {}).get("koharuNativeTextBoxDetectorLiteReport")
+          detector_lite_shadow = (probe_report or {}).get("koharuNativeTextBoxDetectorLiteShadowOCRReport")
+          detector_lite_refinement = (probe_report or {}).get("koharuNativeTextBoxDetectorLiteRefinementReport")
+          detector_lite_closed_loop = (probe_report or {}).get("koharuNativeTextBoxDetectorLiteClosedLoopReport")
+          bubble_instance_lite = (probe_report or {}).get("koharuNativeBubbleMaskInstanceLiteReport")
+          segment_refinement_lite = (probe_report or {}).get("koharuNativeSegmentMaskRefinementLiteReport")
+          native_bundle_lite = (probe_report or {}).get("koharuNativeArtifactBundleLiteReport")
+          native_promotion_lite = (probe_report or {}).get("koharuNativePromotionGateLiteReport")
+
           manifest = {
               "version": "${{ steps.meta.outputs.version }}",
               "branch": "${{ steps.meta.outputs.branch }}",
@@ -1164,6 +1185,68 @@ jobs:
                   "orientationShadowPathNotExecutedBlocks": (external_shadow or {}).get("orientationShadowPathNotExecutedBlocks"),
                   "orientationUnsupportedBlocks": (external_shadow or {}).get("orientationUnsupportedBlocks"),
                   "orientationUnsupportedReasonBreakdown": (external_shadow or {}).get("orientationUnsupportedReasonBreakdown"),
+              },
+              "koharuNativeLiteReportSummary": {
+                  "detectorLite": report_field_summary(detector_lite, [
+                      "enabled", "detectorLiteVerdict", "evaluatedBlockCount", "blockLedgerCount",
+                      "candidateCount", "acceptedCandidateCount", "shadowOCREligibleCandidateCount",
+                      "needsRealTextBoxesBlocks", "renderLockedBlocks", "gateCount"
+                  ]),
+                  "detectorLiteShadowOCR": report_field_summary(detector_lite_shadow, [
+                      "enabled", "shadowOCRVerdict", "evaluatedBlockCount", "blockLedgerCount",
+                      "ocrExecutedCount", "ocrSucceededCount", "betterThanCurrentCount", "gateCount"
+                  ]),
+                  "detectorLiteRefinement": report_field_summary(detector_lite_refinement, [
+                      "enabled", "refinementVerdict", "evaluatedBlockCount", "blockLedgerCount",
+                      "ocrExecutedCount", "ocrSucceededCount", "gateCount"
+                  ]),
+                  "detectorLiteClosedLoop": report_field_summary(detector_lite_closed_loop, [
+                      "enabled", "closedLoopVerdict", "evaluatedBlockCount", "blockLedgerCount", "gateCount"
+                  ]),
+                  "bubbleMaskInstanceLite": report_field_summary(bubble_instance_lite, [
+                      "enabled", "instanceLiteVerdict", "evaluatedBlockCount", "blockLedgerCount",
+                      "instanceCount", "siblingLedgerCount", "adjacencyLedgerCount",
+                      "needsRealTextBoxesBlocks", "needsRealBubbleMaskBlocks", "needsRealSegmentMaskBlocks", "gateCount"
+                  ]),
+                  "segmentMaskRefinementLite": report_field_summary(segment_refinement_lite, [
+                      "enabled", "refinementLiteVerdict", "evaluatedBlockCount", "blockLedgerCount",
+                      "candidateLedgerCount", "siblingLedgerCount", "textBoxSegmentLinkBreakdown",
+                      "needsRealTextBoxesBlocks", "needsRealBubbleMaskBlocks", "needsRealSegmentMaskBlocks", "gateCount"
+                  ]),
+                  "artifactBundleLite": report_field_summary(native_bundle_lite, [
+                      "enabled", "bundleLiteVerdict", "evaluatedBlockCount", "bundleLedgerCount",
+                      "workItemCount", "gateCount", "textBoxSegmentLinkBreakdown",
+                      "textBoxSegmentLinkageReviewBlocks", "needsRealTextBoxesBlocks",
+                      "needsRealBubbleMaskBlocks", "needsRealSegmentMaskBlocks"
+                  ]),
+                  "promotionGateLite": report_field_summary(native_promotion_lite, [
+                      "enabled", "promotionVerdict", "evaluatedBlockCount", "blockLedgerCount",
+                      "stageGateCount", "candidateExportPreviewCount", "workItemCount", "gateCount",
+                      "textBoxSegmentLinkBreakdown", "textBoxSegmentLinkageBlockedBlocks",
+                      "needsRealTextBoxesBlocks", "needsRealBubbleMaskBlocks", "needsRealSegmentMaskBlocks"
+                  ]),
+              },
+              "koharuNativeLiteConvergenceGateSummary": {
+                  "detectorLiteWorkItem": convergence_item_summary("workItem", "WI-koharu-native-textbox-detector-lite"),
+                  "detectorLiteGate": convergence_item_summary("gate", "G-koharu-native-textbox-detector-lite-executed"),
+                  "detectorLiteShadowOCRWorkItem": convergence_item_summary("workItem", "WI-koharu-native-textbox-detector-lite-shadow-ocr"),
+                  "detectorLiteShadowOCRGate": convergence_item_summary("gate", "G-koharu-native-textbox-detector-lite-shadow-ocr-executed"),
+                  "detectorLiteRefinementWorkItem": convergence_item_summary("workItem", "WI-koharu-native-textbox-detector-lite-refinement"),
+                  "detectorLiteRefinementGate": convergence_item_summary("gate", "G-koharu-native-textbox-detector-lite-refinement-executed"),
+                  "detectorLiteClosedLoopWorkItem": convergence_item_summary("workItem", "WI-koharu-native-textbox-detector-lite-closed-loop-router"),
+                  "detectorLiteClosedLoopGate": convergence_item_summary("gate", "G-koharu-native-textbox-detector-lite-closed-loop-router-executed"),
+                  "bubbleMaskInstanceLiteWorkItem": convergence_item_summary("workItem", "WI-koharu-native-bubblemask-instance-lite"),
+                  "bubbleMaskInstanceLiteGate": convergence_item_summary("gate", "G-koharu-native-bubblemask-instance-lite-executed"),
+                  "segmentMaskRefinementLiteWorkItem": convergence_item_summary("workItem", "WI-koharu-native-segmentmask-refinement-lite"),
+                  "segmentMaskRefinementLiteGate": convergence_item_summary("gate", "G-koharu-native-segmentmask-refinement-lite-executed"),
+                  "artifactBundleLiteWorkItem": convergence_item_summary("workItem", "WI-koharu-native-artifact-bundle-lite"),
+                  "artifactBundleLiteGate": convergence_item_summary("gate", "G-koharu-native-artifact-bundle-lite-executed"),
+                  "promotionGateLiteWorkItem": convergence_item_summary("workItem", "WI-koharu-native-promotion-gate-lite"),
+                  "promotionGateLiteGate": convergence_item_summary("gate", "G-koharu-native-promotion-gate-lite-executed"),
+                  "bundleLiteTextBoxSegmentLinkageWorkItem": convergence_item_summary("workItem", "WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage"),
+                  "bundleLiteTextBoxSegmentLinkageGate": convergence_item_summary("gate", "G-koharu-convergence-bundle-lite-textbox-segment-linkage"),
+                  "promotionLiteTextBoxSegmentLinkageWorkItem": convergence_item_summary("workItem", "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage"),
+                  "promotionLiteTextBoxSegmentLinkageGate": convergence_item_summary("gate", "G-koharu-convergence-promotion-lite-textbox-segment-linkage"),
               },
               "koharuArtifactConvergenceGateSummary": {
                   "enabled": (convergence or {}).get("enabled"),
@@ -1335,6 +1418,14 @@ jobs:
               contract = probe.get("koharuNativeArtifactContractDryRunReport") or {}
               reconciliation = probe.get("koharuArtifactIdentityReconciliationReport") or {}
               convergence = probe.get("koharuArtifactConvergenceReport") or {}
+              detector_lite = probe.get("koharuNativeTextBoxDetectorLiteReport") or {}
+              detector_shadow = probe.get("koharuNativeTextBoxDetectorLiteShadowOCRReport") or {}
+              detector_refinement = probe.get("koharuNativeTextBoxDetectorLiteRefinementReport") or {}
+              detector_closed_loop = probe.get("koharuNativeTextBoxDetectorLiteClosedLoopReport") or {}
+              bubble_instance_lite = probe.get("koharuNativeBubbleMaskInstanceLiteReport") or {}
+              segment_refinement_lite = probe.get("koharuNativeSegmentMaskRefinementLiteReport") or {}
+              native_bundle_lite = probe.get("koharuNativeArtifactBundleLiteReport") or {}
+              native_promotion_lite = probe.get("koharuNativePromotionGateLiteReport") or {}
               work_items = {item.get("workItemID"): item for item in convergence.get("workItemLedger") or []}
               gates = {item.get("gateID"): item for item in convergence.get("gateLedger") or []}
               def signals(item):
@@ -1361,6 +1452,30 @@ jobs:
               print_work_item("WI-external-textbox-orientation-shadow-path")
               print_gate("G-external-textbox-orientation-shadow-path")
               print_gate("G-ci-fast-report-availability")
+              print(f"- native detector-lite: verdict={detector_lite.get('detectorLiteVerdict')} candidates={detector_lite.get('candidateCount')} accepted={detector_lite.get('acceptedCandidateCount')} shadowEligible={detector_lite.get('shadowOCREligibleCandidateCount')} needsRealTextBoxes={detector_lite.get('needsRealTextBoxesBlocks')}")
+              print(f"- native detector-lite shadow OCR: verdict={detector_shadow.get('shadowOCRVerdict')} executed={detector_shadow.get('ocrExecutedCount')} succeeded={detector_shadow.get('ocrSucceededCount')} betterThanCurrent={detector_shadow.get('betterThanCurrentCount')}")
+              print(f"- native detector-lite refinement: verdict={detector_refinement.get('refinementVerdict')} executed={detector_refinement.get('ocrExecutedCount')} succeeded={detector_refinement.get('ocrSucceededCount')}")
+              print(f"- native detector-lite closed loop: verdict={detector_closed_loop.get('closedLoopVerdict')} blocks={detector_closed_loop.get('blockLedgerCount')}")
+              print(f"- native BubbleMask instance-lite: verdict={bubble_instance_lite.get('instanceLiteVerdict')} instances={bubble_instance_lite.get('instanceCount')} siblings={bubble_instance_lite.get('siblingLedgerCount')} adjacency={bubble_instance_lite.get('adjacencyLedgerCount')}")
+              print(f"- native SegmentMask refinement-lite: verdict={segment_refinement_lite.get('refinementLiteVerdict')} candidates={segment_refinement_lite.get('candidateLedgerCount')} linkBreakdown={segment_refinement_lite.get('textBoxSegmentLinkBreakdown')} needsRealTextBoxes={segment_refinement_lite.get('needsRealTextBoxesBlocks')} needsRealSegmentMask={segment_refinement_lite.get('needsRealSegmentMaskBlocks')}")
+              print(f"- native artifact bundle-lite: verdict={native_bundle_lite.get('bundleLiteVerdict')} bundles={native_bundle_lite.get('bundleLedgerCount')} linkReviewBlocks={native_bundle_lite.get('textBoxSegmentLinkageReviewBlocks')} linkBreakdown={native_bundle_lite.get('textBoxSegmentLinkBreakdown')}")
+              print(f"- native promotion gate-lite: verdict={native_promotion_lite.get('promotionVerdict')} previews={native_promotion_lite.get('candidateExportPreviewCount')} blockedBlocks={native_promotion_lite.get('textBoxSegmentLinkageBlockedBlocks')} linkBreakdown={native_promotion_lite.get('textBoxSegmentLinkBreakdown')}")
+              print_work_item("WI-koharu-native-textbox-detector-lite")
+              print_gate("G-koharu-native-textbox-detector-lite-executed")
+              print_work_item("WI-koharu-native-textbox-detector-lite-shadow-ocr")
+              print_gate("G-koharu-native-textbox-detector-lite-shadow-ocr-executed")
+              print_work_item("WI-koharu-native-textbox-detector-lite-refinement")
+              print_gate("G-koharu-native-textbox-detector-lite-refinement-executed")
+              print_work_item("WI-koharu-native-textbox-detector-lite-closed-loop-router")
+              print_gate("G-koharu-native-textbox-detector-lite-closed-loop-router-executed")
+              print_work_item("WI-koharu-native-bubblemask-instance-lite")
+              print_gate("G-koharu-native-bubblemask-instance-lite-executed")
+              print_work_item("WI-koharu-native-segmentmask-refinement-lite")
+              print_gate("G-koharu-native-segmentmask-refinement-lite-executed")
+              print_work_item("WI-koharu-native-artifact-bundle-lite")
+              print_gate("G-koharu-native-artifact-bundle-lite-executed")
+              print_work_item("WI-koharu-native-promotion-gate-lite")
+              print_gate("G-koharu-native-promotion-gate-lite-executed")
           orientation = data.get("orientationMetadataSummary") or {}
           print(f"- orientation sourceDirectionBreakdown: {orientation.get('sourceDirectionBreakdown')}")
           print(f"- orientation categoryBreakdown: {orientation.get('orientationCategoryBreakdown')}")
