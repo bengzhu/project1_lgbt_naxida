@@ -125,8 +125,8 @@
 
 - `scripts/validate-koharu-artifacts.py` 新增 `--inspect-release-archive <zip|tar>`，用 CI 同口径安全解包并检查 archive 中是否恰好有一个包含四个标准 JSON 的目录，输出 archive size/SHA、members、candidate directory 和 validator verdict。
 - handoff packet 新增 `--repo`、`--probe-mode` 参数，输出结构化 `releaseUpload`，并生成带 `--repo` 的 `ghReleaseUploadCommand`、`ghWorkflowDispatchCommand` 和 `ghRunListCommand`；默认不加 `--clobber`，避免误覆盖 Release asset。
-- `AITRANS CI Results` 在真实 Koharu archive 下载并 SHA 校验后写出 `koharu-release-archive-inspection.json`，并把 release archive inspection summary 写入 `ci-artifact-manifest.json` 和 failure summary。
-- CI static checks 扩展 package smoke：检查 `--inspect-release-archive` 成功路径、空 archive / 双 candidate archive 失败路径，以及 handoff 命令 repo / quote。
+- `AITRANS CI Results` 继续沿用既有 Release archive 下载、SHA 校验、唯一四件套目录解包、active validator identity / orientation 摘要和 App runtime 证据链；`--inspect-release-archive` 定位为上传前本地 preflight，不作为本轮云端 manifest 新字段。
+- CI static checks 保留 package smoke 和 handoff 命令 repo / quote 检查；archive inspect 的 0 / 多 candidate 失败路径由本地轻量验证覆盖，避免在 workflow 内增加容易破坏 GitHub job 启动的复杂脚本块。
 - artifact contract README 和测试规范同步 upload / inspect / dispatch / run list 的交付步骤和验收口径。
 
 关键文件：
@@ -139,7 +139,9 @@
 
 验证结果：
 
-- 待本轮本地轻量验证与 push 后云端结果包确认：本版本只改 Python validator、workflow static checks 和文档，预期 push CI 走 build-skip；workflow / validator 变化会触发 extended Koharu validator matrix、package smoke 和 archive inspect smoke。
+- 初次提交 `b0c643e` 的 `AITRANS CI Results` run `28855767837` 未能创建 job；后续修复移除 workflow 内 release archive inspection 注入、manifest 和 failure summary 钩子，只保留本地 validator / handoff 能力。
+- 本地轻量验证通过：`git diff --check`、`python3 -B -m py_compile scripts/validate-koharu-artifacts.py`、workflow YAML parse、JSON parse、Koharu valid / orientation / invalid fixture 矩阵、`test/koharu_artifacts --allow-missing`、handoff packet、package 拒绝 / 成功 zip 布局、`--inspect-release-archive` 成功 / 空 archive / 双 candidate archive 失败路径、active-like handoff ready smoke。
+- 云端结果包待本修复 commit push 后确认：本版本只改 Python validator、workflow static checks 和文档，预期 push CI 走 build-skip；workflow / validator 变化会触发 extended Koharu validator matrix 和 package smoke。
 
 遗留事项：
 

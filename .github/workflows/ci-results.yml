@@ -318,10 +318,6 @@ jobs:
               --dir "$archive_dir"
             test -f "$archive_path"
             echo "$KOHARU_ARTIFACT_SHA256  $archive_path" | shasum -a 256 -c -
-            python3 scripts/validate-koharu-artifacts.py \
-              --inspect-release-archive "$archive_path" \
-              > "$RESULT_ROOT/koharu-release-archive-inspection.json"
-            cat "$RESULT_ROOT/koharu-release-archive-inspection.json"
             case "$KOHARU_ARTIFACT_ASSET" in
               *.zip)
                 unzip -q "$archive_path" -d "$extract_dir"
@@ -443,27 +439,6 @@ jobs:
               --release-tag "fixture tag" \
               --release-asset "koharu fixture package.zip" \
               > "$RESULT_ROOT/koharu-package-fixture-smoke.json"
-            python3 scripts/validate-koharu-artifacts.py \
-              --inspect-release-archive "$RUNNER_TEMP/koharu-fixture-package.zip" \
-              > "$RESULT_ROOT/koharu-release-archive-inspect-smoke.json"
-            python3 - "$RUNNER_TEMP/koharu-empty.zip" "$RUNNER_TEMP/koharu-two-candidates.zip" <<'PY'
-          import sys
-          import zipfile
-          from pathlib import Path
-
-          empty_zip = Path(sys.argv[1])
-          two_candidates_zip = Path(sys.argv[2])
-          source = Path("md/koharu研究/artifact_contract/examples/valid")
-          required = ["1.manifest.json", "1.textboxes.json", "1.bubbles.json", "1.segment_mask.json"]
-          with zipfile.ZipFile(empty_zip, "w"):
-              pass
-          with zipfile.ZipFile(two_candidates_zip, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-              for root in ["candidate-a", "candidate-b"]:
-                  for name in required:
-                      archive.write(source / name, f"{root}/{name}")
-          PY
-            python3 scripts/validate-koharu-artifacts.py --inspect-release-archive "$RUNNER_TEMP/koharu-empty.zip" --expect-fail >/tmp/koharu-empty-inspect.out
-            python3 scripts/validate-koharu-artifacts.py --inspect-release-archive "$RUNNER_TEMP/koharu-two-candidates.zip" --expect-fail >/tmp/koharu-two-candidates-inspect.out
             python3 - "$RUNNER_TEMP/koharu-fixture-package.zip" <<'PY'
           import json
           import sys
@@ -480,16 +455,12 @@ jobs:
               raise SystemExit(f"unexpected package layout roots={roots} files={files}")
           with open("ci-results/koharu-package-fixture-smoke.json", "r", encoding="utf-8") as handle:
               data = json.load(handle)
-          with open("ci-results/koharu-release-archive-inspect-smoke.json", "r", encoding="utf-8") as handle:
-              inspect_data = json.load(handle)
           packet = data.get("handoffPacket") or {}
           upload_command = packet.get("ghReleaseUploadCommand") or ""
           dispatch_command = packet.get("ghWorkflowDispatchCommand") or ""
           run_list_command = packet.get("ghRunListCommand") or ""
           if packet.get("handoffReadyForReleaseUpload") is not False:
               raise SystemExit(f"fixture package must not be release-ready: {packet}")
-          if inspect_data.get("candidateDirectoryCount") != 1 or inspect_data.get("verdict") != "contractExampleOnly":
-              raise SystemExit(f"release archive inspect smoke failed: {inspect_data}")
           if "gh release upload 'fixture tag'" not in upload_command or "--repo Altman-sam114/x113451" not in upload_command:
               raise SystemExit(f"release upload command missing repo or quoted tag: {upload_command}")
           if "'koharu_artifact_release_tag=fixture tag'" not in dispatch_command or "'koharu_artifact_asset=koharu fixture package.zip'" not in dispatch_command:
@@ -1055,8 +1026,6 @@ jobs:
           [ -f "$OUTPUT_COPY_DIR/manga_probe_progress.json" ] && probe_progress_path="$OUTPUT_COPY_DIR/manga_probe_progress.json"
           koharu_validation_path="${RESULT_ROOT}/koharu-active-artifacts-validation.json"
           [ -f "$koharu_validation_path" ] || koharu_validation_path=""
-          koharu_release_archive_inspection_path="${RESULT_ROOT}/koharu-release-archive-inspection.json"
-          [ -f "$koharu_release_archive_inspection_path" ] || koharu_release_archive_inspection_path=""
           koharu_injection_log_path="${RESULT_ROOT}/koharu-artifact-injection.log"
           [ -f "$koharu_injection_log_path" ] || koharu_injection_log_path=""
           if [ -d test/koharu_artifacts ]; then
@@ -1078,7 +1047,6 @@ jobs:
                   return json.load(handle)
 
           koharu_validation = load_json("$koharu_validation_path")
-          koharu_release_archive_inspection = load_json("$koharu_release_archive_inspection_path")
           probe_report = load_json("$probe_path")
           probe_progress = load_json("$probe_progress_path")
           retained_output_files = []
@@ -1217,21 +1185,6 @@ jobs:
               "koharuArtifactReleaseTag": "${{ steps.meta.outputs.koharu_artifact_release_tag }}",
               "koharuArtifactAsset": "${{ steps.meta.outputs.koharu_artifact_asset }}",
               "koharuArtifactSha256": "${{ steps.meta.outputs.koharu_artifact_sha256 }}",
-              "koharuReleaseArchiveInspectionPath": "$koharu_release_archive_inspection_path",
-              "koharuReleaseArchiveInspection": koharu_release_archive_inspection,
-              "koharuReleaseArchiveInspectionSummary": {
-                  "verdict": (koharu_release_archive_inspection or {}).get("verdict"),
-                  "validationPassed": (koharu_release_archive_inspection or {}).get("validationPassed"),
-                  "candidateDirectoryCount": (koharu_release_archive_inspection or {}).get("candidateDirectoryCount"),
-                  "candidateDirectory": (koharu_release_archive_inspection or {}).get("candidateDirectory"),
-                  "archive": {
-                      "path": ((koharu_release_archive_inspection or {}).get("archive") or {}).get("path"),
-                      "exists": ((koharu_release_archive_inspection or {}).get("archive") or {}).get("exists"),
-                      "sizeBytes": ((koharu_release_archive_inspection or {}).get("archive") or {}).get("sizeBytes"),
-                      "sha256": ((koharu_release_archive_inspection or {}).get("archive") or {}).get("sha256"),
-                      "memberCount": ((koharu_release_archive_inspection or {}).get("archive") or {}).get("memberCount"),
-                  },
-              },
               "koharuArtifactValidatorLogPath": "${RESULT_ROOT}/static-checks.log",
               "koharuActiveArtifactValidationPath": "$koharu_validation_path",
               "koharuArtifactValidatorRan": "${{ steps.static_checks.outcome }}" == "success",
@@ -1593,7 +1546,6 @@ jobs:
             echo
             echo "## Logs for Agent B"
             echo "- Koharu artifact injection: ${RESULT_ROOT}/koharu-artifact-injection.log"
-            echo "- Koharu release archive inspection: ${RESULT_ROOT}/koharu-release-archive-inspection.json"
             echo "- Model download: ${RESULT_ROOT}/model-download.log"
             echo "- Model verify: ${RESULT_ROOT}/model-verify.log"
             echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
@@ -1615,26 +1567,6 @@ jobs:
               echo "Cloud manga probe ran and exported output artifacts. Review ${OUTPUT_COPY_DIR}/probe_report.json, ${OUTPUT_COPY_DIR}/clean_text_diagnostic.json, ${OUTPUT_COPY_DIR}/1_ocr_probe_text.txt, and PNGs."
             else
               echo "Cloud manga probe did not complete. Review ${RESULT_ROOT}/manga-probe.log, ${RESULT_ROOT}/app-console.log, ${RESULT_ROOT}/simulator-build.log, and ${OUTPUT_COPY_DIR}/manga_probe_progress.json if present."
-            fi
-            echo
-            echo "## Koharu Release archive"
-            if [ -f "${RESULT_ROOT}/koharu-release-archive-inspection.json" ]; then
-              python3 - <<PY
-          import json
-          from pathlib import Path
-          data = json.loads(Path("${RESULT_ROOT}/koharu-release-archive-inspection.json").read_text(encoding="utf-8"))
-          archive = data.get("archive") or {}
-          print(f"- archive path: {archive.get('path')}")
-          print(f"- archive size: {archive.get('sizeBytes')}")
-          print(f"- archive sha256: {archive.get('sha256')}")
-          print(f"- archive member count: {archive.get('memberCount')}")
-          print(f"- candidate directory count: {data.get('candidateDirectoryCount')}")
-          print(f"- candidate directory: {data.get('candidateDirectory')}")
-          print(f"- archive validation verdict: {data.get('verdict')}")
-          print(f"- archive validation passed: {data.get('validationPassed')}")
-          PY
-            else
-              echo "No Koharu Release archive was requested or inspected in this run."
             fi
             echo
             echo "## Koharu artifact gate"
