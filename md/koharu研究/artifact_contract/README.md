@@ -64,6 +64,7 @@ manifest 可指定等价相对路径：
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --print-required-files
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --emit-handoff-packet
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --package-release-archive /tmp/koharu-artifacts.zip --emit-handoff-packet --release-tag <release-tag> --release-asset koharu-artifacts.zip
+python3 scripts/validate-koharu-artifacts.py --inspect-release-archive /tmp/koharu-artifacts.zip
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
@@ -82,7 +83,7 @@ python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allo
 
 validator 默认校验模式只读指定目录，不复制、不生成 active artifact；`--package-release-archive` 只写指定 zip。输出 JSON 摘要包含 `verdict`、`readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed`、`nextAction`、`readinessBlockers`、缺失文件、解析错误、坐标错误、TextBox 数量、Bubble instance 数量、SegmentMask 尺寸匹配结果、`artifactIdentitySummary` 和 `orientationMetadataSummary`。`artifactIdentitySummary` 会记录 source image 以及 manifest / TextBoxes / BubbleMask / SegmentMask 的路径、存在性、size、SHA256，并透传 manifest 的 `generatedBy`、`generatedAt`、`contractExampleOnly`、schema、source image、`sourceImageSHA256Declared`、`sourceImageSHA256Expected`、`sourceImageSHA256Matches` 和 coordinate space；用于 Agent C 核对当前云端结果包里的四件套是否就是被审查的 archive 内容。`orientationMetadataSummary` 会汇总 sourceDirection、orientation category、rotation plan、line polygon TextBox、竖排 TextBox、近 90 度倍数 rotation、任意角度 rotation、orientation partial TextBox 和 unsupported reason breakdown。
 
-`--print-required-files` 只打印 Koharu / 外部 detector 侧需要交付的 active 文件清单，不读取或写入 `test/koharu_artifacts/`。`--emit-handoff-packet` 会在 validator 摘要外输出 Release upload / `workflow_dispatch` handoff 清单，包含 source image SHA、四件套 size/SHA、orientation summary、建议的 `probe_mode=ci-fast`、`koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256` 和 `koharu_artifact_required=true`。`--package-release-archive` 会把当前 root 下解析出的四件套打成一个 zip，zip 内只包含一个目录和四个标准 JSON 文件；默认只允许 `verdict = readyForShadowOCR` 的真实 handoff 包，`--allow-fixture-package` 仅用于本地 examples smoke。缺少真实 active 目录时，`--allow-missing` 的正确结果是 `verdict = manifestMissing`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`，并列出 `manifest`、`TextBoxes`、`BubbleMask`、`SegmentMask` 的阻塞项；不应额外混入 schema / coordinate 缺失噪音。
+`--print-required-files` 只打印 Koharu / 外部 detector 侧需要交付的 active 文件清单，不读取或写入 `test/koharu_artifacts/`。`--emit-handoff-packet` 会在 validator 摘要外输出 Release upload / `workflow_dispatch` handoff 清单，包含 source image SHA、四件套 size/SHA、orientation summary、建议的 `probe_mode=ci-fast`、`koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256` 和 `koharu_artifact_required=true`。`--package-release-archive` 会把当前 root 下解析出的四件套打成一个 zip，zip 内只包含一个目录和四个标准 JSON 文件；默认只允许 `verdict = readyForShadowOCR` 的真实 handoff 包，`--allow-fixture-package` 仅用于本地 examples smoke。`--inspect-release-archive` 会在上传前用 CI 同口径解包并检查 archive 里是否恰好有一个四件套目录，输出 archive size/SHA、成员列表、candidate directory 和 validator verdict。缺少真实 active 目录时，`--allow-missing` 的正确结果是 `verdict = manifestMissing`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`，并列出 `manifest`、`TextBoxes`、`BubbleMask`、`SegmentMask` 的阻塞项；不应额外混入 schema / coordinate 缺失噪音。
 
 云端手动 workflow 可选从 Release archive 注入真实四件套：填写 `koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256` 后，CI 会在 Xcode build 前下载、校验、解压，并且只接受唯一一个同时包含 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json` 的目录；找到 0 个或多个候选目录都会失败，避免从不同目录拼出错包。通过后 CI 只复制该目录下四个固定 JSON 到 `test/koharu_artifacts/`，并把 validator identity / orientation 摘要写入未加密结果包；`koharu_artifact_required=true` 时下载、SHA、解压、唯一目录检查或 validator 失败会直接失败。注入 artifact 时 `probe_mode` 必须是 `ci-fast` 或 `full`，不能使用 `skip`，因为验收必须证明 App 探针实际读取了同一组四件套。
 
@@ -93,11 +94,13 @@ python3 scripts/validate-koharu-artifacts.py \
   --root test/koharu_artifacts \
   --package-release-archive /tmp/koharu-artifacts.zip \
   --emit-handoff-packet \
+  --repo Altman-sam114/x113451 \
+  --probe-mode ci-fast \
   --release-tag <release-tag> \
   --release-asset koharu-artifacts.zip
 ```
 
-输出的 `handoffPacket.releaseArchive.sha256` 就是 GitHub Release asset 的 `koharu_artifact_sha256` 输入；`handoffPacket.ghWorkflowDispatchCommand` 是上传 asset 后的手动 CI 触发模板。Agent C 仍必须以云端结果包里的 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates 为最终验收证据，不能只凭本地包生成成功放行。
+输出的 `handoffPacket.releaseArchive.sha256` 就是 GitHub Release asset 的 `koharu_artifact_sha256` 输入；`handoffPacket.ghReleaseUploadCommand` 是上传到已有 Release tag 的命令，`handoffPacket.ghWorkflowDispatchCommand` 是上传 asset 后的手动 CI 触发模板，`handoffPacket.ghRunListCommand` 用于触发后找最新 `AITRANS CI Results` run。若同名 asset 已存在，不要默认覆盖；只有人工确认要替换时才给 `gh release upload` 增加 `--clobber`。Agent C 仍必须以云端结果包里的 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates 为最终验收证据，不能只凭本地包生成成功放行。
 
 ## 从 Koharu 导出到 AITRANS contract
 

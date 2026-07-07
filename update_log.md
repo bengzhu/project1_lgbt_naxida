@@ -116,6 +116,36 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.82：Koharu Release Archive Inspect and Upload Commands
+日期：2026-07-07
+
+依据：v1.81 已能从本地四件套生成 Release zip 和 `workflow_dispatch` 参数，但真实 P0 handoff 仍有两个易错点：上传前本地 archive 是否符合 CI 唯一目录规则，以及上传到 GitHub Release / 触发 workflow 是否指向正确 repo。继续补这段交付闭环，比新增 report-only 探针层更接近 `v1.38-current-gap-to-koharu.md` 要求的真实 artifact 注入。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 `--inspect-release-archive <zip|tar>`，用 CI 同口径安全解包并检查 archive 中是否恰好有一个包含四个标准 JSON 的目录，输出 archive size/SHA、members、candidate directory 和 validator verdict。
+- handoff packet 新增 `--repo`、`--probe-mode` 参数，输出结构化 `releaseUpload`，并生成带 `--repo` 的 `ghReleaseUploadCommand`、`ghWorkflowDispatchCommand` 和 `ghRunListCommand`；默认不加 `--clobber`，避免误覆盖 Release asset。
+- `AITRANS CI Results` 在真实 Koharu archive 下载并 SHA 校验后写出 `koharu-release-archive-inspection.json`，并把 release archive inspection summary 写入 `ci-artifact-manifest.json` 和 failure summary。
+- CI static checks 扩展 package smoke：检查 `--inspect-release-archive` 成功路径、空 archive / 双 candidate archive 失败路径，以及 handoff 命令 repo / quote。
+- artifact contract README 和测试规范同步 upload / inspect / dispatch / run list 的交付步骤和验收口径。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：本版本只改 Python validator、workflow static checks 和文档，预期 push CI 走 build-skip；workflow / validator 变化会触发 extended Koharu validator matrix、package smoke 和 archive inspect smoke。
+
+遗留事项：
+
+- 本版本仍不生成真实 Koharu 四件套、不上传 Release、不触发手动 `ci-fast/full`，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 真实验收仍必须由人工提供外部 detector 输出，运行 package / inspect / upload / dispatch 命令后，核对云端 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates。
+
 ### v1.81：Koharu Release Handoff Packet Preflight
 日期：2026-07-07
 
@@ -141,7 +171,9 @@
 
 验证结果：
 
-- 待本轮本地轻量验证与 push 后云端结果包确认：本版本只改 Python validator、workflow static checks 和文档，预期 push CI 走 build-skip 或至少不需要 Swift 编译；workflow / contract 相关变更会触发 Koharu validator matrix 与 package smoke。
+- 本地轻量验证通过：`git diff --check`、`python3 -m py_compile scripts/validate-koharu-artifacts.py`、workflow YAML parse、JSON parse、Koharu valid / orientation / invalid fixture 矩阵、`test/koharu_artifacts --allow-missing`、handoff packet、package 拒绝 / 成功 zip 布局和 quote smoke。
+- 云端 `AITRANS CI Results` run `28854050132` 通过，artifact `aitrans-ci-unversioned-smalldata_test--54a94b6e992f-run28854050132-attempt1` 已核对：`branch = smalldata_test`、`commitSha = 54a94b6e992f06d5e7d1704d1634d87aca3dffb6`、`xcodeBuildRequired = false`、`xcodeBuildSkippedReason = non_app_build_related_fast_path`、`probeMode = skip`、`scopeDiffMethod = checkout_before`、`scopeDiffFallbackUsed = false`、`koharuValidatorExtendedRequired = true`、`probeOutputRetainedFiles = ["probe-not-run.txt"]`，package fixture smoke 产物存在且 verdict 为 `contractExampleOnly`。
+- 同轮 `AITRANS - Build IPA` run `28854050100` 通过。
 
 遗留事项：
 
