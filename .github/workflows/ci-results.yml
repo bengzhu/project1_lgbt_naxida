@@ -1060,19 +1060,6 @@ jobs:
               summary["decisionSignals"] = signal_map(item)
               return summary
 
-          def report_field_summary(report, fields):
-              data = report or {}
-              return {field: data.get(field) for field in fields}
-
-          detector_lite = (probe_report or {}).get("koharuNativeTextBoxDetectorLiteReport")
-          detector_lite_shadow = (probe_report or {}).get("koharuNativeTextBoxDetectorLiteShadowOCRReport")
-          detector_lite_refinement = (probe_report or {}).get("koharuNativeTextBoxDetectorLiteRefinementReport")
-          detector_lite_closed_loop = (probe_report or {}).get("koharuNativeTextBoxDetectorLiteClosedLoopReport")
-          bubble_instance_lite = (probe_report or {}).get("koharuNativeBubbleMaskInstanceLiteReport")
-          segment_refinement_lite = (probe_report or {}).get("koharuNativeSegmentMaskRefinementLiteReport")
-          native_bundle_lite = (probe_report or {}).get("koharuNativeArtifactBundleLiteReport")
-          native_promotion_lite = (probe_report or {}).get("koharuNativePromotionGateLiteReport")
-
           manifest = {
               "version": "${{ steps.meta.outputs.version }}",
               "branch": "${{ steps.meta.outputs.branch }}",
@@ -1186,68 +1173,6 @@ jobs:
                   "orientationUnsupportedBlocks": (external_shadow or {}).get("orientationUnsupportedBlocks"),
                   "orientationUnsupportedReasonBreakdown": (external_shadow or {}).get("orientationUnsupportedReasonBreakdown"),
               },
-              "koharuNativeLiteReportSummary": {
-                  "detectorLite": report_field_summary(detector_lite, [
-                      "enabled", "detectorLiteVerdict", "evaluatedBlockCount", "blockLedgerCount",
-                      "candidateCount", "acceptedCandidateCount", "shadowOCREligibleCandidateCount",
-                      "needsRealTextBoxesBlocks", "renderLockedBlocks", "gateCount"
-                  ]),
-                  "detectorLiteShadowOCR": report_field_summary(detector_lite_shadow, [
-                      "enabled", "shadowOCRVerdict", "evaluatedBlockCount", "blockLedgerCount",
-                      "ocrExecutedCount", "ocrSucceededCount", "betterThanCurrentCount", "gateCount"
-                  ]),
-                  "detectorLiteRefinement": report_field_summary(detector_lite_refinement, [
-                      "enabled", "refinementVerdict", "evaluatedBlockCount", "blockLedgerCount",
-                      "ocrExecutedCount", "ocrSucceededCount", "gateCount"
-                  ]),
-                  "detectorLiteClosedLoop": report_field_summary(detector_lite_closed_loop, [
-                      "enabled", "closedLoopVerdict", "evaluatedBlockCount", "blockLedgerCount", "gateCount"
-                  ]),
-                  "bubbleMaskInstanceLite": report_field_summary(bubble_instance_lite, [
-                      "enabled", "instanceLiteVerdict", "evaluatedBlockCount", "blockLedgerCount",
-                      "instanceCount", "siblingLedgerCount", "adjacencyLedgerCount",
-                      "needsRealTextBoxesBlocks", "needsRealBubbleMaskBlocks", "needsRealSegmentMaskBlocks", "gateCount"
-                  ]),
-                  "segmentMaskRefinementLite": report_field_summary(segment_refinement_lite, [
-                      "enabled", "refinementLiteVerdict", "evaluatedBlockCount", "blockLedgerCount",
-                      "candidateLedgerCount", "siblingLedgerCount", "textBoxSegmentLinkBreakdown",
-                      "needsRealTextBoxesBlocks", "needsRealBubbleMaskBlocks", "needsRealSegmentMaskBlocks", "gateCount"
-                  ]),
-                  "artifactBundleLite": report_field_summary(native_bundle_lite, [
-                      "enabled", "bundleLiteVerdict", "evaluatedBlockCount", "bundleLedgerCount",
-                      "workItemCount", "gateCount", "textBoxSegmentLinkBreakdown",
-                      "textBoxSegmentLinkageReviewBlocks", "needsRealTextBoxesBlocks",
-                      "needsRealBubbleMaskBlocks", "needsRealSegmentMaskBlocks"
-                  ]),
-                  "promotionGateLite": report_field_summary(native_promotion_lite, [
-                      "enabled", "promotionVerdict", "evaluatedBlockCount", "blockLedgerCount",
-                      "stageGateCount", "candidateExportPreviewCount", "workItemCount", "gateCount",
-                      "textBoxSegmentLinkBreakdown", "textBoxSegmentLinkageBlockedBlocks",
-                      "needsRealTextBoxesBlocks", "needsRealBubbleMaskBlocks", "needsRealSegmentMaskBlocks"
-                  ]),
-              },
-              "koharuNativeLiteConvergenceGateSummary": {
-                  "detectorLiteWorkItem": convergence_item_summary("workItem", "WI-koharu-native-textbox-detector-lite"),
-                  "detectorLiteGate": convergence_item_summary("gate", "G-koharu-native-textbox-detector-lite-executed"),
-                  "detectorLiteShadowOCRWorkItem": convergence_item_summary("workItem", "WI-koharu-native-textbox-detector-lite-shadow-ocr"),
-                  "detectorLiteShadowOCRGate": convergence_item_summary("gate", "G-koharu-native-textbox-detector-lite-shadow-ocr-executed"),
-                  "detectorLiteRefinementWorkItem": convergence_item_summary("workItem", "WI-koharu-native-textbox-detector-lite-refinement"),
-                  "detectorLiteRefinementGate": convergence_item_summary("gate", "G-koharu-native-textbox-detector-lite-refinement-executed"),
-                  "detectorLiteClosedLoopWorkItem": convergence_item_summary("workItem", "WI-koharu-native-textbox-detector-lite-closed-loop-router"),
-                  "detectorLiteClosedLoopGate": convergence_item_summary("gate", "G-koharu-native-textbox-detector-lite-closed-loop-router-executed"),
-                  "bubbleMaskInstanceLiteWorkItem": convergence_item_summary("workItem", "WI-koharu-native-bubblemask-instance-lite"),
-                  "bubbleMaskInstanceLiteGate": convergence_item_summary("gate", "G-koharu-native-bubblemask-instance-lite-executed"),
-                  "segmentMaskRefinementLiteWorkItem": convergence_item_summary("workItem", "WI-koharu-native-segmentmask-refinement-lite"),
-                  "segmentMaskRefinementLiteGate": convergence_item_summary("gate", "G-koharu-native-segmentmask-refinement-lite-executed"),
-                  "artifactBundleLiteWorkItem": convergence_item_summary("workItem", "WI-koharu-native-artifact-bundle-lite"),
-                  "artifactBundleLiteGate": convergence_item_summary("gate", "G-koharu-native-artifact-bundle-lite-executed"),
-                  "promotionGateLiteWorkItem": convergence_item_summary("workItem", "WI-koharu-native-promotion-gate-lite"),
-                  "promotionGateLiteGate": convergence_item_summary("gate", "G-koharu-native-promotion-gate-lite-executed"),
-                  "bundleLiteTextBoxSegmentLinkageWorkItem": convergence_item_summary("workItem", "WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage"),
-                  "bundleLiteTextBoxSegmentLinkageGate": convergence_item_summary("gate", "G-koharu-convergence-bundle-lite-textbox-segment-linkage"),
-                  "promotionLiteTextBoxSegmentLinkageWorkItem": convergence_item_summary("workItem", "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage"),
-                  "promotionLiteTextBoxSegmentLinkageGate": convergence_item_summary("gate", "G-koharu-convergence-promotion-lite-textbox-segment-linkage"),
-              },
               "koharuArtifactConvergenceGateSummary": {
                   "enabled": (convergence or {}).get("enabled"),
                   "evaluatedBlockCount": (convergence or {}).get("evaluatedBlockCount"),
@@ -1330,6 +1255,90 @@ jobs:
           with open("${RESULT_ROOT}/ci-artifact-manifest.json", "w", encoding="utf-8") as f:
               json.dump(manifest, f, ensure_ascii=False, indent=2)
               f.write("\n")
+          PY
+
+      - name: Append native-lite manifest summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest_path = Path("ci-results/ci-artifact-manifest.json")
+          if not manifest_path.is_file():
+              raise SystemExit("ci-artifact-manifest.json missing before native-lite append")
+
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          probe_path = Path(manifest.get("probeReportPath") or "")
+          probe = json.loads(probe_path.read_text(encoding="utf-8")) if probe_path.is_file() else {}
+          convergence = probe.get("koharuArtifactConvergenceReport") or {}
+
+          report_specs = {
+              "detectorLite": ("koharuNativeTextBoxDetectorLiteReport", "enabled detectorLiteVerdict evaluatedBlockCount blockLedgerCount candidateCount acceptedCandidateCount shadowOCREligibleCandidateCount needsRealTextBoxesBlocks renderLockedBlocks gateCount"),
+              "detectorLiteShadowOCR": ("koharuNativeTextBoxDetectorLiteShadowOCRReport", "enabled shadowOCRVerdict evaluatedBlockCount blockLedgerCount ocrExecutedCount ocrSucceededCount betterThanCurrentCount gateCount"),
+              "detectorLiteRefinement": ("koharuNativeTextBoxDetectorLiteRefinementReport", "enabled refinementVerdict evaluatedBlockCount blockLedgerCount ocrExecutedCount ocrSucceededCount gateCount"),
+              "detectorLiteClosedLoop": ("koharuNativeTextBoxDetectorLiteClosedLoopReport", "enabled closedLoopVerdict evaluatedBlockCount blockLedgerCount gateCount"),
+              "bubbleMaskInstanceLite": ("koharuNativeBubbleMaskInstanceLiteReport", "enabled instanceLiteVerdict evaluatedBlockCount blockLedgerCount instanceCount siblingLedgerCount adjacencyLedgerCount needsRealTextBoxesBlocks needsRealBubbleMaskBlocks needsRealSegmentMaskBlocks gateCount"),
+              "segmentMaskRefinementLite": ("koharuNativeSegmentMaskRefinementLiteReport", "enabled refinementLiteVerdict evaluatedBlockCount blockLedgerCount candidateLedgerCount siblingLedgerCount textBoxSegmentLinkBreakdown needsRealTextBoxesBlocks needsRealBubbleMaskBlocks needsRealSegmentMaskBlocks gateCount"),
+              "artifactBundleLite": ("koharuNativeArtifactBundleLiteReport", "enabled bundleLiteVerdict evaluatedBlockCount bundleLedgerCount workItemCount gateCount textBoxSegmentLinkBreakdown textBoxSegmentLinkageReviewBlocks needsRealTextBoxesBlocks needsRealBubbleMaskBlocks needsRealSegmentMaskBlocks"),
+              "promotionGateLite": ("koharuNativePromotionGateLiteReport", "enabled promotionVerdict evaluatedBlockCount blockLedgerCount stageGateCount candidateExportPreviewCount workItemCount gateCount textBoxSegmentLinkBreakdown textBoxSegmentLinkageBlockedBlocks needsRealTextBoxesBlocks needsRealBubbleMaskBlocks needsRealSegmentMaskBlocks"),
+          }
+          manifest["koharuNativeLiteReportSummary"] = {
+              key: {field: (probe.get(report_name) or {}).get(field) for field in fields.split()}
+              for key, (report_name, fields) in report_specs.items()
+          }
+
+          work_items = {item.get("workItemID"): item for item in convergence.get("workItemLedger") or []}
+          gates = {item.get("gateID"): item for item in convergence.get("gateLedger") or []}
+
+          def signals(item):
+              return {
+                  signal.get("name"): signal.get("value")
+                  for signal in (item or {}).get("decisionSignals", [])
+                  if signal.get("name")
+              }
+
+          def summarize(kind, item_id):
+              item = (work_items if kind == "workItem" else gates).get(item_id)
+              if not item:
+                  return None
+              key = "workItemID" if kind == "workItem" else "gateID"
+              fields = ["status", "targetBlocks", "remainingBlockers", "nextAction"] if kind == "workItem" else ["status", "affectedBlocks", "recommendedAction"]
+              summary = {key: item_id}
+              summary.update({field: item.get(field) for field in fields})
+              summary["decisionSignals"] = signals(item)
+              return summary
+
+          convergence_specs = {
+              "detectorLiteWorkItem": ("workItem", "WI-koharu-native-textbox-detector-lite"),
+              "detectorLiteGate": ("gate", "G-koharu-native-textbox-detector-lite-executed"),
+              "detectorLiteShadowOCRWorkItem": ("workItem", "WI-koharu-native-textbox-detector-lite-shadow-ocr"),
+              "detectorLiteShadowOCRGate": ("gate", "G-koharu-native-textbox-detector-lite-shadow-ocr-executed"),
+              "detectorLiteRefinementWorkItem": ("workItem", "WI-koharu-native-textbox-detector-lite-refinement"),
+              "detectorLiteRefinementGate": ("gate", "G-koharu-native-textbox-detector-lite-refinement-executed"),
+              "detectorLiteClosedLoopWorkItem": ("workItem", "WI-koharu-native-textbox-detector-lite-closed-loop-router"),
+              "detectorLiteClosedLoopGate": ("gate", "G-koharu-native-textbox-detector-lite-closed-loop-router-executed"),
+              "bubbleMaskInstanceLiteWorkItem": ("workItem", "WI-koharu-native-bubblemask-instance-lite"),
+              "bubbleMaskInstanceLiteGate": ("gate", "G-koharu-native-bubblemask-instance-lite-executed"),
+              "segmentMaskRefinementLiteWorkItem": ("workItem", "WI-koharu-native-segmentmask-refinement-lite"),
+              "segmentMaskRefinementLiteGate": ("gate", "G-koharu-native-segmentmask-refinement-lite-executed"),
+              "artifactBundleLiteWorkItem": ("workItem", "WI-koharu-native-artifact-bundle-lite"),
+              "artifactBundleLiteGate": ("gate", "G-koharu-native-artifact-bundle-lite-executed"),
+              "promotionGateLiteWorkItem": ("workItem", "WI-koharu-native-promotion-gate-lite"),
+              "promotionGateLiteGate": ("gate", "G-koharu-native-promotion-gate-lite-executed"),
+              "bundleLiteTextBoxSegmentLinkageWorkItem": ("workItem", "WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage"),
+              "bundleLiteTextBoxSegmentLinkageGate": ("gate", "G-koharu-convergence-bundle-lite-textbox-segment-linkage"),
+              "promotionLiteTextBoxSegmentLinkageWorkItem": ("workItem", "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage"),
+              "promotionLiteTextBoxSegmentLinkageGate": ("gate", "G-koharu-convergence-promotion-lite-textbox-segment-linkage"),
+          }
+          manifest["koharuNativeLiteConvergenceGateSummary"] = {
+              key: summarize(kind, item_id)
+              for key, (kind, item_id) in convergence_specs.items()
+          }
+
+          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
 
       - name: Write failure summary

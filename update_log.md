@@ -116,6 +116,32 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.75：CI Manifest Step Split / Workflow Startup Fix
+日期：2026-07-07
+
+依据：v1.74 把 native-lite manifest 摘要直接塞进 `Write manifest`，使该 GitHub Actions 单步脚本从上一版约 20k 字符增长到约 26k 字符。最新 push 的 `AITRANS CI Results` run `28844255398` 在 0 秒失败且没有 job/log，`gh run view` 明确提示 workflow file issue；这符合单步 `run:` 脚本过大导致 workflow 启动前被拒绝的风险。
+
+核心变更：
+
+- `AITRANS CI Results` 保留 v1.74 的 `koharuNativeLiteReportSummary` 与 `koharuNativeLiteConvergenceGateSummary` manifest 字段，但改由独立 `Append native-lite manifest summary` step 读取已生成的 `ci-artifact-manifest.json` 和可用 `probe_report.json` 后追加。
+- `Write manifest` step 恢复到上一轮成功版本的脚本体积，避免继续触发 workflow 启动阶段失败；native-lite 追加 step 在 `probe_mode=skip` 时仍写出字段，值来自空 probe summary，便于 Agent C 看到字段存在。
+- 产物结构、字段名、probe 路径、Swift 逻辑、OCR / LLM / renderer 和 active artifact gate 不变。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`.github/workflows/ci-results.yml` YAML parse、workflow Python heredoc 语法编译、`python3 -m json.tool` 解析 `test/1.ground_truth.json` / `output/probe_report.json` / `output/clean_text_diagnostic.json`。
+- 拆分后 workflow 单步脚本体积：`Write manifest = 20176 chars`，`Append native-lite manifest summary = 5996 chars`。
+
+遗留事项：
+
+- 需要 push 后重新触发 `AITRANS CI Results`，下载结果包确认 manifest 字段存在且本次 run 不再 0 秒失败。
+- 本版本不新增真实 Koharu 四件套，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.74：Native-Lite CI Summary / Gap Roadmap Refresh
 日期：2026-07-07
 
