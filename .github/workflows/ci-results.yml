@@ -945,7 +945,6 @@ jobs:
             koharu_active_artifacts_present=false
           fi
           python3 - <<PY
-          import hashlib
           import json
           from pathlib import Path
 
@@ -965,15 +964,6 @@ jobs:
           retained_path = Path("$probe_output_retained_files_path")
           if retained_path.is_file():
               retained_output_files = [line.strip() for line in retained_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-          changed_files_path = Path("${RESULT_ROOT}/changed-files.txt")
-          changed_files = []
-          if changed_files_path.is_file():
-              changed_files = [
-                  line.strip()
-                  for line in changed_files_path.read_text(encoding="utf-8").splitlines()
-                  if line.strip()
-              ]
-          changed_files_hash = hashlib.sha256(("\n".join(changed_files) + ("\n" if changed_files else "")).encode("utf-8")).hexdigest()
           external_readiness = (probe_report or {}).get("externalArtifactReadinessReport")
           external_shadow = (probe_report or {}).get("externalTextBoxShadowOCRReport")
           contract_dry_run = (probe_report or {}).get("koharuNativeArtifactContractDryRunReport")
@@ -1080,21 +1070,12 @@ jobs:
               "runId": "${GITHUB_RUN_ID}",
               "runAttempt": "${GITHUB_RUN_ATTEMPT}",
               "workflowName": "${GITHUB_WORKFLOW}",
-              "eventName": "${GITHUB_EVENT_NAME}",
-              "repository": "${GITHUB_REPOSITORY}",
-              "ref": "${GITHUB_REF}",
-              "refName": "${GITHUB_REF_NAME}",
-              "runUrl": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
-              "artifactName": "${{ steps.meta.outputs.artifact_name }}",
               "createdAt": "$created_at",
               "xcodeVersion": "$xcode_version",
               "scheme": "${SCHEME}",
               "destination": "${DESTINATION}",
               "resultBundlePath": "${{ steps.meta.outputs.result_bundle }}",
               "changedFilesPath": "${RESULT_ROOT}/changed-files.txt",
-              "changedFilesCount": len(changed_files),
-              "changedFilesSHA256": changed_files_hash,
-              "changedFiles": changed_files,
               "xcodeBuildRequired": "${{ steps.ci_scope.outputs.xcode_build_required }}" == "true",
               "xcodeBuildSkippedReason": "${{ steps.ci_scope.outputs.xcode_build_skip_reason }}",
               "koharuValidatorExtendedRequired": "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" == "true",
@@ -1359,6 +1340,44 @@ jobs:
               for key, (kind, item_id) in convergence_specs.items()
           }
 
+          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Append provenance manifest trace
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          manifest_path = Path("ci-results/ci-artifact-manifest.json")
+          if not manifest_path.is_file():
+              raise SystemExit("ci-artifact-manifest.json missing before provenance append")
+
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          changed_files_path = Path("ci-results/changed-files.txt")
+          changed_files = []
+          if changed_files_path.is_file():
+              changed_files = [
+                  line.strip()
+                  for line in changed_files_path.read_text(encoding="utf-8").splitlines()
+                  if line.strip()
+              ]
+          changed_files_hash = hashlib.sha256(("\n".join(changed_files) + ("\n" if changed_files else "")).encode("utf-8")).hexdigest()
+          manifest.update({
+              "eventName": "${GITHUB_EVENT_NAME}",
+              "repository": "${GITHUB_REPOSITORY}",
+              "ref": "${GITHUB_REF}",
+              "refName": "${GITHUB_REF_NAME}",
+              "runUrl": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
+              "artifactName": "${{ steps.meta.outputs.artifact_name }}",
+              "changedFilesCount": len(changed_files),
+              "changedFilesSHA256": changed_files_hash,
+              "changedFiles": changed_files,
+          })
           manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
 
