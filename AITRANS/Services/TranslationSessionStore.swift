@@ -11727,14 +11727,8 @@ final class TranslationSessionStore: ObservableObject {
         let bundleByBlock = Dictionary(
             uniqueKeysWithValues: (artifactBundleLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
-        let detectorByBlock = Dictionary(
-            uniqueKeysWithValues: (detectorLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
-        )
         let closedLoopByBlock = Dictionary(
             uniqueKeysWithValues: (closedLoopReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
-        )
-        let bubbleByBlock = Dictionary(
-            uniqueKeysWithValues: (bubbleInstanceLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
         let segmentByBlock = Dictionary(
             uniqueKeysWithValues: (segmentRefinementLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }

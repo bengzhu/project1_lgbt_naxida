@@ -116,6 +116,33 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.73：Cloud ci-fast Evidence / Swift Warning Cleanup
+日期：2026-07-07
+
+依据：v1.72 新增 CI manifest 的 Koharu contract dry-run 与 convergence gate summary 后，需要用真实云端 `ci-fast` 探针确认这些字段在非 skip 路径可用；同一轮 Xcode 日志显示 4 处 Swift unused-value warning，虽不影响构建，但会增加后续 Agent C 读日志噪声。
+
+核心变更：
+
+- 云端手动 `ci-fast` run `28842227463` 已验证 commit `599443891e780155ba62773a6e1bdc7090b3ee6c` 的未加密 CI 结果包可用：GGUF 下载 / SHA 校验、静态检查、Xcode build、模拟器 build、漫画探针和 artifact 上传均成功。
+- 结果包 `aitrans-ci-unversioned-smalldata_test--599443891e78-run28842227463-attempt1` 的 manifest 匹配 `branch = smalldata_test`、`runAttempt = 1`、`workflowName = AITRANS CI Results`、`probeMode = ci-fast`、`mangaProbeOutcome = success`；`junit.xml` 为 5 tests / 0 failures，并包含 `.xcresult`、`probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和核心 PNG。
+- 真实探针路径已填充 `koharuNativeArtifactContractDryRunSummary` 与 `koharuArtifactConvergenceGateSummary`；缺 active artifact 时 contract dry-run 正确为 `blockedByMissingActiveArtifacts`，coverage / orientation gate 保持 open / not evaluated，`G-ci-fast-report-availability` 为 passed 且 `requiredReportSpan = v1.24-v1.70`。
+- 清理 `MangaOverlayProbeService` 与 `TranslationSessionStore` 中不参与逻辑的 unused-value 绑定，减少 Xcode build 日志噪声，不改变主 OCR、翻译、覆盖图、report-only 账本或 active artifact gate。
+
+关键文件：
+
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `update_log.md`
+
+验证结果：
+
+- 云端 `ci-fast` 探针：run `28842227463` 成功，`engineUsed = Local GGUF`、`decodingMode = deterministic`、`totalBlocksDetected = 13`、`passedBlocks = 1`、`failedBlocks = 12`、clean text `5 / 11` 通过，缺 active artifact 的 external shadow OCR 正确阻塞在 `manifestMissing`。
+
+遗留事项：
+
+- 本版本不新增 detector、OCR、LLM、PNG、renderer 或 active Koharu artifact，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+- 缺真实 `test/koharu_artifacts/` 时，external TextBox shadow OCR / orientation path 仍只能验证阻塞和报告完整性；真实 artifact handoff 仍需后续注入四件套后再跑 `ci-fast` / `full`。
+
 ### v1.72：CI Artifact Convergence Gate Summary Closure
 日期：2026-07-07
 

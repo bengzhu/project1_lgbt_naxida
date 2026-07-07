@@ -2177,7 +2177,7 @@ struct MangaOverlayProbeService: Sendable {
                 sameBubble: Bool,
                 accepted: Bool
             ) {
-                guard let sourceTextBoxCandidateID, let candidate = sourceTextBoxCandidate else {
+                guard let candidate = sourceTextBoxCandidate else {
                     return ("fallbackFinalBlockBBox", nil, nil, 0, false, false)
                 }
                 let relation = candidate.relatedBlockRelations.first { $0.blockIndex == block.index }
@@ -2454,7 +2454,6 @@ struct MangaOverlayProbeService: Sendable {
                     : nil
                 let maskArea = maskRect.map(area) ?? 0
                 let textBoxArea = max(1, area(expandedRect))
-                let bubbleArea = max(1, area(bubbleConstraint ?? expandedRect))
                 let textBoxContainment = maskRect.map {
                     Self.rectContainmentRatio(inner: $0, outer: expandedRect)
                 } ?? 0
