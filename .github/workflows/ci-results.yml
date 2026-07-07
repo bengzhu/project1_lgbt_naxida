@@ -797,6 +797,15 @@ jobs:
           if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
               coverage_work_item = work_items_by_id.get("WI-external-textbox-shadow-ocr-coverage") or {}
               coverage_gate = gates_by_id.get("G-external-textbox-shadow-ocr-coverage") or {}
+              report_availability_gate = gates_by_id.get("G-ci-fast-report-availability") or {}
+              report_availability_signals = {
+                  signal.get("name"): signal.get("value")
+                  for signal in report_availability_gate.get("decisionSignals", [])
+              }
+              if report_availability_signals.get("requiredReportSpan") != "v1.24-v1.70":
+                  raise SystemExit(f"ci-fast report availability span mismatch: {report_availability_signals}")
+              if "missingReportCount" not in report_availability_signals or "missingReports" not in report_availability_signals:
+                  raise SystemExit(f"ci-fast report availability missing decision signals: {report_availability_signals}")
               if coverage_work_item.get("status") != "closedReportOnly":
                   raise SystemExit(f"external shadow OCR coverage work item not closed: {coverage_work_item}")
               if coverage_work_item.get("targetBlocks"):
@@ -825,8 +834,13 @@ jobs:
               for needle in [
                   "externalArtifacts: readiness=readyForShadowOCR",
                   "shadowOCRAllowed=true",
+                  "externalTextBoxShadowOCR:",
+                  "ocrSucceeded=",
                   "nativeArtifactContractDryRunReport",
                   "nativeArtifactContractDryRunPreview",
+                  "appSideIdentity=activeArtifactIdentityRecorded",
+                  "convergenceExternalShadowOCRCoverage",
+                  "convergenceExternalTextBoxOrientation",
               ]:
                   if needle not in txt:
                       raise SystemExit(f"missing injected artifact TXT summary: {needle}")
@@ -942,7 +956,9 @@ jobs:
               retained_output_files = [line.strip() for line in retained_path.read_text(encoding="utf-8").splitlines() if line.strip()]
           external_readiness = (probe_report or {}).get("externalArtifactReadinessReport")
           external_shadow = (probe_report or {}).get("externalTextBoxShadowOCRReport")
+          contract_dry_run = (probe_report or {}).get("koharuNativeArtifactContractDryRunReport")
           identity_reconciliation = (probe_report or {}).get("koharuArtifactIdentityReconciliationReport")
+          convergence = (probe_report or {}).get("koharuArtifactConvergenceReport")
           app_identity_receipt = (external_readiness or {}).get("artifactIdentityReceipt") if external_readiness else None
           validator_orientation = (koharu_validation or {}).get("orientationMetadataSummary") if koharu_validation else None
           validator_identity = (koharu_validation or {}).get("artifactIdentitySummary") if koharu_validation else None
@@ -1010,6 +1026,32 @@ jobs:
               }
 
           identity_reconciliation_match = identity_match_summary(validator_identity, identity_reconciliation)
+
+          def signal_map(item):
+              return {
+                  signal.get("name"): signal.get("value")
+                  for signal in (item or {}).get("decisionSignals", [])
+                  if signal.get("name")
+              }
+
+          def convergence_item_summary(kind, item_id):
+              if kind == "workItem":
+                  items = (convergence or {}).get("workItemLedger") or []
+                  key = "workItemID"
+                  fields = ["status", "targetBlocks", "remainingBlockers", "nextAction"]
+              else:
+                  items = (convergence or {}).get("gateLedger") or []
+                  key = "gateID"
+                  fields = ["status", "affectedBlocks", "recommendedAction"]
+              item = next((candidate for candidate in items if candidate.get(key) == item_id), None)
+              if not item:
+                  return None
+              summary = {key: item_id}
+              for field in fields:
+                  summary[field] = item.get(field)
+              summary["decisionSignals"] = signal_map(item)
+              return summary
+
           manifest = {
               "version": "${{ steps.meta.outputs.version }}",
               "branch": "${{ steps.meta.outputs.branch }}",
@@ -1061,6 +1103,17 @@ jobs:
                   "contractExampleOnly": (app_identity_receipt or {}).get("contractExampleOnly"),
                   "files": (app_identity_receipt or {}).get("files"),
               },
+              "koharuNativeArtifactContractDryRunSummary": {
+                  "enabled": (contract_dry_run or {}).get("enabled"),
+                  "contractDryRunVerdict": (contract_dry_run or {}).get("contractDryRunVerdict"),
+                  "appSideArtifactIdentityVerdict": (contract_dry_run or {}).get("appSideArtifactIdentityVerdict"),
+                  "appSideArtifactIdentityFilesPresent": (contract_dry_run or {}).get("appSideArtifactIdentityFilesPresent"),
+                  "appSideArtifactIdentityHashesPresent": (contract_dry_run or {}).get("appSideArtifactIdentityHashesPresent"),
+                  "dryRunOnly": (contract_dry_run or {}).get("dryRunOnly"),
+                  "activeExportAllowed": (contract_dry_run or {}).get("activeExportAllowed"),
+                  "requiredFileCount": (contract_dry_run or {}).get("requiredFileCount"),
+                  "contractGateCount": (contract_dry_run or {}).get("contractGateCount"),
+              },
               "koharuArtifactIdentityReconciliationSummary": {
                   "enabled": (identity_reconciliation or {}).get("enabled"),
                   "identityReconciliationVerdict": (identity_reconciliation or {}).get("identityReconciliationVerdict"),
@@ -1111,6 +1164,19 @@ jobs:
                   "orientationShadowPathNotExecutedBlocks": (external_shadow or {}).get("orientationShadowPathNotExecutedBlocks"),
                   "orientationUnsupportedBlocks": (external_shadow or {}).get("orientationUnsupportedBlocks"),
                   "orientationUnsupportedReasonBreakdown": (external_shadow or {}).get("orientationUnsupportedReasonBreakdown"),
+              },
+              "koharuArtifactConvergenceGateSummary": {
+                  "enabled": (convergence or {}).get("enabled"),
+                  "evaluatedBlockCount": (convergence or {}).get("evaluatedBlockCount"),
+                  "workItemLedgerCount": (convergence or {}).get("workItemLedgerCount"),
+                  "gateCount": (convergence or {}).get("gateCount"),
+                  "externalShadowCoverageWorkItem": convergence_item_summary("workItem", "WI-external-textbox-shadow-ocr-coverage"),
+                  "externalShadowCoverageGate": convergence_item_summary("gate", "G-external-textbox-shadow-ocr-coverage"),
+                  "externalOrientationWorkItem": convergence_item_summary("workItem", "WI-external-textbox-orientation-shadow-path"),
+                  "externalOrientationGate": convergence_item_summary("gate", "G-external-textbox-orientation-shadow-path"),
+                  "artifactIdentityReconciliationWorkItem": convergence_item_summary("workItem", "WI-koharu-artifact-identity-reconciliation"),
+                  "artifactIdentityReconciliationGate": convergence_item_summary("gate", "G-koharu-artifact-identity-reconciliation-ready"),
+                  "ciFastReportAvailabilityGate": convergence_item_summary("gate", "G-ci-fast-report-availability"),
               },
               "modelDownloadLogPath": "${RESULT_ROOT}/model-download.log",
               "modelVerifyLogPath": "${RESULT_ROOT}/model-verify.log",
@@ -1265,13 +1331,36 @@ jobs:
               probe = json.load(open(probe_path, encoding="utf-8"))
               external = probe.get("externalArtifactReadinessReport") or {}
               receipt = external.get("artifactIdentityReceipt") or {}
+              external_shadow = probe.get("externalTextBoxShadowOCRReport") or {}
+              contract = probe.get("koharuNativeArtifactContractDryRunReport") or {}
               reconciliation = probe.get("koharuArtifactIdentityReconciliationReport") or {}
+              convergence = probe.get("koharuArtifactConvergenceReport") or {}
+              work_items = {item.get("workItemID"): item for item in convergence.get("workItemLedger") or []}
+              gates = {item.get("gateID"): item for item in convergence.get("gateLedger") or []}
+              def signals(item):
+                  return {signal.get("name"): signal.get("value") for signal in (item or {}).get("decisionSignals", [])}
+              def print_work_item(item_id):
+                  item = work_items.get(item_id) or {}
+                  print(f"- convergence workItem {item_id}: status={item.get('status')} targetBlocks={item.get('targetBlocks')} nextAction={item.get('nextAction')}")
+              def print_gate(gate_id):
+                  item = gates.get(gate_id) or {}
+                  print(f"- convergence gate {gate_id}: status={item.get('status')} affectedBlocks={item.get('affectedBlocks')} signals={signals(item)}")
               print(f"- app receipt verdict: {receipt.get('identityVerdict')}")
               print(f"- app receipt files present: {receipt.get('allRequiredFilesPresent')} hashes present: {receipt.get('allRequiredFilesHaveSHA256')}")
+              print(f"- contract dry-run verdict: {contract.get('contractDryRunVerdict')}")
+              print(f"- contract dry-run app identity: verdict={contract.get('appSideArtifactIdentityVerdict')} files={contract.get('appSideArtifactIdentityFilesPresent')} hashes={contract.get('appSideArtifactIdentityHashesPresent')}")
+              print(f"- contract dry-run safety: dryRunOnly={contract.get('dryRunOnly')} activeExportAllowed={contract.get('activeExportAllowed')}")
               print(f"- identity reconciliation verdict: {reconciliation.get('identityReconciliationVerdict')}")
               print(f"- identity reconciliation readyForCIManifestComparison: {reconciliation.get('readyForCIManifestComparison')}")
               for row in reconciliation.get("fileRows") or []:
                   print(f"- identity reconciliation {row.get('artifactKind')}: appSize={row.get('appSizeBytes')} appSHA256={row.get('appSHA256')} status={row.get('comparisonStatus')}")
+              print(f"- external shadow OCR: executed={external_shadow.get('executed')} candidateCount={external_shadow.get('candidateCount')} ocrExecutedCount={external_shadow.get('ocrExecutedCount')} ocrSucceededCount={external_shadow.get('ocrSucceededCount')}")
+              print(f"- external shadow orientation: verdict={external_shadow.get('orientationReadinessVerdict')} partial={external_shadow.get('orientationShadowPathPartialBlocks')} unsupported={external_shadow.get('orientationUnsupportedBlocks')} reasons={external_shadow.get('orientationUnsupportedReasonBreakdown')}")
+              print_work_item("WI-external-textbox-shadow-ocr-coverage")
+              print_gate("G-external-textbox-shadow-ocr-coverage")
+              print_work_item("WI-external-textbox-orientation-shadow-path")
+              print_gate("G-external-textbox-orientation-shadow-path")
+              print_gate("G-ci-fast-report-availability")
           orientation = data.get("orientationMetadataSummary") or {}
           print(f"- orientation sourceDirectionBreakdown: {orientation.get('sourceDirectionBreakdown')}")
           print(f"- orientation categoryBreakdown: {orientation.get('orientationCategoryBreakdown')}")

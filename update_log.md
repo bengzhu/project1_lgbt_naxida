@@ -116,6 +116,35 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.72：CI Artifact Convergence Gate Summary Closure
+日期：2026-07-07
+
+依据：v1.70-v1.71 已要求 Agent C 核对 coverage / orientation convergence gate、contract dry-run 和 App-side identity，但 `ci-artifact-manifest.json` 与 `ci-failure-summary.md` 仍主要打印 validator / readiness / shadow OCR 原始摘要，Agent C 需要深挖 `probe_report.json` 才能看到 work item / gate status、blocks 和 `G-ci-fast-report-availability` decision signals。
+
+核心变更：
+
+- `AITRANS CI Results` manifest 新增 `koharuNativeArtifactContractDryRunSummary` 和 `koharuArtifactConvergenceGateSummary`，直接汇总 contract dry-run、App-side identity、coverage / orientation work item 与 gate、identity reconciliation gate、`G-ci-fast-report-availability` 的 decision signals。
+- artifact-requested smoke 新增 `G-ci-fast-report-availability.requiredReportSpan = v1.24-v1.70`、`missingReportCount`、`missingReports` 断言，并扩展 TXT needles，确保 coverage / orientation / OCR success / App-side identity 摘要存在。
+- `ci-failure-summary.md` 的 Koharu artifact gate 区块补充 external shadow OCR counts、contract dry-run safety、coverage / orientation convergence work item / gate 状态和 report availability signals，降低 Agent C 找错包或漏看 blocker 的概率。
+- README、flow、测试规范同步 build-skip 快路径口径：只有 `xcodeBuildRequired=true` 时 `.xcresult` 是必需编译证据，build-skip 必须看 manifest skip reason。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/flow/flow.md`
+- `md/test/test.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`.github/workflows/ci-results.yml` YAML parse、workflow 内 6 个 Python heredoc 语法编译、`python3 -m json.tool` 解析 `test/1.ground_truth.json` / `output/probe_report.json` / `output/clean_text_diagnostic.json`、Koharu validator allow-missing、`contract_example_only_invalid --expect-fail`、新增 manifest summary helper 离线 smoke。
+
+遗留事项：
+
+- 该版本不新增 detector、OCR、LLM、PNG、renderer 或 active Koharu artifact；未重新跑完整漫画探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.71：Convergence Dependency Span / CI Handoff Documentation Closure
 日期：2026-07-07
 
