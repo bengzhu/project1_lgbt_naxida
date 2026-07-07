@@ -461,6 +461,9 @@ jobs:
           upload_command = packet.get("ghReleaseUploadCommand") or ""
           dispatch_command = packet.get("ghWorkflowDispatchCommand") or ""
           run_list_command = packet.get("ghRunListCommand") or ""
+          run_watch_command = packet.get("ghRunWatchCommand") or ""
+          run_download_command = packet.get("ghRunDownloadCommand") or ""
+          ci_result_review = packet.get("ciResultReview") or {}
           if packet.get("handoffReadyForReleaseUpload") is not False:
               raise SystemExit(f"fixture package must not be release-ready: {packet}")
           if packet.get("releaseArchiveInspectionPassed") is not True:
@@ -477,8 +480,57 @@ jobs:
               raise SystemExit(f"workflow dispatch command did not quote spaced inputs: {dispatch_command}")
           if "--repo Altman-sam114/x113451" not in dispatch_command or "--repo Altman-sam114/x113451" not in run_list_command:
               raise SystemExit(f"handoff commands missing repo: dispatch={dispatch_command} run_list={run_list_command}")
+          if "<run-id>" not in run_watch_command or "--exit-status" not in run_watch_command:
+              raise SystemExit(f"handoff packet missing run watch command: {run_watch_command}")
+          if "<run-id>" not in run_download_command or "/private/tmp/aitrans-koharu-handoff-<run-id>" not in run_download_command:
+              raise SystemExit(f"handoff packet missing run download command: {run_download_command}")
           if not (packet.get("releaseArchive") or {}).get("sha256"):
               raise SystemExit(f"package smoke missing archive sha: {packet}")
+          expected_identity_echo = packet.get("expectedCIManifestIdentityEcho") or {}
+          if not expected_identity_echo.get("koharuArtifactValidationIdentitySummaryExpected"):
+              raise SystemExit(f"handoff packet missing structured identity echo: {packet}")
+          if len(packet.get("expectedCloudIdentityRows") or []) < 5:
+              raise SystemExit(f"handoff packet missing cloud identity rows: {packet}")
+          manifest_assertions = packet.get("expectedCIManifestAssertions") or []
+          manifest_paths = {assertion.get("jsonPath") for assertion in manifest_assertions}
+          for expected_path in ["workflowName", "repository", "eventName", "probeMode", "koharuArtifactInjected", "koharuArtifactValidation.verdict", "xcodeBuildRequired"]:
+              if expected_path not in manifest_paths:
+                  raise SystemExit(f"handoff packet missing manifest assertion {expected_path}: {manifest_assertions}")
+          app_runtime_assertions = packet.get("expectedAppRuntimeAssertions") or []
+          if not any(assertion.get("jsonPath") == "externalArtifactReadinessReport.artifactIdentityReceipt.identityVerdict" for assertion in app_runtime_assertions):
+              raise SystemExit(f"handoff packet missing App runtime assertion: {app_runtime_assertions}")
+          if not any(assertion.get("jsonPath") == "koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison" for assertion in packet.get("expectedReconciliationAssertions") or []):
+              raise SystemExit(f"handoff packet missing reconciliation assertion: {packet}")
+          if not any(assertion.get("jsonPath") == "externalTextBoxShadowOCRSummary.ocrSucceededCount" for assertion in packet.get("expectedExternalShadowOCRAssertions") or []):
+              raise SystemExit(f"handoff packet missing external shadow OCR assertion: {packet}")
+          if not any(assertion.get("jsonPath") == "koharuArtifactConvergenceGateSummary.externalShadowCoverageGate.id" for assertion in packet.get("expectedConvergenceAssertions") or []):
+              raise SystemExit(f"handoff packet missing convergence assertion: {packet}")
+          if not (packet.get("expectedProbeTextNeedles") or []):
+              raise SystemExit(f"handoff packet missing probe text needles: {packet}")
+          if not any(assertion.get("jsonPath") == "probeMode" and assertion.get("operator") == "!=" for assertion in packet.get("staleRunRejectionAssertions") or []):
+              raise SystemExit(f"handoff packet missing structured stale run rejection assertion: {packet}")
+          required_files = set(ci_result_review.get("requiredResultFiles") or [])
+          for expected_file in ["ci-artifact-manifest.json", "junit.xml", "xcodebuild.log", "ci-failure-summary.md"]:
+              if expected_file not in required_files:
+                  raise SystemExit(f"CI result review missing required file {expected_file}: {ci_result_review}")
+          probe_files = set(ci_result_review.get("requiredProbeOutputFilesWhenProbeRuns") or [])
+          for expected_probe_file in ["output/probe_report.json", "output/clean_text_diagnostic.json", "output/1_ocr_probe_text.txt", "output/1_debug_boxes.png", "output/1_translated_overlay.png"]:
+              if expected_probe_file not in probe_files:
+                  raise SystemExit(f"CI result review missing probe output file {expected_probe_file}: {ci_result_review}")
+          identity_checks = ci_result_review.get("manifestIdentityChecks") or {}
+          for expected_key in ["workflowName", "branch", "commitSha", "runId", "runAttempt", "probeMode", "koharuArtifactReleaseTag", "koharuArtifactAsset", "koharuArtifactSha256"]:
+              if expected_key not in identity_checks:
+                  raise SystemExit(f"CI result review missing manifest identity key {expected_key}: {identity_checks}")
+          if identity_checks.get("probeMode") != "ci-fast" or identity_checks.get("koharuArtifactReleaseTag") != "fixture tag":
+              raise SystemExit(f"CI result review manifest identity mismatch: {identity_checks}")
+          required_koharu_checks = ci_result_review.get("requiredKoharuChecks") or []
+          if not any("ocrSucceededCount > 0" in check for check in required_koharu_checks):
+              raise SystemExit(f"CI result review missing shadow OCR success check: {ci_result_review}")
+          stale_rules = ci_result_review.get("staleArtifactRejectionRules") or []
+          if not any("commitSha" in rule for rule in stale_rules):
+              raise SystemExit(f"CI result review missing stale artifact rejection rule: {ci_result_review}")
+          if not any("probe_mode=skip" in rule for rule in stale_rules) or not any("releaseArchive.inspection" in rule for rule in stale_rules):
+              raise SystemExit(f"CI result review missing skip/local-proof rejection rule: {ci_result_review}")
           PY
             python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported > "$RESULT_ROOT/koharu-orientation-fixture-validation.json"
             python3 - <<'PY'

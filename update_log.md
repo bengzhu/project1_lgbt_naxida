@@ -116,6 +116,36 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.84：Koharu Handoff CI Result Review Packet
+日期：2026-07-07
+
+依据：v1.83 已把 Release archive 本地 inspection proof 写入 handoff packet，但真实 handoff 仍要等 GitHub Actions 手动 `ci-fast/full` 结果包证明 App runtime 实际读取同一组四件套。继续补交付后 Agent C 的云端结果包核对清单，避免错 run、旧包、错 commit 或只凭本地 inspection 放行。
+
+核心变更：
+
+- `handoffPacket` 新增 `ghRunWatchCommand` 和 `ghRunDownloadCommand`，用 `<run-id>` 占位指导人工在 workflow dispatch 后等待并下载 `AITRANS CI Results` 未加密结果包。
+- `handoffPacket.ciResultReview` 和 `expected*Assertions` 新增机器可读核对清单，覆盖必需结果文件、探针输出文件、manifest identity、Release tag / asset / SHA 回显、Koharu validator identity / orientation、逐文件 cloud identity rows、App runtime readiness、identity reconciliation、external shadow OCR coverage、orientation blockers、TXT 摘要 needles 和旧包拒收规则。
+- CI static package smoke 只断言这些 review / assertion 字段的 shape 和关键语义，不访问 GitHub、不下载 run、不启动模拟器、不把本地 `releaseArchive.inspection` 写成云端 runtime proof。
+- artifact contract README 和测试规范同步 v1.84 handoff 后置 review 口径。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`python3 -B -m py_compile scripts/validate-koharu-artifacts.py`、workflow YAML parse、JSON parse、Koharu valid / orientation / invalid fixture 矩阵、`test/koharu_artifacts --allow-missing`、fixture package handoff packet、`python3 -m json.tool /tmp/koharu-handoff-v184.json` 和新增 `ciResultReview` / structured assertions 字段 smoke。
+- 云端结果包待本版本 commit push 后确认；本版本只改 Python validator、workflow static smoke 和文档，预期 push CI 走 build-skip，但 workflow / validator 变化会触发 extended Koharu validator matrix 和 package smoke。
+
+遗留事项：
+
+- 本版本仍不生成真实 Koharu 四件套、不上传 Release、不触发手动 `ci-fast/full`，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 真实验收仍必须由人工提供外部 detector 输出，按 handoff packet 上传 Release、dispatch `ci-fast/full`，再用 `ciResultReview` 核对云端 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates。
+
 ### v1.83：Koharu Handoff Archive Inspection Proof
 日期：2026-07-07
 
@@ -139,7 +169,8 @@
 验证结果：
 
 - 本地轻量验证通过：`git diff --check`、`python3 -B -m py_compile scripts/validate-koharu-artifacts.py`、workflow YAML parse、JSON parse、Koharu valid / orientation / invalid fixture 矩阵、`test/koharu_artifacts --allow-missing`、handoff packet、package 拒绝 / 成功 zip 布局、`--inspect-release-archive` 成功 / 空 archive / 双 candidate archive 失败路径、fixture handoff inspection proof、active-like handoff ready + inspection proof。
-- 云端结果包待本修复 commit push 后确认：本版本只改 Python validator、workflow static smoke 和文档，预期 push CI 走 build-skip；workflow / validator 变化会触发 extended Koharu validator matrix 和 package smoke。
+- 云端 `AITRANS CI Results` run `28861251800` 通过，artifact `aitrans-ci-unversioned-smalldata_test--642c1e2d5683-run28861251800-attempt1` 已核对：`branch = smalldata_test`、`commitSha = 642c1e2d5683339c6c8ae33fc0ff1437bdf17bb7`、`runId = 28861251800`、`runAttempt = 1`、`workflowName = AITRANS CI Results`、`xcodeBuildRequired = false`、`xcodeBuildSkippedReason = non_app_build_related_fast_path`、`probeMode = skip`、`scopeDiffMethod = checkout_before`、`scopeDiffFallbackUsed = false`、`koharuValidatorExtendedRequired = true`；package smoke 证明 `releaseArchiveInspectionPassed = true`、`releaseArchiveInspectionVerdict = contractExampleOnly`、`candidateDirectoryCount = 1`、`expectedCIManifestEcho` 存在，`junit.xml` 为 5 tests / 0 failures。
+- 同轮 `AITRANS - Build IPA` run `28861251831` 通过。
 
 遗留事项：
 

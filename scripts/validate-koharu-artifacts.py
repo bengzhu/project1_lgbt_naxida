@@ -332,6 +332,51 @@ def handoff_packet(
     archive_path = str((archive_identity or {}).get("path") or "<archive-path>")
     archive_inspection = (archive_identity or {}).get("inspection") or {}
     archive_inspection_passed = bool(archive_inspection.get("validationPassed"))
+    artifact_identity = summary.get("artifactIdentitySummary") or {}
+    artifact_files = artifact_identity.get("artifactFiles") or {}
+    source_image_identity = artifact_identity.get("sourceImage") or {}
+    expected_orientation = archive_inspection.get("orientationMetadataSummary") or summary.get("orientationMetadataSummary")
+
+    def expected_assertion(
+        file: str,
+        json_path: str,
+        operator: str,
+        expected: Any,
+        *,
+        source: str = "handoffPacket",
+        required: bool = True,
+    ) -> dict[str, Any]:
+        return {
+            "file": file,
+            "jsonPath": json_path,
+            "operator": operator,
+            "expected": expected,
+            "source": source,
+            "required": required,
+        }
+
+    expected_cloud_identity_rows = [
+        {
+            "artifactKind": "SourceImage",
+            "expectedSizeBytes": source_image_identity.get("sizeBytes"),
+            "expectedSHA256": source_image_identity.get("sha256"),
+            "localIdentityPath": "handoffPacket.artifactIdentitySummary.sourceImage",
+            "ciManifestIdentityPath": "koharuArtifactValidationIdentitySummary.sourceImage",
+            "reconciliationRowSelector": "artifactKind == SourceImage",
+            "expectedComparisonStatus": "appReceiptReady",
+        }
+    ]
+    for artifact_kind in ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]:
+        file_identity_for_kind = artifact_files.get(artifact_kind) or {}
+        expected_cloud_identity_rows.append({
+            "artifactKind": artifact_kind,
+            "expectedSizeBytes": file_identity_for_kind.get("sizeBytes"),
+            "expectedSHA256": file_identity_for_kind.get("sha256"),
+            "localIdentityPath": f"handoffPacket.artifactIdentitySummary.artifactFiles.{artifact_kind}",
+            "ciManifestIdentityPath": f"koharuArtifactValidationIdentitySummary.artifactFiles.{artifact_kind}",
+            "reconciliationRowSelector": f"artifactKind == {artifact_kind}",
+            "expectedComparisonStatus": "appReceiptReady",
+        })
     release_upload_args = [
         "gh",
         "release",
@@ -360,6 +405,27 @@ def handoff_packet(
         f"koharu_artifact_sha256={archive_sha or '<archive-sha256>'}",
         "-f",
         "koharu_artifact_required=true",
+    ]
+    run_id_placeholder = "<run-id>"
+    ci_result_download_dir = f"/private/tmp/aitrans-koharu-handoff-{run_id_placeholder}"
+    run_watch_args = [
+        "gh",
+        "run",
+        "watch",
+        run_id_placeholder,
+        "--repo",
+        repo,
+        "--exit-status",
+    ]
+    run_download_args = [
+        "gh",
+        "run",
+        "download",
+        run_id_placeholder,
+        "--repo",
+        repo,
+        "--dir",
+        ci_result_download_dir,
     ]
     inspect_args = [
         "python3",
@@ -418,6 +484,103 @@ def handoff_packet(
             "koharuArtifactValidationOrientationSummary": "must match releaseArchive.inspection.orientationMetadataSummary after CI injection",
             "koharuArtifactIdentityReconciliationMatch.matchVerdict": "matched",
         },
+        "expectedCIManifestIdentityEcho": {
+            "koharuArtifactValidationIdentitySummaryExpected": archive_inspection.get("artifactIdentitySummary") or artifact_identity,
+            "koharuArtifactValidationOrientationSummaryExpected": expected_orientation,
+            "koharuArtifactIdentityReconciliationMatchExpected": {
+                "matchVerdict": "matched",
+                "mismatchCount": 0,
+                "minimumRowCount": 5,
+            },
+        },
+        "expectedCloudIdentityRows": expected_cloud_identity_rows,
+        "expectedCIManifestAssertions": [
+            expected_assertion("ci-artifact-manifest.json", "workflowName", "==", "AITRANS CI Results"),
+            expected_assertion("ci-artifact-manifest.json", "branch", "==", "smalldata_test"),
+            expected_assertion("ci-artifact-manifest.json", "repository", "==", repo),
+            expected_assertion("ci-artifact-manifest.json", "eventName", "==", "workflow_dispatch"),
+            expected_assertion("ci-artifact-manifest.json", "probeMode", "==", probe_mode),
+            expected_assertion("ci-artifact-manifest.json", "probeMode", "!=", "skip"),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactInjectionRequested", "==", True),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactInjectionRequired", "==", True),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactInjected", "==", True),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactReleaseTag", "==", release_tag),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactAsset", "==", archive_asset),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactSha256", "==", archive_sha or "<archive-sha256>"),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactValidation.verdict", "==", "readyForShadowOCR"),
+            expected_assertion("ci-artifact-manifest.json", "xcodeBuildRequired", "==", True),
+        ],
+        "expectedAppRuntimeAssertions": [
+            expected_assertion("output/probe_report.json", "externalArtifactReadinessReport.artifactIdentityReceipt.identityVerdict", "==", "activeArtifactIdentityRecorded"),
+            expected_assertion("output/probe_report.json", "externalArtifactReadinessReport.artifactIdentityReceipt.allRequiredFilesPresent", "==", True),
+            expected_assertion("output/probe_report.json", "externalArtifactReadinessReport.artifactIdentityReceipt.allRequiredFilesHaveSHA256", "==", True),
+            expected_assertion("output/probe_report.json", "externalArtifactReadinessReport.artifactIdentityReceipt.sourceImageSHA256Matches", "==", True),
+            expected_assertion("output/probe_report.json", "koharuNativeArtifactContractDryRunReport.contractDryRunVerdict", "==", "activeArtifactsReadyForShadowOCR"),
+            expected_assertion("output/probe_report.json", "koharuNativeArtifactContractDryRunReport.appSideArtifactIdentityVerdict", "==", "activeArtifactIdentityRecorded"),
+            expected_assertion("output/probe_report.json", "koharuNativeArtifactContractDryRunReport.appSideArtifactIdentityFilesPresent", "==", True),
+            expected_assertion("output/probe_report.json", "koharuNativeArtifactContractDryRunReport.appSideArtifactIdentityHashesPresent", "==", True),
+            expected_assertion("output/probe_report.json", "koharuNativeArtifactContractDryRunReport.dryRunOnly", "==", True),
+            expected_assertion("output/probe_report.json", "koharuNativeArtifactContractDryRunReport.activeExportAllowed", "==", False),
+        ],
+        "expectedReconciliationAssertions": [
+            expected_assertion("output/probe_report.json", "koharuArtifactIdentityReconciliationReport.enabled", "==", True),
+            expected_assertion("output/probe_report.json", "koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison", "==", True),
+            expected_assertion("output/probe_report.json", "koharuArtifactIdentityReconciliationReport.sourceImageSHA256Matches", "==", True),
+            expected_assertion("output/probe_report.json", "koharuArtifactIdentityReconciliationReport.fileRowCount", ">=", 5),
+            expected_assertion("output/probe_report.json", "koharuArtifactIdentityReconciliationReport.fileRows[*].comparisonStatus", "all==", "appReceiptReady"),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactIdentityReconciliationMatch.matchVerdict", "==", "matched"),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactIdentityReconciliationMatch.mismatchCount", "==", 0, required=False),
+        ],
+        "expectedExternalShadowOCRAssertions": [
+            expected_assertion("ci-artifact-manifest.json", "externalTextBoxShadowOCRSummary.executed", "==", True),
+            expected_assertion("ci-artifact-manifest.json", "externalTextBoxShadowOCRSummary.candidateCount", ">", 0),
+            expected_assertion("ci-artifact-manifest.json", "externalTextBoxShadowOCRSummary.ocrExecutedCount", ">", 0),
+            expected_assertion("ci-artifact-manifest.json", "externalTextBoxShadowOCRSummary.ocrSucceededCount", ">", 0),
+            expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.executed", "==", True),
+            expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.candidateCount", ">", 0),
+            expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.ocrExecutedCount", ">", 0),
+            expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.ocrSucceededCount", ">", 0),
+        ],
+        "expectedConvergenceAssertions": [
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactConvergenceGateSummary.externalShadowCoverageWorkItem.id", "==", "WI-external-textbox-shadow-ocr-coverage"),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactConvergenceGateSummary.externalShadowCoverageGate.id", "==", "G-external-textbox-shadow-ocr-coverage"),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactConvergenceGateSummary.externalOrientationWorkItem.id", "==", "WI-external-textbox-orientation-shadow-path"),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactConvergenceGateSummary.externalOrientationGate.id", "==", "G-external-textbox-orientation-shadow-path"),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactConvergenceGateSummary.artifactIdentityReconciliationWorkItem.id", "==", "WI-koharu-artifact-identity-reconciliation"),
+            expected_assertion("ci-artifact-manifest.json", "koharuArtifactConvergenceGateSummary.artifactIdentityReconciliationGate.id", "==", "G-koharu-artifact-identity-reconciliation-ready"),
+        ],
+        "expectedOrientationReview": {
+            "expectedOrientationMetadataSummary": expected_orientation,
+            "orientationShadowPathNeededTextBoxIDs": (expected_orientation or {}).get("orientationShadowPathNeededTextBoxIDs"),
+            "orientationPartialTextBoxIDs": (expected_orientation or {}).get("orientationPartialTextBoxIDs"),
+            "orientationUnsupportedTextBoxIDs": (expected_orientation or {}).get("orientationUnsupportedTextBoxIDs"),
+            "orientationUnsupportedReasonBreakdown": (expected_orientation or {}).get("orientationUnsupportedReasonBreakdown"),
+            "cloudSummaryPaths": [
+                "ci-artifact-manifest.json.koharuArtifactValidationOrientationSummary",
+                "ci-artifact-manifest.json.externalTextBoxShadowOCRSummary.orientation*",
+                "ci-artifact-manifest.json.koharuArtifactConvergenceGateSummary.externalOrientation*",
+                "output/probe_report.json.externalTextBoxShadowOCRReport.orientation*",
+            ],
+            "partialOrUnsupportedMustNotBeMarkedPassed": True,
+        },
+        "expectedProbeTextNeedles": [
+            "externalArtifacts",
+            "readyForShadowOCR",
+            "shadowOCRAllowed=true",
+            "externalTextBoxShadowOCR",
+            "ocrSucceeded",
+            "nativeArtifactContractDryRunReport",
+            "activeArtifactIdentityRecorded",
+            "convergenceExternalShadowOCRCoverage",
+            "convergenceExternalTextBoxOrientation",
+        ],
+        "staleRunRejectionAssertions": [
+            expected_assertion("ci-artifact-manifest.json", "commitSha", "==", "<reviewed-head-sha>", source="Agent C reviewed HEAD"),
+            expected_assertion("ci-artifact-manifest.json", "runId", "==", run_id_placeholder, source="selected GitHub run"),
+            expected_assertion("ci-artifact-manifest.json", "runAttempt", "==", "<downloaded-run-attempt>", source="downloaded artifact metadata"),
+            expected_assertion("ci-artifact-manifest.json", "artifactName", "contains", "smalldata_test"),
+            expected_assertion("ci-artifact-manifest.json", "probeMode", "!=", "skip"),
+        ],
         "ghReleaseUploadCommand": shlex.join(release_upload_args),
         "ghWorkflowDispatchCommand": shlex.join(workflow_args),
         "ghRunListCommand": shlex.join([
@@ -433,11 +596,73 @@ def handoff_packet(
             "--repo",
             repo,
         ]),
+        "ghRunWatchCommand": shlex.join(run_watch_args),
+        "ghRunDownloadCommand": shlex.join(run_download_args),
+        "ciResultReview": {
+            "runIdPlaceholder": run_id_placeholder,
+            "downloadDirectory": ci_result_download_dir,
+            "requiredResultFiles": [
+                "ci-artifact-manifest.json",
+                "junit.xml",
+                "xcodebuild.log",
+                "ci-failure-summary.md",
+            ],
+            "requiredProbeOutputFilesWhenProbeRuns": [
+                "output/probe_report.json",
+                "output/clean_text_diagnostic.json",
+                "output/1_ocr_probe_text.txt",
+                "output/1_debug_boxes.png",
+                "output/1_translated_overlay.png",
+            ],
+            "manifestIdentityChecks": {
+                "workflowName": "AITRANS CI Results",
+                "branch": "smalldata_test",
+                "commitSha": "must match the reviewed smalldata_test HEAD or workflow run headSha",
+                "runId": run_id_placeholder,
+                "runAttempt": "must match the downloaded run attempt",
+                "probeMode": probe_mode,
+                "koharuArtifactReleaseTag": release_tag,
+                "koharuArtifactAsset": archive_asset,
+                "koharuArtifactSha256": archive_sha or "<archive-sha256>",
+            },
+            "requiredKoharuChecks": [
+                "koharuArtifactValidation.verdict == readyForShadowOCR",
+                "koharuArtifactValidationIdentitySummary matches releaseArchive.inspection.artifactIdentitySummary",
+                "koharuArtifactValidationOrientationSummary matches releaseArchive.inspection.orientationMetadataSummary",
+                "externalArtifactReadinessSummary.readinessVerdict == readyForShadowOCR",
+                "externalTextBoxShadowOCRSummary.executed == true",
+                "externalTextBoxShadowOCRSummary.candidateCount > 0",
+                "externalTextBoxShadowOCRSummary.ocrExecutedCount > 0",
+                "externalTextBoxShadowOCRSummary.ocrSucceededCount > 0",
+                "koharuArtifactIdentityReconciliationMatch.matchVerdict == matched",
+            ],
+            "requiredAppRuntimeReportChecks": [
+                "externalArtifactReadinessReport.artifactIdentityReceipt.identityVerdict == activeArtifactIdentityRecorded",
+                "externalArtifactReadinessReport.artifactIdentityReceipt.sourceImageSHA256Matches == true",
+                "koharuNativeArtifactContractDryRunReport.contractDryRunVerdict == activeArtifactsReadyForShadowOCR",
+                "koharuNativeArtifactContractDryRunReport.dryRunOnly == true",
+                "koharuNativeArtifactContractDryRunReport.activeExportAllowed == false",
+                "koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison == true",
+                "koharuArtifactIdentityReconciliationReport.sourceImageSHA256Matches == true",
+                "externalTextBoxShadowOCRReport.executed == true",
+                "externalTextBoxShadowOCRReport.ocrSucceededCount > 0",
+                "koharuArtifactConvergenceReport consumes WI/G-external-textbox-shadow-ocr-coverage",
+                "orientation partial or unsupported blocks must not be marked passed",
+            ],
+            "staleArtifactRejectionRules": [
+                "Discard the result if manifest.commitSha does not match the reviewed commit.",
+                "Discard the result if manifest.runId or runAttempt differs from the downloaded run.",
+                "Discard older runs after any new push to smalldata_test.",
+                "Do not accept probe_mode=skip for Koharu artifact handoff.",
+                "Do not accept local releaseArchive.inspection as cloud App runtime proof.",
+            ],
+        },
         "notes": [
             "ghReleaseUploadCommand requires the named GitHub Release tag to already exist.",
             "Do not add --clobber unless a human intentionally wants to replace an existing asset.",
             "CI will reject archives that do not contain exactly one directory with the four canonical JSON files.",
             "releaseArchive.inspection is a local preflight proof; Agent C must still verify the cloud manifest and App runtime reports.",
+            "Use ghRunWatchCommand and ghRunDownloadCommand after workflow dispatch; replace <run-id> with the AITRANS CI Results run id.",
             "Agent C must still verify App runtime readiness, identity reconciliation, shadow OCR coverage, and orientation gates from the CI result artifact.",
         ],
     }
