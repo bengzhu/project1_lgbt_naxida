@@ -198,7 +198,7 @@ test/1.png
   -> TextRegion crop shadow 实验矩阵（control + pre-crop plan 候选，不替换主输入）
   -> TextBox plan 失败归因与晋级门槛审计（解释 blockers，不替换主输入）
   -> line-level TextBox / deskew shadow 验证（仅目标块，不替换主输入）
-  -> external artifact readiness gate（真实 TextBoxes / BubbleMask / SegmentMask 输入解析、校验、App 侧 identity receipt 和阻塞报告）
+  -> external artifact readiness gate（真实 TextBoxes / BubbleMask / SegmentMask 输入解析、校验、App 侧 identity receipt、sourceImageSHA256 match 和阻塞报告）
   -> external TextBoxes shadow OCR（仅 readiness ready 时执行，每块最多 1 个 externalArtifact.textBoxCrop，不替换主输入；ready 后 candidate coverage 也进入 convergence gate）
   -> external TextBox orientation-aware shadow OCR（真实 artifact ready 后对竖排 / 近 90 度倍数旋转 TextBox 执行有上限 rotation OCR；partial / unsupported / line polygon / 任意角度进入 convergence blockers，阻塞误判闭环）
   -> internal structure bottleneck routing（聚合 OCR / bubble / crop / translation / render 证据，只写报告和 TXT）
@@ -227,8 +227,8 @@ test/1.png
   -> Koharu Native SegmentMask Refinement-Lite report（TextBox 约束文字像素掩码 refinement 账本，report-only）
   -> Koharu Native Artifact Bundle-Lite report（TextBoxes / BubbleMask / SegmentMask / OCR / Translation / Render 结构一致性闭环，report-only）
   -> Koharu Native Promotion Gate-Lite report（探针驱动 native-lite artifact 晋级门槛 / candidate export preview，report-only）
-  -> Koharu Native Artifact Contract Dry-Run report（四件套 artifact contract 必需字段 / 禁止来源 / App 侧 identity receipt / validator 命令干跑，report-only）
-  -> Koharu Artifact Identity Reconciliation report（App runtime receipt -> CI manifest identity 字段路径 / size-SHA 对账表，report-only）
+  -> Koharu Native Artifact Contract Dry-Run report（四件套 artifact contract 必需字段 / sourceImageSHA256 / 禁止来源 / App 侧 identity receipt / validator 命令干跑，report-only）
+  -> Koharu Artifact Identity Reconciliation report（App runtime receipt -> CI manifest identity 字段路径 / source image SHA match / size-SHA 对账表，report-only）
   -> Koharu Artifact convergence report（canonical artifact 收敛矩阵、逐块 path、work item closure、linkage / external shadow coverage / orientation gate ledger）
   -> JSON / TXT / PNG 输出
 ```

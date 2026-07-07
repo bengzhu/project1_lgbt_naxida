@@ -771,12 +771,16 @@ jobs:
                   raise SystemExit(f"artifactIdentityReceipt.identityVerdict={receipt.get('identityVerdict')!r}")
               if receipt.get("allRequiredFilesPresent") is not True or receipt.get("allRequiredFilesHaveSHA256") is not True:
                   raise SystemExit(f"artifactIdentityReceipt files/hashes not ready: {receipt}")
+              if receipt.get("sourceImageSHA256Matches") is not True:
+                  raise SystemExit(f"artifactIdentityReceipt sourceImageSHA256Matches={receipt.get('sourceImageSHA256Matches')!r}: {receipt}")
               if contract.get("appSideArtifactIdentityVerdict") != "activeArtifactIdentityRecorded":
                   raise SystemExit(f"contract appSideArtifactIdentityVerdict={contract.get('appSideArtifactIdentityVerdict')!r}")
               if contract.get("appSideArtifactIdentityFilesPresent") is not True or contract.get("appSideArtifactIdentityHashesPresent") is not True:
                   raise SystemExit("contract app-side identity files/hashes are not present")
               if reconciliation.get("enabled") is not True:
                   raise SystemExit("koharuArtifactIdentityReconciliationReport missing or disabled")
+              if reconciliation.get("sourceImageSHA256Matches") is not True:
+                  raise SystemExit(f"identity reconciliation sourceImageSHA256Matches={reconciliation.get('sourceImageSHA256Matches')!r}: {reconciliation}")
               if reconciliation.get("readyForCIManifestComparison") is not True:
                   raise SystemExit(f"identity reconciliation not ready: {reconciliation.get('identityReconciliationVerdict')!r}")
               rows = reconciliation.get("fileRows") or []
@@ -1150,6 +1154,9 @@ jobs:
                   "allRequiredFilesPresent": (app_identity_receipt or {}).get("allRequiredFilesPresent"),
                   "allRequiredFilesHaveSHA256": (app_identity_receipt or {}).get("allRequiredFilesHaveSHA256"),
                   "sourceImage": (app_identity_receipt or {}).get("sourceImage"),
+                  "sourceImageSHA256Declared": (app_identity_receipt or {}).get("sourceImageSHA256Declared"),
+                  "sourceImageSHA256Expected": (app_identity_receipt or {}).get("sourceImageSHA256Expected"),
+                  "sourceImageSHA256Matches": (app_identity_receipt or {}).get("sourceImageSHA256Matches"),
                   "schemaVersion": (app_identity_receipt or {}).get("schemaVersion"),
                   "coordinateSpace": (app_identity_receipt or {}).get("coordinateSpace"),
                   "contractExampleOnly": (app_identity_receipt or {}).get("contractExampleOnly"),
@@ -1171,6 +1178,9 @@ jobs:
                   "identityReconciliationVerdict": (identity_reconciliation or {}).get("identityReconciliationVerdict"),
                   "appReceiptVerdict": (identity_reconciliation or {}).get("appReceiptVerdict"),
                   "contractDryRunVerdict": (identity_reconciliation or {}).get("contractDryRunVerdict"),
+                  "sourceImageSHA256Declared": (identity_reconciliation or {}).get("sourceImageSHA256Declared"),
+                  "sourceImageSHA256Expected": (identity_reconciliation or {}).get("sourceImageSHA256Expected"),
+                  "sourceImageSHA256Matches": (identity_reconciliation or {}).get("sourceImageSHA256Matches"),
                   "readyForCIManifestComparison": (identity_reconciliation or {}).get("readyForCIManifestComparison"),
                   "manualCIComparisonRequired": (identity_reconciliation or {}).get("manualCIComparisonRequired"),
                   "fileRowCount": (identity_reconciliation or {}).get("fileRowCount"),
@@ -1555,10 +1565,12 @@ jobs:
                   print(f"- convergence gate {gate_id}: status={item.get('status')} affectedBlocks={item.get('affectedBlocks')} signals={signals(item)}")
               print(f"- app receipt verdict: {receipt.get('identityVerdict')}")
               print(f"- app receipt files present: {receipt.get('allRequiredFilesPresent')} hashes present: {receipt.get('allRequiredFilesHaveSHA256')}")
+              print(f"- app receipt sourceImageSHA256: declared={receipt.get('sourceImageSHA256Declared')} expected={receipt.get('sourceImageSHA256Expected')} matches={receipt.get('sourceImageSHA256Matches')}")
               print(f"- contract dry-run verdict: {contract.get('contractDryRunVerdict')}")
               print(f"- contract dry-run app identity: verdict={contract.get('appSideArtifactIdentityVerdict')} files={contract.get('appSideArtifactIdentityFilesPresent')} hashes={contract.get('appSideArtifactIdentityHashesPresent')}")
               print(f"- contract dry-run safety: dryRunOnly={contract.get('dryRunOnly')} activeExportAllowed={contract.get('activeExportAllowed')}")
               print(f"- identity reconciliation verdict: {reconciliation.get('identityReconciliationVerdict')}")
+              print(f"- identity reconciliation sourceImageSHA256: declared={reconciliation.get('sourceImageSHA256Declared')} expected={reconciliation.get('sourceImageSHA256Expected')} matches={reconciliation.get('sourceImageSHA256Matches')}")
               print(f"- identity reconciliation readyForCIManifestComparison: {reconciliation.get('readyForCIManifestComparison')}")
               for row in reconciliation.get("fileRows") or []:
                   print(f"- identity reconciliation {row.get('artifactKind')}: appSize={row.get('appSizeBytes')} appSHA256={row.get('appSHA256')} status={row.get('comparisonStatus')}")

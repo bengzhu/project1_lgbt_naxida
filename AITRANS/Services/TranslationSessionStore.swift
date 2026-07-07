@@ -8526,6 +8526,9 @@ final class TranslationSessionStore: ObservableObject {
             manifest: manifest,
             activeArtifactsDirectory: activeArtifactsDirectory
         )
+        let expectedSourceImageSHA256 = artifactIdentityReceipt.files.first {
+            $0.artifactKind.lowercased() == "sourceimage"
+        }?.sha256
         let textBoxes = Self.decodeExternalArtifactList(
             MangaOverlayExternalTextBox.self,
             from: textBoxesURL,
@@ -8557,6 +8560,7 @@ final class TranslationSessionStore: ObservableObject {
             textBoxes: textBoxes,
             bubbleInstances: bubbleInstances,
             segmentMask: segmentMask,
+            expectedSourceImageSHA256: expectedSourceImageSHA256,
             imageWidth: imageWidth,
             imageHeight: imageHeight
         )
@@ -8595,6 +8599,7 @@ final class TranslationSessionStore: ObservableObject {
             notes.append("external detector artifact evidence is insufficient; stop before shadow OCR")
         }
         notes.append("artifactIdentityReceipt=\(artifactIdentityReceipt.identityVerdict)")
+        notes.append("sourceImageSHA256Matches=\(artifactIdentityReceipt.sourceImageSHA256Matches)")
         let shadowAllowed = readinessVerdict == "readyForShadowOCR"
             && activeArtifactsDirectory
             && manifest?.contractExampleOnly != true
@@ -8646,6 +8651,12 @@ final class TranslationSessionStore: ObservableObject {
             externalArtifactFileIdentityReceipt(kind: "SegmentMask", url: segmentMaskURL, required: true)
         ]
         let requiredFiles = files.filter(\.required)
+        let sourceImageSHA256Expected = files.first { $0.artifactKind.lowercased() == "sourceimage" }?.sha256
+        let sourceImageSHA256Declared = manifest?.sourceImageSHA256
+        let sourceImageSHA256Normalized = Self.normalizedExternalArtifactSHA256(sourceImageSHA256Declared)
+        let sourceImageSHA256Matches = sourceImageSHA256Normalized != nil
+            && sourceImageSHA256Expected != nil
+            && sourceImageSHA256Normalized == sourceImageSHA256Expected
         let allRequiredFilesPresent = requiredFiles.allSatisfy(\.exists)
         let allRequiredFilesHaveSHA256 = requiredFiles.allSatisfy { $0.sha256?.isEmpty == false }
         let identityVerdict: String
@@ -8659,6 +8670,12 @@ final class TranslationSessionStore: ObservableObject {
             identityVerdict = "blockedContractExampleOnly"
         } else if manifest?.sourceImageFieldPresent != true || manifest?.sourceImage.isEmpty == true {
             identityVerdict = "manifestSourceImageMissing"
+        } else if manifest?.sourceImageSHA256FieldPresent != true {
+            identityVerdict = "manifestSourceImageSHA256Missing"
+        } else if manifest?.sourceImageSHA256TypeValid != true || sourceImageSHA256Normalized == nil {
+            identityVerdict = "manifestSourceImageSHA256Invalid"
+        } else if !sourceImageSHA256Matches {
+            identityVerdict = "manifestSourceImageSHA256Mismatch"
         } else if manifest?.contractExampleOnlyFieldPresent != true {
             identityVerdict = "manifestContractExampleOnlyMissing"
         } else if manifest?.contractExampleOnlyTypeValid != true {
@@ -8668,6 +8685,9 @@ final class TranslationSessionStore: ObservableObject {
         }
         return MangaOverlayExternalArtifactIdentityReceipt(
             sourceImage: manifest?.sourceImage ?? "test/1.png",
+            sourceImageSHA256Declared: sourceImageSHA256Declared,
+            sourceImageSHA256Expected: sourceImageSHA256Expected,
+            sourceImageSHA256Matches: sourceImageSHA256Matches,
             schemaVersion: manifest?.schemaVersion,
             coordinateSpace: manifest?.coordinateSpace,
             contractExampleOnly: manifest?.contractExampleOnly ?? false,
@@ -8680,6 +8700,7 @@ final class TranslationSessionStore: ObservableObject {
             files: files,
             notes: [
                 "App-side receipt records the active bundle files actually visible to the probe runtime.",
+                "Manifest sourceImageSHA256 must match the runtime-visible bundle test/1.png SHA256 before active artifacts can be treated as ready.",
                 "Compare these SHA256 values with ci-artifact-manifest.koharuArtifactValidationIdentitySummary before treating injected artifacts as consumed by the App.",
                 "This receipt is report-only and does not create, copy, modify, or promote active artifacts."
             ]
@@ -8722,6 +8743,17 @@ final class TranslationSessionStore: ObservableObject {
             sizeBytes: sizeBytes,
             sha256: sha256
         )
+    }
+
+    private static func normalizedExternalArtifactSHA256(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let hexCharacters = Set("0123456789abcdef")
+        guard normalized.count == 64,
+              normalized.allSatisfy({ hexCharacters.contains($0) }) else {
+            return nil
+        }
+        return normalized
     }
 
     private func makeExternalTextBoxShadowOCRReport(
@@ -12345,9 +12377,11 @@ final class TranslationSessionStore: ObservableObject {
         let appSideArtifactIdentityVerdict = appSideArtifactIdentityReceipt?.identityVerdict ?? "notRecorded"
         let appSideArtifactIdentityFilesPresent = appSideArtifactIdentityReceipt?.allRequiredFilesPresent ?? false
         let appSideArtifactIdentityHashesPresent = appSideArtifactIdentityReceipt?.allRequiredFilesHaveSHA256 ?? false
+        let appSideSourceImageSHA256Matches = appSideArtifactIdentityReceipt?.sourceImageSHA256Matches ?? false
         let appSideArtifactIdentityReady = appSideArtifactIdentityVerdict == "activeArtifactIdentityRecorded"
             && appSideArtifactIdentityFilesPresent
             && appSideArtifactIdentityHashesPresent
+            && appSideSourceImageSHA256Matches
 
         func file(
             path: String,
@@ -12410,7 +12444,7 @@ final class TranslationSessionStore: ObservableObject {
         }
         let manifestFound = externalArtifactReadinessReport?.manifestFound ?? false
         let requiredFiles = [
-            file(path: "test/koharu_artifacts/1.manifest.json", kind: "manifest", found: manifestFound, fields: ["schemaVersion", "sourceImage=test/1.png", "coordinateSpace=originalImageTopLeftPixels", "contractExampleOnly=false"]),
+            file(path: "test/koharu_artifacts/1.manifest.json", kind: "manifest", found: manifestFound, fields: ["schemaVersion", "sourceImage=test/1.png", "sourceImageSHA256=\(externalArtifactReadinessReport?.coordinateValidation.expectedSourceImageSHA256 ?? "unknown")", "coordinateSpace=originalImageTopLeftPixels", "contractExampleOnly=false"]),
             file(path: "test/koharu_artifacts/1.textboxes.json", kind: "TextBoxes", found: externalArtifactReadinessReport?.textBoxesFound ?? false, fields: requiredByStage["TextBoxes"] ?? []),
             file(path: "test/koharu_artifacts/1.bubbles.json", kind: "BubbleMask", found: externalArtifactReadinessReport?.bubbleMaskFound ?? false, fields: requiredByStage["BubbleMask"] ?? []),
             file(path: "test/koharu_artifacts/1.segment_mask.json", kind: "SegmentMask", found: externalArtifactReadinessReport?.segmentMaskFound ?? false, fields: requiredByStage["SegmentMask"] ?? [])
@@ -12424,7 +12458,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-native-artifact-contract-dry-run-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "dry-run mutates OCR, translation, renderer, output files, active artifacts, or currentBlockSource", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-native-artifact-contract-dry-run-no-ground-truth", "No ground truth decision", "policy", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth selects export previews, file readiness, verdict, or next action", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-native-artifact-contract-dry-run-required-files", "Required files", "test/koharu_artifacts", requiredFiles.allSatisfy(\.activeFileFound) ? "passed" : "blocked", "manifest/TextBoxes/BubbleMask/SegmentMask active files are present", allBlockIndexes, "active four-file artifact contract is incomplete", "collectRealKoharuArtifactFourPack", [signal("missingArtifacts", (externalArtifactReadinessReport?.missingArtifacts ?? ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]).joined(separator: ","), source: "externalArtifactReadinessReport")]),
-            gate("G-native-artifact-contract-dry-run-app-side-identity", "App-side identity receipt", "ExternalArtifacts", appSideArtifactIdentityReady ? "passed" : "blocked", "App runtime records source image and active four-file size/SHA256 identity", allBlockIndexes, "CI validator identity cannot be matched to the files actually visible inside the App probe runtime", "compareAppReceiptWithCIManifestIdentity", [signal("appSideArtifactIdentityVerdict", appSideArtifactIdentityVerdict, source: "externalArtifactReadinessReport.artifactIdentityReceipt"), signal("appSideArtifactIdentityFilesPresent", String(appSideArtifactIdentityFilesPresent), source: "externalArtifactReadinessReport.artifactIdentityReceipt"), signal("appSideArtifactIdentityHashesPresent", String(appSideArtifactIdentityHashesPresent), source: "externalArtifactReadinessReport.artifactIdentityReceipt")]),
+            gate("G-native-artifact-contract-dry-run-app-side-identity", "App-side identity receipt", "ExternalArtifacts", appSideArtifactIdentityReady ? "passed" : "blocked", "App runtime records source image and active four-file size/SHA256 identity, and manifest sourceImageSHA256 matches the runtime source image SHA256", allBlockIndexes, "CI validator identity cannot be matched to the files actually visible inside the App probe runtime", "compareAppReceiptWithCIManifestIdentity", [signal("appSideArtifactIdentityVerdict", appSideArtifactIdentityVerdict, source: "externalArtifactReadinessReport.artifactIdentityReceipt"), signal("appSideArtifactIdentityFilesPresent", String(appSideArtifactIdentityFilesPresent), source: "externalArtifactReadinessReport.artifactIdentityReceipt"), signal("appSideArtifactIdentityHashesPresent", String(appSideArtifactIdentityHashesPresent), source: "externalArtifactReadinessReport.artifactIdentityReceipt"), signal("sourceImageSHA256Matches", String(appSideSourceImageSHA256Matches), source: "externalArtifactReadinessReport.artifactIdentityReceipt")]),
             gate("G-native-artifact-contract-dry-run-preview-blocked", "Preview export blocked", "candidateExportPreview", previews.allSatisfy { !$0.activeExportAllowed && !$0.wouldCreateActiveArtifact } ? "passed" : "blocked", "native-lite previews never create active artifacts", previews.map(\.blockIndex), "candidate preview writes test/koharu_artifacts or marks proxy exportable", "keepDryRunOnly", [signal("dryRunPreviewCount", String(previews.count), source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-native-artifact-contract-dry-run-validator-command", "Validator command", "validator", "passed", "validator commands are explicit and non-mutating", [], "Agent C cannot reproduce artifact contract readiness", "keepValidatorCommandsInReport", [signal("validatorCommands", "2", source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-native-artifact-contract-dry-run-active-readiness", "Active readiness", "ExternalArtifacts", activeReady ? "passed" : "blocked", "readinessVerdict=readyForShadowOCR and externalTextBoxesShadowOCRAllowed=true", allBlockIndexes, "Swift readiness and validator contract are not ready for shadow OCR", "collectAndValidateRealArtifacts", [signal("readinessVerdict", externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing", source: "externalArtifactReadinessReport")])
@@ -12868,6 +12902,7 @@ final class TranslationSessionStore: ObservableObject {
         textBoxes: [MangaOverlayExternalTextBox],
         bubbleInstances: [MangaOverlayExternalBubbleInstance],
         segmentMask: MangaOverlayExternalSegmentMaskSummary?,
+        expectedSourceImageSHA256: String?,
         imageWidth: Int,
         imageHeight: Int
     ) -> MangaOverlayExternalArtifactCoordinateValidation {
@@ -12878,6 +12913,13 @@ final class TranslationSessionStore: ObservableObject {
         let coordinateSpace = manifest?.coordinateSpace
         let sourceImageMissing = manifest != nil && (manifest?.sourceImageFieldPresent != true || manifest?.sourceImage.isEmpty == true)
         let sourceImageMatches = manifest == nil || manifest?.sourceImage == "test/1.png"
+        let sourceImageSHA256Declared = manifest?.sourceImageSHA256
+        let sourceImageSHA256Normalized = Self.normalizedExternalArtifactSHA256(sourceImageSHA256Declared)
+        let sourceImageSHA256FieldPresent = manifest?.sourceImageSHA256FieldPresent ?? false
+        let sourceImageSHA256TypeValid = manifest?.sourceImageSHA256TypeValid ?? false
+        let sourceImageSHA256Matches = sourceImageSHA256Normalized != nil
+            && expectedSourceImageSHA256 != nil
+            && sourceImageSHA256Normalized == expectedSourceImageSHA256
         let contractExampleOnlyMissing = manifest != nil && manifest?.contractExampleOnlyFieldPresent != true
         let contractExampleOnlyInvalid = manifest != nil && manifest?.contractExampleOnlyFieldPresent == true && manifest?.contractExampleOnlyTypeValid != true
         var errors: [String] = []
@@ -12895,6 +12937,15 @@ final class TranslationSessionStore: ObservableObject {
             errors.append("sourceImageMissing")
         } else if !sourceImageMatches {
             errors.append("sourceImageMismatch:\(manifest?.sourceImage ?? "nil")")
+        }
+        if manifest != nil {
+            if !sourceImageSHA256FieldPresent {
+                errors.append("sourceImageSHA256Missing")
+            } else if !sourceImageSHA256TypeValid || sourceImageSHA256Normalized == nil {
+                errors.append("sourceImageSHA256Invalid:\(sourceImageSHA256Declared ?? "nil")")
+            } else if !sourceImageSHA256Matches {
+                errors.append("sourceImageSHA256Mismatch:\(sourceImageSHA256Declared ?? "nil")")
+            }
         }
         let bounds = CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
         var invalidTextBoxes: [String] = []
@@ -12970,6 +13021,11 @@ final class TranslationSessionStore: ObservableObject {
             coordinateSpace: coordinateSpace,
             expectedCoordinateSpace: expected,
             sourceImageMatches: sourceImageMatches,
+            sourceImageSHA256: sourceImageSHA256Declared,
+            expectedSourceImageSHA256: expectedSourceImageSHA256,
+            sourceImageSHA256FieldPresent: sourceImageSHA256FieldPresent,
+            sourceImageSHA256TypeValid: sourceImageSHA256TypeValid,
+            sourceImageSHA256Matches: sourceImageSHA256Matches,
             imageWidth: imageWidth,
             imageHeight: imageHeight,
             bboxValidationPassed: invalidTextBoxes.isEmpty && invalidBubbles.isEmpty,
@@ -13067,6 +13123,15 @@ final class TranslationSessionStore: ObservableObject {
         if coordinateValidation.errors.contains(where: { $0.hasPrefix("sourceImageMismatch") }) {
             return "sourceImageMismatch"
         }
+        if coordinateValidation.errors.contains("sourceImageSHA256Missing") {
+            return "sourceImageSHA256Missing"
+        }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("sourceImageSHA256Invalid") }) {
+            return "sourceImageSHA256Invalid"
+        }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("sourceImageSHA256Mismatch") }) {
+            return "sourceImageSHA256Mismatch"
+        }
         if coordinateValidation.errors.contains("contractExampleOnlyMissing") {
             return "contractExampleOnlyMissing"
         }
@@ -13109,7 +13174,7 @@ final class TranslationSessionStore: ObservableObject {
             return "stopBecauseFixtureIsNotDetectorOutput"
         case "contractExampleOnlyMissing", "contractExampleOnlyInvalid", "generatedByMissing", "forbiddenGeneratedBy":
             return "stopUntilRealDetectorSourceDeclared"
-        case "schemaVersionMissing", "schemaVersionMismatch", "coordinateSpaceMissing", "coordinateSpaceMismatch", "sourceImageMissing", "sourceImageMismatch", "coordinateValidationFailed":
+        case "schemaVersionMissing", "schemaVersionMismatch", "coordinateSpaceMissing", "coordinateSpaceMismatch", "sourceImageMissing", "sourceImageMismatch", "sourceImageSHA256Missing", "sourceImageSHA256Invalid", "sourceImageSHA256Mismatch", "coordinateValidationFailed":
             return "stopUntilArtifactContractFixed"
         default:
             return "stopUntilArtifactsProvided"
@@ -20006,8 +20071,12 @@ final class TranslationSessionStore: ObservableObject {
         let allRowsReady = rows.allSatisfy { $0.comparisonStatus == "appReceiptReady" }
         let appReceiptVerdict = receipt?.identityVerdict ?? "notRecorded"
         let contractVerdict = koharuNativeArtifactContractDryRunReport?.contractDryRunVerdict ?? "notExecuted"
+        let sourceImageSHA256Declared = receipt?.sourceImageSHA256Declared
+        let sourceImageSHA256Expected = receipt?.sourceImageSHA256Expected
+        let sourceImageSHA256Matches = receipt?.sourceImageSHA256Matches ?? false
         let readyForCIManifestComparison = appReceiptVerdict == "activeArtifactIdentityRecorded"
             && allRowsReady
+            && sourceImageSHA256Matches
             && koharuNativeArtifactContractDryRunReport?.appSideArtifactIdentityFilesPresent == true
             && koharuNativeArtifactContractDryRunReport?.appSideArtifactIdentityHashesPresent == true
         let identityReconciliationVerdict: String
@@ -20046,6 +20115,7 @@ final class TranslationSessionStore: ObservableObject {
                 [
                     signal("appReceiptVerdict", appReceiptVerdict, source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
                     signal("allRowsReady", String(allRowsReady), source: "koharuArtifactIdentityReconciliationReport"),
+                    signal("sourceImageSHA256Matches", String(sourceImageSHA256Matches), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
                     signal("contractDryRunVerdict", contractVerdict, source: "koharuNativeArtifactContractDryRunReport")
                 ]
             ),
@@ -20060,6 +20130,9 @@ final class TranslationSessionStore: ObservableObject {
                 readyForCIManifestComparison ? "compareAppReceiptWithCIManifestIdentitySummary" : "restoreAppSideArtifactIdentityReceipt",
                 [
                     signal("readyForCIManifestComparison", String(readyForCIManifestComparison), source: "koharuArtifactIdentityReconciliationReport"),
+                    signal("sourceImageSHA256Declared", sourceImageSHA256Declared ?? "nil", source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("sourceImageSHA256Expected", sourceImageSHA256Expected ?? "nil", source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("sourceImageSHA256Matches", String(sourceImageSHA256Matches), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
                     signal("manualCIComparisonRequired", "true", source: "koharuArtifactIdentityReconciliationReport")
                 ]
             )
@@ -20074,6 +20147,9 @@ final class TranslationSessionStore: ObservableObject {
             fileRowCount: rows.count,
             gateCount: gates.count,
             sourceImage: receipt?.sourceImage ?? "test/1.png",
+            sourceImageSHA256Declared: sourceImageSHA256Declared,
+            sourceImageSHA256Expected: sourceImageSHA256Expected,
+            sourceImageSHA256Matches: sourceImageSHA256Matches,
             activeInputDirectory: "test/koharu_artifacts",
             appReceiptVerdict: appReceiptVerdict,
             contractDryRunVerdict: contractVerdict,
@@ -20098,6 +20174,7 @@ final class TranslationSessionStore: ObservableObject {
             notes: [
                 "koharuArtifactIdentityReconciliationReport converts the App-side runtime artifactIdentityReceipt into a stable Agent C / CI comparison ledger.",
                 "The report intentionally does not read ci-artifact-manifest.json; GitHub Actions or Agent C compare the listed field paths against App receipt size/SHA256 values after export.",
+                "Manifest sourceImageSHA256 must match the App runtime source image SHA256 before readyForCIManifestComparison can become true.",
                 "SourceImage plus manifest, TextBoxes, BubbleMask, and SegmentMask are all required before readyForCIManifestComparison can become true.",
                 "This is a P0 real-artifact handoff evidence gate, not a detector, OCR, translation, renderer, or active artifact promotion.",
                 "No OCR, LLM, PNG, prompt/model, renderer, safeLayoutRect, glyphMaskFillRects, finalTextUsedForTranslation, blockPassed, failureCategory, currentBlockSource, or active test/koharu_artifacts behavior changes are made."

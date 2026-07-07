@@ -3790,6 +3790,9 @@ struct MangaKoharuArtifactIdentityReconciliationReport: Equatable, Codable, Send
     var fileRowCount: Int
     var gateCount: Int
     var sourceImage: String
+    var sourceImageSHA256Declared: String?
+    var sourceImageSHA256Expected: String?
+    var sourceImageSHA256Matches: Bool
     var activeInputDirectory: String
     var appReceiptVerdict: String
     var contractDryRunVerdict: String
@@ -4982,6 +4985,9 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
     var sourceImage: String
     var sourceImageFieldPresent: Bool
     var sourceImageTypeValid: Bool
+    var sourceImageSHA256: String?
+    var sourceImageSHA256FieldPresent: Bool
+    var sourceImageSHA256TypeValid: Bool
     var coordinateSpace: String
     var contractExampleOnly: Bool
     var contractExampleOnlyFieldPresent: Bool
@@ -4998,6 +5004,11 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
         case sourceImage
         case sourceImageFieldPresent
         case sourceImageTypeValid
+        case sourceImageSHA256
+        case sourceImageSha256
+        case sourceImageSha
+        case sourceImageSHA256FieldPresent
+        case sourceImageSHA256TypeValid
         case coordinateSpace
         case contractExampleOnly
         case contractExampleOnlyFieldPresent
@@ -5017,6 +5028,14 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
         let decodedSourceImage = try? container.decodeIfPresent(String.self, forKey: .sourceImage)
         sourceImageTypeValid = !sourceImageFieldPresent || decodedSourceImage != nil
         sourceImage = decodedSourceImage ?? ""
+        sourceImageSHA256FieldPresent = container.contains(.sourceImageSHA256)
+            || container.contains(.sourceImageSha256)
+            || container.contains(.sourceImageSha)
+        let decodedSourceImageSHA256 = (try? container.decodeIfPresent(String.self, forKey: .sourceImageSHA256))
+            ?? (try? container.decodeIfPresent(String.self, forKey: .sourceImageSha256))
+            ?? (try? container.decodeIfPresent(String.self, forKey: .sourceImageSha))
+        sourceImageSHA256TypeValid = !sourceImageSHA256FieldPresent || decodedSourceImageSHA256 != nil
+        sourceImageSHA256 = decodedSourceImageSHA256
         coordinateSpace = try container.decodeIfPresent(String.self, forKey: .coordinateSpace) ?? ""
         contractExampleOnlyFieldPresent = container.contains(.contractExampleOnly)
         let decodedContractExampleOnly = try? container.decodeIfPresent(Bool.self, forKey: .contractExampleOnly)
@@ -5180,6 +5199,11 @@ struct MangaOverlayExternalArtifactCoordinateValidation: Equatable, Codable, Sen
     var coordinateSpace: String?
     var expectedCoordinateSpace: String
     var sourceImageMatches: Bool
+    var sourceImageSHA256: String?
+    var expectedSourceImageSHA256: String?
+    var sourceImageSHA256FieldPresent: Bool
+    var sourceImageSHA256TypeValid: Bool
+    var sourceImageSHA256Matches: Bool
     var imageWidth: Int
     var imageHeight: Int
     var bboxValidationPassed: Bool
@@ -5201,6 +5225,9 @@ struct MangaOverlayExternalArtifactFileIdentityReceipt: Equatable, Codable, Send
 
 struct MangaOverlayExternalArtifactIdentityReceipt: Equatable, Codable, Sendable {
     var sourceImage: String
+    var sourceImageSHA256Declared: String?
+    var sourceImageSHA256Expected: String?
+    var sourceImageSHA256Matches: Bool
     var schemaVersion: String?
     var coordinateSpace: String?
     var contractExampleOnly: Bool

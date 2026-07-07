@@ -116,6 +116,39 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.80：App Runtime Source Image SHA Gate
+日期：2026-07-07
+
+依据：v1.79 已让 Python validator / CI static smoke 要求 Koharu active manifest 声明 `sourceImageSHA256` 并匹配当前仓库 `test/1.png`，但 Swift App runtime readiness 仍主要核对 source image 路径和 App 可见文件 size / SHA256。如果外部 artifact manifest 在 App 探针内缺失、格式错误或声明了旧图 SHA，必须由 App 侧 readiness、identity receipt、contract dry-run 和 identity reconciliation 同步阻塞，避免 validator 与 runtime handoff 口径分叉。
+
+核心变更：
+
+- `MangaOverlayExternalArtifactManifest` 解析 `sourceImageSHA256`，并记录字段存在性、类型有效性和标准化 SHA。
+- `externalArtifactReadinessReport.coordinateValidation` 新增 declared / expected / fieldPresent / typeValid / matches 字段；Swift readiness 现在对缺失、非 64 位 hex 或不匹配 runtime bundle `test/1.png` SHA 的 manifest 输出 `sourceImageSHA256Missing` / `sourceImageSHA256Invalid` / `sourceImageSHA256Mismatch`，并阻止 `readyForShadowOCR`。
+- `externalArtifactReadinessReport.artifactIdentityReceipt` 新增 `sourceImageSHA256Declared`、`sourceImageSHA256Expected`、`sourceImageSHA256Matches`；`identityVerdict = activeArtifactIdentityRecorded` 现在要求 manifest SHA 与 App runtime 可见 source image SHA 匹配。
+- `koharuNativeArtifactContractDryRunReport` 的 manifest required fields 增加 `sourceImageSHA256=<expected>`，App-side identity gate 也消费 `sourceImageSHA256Matches`。
+- `koharuArtifactIdentityReconciliationReport` 顶层新增 declared / expected / matches，`readyForCIManifestComparison` 只有在 source image SHA match 为 true 时才能通过。
+- `1_ocr_probe_text.txt` 摘要、CI post-export smoke、`ci-artifact-manifest.json` 的 App receipt / identity reconciliation summaries 和 failure summary 都透传 App runtime source image SHA declared / expected / matches。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：由于修改 Swift 和 workflow，预期 push CI 需要 `xcodeBuildRequired = true`，默认 `probeMode = skip` 不会运行 App 探针；App runtime source image SHA smoke 会在后续手动 `ci-fast/full` 且注入 Koharu artifact 时生效。
+
+遗留事项：
+
+- 本版本不新增真实 Koharu 四件套，不改变 OCR / LLM / renderer / 覆盖图 / active artifact，不追加 `metrics/version_history.csv`。
+- 需要真实 handoff 验收时，仍需手动 `workflow_dispatch` 选择 `ci-fast` 或 `full` 并注入 Koharu artifact archive，核对 App receipt 与 reconciliation 的 `sourceImageSHA256Matches = true`。
+
 ### v1.79：Koharu Source Image SHA Contract Gate
 日期：2026-07-07
 
