@@ -116,6 +116,45 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.69：External Artifact Validator / Shadow OCR Coverage Closure Gate
+日期：2026-07-07
+
+依据：v1.65-v1.68 已把真实 Koharu artifact 的 validator identity、App-side receipt、identity reconciliation 和 external shadow OCR coverage 接进 CI / convergence，但仍有两个闭环风险：一是 validator 对 active manifest 缺 `sourceImage` 或缺 `contractExampleOnly` 会走默认值，可能放宽真实 artifact 准入；二是 convergence 的 external shadow OCR coverage 只要求 `executed = true` 和 `candidateCount > 0`，没有把实际 crop OCR 执行数 / 成功数纳入闭合条件，且 ready artifact 未闭合时 gate status 仍是 warning。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 现在要求 manifest 显式声明 `sourceImage = test/1.png` 和布尔型 `contractExampleOnly`；缺失分别输出 `sourceImageMissing` / `contractExampleOnlyMissing`，非布尔 `contractExampleOnly` 输出 `contractExampleOnlyInvalid:*`，均阻止 `readyForShadowOCR`。
+- 新增 invalid fixtures：`source_image_missing` 与 `contract_example_only_missing`，并接入 GitHub Actions extended Koharu validator matrix。
+- `koharuArtifactConvergenceReport` 的 `WI/G-external-textbox-shadow-ocr-coverage` 在真实 artifact ready 后新增 `ocrExecutedCount > 0` 和 `ocrSucceededCount > 0` 闭合条件；未闭合时 gate status 从 warning 升为 blocked。
+- `G-ci-fast-report-availability` 的 threshold / decision signals 更新为当前 v1.24-v1.68 依赖集合，并写出 `missingReportCount`、`missingReports` 和 `requiredReportSpan`，避免旧 v1.24-v1.27 文案误导 Agent C。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/artifact_contract/examples/invalid/source_image_missing/*`
+- `md/koharu研究/artifact_contract/examples/invalid/contract_example_only_missing/*`
+- `update_log.md`
+
+验证结果：
+
+- 本轮本地轻量验证见最终回复。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked / identity missing。
+- 该版本不新增 OCR / LLM / PNG，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.68：Koharu Artifact Identity Reconciliation Gate
 日期：2026-07-06
 

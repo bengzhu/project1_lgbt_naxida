@@ -539,10 +539,16 @@ def verdict_for(
         return "coordinateSpaceMissing"
     if any(error.startswith("coordinateSpaceMismatch") for error in coordinate_errors):
         return "coordinateSpaceMismatch"
+    if any(error.startswith("sourceImageMissing") for error in coordinate_errors):
+        return "sourceImageMissing"
     if any(error.startswith("sourceImageMismatch") for error in coordinate_errors):
         return "sourceImageMismatch"
     if coordinate_errors:
         return "coordinateValidationFailed"
+    if any(error.startswith("contractExampleOnlyMissing") for error in source_policy_errors):
+        return "contractExampleOnlyMissing"
+    if any(error.startswith("contractExampleOnlyInvalid") for error in source_policy_errors):
+        return "contractExampleOnlyInvalid"
     if any(error.startswith("generatedByMissing") for error in source_policy_errors):
         return "generatedByMissing"
     if any(error.startswith("forbiddenGeneratedBy") for error in source_policy_errors):
@@ -567,13 +573,19 @@ def next_action_for(verdict: str) -> str:
         return "stopUntilParserFixed"
     if verdict == "contractExampleOnly":
         return "stopBecauseFixtureIsNotDetectorOutput"
-    if verdict in {"generatedByMissing", "forbiddenGeneratedBy"}:
+    if verdict in {
+        "contractExampleOnlyMissing",
+        "contractExampleOnlyInvalid",
+        "generatedByMissing",
+        "forbiddenGeneratedBy",
+    }:
         return "stopUntilRealDetectorSourceDeclared"
     if verdict in {
         "schemaVersionMissing",
         "schemaVersionMismatch",
         "coordinateSpaceMissing",
         "coordinateSpaceMismatch",
+        "sourceImageMissing",
         "sourceImageMismatch",
         "coordinateValidationFailed",
     }:
@@ -659,11 +671,21 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
             coordinate_errors.append(f"coordinateSpaceMismatch:{coordinate_space}")
 
     source_image = manifest.get("sourceImage") if manifest else None
-    if source_image not in (None, EXPECTED_SOURCE_IMAGE):
-        coordinate_errors.append(f"sourceImageMismatch:{source_image}")
+    if manifest is not None:
+        if source_image is None:
+            coordinate_errors.append("sourceImageMissing")
+        elif source_image != EXPECTED_SOURCE_IMAGE:
+            coordinate_errors.append(f"sourceImageMismatch:{source_image}")
 
-    contract_example_only = bool(manifest.get("contractExampleOnly")) if manifest else False
-    source_policy_errors = generated_by_policy_errors(manifest, contract_example_only)
+    source_policy_errors: list[str] = []
+    contract_example_only_raw = manifest.get("contractExampleOnly") if manifest else None
+    if manifest is not None:
+        if "contractExampleOnly" not in manifest:
+            source_policy_errors.append("contractExampleOnlyMissing")
+        elif not isinstance(contract_example_only_raw, bool):
+            source_policy_errors.append(f"contractExampleOnlyInvalid:{contract_example_only_raw}")
+    contract_example_only = contract_example_only_raw if isinstance(contract_example_only_raw, bool) else False
+    source_policy_errors.extend(generated_by_policy_errors(manifest, contract_example_only))
     invalid_text_box_ids = validate_boxes(text_boxes, "textBox", image_width, image_height, coordinate_errors)
     invalid_bubble_ids = validate_boxes(bubbles, "bubble", image_width, image_height, coordinate_errors)
     orientation_metadata_summary = summarize_orientation_metadata(text_boxes)

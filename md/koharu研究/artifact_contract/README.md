@@ -87,7 +87,7 @@ validator 只读指定目录，不复制、不生成 active artifact。输出 JS
 - 将 Koharu `TextRegion` 的 `x/y/width/height` 转成 `1.textboxes.json` 的 `bbox`，保留 `confidence`、`detector`、`linePolygons`、`sourceDirection`、`rotationDegrees` / `rotationDeg`、`detectedFontSizePx` 等可选字段。
 - 将 speech bubble instance 结果转成 `1.bubbles.json`，每个 instance 至少包含 `id`、`bbox`，建议包含 `maskValue` 和 `pixelCount`。
 - 将文字像素 mask 统计转成 `1.segment_mask.json`，至少包含与 `test/1.png` 一致的 `width = 576`、`height = 1280`；建议包含 `glyphPixelCount` 和 `connectedComponentCount`。
-- `1.manifest.json` 必须声明 `schemaVersion = aitrans.koharu_artifact_contract.v1`、`sourceImage = test/1.png`、`coordinateSpace = originalImageTopLeftPixels`、`contractExampleOnly = false`，并记录 `generatedBy`。
+- `1.manifest.json` 必须显式声明 `schemaVersion = aitrans.koharu_artifact_contract.v1`、`sourceImage = test/1.png`、`coordinateSpace = originalImageTopLeftPixels`、`contractExampleOnly = false`，并记录 `generatedBy`；缺 `sourceImage`、缺 `contractExampleOnly` 或 `contractExampleOnly` 不是布尔值都会被 validator 阻塞。
 - manifest 路径字段不得使用绝对路径或 `..` 逃逸 active 目录。
 - 转换后先运行 validator；只有 `readyForShadowOCR = true` 且 `externalTextBoxesShadowOCRAllowed = true`，App 探针才允许执行 external TextBoxes shadow OCR。
 

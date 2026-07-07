@@ -20961,11 +20961,12 @@ final class TranslationSessionStore: ObservableObject {
         let externalShadowOCRExecuted = externalTextBoxShadowOCRReport?.executed == true
         let externalShadowCandidateCount = externalTextBoxShadowOCRReport?.candidateCount ?? 0
         let externalShadowOCRExecutedCount = externalTextBoxShadowOCRReport?.ocrExecutedCount ?? 0
+        let externalShadowOCRSucceededCount = externalTextBoxShadowOCRReport?.ocrSucceededCount ?? 0
         let externalShadowSkippedBlocks = uniqueSorted(externalTextBoxShadowOCRReport?.skippedBlocks ?? [])
         let externalShadowCoverageBlockedBlocks: [Int]
         if !externalReady {
             externalShadowCoverageBlockedBlocks = []
-        } else if !externalContractDryRunReady || !externalIdentityReconciliationReady || externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted || externalShadowCandidateCount <= 0 {
+        } else if !externalContractDryRunReady || !externalIdentityReconciliationReady || externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted || externalShadowCandidateCount <= 0 || externalShadowOCRExecutedCount <= 0 || externalShadowOCRSucceededCount <= 0 {
             externalShadowCoverageBlockedBlocks = allBlockIndexes
         } else {
             externalShadowCoverageBlockedBlocks = []
@@ -20981,6 +20982,10 @@ final class TranslationSessionStore: ObservableObject {
             externalShadowCoverageNextAction = "runExternalTextBoxShadowOCR"
         } else if externalShadowCandidateCount <= 0 {
             externalShadowCoverageNextAction = "fixExternalTextBoxBlockAlignment"
+        } else if externalShadowOCRExecutedCount <= 0 {
+            externalShadowCoverageNextAction = "runExternalTextBoxShadowOCRCandidates"
+        } else if externalShadowOCRSucceededCount <= 0 {
+            externalShadowCoverageNextAction = "fixExternalTextBoxCropOCRInputs"
         } else {
             externalShadowCoverageNextAction = "keepExternalTextBoxShadowOCRReportOnly"
         }
@@ -20997,6 +21002,10 @@ final class TranslationSessionStore: ObservableObject {
             externalShadowCoverageWorkItemStatus = "blockedByExternalShadowOCRNotExecuted"
         } else if externalShadowCandidateCount <= 0 {
             externalShadowCoverageWorkItemStatus = "blockedByNoExternalShadowCandidates"
+        } else if externalShadowOCRExecutedCount <= 0 {
+            externalShadowCoverageWorkItemStatus = "blockedByNoExternalShadowOCRExecutions"
+        } else if externalShadowOCRSucceededCount <= 0 {
+            externalShadowCoverageWorkItemStatus = "blockedByNoExternalShadowOCRSuccess"
         } else {
             externalShadowCoverageWorkItemStatus = "closedReportOnly"
         }
@@ -21007,9 +21016,11 @@ final class TranslationSessionStore: ObservableObject {
             + (externalTextBoxShadowOCRReport == nil && externalReady ? ["externalTextBoxShadowOCRReport missing despite ready external artifacts"] : [])
             + (externalTextBoxShadowOCRReport != nil && externalReady && !externalShadowOCRExecuted ? ["externalTextBoxShadowOCRReport.executed is false despite ready external artifacts"] : [])
             + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowCandidateCount <= 0 ? ["external TextBoxes did not produce any block-matched shadow OCR candidates"] : [])
+            + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowOCRExecutedCount <= 0 ? ["external TextBox shadow OCR did not execute any candidate crops"] : [])
+            + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowOCRSucceededCount <= 0 ? ["external TextBox shadow OCR did not produce any successful crop OCR results"] : [])
         )
         let externalShadowCoverageGateStatus = externalReady
-            ? (externalShadowCoverageBlockedBlocks.isEmpty ? "passed" : "warning")
+            ? (externalShadowCoverageBlockedBlocks.isEmpty ? "passed" : "blocked")
             : "open"
         let externalShadowCoverageDecisionSignals = [
             signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"),
@@ -21029,6 +21040,7 @@ final class TranslationSessionStore: ObservableObject {
             signal("shadowExecuted", String(externalShadowOCRExecuted), source: "externalTextBoxShadowOCRReport"),
             signal("candidateCount", String(externalShadowCandidateCount), source: "externalTextBoxShadowOCRReport"),
             signal("ocrExecutedCount", String(externalShadowOCRExecutedCount), source: "externalTextBoxShadowOCRReport"),
+            signal("ocrSucceededCount", String(externalShadowOCRSucceededCount), source: "externalTextBoxShadowOCRReport"),
             signal("skippedBlocks", joined(externalShadowSkippedBlocks), source: "externalTextBoxShadowOCRReport"),
             signal("skippedBlockCount", String(externalShadowSkippedBlocks.count), source: "externalTextBoxShadowOCRReport")
         ]
@@ -21298,11 +21310,11 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-convergence-promotion-lite-textbox-segment-linkage", name: "Convergence promotion-lite TextBox SegmentMask linkage", scope: "TextBoxes->SegmentMask", status: promotionLinkageBlockedBlocks.isEmpty ? "passed" : "warning", threshold: "promotion linkage blocked blocks are surfaced in convergence work items and block paths", affected: promotionLinkageBlockedBlocks, failureMeans: "convergence hides SegmentMask promotion blockers caused by weak/fallback/rejected/wrong-bubble TextBox linkage", action: promotionLinkageBlockedBlocks.isEmpty ? "keepNativePromotionGateLiteReportOnly" : "auditTextBoxSegmentLinkageBeforePromotion", decisions: [signal("textBoxSegmentLinkageBlockedBlocks", joined(promotionLinkageBlockedBlocks), source: "koharuNativePromotionGateLiteReport"), signal("textBoxSegmentLinkBreakdown", joinedBreakdown(koharuNativePromotionGateLiteReport?.textBoxSegmentLinkBreakdown ?? [:]), source: "koharuNativePromotionGateLiteReport")]),
             gate("G-koharu-native-artifact-contract-dry-run-executed", name: "Koharu Native Artifact contract dry-run executed", scope: "ExternalArtifacts", status: nativeArtifactContractDryRunExecuted ? (nativeArtifactContractDryRunStatus == "blockedByUnsafeActiveExport" ? "blocked" : (nativeArtifactContractDryRunStatus == "blockedByMissingRealArtifact" ? "warning" : "passed")) : "open", threshold: "koharuNativeArtifactContractDryRunReport.enabled=true with requiredFileCount>=4, contractGateCount>=6, dryRunOnly=true, activeExportAllowed=false, and no active artifact mutation", affected: nativeArtifactContractDryRunBlocks, failureMeans: "Native Artifact contract dry-run is missing, unsafe for active export, or hides missing real Koharu artifact files", action: nativeArtifactContractDryRunNextAction, decisions: [signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("groundTruthUsedForDecision", koharuNativeArtifactContractDryRunReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-koharu-artifact-identity-reconciliation-ready", name: "Koharu artifact identity reconciliation ready", scope: "ExternalArtifacts/CIReview", status: artifactIdentityReconciliationReady ? "passed" : (externalReady ? "warning" : "open"), threshold: "koharuArtifactIdentityReconciliationReport.enabled=true with SourceImage plus four artifact file rows ready for ci-artifact-manifest.koharuArtifactValidationIdentitySummary size/SHA256 comparison", affected: artifactIdentityReconciliationBlocks, failureMeans: "convergence treats injected artifact handoff as closed without a machine-readable App receipt to CI manifest identity reconciliation ledger", action: artifactIdentityReconciliationNextAction, decisions: [signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport"), signal("readyForCIManifestComparison", koharuArtifactIdentityReconciliationReport.map { String($0.readyForCIManifestComparison) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("manualCIComparisonRequired", koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport")]),
-            gate("G-external-textbox-shadow-ocr-coverage", name: "External TextBox shadow OCR coverage", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalShadowCoverageGateStatus, threshold: "ready external artifacts must produce an executed externalTextBoxShadowOCRReport with candidateCount > 0 before ExternalArtifacts can be considered closed", affected: externalShadowCoverageBlockedBlocks, failureMeans: "convergence treats ready artifact files as an OCR coverage closure even though shadow OCR did not run or produced no block-matched candidates", action: externalShadowCoverageNextAction, decisions: externalShadowCoverageDecisionSignals),
+            gate("G-external-textbox-shadow-ocr-coverage", name: "External TextBox shadow OCR coverage", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalShadowCoverageGateStatus, threshold: "ready external artifacts must produce an executed externalTextBoxShadowOCRReport with candidateCount > 0, ocrExecutedCount > 0, and ocrSucceededCount > 0 before ExternalArtifacts can be considered closed", affected: externalShadowCoverageBlockedBlocks, failureMeans: "convergence treats ready artifact files as an OCR coverage closure even though shadow OCR did not run, produced no block-matched candidates, or produced no successful crop OCR results", action: externalShadowCoverageNextAction, decisions: externalShadowCoverageDecisionSignals),
             gate("G-external-textbox-orientation-shadow-path", name: "External TextBox orientation shadow path", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalOrientationGateStatus, threshold: "vertical, rotated, arbitrary-rotation, or line-polygon external TextBoxes must not be treated as fully closed until external shadow OCR coverage exists, orientation OCR is executed, and unsupported orientation features are surfaced", affected: uniqueSorted(externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), failureMeans: "convergence hides missing coverage or unsupported external TextBox orientation-aware shadow OCR work", action: externalOrientationNextAction, decisions: externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
-            gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
+            gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.68 convergence dependency reports available, including model floor, render lock, resolver/router/request, native replay, BubbleIndex/DistanceField/seam/render fit, detector-lite, native-lite artifact bundle/promotion, contract dry-run, and identity reconciliation", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides a missing upstream report required by the current dependency ledger", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReportCount", String(missingReports.count), source: "koharuArtifactConvergenceReport"), signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport"), signal("requiredReportSpan", "v1.24-v1.68", source: "koharuArtifactConvergenceReport")])
         ]
 
         let referenceReports = [
@@ -21339,13 +21351,13 @@ final class TranslationSessionStore: ObservableObject {
             "blocks"
         ]
         var notes = [
-            "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, v1.44 native SegmentMask refinement-lite, v1.45 native Artifact bundle-lite, v1.46 native promotion gate-lite, v1.47 native artifact contract dry-run, v1.58 TextBox SegmentMask linkage convergence gates, and v1.68 artifact identity reconciliation into a next-step decision ledger.",
+            "koharuArtifactConvergenceReport summarizes v1.22-v1.68 reports into a canonical Koharu artifact convergence matrix.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, v1.44 native SegmentMask refinement-lite, v1.45 native Artifact bundle-lite, v1.46 native promotion gate-lite, v1.47 native artifact contract dry-run, v1.58 TextBox SegmentMask linkage convergence gates, v1.68 artifact identity reconciliation, and v1.69 shadow OCR coverage closure into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
         if !missingReports.isEmpty {
-            notes.append("Missing upstream reports in this run: \(missingReports.joined(separator: ",")). Report still generated with G-ci-fast-report-availability warning.")
+            notes.append("Missing upstream reports in this run: \(missingReports.joined(separator: ",")). Report still generated with G-ci-fast-report-availability warning across the current v1.24-v1.68 dependency set.")
         }
 
         return MangaKoharuArtifactConvergenceReport(

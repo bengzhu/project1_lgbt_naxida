@@ -1,0 +1,11 @@
+{
+  "textBoxes": [
+    {
+      "id": "source-image-missing-textbox",
+      "bbox": [118, 172, 120, 46],
+      "confidence": 0.82,
+      "detector": "manual-invalid-fixture",
+      "sourceDirection": "horizontal"
+    }
+  ]
+}
