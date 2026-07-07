@@ -50,6 +50,7 @@ REQUIRED_ARTIFACT_FILES = [
         "notes": [
             "schemaVersion must be aitrans.koharu_artifact_contract.v1",
             "sourceImage must be test/1.png",
+            "sourceImageSHA256 must match the current repository test/1.png",
             "coordinateSpace must be originalImageTopLeftPixels",
             "contractExampleOnly must be false for active detector output",
         ],
@@ -113,6 +114,29 @@ def file_identity(path: Path) -> dict[str, Any]:
     summary["sizeBytes"] = size
     summary["sha256"] = digest.hexdigest()
     return summary
+
+
+def declared_source_image_sha256(manifest: dict[str, Any] | None) -> Any:
+    if manifest is None:
+        return None
+    for key in ["sourceImageSHA256", "sourceImageSha256", "sourceImageSha"]:
+        if key in manifest:
+            return manifest.get(key)
+    identity = manifest.get("sourceImageIdentity")
+    if isinstance(identity, dict):
+        return identity.get("sha256")
+    return None
+
+
+def normalized_sha256(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().lower()
+    if len(normalized) != 64:
+        return None
+    if any(char not in "0123456789abcdef" for char in normalized):
+        return None
+    return normalized
 
 
 def is_active_artifacts_root(root: Path) -> bool:
@@ -389,17 +413,28 @@ def summarize_artifact_identity(
     manifest: dict[str, Any] | None,
     active_artifacts_directory: bool,
 ) -> dict[str, Any]:
+    source_image_identity = file_identity(image_path)
+    source_image_sha_declared = declared_source_image_sha256(manifest)
+    source_image_sha_normalized = normalized_sha256(source_image_sha_declared)
+    source_image_sha_expected = source_image_identity.get("sha256")
     return {
         "root": str(root),
         "activeArtifactsDirectory": active_artifacts_directory,
         "sourceImageExpected": EXPECTED_SOURCE_IMAGE,
         "sourceImageDeclared": manifest.get("sourceImage") if manifest else None,
+        "sourceImageSHA256Expected": source_image_sha_expected,
+        "sourceImageSHA256Declared": source_image_sha_declared,
+        "sourceImageSHA256Matches": (
+            source_image_sha_normalized == source_image_sha_expected
+            if source_image_sha_normalized is not None and source_image_sha_expected is not None
+            else False
+        ),
         "schemaVersionDeclared": manifest.get("schemaVersion") if manifest else None,
         "coordinateSpaceDeclared": manifest.get("coordinateSpace") if manifest else None,
         "contractExampleOnly": bool(manifest.get("contractExampleOnly")) if manifest else False,
         "generatedBy": manifest.get("generatedBy") if manifest else None,
         "generatedAt": manifest.get("generatedAt") if manifest else None,
-        "sourceImage": file_identity(image_path),
+        "sourceImage": source_image_identity,
         "artifactFiles": {
             "manifest": file_identity(manifest_path),
             "TextBoxes": file_identity(textboxes_path),
@@ -543,6 +578,12 @@ def verdict_for(
         return "sourceImageMissing"
     if any(error.startswith("sourceImageMismatch") for error in coordinate_errors):
         return "sourceImageMismatch"
+    if any(error.startswith("sourceImageSHA256Missing") for error in coordinate_errors):
+        return "sourceImageSHA256Missing"
+    if any(error.startswith("sourceImageSHA256Invalid") for error in coordinate_errors):
+        return "sourceImageSHA256Invalid"
+    if any(error.startswith("sourceImageSHA256Mismatch") for error in coordinate_errors):
+        return "sourceImageSHA256Mismatch"
     if coordinate_errors:
         return "coordinateValidationFailed"
     if any(error.startswith("contractExampleOnlyMissing") for error in source_policy_errors):
@@ -587,6 +628,9 @@ def next_action_for(verdict: str) -> str:
         "coordinateSpaceMismatch",
         "sourceImageMissing",
         "sourceImageMismatch",
+        "sourceImageSHA256Missing",
+        "sourceImageSHA256Invalid",
+        "sourceImageSHA256Mismatch",
         "coordinateValidationFailed",
     }:
         return "stopUntilArtifactContractFixed"
@@ -671,11 +715,21 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
             coordinate_errors.append(f"coordinateSpaceMismatch:{coordinate_space}")
 
     source_image = manifest.get("sourceImage") if manifest else None
+    source_image_sha = declared_source_image_sha256(manifest)
+    source_image_identity = file_identity(image_path)
+    expected_source_image_sha = source_image_identity.get("sha256")
     if manifest is not None:
         if source_image is None:
             coordinate_errors.append("sourceImageMissing")
         elif source_image != EXPECTED_SOURCE_IMAGE:
             coordinate_errors.append(f"sourceImageMismatch:{source_image}")
+        source_image_sha_normalized = normalized_sha256(source_image_sha)
+        if source_image_sha is None:
+            coordinate_errors.append("sourceImageSHA256Missing")
+        elif source_image_sha_normalized is None:
+            coordinate_errors.append(f"sourceImageSHA256Invalid:{source_image_sha}")
+        elif expected_source_image_sha is not None and source_image_sha_normalized != expected_source_image_sha:
+            coordinate_errors.append(f"sourceImageSHA256Mismatch:{source_image_sha}")
 
     source_policy_errors: list[str] = []
     contract_example_only_raw = manifest.get("contractExampleOnly") if manifest else None
@@ -769,6 +823,13 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         "coordinateErrors": coordinate_errors,
         "sourcePolicyErrors": source_policy_errors,
         "sourceImage": source_image,
+        "sourceImageSHA256": source_image_sha,
+        "expectedSourceImageSHA256": expected_source_image_sha,
+        "sourceImageSHA256Matches": (
+            normalized_sha256(source_image_sha) == expected_source_image_sha
+            if normalized_sha256(source_image_sha) is not None and expected_source_image_sha is not None
+            else False
+        ),
         "schemaVersion": schema_version,
         "expectedSchemaVersion": EXPECTED_SCHEMA_VERSION,
         "coordinateSpace": coordinate_space,
@@ -798,10 +859,13 @@ def main() -> int:
     args = parser.parse_args()
 
     root = Path(args.root)
+    image_path = Path(args.image)
     if args.print_required_files:
+        source_image_identity = file_identity(image_path)
         summary = {
             "activeInputDirectory": str(ACTIVE_ARTIFACT_ROOT),
             "sourceImage": EXPECTED_SOURCE_IMAGE,
+            "sourceImageSHA256": source_image_identity.get("sha256"),
             "schemaVersion": EXPECTED_SCHEMA_VERSION,
             "coordinateSpace": EXPECTED_COORDINATE_SPACE,
             "requiredFiles": REQUIRED_ARTIFACT_FILES,
@@ -810,6 +874,7 @@ def main() -> int:
                 "activeArtifactsDirectory == true",
                 "contractExampleOnly == false",
                 "externalTextBoxesShadowOCRAllowed == true",
+                "manifest sourceImageSHA256 matches the current repository test/1.png SHA256",
                 "artifactIdentitySummary source image and artifact SHA256 values match the reviewed archive",
                 "TextBox optional direction metadata is valid when present",
                 "orientationMetadataSummary unsupported line polygon / arbitrary rotation risks are reviewed before treating shadow OCR as closed",
@@ -829,7 +894,6 @@ def main() -> int:
         print()
         return 0
 
-    image_path = Path(args.image)
     if not root.exists() and not args.allow_missing:
         active_artifacts_directory = is_active_artifacts_root(root) and root.exists()
         summary = {
@@ -853,6 +917,11 @@ def main() -> int:
             "missingArtifacts": ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"],
             "parseErrors": [],
             "coordinateErrors": [],
+            "sourcePolicyErrors": [],
+            "sourceImage": None,
+            "sourceImageSHA256": None,
+            "expectedSourceImageSHA256": file_identity(image_path).get("sha256"),
+            "sourceImageSHA256Matches": False,
             "textBoxCount": 0,
             "bubbleInstanceCount": 0,
             "segmentMaskSizeMatches": None,

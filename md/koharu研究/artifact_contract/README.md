@@ -29,6 +29,7 @@ manifest 可指定等价相对路径：
 {
   "schemaVersion": "aitrans.koharu_artifact_contract.v1",
   "sourceImage": "test/1.png",
+  "sourceImageSHA256": "9c3dc0ee9dfc4a6b664c4b4dd32e5b74b214f6f0d16f32ef97ef02ce47c2ed21",
   "coordinateSpace": "originalImageTopLeftPixels",
   "contractExampleOnly": false,
   "generatedBy": "external-detector-name",
@@ -43,6 +44,7 @@ manifest 可指定等价相对路径：
 
 - 坐标系固定为 `originalImageTopLeftPixels`。
 - 当前探针图固定映射为 `sourceImage = test/1.png`。
+- manifest 必须声明 `sourceImageSHA256`，且必须等于当前仓库 `test/1.png` 的 SHA256：`9c3dc0ee9dfc4a6b664c4b4dd32e5b74b214f6f0d16f32ef97ef02ce47c2ed21`。
 - bbox 格式统一为 `[x, y, width, height]`，左上角原点，像素坐标。
 - bbox 宽高必须为正，且不能越过原图边界。
 - `confidence` 若存在，必须在 `[0, 1]`。
@@ -69,11 +71,14 @@ python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_con
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_missing --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_sha_missing --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_sha_mismatch --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
 ```
 
-validator 只读指定目录，不复制、不生成 active artifact。输出 JSON 摘要包含 `verdict`、`readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed`、`nextAction`、`readinessBlockers`、缺失文件、解析错误、坐标错误、TextBox 数量、Bubble instance 数量、SegmentMask 尺寸匹配结果、`artifactIdentitySummary` 和 `orientationMetadataSummary`。`artifactIdentitySummary` 会记录 source image 以及 manifest / TextBoxes / BubbleMask / SegmentMask 的路径、存在性、size、SHA256，并透传 manifest 的 `generatedBy`、`generatedAt`、`contractExampleOnly`、schema、source image 和 coordinate space；用于 Agent C 核对当前云端结果包里的四件套是否就是被审查的 archive 内容。`orientationMetadataSummary` 会汇总 sourceDirection、orientation category、rotation plan、line polygon TextBox、竖排 TextBox、近 90 度倍数 rotation、任意角度 rotation、orientation partial TextBox 和 unsupported reason breakdown。
+validator 只读指定目录，不复制、不生成 active artifact。输出 JSON 摘要包含 `verdict`、`readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed`、`nextAction`、`readinessBlockers`、缺失文件、解析错误、坐标错误、TextBox 数量、Bubble instance 数量、SegmentMask 尺寸匹配结果、`artifactIdentitySummary` 和 `orientationMetadataSummary`。`artifactIdentitySummary` 会记录 source image 以及 manifest / TextBoxes / BubbleMask / SegmentMask 的路径、存在性、size、SHA256，并透传 manifest 的 `generatedBy`、`generatedAt`、`contractExampleOnly`、schema、source image、`sourceImageSHA256Declared`、`sourceImageSHA256Expected`、`sourceImageSHA256Matches` 和 coordinate space；用于 Agent C 核对当前云端结果包里的四件套是否就是被审查的 archive 内容。`orientationMetadataSummary` 会汇总 sourceDirection、orientation category、rotation plan、line polygon TextBox、竖排 TextBox、近 90 度倍数 rotation、任意角度 rotation、orientation partial TextBox 和 unsupported reason breakdown。
 
 `--print-required-files` 只打印 Koharu / 外部 detector 侧需要交付的 active 文件清单，不读取或写入 `test/koharu_artifacts/`。缺少真实 active 目录时，`--allow-missing` 的正确结果是 `verdict = manifestMissing`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`，并列出 `manifest`、`TextBoxes`、`BubbleMask`、`SegmentMask` 的阻塞项；不应额外混入 schema / coordinate 缺失噪音。
 
@@ -88,7 +93,7 @@ validator 只读指定目录，不复制、不生成 active artifact。输出 JS
 - 将 Koharu `TextRegion` 的 `x/y/width/height` 转成 `1.textboxes.json` 的 `bbox`，保留 `confidence`、`detector`、`linePolygons`、`sourceDirection`、`rotationDegrees` / `rotationDeg`、`detectedFontSizePx` 等可选字段。
 - 将 speech bubble instance 结果转成 `1.bubbles.json`，每个 instance 至少包含 `id`、`bbox`，建议包含 `maskValue` 和 `pixelCount`。
 - 将文字像素 mask 统计转成 `1.segment_mask.json`，至少包含与 `test/1.png` 一致的 `width = 576`、`height = 1280`；建议包含 `glyphPixelCount` 和 `connectedComponentCount`。
-- `1.manifest.json` 必须显式声明 `schemaVersion = aitrans.koharu_artifact_contract.v1`、`sourceImage = test/1.png`、`coordinateSpace = originalImageTopLeftPixels`、`contractExampleOnly = false`，并记录 `generatedBy`；缺 `sourceImage`、缺 `contractExampleOnly` 或 `contractExampleOnly` 不是布尔值都会被 validator 阻塞。
+- `1.manifest.json` 必须显式声明 `schemaVersion = aitrans.koharu_artifact_contract.v1`、`sourceImage = test/1.png`、`sourceImageSHA256 = 9c3dc0ee9dfc4a6b664c4b4dd32e5b74b214f6f0d16f32ef97ef02ce47c2ed21`、`coordinateSpace = originalImageTopLeftPixels`、`contractExampleOnly = false`，并记录 `generatedBy`；缺 `sourceImage`、缺 `sourceImageSHA256`、SHA 不匹配、缺 `contractExampleOnly` 或 `contractExampleOnly` 不是布尔值都会被 validator 阻塞。
 - manifest 路径字段不得使用绝对路径或 `..` 逃逸 active 目录。
 - 转换后先运行 validator；只有 `readyForShadowOCR = true` 且 `externalTextBoxesShadowOCRAllowed = true`，App 探针才允许执行 external TextBoxes shadow OCR。
 
@@ -112,6 +117,7 @@ test/koharu_artifacts/
 {
   "schemaVersion": "aitrans.koharu_artifact_contract.v1",
   "sourceImage": "test/1.png",
+  "sourceImageSHA256": "9c3dc0ee9dfc4a6b664c4b4dd32e5b74b214f6f0d16f32ef97ef02ce47c2ed21",
   "coordinateSpace": "originalImageTopLeftPixels",
   "contractExampleOnly": false,
   "generatedBy": "真实 detector / Koharu 输出来源",
@@ -161,6 +167,7 @@ externalTextBoxesShadowOCRAllowed = true
 missingArtifacts = []
 parseErrors = []
 coordinateErrors = []
+sourceImageSHA256Matches = true
 textBoxCount > 0
 bubbleInstanceCount > 0
 segmentMaskSizeMatches = true
@@ -198,6 +205,7 @@ koharuNativeArtifactContractDryRunReport.dryRunOnly = true
 koharuNativeArtifactContractDryRunReport.activeExportAllowed = false
 koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison = true
 koharuArtifactIdentityReconciliationMatch.matchVerdict = matched
+koharuArtifactValidationIdentitySummary.sourceImageSHA256Matches = true
 WI-external-textbox-shadow-ocr-coverage.status = closedReportOnly
 WI-external-textbox-shadow-ocr-coverage.targetBlocks = []
 G-external-textbox-shadow-ocr-coverage.status = passed

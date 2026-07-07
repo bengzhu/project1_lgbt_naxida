@@ -1,6 +1,7 @@
 {
   "schemaVersion": "aitrans.koharu_artifact_contract.v1",
   "sourceImage": "test/1.png",
+  "sourceImageSHA256": "9c3dc0ee9dfc4a6b664c4b4dd32e5b74b214f6f0d16f32ef97ef02ce47c2ed21",
   "coordinateSpace": "originalImageTopLeftPixels",
   "contractExampleOnly": true,
   "generatedBy": "manual-contract-fixture",

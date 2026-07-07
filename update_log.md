@@ -116,6 +116,36 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.79：Koharu Source Image SHA Contract Gate
+日期：2026-07-07
+
+依据：v1.66-v1.78 已让 CI / App 侧记录 source image 和四件套 size / SHA256 identity，但 Koharu active manifest 仍只声明 `sourceImage = test/1.png`，没有强制声明“本 artifact 是基于当前仓库这张 `test/1.png` 生成”。如果外部 detector 用旧图、裁切图或错图导出，路径和尺寸可能看似正确，后续云端 handoff 仍有误接风险。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 要求 manifest 声明 `sourceImageSHA256`，并校验它必须匹配当前仓库 `test/1.png` 的实际 SHA256：`9c3dc0ee9dfc4a6b664c4b4dd32e5b74b214f6f0d16f32ef97ef02ce47c2ed21`。
+- validator 输出新增 `sourceImageSHA256`、`expectedSourceImageSHA256`、`sourceImageSHA256Matches`，`artifactIdentitySummary` 新增 `sourceImageSHA256Declared`、`sourceImageSHA256Expected`、`sourceImageSHA256Matches`，并新增 `sourceImageSHA256Missing` / `sourceImageSHA256Invalid` / `sourceImageSHA256Mismatch` verdict。
+- CI 注入真实 Koharu artifact 和 valid fixture smoke 都会断言 manifest 声明 SHA 与仓库 source image SHA 一致；完整 invalid fixture 矩阵新增 `source_image_sha_missing` 和 `source_image_sha_mismatch`。
+- artifact contract README、`md/test/test.md` 和示例 manifests 同步新的 source image SHA contract。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/artifact_contract/examples/**/1.manifest.json`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：预期 workflow / validator / contract 变更会触发 extended Koharu invalid fixture matrix，且本轮仍不涉及 Swift / Xcode 工程 / `test/` 素材，预期 `xcodeBuildRequired = false`。
+
+遗留事项：
+
+- 本版本不新增真实 Koharu 四件套，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 如果未来 `test/1.png` 变更，所有 active artifact 和 contract fixtures 必须同步新的 `sourceImageSHA256`，否则 validator 应阻塞 handoff。
+
 ### v1.78：CI Scope Targeted Fetch Closure
 日期：2026-07-07
 

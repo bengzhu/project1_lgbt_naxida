@@ -371,6 +371,12 @@ jobs:
               raise SystemExit(f"injected Koharu artifact verdict={data.get('verdict')!r}; expected readyForShadowOCR")
           if data.get("readyForShadowOCR") is not True or data.get("externalTextBoxesShadowOCRAllowed") is not True:
               raise SystemExit(f"injected Koharu artifact is not shadow-OCR ready: {data}")
+          identity = data.get("artifactIdentitySummary") or {}
+          source_image = identity.get("sourceImage") or {}
+          declared_sha = identity.get("sourceImageSHA256Declared")
+          actual_sha = source_image.get("sha256")
+          if identity.get("sourceImageSHA256Matches") is not True or declared_sha != actual_sha:
+              raise SystemExit(f"injected Koharu artifact source image SHA mismatch: {identity}")
           PY
           } 2>&1 | tee "$RESULT_ROOT/koharu-artifact-injection.log" || fail_or_skip "download_or_validation_failed"
 
@@ -410,8 +416,12 @@ jobs:
               raise SystemExit(f"valid fixture verdict={data.get('verdict')!r}")
           if identity.get("contractExampleOnly") is not True:
               raise SystemExit(f"valid fixture identity missing contractExampleOnly: {identity}")
-          if len(str(source_image.get("sha256") or "")) != 64:
+          declared_sha = identity.get("sourceImageSHA256Declared")
+          actual_sha = source_image.get("sha256")
+          if len(str(actual_sha or "")) != 64:
               raise SystemExit(f"valid fixture source image sha missing: {identity}")
+          if identity.get("sourceImageSHA256Matches") is not True or declared_sha != actual_sha:
+              raise SystemExit(f"valid fixture declared source image sha mismatch: {identity}")
           for key in ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]:
               item = files.get(key) or {}
               if item.get("exists") is not True or len(str(item.get("sha256") or "")) != 64:
@@ -450,6 +460,8 @@ jobs:
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_missing --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_sha_missing --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_sha_mismatch --expect-fail
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_missing --expect-fail
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid --expect-fail
             else
@@ -778,6 +790,11 @@ jobs:
                   raise SystemExit("koharu-active-artifacts-validation.json missing for identity comparison")
               validator = json.loads(validation_path.read_text(encoding="utf-8"))
               validator_identity = validator.get("artifactIdentitySummary") or {}
+              validator_source_image = validator_identity.get("sourceImage") or {}
+              declared_source_sha = validator_identity.get("sourceImageSHA256Declared")
+              actual_source_sha = validator_source_image.get("sha256")
+              if validator_identity.get("sourceImageSHA256Matches") is not True or declared_source_sha != actual_source_sha:
+                  raise SystemExit(f"validator manifest source image SHA does not match repo source image: {validator_identity}")
               artifact_files = validator_identity.get("artifactFiles") or {}
               def validator_item(kind):
                   if kind == "SourceImage":
