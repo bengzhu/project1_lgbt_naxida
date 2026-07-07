@@ -945,6 +945,7 @@ jobs:
             koharu_active_artifacts_present=false
           fi
           python3 - <<PY
+          import hashlib
           import json
           from pathlib import Path
 
@@ -964,6 +965,15 @@ jobs:
           retained_path = Path("$probe_output_retained_files_path")
           if retained_path.is_file():
               retained_output_files = [line.strip() for line in retained_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+          changed_files_path = Path("${RESULT_ROOT}/changed-files.txt")
+          changed_files = []
+          if changed_files_path.is_file():
+              changed_files = [
+                  line.strip()
+                  for line in changed_files_path.read_text(encoding="utf-8").splitlines()
+                  if line.strip()
+              ]
+          changed_files_hash = hashlib.sha256(("\n".join(changed_files) + ("\n" if changed_files else "")).encode("utf-8")).hexdigest()
           external_readiness = (probe_report or {}).get("externalArtifactReadinessReport")
           external_shadow = (probe_report or {}).get("externalTextBoxShadowOCRReport")
           contract_dry_run = (probe_report or {}).get("koharuNativeArtifactContractDryRunReport")
@@ -1070,12 +1080,21 @@ jobs:
               "runId": "${GITHUB_RUN_ID}",
               "runAttempt": "${GITHUB_RUN_ATTEMPT}",
               "workflowName": "${GITHUB_WORKFLOW}",
+              "eventName": "${GITHUB_EVENT_NAME}",
+              "repository": "${GITHUB_REPOSITORY}",
+              "ref": "${GITHUB_REF}",
+              "refName": "${GITHUB_REF_NAME}",
+              "runUrl": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
+              "artifactName": "${{ steps.meta.outputs.artifact_name }}",
               "createdAt": "$created_at",
               "xcodeVersion": "$xcode_version",
               "scheme": "${SCHEME}",
               "destination": "${DESTINATION}",
               "resultBundlePath": "${{ steps.meta.outputs.result_bundle }}",
               "changedFilesPath": "${RESULT_ROOT}/changed-files.txt",
+              "changedFilesCount": len(changed_files),
+              "changedFilesSHA256": changed_files_hash,
+              "changedFiles": changed_files,
               "xcodeBuildRequired": "${{ steps.ci_scope.outputs.xcode_build_required }}" == "true",
               "xcodeBuildSkippedReason": "${{ steps.ci_scope.outputs.xcode_build_skip_reason }}",
               "koharuValidatorExtendedRequired": "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" == "true",
@@ -1355,7 +1374,24 @@ jobs:
             echo "- commitSha: ${GITHUB_SHA}"
             echo "- runId: ${GITHUB_RUN_ID}"
             echo "- runAttempt: ${GITHUB_RUN_ATTEMPT}"
+            echo "- runUrl: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- eventName: ${GITHUB_EVENT_NAME}"
+            echo "- ref: ${GITHUB_REF}"
+            echo "- repository: ${GITHUB_REPOSITORY}"
             echo "- artifact: ${{ steps.meta.outputs.artifact_name }}"
+            if [ -f "${RESULT_ROOT}/changed-files.txt" ]; then
+              changed_count="$(wc -l < "${RESULT_ROOT}/changed-files.txt" | tr -d '[:space:]')"
+              changed_hash="$(python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          path = Path("ci-results/changed-files.txt")
+          lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+          print(hashlib.sha256(("\n".join(lines) + ("\n" if lines else "")).encode("utf-8")).hexdigest())
+          PY
+          )"
+              echo "- changed files: ${changed_count}"
+              echo "- changed files sha256: ${changed_hash}"
+            fi
             echo "- probe mode: ${{ steps.meta.outputs.probe_mode }}"
             echo "- probe timeout seconds: ${{ steps.meta.outputs.probe_timeout_seconds }}"
             echo "- probe stall timeout seconds: ${{ steps.meta.outputs.probe_stall_timeout_seconds }}"

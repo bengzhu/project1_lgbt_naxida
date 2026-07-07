@@ -116,6 +116,33 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.77：CI Artifact Provenance Self-Trace
+日期：2026-07-07
+
+依据：v1.76 已让 build-skip 结果包更干净，但 Agent C 下载未加密 artifact 后仍需要从 GitHub UI 或 `gh run view` 反查 run URL、artifact name、event/ref/repository 和变更范围。后续真实 Koharu artifact handoff 会更依赖“拿到的包就是目标 run / 目标提交 / 目标变更”的机器可核对证据，因此本轮继续增强 CI 结果包可追溯性。
+
+核心变更：
+
+- `ci-artifact-manifest.json` 新增 `artifactName`、`eventName`、`repository`、`ref`、`refName` 和 `runUrl`，让结果包自带 GitHub run 与 artifact identity。
+- `ci-artifact-manifest.json` 新增 `changedFilesCount`、`changedFilesSHA256` 和 `changedFiles`，直接记录本轮 scope detection 的文件列表和稳定哈希。
+- `ci-failure-summary.md` 同步打印 run URL、event/ref/repository、artifact name、changed files count 和 changed files SHA256，便于失败时快速定位。
+- `md/test/test.md` 补充 v1.77 结果包 provenance 字段验收口径。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：预期 manifest 能解析并包含 self-trace 字段；failure summary 顶部能直接看到 run URL、artifact name 和 changed-files 摘要。本轮仍是 CI / 文档变更，预期 `xcodeBuildRequired = false`。
+
+遗留事项：
+
+- 本版本不新增真实 Koharu 四件套，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 若未来需要限制 manifest 体积，可保留 `changedFilesSHA256` 和 count，将完整 `changedFiles` 迁移为单独文件引用；当前普通 push 变更列表很小，直接内嵌更利于验收。
+
 ### v1.76：CI Scope Diff Accuracy / Skip Probe Artifact Hygiene
 日期：2026-07-07
 
