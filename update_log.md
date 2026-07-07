@@ -116,6 +116,46 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.70：Koharu Artifact App / CI Handoff Strict Closure
+日期：2026-07-07
+
+依据：v1.69 已把 validator manifest 显式字段和 external shadow OCR coverage gate 收紧，但 App 侧仍需要显式保留 manifest 字段缺失 / 类型错误证据；CI smoke 也需要核对 `ocrSucceededCount`、coverage / orientation work item 与 gate ID；同时 “填写 Koharu artifact archive 但 `probe_mode=skip`” 会导致只验证下载和 validator，不能证明 App 实际消费 artifact。
+
+核心变更：
+
+- `MangaOverlayExternalArtifactManifest` 新增 `sourceImageFieldPresent`、`sourceImageTypeValid`、`contractExampleOnlyFieldPresent`、`contractExampleOnlyTypeValid`，让 Swift readiness 能区分缺字段、类型错误和真实值。
+- `externalArtifactReadinessReport` / `externalArtifactIdentityReceipt` / nextAction 新增 `sourceImageMissing`、`contractExampleOnlyMissing`、`contractExampleOnlyInvalid` 分支；ready artifact 的 orientation gate 未闭合时从 warning 收紧为 blocked。
+- `1_ocr_probe_text.txt` 的 external TextBox shadow OCR 行补出 `ocrSucceeded`，convergence 摘要补出 coverage / orientation work item status、gate status 和 gate blocks。
+- GitHub Actions extended validator matrix 新增 `contract_example_only_invalid`；artifact requested 的探针 smoke 硬核对 `ocrSucceededCount > 0`、coverage / orientation work item 与 gate ID、coverage gate passed，以及 orientation gate 不得在仍有 blockers 时 passed。
+- CI metadata 禁止 Koharu artifact archive 与 `probe_mode=skip` 组合；真实四件套注入必须用 `ci-fast` 或 `full` 产生 App 侧证据。
+- 同步更新 Koharu contract README、流程文档、流程图和测试规范；新增 invalid fixture `contract_example_only_invalid`。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid/*`
+- `update_log.md`
+
+验证结果：
+
+- 本轮本地轻量验证见最终回复。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked / identity missing。
+- 该版本不新增 detector、OCR、LLM、PNG 或 renderer 算法，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
 ### v1.69：External Artifact Validator / Shadow OCR Coverage Closure Gate
 日期：2026-07-07
 
@@ -145,7 +185,7 @@
 
 验证结果：
 
-- 本轮本地轻量验证见最终回复。
+- 本地轻量验证已通过；云端 commit `c1d5990df733d5593de57b4631c8e4120658dcb7` 的 `AITRANS CI Results` run `28839023072` 成功，`Build IPA` run `28839023071` 成功。默认 push 探针为 `skip`，未生成新的漫画探针报告。
 
 未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
 

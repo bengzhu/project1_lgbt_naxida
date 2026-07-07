@@ -4980,8 +4980,12 @@ struct MangaOverlayLineCropExperimentReport: Equatable, Codable, Sendable {
 struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
     var schemaVersion: String
     var sourceImage: String
+    var sourceImageFieldPresent: Bool
+    var sourceImageTypeValid: Bool
     var coordinateSpace: String
     var contractExampleOnly: Bool
+    var contractExampleOnlyFieldPresent: Bool
+    var contractExampleOnlyTypeValid: Bool
     var generatedBy: String?
     var generatedAt: String?
     var textBoxesPath: String?
@@ -4992,8 +4996,12 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
         case sourceImage
+        case sourceImageFieldPresent
+        case sourceImageTypeValid
         case coordinateSpace
         case contractExampleOnly
+        case contractExampleOnlyFieldPresent
+        case contractExampleOnlyTypeValid
         case generatedBy
         case generatedAt
         case textBoxesPath
@@ -5005,9 +5013,15 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try container.decodeIfPresent(String.self, forKey: .schemaVersion) ?? "unknown"
-        sourceImage = try container.decodeIfPresent(String.self, forKey: .sourceImage) ?? ""
+        sourceImageFieldPresent = container.contains(.sourceImage)
+        let decodedSourceImage = try? container.decodeIfPresent(String.self, forKey: .sourceImage)
+        sourceImageTypeValid = !sourceImageFieldPresent || decodedSourceImage != nil
+        sourceImage = decodedSourceImage ?? ""
         coordinateSpace = try container.decodeIfPresent(String.self, forKey: .coordinateSpace) ?? ""
-        contractExampleOnly = try container.decodeIfPresent(Bool.self, forKey: .contractExampleOnly) ?? false
+        contractExampleOnlyFieldPresent = container.contains(.contractExampleOnly)
+        let decodedContractExampleOnly = try? container.decodeIfPresent(Bool.self, forKey: .contractExampleOnly)
+        contractExampleOnlyTypeValid = !contractExampleOnlyFieldPresent || decodedContractExampleOnly != nil
+        contractExampleOnly = decodedContractExampleOnly ?? false
         generatedBy = try container.decodeIfPresent(String.self, forKey: .generatedBy)
         generatedAt = try container.decodeIfPresent(String.self, forKey: .generatedAt)
         textBoxesPath = try container.decodeIfPresent(String.self, forKey: .textBoxesPath)

@@ -125,6 +125,10 @@ jobs:
               exit 1
               ;;
           esac
+          if [ "$koharu_artifact_requested" = "true" ] && [ "$requested_probe_mode" = "skip" ]; then
+            echo "Koharu artifact injection requires probe_mode=ci-fast or full so App-side readiness, identity, shadow OCR coverage, and convergence gates can be verified." >&2
+            exit 1
+          fi
           version="unversioned"
           if [[ "$branch" =~ v([0-9]+(\.[0-9]+)*) ]]; then
             version="v${BASH_REMATCH[1]}"
@@ -420,6 +424,7 @@ jobs:
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_missing --expect-fail
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_missing --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid --expect-fail
             else
               echo "Skipping extended Koharu invalid fixture matrix for fast CI scope"
             fi
@@ -716,6 +721,8 @@ jobs:
                   raise SystemExit(f"externalTextBoxShadowOCRReport.candidateCount={external_shadow.get('candidateCount')!r}")
               if int(external_shadow.get("ocrExecutedCount") or 0) <= 0:
                   raise SystemExit(f"externalTextBoxShadowOCRReport.ocrExecutedCount={external_shadow.get('ocrExecutedCount')!r}")
+              if int(external_shadow.get("ocrSucceededCount") or 0) <= 0:
+                  raise SystemExit(f"externalTextBoxShadowOCRReport.ocrSucceededCount={external_shadow.get('ocrSucceededCount')!r}")
               if contract.get("contractDryRunVerdict") != "activeArtifactsReadyForShadowOCR":
                   raise SystemExit(f"contractDryRunVerdict={contract.get('contractDryRunVerdict')!r}")
               if contract.get("activeExportAllowed") is not False or contract.get("dryRunOnly") is not True:
@@ -767,10 +774,14 @@ jobs:
                   raise SystemExit(f"CI validator identity does not match App receipt: {mismatches}")
           work_item_ids = {item.get("workItemID") for item in convergence.get("workItemLedger", [])}
           gate_ids = {item.get("gateID") for item in convergence.get("gateLedger", [])}
+          work_items_by_id = {item.get("workItemID"): item for item in convergence.get("workItemLedger", [])}
+          gates_by_id = {item.get("gateID"): item for item in convergence.get("gateLedger", [])}
           for required_id in [
               "WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage",
               "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage",
               "WI-koharu-artifact-identity-reconciliation",
+              "WI-external-textbox-shadow-ocr-coverage",
+              "WI-external-textbox-orientation-shadow-path",
           ]:
               if required_id not in work_item_ids:
                   raise SystemExit(f"missing convergence work item: {required_id}")
@@ -778,9 +789,26 @@ jobs:
               "G-koharu-convergence-bundle-lite-textbox-segment-linkage",
               "G-koharu-convergence-promotion-lite-textbox-segment-linkage",
               "G-koharu-artifact-identity-reconciliation-ready",
+              "G-external-textbox-shadow-ocr-coverage",
+              "G-external-textbox-orientation-shadow-path",
           ]:
               if required_id not in gate_ids:
                   raise SystemExit(f"missing convergence gate: {required_id}")
+          if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
+              coverage_work_item = work_items_by_id.get("WI-external-textbox-shadow-ocr-coverage") or {}
+              coverage_gate = gates_by_id.get("G-external-textbox-shadow-ocr-coverage") or {}
+              if coverage_work_item.get("status") != "closedReportOnly":
+                  raise SystemExit(f"external shadow OCR coverage work item not closed: {coverage_work_item}")
+              if coverage_work_item.get("targetBlocks"):
+                  raise SystemExit(f"external shadow OCR coverage work item still has targetBlocks: {coverage_work_item.get('targetBlocks')}")
+              if coverage_gate.get("status") != "passed":
+                  raise SystemExit(f"external shadow OCR coverage gate not passed: {coverage_gate}")
+              if coverage_gate.get("affectedBlocks"):
+                  raise SystemExit(f"external shadow OCR coverage gate still has affectedBlocks: {coverage_gate.get('affectedBlocks')}")
+              orientation_work_item = work_items_by_id.get("WI-external-textbox-orientation-shadow-path") or {}
+              orientation_gate = gates_by_id.get("G-external-textbox-orientation-shadow-path") or {}
+              if orientation_gate.get("status") == "passed" and (orientation_gate.get("affectedBlocks") or orientation_work_item.get("targetBlocks")):
+                  raise SystemExit(f"orientation gate passed despite blockers: workItem={orientation_work_item} gate={orientation_gate}")
           txt = pathlib.Path("output", "1_ocr_probe_text.txt").read_text(encoding="utf-8")
           for needle in [
               "nativeArtifactBundleLiteTextBoxSegmentLink",

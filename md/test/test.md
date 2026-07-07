@@ -70,8 +70,10 @@ python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_con
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_missing --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_missing --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
 ```
@@ -320,7 +322,7 @@ Agent B 的云端结果必须可下载、可追溯、未加密，供 Agent C 验
 - `.xcresult`：当 `xcodeBuildRequired = true` 时必须包含 Xcode 结果包，例如 `TestResults/AITRANS-${version}-${short_sha}.xcresult`；文档 / 元数据快路径允许缺省，但必须在 manifest 写明 skip reason。
 - `junit.xml`：CI 可读摘要。当前没有 XCTest 时，至少生成 build smoke 的 JUnit 摘要。
 - `xcodebuild.log`：完整构建日志。
-- `ci-artifact-manifest.json`：结果包索引，包含 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`createdAt`、`xcodeVersion`、`scheme`、`destination`、`resultBundlePath`、`junitPath`、`xcodebuildLogPath`、`failureSummaryPath`、`probeReportPath`。v1.14 起还包含 `koharuActiveArtifactValidationPath`、`koharuArtifactValidation`、`externalArtifactReadinessSummary` 和 `externalTextBoxShadowOCRSummary`，用于区分缺 artifact 阻塞路径和 ready/executed=true 路径；v1.65 起还包含 `koharuArtifactValidationOrientationSummary`，`externalTextBoxShadowOCRSummary` 透传 orientation 与 coverage 相关字段。
+- `ci-artifact-manifest.json`：结果包索引，包含 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`createdAt`、`xcodeVersion`、`scheme`、`destination`、`resultBundlePath`、`junitPath`、`xcodebuildLogPath`、`failureSummaryPath`、`probeReportPath`。v1.14 起还包含 `koharuActiveArtifactValidationPath`、`koharuArtifactValidation`、`externalArtifactReadinessSummary` 和 `externalTextBoxShadowOCRSummary`，用于区分缺 artifact 阻塞路径和 ready/executed=true 路径；v1.65 起还包含 `koharuArtifactValidationOrientationSummary`，`externalTextBoxShadowOCRSummary` 透传 orientation 与 coverage 相关字段；v1.66-v1.68 起还必须包含 `koharuArtifactValidationIdentitySummary`、App 侧 identity receipt / reconciliation summary 和 `koharuArtifactIdentityReconciliationMatch`；v1.69 起 ready artifact 的 shadow OCR coverage 还必须核对 `ocrExecutedCount > 0`、`ocrSucceededCount > 0`，并在 convergence report 的 report availability gate 里保留 `missingReportCount`、`missingReports` 和 `requiredReportSpan`。
 - `xcodeBuildRequired` / `xcodeBuildSkippedReason`：仅文档 / 元数据快路径允许 `xcodeBuildRequired = false`；Agent C 必须把它视作“未提供 Swift/Xcode 编译证据”，不能用于验收代码改动。
 - `ci-failure-summary.md`：无论成功或失败都生成；失败时写清失败阶段、关键日志位置、建议 Agent B 先看哪些文件。
 - `model-download.log` / `model-verify.log`：仅 `ci-fast` / `full` 探针模式要求，记录 Release 下载、cache 命中和 SHA256 校验；`probe_mode=skip` 必须在 manifest 写 `modelSetupSkippedReason`。
@@ -337,7 +339,7 @@ Agent C 取用规则：
 
 - 只看当前 `codeb/...` HEAD 对应的 `commitSha`。
 - 必须核对 manifest 的 `branch`、`commitSha`、`runId`、`runAttempt`。
-- 涉及 external artifact 时，必须核对 manifest 内 `koharuArtifactValidation.verdict`、`externalArtifactReadinessSummary.readinessVerdict`、`externalTextBoxShadowOCRSummary.executed`，并确认这些值来自当前 `commitSha` 的结果包。
+- 涉及 external artifact 时，必须核对 manifest 内 `koharuArtifactValidation.verdict`、`koharuArtifactValidationIdentitySummary`、`koharuArtifactValidationOrientationSummary`、`externalArtifactReadinessSummary.readinessVerdict`、App 侧 identity receipt / reconciliation summary、`koharuArtifactIdentityReconciliationMatch.matchVerdict` 和 `externalTextBoxShadowOCRSummary.executed/candidateCount/ocrExecutedCount/ocrSucceededCount`，并确认这些值来自当前 `commitSha` 的结果包。
 - B 再次 push 后，旧 run 结果废弃。
 - Actions 重跑时，记录实际验收的 `runAttempt`。
 - C 验收通过后默认通过 PR merge 收口，并删除远端 `codeb/...` 候选分支；无权限删除时必须说明。

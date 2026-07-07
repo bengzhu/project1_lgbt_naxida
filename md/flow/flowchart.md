@@ -170,6 +170,7 @@ flowchart TD
   KNSMR --> R
   KNABL --> R
   KNPG --> R
+  KNCD --> R
   KIR --> R
   KAC --> R
   Z --> R
@@ -212,6 +213,7 @@ flowchart TD
   KNSMR --> T
   KNABL --> T
   KNPG --> T
+  KNCD --> T
   KIR --> T
   KAC --> T
 ```

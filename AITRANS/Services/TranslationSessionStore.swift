@@ -8657,6 +8657,12 @@ final class TranslationSessionStore: ObservableObject {
             identityVerdict = "requiredIdentityHashMissing"
         } else if manifest?.contractExampleOnly == true {
             identityVerdict = "blockedContractExampleOnly"
+        } else if manifest?.sourceImageFieldPresent != true || manifest?.sourceImage.isEmpty == true {
+            identityVerdict = "manifestSourceImageMissing"
+        } else if manifest?.contractExampleOnlyFieldPresent != true {
+            identityVerdict = "manifestContractExampleOnlyMissing"
+        } else if manifest?.contractExampleOnlyTypeValid != true {
+            identityVerdict = "manifestContractExampleOnlyInvalid"
         } else {
             identityVerdict = "activeArtifactIdentityRecorded"
         }
@@ -12876,7 +12882,10 @@ final class TranslationSessionStore: ObservableObject {
         let schemaVersion = manifest?.schemaVersion
         let schemaVersionMatches = schemaVersion == expectedSchemaVersion
         let coordinateSpace = manifest?.coordinateSpace
-        let sourceImageMatches = manifest?.sourceImage == nil || manifest?.sourceImage == "test/1.png"
+        let sourceImageMissing = manifest != nil && (manifest?.sourceImageFieldPresent != true || manifest?.sourceImage.isEmpty == true)
+        let sourceImageMatches = manifest == nil || manifest?.sourceImage == "test/1.png"
+        let contractExampleOnlyMissing = manifest != nil && manifest?.contractExampleOnlyFieldPresent != true
+        let contractExampleOnlyInvalid = manifest != nil && manifest?.contractExampleOnlyFieldPresent == true && manifest?.contractExampleOnlyTypeValid != true
         var errors: [String] = []
         if let schemaVersion, schemaVersion != expectedSchemaVersion {
             errors.append("schemaVersionMismatch:\(schemaVersion)")
@@ -12888,7 +12897,9 @@ final class TranslationSessionStore: ObservableObject {
         } else if coordinateSpace == nil {
             errors.append("coordinateSpaceMissing")
         }
-        if !sourceImageMatches {
+        if sourceImageMissing {
+            errors.append("sourceImageMissing")
+        } else if !sourceImageMatches {
             errors.append("sourceImageMismatch:\(manifest?.sourceImage ?? "nil")")
         }
         let bounds = CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
@@ -12945,6 +12956,13 @@ final class TranslationSessionStore: ObservableObject {
         var notes = ["bbox convention is original image pixel coordinates with top-left origin"]
         if manifest?.contractExampleOnly == true {
             notes.append("contractExampleOnly=true")
+        }
+        if contractExampleOnlyMissing {
+            errors.append("contractExampleOnlyMissing")
+            notes.append("contractExampleOnlyMissing")
+        } else if contractExampleOnlyInvalid {
+            errors.append("contractExampleOnlyInvalid")
+            notes.append("contractExampleOnlyInvalid")
         }
         let sourcePolicyErrors = Self.externalArtifactGeneratedByPolicyErrors(manifest: manifest)
         if !sourcePolicyErrors.isEmpty {
@@ -13049,8 +13067,17 @@ final class TranslationSessionStore: ObservableObject {
         if coordinateValidation.errors.contains(where: { $0.hasPrefix("coordinateSpaceMismatch") }) {
             return "coordinateSpaceMismatch"
         }
+        if coordinateValidation.errors.contains("sourceImageMissing") {
+            return "sourceImageMissing"
+        }
         if coordinateValidation.errors.contains(where: { $0.hasPrefix("sourceImageMismatch") }) {
             return "sourceImageMismatch"
+        }
+        if coordinateValidation.errors.contains("contractExampleOnlyMissing") {
+            return "contractExampleOnlyMissing"
+        }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("contractExampleOnlyInvalid") }) {
+            return "contractExampleOnlyInvalid"
         }
         if coordinateValidation.errors.contains("generatedByMissing") {
             return "generatedByMissing"
@@ -13086,9 +13113,9 @@ final class TranslationSessionStore: ObservableObject {
             return "stopUntilParserFixed"
         case "contractExampleOnly":
             return "stopBecauseFixtureIsNotDetectorOutput"
-        case "generatedByMissing", "forbiddenGeneratedBy":
+        case "contractExampleOnlyMissing", "contractExampleOnlyInvalid", "generatedByMissing", "forbiddenGeneratedBy":
             return "stopUntilRealDetectorSourceDeclared"
-        case "schemaVersionMissing", "schemaVersionMismatch", "coordinateSpaceMissing", "coordinateSpaceMismatch", "sourceImageMismatch", "coordinateValidationFailed":
+        case "schemaVersionMissing", "schemaVersionMismatch", "coordinateSpaceMissing", "coordinateSpaceMismatch", "sourceImageMissing", "sourceImageMismatch", "coordinateValidationFailed":
             return "stopUntilArtifactContractFixed"
         default:
             return "stopUntilArtifactsProvided"
@@ -21084,7 +21111,7 @@ final class TranslationSessionStore: ObservableObject {
             + (externalOrientationUnsupportedBlocks.isEmpty ? [] : ["external TextBox declares linePolygons or arbitrary rotation that still needs warp/deskew support"])
         )
         let externalOrientationGateStatus = externalReady
-            ? (externalShadowCoverageBlockedBlocks.isEmpty && externalOrientationBlockedBlocks.isEmpty ? "passed" : "warning")
+            ? (externalShadowCoverageBlockedBlocks.isEmpty && externalOrientationBlockedBlocks.isEmpty ? "passed" : "blocked")
             : "open"
         let externalOrientationDecisionSignals = [
             signal("orientationReadinessVerdict", externalOrientationVerdict, source: "externalTextBoxShadowOCRReport"),

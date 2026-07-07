@@ -69,6 +69,7 @@ python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_con
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail
+python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid --expect-fail
 python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
 ```
 
@@ -76,7 +77,7 @@ validator 只读指定目录，不复制、不生成 active artifact。输出 JS
 
 `--print-required-files` 只打印 Koharu / 外部 detector 侧需要交付的 active 文件清单，不读取或写入 `test/koharu_artifacts/`。缺少真实 active 目录时，`--allow-missing` 的正确结果是 `verdict = manifestMissing`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided`，并列出 `manifest`、`TextBoxes`、`BubbleMask`、`SegmentMask` 的阻塞项；不应额外混入 schema / coordinate 缺失噪音。
 
-云端手动 workflow 可选从 Release archive 注入真实四件套：填写 `koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256` 后，CI 会在 Xcode build 前下载、校验、解压，并且只接受唯一一个同时包含 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json` 的目录；找到 0 个或多个候选目录都会失败，避免从不同目录拼出错包。通过后 CI 只复制该目录下四个固定 JSON 到 `test/koharu_artifacts/`，并把 validator identity / orientation 摘要写入未加密结果包；`koharu_artifact_required=true` 时下载、SHA、解压、唯一目录检查或 validator 失败会直接失败。
+云端手动 workflow 可选从 Release archive 注入真实四件套：填写 `koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256` 后，CI 会在 Xcode build 前下载、校验、解压，并且只接受唯一一个同时包含 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json` 的目录；找到 0 个或多个候选目录都会失败，避免从不同目录拼出错包。通过后 CI 只复制该目录下四个固定 JSON 到 `test/koharu_artifacts/`，并把 validator identity / orientation 摘要写入未加密结果包；`koharu_artifact_required=true` 时下载、SHA、解压、唯一目录检查或 validator 失败会直接失败。注入 artifact 时 `probe_mode` 必须是 `ci-fast` 或 `full`，不能使用 `skip`，因为验收必须证明 App 探针实际读取了同一组四件套。
 
 ## 从 Koharu 导出到 AITRANS contract
 
@@ -189,6 +190,9 @@ externalArtifactReadinessSummary.externalTextBoxesShadowOCRAllowed = true
 externalTextBoxShadowOCRSummary.executed = true
 externalTextBoxShadowOCRSummary.candidateCount > 0
 externalTextBoxShadowOCRSummary.ocrExecutedCount > 0
+externalTextBoxShadowOCRSummary.ocrSucceededCount > 0
+koharuArtifactIdentityReconciliationMatch.matchVerdict = matched
+G-external-textbox-shadow-ocr-coverage.status = passed
 koharuArtifactValidationOrientationSummary 可用于审计 TextBox 方向风险
 externalTextBoxShadowOCRSummary.orientationReadinessVerdict 已按 App 探针结果填充
 ```
@@ -207,3 +211,16 @@ externalTextBoxesShadowOCRAllowed == true
 ```
 
 没有真实 active artifact 时，正确结果仍是 `manifestMissing` 或 `artifactFilesMissing`，`nextAction = stopUntilArtifactsProvided`。本契约工作不改变 `configuration.currentBlockSource`、`finalTextUsedForTranslation`、主覆盖图、`blockPassed` 或 `textRegionCropReport.adoptedCount`。
+
+ready 只表示允许进入 external TextBoxes shadow OCR。云端闭环验收还必须满足：
+
+```text
+externalTextBoxShadowOCRReport.executed == true
+externalTextBoxShadowOCRReport.candidateCount > 0
+externalTextBoxShadowOCRReport.ocrExecutedCount > 0
+externalTextBoxShadowOCRReport.ocrSucceededCount > 0
+koharuArtifactIdentityReconciliationMatch.matchVerdict == "matched"
+G-external-textbox-shadow-ocr-coverage.status == "passed"
+```
+
+若 TextBox 带 `sourceDirection`、`linePolygons`、`rotationDegrees` / `rotationDeg`，orientation partial / unsupported 必须进入 `WI/G-external-textbox-orientation-shadow-path`，不能把相关块判为 `closedReportOnly` 或把 gate 判为 `passed`。
