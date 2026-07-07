@@ -456,11 +456,21 @@ jobs:
           with open("ci-results/koharu-package-fixture-smoke.json", "r", encoding="utf-8") as handle:
               data = json.load(handle)
           packet = data.get("handoffPacket") or {}
+          release_archive = packet.get("releaseArchive") or {}
+          release_archive_inspection = release_archive.get("inspection") or {}
           upload_command = packet.get("ghReleaseUploadCommand") or ""
           dispatch_command = packet.get("ghWorkflowDispatchCommand") or ""
           run_list_command = packet.get("ghRunListCommand") or ""
           if packet.get("handoffReadyForReleaseUpload") is not False:
               raise SystemExit(f"fixture package must not be release-ready: {packet}")
+          if packet.get("releaseArchiveInspectionPassed") is not True:
+              raise SystemExit(f"fixture package missing release archive inspection proof: {packet}")
+          if release_archive_inspection.get("candidateDirectoryCount") != 1 or release_archive_inspection.get("verdict") != "contractExampleOnly":
+              raise SystemExit(f"fixture archive inspection proof mismatch: {release_archive_inspection}")
+          if not packet.get("inspectReleaseArchiveCommand"):
+              raise SystemExit(f"handoff packet missing inspect command: {packet}")
+          if not (packet.get("expectedCIManifestEcho") or {}).get("koharuArtifactIdentityReconciliationMatch.matchVerdict"):
+              raise SystemExit(f"handoff packet missing expected CI manifest echo: {packet}")
           if "gh release upload 'fixture tag'" not in upload_command or "--repo Altman-sam114/x113451" not in upload_command:
               raise SystemExit(f"release upload command missing repo or quoted tag: {upload_command}")
           if "'koharu_artifact_release_tag=fixture tag'" not in dispatch_command or "'koharu_artifact_asset=koharu fixture package.zip'" not in dispatch_command:

@@ -116,6 +116,36 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.83：Koharu Handoff Archive Inspection Proof
+日期：2026-07-07
+
+依据：v1.82 已提供 `--inspect-release-archive` 和带 repo 的 Release upload / workflow dispatch 命令，但 handoff packet 本身还没有把“将上传的 archive 已按 CI 唯一四件套目录规则复验”作为结构化 proof 带给人工和 Agent C。继续补真实 artifact handoff 交付闭环，不新增 report-only 探针层，不改 Swift 主链路。
+
+核心变更：
+
+- `--package-release-archive` 生成 zip 后会立即用 `inspect_release_archive()` 复验该 zip，并把结果写入 `handoffPacket.releaseArchive.inspection`，包含 validation verdict、candidate directory、member count、artifact identity summary 和 orientation summary。
+- `handoffPacket` 新增 `releaseArchiveInspectionPassed`、`releaseArchiveInspectionVerdict`、`inspectReleaseArchiveCommand` 和 `expectedCIManifestEcho`，让上传前 proof、Release asset SHA、workflow dispatch 参数和 Agent C 云端 manifest 核对点在同一个 JSON 中闭合。
+- handoff ready 现在要求真实 validator verdict、archive SHA 和本地 archive inspection proof 同时成立；`contractExampleOnly` fixture 仍可用于 smoke，但不会被标记为 release / dispatch ready。
+- `AITRANS CI Results` static checks 只在 fixture package smoke 中断言 handoff inspection proof，不把 inspection 重新塞回真实 Release 注入主路径，避免增加 workflow 启动风险。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`python3 -B -m py_compile scripts/validate-koharu-artifacts.py`、workflow YAML parse、JSON parse、Koharu valid / orientation / invalid fixture 矩阵、`test/koharu_artifacts --allow-missing`、handoff packet、package 拒绝 / 成功 zip 布局、`--inspect-release-archive` 成功 / 空 archive / 双 candidate archive 失败路径、fixture handoff inspection proof、active-like handoff ready + inspection proof。
+- 云端结果包待本修复 commit push 后确认：本版本只改 Python validator、workflow static smoke 和文档，预期 push CI 走 build-skip；workflow / validator 变化会触发 extended Koharu validator matrix 和 package smoke。
+
+遗留事项：
+
+- 本版本仍不生成真实 Koharu 四件套、不上传 Release、不触发手动 `ci-fast/full`，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 真实验收仍必须由人工提供外部 detector 输出，按 handoff packet 上传 Release 并 dispatch `ci-fast/full` 后，核对云端 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates。
+
 ### v1.82：Koharu Release Archive Inspect and Upload Commands
 日期：2026-07-07
 

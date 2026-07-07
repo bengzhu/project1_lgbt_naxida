@@ -243,6 +243,7 @@ def package_release_archive(
     root: Path,
     *,
     allow_fixture_package: bool,
+    image_path: Path,
 ) -> dict[str, Any]:
     verdict = summary.get("verdict")
     if verdict != "readyForShadowOCR" and not (allow_fixture_package and verdict == "contractExampleOnly"):
@@ -283,11 +284,24 @@ def package_release_archive(
     with zipfile.ZipFile(archive_path, "r") as archive:
         archive_members = archive.namelist()
     archive_sha = sha256_file(archive_path)
+    inspection = inspect_release_archive(archive_path, image_path)
     return {
         "path": str(archive_path),
         "exists": archive_path.is_file(),
         "sizeBytes": archive_path.stat().st_size,
         "sha256": archive_sha,
+        "inspection": {
+            "validationPassed": inspection.get("validationPassed"),
+            "verdict": inspection.get("verdict"),
+            "candidateDirectoryCount": inspection.get("candidateDirectoryCount"),
+            "candidateDirectory": inspection.get("candidateDirectory"),
+            "archive": {
+                "memberCount": ((inspection.get("archive") or {}).get("memberCount")),
+                "members": ((inspection.get("archive") or {}).get("members")),
+            },
+            "artifactIdentitySummary": ((inspection.get("validation") or {}).get("artifactIdentitySummary")),
+            "orientationMetadataSummary": ((inspection.get("validation") or {}).get("orientationMetadataSummary")),
+        },
         "layout": {
             "singleDirectory": archive_dir,
             "canonicalFiles": [
@@ -316,6 +330,8 @@ def handoff_packet(
     archive_sha = (archive_identity or {}).get("sha256")
     archive_asset = release_asset or Path(str((archive_identity or {}).get("path") or "koharu-artifacts.zip")).name
     archive_path = str((archive_identity or {}).get("path") or "<archive-path>")
+    archive_inspection = (archive_identity or {}).get("inspection") or {}
+    archive_inspection_passed = bool(archive_inspection.get("validationPassed"))
     release_upload_args = [
         "gh",
         "release",
@@ -345,9 +361,20 @@ def handoff_packet(
         "-f",
         "koharu_artifact_required=true",
     ]
+    inspect_args = [
+        "python3",
+        "scripts/validate-koharu-artifacts.py",
+        "--inspect-release-archive",
+        archive_path,
+    ]
+    handoff_ready = (
+        summary.get("verdict") == "readyForShadowOCR"
+        and bool(archive_sha)
+        and archive_inspection_passed
+    )
     return {
-        "handoffReadyForReleaseUpload": summary.get("verdict") == "readyForShadowOCR" and bool(archive_sha),
-        "handoffReadyForWorkflowDispatch": summary.get("verdict") == "readyForShadowOCR" and bool(archive_sha),
+        "handoffReadyForReleaseUpload": handoff_ready,
+        "handoffReadyForWorkflowDispatch": handoff_ready,
         "validationVerdict": summary.get("verdict"),
         "readyForShadowOCR": summary.get("readyForShadowOCR"),
         "externalTextBoxesShadowOCRAllowed": summary.get("externalTextBoxesShadowOCRAllowed"),
@@ -365,6 +392,9 @@ def handoff_packet(
         "artifactIdentitySummary": summary.get("artifactIdentitySummary"),
         "orientationMetadataSummary": summary.get("orientationMetadataSummary"),
         "releaseArchive": archive_identity,
+        "releaseArchiveInspectionPassed": archive_inspection_passed,
+        "releaseArchiveInspectionVerdict": archive_inspection.get("verdict"),
+        "inspectReleaseArchiveCommand": shlex.join(inspect_args),
         "workflowDispatchInputs": {
             "probe_mode": probe_mode,
             "koharu_artifact_release_tag": release_tag,
@@ -379,6 +409,14 @@ def handoff_packet(
             "assetName": archive_asset,
             "requiresExistingRelease": True,
             "clobberByDefault": False,
+        },
+        "expectedCIManifestEcho": {
+            "koharuArtifactReleaseTag": release_tag,
+            "koharuArtifactAsset": archive_asset,
+            "koharuArtifactSha256": archive_sha or "<archive-sha256>",
+            "koharuArtifactValidationIdentitySummary": "must match releaseArchive.inspection.artifactIdentitySummary after CI injection",
+            "koharuArtifactValidationOrientationSummary": "must match releaseArchive.inspection.orientationMetadataSummary after CI injection",
+            "koharuArtifactIdentityReconciliationMatch.matchVerdict": "matched",
         },
         "ghReleaseUploadCommand": shlex.join(release_upload_args),
         "ghWorkflowDispatchCommand": shlex.join(workflow_args),
@@ -399,6 +437,7 @@ def handoff_packet(
             "ghReleaseUploadCommand requires the named GitHub Release tag to already exist.",
             "Do not add --clobber unless a human intentionally wants to replace an existing asset.",
             "CI will reject archives that do not contain exactly one directory with the four canonical JSON files.",
+            "releaseArchive.inspection is a local preflight proof; Agent C must still verify the cloud manifest and App runtime reports.",
             "Agent C must still verify App runtime readiness, identity reconciliation, shadow OCR coverage, and orientation gates from the CI result artifact.",
         ],
     }
@@ -1255,6 +1294,7 @@ def main() -> int:
             Path(args.package_release_archive),
             root,
             allow_fixture_package=args.allow_fixture_package,
+            image_path=image_path,
         )
 
     output = summary
