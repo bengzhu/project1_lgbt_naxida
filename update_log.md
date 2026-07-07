@@ -139,7 +139,8 @@
 验证结果：
 
 - 本地轻量验证通过：`git diff --check`、`python3 -B -m py_compile scripts/validate-koharu-artifacts.py`、workflow YAML parse、JSON parse、Koharu valid / orientation / invalid fixture 矩阵、`test/koharu_artifacts --allow-missing`、fixture package handoff packet、`python3 -m json.tool /tmp/koharu-handoff-v184.json` 和新增 `ciResultReview` / structured assertions 字段 smoke。
-- 云端结果包待本版本 commit push 后确认；本版本只改 Python validator、workflow static smoke 和文档，预期 push CI 走 build-skip，但 workflow / validator 变化会触发 extended Koharu validator matrix 和 package smoke。
+- 云端 `AITRANS CI Results` run `28864811074` 通过，artifact `aitrans-ci-unversioned-smalldata_test--13591a80d066-run28864811074-attempt1` 已核对：`branch = smalldata_test`、`commitSha = 13591a80d0663fb3fed83f74e2cb03ddf851a05e`、`runId = 28864811074`、`runAttempt = 1`、`workflowName = AITRANS CI Results`、`xcodeBuildRequired = false`、`xcodeBuildSkippedReason = non_app_build_related_fast_path`、`probeMode = skip`、`scopeDiffMethod = checkout_before`、`scopeDiffFallbackUsed = false`、`koharuValidatorExtendedRequired = true`；`junit.xml` 为 5 tests / 0 failures；fixture package smoke 证明 `releaseArchiveInspectionPassed = true`、`releaseArchiveInspectionVerdict = contractExampleOnly`、`candidateDirectoryCount = 1`、`ghRunWatchCommand` / `ghRunDownloadCommand` 存在、`ciResultReview.requiredResultFiles` 覆盖四个必需文件、`expectedCloudIdentityRows = 5`、`expectedCIManifestAssertions = 14`、`expectedAppRuntimeAssertions = 10`、`expectedExternalShadowOCRAssertions = 8`、`expectedConvergenceAssertions = 6`、`staleRunRejectionAssertions = 5`。
+- 同轮 `AITRANS - Build IPA` run `28864811123` 通过，archive 10m45s，IPA package 6s。
 
 遗留事项：
 
