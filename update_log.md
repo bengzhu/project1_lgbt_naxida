@@ -116,6 +116,32 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.76：CI Scope Diff Accuracy / Skip Probe Artifact Hygiene
+日期：2026-07-07
+
+依据：v1.75 云端 push run `28844582258` 虽然只改 workflow 和日志，但 `changed-files.txt` 回退成全仓列表，导致 `xcodeBuildRequired = true` 并额外跑 Xcode build。原因是 `actions/checkout` 默认浅克隆只含当前提交，`Detect CI scope` 找不到 `github.event.before` 时只能回退 `git ls-files`。这会削弱非 App 改动的 build-skip 加速路径。同轮审计还发现 `probe_mode=skip` 会把仓库中已有的旧 `output/` 复制进结果包，容易让 Agent C 误读为本次云端探针产物。
+
+核心变更：
+
+- `AITRANS CI Results` 的 checkout 增加 `fetch-depth: 2`，让普通单提交 push 能 diff 到 `github.event.before`，避免浅克隆缺 before commit 时误判全仓变化。
+- `Copy available probe outputs` 只在 `probe_mode != skip` 且 `manga_probe` 成功时复制本轮 `output/`；skip 或探针失败时只写 `output/probe-not-run.txt`，不再把 checked-in 旧 JSON / TXT / PNG 混入本次 CI artifact。
+- `md/test/test.md` 补充 scope detection 和 skip probe artifact hygiene 要求，明确 build-skip 结果包不能被旧探针输出污染。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：预期本次仅 workflow / 文档变更时 `xcodeBuildRequired = false`，`xcodeBuildSkippedReason = non_app_build_related_fast_path`，`changed-files.txt` 只列本次变更文件；`probeMode = skip` 时 `probeReportPath` 为空，`probeOutputRetainedFiles = ["probe-not-run.txt"]`。
+
+遗留事项：
+
+- `fetch-depth: 2` 覆盖普通单提交 push；若后续一次 push 包含多提交且 `before` 不在最近 2 个提交内，仍可能回退全仓列表。需要时再升级为按 SHA 定向 fetch，而不是直接全量 checkout。
+- 本版本不新增真实 Koharu 四件套，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+
 ### v1.75：CI Manifest Step Split / Workflow Startup Fix
 日期：2026-07-07
 

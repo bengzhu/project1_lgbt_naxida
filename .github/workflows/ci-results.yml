@@ -62,6 +62,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Prepare metadata
         id: meta
@@ -862,14 +864,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_COPY_DIR"
-          if [ -d output ]; then
+          if [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" = "success" ] && [ -d output ]; then
             find output -maxdepth 1 -type f \( -name '*.json' -o -name '*.txt' -o -name '*.png' \) -print -exec cp {} "$OUTPUT_COPY_DIR/" \;
           fi
           if [ ! -f "$OUTPUT_COPY_DIR/probe_report.json" ]; then
             if [ "${{ steps.meta.outputs.probe_mode }}" = "skip" ]; then
               echo "probe_mode=skip fast CI did not run cloud manga probe; trigger workflow_dispatch with ci-fast or full when probe artifacts are required" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
             else
-              echo "probe_report.json not available from this workflow run; cloud manga probe did not complete successfully" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
+              echo "probe_report.json not available from this workflow run; cloud manga probe did not complete successfully, so checked-in output/ files were not copied into this result bundle" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
             fi
           fi
           find "$OUTPUT_COPY_DIR" -maxdepth 1 -type f -print | while read -r file; do basename "$file"; done | sort > "$RESULT_ROOT/probe-output-retained-files.txt"
