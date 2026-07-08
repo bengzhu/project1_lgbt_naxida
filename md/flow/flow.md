@@ -47,6 +47,7 @@
 
 - 调用 `TranslationSessionStore` 方法。
 - 展示翻译、历史、模型状态、OCR 块、探针报告和错误。
+- 音频页展示 Apple Speech 本机识别能力、识别运行摘要、识别文本、译文和取消入口。
 
 关键文件：
 
@@ -76,6 +77,7 @@
 - `Application Support/AITRANS/state.json`。
 - `output/probe_report.json` 相关报告模型。
 - 诊断汇总和质量判定结果。
+- `speechRecognitionRunSummary`：记录音频文件或实时麦克风识别的模式、语言、离线要求、耗时、词数、分段数、平均置信度、最终文本和失败原因。
 
 关键文件：
 
@@ -140,7 +142,40 @@
 
 - 不要把漫画探针专用真值、纠错或质量统计混入普通图片生产路径。
 
-### 1.6 漫画覆盖翻译探针
+### 1.6 音频识别和翻译
+职责：通过 Apple Speech 做本机语音识别，再把识别文本交给统一模型翻译入口。
+
+输入：
+
+- 用户选择的音频文件。
+- Pro 页长按麦克风采集的实时音频。
+- 当前源语言的 Speech locale 和本机识别能力。
+
+输出：
+
+- `lastRecognizedSpeechText` 或 `proLiveTranscriptText`。
+- 翻译后的 `TranscriptLine`。
+- `speechRecognitionRunSummary`，用于 UI 展示模式、locale、本机识别要求、耗时、词数、分段数、置信度和错误。
+
+关键文件：
+
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Views/ContentView.swift`
+- `AITRANS/Views/ProFeatureViews.swift`
+
+规则：
+
+- 文件识别和实时识别都强制 `requiresOnDeviceRecognition = true`。
+- UI 只调用 store 方法，不直接创建 Speech recognizer。
+- 识别中和翻译中状态分开展示；用户可取消正在检查或识别的音频任务。
+
+禁止：
+
+- 不要把 Apple Speech 结果绕过 store 直接写入历史。
+- 不要把未授权、设备不支持或空识别文本伪装成成功。
+
+### 1.7 漫画覆盖翻译探针
 职责：固定读取 bundle 内 `test/1.png`，跑 OCR、翻译、覆盖绘制和诊断报告。
 
 输入：

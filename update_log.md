@@ -116,6 +116,40 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.86：Speech Recognition Insight and Audio UI Polish
+日期：2026-07-08
+
+依据：v1.85 已补齐 Koharu draft artifact contract 工具，但用户目标继续扩展到语音识别、云端测试和更精致的 UI。本轮先把音频识别从“只有一条状态文案”升级为可观察的本机识别运行摘要，并改善音频页操作反馈。
+
+核心变更：
+
+- 新增 `SpeechRecognitionRunSummary` 和 `SpeechRecognitionRunMode`，记录音频文件或实时麦克风识别的模式、输入名、locale、本机识别要求、设备支持状态、耗时、词数、分段数、平均置信度、最终文本和失败原因。
+- `AudioRecognitionState` 新增 `translating`，区分 Apple Speech 识别中和识别文本交给模型翻译中。
+- 文件音频识别和同声传译都会维护 `speechRecognitionRunSummary`；识别失败、权限拒绝、设备不支持、空文本、用户取消都会留下明确失败原因。
+- 长按同声传译松手后，主动结束导致的 recognition task cancel error 不再覆盖为失败状态。
+- 音频页新增识别质量摘要面板和识别取消入口，展示 locale、强制本机、耗时、词数、片段和置信度，让语音链路更可诊断、UI 信息层次更完整。
+- 同步 `md/flow/flow.md` 和 `md/flow/flowchart.md` 的音频识别流程。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Views/ContentView.swift`
+- `AITRANS/Views/ProFeatureViews.swift`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`python3 -m json.tool test/1.ground_truth.json`、`python3 -m json.tool output/clean_text_diagnostic.json`、`python3 -m json.tool output/probe_report.json`。
+- Swift / Xcode build 按项目规则交给 GitHub Actions；本轮 push 后需核对 `AITRANS CI Results` 和 `AITRANS - Build IPA`。
+
+遗留事项：
+
+- 本轮不引入第三方语音模型，不改变 Apple Speech 的 on-device 约束；真正“AI 语音识别”质量提升仍需要后续接入更强 ASR 或增加固定音频样本基准。
+- 语音 UI 已改善诊断和反馈，但还未做整站级视觉重设计；后续可继续升级工作台、图片页和 Pro 页视觉系统。
+
 ### v1.85：Koharu Native Draft Artifact Tool
 日期：2026-07-07
 

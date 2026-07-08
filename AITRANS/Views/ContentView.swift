@@ -1382,6 +1382,8 @@ private struct ProLiveInterpreterPanel: View {
                 .foregroundStyle(.white.opacity(0.58))
                 .fixedSize(horizontal: false, vertical: true)
 
+            SpeechRecognitionRunSummaryPanel()
+
             RawProbeBox(
                 title: "识别文本",
                 icon: "text.bubble.fill",
@@ -1412,18 +1414,14 @@ private struct AudioRecognitionWorkbenchPanel: View {
 
             AudioRecognitionPanel()
 
-            HStack(spacing: 10) {
-                PrimaryActionButton(icon: "folder", title: "选择音频") {
-                    showAudioImporter = true
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    audioFileButtons
                 }
-                .disabled(isRunning)
-                .opacity(isRunning ? 0.55 : 1)
 
-                SecondaryActionButton(icon: "arrow.clockwise", title: "重试 test/ 音频", tint: Color.appAccent) {
-                    store.runBundledAudioTest()
+                VStack(spacing: 10) {
+                    audioFileButtons
                 }
-                .disabled(isRunning)
-                .opacity(isRunning ? 0.55 : 1)
             }
 
             SpeechCapabilityPanel()
@@ -1443,9 +1441,39 @@ private struct AudioRecognitionWorkbenchPanel: View {
 
     private var isRunning: Bool {
         switch store.audioRecognitionState {
-        case .checking, .recognizing:
+        case .checking, .recognizing, .translating:
             true
         case .idle, .translated, .failed:
+            false
+        }
+    }
+
+    @ViewBuilder
+    private var audioFileButtons: some View {
+        PrimaryActionButton(icon: "folder", title: "选择音频") {
+            showAudioImporter = true
+        }
+        .disabled(isRunning)
+        .opacity(isRunning ? 0.55 : 1)
+
+        SecondaryActionButton(icon: "arrow.clockwise", title: "重试 test/ 音频", tint: Color.appAccent) {
+            store.runBundledAudioTest()
+        }
+        .disabled(isRunning)
+        .opacity(isRunning ? 0.55 : 1)
+
+        if canCancelRecognition {
+            SecondaryActionButton(icon: "xmark.circle.fill", title: "取消识别", tint: Color.danger) {
+                store.cancelAudioRecognition()
+            }
+        }
+    }
+
+    private var canCancelRecognition: Bool {
+        switch store.audioRecognitionState {
+        case .checking, .recognizing:
+            true
+        case .idle, .translating, .translated, .failed:
             false
         }
     }
@@ -1455,6 +1483,7 @@ private struct AudioRecognitionWorkbenchPanel: View {
         case .idle: "待选择"
         case .checking: "检查中"
         case .recognizing: "识别中"
+        case .translating: "翻译中"
         case .translated: "已完成"
         case .failed: "失败"
         }

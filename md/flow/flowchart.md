@@ -25,7 +25,8 @@ flowchart TD
   J --> K["图片旁贴 / 覆盖 UI"]
 
   %% 音频分支：Apple 本机语音识别
-  C --> L["音频识别<br/>Apple Speech on-device"]
+  C --> L["音频识别<br/>Apple Speech on-device / requiresOnDeviceRecognition"]
+  L --> LV["speechRecognitionRunSummary<br/>locale / 耗时 / 词数 / 片段 / 置信度 / 失败原因"]
   L --> D
 
   %% 漫画探针分支：固定 test/1.png

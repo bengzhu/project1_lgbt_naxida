@@ -176,6 +176,59 @@ struct SpeechRecognitionCapability: Identifiable, Equatable, Sendable {
     var supportsOnDeviceRecognition: Bool
 }
 
+enum SpeechRecognitionRunMode: String, Equatable, Codable, Sendable {
+    case audioFile
+    case liveMicrophone
+
+    var displayName: String {
+        switch self {
+        case .audioFile: "音频文件"
+        case .liveMicrophone: "实时麦克风"
+        }
+    }
+}
+
+struct SpeechRecognitionRunSummary: Equatable, Codable, Sendable {
+    var mode: SpeechRecognitionRunMode
+    var inputName: String
+    var localeIdentifier: String
+    var requiresOnDeviceRecognition: Bool
+    var supportsOnDeviceRecognition: Bool
+    var startedAt: Date
+    var completedAt: Date?
+    var transcriptPreview: String
+    var wordCount: Int
+    var segmentCount: Int
+    var averageConfidence: Double?
+    var isFinal: Bool
+    var failureMessage: String?
+
+    static let empty = SpeechRecognitionRunSummary(
+        mode: .audioFile,
+        inputName: "等待输入",
+        localeIdentifier: "en-US",
+        requiresOnDeviceRecognition: true,
+        supportsOnDeviceRecognition: false,
+        startedAt: Date(timeIntervalSince1970: 0),
+        completedAt: nil,
+        transcriptPreview: "",
+        wordCount: 0,
+        segmentCount: 0,
+        averageConfidence: nil,
+        isFinal: false,
+        failureMessage: nil
+    )
+
+    var hasContent: Bool {
+        inputName != "等待输入" || !transcriptPreview.isEmpty || failureMessage != nil
+    }
+
+    var elapsedSeconds: TimeInterval {
+        let end = completedAt ?? Date()
+        return max(0, end.timeIntervalSince(startedAt))
+    }
+}
+
 struct ProSubscriptionPlan: Equatable, Sendable {
     var productID: String
     var title: String
@@ -5940,6 +5993,7 @@ enum AudioRecognitionState: String, Equatable, Codable, Sendable {
     case idle
     case checking
     case recognizing
+    case translating
     case translated
     case failed
 }

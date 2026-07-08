@@ -95,6 +95,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var proLiveTranscriptText = ""
     @Published var proLiveTranslationText = ""
     @Published var isCapturingProSpeech = false
+    @Published var speechRecognitionRunSummary: SpeechRecognitionRunSummary = .empty
     @Published var imageTranslationState: ImageTranslationState = .idle
     @Published var imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
     @Published var imageTranslationBlocks: [ImageTranslationBlock] = []
@@ -122,6 +123,7 @@ final class TranslationSessionStore: ObservableObject {
     private var audioRecognitionTask: SFSpeechRecognitionTask?
     private var liveAudioEngine: AVAudioEngine?
     private var liveSpeechRecognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var isProLiveSpeechCaptureRequested = false
     private var proSubscriptionProduct: Product?
     private var imageTranslationSourceURL: URL?
     private var activeSessionID = UUID()
@@ -371,9 +373,11 @@ final class TranslationSessionStore: ObservableObject {
         audioRecognitionTask?.cancel()
 
         let capability = currentSpeechCapability
+        beginSpeechRecognitionRun(mode: .audioFile, inputName: url.lastPathComponent, capability: capability)
         guard capability.supportsOnDeviceRecognition else {
             audioRecognitionState = .failed
             audioRecognitionMessage = "\(sourceLanguage.rawValue) 当前设备未报告支持 Apple 本机语音识别，断网测试不能保证成功"
+            failSpeechRecognitionRun(audioRecognitionMessage)
             dataTransferMessage = audioRecognitionMessage
             return
         }
@@ -391,6 +395,7 @@ final class TranslationSessionStore: ObservableObject {
         } catch {
             audioRecognitionState = .failed
             audioRecognitionMessage = "音频文件复制失败：\(error.localizedDescription)"
+            failSpeechRecognitionRun(audioRecognitionMessage)
             dataTransferMessage = audioRecognitionMessage
             return
         }
@@ -405,6 +410,7 @@ final class TranslationSessionStore: ObservableObject {
                 guard status == .authorized else {
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "Apple Speech 权限未授权，无法测试本机识别"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
@@ -424,13 +430,16 @@ final class TranslationSessionStore: ObservableObject {
         guard !isCapturingProSpeech else { return }
 
         let capability = currentSpeechCapability
+        beginSpeechRecognitionRun(mode: .liveMicrophone, inputName: "实时麦克风", capability: capability)
         guard capability.supportsOnDeviceRecognition else {
             audioRecognitionState = .failed
             audioRecognitionMessage = "\(sourceLanguage.rawValue) 当前设备未报告支持 Apple 本机语音识别"
+            failSpeechRecognitionRun(audioRecognitionMessage)
             dataTransferMessage = audioRecognitionMessage
             return
         }
 
+        isProLiveSpeechCaptureRequested = true
         audioRecognitionState = .checking
         audioRecognitionMessage = "正在请求麦克风和 Speech 权限"
 
@@ -438,16 +447,20 @@ final class TranslationSessionStore: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 guard speechStatus == .authorized else {
+                    self.isProLiveSpeechCaptureRequested = false
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "Apple Speech 权限未授权"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
 
                 let microphoneGranted = await self.requestMicrophoneAccess()
                 guard microphoneGranted else {
+                    self.isProLiveSpeechCaptureRequested = false
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "麦克风权限未授权"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
@@ -458,6 +471,16 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func endProLiveSpeechCapture() {
+        isProLiveSpeechCaptureRequested = false
+        guard isCapturingProSpeech || liveAudioEngine != nil || liveSpeechRecognitionRequest != nil else {
+            if audioRecognitionState == .checking {
+                audioRecognitionState = .idle
+                audioRecognitionMessage = "语音识别已取消"
+                failSpeechRecognitionRun("用户取消")
+                dataTransferMessage = audioRecognitionMessage
+            }
+            return
+        }
         liveAudioEngine?.stop()
         liveAudioEngine?.inputNode.removeTap(onBus: 0)
         liveSpeechRecognitionRequest?.endAudio()
@@ -468,6 +491,10 @@ final class TranslationSessionStore: ObservableObject {
         isCapturingProSpeech = false
         audioRecognitionState = proLiveTranscriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .idle : .translated
         audioRecognitionMessage = proLiveTranscriptText.isEmpty ? "未识别到语音" : "识别完成，可点击翻译"
+        finishSpeechRecognitionRun(
+            finalText: proLiveTranscriptText,
+            failureMessage: proLiveTranscriptText.isEmpty ? "未识别到语音" : nil
+        )
     }
 
     func translateProLiveTranscript() {
@@ -480,6 +507,7 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         isProcessing = true
+        audioRecognitionState = .translating
         audioRecognitionMessage = "正在翻译识别文本"
         Task { [weak self] in
             guard let self else { return }
@@ -528,9 +556,18 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     private func startProLiveSpeechRecognition(capability: SpeechRecognitionCapability) {
+        guard isProLiveSpeechCaptureRequested else {
+            audioRecognitionState = .idle
+            audioRecognitionMessage = "语音识别已取消"
+            failSpeechRecognitionRun("用户取消")
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: capability.localeIdentifier)) else {
+            isProLiveSpeechCaptureRequested = false
             audioRecognitionState = .failed
             audioRecognitionMessage = "无法创建 \(capability.localeIdentifier) 语音识别器"
+            failSpeechRecognitionRun(audioRecognitionMessage)
             dataTransferMessage = audioRecognitionMessage
             return
         }
@@ -556,8 +593,10 @@ final class TranslationSessionStore: ObservableObject {
             try audioEngine.start()
         } catch {
             inputNode.removeTap(onBus: 0)
+            isProLiveSpeechCaptureRequested = false
             audioRecognitionState = .failed
             audioRecognitionMessage = "麦克风启动失败：\(error.localizedDescription)"
+            failSpeechRecognitionRun(audioRecognitionMessage)
             dataTransferMessage = audioRecognitionMessage
             return
         }
@@ -576,12 +615,15 @@ final class TranslationSessionStore: ObservableObject {
 
                 if let result {
                     self.proLiveTranscriptText = result.bestTranscription.formattedString
+                    self.updateSpeechRecognitionRun(from: result.bestTranscription, isFinal: result.isFinal)
                 }
 
                 if let error {
+                    guard self.isCapturingProSpeech else { return }
                     self.endProLiveSpeechCapture()
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "语音识别失败：\(error.localizedDescription)"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                     self.dataTransferMessage = self.audioRecognitionMessage
                 }
             }
@@ -613,24 +655,28 @@ final class TranslationSessionStore: ObservableObject {
                     self.isProcessing = false
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "本机语音识别失败：\(error.localizedDescription)"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
 
                 guard let result, result.isFinal else { return }
                 self.audioRecognitionTask = nil
+                self.updateSpeechRecognitionRun(from: result.bestTranscription, isFinal: true, completedAt: Date())
 
                 let text = result.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else {
                     self.isProcessing = false
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "语音识别完成，但没有得到文本"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
 
                 self.lastRecognizedSpeechText = text
                 self.draftText = text
+                self.audioRecognitionState = .translating
                 self.audioRecognitionMessage = "识别成功，正在交给翻译模型"
 
                 let timestamp = Self.timeFormatter.string(from: Date())
@@ -638,13 +684,116 @@ final class TranslationSessionStore: ObservableObject {
                 if didTranslate {
                     self.audioRecognitionState = .translated
                     self.audioRecognitionMessage = "已离线识别并完成翻译"
+                    self.finishSpeechRecognitionRun(finalText: text)
                 } else {
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "已离线识别出文字，但翻译模型处理失败"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                 }
                 self.dataTransferMessage = self.audioRecognitionMessage
             }
         }
+    }
+
+    func cancelAudioRecognition() {
+        isProLiveSpeechCaptureRequested = false
+        liveAudioEngine?.stop()
+        liveAudioEngine?.inputNode.removeTap(onBus: 0)
+        liveSpeechRecognitionRequest?.endAudio()
+        liveAudioEngine = nil
+        liveSpeechRecognitionRequest = nil
+        audioRecognitionTask?.cancel()
+        audioRecognitionTask = nil
+        isCapturingProSpeech = false
+        isProcessing = false
+        audioRecognitionState = .idle
+        audioRecognitionMessage = "语音识别已取消"
+        failSpeechRecognitionRun("用户取消")
+        dataTransferMessage = audioRecognitionMessage
+    }
+
+    private func beginSpeechRecognitionRun(
+        mode: SpeechRecognitionRunMode,
+        inputName: String,
+        capability: SpeechRecognitionCapability
+    ) {
+        speechRecognitionRunSummary = SpeechRecognitionRunSummary(
+            mode: mode,
+            inputName: inputName.isEmpty ? mode.displayName : inputName,
+            localeIdentifier: capability.localeIdentifier,
+            requiresOnDeviceRecognition: true,
+            supportsOnDeviceRecognition: capability.supportsOnDeviceRecognition,
+            startedAt: Date(),
+            completedAt: nil,
+            transcriptPreview: "",
+            wordCount: 0,
+            segmentCount: 0,
+            averageConfidence: nil,
+            isFinal: false,
+            failureMessage: nil
+        )
+    }
+
+    private func updateSpeechRecognitionRun(
+        from transcription: SFTranscription,
+        isFinal: Bool,
+        completedAt: Date? = nil
+    ) {
+        let text = transcription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let segments = transcription.segments
+        speechRecognitionRunSummary.transcriptPreview = text
+        speechRecognitionRunSummary.wordCount = Self.speechTokenCount(in: text)
+        speechRecognitionRunSummary.segmentCount = segments.count
+        speechRecognitionRunSummary.averageConfidence = Self.averageConfidence(for: segments)
+        speechRecognitionRunSummary.isFinal = isFinal
+        speechRecognitionRunSummary.completedAt = completedAt
+        speechRecognitionRunSummary.failureMessage = nil
+    }
+
+    private func finishSpeechRecognitionRun(finalText: String, failureMessage: String? = nil) {
+        let text = finalText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !text.isEmpty {
+            speechRecognitionRunSummary.transcriptPreview = text
+            speechRecognitionRunSummary.wordCount = Self.speechTokenCount(in: text)
+        }
+        speechRecognitionRunSummary.isFinal = failureMessage == nil
+        speechRecognitionRunSummary.completedAt = Date()
+        speechRecognitionRunSummary.failureMessage = failureMessage
+    }
+
+    private func failSpeechRecognitionRun(_ message: String) {
+        speechRecognitionRunSummary.completedAt = Date()
+        speechRecognitionRunSummary.isFinal = false
+        speechRecognitionRunSummary.failureMessage = message
+    }
+
+    private static func averageConfidence(for segments: [SFTranscriptionSegment]) -> Double? {
+        guard !segments.isEmpty else { return nil }
+        let total = segments.reduce(0.0) { partialResult, segment in
+            partialResult + min(max(Double(segment.confidence), 0), 1)
+        }
+        return total / Double(segments.count)
+    }
+
+    private static func speechTokenCount(in text: String) -> Int {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return 0 }
+
+        let whitespaceTokens = trimmed.split { character in
+            character.isWhitespace
+        }
+        if whitespaceTokens.count > 1 {
+            return whitespaceTokens.count
+        }
+
+        if trimmed.range(of: "\\p{Han}", options: .regularExpression) != nil {
+            return trimmed.unicodeScalars.filter { scalar in
+                !CharacterSet.whitespacesAndNewlines.contains(scalar) &&
+                !CharacterSet.punctuationCharacters.contains(scalar)
+            }.count
+        }
+
+        return 1
     }
 
     private func copyAudioFileIntoSandbox(_ url: URL) throws -> URL {
