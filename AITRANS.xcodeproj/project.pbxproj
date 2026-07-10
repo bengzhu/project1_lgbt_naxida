@@ -26,6 +26,8 @@
 		0A0000010000000000000027 /* test in Resources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000028 /* test */; };
 		0A0000010000000000000029 /* MangaOverlayProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000002A /* MangaOverlayProbeService.swift */; };
 		0A000001000000000000002C /* AppComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000002B /* AppComponents.swift */; };
+		0A00000100000000000000A2 /* TextTranslationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000A1 /* TextTranslationView.swift */; };
+		0A00000100000000000000A4 /* FeatureShellViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000A3 /* FeatureShellViews.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -65,6 +67,8 @@
 		0A0000010000000000000028 /* test */ = {isa = PBXFileReference; lastKnownFileType = folder; path = test; sourceTree = SOURCE_ROOT; };
 		0A000001000000000000002A /* MangaOverlayProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaOverlayProbeService.swift; sourceTree = "<group>"; };
 		0A000001000000000000002B /* AppComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppComponents.swift; sourceTree = "<group>"; };
+		0A00000100000000000000A1 /* TextTranslationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextTranslationView.swift; sourceTree = "<group>"; };
+		0A00000100000000000000A3 /* FeatureShellViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureShellViews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -148,6 +152,8 @@
 				0A000001000000000000001A /* AppTheme.swift */,
 				0A000001000000000000002B /* AppComponents.swift */,
 				0A0000010000000000000012 /* ContentView.swift */,
+				0A00000100000000000000A1 /* TextTranslationView.swift */,
+				0A00000100000000000000A3 /* FeatureShellViews.swift */,
 				0A000001000000000000001B /* ImageTranslationViews.swift */,
 				0A000001000000000000001D /* ProFeatureViews.swift */,
 			);
@@ -259,6 +265,8 @@
 				0A0000010000000000000025 /* LocalModelDownloadService.swift in Sources */,
 				0A0000010000000000000029 /* MangaOverlayProbeService.swift in Sources */,
 				0A000001000000000000002C /* AppComponents.swift in Sources */,
+				0A00000100000000000000A2 /* TextTranslationView.swift in Sources */,
+				0A00000100000000000000A4 /* FeatureShellViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
