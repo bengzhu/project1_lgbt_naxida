@@ -1139,6 +1139,12 @@ jobs:
       - name: Write manifest
         if: always()
         shell: bash
+        env:
+          MANIFEST_XCODE_BUILD_REQUIRED: ${{ steps.ci_scope.outputs.xcode_build_required }}
+          MANIFEST_XCODE_BUILD_SKIPPED_REASON: ${{ steps.ci_scope.outputs.xcode_build_skip_reason }}
+          MANIFEST_UI_EVIDENCE_REQUIRED: ${{ (github.ref_name == 'codeb/v1.87-enterprise-ui' || github.ref_name == 'codeb/v1.88-home-translation-ui') && steps.ci_scope.outputs.xcode_build_required == 'true' }}
+          MANIFEST_UI_EVIDENCE_OUTCOME: ${{ steps.ui_evidence.outcome }}
+          MANIFEST_UI_INTERACTION_CONTRACT_OUTCOME: ${{ steps.ui_interaction_contract.outcome }}
         run: |
           set -euo pipefail
           xcode_version="$(xcodebuild -version | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
@@ -1293,16 +1299,14 @@ jobs:
               "destination": "${DESTINATION}",
               "resultBundlePath": "${{ steps.meta.outputs.result_bundle }}",
               "changedFilesPath": "${RESULT_ROOT}/changed-files.txt",
-              "xcodeBuildRequired": "${{ steps.ci_scope.outputs.xcode_build_required }}" == "true",
-              "xcodeBuildSkippedReason": "${{ steps.ci_scope.outputs.xcode_build_skip_reason }}",
-              "uiEvidenceRequired": "${GITHUB_REF_NAME}" in {"codeb/v1.87-enterprise-ui", "codeb/v1.88-home-translation-ui"} and "${{ steps.ci_scope.outputs.xcode_build_required }}" == "true",
-              "uiEvidenceOutcome": "${{ steps.ui_evidence.outcome }}",
+              "xcodeBuildRequired": "$MANIFEST_XCODE_BUILD_REQUIRED" == "true",
+              "xcodeBuildSkippedReason": "$MANIFEST_XCODE_BUILD_SKIPPED_REASON",
+              "uiEvidenceRequired": "$MANIFEST_UI_EVIDENCE_REQUIRED" == "true",
+              "uiEvidenceOutcome": "$MANIFEST_UI_EVIDENCE_OUTCOME",
               "uiEvidenceManifestPath": "${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json",
               "uiEvidenceLogPath": "${RESULT_ROOT}/ui-evidence.log",
-              "uiInteractionContractOutcome": "${{ steps.ui_interaction_contract.outcome }}",
+              "uiInteractionContractOutcome": "$MANIFEST_UI_INTERACTION_CONTRACT_OUTCOME",
               "uiInteractionContractLogPath": "${RESULT_ROOT}/ui-interaction-contract.log",
-              "v188HomeUIContractOutcome": "${{ steps.home_ui_contract.outcome }}",
-              "v188HomeUIContractLogPath": "${RESULT_ROOT}/v188-home-ui-contract.log",
               "koharuValidatorExtendedRequired": "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" == "true",
               "simulatorAppReusedFromXcodeBuild": "${{ steps.meta.outputs.probe_mode }}" != "skip" and "${{ steps.simulator_build.outcome }}" == "success",
               "simulatorAppPath": "${{ steps.simulator_build.outputs.simulator_app_path }}",
@@ -1482,6 +1486,25 @@ jobs:
           with open("${RESULT_ROOT}/ci-artifact-manifest.json", "w", encoding="utf-8") as f:
               json.dump(manifest, f, ensure_ascii=False, indent=2)
               f.write("\n")
+          PY
+
+      - name: Append v1.88 home UI manifest status
+        if: always()
+        shell: bash
+        env:
+          V188_HOME_UI_CONTRACT_OUTCOME: ${{ steps.home_ui_contract.outcome }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("ci-results/ci-artifact-manifest.json")
+          manifest = json.loads(path.read_text(encoding="utf-8"))
+          manifest["v188HomeUIContractOutcome"] = os.environ["V188_HOME_UI_CONTRACT_OUTCOME"]
+          manifest["v188HomeUIContractLogPath"] = "ci-results/v188-home-ui-contract.log"
+          path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
 
       - name: Append native-lite manifest summary
