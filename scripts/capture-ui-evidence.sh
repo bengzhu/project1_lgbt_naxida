@@ -67,6 +67,9 @@ trap cleanup EXIT
 
 for device_id in "$small_id" "$large_id" "$tablet_id"; do
   xcrun simctl boot "$device_id"
+done
+
+for device_id in "$small_id" "$large_id" "$tablet_id"; do
   xcrun simctl bootstatus "$device_id" -b
   xcrun simctl install "$device_id" "$app_path"
   xcrun simctl ui "$device_id" appearance dark
@@ -88,6 +91,7 @@ capture() {
   local reduce_motion="$7"
   local appearance="$8"
 
+  echo "Capturing $filename ($device_label, $orientation, $content_size, $appearance)"
   xcrun simctl ui "$device_id" content_size "$content_size"
   set_orientation "$device_id" "$orientation"
   xcrun simctl terminate "$device_id" "$bundle_id" >/dev/null 2>&1 || true

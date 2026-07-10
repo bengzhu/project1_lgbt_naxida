@@ -621,7 +621,7 @@ jobs:
       - name: Capture current HEAD UI evidence
         id: ui_evidence
         if: github.ref_name == 'codeb/v1.87-enterprise-ui' && steps.ci_scope.outputs.xcode_build_required == 'true' && steps.xcode_build.outcome == 'success'
-        timeout-minutes: 15
+        timeout-minutes: 25
         shell: bash
         continue-on-error: true
         run: |
