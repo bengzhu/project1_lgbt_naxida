@@ -44,6 +44,7 @@ struct ProAccessPanel: View {
 
 struct ProFeatureGrid: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @State private var showBackgroundPlan = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
@@ -53,6 +54,28 @@ struct ProFeatureGrid: View {
                 ProFeatureRow(title: "音频翻译", detail: "Apple Speech 本机识别", systemImage: "waveform", unlocked: store.isProUnlocked)
                 ProFeatureRow(title: "扩展语言", detail: "日语、法语与德语", systemImage: "globe", unlocked: store.isProUnlocked)
             }
+
+            Button {
+                showBackgroundPlan = true
+            } label: {
+                HStack(spacing: AppTheme.Spacing.control) {
+                    Image(systemName: "rectangle.on.rectangle.badge.gearshape")
+                        .foregroundStyle(.appAccent)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("后台翻译路线").font(.subheadline.bold())
+                        Text("Share Extension 或 ReplayKit 合规方案").font(.caption).foregroundStyle(.appTextSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "info.circle").accessibilityHidden(true)
+                }
+                .frame(minHeight: AppTheme.Layout.minimumTarget)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.appTextPrimary)
+        }
+        .alert("后台一键翻译", isPresented: $showBackgroundPlan) {} message: {
+            Text("iOS 普通 App 不能常驻覆盖其他 App。可行路线是 Share Extension 处理截图或文本，或由用户显式启动 ReplayKit 屏幕广播后处理画面。")
         }
     }
 }

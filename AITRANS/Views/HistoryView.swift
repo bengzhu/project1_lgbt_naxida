@@ -94,7 +94,6 @@ struct HistoryView: View {
                 .frame(minHeight: AppTheme.Layout.minimumTarget)
                 .background(Color.appSurface, in: .rect(cornerRadius: AppTheme.Radius.control))
                 .overlay { RoundedRectangle(cornerRadius: AppTheme.Radius.control).stroke(Color.appBorder) }
-                .searchable(text: $query, prompt: "搜索原文、译文或摘要")
 
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: AppTheme.Spacing.control) { commands }

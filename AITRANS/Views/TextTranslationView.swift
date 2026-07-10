@@ -31,6 +31,7 @@ struct TextTranslationView: View {
                     }
                 }
 
+                SessionCommandBar()
                 RecentTranslationList()
             }
             .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
@@ -39,6 +40,26 @@ struct TextTranslationView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Color.appCanvas)
+    }
+}
+
+private struct SessionCommandBar: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: AppTheme.Spacing.control) { actions }
+            VStack(spacing: AppTheme.Spacing.control) { actions }
+        }
+    }
+
+    @ViewBuilder private var actions: some View {
+        AppSecondaryButton(title: "新会话", systemImage: "plus.rectangle.on.rectangle") {
+            store.startNewSession()
+        }
+        AppSecondaryButton(title: "归档当前", systemImage: "tray.and.arrow.down") {
+            store.archiveCurrentSession()
+        }
     }
 }
 
@@ -123,6 +144,7 @@ private struct LanguageControlBar: View {
 private struct TranslationInputPane: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @Binding var selectedTab: AppTab
+    @FocusState private var inputFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
@@ -136,6 +158,7 @@ private struct TranslationInputPane: View {
                 .font(.body)
                 .lineLimit(8...18)
                 .textFieldStyle(.plain)
+                .focused($inputFocused)
                 .foregroundStyle(.appTextPrimary)
                 .padding(AppTheme.Spacing.section)
                 .frame(maxWidth: .infinity, minHeight: 190, alignment: .topLeading)
@@ -151,6 +174,11 @@ private struct TranslationInputPane: View {
             }
         }
         .appSurface()
+        .task {
+#if DEBUG
+            inputFocused = ProcessInfo.processInfo.environment["AITRANS_UI_EVIDENCE_SCENARIO"] == AppPreviewScenario.textKeyboard.rawValue
+#endif
+        }
     }
 
     @ViewBuilder private var actions: some View {
@@ -235,10 +263,16 @@ private struct TranslationOutputPane: View {
             AppStatusRow(
                 title: store.lastGenerationLabel,
                 detail: "\(store.selectedEngine.rawValue) · \(store.selectedPrompt.title)",
-                tone: store.isProcessing ? .active : (latestLine == nil ? .neutral : .success)
+                tone: statusTone
             )
         }
         .appSurface()
+    }
+
+    private var statusTone: AppStatusTone {
+        if store.isProcessing { return .active }
+        if store.lastGenerationLabel.localizedStandardContains("失败") { return .danger }
+        return latestLine == nil ? .neutral : .success
     }
 }
 

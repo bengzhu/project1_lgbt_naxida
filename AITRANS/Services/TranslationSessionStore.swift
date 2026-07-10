@@ -132,12 +132,18 @@ final class TranslationSessionStore: ObservableObject {
     private var liveSampleIndex = 0
     private var isRestoring = false
 
-    init(modelService: any LocalLanguageModeling) {
+    init(
+        modelService: any LocalLanguageModeling,
+        persistenceURL: URL? = nil,
+        performsStartupWork: Bool = true
+    ) {
         let configuredLocalService = GemmaLocalService()
         self.mockService = modelService
         self.localService = configuredLocalService
         self.localModelDirectory = configuredLocalService.modelDirectory
-        self.persistenceURL = Self.makePersistenceURL()
+        self.persistenceURL = persistenceURL ?? Self.makePersistenceURL()
+
+        guard performsStartupWork else { return }
 
         restoreSnapshot()
         updateModelDownloadStateFromDisk()

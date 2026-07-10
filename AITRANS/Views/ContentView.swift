@@ -32,14 +32,30 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
 
 struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @EnvironmentObject private var store: TranslationSessionStore
-    @State private var selectedTab: AppTab = .text
+    @State private var selectedTab: AppTab
+
+    private let evidenceScenario: AppPreviewScenario?
+
+    init() {
+#if DEBUG
+        let scenario = ProcessInfo.processInfo.environment["AITRANS_UI_EVIDENCE_SCENARIO"]
+            .flatMap(AppPreviewScenario.init(rawValue:))
+#else
+        let scenario: AppPreviewScenario? = nil
+#endif
+        evidenceScenario = scenario
+        _selectedTab = State(initialValue: scenario?.selectedTab ?? .text)
+    }
 
     var body: some View {
         ZStack {
             AppCanvasBackground()
 
-            if horizontalSizeClass == .regular {
+            if evidenceScenario?.presentsModelDirectly == true {
+                ModelManagementView()
+            } else if horizontalSizeClass == .regular {
                 TabletRootView(selectedTab: $selectedTab)
             } else {
                 PhoneRootView(selectedTab: $selectedTab)
@@ -51,6 +67,7 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .environment(\.accessibilityReduceMotion, systemReduceMotion || evidenceScenario == .audioRecognizing)
     }
 }
 

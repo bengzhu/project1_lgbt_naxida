@@ -396,6 +396,7 @@ jobs:
             echo "## Static checks"
             git diff --check
             python3 -B scripts/test-speech-recognition-contract.py
+            bash -n scripts/capture-ui-evidence.sh
             python3 -m json.tool test/1.ground_truth.json >/dev/null
             if [ -f output/probe_report.json ]; then
               python3 -m json.tool output/probe_report.json >/dev/null
@@ -613,6 +614,29 @@ jobs:
             echo "This run changed only docs, metadata, or validator-independent files."
             echo "Choose workflow_dispatch probe_mode=ci-fast/full or change Swift/Xcode/resources/test files to force build validation."
           } > "$RESULT_ROOT/xcodebuild.log"
+
+      - name: Capture current HEAD UI evidence
+        id: ui_evidence
+        if: github.ref_name == 'codeb/v1.87-enterprise-ui' && steps.ci_scope.outputs.xcode_build_required == 'true' && steps.xcode_build.outcome == 'success'
+        timeout-minutes: 15
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          {
+            app_path="$(find "$DERIVED_DATA/Build/Products/Debug-iphonesimulator" -maxdepth 2 -name "$SCHEME.app" -type d | head -n 1)"
+            if [ -z "$app_path" ]; then
+              echo "Debug simulator app missing; UI evidence cannot be captured" >&2
+              exit 1
+            fi
+            bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Info.plist")"
+            test -n "$bundle_id"
+            scripts/capture-ui-evidence.sh \
+              "$app_path" \
+              "$bundle_id" \
+              "$RESULT_ROOT/ui-evidence" \
+              "$GITHUB_SHA"
+          } 2>&1 | tee "$RESULT_ROOT/ui-evidence.log"
 
       - name: Locate simulator app for manga probe
         id: simulator_build
@@ -1244,6 +1268,10 @@ jobs:
               "changedFilesPath": "${RESULT_ROOT}/changed-files.txt",
               "xcodeBuildRequired": "${{ steps.ci_scope.outputs.xcode_build_required }}" == "true",
               "xcodeBuildSkippedReason": "${{ steps.ci_scope.outputs.xcode_build_skip_reason }}",
+              "uiEvidenceRequired": "${GITHUB_REF_NAME}" == "codeb/v1.87-enterprise-ui",
+              "uiEvidenceOutcome": "${{ steps.ui_evidence.outcome }}",
+              "uiEvidenceManifestPath": "${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json",
+              "uiEvidenceLogPath": "${RESULT_ROOT}/ui-evidence.log",
               "koharuValidatorExtendedRequired": "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" == "true",
               "simulatorAppReusedFromXcodeBuild": "${{ steps.meta.outputs.probe_mode }}" != "skip" and "${{ steps.simulator_build.outcome }}" == "success",
               "simulatorAppPath": "${{ steps.simulator_build.outputs.simulator_app_path }}",
@@ -1618,6 +1646,7 @@ jobs:
             echo "- GGUF verify: ${{ steps.verify_model.outcome }}"
             echo "- static checks: ${{ steps.static_checks.outcome }}"
             echo "- xcode build: ${{ steps.xcode_build.outcome }}"
+            echo "- UI evidence: ${{ steps.ui_evidence.outcome }}"
             echo "- simulator build: ${{ steps.simulator_build.outcome }}"
             echo "- manga probe: ${{ steps.manga_probe.outcome }}"
             echo
@@ -1628,6 +1657,8 @@ jobs:
             echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
             echo "- Koharu active artifact validation: ${RESULT_ROOT}/koharu-active-artifacts-validation.json"
             echo "- Xcode build: ${RESULT_ROOT}/xcodebuild.log"
+            echo "- UI evidence: ${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json"
+            echo "- UI evidence log: ${RESULT_ROOT}/ui-evidence.log"
             echo "- Simulator build: ${RESULT_ROOT}/simulator-build.log"
             echo "- Manga probe: ${RESULT_ROOT}/manga-probe.log"
             echo "- App console: ${RESULT_ROOT}/app-console.log"
@@ -1748,7 +1779,7 @@ jobs:
               echo "- active artifact validator output missing; inspect static checks."
             fi
             echo
-            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${GITHUB_REF_NAME}" = "codeb/v1.87-enterprise-ui" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
               echo "## Return to Agent B"
               echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
             else
@@ -1773,7 +1804,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${GITHUB_REF_NAME}" = "codeb/v1.87-enterprise-ui" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi
