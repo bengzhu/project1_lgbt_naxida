@@ -44,9 +44,18 @@ struct SettingsView: View {
             }
         }
         .task {
+            guard !isUIEvidenceScenario else { return }
             store.loadProSubscriptionProduct()
             store.refreshSpeechRecognitionCapabilities()
         }
+    }
+
+    private var isUIEvidenceScenario: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.environment["AITRANS_UI_EVIDENCE_SCENARIO"] != nil
+#else
+        false
+#endif
     }
 }
 

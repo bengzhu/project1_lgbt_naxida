@@ -134,7 +134,7 @@
 
 本地轻量验证：Swift parse、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、5 项 Speech contract 和三个 JSON parse；未跑本机 build / 探针，按规则交给云端验证。
 
-已知云端证据：`398d33f` 对应 run `29072596685` 的静态检查和 Xcode build 成功，但旧截图脚本在首张 iPhone 图前阻塞，`uiEvidenceOutcome=failure`、截图数为 0，不能作为视觉验收。修复后的当前 HEAD 必须重新生成 8 张 iPhone PNG，并逐张检查重叠、截断、安全区、键盘和状态准确性。
+已知云端证据：`f3bde05` 对应 run `29074315687` 的静态检查、Xcode build 和结构化 UI evidence gate 均成功，manifest 与 8 张 iPhone PNG 的 SHA、日夜、Dynamic Type 和 Reduce Motion 字段匹配。但 Agent B 实际查看后拒绝该视觉证据：Pro 锁定设置图除状态栏外全黑，键盘图被 QuickPath 首次使用教学遮罩覆盖。当前修复改为隔离 evidence store、跳过设置页启动服务、预关闭键盘教学，并新增 50 KB 疑似空白图门槛；必须用新 HEAD 重新生成并逐张检查，旧 run 不能作为最终视觉验收。
 
 ### v1.86：Speech Recognition Insight and Audio UI Polish
 日期：2026-07-08

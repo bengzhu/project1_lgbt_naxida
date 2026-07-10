@@ -53,10 +53,17 @@ small_id="$(xcrun simctl create "AITRANS UI Small" "$small_type" "$runtime")"
 large_id="$(xcrun simctl create "AITRANS UI Large" "$large_type" "$runtime")"
 
 cleanup() {
+  if [ "${CI:-false}" = "true" ]; then
+    echo "Skipping simulator cleanup on ephemeral CI runner"
+    return
+  fi
   for device_id in "$small_id" "$large_id"; do
-    xcrun simctl shutdown "$device_id" >/dev/null 2>&1 || true
-    xcrun simctl delete "$device_id" >/dev/null 2>&1 || true
+    (
+      xcrun simctl shutdown "$device_id" >/dev/null 2>&1 || true
+      xcrun simctl delete "$device_id" >/dev/null 2>&1 || true
+    ) &
   done
+  wait || true
 }
 trap cleanup EXIT
 
@@ -71,6 +78,7 @@ wait "$large_boot_pid"
 for device_id in "$small_id" "$large_id"; do
   xcrun simctl install "$device_id" "$app_path"
   xcrun simctl ui "$device_id" appearance dark
+  xcrun simctl spawn "$device_id" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
 done
 
 capture() {
@@ -94,10 +102,16 @@ capture() {
 
   local image_width
   local image_height
+  local image_bytes
   image_width="$(sips -g pixelWidth "$output_dir/$filename" | awk '/pixelWidth/ {print $2}')"
   image_height="$(sips -g pixelHeight "$output_dir/$filename" | awk '/pixelHeight/ {print $2}')"
+  image_bytes="$(stat -f '%z' "$output_dir/$filename")"
   if [ "$orientation" = "portrait" ] && [ "$image_height" -le "$image_width" ]; then
     echo "Expected portrait screenshot but received ${image_width}x${image_height}: $filename" >&2
+    exit 1
+  fi
+  if [ "$image_bytes" -lt 50000 ]; then
+    echo "Screenshot appears blank (${image_bytes} bytes): $filename" >&2
     exit 1
   fi
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
