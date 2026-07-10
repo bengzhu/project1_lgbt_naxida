@@ -52,7 +52,26 @@
 关键文件：
 
 - `AITRANS/Views/ContentView.swift`
+- `AITRANS/Views/AppTheme.swift`
+- `AITRANS/Views/AppComponents.swift`
+- `AITRANS/Views/TextTranslationView.swift`
 - `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS/Views/AudioTranslationView.swift`
+- `AITRANS/Views/HistoryView.swift`
+- `AITRANS/Views/PromptLibraryView.swift`
+- `AITRANS/Views/SettingsView.swift`
+- `AITRANS/Views/ModelManagementView.swift`
+- `AITRANS/Views/DeveloperConsoleView.swift`
+- `AITRANS/Views/ProFeatureViews.swift`
+- `AITRANS/Views/AppPreviewSupport.swift`
+
+当前布局：
+
+- iPhone 使用文本、图片、音频、历史、设置五入口 `TabView`。
+- iPad 使用 `NavigationSplitView`；宽内容优先输入/输出或主检查区/状态区并排，空间不足时通过 `ViewThatFits` 降为单列。
+- `AppTheme` 提供语义颜色、间距、圆角、动效、触控和宽度 token；`AppComponents` 提供页头、区段、状态、按钮、空状态、指标和页面宽度原语。
+- 所有业务按钮只调用 store 公开方法；UI 不直接操作 `state.json`、模型 runtime、Speech task、Vision OCR 或漫画探针服务。
+- `AppPreviewScenario` 通过临时 URL 和 `performsStartupWork=false` 隔离预览，不恢复或持久化生产数据。DEBUG CI 可用 `AITRANS_UI_EVIDENCE_SCENARIO` 复现截图状态；生产启动不读取这些场景。
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppTheme.swift`
 

@@ -20,6 +20,16 @@
 - 需要探针验收时，手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。`ci-fast` 仍跑真实模拟器、Local GGUF、真实 `test/1.png`、deterministic 解码、主 OCR / bubble-first 融合 / 逐块翻译 / 失败块覆盖 / clean text / external artifact gate，以及 v1.18+ 必需的 report-only / detector-lite 受限 shadow 报告；只跳过明确列出的高成本对照和诊断 PNG。`ci-fast` 必须保留 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt`、`1_debug_boxes.png`、`1_translated_overlay.png`、`manga_probe_progress.json`。`full` 额外要求 contact sheet 等完整关键 PNG。
 - 探针模式等待期间 `ci-fast` 每 30 秒打印 `output/manga_probe_progress.json` 和输出目录快照，1800 秒总超时、启动后 180 秒未创建 progress 提前失败、进度 300 秒不更新提前失败；`full` 为 3600 秒总超时、300 秒 no-progress 阈值、600 秒停滞阈值。失败时仍复制已有 `output/`，并在结果包保留 `manga-probe.log`、`app-console.log`、manifest 和失败摘要。
 
+### 0.1 v1.87 UI 视觉与交互矩阵
+
+`codeb/v1.87-enterprise-ui` 的 push CI 在 Xcode build 通过后必须运行 `scripts/capture-ui-evidence.sh`。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、`ui-evidence-manifest.json` 和 `ui-evidence.log`，manifest 的每张截图必须记录设备、方向、Dynamic Type、场景、Reduce Motion 和当前 `commitSha`。
+
+最低截图矩阵：紧凑 iPhone 的文本空态、图片空态、历史有数据、Pro 锁定；大屏 iPhone 的文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频运行；iPad 的 Pro 解锁竖屏、图片成功横屏、Local missing 竖屏和 Local ready XXL 横屏。截图步骤失败必须使候选分支 CI 失败。
+
+Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键盘遮挡；页面没有卡片套卡片；主操作层级唯一；颜色之外仍有图标和文字状态；44pt 触控、最长状态文案、Dynamic Type、横竖屏和安全区可用。Preview matrix 只用于复现状态和开发检查，不得当作当前 HEAD 运行截图。
+
+交互回归至少覆盖：文本翻译/交换语言/目标语言/提示词；新会话与历史恢复/搜索/删除/导入/导出/清空；提示词新建/编辑/复制/删除/选择；Mock/Local、GGUF 下载/导入/移除和失败；图片导入/OCR/旁贴/覆盖/取消/重试/导出；音频导入/识别/取消/翻译/摘要；Pro 锁定/解锁/订阅校验；开发 raw probe、批量探针和漫画报告入口。
+
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：
 

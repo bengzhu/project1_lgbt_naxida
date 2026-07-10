@@ -7,7 +7,12 @@
 ```mermaid
 flowchart TD
   %% 用户入口：文本、图片、音频、开发页探针
-  A["用户操作 / test 固定素材"] --> B["SwiftUI UI 层<br/>文本 / 图片 / 音频 / 历史 / 设置 / 开发页"]
+  A["用户操作 / test 固定素材"] --> NAV{"设备布局"}
+  NAV -->|"iPhone"| TAB["五入口 TabView"]
+  NAV -->|"iPad"| SPLIT["NavigationSplitView"]
+  TAB --> B["拆分的 SwiftUI feature views<br/>文本 / 图片 / 音频 / 历史 / 设置 / 开发"]
+  SPLIT --> B
+  DS["AppTheme + AppComponents<br/>语义 token / 状态 / 44pt / 响应式布局"] --> B
 
   %% 状态中心：所有业务动作统一进入 store
   B --> C["TranslationSessionStore<br/>统一状态、调度、持久化、诊断"]
@@ -39,6 +44,7 @@ flowchart TD
 
   %% 输出：持久化和调试产物
   C --> R["state.json<br/>会话、历史、提示词、设置"]
+  PREVIEW["隔离 Preview / DEBUG UI evidence 场景"] -. "仅展示状态，不执行业务服务" .-> B
   Q --> S["App 沙盒 Output<br/>JSON / TXT / PNG"]
   S --> T["scripts/export-probe-output.sh<br/>导出到项目根 output/"]
   T --> U["metrics/version_history.csv<br/>长期指标 append-only"]

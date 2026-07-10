@@ -116,6 +116,24 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.87 候选：企业级视觉系统与核心体验重构
+日期：2026-07-10
+
+状态：Agent B 候选实现，等待当前 HEAD 的 GitHub Actions build、UI evidence artifact 和 Agent C 视觉验收；正式版本号仍为 `1.86`。
+
+核心变更：
+
+- 建立炭灰、冷白、电光青的语义设计 token，统一 canvas、surface、border、状态色、间距、8pt 以内圆角、44pt 触控目标和 Reduce Motion 行为。
+- `ContentView.swift` 从 3277 行缩减为根路由；文本、图片、音频、历史、提示词、设置、模型、Pro 和开发控制台拆为独立文件，继续共享唯一 `TranslationSessionStore`。
+- 重做 iPhone 五入口 Tab 和 iPad `NavigationSplitView`；文本工作台、图片检查区、音频运行摘要、历史命令、提示词编辑、模型管理和开发报告使用一致的状态组件与响应式布局。
+- 新增隔离 `AppPreviewScenario`，preview 不恢复、不写入生产 `state.json`，覆盖多设备、Dynamic Type、Reduce Motion 及代表性成功/失败/锁定状态。
+- 新增 `scripts/capture-ui-evidence.sh` 与候选分支 CI 步骤，复用当前 Debug build 生成带设备、方向、Dynamic Type、状态、Reduce Motion 和 commit SHA 的截图 manifest；证据步骤失败会阻塞 CI。
+- Speech contract 仅更新 UI 文件定位，保留取消、`translating` 和运行摘要断言强度。
+
+本地轻量验证：Swift parse、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、5 项 Speech contract 和三个 JSON parse；未跑本机 build / 探针，按规则交给云端验证。
+
+未验证：当前记录尚无云端 run ID、`.xcresult` 或实际截图结论；push 后必须用当前 commit 的 `ui-evidence/ui-evidence-manifest.json` 和 PNG 逐张检查重叠、截断、安全区、键盘、横竖屏和状态准确性。
+
 ### v1.86：Speech Recognition Insight and Audio UI Polish
 日期：2026-07-08
 
