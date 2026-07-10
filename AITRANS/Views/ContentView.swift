@@ -1,4 +1,7 @@
 import SwiftUI
+#if DEBUG
+import UIKit
+#endif
 
 enum AppTab: Hashable, CaseIterable, Identifiable {
     case text
@@ -68,6 +71,7 @@ struct ContentView: View {
         }
         .preferredColorScheme(appearance.colorScheme)
         .environment(\.appReduceMotionOverride, evidenceScenario == .audioRecognizing)
+        .onAppear(perform: applyEvidenceOrientation)
     }
 
     private var appearance: AppAppearance {
@@ -78,6 +82,31 @@ struct ContentView: View {
         }
 #endif
         return AppAppearance(rawValue: appearanceRawValue) ?? .system
+    }
+
+    private func applyEvidenceOrientation() {
+#if DEBUG
+        guard let orientation = ProcessInfo.processInfo.environment["AITRANS_UI_EVIDENCE_ORIENTATION"] else {
+            return
+        }
+
+        let orientationMask: UIInterfaceOrientationMask = switch orientation {
+        case "landscapeLeft": .landscapeLeft
+        case "landscapeRight": .landscapeRight
+        default: .portrait
+        }
+
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first else {
+            assertionFailure("UI evidence window scene is unavailable")
+            return
+        }
+
+        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: orientationMask)) { error in
+            assertionFailure("UI evidence orientation request failed: \(error.localizedDescription)")
+        }
+#endif
     }
 }
 

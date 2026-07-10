@@ -75,12 +75,6 @@ for device_id in "$small_id" "$large_id" "$tablet_id"; do
   xcrun simctl ui "$device_id" appearance dark
 done
 
-set_orientation() {
-  local device_id="$1"
-  local orientation="$2"
-  xcrun simctl ui "$device_id" orientation "$orientation"
-}
-
 capture() {
   local device_id="$1"
   local device_label="$2"
@@ -93,13 +87,27 @@ capture() {
 
   echo "Capturing $filename ($device_label, $orientation, $content_size, $appearance)"
   xcrun simctl ui "$device_id" content_size "$content_size"
-  set_orientation "$device_id" "$orientation"
   xcrun simctl terminate "$device_id" "$bundle_id" >/dev/null 2>&1 || true
   SIMCTL_CHILD_AITRANS_UI_EVIDENCE_SCENARIO="$scenario" \
     SIMCTL_CHILD_AITRANS_UI_EVIDENCE_APPEARANCE="$appearance" \
+    SIMCTL_CHILD_AITRANS_UI_EVIDENCE_ORIENTATION="$orientation" \
     xcrun simctl launch --terminate-running-process "$device_id" "$bundle_id"
   sleep 3
   xcrun simctl io "$device_id" screenshot "$output_dir/$filename"
+
+  local image_width
+  local image_height
+  image_width="$(sips -g pixelWidth "$output_dir/$filename" | awk '/pixelWidth/ {print $2}')"
+  image_height="$(sips -g pixelHeight "$output_dir/$filename" | awk '/pixelHeight/ {print $2}')"
+  if [ "$orientation" = "portrait" ] && [ "$image_height" -le "$image_width" ]; then
+    echo "Expected portrait screenshot but received ${image_width}x${image_height}: $filename" >&2
+    exit 1
+  fi
+  if [ "$orientation" != "portrait" ] && [ "$image_width" -le "$image_height" ]; then
+    echo "Expected landscape screenshot but received ${image_width}x${image_height}: $filename" >&2
+    exit 1
+  fi
+
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
     "$filename" "$device_label" "$orientation" "$content_size" "$scenario" "$reduce_motion" "$appearance" "$commit_sha" >> "$metadata_tsv"
 }
