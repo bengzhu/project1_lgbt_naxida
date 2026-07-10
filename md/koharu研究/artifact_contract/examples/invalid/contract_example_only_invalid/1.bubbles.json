@@ -1,0 +1,11 @@
+{
+  "bubbleInstances": [
+    {
+      "id": "contract-example-only-invalid-bubble",
+      "bbox": [250, 360, 198, 122],
+      "confidence": 0.71,
+      "maskValue": 1,
+      "pixelCount": 11000
+    }
+  ]
+}

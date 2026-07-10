@@ -1,0 +1,11 @@
+{
+  "bubbleInstances": [
+    {
+      "id": "source-image-missing-bubble",
+      "bbox": [96, 146, 170, 98],
+      "confidence": 0.74,
+      "maskValue": 1,
+      "pixelCount": 9800
+    }
+  ]
+}

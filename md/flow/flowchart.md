@@ -25,7 +25,9 @@ flowchart TD
   J --> K["图片旁贴 / 覆盖 UI"]
 
   %% 音频分支：Apple 本机语音识别
-  C --> L["音频识别<br/>Apple Speech on-device"]
+  C --> LR["Speech run ID<br/>取消 / 重试使旧回调失效"]
+  LR --> L["音频识别<br/>Apple Speech on-device / requiresOnDeviceRecognition"]
+  L --> LV["speechRecognitionRunSummary<br/>输入 / locale / 耗时 / 词数 / 片段 / 置信度 / 失败原因"]
   L --> D
 
   %% 漫画探针分支：固定 test/1.png
@@ -89,9 +91,11 @@ flowchart TD
   MODE -- "ci-fast" --> EAR
   CE --> TBF["textBoxPlanFailureReport<br/>plan / candidate / block 失败归因与晋级 blockers"]
   TBF --> LTB["lineTextBoxPlanReport / lineCropExperimentReport<br/>目标块行级 TextBox / deskew shadow 验证"]
-  LTB --> EAR["externalArtifactReadinessReport<br/>真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门"]
+  LTB --> EAR["externalArtifactReadinessReport<br/>真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门 + App-side identity receipt / sourceImageSHA256 match"]
   EAR --> ETS["externalTextBoxShadowOCRReport<br/>ready 后每块最多 1 个 externalArtifact.textBoxCrop / shadow-only"]
-  ETS --> ISR["internalStructureBottleneckReport<br/>OCR / bubble / crop / translation / render 路由诊断"]
+  ETS --> ESC["external TextBox shadow OCR coverage gate<br/>ready 后要求 identity reconciliation + contract dry-run + executed + candidate / OCR execution / OCR success"]
+  ESC --> ETO["external TextBox orientation-aware shadow OCR<br/>bounded rotation OCR / partial 与 unsupported 进入 convergence blockers"]
+  ETO --> ISR["internalStructureBottleneckReport<br/>OCR / bubble / crop / translation / render 路由诊断"]
   ISR --> RTA["routingDrivenTranslationComparisonReport<br/>modelTranslationQuality 块 strict prompt 对照 / report-only"]
   RTA --> TMF["translationModelFloorComparisonReport<br/>clean text baseline + strict prompt 地板对照"]
   ISR --> ODA["ocrCharacterDamageAuditReport<br/>OCR 损坏 token 审计 / report-only"]
@@ -112,16 +116,17 @@ flowchart TD
   KBI --> KDF["koharuDistanceFieldSafeAreaReport<br/>distance field / safe pixels / maximum safe rect"]
   KDF --> KAS["koharuBubbleAdjacencySeamReport<br/>adjacency graph / seam candidate ledger"]
   KAS --> KRS["koharuRenderSpriteFitPlannerReport<br/>font budget / layout candidate / sibling fit ledger"]
-  KRS --> KNT["koharuNativeTextBoxDetectorLiteReport<br/>pre-OCR pixel / bubble TextBox candidates"]
-  KNT --> KNSO["koharuNativeTextBoxDetectorLiteShadowOCRReport<br/>detector-lite TextBoxes -> OCR shadow loop"]
+  KRS --> KNT["koharuNativeTextBoxDetectorLiteReport<br/>pre-OCR TextBox candidates + block relation"]
+  KNT --> KNSO["koharuNativeTextBoxDetectorLiteShadowOCRReport<br/>detector-lite TextBoxes -> OCR / vertical rotation shadow loop"]
   KNSO --> KNTR["koharuNativeTextBoxDetectorLiteRefinementReport<br/>detector-lite parent bbox refinement + shadow OCR"]
   KNTR --> KNTCL["koharuNativeTextBoxDetectorLiteClosedLoopReport<br/>closed-loop route / stoplist / artifact routing"]
-  KNTCL --> KNBM["koharuNativeBubbleMaskInstanceLiteReport<br/>pixel instance-lite mask / majority assignment"]
-  KNBM --> KNSMR["koharuNativeSegmentMaskRefinementLiteReport<br/>TextBox-constrained glyph pixel mask"]
-  KNSMR --> KNABL["koharuNativeArtifactBundleLiteReport<br/>TextBoxes / BubbleMask / SegmentMask consistency closure"]
-  KNABL --> KNPG["koharuNativePromotionGateLiteReport<br/>probe-driven promotion gates / candidate preview"]
-  KNPG --> KNSAE["koharuNativeShadowArtifactExportLiteReport<br/>non-active shadow JSON artifact packet"]
-  KNSAE --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / work item closure ledger"]
+  KNTCL --> KNBM["koharuNativeBubbleMaskInstanceLiteReport<br/>instance mask / scoped safe rect / sprite + sibling collision"]
+  KNBM --> KNSMR["koharuNativeSegmentMaskRefinementLiteReport<br/>TextBox-linked SegmentMask refinement / containment ratio"]
+  KNSMR --> KNABL["koharuNativeArtifactBundleLiteReport<br/>TextBoxes / BubbleMask / SegmentMask consistency + linkage closure"]
+  KNABL --> KNPG["koharuNativePromotionGateLiteReport<br/>probe-driven promotion gates / linkage-blocked preview"]
+  KNPG --> KNCD["koharuNativeArtifactContractDryRunReport<br/>four-file contract dry-run / sourceImageSHA256 / App-side identity receipt / validator commands"]
+  KNCD --> KIR["koharuArtifactIdentityReconciliationReport<br/>App receipt -> CI manifest identity field paths / source image SHA match / size-SHA ledger"]
+  KIR --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / linkage + identity reconciliation + external shadow coverage + orientation gates"]
   TMF --> KAC
   P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
   M --> R["probe_report.json<br/>从明细实时汇总"]
@@ -136,6 +141,8 @@ flowchart TD
   LTB --> R
   EAR --> R
   ETS --> R
+  ESC --> R
+  ETO --> R
   ISR --> R
   RTA --> R
   TMF --> R
@@ -165,7 +172,8 @@ flowchart TD
   KNSMR --> R
   KNABL --> R
   KNPG --> R
-  KNSAE --> R
+  KNCD --> R
+  KIR --> R
   KAC --> R
   Z --> R
   M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
@@ -176,6 +184,8 @@ flowchart TD
   LTB --> T
   EAR --> T
   ETS --> T
+  ESC --> T
+  ETO --> T
   ISR --> T
   RTA --> T
   TMF --> T
@@ -205,7 +215,8 @@ flowchart TD
   KNSMR --> T
   KNABL --> T
   KNPG --> T
-  KNSAE --> T
+  KNCD --> T
+  KIR --> T
   KAC --> T
 ```
 
@@ -225,11 +236,11 @@ flowchart TD
   P --> B0["从 smalldata_test 开分支<br/>codeb/vX.Y-短标题"]
   B0 --> B1["Agent B<br/>按提示词小步实现"]
   B1 --> B2["本地轻量检查<br/>git diff --check / JSON / YAML smoke"]
-  B2 --> B3["push codeb/...<br/>不合并 main"]
+  B2 --> B3["push codeb/... 或版本整合 1.*<br/>不合并 main"]
   B3 --> B4["创建 PR<br/>base=smalldata_test / head=codeb/..."]
 
   %% 云端验证和结果包
-  B4 --> G1["GitHub Actions<br/>单次 Debug simulator build / JSON / 静态检查 / ci-fast 探针"]
+  B4 --> G1["GitHub Actions<br/>变更范围检测 / 契约测试 / 必要时 Xcode build / 动态读取 App bundle ID / 手动 ci-fast 探针"]
   G0["workflow_dispatch<br/>可选 full 或 skip"] --> G1
   G1 --> G2["未加密 CI 结果包<br/>xcresult / junit.xml / xcodebuild.log / manifest / failure summary / Koharu gate 摘要"]
   G1 --> G3["加密打包 workflow<br/>软件包交付，Agent C 不以此验收"]

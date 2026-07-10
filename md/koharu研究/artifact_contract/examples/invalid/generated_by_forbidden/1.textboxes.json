@@ -1,0 +1,13 @@
+{
+  "textBoxes": [
+    {
+      "id": "generated-by-forbidden-textbox-1",
+      "bbox": [118, 172, 120, 46],
+      "confidence": 0.82,
+      "detector": "manual-invalid-fixture",
+      "sourceDirection": "Horizontal",
+      "rotationDegrees": 0,
+      "notes": ["generatedBy source policy fixture"]
+    }
+  ]
+}

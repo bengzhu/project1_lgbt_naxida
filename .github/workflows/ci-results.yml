@@ -5,17 +5,42 @@ on:
     branches:
       - smalldata_test
       - 'codeb/**'
+      - '1.*'
   workflow_dispatch:
     inputs:
       probe_mode:
-        description: 'Manga probe mode: ci-fast, full, or skip'
+        description: 'Manga probe mode: skip for fast build-only CI, ci-fast/full for probe validation'
         required: false
-        default: ci-fast
+        default: skip
         type: choice
         options:
+          - skip
           - ci-fast
           - full
-          - skip
+      koharu_artifact_release_tag:
+        description: 'Optional Release tag containing a real Koharu artifact archive'
+        required: false
+        type: string
+      koharu_artifact_asset:
+        description: 'Optional Release asset archive with 1.manifest/textboxes/bubbles/segment_mask JSON'
+        required: false
+        type: string
+      koharu_artifact_sha256:
+        description: 'SHA256 for the optional Koharu artifact archive'
+        required: false
+        type: string
+      koharu_artifact_required:
+        description: 'Fail when the optional Koharu artifact archive is absent or invalid'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+concurrency:
+  group: ci-results-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci-results:
@@ -25,7 +50,6 @@ jobs:
       SCHEME: AITRANS
       DESTINATION: generic/platform=iOS Simulator
       SIMULATOR_RUNTIME: iOS
-      BUNDLE_ID: com.local.aitrans
       DERIVED_DATA: .derivedData-ci
       RESULT_ROOT: ci-results
       TEST_RESULTS_DIR: ci-results/TestResults
@@ -38,6 +62,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Prepare metadata
         id: meta
@@ -50,28 +76,65 @@ jobs:
           short_sha="${GITHUB_SHA:0:12}"
           requested_probe_mode="${{ github.event.inputs.probe_mode }}"
           if [ -z "$requested_probe_mode" ]; then
-            requested_probe_mode="ci-fast"
+            requested_probe_mode="skip"
+          fi
+          koharu_artifact_release_tag="${{ github.event.inputs.koharu_artifact_release_tag }}"
+          koharu_artifact_asset="${{ github.event.inputs.koharu_artifact_asset }}"
+          koharu_artifact_sha256="${{ github.event.inputs.koharu_artifact_sha256 }}"
+          koharu_artifact_required="${{ github.event.inputs.koharu_artifact_required }}"
+          if [ -z "$koharu_artifact_required" ]; then
+            koharu_artifact_required="false"
+          fi
+          case "$koharu_artifact_required" in
+            true|false) ;;
+            *)
+              echo "Invalid koharu_artifact_required=$koharu_artifact_required" >&2
+              exit 1
+              ;;
+          esac
+          koharu_artifact_requested=false
+          if [ -n "$koharu_artifact_release_tag$koharu_artifact_asset$koharu_artifact_sha256" ]; then
+            koharu_artifact_requested=true
+          fi
+          if [ "$koharu_artifact_requested" = "true" ]; then
+            if [ -z "$koharu_artifact_release_tag" ] || [ -z "$koharu_artifact_asset" ] || [ -z "$koharu_artifact_sha256" ]; then
+              echo "koharu_artifact_release_tag, koharu_artifact_asset, and koharu_artifact_sha256 must be provided together" >&2
+              exit 1
+            fi
+          fi
+          if [ "$koharu_artifact_required" = "true" ] && [ "$koharu_artifact_requested" != "true" ]; then
+            echo "koharu_artifact_required=true requires a release tag, asset, and sha256" >&2
+            exit 1
           fi
           case "$requested_probe_mode" in
             ci-fast)
               probe_timeout_seconds=1800
               probe_stall_timeout_seconds=300
+              probe_no_progress_timeout_seconds=180
               ;;
             full)
               probe_timeout_seconds=3600
               probe_stall_timeout_seconds=600
+              probe_no_progress_timeout_seconds=300
               ;;
             skip)
               probe_timeout_seconds=0
               probe_stall_timeout_seconds=0
+              probe_no_progress_timeout_seconds=0
               ;;
             *)
               echo "Invalid probe_mode=$requested_probe_mode" >&2
               exit 1
               ;;
           esac
+          if [ "$koharu_artifact_requested" = "true" ] && [ "$requested_probe_mode" = "skip" ]; then
+            echo "Koharu artifact injection requires probe_mode=ci-fast or full so App-side readiness, identity, shadow OCR coverage, and convergence gates can be verified." >&2
+            exit 1
+          fi
           version="unversioned"
           if [[ "$branch" =~ v([0-9]+(\.[0-9]+)*) ]]; then
+            version="v${BASH_REMATCH[1]}"
+          elif [[ "$branch" =~ ^([0-9]+(\.[0-9]+)*)$ ]]; then
             version="v${BASH_REMATCH[1]}"
           fi
           artifact_name="aitrans-ci-${version}-${branch_slug}-${short_sha}-run${GITHUB_RUN_ID}-attempt${GITHUB_RUN_ATTEMPT}"
@@ -86,15 +149,100 @@ jobs:
             echo "probe_mode=$requested_probe_mode"
             echo "probe_timeout_seconds=$probe_timeout_seconds"
             echo "probe_stall_timeout_seconds=$probe_stall_timeout_seconds"
+            echo "probe_no_progress_timeout_seconds=$probe_no_progress_timeout_seconds"
+            echo "koharu_artifact_requested=$koharu_artifact_requested"
+            echo "koharu_artifact_required=$koharu_artifact_required"
+            echo "koharu_artifact_release_tag=$koharu_artifact_release_tag"
+            echo "koharu_artifact_asset=$koharu_artifact_asset"
+            echo "koharu_artifact_sha256=$koharu_artifact_sha256"
           } >> "$GITHUB_OUTPUT"
           {
             echo "PROBE_MODE=$requested_probe_mode"
             echo "PROBE_TIMEOUT_SECONDS=$probe_timeout_seconds"
             echo "PROBE_STALL_TIMEOUT_SECONDS=$probe_stall_timeout_seconds"
+            echo "PROBE_NO_PROGRESS_TIMEOUT_SECONDS=$probe_no_progress_timeout_seconds"
+            echo "KOHARU_ARTIFACT_RELEASE_TAG=$koharu_artifact_release_tag"
+            echo "KOHARU_ARTIFACT_ASSET=$koharu_artifact_asset"
+            echo "KOHARU_ARTIFACT_SHA256=$koharu_artifact_sha256"
           } >> "$GITHUB_ENV"
+
+      - name: Detect CI scope
+        id: ci_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RESULT_ROOT"
+          before="${{ github.event.before }}"
+          if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            before="$(git rev-parse HEAD^ 2>/dev/null || true)"
+          fi
+          scope_diff_method="none"
+          scope_diff_base_sha="$before"
+          scope_diff_fallback_used=false
+          if [ -n "$before" ] && ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+            echo "Before commit $before is not present in checkout; attempting targeted fetch."
+            if git fetch --no-tags --depth=1 origin "$before" 2>/dev/null; then
+              scope_diff_method="targeted_fetch"
+            else
+              echo "Targeted fetch for before commit $before failed; falling back to full repo file list." >&2
+            fi
+          fi
+          if [ -n "$before" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then
+            if [ "$scope_diff_method" = "none" ]; then
+              scope_diff_method="checkout_before"
+            fi
+            git diff --name-only "$before" "$GITHUB_SHA" > "$RESULT_ROOT/changed-files.txt"
+          else
+            scope_diff_method="full_repo_fallback"
+            scope_diff_fallback_used=true
+            git ls-files > "$RESULT_ROOT/changed-files.txt"
+          fi
+
+          xcode_build_required=false
+          xcode_build_skip_reason="non_app_build_related_fast_path"
+          if [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ]; then
+            xcode_build_required=true
+            xcode_build_skip_reason=""
+          elif [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ]; then
+            xcode_build_required=true
+            xcode_build_skip_reason=""
+          elif grep -E '^(AITRANS/|AITRANS\.xcodeproj/|build-apple/|test/)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            xcode_build_required=true
+            xcode_build_skip_reason=""
+          fi
+
+          koharu_validator_extended_required=false
+          if [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ] || grep -E '^(\.github/workflows/ci-results\.yml|scripts/validate-koharu-artifacts\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            koharu_validator_extended_required=true
+          fi
+
+          {
+            echo "xcode_build_required=$xcode_build_required"
+            echo "xcode_build_skip_reason=$xcode_build_skip_reason"
+            echo "koharu_validator_extended_required=$koharu_validator_extended_required"
+            echo "scope_diff_method=$scope_diff_method"
+            echo "scope_diff_base_sha=$scope_diff_base_sha"
+            echo "scope_diff_fallback_used=$scope_diff_fallback_used"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "XCODE_BUILD_REQUIRED=$xcode_build_required"
+            echo "XCODE_BUILD_SKIP_REASON=$xcode_build_skip_reason"
+            echo "KOHARU_VALIDATOR_EXTENDED_REQUIRED=$koharu_validator_extended_required"
+            echo "SCOPE_DIFF_METHOD=$scope_diff_method"
+            echo "SCOPE_DIFF_BASE_SHA=$scope_diff_base_sha"
+            echo "SCOPE_DIFF_FALLBACK_USED=$scope_diff_fallback_used"
+          } >> "$GITHUB_ENV"
+          echo "Changed files:"
+          cat "$RESULT_ROOT/changed-files.txt"
+          echo "scope_diff_method=$scope_diff_method"
+          echo "scope_diff_base_sha=$scope_diff_base_sha"
+          echo "scope_diff_fallback_used=$scope_diff_fallback_used"
+          echo "xcode_build_required=$xcode_build_required"
+          echo "koharu_validator_extended_required=$koharu_validator_extended_required"
 
       - name: Restore GGUF model cache
         id: gguf_cache
+        if: steps.meta.outputs.probe_mode != 'skip'
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.MODEL_CACHE_DIR }}
@@ -102,7 +250,7 @@ jobs:
 
       - name: Download GGUF from GitHub Release
         id: download_model
-        if: steps.gguf_cache.outputs.cache-hit != 'true'
+        if: steps.meta.outputs.probe_mode != 'skip' && steps.gguf_cache.outputs.cache-hit != 'true'
         shell: bash
         continue-on-error: true
         env:
@@ -120,6 +268,7 @@ jobs:
 
       - name: Verify GGUF model
         id: verify_model
+        if: steps.meta.outputs.probe_mode != 'skip'
         shell: bash
         continue-on-error: true
         run: |
@@ -133,11 +282,109 @@ jobs:
           } 2>&1 | tee "$RESULT_ROOT/model-verify.log"
 
       - name: Save GGUF model cache
-        if: steps.gguf_cache.outputs.cache-hit != 'true'
+        if: steps.meta.outputs.probe_mode != 'skip' && steps.gguf_cache.outputs.cache-hit != 'true' && steps.verify_model.outcome == 'success'
         uses: actions/cache/save@v4
         with:
           path: ${{ env.MODEL_CACHE_DIR }}
           key: gguf-${{ env.MODEL_TAG }}-${{ env.MODEL_SHA256 }}
+
+      - name: Prepare Koharu active artifacts
+        id: koharu_artifacts
+        if: steps.meta.outputs.koharu_artifact_requested == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          archive_dir="$RUNNER_TEMP/koharu-artifact-archive"
+          extract_dir="$RUNNER_TEMP/koharu-artifact-extract"
+          archive_path="$archive_dir/${KOHARU_ARTIFACT_ASSET}"
+          mkdir -p "$archive_dir" "$extract_dir" "$RESULT_ROOT"
+
+          fail_or_skip() {
+            reason="$1"
+            echo "status=$reason" >> "$GITHUB_OUTPUT"
+            echo "injected=false" >> "$GITHUB_OUTPUT"
+            echo "Koharu artifact injection failed: $reason" >&2
+            if [ "${{ steps.meta.outputs.koharu_artifact_required }}" = "true" ]; then
+              exit 1
+            fi
+            exit 0
+          }
+
+          {
+            echo "Downloading Koharu artifact $KOHARU_ARTIFACT_ASSET from release $KOHARU_ARTIFACT_RELEASE_TAG"
+            gh release download "$KOHARU_ARTIFACT_RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --pattern "$KOHARU_ARTIFACT_ASSET" \
+              --dir "$archive_dir"
+            test -f "$archive_path"
+            echo "$KOHARU_ARTIFACT_SHA256  $archive_path" | shasum -a 256 -c -
+            case "$KOHARU_ARTIFACT_ASSET" in
+              *.zip)
+                unzip -q "$archive_path" -d "$extract_dir"
+                ;;
+              *.tar.gz|*.tgz)
+                tar -xzf "$archive_path" -C "$extract_dir"
+                ;;
+              *.tar)
+                tar -xf "$archive_path" -C "$extract_dir"
+                ;;
+              *)
+                echo "unsupported archive type: $KOHARU_ARTIFACT_ASSET" >&2
+                exit 42
+                ;;
+            esac
+            python3 - "$extract_dir" <<'PY'
+          import shutil
+          import sys
+          from pathlib import Path
+
+          extract_dir = Path(sys.argv[1])
+          destination = Path("test/koharu_artifacts")
+          required = [
+              "1.manifest.json",
+              "1.textboxes.json",
+              "1.bubbles.json",
+              "1.segment_mask.json",
+          ]
+          candidate_dirs = []
+          for candidate in sorted({path.parent for path in extract_dir.rglob("1.manifest.json") if path.is_file()}):
+              if all((candidate / name).is_file() for name in required):
+                  candidate_dirs.append(candidate)
+          if len(candidate_dirs) != 1:
+              details = ", ".join(str(path.relative_to(extract_dir)) for path in candidate_dirs) or "none"
+              raise SystemExit(f"expected exactly one Koharu artifact directory containing the four-file contract, found {len(candidate_dirs)}: {details}")
+          source_dir = candidate_dirs[0]
+          print(f"Koharu artifact source directory: {source_dir.relative_to(extract_dir)}")
+          if destination.exists():
+              shutil.rmtree(destination)
+          destination.mkdir(parents=True, exist_ok=True)
+          for name in required:
+              shutil.copy2(source_dir / name, destination / name)
+          PY
+            python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts > "$RESULT_ROOT/koharu-active-artifacts-validation.json"
+            cat "$RESULT_ROOT/koharu-active-artifacts-validation.json"
+            python3 - <<'PY'
+          import json
+          with open("ci-results/koharu-active-artifacts-validation.json", "r", encoding="utf-8") as handle:
+              data = json.load(handle)
+          if data.get("verdict") != "readyForShadowOCR":
+              raise SystemExit(f"injected Koharu artifact verdict={data.get('verdict')!r}; expected readyForShadowOCR")
+          if data.get("readyForShadowOCR") is not True or data.get("externalTextBoxesShadowOCRAllowed") is not True:
+              raise SystemExit(f"injected Koharu artifact is not shadow-OCR ready: {data}")
+          identity = data.get("artifactIdentitySummary") or {}
+          source_image = identity.get("sourceImage") or {}
+          declared_sha = identity.get("sourceImageSHA256Declared")
+          actual_sha = source_image.get("sha256")
+          if identity.get("sourceImageSHA256Matches") is not True or declared_sha != actual_sha:
+              raise SystemExit(f"injected Koharu artifact source image SHA mismatch: {identity}")
+          PY
+          } 2>&1 | tee "$RESULT_ROOT/koharu-artifact-injection.log" || fail_or_skip "download_or_validation_failed"
+
+          echo "status=injected" >> "$GITHUB_OUTPUT"
+          echo "injected=true" >> "$GITHUB_OUTPUT"
+          echo "archive_path=$archive_path" >> "$GITHUB_OUTPUT"
 
       - name: Static checks
         id: static_checks
@@ -148,6 +395,7 @@ jobs:
           {
             echo "## Static checks"
             git diff --check
+            python3 -B scripts/test-speech-recognition-contract.py
             python3 -m json.tool test/1.ground_truth.json >/dev/null
             if [ -f output/probe_report.json ]; then
               python3 -m json.tool output/probe_report.json >/dev/null
@@ -159,17 +407,180 @@ jobs:
             else
               echo "output/clean_text_diagnostic.json not present; skipping existing clean text parse"
             fi
-            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid
-            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
-            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
-            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
-            python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --print-required-files
+            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
+            python3 - <<'PY'
+          import json
+          with open("ci-results/koharu-valid-fixture-validation.json", "r", encoding="utf-8") as handle:
+              data = json.load(handle)
+          identity = data.get("artifactIdentitySummary") or {}
+          source_image = identity.get("sourceImage") or {}
+          files = identity.get("artifactFiles") or {}
+          if data.get("verdict") != "contractExampleOnly":
+              raise SystemExit(f"valid fixture verdict={data.get('verdict')!r}")
+          if identity.get("contractExampleOnly") is not True:
+              raise SystemExit(f"valid fixture identity missing contractExampleOnly: {identity}")
+          declared_sha = identity.get("sourceImageSHA256Declared")
+          actual_sha = source_image.get("sha256")
+          if len(str(actual_sha or "")) != 64:
+              raise SystemExit(f"valid fixture source image sha missing: {identity}")
+          if identity.get("sourceImageSHA256Matches") is not True or declared_sha != actual_sha:
+              raise SystemExit(f"valid fixture declared source image sha mismatch: {identity}")
+          for key in ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]:
+              item = files.get(key) or {}
+              if item.get("exists") is not True or len(str(item.get("sha256") or "")) != 64:
+                  raise SystemExit(f"valid fixture missing file identity {key}: {identity}")
+          PY
+            if python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid --package-release-archive "$RUNNER_TEMP/koharu-fixture-refuse.zip" >/tmp/koharu-fixture-refuse.out 2>/tmp/koharu-fixture-refuse.err; then
+              echo "contractExampleOnly fixture package unexpectedly allowed without --allow-fixture-package" >&2
+              exit 1
+            fi
+            python3 scripts/validate-koharu-artifacts.py \
+              --root md/koharu研究/artifact_contract/examples/valid \
+              --package-release-archive "$RUNNER_TEMP/koharu-fixture-package.zip" \
+              --allow-fixture-package \
+              --emit-handoff-packet \
+              --release-tag "fixture tag" \
+              --release-asset "koharu fixture package.zip" \
+              > "$RESULT_ROOT/koharu-package-fixture-smoke.json"
+            python3 - "$RUNNER_TEMP/koharu-fixture-package.zip" <<'PY'
+          import json
+          import sys
+          import zipfile
+          from pathlib import Path
+
+          archive_path = Path(sys.argv[1])
+          with zipfile.ZipFile(archive_path, "r") as archive:
+              names = archive.namelist()
+          roots = {name.split("/")[0] for name in names if "/" in name}
+          files = {name.split("/", 1)[1] for name in names if "/" in name}
+          expected = {"1.manifest.json", "1.textboxes.json", "1.bubbles.json", "1.segment_mask.json"}
+          if len(roots) != 1 or files != expected:
+              raise SystemExit(f"unexpected package layout roots={roots} files={files}")
+          with open("ci-results/koharu-package-fixture-smoke.json", "r", encoding="utf-8") as handle:
+              data = json.load(handle)
+          packet = data.get("handoffPacket") or {}
+          release_archive = packet.get("releaseArchive") or {}
+          release_archive_inspection = release_archive.get("inspection") or {}
+          upload_command = packet.get("ghReleaseUploadCommand") or ""
+          dispatch_command = packet.get("ghWorkflowDispatchCommand") or ""
+          run_list_command = packet.get("ghRunListCommand") or ""
+          run_watch_command = packet.get("ghRunWatchCommand") or ""
+          run_download_command = packet.get("ghRunDownloadCommand") or ""
+          ci_result_review = packet.get("ciResultReview") or {}
+          if packet.get("handoffReadyForReleaseUpload") is not False:
+              raise SystemExit(f"fixture package must not be release-ready: {packet}")
+          if packet.get("releaseArchiveInspectionPassed") is not True:
+              raise SystemExit(f"fixture package missing release archive inspection proof: {packet}")
+          if release_archive_inspection.get("candidateDirectoryCount") != 1 or release_archive_inspection.get("verdict") != "contractExampleOnly":
+              raise SystemExit(f"fixture archive inspection proof mismatch: {release_archive_inspection}")
+          if not packet.get("inspectReleaseArchiveCommand"):
+              raise SystemExit(f"handoff packet missing inspect command: {packet}")
+          if not (packet.get("expectedCIManifestEcho") or {}).get("koharuArtifactIdentityReconciliationMatch.matchVerdict"):
+              raise SystemExit(f"handoff packet missing expected CI manifest echo: {packet}")
+          if "gh release upload 'fixture tag'" not in upload_command or "--repo Altman-sam114/x113451" not in upload_command:
+              raise SystemExit(f"release upload command missing repo or quoted tag: {upload_command}")
+          if "'koharu_artifact_release_tag=fixture tag'" not in dispatch_command or "'koharu_artifact_asset=koharu fixture package.zip'" not in dispatch_command:
+              raise SystemExit(f"workflow dispatch command did not quote spaced inputs: {dispatch_command}")
+          if "--repo Altman-sam114/x113451" not in dispatch_command or "--repo Altman-sam114/x113451" not in run_list_command:
+              raise SystemExit(f"handoff commands missing repo: dispatch={dispatch_command} run_list={run_list_command}")
+          if "<run-id>" not in run_watch_command or "--exit-status" not in run_watch_command:
+              raise SystemExit(f"handoff packet missing run watch command: {run_watch_command}")
+          if "<run-id>" not in run_download_command or "/private/tmp/aitrans-koharu-handoff-<run-id>" not in run_download_command:
+              raise SystemExit(f"handoff packet missing run download command: {run_download_command}")
+          if not (packet.get("releaseArchive") or {}).get("sha256"):
+              raise SystemExit(f"package smoke missing archive sha: {packet}")
+          expected_identity_echo = packet.get("expectedCIManifestIdentityEcho") or {}
+          if not expected_identity_echo.get("koharuArtifactValidationIdentitySummaryExpected"):
+              raise SystemExit(f"handoff packet missing structured identity echo: {packet}")
+          if len(packet.get("expectedCloudIdentityRows") or []) < 5:
+              raise SystemExit(f"handoff packet missing cloud identity rows: {packet}")
+          manifest_assertions = packet.get("expectedCIManifestAssertions") or []
+          manifest_paths = {assertion.get("jsonPath") for assertion in manifest_assertions}
+          for expected_path in ["workflowName", "repository", "eventName", "probeMode", "koharuArtifactInjected", "koharuArtifactValidation.verdict", "xcodeBuildRequired"]:
+              if expected_path not in manifest_paths:
+                  raise SystemExit(f"handoff packet missing manifest assertion {expected_path}: {manifest_assertions}")
+          app_runtime_assertions = packet.get("expectedAppRuntimeAssertions") or []
+          if not any(assertion.get("jsonPath") == "externalArtifactReadinessReport.artifactIdentityReceipt.identityVerdict" for assertion in app_runtime_assertions):
+              raise SystemExit(f"handoff packet missing App runtime assertion: {app_runtime_assertions}")
+          if not any(assertion.get("jsonPath") == "koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison" for assertion in packet.get("expectedReconciliationAssertions") or []):
+              raise SystemExit(f"handoff packet missing reconciliation assertion: {packet}")
+          if not any(assertion.get("jsonPath") == "externalTextBoxShadowOCRSummary.ocrSucceededCount" for assertion in packet.get("expectedExternalShadowOCRAssertions") or []):
+              raise SystemExit(f"handoff packet missing external shadow OCR assertion: {packet}")
+          if not any(assertion.get("jsonPath") == "koharuArtifactConvergenceGateSummary.externalShadowCoverageGate.id" for assertion in packet.get("expectedConvergenceAssertions") or []):
+              raise SystemExit(f"handoff packet missing convergence assertion: {packet}")
+          if not (packet.get("expectedProbeTextNeedles") or []):
+              raise SystemExit(f"handoff packet missing probe text needles: {packet}")
+          if not any(assertion.get("jsonPath") == "probeMode" and assertion.get("operator") == "!=" for assertion in packet.get("staleRunRejectionAssertions") or []):
+              raise SystemExit(f"handoff packet missing structured stale run rejection assertion: {packet}")
+          required_files = set(ci_result_review.get("requiredResultFiles") or [])
+          for expected_file in ["ci-artifact-manifest.json", "junit.xml", "xcodebuild.log", "ci-failure-summary.md"]:
+              if expected_file not in required_files:
+                  raise SystemExit(f"CI result review missing required file {expected_file}: {ci_result_review}")
+          probe_files = set(ci_result_review.get("requiredProbeOutputFilesWhenProbeRuns") or [])
+          for expected_probe_file in ["output/probe_report.json", "output/clean_text_diagnostic.json", "output/1_ocr_probe_text.txt", "output/1_debug_boxes.png", "output/1_translated_overlay.png"]:
+              if expected_probe_file not in probe_files:
+                  raise SystemExit(f"CI result review missing probe output file {expected_probe_file}: {ci_result_review}")
+          identity_checks = ci_result_review.get("manifestIdentityChecks") or {}
+          for expected_key in ["workflowName", "branch", "commitSha", "runId", "runAttempt", "probeMode", "koharuArtifactReleaseTag", "koharuArtifactAsset", "koharuArtifactSha256"]:
+              if expected_key not in identity_checks:
+                  raise SystemExit(f"CI result review missing manifest identity key {expected_key}: {identity_checks}")
+          if identity_checks.get("probeMode") != "ci-fast" or identity_checks.get("koharuArtifactReleaseTag") != "fixture tag":
+              raise SystemExit(f"CI result review manifest identity mismatch: {identity_checks}")
+          required_koharu_checks = ci_result_review.get("requiredKoharuChecks") or []
+          if not any("ocrSucceededCount > 0" in check for check in required_koharu_checks):
+              raise SystemExit(f"CI result review missing shadow OCR success check: {ci_result_review}")
+          stale_rules = ci_result_review.get("staleArtifactRejectionRules") or []
+          if not any("commitSha" in rule for rule in stale_rules):
+              raise SystemExit(f"CI result review missing stale artifact rejection rule: {ci_result_review}")
+          if not any("probe_mode=skip" in rule for rule in stale_rules) or not any("releaseArchive.inspection" in rule for rule in stale_rules):
+              raise SystemExit(f"CI result review missing skip/local-proof rejection rule: {ci_result_review}")
+          PY
+            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported > "$RESULT_ROOT/koharu-orientation-fixture-validation.json"
+            python3 - <<'PY'
+          import json
+          with open("ci-results/koharu-orientation-fixture-validation.json", "r", encoding="utf-8") as handle:
+              data = json.load(handle)
+          orientation = data.get("orientationMetadataSummary") or {}
+          if data.get("verdict") != "contractExampleOnly":
+              raise SystemExit(f"orientation fixture verdict={data.get('verdict')!r}")
+          expected_partial = {"orientation-partial-vertical-linepolygon"}
+          expected_unsupported = {"orientation-partial-vertical-linepolygon", "orientation-unsupported-arbitrary-rotation"}
+          partial = set(orientation.get("orientationPartialTextBoxIDs") or [])
+          unsupported = set(orientation.get("orientationUnsupportedTextBoxIDs") or [])
+          reasons = orientation.get("orientationUnsupportedReasonBreakdown") or {}
+          if not expected_partial.issubset(partial):
+              raise SystemExit(f"orientation fixture missing partial IDs: {orientation}")
+          if not expected_unsupported.issubset(unsupported):
+              raise SystemExit(f"orientation fixture missing unsupported IDs: {orientation}")
+          for key in ["linePolygonWarpUnsupported", "arbitraryRotationUnsupported"]:
+              if int(reasons.get(key) or 0) <= 0:
+                  raise SystemExit(f"orientation fixture missing unsupported reason {key}: {orientation}")
+          PY
+            python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files
             python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing > "$RESULT_ROOT/koharu-active-artifacts-validation.json"
             cat "$RESULT_ROOT/koharu-active-artifacts-validation.json"
+            if [ "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" = "true" ]; then
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_missing --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_sha_missing --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_sha_mismatch --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_missing --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid --expect-fail
+            else
+              echo "Skipping extended Koharu invalid fixture matrix for fast CI scope"
+            fi
           } 2>&1 | tee "$RESULT_ROOT/static-checks.log"
 
       - name: Xcode build
         id: xcode_build
+        if: steps.ci_scope.outputs.xcode_build_required == 'true'
+        timeout-minutes: 20
         shell: bash
         continue-on-error: true
         run: |
@@ -183,13 +594,29 @@ jobs:
             -destination "$DESTINATION" \
             -derivedDataPath "$DERIVED_DATA" \
             -resultBundlePath "${{ steps.meta.outputs.result_bundle }}" \
+            -quiet \
             CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             build \
           2>&1 | tee "$RESULT_ROOT/xcodebuild.log"
           exit ${PIPESTATUS[0]}
 
+      - name: Write skipped Xcode build log
+        if: steps.ci_scope.outputs.xcode_build_required != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$TEST_RESULTS_DIR"
+          {
+            echo "Xcode build skipped by fast CI scope."
+            echo "reason=${{ steps.ci_scope.outputs.xcode_build_skip_reason }}"
+            echo "This run changed only docs, metadata, or validator-independent files."
+            echo "Choose workflow_dispatch probe_mode=ci-fast/full or change Swift/Xcode/resources/test files to force build validation."
+          } > "$RESULT_ROOT/xcodebuild.log"
+
       - name: Locate simulator app for manga probe
         id: simulator_build
+        if: steps.meta.outputs.probe_mode != 'skip' && steps.ci_scope.outputs.xcode_build_required == 'true' && steps.xcode_build.outcome == 'success' && steps.verify_model.outcome == 'success'
         shell: bash
         continue-on-error: true
         run: |
@@ -203,12 +630,19 @@ jobs:
             fi
             echo "simulatorAppReusedFromXcodeBuild=true"
             echo "simulatorAppPath=$app_path"
+            bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Info.plist")"
+            if [ -z "$bundle_id" ]; then
+              echo "Built app bundle identifier is empty" >&2
+              exit 1
+            fi
+            echo "bundleIdentifier=$bundle_id"
             echo "simulator_app_path=$app_path" >> "$GITHUB_OUTPUT"
+            echo "bundle_id=$bundle_id" >> "$GITHUB_OUTPUT"
           } 2>&1 | tee "$RESULT_ROOT/simulator-build.log"
 
       - name: Run cloud manga probe
         id: manga_probe
-        if: steps.meta.outputs.probe_mode != 'skip'
+        if: steps.meta.outputs.probe_mode != 'skip' && steps.xcode_build.outcome == 'success' && steps.verify_model.outcome == 'success' && steps.simulator_build.outcome == 'success'
         shell: bash
         continue-on-error: true
         run: |
@@ -250,8 +684,13 @@ jobs:
             xcrun simctl bootstatus "$device_id" -b
 
             app_path="${{ steps.simulator_build.outputs.simulator_app_path }}"
+            BUNDLE_ID="${{ steps.simulator_build.outputs.bundle_id }}"
             if [ -z "$app_path" ]; then
               echo "Debug simulator app path is missing from locate step" >&2
+              exit 1
+            fi
+            if [ -z "$BUNDLE_ID" ]; then
+              echo "Debug simulator app bundle identifier is missing from locate step" >&2
               exit 1
             fi
             echo "Installing $app_path"
@@ -267,7 +706,7 @@ jobs:
             echo "$container" > "$RESULT_ROOT/probe-app-container.txt"
             model_dir="$container/Library/Application Support/Models/Gemma-1.5B"
             mkdir -p "$model_dir"
-            cp "$MODEL_CACHE_DIR/$MODEL_ASSET" "$model_dir/model.gguf"
+            cp -c "$MODEL_CACHE_DIR/$MODEL_ASSET" "$model_dir/model.gguf" 2>/dev/null || cp "$MODEL_CACHE_DIR/$MODEL_ASSET" "$model_dir/model.gguf"
             echo "Imported Release model asset=$MODEL_ASSET into legacy app model directory=$model_dir"
             echo "$MODEL_SHA256  $model_dir/model.gguf" | shasum -a 256 -c -
             wc -c "$model_dir/model.gguf"
@@ -297,6 +736,7 @@ jobs:
             progress="$output_dir/manga_probe_progress.json"
             last_status_print=0
             last_progress_mtime=0
+            launch_started_at="$SECONDS"
             stalled_progress_seconds=0
             while [ "$SECONDS" -lt "$deadline" ]; do
               if [ $((SECONDS - last_status_print)) -ge 30 ]; then
@@ -313,6 +753,10 @@ jobs:
                     last_progress_mtime="$progress_mtime"
                     stalled_progress_seconds=0
                   fi
+                fi
+                if [ ! -f "$progress" ] && [ "$PROBE_NO_PROGRESS_TIMEOUT_SECONDS" -gt 0 ] && [ $((SECONDS - launch_started_at)) -ge "$PROBE_NO_PROGRESS_TIMEOUT_SECONDS" ]; then
+                  echo "Probe progress file was not created within ${PROBE_NO_PROGRESS_TIMEOUT_SECONDS}s" >&2
+                  break
                 fi
                 if [ -d "$output_dir" ]; then
                   echo "Current output files:"
@@ -389,6 +833,193 @@ jobs:
           missing = [name for name in required if not pathlib.Path("output", name).is_file()]
           if missing:
               raise SystemExit(f"missing exported probe outputs: {missing}")
+          import json
+          report = json.load(open("output/probe_report.json", encoding="utf-8"))
+          external = report.get("externalArtifactReadinessReport") or {}
+          external_shadow = report.get("externalTextBoxShadowOCRReport") or {}
+          contract = report.get("koharuNativeArtifactContractDryRunReport") or {}
+          reconciliation = report.get("koharuArtifactIdentityReconciliationReport") or {}
+          bundle = report.get("koharuNativeArtifactBundleLiteReport") or {}
+          promotion = report.get("koharuNativePromotionGateLiteReport") or {}
+          convergence = report.get("koharuArtifactConvergenceReport") or {}
+          required_report_fields = [
+              ("koharuNativeArtifactBundleLiteReport.textBoxSegmentLinkBreakdown", bundle.get("textBoxSegmentLinkBreakdown")),
+              ("koharuNativeArtifactBundleLiteReport.textBoxSegmentLinkageReviewBlocks", bundle.get("textBoxSegmentLinkageReviewBlocks")),
+              ("koharuNativePromotionGateLiteReport.textBoxSegmentLinkBreakdown", promotion.get("textBoxSegmentLinkBreakdown")),
+              ("koharuNativePromotionGateLiteReport.textBoxSegmentLinkageBlockedBlocks", promotion.get("textBoxSegmentLinkageBlockedBlocks")),
+              ("koharuArtifactIdentityReconciliationReport.enabled", reconciliation.get("enabled")),
+              ("koharuArtifactIdentityReconciliationReport.fileRows", reconciliation.get("fileRows")),
+              ("koharuArtifactIdentityReconciliationReport.gateLedger", reconciliation.get("gateLedger")),
+              ("koharuArtifactConvergenceReport.workItemLedger", convergence.get("workItemLedger")),
+              ("koharuArtifactConvergenceReport.gateLedger", convergence.get("gateLedger")),
+          ]
+          missing_report_fields = [name for name, value in required_report_fields if value is None]
+          if missing_report_fields:
+              raise SystemExit(f"missing linkage report fields: {missing_report_fields}")
+          if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
+              external_expected = {
+                  "readinessVerdict": "readyForShadowOCR",
+                  "activeArtifactsDirectory": True,
+                  "contractExampleOnly": False,
+                  "externalTextBoxesShadowOCRAllowed": True,
+                  "manifestFound": True,
+                  "textBoxesFound": True,
+                  "bubbleMaskFound": True,
+                  "segmentMaskFound": True,
+              }
+              mismatches = {
+                  key: {"expected": expected, "actual": external.get(key)}
+                  for key, expected in external_expected.items()
+                  if external.get(key) != expected
+              }
+              if mismatches:
+                  raise SystemExit(f"injected Koharu artifact not visible in App readiness report: {mismatches}")
+              if external_shadow.get("executed") is not True:
+                  raise SystemExit(f"externalTextBoxShadowOCRReport.executed={external_shadow.get('executed')!r}")
+              if int(external_shadow.get("candidateCount") or 0) <= 0:
+                  raise SystemExit(f"externalTextBoxShadowOCRReport.candidateCount={external_shadow.get('candidateCount')!r}")
+              if int(external_shadow.get("ocrExecutedCount") or 0) <= 0:
+                  raise SystemExit(f"externalTextBoxShadowOCRReport.ocrExecutedCount={external_shadow.get('ocrExecutedCount')!r}")
+              if int(external_shadow.get("ocrSucceededCount") or 0) <= 0:
+                  raise SystemExit(f"externalTextBoxShadowOCRReport.ocrSucceededCount={external_shadow.get('ocrSucceededCount')!r}")
+              if contract.get("contractDryRunVerdict") != "activeArtifactsReadyForShadowOCR":
+                  raise SystemExit(f"contractDryRunVerdict={contract.get('contractDryRunVerdict')!r}")
+              if contract.get("activeExportAllowed") is not False or contract.get("dryRunOnly") is not True:
+                  raise SystemExit("contract dry-run active export boundary was not preserved")
+              receipt = external.get("artifactIdentityReceipt") or {}
+              if receipt.get("identityVerdict") != "activeArtifactIdentityRecorded":
+                  raise SystemExit(f"artifactIdentityReceipt.identityVerdict={receipt.get('identityVerdict')!r}")
+              if receipt.get("allRequiredFilesPresent") is not True or receipt.get("allRequiredFilesHaveSHA256") is not True:
+                  raise SystemExit(f"artifactIdentityReceipt files/hashes not ready: {receipt}")
+              if receipt.get("sourceImageSHA256Matches") is not True:
+                  raise SystemExit(f"artifactIdentityReceipt sourceImageSHA256Matches={receipt.get('sourceImageSHA256Matches')!r}: {receipt}")
+              if contract.get("appSideArtifactIdentityVerdict") != "activeArtifactIdentityRecorded":
+                  raise SystemExit(f"contract appSideArtifactIdentityVerdict={contract.get('appSideArtifactIdentityVerdict')!r}")
+              if contract.get("appSideArtifactIdentityFilesPresent") is not True or contract.get("appSideArtifactIdentityHashesPresent") is not True:
+                  raise SystemExit("contract app-side identity files/hashes are not present")
+              if reconciliation.get("enabled") is not True:
+                  raise SystemExit("koharuArtifactIdentityReconciliationReport missing or disabled")
+              if reconciliation.get("sourceImageSHA256Matches") is not True:
+                  raise SystemExit(f"identity reconciliation sourceImageSHA256Matches={reconciliation.get('sourceImageSHA256Matches')!r}: {reconciliation}")
+              if reconciliation.get("readyForCIManifestComparison") is not True:
+                  raise SystemExit(f"identity reconciliation not ready: {reconciliation.get('identityReconciliationVerdict')!r}")
+              rows = reconciliation.get("fileRows") or []
+              if len(rows) < 5:
+                  raise SystemExit(f"identity reconciliation fileRows too small: {len(rows)}")
+              bad_rows = [row for row in rows if row.get("comparisonStatus") != "appReceiptReady"]
+              if bad_rows:
+                  raise SystemExit(f"identity reconciliation rows not appReceiptReady: {bad_rows}")
+              validation_path = pathlib.Path("ci-results/koharu-active-artifacts-validation.json")
+              if not validation_path.is_file():
+                  raise SystemExit("koharu-active-artifacts-validation.json missing for identity comparison")
+              validator = json.loads(validation_path.read_text(encoding="utf-8"))
+              validator_identity = validator.get("artifactIdentitySummary") or {}
+              validator_source_image = validator_identity.get("sourceImage") or {}
+              declared_source_sha = validator_identity.get("sourceImageSHA256Declared")
+              actual_source_sha = validator_source_image.get("sha256")
+              if validator_identity.get("sourceImageSHA256Matches") is not True or declared_source_sha != actual_source_sha:
+                  raise SystemExit(f"validator manifest source image SHA does not match repo source image: {validator_identity}")
+              artifact_files = validator_identity.get("artifactFiles") or {}
+              def validator_item(kind):
+                  if kind == "SourceImage":
+                      return validator_identity.get("sourceImage") or {}
+                  if kind == "manifest":
+                      return artifact_files.get("manifest") or {}
+                  return artifact_files.get(kind) or {}
+              mismatches = []
+              for row in rows:
+                  kind = row.get("artifactKind")
+                  item = validator_item(kind)
+                  if item.get("sizeBytes") != row.get("appSizeBytes") or item.get("sha256") != row.get("appSHA256"):
+                      mismatches.append({
+                          "artifactKind": kind,
+                          "validatorSize": item.get("sizeBytes"),
+                          "appSize": row.get("appSizeBytes"),
+                          "validatorSHA256": item.get("sha256"),
+                          "appSHA256": row.get("appSHA256"),
+                      })
+              if mismatches:
+                  raise SystemExit(f"CI validator identity does not match App receipt: {mismatches}")
+          work_item_ids = {item.get("workItemID") for item in convergence.get("workItemLedger", [])}
+          gate_ids = {item.get("gateID") for item in convergence.get("gateLedger", [])}
+          work_items_by_id = {item.get("workItemID"): item for item in convergence.get("workItemLedger", [])}
+          gates_by_id = {item.get("gateID"): item for item in convergence.get("gateLedger", [])}
+          for required_id in [
+              "WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage",
+              "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage",
+              "WI-koharu-artifact-identity-reconciliation",
+              "WI-external-textbox-shadow-ocr-coverage",
+              "WI-external-textbox-orientation-shadow-path",
+          ]:
+              if required_id not in work_item_ids:
+                  raise SystemExit(f"missing convergence work item: {required_id}")
+          for required_id in [
+              "G-koharu-convergence-bundle-lite-textbox-segment-linkage",
+              "G-koharu-convergence-promotion-lite-textbox-segment-linkage",
+              "G-koharu-artifact-identity-reconciliation-ready",
+              "G-external-textbox-shadow-ocr-coverage",
+              "G-external-textbox-orientation-shadow-path",
+          ]:
+              if required_id not in gate_ids:
+                  raise SystemExit(f"missing convergence gate: {required_id}")
+          if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
+              coverage_work_item = work_items_by_id.get("WI-external-textbox-shadow-ocr-coverage") or {}
+              coverage_gate = gates_by_id.get("G-external-textbox-shadow-ocr-coverage") or {}
+              report_availability_gate = gates_by_id.get("G-ci-fast-report-availability") or {}
+              report_availability_signals = {
+                  signal.get("name"): signal.get("value")
+                  for signal in report_availability_gate.get("decisionSignals", [])
+              }
+              if report_availability_signals.get("requiredReportSpan") != "v1.24-v1.70":
+                  raise SystemExit(f"ci-fast report availability span mismatch: {report_availability_signals}")
+              if "missingReportCount" not in report_availability_signals or "missingReports" not in report_availability_signals:
+                  raise SystemExit(f"ci-fast report availability missing decision signals: {report_availability_signals}")
+              if coverage_work_item.get("status") != "closedReportOnly":
+                  raise SystemExit(f"external shadow OCR coverage work item not closed: {coverage_work_item}")
+              if coverage_work_item.get("targetBlocks"):
+                  raise SystemExit(f"external shadow OCR coverage work item still has targetBlocks: {coverage_work_item.get('targetBlocks')}")
+              if coverage_gate.get("status") != "passed":
+                  raise SystemExit(f"external shadow OCR coverage gate not passed: {coverage_gate}")
+              if coverage_gate.get("affectedBlocks"):
+                  raise SystemExit(f"external shadow OCR coverage gate still has affectedBlocks: {coverage_gate.get('affectedBlocks')}")
+              orientation_work_item = work_items_by_id.get("WI-external-textbox-orientation-shadow-path") or {}
+              orientation_gate = gates_by_id.get("G-external-textbox-orientation-shadow-path") or {}
+              if orientation_gate.get("status") == "passed" and (orientation_gate.get("affectedBlocks") or orientation_work_item.get("targetBlocks")):
+                  raise SystemExit(f"orientation gate passed despite blockers: workItem={orientation_work_item} gate={orientation_gate}")
+          txt = pathlib.Path("output", "1_ocr_probe_text.txt").read_text(encoding="utf-8")
+          for needle in [
+              "koharuNativeTextBoxDetectorLiteReport",
+              "koharuNativeTextBoxDetectorLiteShadowOCRReport",
+              "koharuNativeTextBoxDetectorLiteRefinementReport",
+              "koharuNativeTextBoxDetectorLiteClosedLoopReport",
+              "koharuNativeBubbleMaskInstanceLiteReport",
+              "koharuNativeSegmentMaskRefinementLiteReport",
+              "koharuNativeArtifactBundleLiteReport",
+              "koharuNativePromotionGateLiteReport",
+              "nativeArtifactBundleLiteTextBoxSegmentLink",
+              "nativePromotionTextBoxSegmentLink",
+              "convergenceBundleTextBoxSegmentLinkage",
+              "convergencePromotionTextBoxSegmentLinkage",
+              "koharuArtifactIdentityReconciliationReport",
+              "artifactIdentityReconciliationFile",
+              "convergenceArtifactIdentityReconciliation",
+          ]:
+              if needle not in txt:
+                  raise SystemExit(f"missing probe TXT summary: {needle}")
+          if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
+              for needle in [
+                  "externalArtifacts: readiness=readyForShadowOCR",
+                  "shadowOCRAllowed=true",
+                  "externalTextBoxShadowOCR:",
+                  "ocrSucceeded=",
+                  "nativeArtifactContractDryRunReport",
+                  "nativeArtifactContractDryRunPreview",
+                  "appSideIdentity=activeArtifactIdentityRecorded",
+                  "convergenceExternalShadowOCRCoverage",
+                  "convergenceExternalTextBoxOrientation",
+              ]:
+                  if needle not in txt:
+                      raise SystemExit(f"missing injected artifact TXT summary: {needle}")
           PY
           } 2>&1 | tee "$RESULT_ROOT/manga-probe.log"
 
@@ -399,11 +1030,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$OUTPUT_COPY_DIR"
-          if [ -d output ]; then
+          if [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" = "success" ] && [ -d output ]; then
             find output -maxdepth 1 -type f \( -name '*.json' -o -name '*.txt' -o -name '*.png' \) -print -exec cp {} "$OUTPUT_COPY_DIR/" \;
           fi
           if [ ! -f "$OUTPUT_COPY_DIR/probe_report.json" ]; then
-            echo "probe_report.json not available from this workflow run; cloud manga probe did not complete successfully" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
+            if [ "${{ steps.meta.outputs.probe_mode }}" = "skip" ]; then
+              echo "probe_mode=skip fast CI did not run cloud manga probe; trigger workflow_dispatch with ci-fast or full when probe artifacts are required" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
+            else
+              echo "probe_report.json not available from this workflow run; cloud manga probe did not complete successfully, so checked-in output/ files were not copied into this result bundle" > "$OUTPUT_COPY_DIR/probe-not-run.txt"
+            fi
           fi
           find "$OUTPUT_COPY_DIR" -maxdepth 1 -type f -print | while read -r file; do basename "$file"; done | sort > "$RESULT_ROOT/probe-output-retained-files.txt"
 
@@ -412,20 +1047,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
+          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" XCODE_BUILD_REQUIRED="${{ steps.ci_scope.outputs.xcode_build_required }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" SIMULATOR_BUILD_STATUS="${{ steps.simulator_build.outcome }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
           import os
           import xml.etree.ElementTree as ET
 
           root = ET.Element("testsuite", name="AITRANS CI Results", tests="2")
           failures = 0
+          model_status = os.environ["MODEL_STATUS"]
           probe_status = os.environ["MANGA_PROBE_STATUS"]
+          simulator_status = os.environ["SIMULATOR_BUILD_STATUS"]
+          if os.environ["PROBE_MODE"] == "skip" and model_status == "skipped":
+              model_status = "success"
           if os.environ["PROBE_MODE"] == "skip" and probe_status == "skipped":
               probe_status = "success"
+          if os.environ["PROBE_MODE"] == "skip" and simulator_status == "skipped":
+              simulator_status = "success"
+          build_status = os.environ["BUILD_STATUS"]
+          if os.environ["XCODE_BUILD_REQUIRED"] != "true" and build_status == "skipped":
+              build_status = "success"
           cases = [
-              ("gguf-model", os.environ["MODEL_STATUS"], "GGUF model setup failed"),
+              ("gguf-model", model_status, "GGUF model setup failed"),
               ("static-checks", os.environ["STATIC_STATUS"], "static checks failed"),
-              ("xcode-build", os.environ["BUILD_STATUS"], "xcode build failed"),
-              ("simulator-build", "${{ steps.simulator_build.outcome }}", "simulator build failed"),
+              ("xcode-build", build_status, "xcode build failed"),
+              ("simulator-build", simulator_status, "simulator build failed"),
               ("manga-probe", probe_status, "manga probe failed"),
           ]
           root.set("tests", str(len(cases)))
@@ -441,7 +1085,7 @@ jobs:
           tree.write(os.path.join(os.environ["RESULT_ROOT"], "junit.xml"), encoding="utf-8", xml_declaration=True)
           PY
 
-      - name: Write manifest and failure summary
+      - name: Write manifest
         if: always()
         shell: bash
         run: |
@@ -459,6 +1103,8 @@ jobs:
           [ -f "$OUTPUT_COPY_DIR/manga_probe_progress.json" ] && probe_progress_path="$OUTPUT_COPY_DIR/manga_probe_progress.json"
           koharu_validation_path="${RESULT_ROOT}/koharu-active-artifacts-validation.json"
           [ -f "$koharu_validation_path" ] || koharu_validation_path=""
+          koharu_injection_log_path="${RESULT_ROOT}/koharu-artifact-injection.log"
+          [ -f "$koharu_injection_log_path" ] || koharu_injection_log_path=""
           if [ -d test/koharu_artifacts ]; then
             koharu_active_artifacts_present=true
           else
@@ -486,7 +1132,102 @@ jobs:
               retained_output_files = [line.strip() for line in retained_path.read_text(encoding="utf-8").splitlines() if line.strip()]
           external_readiness = (probe_report or {}).get("externalArtifactReadinessReport")
           external_shadow = (probe_report or {}).get("externalTextBoxShadowOCRReport")
+          contract_dry_run = (probe_report or {}).get("koharuNativeArtifactContractDryRunReport")
+          identity_reconciliation = (probe_report or {}).get("koharuArtifactIdentityReconciliationReport")
+          convergence = (probe_report or {}).get("koharuArtifactConvergenceReport")
+          app_identity_receipt = (external_readiness or {}).get("artifactIdentityReceipt") if external_readiness else None
+          validator_orientation = (koharu_validation or {}).get("orientationMetadataSummary") if koharu_validation else None
+          validator_identity = (koharu_validation or {}).get("artifactIdentitySummary") if koharu_validation else None
           probe_configuration = (probe_report or {}).get("configuration") or {}
+
+          def identity_match_summary(validator_identity, reconciliation):
+              rows = (reconciliation or {}).get("fileRows") or []
+              artifact_files = (validator_identity or {}).get("artifactFiles") or {}
+              def valid_sha(value):
+                  return isinstance(value, str) and len(value) == 64 and all(ch in "0123456789abcdefABCDEF" for ch in value)
+              def validator_item(kind):
+                  if kind == "SourceImage":
+                      return (validator_identity or {}).get("sourceImage") or {}
+                  if kind == "manifest":
+                      return artifact_files.get("manifest") or {}
+                  return artifact_files.get(kind) or {}
+              row_summaries = []
+              mismatches = []
+              for row in rows:
+                  kind = row.get("artifactKind")
+                  item = validator_item(kind)
+                  app_ready = row.get("comparisonStatus") == "appReceiptReady"
+                  validator_ready = item.get("exists") is True and item.get("sizeBytes") is not None and valid_sha(item.get("sha256"))
+                  app_identity_ready = row.get("appSizeBytes") is not None and valid_sha(row.get("appSHA256"))
+                  size_match = item.get("sizeBytes") == row.get("appSizeBytes")
+                  sha_match = item.get("sha256") == row.get("appSHA256")
+                  summary = {
+                      "artifactKind": kind,
+                      "appReceiptReady": app_ready,
+                      "validatorIdentityReady": validator_ready,
+                      "appIdentityReady": app_identity_ready,
+                      "appSizeBytes": row.get("appSizeBytes"),
+                      "validatorSizeBytes": item.get("sizeBytes"),
+                      "sizeMatches": size_match,
+                      "appSHA256": row.get("appSHA256"),
+                      "validatorSHA256": item.get("sha256"),
+                      "sha256Matches": sha_match,
+                      "comparisonStatus": row.get("comparisonStatus"),
+                      "ciManifestFieldPathForSize": row.get("ciManifestFieldPathForSize"),
+                      "ciManifestFieldPathForSHA256": row.get("ciManifestFieldPathForSHA256"),
+                  }
+                  row_summaries.append(summary)
+                  if not app_ready or not validator_ready or not app_identity_ready or not size_match or not sha_match:
+                      mismatches.append(summary)
+              if not rows:
+                  verdict = "notEvaluatedNoAppReconciliationRows"
+              elif not validator_identity:
+                  verdict = "notEvaluatedNoValidatorIdentity"
+              elif any(not row.get("appReceiptReady") for row in row_summaries):
+                  verdict = "notEvaluatedAppReceiptRowsNotReady"
+              elif any(not row.get("validatorIdentityReady") for row in row_summaries):
+                  verdict = "notEvaluatedValidatorIdentityIncomplete"
+              elif any(not row.get("appIdentityReady") for row in row_summaries):
+                  verdict = "notEvaluatedAppIdentityIncomplete"
+              elif mismatches:
+                  verdict = "mismatch"
+              else:
+                  verdict = "matched"
+              return {
+                  "matchVerdict": verdict,
+                  "rowCount": len(rows),
+                  "mismatchCount": len(mismatches),
+                  "rows": row_summaries,
+                  "mismatches": mismatches,
+              }
+
+          identity_reconciliation_match = identity_match_summary(validator_identity, identity_reconciliation)
+
+          def signal_map(item):
+              return {
+                  signal.get("name"): signal.get("value")
+                  for signal in (item or {}).get("decisionSignals", [])
+                  if signal.get("name")
+              }
+
+          def convergence_item_summary(kind, item_id):
+              if kind == "workItem":
+                  items = (convergence or {}).get("workItemLedger") or []
+                  key = "workItemID"
+                  fields = ["status", "targetBlocks", "remainingBlockers", "nextAction"]
+              else:
+                  items = (convergence or {}).get("gateLedger") or []
+                  key = "gateID"
+                  fields = ["status", "affectedBlocks", "recommendedAction"]
+              item = next((candidate for candidate in items if candidate.get(key) == item_id), None)
+              if not item:
+                  return None
+              summary = {key: item_id}
+              for field in fields:
+                  summary[field] = item.get(field)
+              summary["decisionSignals"] = signal_map(item)
+              return summary
+
           manifest = {
               "version": "${{ steps.meta.outputs.version }}",
               "branch": "${{ steps.meta.outputs.branch }}",
@@ -500,7 +1241,11 @@ jobs:
               "scheme": "${SCHEME}",
               "destination": "${DESTINATION}",
               "resultBundlePath": "${{ steps.meta.outputs.result_bundle }}",
-              "simulatorAppReusedFromXcodeBuild": True,
+              "changedFilesPath": "${RESULT_ROOT}/changed-files.txt",
+              "xcodeBuildRequired": "${{ steps.ci_scope.outputs.xcode_build_required }}" == "true",
+              "xcodeBuildSkippedReason": "${{ steps.ci_scope.outputs.xcode_build_skip_reason }}",
+              "koharuValidatorExtendedRequired": "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" == "true",
+              "simulatorAppReusedFromXcodeBuild": "${{ steps.meta.outputs.probe_mode }}" != "skip" and "${{ steps.simulator_build.outcome }}" == "success",
               "simulatorAppPath": "${{ steps.simulator_build.outputs.simulator_app_path }}",
               "junitPath": "${RESULT_ROOT}/junit.xml",
               "xcodebuildLogPath": "${RESULT_ROOT}/xcodebuild.log",
@@ -508,11 +1253,57 @@ jobs:
               "mangaProbeLogPath": "${RESULT_ROOT}/manga-probe.log",
               "appConsoleLogPath": "${RESULT_ROOT}/app-console.log",
               "staticChecksLogPath": "${RESULT_ROOT}/static-checks.log",
+              "koharuArtifactInjectionRequested": "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true",
+              "koharuArtifactInjectionRequired": "${{ steps.meta.outputs.koharu_artifact_required }}" == "true",
+              "koharuArtifactInjectionStatus": "${{ steps.koharu_artifacts.outputs.status }}",
+              "koharuArtifactInjectionOutcome": "${{ steps.koharu_artifacts.outcome }}",
+              "koharuArtifactInjected": "${{ steps.koharu_artifacts.outputs.injected }}" == "true",
+              "koharuArtifactInjectionLogPath": "$koharu_injection_log_path",
+              "koharuArtifactReleaseTag": "${{ steps.meta.outputs.koharu_artifact_release_tag }}",
+              "koharuArtifactAsset": "${{ steps.meta.outputs.koharu_artifact_asset }}",
+              "koharuArtifactSha256": "${{ steps.meta.outputs.koharu_artifact_sha256 }}",
               "koharuArtifactValidatorLogPath": "${RESULT_ROOT}/static-checks.log",
               "koharuActiveArtifactValidationPath": "$koharu_validation_path",
               "koharuArtifactValidatorRan": "${{ steps.static_checks.outcome }}" == "success",
               "koharuActiveArtifactsDirectoryPresent": "$koharu_active_artifacts_present" == "true",
               "koharuArtifactValidation": koharu_validation,
+              "koharuArtifactValidationIdentitySummary": validator_identity,
+              "koharuArtifactValidationOrientationSummary": validator_orientation,
+              "appSideArtifactIdentityReceiptSummary": {
+                  "identityVerdict": (app_identity_receipt or {}).get("identityVerdict"),
+                  "allRequiredFilesPresent": (app_identity_receipt or {}).get("allRequiredFilesPresent"),
+                  "allRequiredFilesHaveSHA256": (app_identity_receipt or {}).get("allRequiredFilesHaveSHA256"),
+                  "sourceImage": (app_identity_receipt or {}).get("sourceImage"),
+                  "schemaVersion": (app_identity_receipt or {}).get("schemaVersion"),
+                  "coordinateSpace": (app_identity_receipt or {}).get("coordinateSpace"),
+                  "contractExampleOnly": (app_identity_receipt or {}).get("contractExampleOnly"),
+                  "files": (app_identity_receipt or {}).get("files"),
+              },
+              "koharuNativeArtifactContractDryRunSummary": {
+                  "enabled": (contract_dry_run or {}).get("enabled"),
+                  "contractDryRunVerdict": (contract_dry_run or {}).get("contractDryRunVerdict"),
+                  "appSideArtifactIdentityVerdict": (contract_dry_run or {}).get("appSideArtifactIdentityVerdict"),
+                  "appSideArtifactIdentityFilesPresent": (contract_dry_run or {}).get("appSideArtifactIdentityFilesPresent"),
+                  "appSideArtifactIdentityHashesPresent": (contract_dry_run or {}).get("appSideArtifactIdentityHashesPresent"),
+                  "dryRunOnly": (contract_dry_run or {}).get("dryRunOnly"),
+                  "activeExportAllowed": (contract_dry_run or {}).get("activeExportAllowed"),
+                  "requiredFileCount": (contract_dry_run or {}).get("requiredFileCount"),
+                  "contractGateCount": (contract_dry_run or {}).get("contractGateCount"),
+              },
+              "koharuArtifactIdentityReconciliationSummary": {
+                  "enabled": (identity_reconciliation or {}).get("enabled"),
+                  "identityReconciliationVerdict": (identity_reconciliation or {}).get("identityReconciliationVerdict"),
+                  "appReceiptVerdict": (identity_reconciliation or {}).get("appReceiptVerdict"),
+                  "contractDryRunVerdict": (identity_reconciliation or {}).get("contractDryRunVerdict"),
+                  "readyForCIManifestComparison": (identity_reconciliation or {}).get("readyForCIManifestComparison"),
+                  "manualCIComparisonRequired": (identity_reconciliation or {}).get("manualCIComparisonRequired"),
+                  "fileRowCount": (identity_reconciliation or {}).get("fileRowCount"),
+                  "comparisonStatusBreakdown": (identity_reconciliation or {}).get("comparisonStatusBreakdown"),
+                  "readyFileKinds": (identity_reconciliation or {}).get("readyFileKinds"),
+                  "missingFileKinds": (identity_reconciliation or {}).get("missingFileKinds"),
+                  "hashMissingFileKinds": (identity_reconciliation or {}).get("hashMissingFileKinds"),
+              },
+              "koharuArtifactIdentityReconciliationMatch": identity_reconciliation_match,
               "externalArtifactReadinessSummary": {
                   "readinessVerdict": (external_readiness or {}).get("readinessVerdict"),
                   "activeArtifactsDirectory": (external_readiness or {}).get("activeArtifactsDirectory"),
@@ -537,6 +1328,31 @@ jobs:
                   "promotedExternalShadowBlocks": (external_shadow or {}).get("promotedExternalShadowBlocks"),
                   "wouldPromoteByExistingGateBlocks": (external_shadow or {}).get("wouldPromoteByExistingGateBlocks"),
                   "skippedBlocks": (external_shadow or {}).get("skippedBlocks"),
+                  "sourceDirectionBreakdown": (external_shadow or {}).get("sourceDirectionBreakdown"),
+                  "orientationCategoryBreakdown": (external_shadow or {}).get("orientationCategoryBreakdown"),
+                  "linePolygonCandidateBlocks": (external_shadow or {}).get("linePolygonCandidateBlocks"),
+                  "rotationCandidateBlocks": (external_shadow or {}).get("rotationCandidateBlocks"),
+                  "verticalCandidateBlocks": (external_shadow or {}).get("verticalCandidateBlocks"),
+                  "orientationReadinessVerdict": (external_shadow or {}).get("orientationReadinessVerdict"),
+                  "orientationShadowPathNeededBlocks": (external_shadow or {}).get("orientationShadowPathNeededBlocks"),
+                  "orientationShadowPathExecutedBlocks": (external_shadow or {}).get("orientationShadowPathExecutedBlocks"),
+                  "orientationShadowPathPartialBlocks": (external_shadow or {}).get("orientationShadowPathPartialBlocks"),
+                  "orientationShadowPathNotExecutedBlocks": (external_shadow or {}).get("orientationShadowPathNotExecutedBlocks"),
+                  "orientationUnsupportedBlocks": (external_shadow or {}).get("orientationUnsupportedBlocks"),
+                  "orientationUnsupportedReasonBreakdown": (external_shadow or {}).get("orientationUnsupportedReasonBreakdown"),
+              },
+              "koharuArtifactConvergenceGateSummary": {
+                  "enabled": (convergence or {}).get("enabled"),
+                  "evaluatedBlockCount": (convergence or {}).get("evaluatedBlockCount"),
+                  "workItemLedgerCount": (convergence or {}).get("workItemLedgerCount"),
+                  "gateCount": (convergence or {}).get("gateCount"),
+                  "externalShadowCoverageWorkItem": convergence_item_summary("workItem", "WI-external-textbox-shadow-ocr-coverage"),
+                  "externalShadowCoverageGate": convergence_item_summary("gate", "G-external-textbox-shadow-ocr-coverage"),
+                  "externalOrientationWorkItem": convergence_item_summary("workItem", "WI-external-textbox-orientation-shadow-path"),
+                  "externalOrientationGate": convergence_item_summary("gate", "G-external-textbox-orientation-shadow-path"),
+                  "artifactIdentityReconciliationWorkItem": convergence_item_summary("workItem", "WI-koharu-artifact-identity-reconciliation"),
+                  "artifactIdentityReconciliationGate": convergence_item_summary("gate", "G-koharu-artifact-identity-reconciliation-ready"),
+                  "ciFastReportAvailabilityGate": convergence_item_summary("gate", "G-ci-fast-report-availability"),
               },
               "modelDownloadLogPath": "${RESULT_ROOT}/model-download.log",
               "modelVerifyLogPath": "${RESULT_ROOT}/model-verify.log",
@@ -547,9 +1363,10 @@ jobs:
               "probeProgressPath": "$probe_progress_path",
               "probeMode": "${{ steps.meta.outputs.probe_mode }}",
               "probeFastPathEnabled": "${{ steps.meta.outputs.probe_mode }}" == "ci-fast",
-              "probeSkippedReason": "workflow_dispatch_or_document_only_skip" if "${{ steps.meta.outputs.probe_mode }}" == "skip" else None,
+              "probeSkippedReason": "default_push_fast_ci_or_manual_skip" if "${{ steps.meta.outputs.probe_mode }}" == "skip" else None,
               "probeTimeoutSeconds": int("${{ steps.meta.outputs.probe_timeout_seconds }}"),
               "probeStallTimeoutSeconds": int("${{ steps.meta.outputs.probe_stall_timeout_seconds }}"),
+              "probeNoProgressTimeoutSeconds": int("${{ steps.meta.outputs.probe_no_progress_timeout_seconds }}"),
               "probeDurationSeconds": (probe_progress or {}).get("elapsedSeconds"),
               "probeStageDurationsSeconds": (probe_progress or {}).get("stageDurationsSeconds"),
               "probeSkippedDiagnostics": probe_configuration.get("skippedDiagnostics") or (probe_progress or {}).get("skippedDiagnostics") or [],
@@ -592,6 +1409,7 @@ jobs:
               "modelCacheKey": "gguf-${MODEL_TAG}-${MODEL_SHA256}",
               "modelCacheHit": "${{ steps.gguf_cache.outputs.cache-hit }}",
               "modelLocalPath": "${MODEL_CACHE_DIR}/${MODEL_ASSET}",
+              "modelSetupSkippedReason": "probe_mode_skip_fast_ci_does_not_need_model" if "${{ steps.meta.outputs.probe_mode }}" == "skip" else None,
               "modelDownloadOutcome": "${{ steps.download_model.outcome }}",
               "modelVerifyOutcome": "${{ steps.verify_model.outcome }}",
               "staticChecksOutcome": "${{ steps.static_checks.outcome }}",
@@ -599,13 +1417,164 @@ jobs:
               "simulatorBuildOutcome": "${{ steps.simulator_build.outcome }}",
               "mangaProbeOutcome": "${{ steps.manga_probe.outcome }}",
               "probeRunInWorkflow": "${{ steps.manga_probe.outcome }}" == "success",
-              "probeRunNote": "Cloud manga probe installs the reused simulator app, imports model.gguf into the app container, launches with AITRANS_RUN_MANGA_PROBE=1 and AITRANS_MANGA_PROBE_MODE, and exports output/ when successful.",
+              "probeRunNote": "probe_mode=skip runs fast CI without simulator probe; ci-fast/full install the reused simulator app, import model.gguf into the app container, launch with AITRANS_RUN_MANGA_PROBE=1 and AITRANS_MANGA_PROBE_MODE, and export output/ when successful.",
               "encryptedPackageArtifactUsedForReview": False
           }
           with open("${RESULT_ROOT}/ci-artifact-manifest.json", "w", encoding="utf-8") as f:
               json.dump(manifest, f, ensure_ascii=False, indent=2)
               f.write("\n")
           PY
+
+      - name: Append native-lite manifest summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest_path = Path("ci-results/ci-artifact-manifest.json")
+          if not manifest_path.is_file():
+              raise SystemExit("ci-artifact-manifest.json missing before native-lite append")
+
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          probe_path = Path(manifest.get("probeReportPath") or "")
+          probe = json.loads(probe_path.read_text(encoding="utf-8")) if probe_path.is_file() else {}
+          convergence = probe.get("koharuArtifactConvergenceReport") or {}
+
+          report_specs = {
+              "detectorLite": ("koharuNativeTextBoxDetectorLiteReport", "enabled detectorLiteVerdict evaluatedBlockCount blockLedgerCount candidateCount acceptedCandidateCount shadowOCREligibleCandidateCount needsRealTextBoxesBlocks renderLockedBlocks gateCount"),
+              "detectorLiteShadowOCR": ("koharuNativeTextBoxDetectorLiteShadowOCRReport", "enabled shadowOCRVerdict evaluatedBlockCount blockLedgerCount ocrExecutedCount ocrSucceededCount betterThanCurrentCount gateCount"),
+              "detectorLiteRefinement": ("koharuNativeTextBoxDetectorLiteRefinementReport", "enabled refinementVerdict evaluatedBlockCount blockLedgerCount ocrExecutedCount ocrSucceededCount gateCount"),
+              "detectorLiteClosedLoop": ("koharuNativeTextBoxDetectorLiteClosedLoopReport", "enabled closedLoopVerdict evaluatedBlockCount blockLedgerCount gateCount"),
+              "bubbleMaskInstanceLite": ("koharuNativeBubbleMaskInstanceLiteReport", "enabled instanceLiteVerdict evaluatedBlockCount blockLedgerCount instanceCount siblingLedgerCount adjacencyLedgerCount needsRealTextBoxesBlocks needsRealBubbleMaskBlocks needsRealSegmentMaskBlocks gateCount"),
+              "segmentMaskRefinementLite": ("koharuNativeSegmentMaskRefinementLiteReport", "enabled refinementLiteVerdict evaluatedBlockCount blockLedgerCount candidateLedgerCount siblingLedgerCount textBoxSegmentLinkBreakdown needsRealTextBoxesBlocks needsRealBubbleMaskBlocks needsRealSegmentMaskBlocks gateCount"),
+              "artifactBundleLite": ("koharuNativeArtifactBundleLiteReport", "enabled bundleLiteVerdict evaluatedBlockCount bundleLedgerCount workItemCount gateCount textBoxSegmentLinkBreakdown textBoxSegmentLinkageReviewBlocks needsRealTextBoxesBlocks needsRealBubbleMaskBlocks needsRealSegmentMaskBlocks"),
+              "promotionGateLite": ("koharuNativePromotionGateLiteReport", "enabled promotionVerdict evaluatedBlockCount blockLedgerCount stageGateCount candidateExportPreviewCount workItemCount gateCount textBoxSegmentLinkBreakdown textBoxSegmentLinkageBlockedBlocks needsRealTextBoxesBlocks needsRealBubbleMaskBlocks needsRealSegmentMaskBlocks"),
+          }
+          manifest["koharuNativeLiteReportSummary"] = {
+              key: {field: (probe.get(report_name) or {}).get(field) for field in fields.split()}
+              for key, (report_name, fields) in report_specs.items()
+          }
+
+          work_items = {item.get("workItemID"): item for item in convergence.get("workItemLedger") or []}
+          gates = {item.get("gateID"): item for item in convergence.get("gateLedger") or []}
+
+          def signals(item):
+              return {
+                  signal.get("name"): signal.get("value")
+                  for signal in (item or {}).get("decisionSignals", [])
+                  if signal.get("name")
+              }
+
+          def summarize(kind, item_id):
+              item = (work_items if kind == "workItem" else gates).get(item_id)
+              if not item:
+                  return None
+              key = "workItemID" if kind == "workItem" else "gateID"
+              fields = ["status", "targetBlocks", "remainingBlockers", "nextAction"] if kind == "workItem" else ["status", "affectedBlocks", "recommendedAction"]
+              summary = {key: item_id}
+              summary.update({field: item.get(field) for field in fields})
+              summary["decisionSignals"] = signals(item)
+              return summary
+
+          convergence_specs = {
+              "detectorLiteWorkItem": ("workItem", "WI-koharu-native-textbox-detector-lite"),
+              "detectorLiteGate": ("gate", "G-koharu-native-textbox-detector-lite-executed"),
+              "detectorLiteShadowOCRWorkItem": ("workItem", "WI-koharu-native-textbox-detector-lite-shadow-ocr"),
+              "detectorLiteShadowOCRGate": ("gate", "G-koharu-native-textbox-detector-lite-shadow-ocr-executed"),
+              "detectorLiteRefinementWorkItem": ("workItem", "WI-koharu-native-textbox-detector-lite-refinement"),
+              "detectorLiteRefinementGate": ("gate", "G-koharu-native-textbox-detector-lite-refinement-executed"),
+              "detectorLiteClosedLoopWorkItem": ("workItem", "WI-koharu-native-textbox-detector-lite-closed-loop-router"),
+              "detectorLiteClosedLoopGate": ("gate", "G-koharu-native-textbox-detector-lite-closed-loop-router-executed"),
+              "bubbleMaskInstanceLiteWorkItem": ("workItem", "WI-koharu-native-bubblemask-instance-lite"),
+              "bubbleMaskInstanceLiteGate": ("gate", "G-koharu-native-bubblemask-instance-lite-executed"),
+              "segmentMaskRefinementLiteWorkItem": ("workItem", "WI-koharu-native-segmentmask-refinement-lite"),
+              "segmentMaskRefinementLiteGate": ("gate", "G-koharu-native-segmentmask-refinement-lite-executed"),
+              "artifactBundleLiteWorkItem": ("workItem", "WI-koharu-native-artifact-bundle-lite"),
+              "artifactBundleLiteGate": ("gate", "G-koharu-native-artifact-bundle-lite-executed"),
+              "promotionGateLiteWorkItem": ("workItem", "WI-koharu-native-promotion-gate-lite"),
+              "promotionGateLiteGate": ("gate", "G-koharu-native-promotion-gate-lite-executed"),
+              "bundleLiteTextBoxSegmentLinkageWorkItem": ("workItem", "WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage"),
+              "bundleLiteTextBoxSegmentLinkageGate": ("gate", "G-koharu-convergence-bundle-lite-textbox-segment-linkage"),
+              "promotionLiteTextBoxSegmentLinkageWorkItem": ("workItem", "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage"),
+              "promotionLiteTextBoxSegmentLinkageGate": ("gate", "G-koharu-convergence-promotion-lite-textbox-segment-linkage"),
+          }
+          manifest["koharuNativeLiteConvergenceGateSummary"] = {
+              key: summarize(kind, item_id)
+              for key, (kind, item_id) in convergence_specs.items()
+          }
+
+          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Append provenance manifest trace
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          manifest_path = Path("ci-results/ci-artifact-manifest.json")
+          if not manifest_path.is_file():
+              raise SystemExit("ci-artifact-manifest.json missing before provenance append")
+
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          probe_path = Path("ci-results/output/probe_report.json")
+          probe = json.loads(probe_path.read_text(encoding="utf-8")) if probe_path.is_file() else {}
+          external = probe.get("externalArtifactReadinessReport") or {}
+          receipt = external.get("artifactIdentityReceipt") or {}
+          reconciliation = probe.get("koharuArtifactIdentityReconciliationReport") or {}
+          receipt_summary = manifest.setdefault("appSideArtifactIdentityReceiptSummary", {})
+          receipt_summary.update({
+              "sourceImageSHA256Declared": receipt.get("sourceImageSHA256Declared"),
+              "sourceImageSHA256Expected": receipt.get("sourceImageSHA256Expected"),
+              "sourceImageSHA256Matches": receipt.get("sourceImageSHA256Matches"),
+          })
+          reconciliation_summary = manifest.setdefault("koharuArtifactIdentityReconciliationSummary", {})
+          reconciliation_summary.update({
+              "sourceImageSHA256Declared": reconciliation.get("sourceImageSHA256Declared"),
+              "sourceImageSHA256Expected": reconciliation.get("sourceImageSHA256Expected"),
+              "sourceImageSHA256Matches": reconciliation.get("sourceImageSHA256Matches"),
+          })
+          changed_files_path = Path("ci-results/changed-files.txt")
+          changed_files = []
+          if changed_files_path.is_file():
+              changed_files = [
+                  line.strip()
+                  for line in changed_files_path.read_text(encoding="utf-8").splitlines()
+                  if line.strip()
+              ]
+          changed_files_hash = hashlib.sha256(("\n".join(changed_files) + ("\n" if changed_files else "")).encode("utf-8")).hexdigest()
+          repository = os.environ["GITHUB_REPOSITORY"]
+          run_id = os.environ["GITHUB_RUN_ID"]
+          manifest.update({
+              "eventName": os.environ["GITHUB_EVENT_NAME"],
+              "repository": repository,
+              "ref": os.environ["GITHUB_REF"],
+              "refName": os.environ["GITHUB_REF_NAME"],
+              "runUrl": f"https://github.com/{repository}/actions/runs/{run_id}",
+              "artifactName": "${{ steps.meta.outputs.artifact_name }}",
+              "scopeDiffMethod": os.environ.get("SCOPE_DIFF_METHOD"),
+              "scopeDiffBaseSha": os.environ.get("SCOPE_DIFF_BASE_SHA"),
+              "scopeDiffFallbackUsed": os.environ.get("SCOPE_DIFF_FALLBACK_USED") == "true",
+              "changedFilesCount": len(changed_files),
+              "changedFilesSHA256": changed_files_hash,
+              "changedFiles": changed_files,
+          })
+          manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Write failure summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
           {
             echo "# AITRANS CI Failure Summary"
             echo
@@ -613,10 +1582,37 @@ jobs:
             echo "- commitSha: ${GITHUB_SHA}"
             echo "- runId: ${GITHUB_RUN_ID}"
             echo "- runAttempt: ${GITHUB_RUN_ATTEMPT}"
+            echo "- runUrl: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- eventName: ${GITHUB_EVENT_NAME}"
+            echo "- ref: ${GITHUB_REF}"
+            echo "- repository: ${GITHUB_REPOSITORY}"
             echo "- artifact: ${{ steps.meta.outputs.artifact_name }}"
+            echo "- scope diff method: ${{ steps.ci_scope.outputs.scope_diff_method }}"
+            echo "- scope diff base sha: ${{ steps.ci_scope.outputs.scope_diff_base_sha }}"
+            echo "- scope diff fallback used: ${{ steps.ci_scope.outputs.scope_diff_fallback_used }}"
+            if [ -f "${RESULT_ROOT}/changed-files.txt" ]; then
+              changed_count="$(wc -l < "${RESULT_ROOT}/changed-files.txt" | tr -d '[:space:]')"
+              changed_hash="$(python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          path = Path("ci-results/changed-files.txt")
+          lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+          print(hashlib.sha256(("\n".join(lines) + ("\n" if lines else "")).encode("utf-8")).hexdigest())
+          PY
+          )"
+              echo "- changed files: ${changed_count}"
+              echo "- changed files sha256: ${changed_hash}"
+            fi
             echo "- probe mode: ${{ steps.meta.outputs.probe_mode }}"
             echo "- probe timeout seconds: ${{ steps.meta.outputs.probe_timeout_seconds }}"
             echo "- probe stall timeout seconds: ${{ steps.meta.outputs.probe_stall_timeout_seconds }}"
+            echo "- probe no-progress timeout seconds: ${{ steps.meta.outputs.probe_no_progress_timeout_seconds }}"
+            echo "- Koharu artifact injection requested: ${{ steps.meta.outputs.koharu_artifact_requested }}"
+            echo "- Koharu artifact injection required: ${{ steps.meta.outputs.koharu_artifact_required }}"
+            echo "- Koharu artifact injection: ${{ steps.koharu_artifacts.outcome }} / ${{ steps.koharu_artifacts.outputs.status }}"
+            echo "- Xcode build required: ${{ steps.ci_scope.outputs.xcode_build_required }}"
+            echo "- Xcode build skip reason: ${{ steps.ci_scope.outputs.xcode_build_skip_reason }}"
+            echo "- extended Koharu validator matrix: ${{ steps.ci_scope.outputs.koharu_validator_extended_required }}"
             echo "- GGUF cache hit: ${{ steps.gguf_cache.outputs.cache-hit }}"
             echo "- GGUF download: ${{ steps.download_model.outcome }}"
             echo "- GGUF verify: ${{ steps.verify_model.outcome }}"
@@ -626,6 +1622,7 @@ jobs:
             echo "- manga probe: ${{ steps.manga_probe.outcome }}"
             echo
             echo "## Logs for Agent B"
+            echo "- Koharu artifact injection: ${RESULT_ROOT}/koharu-artifact-injection.log"
             echo "- Model download: ${RESULT_ROOT}/model-download.log"
             echo "- Model verify: ${RESULT_ROOT}/model-verify.log"
             echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
@@ -641,7 +1638,8 @@ jobs:
             echo
             echo "## Probe status"
             if [ "${{ steps.meta.outputs.probe_mode }}" = "skip" ]; then
-              echo "Cloud manga probe was skipped by probe_mode=skip. This is only acceptable for document-only or explicitly skipped validation; inspect manifest probeSkippedReason."
+              echo "Cloud manga probe was skipped by probe_mode=skip. This is the default fast push CI path; use workflow_dispatch probe_mode=ci-fast or full for probe validation."
+              echo "GGUF model setup was also skipped because the fast path does not launch Local GGUF inference."
             elif [ "${{ steps.manga_probe.outcome }}" = "success" ]; then
               echo "Cloud manga probe ran and exported output artifacts. Review ${OUTPUT_COPY_DIR}/probe_report.json, ${OUTPUT_COPY_DIR}/clean_text_diagnostic.json, ${OUTPUT_COPY_DIR}/1_ocr_probe_text.txt, and PNGs."
             else
@@ -652,6 +1650,7 @@ jobs:
             if [ -f "${RESULT_ROOT}/koharu-active-artifacts-validation.json" ]; then
               python3 - <<PY
           import json
+          from pathlib import Path
           with open("${RESULT_ROOT}/koharu-active-artifacts-validation.json", "r", encoding="utf-8") as f:
               data = json.load(f)
           print(f"- activeArtifactsDirectory: {data.get('activeArtifactsDirectory')}")
@@ -659,17 +1658,106 @@ jobs:
           print(f"- externalTextBoxesShadowOCRAllowed: {data.get('externalTextBoxesShadowOCRAllowed')}")
           print(f"- nextAction: {data.get('nextAction')}")
           print(f"- readinessBlockers: {data.get('readinessBlockers')}")
+          identity = data.get("artifactIdentitySummary") or {}
+          source_image = identity.get("sourceImage") or {}
+          print(f"- identity generatedBy: {identity.get('generatedBy')}")
+          print(f"- identity generatedAt: {identity.get('generatedAt')}")
+          print(f"- identity sourceImageSha256: {source_image.get('sha256')}")
+          files = identity.get("artifactFiles") or {}
+          for key in ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]:
+              item = files.get(key) or {}
+              print(f"- identity {key}: exists={item.get('exists')} size={item.get('sizeBytes')} sha256={item.get('sha256')}")
+          probe_path = "${OUTPUT_COPY_DIR}/probe_report.json"
+          if Path(probe_path).is_file():
+              probe = json.load(open(probe_path, encoding="utf-8"))
+              external = probe.get("externalArtifactReadinessReport") or {}
+              receipt = external.get("artifactIdentityReceipt") or {}
+              external_shadow = probe.get("externalTextBoxShadowOCRReport") or {}
+              contract = probe.get("koharuNativeArtifactContractDryRunReport") or {}
+              reconciliation = probe.get("koharuArtifactIdentityReconciliationReport") or {}
+              convergence = probe.get("koharuArtifactConvergenceReport") or {}
+              detector_lite = probe.get("koharuNativeTextBoxDetectorLiteReport") or {}
+              detector_shadow = probe.get("koharuNativeTextBoxDetectorLiteShadowOCRReport") or {}
+              detector_refinement = probe.get("koharuNativeTextBoxDetectorLiteRefinementReport") or {}
+              detector_closed_loop = probe.get("koharuNativeTextBoxDetectorLiteClosedLoopReport") or {}
+              bubble_instance_lite = probe.get("koharuNativeBubbleMaskInstanceLiteReport") or {}
+              segment_refinement_lite = probe.get("koharuNativeSegmentMaskRefinementLiteReport") or {}
+              native_bundle_lite = probe.get("koharuNativeArtifactBundleLiteReport") or {}
+              native_promotion_lite = probe.get("koharuNativePromotionGateLiteReport") or {}
+              work_items = {item.get("workItemID"): item for item in convergence.get("workItemLedger") or []}
+              gates = {item.get("gateID"): item for item in convergence.get("gateLedger") or []}
+              def signals(item):
+                  return {signal.get("name"): signal.get("value") for signal in (item or {}).get("decisionSignals", [])}
+              def print_work_item(item_id):
+                  item = work_items.get(item_id) or {}
+                  print(f"- convergence workItem {item_id}: status={item.get('status')} targetBlocks={item.get('targetBlocks')} nextAction={item.get('nextAction')}")
+              def print_gate(gate_id):
+                  item = gates.get(gate_id) or {}
+                  print(f"- convergence gate {gate_id}: status={item.get('status')} affectedBlocks={item.get('affectedBlocks')} signals={signals(item)}")
+              print(f"- app receipt verdict: {receipt.get('identityVerdict')}")
+              print(f"- app receipt files present: {receipt.get('allRequiredFilesPresent')} hashes present: {receipt.get('allRequiredFilesHaveSHA256')}")
+              print(f"- app receipt sourceImageSHA256: declared={receipt.get('sourceImageSHA256Declared')} expected={receipt.get('sourceImageSHA256Expected')} matches={receipt.get('sourceImageSHA256Matches')}")
+              print(f"- contract dry-run verdict: {contract.get('contractDryRunVerdict')}")
+              print(f"- contract dry-run app identity: verdict={contract.get('appSideArtifactIdentityVerdict')} files={contract.get('appSideArtifactIdentityFilesPresent')} hashes={contract.get('appSideArtifactIdentityHashesPresent')}")
+              print(f"- contract dry-run safety: dryRunOnly={contract.get('dryRunOnly')} activeExportAllowed={contract.get('activeExportAllowed')}")
+              print(f"- identity reconciliation verdict: {reconciliation.get('identityReconciliationVerdict')}")
+              print(f"- identity reconciliation sourceImageSHA256: declared={reconciliation.get('sourceImageSHA256Declared')} expected={reconciliation.get('sourceImageSHA256Expected')} matches={reconciliation.get('sourceImageSHA256Matches')}")
+              print(f"- identity reconciliation readyForCIManifestComparison: {reconciliation.get('readyForCIManifestComparison')}")
+              for row in reconciliation.get("fileRows") or []:
+                  print(f"- identity reconciliation {row.get('artifactKind')}: appSize={row.get('appSizeBytes')} appSHA256={row.get('appSHA256')} status={row.get('comparisonStatus')}")
+              print(f"- external shadow OCR: executed={external_shadow.get('executed')} candidateCount={external_shadow.get('candidateCount')} ocrExecutedCount={external_shadow.get('ocrExecutedCount')} ocrSucceededCount={external_shadow.get('ocrSucceededCount')}")
+              print(f"- external shadow orientation: verdict={external_shadow.get('orientationReadinessVerdict')} partial={external_shadow.get('orientationShadowPathPartialBlocks')} unsupported={external_shadow.get('orientationUnsupportedBlocks')} reasons={external_shadow.get('orientationUnsupportedReasonBreakdown')}")
+              print_work_item("WI-external-textbox-shadow-ocr-coverage")
+              print_gate("G-external-textbox-shadow-ocr-coverage")
+              print_work_item("WI-external-textbox-orientation-shadow-path")
+              print_gate("G-external-textbox-orientation-shadow-path")
+              print_gate("G-ci-fast-report-availability")
+              print(f"- native detector-lite: verdict={detector_lite.get('detectorLiteVerdict')} candidates={detector_lite.get('candidateCount')} accepted={detector_lite.get('acceptedCandidateCount')} shadowEligible={detector_lite.get('shadowOCREligibleCandidateCount')} needsRealTextBoxes={detector_lite.get('needsRealTextBoxesBlocks')}")
+              print(f"- native detector-lite shadow OCR: verdict={detector_shadow.get('shadowOCRVerdict')} executed={detector_shadow.get('ocrExecutedCount')} succeeded={detector_shadow.get('ocrSucceededCount')} betterThanCurrent={detector_shadow.get('betterThanCurrentCount')}")
+              print(f"- native detector-lite refinement: verdict={detector_refinement.get('refinementVerdict')} executed={detector_refinement.get('ocrExecutedCount')} succeeded={detector_refinement.get('ocrSucceededCount')}")
+              print(f"- native detector-lite closed loop: verdict={detector_closed_loop.get('closedLoopVerdict')} blocks={detector_closed_loop.get('blockLedgerCount')}")
+              print(f"- native BubbleMask instance-lite: verdict={bubble_instance_lite.get('instanceLiteVerdict')} instances={bubble_instance_lite.get('instanceCount')} siblings={bubble_instance_lite.get('siblingLedgerCount')} adjacency={bubble_instance_lite.get('adjacencyLedgerCount')}")
+              print(f"- native SegmentMask refinement-lite: verdict={segment_refinement_lite.get('refinementLiteVerdict')} candidates={segment_refinement_lite.get('candidateLedgerCount')} linkBreakdown={segment_refinement_lite.get('textBoxSegmentLinkBreakdown')} needsRealTextBoxes={segment_refinement_lite.get('needsRealTextBoxesBlocks')} needsRealSegmentMask={segment_refinement_lite.get('needsRealSegmentMaskBlocks')}")
+              print(f"- native artifact bundle-lite: verdict={native_bundle_lite.get('bundleLiteVerdict')} bundles={native_bundle_lite.get('bundleLedgerCount')} linkReviewBlocks={native_bundle_lite.get('textBoxSegmentLinkageReviewBlocks')} linkBreakdown={native_bundle_lite.get('textBoxSegmentLinkBreakdown')}")
+              print(f"- native promotion gate-lite: verdict={native_promotion_lite.get('promotionVerdict')} previews={native_promotion_lite.get('candidateExportPreviewCount')} blockedBlocks={native_promotion_lite.get('textBoxSegmentLinkageBlockedBlocks')} linkBreakdown={native_promotion_lite.get('textBoxSegmentLinkBreakdown')}")
+              print_work_item("WI-koharu-native-textbox-detector-lite")
+              print_gate("G-koharu-native-textbox-detector-lite-executed")
+              print_work_item("WI-koharu-native-textbox-detector-lite-shadow-ocr")
+              print_gate("G-koharu-native-textbox-detector-lite-shadow-ocr-executed")
+              print_work_item("WI-koharu-native-textbox-detector-lite-refinement")
+              print_gate("G-koharu-native-textbox-detector-lite-refinement-executed")
+              print_work_item("WI-koharu-native-textbox-detector-lite-closed-loop-router")
+              print_gate("G-koharu-native-textbox-detector-lite-closed-loop-router-executed")
+              print_work_item("WI-koharu-native-bubblemask-instance-lite")
+              print_gate("G-koharu-native-bubblemask-instance-lite-executed")
+              print_work_item("WI-koharu-native-segmentmask-refinement-lite")
+              print_gate("G-koharu-native-segmentmask-refinement-lite-executed")
+              print_work_item("WI-koharu-native-artifact-bundle-lite")
+              print_gate("G-koharu-native-artifact-bundle-lite-executed")
+              print_work_item("WI-koharu-native-promotion-gate-lite")
+              print_gate("G-koharu-native-promotion-gate-lite-executed")
+          orientation = data.get("orientationMetadataSummary") or {}
+          print(f"- orientation sourceDirectionBreakdown: {orientation.get('sourceDirectionBreakdown')}")
+          print(f"- orientation categoryBreakdown: {orientation.get('orientationCategoryBreakdown')}")
+          print(f"- orientation needed TextBoxes: {orientation.get('orientationShadowPathNeededTextBoxIDs')}")
+          print(f"- orientation partial TextBoxes: {orientation.get('orientationPartialTextBoxIDs')}")
+          print(f"- orientation unsupported TextBoxes: {orientation.get('orientationUnsupportedTextBoxIDs')}")
+          print(f"- orientation unsupported reasons: {orientation.get('orientationUnsupportedReasonBreakdown')}")
           PY
             else
               echo "- active artifact validator output missing; inspect static checks."
             fi
             echo
-            if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ] || [ "${{ steps.simulator_build.outcome }}" != "success" ] || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
               echo "## Return to Agent B"
               echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
             else
               echo "## Result"
-              echo "Static checks and Xcode build passed. Agent C still needs to inspect the diff, manifest, logs, and available output artifacts."
+              if [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ]; then
+                echo "Static checks and Xcode build passed. Agent C still needs to inspect the diff, manifest, logs, and available output artifacts."
+              else
+                echo "Static checks passed. Xcode build was skipped by scope detection; Agent C must not treat this run as Swift/Xcode compile evidence."
+              fi
             fi
           } > "$RESULT_ROOT/ci-failure-summary.md"
 
@@ -685,7 +1773,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ "${{ steps.verify_model.outcome }}" != "success" ] || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.xcode_build.outcome }}" != "success" ] || [ "${{ steps.simulator_build.outcome }}" != "success" ] || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi

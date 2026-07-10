@@ -596,19 +596,42 @@ struct MangaOverlayProbeService: Sendable {
         textBoxBBox: [Double],
         options: MangaOverlayPreprocessingOptions = .defaultValue
     ) async throws -> (text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double) {
+        let result = try await recognizeExternalTextBoxCrop(
+            in: image,
+            textBoxBBox: textBoxBBox,
+            options: options,
+            rotationAngle: 0
+        )
+        return (result.text, result.cropBBox, result.paddingX, result.paddingY)
+    }
+
+    func recognizeExternalTextBoxCrop(
+        in image: CGImage,
+        textBoxBBox: [Double],
+        options: MangaOverlayPreprocessingOptions = .defaultValue,
+        rotationAngle: Int,
+        recognitionLanguages: [String]? = nil
+    ) async throws -> (text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double, rotationApplied: Double) {
         try await Task.detached(priority: .userInitiated) {
             let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
             let seedRect = Self.clamp(Self.rect(from: textBoxBBox), to: bounds).integral
+            let normalizedRotation = [0, 90, 180, 270].contains(rotationAngle) ? rotationAngle : 0
             guard seedRect.width >= 2, seedRect.height >= 2 else {
-                return (nil, Self.bboxArray(from: seedRect), 0, 0)
+                return (nil, Self.bboxArray(from: seedRect), 0, 0, Double(normalizedRotation))
             }
             let padding = Self.adaptiveCropPadding(for: seedRect)
             let cropRect = Self.clamp(
                 seedRect.insetBy(dx: -padding.x, dy: -padding.y),
                 to: bounds
             ).integral
-            let text = try Self.recognizePreprocessedText(in: image, cropRect: cropRect, options: options)
-            return (text, Self.bboxArray(from: cropRect), Double(padding.x), Double(padding.y))
+            let text = try Self.recognizePreprocessedText(
+                in: image,
+                cropRect: cropRect,
+                options: options,
+                rotationAngle: normalizedRotation,
+                recognitionLanguages: recognitionLanguages
+            )
+            return (text, Self.bboxArray(from: cropRect), Double(padding.x), Double(padding.y), Double(normalizedRotation))
         }.value
     }
 
@@ -661,18 +684,23 @@ struct MangaOverlayProbeService: Sendable {
     private static func recognizePreprocessedText(
         in image: CGImage,
         cropRect: CGRect,
-        options: MangaOverlayPreprocessingOptions
+        options: MangaOverlayPreprocessingOptions,
+        rotationAngle: Int = 0,
+        recognitionLanguages: [String]? = nil
     ) throws -> String? {
         guard cropRect.width >= 2, cropRect.height >= 2 else { return nil }
         let cropped = try croppedImage(image, rect: cropRect)
         let prepared = try preprocessedImage(cropped, options: options)
+        let normalizedRotation = [0, 90, 180, 270].contains(rotationAngle) ? rotationAngle : 0
+        let rotated = try rotatedImage(prepared, angle: normalizedRotation)
         let candidates = try recognizeTextCandidates(
-            in: prepared,
+            in: rotated,
             angle: 0,
-            scaledContentSize: CGSize(width: CGFloat(prepared.width), height: CGFloat(prepared.height)),
+            scaledContentSize: CGSize(width: CGFloat(rotated.width), height: CGFloat(rotated.height)),
             contentOrigin: .zero,
             scale: 1,
-            customWords: []
+            customWords: [],
+            recognitionLanguages: recognitionLanguages
         )
         let text = candidates
             .sorted {
@@ -1187,10 +1215,17 @@ struct MangaOverlayProbeService: Sendable {
                     seedRect: block.bbox,
                     currentSafeLayoutRect: block.safeLayoutRect,
                     instanceLiteSafeRect: nil,
+                    instanceLiteBlockScopedSafeRect: nil,
+                    instanceLiteSafeRectPolicy: "missingInstanceLiteSafeRect",
                     distanceFieldSafeRectFromInstanceLite: nil,
                     distanceFieldSafeRectSource: "nativeBubbleMaskInstanceLite",
                     currentRenderNonTransparentBounds: block.renderNonTransparentBounds,
                     spriteContainedByInstanceLiteMask: false,
+                    spriteBlockScopedSafeRectContainmentRatio: 0,
+                    spriteContainedByBlockScopedSafeRect: false,
+                    spriteContainmentPolicy: "missingBlockScopedSafeRect",
+                    sameInstanceRenderSpriteOverlapCount: 0,
+                    spriteSiblingCollisionPolicy: "missingInstanceLiteSiblings",
                     siblingPartitionStatus: "manualReviewOnly",
                     splitRisk: "manualReviewOnly",
                     adjacencyRisk: "manualReviewOnly",
@@ -1256,7 +1291,10 @@ struct MangaOverlayProbeService: Sendable {
                     splitRiskBreakdown: countBy(ledgers.map(\.splitRisk)),
                     siblingPartitionBreakdown: countBy(ledgers.map(\.siblingPartitionStatus)),
                     safeRectComparisonBreakdown: [:],
+                    safeRectPolicyBreakdown: countBy(ledgers.map(\.instanceLiteSafeRectPolicy)),
                     spriteContainmentBreakdown: countBy(ledgers.map { $0.spriteContainedByInstanceLiteMask ? "contained" : "notContained" }),
+                    spriteBlockScopedContainmentBreakdown: countBy(ledgers.map(\.spriteContainmentPolicy)),
+                    spriteSiblingCollisionBreakdown: countBy(ledgers.map(\.spriteSiblingCollisionPolicy)),
                     adjacencyRiskBreakdown: countBy(ledgers.map(\.adjacencyRisk)),
                     primaryBottleneckBreakdown: countBy(ledgers.map(\.primaryBottleneck)),
                     nextActionBreakdown: countBy(ledgers.map(\.nextAction)),
@@ -1482,6 +1520,90 @@ struct MangaOverlayProbeService: Sendable {
                 return Double(covered) / Double(max(1, total))
             }
 
+            func maskDerivedSafeRect(for instanceID: Int?) -> CGRect? {
+                guard let instanceID,
+                      let offsets = pixelOffsetsByInstanceID[instanceID],
+                      let instanceRect = instanceRectsByID[instanceID],
+                      !offsets.isEmpty else { return nil }
+                let clamped = Self.clamp(instanceRect.integral, to: imageBounds)
+                let x0 = max(0, Int(clamped.minX.rounded(.down)))
+                let x1 = min(image.width, Int(clamped.maxX.rounded(.up)))
+                let y0 = max(0, Int(clamped.minY.rounded(.down)))
+                let y1 = min(image.height, Int(clamped.maxY.rounded(.up)))
+                guard x0 < x1, y0 < y1 else { return nil }
+
+                var rowRuns: [Int: (minX: Int, maxX: Int, count: Int)] = [:]
+                var columnRuns: [Int: (minY: Int, maxY: Int, count: Int)] = [:]
+                for offset in offsets {
+                    let y = offset / image.width
+                    let x = offset % image.width
+                    guard x >= x0, x < x1, y >= y0, y < y1 else { continue }
+                    if var row = rowRuns[y] {
+                        row.minX = min(row.minX, x)
+                        row.maxX = max(row.maxX, x)
+                        row.count += 1
+                        rowRuns[y] = row
+                    } else {
+                        rowRuns[y] = (x, x, 1)
+                    }
+                    if var column = columnRuns[x] {
+                        column.minY = min(column.minY, y)
+                        column.maxY = max(column.maxY, y)
+                        column.count += 1
+                        columnRuns[x] = column
+                    } else {
+                        columnRuns[x] = (y, y, 1)
+                    }
+                }
+                guard !rowRuns.isEmpty, !columnRuns.isEmpty else { return nil }
+
+                let maskInset = max(2, min(12, Int((min(clamped.width, clamped.height) * 0.08).rounded(.down))))
+                var safeMinX = Int.max
+                var safeMaxX = Int.min
+                var safeMinY = Int.max
+                var safeMaxY = Int.min
+                for offset in offsets {
+                    let y = offset / image.width
+                    let x = offset % image.width
+                    guard let row = rowRuns[y], let column = columnRuns[x] else { continue }
+                    let distanceToMaskEdge = min(x - row.minX, row.maxX - x, y - column.minY, column.maxY - y)
+                    guard distanceToMaskEdge >= maskInset else { continue }
+                    safeMinX = min(safeMinX, x)
+                    safeMaxX = max(safeMaxX, x)
+                    safeMinY = min(safeMinY, y)
+                    safeMaxY = max(safeMaxY, y)
+                }
+
+                if safeMinX <= safeMaxX, safeMinY <= safeMaxY {
+                    return Self.clamp(
+                        CGRect(x: safeMinX, y: safeMinY, width: safeMaxX - safeMinX + 1, height: safeMaxY - safeMinY + 1).integral,
+                        to: imageBounds
+                    )
+                }
+
+                let rowCoverageThreshold = max(3, Int((clamped.width * 0.35).rounded(.down)))
+                let columnCoverageThreshold = max(3, Int((clamped.height * 0.35).rounded(.down)))
+                let denseRows = rowRuns.filter { $0.value.count >= rowCoverageThreshold }.map(\.key)
+                let denseColumns = columnRuns.filter { $0.value.count >= columnCoverageThreshold }.map(\.key)
+                guard let denseMinX = denseColumns.min(),
+                      let denseMaxX = denseColumns.max(),
+                      let denseMinY = denseRows.min(),
+                      let denseMaxY = denseRows.max(),
+                      denseMinX <= denseMaxX,
+                      denseMinY <= denseMaxY else { return nil }
+                return Self.clamp(
+                    CGRect(x: denseMinX, y: denseMinY, width: denseMaxX - denseMinX + 1, height: denseMaxY - denseMinY + 1).integral,
+                    to: imageBounds
+                )
+            }
+
+            var instanceSafeRectsByID: [Int: CGRect] = [:]
+            for instanceID in pixelOffsetsByInstanceID.keys {
+                if let safeRect = maskDerivedSafeRect(for: instanceID) {
+                    instanceSafeRectsByID[instanceID] = safeRect
+                }
+            }
+
             let blockMajorities = Dictionary(uniqueKeysWithValues: blocks.map { block in
                 (block.index, majority(in: Self.rect(from: block.bbox)))
             })
@@ -1602,12 +1724,27 @@ struct MangaOverlayProbeService: Sendable {
             for (instanceID, siblingBlocks) in blocksByInstance.sorted(by: { $0.key < $1.key }) {
                 guard siblingBlocks.count > 1 else { continue }
                 let currentRects = siblingBlocks.compactMap { block in block.safeLayoutRect.map(Self.rect(from:)) }
-                let instanceRect = instanceRectsByID[instanceID]
-                let instanceSafeRects = siblingBlocks.compactMap { _ in instanceRect?.insetBy(dx: max(2, (instanceRect?.width ?? 0) * 0.12), dy: max(2, (instanceRect?.height ?? 0) * 0.12)) }
+                let instanceSafeRects = siblingBlocks.compactMap { _ in instanceSafeRectsByID[instanceID] }
+                let blockScopedSafeRects = siblingBlocks.map { block in
+                    Self.clamp(Self.rect(from: block.bbox), to: imageBounds)
+                }
+                let renderSpriteRects = siblingBlocks.compactMap { block in
+                    block.renderNonTransparentBounds.map(Self.rect(from:))
+                }
+                let renderSpriteOverlapCount = rectOverlapCount(renderSpriteRects)
                 let seamRelated = adjacencyLedgers.contains { ledger in
                     ledger.affectedBlocks.contains { blockIndex in siblingBlocks.map(\.index).contains(blockIndex) }
                 }
                 let status = seamRelated || siblingBlocks.count > 1 ? "needsSiblingPartition" : "singleBlockStable"
+                let safeRectPolicy = "sameInstanceSiblingKeepSeedRect"
+                let spriteCollisionPolicy: String
+                if renderSpriteRects.count < siblingBlocks.count {
+                    spriteCollisionPolicy = "missingRenderSpriteBounds"
+                } else if renderSpriteOverlapCount > 0 {
+                    spriteCollisionPolicy = "sameInstanceSpriteOverlapManualReview"
+                } else {
+                    spriteCollisionPolicy = "sameInstanceSpritesSeparated"
+                }
                 siblingLedgers.append(
                     MangaKoharuNativeBubbleMaskInstanceLiteSiblingLedger(
                         instanceID: instanceID,
@@ -1615,12 +1752,20 @@ struct MangaOverlayProbeService: Sendable {
                         currentBubbleID: sourceBubbleByInstanceID[instanceID] ?? nil,
                         currentSafeRectOverlapCount: rectOverlapCount(currentRects),
                         instanceLiteSafeRectOverlapCount: rectOverlapCount(instanceSafeRects),
+                        blockScopedSafeRectOverlapCount: rectOverlapCount(blockScopedSafeRects),
+                        renderSpriteOverlapCount: renderSpriteOverlapCount,
+                        sameBubbleSafeRectPolicy: safeRectPolicy,
+                        sameBubbleSpriteCollisionPolicy: spriteCollisionPolicy,
                         seamCandidateRelated: seamRelated,
                         siblingPartitionStatus: status,
                         needsRealBubbleMask: true,
                         nextAction: "collectRealBubbleMaskForSiblingPartition",
                         decisionSignals: [
                             signal("blockCount", String(siblingBlocks.count), source: "blocks"),
+                            signal("sameBubbleSafeRectPolicy", safeRectPolicy, source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("blockScopedSafeRectOverlapCount", String(rectOverlapCount(blockScopedSafeRects)), source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("renderSpriteOverlapCount", String(renderSpriteOverlapCount), source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("sameBubbleSpriteCollisionPolicy", spriteCollisionPolicy, source: "koharuNativeBubbleMaskInstanceLiteReport"),
                             signal("seamCandidateRelated", String(seamRelated), source: "koharuBubbleAdjacencySeamReport")
                         ],
                         groundTruthUsedForDecision: false,
@@ -1631,6 +1776,8 @@ struct MangaOverlayProbeService: Sendable {
             }
 
             let siblingStatusByInstance = Dictionary(uniqueKeysWithValues: siblingLedgers.map { ($0.instanceID ?? -1, $0.siblingPartitionStatus) })
+            let siblingSpriteOverlapByInstance = Dictionary(uniqueKeysWithValues: siblingLedgers.map { ($0.instanceID ?? -1, $0.renderSpriteOverlapCount) })
+            let siblingSpritePolicyByInstance = Dictionary(uniqueKeysWithValues: siblingLedgers.map { ($0.instanceID ?? -1, $0.sameBubbleSpriteCollisionPolicy) })
             let adjacencyRiskByInstance = adjacencyLedgers.reduce(into: [Int: String]()) { partial, ledger in
                 partial[ledger.instanceAID] = ledger.seamRisk
                 partial[ledger.instanceBID] = ledger.seamRisk
@@ -1659,17 +1806,23 @@ struct MangaOverlayProbeService: Sendable {
                     assignment = "majorityMaskDiffersFromCurrentBubbleID"
                     conflict = "instance-lite majority maps to \(matchedBubble.map(String.init) ?? "nil") while current bubbleID is \(block.bubbleID.map(String.init) ?? "nil")"
                 }
-                let instanceRect = maj.id.flatMap { instanceRectsByID[$0] }
-                let safeRect = instanceRect.map { rect in
-                    let insetX = max(2, rect.width * 0.12)
-                    let insetY = max(2, rect.height * 0.12)
-                    return Self.clamp(rect.insetBy(dx: insetX, dy: insetY).integral, to: imageBounds)
+                let safeRect = maj.id.flatMap { instanceSafeRectsByID[$0] }
+                let sameInstanceSiblingCount = maj.id.flatMap { blocksByInstance[$0]?.count } ?? 0
+                let hasSameInstanceSiblings = sameInstanceSiblingCount > 1
+                let blockScopedSafeRect = safeRect.map { hasSameInstanceSiblings ? seedRect : $0 }
+                let safeRectPolicy: String
+                if safeRect == nil {
+                    safeRectPolicy = "missingInstanceLiteSafeRect"
+                } else if hasSameInstanceSiblings {
+                    safeRectPolicy = "sameInstanceSiblingKeepSeedRect"
+                } else {
+                    safeRectPolicy = "singleBlockUseMaskDerivedSafeRect"
                 }
                 let currentSafe = block.safeLayoutRect.map(Self.rect(from:))
                 let safeRectComparison: String
-                if safeRect == nil {
+                if blockScopedSafeRect == nil {
                     safeRectComparison = "missingInstanceLiteSafeRect"
-                } else if let currentSafe, let safeRect, area(currentSafe.intersection(safeRect)) / max(1, min(area(currentSafe), area(safeRect))) >= 0.55 {
+                } else if let currentSafe, let blockScopedSafeRect, area(currentSafe.intersection(blockScopedSafeRect)) / max(1, min(area(currentSafe), area(blockScopedSafeRect))) >= 0.55 {
                     safeRectComparison = "similarToCurrentSafeRect"
                 } else {
                     safeRectComparison = "differsFromCurrentSafeRect"
@@ -1677,6 +1830,25 @@ struct MangaOverlayProbeService: Sendable {
                 let renderRect = block.renderNonTransparentBounds.map(Self.rect(from:))
                 let renderCoverage = renderRect.map { pixelCoverage(of: $0, instanceID: maj.id) } ?? 0
                 let spriteContained = renderCoverage >= 0.72
+                let spriteBlockScopedContainment = {
+                    guard let renderRect, let blockScopedSafeRect else { return 0.0 }
+                    return Self.rectContainmentRatio(inner: renderRect, outer: blockScopedSafeRect)
+                }()
+                let spriteContainedByScopedSafeRect = renderRect != nil
+                    && blockScopedSafeRect != nil
+                    && spriteBlockScopedContainment >= 0.995
+                let spriteContainmentPolicy: String
+                if renderRect == nil {
+                    spriteContainmentPolicy = "missingRenderSpriteBounds"
+                } else if blockScopedSafeRect == nil {
+                    spriteContainmentPolicy = "missingBlockScopedSafeRect"
+                } else if spriteContainedByScopedSafeRect {
+                    spriteContainmentPolicy = "spriteWithinBlockScopedSafeRect"
+                } else {
+                    spriteContainmentPolicy = "spriteEscapesBlockScopedSafeRect"
+                }
+                let sameInstanceSpriteOverlapCount = maj.id.flatMap { siblingSpriteOverlapByInstance[$0] } ?? 0
+                let spriteSiblingCollisionPolicy = maj.id.flatMap { siblingSpritePolicyByInstance[$0] } ?? "singleBlockOrNoInstance"
                 let segmentStatus: String
                 if let segment = segmentByBlock[block.index] {
                     if segment.usableForCropEvidence { segmentStatus = "segmentGlyphEvidenceUsable" }
@@ -1745,10 +1917,17 @@ struct MangaOverlayProbeService: Sendable {
                         seedRect: Self.bboxArray(from: seedRect),
                         currentSafeLayoutRect: block.safeLayoutRect,
                         instanceLiteSafeRect: safeRect.map(Self.bboxArray(from:)),
-                        distanceFieldSafeRectFromInstanceLite: safeRect.map(Self.bboxArray(from:)),
-                        distanceFieldSafeRectSource: "nativeBubbleMaskInstanceLite",
+                        instanceLiteBlockScopedSafeRect: blockScopedSafeRect.map(Self.bboxArray(from:)),
+                        instanceLiteSafeRectPolicy: safeRectPolicy,
+                        distanceFieldSafeRectFromInstanceLite: blockScopedSafeRect.map(Self.bboxArray(from:)),
+                        distanceFieldSafeRectSource: hasSameInstanceSiblings ? "nativeBubbleMaskInstanceLiteBlockScopedSeedRect" : "nativeBubbleMaskInstanceLite",
                         currentRenderNonTransparentBounds: block.renderNonTransparentBounds,
                         spriteContainedByInstanceLiteMask: spriteContained,
+                        spriteBlockScopedSafeRectContainmentRatio: spriteBlockScopedContainment,
+                        spriteContainedByBlockScopedSafeRect: spriteContainedByScopedSafeRect,
+                        spriteContainmentPolicy: spriteContainmentPolicy,
+                        sameInstanceRenderSpriteOverlapCount: sameInstanceSpriteOverlapCount,
+                        spriteSiblingCollisionPolicy: spriteSiblingCollisionPolicy,
                         siblingPartitionStatus: siblingStatus,
                         splitRisk: splitRisk,
                         adjacencyRisk: adjacencyRisk,
@@ -1763,7 +1942,14 @@ struct MangaOverlayProbeService: Sendable {
                             signal("currentBubbleID", block.bubbleID.map(String.init) ?? "nil", source: "blocks"),
                             signal("instanceLiteMajorityID", maj.id.map(String.init) ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"),
                             signal("assignmentAgreement", assignment, source: "koharuNativeBubbleMaskInstanceLiteReport"),
-                            signal("safeRectComparison", safeRectComparison, source: "koharuNativeBubbleMaskInstanceLiteReport")
+                            signal("safeRectComparison", safeRectComparison, source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("safeRectSource", safeRect == nil ? "nil" : "maskDerivedInstanceLitePixels", source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("safeRectPolicy", safeRectPolicy, source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("sameInstanceSiblingCount", String(sameInstanceSiblingCount), source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("spriteBlockScopedSafeRectContainmentRatio", formatted(spriteBlockScopedContainment), source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("spriteContainmentPolicy", spriteContainmentPolicy, source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("sameInstanceRenderSpriteOverlapCount", String(sameInstanceSpriteOverlapCount), source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("spriteSiblingCollisionPolicy", spriteSiblingCollisionPolicy, source: "koharuNativeBubbleMaskInstanceLiteReport")
                         ],
                         evaluationSignals: [
                             signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
@@ -1802,6 +1988,8 @@ struct MangaOverlayProbeService: Sendable {
                 gate("G-native-bubblemask-instance-lite-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack majority assignment ledger rows", "restoreBlockLedgerCoverage", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuNativeBubbleMaskInstanceLiteReport")]),
                 gate("G-native-bubblemask-instance-lite-instance-ledger-visible", "Instance ledger visible", "BubbleMask", instances.isEmpty ? "warning" : "passed", "instanceCount>=1 or blockedByInsufficientPixelEvidence", allBlockIndexes, "instance-lite silently emits empty report without blocked verdict", "writeBlockedPixelEvidenceGate", [signal("instanceLiteVerdict", instanceVerdict, source: "koharuNativeBubbleMaskInstanceLiteReport")]),
                 gate("G-native-bubblemask-instance-lite-safe-rect-report-only", "Safe rect report-only", "RenderedSprites", "passed", "distanceFieldSafeRectSource=nativeBubbleMaskInstanceLite and not written back", allBlockIndexes, "instance-lite safe rect mutates block.safeLayoutRect or distanceField report", "keepSafeRectComparisonReportOnly", [signal("safeRectWriteBack", "false", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+                gate("G-native-bubblemask-instance-lite-sibling-safe-rect-policy", "Sibling safe rect policy", "BubbleMask", "passed", "same-instance sibling blocks keep block-scoped seed rects report-only", siblingLedgers.flatMap(\.blockIndexes), "same-instance sibling blocks are expanded into one shared instance safe rect", "keepSiblingSafeRectPolicyReportOnly", [signal("sameInstanceSiblingLedgerCount", String(siblingLedgers.count), source: "koharuNativeBubbleMaskInstanceLiteReport")]),
+                gate("G-native-bubblemask-instance-lite-sibling-sprite-collision", "Sibling sprite collision preview", "RenderedSprites", "passed", "same-instance render sprite overlap is audited report-only", siblingLedgers.flatMap(\.blockIndexes), "same-instance rendered sprites collide without a visible sibling collision ledger", "keepSiblingSpriteCollisionReportOnly", [signal("sameInstanceSiblingLedgerCount", String(siblingLedgers.count), source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("spriteSiblingCollisionPolicies", countBy(siblingLedgers.map(\.sameBubbleSpriteCollisionPolicy)).map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "koharuNativeBubbleMaskInstanceLiteReport")]),
                 gate("G-native-bubblemask-instance-lite-no-ocr-llm-png", "No OCR LLM PNG", "budget", "passed", "no OCR/LLM calls and no PNG output", [], "instance-lite adds OCR, LLM, or new PNG output", "removeHeavyWorkFromInstanceLite", [signal("ocrCalls", "0", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("llmCalls", "0", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("pngOutputs", "0", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
                 gate("G-native-bubblemask-instance-lite-real-artifact-boundary", "External artifact boundary", "ExternalArtifacts", "passed", "externalArtifactsRequiredForThisReport=false and active artifacts unchanged", [], "instance-lite creates, copies, or modifies active Koharu artifacts", "doNotCreateActiveArtifacts", [signal("externalArtifactsRequiredForThisReport", "false", source: "koharuNativeBubbleMaskInstanceLiteReport")])
             ]
@@ -1835,11 +2023,14 @@ struct MangaOverlayProbeService: Sendable {
                 splitRiskBreakdown: countBy(blockLedgers.map(\.splitRisk)),
                 siblingPartitionBreakdown: countBy(blockLedgers.map(\.siblingPartitionStatus)),
                 safeRectComparisonBreakdown: countBy(blockLedgers.map {
-                    if $0.instanceLiteSafeRect == nil { return "missingInstanceLiteSafeRect" }
-                    if $0.currentSafeLayoutRect == $0.instanceLiteSafeRect { return "sameAsCurrentSafeRect" }
+                    if $0.instanceLiteBlockScopedSafeRect == nil { return "missingInstanceLiteSafeRect" }
+                    if $0.currentSafeLayoutRect == $0.instanceLiteBlockScopedSafeRect { return "sameAsCurrentSafeRect" }
                     return "comparedReportOnly"
                 }),
+                safeRectPolicyBreakdown: countBy(blockLedgers.map(\.instanceLiteSafeRectPolicy)),
                 spriteContainmentBreakdown: countBy(blockLedgers.map { $0.spriteContainedByInstanceLiteMask ? "contained" : "notContainedOrUnproven" }),
+                spriteBlockScopedContainmentBreakdown: countBy(blockLedgers.map(\.spriteContainmentPolicy)),
+                spriteSiblingCollisionBreakdown: countBy(blockLedgers.map(\.spriteSiblingCollisionPolicy)),
                 adjacencyRiskBreakdown: countBy(blockLedgers.map(\.adjacencyRisk)),
                 primaryBottleneckBreakdown: countBy(blockLedgers.map(\.primaryBottleneck)),
                 nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
@@ -1950,6 +2141,11 @@ struct MangaOverlayProbeService: Sendable {
             let instanceRectByID = Dictionary(
                 uniqueKeysWithValues: (koharuNativeBubbleMaskInstanceLiteReport?.instances ?? []).map { ($0.instanceID, Self.rect(from: $0.bbox)) }
             )
+            let instanceBubbleByID = Dictionary(
+                uniqueKeysWithValues: (koharuNativeBubbleMaskInstanceLiteReport?.instances ?? []).map {
+                    ($0.instanceID, $0.matchedExistingBubbleID ?? $0.sourceBubbleID)
+                }
+            )
             let bubbleRectByID = Dictionary(
                 uniqueKeysWithValues: bubbleGeometry.bubbles.map { ($0.id, Self.rect(from: $0.bbox)) }
             )
@@ -1959,11 +2155,45 @@ struct MangaOverlayProbeService: Sendable {
                     detectorCandidatesByBlock[blockIndex, default: []].append(candidate)
                 }
             }
+            let detectorCandidateByID = Dictionary(
+                uniqueKeysWithValues: (detectorLiteReport?.candidates ?? []).map { ($0.candidateID, $0) }
+            )
             for blockIndex in detectorCandidatesByBlock.keys {
                 detectorCandidatesByBlock[blockIndex]?.sort {
                     if $0.score == $1.score { return $0.candidateID < $1.candidateID }
                     return $0.score > $1.score
                 }
+            }
+
+            func textBoxSegmentLink(
+                block: MangaOverlayProbeBlock,
+                sourceTextBoxCandidateID: String?,
+                sourceTextBoxCandidate: MangaKoharuNativeTextBoxDetectorLiteCandidate?
+            ) -> (
+                verdict: String,
+                candidateVerdict: String?,
+                shadowOCREligible: Bool?,
+                overlapRatio: Double,
+                sameBubble: Bool,
+                accepted: Bool
+            ) {
+                guard let candidate = sourceTextBoxCandidate else {
+                    return ("fallbackFinalBlockBBox", nil, nil, 0, false, false)
+                }
+                let relation = candidate.relatedBlockRelations.first { $0.blockIndex == block.index }
+                let overlap = relation?.overlapRatio ?? 0
+                let sameBubble = relation?.sameBubble ?? (candidate.sourceBubbleID == block.bubbleID)
+                if !sameBubble {
+                    return ("sourceTextBoxBubbleMismatch", candidate.candidateVerdict, candidate.shadowOCREligible, overlap, false, false)
+                }
+                if candidate.candidateVerdict == "acceptedShadowOnly" {
+                    let accepted = overlap >= 0.08 || relation?.centerContained == true
+                    return (accepted ? "acceptedTextBoxCandidate" : "weakAcceptedTextBoxRelation", candidate.candidateVerdict, candidate.shadowOCREligible, overlap, sameBubble, accepted)
+                }
+                if candidate.candidateVerdict == "manualReviewOnly" || candidate.candidateVerdict == "manualReviewUnionFallback" {
+                    return ("manualReviewTextBoxCandidate", candidate.candidateVerdict, candidate.shadowOCREligible, overlap, sameBubble, false)
+                }
+                return ("rejectedTextBoxCandidate", candidate.candidateVerdict, candidate.shadowOCREligible, overlap, sameBubble, false)
             }
 
             func emptyCandidate(
@@ -1993,6 +2223,18 @@ struct MangaOverlayProbeService: Sendable {
                     maskFillRatio: 0,
                     textboxCoverage: 0,
                     bubbleCoverage: 0,
+                    maskContainedByTextBoxRatio: 0,
+                    maskContainedByBubbleRatio: 0,
+                    maskMajorityInstanceLiteID: nil,
+                    maskMajorityBubbleID: nil,
+                    maskMajorityCoverage: 0,
+                    maskMajorityAgreement: "maskMissing",
+                    sourceTextBoxCandidateVerdict: nil,
+                    sourceTextBoxShadowOCREligible: nil,
+                    sourceTextBoxBlockOverlapRatio: 0,
+                    sourceTextBoxSameBubble: false,
+                    sourceTextBoxAcceptedForSegmentMask: false,
+                    sourceTextBoxLinkVerdict: "fallbackFinalBlockBBox",
                     existingGlyphOverlap: 0,
                     segmentProxyAgreement: 0,
                     candidateVerdict: reason,
@@ -2020,6 +2262,8 @@ struct MangaOverlayProbeService: Sendable {
                         failureCategory: block.failureCategory,
                         blockPassed: block.blockPassed,
                         selectedCandidateID: nil,
+                        selectedSourceTextBoxCandidateID: nil,
+                        selectedSourceTextBoxLinkVerdict: "fallbackFinalBlockBBox",
                         candidateCount: 1,
                         maskBBox: nil,
                         rawPixelCount: 0,
@@ -2028,6 +2272,12 @@ struct MangaOverlayProbeService: Sendable {
                         componentCount: 0,
                         textboxCoverage: 0,
                         bubbleCoverage: 0,
+                        maskContainedByTextBoxRatio: 0,
+                        maskContainedByBubbleRatio: 0,
+                        maskMajorityInstanceLiteID: nil,
+                        maskMajorityBubbleID: nil,
+                        maskMajorityCoverage: 0,
+                        maskMajorityAgreement: "maskMissing",
                         existingGlyphOverlap: 0,
                         segmentProxyAgreement: 0,
                         maskContainedByTextBox: false,
@@ -2080,6 +2330,11 @@ struct MangaOverlayProbeService: Sendable {
                     bubbleClampBreakdown: [:],
                     componentFilteringBreakdown: [:],
                     maskContainmentBreakdown: [:],
+                    maskMajorityAgreementBreakdown: [:],
+                    textBoxSegmentLinkBreakdown: countBy(candidates.map(\.sourceTextBoxLinkVerdict)),
+                    segmentFromAcceptedTextBoxCount: candidates.filter(\.sourceTextBoxAcceptedForSegmentMask).count,
+                    segmentFromRejectedTextBoxCount: candidates.filter { $0.sourceTextBoxLinkVerdict == "rejectedTextBoxCandidate" }.count,
+                    segmentFromFallbackBBoxCount: candidates.filter { $0.sourceTextBoxLinkVerdict == "fallbackFinalBlockBBox" }.count,
                     siblingMaskOverlapBreakdown: [:],
                     primaryBottleneckBreakdown: countBy(blockLedgers.map(\.primaryBottleneck)),
                     nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
@@ -2101,10 +2356,16 @@ struct MangaOverlayProbeService: Sendable {
                 candidateID: String,
                 source: String,
                 sourceTextBoxCandidateID: String?,
+                sourceTextBoxCandidate: MangaKoharuNativeTextBoxDetectorLiteCandidate?,
                 sourceRect: CGRect,
                 directionHint: String,
                 sourceBubbleID: Int?
             ) -> MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger {
+                let link = textBoxSegmentLink(
+                    block: block,
+                    sourceTextBoxCandidateID: sourceTextBoxCandidateID,
+                    sourceTextBoxCandidate: sourceTextBoxCandidate
+                )
                 let (expandedRect, paddingX, paddingY) = expandedTextBoxRect(sourceRect, direction: directionHint, bounds: contentCrop)
                 let instanceID = instanceLiteByBlock[block.index]?.instanceLiteMajorityID
                 let instanceRect = instanceID.flatMap { instanceRectByID[$0] }
@@ -2193,7 +2454,38 @@ struct MangaOverlayProbeService: Sendable {
                     : nil
                 let maskArea = maskRect.map(area) ?? 0
                 let textBoxArea = max(1, area(expandedRect))
-                let bubbleArea = max(1, area(bubbleConstraint ?? expandedRect))
+                let textBoxContainment = maskRect.map {
+                    Self.rectContainmentRatio(inner: $0, outer: expandedRect)
+                } ?? 0
+                let bubbleContainment = maskRect.map { mask in
+                    bubbleConstraint.map { Self.rectContainmentRatio(inner: mask, outer: $0) } ?? 0
+                } ?? 0
+                let instanceContainment = maskRect.map { mask in
+                    instanceRect.map { Self.rectContainmentRatio(inner: mask, outer: $0) } ?? 0
+                } ?? 0
+                let maskMajorityInstanceID = instanceContainment >= 0.90 ? instanceID : nil
+                let maskMajorityBubbleID = maskMajorityInstanceID.flatMap { instanceBubbleByID[$0] ?? nil }
+                let expectedBubbleID = sourceBubbleID ?? block.bubbleID
+                let instanceAssignmentAgreement = instanceLiteByBlock[block.index]?.assignmentAgreement
+                let maskMajorityCoverage = max(instanceContainment, bubbleContainment)
+                let maskMajorityAgreement: String
+                if maskRect == nil {
+                    maskMajorityAgreement = "maskMissing"
+                } else if let instanceID, maskMajorityInstanceID == instanceID, instanceContainment >= 0.90 {
+                    maskMajorityAgreement = "agreesWithBlockInstanceLiteMajority"
+                } else if let expectedBubbleID,
+                          let maskMajorityBubbleID,
+                          maskMajorityBubbleID == expectedBubbleID,
+                          bubbleContainment >= 0.90,
+                          instanceAssignmentAgreement == "agreesWithCurrentBubbleID" {
+                    maskMajorityAgreement = "agreesWithSourceBubble"
+                } else if instanceID == nil {
+                    maskMajorityAgreement = "noInstanceMajority"
+                } else if maskMajorityCoverage < 0.50 {
+                    maskMajorityAgreement = "weakMaskMajority"
+                } else {
+                    maskMajorityAgreement = "differsFromBlockInstanceLiteMajority"
+                }
                 let glyphOverlap: Double
                 if let maskRect, let glyphRect {
                     let intersection = maskRect.intersection(glyphRect)
@@ -2208,6 +2500,9 @@ struct MangaOverlayProbeService: Sendable {
                 if sourceTextBoxCandidateID == nil && source == "currentFinalBlockBBoxFallback" {
                     rejectionReasons.append("textBoxConstraintMissing")
                 }
+                if link.verdict == "sourceTextBoxBubbleMismatch" {
+                    rejectionReasons.append("sourceTextBoxBubbleMismatch")
+                }
                 if bubbleConstraint == nil {
                     rejectionReasons.append("bubbleConstraintMissing")
                 }
@@ -2220,9 +2515,20 @@ struct MangaOverlayProbeService: Sendable {
                 if componentCount == 0 {
                     rejectionReasons.append("componentFilteringRejected")
                 }
+                if maskRect != nil, textBoxContainment < 0.92 {
+                    rejectionReasons.append("maskEscapesTextBox")
+                }
+                if maskRect != nil, bubbleContainment < 0.90 {
+                    rejectionReasons.append("maskEscapesBubble")
+                }
+                if maskMajorityAgreement == "differsFromBlockInstanceLiteMajority" {
+                    rejectionReasons.append("maskMajorityDisagreesWithBubble")
+                }
                 let verdict: String
                 if rejectionReasons.contains("textBoxConstraintMissing") {
                     verdict = "textBoxConstraintMissing"
+                } else if rejectionReasons.contains("sourceTextBoxBubbleMismatch") {
+                    verdict = "sourceTextBoxBubbleMismatch"
                 } else if rejectionReasons.contains("bubbleConstraintMissing") {
                     verdict = "bubbleConstraintMissing"
                 } else if rejectionReasons.contains("maskTooSparse") {
@@ -2231,6 +2537,12 @@ struct MangaOverlayProbeService: Sendable {
                     verdict = "maskTooLargeLikelyBackground"
                 } else if rejectionReasons.contains("componentFilteringRejected") {
                     verdict = "componentFilteringRejected"
+                } else if rejectionReasons.contains("maskEscapesTextBox") {
+                    verdict = "maskEscapesTextBox"
+                } else if rejectionReasons.contains("maskEscapesBubble") {
+                    verdict = "maskEscapesBubble"
+                } else if rejectionReasons.contains("maskMajorityDisagreesWithBubble") {
+                    verdict = "maskMajorityDisagreesWithBubble"
                 } else if segmentAgreement < 0.15 {
                     verdict = "weakPixelEvidence"
                 } else {
@@ -2257,6 +2569,18 @@ struct MangaOverlayProbeService: Sendable {
                     maskFillRatio: maskArea > 0 ? Double(bubblePixelCount) / max(1, maskArea) : 0,
                     textboxCoverage: textCoverage,
                     bubbleCoverage: bubbleCoverage,
+                    maskContainedByTextBoxRatio: textBoxContainment,
+                    maskContainedByBubbleRatio: bubbleContainment,
+                    maskMajorityInstanceLiteID: maskMajorityInstanceID,
+                    maskMajorityBubbleID: maskMajorityBubbleID,
+                    maskMajorityCoverage: maskMajorityCoverage,
+                    maskMajorityAgreement: maskMajorityAgreement,
+                    sourceTextBoxCandidateVerdict: link.candidateVerdict,
+                    sourceTextBoxShadowOCREligible: link.shadowOCREligible,
+                    sourceTextBoxBlockOverlapRatio: link.overlapRatio,
+                    sourceTextBoxSameBubble: link.sameBubble,
+                    sourceTextBoxAcceptedForSegmentMask: link.accepted,
+                    sourceTextBoxLinkVerdict: link.verdict,
                     existingGlyphOverlap: glyphOverlap,
                     segmentProxyAgreement: segmentAgreement,
                     candidateVerdict: verdict,
@@ -2264,9 +2588,16 @@ struct MangaOverlayProbeService: Sendable {
                     decisionSignals: [
                         signal("source", source, source: "koharuNativeSegmentMaskRefinementLiteReport"),
                         signal("sourceTextBoxCandidateID", sourceTextBoxCandidateID ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport"),
+                        signal("sourceTextBoxLinkVerdict", link.verdict, source: "koharuNativeTextBoxDetectorLiteReport"),
+                        signal("sourceTextBoxCandidateVerdict", link.candidateVerdict ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport"),
+                        signal("sourceTextBoxBlockOverlapRatio", formatted(link.overlapRatio), source: "koharuNativeTextBoxDetectorLiteReport"),
+                        signal("sourceTextBoxSameBubble", String(link.sameBubble), source: "koharuNativeTextBoxDetectorLiteReport"),
                         signal("sourceInstanceLiteID", instanceID.map(String.init) ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"),
                         signal("rawPixelCount", String(rawPixelCount), source: "SourceImage"),
-                        signal("afterBubbleClampPixelCount", String(bubblePixelCount), source: "koharuNativeSegmentMaskRefinementLiteReport")
+                        signal("afterBubbleClampPixelCount", String(bubblePixelCount), source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                        signal("maskContainedByTextBoxRatio", formatted(textBoxContainment), source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                        signal("maskContainedByBubbleRatio", formatted(bubbleContainment), source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                        signal("maskMajorityAgreement", maskMajorityAgreement, source: "koharuNativeSegmentMaskRefinementLiteReport")
                     ],
                     evaluationSignals: [
                         signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
@@ -2292,6 +2623,7 @@ struct MangaOverlayProbeService: Sendable {
                             candidateID: "segmentMaskRefinementLite.block\(block.index).detector\(offset)",
                             source: source,
                             sourceTextBoxCandidateID: detectorCandidate.candidateID,
+                            sourceTextBoxCandidate: detectorCandidateByID[detectorCandidate.candidateID],
                             sourceRect: Self.rect(from: detectorCandidate.bbox),
                             directionHint: detectorCandidate.directionHint,
                             sourceBubbleID: detectorCandidate.sourceBubbleID
@@ -2305,6 +2637,7 @@ struct MangaOverlayProbeService: Sendable {
                             candidateID: "segmentMaskRefinementLite.block\(block.index).fallback",
                             source: "currentFinalBlockBBoxFallback",
                             sourceTextBoxCandidateID: nil,
+                            sourceTextBoxCandidate: nil,
                             sourceRect: Self.rect(from: block.bbox),
                             directionHint: "unknown",
                             sourceBubbleID: block.bubbleID
@@ -2316,8 +2649,10 @@ struct MangaOverlayProbeService: Sendable {
                 let renderLocked = renderLockByBlock[block.index]?.renderCollisionResolved == false || !block.renderCollisionResolved
                 let instanceID = instanceLiteByBlock[block.index]?.instanceLiteMajorityID
                 let segment = segmentByBlock[block.index]
-                let containedByTextBox = selected?.maskBBox != nil && !(selected?.rejectionReasons.contains("textBoxConstraintMissing") ?? true)
-                let containedByBubble = selected?.maskBBox != nil && !(selected?.rejectionReasons.contains("bubbleConstraintMissing") ?? true)
+                let containedByTextBox = (selected?.maskContainedByTextBoxRatio ?? 0) >= 0.92
+                    && !(selected?.rejectionReasons.contains("textBoxConstraintMissing") ?? true)
+                let containedByBubble = (selected?.maskContainedByBubbleRatio ?? 0) >= 0.90
+                    && !(selected?.rejectionReasons.contains("bubbleConstraintMissing") ?? true)
                 let usableClear = selected?.candidateVerdict == "refinementLiteUsableForReport" && (selected?.afterBubbleClampPixelCount ?? 0) >= 24
                 let usableOCRCrop = usableClear && (selected?.textboxCoverage ?? 0) < 0.45
                 let usableRender = usableClear && containedByBubble && !renderLocked
@@ -2328,6 +2663,10 @@ struct MangaOverlayProbeService: Sendable {
                     primary = "translationModelFloor"
                 } else if selected?.rejectionReasons.contains("textBoxConstraintMissing") == true {
                     primary = "textBoxConstraintMissing"
+                } else if selected?.sourceTextBoxLinkVerdict == "rejectedTextBoxCandidate"
+                    || selected?.sourceTextBoxLinkVerdict == "sourceTextBoxBubbleMismatch"
+                    || selected?.sourceTextBoxLinkVerdict == "weakAcceptedTextBoxRelation" {
+                    primary = "textBoxSegmentLinkWeak"
                 } else if selected?.rejectionReasons.contains("bubbleConstraintMissing") == true {
                     primary = "bubbleMaskConstraintMissing"
                 } else if selected?.candidateVerdict != "refinementLiteUsableForReport" {
@@ -2344,6 +2683,7 @@ struct MangaOverlayProbeService: Sendable {
                 case "renderLocked": nextAction = "keepRenderLockReportOnly"
                 case "translationModelFloor": nextAction = "keepModelFloorSeparate"
                 case "textBoxConstraintMissing": nextAction = "collectRealTextBoxes"
+                case "textBoxSegmentLinkWeak": nextAction = "auditTextBoxSegmentLinkage"
                 case "bubbleMaskConstraintMissing": nextAction = "collectRealBubbleMask"
                 case "segmentMaskPixelEvidenceWeak": nextAction = "collectRealSegmentMask"
                 case "ocrInputStillDominant": nextAction = "keepSegmentMaskRefinementLiteReportOnly"
@@ -2360,6 +2700,8 @@ struct MangaOverlayProbeService: Sendable {
                         failureCategory: block.failureCategory,
                         blockPassed: block.blockPassed,
                         selectedCandidateID: selected?.candidateID,
+                        selectedSourceTextBoxCandidateID: selected?.sourceTextBoxCandidateID,
+                        selectedSourceTextBoxLinkVerdict: selected?.sourceTextBoxLinkVerdict ?? "fallbackFinalBlockBBox",
                         candidateCount: perBlockCandidates.count,
                         maskBBox: selected?.maskBBox,
                         rawPixelCount: selected?.rawPixelCount ?? 0,
@@ -2368,6 +2710,12 @@ struct MangaOverlayProbeService: Sendable {
                         componentCount: selected?.connectedComponentCount ?? 0,
                         textboxCoverage: selected?.textboxCoverage ?? 0,
                         bubbleCoverage: selected?.bubbleCoverage ?? 0,
+                        maskContainedByTextBoxRatio: selected?.maskContainedByTextBoxRatio ?? 0,
+                        maskContainedByBubbleRatio: selected?.maskContainedByBubbleRatio ?? 0,
+                        maskMajorityInstanceLiteID: selected?.maskMajorityInstanceLiteID,
+                        maskMajorityBubbleID: selected?.maskMajorityBubbleID,
+                        maskMajorityCoverage: selected?.maskMajorityCoverage ?? 0,
+                        maskMajorityAgreement: selected?.maskMajorityAgreement ?? "maskMissing",
                         existingGlyphOverlap: selected?.existingGlyphOverlap ?? 0,
                         segmentProxyAgreement: selected?.segmentProxyAgreement ?? 0,
                         maskContainedByTextBox: containedByTextBox,
@@ -2380,7 +2728,12 @@ struct MangaOverlayProbeService: Sendable {
                         decisionSignals: [
                             signal("selectedCandidateID", selected?.candidateID ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"),
                             signal("candidateVerdict", selected?.candidateVerdict ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                            signal("selectedSourceTextBoxCandidateID", selected?.sourceTextBoxCandidateID ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport"),
+                            signal("selectedSourceTextBoxLinkVerdict", selected?.sourceTextBoxLinkVerdict ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport"),
                             signal("instanceLiteMajorityID", instanceID.map(String.init) ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"),
+                            signal("maskContainedByTextBoxRatio", formatted(selected?.maskContainedByTextBoxRatio), source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                            signal("maskContainedByBubbleRatio", formatted(selected?.maskContainedByBubbleRatio), source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                            signal("maskMajorityAgreement", selected?.maskMajorityAgreement ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"),
                             signal("renderLocked", String(renderLocked), source: "koharuRenderRegressionLockReport,blocks")
                         ],
                         evaluationSignals: [
@@ -2443,7 +2796,9 @@ struct MangaOverlayProbeService: Sendable {
             let needsRealSegmentMaskBlocks = uniqueSorted(blockLedgers.filter {
                 $0.primaryBottleneck == "segmentMaskPixelEvidenceWeak" || !$0.wouldBeUsableForClearTextMask
             }.map(\.blockIndex))
-            let needsRealTextBoxesBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "textBoxConstraintMissing" }.map(\.blockIndex))
+            let needsRealTextBoxesBlocks = uniqueSorted(blockLedgers.filter {
+                $0.primaryBottleneck == "textBoxConstraintMissing" || $0.primaryBottleneck == "textBoxSegmentLinkWeak"
+            }.map(\.blockIndex))
             let needsRealBubbleMaskBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "bubbleMaskConstraintMissing" }.map(\.blockIndex))
             let manualReviewBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "manualReviewOnly" }.map(\.blockIndex))
             let renderLockedBlocks = uniqueSorted(blockLedgers.filter { $0.primaryBottleneck == "renderLocked" }.map(\.blockIndex))
@@ -2468,6 +2823,8 @@ struct MangaOverlayProbeService: Sendable {
                 gate("G-native-segmentmask-refinement-lite-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth drives threshold, TextBox choice, mask, route, nextAction, verdict, or gate", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
                 gate("G-native-segmentmask-refinement-lite-source-pixels", "Source pixels", "SourceImage", "passed", "usesSourceImagePixels=true", allBlockIndexes, "report is pure bbox copy without source pixel evidence", "restorePixelScan", [signal("usesSourceImagePixels", "true", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
                 gate("G-native-segmentmask-refinement-lite-textbox-constrained", "TextBox constrained", "TextBoxes", needsRealTextBoxesBlocks.isEmpty ? "passed" : "warning", "usesTextBoxConstraints=true and fallback is explicit", needsRealTextBoxesBlocks, "TextBox constraints are missing or fake-promoted as real Koharu TextBoxes", "collectRealTextBoxes", [signal("usesTextBoxConstraints", "true", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-textbox-linkage-audited", "TextBox SegmentMask linkage audited", "TextBoxes->SegmentMask", "passed", "source TextBox candidate verdict, block overlap, same-bubble relation, and fallback status are recorded", allBlockIndexes, "SegmentMask refinement silently consumes weak or wrong-bubble TextBox candidates", "recordTextBoxSegmentLinkage", [signal("textBoxSegmentLinkBreakdown", countBy(candidateLedgers.map(\.sourceTextBoxLinkVerdict)).map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "koharuNativeSegmentMaskRefinementLiteReport")]),
+                gate("G-native-segmentmask-refinement-lite-no-rejected-textbox-silent-selection", "No rejected TextBox silent selection", "TextBoxes->SegmentMask", candidateLedgers.contains { $0.sourceTextBoxLinkVerdict == "rejectedTextBoxCandidate" || $0.sourceTextBoxLinkVerdict == "sourceTextBoxBubbleMismatch" } ? "warning" : "passed", "rejected or wrong-bubble TextBox source must be visible in linkage ledger", blockLedgers.filter { $0.selectedSourceTextBoxLinkVerdict == "rejectedTextBoxCandidate" || $0.selectedSourceTextBoxLinkVerdict == "sourceTextBoxBubbleMismatch" }.map(\.blockIndex), "rejected TextBox candidates are treated as clean SegmentMask constraints", "collectRealTextBoxesOrKeepFallbackExplicit", [signal("selectedTextBoxSegmentLinkBreakdown", countBy(blockLedgers.map(\.selectedSourceTextBoxLinkVerdict)).map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "koharuNativeSegmentMaskRefinementLiteReport")]),
                 gate("G-native-segmentmask-refinement-lite-bubble-constrained", "Bubble constrained", "BubbleMask", needsRealBubbleMaskBlocks.isEmpty ? "passed" : "warning", "usesBubbleMaskConstraints=true with instance-lite or bubble geometry fallback", needsRealBubbleMaskBlocks, "glyph mask can leak across bubbles without explicit blocker", "collectRealBubbleMask", [signal("usesBubbleMaskConstraints", "true", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
                 gate("G-native-segmentmask-refinement-lite-proxy-boundary", "Proxy boundary", "SegmentMask", "passed", "proxyNotRealKoharuSegmentMask=true", allBlockIndexes, "refinement-lite mask is promoted as real Koharu SegmentMask", "keepProxyBoundaryOrCollectRealArtifact", [signal("proxyNotRealKoharuSegmentMask", "true", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
                 gate("G-native-segmentmask-refinement-lite-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack SegmentMask refinement ledger rows", "restoreBlockLedgerCoverage", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuNativeSegmentMaskRefinementLiteReport")]),
@@ -2507,7 +2864,17 @@ struct MangaOverlayProbeService: Sendable {
                 textboxClampBreakdown: countBy(candidateLedgers.map { $0.sourceTextBoxCandidateID == nil ? "fallbackFinalBlockBBoxConstraint" : "nativeDetectorLiteConstraint" }),
                 bubbleClampBreakdown: countBy(candidateLedgers.map { $0.sourceInstanceLiteID == nil ? "bubbleGeometryFallback" : "instanceLiteConstraint" }),
                 componentFilteringBreakdown: countBy(candidateLedgers.map { $0.connectedComponentCount > 0 ? "componentsPresent" : "componentFilteringRejected" }),
-                maskContainmentBreakdown: countBy(blockLedgers.map { $0.maskContainedByTextBox && $0.maskContainedByBubble ? "containedByTextBoxAndBubble" : "containmentUnproven" }),
+                maskContainmentBreakdown: countBy(blockLedgers.map {
+                    if $0.maskBBox == nil { return "maskMissing" }
+                    if !$0.maskContainedByTextBox { return "maskEscapesTextBox" }
+                    if !$0.maskContainedByBubble { return "maskEscapesBubble" }
+                    return "containedByTextBoxAndBubble"
+                }),
+                maskMajorityAgreementBreakdown: countBy(blockLedgers.map(\.maskMajorityAgreement)),
+                textBoxSegmentLinkBreakdown: countBy(candidateLedgers.map(\.sourceTextBoxLinkVerdict)),
+                segmentFromAcceptedTextBoxCount: candidateLedgers.filter(\.sourceTextBoxAcceptedForSegmentMask).count,
+                segmentFromRejectedTextBoxCount: candidateLedgers.filter { $0.sourceTextBoxLinkVerdict == "rejectedTextBoxCandidate" || $0.sourceTextBoxLinkVerdict == "sourceTextBoxBubbleMismatch" }.count,
+                segmentFromFallbackBBoxCount: candidateLedgers.filter { $0.sourceTextBoxLinkVerdict == "fallbackFinalBlockBBox" }.count,
                 siblingMaskOverlapBreakdown: countBy(siblingLedgers.map(\.sameBubbleSiblingRisk)),
                 primaryBottleneckBreakdown: countBy(blockLedgers.map(\.primaryBottleneck)),
                 nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
@@ -4387,6 +4754,7 @@ struct MangaOverlayProbeService: Sendable {
                     candidateSourceBreakdown: [:],
                     directionHintBreakdown: [:],
                     candidateVerdictBreakdown: [:],
+                    blockRelationBreakdown: [:],
                     rejectionReasonBreakdown: ["imageBytesUnavailable": 1],
                     primaryBottleneckBreakdown: [:],
                     nextActionBreakdown: [:],
@@ -4426,12 +4794,13 @@ struct MangaOverlayProbeService: Sendable {
                 return min(1, intersectionArea / max(1, area(rect)))
             }
 
-            func makeCandidate(for bubble: MangaOverlayProbeBubble) -> MangaKoharuNativeTextBoxDetectorLiteCandidate? {
+            func makeCandidates(for bubble: MangaOverlayProbeBubble) -> [MangaKoharuNativeTextBoxDetectorLiteCandidate] {
+                typealias Component = (rect: CGRect, pixelCount: Int)
                 let bubbleRect = Self.clamp(Self.rect(from: bubble.bbox).integral, to: imageBounds)
-                guard bubbleRect.width >= 8, bubbleRect.height >= 8 else { return nil }
+                guard bubbleRect.width >= 8, bubbleRect.height >= 8 else { return [] }
                 let width = Int(bubbleRect.width)
                 let height = Int(bubbleRect.height)
-                guard width > 0, height > 0 else { return nil }
+                guard width > 0, height > 0 else { return [] }
 
                 var gray = [UInt8](repeating: 255, count: width * height)
                 var sum = 0
@@ -4458,8 +4827,7 @@ struct MangaOverlayProbeService: Sendable {
                 }
 
                 var visited = [Bool](repeating: false, count: width * height)
-                var componentRects: [CGRect] = []
-                var acceptedPixelCount = 0
+                var components: [Component] = []
                 let minArea = max(2, Int(min(bubbleRect.width, bubbleRect.height) * 0.025))
                 let maxArea = max(minArea + 1, Int(area(bubbleRect) * 0.16))
                 for startY in 0..<height {
@@ -4501,117 +4869,249 @@ struct MangaOverlayProbeService: Sendable {
                         let longSide = max(rect.width, rect.height)
                         let shortSide = max(1, min(rect.width, rect.height))
                         guard longSide / shortSide <= 18 else { continue }
-                        componentRects.append(rect)
-                        acceptedPixelCount += pixelCount
+                        components.append((rect: rect, pixelCount: pixelCount))
                     }
                 }
-                guard !componentRects.isEmpty else { return nil }
+                guard !components.isEmpty else { return [] }
 
-                var unionRect = componentRects[0]
-                for rect in componentRects.dropFirst() {
-                    unionRect = unionRect.union(rect)
-                }
-                unionRect = Self.clamp(unionRect.insetBy(dx: -3, dy: -3).integral, to: bubbleRect)
-                let localUnion = unionRect.offsetBy(dx: -bubbleRect.minX, dy: -bubbleRect.minY)
-                var horizontalProjection = [Int](repeating: 0, count: height)
-                var verticalProjection = [Int](repeating: 0, count: width)
-                let minY = max(0, Int(localUnion.minY))
-                let maxY = min(height, Int(localUnion.maxY))
-                let minX = max(0, Int(localUnion.minX))
-                let maxX = min(width, Int(localUnion.maxX))
-                for y in minY..<maxY {
-                    for x in minX..<maxX where foreground[y * width + x] {
-                        horizontalProjection[y] += 1
-                        verticalProjection[x] += 1
+                func unionRect(for cluster: [Component]) -> CGRect {
+                    var union = cluster[0].rect
+                    for component in cluster.dropFirst() {
+                        union = union.union(component.rect)
                     }
+                    return Self.clamp(union.insetBy(dx: -3, dy: -3).integral, to: bubbleRect)
                 }
-                let hThreshold = max(1, Int(Double(maxX - minX) * 0.08))
-                let vThreshold = max(1, Int(Double(maxY - minY) * 0.08))
-                let hPeaks = projectionPeakCount(horizontalProjection, threshold: hThreshold)
-                let vPeaks = projectionPeakCount(verticalProjection, threshold: vThreshold)
-                let hint = directionHint(width: unionRect.width, height: unionRect.height, horizontalPeaks: hPeaks, verticalPeaks: vPeaks)
-                let darkDensity = Double(acceptedPixelCount) / max(1, area(unionRect))
-                let bubbleCoverage = maskRuntime.coverageRatio(of: unionRect, bubbleID: bubble.id)
-                let glyphOverlap = segmentOverlap(for: unionRect)
-                let aspect = Double(unionRect.width / max(1, unionRect.height))
-                let coverageScore = min(1, bubbleCoverage)
-                let densityScore = min(1, darkDensity / 0.16)
-                let componentScore = min(1, Double(componentRects.count) / 10.0)
-                let segmentScore = min(1, glyphOverlap * 1.35)
-                let score = (coverageScore * 0.32) + (densityScore * 0.26) + (componentScore * 0.18) + (segmentScore * 0.14) + (min(1, Double(max(hPeaks, vPeaks)) / 6.0) * 0.10)
-                let verdict = candidateVerdict(
-                    rect: unionRect,
-                    bubbleRect: bubbleRect,
-                    darkDensity: darkDensity,
-                    componentCount: componentRects.count,
-                    bubbleCoverage: bubbleCoverage,
-                    segmentOverlap: glyphOverlap,
-                    score: score
-                )
-                let relatedBlocks = blocks.filter { block in
-                    let blockRect = Self.rect(from: block.bbox)
-                    return block.bubbleID == bubble.id || overlapRatio(blockRect, unionRect) >= 0.20
-                }.map(\.index)
-                let matchedBlocks = blocks.filter { block in
-                    overlapRatio(Self.rect(from: block.bbox), unionRect) >= 0.35
-                }.map(\.index)
-                let candidateID = "NTBDL-\(bubble.id)-0"
-                return MangaKoharuNativeTextBoxDetectorLiteCandidate(
-                    candidateID: candidateID,
-                    source: "nativeDetectorLite",
-                    sourceBubbleID: bubble.id,
-                    bbox: Self.bboxArray(from: unionRect),
-                    candidateArea: area(unionRect),
-                    directionHint: hint,
-                    generationSignals: ["connectedComponentGroup", "strokeDensityBand", "projectionBand", "bubbleInteriorDarkPixels", "glyphProxyOverlap"],
-                    bubbleCoverageRatio: bubbleCoverage,
-                    segmentGlyphOverlapRatio: glyphOverlap,
-                    darkPixelDensity: darkDensity,
-                    componentCount: componentRects.count,
-                    projectionPeakCount: max(hPeaks, vPeaks),
-                    aspectRatio: aspect,
-                    score: score,
-                    candidateVerdict: verdict.0,
-                    shadowOCREligible: verdict.1,
-                    matchedBlockIndexes: uniqueSorted(matchedBlocks),
-                    relatedCurrentBlockIndexes: uniqueSorted(relatedBlocks),
-                    wouldChangeMainFlow: false,
-                    diagnosticOnly: true,
-                    groundTruthUsedForDecision: false,
-                    decisionSignals: [
-                        signal("source", "nativeDetectorLite", source: "SourceImagePixels"),
-                        signal("darkPixelDensity", formatted(darkDensity), source: "SourceImagePixels"),
-                        signal("bubbleCoverageRatio", formatted(bubbleCoverage), source: "BubbleMaskProxy"),
-                        signal("score", formatted(score), source: "koharuNativeTextBoxDetectorLiteReport")
-                    ],
-                    evaluationSignals: [
-                        signal("matchedBlockIndexes", uniqueSorted(matchedBlocks).map(String.init).joined(separator: ","), source: "blocks.bbox", decision: false, evaluation: true)
-                    ],
-                    rejectionReasons: verdict.2,
-                    notes: [
-                        "candidate bbox is generated from pixel dark components and projection inside bubble bbox before any Vision OCR text is read",
-                        "Vision OCR text, pre-crop plan, line plan, TextRegion crop output, and ground truth are not used to generate or rank this candidate"
-                    ]
-                )
+
+                func projectionClusters(axis: String) -> (clusters: [[Component]], score: Double) {
+                    let sorted: [Component]
+                    let axisLength: CGFloat
+                    if axis == "x" {
+                        sorted = components.sorted { $0.rect.midX < $1.rect.midX }
+                        axisLength = max(1, bubbleRect.width)
+                    } else {
+                        sorted = components.sorted { $0.rect.midY < $1.rect.midY }
+                        axisLength = max(1, bubbleRect.height)
+                    }
+                    guard let first = sorted.first else { return ([], 0) }
+                    let splitGap = max(12, min(bubbleRect.width, bubbleRect.height) * 0.11)
+                    var clusters: [[Component]] = [[first]]
+                    var currentMax = axis == "x" ? first.rect.maxX : first.rect.maxY
+                    var bestGap: CGFloat = 0
+                    for component in sorted.dropFirst() {
+                        let nextMin = axis == "x" ? component.rect.minX : component.rect.minY
+                        let nextMax = axis == "x" ? component.rect.maxX : component.rect.maxY
+                        let gap = nextMin - currentMax
+                        if gap >= splitGap {
+                            clusters.append([component])
+                            bestGap = max(bestGap, gap)
+                            currentMax = nextMax
+                        } else {
+                            clusters[clusters.count - 1].append(component)
+                            currentMax = max(currentMax, nextMax)
+                        }
+                    }
+                    let validClusters = clusters.filter { cluster in
+                        let rect = unionRect(for: cluster)
+                        return cluster.count >= 2
+                            && rect.width >= 4
+                            && rect.height >= 4
+                            && area(rect) / max(1, area(bubbleRect)) <= 0.72
+                    }
+                    guard validClusters.count >= 2 else { return ([], 0) }
+                    return (Array(validClusters.prefix(4)), Double(bestGap / axisLength))
+                }
+
+                let xClusters = projectionClusters(axis: "x")
+                let yClusters = projectionClusters(axis: "y")
+                let selectedClusters: [[Component]]
+                if xClusters.clusters.count >= 2 || yClusters.clusters.count >= 2 {
+                    selectedClusters = xClusters.score >= yClusters.score ? xClusters.clusters : yClusters.clusters
+                } else {
+                    selectedClusters = []
+                }
+
+                let candidateInputs: [([Component], String)]
+                if selectedClusters.count >= 2 {
+                    candidateInputs = selectedClusters.map { ($0, "componentCluster") } + [(components, "unionFallback")]
+                } else {
+                    candidateInputs = [(components, "singleUnion")]
+                }
+
+                func buildCandidate(from cluster: [Component], clusterIndex: Int, clusterKind: String) -> MangaKoharuNativeTextBoxDetectorLiteCandidate {
+                    let unionRect = unionRect(for: cluster)
+                    let localUnion = unionRect.offsetBy(dx: -bubbleRect.minX, dy: -bubbleRect.minY)
+                    var horizontalProjection = [Int](repeating: 0, count: height)
+                    var verticalProjection = [Int](repeating: 0, count: width)
+                    let minY = max(0, Int(localUnion.minY))
+                    let maxY = min(height, Int(localUnion.maxY))
+                    let minX = max(0, Int(localUnion.minX))
+                    let maxX = min(width, Int(localUnion.maxX))
+                    for y in minY..<maxY {
+                        for x in minX..<maxX where foreground[y * width + x] {
+                            horizontalProjection[y] += 1
+                            verticalProjection[x] += 1
+                        }
+                    }
+                    let hThreshold = max(1, Int(Double(maxX - minX) * 0.08))
+                    let vThreshold = max(1, Int(Double(maxY - minY) * 0.08))
+                    let hPeaks = projectionPeakCount(horizontalProjection, threshold: hThreshold)
+                    let vPeaks = projectionPeakCount(verticalProjection, threshold: vThreshold)
+                    let hint = directionHint(width: unionRect.width, height: unionRect.height, horizontalPeaks: hPeaks, verticalPeaks: vPeaks)
+                    let acceptedPixelCount = cluster.reduce(0) { $0 + $1.pixelCount }
+                    let darkDensity = Double(acceptedPixelCount) / max(1, area(unionRect))
+                    let bubbleCoverage = maskRuntime.coverageRatio(of: unionRect, bubbleID: bubble.id)
+                    let glyphOverlap = segmentOverlap(for: unionRect)
+                    let aspect = Double(unionRect.width / max(1, unionRect.height))
+                    let coverageScore = min(1, bubbleCoverage)
+                    let densityScore = min(1, darkDensity / 0.16)
+                    let componentScore = min(1, Double(cluster.count) / 10.0)
+                    let segmentScore = min(1, glyphOverlap * 1.35)
+                    let score = (coverageScore * 0.32) + (densityScore * 0.26) + (componentScore * 0.18) + (segmentScore * 0.14) + (min(1, Double(max(hPeaks, vPeaks)) / 6.0) * 0.10)
+                    var verdict = candidateVerdict(
+                        rect: unionRect,
+                        bubbleRect: bubbleRect,
+                        darkDensity: darkDensity,
+                        componentCount: cluster.count,
+                        bubbleCoverage: bubbleCoverage,
+                        segmentOverlap: glyphOverlap,
+                        score: score
+                    )
+                    if clusterKind == "unionFallback" {
+                        verdict.0 = "manualReviewUnionFallback"
+                        verdict.1 = false
+                        verdict.2.append("multiCandidateUnionFallbackNotShadowOCREligible")
+                    }
+                    var blockRelations = blocks.compactMap { block -> MangaKoharuNativeTextBoxDetectorLiteBlockRelation? in
+                        let blockRect = Self.rect(from: block.bbox)
+                        let center = CGPoint(x: blockRect.midX, y: blockRect.midY)
+                        let overlap = overlapRatio(blockRect, unionRect)
+                        let centerContained = unionRect.contains(center)
+                        let sameBubble = block.bubbleID == bubble.id
+                        if clusterKind == "componentCluster" {
+                            guard sameBubble && (overlap >= 0.08 || centerContained) else { return nil }
+                        } else {
+                            guard sameBubble || overlap >= 0.20 || centerContained else { return nil }
+                        }
+                        let reason: String
+                        if sameBubble && centerContained {
+                            reason = "sameBubbleCenterContained"
+                        } else if sameBubble && overlap >= 0.08 {
+                            reason = "sameBubbleOverlap"
+                        } else if centerContained {
+                            reason = "centerContained"
+                        } else {
+                            reason = "overlapFallback"
+                        }
+                        return MangaKoharuNativeTextBoxDetectorLiteBlockRelation(
+                            blockIndex: block.index,
+                            overlapRatio: overlap,
+                            centerContained: centerContained,
+                            sameBubble: sameBubble,
+                            relationReason: reason
+                        )
+                    }
+                    var relatedBlocks = blockRelations.map(\.blockIndex)
+                    if relatedBlocks.isEmpty, clusterKind == "componentCluster" {
+                        let fallbackRelations = blocks
+                            .filter { $0.bubbleID == bubble.id }
+                            .map { block in
+                                (index: block.index, overlap: overlapRatio(Self.rect(from: block.bbox), unionRect))
+                            }
+                            .sorted { lhs, rhs in
+                                if lhs.overlap == rhs.overlap { return lhs.index < rhs.index }
+                                return lhs.overlap > rhs.overlap
+                            }
+                            .prefix(1)
+                        relatedBlocks = fallbackRelations.map(\.index)
+                        blockRelations.append(contentsOf: fallbackRelations.map {
+                            MangaKoharuNativeTextBoxDetectorLiteBlockRelation(
+                                blockIndex: $0.index,
+                                overlapRatio: $0.overlap,
+                                centerContained: false,
+                                sameBubble: true,
+                                relationReason: "nearestSameBubbleFallback"
+                            )
+                        })
+                    }
+                    let matchedBlocks = blocks.filter { block in
+                        overlapRatio(Self.rect(from: block.bbox), unionRect) >= 0.35
+                    }.map(\.index)
+                    let candidateID = "NTBDL-\(bubble.id)-\(String(format: "%02d", clusterIndex))"
+                    let splitSignal = selectedClusters.count >= 2 ? "multiCandidateBubble" : "singleCandidateBubble"
+                    return MangaKoharuNativeTextBoxDetectorLiteCandidate(
+                        candidateID: candidateID,
+                        source: "nativeDetectorLite",
+                        sourceBubbleID: bubble.id,
+                        bbox: Self.bboxArray(from: unionRect),
+                        candidateArea: area(unionRect),
+                        directionHint: hint,
+                        generationSignals: ["connectedComponentGroup", "strokeDensityBand", "projectionBand", "bubbleInteriorDarkPixels", "glyphProxyOverlap", clusterKind, splitSignal],
+                        bubbleCoverageRatio: bubbleCoverage,
+                        segmentGlyphOverlapRatio: glyphOverlap,
+                        darkPixelDensity: darkDensity,
+                        componentCount: cluster.count,
+                        projectionPeakCount: max(hPeaks, vPeaks),
+                        aspectRatio: aspect,
+                        score: score,
+                        candidateVerdict: verdict.0,
+                        shadowOCREligible: verdict.1,
+                        matchedBlockIndexes: uniqueSorted(matchedBlocks),
+                        relatedCurrentBlockIndexes: uniqueSorted(relatedBlocks),
+                        relatedBlockRelations: blockRelations.sorted { lhs, rhs in
+                            if lhs.blockIndex == rhs.blockIndex { return lhs.overlapRatio > rhs.overlapRatio }
+                            return lhs.blockIndex < rhs.blockIndex
+                        },
+                        wouldChangeMainFlow: false,
+                        diagnosticOnly: true,
+                        groundTruthUsedForDecision: false,
+                        decisionSignals: [
+                            signal("source", "nativeDetectorLite", source: "SourceImagePixels"),
+                            signal("clusterKind", clusterKind, source: "SourceImagePixels"),
+                            signal("candidatePoolCap", "4 component clusters plus 1 union fallback per bubble", source: "koharuNativeTextBoxDetectorLiteReport"),
+                            signal("darkPixelDensity", formatted(darkDensity), source: "SourceImagePixels"),
+                            signal("bubbleCoverageRatio", formatted(bubbleCoverage), source: "BubbleMaskProxy"),
+                            signal("score", formatted(score), source: "koharuNativeTextBoxDetectorLiteReport")
+                        ],
+                        evaluationSignals: [
+                            signal("matchedBlockIndexes", uniqueSorted(matchedBlocks).map(String.init).joined(separator: ","), source: "blocks.bbox", decision: false, evaluation: true)
+                        ],
+                        rejectionReasons: verdict.2,
+                        notes: [
+                            "candidate bbox is generated from pixel dark component clusters and projection valleys inside bubble bbox before any Vision OCR text is read",
+                            "Vision OCR text, pre-crop plan, line plan, TextRegion crop output, and ground truth are not used to generate or rank this candidate"
+                        ]
+                    )
+                }
+
+                return candidateInputs.enumerated().map { index, input in
+                    buildCandidate(from: input.0, clusterIndex: index, clusterKind: input.1)
+                }
             }
 
             var candidates: [MangaKoharuNativeTextBoxDetectorLiteCandidate] = []
             for bubble in bubbleGeometry.bubbles.sorted(by: { $0.id < $1.id }) {
-                if let candidate = makeCandidate(for: bubble) {
-                    candidates.append(candidate)
-                }
+                candidates.append(contentsOf: makeCandidates(for: bubble))
             }
-            candidates.sort { lhs, rhs in
+            func detectorCandidateSort(_ lhs: MangaKoharuNativeTextBoxDetectorLiteCandidate, _ rhs: MangaKoharuNativeTextBoxDetectorLiteCandidate) -> Bool {
                 if lhs.sourceBubbleID != rhs.sourceBubbleID {
                     return (lhs.sourceBubbleID ?? -1) < (rhs.sourceBubbleID ?? -1)
                 }
-                return lhs.score > rhs.score
+                if lhs.shadowOCREligible != rhs.shadowOCREligible {
+                    return lhs.shadowOCREligible && !rhs.shadowOCREligible
+                }
+                if abs(lhs.score - rhs.score) > 0.0001 {
+                    return lhs.score > rhs.score
+                }
+                return lhs.candidateID < rhs.candidateID
+            }
+            candidates.sort { lhs, rhs in
+                detectorCandidateSort(lhs, rhs)
             }
 
             let candidatesByBubble = Dictionary(grouping: candidates) { $0.sourceBubbleID ?? -1 }
             let candidatesByBlock = Dictionary(grouping: candidates.flatMap { candidate in
                 candidate.relatedCurrentBlockIndexes.map { (blockIndex: $0, candidate: candidate) }
-            }) { $0.blockIndex }.mapValues { $0.map(\.candidate).sorted { $0.score > $1.score } }
+            }) { $0.blockIndex }.mapValues { $0.map(\.candidate).sorted(by: detectorCandidateSort) }
             let modelFloorBlocks = Set(translationModelFloorComparisonReport?.noisyModelFloorBlocks ?? [])
             let renderLockedSet = Set((koharuRenderRegressionLockReport?.blockLocks ?? []).filter { $0.renderStatus == "renderLocked" }.map(\.blockIndex))
             let segmentWeakSet = Set(segmentMaskReport?.weakSegmentBlocks ?? [])
@@ -4623,6 +5123,7 @@ struct MangaOverlayProbeService: Sendable {
                 let bestRect = best.map { Self.rect(from: $0.bbox) }
                 let blockRect = Self.rect(from: block.bbox)
                 let coverage = bestRect.map { overlapRatio(blockRect, $0) } ?? 0
+                let bestRelation = best?.relatedBlockRelations.first { $0.blockIndex == block.index }
                 let coverageVerdict: String
                 if best == nil {
                     coverageVerdict = "noNativeCandidate"
@@ -4682,6 +5183,11 @@ struct MangaOverlayProbeService: Sendable {
                     bestCandidateID: best?.candidateID,
                     bestCandidateBBox: best?.bbox,
                     bestCandidateScore: best?.score,
+                    bestCandidateCoverageRatio: bestRelation?.overlapRatio ?? coverage,
+                    bestCandidateCenterContained: bestRelation?.centerContained ?? false,
+                    bestCandidateSameBubble: bestRelation?.sameBubble ?? false,
+                    bestCandidateVerdict: best?.candidateVerdict,
+                    bestCandidateShadowOCREligible: best?.shadowOCREligible ?? false,
                     candidateCoverageVerdict: coverageVerdict,
                     directionHint: best?.directionHint ?? "unknown",
                     bubbleAssignmentRisk: bubbleRisk,
@@ -4693,6 +5199,8 @@ struct MangaOverlayProbeService: Sendable {
                     nextAction: nextAction,
                     decisionSignals: [
                         signal("candidateCoverageVerdict", coverageVerdict, source: "koharuNativeTextBoxDetectorLiteReport"),
+                        signal("bestCandidateVerdict", best?.candidateVerdict ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport"),
+                        signal("bestCandidateRelationReason", bestRelation?.relationReason ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport"),
                         signal("bubbleAssignmentRisk", bubbleRisk, source: "bubbleMaskReport"),
                         signal("segmentEvidenceVerdict", segmentVerdict, source: "segmentMaskReport")
                     ],
@@ -4790,8 +5298,9 @@ struct MangaOverlayProbeService: Sendable {
             let gateLedger = [
                 gate("G-native-textbox-detector-lite-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "detector-lite mutates OCR, translation, renderer, blockPassed, currentBlockSource, or crop adoption", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeTextBoxDetectorLiteReport")]),
                 gate("G-native-textbox-detector-lite-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlocks, "ground truth influences candidate bbox, ranking, eligibility, gate, or next action", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeTextBoxDetectorLiteReport")]),
-                gate("G-native-textbox-detector-lite-pre-ocr-source", "Pre OCR source", "TextBoxes", "passed", "candidate source is SourceImage pixels plus geometry", allBlocks, "Vision OCR text, pre-crop plan, line plan, crop output, or ground truth is used as detector output", "keepCandidateGenerationPixelFirst", [signal("candidateSource", "SourceImagePixels+BubbleGeometry", source: "koharuNativeTextBoxDetectorLiteReport")]),
-                gate("G-native-textbox-detector-lite-candidate-count", "Candidate count", "TextBoxes", candidates.isEmpty ? "warning" : "passed", "candidateCount>=1", allBlocks, "detector-lite produced no candidates", "inspectPixelThresholds", [signal("candidateCount", String(candidates.count), source: "koharuNativeTextBoxDetectorLiteReport")]),
+	                gate("G-native-textbox-detector-lite-pre-ocr-source", "Pre OCR source", "TextBoxes", "passed", "candidate source is SourceImage pixels plus geometry", allBlocks, "Vision OCR text, pre-crop plan, line plan, crop output, or ground truth is used as detector output", "keepCandidateGenerationPixelFirst", [signal("candidateSource", "SourceImagePixels+BubbleGeometry", source: "koharuNativeTextBoxDetectorLiteReport")]),
+	                gate("G-native-textbox-detector-lite-candidate-pool-cap", "Candidate pool cap", "TextBoxes", "passed", "per bubble <=4 component clusters + 1 diagnostic union fallback", allBlocks, "detector-lite candidate pool grows without a fixed ci-fast budget cap", "keepPerBubbleCandidatePoolBounded", [signal("candidatePoolCap", "5", source: "koharuNativeTextBoxDetectorLiteReport")]),
+	                gate("G-native-textbox-detector-lite-candidate-count", "Candidate count", "TextBoxes", candidates.isEmpty ? "warning" : "passed", "candidateCount>=1", allBlocks, "detector-lite produced no candidates", "inspectPixelThresholds", [signal("candidateCount", String(candidates.count), source: "koharuNativeTextBoxDetectorLiteReport")]),
                 gate("G-native-textbox-detector-lite-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlocks, "some final blocks lack detector-lite ledger rows", "restoreBlockLedgerCoverage", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuNativeTextBoxDetectorLiteReport")]),
                 gate("G-native-textbox-detector-lite-bubble-ledger-count", "Bubble ledger count", "BubbleMask", bubbleLedgers.count == bubbleGeometry.bubbles.count ? "passed" : "warning", "bubbleLedgerCount==bubbleGeometry.bubbles.count", allBlocks, "some bubbles lack detector-lite ledger rows", "restoreBubbleLedgerCoverage", [signal("bubbleLedgerCount", String(bubbleLedgers.count), source: "koharuNativeTextBoxDetectorLiteReport")]),
                 gate("G-native-textbox-detector-lite-proxy-boundary", "Proxy boundary", "TextBoxes", "passed", "proxyNotRealKoharuTextBoxes=true", allBlocks, "detector-lite is promoted as real Koharu TextBoxes", "keepProxyBoundaryOrCollectRealArtifact", [signal("proxyNotRealKoharuTextBoxes", "true", source: "koharuNativeTextBoxDetectorLiteReport")]),
@@ -4838,6 +5347,7 @@ struct MangaOverlayProbeService: Sendable {
                 candidateSourceBreakdown: countBy(candidates.map(\.source)),
                 directionHintBreakdown: countBy(candidates.map(\.directionHint)),
                 candidateVerdictBreakdown: countBy(candidates.map(\.candidateVerdict)),
+                blockRelationBreakdown: countBy(candidates.flatMap { $0.relatedBlockRelations.map(\.relationReason) }),
                 rejectionReasonBreakdown: countBy(candidates.flatMap(\.rejectionReasons)),
                 primaryBottleneckBreakdown: countBy(blockLedgers.map(\.primaryBottleneck)),
                 nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
@@ -4853,8 +5363,9 @@ struct MangaOverlayProbeService: Sendable {
                 bubbleLedgers: bubbleLedgers,
                 gateLedger: gateLedger,
                 notes: [
-                    "koharuNativeTextBoxDetectorLiteReport is a shadow-only pre-OCR TextBoxes candidate layer.",
-                    "Candidate bboxes are generated from source image dark components, projection bands, density, bubble coverage, and glyph proxy overlap; Vision OCR text, ground truth, pre-crop plans, line plans, and crop OCR output are not used to generate or rank candidates.",
+	                    "koharuNativeTextBoxDetectorLiteReport is a shadow-only pre-OCR TextBoxes candidate layer.",
+	                    "Each bubble may emit a bounded pre-OCR candidate pool: up to 4 component-cluster TextBoxes plus 1 diagnostic union fallback that is not shadow-OCR eligible.",
+	                    "Candidate bboxes are generated from source image dark components, projection bands, density, bubble coverage, and glyph proxy overlap; Vision OCR text, ground truth, pre-crop plans, line plans, and crop OCR output are not used to generate or rank candidates.",
                     "The report does not execute OCR by default, does not add LLM calls, and does not change finalTextUsedForTranslation, blockPassed, failureCategory, overlay rendering, textRegionCropReport.adoptedCount, active artifacts, or configuration.currentBlockSource.",
                     "proxyNotRealKoharuTextBoxes=true: detector-lite candidates are not real Koharu TextBoxes and remain report-only until a separate promotion gate exists."
                 ]
@@ -5257,7 +5768,8 @@ struct MangaOverlayProbeService: Sendable {
         koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
         koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
         koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport? = nil,
-        koharuNativeShadowArtifactExportLiteReport: MangaKoharuNativeShadowArtifactExportLiteReport? = nil,
+        koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport? = nil,
+        koharuArtifactIdentityReconciliationReport: MangaKoharuArtifactIdentityReconciliationReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?,
         bubbleMaskReport: MangaOverlayBubbleMaskReport?,
@@ -5542,6 +6054,19 @@ struct MangaOverlayProbeService: Sendable {
             let externalShadowDelta = externalShadowSummary?.qualityDelta?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let externalShadowPreservation = externalShadowSummary?.wordPreservationRatio?.formatted(.number.precision(.fractionLength(3))) ?? "nil"
             let externalShadowBlockers = externalShadowSummary?.blockers.joined(separator: " | ") ?? "nil"
+            let externalShadowDirection = externalShadowSummary?.selectedSourceDirection ?? "nil"
+            let externalShadowOrientation = externalShadowSummary?.selectedOrientationCategory ?? "nil"
+            let externalShadowLinePolygons = externalShadowSummary.map { String($0.selectedLinePolygonsPresent) } ?? "false"
+            let externalShadowRotation = externalShadowSummary?.selectedRotationDegrees?.formatted(.number.precision(.fractionLength(2))) ?? "nil"
+            let externalShadowOrientationNeeded = externalShadowSummary.map { String($0.orientationShadowPathNeeded) } ?? "false"
+            let externalShadowOrientationExecuted = externalShadowSummary.map { String($0.orientationShadowPathExecuted) } ?? "false"
+            let externalShadowOrientationVerdict = externalShadowSummary?.orientationReadinessVerdict ?? "nil"
+            let externalShadowAttemptedRotations = externalShadowSummary?.orientationAttemptedRotations
+                .map { $0.formatted(.number.precision(.fractionLength(1))) }
+                .joined(separator: ",") ?? "nil"
+            let externalShadowSelectedRotation = externalShadowSummary?.orientationSelectedRotation?.formatted(.number.precision(.fractionLength(1))) ?? "nil"
+            let externalShadowLanguages = externalShadowSummary?.orientationRecognitionLanguages.joined(separator: ",") ?? "default"
+            let externalShadowUnsupported = externalShadowSummary?.orientationUnsupportedReason ?? "none"
             let bottleneck = internalBottleneckByBlock[block.index]
             let bottleneckSecondary = bottleneck?.secondaryBottlenecks.joined(separator: " | ") ?? "nil"
             let bottleneckEvidence = bottleneck?.evidence.joined(separator: " | ") ?? "nil"
@@ -5671,7 +6196,7 @@ struct MangaOverlayProbeService: Sendable {
             linePromotionChecks: passed=\(linePromotionChecks?.passed ?? "nil") failed=\(linePromotionChecks?.failed ?? "nil")
             lineResearchDecision: \(lineResearchDecision)
             externalArtifacts: readiness=\(externalReadiness) shadowOCRAllowed=\(externalShadowAllowed) activeDirectory=\(externalActiveDirectory) contractExampleOnly=\(externalContractExampleOnly) textBoxID=\(externalTextBoxMatch) textBoxIoU=\(externalTextBoxIoU) bubbleInstanceID=\(externalBubbleMatch) bubbleIoU=\(externalBubbleIoU) segmentMask=\(externalSegmentCoverage) alignment=\(externalAlignmentVerdict) nextAction=\(externalNextAction)
-            externalTextBoxShadowOCR: executed=\(externalShadowSummary.map { String($0.ocrExecuted) } ?? "false") selectedTextBoxID=\(externalShadowSummary?.selectedTextBoxID ?? "none") candidateBBox=[\(externalShadowBBox)] ocrSucceeded=\(externalShadowSummary.map { String($0.ocrSucceeded) } ?? "false") ocrText=\(externalShadowText) qualityDelta=\(externalShadowDelta) wordPreservation=\(externalShadowPreservation) promotionVerdict=\(externalShadowSummary?.promotionVerdict ?? "skipped") blockers=\(externalShadowBlockers)
+            externalTextBoxShadowOCR: executed=\(externalShadowSummary.map { String($0.ocrExecuted) } ?? "false") selectedTextBoxID=\(externalShadowSummary?.selectedTextBoxID ?? "none") candidateBBox=[\(externalShadowBBox)] ocrSucceeded=\(externalShadowSummary.map { String($0.ocrSucceeded) } ?? "false") ocrText=\(externalShadowText) qualityDelta=\(externalShadowDelta) wordPreservation=\(externalShadowPreservation) promotionVerdict=\(externalShadowSummary?.promotionVerdict ?? "skipped") blockers=\(externalShadowBlockers) sourceDirection=\(externalShadowDirection) orientation=\(externalShadowOrientation) linePolygonsPresent=\(externalShadowLinePolygons) rotationDegrees=\(externalShadowRotation) orientationShadowNeeded=\(externalShadowOrientationNeeded) orientationShadowExecuted=\(externalShadowOrientationExecuted) orientationAttemptedRotations=\(externalShadowAttemptedRotations) orientationSelectedRotation=\(externalShadowSelectedRotation) orientationLanguages=\(externalShadowLanguages) orientationUnsupported=\(externalShadowUnsupported) orientationVerdict=\(externalShadowOrientationVerdict)
             internalStructureBottleneck: primary=\(bottleneck?.primaryBottleneck ?? "nil") secondary=\(bottleneckSecondary) recommended=\(bottleneck?.recommendedNextAction ?? "nil") evidence=\(bottleneckEvidence) mustNotPromote=\(bottleneckMustNotPromote)
             routingDrivenTranslationComparison: variantID=\(routingComparison?.variantID ?? "nil") improvement=\(routingComparison?.improvementCategory ?? "nil") controlPassed=\(routingComparison.map { String($0.controlPassed) } ?? "nil") variantPassed=\(routingComparison.map { String($0.variantPassed) } ?? "nil") variantCandidate=\(routingComparison?.variantCandidate.replacing("\n", with: " / ") ?? "nil") variantRawClass=\(routingComparison?.variantRawOutputClassification ?? "nil") variantCandidateClass=\(routingComparison?.variantCandidateClassification ?? "nil") latinLeakReduced=\(routingComparison.map { String($0.latinLeakReduced) } ?? "nil") failures=\(routingVariantFailureReasons) diagnosticOnly=\(routingComparison.map { String($0.diagnosticOnly) } ?? "nil") mustNotPromote=\(routingMustNotPromote)
             ocrCharacterDamageAudit: damaged=[\(damagedTokens)] missing=[\(missingTokens)] extra=[\(extraTokens)] substitutions=[\(substitutions)] repeatedKeywordDamage=[\(repeatedDamage)] lineBreakRisk=\(ocrDamage.map { String($0.lineBreakRisk) } ?? "nil") action=\(ocrDamage?.recommendedNextAction ?? "nil") cropBlockers=\(ocrDamageCropBlockers) textBoxEvidence=\(ocrDamage?.textBoxEvidenceSummary ?? "nil") segmentEvidence=\(ocrDamage?.segmentMaskEvidenceSummary ?? "nil") diagnosticOnly=\(ocrDamage.map { String($0.diagnosticOnly) } ?? "nil") mustNotPromote=\(ocrDamageMustNotPromote)
@@ -5692,12 +6217,12 @@ struct MangaOverlayProbeService: Sendable {
             distanceFieldBlockLedger: block=\(koharuDistanceFieldBlockLedger.map { String($0.blockIndex) } ?? "nil") bubbleID=\(koharuDistanceFieldBlockLedger?.bubbleID.map(String.init) ?? "nil") currentIoU=\(koharuDistanceFieldBlockLedger?.currentVsDistanceSafeRectIoU?.formatted(.number.precision(.fractionLength(3))) ?? "nil") spriteCurrent=\(koharuDistanceFieldBlockLedger?.spriteContainedByCurrentSafeRect.map(String.init) ?? "nil") spriteDistance=\(koharuDistanceFieldBlockLedger?.spriteContainedByDistanceSafeRect.map(String.init) ?? "nil") verdict=\(koharuDistanceFieldBlockLedger?.safeRectComparisonVerdict ?? "nil") next=\(koharuDistanceFieldBlockLedger?.nextAction ?? "nil")
             bubbleSeamBlockLedger: block=\(koharuBubbleSeamBlockLedger.map { String($0.blockIndex) } ?? "nil") bubbleID=\(koharuBubbleSeamBlockLedger?.bubbleID.map(String.init) ?? "nil") pairs=[\(koharuBubbleSeamBlockLedger?.relatedPairIDs.joined(separator: ",") ?? "nil")] seams=[\(koharuBubbleSeamBlockLedger?.relatedSeamCandidateIDs.joined(separator: ",") ?? "nil")] risk=\(koharuBubbleSeamBlockLedger?.blockSeamRisk ?? "nil") verdict=\(koharuBubbleSeamBlockLedger?.blockSeamVerdict ?? "nil") next=\(koharuBubbleSeamBlockLedger?.nextAction ?? "nil")
             renderSpriteFit: block=\(renderSpriteFit.map { String($0.blockIndex) } ?? "nil") source=\(renderSpriteFit?.textSourceForRender ?? "nil") chars=\(renderSpriteFit.map { String($0.renderTextCharacterCount) } ?? "nil") cjk=\(renderSpriteFit.map { String($0.renderTextCJKCount) } ?? "nil") latin=\(renderSpriteFit.map { String($0.renderTextLatinCount) } ?? "nil") rectSource=\(renderSpriteFit?.selectedReportOnlyFitRectSource ?? "nil") fontBudget=\(renderSpriteFit?.fontBudgetVerdict ?? "nil") fit=\(renderSpriteFit?.fitVerdict ?? "nil") failureOverlayFit=\(renderSpriteFit?.failureOverlayFitVerdict ?? "nil") seams=[\(renderSpriteFit?.relatedSeamCandidateIDs.joined(separator: ",") ?? "nil")] siblings=[\(renderSpriteFit?.sameBubbleSiblingBlockIndexes.map(String.init).joined(separator: ",") ?? "nil")] next=\(renderSpriteFit?.nextAction ?? "nil")
-            nativeTextBoxDetectorLiteBlockLedger: block=\(nativeTextBoxDetectorLite.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLite?.bubbleID.map(String.init) ?? "nil") candidates=[\(nativeTextBoxDetectorLite?.candidateIDs.joined(separator: ",") ?? "nil")] best=\(nativeTextBoxDetectorLite?.bestCandidateID ?? "nil") score=\(nativeTextBoxDetectorLite?.bestCandidateScore?.formatted(.number.precision(.fractionLength(3))) ?? "nil") coverage=\(nativeTextBoxDetectorLite?.candidateCoverageVerdict ?? "nil") direction=\(nativeTextBoxDetectorLite?.directionHint ?? "nil") bottleneck=\(nativeTextBoxDetectorLite?.primaryBottleneck ?? "nil") next=\(nativeTextBoxDetectorLite?.nextAction ?? "nil")
+            nativeTextBoxDetectorLiteBlockLedger: block=\(nativeTextBoxDetectorLite.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLite?.bubbleID.map(String.init) ?? "nil") candidates=[\(nativeTextBoxDetectorLite?.candidateIDs.joined(separator: ",") ?? "nil")] best=\(nativeTextBoxDetectorLite?.bestCandidateID ?? "nil") score=\(nativeTextBoxDetectorLite?.bestCandidateScore?.formatted(.number.precision(.fractionLength(3))) ?? "nil") relationOverlap=\(nativeTextBoxDetectorLite?.bestCandidateCoverageRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil") relationCenter=\(nativeTextBoxDetectorLite.map { String($0.bestCandidateCenterContained) } ?? "nil") relationSameBubble=\(nativeTextBoxDetectorLite.map { String($0.bestCandidateSameBubble) } ?? "nil") bestVerdict=\(nativeTextBoxDetectorLite?.bestCandidateVerdict ?? "nil") bestShadow=\(nativeTextBoxDetectorLite.map { String($0.bestCandidateShadowOCREligible) } ?? "nil") coverage=\(nativeTextBoxDetectorLite?.candidateCoverageVerdict ?? "nil") direction=\(nativeTextBoxDetectorLite?.directionHint ?? "nil") bottleneck=\(nativeTextBoxDetectorLite?.primaryBottleneck ?? "nil") next=\(nativeTextBoxDetectorLite?.nextAction ?? "nil")
             nativeTextBoxDetectorLiteShadowOCRBlockLedger: block=\(nativeTextBoxDetectorLiteShadowOCR.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLiteShadowOCR?.bubbleID.map(String.init) ?? "nil") selected=\(nativeTextBoxDetectorLiteShadowOCR?.selectedCandidateID ?? "nil") outcome=\(nativeTextBoxDetectorLiteShadowOCR?.shadowOutcome ?? "nil") shadowText=\(nativeTextBoxDetectorLiteShadowOCR?.shadowOCRNormalizedText?.replacing("\n", with: " / ") ?? "nil") qualityDelta=\(nativeTextBoxDetectorLiteShadowOCR?.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") similarityDelta=\(nativeTextBoxDetectorLiteShadowOCR?.ocrSimilarityDeltaForEvaluation?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bottleneck=\(nativeTextBoxDetectorLiteShadowOCR?.primaryBottleneck ?? "nil") next=\(nativeTextBoxDetectorLiteShadowOCR?.nextAction ?? "nil")
             nativeTextBoxDetectorLiteRefinementBlockLedger: block=\(nativeTextBoxDetectorLiteRefinement.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLiteRefinement?.bubbleID.map(String.init) ?? "nil") target=\(nativeTextBoxDetectorLiteRefinement?.targetReason ?? "nil") base=\(nativeTextBoxDetectorLiteRefinement?.baseCandidateID ?? "nil") refined=[\(nativeTextBoxDetectorLiteRefinement?.refinedBBox?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")] strategy=\(nativeTextBoxDetectorLiteRefinement?.refinementStrategy ?? "nil") outcome=\(nativeTextBoxDetectorLiteRefinement?.refinementOutcome ?? "nil") refinedText=\(nativeTextBoxDetectorLiteRefinement?.refinedOCRNormalizedText?.replacing("\n", with: " / ") ?? "nil") qualityDeltaCurrent=\(nativeTextBoxDetectorLiteRefinement?.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") qualityDeltaDetector=\(nativeTextBoxDetectorLiteRefinement?.qualityDeltaVsDetectorLiteShadow?.formatted(.number.precision(.fractionLength(3))) ?? "nil") similarityDelta=\(nativeTextBoxDetectorLiteRefinement?.ocrSimilarityDeltaForEvaluation?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bottleneck=\(nativeTextBoxDetectorLiteRefinement?.primaryBottleneck ?? "nil") next=\(nativeTextBoxDetectorLiteRefinement?.nextAction ?? "nil")
             nativeTextBoxDetectorLiteClosedLoopBlockLedger: block=\(nativeTextBoxDetectorLiteClosedLoop.map { String($0.blockIndex) } ?? "nil") bubbleID=\(nativeTextBoxDetectorLiteClosedLoop?.bubbleID.map(String.init) ?? "nil") failure=\(nativeTextBoxDetectorLiteClosedLoop?.failureCategory ?? "nil") shadow=\(nativeTextBoxDetectorLiteClosedLoop?.detectorLiteShadowOutcome ?? "nil") refinement=\(nativeTextBoxDetectorLiteClosedLoop?.refinementOutcome ?? "nil") best=\(nativeTextBoxDetectorLiteClosedLoop?.bestReportOnlyCandidateID ?? "nil") delta=\(nativeTextBoxDetectorLiteClosedLoop?.qualityDeltaVsCurrent?.formatted(.number.precision(.fractionLength(3))) ?? "nil") bubble=\(nativeTextBoxDetectorLiteClosedLoop?.bubbleAssignmentStatus ?? "nil") segment=\(nativeTextBoxDetectorLiteClosedLoop?.segmentGlyphEvidenceStatus ?? "nil") translationRoute=\(nativeTextBoxDetectorLiteClosedLoop?.translationFailureRoute ?? "nil") render=\(nativeTextBoxDetectorLiteClosedLoop?.renderLockStatus ?? "nil") bottleneck=\(nativeTextBoxDetectorLiteClosedLoop?.primaryBottleneck ?? "nil") route=\(nativeTextBoxDetectorLiteClosedLoop?.closedLoopRoute ?? "nil") next=\(nativeTextBoxDetectorLiteClosedLoop?.nextAction ?? "nil")
-            nativeBubbleMaskInstanceLiteBlockLedger: block=\(nativeBubbleMaskInstanceLite.map { String($0.blockIndex) } ?? "nil") currentBubbleID=\(nativeBubbleMaskInstanceLite?.currentBubbleID.map(String.init) ?? "nil") majorityID=\(nativeBubbleMaskInstanceLite?.instanceLiteMajorityID.map(String.init) ?? "nil") majorityCoverage=\(nativeBubbleMaskInstanceLite?.instanceLiteMajorityCoverage.formatted(.number.precision(.fractionLength(3))) ?? "nil") agreement=\(nativeBubbleMaskInstanceLite?.assignmentAgreement ?? "nil") conflict=\(nativeBubbleMaskInstanceLite?.assignmentConflictReason ?? "nil") safeRect=[\(nativeBubbleMaskInstanceLite?.instanceLiteSafeRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")] distanceFieldSource=\(nativeBubbleMaskInstanceLite?.distanceFieldSafeRectSource ?? "nil") spriteContained=\(nativeBubbleMaskInstanceLite.map { String($0.spriteContainedByInstanceLiteMask) } ?? "nil") sibling=\(nativeBubbleMaskInstanceLite?.siblingPartitionStatus ?? "nil") split=\(nativeBubbleMaskInstanceLite?.splitRisk ?? "nil") adjacency=\(nativeBubbleMaskInstanceLite?.adjacencyRisk ?? "nil") segment=\(nativeBubbleMaskInstanceLite?.segmentGlyphEvidenceStatus ?? "nil") translationRoute=\(nativeBubbleMaskInstanceLite?.translationFailureRoute ?? "nil") detectorRoute=\(nativeBubbleMaskInstanceLite?.detectorLiteClosedLoopRoute ?? "nil") render=\(nativeBubbleMaskInstanceLite?.renderLockStatus ?? "nil") bottleneck=\(nativeBubbleMaskInstanceLite?.primaryBottleneck ?? "nil") next=\(nativeBubbleMaskInstanceLite?.nextAction ?? "nil")
-            nativeSegmentMaskRefinementLiteBlockLedger: block=\(nativeSegmentMaskRefinementLite.map { String($0.blockIndex) } ?? "nil") selected=\(nativeSegmentMaskRefinementLite?.selectedCandidateID ?? "nil") pixels=\(nativeSegmentMaskRefinementLite.map { String($0.afterBubbleClampPixelCount) } ?? "nil") textBoxCoverage=\(nativeSegmentMaskRefinementLite?.textboxCoverage.formatted(.number.precision(.fractionLength(3))) ?? "nil") bubbleCoverage=\(nativeSegmentMaskRefinementLite?.bubbleCoverage.formatted(.number.precision(.fractionLength(3))) ?? "nil") glyphOverlap=\(nativeSegmentMaskRefinementLite?.existingGlyphOverlap.formatted(.number.precision(.fractionLength(3))) ?? "nil") segmentAgreement=\(nativeSegmentMaskRefinementLite?.segmentProxyAgreement.formatted(.number.precision(.fractionLength(3))) ?? "nil") containedTextBox=\(nativeSegmentMaskRefinementLite.map { String($0.maskContainedByTextBox) } ?? "nil") containedBubble=\(nativeSegmentMaskRefinementLite.map { String($0.maskContainedByBubble) } ?? "nil") clearText=\(nativeSegmentMaskRefinementLite.map { String($0.wouldBeUsableForClearTextMask) } ?? "nil") ocrCrop=\(nativeSegmentMaskRefinementLite.map { String($0.wouldBeUsableForOCRCropConstraint) } ?? "nil") render=\(nativeSegmentMaskRefinementLite.map { String($0.wouldBeUsableForRenderContainment) } ?? "nil") bottleneck=\(nativeSegmentMaskRefinementLite?.primaryBottleneck ?? "nil") next=\(nativeSegmentMaskRefinementLite?.nextAction ?? "nil")
+            nativeBubbleMaskInstanceLiteBlockLedger: block=\(nativeBubbleMaskInstanceLite.map { String($0.blockIndex) } ?? "nil") currentBubbleID=\(nativeBubbleMaskInstanceLite?.currentBubbleID.map(String.init) ?? "nil") majorityID=\(nativeBubbleMaskInstanceLite?.instanceLiteMajorityID.map(String.init) ?? "nil") majorityCoverage=\(nativeBubbleMaskInstanceLite?.instanceLiteMajorityCoverage.formatted(.number.precision(.fractionLength(3))) ?? "nil") agreement=\(nativeBubbleMaskInstanceLite?.assignmentAgreement ?? "nil") conflict=\(nativeBubbleMaskInstanceLite?.assignmentConflictReason ?? "nil") safeRect=[\(nativeBubbleMaskInstanceLite?.instanceLiteSafeRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")] scopedSafeRect=[\(nativeBubbleMaskInstanceLite?.instanceLiteBlockScopedSafeRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")] safeRectPolicy=\(nativeBubbleMaskInstanceLite?.instanceLiteSafeRectPolicy ?? "nil") distanceFieldSource=\(nativeBubbleMaskInstanceLite?.distanceFieldSafeRectSource ?? "nil") spriteContained=\(nativeBubbleMaskInstanceLite.map { String($0.spriteContainedByInstanceLiteMask) } ?? "nil") spriteScopedContainmentRatio=\(nativeBubbleMaskInstanceLite?.spriteBlockScopedSafeRectContainmentRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil") spriteContainedByScopedSafeRect=\(nativeBubbleMaskInstanceLite.map { String($0.spriteContainedByBlockScopedSafeRect) } ?? "nil") spriteContainmentPolicy=\(nativeBubbleMaskInstanceLite?.spriteContainmentPolicy ?? "nil") siblingSpriteOverlap=\(nativeBubbleMaskInstanceLite.map { String($0.sameInstanceRenderSpriteOverlapCount) } ?? "nil") siblingSpritePolicy=\(nativeBubbleMaskInstanceLite?.spriteSiblingCollisionPolicy ?? "nil") sibling=\(nativeBubbleMaskInstanceLite?.siblingPartitionStatus ?? "nil") split=\(nativeBubbleMaskInstanceLite?.splitRisk ?? "nil") adjacency=\(nativeBubbleMaskInstanceLite?.adjacencyRisk ?? "nil") segment=\(nativeBubbleMaskInstanceLite?.segmentGlyphEvidenceStatus ?? "nil") translationRoute=\(nativeBubbleMaskInstanceLite?.translationFailureRoute ?? "nil") detectorRoute=\(nativeBubbleMaskInstanceLite?.detectorLiteClosedLoopRoute ?? "nil") render=\(nativeBubbleMaskInstanceLite?.renderLockStatus ?? "nil") bottleneck=\(nativeBubbleMaskInstanceLite?.primaryBottleneck ?? "nil") next=\(nativeBubbleMaskInstanceLite?.nextAction ?? "nil")
+            nativeSegmentMaskRefinementLiteBlockLedger: block=\(nativeSegmentMaskRefinementLite.map { String($0.blockIndex) } ?? "nil") selected=\(nativeSegmentMaskRefinementLite?.selectedCandidateID ?? "nil") pixels=\(nativeSegmentMaskRefinementLite.map { String($0.afterBubbleClampPixelCount) } ?? "nil") textBoxCoverage=\(nativeSegmentMaskRefinementLite?.textboxCoverage.formatted(.number.precision(.fractionLength(3))) ?? "nil") bubbleCoverage=\(nativeSegmentMaskRefinementLite?.bubbleCoverage.formatted(.number.precision(.fractionLength(3))) ?? "nil") textBoxContainment=\(nativeSegmentMaskRefinementLite?.maskContainedByTextBoxRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil") bubbleContainment=\(nativeSegmentMaskRefinementLite?.maskContainedByBubbleRatio.formatted(.number.precision(.fractionLength(3))) ?? "nil") majorityAgreement=\(nativeSegmentMaskRefinementLite?.maskMajorityAgreement ?? "nil") glyphOverlap=\(nativeSegmentMaskRefinementLite?.existingGlyphOverlap.formatted(.number.precision(.fractionLength(3))) ?? "nil") segmentAgreement=\(nativeSegmentMaskRefinementLite?.segmentProxyAgreement.formatted(.number.precision(.fractionLength(3))) ?? "nil") containedTextBox=\(nativeSegmentMaskRefinementLite.map { String($0.maskContainedByTextBox) } ?? "nil") containedBubble=\(nativeSegmentMaskRefinementLite.map { String($0.maskContainedByBubble) } ?? "nil") clearText=\(nativeSegmentMaskRefinementLite.map { String($0.wouldBeUsableForClearTextMask) } ?? "nil") ocrCrop=\(nativeSegmentMaskRefinementLite.map { String($0.wouldBeUsableForOCRCropConstraint) } ?? "nil") render=\(nativeSegmentMaskRefinementLite.map { String($0.wouldBeUsableForRenderContainment) } ?? "nil") bottleneck=\(nativeSegmentMaskRefinementLite?.primaryBottleneck ?? "nil") next=\(nativeSegmentMaskRefinementLite?.nextAction ?? "nil")
             translationFloorNoisyBlock: modelFloorLimited=\(translationFloorNoisy.map { String($0.modelFloorLimited) } ?? "nil") ocrInputSuspect=\(translationFloorNoisy.map { String($0.ocrInputSuspect) } ?? "nil") languageQualityFailure=\(translationFloorNoisy.map { String($0.translationLanguageQualityFailure) } ?? "nil") routingOutcome=\(translationFloorNoisy?.routingComparisonOutcome ?? "nil") nextAction=\(translationFloorNoisy?.recommendedNextAction ?? "nil")
             renderLock: status=\(renderLock?.renderStatus ?? "nil") failureOverlayRequired=\(renderLock.map { String($0.failureOverlayRequired) } ?? "nil") failureOverlayLocked=\(renderLock.map { String($0.failureOverlayLocked) } ?? "nil") safeLayoutSource=\(renderLock?.safeLayoutSource ?? "nil") maskOverflowPixels=\(renderLock.map { String($0.renderMaskOverflowPixelCount) } ?? "nil") truncated=\(renderLock.map { String($0.renderTextTruncated) } ?? "nil") nextAction=\(renderLock?.recommendedNextAction ?? "nil")
             cropFailureAttribution: \(cropAttribution)
@@ -5748,6 +6273,27 @@ struct MangaOverlayProbeService: Sendable {
         let renderWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
             $0.workItemID == "WI-render-regression-lock"
         }
+        let convergenceBundleLinkageWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
+            $0.workItemID == "WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage"
+        }
+        let convergencePromotionLinkageWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
+            $0.workItemID == "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage"
+        }
+        let convergenceExternalShadowCoverageWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
+            $0.workItemID == "WI-external-textbox-shadow-ocr-coverage"
+        }
+        let convergenceExternalShadowCoverageGate = koharuArtifactConvergenceReport?.gateLedger.first {
+            $0.gateID == "G-external-textbox-shadow-ocr-coverage"
+        }
+        let convergenceExternalOrientationWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
+            $0.workItemID == "WI-external-textbox-orientation-shadow-path"
+        }
+        let convergenceExternalOrientationGate = koharuArtifactConvergenceReport?.gateLedger.first {
+            $0.gateID == "G-external-textbox-orientation-shadow-path"
+        }
+        let convergenceArtifactIdentityReconciliationWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
+            $0.workItemID == "WI-koharu-artifact-identity-reconciliation"
+        }
         let resolverQueueSummary = (koharuPipelineResolverReport?.executionQueue ?? [])
             .map { "\($0.executionItemID):status=\($0.status):next=\($0.recommendedNextAction)" }
             .joined(separator: " | ")
@@ -5793,8 +6339,16 @@ struct MangaOverlayProbeService: Sendable {
             .joined(separator: "\n")
         let nativeTextBoxDetectorLiteShadowOCRCandidateSummary = (koharuNativeTextBoxDetectorLiteShadowOCRReport?.candidates ?? [])
             .prefix(32)
-            .map { "nativeTextBoxDetectorLiteShadowOCRCandidate: id=\($0.candidateID) source=\($0.sourceCandidateID) block=\($0.relatedBlockIndex) bubble=\($0.sourceBubbleID.map(String.init) ?? "nil") bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))] dir=\($0.directionHint) succeeded=\($0.ocrSucceeded) outcome=\($0.outcome) qualityDelta=\($0.qualityDeltaVsCurrent.formatted(.number.precision(.fractionLength(3)))) wordPreservation=\($0.wordPreservationVsCurrent.formatted(.number.precision(.fractionLength(3)))) text=\($0.ocrNormalizedText.replacing("\n", with: " / "))" }
+            .map { "nativeTextBoxDetectorLiteShadowOCRCandidate: id=\($0.candidateID) source=\($0.sourceCandidateID) block=\($0.relatedBlockIndex) bubble=\($0.sourceBubbleID.map(String.init) ?? "nil") bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))] dir=\($0.directionHint) rotation=\($0.rotationApplied.formatted(.number.precision(.fractionLength(0)))) succeeded=\($0.ocrSucceeded) outcome=\($0.outcome) qualityDelta=\($0.qualityDeltaVsCurrent.formatted(.number.precision(.fractionLength(3)))) wordPreservation=\($0.wordPreservationVsCurrent.formatted(.number.precision(.fractionLength(3)))) text=\($0.ocrNormalizedText.replacing("\n", with: " / "))" }
             .joined(separator: "\n")
+        let nativeTextBoxDetectorLiteShadowOCRRotationSummary = Dictionary(
+            grouping: koharuNativeTextBoxDetectorLiteShadowOCRReport?.candidates ?? [],
+            by: { $0.rotationApplied.formatted(.number.precision(.fractionLength(0))) }
+        )
+            .mapValues(\.count)
+            .map { "\($0.key)=\($0.value)" }
+            .sorted()
+            .joined(separator: ",")
         let nativeTextBoxDetectorLiteRefinementCandidateSummary = (koharuNativeTextBoxDetectorLiteRefinementReport?.candidates ?? [])
             .prefix(24)
             .map { "nativeTextBoxDetectorLiteRefinementCandidate: id=\($0.candidateID) source=\($0.source) block=\($0.blockIndex) bubble=\($0.sourceBubbleID.map(String.init) ?? "nil") base=[\($0.baseBBox.map { String(Int($0.rounded())) }.joined(separator: ","))] refined=[\($0.refinedBBox.map { String(Int($0.rounded())) }.joined(separator: ","))] strategy=\($0.refinementStrategy) target=\($0.targetReason) succeeded=\($0.ocrSucceeded) outcome=\($0.outcome) qualityDeltaCurrent=\($0.qualityDeltaVsCurrent.formatted(.number.precision(.fractionLength(3)))) qualityDeltaDetector=\($0.qualityDeltaVsDetectorLiteShadow?.formatted(.number.precision(.fractionLength(3))) ?? "nil") text=\($0.ocrNormalizedText.replacing("\n", with: " / "))" }
@@ -5809,7 +6363,7 @@ struct MangaOverlayProbeService: Sendable {
             .joined(separator: "\n")
         let nativeBubbleMaskSiblingSummary = (koharuNativeBubbleMaskInstanceLiteReport?.siblingLedgers ?? [])
             .prefix(24)
-            .map { "nativeBubbleMaskInstanceLiteSiblingLedger: instance=\($0.instanceID.map(String.init) ?? "nil") blocks=\($0.blockIndexes.map(String.init).joined(separator: ",")) currentOverlap=\($0.currentSafeRectOverlapCount) instanceOverlap=\($0.instanceLiteSafeRectOverlapCount) seam=\($0.seamCandidateRelated) status=\($0.siblingPartitionStatus) needsRealBubbleMask=\($0.needsRealBubbleMask) next=\($0.nextAction)" }
+            .map { "nativeBubbleMaskInstanceLiteSiblingLedger: instance=\($0.instanceID.map(String.init) ?? "nil") blocks=\($0.blockIndexes.map(String.init).joined(separator: ",")) currentOverlap=\($0.currentSafeRectOverlapCount) instanceOverlap=\($0.instanceLiteSafeRectOverlapCount) blockScopedOverlap=\($0.blockScopedSafeRectOverlapCount) renderSpriteOverlap=\($0.renderSpriteOverlapCount) policy=\($0.sameBubbleSafeRectPolicy) spritePolicy=\($0.sameBubbleSpriteCollisionPolicy) seam=\($0.seamCandidateRelated) status=\($0.siblingPartitionStatus) needsRealBubbleMask=\($0.needsRealBubbleMask) next=\($0.nextAction)" }
             .joined(separator: "\n")
         let nativeBubbleMaskAdjacencySummary = (koharuNativeBubbleMaskInstanceLiteReport?.adjacencyLedgers ?? [])
             .prefix(24)
@@ -5817,7 +6371,7 @@ struct MangaOverlayProbeService: Sendable {
             .joined(separator: "\n")
         let nativeSegmentMaskRefinementCandidateSummary = (koharuNativeSegmentMaskRefinementLiteReport?.candidateLedgers ?? [])
             .prefix(24)
-            .map { "nativeSegmentMaskRefinementLiteCandidate: id=\($0.candidateID) block=\($0.blockIndex) source=\($0.source) textBox=\($0.sourceTextBoxCandidateID ?? "nil") bubble=\($0.sourceBubbleID.map(String.init) ?? "nil") instance=\($0.sourceInstanceLiteID.map(String.init) ?? "nil") bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))] expanded=[\($0.expandedTextBoxRect.map { String(Int($0.rounded())) }.joined(separator: ","))] pixels=\($0.afterBubbleClampPixelCount) components=\($0.connectedComponentCount) textBoxCoverage=\($0.textboxCoverage.formatted(.number.precision(.fractionLength(3)))) bubbleCoverage=\($0.bubbleCoverage.formatted(.number.precision(.fractionLength(3)))) glyphOverlap=\($0.existingGlyphOverlap.formatted(.number.precision(.fractionLength(3)))) segmentAgreement=\($0.segmentProxyAgreement.formatted(.number.precision(.fractionLength(3)))) verdict=\($0.candidateVerdict) rejections=\($0.rejectionReasons.joined(separator: " | "))" }
+            .map { "nativeSegmentMaskRefinementLiteCandidate: id=\($0.candidateID) block=\($0.blockIndex) source=\($0.source) textBox=\($0.sourceTextBoxCandidateID ?? "nil") textBoxVerdict=\($0.sourceTextBoxCandidateVerdict ?? "nil") textBoxLink=\($0.sourceTextBoxLinkVerdict) textBoxOverlap=\($0.sourceTextBoxBlockOverlapRatio.formatted(.number.precision(.fractionLength(3)))) textBoxSameBubble=\($0.sourceTextBoxSameBubble) textBoxAccepted=\($0.sourceTextBoxAcceptedForSegmentMask) bubble=\($0.sourceBubbleID.map(String.init) ?? "nil") instance=\($0.sourceInstanceLiteID.map(String.init) ?? "nil") bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))] expanded=[\($0.expandedTextBoxRect.map { String(Int($0.rounded())) }.joined(separator: ","))] pixels=\($0.afterBubbleClampPixelCount) components=\($0.connectedComponentCount) textBoxCoverage=\($0.textboxCoverage.formatted(.number.precision(.fractionLength(3)))) bubbleCoverage=\($0.bubbleCoverage.formatted(.number.precision(.fractionLength(3)))) textBoxContainment=\($0.maskContainedByTextBoxRatio.formatted(.number.precision(.fractionLength(3)))) bubbleContainment=\($0.maskContainedByBubbleRatio.formatted(.number.precision(.fractionLength(3)))) majorityAgreement=\($0.maskMajorityAgreement) majorityCoverage=\($0.maskMajorityCoverage.formatted(.number.precision(.fractionLength(3)))) glyphOverlap=\($0.existingGlyphOverlap.formatted(.number.precision(.fractionLength(3)))) segmentAgreement=\($0.segmentProxyAgreement.formatted(.number.precision(.fractionLength(3)))) verdict=\($0.candidateVerdict) rejections=\($0.rejectionReasons.joined(separator: " | "))" }
             .joined(separator: "\n")
         let nativeSegmentMaskRefinementSiblingSummary = (koharuNativeSegmentMaskRefinementLiteReport?.siblingLedgers ?? [])
             .prefix(24)
@@ -5826,7 +6380,7 @@ struct MangaOverlayProbeService: Sendable {
         let nativeArtifactBundleLiteBlockSummary = (koharuNativeArtifactBundleLiteReport?.blockLedgers ?? [])
             .prefix(32)
             .map { ledger in
-                "nativeArtifactBundleLiteBlockLedger: block=\(ledger.blockIndex) bubble=\(ledger.bubbleID.map(String.init) ?? "nil") textBox=\(ledger.selectedTextBoxLite.componentID):\(ledger.selectedTextBoxLite.componentSource):\(ledger.selectedTextBoxLite.readinessStatus) bubbleComponent=\(ledger.selectedBubbleInstanceLite.componentID):\(ledger.selectedBubbleInstanceLite.componentSource):\(ledger.selectedBubbleInstanceLite.readinessStatus) segment=\(ledger.selectedSegmentMaskLite.componentID):\(ledger.selectedSegmentMaskLite.componentSource):\(ledger.selectedSegmentMaskLite.readinessStatus) consistency=\(ledger.artifactConsistencyVerdict) primary=\(ledger.primaryBlockingArtifact) next=\(ledger.nextAction)"
+                "nativeArtifactBundleLiteBlockLedger: block=\(ledger.blockIndex) bubble=\(ledger.bubbleID.map(String.init) ?? "nil") textBox=\(ledger.selectedTextBoxLite.componentID):\(ledger.selectedTextBoxLite.componentSource):\(ledger.selectedTextBoxLite.readinessStatus) bubbleComponent=\(ledger.selectedBubbleInstanceLite.componentID):\(ledger.selectedBubbleInstanceLite.componentSource):\(ledger.selectedBubbleInstanceLite.readinessStatus) segment=\(ledger.selectedSegmentMaskLite.componentID):\(ledger.selectedSegmentMaskLite.componentSource):\(ledger.selectedSegmentMaskLite.readinessStatus) textBoxSegmentLink=\(ledger.selectedTextBoxSegmentLinkVerdict):\(ledger.textBoxSegmentLinkageStatus):risk=\(ledger.textBoxSegmentLinkageRisk) consistency=\(ledger.artifactConsistencyVerdict) primary=\(ledger.primaryBlockingArtifact) next=\(ledger.nextAction)"
             }
             .joined(separator: "\n")
         let nativeArtifactBundleLiteEdgeSummary = (koharuNativeArtifactBundleLiteReport?.consistencyEdges ?? [])
@@ -5839,7 +6393,7 @@ struct MangaOverlayProbeService: Sendable {
         let nativePromotionBlockSummary = (koharuNativePromotionGateLiteReport?.blockLedgers ?? [])
             .prefix(32)
             .map {
-                "nativePromotionBlockLedger: block=\($0.blockIndex) bubble=\($0.bubbleID.map(String.init) ?? "nil") eligibility=\($0.promotionEligibility) textBoxes=\($0.textBoxesPromotionStatus) bubbleMask=\($0.bubbleMaskPromotionStatus) segmentMask=\($0.segmentMaskPromotionStatus) ocr=\($0.ocrTextPromotionStatus) translation=\($0.translationPromotionStatus) render=\($0.renderPromotionStatus) primary=\($0.primaryBlockingArtifact) bottleneck=\($0.probeBottleneckCategory) next=\($0.nextAction) mustNotPromote=\($0.mustNotPromoteReasons.joined(separator: " | "))"
+                "nativePromotionBlockLedger: block=\($0.blockIndex) bubble=\($0.bubbleID.map(String.init) ?? "nil") eligibility=\($0.promotionEligibility) textBoxes=\($0.textBoxesPromotionStatus) bubbleMask=\($0.bubbleMaskPromotionStatus) segmentMask=\($0.segmentMaskPromotionStatus) textBoxSegmentLink=\($0.textBoxSegmentLinkVerdict):\($0.textBoxSegmentLinkagePromotionStatus) ocr=\($0.ocrTextPromotionStatus) translation=\($0.translationPromotionStatus) render=\($0.renderPromotionStatus) primary=\($0.primaryBlockingArtifact) bottleneck=\($0.probeBottleneckCategory) next=\($0.nextAction) mustNotPromote=\($0.mustNotPromoteReasons.joined(separator: " | "))"
             }
             .joined(separator: "\n")
         let nativePromotionStageGateSummary = (koharuNativePromotionGateLiteReport?.stageGates ?? [])
@@ -5852,17 +6406,21 @@ struct MangaOverlayProbeService: Sendable {
         let nativePromotionWorkItemSummary = (koharuNativePromotionGateLiteReport?.workItems ?? [])
             .map { "nativePromotionWorkItem: id=\($0.workItemID) target=\($0.targetArtifact) status=\($0.status) priority=\($0.priority) blocks=[\($0.affectedBlocks.map(String.init).joined(separator: ","))] next=\($0.nextAction)" }
             .joined(separator: "\n")
-        let nativeShadowArtifactFileSummary = (koharuNativeShadowArtifactExportLiteReport?.files ?? [])
-            .map { "nativeShadowArtifactFile: path=\($0.relativePath) kind=\($0.artifactKind) exists=\($0.exists) nonEmpty=\($0.nonEmpty) bytes=\($0.byteCount) records=\($0.recordCount) forbidden=\($0.forbiddenAsActiveArtifact) readyForActive=\($0.readyForActiveArtifact)" }
+        let nativeArtifactContractDryRunFileSummary = (koharuNativeArtifactContractDryRunReport?.requiredFiles ?? [])
+            .map { "nativeArtifactContractDryRunRequiredFile: path=\($0.path) kind=\($0.artifactKind) activeFileFound=\($0.activeFileFound) identityStatus=\($0.identityStatus) size=\($0.fileSizeBytes.map(String.init) ?? "nil") sha256=\($0.sha256 ?? "nil") dryRunPreviews=\($0.dryRunPreviewCount) status=\($0.status) missingFields=\($0.missingRequiredFields.joined(separator: " | ")) forbiddenSourceCount=\($0.forbiddenSourceCount) next=\($0.nextAction)" }
             .joined(separator: "\n")
-        let nativeShadowArtifactBlockSummary = (koharuNativeShadowArtifactExportLiteReport?.blockLedgers ?? [])
+        let nativeArtifactContractDryRunPreviewSummary = (koharuNativeArtifactContractDryRunReport?.previews ?? [])
             .prefix(32)
-            .map {
-                "nativeShadowArtifactExportBlockLedger: block=\($0.blockIndex) bubble=\($0.bubbleID.map(String.init) ?? "nil") eligibility=\($0.shadowExportEligibility) textBox=\($0.textBoxExportRecordID ?? "nil") bubbleRecord=\($0.bubbleExportRecordID ?? "nil") segment=\($0.segmentMaskExportRecordID ?? "nil") bundle=\($0.bundleExportRecordID) coord=\($0.textBoxCoordinateStatus)/\($0.bubbleCoordinateStatus)/\($0.segmentMaskSummaryStatus) promotion=\($0.promotionGateStatusFromV146) primary=\($0.primaryBlockingArtifact) next=\($0.nextAction) mustNotUse=\($0.mustNotUseAsActiveArtifactReasons.joined(separator: " | "))"
-            }
+            .map { "nativeArtifactContractDryRunPreview: id=\($0.previewID) block=\($0.blockIndex) stage=\($0.targetArtifactStage) source=\($0.candidateSource) destination=\($0.destinationPath) contractReady=\($0.canSatisfyContractDryRun) activeExportAllowed=\($0.activeExportAllowed) missing=\($0.missingRequiredFields.joined(separator: " | ")) forbidden=\($0.forbiddenSourceReasons.joined(separator: " | "))" }
             .joined(separator: "\n")
-        let nativeShadowArtifactGateSummary = (koharuNativeShadowArtifactExportLiteReport?.gateLedger ?? [])
-            .map { "nativeShadowArtifactGate: id=\($0.gateID) status=\($0.status) scope=\($0.scope) affected=[\($0.affectedBlocks.map(String.init).joined(separator: ","))] action=\($0.recommendedAction)" }
+        let nativeArtifactContractDryRunGateSummary = (koharuNativeArtifactContractDryRunReport?.gateLedger ?? [])
+            .map { "nativeArtifactContractDryRunGate: id=\($0.gateID) status=\($0.status) scope=\($0.scope) affected=[\($0.affectedBlocks.map(String.init).joined(separator: ","))] action=\($0.recommendedAction)" }
+            .joined(separator: "\n")
+        let artifactIdentityReconciliationFileSummary = (koharuArtifactIdentityReconciliationReport?.fileRows ?? [])
+            .map { "artifactIdentityReconciliationFile: kind=\($0.artifactKind) appExists=\($0.appExists) appSize=\($0.appSizeBytes.map(String.init) ?? "nil") appSHA=\($0.appSHA256 ?? "nil") appStatus=\($0.appIdentityStatus) contractStatus=\($0.contractDryRunStatus ?? "nil") ciSizePath=\($0.ciManifestFieldPathForSize) ciSHAPath=\($0.ciManifestFieldPathForSHA256) status=\($0.comparisonStatus) next=\($0.nextAction)" }
+            .joined(separator: "\n")
+        let artifactIdentityReconciliationGateSummary = (koharuArtifactIdentityReconciliationReport?.gateLedger ?? [])
+            .map { "artifactIdentityReconciliationGate: id=\($0.gateID) status=\($0.status) scope=\($0.scope) affected=[\($0.affectedBlocks.map(String.init).joined(separator: ","))] action=\($0.recommendedAction)" }
             .joined(separator: "\n")
         let externalSummary = """
         koharuNativeAlgorithmReplayMatrixReport: enabled=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.enabled) } ?? "nil") stages=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.stageCount) } ?? "nil") candidates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.candidateCount) } ?? "nil") blockRoutes=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuNativeAlgorithmReplayMatrixReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeAlgorithmReplayMatrixReport?.matrixVerdict ?? "nil")
@@ -5905,11 +6463,12 @@ struct MangaOverlayProbeService: Sendable {
         nativeTextBoxDetectorLiteDirection=\(koharuNativeTextBoxDetectorLiteReport?.directionHintBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeTextBoxDetectorLiteBottleneck=\(koharuNativeTextBoxDetectorLiteReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeTextBoxDetectorLiteNextAction=\(koharuNativeTextBoxDetectorLiteReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
-        nativeTextBoxDetectorLiteCandidateLedger: \((koharuNativeTextBoxDetectorLiteReport?.candidates.prefix(24).map { "\($0.candidateID):bubble=\($0.sourceBubbleID.map(String.init) ?? "nil"):bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))]:dir=\($0.directionHint):score=\($0.score.formatted(.number.precision(.fractionLength(3)))):verdict=\($0.candidateVerdict):shadow=\($0.shadowOCREligible)" }.joined(separator: " | ")) ?? "nil")
+        nativeTextBoxDetectorLiteCandidateLedger: \((koharuNativeTextBoxDetectorLiteReport?.candidates.prefix(24).map { "\($0.candidateID):bubble=\($0.sourceBubbleID.map(String.init) ?? "nil"):bbox=[\($0.bbox.map { String(Int($0.rounded())) }.joined(separator: ","))]:dir=\($0.directionHint):score=\($0.score.formatted(.number.precision(.fractionLength(3)))):verdict=\($0.candidateVerdict):shadow=\($0.shadowOCREligible):relations=\($0.relatedBlockRelations.map { "#\($0.blockIndex)/\($0.relationReason)/ov=\($0.overlapRatio.formatted(.number.precision(.fractionLength(2))))/same=\($0.sameBubble)" }.joined(separator: ";"))" }.joined(separator: " | ")) ?? "nil")
         nativeTextBoxDetectorLiteBubbleLedger: \((koharuNativeTextBoxDetectorLiteReport?.bubbleLedgers.map { "bubble=\($0.bubbleID):candidates=\($0.candidateCount):accepted=\($0.acceptedCandidateCount):coverage=\($0.nativeTextBoxCoverageVerdict):split=\($0.splitRisk):sibling=\($0.sameBubbleSiblingRisk):next=\($0.nextAction)" }.joined(separator: " | ")) ?? "nil")
         koharuNativeTextBoxDetectorLiteShadowOCRReport: enabled=\(koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.enabled) } ?? "nil") inputCandidates=\(koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.inputCandidateCount) } ?? "nil") selected=\(koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.selectedCandidateCount) } ?? "nil") ocrExecuted=\(koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.ocrExecutedCount) } ?? "nil") succeeded=\(koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.ocrSucceededCount) } ?? "nil") empty=\(koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.emptyOCRCount) } ?? "nil") better=\(koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.betterThanCurrentCount) } ?? "nil") worse=\(koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.worseThanCurrentCount) } ?? "nil") same=\(koharuNativeTextBoxDetectorLiteShadowOCRReport.map { String($0.sameAsCurrentCount) } ?? "nil") verdict=\(koharuNativeTextBoxDetectorLiteShadowOCRReport?.shadowOCRVerdict ?? "nil")
         nativeTextBoxDetectorLiteShadowOCROutcome=\(koharuNativeTextBoxDetectorLiteShadowOCRReport?.ocrOutcomeBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeTextBoxDetectorLiteShadowOCRQualityDelta=\(koharuNativeTextBoxDetectorLiteShadowOCRReport?.qualityDeltaBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeTextBoxDetectorLiteShadowOCRRotation=\(nativeTextBoxDetectorLiteShadowOCRRotationSummary.isEmpty ? "nil" : nativeTextBoxDetectorLiteShadowOCRRotationSummary)
         nativeTextBoxDetectorLiteShadowOCRNextAction=\(koharuNativeTextBoxDetectorLiteShadowOCRReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         \(nativeTextBoxDetectorLiteShadowOCRCandidateSummary.isEmpty ? "nativeTextBoxDetectorLiteShadowOCRCandidate: nil" : nativeTextBoxDetectorLiteShadowOCRCandidateSummary)
         koharuNativeTextBoxDetectorLiteRefinementReport: enabled=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.enabled) } ?? "nil") targets=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.targetBlockCount) } ?? "nil") candidates=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.refinedCandidateCount) } ?? "nil") ocrExecuted=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.ocrExecutedCount) } ?? "nil") succeeded=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.ocrSucceededCount) } ?? "nil") empty=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.emptyOCRCount) } ?? "nil") betterCurrent=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.refinedBetterThanCurrentCount) } ?? "nil") betterDetectorLite=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.refinedBetterThanDetectorLiteCount) } ?? "nil") worse=\(koharuNativeTextBoxDetectorLiteRefinementReport.map { String($0.refinedWorseThanDetectorLiteCount) } ?? "nil") verdict=\(koharuNativeTextBoxDetectorLiteRefinementReport?.refinementVerdict ?? "nil")
@@ -5928,6 +6487,9 @@ struct MangaOverlayProbeService: Sendable {
         nativeBubbleMaskInstanceLiteSplit=\(koharuNativeBubbleMaskInstanceLiteReport?.splitRiskBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeBubbleMaskInstanceLiteSibling=\(koharuNativeBubbleMaskInstanceLiteReport?.siblingPartitionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeBubbleMaskInstanceLiteSafeRect=\(koharuNativeBubbleMaskInstanceLiteReport?.safeRectComparisonBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeBubbleMaskInstanceLiteSafeRectPolicy=\(koharuNativeBubbleMaskInstanceLiteReport?.safeRectPolicyBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeBubbleMaskInstanceLiteBlockScopedSpriteContainment=\(koharuNativeBubbleMaskInstanceLiteReport?.spriteBlockScopedContainmentBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeBubbleMaskInstanceLiteSiblingSpriteCollision=\(koharuNativeBubbleMaskInstanceLiteReport?.spriteSiblingCollisionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeBubbleMaskInstanceLiteBottleneck=\(koharuNativeBubbleMaskInstanceLiteReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeBubbleMaskInstanceLiteNextAction=\(koharuNativeBubbleMaskInstanceLiteReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         needsRealBubbleMaskBlocks=\(koharuNativeBubbleMaskInstanceLiteReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealSegmentMaskBlocks=\(koharuNativeBubbleMaskInstanceLiteReport?.needsRealSegmentMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealTextBoxesBlocks=\(koharuNativeBubbleMaskInstanceLiteReport?.needsRealTextBoxesBlocks.map(String.init).joined(separator: ",") ?? "nil")
@@ -5939,8 +6501,10 @@ struct MangaOverlayProbeService: Sendable {
         nativeSegmentMaskRefinementLiteVerdict=\(koharuNativeSegmentMaskRefinementLiteReport?.candidateVerdictBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeSegmentMaskRefinementLitePixels=\(koharuNativeSegmentMaskRefinementLiteReport?.pixelEvidenceBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeSegmentMaskRefinementLiteTextBoxClamp=\(koharuNativeSegmentMaskRefinementLiteReport?.textboxClampBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeSegmentMaskRefinementLiteTextBoxLink=\(koharuNativeSegmentMaskRefinementLiteReport?.textBoxSegmentLinkBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") acceptedTextBox=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.segmentFromAcceptedTextBoxCount) } ?? "nil") rejectedTextBox=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.segmentFromRejectedTextBoxCount) } ?? "nil") fallbackBBox=\(koharuNativeSegmentMaskRefinementLiteReport.map { String($0.segmentFromFallbackBBoxCount) } ?? "nil")
         nativeSegmentMaskRefinementLiteBubbleClamp=\(koharuNativeSegmentMaskRefinementLiteReport?.bubbleClampBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeSegmentMaskRefinementLiteContainment=\(koharuNativeSegmentMaskRefinementLiteReport?.maskContainmentBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeSegmentMaskRefinementLiteMajorityAgreement=\(koharuNativeSegmentMaskRefinementLiteReport?.maskMajorityAgreementBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeSegmentMaskRefinementLiteBottleneck=\(koharuNativeSegmentMaskRefinementLiteReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeSegmentMaskRefinementLiteNextAction=\(koharuNativeSegmentMaskRefinementLiteReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         needsRealSegmentMaskBlocks=\(koharuNativeSegmentMaskRefinementLiteReport?.needsRealSegmentMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealTextBoxesBlocks=\(koharuNativeSegmentMaskRefinementLiteReport?.needsRealTextBoxesBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealBubbleMaskBlocks=\(koharuNativeSegmentMaskRefinementLiteReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil")
@@ -5949,6 +6513,7 @@ struct MangaOverlayProbeService: Sendable {
         koharuNativeArtifactBundleLiteReport: enabled=\(koharuNativeArtifactBundleLiteReport.map { String($0.enabled) } ?? "nil") bundles=\(koharuNativeArtifactBundleLiteReport.map { String($0.bundleLedgerCount) } ?? "nil") edges=\(koharuNativeArtifactBundleLiteReport.map { String($0.consistencyEdgeCount) } ?? "nil") workItems=\(koharuNativeArtifactBundleLiteReport.map { String($0.workItemCount) } ?? "nil") gates=\(koharuNativeArtifactBundleLiteReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeArtifactBundleLiteReport?.bundleLiteVerdict ?? "nil") nativeBundleLite=\(koharuNativeArtifactBundleLiteReport.map { String($0.nativeBundleLite) } ?? "nil") proxyTextBoxes=\(koharuNativeArtifactBundleLiteReport.map { String($0.proxyNotRealKoharuTextBoxes) } ?? "nil") proxyBubbleMask=\(koharuNativeArtifactBundleLiteReport.map { String($0.proxyNotRealKoharuBubbleMask) } ?? "nil") proxySegmentMask=\(koharuNativeArtifactBundleLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil") groundTruthUsedForDecision=\(koharuNativeArtifactBundleLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil") wouldChangeMainFlow=\(koharuNativeArtifactBundleLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil")
         nativeArtifactBundleLiteComponentReadiness=\(koharuNativeArtifactBundleLiteReport?.componentReadinessBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeArtifactBundleLiteConsistency=\(koharuNativeArtifactBundleLiteReport?.artifactConsistencyBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativeArtifactBundleLiteTextBoxSegmentLink=\(koharuNativeArtifactBundleLiteReport?.textBoxSegmentLinkBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") reviewBlocks=\(koharuNativeArtifactBundleLiteReport?.textBoxSegmentLinkageReviewBlocks.map(String.init).joined(separator: ",") ?? "nil")
         nativeArtifactBundleLiteBlockingArtifact=\(koharuNativeArtifactBundleLiteReport?.primaryBlockingArtifactBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeArtifactBundleLiteNextAction=\(koharuNativeArtifactBundleLiteReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativeArtifactBundleLiteReadyForFullProbe=\(koharuNativeArtifactBundleLiteReport?.readyForFullProbeReviewBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealTextBoxes=\(koharuNativeArtifactBundleLiteReport?.needsRealTextBoxesBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealBubbleMask=\(koharuNativeArtifactBundleLiteReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealSegmentMask=\(koharuNativeArtifactBundleLiteReport?.needsRealSegmentMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") modelFloor=\(koharuNativeArtifactBundleLiteReport?.modelFloorBlockedBlocks.map(String.init).joined(separator: ",") ?? "nil") renderLocked=\(koharuNativeArtifactBundleLiteReport?.renderLockedBlocks.map(String.init).joined(separator: ",") ?? "nil")
@@ -5960,22 +6525,30 @@ struct MangaOverlayProbeService: Sendable {
         nativePromotionEligibility=\(koharuNativePromotionGateLiteReport?.promotionEligibilityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativePromotionBlockingArtifact=\(koharuNativePromotionGateLiteReport?.primaryBlockingArtifactBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativePromotionBottleneck=\(koharuNativePromotionGateLiteReport?.probeBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        nativePromotionTextBoxSegmentLink=\(koharuNativePromotionGateLiteReport?.textBoxSegmentLinkBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") blocked=\(koharuNativePromotionGateLiteReport?.textBoxSegmentLinkageBlockedBlocks.map(String.init).joined(separator: ",") ?? "nil")
         nativePromotionNextAction=\(koharuNativePromotionGateLiteReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         nativePromotionShadowReviewEligible=\(koharuNativePromotionGateLiteReport?.shadowReviewEligibleBlocks.map(String.init).joined(separator: ",") ?? "nil") stopLocalTuning=\(koharuNativePromotionGateLiteReport?.stopLocalTuningBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealTextBoxes=\(koharuNativePromotionGateLiteReport?.needsRealTextBoxesBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealBubbleMask=\(koharuNativePromotionGateLiteReport?.needsRealBubbleMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") needsRealSegmentMask=\(koharuNativePromotionGateLiteReport?.needsRealSegmentMaskBlocks.map(String.init).joined(separator: ",") ?? "nil") modelFloor=\(koharuNativePromotionGateLiteReport?.modelFloorBlockedBlocks.map(String.init).joined(separator: ",") ?? "nil") renderLocked=\(koharuNativePromotionGateLiteReport?.renderLockedBlocks.map(String.init).joined(separator: ",") ?? "nil")
         \(nativePromotionStageGateSummary.isEmpty ? "nativePromotionStageGate: nil" : nativePromotionStageGateSummary)
         \(nativePromotionBlockSummary.isEmpty ? "nativePromotionBlockLedger: nil" : nativePromotionBlockSummary)
         \(nativePromotionPreviewSummary.isEmpty ? "nativeCandidateExportPreview: nil" : nativePromotionPreviewSummary)
         \(nativePromotionWorkItemSummary.isEmpty ? "nativePromotionWorkItem: nil" : nativePromotionWorkItemSummary)
-        koharuNativeShadowArtifactExportLiteReport: enabled=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.enabled) } ?? "nil") files=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.exportedFileCount) } ?? "nil") textBoxes=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.textBoxRecordCount) } ?? "nil") bubbles=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.bubbleRecordCount) } ?? "nil") segmentMasks=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.segmentMaskRecordCount) } ?? "nil") bundles=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.bundleRecordCount) } ?? "nil") blocks=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.blockLedgerCount) } ?? "nil") gates=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuNativeShadowArtifactExportLiteReport?.exportVerdict ?? "nil") output=\(koharuNativeShadowArtifactExportLiteReport?.relativeOutputDirectory ?? "nil") shadowOnly=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.shadowOnly) } ?? "nil") forbidden=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.forbiddenAsActiveArtifact) } ?? "nil") readyForActive=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.readyForActiveArtifact) } ?? "nil") activeWritten=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.activeArtifactsWritten) } ?? "nil") wouldCreateActiveArtifact=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.wouldCreateActiveArtifact) } ?? "nil") groundTruthUsedForDecision=\(koharuNativeShadowArtifactExportLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil")
-        nativeShadowArtifactFieldCompleteness=\(koharuNativeShadowArtifactExportLiteReport?.fieldCompletenessBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
-        nativeShadowArtifactCoordinateValidation=\(koharuNativeShadowArtifactExportLiteReport?.coordinateValidationBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
-        nativeShadowArtifactRecordSource=\(koharuNativeShadowArtifactExportLiteReport?.recordSourceBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
-        nativeShadowArtifactBlockingArtifact=\(koharuNativeShadowArtifactExportLiteReport?.primaryBlockingArtifactBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
-        nativeShadowArtifactNextAction=\(koharuNativeShadowArtifactExportLiteReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
-        externalArtifactReadinessAfterNativeShadowExport=\(externalArtifactReadinessReport?.readinessVerdict ?? "nil")
-        \(nativeShadowArtifactFileSummary.isEmpty ? "nativeShadowArtifactFile: nil" : nativeShadowArtifactFileSummary)
-        \(nativeShadowArtifactBlockSummary.isEmpty ? "nativeShadowArtifactExportBlockLedger: nil" : nativeShadowArtifactBlockSummary)
-        \(nativeShadowArtifactGateSummary.isEmpty ? "nativeShadowArtifactGate: nil" : nativeShadowArtifactGateSummary)
+        koharuNativeArtifactContractDryRunReport: enabled=\(koharuNativeArtifactContractDryRunReport.map { String($0.enabled) } ?? "nil") requiredFiles=\(koharuNativeArtifactContractDryRunReport.map { String($0.requiredFileCount) } ?? "nil") previews=\(koharuNativeArtifactContractDryRunReport.map { String($0.dryRunPreviewCount) } ?? "nil") gates=\(koharuNativeArtifactContractDryRunReport.map { String($0.contractGateCount) } ?? "nil") verdict=\(koharuNativeArtifactContractDryRunReport?.contractDryRunVerdict ?? "nil") appSideIdentity=\(koharuNativeArtifactContractDryRunReport?.appSideArtifactIdentityVerdict ?? "nil") appSideFilesPresent=\(koharuNativeArtifactContractDryRunReport.map { String($0.appSideArtifactIdentityFilesPresent) } ?? "nil") appSideHashesPresent=\(koharuNativeArtifactContractDryRunReport.map { String($0.appSideArtifactIdentityHashesPresent) } ?? "nil") sourceImageSHA256Declared=\(koharuArtifactIdentityReconciliationReport?.sourceImageSHA256Declared ?? "nil") sourceImageSHA256Expected=\(koharuArtifactIdentityReconciliationReport?.sourceImageSHA256Expected ?? "nil") sourceImageSHA256Matches=\(koharuArtifactIdentityReconciliationReport.map { String($0.sourceImageSHA256Matches) } ?? "nil") dryRunOnly=\(koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil") activeExportAllowed=\(koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil") groundTruthUsedForDecision=\(koharuNativeArtifactContractDryRunReport.map { String($0.groundTruthUsedForDecision) } ?? "nil") wouldChangeMainFlow=\(koharuNativeArtifactContractDryRunReport.map { String($0.wouldChangeMainFlow) } ?? "nil")
+        artifactContractDryRunReadiness=\(koharuNativeArtifactContractDryRunReport?.readinessVerdict ?? "nil") activeDirectory=\(koharuNativeArtifactContractDryRunReport.map { String($0.activeArtifactsDirectory) } ?? "nil") shadowOCRAllowed=\(koharuNativeArtifactContractDryRunReport.map { String($0.externalTextBoxesShadowOCRAllowed) } ?? "nil") sourceImage=\(koharuNativeArtifactContractDryRunReport?.sourceImage ?? "nil") coordinateSpace=\(koharuNativeArtifactContractDryRunReport?.coordinateSpace ?? "nil")
+        artifactContractDryRunRequiredFileStatus=\(koharuNativeArtifactContractDryRunReport?.requiredFileStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        artifactContractDryRunTargetArtifacts=\(koharuNativeArtifactContractDryRunReport?.targetArtifactBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        artifactContractDryRunMissingFields=\(koharuNativeArtifactContractDryRunReport?.missingRequiredFieldBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        artifactContractDryRunForbiddenSources=\(koharuNativeArtifactContractDryRunReport?.forbiddenSourceBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        artifactContractDryRunNextAction=\(koharuNativeArtifactContractDryRunReport?.nextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        artifactContractDryRunValidatorCommands=\(koharuNativeArtifactContractDryRunReport?.validatorCommands.joined(separator: " | ") ?? "nil")
+        artifactContractDryRunForbiddenActiveSources=\(koharuNativeArtifactContractDryRunReport?.forbiddenActiveSources.joined(separator: ",") ?? "nil")
+        \(nativeArtifactContractDryRunFileSummary.isEmpty ? "nativeArtifactContractDryRunRequiredFile: nil" : nativeArtifactContractDryRunFileSummary)
+        \(nativeArtifactContractDryRunPreviewSummary.isEmpty ? "nativeArtifactContractDryRunPreview: nil" : nativeArtifactContractDryRunPreviewSummary)
+        \(nativeArtifactContractDryRunGateSummary.isEmpty ? "nativeArtifactContractDryRunGate: nil" : nativeArtifactContractDryRunGateSummary)
+        koharuArtifactIdentityReconciliationReport: enabled=\(koharuArtifactIdentityReconciliationReport.map { String($0.enabled) } ?? "nil") fileRows=\(koharuArtifactIdentityReconciliationReport.map { String($0.fileRowCount) } ?? "nil") gates=\(koharuArtifactIdentityReconciliationReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuArtifactIdentityReconciliationReport?.identityReconciliationVerdict ?? "nil") appReceipt=\(koharuArtifactIdentityReconciliationReport?.appReceiptVerdict ?? "nil") contractVerdict=\(koharuArtifactIdentityReconciliationReport?.contractDryRunVerdict ?? "nil") sourceImageSHA256Declared=\(koharuArtifactIdentityReconciliationReport?.sourceImageSHA256Declared ?? "nil") sourceImageSHA256Expected=\(koharuArtifactIdentityReconciliationReport?.sourceImageSHA256Expected ?? "nil") sourceImageSHA256Matches=\(koharuArtifactIdentityReconciliationReport.map { String($0.sourceImageSHA256Matches) } ?? "nil") readyForCIManifestComparison=\(koharuArtifactIdentityReconciliationReport.map { String($0.readyForCIManifestComparison) } ?? "nil") manualCIComparisonRequired=\(koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil") dryRunOnly=\(koharuArtifactIdentityReconciliationReport.map { String($0.dryRunOnly) } ?? "nil") activeExportAllowed=\(koharuArtifactIdentityReconciliationReport.map { String($0.activeExportAllowed) } ?? "nil") groundTruthUsedForDecision=\(koharuArtifactIdentityReconciliationReport.map { String($0.groundTruthUsedForDecision) } ?? "nil") wouldChangeMainFlow=\(koharuArtifactIdentityReconciliationReport.map { String($0.wouldChangeMainFlow) } ?? "nil")
+        artifactIdentityReconciliationStatus=\(koharuArtifactIdentityReconciliationReport?.comparisonStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
+        artifactIdentityReconciliationReadyFiles=\(koharuArtifactIdentityReconciliationReport?.readyFileKinds.joined(separator: ",") ?? "nil") missing=\(koharuArtifactIdentityReconciliationReport?.missingFileKinds.joined(separator: ",") ?? "nil") hashMissing=\(koharuArtifactIdentityReconciliationReport?.hashMissingFileKinds.joined(separator: ",") ?? "nil")
+        \(artifactIdentityReconciliationFileSummary.isEmpty ? "artifactIdentityReconciliationFile: nil" : artifactIdentityReconciliationFileSummary)
+        \(artifactIdentityReconciliationGateSummary.isEmpty ? "artifactIdentityReconciliationGate: nil" : artifactIdentityReconciliationGateSummary)
         koharuWorkOrderRouterReport: enabled=\(koharuWorkOrderRouterReport.map { String($0.enabled) } ?? "nil") workOrders=\(koharuWorkOrderRouterReport.map { String($0.workOrderCount) } ?? "nil") blockRoutes=\(koharuWorkOrderRouterReport.map { String($0.blockRouteCount) } ?? "nil") gates=\(koharuWorkOrderRouterReport.map { String($0.gateCount) } ?? "nil") verdict=\(koharuWorkOrderRouterReport?.routerVerdict ?? "nil")
         workOrderStatus=\(koharuWorkOrderRouterReport?.workOrderStatusBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         workOrderPriority=\(koharuWorkOrderRouterReport?.workOrderPriorityBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -6002,7 +6575,7 @@ struct MangaOverlayProbeService: Sendable {
         batchFormatFailure=\(translationModelFloorComparisonReport.map { String($0.batchFormatFailure) } ?? "nil")
         \(translationFloorCleanCaseSummary)
         externalArtifactReadiness: activeDirectory=\(externalArtifactReadinessReport.map { String($0.activeArtifactsDirectory) } ?? "nil") contractExampleOnly=\(externalArtifactReadinessReport.map { String($0.contractExampleOnly) } ?? "nil") shadowOCRAllowed=\(externalArtifactReadinessReport.map { String($0.externalTextBoxesShadowOCRAllowed) } ?? "nil") manifestFound=\(externalArtifactReadinessReport.map { String($0.manifestFound) } ?? "nil") textBoxesFound=\(externalArtifactReadinessReport.map { String($0.textBoxesFound) } ?? "nil") bubbleMaskFound=\(externalArtifactReadinessReport.map { String($0.bubbleMaskFound) } ?? "nil") segmentMaskFound=\(externalArtifactReadinessReport.map { String($0.segmentMaskFound) } ?? "nil") verdict=\(externalArtifactReadinessReport?.readinessVerdict ?? "nil") nextAction=\(externalArtifactReadinessReport?.nextAction ?? "nil") missing=\(externalArtifactReadinessReport?.missingArtifacts.joined(separator: ",") ?? "nil")
-        externalTextBoxShadowOCR: enabled=\(externalTextBoxShadowOCRReport.map { String($0.enabled) } ?? "nil") executed=\(externalTextBoxShadowOCRReport.map { String($0.executed) } ?? "nil") gateVerdict=\(externalTextBoxShadowOCRReport?.gateVerdict ?? "nil") candidates=\(externalTextBoxShadowOCRReport.map { String($0.candidateCount) } ?? "nil") ocrExecuted=\(externalTextBoxShadowOCRReport.map { String($0.ocrExecutedCount) } ?? "nil") betterThanControl=\(externalTextBoxShadowOCRReport.map { String($0.betterThanControlCount) } ?? "nil") skipped=\(externalTextBoxShadowOCRReport?.skippedBlocks.map(String.init).joined(separator: ",") ?? "nil")
+        externalTextBoxShadowOCR: enabled=\(externalTextBoxShadowOCRReport.map { String($0.enabled) } ?? "nil") executed=\(externalTextBoxShadowOCRReport.map { String($0.executed) } ?? "nil") gateVerdict=\(externalTextBoxShadowOCRReport?.gateVerdict ?? "nil") candidates=\(externalTextBoxShadowOCRReport.map { String($0.candidateCount) } ?? "nil") ocrExecuted=\(externalTextBoxShadowOCRReport.map { String($0.ocrExecutedCount) } ?? "nil") ocrSucceeded=\(externalTextBoxShadowOCRReport.map { String($0.ocrSucceededCount) } ?? "nil") betterThanControl=\(externalTextBoxShadowOCRReport.map { String($0.betterThanControlCount) } ?? "nil") skipped=\(externalTextBoxShadowOCRReport?.skippedBlocks.map(String.init).joined(separator: ",") ?? "nil") orientationVerdict=\(externalTextBoxShadowOCRReport?.orientationReadinessVerdict ?? "nil") orientation=\(externalTextBoxShadowOCRReport?.orientationCategoryBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") sourceDirection=\(externalTextBoxShadowOCRReport?.sourceDirectionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") linePolygonBlocks=\(externalTextBoxShadowOCRReport?.linePolygonCandidateBlocks.map(String.init).joined(separator: ",") ?? "nil") rotationBlocks=\(externalTextBoxShadowOCRReport?.rotationCandidateBlocks.map(String.init).joined(separator: ",") ?? "nil") verticalBlocks=\(externalTextBoxShadowOCRReport?.verticalCandidateBlocks.map(String.init).joined(separator: ",") ?? "nil") orientationNeeded=\(externalTextBoxShadowOCRReport?.orientationShadowPathNeededBlocks.map(String.init).joined(separator: ",") ?? "nil") orientationExecuted=\(externalTextBoxShadowOCRReport?.orientationShadowPathExecutedBlocks.map(String.init).joined(separator: ",") ?? "nil") orientationPartial=\(externalTextBoxShadowOCRReport?.orientationShadowPathPartialBlocks.map(String.init).joined(separator: ",") ?? "nil") orientationNotExecuted=\(externalTextBoxShadowOCRReport?.orientationShadowPathNotExecutedBlocks.map(String.init).joined(separator: ",") ?? "nil") orientationUnsupported=\(externalTextBoxShadowOCRReport?.orientationUnsupportedBlocks.map(String.init).joined(separator: ",") ?? "nil") orientationUnsupportedReasons=\(externalTextBoxShadowOCRReport?.orientationUnsupportedReasonBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         internalStructureBottleneckReport: evaluated=\(internalStructureBottleneckReport.map { String($0.evaluatedBlockCount) } ?? "nil") primary=\(internalStructureBottleneckReport?.primaryBottleneckBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") recommended=\(internalStructureBottleneckReport?.recommendedActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil") duplicateOrFragment=\(internalStructureBottleneckReport?.duplicateOrFragmentBlocks.map(String.init).joined(separator: ",") ?? "nil")
         routingDrivenTranslationComparisonReport: enabled=\(routingDrivenTranslationComparisonReport.map { String($0.enabled) } ?? "nil") evaluated=\(routingDrivenTranslationComparisonReport.map { String($0.evaluatedCaseCount) } ?? "nil") targets=\(routingDrivenTranslationComparisonReport?.targetBlockIndexes.map(String.init).joined(separator: ",") ?? "nil") controlPassed=\(routingDrivenTranslationComparisonReport.map { String($0.controlPassedCount) } ?? "nil") variantPassed=\(routingDrivenTranslationComparisonReport.map { String($0.variantPassedCount) } ?? "nil") improvements=\(routingDrivenTranslationComparisonReport?.improvementBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         ocrCharacterDamageAuditReport: enabled=\(ocrCharacterDamageAuditReport.map { String($0.enabled) } ?? "nil") evaluated=\(ocrCharacterDamageAuditReport.map { String($0.evaluatedBlockCount) } ?? "nil") targets=\(ocrCharacterDamageAuditReport?.targetBlockIndexes.map(String.init).joined(separator: ",") ?? "nil") lineBreakRisk=\(ocrCharacterDamageAuditReport?.lineBreakRiskBlocks.map(String.init).joined(separator: ",") ?? "nil") cropBlocked=\(ocrCharacterDamageAuditReport?.cropBlockedBlocks.map(String.init).joined(separator: ",") ?? "nil") actions=\(ocrCharacterDamageAuditReport?.recommendedActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
@@ -6019,6 +6592,11 @@ struct MangaOverlayProbeService: Sendable {
         firstBlockingArtifact=\(koharuArtifactConvergenceReport?.firstBlockingArtifactBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         primaryNextAction=\(koharuArtifactConvergenceReport?.primaryNextActionBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",") ?? "nil")
         closedWorkItems=\(koharuArtifactConvergenceReport?.closedWorkItems.joined(separator: ",") ?? "nil") openWorkItems=\(koharuArtifactConvergenceReport?.openWorkItems.joined(separator: ",") ?? "nil")
+        convergenceBundleTextBoxSegmentLinkage=status:\(convergenceBundleLinkageWorkItem?.status ?? "nil"):blocks=\(convergenceBundleLinkageWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergenceBundleLinkageWorkItem?.nextAction ?? "nil")
+        convergencePromotionTextBoxSegmentLinkage=status:\(convergencePromotionLinkageWorkItem?.status ?? "nil"):blocks=\(convergencePromotionLinkageWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergencePromotionLinkageWorkItem?.nextAction ?? "nil")
+        convergenceExternalShadowOCRCoverage=workItemStatus:\(convergenceExternalShadowCoverageWorkItem?.status ?? "nil"):gateStatus:\(convergenceExternalShadowCoverageGate?.status ?? "nil"):blocks=\(convergenceExternalShadowCoverageWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):gateBlocks=\(convergenceExternalShadowCoverageGate?.affectedBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergenceExternalShadowCoverageWorkItem?.nextAction ?? "nil")
+        convergenceExternalTextBoxOrientation=workItemStatus:\(convergenceExternalOrientationWorkItem?.status ?? "nil"):gateStatus:\(convergenceExternalOrientationGate?.status ?? "nil"):blocks=\(convergenceExternalOrientationWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):gateBlocks=\(convergenceExternalOrientationGate?.affectedBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergenceExternalOrientationWorkItem?.nextAction ?? "nil")
+        convergenceArtifactIdentityReconciliation=status:\(convergenceArtifactIdentityReconciliationWorkItem?.status ?? "nil"):blocks=\(convergenceArtifactIdentityReconciliationWorkItem?.targetBlocks.map(String.init).joined(separator: ",") ?? "nil"):next=\(convergenceArtifactIdentityReconciliationWorkItem?.nextAction ?? "nil")
 
         """
         let cleanContent = (externalSummary + content)
@@ -6146,7 +6724,8 @@ struct MangaOverlayProbeService: Sendable {
         scale: CGFloat,
         customWords: [String],
         source: String = "wholePageOCR",
-        sliceIndex: Int? = nil
+        sliceIndex: Int? = nil,
+        recognitionLanguages: [String]? = nil
     ) throws -> [MangaOverlayOCRCandidate] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
@@ -6156,9 +6735,10 @@ struct MangaOverlayProbeService: Sendable {
             request.customWords = customWords
         }
         let supportedLanguages = (try? request.supportedRecognitionLanguages()) ?? []
-        let englishLanguages = ["en-US", "en"].filter { supportedLanguages.contains($0) }
-        if !englishLanguages.isEmpty {
-            request.recognitionLanguages = englishLanguages
+        let requestedLanguages = recognitionLanguages ?? ["en-US", "en"]
+        let availableRequestedLanguages = requestedLanguages.filter { supportedLanguages.contains($0) }
+        if !availableRequestedLanguages.isEmpty {
+            request.recognitionLanguages = availableRequestedLanguages
         }
         request.minimumTextHeight = 0.006
 

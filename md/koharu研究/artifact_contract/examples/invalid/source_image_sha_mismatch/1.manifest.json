@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "aitrans.koharu_artifact_contract.v1",
+  "sourceImage": "test/1.png",
+  "sourceImageSHA256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "coordinateSpace": "originalImageTopLeftPixels",
+  "contractExampleOnly": true,
+  "generatedBy": "manual-invalid-fixture",
+  "textBoxesPath": "1.textboxes.json",
+  "bubbleMaskPath": "1.bubbles.json",
+  "segmentMaskPath": "1.segment_mask.json",
+  "notes": ["invalid fixture: sourceImageSHA256 mismatch"]
+}

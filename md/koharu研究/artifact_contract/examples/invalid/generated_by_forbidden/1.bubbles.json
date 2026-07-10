@@ -1,0 +1,12 @@
+{
+  "bubbleInstances": [
+    {
+      "id": "generated-by-forbidden-bubble-1",
+      "bbox": [96, 144, 182, 112],
+      "confidence": 0.71,
+      "maskValue": 1,
+      "pixelCount": 12840,
+      "notes": ["generatedBy source policy fixture"]
+    }
+  ]
+}

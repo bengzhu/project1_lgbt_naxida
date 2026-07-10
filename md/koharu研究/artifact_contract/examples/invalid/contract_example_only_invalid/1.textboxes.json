@@ -1,0 +1,11 @@
+{
+  "textBoxes": [
+    {
+      "id": "contract-example-only-invalid-textbox",
+      "bbox": [278, 394, 146, 58],
+      "confidence": 0.76,
+      "detector": "koharu-real-detector-export",
+      "sourceDirection": "horizontal"
+    }
+  ]
+}

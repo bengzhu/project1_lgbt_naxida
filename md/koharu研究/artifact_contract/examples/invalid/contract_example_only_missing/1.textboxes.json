@@ -1,0 +1,11 @@
+{
+  "textBoxes": [
+    {
+      "id": "contract-example-only-missing-textbox",
+      "bbox": [278, 394, 146, 58],
+      "confidence": 0.76,
+      "detector": "manual-invalid-fixture",
+      "sourceDirection": "horizontal"
+    }
+  ]
+}

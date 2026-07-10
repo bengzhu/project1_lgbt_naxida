@@ -176,6 +176,59 @@ struct SpeechRecognitionCapability: Identifiable, Equatable, Sendable {
     var supportsOnDeviceRecognition: Bool
 }
 
+enum SpeechRecognitionRunMode: String, Equatable, Codable, Sendable {
+    case audioFile
+    case liveMicrophone
+
+    var displayName: String {
+        switch self {
+        case .audioFile: "音频文件"
+        case .liveMicrophone: "实时麦克风"
+        }
+    }
+}
+
+struct SpeechRecognitionRunSummary: Equatable, Codable, Sendable {
+    var mode: SpeechRecognitionRunMode
+    var inputName: String
+    var localeIdentifier: String
+    var requiresOnDeviceRecognition: Bool
+    var supportsOnDeviceRecognition: Bool
+    var startedAt: Date
+    var completedAt: Date?
+    var transcriptPreview: String
+    var wordCount: Int
+    var segmentCount: Int
+    var averageConfidence: Double?
+    var isFinal: Bool
+    var failureMessage: String?
+
+    static let empty = SpeechRecognitionRunSummary(
+        mode: .audioFile,
+        inputName: "等待输入",
+        localeIdentifier: "en-US",
+        requiresOnDeviceRecognition: true,
+        supportsOnDeviceRecognition: false,
+        startedAt: Date(timeIntervalSince1970: 0),
+        completedAt: nil,
+        transcriptPreview: "",
+        wordCount: 0,
+        segmentCount: 0,
+        averageConfidence: nil,
+        isFinal: false,
+        failureMessage: nil
+    )
+
+    var hasContent: Bool {
+        inputName != "等待输入" || !transcriptPreview.isEmpty || failureMessage != nil
+    }
+
+    var elapsedSeconds: TimeInterval {
+        let end = completedAt ?? Date()
+        return max(0, end.timeIntervalSince(startedAt))
+    }
+}
+
 struct ProSubscriptionPlan: Equatable, Sendable {
     var productID: String
     var title: String
@@ -2463,6 +2516,14 @@ struct MangaKoharuNativeTextBoxDetectorLiteSignal: Equatable, Codable, Sendable 
     var groundTruthUsedForEvaluationOnly: Bool
 }
 
+struct MangaKoharuNativeTextBoxDetectorLiteBlockRelation: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var overlapRatio: Double
+    var centerContained: Bool
+    var sameBubble: Bool
+    var relationReason: String
+}
+
 struct MangaKoharuNativeTextBoxDetectorLiteCandidate: Equatable, Codable, Sendable {
     var candidateID: String
     var source: String
@@ -2482,6 +2543,7 @@ struct MangaKoharuNativeTextBoxDetectorLiteCandidate: Equatable, Codable, Sendab
     var shadowOCREligible: Bool
     var matchedBlockIndexes: [Int]
     var relatedCurrentBlockIndexes: [Int]
+    var relatedBlockRelations: [MangaKoharuNativeTextBoxDetectorLiteBlockRelation]
     var wouldChangeMainFlow: Bool
     var diagnosticOnly: Bool
     var groundTruthUsedForDecision: Bool
@@ -2504,6 +2566,11 @@ struct MangaKoharuNativeTextBoxDetectorLiteBlockLedger: Equatable, Codable, Send
     var bestCandidateID: String?
     var bestCandidateBBox: [Double]?
     var bestCandidateScore: Double?
+    var bestCandidateCoverageRatio: Double
+    var bestCandidateCenterContained: Bool
+    var bestCandidateSameBubble: Bool
+    var bestCandidateVerdict: String?
+    var bestCandidateShadowOCREligible: Bool
     var candidateCoverageVerdict: String
     var directionHint: String
     var bubbleAssignmentRisk: String
@@ -2575,6 +2642,7 @@ struct MangaKoharuNativeTextBoxDetectorLiteReport: Equatable, Codable, Sendable 
     var candidateSourceBreakdown: [String: Int]
     var directionHintBreakdown: [String: Int]
     var candidateVerdictBreakdown: [String: Int]
+    var blockRelationBreakdown: [String: Int]
     var rejectionReasonBreakdown: [String: Int]
     var primaryBottleneckBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
@@ -3032,10 +3100,17 @@ struct MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger: Equatable, Codable, S
     var seedRect: [Double]
     var currentSafeLayoutRect: [Double]?
     var instanceLiteSafeRect: [Double]?
+    var instanceLiteBlockScopedSafeRect: [Double]?
+    var instanceLiteSafeRectPolicy: String
     var distanceFieldSafeRectFromInstanceLite: [Double]?
     var distanceFieldSafeRectSource: String
     var currentRenderNonTransparentBounds: [Double]?
     var spriteContainedByInstanceLiteMask: Bool
+    var spriteBlockScopedSafeRectContainmentRatio: Double
+    var spriteContainedByBlockScopedSafeRect: Bool
+    var spriteContainmentPolicy: String
+    var sameInstanceRenderSpriteOverlapCount: Int
+    var spriteSiblingCollisionPolicy: String
     var siblingPartitionStatus: String
     var splitRisk: String
     var adjacencyRisk: String
@@ -3059,6 +3134,10 @@ struct MangaKoharuNativeBubbleMaskInstanceLiteSiblingLedger: Equatable, Codable,
     var currentBubbleID: Int?
     var currentSafeRectOverlapCount: Int
     var instanceLiteSafeRectOverlapCount: Int
+    var blockScopedSafeRectOverlapCount: Int
+    var renderSpriteOverlapCount: Int
+    var sameBubbleSafeRectPolicy: String
+    var sameBubbleSpriteCollisionPolicy: String
     var seamCandidateRelated: Bool
     var siblingPartitionStatus: String
     var needsRealBubbleMask: Bool
@@ -3127,7 +3206,10 @@ struct MangaKoharuNativeBubbleMaskInstanceLiteReport: Equatable, Codable, Sendab
     var splitRiskBreakdown: [String: Int]
     var siblingPartitionBreakdown: [String: Int]
     var safeRectComparisonBreakdown: [String: Int]
+    var safeRectPolicyBreakdown: [String: Int]
     var spriteContainmentBreakdown: [String: Int]
+    var spriteBlockScopedContainmentBreakdown: [String: Int]
+    var spriteSiblingCollisionBreakdown: [String: Int]
     var adjacencyRiskBreakdown: [String: Int]
     var primaryBottleneckBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
@@ -3173,6 +3255,18 @@ struct MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger: Equatable, Cod
     var maskFillRatio: Double
     var textboxCoverage: Double
     var bubbleCoverage: Double
+    var maskContainedByTextBoxRatio: Double
+    var maskContainedByBubbleRatio: Double
+    var maskMajorityInstanceLiteID: Int?
+    var maskMajorityBubbleID: Int?
+    var maskMajorityCoverage: Double
+    var maskMajorityAgreement: String
+    var sourceTextBoxCandidateVerdict: String?
+    var sourceTextBoxShadowOCREligible: Bool?
+    var sourceTextBoxBlockOverlapRatio: Double
+    var sourceTextBoxSameBubble: Bool
+    var sourceTextBoxAcceptedForSegmentMask: Bool
+    var sourceTextBoxLinkVerdict: String
     var existingGlyphOverlap: Double
     var segmentProxyAgreement: Double
     var candidateVerdict: String
@@ -3193,6 +3287,8 @@ struct MangaKoharuNativeSegmentMaskRefinementLiteBlockLedger: Equatable, Codable
     var failureCategory: String
     var blockPassed: Bool
     var selectedCandidateID: String?
+    var selectedSourceTextBoxCandidateID: String?
+    var selectedSourceTextBoxLinkVerdict: String
     var candidateCount: Int
     var maskBBox: [Double]?
     var rawPixelCount: Int
@@ -3201,6 +3297,12 @@ struct MangaKoharuNativeSegmentMaskRefinementLiteBlockLedger: Equatable, Codable
     var componentCount: Int
     var textboxCoverage: Double
     var bubbleCoverage: Double
+    var maskContainedByTextBoxRatio: Double
+    var maskContainedByBubbleRatio: Double
+    var maskMajorityInstanceLiteID: Int?
+    var maskMajorityBubbleID: Int?
+    var maskMajorityCoverage: Double
+    var maskMajorityAgreement: String
     var existingGlyphOverlap: Double
     var segmentProxyAgreement: Double
     var maskContainedByTextBox: Bool
@@ -3279,6 +3381,11 @@ struct MangaKoharuNativeSegmentMaskRefinementLiteReport: Equatable, Codable, Sen
     var bubbleClampBreakdown: [String: Int]
     var componentFilteringBreakdown: [String: Int]
     var maskContainmentBreakdown: [String: Int]
+    var maskMajorityAgreementBreakdown: [String: Int]
+    var textBoxSegmentLinkBreakdown: [String: Int]
+    var segmentFromAcceptedTextBoxCount: Int
+    var segmentFromRejectedTextBoxCount: Int
+    var segmentFromFallbackBBoxCount: Int
     var siblingMaskOverlapBreakdown: [String: Int]
     var primaryBottleneckBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
@@ -3343,6 +3450,9 @@ struct MangaKoharuNativeArtifactBundleLiteBlockLedger: Equatable, Codable, Senda
     var selectedTextBoxLite: MangaKoharuNativeArtifactBundleLiteComponent
     var selectedBubbleInstanceLite: MangaKoharuNativeArtifactBundleLiteComponent
     var selectedSegmentMaskLite: MangaKoharuNativeArtifactBundleLiteComponent
+    var selectedTextBoxSegmentLinkVerdict: String
+    var textBoxSegmentLinkageStatus: String
+    var textBoxSegmentLinkageRisk: Bool
     var ocrEvidence: [MangaKoharuNativeArtifactBundleLiteSignal]
     var translationFailureRoute: String
     var renderFitEvidence: [MangaKoharuNativeArtifactBundleLiteSignal]
@@ -3418,8 +3528,10 @@ struct MangaKoharuNativeArtifactBundleLiteReport: Equatable, Codable, Sendable {
     var ocrRouteBreakdown: [String: Int]
     var translationRouteBreakdown: [String: Int]
     var renderRouteBreakdown: [String: Int]
+    var textBoxSegmentLinkBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
     var readyForFullProbeReviewBlocks: [Int]
+    var textBoxSegmentLinkageReviewBlocks: [Int]
     var needsRealTextBoxesBlocks: [Int]
     var needsRealBubbleMaskBlocks: [Int]
     var needsRealSegmentMaskBlocks: [Int]
@@ -3469,6 +3581,8 @@ struct MangaKoharuNativePromotionBlockLedger: Equatable, Codable, Sendable {
     var textBoxesPromotionStatus: String
     var bubbleMaskPromotionStatus: String
     var segmentMaskPromotionStatus: String
+    var textBoxSegmentLinkVerdict: String
+    var textBoxSegmentLinkagePromotionStatus: String
     var ocrTextPromotionStatus: String
     var translationPromotionStatus: String
     var renderPromotionStatus: String
@@ -3558,8 +3672,10 @@ struct MangaKoharuNativePromotionGateLiteReport: Equatable, Codable, Sendable {
     var promotionEligibilityBreakdown: [String: Int]
     var primaryBlockingArtifactBreakdown: [String: Int]
     var probeBottleneckBreakdown: [String: Int]
+    var textBoxSegmentLinkBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
     var shadowReviewEligibleBlocks: [Int]
+    var textBoxSegmentLinkageBlockedBlocks: [Int]
     var stopLocalTuningBlocks: [Int]
     var needsRealTextBoxesBlocks: [Int]
     var needsRealBubbleMaskBlocks: [Int]
@@ -3575,7 +3691,7 @@ struct MangaKoharuNativePromotionGateLiteReport: Equatable, Codable, Sendable {
     var notes: [String]
 }
 
-struct MangaKoharuNativeShadowArtifactExportLiteSignal: Equatable, Codable, Sendable {
+struct MangaKoharuNativeArtifactContractDryRunSignal: Equatable, Codable, Sendable {
     var name: String
     var value: String
     var sourceReport: String
@@ -3583,218 +3699,174 @@ struct MangaKoharuNativeShadowArtifactExportLiteSignal: Equatable, Codable, Send
     var groundTruthUsedForEvaluationOnly: Bool
 }
 
-struct MangaKoharuNativeShadowArtifactFileRecord: Equatable, Codable, Sendable {
-    var fileName: String
-    var relativePath: String
+struct MangaKoharuNativeArtifactContractDryRunFile: Equatable, Codable, Sendable {
+    var path: String
     var artifactKind: String
-    var exists: Bool
-    var nonEmpty: Bool
-    var byteCount: Int
-    var recordCount: Int
-    var shadowOnly: Bool
-    var forbiddenAsActiveArtifact: Bool
-    var readyForActiveArtifact: Bool
-    var wouldCreateActiveArtifact: Bool
-    var notes: [String]
-}
-
-struct MangaKoharuNativeShadowArtifactTextBoxRecord: Equatable, Codable, Sendable {
-    var blockIndex: Int
-    var textBoxID: String
-    var bbox: [Double]
-    var sourceReport: String
-    var sourceCandidateID: String
-    var sourceDirection: String
-    var confidence: Double
-    var fieldCompleteness: String
-    var coordinateValid: Bool
-    var promotionStatus: String
-    var exportEligibility: String
-    var shadowOnly: Bool
-    var contractExampleOnly: Bool
-    var forbiddenAsActiveArtifact: Bool
-    var readyForActiveArtifact: Bool
-    var wouldCreateActiveArtifact: Bool
-    var proxyNotRealKoharuTextBox: Bool
-    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
-    var evaluationSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
-}
-
-struct MangaKoharuNativeShadowArtifactBubbleRecord: Equatable, Codable, Sendable {
-    var bubbleID: Int?
-    var instanceLiteID: Int?
-    var bbox: [Double]
-    var sourceReport: String
-    var majorityBlockIndexes: [Int]
-    var maskValue: Int?
-    var pixelCount: Int
-    var safeRectSummary: String
-    var assignmentStatus: String
-    var splitRisk: String
-    var shadowOnly: Bool
-    var contractExampleOnly: Bool
-    var forbiddenAsActiveArtifact: Bool
-    var readyForActiveArtifact: Bool
-    var wouldCreateActiveArtifact: Bool
-    var proxyNotRealKoharuBubbleMask: Bool
-    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
-    var evaluationSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
-}
-
-struct MangaKoharuNativeShadowArtifactSegmentMaskRecord: Equatable, Codable, Sendable {
-    var segmentMaskID: String
-    var blockIndex: Int?
-    var width: Int
-    var height: Int
-    var sourceReport: String
-    var candidateCount: Int
-    var glyphPixelCount: Int
-    var connectedComponentCount: Int
-    var blockSummaries: [String]
-    var textboxConstrained: Bool
-    var bubbleConstrained: Bool
-    var shadowOnly: Bool
-    var contractExampleOnly: Bool
-    var forbiddenAsActiveArtifact: Bool
-    var readyForActiveArtifact: Bool
-    var wouldCreateActiveArtifact: Bool
-    var proxyNotRealKoharuSegmentMask: Bool
-    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
-    var evaluationSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
-}
-
-struct MangaKoharuNativeShadowArtifactBundleRecord: Equatable, Codable, Sendable {
-    var blockIndex: Int
-    var textBoxID: String?
-    var bubbleID: Int?
-    var segmentMaskCandidateID: String?
-    var finalTextUsedForTranslation: String
-    var translationCandidate: String
-    var failureCategory: String
-    var blockPassed: Bool
-    var renderSafeRect: [Double]?
-    var renderFitStatus: String
-    var promotionEligibility: String
-    var primaryBlockingArtifact: String
+    var required: Bool
+    var activeFileFound: Bool
+    var fileSizeBytes: Int?
+    var sha256: String?
+    var identityStatus: String
+    var dryRunPreviewCount: Int
+    var status: String
+    var requiredFields: [String]
+    var missingRequiredFields: [String]
+    var forbiddenSourceCount: Int
     var nextAction: String
-    var shadowOnly: Bool
-    var contractExampleOnly: Bool
-    var forbiddenAsActiveArtifact: Bool
-    var readyForActiveArtifact: Bool
+    var decisionSignals: [MangaKoharuNativeArtifactContractDryRunSignal]
+    var groundTruthUsedForDecision: Bool
     var wouldCreateActiveArtifact: Bool
-    var wouldChangeMainFlow: Bool
-    var groundTruthUsedForDecision: Bool
-    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
-    var evaluationSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
 }
 
-struct MangaKoharuNativeShadowArtifactBlockLedger: Equatable, Codable, Sendable {
+struct MangaKoharuNativeArtifactContractDryRunPreview: Equatable, Codable, Sendable {
+    var previewID: String
     var blockIndex: Int
-    var bubbleID: Int?
-    var blockPassed: Bool
-    var failureCategory: String
-    var finalTextUsedForTranslation: String
-    var textBoxExportRecordID: String?
-    var bubbleExportRecordID: String?
-    var segmentMaskExportRecordID: String?
-    var bundleExportRecordID: String
-    var textBoxCoordinateStatus: String
-    var bubbleCoordinateStatus: String
-    var segmentMaskSummaryStatus: String
-    var fieldCompletenessStatus: String
-    var promotionGateStatusFromV146: String
-    var shadowExportEligibility: String
-    var primaryBlockingArtifact: String
-    var nextAction: String
-    var mustNotUseAsActiveArtifactReasons: [String]
-    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
-    var evaluationSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
+    var targetArtifactStage: String
+    var candidateSource: String
+    var sourceReport: String
+    var destinationPath: String
+    var bbox: [Double]?
+    var confidence: Double?
+    var requiredFields: [String]
+    var missingRequiredFields: [String]
+    var forbiddenSourceReasons: [String]
+    var canSatisfyContractDryRun: Bool
+    var activeExportAllowed: Bool
+    var reasonNotExported: String
+    var decisionSignals: [MangaKoharuNativeArtifactContractDryRunSignal]
     var groundTruthUsedForDecision: Bool
-    var wouldChangeMainFlow: Bool
-    var diagnosticOnly: Bool
+    var wouldCreateActiveArtifact: Bool
 }
 
-struct MangaKoharuNativeShadowArtifactGate: Equatable, Codable, Sendable {
+struct MangaKoharuNativeArtifactContractDryRunGate: Equatable, Codable, Sendable {
     var gateID: String
     var gateName: String
     var scope: String
     var status: String
     var threshold: String
     var affectedBlocks: [Int]
-    var decisionSignals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
     var failureMeans: String
     var recommendedAction: String
+    var decisionSignals: [MangaKoharuNativeArtifactContractDryRunSignal]
     var groundTruthUsedForDecision: Bool
 }
 
-struct MangaKoharuNativeShadowArtifactManifest: Equatable, Codable, Sendable {
-    var schemaVersion: String
+struct MangaKoharuNativeArtifactContractDryRunReport: Equatable, Codable, Sendable {
+    var enabled: Bool
+    var source: String
+    var referencePipeline: String
+    var referenceConcept: String
+    var referenceWorkItemID: String
     var sourceImage: String
     var coordinateSpace: String
-    var generatedBy: String
-    var shadowOnly: Bool
-    var contractExampleOnly: Bool
-    var forbiddenAsActiveArtifact: Bool
-    var readyForActiveArtifact: Bool
-    var activeArtifactsDirectory: Bool
-    var activeArtifactsWritten: Bool
+    var imageWidth: Int
+    var imageHeight: Int
+    var activeInputDirectory: String
+    var examplesDirectory: String
+    var evaluatedBlockCount: Int
+    var requiredFileCount: Int
+    var dryRunPreviewCount: Int
+    var contractGateCount: Int
     var groundTruthUsedForDecision: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
     var wouldChangeMainFlow: Bool
-    var wouldCreateActiveArtifact: Bool
-    var textBoxesPath: String
-    var bubbleMaskPath: String
-    var segmentMaskPath: String
-    var bundlePath: String
-    var sourceReports: [String]
+    var diagnosticOnly: Bool
+    var dryRunOnly: Bool
+    var activeExportAllowed: Bool
+    var externalArtifactsRequiredForThisReport: Bool
+    var appSideArtifactIdentityVerdict: String
+    var appSideArtifactIdentityFilesPresent: Bool
+    var appSideArtifactIdentityHashesPresent: Bool
+    var contractDryRunVerdict: String
+    var readinessVerdict: String
+    var activeArtifactsDirectory: Bool
+    var contractExampleOnly: Bool
+    var externalTextBoxesShadowOCRAllowed: Bool
+    var requiredFileStatusBreakdown: [String: Int]
+    var targetArtifactBreakdown: [String: Int]
+    var missingRequiredFieldBreakdown: [String: Int]
+    var forbiddenSourceBreakdown: [String: Int]
+    var nextActionBreakdown: [String: Int]
+    var contractReadyDryRunPreviewIDs: [String]
+    var blockedPreviewIDs: [String]
+    var requiredFiles: [MangaKoharuNativeArtifactContractDryRunFile]
+    var previews: [MangaKoharuNativeArtifactContractDryRunPreview]
+    var gateLedger: [MangaKoharuNativeArtifactContractDryRunGate]
+    var validatorCommands: [String]
+    var forbiddenActiveSources: [String]
     var notes: [String]
 }
 
-struct MangaKoharuNativeShadowArtifactExportLiteReport: Equatable, Codable, Sendable {
+struct MangaKoharuArtifactIdentityReconciliationSignal: Equatable, Codable, Sendable {
+    var name: String
+    var value: String
+    var sourceReport: String
+    var groundTruthFreeDecisionSignal: Bool
+    var groundTruthUsedForEvaluationOnly: Bool
+}
+
+struct MangaKoharuArtifactIdentityReconciliationFileRow: Equatable, Codable, Sendable {
+    var artifactKind: String
+    var appReceiptPath: String?
+    var appRequired: Bool
+    var appExists: Bool
+    var appSizeBytes: Int?
+    var appSHA256: String?
+    var appIdentityStatus: String
+    var contractDryRunStatus: String?
+    var ciManifestFieldPathForSize: String
+    var ciManifestFieldPathForSHA256: String
+    var comparisonStatus: String
+    var nextAction: String
+    var decisionSignals: [MangaKoharuArtifactIdentityReconciliationSignal]
+}
+
+struct MangaKoharuArtifactIdentityReconciliationGate: Equatable, Codable, Sendable {
+    var gateID: String
+    var name: String
+    var status: String
+    var scope: String
+    var threshold: String
+    var affectedBlocks: [Int]
+    var failureMeans: String
+    var recommendedAction: String
+    var decisionSignals: [MangaKoharuArtifactIdentityReconciliationSignal]
+}
+
+struct MangaKoharuArtifactIdentityReconciliationReport: Equatable, Codable, Sendable {
     var enabled: Bool
     var source: String
     var referencePipeline: String
     var referenceConcept: String
     var referenceWorkItemID: String
     var evaluatedBlockCount: Int
-    var exportedFileCount: Int
-    var textBoxRecordCount: Int
-    var bubbleRecordCount: Int
-    var segmentMaskRecordCount: Int
-    var bundleRecordCount: Int
-    var blockLedgerCount: Int
+    var fileRowCount: Int
     var gateCount: Int
-    var outputDirectory: String
-    var relativeOutputDirectory: String
-    var activeArtifactsDirectory: Bool
-    var activeArtifactsWritten: Bool
-    var shadowOnly: Bool
-    var forbiddenAsActiveArtifact: Bool
-    var readyForActiveArtifact: Bool
+    var sourceImage: String
+    var sourceImageSHA256Declared: String?
+    var sourceImageSHA256Expected: String?
+    var sourceImageSHA256Matches: Bool
+    var activeInputDirectory: String
+    var appReceiptVerdict: String
+    var contractDryRunVerdict: String
+    var identityReconciliationVerdict: String
+    var readyForCIManifestComparison: Bool
+    var manualCIComparisonRequired: Bool
     var groundTruthUsedForDecision: Bool
     var groundTruthUsedForEvaluationOnly: Bool
     var wouldChangeMainFlow: Bool
-    var wouldCreateActiveArtifact: Bool
     var diagnosticOnly: Bool
-    var nativeShadowExportLite: Bool
-    var proxyNotRealKoharuTextBoxes: Bool
-    var proxyNotRealKoharuBubbleMask: Bool
-    var proxyNotRealKoharuSegmentMask: Bool
-    var proxyNotRealKoharuOCR: Bool
-    var proxyNotRealKoharuRenderer: Bool
+    var dryRunOnly: Bool
+    var activeExportAllowed: Bool
     var externalArtifactsRequiredForThisReport: Bool
-    var exportVerdict: String
-    var fieldCompletenessBreakdown: [String: Int]
-    var coordinateValidationBreakdown: [String: Int]
-    var recordSourceBreakdown: [String: Int]
-    var primaryBlockingArtifactBreakdown: [String: Int]
+    var appReceiptStatusBreakdown: [String: Int]
+    var comparisonStatusBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
-    var files: [MangaKoharuNativeShadowArtifactFileRecord]
-    var textBoxRecords: [MangaKoharuNativeShadowArtifactTextBoxRecord]
-    var bubbleRecords: [MangaKoharuNativeShadowArtifactBubbleRecord]
-    var segmentMaskRecords: [MangaKoharuNativeShadowArtifactSegmentMaskRecord]
-    var bundleRecords: [MangaKoharuNativeShadowArtifactBundleRecord]
-    var blockLedgers: [MangaKoharuNativeShadowArtifactBlockLedger]
-    var gateLedger: [MangaKoharuNativeShadowArtifactGate]
+    var readyFileKinds: [String]
+    var missingFileKinds: [String]
+    var hashMissingFileKinds: [String]
+    var fileRows: [MangaKoharuArtifactIdentityReconciliationFileRow]
+    var gateLedger: [MangaKoharuArtifactIdentityReconciliationGate]
     var notes: [String]
 }
 
@@ -4964,8 +5036,15 @@ struct MangaOverlayLineCropExperimentReport: Equatable, Codable, Sendable {
 struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
     var schemaVersion: String
     var sourceImage: String
+    var sourceImageFieldPresent: Bool
+    var sourceImageTypeValid: Bool
+    var sourceImageSHA256: String?
+    var sourceImageSHA256FieldPresent: Bool
+    var sourceImageSHA256TypeValid: Bool
     var coordinateSpace: String
     var contractExampleOnly: Bool
+    var contractExampleOnlyFieldPresent: Bool
+    var contractExampleOnlyTypeValid: Bool
     var generatedBy: String?
     var generatedAt: String?
     var textBoxesPath: String?
@@ -4976,8 +5055,17 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
         case sourceImage
+        case sourceImageFieldPresent
+        case sourceImageTypeValid
+        case sourceImageSHA256
+        case sourceImageSha256
+        case sourceImageSha
+        case sourceImageSHA256FieldPresent
+        case sourceImageSHA256TypeValid
         case coordinateSpace
         case contractExampleOnly
+        case contractExampleOnlyFieldPresent
+        case contractExampleOnlyTypeValid
         case generatedBy
         case generatedAt
         case textBoxesPath
@@ -4989,15 +5077,50 @@ struct MangaOverlayExternalArtifactManifest: Equatable, Codable, Sendable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try container.decodeIfPresent(String.self, forKey: .schemaVersion) ?? "unknown"
-        sourceImage = try container.decodeIfPresent(String.self, forKey: .sourceImage) ?? ""
+        sourceImageFieldPresent = container.contains(.sourceImage)
+        let decodedSourceImage = try? container.decodeIfPresent(String.self, forKey: .sourceImage)
+        sourceImageTypeValid = !sourceImageFieldPresent || decodedSourceImage != nil
+        sourceImage = decodedSourceImage ?? ""
+        sourceImageSHA256FieldPresent = container.contains(.sourceImageSHA256)
+            || container.contains(.sourceImageSha256)
+            || container.contains(.sourceImageSha)
+        let decodedSourceImageSHA256 = (try? container.decodeIfPresent(String.self, forKey: .sourceImageSHA256))
+            ?? (try? container.decodeIfPresent(String.self, forKey: .sourceImageSha256))
+            ?? (try? container.decodeIfPresent(String.self, forKey: .sourceImageSha))
+        sourceImageSHA256TypeValid = !sourceImageSHA256FieldPresent || decodedSourceImageSHA256 != nil
+        sourceImageSHA256 = decodedSourceImageSHA256
         coordinateSpace = try container.decodeIfPresent(String.self, forKey: .coordinateSpace) ?? ""
-        contractExampleOnly = try container.decodeIfPresent(Bool.self, forKey: .contractExampleOnly) ?? false
+        contractExampleOnlyFieldPresent = container.contains(.contractExampleOnly)
+        let decodedContractExampleOnly = try? container.decodeIfPresent(Bool.self, forKey: .contractExampleOnly)
+        contractExampleOnlyTypeValid = !contractExampleOnlyFieldPresent || decodedContractExampleOnly != nil
+        contractExampleOnly = decodedContractExampleOnly ?? false
         generatedBy = try container.decodeIfPresent(String.self, forKey: .generatedBy)
         generatedAt = try container.decodeIfPresent(String.self, forKey: .generatedAt)
         textBoxesPath = try container.decodeIfPresent(String.self, forKey: .textBoxesPath)
         bubbleMaskPath = try container.decodeIfPresent(String.self, forKey: .bubbleMaskPath)
         segmentMaskPath = try container.decodeIfPresent(String.self, forKey: .segmentMaskPath)
         notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(sourceImage, forKey: .sourceImage)
+        try container.encode(sourceImageFieldPresent, forKey: .sourceImageFieldPresent)
+        try container.encode(sourceImageTypeValid, forKey: .sourceImageTypeValid)
+        try container.encodeIfPresent(sourceImageSHA256, forKey: .sourceImageSHA256)
+        try container.encode(sourceImageSHA256FieldPresent, forKey: .sourceImageSHA256FieldPresent)
+        try container.encode(sourceImageSHA256TypeValid, forKey: .sourceImageSHA256TypeValid)
+        try container.encode(coordinateSpace, forKey: .coordinateSpace)
+        try container.encode(contractExampleOnly, forKey: .contractExampleOnly)
+        try container.encode(contractExampleOnlyFieldPresent, forKey: .contractExampleOnlyFieldPresent)
+        try container.encode(contractExampleOnlyTypeValid, forKey: .contractExampleOnlyTypeValid)
+        try container.encodeIfPresent(generatedBy, forKey: .generatedBy)
+        try container.encodeIfPresent(generatedAt, forKey: .generatedAt)
+        try container.encodeIfPresent(textBoxesPath, forKey: .textBoxesPath)
+        try container.encodeIfPresent(bubbleMaskPath, forKey: .bubbleMaskPath)
+        try container.encodeIfPresent(segmentMaskPath, forKey: .segmentMaskPath)
+        try container.encode(notes, forKey: .notes)
     }
 }
 
@@ -5144,9 +5267,17 @@ struct MangaOverlayExternalSegmentMaskSummary: Equatable, Codable, Sendable {
 }
 
 struct MangaOverlayExternalArtifactCoordinateValidation: Equatable, Codable, Sendable {
+    var schemaVersion: String?
+    var expectedSchemaVersion: String
+    var schemaVersionMatches: Bool
     var coordinateSpace: String?
     var expectedCoordinateSpace: String
     var sourceImageMatches: Bool
+    var sourceImageSHA256: String?
+    var expectedSourceImageSHA256: String?
+    var sourceImageSHA256FieldPresent: Bool
+    var sourceImageSHA256TypeValid: Bool
+    var sourceImageSHA256Matches: Bool
     var imageWidth: Int
     var imageHeight: Int
     var bboxValidationPassed: Bool
@@ -5154,6 +5285,33 @@ struct MangaOverlayExternalArtifactCoordinateValidation: Equatable, Codable, Sen
     var invalidBubbleInstanceIDs: [String]
     var segmentMaskSizeMatches: Bool?
     var errors: [String]
+    var notes: [String]
+}
+
+struct MangaOverlayExternalArtifactFileIdentityReceipt: Equatable, Codable, Sendable {
+    var artifactKind: String
+    var path: String?
+    var required: Bool
+    var exists: Bool
+    var sizeBytes: Int?
+    var sha256: String?
+}
+
+struct MangaOverlayExternalArtifactIdentityReceipt: Equatable, Codable, Sendable {
+    var sourceImage: String
+    var sourceImageSHA256Declared: String?
+    var sourceImageSHA256Expected: String?
+    var sourceImageSHA256Matches: Bool
+    var schemaVersion: String?
+    var coordinateSpace: String?
+    var contractExampleOnly: Bool
+    var generatedBy: String?
+    var generatedAt: String?
+    var activeArtifactsDirectory: Bool
+    var allRequiredFilesPresent: Bool
+    var allRequiredFilesHaveSHA256: Bool
+    var identityVerdict: String
+    var files: [MangaOverlayExternalArtifactFileIdentityReceipt]
     var notes: [String]
 }
 
@@ -5195,6 +5353,7 @@ struct MangaOverlayExternalArtifactReadinessReport: Equatable, Codable, Sendable
     var parseErrors: [String]
     var missingArtifacts: [String]
     var coordinateValidation: MangaOverlayExternalArtifactCoordinateValidation
+    var artifactIdentityReceipt: MangaOverlayExternalArtifactIdentityReceipt?
     var blockAlignment: [MangaOverlayExternalArtifactBlockAlignment]
     var readinessVerdict: String
     var nextAction: String
@@ -5215,9 +5374,18 @@ struct MangaOverlayExternalTextBoxShadowOCRCandidate: Equatable, Codable, Sendab
     var bubbleAlignmentMatched: Bool
     var areaRatioToBlock: Double?
     var linePolygonsPresent: Bool
+    var linePolygonCount: Int
     var sourceDirection: String?
+    var normalizedSourceDirection: String?
+    var orientationCategory: String
     var rotationDegrees: Double?
     var deskewExecuted: Bool
+    var orientationShadowPathNeeded: Bool
+    var orientationShadowPathExecuted: Bool
+    var orientationAttemptedRotations: [Double]
+    var orientationSelectedRotation: Double?
+    var orientationRecognitionLanguages: [String]
+    var orientationUnsupportedReason: String?
     var ocrExecuted: Bool
     var ocrSucceeded: Bool
     var controlText: String
@@ -5238,6 +5406,17 @@ struct MangaOverlayExternalTextBoxShadowOCRBlockSummary: Equatable, Codable, Sen
     var selectedCandidateID: Int?
     var selectedTextBoxID: String?
     var candidateBBox: [Double]?
+    var selectedSourceDirection: String?
+    var selectedOrientationCategory: String?
+    var selectedLinePolygonsPresent: Bool
+    var selectedRotationDegrees: Double?
+    var orientationShadowPathNeeded: Bool
+    var orientationShadowPathExecuted: Bool
+    var orientationAttemptedRotations: [Double]
+    var orientationSelectedRotation: Double?
+    var orientationRecognitionLanguages: [String]
+    var orientationUnsupportedReason: String?
+    var orientationReadinessVerdict: String
     var ocrExecuted: Bool
     var ocrSucceeded: Bool
     var ocrText: String?
@@ -5266,6 +5445,18 @@ struct MangaOverlayExternalTextBoxShadowOCRReport: Equatable, Codable, Sendable 
     var promotedExternalShadowBlocks: [Int]
     var wouldPromoteByExistingGateBlocks: [Int]
     var skippedBlocks: [Int]
+    var sourceDirectionBreakdown: [String: Int]
+    var orientationCategoryBreakdown: [String: Int]
+    var linePolygonCandidateBlocks: [Int]
+    var rotationCandidateBlocks: [Int]
+    var verticalCandidateBlocks: [Int]
+    var orientationShadowPathNeededBlocks: [Int]
+    var orientationShadowPathExecutedBlocks: [Int]
+    var orientationShadowPathPartialBlocks: [Int]
+    var orientationShadowPathNotExecutedBlocks: [Int]
+    var orientationUnsupportedBlocks: [Int]
+    var orientationUnsupportedReasonBreakdown: [String: Int]
+    var orientationReadinessVerdict: String
     var blockSummaries: [MangaOverlayExternalTextBoxShadowOCRBlockSummary]
     var candidates: [MangaOverlayExternalTextBoxShadowOCRCandidate]
     var notes: [String]
@@ -5773,7 +5964,8 @@ struct MangaOverlayProbeReport: Equatable, Codable, Sendable {
     var koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?
     var koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?
     var koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport?
-    var koharuNativeShadowArtifactExportLiteReport: MangaKoharuNativeShadowArtifactExportLiteReport?
+    var koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport?
+    var koharuArtifactIdentityReconciliationReport: MangaKoharuArtifactIdentityReconciliationReport?
     var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
     var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
     var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -5801,6 +5993,7 @@ enum AudioRecognitionState: String, Equatable, Codable, Sendable {
     case idle
     case checking
     case recognizing
+    case translating
     case translated
     case failed
 }

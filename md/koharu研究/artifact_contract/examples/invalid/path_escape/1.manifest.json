@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "aitrans.koharu_artifact_contract.v1",
+  "sourceImage": "test/1.png",
+  "sourceImageSHA256": "9c3dc0ee9dfc4a6b664c4b4dd32e5b74b214f6f0d16f32ef97ef02ce47c2ed21",
+  "coordinateSpace": "originalImageTopLeftPixels",
+  "contractExampleOnly": true,
+  "generatedBy": "manual-invalid-fixture",
+  "textBoxesPath": "../valid/1.textboxes.json",
+  "bubbleMaskPath": "1.bubbles.json",
+  "segmentMaskPath": "1.segment_mask.json",
+  "notes": ["invalid fixture: manifest path escapes active artifact root"]
+}

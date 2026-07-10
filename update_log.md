@@ -8,7 +8,7 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
-## 当前状态
+## 当前漫画指标基线
 日期：2026-06-29
 
 当前项目是 SwiftUI iOS 本地翻译原型，主线已从普通翻译 UI 转到漫画截图 OCR、本地翻译、覆盖合成和探针诊断。最新可用基线来自当前 `output/probe_report.json`、`output/clean_text_diagnostic.json` 和 `metrics/version_history.csv` 的 v21 行：
@@ -78,6 +78,7 @@
 - `textBoxPlanFailureReport.continueGeometryResearchBlocks = [1, 6, 10]`
 - `textBoxPlanFailureReport.candidatePromotionBlockedBlocks = [1, 2, 4, 5, 6, 9, 10]`
 - `lineTextBoxPlanReport.targetBlocks = [1, 6, 10]`
+
 - `lineTextBoxPlanReport.planCount = 12`
 - `lineTextBoxPlanReport.shadowOCREligiblePlanCount = 12`
 - `lineCropExperimentReport.candidateCount = 12`
@@ -115,45 +116,1558 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
-### v1.47：Koharu Native Shadow Artifact Export-Lite 候选 artifact 影子导出
-日期：2026-07-03
-依据：`md/prompt/v1（漫画探针）/v1.47（KoharuNativeShadowArtifactExportLite候选artifact影子导出）.md`。本轮修改 Swift 探针报告模型、非 active shadow artifact JSON 导出、Koharu convergence 联动、TXT 快照、shadow validator 和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+### v1.86：Speech Recognition Insight and Audio UI Polish
+日期：2026-07-08
+
+依据：v1.85 已补齐 Koharu draft artifact contract 工具，但用户目标继续扩展到语音识别、云端测试和更精致的 UI。本轮先把音频识别从“只有一条状态文案”升级为可观察的本机识别运行摘要，并改善音频页操作反馈。
 
 核心变更：
 
-- 新增 `koharuNativeShadowArtifactExportLiteReport`，在 v1.46 Native Promotion Gate-Lite 后、最终 convergence 刷新前生成。
-- 新增 App 沙盒 `Output/koharu_native_shadow_artifacts/` 非 active 输出目录，写出 `1.native_manifest.json`、`1.native_textboxes.json`、`1.native_bubbles.json`、`1.native_segment_mask.json`、`1.native_artifact_bundle.json`。
-- Shadow manifest 和记录显式标记 `shadowOnly = true`、`contractExampleOnly = true`、`forbiddenAsActiveArtifact = true`、`readyForActiveArtifact = false`、`activeArtifactsWritten = false`、`wouldCreateActiveArtifact = false`。
-- 报告记录 exported files、record counts、field completeness、coordinate validation、record source、逐块 export ledger、active-artifact forbidden gate、proxy boundary gate 和 external readiness unchanged gate。
-- `koharuArtifactConvergenceReport.referenceReports` 新增 `koharuNativeShadowArtifactExportLiteReport`；convergence 新增 `WI-koharu-native-shadow-artifact-export-lite` 和 `G-koharu-native-shadow-artifact-export-lite-executed`。
-- `1_ocr_probe_text.txt` 新增 shadow export summary、文件清单、逐块 `nativeShadowArtifactExportBlockLedger`、`nativeShadowArtifactGate` 和 external readiness 摘要。
-- 新增只读 `scripts/validate-koharu-shadow-artifacts.py`，用于校验 shadow export 目录；它不复制、不迁移、不生成 active `test/koharu_artifacts/`。
-- 本轮不新增 OCR / LLM / PNG，不更换模型，不创建或修改 active `test/koharu_artifacts/`，不替换主 OCR、翻译输入、覆盖图、renderer、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals。
+- 新增 `SpeechRecognitionRunSummary` 和 `SpeechRecognitionRunMode`，记录音频文件或实时麦克风识别的模式、输入名、locale、本机识别要求、设备支持状态、耗时、词数、分段数、平均置信度、最终文本和失败原因。
+- `AudioRecognitionState` 新增 `translating`，区分 Apple Speech 识别中和识别文本交给模型翻译中。
+- 文件音频识别和同声传译都会维护 `speechRecognitionRunSummary`；识别失败、权限拒绝、设备不支持、空文本、用户取消都会留下明确失败原因。
+- 长按同声传译松手后，主动结束导致的 recognition task cancel error 不再覆盖为失败状态。
+- 音频页新增识别质量摘要面板和识别取消入口，展示 locale、强制本机、耗时、词数、片段和置信度，让语音链路更可诊断、UI 信息层次更完整。
+- 合并验收补强用 run UUID 隔离授权、Speech 和翻译回调，避免取消/重试后旧任务污染新摘要；当前翻译任务未结束时不启动实时语音采集。
+- App bundle ID 统一为 `com.local.aitransform114`；CI 改为从构建 App `Info.plist` 动态读取 bundle ID，并让 `1.*` 版本分支触发合并前快验。
+- Xcode `MARKETING_VERSION` 从 `0.1.0` 收口为 `1.86`，CI 也会把纯数字 `1.86` 分支记录为 artifact version `v1.86`。
+- 新增 `scripts/test-speech-recognition-contract.py` 并接入 CI static checks；完整 v1.47-v1.86 汇总见 `md/v1.47-to-v1.86-update-notes.md`。
+- 同步 `md/flow/flow.md` 和 `md/flow/flowchart.md` 的音频识别流程。
 
 关键文件：
 
 - `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Views/ContentView.swift`
+- `AITRANS/Views/ProFeatureViews.swift`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-speech-recognition-contract.py`
+- `md/v1.47-to-v1.86-update-notes.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`python3 -m json.tool test/1.ground_truth.json`、`python3 -m json.tool output/clean_text_diagnostic.json`、`python3 -m json.tool output/probe_report.json`。
+- 合并验收补强通过：5 个 speech/CI contract tests、plist lint、workflow YAML parse、Swift parse、Python compile、Koharu draft/valid/orientation/missing/invalid fixture smoke。
+- Swift / Xcode build 按项目规则交给 GitHub Actions；本轮 push 后需核对 `AITRANS CI Results` 和 `AITRANS - Build IPA`。
+
+遗留事项：
+
+- 本轮不引入第三方语音模型，不改变 Apple Speech 的 on-device 约束；真正“AI 语音识别”质量提升仍需要后续接入更强 ASR 或增加固定音频样本基准。
+- 语音 UI 已改善诊断和反馈，但还未做整站级视觉重设计；后续可继续升级工作台、图片页和 Pro 页视觉系统。
+
+### v1.85：Koharu Native Draft Artifact Tool
+日期：2026-07-07
+
+依据：v1.84 已把真实 Koharu handoff 后的 CI 结果核对清单补齐，但本地仍缺一个低风险工具，把 AITRANS 当前 probe block / bubble / glyph-mask proxy 以四件套 contract 形状导出，供外部 detector / handoff 开发快速对齐字段。该工具必须保持非 active、非真实 detector 输出，避免把 proxy 冒充为 `test/koharu_artifacts/`。
+
+核心变更：
+
+- 新增 `scripts/make-koharu-native-draft-artifacts.py`，从 `output/probe_report.json` 生成 `build/koharu_native_draft/1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`。
+- draft manifest 固定 `contractExampleOnly=true`，记录当前 `test/1.png` SHA256、生成来源、TextBox / Bubble / SegmentMask 来源和 count；当前旧 probe_report 缺 detector-lite 字段时，TextBoxes / BubbleMask 会从最终 probe blocks fallback 生成。
+- 生成的草稿目录只用于 contract shape / validator smoke，validator 正确结果是 `verdict = contractExampleOnly`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`，不得复制到 active `test/koharu_artifacts/`。
+- artifact contract README 和测试规范同步该工具的用途、命令和禁止项。
+
+关键文件：
+
+- `scripts/make-koharu-native-draft-artifacts.py`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`python3 -B -m py_compile scripts/make-koharu-native-draft-artifacts.py`、`python3 scripts/make-koharu-native-draft-artifacts.py --out build/koharu_native_draft`、`python3 scripts/validate-koharu-artifacts.py --root build/koharu_native_draft`。草稿生成 13 个 TextBox、10 个 bubble summary、`segmentGlyphPixelCount = 92827`，validator 输出 `verdict = contractExampleOnly`、`sourceImageSHA256Matches = true`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`。
+
+遗留事项：
+
+- 本版本不生成真实 Koharu 四件套、不写入 `test/koharu_artifacts/`、不上传 Release、不触发手动 `ci-fast/full`，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 真正复刻效果仍需要外部 detector / Koharu 真实 TextBoxes、BubbleMask、SegmentMask 注入后跑 `ci-fast/full`；后续编译提速建议单独拆 `writeOCRProbeText` 到扩展文件，再云端 Xcode build 验证。
+
+### v1.84：Koharu Handoff CI Result Review Packet
+日期：2026-07-07
+
+依据：v1.83 已把 Release archive 本地 inspection proof 写入 handoff packet，但真实 handoff 仍要等 GitHub Actions 手动 `ci-fast/full` 结果包证明 App runtime 实际读取同一组四件套。继续补交付后 Agent C 的云端结果包核对清单，避免错 run、旧包、错 commit 或只凭本地 inspection 放行。
+
+核心变更：
+
+- `handoffPacket` 新增 `ghRunWatchCommand` 和 `ghRunDownloadCommand`，用 `<run-id>` 占位指导人工在 workflow dispatch 后等待并下载 `AITRANS CI Results` 未加密结果包。
+- `handoffPacket.ciResultReview` 和 `expected*Assertions` 新增机器可读核对清单，覆盖必需结果文件、探针输出文件、manifest identity、Release tag / asset / SHA 回显、Koharu validator identity / orientation、逐文件 cloud identity rows、App runtime readiness、identity reconciliation、external shadow OCR coverage、orientation blockers、TXT 摘要 needles 和旧包拒收规则。
+- CI static package smoke 只断言这些 review / assertion 字段的 shape 和关键语义，不访问 GitHub、不下载 run、不启动模拟器、不把本地 `releaseArchive.inspection` 写成云端 runtime proof。
+- artifact contract README 和测试规范同步 v1.84 handoff 后置 review 口径。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`python3 -B -m py_compile scripts/validate-koharu-artifacts.py`、workflow YAML parse、JSON parse、Koharu valid / orientation / invalid fixture 矩阵、`test/koharu_artifacts --allow-missing`、fixture package handoff packet、`python3 -m json.tool /tmp/koharu-handoff-v184.json` 和新增 `ciResultReview` / structured assertions 字段 smoke。
+- 云端 `AITRANS CI Results` run `28864811074` 通过，artifact `aitrans-ci-unversioned-smalldata_test--13591a80d066-run28864811074-attempt1` 已核对：`branch = smalldata_test`、`commitSha = 13591a80d0663fb3fed83f74e2cb03ddf851a05e`、`runId = 28864811074`、`runAttempt = 1`、`workflowName = AITRANS CI Results`、`xcodeBuildRequired = false`、`xcodeBuildSkippedReason = non_app_build_related_fast_path`、`probeMode = skip`、`scopeDiffMethod = checkout_before`、`scopeDiffFallbackUsed = false`、`koharuValidatorExtendedRequired = true`；`junit.xml` 为 5 tests / 0 failures；fixture package smoke 证明 `releaseArchiveInspectionPassed = true`、`releaseArchiveInspectionVerdict = contractExampleOnly`、`candidateDirectoryCount = 1`、`ghRunWatchCommand` / `ghRunDownloadCommand` 存在、`ciResultReview.requiredResultFiles` 覆盖四个必需文件、`expectedCloudIdentityRows = 5`、`expectedCIManifestAssertions = 14`、`expectedAppRuntimeAssertions = 10`、`expectedExternalShadowOCRAssertions = 8`、`expectedConvergenceAssertions = 6`、`staleRunRejectionAssertions = 5`。
+- 同轮 `AITRANS - Build IPA` run `28864811123` 通过，archive 10m45s，IPA package 6s。
+
+遗留事项：
+
+- 本版本仍不生成真实 Koharu 四件套、不上传 Release、不触发手动 `ci-fast/full`，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 真实验收仍必须由人工提供外部 detector 输出，按 handoff packet 上传 Release、dispatch `ci-fast/full`，再用 `ciResultReview` 核对云端 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates。
+
+### v1.83：Koharu Handoff Archive Inspection Proof
+日期：2026-07-07
+
+依据：v1.82 已提供 `--inspect-release-archive` 和带 repo 的 Release upload / workflow dispatch 命令，但 handoff packet 本身还没有把“将上传的 archive 已按 CI 唯一四件套目录规则复验”作为结构化 proof 带给人工和 Agent C。继续补真实 artifact handoff 交付闭环，不新增 report-only 探针层，不改 Swift 主链路。
+
+核心变更：
+
+- `--package-release-archive` 生成 zip 后会立即用 `inspect_release_archive()` 复验该 zip，并把结果写入 `handoffPacket.releaseArchive.inspection`，包含 validation verdict、candidate directory、member count、artifact identity summary 和 orientation summary。
+- `handoffPacket` 新增 `releaseArchiveInspectionPassed`、`releaseArchiveInspectionVerdict`、`inspectReleaseArchiveCommand` 和 `expectedCIManifestEcho`，让上传前 proof、Release asset SHA、workflow dispatch 参数和 Agent C 云端 manifest 核对点在同一个 JSON 中闭合。
+- handoff ready 现在要求真实 validator verdict、archive SHA 和本地 archive inspection proof 同时成立；`contractExampleOnly` fixture 仍可用于 smoke，但不会被标记为 release / dispatch ready。
+- `AITRANS CI Results` static checks 只在 fixture package smoke 中断言 handoff inspection proof，不把 inspection 重新塞回真实 Release 注入主路径，避免增加 workflow 启动风险。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`python3 -B -m py_compile scripts/validate-koharu-artifacts.py`、workflow YAML parse、JSON parse、Koharu valid / orientation / invalid fixture 矩阵、`test/koharu_artifacts --allow-missing`、handoff packet、package 拒绝 / 成功 zip 布局、`--inspect-release-archive` 成功 / 空 archive / 双 candidate archive 失败路径、fixture handoff inspection proof、active-like handoff ready + inspection proof。
+- 云端 `AITRANS CI Results` run `28861251800` 通过，artifact `aitrans-ci-unversioned-smalldata_test--642c1e2d5683-run28861251800-attempt1` 已核对：`branch = smalldata_test`、`commitSha = 642c1e2d5683339c6c8ae33fc0ff1437bdf17bb7`、`runId = 28861251800`、`runAttempt = 1`、`workflowName = AITRANS CI Results`、`xcodeBuildRequired = false`、`xcodeBuildSkippedReason = non_app_build_related_fast_path`、`probeMode = skip`、`scopeDiffMethod = checkout_before`、`scopeDiffFallbackUsed = false`、`koharuValidatorExtendedRequired = true`；package smoke 证明 `releaseArchiveInspectionPassed = true`、`releaseArchiveInspectionVerdict = contractExampleOnly`、`candidateDirectoryCount = 1`、`expectedCIManifestEcho` 存在，`junit.xml` 为 5 tests / 0 failures。
+- 同轮 `AITRANS - Build IPA` run `28861251831` 通过。
+
+遗留事项：
+
+- 本版本仍不生成真实 Koharu 四件套、不上传 Release、不触发手动 `ci-fast/full`，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 真实验收仍必须由人工提供外部 detector 输出，按 handoff packet 上传 Release 并 dispatch `ci-fast/full` 后，核对云端 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates。
+
+### v1.82：Koharu Release Archive Inspect and Upload Commands
+日期：2026-07-07
+
+依据：v1.81 已能从本地四件套生成 Release zip 和 `workflow_dispatch` 参数，但真实 P0 handoff 仍有两个易错点：上传前本地 archive 是否符合 CI 唯一目录规则，以及上传到 GitHub Release / 触发 workflow 是否指向正确 repo。继续补这段交付闭环，比新增 report-only 探针层更接近 `v1.38-current-gap-to-koharu.md` 要求的真实 artifact 注入。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 `--inspect-release-archive <zip|tar>`，用 CI 同口径安全解包并检查 archive 中是否恰好有一个包含四个标准 JSON 的目录，输出 archive size/SHA、members、candidate directory 和 validator verdict。
+- handoff packet 新增 `--repo`、`--probe-mode` 参数，输出结构化 `releaseUpload`，并生成带 `--repo` 的 `ghReleaseUploadCommand`、`ghWorkflowDispatchCommand` 和 `ghRunListCommand`；默认不加 `--clobber`，避免误覆盖 Release asset。
+- `AITRANS CI Results` 继续沿用既有 Release archive 下载、SHA 校验、唯一四件套目录解包、active validator identity / orientation 摘要和 App runtime 证据链；`--inspect-release-archive` 定位为上传前本地 preflight，不作为本轮云端 manifest 新字段。
+- CI static checks 保留 package smoke 和 handoff 命令 repo / quote 检查；archive inspect 的 0 / 多 candidate 失败路径由本地轻量验证覆盖，避免在 workflow 内增加容易破坏 GitHub job 启动的复杂脚本块。
+- artifact contract README 和测试规范同步 upload / inspect / dispatch / run list 的交付步骤和验收口径。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 初次提交 `b0c643e` 的 `AITRANS CI Results` run `28855767837` 未能创建 job；后续修复移除 workflow 内 release archive inspection 注入、manifest 和 failure summary 钩子，只保留本地 validator / handoff 能力。
+- 本地轻量验证通过：`git diff --check`、`python3 -B -m py_compile scripts/validate-koharu-artifacts.py`、workflow YAML parse、JSON parse、Koharu valid / orientation / invalid fixture 矩阵、`test/koharu_artifacts --allow-missing`、handoff packet、package 拒绝 / 成功 zip 布局、`--inspect-release-archive` 成功 / 空 archive / 双 candidate archive 失败路径、active-like handoff ready smoke。
+- 云端结果包待本修复 commit push 后确认：本版本只改 Python validator、workflow static checks 和文档，预期 push CI 走 build-skip；workflow / validator 变化会触发 extended Koharu validator matrix 和 package smoke。
+
+遗留事项：
+
+- 本版本仍不生成真实 Koharu 四件套、不上传 Release、不触发手动 `ci-fast/full`，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 真实验收仍必须由人工提供外部 detector 输出，运行 package / inspect / upload / dispatch 命令后，核对云端 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates。
+
+### v1.81：Koharu Release Handoff Packet Preflight
+日期：2026-07-07
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 已明确当前下一步仍是 P0：拿真实 `TextBoxes / BubbleMask / SegmentMask` 四件套，通过 Release archive 注入手动 `ci-fast/full`，看 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates。v1.79-v1.80 已收紧 source image SHA contract，但外部 detector 输出到 GitHub Release / workflow_dispatch 的交付路径仍需要人工拼 zip、算 SHA、填参数，容易错包或漏填。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 `--emit-handoff-packet`，在 validator 摘要外输出 Release upload / `workflow_dispatch` handoff 清单，包含 source image SHA、四件套 size/SHA、orientation summary、建议的 `probe_mode=ci-fast`、`koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256`、`koharu_artifact_required=true` 和 `gh workflow run` 模板。
+- 新增 `--package-release-archive <zip>`，把当前 root 下解析出的四件套打成一个 zip；zip 内只包含一个目录和四个标准 JSON，贴合 CI 的唯一目录检查。
+- 打包默认只接受 `verdict = readyForShadowOCR`；`contractExampleOnly` examples 不会被标记为 handoff ready，`--allow-fixture-package` 仅用于本地 smoke。
+- handoff packet 区分当前离线 root 的 `externalTextBoxesShadowOCRAllowed` 与 CI 注入 active 目录后的 expected readiness，避免把非 active 路径误读成 App 已消费 artifact。
+- 打包路径增加源文件覆盖保护，`ghWorkflowDispatchCommand` 对 tag / asset / SHA 参数做 shell quote。
+- `AITRANS CI Results` static checks 增加 package smoke：验证 `contractExampleOnly` fixture 默认拒绝打包、`--allow-fixture-package` 生成单目录四标准 JSON，并检查带空格 dispatch 参数 quote。
+- artifact contract README 和测试规范同步新的 preflight / package 命令与 CI package smoke 预期。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`python3 -m py_compile scripts/validate-koharu-artifacts.py`、workflow YAML parse、JSON parse、Koharu valid / orientation / invalid fixture 矩阵、`test/koharu_artifacts --allow-missing`、handoff packet、package 拒绝 / 成功 zip 布局和 quote smoke。
+- 云端 `AITRANS CI Results` run `28854050132` 通过，artifact `aitrans-ci-unversioned-smalldata_test--54a94b6e992f-run28854050132-attempt1` 已核对：`branch = smalldata_test`、`commitSha = 54a94b6e992f06d5e7d1704d1634d87aca3dffb6`、`xcodeBuildRequired = false`、`xcodeBuildSkippedReason = non_app_build_related_fast_path`、`probeMode = skip`、`scopeDiffMethod = checkout_before`、`scopeDiffFallbackUsed = false`、`koharuValidatorExtendedRequired = true`、`probeOutputRetainedFiles = ["probe-not-run.txt"]`，package fixture smoke 产物存在且 verdict 为 `contractExampleOnly`。
+- 同轮 `AITRANS - Build IPA` run `28854050100` 通过。
+
+遗留事项：
+
+- 本版本不生成真实 Koharu 四件套，不上传 Release，不触发手动 `ci-fast/full`，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 真实验收仍必须由人工提供外部 detector 输出，运行 handoff packet 生成 zip，上传 Release 后手动 dispatch，并核对云端 App runtime 证据。
+
+### v1.80：App Runtime Source Image SHA Gate
+日期：2026-07-07
+
+依据：v1.79 已让 Python validator / CI static smoke 要求 Koharu active manifest 声明 `sourceImageSHA256` 并匹配当前仓库 `test/1.png`，但 Swift App runtime readiness 仍主要核对 source image 路径和 App 可见文件 size / SHA256。如果外部 artifact manifest 在 App 探针内缺失、格式错误或声明了旧图 SHA，必须由 App 侧 readiness、identity receipt、contract dry-run 和 identity reconciliation 同步阻塞，避免 validator 与 runtime handoff 口径分叉。
+
+核心变更：
+
+- `MangaOverlayExternalArtifactManifest` 解析 `sourceImageSHA256`，并记录字段存在性、类型有效性和标准化 SHA。
+- `externalArtifactReadinessReport.coordinateValidation` 新增 declared / expected / fieldPresent / typeValid / matches 字段；Swift readiness 现在对缺失、非 64 位 hex 或不匹配 runtime bundle `test/1.png` SHA 的 manifest 输出 `sourceImageSHA256Missing` / `sourceImageSHA256Invalid` / `sourceImageSHA256Mismatch`，并阻止 `readyForShadowOCR`。
+- `externalArtifactReadinessReport.artifactIdentityReceipt` 新增 `sourceImageSHA256Declared`、`sourceImageSHA256Expected`、`sourceImageSHA256Matches`；`identityVerdict = activeArtifactIdentityRecorded` 现在要求 manifest SHA 与 App runtime 可见 source image SHA 匹配。
+- `koharuNativeArtifactContractDryRunReport` 的 manifest required fields 增加 `sourceImageSHA256=<expected>`，App-side identity gate 也消费 `sourceImageSHA256Matches`。
+- `koharuArtifactIdentityReconciliationReport` 顶层新增 declared / expected / matches，`readyForCIManifestComparison` 只有在 source image SHA match 为 true 时才能通过。
+- `1_ocr_probe_text.txt` 摘要、CI post-export smoke、`ci-artifact-manifest.json` 的 App receipt / identity reconciliation summaries 和 failure summary 都透传 App runtime source image SHA declared / expected / matches。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、JSON 解析、workflow YAML parse、workflow Python heredoc 编译、Koharu validator valid / invalid fixture 矩阵。
+- 云端 `AITRANS CI Results` run `28851345305` 通过，artifact `aitrans-ci-unversioned-smalldata_test--5668ab847c01-run28851345305-attempt1` 已核对：`branch = smalldata_test`、`commitSha = 5668ab847c0148201e26010a95de2a92306a92a4`、`xcodeBuildRequired = true`、`xcode build = success`、`probeMode = skip`、`scopeDiffMethod = checkout_before`、`scopeDiffFallbackUsed = false`、`changedFiles = ["AITRANS/Models/TranscriptModels.swift"]`。
+- 同轮 `AITRANS - Build IPA` archive 编译阶段已成功，但上传 archive log 时 GitHub artifact service 多次 timeout，属于打包 artifact 上传失败，不是 Swift 编译失败。
+
+遗留事项：
+
+- 本版本不新增真实 Koharu 四件套，不改变 OCR / LLM / renderer / 覆盖图 / active artifact，不追加 `metrics/version_history.csv`。
+- 需要真实 handoff 验收时，仍需手动 `workflow_dispatch` 选择 `ci-fast` 或 `full` 并注入 Koharu artifact archive，核对 App receipt 与 reconciliation 的 `sourceImageSHA256Matches = true`。
+
+### v1.79：Koharu Source Image SHA Contract Gate
+日期：2026-07-07
+
+依据：v1.66-v1.78 已让 CI / App 侧记录 source image 和四件套 size / SHA256 identity，但 Koharu active manifest 仍只声明 `sourceImage = test/1.png`，没有强制声明“本 artifact 是基于当前仓库这张 `test/1.png` 生成”。如果外部 detector 用旧图、裁切图或错图导出，路径和尺寸可能看似正确，后续云端 handoff 仍有误接风险。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 要求 manifest 声明 `sourceImageSHA256`，并校验它必须匹配当前仓库 `test/1.png` 的实际 SHA256：`9c3dc0ee9dfc4a6b664c4b4dd32e5b74b214f6f0d16f32ef97ef02ce47c2ed21`。
+- validator 输出新增 `sourceImageSHA256`、`expectedSourceImageSHA256`、`sourceImageSHA256Matches`，`artifactIdentitySummary` 新增 `sourceImageSHA256Declared`、`sourceImageSHA256Expected`、`sourceImageSHA256Matches`，并新增 `sourceImageSHA256Missing` / `sourceImageSHA256Invalid` / `sourceImageSHA256Mismatch` verdict。
+- CI 注入真实 Koharu artifact 和 valid fixture smoke 都会断言 manifest 声明 SHA 与仓库 source image SHA 一致；完整 invalid fixture 矩阵新增 `source_image_sha_missing` 和 `source_image_sha_mismatch`。
+- artifact contract README、`md/test/test.md` 和示例 manifests 同步新的 source image SHA contract。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/artifact_contract/examples/**/1.manifest.json`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：预期 workflow / validator / contract 变更会触发 extended Koharu invalid fixture matrix，且本轮仍不涉及 Swift / Xcode 工程 / `test/` 素材，预期 `xcodeBuildRequired = false`。
+
+遗留事项：
+
+- 本版本不新增真实 Koharu 四件套，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 如果未来 `test/1.png` 变更，所有 active artifact 和 contract fixtures 必须同步新的 `sourceImageSHA256`，否则 validator 应阻塞 handoff。
+
+### v1.78：CI Scope Targeted Fetch Closure
+日期：2026-07-07
+
+依据：v1.76 用 `fetch-depth: 2` 修复了普通单提交 push 的 scope diff，但遗留事项仍指出：如果一次 push 包含多提交且 `github.event.before` 不在最近 2 个提交内，`Detect CI scope` 仍会回退 `git ls-files`，把 `changed-files.txt` 变成全仓列表，进而误触发 Xcode build 和 extended Koharu validator。v1.77 已让结果包可追溯，本轮继续把 scope diff 方法本身变成可审计证据。
+
+核心变更：
+
+- `Detect CI scope` 在 checkout 内找不到 `github.event.before` 时，先执行定向 `git fetch --no-tags --depth=1 origin <before>`，成功后继续按真实 before SHA diff。
+- 只有 checkout 和 targeted fetch 都无法拿到 before commit 时，才回退 `git ls-files` 全仓列表。
+- CI 输出、manifest 和 failure summary 新增 `scopeDiffMethod`、`scopeDiffBaseSha`、`scopeDiffFallbackUsed`，Agent C 可判断 changed-files 是否来自 `checkout_before`、`targeted_fetch` 或 `full_repo_fallback`。
+- `md/test/test.md` 同步多提交 push 的 scope diff 验收口径。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：普通单提交 push 预期 `scopeDiffMethod = checkout_before`、`scopeDiffFallbackUsed = false`；若后续出现多提交 push 且 before 不在浅克隆内，预期使用 `targeted_fetch` 而不是全仓 fallback。
+
+遗留事项：
+
+- 本版本不新增真实 Koharu 四件套，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 若极端情况下 GitHub 不允许按 SHA 定向 fetch，workflow 仍会显式记录 `full_repo_fallback`，避免 Agent C 把全仓 changed-files 误认为精确 diff。
+
+### v1.77：CI Artifact Provenance Self-Trace
+日期：2026-07-07
+
+依据：v1.76 已让 build-skip 结果包更干净，但 Agent C 下载未加密 artifact 后仍需要从 GitHub UI 或 `gh run view` 反查 run URL、artifact name、event/ref/repository 和变更范围。后续真实 Koharu artifact handoff 会更依赖“拿到的包就是目标 run / 目标提交 / 目标变更”的机器可核对证据，因此本轮继续增强 CI 结果包可追溯性。
+
+核心变更：
+
+- `ci-artifact-manifest.json` 新增 `artifactName`、`eventName`、`repository`、`ref`、`refName` 和 `runUrl`，让结果包自带 GitHub run 与 artifact identity。
+- `ci-artifact-manifest.json` 新增 `changedFilesCount`、`changedFilesSHA256` 和 `changedFiles`，直接记录本轮 scope detection 的文件列表和稳定哈希。
+- `ci-failure-summary.md` 同步打印 run URL、event/ref/repository、artifact name、changed files count 和 changed files SHA256，便于失败时快速定位。
+- `md/test/test.md` 补充 v1.77 结果包 provenance 字段验收口径。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：预期 manifest 能解析并包含 self-trace 字段；failure summary 顶部能直接看到 run URL、artifact name 和 changed-files 摘要。本轮仍是 CI / 文档变更，预期 `xcodeBuildRequired = false`。
+
+遗留事项：
+
+- 本版本不新增真实 Koharu 四件套，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+- 若未来需要限制 manifest 体积，可保留 `changedFilesSHA256` 和 count，将完整 `changedFiles` 迁移为单独文件引用；当前普通 push 变更列表很小，直接内嵌更利于验收。
+
+### v1.76：CI Scope Diff Accuracy / Skip Probe Artifact Hygiene
+日期：2026-07-07
+
+依据：v1.75 云端 push run `28844582258` 虽然只改 workflow 和日志，但 `changed-files.txt` 回退成全仓列表，导致 `xcodeBuildRequired = true` 并额外跑 Xcode build。原因是 `actions/checkout` 默认浅克隆只含当前提交，`Detect CI scope` 找不到 `github.event.before` 时只能回退 `git ls-files`。这会削弱非 App 改动的 build-skip 加速路径。同轮审计还发现 `probe_mode=skip` 会把仓库中已有的旧 `output/` 复制进结果包，容易让 Agent C 误读为本次云端探针产物。
+
+核心变更：
+
+- `AITRANS CI Results` 的 checkout 增加 `fetch-depth: 2`，让普通单提交 push 能 diff 到 `github.event.before`，避免浅克隆缺 before commit 时误判全仓变化。
+- `Copy available probe outputs` 只在 `probe_mode != skip` 且 `manga_probe` 成功时复制本轮 `output/`；skip 或探针失败时只写 `output/probe-not-run.txt`，不再把 checked-in 旧 JSON / TXT / PNG 混入本次 CI artifact。
+- `md/test/test.md` 补充 scope detection 和 skip probe artifact hygiene 要求，明确 build-skip 结果包不能被旧探针输出污染。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- 待本轮本地轻量验证与 push 后云端结果包确认：预期本次仅 workflow / 文档变更时 `xcodeBuildRequired = false`，`xcodeBuildSkippedReason = non_app_build_related_fast_path`，`changed-files.txt` 只列本次变更文件；`probeMode = skip` 时 `probeReportPath` 为空，`probeOutputRetainedFiles = ["probe-not-run.txt"]`。
+
+遗留事项：
+
+- `fetch-depth: 2` 覆盖普通单提交 push；若后续一次 push 包含多提交且 `before` 不在最近 2 个提交内，仍可能回退全仓列表。需要时再升级为按 SHA 定向 fetch，而不是直接全量 checkout。
+- 本版本不新增真实 Koharu 四件套，不改变 OCR / LLM / renderer / 漫画指标，不追加 `metrics/version_history.csv`。
+
+### v1.75：CI Manifest Step Split / Workflow Startup Fix
+日期：2026-07-07
+
+依据：v1.74 把 native-lite manifest 摘要直接塞进 `Write manifest`，使该 GitHub Actions 单步脚本从上一版约 20k 字符增长到约 26k 字符。最新 push 的 `AITRANS CI Results` run `28844255398` 在 0 秒失败且没有 job/log，`gh run view` 明确提示 workflow file issue；这符合单步 `run:` 脚本过大导致 workflow 启动前被拒绝的风险。
+
+核心变更：
+
+- `AITRANS CI Results` 保留 v1.74 的 `koharuNativeLiteReportSummary` 与 `koharuNativeLiteConvergenceGateSummary` manifest 字段，但改由独立 `Append native-lite manifest summary` step 读取已生成的 `ci-artifact-manifest.json` 和可用 `probe_report.json` 后追加。
+- `Write manifest` step 恢复到上一轮成功版本的脚本体积，避免继续触发 workflow 启动阶段失败；native-lite 追加 step 在 `probe_mode=skip` 时仍写出字段，值来自空 probe summary，便于 Agent C 看到字段存在。
+- 产物结构、字段名、probe 路径、Swift 逻辑、OCR / LLM / renderer 和 active artifact gate 不变。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`.github/workflows/ci-results.yml` YAML parse、workflow Python heredoc 语法编译、`python3 -m json.tool` 解析 `test/1.ground_truth.json` / `output/probe_report.json` / `output/clean_text_diagnostic.json`。
+- 拆分后 workflow 单步脚本体积：`Write manifest = 20176 chars`，`Append native-lite manifest summary = 5996 chars`。
+
+遗留事项：
+
+- 需要 push 后重新触发 `AITRANS CI Results`，下载结果包确认 manifest 字段存在且本次 run 不再 0 秒失败。
+- 本版本不新增真实 Koharu 四件套，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.74：Native-Lite CI Summary / Gap Roadmap Refresh
+日期：2026-07-07
+
+依据：v1.39-v1.46 的 detector-lite、shadow OCR、refinement、closed-loop、BubbleMask instance-lite、SegmentMask refinement-lite、bundle-lite 和 promotion gate-lite 已进入 Swift 报告与 convergence，但云端 `ci-artifact-manifest.json` / `ci-failure-summary.md` 仍主要汇总 external artifact handoff、contract dry-run、identity 和 external shadow OCR。Agent C 若要判断 native-lite 阻塞，仍需深挖完整 `probe_report.json`；同时 `md/koharu研究/v1.38-current-gap-to-koharu.md` 的推荐路线仍把部分已完成 report-only 层写成未来任务。
+
+核心变更：
+
+- `AITRANS CI Results` manifest 新增 `koharuNativeLiteReportSummary`，直接汇总 v1.39-v1.46 native-lite report 的 verdict、关键 count、TextBox -> SegmentMask linkage breakdown、needs-real-artifact blocks 和 promotion preview 状态。
+- manifest 新增 `koharuNativeLiteConvergenceGateSummary`，直接摘出 detector-lite、shadow OCR、refinement、closed-loop、BubbleMask instance-lite、SegmentMask refinement-lite、bundle-lite、promotion gate-lite 及 linkage work item / gate 的 status、blocks、nextAction 和 decision signals。
+- `ci-failure-summary.md` 的 Koharu artifact gate 区块新增 native-lite report / convergence gate 摘要，方便 Agent C 在失败摘要里直接看到 native-lite 阻塞位置。
+- `ci-fast/full` smoke 扩展 `1_ocr_probe_text.txt` needles，要求 native-lite report summary 存在，防止 TXT 快照悄悄丢失 v1.39-v1.46 证据。
+- `md/koharu研究/v1.38-current-gap-to-koharu.md` 标注原推荐版本路线为历史判断，说明 v1.39-v1.46 已以 report-only / proxy 形式完成；当前下一步仍是注入真实四件套跑 `ci-fast/full`，不是重复实现同名 detector-lite / promotion gate。
+- README 与测试规范同步 v1.74 manifest 字段和验收口径。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/test/test.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`.github/workflows/ci-results.yml` YAML parse、workflow 内 11 个 Python heredoc 语法编译、`python3 -m json.tool` 解析 `test/1.ground_truth.json` / `output/probe_report.json` / `output/clean_text_diagnostic.json`、基于云端 `ci-fast` run `28842227463` artifact 的 native-lite manifest summary helper 离线 smoke。
+
+遗留事项：
+
+- 本版本不新增 detector、OCR、LLM、PNG、renderer 或 active Koharu artifact，不改变主 OCR、翻译、覆盖图、report-only 账本语义或漫画质量指标，不追加 `metrics/version_history.csv`。
+- 缺真实 `test/koharu_artifacts/` 时，native-lite 仍是 proxy / report-only；真实收益仍必须等外部四件套注入后看 external shadow OCR、orientation 和 identity handoff。
+
+### v1.73：Cloud ci-fast Evidence / Swift Warning Cleanup
+日期：2026-07-07
+
+依据：v1.72 新增 CI manifest 的 Koharu contract dry-run 与 convergence gate summary 后，需要用真实云端 `ci-fast` 探针确认这些字段在非 skip 路径可用；同一轮 Xcode 日志显示 4 处 Swift unused-value warning，虽不影响构建，但会增加后续 Agent C 读日志噪声。
+
+核心变更：
+
+- 云端手动 `ci-fast` run `28842227463` 已验证 commit `599443891e780155ba62773a6e1bdc7090b3ee6c` 的未加密 CI 结果包可用：GGUF 下载 / SHA 校验、静态检查、Xcode build、模拟器 build、漫画探针和 artifact 上传均成功。
+- 结果包 `aitrans-ci-unversioned-smalldata_test--599443891e78-run28842227463-attempt1` 的 manifest 匹配 `branch = smalldata_test`、`runAttempt = 1`、`workflowName = AITRANS CI Results`、`probeMode = ci-fast`、`mangaProbeOutcome = success`；`junit.xml` 为 5 tests / 0 failures，并包含 `.xcresult`、`probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和核心 PNG。
+- 真实探针路径已填充 `koharuNativeArtifactContractDryRunSummary` 与 `koharuArtifactConvergenceGateSummary`；缺 active artifact 时 contract dry-run 正确为 `blockedByMissingActiveArtifacts`，coverage / orientation gate 保持 open / not evaluated，`G-ci-fast-report-availability` 为 passed 且 `requiredReportSpan = v1.24-v1.70`。
+- 清理 `MangaOverlayProbeService` 与 `TranslationSessionStore` 中不参与逻辑的 unused-value 绑定，减少 Xcode build 日志噪声，不改变主 OCR、翻译、覆盖图、report-only 账本或 active artifact gate。
+
+关键文件：
+
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `update_log.md`
+
+验证结果：
+
+- 云端 `ci-fast` 探针：run `28842227463` 成功，`engineUsed = Local GGUF`、`decodingMode = deterministic`、`totalBlocksDetected = 13`、`passedBlocks = 1`、`failedBlocks = 12`、clean text `5 / 11` 通过，缺 active artifact 的 external shadow OCR 正确阻塞在 `manifestMissing`。
+
+遗留事项：
+
+- 本版本不新增 detector、OCR、LLM、PNG、renderer 或 active Koharu artifact，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+- 缺真实 `test/koharu_artifacts/` 时，external TextBox shadow OCR / orientation path 仍只能验证阻塞和报告完整性；真实 artifact handoff 仍需后续注入四件套后再跑 `ci-fast` / `full`。
+
+### v1.72：CI Artifact Convergence Gate Summary Closure
+日期：2026-07-07
+
+依据：v1.70-v1.71 已要求 Agent C 核对 coverage / orientation convergence gate、contract dry-run 和 App-side identity，但 `ci-artifact-manifest.json` 与 `ci-failure-summary.md` 仍主要打印 validator / readiness / shadow OCR 原始摘要，Agent C 需要深挖 `probe_report.json` 才能看到 work item / gate status、blocks 和 `G-ci-fast-report-availability` decision signals。
+
+核心变更：
+
+- `AITRANS CI Results` manifest 新增 `koharuNativeArtifactContractDryRunSummary` 和 `koharuArtifactConvergenceGateSummary`，直接汇总 contract dry-run、App-side identity、coverage / orientation work item 与 gate、identity reconciliation gate、`G-ci-fast-report-availability` 的 decision signals。
+- artifact-requested smoke 新增 `G-ci-fast-report-availability.requiredReportSpan = v1.24-v1.70`、`missingReportCount`、`missingReports` 断言，并扩展 TXT needles，确保 coverage / orientation / OCR success / App-side identity 摘要存在。
+- `ci-failure-summary.md` 的 Koharu artifact gate 区块补充 external shadow OCR counts、contract dry-run safety、coverage / orientation convergence work item / gate 状态和 report availability signals，降低 Agent C 找错包或漏看 blocker 的概率。
+- README、flow、测试规范同步 build-skip 快路径口径：只有 `xcodeBuildRequired=true` 时 `.xcresult` 是必需编译证据，build-skip 必须看 manifest skip reason。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/flow/flow.md`
+- `md/test/test.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`.github/workflows/ci-results.yml` YAML parse、workflow 内 6 个 Python heredoc 语法编译、`python3 -m json.tool` 解析 `test/1.ground_truth.json` / `output/probe_report.json` / `output/clean_text_diagnostic.json`、Koharu validator allow-missing、`contract_example_only_invalid --expect-fail`、新增 manifest summary helper 离线 smoke。
+
+遗留事项：
+
+- 该版本不新增 detector、OCR、LLM、PNG、renderer 或 active Koharu artifact；未重新跑完整漫画探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.71：Convergence Dependency Span / CI Handoff Documentation Closure
+日期：2026-07-07
+
+依据：v1.70 已完成 App/CI artifact handoff strict closure 并通过云端 push 快验，但 `koharuArtifactConvergenceReport`、测试规范和 artifact contract README 仍有少量 v1.68 / v1.69 口径残留，容易让后续 Agent C 按旧 dependency span 或 validator-only preflight 验收。
+
+核心变更：
+
+- `G-ci-fast-report-availability` 的 threshold、`requiredReportSpan` 和 notes 从 `v1.24-v1.68` 更新为 `v1.24-v1.70`，纳入 shadow OCR coverage closure 与 App/CI handoff strict closure。
+- `README.md`、`md/flow/flow.md`、`md/test/test.md` 明确：填写 Koharu artifact archive 时必须跑 `ci-fast` 或 `full`，不能用 `probe_mode=skip`；coverage / orientation work item 与 gate ID、status、TXT 摘要和 App-side identity 都是验收证据。
+- `md/koharu研究/artifact_contract/README.md` 将旧 v1.15 清单改成 v1.70+ active artifact / validator preflight 清单，并明确 validator 通过不等于 Agent C 可验收，云端闭环还必须核对 contract dry-run、identity reconciliation、shadow OCR coverage 和 orientation blockers。
+- `md/koharu研究/v1.38-current-gap-to-koharu.md` 补 v1.70 云端 run 证据和 v1.71 后补充。
+
+关键文件：
+
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/test/test.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、`python3 -m json.tool test/1.ground_truth.json`、`python3 -m json.tool output/probe_report.json`、`python3 -m json.tool output/clean_text_diagnostic.json`、`swiftc -parse $(rg --files AITRANS -g '*.swift')`、`scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`、valid fixture validator、`contract_example_only_invalid --expect-fail`。
+
+遗留事项：
+
+- 该版本不新增 detector、OCR、LLM、PNG、renderer 或 active Koharu artifact；未重新跑完整漫画探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.70：Koharu Artifact App / CI Handoff Strict Closure
+日期：2026-07-07
+
+依据：v1.69 已把 validator manifest 显式字段和 external shadow OCR coverage gate 收紧，但 App 侧仍需要显式保留 manifest 字段缺失 / 类型错误证据；CI smoke 也需要核对 `ocrSucceededCount`、coverage / orientation work item 与 gate ID；同时 “填写 Koharu artifact archive 但 `probe_mode=skip`” 会导致只验证下载和 validator，不能证明 App 实际消费 artifact。
+
+核心变更：
+
+- `MangaOverlayExternalArtifactManifest` 新增 `sourceImageFieldPresent`、`sourceImageTypeValid`、`contractExampleOnlyFieldPresent`、`contractExampleOnlyTypeValid`，让 Swift readiness 能区分缺字段、类型错误和真实值。
+- `externalArtifactReadinessReport` / `externalArtifactIdentityReceipt` / nextAction 新增 `sourceImageMissing`、`contractExampleOnlyMissing`、`contractExampleOnlyInvalid` 分支；ready artifact 的 orientation gate 未闭合时从 warning 收紧为 blocked。
+- `1_ocr_probe_text.txt` 的 external TextBox shadow OCR 行补出 `ocrSucceeded`，convergence 摘要补出 coverage / orientation work item status、gate status 和 gate blocks。
+- GitHub Actions extended validator matrix 新增 `contract_example_only_invalid`；artifact requested 的探针 smoke 硬核对 `ocrSucceededCount > 0`、coverage / orientation work item 与 gate ID、coverage gate passed，以及 orientation gate 不得在仍有 blockers 时 passed。
+- CI metadata 禁止 Koharu artifact archive 与 `probe_mode=skip` 组合；真实四件套注入必须用 `ci-fast` 或 `full` 产生 App 侧证据。
+- 同步更新 Koharu contract README、流程文档、流程图和测试规范；新增 invalid fixture `contract_example_only_invalid`。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid/*`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证通过：`git diff --check`、YAML smoke、JSON 解析、Swift `swiftc -parse`、Koharu validator matrix。
+- 云端 push 快验通过：commit `6b53da9bb3005afbc9bc4bd5d1a8d05e06ca37cf`；`AITRANS CI Results` run `28840108595` 成功，manifest 匹配 `branch = smalldata_test`、`commitSha = 6b53da9bb3005afbc9bc4bd5d1a8d05e06ca37cf`、`xcodeBuildRequired = true`、`xcodeBuildOutcome = success`、`.xcresult` 存在，JUnit `5` tests / `0` failures，默认 push `probeMode = skip`、`mangaProbeOutcome = skipped`，extended validator required 并正确拒绝 `contract_example_only_invalid`。
+- 云端打包通过：`Build IPA` run `28840108614` 成功。
+- 未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked / identity missing。
+- 该版本不新增 detector、OCR、LLM、PNG 或 renderer 算法，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.69：External Artifact Validator / Shadow OCR Coverage Closure Gate
+日期：2026-07-07
+
+依据：v1.65-v1.68 已把真实 Koharu artifact 的 validator identity、App-side receipt、identity reconciliation 和 external shadow OCR coverage 接进 CI / convergence，但仍有两个闭环风险：一是 validator 对 active manifest 缺 `sourceImage` 或缺 `contractExampleOnly` 会走默认值，可能放宽真实 artifact 准入；二是 convergence 的 external shadow OCR coverage 只要求 `executed = true` 和 `candidateCount > 0`，没有把实际 crop OCR 执行数 / 成功数纳入闭合条件，且 ready artifact 未闭合时 gate status 仍是 warning。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 现在要求 manifest 显式声明 `sourceImage = test/1.png` 和布尔型 `contractExampleOnly`；缺失分别输出 `sourceImageMissing` / `contractExampleOnlyMissing`，非布尔 `contractExampleOnly` 输出 `contractExampleOnlyInvalid:*`，均阻止 `readyForShadowOCR`。
+- 新增 invalid fixtures：`source_image_missing` 与 `contract_example_only_missing`，并接入 GitHub Actions extended Koharu validator matrix。
+- `koharuArtifactConvergenceReport` 的 `WI/G-external-textbox-shadow-ocr-coverage` 在真实 artifact ready 后新增 `ocrExecutedCount > 0` 和 `ocrSucceededCount > 0` 闭合条件；未闭合时 gate status 从 warning 升为 blocked。
+- `G-ci-fast-report-availability` 的 threshold / decision signals 更新为当前 v1.24-v1.68 依赖集合，并写出 `missingReportCount`、`missingReports` 和 `requiredReportSpan`，避免旧 v1.24-v1.27 文案误导 Agent C。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/artifact_contract/examples/invalid/source_image_missing/*`
+- `md/koharu研究/artifact_contract/examples/invalid/contract_example_only_missing/*`
+- `update_log.md`
+
+验证结果：
+
+- 本地轻量验证已通过；云端 commit `c1d5990df733d5593de57b4631c8e4120658dcb7` 的 `AITRANS CI Results` run `28839023072` 成功，`Build IPA` run `28839023071` 成功。默认 push 探针为 `skip`，未生成新的漫画探针报告。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked / identity missing。
+- 该版本不新增 OCR / LLM / PNG，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.68：Koharu Artifact Identity Reconciliation Gate
+日期：2026-07-06
+
+依据：v1.67 已把 App 探针 runtime 可见的 source image 与四件套 size / SHA256 写入 `artifactIdentityReceipt`，但 Agent C 仍需要手工把这些值与 `ci-artifact-manifest.koharuArtifactValidationIdentitySummary` 对齐。真实 artifact handoff 需要一个可机器核对的对账表和 CI match verdict，防止 validator 校验的是一组文件、App 消费的是另一组文件。
+
+核心变更：
+
+- 新增 `koharuArtifactIdentityReconciliationReport`，把 App receipt 规范化为 SourceImage + manifest / TextBoxes / BubbleMask / SegmentMask 五行 ledger，逐行写出 App size / SHA256、receipt 状态、contract dry-run identity status，以及 CI manifest identity 的 size / SHA 字段路径。
+- `koharuArtifactConvergenceReport` 新增 `WI-koharu-artifact-identity-reconciliation` / `G-koharu-artifact-identity-reconciliation-ready`，并让 external shadow OCR coverage gate 在真实 artifact ready 后同时要求 reconciliation ready。
+- GitHub Actions 在注入真实 Koharu artifact 并跑 `ci-fast/full` 后，会比较 validator identity 与 App reconciliation rows 的 size / SHA256，失败时阻断；`ci-artifact-manifest.json` 新增 App receipt summary、reconciliation summary 和 `koharuArtifactIdentityReconciliationMatch`。
+- `1_ocr_probe_text.txt` 新增 reconciliation report、逐文件对账行和 convergence work item 摘要，方便 Agent C 直接核对。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮本地轻量验证见最终回复。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时 reconciliation 会保持 App receipt incomplete / not ready。
+- 该版本不新增 OCR / LLM / PNG，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.67：App-Side Koharu Artifact Identity Receipt
+日期：2026-07-06
+
+依据：v1.66 已在 validator / CI manifest 中记录 Release archive 注入的四件套 identity，但 App 侧探针报告仍缺少运行时实际可见文件的 size / SHA256 receipt。Agent C 需要同时核对 CI manifest identity 与 `probe_report.json` 中 App runtime receipt，才能确认不是只下载 / 校验了 archive，而是 App 探针确实消费到同一组 active artifact 文件。
+
+核心变更：
+
+- `externalArtifactReadinessReport` 新增 `artifactIdentityReceipt`，记录 App bundle / runtime 中 `test/1.png`、manifest、TextBoxes、BubbleMask、SegmentMask 的存在性、size、SHA256、manifest schema / coordinate space / generatedBy / generatedAt / contractExampleOnly 和 `identityVerdict`。
+- `koharuNativeArtifactContractDryRunReport` 新增 App 侧 identity 顶层摘要，并把每个 required file 的 `fileSizeBytes`、`sha256`、`identityStatus` 写入 dry-run file ledger；真实 artifact ready 时，contract dry-run ready 现在要求 App 侧 receipt 完整。
+- `koharuArtifactConvergenceReport` 的 external shadow OCR coverage decision signals 透传 App 侧 identity verdict / files / hashes，`1_ocr_probe_text.txt` 同步打印 App 侧 identity 摘要和 required file SHA，方便 Agent C 对齐 `ci-artifact-manifest.koharuArtifactValidationIdentitySummary`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮本地轻量验证见最终回复。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时 App 侧 receipt 会稳定记录 active 目录缺失 / required identity files missing。
+- 该版本不新增 OCR / LLM / PNG，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.66：Koharu Artifact Identity / Contract Dry-Run Coverage Gate
+日期：2026-07-06
+
+依据：v1.65 已把 orientation summary 和 external shadow OCR coverage gate 接进 CI / convergence，但真实 Koharu archive 注入仍缺少两个验收细节：一是 Agent C 不能快速核对 active 四件套的文件身份是否与本轮 Release archive / source image 对齐；二是 `WI/G-external-textbox-shadow-ocr-coverage` 只要求 readiness 与 shadow OCR executed / candidateCount，还没有把 contract dry-run verdict 和 dry-run 边界安全纳入同一个闭环。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 `artifactIdentitySummary`，输出 source image、manifest、TextBoxes、BubbleMask、SegmentMask 的路径、存在性、size、SHA256，并透传 `generatedBy`、`generatedAt`、`contractExampleOnly`、schema、source image 和 coordinate space。
+- GitHub Actions 注入 Koharu artifact archive 时只接受唯一一个同时包含四件套的目录，避免从多个目录各取一个 `rglob()[0]` 拼出错包；`ci-artifact-manifest.json` 透传 `koharuArtifactValidationIdentitySummary`，`ci-failure-summary.md` 打印 identity 摘要。
+- `koharuArtifactConvergenceReport` 的 `WI-external-textbox-shadow-ocr-coverage` / `G-external-textbox-shadow-ocr-coverage` 在真实 artifact ready 后新增 contract dry-run 前置条件：`contractDryRunVerdict = activeArtifactsReadyForShadowOCR`、`dryRunOnly = true`、`activeExportAllowed = false`，再要求 `externalTextBoxShadowOCRReport.executed = true` 且 `candidateCount > 0`。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/koharu研究/v1.38-current-gap-to-koharu.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮本地轻量验证见最终回复。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked / identity empty-or-missing / orientation summary。
+- 该版本不新增 OCR / LLM / PNG，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.65：External TextBox Shadow OCR Coverage / Validator Orientation Summary
+日期：2026-07-06
+
+依据：v1.64 已能防止 external TextBox orientation partial / unsupported path 被 convergence 误判为闭环，但仍有两类证据缺口：一是 validator 只校验方向元数据是否合法，没有在 CI 结果包中汇总 TextBox 的竖排、旋转、line polygon 与 unsupported 风险；二是 artifact `readyForShadowOCR` 只证明四件套可解析，不证明 App 侧 external shadow OCR 已执行并产生 block-matched candidate。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 `orientationMetadataSummary`，汇总 sourceDirection / orientation category / rotation plan / line polygon / vertical / right-angle rotation / arbitrary rotation / unsupported reason，缺 active artifact 时也稳定输出空摘要。
+- `ci-artifact-manifest.json` 新增 `koharuArtifactValidationOrientationSummary`，`ci-failure-summary.md` 的 Koharu artifact gate 区块同步打印 validator orientation 摘要，方便 Agent C 在模拟器探针前核对外部 TextBox 方向风险。
+- `koharuArtifactConvergenceReport` 新增 `WI-external-textbox-shadow-ocr-coverage` / `G-external-textbox-shadow-ocr-coverage`。真实 artifact ready 后，若 `externalTextBoxShadowOCRReport` 缺失、`executed=false` 或 `candidateCount=0`，ExternalArtifacts stage 会进入 `externalShadowOCRCoverageBlocked`，orientation gate 也不会被误判为 passed / closed。
+- `1_ocr_probe_text.txt` 追加 `convergenceExternalShadowOCRCoverage` 和 `convergenceExternalTextBoxOrientation` 摘要。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `.github/workflows/ci-results.yml`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `update_log.md`
+
+验证结果：
+
+- 本轮本地轻量验证见最终回复。
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked / validator empty orientation summary。
+- 该版本不新增 OCR / LLM / PNG，不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed`、active artifact 或 `configuration.currentBlockSource`。
+- 未重新跑完整探针，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.64：External TextBox Orientation Partial / Unsupported Convergence Gate
+日期：2026-07-06
+
+依据：v1.63 已能在真实 artifact ready 后对竖排或接近 90/180/270 度的 external TextBox 执行有上限 rotation shadow OCR，并在候选 / block summary 写出 unsupported reason。但 `koharuArtifactConvergenceReport` 仍主要消费 `orientationShadowPathNotExecutedBlocks`，存在“orientation path 已部分执行但仍因 line polygon warp 或任意角度 deskew unsupported 而未闭环，却被 convergence 看成 closed/passed”的风险。
+
+核心变更：
+
+- `externalTextBoxShadowOCRReport` 新增 `orientationShadowPathPartialBlocks`、`orientationUnsupportedBlocks`、`orientationUnsupportedReasonBreakdown`，把“已执行 rotation OCR 但仍有 unsupported orientation feature”的块提升到 report 级摘要。
+- `orientationReadinessVerdict = orientationShadowPathExecuted` 现在要求无 not-executed blocks 且无 unsupported blocks；部分执行会保持 `orientationShadowPathPartiallyExecuted`。
+- `koharuArtifactConvergenceReport` 的 ExternalArtifacts stage、`WI-external-textbox-orientation-shadow-path` 和 `G-external-textbox-orientation-shadow-path` 改为同时消费 executed / partial / notExecuted / unsupported / unsupported reason breakdown，line polygon warp 与任意角度 deskew 会继续作为 convergence blockers 暴露。
+- `1_ocr_probe_text.txt` 的 external TextBox shadow OCR 汇总追加 `orientationPartial`、`orientationUnsupported` 和 `orientationUnsupportedReasons`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `git diff --check`
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `python3 -m json.tool test/1.ground_truth.json`
+- `python3 -m json.tool output/probe_report.json`
+- `python3 -m json.tool output/clean_text_diagnostic.json`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail`
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked 报告。
+- 该版本仍不实现 line polygon crop / warp 或任意角度 deskew，只防止这类 unsupported orientation path 被 convergence 误判为已闭环。
+- 该版本不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed` 或 active artifact，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.63：External TextBox Orientation Rotation Shadow OCR
+日期：2026-07-06
+
+依据：v1.62 已把 external TextBox 的 `sourceDirection`、`linePolygons` 和 `rotationDegrees` 纳入 orientation ledger，并阻止需要 orientation-aware path 但未执行的候选进入 would-promote 预览。`md/koharu研究/v1.38-current-gap-to-koharu.md` 要求从报告堆叠转向真实 TextBox / 竖排方向 shadow path。当前可安全复用的 OCR 能力是 crop 后 0/90/180/270 旋转，不具备任意角度 deskew 或 line polygon warp。
+
+核心变更：
+
+- `externalTextBoxShadowOCRReport` 在真实 `test/koharu_artifacts/` readiness 通过后，对竖排 TextBox 和接近 90/180/270 度的 rotation TextBox 执行有上限的 rotation shadow OCR；竖排使用 `ja-JP/ja/en-US/en` Vision language profile。
+- 候选和逐块 summary 新增 `orientationAttemptedRotations`、`orientationSelectedRotation`、`orientationRecognitionLanguages`、`orientationUnsupportedReason`，让 JSON / TXT 能证明 orientation path 是否真的执行、选了哪个旋转、以及为何仍阻塞。
+- `orientationReadinessVerdict` 区分 `orientationShadowPathExecuted`、`orientationShadowPathPartiallyExecuted`、`orientationShadowPathNeededNotExecuted`；line polygon warp 和任意角度 deskew 仍以 blocker 阻止 would-promote 预览。
+- `1_ocr_probe_text.txt` 的 external TextBox shadow OCR 逐块摘要和报告汇总追加 rotation / language / unsupported 证据。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `git diff --check`
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `python3 -m json.tool test/1.ground_truth.json`
+- `python3 -m json.tool output/probe_report.json`
+- `python3 -m json.tool output/clean_text_diagnostic.json`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail`
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；缺真实 artifact 时仍只输出 readiness blocked 报告。
+- 该版本只支持 90 度倍数 rotation shadow OCR，不实现任意角度 deskew 或 line polygon crop / warp。
+- 该版本不改变主 OCR、`finalTextUsedForTranslation`、翻译、覆盖图、`blockPassed` 或 active artifact，不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.62：External TextBox Orientation Shadow Ledger
+日期：2026-07-06
+
+依据：v1.61 已把 external TextBox 可选 `sourceDirection`、`rotationDegrees` / `rotationDeg`、`linePolygons` 纳入 validator 和 Swift readiness，但 ready 后的 `externalTextBoxShadowOCRReport` 仍只透传少量 metadata，未把“竖排 / line polygon / rotation 需要 orientation-aware shadow path，而当前未执行”作为可审计 gate。`md/koharu研究/v1.38-current-gap-to-koharu.md` 明确 line polygon 和竖排方向主路径是 AITRANS 距 Koharu 的关键差距。
+
+核心变更：
+
+- `MangaOverlayExternalTextBoxShadowOCRCandidate`、`BlockSummary` 和 `Report` 新增 external TextBox orientation ledger：规范化 `sourceDirection`、orientation 分类、line polygon 数量、rotation blocks、vertical blocks、orientation shadow path needed / executed / not executed blocks 和 report verdict。
+- `makeExternalTextBoxShadowOCRReport` 在选择 external TextBox 后记录方向元数据；当 TextBox 声明 vertical / linePolygons / non-zero rotation 时，写入 `orientationShadowPathNeededNotExecuted` blocker，阻止其进入 `wouldPromoteByExistingGateReportOnly`。
+- `koharuArtifactConvergenceReport` 新增 `WI-external-textbox-orientation-shadow-path` 和 `G-external-textbox-orientation-shadow-path`，把缺失 orientation-aware shadow OCR 路径暴露到 convergence work item / gate。
+- `1_ocr_probe_text.txt` external shadow OCR 明细和汇总追加 sourceDirection、orientation、linePolygons、rotation、orientation shadow needed / executed / verdict。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `git diff --check`
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `python3 -m json.tool test/1.ground_truth.json`
+- `python3 -m json.tool output/probe_report.json`
+- `python3 -m json.tool output/clean_text_diagnostic.json`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail`
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不执行 rotation / deskew / line polygon crop OCR，只记录 orientation shadow path 缺口并阻止 report-only promote 预览误判。
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`。
+- 该版本不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.61：Koharu TextBox Direction Metadata Gate
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 明确 AITRANS 距 Koharu 的关键差距包括真实 TextBoxes、line polygon 和竖排方向主路径。v1.60 已拦住伪造来源，但 TextBox 可选 `sourceDirection`、`rotationDegrees` / `rotationDeg`、`linePolygons` 仍主要是透传或浅校验，真实四件套即使带坏方向元数据也可能进入 App readiness。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 TextBox 可选方向元数据校验：`sourceDirection` 必须落在 horizontal / vertical / vertical-rl / vertical-lr / unknown 等枚举内，`rotationDegrees` / `rotationDeg` 必须是有限数值且在 `[-360, 360]`，`linePolygons` 必须是非空 polygon 数组且点位在 `test/1.png` 原图范围内。
+- Swift `externalArtifactReadinessReport` 使用同类校验，把 TextBox metadata 错误并入 coordinate validation，阻止离线 validator 和 App readiness 口径分叉。
+- 新增 invalid fixture `md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid/`，并加入 CI extended validator matrix。
+- artifact contract README、README、flow 和 test 文档同步说明：方向/旋转/line polygon 仍是可选字段，但提供时必须有效，供后续竖排 / line polygon shadow path 使用。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid/`
+- `md/koharu研究/artifact_contract/README.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `git diff --check`
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `python3 -m py_compile scripts/validate-koharu-artifacts.py`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail`
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；只加强真实四件套方向元数据准入。
+- 该版本不执行 rotation / deskew / line polygon crop OCR；下一步可在 `externalTextBoxShadowOCRReport` 中做 report-only vertical / line polygon shadow path。
+- 该版本不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### CI 维护：Build IPA archive artifact handoff
+日期：2026-07-06
+
+依据：`AITRANS - Build IPA` workflow 在 `Build using xcodebuild` job 已成功归档并上传 xcarchive，但 `Fakesign and package IPA` job 固定下载 `archive.xcarchive.tar.zip`，当 `IPA_PASSWORD` 为空或 secret 不可用导致上游实际上传 `archive.xcarchive.tar` 时，下游会报 `Artifact not found for name: archive.xcarchive.tar.zip`。
+
+核心变更：
+
+- `.github/workflows/build.yml` 将上游实际生成的 xcarchive artifact 文件名写入 step output，并作为 build job output 传给 package job。
+- `Download xcarchive` 不再固定下载 `.zip`，而是使用 `needs.build.outputs.archive_artifact`。
+- `Extract xcarchive` 同时支持 `.tar.zip` 和 `.tar`，保持有密码和无密码两种打包路径。
+
+关键文件：
+
+- `.github/workflows/build.yml`
+- `update_log.md`
+
+验证结果：
+
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/build.yml"); puts "yaml ok"'`
+- `git diff --check`
+
+未跑本机 Xcode build / 模拟器漫画探针；该维护只修 GitHub Actions 打包 artifact 交接，按规则交给云端 workflow 验证。
+
+遗留事项：
+
+- 该维护项不改变未加密 `AITRANS CI Results` 验收口径，不改变漫画探针质量，不追加 `metrics/version_history.csv`。
+
+### v1.60：Koharu Artifact GeneratedBy Source Policy Gate
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 明确 P0 是真实 Koharu artifact 输入。v1.59 已强化注入后 App 侧消费证明，但 active package 仍需要防止“格式正确、来源却是 manual / fixture / Vision OCR / proxy / ground truth”的四件套通过到 shadow OCR。
+
+核心变更：
+
+- `scripts/validate-koharu-artifacts.py` 新增 active manifest `generatedBy` source policy：`contractExampleOnly=false` 时必须声明真实 detector / segmenter 来源；缺失返回 `generatedByMissing`，命中 `manual`、`fixture`、`Vision OCR`、`pre-crop`、`line plan`、`BubbleMask proxy`、`SegmentMask proxy`、`ground truth`、`handwritten` 等禁用来源词返回 `forbiddenGeneratedBy`。
+- Swift `externalArtifactReadinessReport` 使用同一 source policy，把 `generatedByMissing` / `forbiddenGeneratedBy` 阻塞在 `readyForShadowOCR` 之前，并给出 `stopUntilRealDetectorSourceDeclared`。
+- 新增 invalid fixture `md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden/`，并加入 CI extended validator matrix。
+- `README.md`、`md/flow/flow.md`、`md/test/test.md` 和 artifact contract README 同步说明：Agent C 验收真实四件套时必须核对 `generatedBy` 不是禁用来源。
+
+关键文件：
+
+- `scripts/validate-koharu-artifacts.py`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `.github/workflows/ci-results.yml`
+- `md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden/`
+- `README.md`
+- `md/flow/flow.md`
+- `md/test/test.md`
+- `md/koharu研究/artifact_contract/README.md`
+- `update_log.md`
+
+验证结果：
+
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `git diff --check`
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `python3 -m json.tool test/1.ground_truth.json`
+- `python3 -m json.tool output/probe_report.json`
+- `python3 -m json.tool output/clean_text_diagnostic.json`
+- `python3 -m py_compile scripts/validate-koharu-artifacts.py`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail`
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；只加强真实四件套来源准入。
+- 该版本不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### CI 维护：push 快验范围检测与 validator 精简
+日期：2026-07-06
+
+依据：人工要求精简当前测试，让云端 CI 加速，避免每次非 App 构建相关调整都跑完整 Xcode build 或完整 artifact invalid fixture 矩阵。
+
+核心变更：
+
+- `AITRANS CI Results` 新增变更范围检测：非 App 构建相关 push 可跳过 Xcode build，结果包保留 `xcodebuild.log` skip 说明，并在 manifest 写入 `xcodeBuildRequired`、`xcodeBuildSkippedReason`、`changedFilesPath`。
+- Swift、Xcode 工程、`build-apple/`、资源、`test/` 素材、手动 `ci-fast/full` 或 Koharu artifact 注入仍强制 Xcode build。
+- Xcode build 步骤增加 20 分钟上限，启用 `COMPILER_INDEX_STORE_ENABLE=NO` 并使用 quiet build log，减少默认云端耗时和日志体积。
+- Koharu artifact validator 完整 invalid fixture 矩阵只在 validator、artifact contract 或 workflow 相关文件变化时运行；普通 push 只跑 valid example、active allow-missing 和 required-files 核心校验。
+- `AGENTS.md`、`README.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md` 同步新 CI 口径；非 App 构建相关 build-skip 不能当作 Swift/Xcode 编译证据。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `AGENTS.md`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `git diff --check`
+- `python3 -m json.tool test/1.ground_truth.json`
+- `python3 -m json.tool output/probe_report.json`
+- `python3 -m json.tool output/clean_text_diagnostic.json`
+- `python3 -m py_compile scripts/validate-koharu-artifacts.py`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+
+遗留事项：
+
+- 该维护项不改变漫画探针质量，不追加 `metrics/version_history.csv`。
+- Swift / Xcode 代码改动仍需要云端 Xcode build；手动探针仍需 `workflow_dispatch` 选择 `ci-fast` 或 `full`。
+
+### v1.59：Injected Koharu Artifact App-Readiness Smoke
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 把 P0 定为真实 Koharu artifact 输入。此前 workflow 已能下载、校验、解压并 validator 检查四件套，但手动探针的 smoke 仍可能只证明 CI 注入步骤成功，未强制证明 App 内 `externalArtifactReadinessReport` 和 external TextBox shadow OCR 真消费到了 active artifact。
+
+核心变更：
+
+- 手动 `workflow_dispatch` 注入 Koharu artifact 且运行 `ci-fast/full` 时，`manga-probe.log` 的 post-export smoke 会读取 `output/probe_report.json`，强制核对 App 侧 `externalArtifactReadinessReport.readinessVerdict = readyForShadowOCR`、`activeArtifactsDirectory = true`、`contractExampleOnly = false`、`externalTextBoxesShadowOCRAllowed = true`，以及 manifest / TextBoxes / BubbleMask / SegmentMask 全部 found。
+- 同一 smoke 会核对 `externalTextBoxShadowOCRReport.executed = true` 且 `candidateCount > 0`，避免只验证静态四件套存在却没有进入 shadow OCR。
+- 同一 smoke 会核对 `koharuNativeArtifactContractDryRunReport.contractDryRunVerdict = activeArtifactsReadyForShadowOCR`，并确认 `dryRunOnly = true`、`activeExportAllowed = false`，保持 active artifact 写入边界。
+- TXT smoke 新增注入路径 needle：`externalArtifacts: readiness=readyForShadowOCR`、`shadowOCRAllowed=true`、`nativeArtifactContractDryRunReport`、`nativeArtifactContractDryRunPreview`。
+- `README.md`、`md/flow/flow.md`、`md/test/test.md` 同步说明：Agent C 不能只看 Release 下载、SHA、解压或 validator 日志，必须看 App 侧探针报告。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/flow/flow.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `git diff --check`
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `python3 -m json.tool test/1.ground_truth.json`
+- `python3 -m json.tool output/probe_report.json`
+- `python3 -m json.tool output/clean_text_diagnostic.json`
+- `python3 -m py_compile scripts/validate-koharu-artifacts.py`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不提供真实 Koharu artifact，也不创建 active `test/koharu_artifacts/`；只强化注入后云端验收证据。
+- 该版本不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.58：TextBox Segment Linkage Reaches Convergence
+日期：2026-07-06
+
+依据：v1.57 已把 TextBox -> SegmentMask linkage 传播到 bundle-lite 和 promotion gate，但最终 `koharuArtifactConvergenceReport` 仍需要显式消费这些 work item / gate，避免 bundle / promotion 层已经阻塞弱 linkage、收敛层却只按旧 artifact stage 给出下一步。
+
+核心变更：
+
+- `koharuArtifactConvergenceReport` 新增 bundle / promotion linkage review 聚合，把 v1.57 的 review / blocked blocks 继续传播到 convergence stage、block path、work item closure ledger 和 gate ledger。
+- TextBoxes / SegmentMask convergence stage 会在 weak、fallback、rejected 或 wrong-bubble linkage 存在时输出 linkage-blocked status、affected blocks、decision signals 和 blocked work items。
+- 逐块 artifact path 会把 `primaryStructuralBottleneck` 收束到 `textBoxSegmentMaskLinkage`，并优先给出 `auditTextBoxSegmentLinkageBeforeBundleReadiness` 或 `auditTextBoxSegmentLinkageBeforePromotion`。
+- 新增 convergence work items / gates：`WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage`、`WI-koharu-native-promotion-gate-lite-textbox-segment-linkage`、`G-koharu-convergence-bundle-lite-textbox-segment-linkage`、`G-koharu-convergence-promotion-lite-textbox-segment-linkage`。
+- `1_ocr_probe_text.txt` 新增 `convergenceBundleTextBoxSegmentLinkage` 和 `convergencePromotionTextBoxSegmentLinkage` 摘要，云端 `ci-fast` smoke 会检查 JSON 字段和 TXT needle。
+- 本轮仍是 report-only：不新增 OCR / LLM / PNG，不创建或修改 active `test/koharu_artifacts/`，不改变主 OCR、翻译输入、覆盖图、renderer、`safeLayoutRect`、`glyphMaskFillRects`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `git diff --check`
+- `python3 -m json.tool test/1.ground_truth.json`
+- `python3 -m json.tool output/probe_report.json`
+- `python3 -m json.tool output/clean_text_diagnostic.json`
+- `python3 -m py_compile scripts/validate-koharu-artifacts.py`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+
+未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+
+遗留事项：
+
+- 该版本不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+- 真正的 Koharu 能力仍依赖真实 TextBoxes / BubbleMask / SegmentMask 四件套或模型级 detector 输出；native-lite linkage 只作为 report-only gate。
+
+### v1.57：TextBox Segment Linkage Propagates to Bundle / Promotion
+日期：2026-07-06
+
+依据：v1.56 已在 SegmentMask refinement-lite 中记录 selected TextBox -> SegmentMask linkage，但 v1.45 bundle-lite 和 v1.46 promotion gate 仍主要看组件可用性，缺少把 rejected / fallback / wrong-bubble TextBox linkage 继续向 bundle readiness 和 promotion eligibility 传播的阻塞口径。
+
+核心变更：
+
+- `MangaKoharuNativeArtifactBundleLiteBlockLedger` 新增 `selectedTextBoxSegmentLinkVerdict`、`textBoxSegmentLinkageStatus`、`textBoxSegmentLinkageRisk`；报告新增 `textBoxSegmentLinkBreakdown` 和 `textBoxSegmentLinkageReviewBlocks`。
+- `koharuNativeArtifactBundleLiteReport` 新增 `TextBoxSegmentMaskLinkage` consistency edge；fallback、weak、rejected 或 wrong-bubble linkage 会把 `primaryBlockingArtifact` 指向 `TextBoxes`，并把 `nextAction` 收束到 `auditTextBoxSegmentLinkageBeforeBundleReadiness`。
+- `MangaKoharuNativePromotionBlockLedger` 新增 `textBoxSegmentLinkVerdict` 和 `textBoxSegmentLinkagePromotionStatus`；报告新增 `textBoxSegmentLinkBreakdown` 和 `textBoxSegmentLinkageBlockedBlocks`。
+- `koharuNativePromotionGateLiteReport` 会把弱 linkage 写入 TextBoxes / SegmentMask promotion status、`mustNotPromoteReasons`、probe bottleneck 和 `auditTextBoxSegmentLinkageBeforePromotion`，防止 SegmentMask proxy 因局部可用而被误判可晋级。
+- 新增 linkage work items / gates：`WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage`、`G-native-artifact-bundle-lite-textbox-segment-linkage`、`WI-koharu-native-promotion-gate-lite-textbox-segment-linkage`、`G-native-promotion-gate-lite-textbox-segment-linkage`。
+- `1_ocr_probe_text.txt` 新增 bundle / promotion 的 `textBoxSegmentLink=` 逐块摘要，以及报告级 `nativeArtifactBundleLiteTextBoxSegmentLink`、`nativePromotionTextBoxSegmentLink` 汇总。
+- 本轮仍是 report-only：不新增 OCR / LLM / PNG，不创建或修改 active `test/koharu_artifacts/`，不改变主 OCR、翻译输入、覆盖图、renderer、`safeLayoutRect`、`glyphMaskFillRects`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci-results.yml"); puts "yaml ok"'`
+- `git diff --check`
+- `python3 -m json.tool test/1.ground_truth.json`
+- `python3 -m json.tool output/probe_report.json`
+- `python3 -m json.tool output/clean_text_diagnostic.json`
+- `python3 -m py_compile scripts/validate-koharu-artifacts.py`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files`
+- `python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail`
+- `python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail`
+
+遗留事项：
+
+- 未跑本机 Xcode build / 模拟器漫画探针；按规则交给 GitHub Actions build 和手动 `ci-fast` / `full` 探针验证。
+- 该版本不改变漫画质量指标，不追加 `metrics/version_history.csv`。
+
+### v1.56：TextBox -> SegmentMask Linkage Gate
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 的 TextBoxes / SegmentMask 差距：Koharu 是 TextBoxes 先产出，再约束 SegmentMask；AITRANS 已有 detector-lite 和 SegmentMask refinement-lite，但两者之间缺少可审计 linkage，容易出现 SegmentMask 看似可用、实际来自弱 TextBox / rejected TextBox / fallback bbox 的假闭环。
+
+核心变更：
+
+- `MangaKoharuNativeTextBoxDetectorLiteCandidate` 新增 `relatedBlockRelations[]`，记录 candidate 与 block 的 overlap、center containment、same-bubble 和 relation reason。
+- `MangaKoharuNativeTextBoxDetectorLiteBlockLedger` 新增 best candidate relation 字段：coverage ratio、center-contained、same-bubble、candidate verdict 和 shadow OCR eligibility。
+- `koharuNativeTextBoxDetectorLiteReport` 新增 `blockRelationBreakdown`。
+- `MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger` 新增来源 TextBox linkage 字段：source TextBox verdict、shadow eligibility、block overlap、same-bubble、accepted-for-SegmentMask 和 link verdict。
+- `MangaKoharuNativeSegmentMaskRefinementLiteBlockLedger` 新增 selected source TextBox candidate ID / link verdict。
+- `koharuNativeSegmentMaskRefinementLiteReport` 新增 `textBoxSegmentLinkBreakdown`、`segmentFromAcceptedTextBoxCount`、`segmentFromRejectedTextBoxCount`、`segmentFromFallbackBBoxCount`。
+- 新增 gates：`G-native-segmentmask-refinement-lite-textbox-linkage-audited` 和 `G-native-segmentmask-refinement-lite-no-rejected-textbox-silent-selection`。
+- `1_ocr_probe_text.txt` 的 TextBox / SegmentMask native-lite summary 输出 candidate relation、selected link verdict、accepted/rejected/fallback 计数。
+- 本轮不新增 OCR / LLM / PNG，不创建或修改 active `test/koharu_artifacts/`，不替换主 OCR、翻译输入、覆盖图、`safeLayoutRect`、`glyphMaskFillRects`、renderer、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+
+遗留事项：
+
+- Linkage gate 仍只审计 native-lite proxy TextBoxes；真实能力需要 active Koharu TextBoxes / SegmentMask 四件套或模型级 detector 输出。
+- 后续可把该 linkage 接入 `koharuNativeArtifactBundleLiteReport` / promotion gate 的 consistency edges，使 rejected / fallback TextBox 约束直接影响 artifact readiness。
+
+### v1.55：BubbleMask Sibling Sprite Collision Preview
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 的 P5 渲染方向和 Koharu renderer 的 same-bubble sprite collision 思路：v1.54 已检查单块 sprite bounds 是否落在 block-scoped safe rect 内，本轮继续 report-only 检查同一个 instance-lite bubble 下多个 rendered sprite bounds 是否互相重叠。
+
+核心变更：
+
+- `MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger` 新增 `sameInstanceRenderSpriteOverlapCount` 和 `spriteSiblingCollisionPolicy`。
+- `MangaKoharuNativeBubbleMaskInstanceLiteSiblingLedger` 新增 `renderSpriteOverlapCount` 和 `sameBubbleSpriteCollisionPolicy`。
+- `koharuNativeBubbleMaskInstanceLiteReport` 新增 `spriteSiblingCollisionBreakdown`。
+- `makeKoharuNativeBubbleMaskInstanceLiteReport` 现在对 same-instance sibling blocks 的 `renderNonTransparentBounds` 做 bounded overlap 计数，并输出 `sameInstanceSpritesSeparated`、`sameInstanceSpriteOverlapManualReview`、`missingRenderSpriteBounds` 或 `singleBlockOrNoInstance`。
+- 新增 gate `G-native-bubblemask-instance-lite-sibling-sprite-collision`，只证明同 instance sprite collision 已进入账本，不写回 renderer。
+- `1_ocr_probe_text.txt` 的 block / sibling / summary 行输出 sibling sprite overlap 和 collision policy。
+- CI 维护：Koharu artifact archive 注入前会清空 `test/koharu_artifacts/`，避免残留 active 文件影响四件套 validator；测试文档同步 schema/path invalid fixtures 和 skip/探针结果包口径。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `AGENTS.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+
+遗留事项：
+
+- 这仍是 bounds-level sibling collision preview，不是 Koharu renderer 的逐像素 alpha mask collision；真实能力需要 active BubbleMask 或 renderer-side sprite alpha gate。
+- Rawls 子 agent 建议的 TextBox -> SegmentMask linkage gate 是下一轮高收益候选；本轮先收窄在 P5 sibling sprite collision，避免一次改动跨太多报告结构。
+
+### v1.54：BubbleMask Block-Scoped Sprite Containment Preview
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 的 P5 渲染方向和 Koharu renderer 的 mask collision 思路：先 report-only 检查 rendered sprite 非透明 bounds 是否落在所属 block 的 scoped safe rect 内，再考虑未来是否接入真实 renderer gate。
+
+核心变更：
+
+- `MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger` 新增 `spriteBlockScopedSafeRectContainmentRatio`、`spriteContainedByBlockScopedSafeRect`、`spriteContainmentPolicy`。
+- `koharuNativeBubbleMaskInstanceLiteReport` 新增 `spriteBlockScopedContainmentBreakdown`，保留旧 `spriteContainmentBreakdown` 的 instance-lite mask coverage 语义。
+- v1.43 block ledger 现在用现有 `renderNonTransparentBounds` 和 `instanceLiteBlockScopedSafeRect` 计算 report-only containment ratio；`>= 0.995` 视为 `spriteWithinBlockScopedSafeRect`，缺 bounds / 缺 scoped safe rect 时明确记录 missing 状态。
+- `1_ocr_probe_text.txt` 的 `nativeBubbleMaskInstanceLiteBlockLedger` 行输出 `spriteScopedContainmentRatio`、`spriteContainedByScopedSafeRect`、`spriteContainmentPolicy`；summary 输出 `nativeBubbleMaskInstanceLiteBlockScopedSpriteContainment`。
+- 本轮不新增 OCR / LLM / PNG，不创建或修改 active `test/koharu_artifacts/`，不重新渲染，不写回主 OCR、翻译输入、覆盖图、`safeLayoutRect`、DistanceField 报告、renderer、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+
+遗留事项：
+
+- 这仍是 bounds-level preview，不是 Koharu 逐像素 alpha mask collision；真实能力需要 active BubbleMask 或 renderer-side sprite alpha gate。
+- 当前本地 `output/` 不含 v1.43+ 新字段；真实 JSON / TXT 结果以后续手动 GitHub Actions `ci-fast/full` 结果包为准。
+
+### v1.53：BubbleMask Instance-Lite Sibling Safe Rect Policy
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 的 P3 方向，以及 Koharu renderer 行为：同一个 bubble ID 下多个 text block 不应全部扩展到同一个最大 safe rect，否则会制造 sibling layout collision。
+
+核心变更：
+
+- `MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger` 新增 `instanceLiteBlockScopedSafeRect` 和 `instanceLiteSafeRectPolicy`。
+- `MangaKoharuNativeBubbleMaskInstanceLiteSiblingLedger` 新增 `blockScopedSafeRectOverlapCount` 和 `sameBubbleSafeRectPolicy`。
+- `koharuNativeBubbleMaskInstanceLiteReport` 新增 `safeRectPolicyBreakdown`。
+- 单 block instance 继续使用 v1.51 的 mask-derived instance safe rect；同 instance 多 block 时，report-only `instanceLiteBlockScopedSafeRect` 使用 block seed rect，避免把同一个最大 safe rect 复制给 siblings。
+- `distanceFieldSafeRectFromInstanceLite` 在同 instance 多 block 场景写入 block-scoped rect，并把 `distanceFieldSafeRectSource` 标为 `nativeBubbleMaskInstanceLiteBlockScopedSeedRect`。
+- 新增 gate `G-native-bubblemask-instance-lite-sibling-safe-rect-policy`，只证明 policy report-only，不写回主流程。
+- `1_ocr_probe_text.txt` 的 block / sibling / summary 行新增 safe rect policy 和 block-scoped overlap 输出。
+- 本轮不新增 OCR / LLM / PNG，不创建或修改 active `test/koharu_artifacts/`，不写回主 OCR、翻译输入、覆盖图、`safeLayoutRect`、DistanceField 报告、renderer、`blockPassed`、失败分类或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+
+遗留事项：
+
+- 仍是 native-lite report-only 近似；真实 Koharu BubbleMask 仍需要 active artifact 或更强 detector 输出。
+- 当前本地 `output/` 不含 v1.43+ 新字段；真实 JSON / TXT 结果以后续手动 GitHub Actions `ci-fast/full` 结果包为准。
+
+### v1.52：SegmentMask Refinement-Lite Containment Ratio Gate
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 的 P3 / SegmentMask 差距，以及子 agent 对 v1.44 的只读复核：已有 TextBox-constrained glyph mask，但 `maskContainedByTextBox` / `maskContainedByBubble` 只是弱布尔，不能表达 Koharu-like mask containment 证据。
+
+核心变更：
+
+- `MangaKoharuNativeSegmentMaskRefinementLiteCandidateLedger` / `BlockLedger` 新增 `maskContainedByTextBoxRatio`、`maskContainedByBubbleRatio`、`maskMajorityInstanceLiteID`、`maskMajorityBubbleID`、`maskMajorityCoverage`、`maskMajorityAgreement`。
+- `koharuNativeSegmentMaskRefinementLiteReport` 新增 `maskMajorityAgreementBreakdown`。
+- v1.44 正常候选在 `maskBBox` 生成后用 `rectContainmentRatio` 计算 TextBox / Bubble containment ratio；block ledger 的 `maskContainedByTextBox` / `maskContainedByBubble` 改为 ratio 阈值判定，而不是只看是否缺 constraint。
+- majority agreement 使用 v1.43 instance-lite ledger / instance bbox / bubble ID 做 report-only 一致性判断；不重算真实 SegmentMask 像素多数票，不把它冒充真实 Koharu SegmentMask。
+- `1_ocr_probe_text.txt` summary 追加 `nativeSegmentMaskRefinementLiteMajorityAgreement`，candidate / block ledger 行输出 containment ratio 与 majority agreement。
+- 本轮仍不新增 OCR / LLM / PNG，不创建或修改 active `test/koharu_artifacts/`，不写回主 OCR、翻译输入、覆盖图、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、renderer、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+
+遗留事项：
+
+- v1.52 仍是 native-lite report-only 近似；真实 SegmentMask 还需要 active artifact 或 detector 输出。
+- 当前本地 `output/` 不含 v1.44+ 新字段；真实 TXT / JSON 输出以后续手动 GitHub Actions `ci-fast/full` 结果包为准。
+
+### v1.51：BubbleMask Instance-Lite 像素派生 Safe Rect
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 的 P3 方向，继续把 BubbleMask instance-lite 从 bbox 代理推向像素 ID mask / safe area 证据；本轮仍不接 active Koharu artifact、不新增 OCR / LLM / PNG、不替换主 OCR / 翻译 / 覆盖 / 通过判定。
+
+核心变更：
+
+- `koharuNativeBubbleMaskInstanceLiteReport` 的 `instanceLiteSafeRect` / `distanceFieldSafeRectFromInstanceLite` 不再由 instance bbox 简单内缩生成，改为从对应 instance 的源图像像素 offset 派生。
+- 新增轻量 mask-derived safe rect 逻辑：先按 row / column run 估计到 mask 边界的内侧距离并做 erosion；若实例太薄无法形成 eroded core，则回退到高覆盖 row / column projection core。
+- same-bubble sibling overlap 和逐块 block ledger 共用同一份 `instanceSafeRectsByID`，避免 block 与 sibling ledger 使用不同 safe rect 口径。
+- block decision signals 新增 `safeRectSource = maskDerivedInstanceLitePixels` / `nil`，保持 schema 不变。
+- 所有结果仍是 report-only；不写回 `safeLayoutRect`、DistanceField 报告、renderer、OCR 输入、翻译输入、active artifacts 或 `configuration.currentBlockSource`。
+
+关键文件：
+
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证结果：
+
+- `swiftc -parse $(rg --files AITRANS -g '*.swift')`
+- `git diff --check`
+
+遗留事项：
+
+- 该 safe rect 仍是 AITRANS native-lite report-only 近似，不代表真实 Koharu `BubbleMask` distance field 已接入。
+- 真实 P3 收益仍需手动 GitHub Actions `ci-fast/full` 结果包检查 `koharuNativeBubbleMaskInstanceLiteReport` 的 block / sibling ledger。
+
+### v1.50：Detector-Lite 竖排 Rotation Shadow OCR
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 的 P2 方向，向 Koharu 的竖排 / 方向处理能力靠近；本轮不新建 active artifact、不新增 LLM、不替换主 OCR / 翻译 / 覆盖 / 通过判定。
+
+核心变更：
+
+- `koharuNativeTextBoxDetectorLiteShadowOCRReport` 复用既有 `directionHint` / `rotationApplied` 字段，对 v1.39 `verticalCandidate` 做有上限的 `[0,90]` crop OCR shadow 对照。
+- `verticalCandidate` crop OCR 使用受限 `ja-JP/ja/en-US/en` Vision language profile；横排候选保留默认 0 度 / 英语路径。
+- v1.40 候选选择按当前 block 与 bbox 的 overlap / center containment 优先于全局 detector score，降低 same-bubble sibling 共享错误高分候选的风险。
+- full 模式每块最多跑 2 个候选时，block ledger 的 `selectedCandidateID` 现在记录本块 report-only 最佳 shadow OCR 候选，v1.41 refinement 跟随该最佳 ID。
+- rotation 对照仍按候选计入既有每块选择预算：`ci-fast` 每块最多 1 个 detector-lite 候选、`full` 每块最多 2 个；不会新增候选池或 promotion 路径。
+- 旋转结果选择只使用无真值 OCR 质量分和当前文本 word preservation；ground truth 仍只写 evaluation signals，不参与候选选择、OCR 执行、gate 或 nextAction。
+- 新增 gate `G-native-textbox-detector-lite-shadow-ocr-vertical-rotation-budget`，记录 vertical candidate 数、实际采用 rotation 数和 rotation breakdown。
+- `1_ocr_probe_text.txt` summary 新增 `nativeTextBoxDetectorLiteShadowOCRRotation`，每个 `nativeTextBoxDetectorLiteShadowOCRCandidate` 输出 `rotation=`。
+
+关键文件：
+
 - `AITRANS/Services/MangaOverlayProbeService.swift`
 - `AITRANS/Services/TranslationSessionStore.swift`
 - `README.md`
 - `md/flow/flow.md`
 - `md/flow/flowchart.md`
 - `md/test/test.md`
-- `update_log.md`
-- `scripts/validate-koharu-shadow-artifacts.py`
-- `md/prompt/v1（漫画探针）/v1.47（KoharuNativeShadowArtifactExportLite候选artifact影子导出）.md`
 
 验证计划：
 
-- 本轮 Agent B 本地运行轻量 Swift parse、`git diff --check`、JSON 解析、Koharu validator smoke 和 shadow validator smoke。
-- 未跑本机 build / 探针，按规则交给云端验证。
-- 云端 `AITRANS CI Results` `ci-fast` 应证明 `koharuNativeShadowArtifactExportLiteReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`exportedFileCount >= 5`、`textBoxRecordCount == totalBlocksDetected`、`bundleRecordCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`gateCount >= 10`、shadow / forbidden / not-active-ready flags 正确、`activeArtifactsWritten = false`、`wouldCreateActiveArtifact = false`、`groundTruthUsedForDecision = false`，convergence 包含 v1.47 reference / work item / gate，且 `1_ocr_probe_text.txt` 包含 summary、文件清单、逐块 ledger 和 gate。
+- 本地运行 Swift parse、workflow YAML parse、`git diff --check`、JSON smoke 和 Koharu artifact validator smoke。
+- 本轮不跑本地 Xcode build 或模拟器漫画探针；真实 v1.50 `rotationApplied` 结果以手动 GitHub Actions `ci-fast/full` 输出为准。
 
 遗留事项：
 
-- 旧仓库根 `output/` 不含 v1.47 新字段和 shadow 目录；以 PR 后云端结果包为准。
-- v1.47 仍是 native-lite shadow artifact export report-only 输出包，不代表真实 Koharu `TextBoxes` / `BubbleMask` / `SegmentMask` / `OcrText` / `RenderedSprites` 已接入，也不代表 OCR 或翻译质量改善。
-- 本轮未重新跑完整漫画探针，不追加 `metrics/version_history.csv` 漫画指标行。
+- 当前 `test/1.png` 是英文横排样例，可能不会稳定触发大量 `verticalCandidate`；P2 真正收益仍需要竖排日语样例或云端结果包证明。
+- 该路径仍是 detector-lite shadow OCR，不代表真实 Koharu TextBoxes / OCR 已接入，也不替换主流程。
+
+### v1.49：Detector-Lite 每 Bubble 多候选池
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 的 P1 要求，在没有真实 Koharu artifact 时继续改进 native TextBoxes detector-lite；本轮仍不伪造 active artifact、不使用 Vision OCR 文本 / ground truth / pre-crop / line / TextRegion crop 结果生成候选，不改变主 OCR、翻译、覆盖或通过判定。
+
+核心变更：
+
+- `koharuNativeTextBoxDetectorLiteReport` 从每个 bubble 单一暗连通域 union 候选，改为每个 bubble 有上限的预 OCR candidate pool：最多 4 个 component-cluster TextBox 候选 + 1 个 diagnostic union fallback。
+- component-cluster 候选按 bubble 内连通域 gap / projection split 生成；union fallback 仅用于诊断，固定 `shadowOCREligible = false`，避免在 v1.40 `ci-fast` 每块 1 个候选预算下抢占 shadow OCR。
+- detector-lite candidate ID 改为稳定零填充序号 `NTBDL-<bubbleID>-<NN>`，并按 bubble、shadow OCR eligibility、score、ID 稳定排序。
+- 多候选到 current block 的关系改为 bbox overlap / center containment 优先；component-cluster 无匹配时才回退同 bubble 最近块，避免同 bubble sibling 全部共享同一高分候选。
+- `G-native-textbox-detector-lite-candidate-pool-cap` gate 记录候选池上限，文档和测试口径同步要求 `bubbleLedgerCount == evaluatedBubbleCount`、candidate pool 有上限且 union fallback 不参与 shadow OCR。
+
+关键文件：
+
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+
+验证计划：
+
+- 本地运行 Swift parse、workflow YAML parse、`git diff --check`、JSON smoke 和 Koharu artifact validator valid / invalid / active-missing smoke。
+- 本轮不跑本地 Xcode build 或模拟器漫画探针；完整 build 和真实 `ci-fast/full` 探针仍交给 GitHub Actions。
+
+遗留事项：
+
+- 多候选池仍是 proxy-not-real Koharu TextBoxes；真实晋级仍需要 Release 注入真实 Koharu artifact archive 并通过 active artifact validator。
+- 手动 `ci-fast/full` 才会运行 v1.40/v1.41 shadow OCR / refinement OCR；push 默认快验仍保持 probe skip 以控制云端耗时。
+
+### v1.48 Koharu active artifact CI intake 与契约硬化
+日期：2026-07-06
+
+依据：`md/koharu研究/v1.38-current-gap-to-koharu.md` 的 P0 要求从 report-only 转向真实 `test/koharu_artifacts/` 输入。本轮不伪造 active artifact、不复制 examples、不使用 Vision OCR / pre-crop / line / proxy / ground truth / 手写框生成四件套。
+
+核心变更：
+
+- `AITRANS CI Results` 新增手动 `workflow_dispatch` 输入 `koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256`、`koharu_artifact_required`。
+- 当提供真实 Koharu artifact archive 时，CI 在 Xcode build 前从 Release 下载、校验 SHA256、解压，并只复制 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json` 到 `test/koharu_artifacts/`，随后运行 validator。`koharu_artifact_required=true` 时注入或 validator 失败会阻断工作流。
+- `ci-artifact-manifest.json` 新增 Koharu artifact 注入来源、required 状态、注入结果、Release tag、asset、SHA 和注入日志路径，Agent C 可区分缺 artifact 阻塞路径与真实 artifact 注入路径。
+- `scripts/validate-koharu-artifacts.py` 将 `schemaVersion` 缺失 / 不匹配变成 readiness 阻塞，`schemaVersion` 必须为 `aitrans.koharu_artifact_contract.v1`。
+- Python validator 和 Swift readiness 都拒绝 manifest artifact path 使用绝对路径或 `..` 逃逸 active artifact root，避免 active manifest 指向目录外文件。
+- 新增 invalid fixtures：`schema_mismatch` 和 `path_escape`，并加入 CI 静态检查 `--expect-fail`。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `scripts/validate-koharu-artifacts.py`
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `md/koharu研究/artifact_contract/README.md`
+- `md/test/test.md`
+- `md/flow/flow.md`
+- `README.md`
+
+验证结果：
+
+- 本轮应通过轻量检查：Swift parse、workflow YAML parse、`git diff --check`、JSON parse、validator valid / invalid / active missing。
+- 本轮不跑本地 Xcode build 或模拟器漫画探针；完整 build 和 `ci-fast/full` 仍交给 GitHub Actions。
+
+遗留事项：
+
+- 当前仓库默认仍没有真实 active `test/koharu_artifacts/`，因此不能声称 `externalTextBoxShadowOCRReport.executed = true` 已验证。
+- 下一步若有真实 Koharu archive，手动 `workflow_dispatch` 填写 Koharu artifact 输入并选择 `ci-fast`，验收 `koharuArtifactValidation.verdict = readyForShadowOCR`、Swift readiness ready、external shadow OCR executed。
+- 若短期仍无真实 artifact，下一步按 v1.38 P1 改进 native TextBoxes detector-lite：每个 bubble 生成多个 OCR 前 TextBox 候选，而不是将全部暗连通域 union 成单一大框。
+
+### 维护：AITRANS CI Results 默认快验加速
+日期：2026-07-06
+
+本轮根据 Agent X 目标和云端 CI 速度要求，精简默认云端验证路径；不修改漫画探针算法、不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`。
+
+核心变更：
+
+- `AITRANS CI Results` 增加 `concurrency`，同一 ref 新 run 会取消旧 run，避免连续 push 堆积 macOS runner。
+- `push` 到 `smalldata_test` / `codeb/**` 默认 `probe_mode=skip`，只跑静态检查、Xcode build、manifest 和未加密结果包；不下载 GGUF、不创建模拟器、不安装 App、不跑漫画探针。
+- 手动 `workflow_dispatch` 仍可选择 `ci-fast` 或 `full` 跑真实 simulator + Local GGUF 漫画探针。
+- `probe_mode=skip` 时 JUnit 把 GGUF model / simulator / manga probe 跳过视为快验成功，并在 manifest 写 `probeSkippedReason = default_push_fast_ci_or_manual_skip` 与 `modelSetupSkippedReason = probe_mode_skip_fast_ci_does_not_need_model`。
+- 手动探针模式下，GGUF cache 只在 SHA 校验成功后保存；build 或模型校验失败时不再继续定位 App 或启动模拟器。
+- 手动探针导入模型到 App sandbox 时优先使用 APFS clone `cp -c`，失败再回退普通复制。
+- 手动探针新增 `probeNoProgressTimeoutSeconds`，`ci-fast` 180 秒、`full` 300 秒内若没有生成 progress 文件会提前失败，避免 App 未启动时等满总超时。
+
+关键文件：
+
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `AGENTS.md`
+- `md/flow/flow.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证计划：
+
+- 本地运行 YAML 解析、`git diff --check` 和现有 JSON smoke。
+- 未跑本机 build / 探针；push 后默认云端快验应只检查静态项和 Xcode build。需要漫画探针结果时手动触发 `workflow_dispatch` 的 `ci-fast` 或 `full`。
+
+遗留事项：
+
+- 手动 `ci-fast` 内部仍会运行 v1.40 / v1.41 detector-lite shadow OCR / refinement OCR 等额外 Vision crop OCR；若后续还嫌手动探针慢，需要在 Swift run options 中新增更细粒度门控并同步 v1.29-v1.46 验收口径。
+
+### v1.47：Koharu Native Artifact Contract Dry-Run 四件套准入干跑
+日期：2026-07-06
+
+依据：Agent X 继续沿 `md/koharu研究/v1.38-current-gap-to-koharu.md` 推进，避免继续只堆抽象报告，转向真实 Koharu artifact 四件套准入的机器可验 dry-run。本轮修改 Swift 探针报告模型、TXT 摘要和核心文档；不刷新仓库根 `output/`，不追加 `metrics/version_history.csv`，完整 build / 探针交给 GitHub Actions。
+
+核心变更：
+
+- 新增 `koharuNativeArtifactContractDryRunReport`，在 v1.46 `koharuNativePromotionGateLiteReport` 后生成。
+- 报告把 v1.46 `candidateExportPreviews[]` 映射到 active 四件套 contract：`test/koharu_artifacts/1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`。
+- 报告写出 `sourceImage = test/1.png`、`coordinateSpace = originalImageTopLeftPixels`、`activeInputDirectory`、`examplesDirectory`、required files、required fields、missing fields、forbidden source breakdown、validator commands 和 gate ledger。
+- `koharuArtifactConvergenceReport` 现在把 v1.47 纳入 `referenceReports`、`workItemLedger` 和 `gateLedger`，用 `WI-koharu-native-artifact-contract-dry-run` / `G-koharu-native-artifact-contract-dry-run-executed` 明确记录真实四件套 intake 仍阻塞或 ready。
+- `activeExportAllowed = false`、`dryRunOnly = true`，native-lite / proxy preview 只做 contract dry-run，不创建、复制或修改 active `test/koharu_artifacts/`。
+- `1_ocr_probe_text.txt` 新增 dry-run summary、required file、preview、gate、validator command 和 forbidden active source 摘要。
+
+关键文件：
+
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Services/MangaOverlayProbeService.swift`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+- `update_log.md`
+
+验证计划：
+
+- 本地运行 Swift parse、YAML 解析、`git diff --check`、JSON smoke 和 Koharu artifact validator 正反例。
+- 云端手动 `workflow_dispatch` 的 `ci-fast` 应证明 `koharuNativeArtifactContractDryRunReport.enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`requiredFileCount >= 4`、`contractGateCount >= 6`、`dryRunOnly = true`、`activeExportAllowed = false`、`groundTruthUsedForDecision = false`、`wouldChangeMainFlow = false`，`koharuArtifactConvergenceReport.referenceReports` 包含该报告，`workItemLedger` / `gateLedger` 包含 `WI-koharu-native-artifact-contract-dry-run` / `G-koharu-native-artifact-contract-dry-run-executed`，且 `1_ocr_probe_text.txt` 包含 `nativeArtifactContractDryRunRequiredFile` 和 `nativeArtifactContractDryRunPreview`。
+
+遗留事项：
+
+- 旧仓库根 `output/` 不含 v1.47 新字段；以 PR 后云端结果包为准。
+- v1.47 仍不代表真实 Koharu `TextBoxes` / `BubbleMask` / `SegmentMask` 已接入；下一步仍需要真实 active 四件套或更强 detector 输出通过 validator。
 
 ### v1.46：Koharu Native Promotion Gate-Lite 探针驱动晋级门槛
 日期：2026-07-03

@@ -47,6 +47,7 @@
 
 - 调用 `TranslationSessionStore` 方法。
 - 展示翻译、历史、模型状态、OCR 块、探针报告和错误。
+- 音频页展示 Apple Speech 本机识别能力、识别运行摘要、识别文本、译文和取消入口。
 
 关键文件：
 
@@ -76,6 +77,7 @@
 - `Application Support/AITRANS/state.json`。
 - `output/probe_report.json` 相关报告模型。
 - 诊断汇总和质量判定结果。
+- `speechRecognitionRunSummary`：记录音频文件或实时麦克风识别的模式、语言、离线要求、耗时、词数、分段数、平均置信度、最终文本和失败原因。
 
 关键文件：
 
@@ -140,7 +142,41 @@
 
 - 不要把漫画探针专用真值、纠错或质量统计混入普通图片生产路径。
 
-### 1.6 漫画覆盖翻译探针
+### 1.6 音频识别和翻译
+职责：通过 Apple Speech 做本机语音识别，再把识别文本交给统一模型翻译入口。
+
+输入：
+
+- 用户选择的音频文件。
+- Pro 页长按麦克风采集的实时音频。
+- 当前源语言的 Speech locale 和本机识别能力。
+
+输出：
+
+- `lastRecognizedSpeechText` 或 `proLiveTranscriptText`。
+- 翻译后的 `TranscriptLine`。
+- `speechRecognitionRunSummary`，用于 UI 展示模式、locale、本机识别要求、耗时、词数、分段数、置信度和错误。
+
+关键文件：
+
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS/Models/TranscriptModels.swift`
+- `AITRANS/Views/ContentView.swift`
+- `AITRANS/Views/ProFeatureViews.swift`
+
+规则：
+
+- 文件识别和实时识别都强制 `requiresOnDeviceRecognition = true`。
+- UI 只调用 store 方法，不直接创建 Speech recognizer。
+- 识别中和翻译中状态分开展示；用户可取消正在检查或识别的音频任务。
+- 每次识别生成独立 run ID；授权、Speech result/error 和翻译完成回调只有在 run ID 仍匹配时才能更新 store。
+
+禁止：
+
+- 不要把 Apple Speech 结果绕过 store 直接写入历史。
+- 不要把未授权、设备不支持或空识别文本伪装成成功。
+
+### 1.7 漫画覆盖翻译探针
 职责：固定读取 bundle 内 `test/1.png`，跑 OCR、翻译、覆盖绘制和诊断报告。
 
 输入：
@@ -198,8 +234,9 @@ test/1.png
   -> TextRegion crop shadow 实验矩阵（control + pre-crop plan 候选，不替换主输入）
   -> TextBox plan 失败归因与晋级门槛审计（解释 blockers，不替换主输入）
   -> line-level TextBox / deskew shadow 验证（仅目标块，不替换主输入）
-  -> external artifact readiness gate（真实 TextBoxes / BubbleMask / SegmentMask 输入解析、校验和阻塞报告）
-  -> external TextBoxes shadow OCR（仅 readiness ready 时执行，每块最多 1 个 externalArtifact.textBoxCrop，不替换主输入）
+  -> external artifact readiness gate（真实 TextBoxes / BubbleMask / SegmentMask 输入解析、校验、App 侧 identity receipt、sourceImageSHA256 match 和阻塞报告）
+  -> external TextBoxes shadow OCR（仅 readiness ready 时执行，每块最多 1 个 externalArtifact.textBoxCrop，不替换主输入；ready 后 candidate coverage 也进入 convergence gate）
+  -> external TextBox orientation-aware shadow OCR（真实 artifact ready 后对竖排 / 近 90 度倍数旋转 TextBox 执行有上限 rotation OCR；partial / unsupported / line polygon / 任意角度进入 convergence blockers，阻塞误判闭环）
   -> internal structure bottleneck routing（聚合 OCR / bubble / crop / translation / render 证据，只写报告和 TXT）
   -> reading order structure audit（审计阅读顺序、气泡归属、多块气泡和结构动作，只写报告和 TXT）
   -> structure action candidate matrix（把结构建议转成 report-only work candidates）
@@ -218,24 +255,27 @@ test/1.png
   -> Koharu DistanceField SafeArea shadow report（rounded-rect proxy ID mask 的 distance field / safe pixels / maximum safe rect / sprite containment 对照，report-only）
   -> Koharu Bubble Adjacency Seam shadow report（BubbleMask proxy adjacency graph / seam candidate / block seam ledger，report-only）
   -> Koharu RenderSprite Fit Planner report（RenderedSprites 字体预算 / layout candidate / sibling fit / failure fallback 风险账本，report-only）
-  -> Koharu Native TextBox Detector-Lite report（source image 像素 / bubble geometry 生成预 OCR TextBox 候选，shadow-only）
-  -> Koharu Native TextBox Detector-Lite Shadow OCR report（受限 detector-lite crop OCR 闭环评估，report-only）
+  -> Koharu Native TextBox Detector-Lite report（source image 像素 / bubble geometry 生成每 bubble 预 OCR TextBox 候选池，shadow-only）
+  -> Koharu Native TextBox Detector-Lite Shadow OCR report（受限 detector-lite crop OCR / vertical rotation shadow 评估，report-only）
   -> Koharu Native TextBox Detector-Lite Refinement report（detector-lite 父 bbox 二次收紧 + 受限 refinement shadow OCR，report-only）
   -> Koharu Native TextBox Detector-Lite Closed Loop report（消费 detector-lite / shadow OCR / refinement 和结构诊断做闭环裁决与结构路由，report-only）
   -> Koharu Native BubbleMask Instance-Lite report（source image 像素近白连通域实例 ID mask 账本，report-only）
   -> Koharu Native SegmentMask Refinement-Lite report（TextBox 约束文字像素掩码 refinement 账本，report-only）
   -> Koharu Native Artifact Bundle-Lite report（TextBoxes / BubbleMask / SegmentMask / OCR / Translation / Render 结构一致性闭环，report-only）
   -> Koharu Native Promotion Gate-Lite report（探针驱动 native-lite artifact 晋级门槛 / candidate export preview，report-only）
-  -> Koharu Native Shadow Artifact Export-Lite report（非 active shadow JSON artifact 包，写入 Output/koharu_native_shadow_artifacts/）
-  -> Koharu Artifact convergence report（canonical artifact 收敛矩阵、逐块 path、work item closure、gate ledger）
+  -> Koharu Native Artifact Contract Dry-Run report（四件套 artifact contract 必需字段 / sourceImageSHA256 / 禁止来源 / App 侧 identity receipt / validator 命令干跑，report-only）
+  -> Koharu Artifact Identity Reconciliation report（App runtime receipt -> CI manifest identity 字段路径 / source image SHA match / size-SHA 对账表，report-only）
+  -> Koharu Artifact convergence report（canonical artifact 收敛矩阵、逐块 path、work item closure、linkage / external shadow coverage / orientation gate ledger）
   -> JSON / TXT / PNG 输出
 ```
 
 探针运行模式：
 
+- `skip`：GitHub Actions push 默认快验模式，不下载 GGUF、不启动模拟器、不跑漫画探针，manifest 必须写明 `probeSkippedReason` 和 `modelSetupSkippedReason`。CI 会先检测变更范围；Swift / Xcode / 资源 / `test/` 素材变化仍跑 Xcode build，非 App 构建相关变更可跳过 Xcode build 并在 manifest 写 `xcodeBuildRequired=false` 与 skip reason。
+- `ci-fast`：手动 `workflow_dispatch` 快速探针模式，使用真实 simulator、Local GGUF、`test/1.png`、deterministic 解码、whole-page OCR、bubble-first 融合、逐块翻译、失败块覆盖、clean text diagnostic 和 external artifact gate；跳过 lexicon / Vision API / slice / TextRegion crop shadow / crop experiment / line shadow / tagged batch / 模型纠错 / 纠错翻译对照 / contact sheet 等高成本诊断。
 - `full`：开发页按钮和人工 full 回归默认模式，运行完整 shadow-only 对照、diagnostic PNG 和 contact sheet。
-- `ci-fast`：GitHub Actions 日常 `codeb/**` / `smalldata_test` push 默认模式，仍使用真实 simulator、Local GGUF、`test/1.png`、deterministic 解码、whole-page OCR、bubble-first 融合、逐块翻译、失败块覆盖、clean text diagnostic 和 external artifact gate；跳过 lexicon / Vision API / slice / TextRegion crop shadow / crop experiment / line shadow / tagged batch / 模型纠错 / 纠错翻译对照 / contact sheet 等高成本诊断。
-- `skip`：只允许 workflow 手动跳过探针，manifest 必须写明 `probeSkippedReason`；App 侧不会把 skip 当作可验收探针运行。
+
+手动 workflow 可选提供 Koharu artifact Release archive：`koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256`。CI 会在 Xcode build 前下载、校验、解压并只复制 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json` 到 `test/koharu_artifacts/`，随后跑 validator；`koharu_artifact_required=true` 时任一失败都会阻断工作流。该路径只接收真实 detector / segmenter 输出，不从 examples、Vision OCR、pre-crop、line、proxy、ground truth 或手写框生成 active artifact。v1.59 起，注入 archive 后的 `ci-fast/full` 还必须在 App 侧探针产物中证明 `externalArtifactReadinessReport.readinessVerdict = readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed = true`、`externalTextBoxShadowOCRReport.executed = true`、`candidateCount > 0` 和 contract dry-run ready，避免只验证下载 / 解压 / validator 而没有证明 App 真消费到 artifact。v1.64 起，若真实 TextBox 带 vertical source direction、近 90/180/270 度 rotation、linePolygons 或任意角度 rotation，`externalTextBoxShadowOCRReport` 会写入 attempted rotations、selected rotation、language profile、orientation shadow path needed / executed / partial / not executed、unsupported blocks 和 reason breakdown；line polygon warp 和任意角度 deskew 仍不执行，并继续进入 convergence blockers。v1.65 起，validator 先输出 `orientationMetadataSummary`，convergence 再用 `WI/G-external-textbox-shadow-ocr-coverage` 防止 ready artifact 在 shadow OCR 未执行或无 candidate 时被误判为闭环。v1.67 起，App 探针 runtime 在 `externalArtifactReadinessReport.artifactIdentityReceipt` 中记录 source image 与 active 四件套的 size / SHA256；v1.68 起 `koharuArtifactIdentityReconciliationReport` 把这些 App rows 映射到 `ci-artifact-manifest.koharuArtifactValidationIdentitySummary` 字段路径，Actions 注入探针后会生成 `koharuArtifactIdentityReconciliationMatch` 并要求 size/SHA256 逐项匹配。v1.69 起 coverage gate 还要求 `ocrExecutedCount > 0` 和 `ocrSucceededCount > 0`，ready artifact 下未闭合时 gate status 为 blocked。v1.70 起只要填写 Koharu artifact Release archive，`probe_mode` 必须是 `ci-fast` 或 `full`，不能用 `skip`，避免只校验下载包而没有 App 侧消费证据。
 
 报告会在 `configuration.probeRunMode`、`configuration.probeFastPathEnabled`、`configuration.skippedDiagnostics` 和 `manga_probe_progress.json` 中记录模式、跳过项、保留输出文件和阶段耗时。
 
@@ -308,7 +348,11 @@ test/1.png
   -> TextRegion crop OCR 候选诊断和护栏选择
   -> TranslationSessionStore.translateMangaProbeBlock
   -> TextBox / SegmentMask 派生诊断和 crop experiment shadow 矩阵
-  -> external artifact readiness gate
+  -> external artifact readiness gate / App-side identity receipt
+  -> external TextBoxes shadow OCR / orientation-aware shadow path
+  -> Koharu Native Artifact contract dry-run
+  -> Koharu Artifact identity reconciliation
+  -> Koharu Artifact convergence coverage / orientation gates
   -> internalStructureBottleneckReport
   -> routingDrivenTranslationComparisonReport / ocrCharacterDamageAuditReport
   -> readingOrderStructureAuditReport
@@ -338,7 +382,7 @@ test/1.png
   -> Agent B 本地只跑轻量检查
   -> Agent B push codeb/... 到 GitHub
   -> Agent B 创建 PR：base=smalldata_test, head=codeb/...
-  -> GitHub Actions 运行 build / JSON / 静态检查 / 可用探针
+  -> GitHub Actions 运行 JSON / 静态检查 / Xcode build 快验
   -> GitHub Actions 上传未加密 CI 结果包
   -> Agent C 通过 PR 和结果包核对 diff、日志、manifest 和 artifact
       -> 失败：C 输出退回清单，B 按结果包日志继续修
@@ -357,14 +401,15 @@ test/1.png
 结果包规则：
 
 - 加密打包 workflow 只负责软件包交付，不作为 Agent C 验收依据，不为验收改动密码或解密流程。
-- Agent C 使用独立未加密 CI 结果包验收，至少核对 `.xcresult`、`junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`。
+- Agent C 使用独立未加密 CI 结果包验收；`xcodeBuildRequired=true` 时必须核对 `.xcresult`，build-skip 快路径必须核对 skip reason，同时核对 `junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`。
 - `ci-artifact-manifest.json` 必须能追溯 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`scheme`、`destination`、结果路径和探针报告路径。
 - 云端失败时，workflow 必须保留日志和失败摘要，Agent C 按结果包指出应交回 Agent B 修复的失败阶段和日志位置。
-- 云端结果包 workflow 会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，并缓存到 `.ci-models/`。
-- 云端 CI 单次 Debug simulator build 同时产出 `.xcresult` 和可安装 App；探针步骤只定位并复用该 App，不重复完整 `xcodebuild build`。
-- 云端漫画探针会创建并启动 iPhone 模拟器，安装 `com.local.aitrans`，把缓存 GGUF 复制到 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 和 `AITRANS_MANGA_PROBE_MODE` 启动 App，等待并导出本轮 `output/`。
+- 手动探针 workflow 会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，并缓存到 `.ci-models/`。
+- push 默认 `probe_mode=skip` 快验，只跑静态检查、按 `xcodeBuildRequired` 决定是否跑 Xcode build、manifest 和未加密结果包；不下载 GGUF、不创建模拟器、不安装 App、不跑漫画探针。
+- 手动 `workflow_dispatch` 选择 `ci-fast` 或 `full` 时，云端 CI 单次 Debug simulator build 同时产出 `.xcresult` 和可安装 App；探针步骤只定位并复用该 App，不重复完整 `xcodebuild build`。
+- 云端漫画探针会创建并启动 iPhone 模拟器，从构建 App 的 `Info.plist` 读取实际 bundle ID，安装 App，把缓存 GGUF 复制到 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 和 `AITRANS_MANGA_PROBE_MODE` 启动 App，等待并导出本轮 `output/`。
 - `ci-artifact-manifest.json` 必须记录 `probeMode`、`probeFastPathEnabled`、`probeSkippedDiagnostics`、`probeOutputRequiredFiles`、`probeOutputRetainedFiles`、`simulatorAppReusedFromXcodeBuild` 和 `simulatorAppPath`。
-- 云端探针验收报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0` 和关键产物存在；`overallPassed=false` 不单独判 CI 失败，因为当前质量基线本身仍有失败块。
+- push 快验验收静态检查通过；若 `xcodeBuildRequired=true` 还必须 Xcode build 通过，若 `xcodeBuildRequired=false` 必须在 manifest 写明 skip reason。手动探针验收 Release 模型可下载且 SHA 通过、报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0` 和关键产物存在；`overallPassed=false` 不单独判 CI 失败，因为当前质量基线本身仍有失败块。
 - 本阶段不提交模型文件，Release asset 是云端模型来源。
 
 ## 5. 已确认铁律
@@ -382,7 +427,7 @@ test/1.png
 - v19 `textBoxPlanFailureReport` 用 `sourcePlanID` 串联 plan、candidate 和 block 级结论，只解释 promotion checks / blockers / recommended action，不改变主输入、主覆盖图或 `textRegionCropReport.adoptedCount`。
 - v20 `lineTextBoxPlanReport` / `lineCropExperimentReport` 只对 `textBoxPlanFailureReport.continueGeometryResearchBlocks` 生成 line-level TextBox / deskew shadow 候选；当前目标块 `[1, 6, 10]` 共 12 个候选，全部只写报告和 TXT，不改变主输入、主覆盖图、`blockPassed` 或 `textRegionCropReport.adoptedCount`。
 - v21 `externalArtifactReadinessReport` 是真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门；它只读 `test/koharu_artifacts/` 或 manifest 指定文件，做解析、坐标校验和 block alignment。没有真实 artifact 时输出 `manifestMissing` / `stopUntilArtifactsProvided`，不能用现有 Vision OCR、pre-crop plan 或 line plan 伪装 detector 输出。
-- v1.13 `externalTextBoxShadowOCRReport` 是 readiness 通过后的 external TextBoxes shadow OCR 层；每个 fused block 最多选 1 个 `externalArtifact.textBoxCrop`，选择只使用 IoU、center containment、confidence、bubble alignment 和面积比例，不使用 ground truth。默认缺 active artifact 时 `executed=false`、`candidateCount=0`、所有块 skipped；即使有 better-than-control 候选也只进入 report / TXT，不改变 `finalTextUsedForTranslation`、主覆盖图、`blockPassed` 或 `textRegionCropReport.adoptedCount`。
+- v1.13 `externalTextBoxShadowOCRReport` 是 readiness 通过后的 external TextBoxes shadow OCR 层；每个 fused block 最多选 1 个 `externalArtifact.textBoxCrop`，选择只使用 IoU、center containment、confidence、bubble alignment 和面积比例，不使用 ground truth。默认缺 active artifact 时 `executed=false`、`candidateCount=0`、所有块 skipped；即使有 better-than-control 候选也只进入 report / TXT，不改变 `finalTextUsedForTranslation`、主覆盖图、`blockPassed` 或 `textRegionCropReport.adoptedCount`。v1.64 起 report 级写出 `orientationShadowPathPartialBlocks`、`orientationUnsupportedBlocks`、`orientationUnsupportedReasonBreakdown`；`orientationReadinessVerdict = orientationShadowPathExecuted` 必须同时满足无 not-executed 且无 unsupported。v1.69 起 convergence 要求 ready artifact 后 `externalTextBoxShadowOCRReport.executed = true`、`candidateCount > 0`、`ocrExecutedCount > 0` 且 `ocrSucceededCount > 0`，否则 `WI/G-external-textbox-shadow-ocr-coverage` 会以 blocked 阻塞 ExternalArtifacts closed 状态。
 - v1.18 `internalStructureBottleneckReport` 是 AITRANS 自有探针的结构瓶颈路由层；它从最终 blocks、post-fusion cleanup、TextRegion crop、TextBox plan failure、BubbleMask、assignment correction、split candidate、external readiness 和翻译失败分类现场汇总 `primaryBottleneck` / `recommendedNextAction`，不依赖外部 artifact，不改变主流程文本、覆盖图或通过判定。
 - v1.19 `routingDrivenTranslationComparisonReport` 只针对 `modelTranslationQuality` 路由块做最多 5 个 strict prompt deterministic 对照，复用既有候选抽取、分类和质量判定；结果只写 JSON / TXT，不替换漫画主 prompt、主译文、`blockPassed`、失败分类或覆盖图。
 - v1.19 `ocrCharacterDamageAuditReport` 只针对 `ocrCharacterDamage` / `ocrInputSuspect` / 低相似度块做 token 级损坏审计；ground truth 仅用于探针诊断，报告 damaged / missing / extra / substitution token、line break risk、TextBox / SegmentMask 证据和 crop blockers，不参与生产候选选择或文本替换。
@@ -394,7 +439,8 @@ test/1.png
 - v1.25 `nativeTextBoxProxyLedgerReport` 执行 v1.24 的 `WI-native-textbox-artifact-scorecard`，把现有 TextBox / crop / line / BubbleMask / SegmentMask / OCR damage / v1.24 scoreboard 证据整理成 Native TextBox proxy 质量账本。它输出 `blockLedgers[]`、`candidateLedgers[]`、`gateLedger[]` 和 `stoplist[]`，区分 `reportOnlyStable`、`shadowOnlyEligible`、`frozenByStoplist`、word preservation / BubbleMask / SegmentMask / OCR damage / model floor 阻塞和 `manualReviewOnly`。候选冻结、排序、qualityStatus 和 nextAction 只能使用 ground-truth-free decision signals；ground truth 只进入 evaluationSignals。报告只写 JSON / TXT，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup 或候选选择。
 - v1.26 `bubbleMaskAssignmentSplitScoreboardReport` 执行 v1.24 的 `WI-bubblemask-assignment-split-scorecard`，把现有 BubbleMask proxy、归属修正、split candidate、reading order、structure action、Koharu native scoreboard 和 Native TextBox ledger 证据整理成 BubbleMask 归属 / 分割 / sibling 布局评分板。它输出 `blockScorecards[]`、`bubbleScorecards[]`、`splitCandidateLedgers[]`、`siblingLayoutScorecards[]` 和 `gateLedger[]`，区分 `consistent`、`correctionRecommendedReportOnly`、`correctionAppliedToCropClampOnly`、`maskConflict`、`splitCandidateEligibleReportOnly`、`sameBubbleSiblingLayoutStable`、`needsRealBubbleMask` 和 render mask 状态。assignment、split、sibling layout、nextAction 和 promotion blockers 只能使用 ground-truth-free decision signals；ground truth 只进入 evaluationSignals。报告只写 JSON / TXT，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect` 或 `configuration.currentBlockSource`。
 - v1.27 `segmentMaskProxyCoverageScoreboardReport` 执行 v1.24 的 `WI-segmentmask-proxy-coverage-scorecard`，把现有 glyph mask、SegmentMask proxy、TextBox 覆盖、BubbleMask 覆盖、safe rect、背景填充和渲染碰撞证据整理成 SegmentMask proxy 覆盖评分板。它输出 `blockScorecards[]`、`cleanupLedgers[]` 和 `gateLedger[]`，区分 `usableProxyCoverage`、`usableForCleanupOnly`、弱 TextBox / BubbleMask / safe rect 覆盖、清字边界、background fill guardrail、render mask 状态和 `needsRealSegmentMask`。coverage、cleanup、nextAction 和 gate 只能使用 ground-truth-free decision signals；ground truth 只进入 evaluationSignals。报告只写 JSON / TXT，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect`、`glyphMaskFillRects`、背景填充行为或 `configuration.currentBlockSource`。
-- v1.28 `koharuArtifactConvergenceReport` 把 v1.22 DAG、v1.23 stage gap、v1.24 native scoreboard、v1.25 TextBox、v1.26 BubbleMask、v1.27 SegmentMask、external artifact readiness、clean text model floor、diagnostics 和最终 blocks 收敛为 Koharu canonical artifact 矩阵、逐块 artifact path、work item closure ledger 和 gate ledger。它关闭前三个 native/proxy scoreboard 的 report-only 工作项，把未闭合项集中到 `WI-translation-model-floor-comparison`、`WI-render-regression-lock` 和 `WI-external-artifact-optional-handoff`；不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect`、`glyphMaskFillRects`、背景填充行为、渲染逻辑或 `configuration.currentBlockSource`。ground truth 只进入 evaluationSignals，不参与 firstBlockingArtifact、primaryNextAction、work item status 或 gate。
+- v1.28 `koharuArtifactConvergenceReport` 把 v1.22 DAG、v1.23 stage gap、v1.24 native scoreboard、v1.25 TextBox、v1.26 BubbleMask、v1.27 SegmentMask、external artifact readiness、clean text model floor、diagnostics 和最终 blocks 收敛为 Koharu canonical artifact 矩阵、逐块 artifact path、work item closure ledger 和 gate ledger。它关闭前三个 native/proxy scoreboard 的 report-only 工作项，把未闭合项集中到 `WI-translation-model-floor-comparison`、`WI-render-regression-lock` 和 `WI-external-artifact-optional-handoff`；v1.58 起继续消费 v1.57 bundle-lite / promotion gate 的 TextBox -> SegmentMask linkage work item 与 convergence gate，把 weak / fallback / rejected / wrong-bubble linkage 传播到最终 path、stage、work item 和 gate；v1.64 起 `WI-external-textbox-orientation-shadow-path` / `G-external-textbox-orientation-shadow-path` 同时消费 executed / partial / notExecuted / unsupported / reason breakdown，partial 或 unsupported 不得进入 `closedReportOnly`；v1.65 起 `WI-external-textbox-shadow-ocr-coverage` / `G-external-textbox-shadow-ocr-coverage` 先检查 ready artifact 是否真的产生 external shadow OCR candidate；v1.68 起同一 coverage gate 也要求 `koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison = true`，并通过 `WI-koharu-artifact-identity-reconciliation` / `G-koharu-artifact-identity-reconciliation-ready` 暴露 App receipt 与 CI manifest identity 的对账状态。该报告不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect`、`glyphMaskFillRects`、背景填充行为、渲染逻辑或 `configuration.currentBlockSource`。ground truth 只进入 evaluationSignals，不参与 firstBlockingArtifact、primaryNextAction、work item status 或 gate。
+- v1.69 起 convergence coverage gate 进一步要求 ready artifact 后 `externalTextBoxShadowOCRReport.executed = true`、`candidateCount > 0`、`ocrExecutedCount > 0`、`ocrSucceededCount > 0`，否则 ExternalArtifacts 不得闭合；v1.70 起 App/CI handoff strict closure 还要求 artifact archive 不得配 `probe_mode=skip`，coverage / orientation work item 与 gate ID、status 必须进入 smoke 和 TXT 证据，orientation partial / unsupported blockers 存在时 gate 不得误判 passed。
 - v1.29 `translationModelFloorComparisonReport` 执行 `WI-translation-model-floor-comparison`，用 `cleanTextDiagnostic` 的 dialogue baseline 和 `strictChineseOnlyV1` deterministic 变体做同源 clean text 对照，并汇总 noisy final blocks、v1.19 routing strict prompt、tagged batch 和 v1.28 convergence work item。它只分类当前模型 / prompt 地板，不换模型、不改主 prompt、不改逐块主译文、不改覆盖图、`blockPassed`、失败分类或质量规则；clean text ground truth 只进入模型地板评估和 evaluation-only 信号。
 - v1.30 `koharuRenderRegressionLockReport` 执行 `WI-render-regression-lock`，把现有 safe layout、mask-safe rect、render collision、render mask overflow、glyph mask、background fill、失败块 fallback 覆盖文本和核心输出文件状态整理成 RenderedSprites / FinalRender 回归账本。它输出逐块 `blockLocks[]`、`artifactStages[]`、`outputFileChecks[]` 和 `gateLedger[]`，并让 convergence 中的 render work item 从未执行 open 推进为 `closedReportOnly` 或 `openRenderIssueDetected`。该报告只写 JSON / TXT，不重新渲染、不新增 OCR / LLM、不解析 PNG 像素做逐块证明、不改变覆盖绘制、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、主 OCR、主翻译、`blockPassed`、失败分类或 `configuration.currentBlockSource`；`proxyNotRealKoharuRenderer = true` 表示它不是 Koharu 真实 renderer / RenderedSprites / inpainting。
 - v1.31 `koharuPipelineResolverReport` 在 render lock 之后、最终 convergence 刷新前生成，把现有报告组织成 Koharu 式 `needs` / `produces` / DAG resolver / Op preview 影子层。它输出 stage nodes、edges、逐块 first blocked node、downstream impact、execution queue、op previews 和 gates，并把 `WI-koharu-pipeline-resolver-shadow-dag` / `G-koharu-pipeline-resolver-executed` 联动进 convergence。该报告只写 JSON / TXT，不新增 OCR / LLM、不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect`、`glyphMaskFillRects`、背景填充或 `configuration.currentBlockSource`。
@@ -402,17 +448,19 @@ test/1.png
 - v1.36 `koharuDistanceFieldSafeAreaReport` 在 v1.35 BubbleIndex 账本之后、最终 convergence 刷新前生成，只使用 AITRANS rounded-rect BubbleMask proxy ID mask，在每个 bubble bbox 内计算 two-pass chamfer 8-neighbor distance field、safe pixels、histogram maximum safe rect 和 block / sibling safe-area 对照。它输出 `bubbleLedgers[]`、`blockLedgers[]`、`siblingLedgers[]` 和 `gateLedger[]`，并把 `WI-koharu-distance-field-safe-area` / `G-koharu-distance-field-safe-area-executed` 联动进 convergence。该报告只写 JSON / TXT，不新增 OCR / LLM、不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、post-fusion cleanup、候选选择、active artifacts 或 `configuration.currentBlockSource`；ground truth 只进入 evaluation signals。
 - v1.37 `koharuBubbleAdjacencySeamReport` 在 v1.36 DistanceField 账本之后、最终 convergence 刷新前生成，只使用 AITRANS 现有 rounded-rect BubbleMask proxy、BubbleIndex、DistanceField、split candidate、same-bubble sibling、OCR damage 和 render lock 证据。它输出 `pairLedgers[]`、`seamCandidateLedgers[]`、`blockLedgers[]` 和 `gateLedger[]`，并把 `WI-koharu-bubble-adjacency-seam` / `G-koharu-bubble-adjacency-seam-executed` 联动进 convergence。该报告只写 JSON / TXT，不新增 OCR / LLM、不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、DistanceField safe rect、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、post-fusion cleanup、候选选择、active artifacts 或 `configuration.currentBlockSource`；ground truth 只进入 evaluation signals。
 - v1.38 `koharuRenderSpriteFitPlannerReport` 在 v1.37 seam 账本之后、最终 convergence 刷新前生成，只使用现有 `safeLayoutRect`、`renderFontSize`、`renderNonTransparentBounds`、render collision、失败 fallback、Render Regression Lock、BubbleIndex、DistanceField 和 seam 证据。它输出 `blockLedgers[]`、`layoutCandidateLedgers[]`、`siblingLedgers[]` 和 `gateLedger[]`，并把 `WI-koharu-render-sprite-fit-planner` / `G-koharu-render-sprite-fit-planner-executed` 联动进 convergence。该报告只写 JSON / TXT，不新增 OCR / LLM、不重新渲染 PNG、不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、DistanceField safe rect、`renderFontSize`、`renderNonTransparentBounds`、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、post-fusion cleanup、候选选择、active artifacts 或 `configuration.currentBlockSource`；ground truth 只进入 evaluation signals。
-- v1.39 `koharuNativeTextBoxDetectorLiteReport` 在 v1.38 RenderSprite fit planner 之后、最终 convergence 刷新前生成。它只用 source image 像素、bubble geometry、BubbleMask proxy 和 glyph / SegmentMask proxy 生成 OCR 前 `nativeDetectorLite` TextBox 候选，输出 candidate、block、bubble 和 gate ledger，并把 `WI-koharu-native-textbox-detector-lite` / `G-koharu-native-textbox-detector-lite-executed` 联动进 convergence。该报告默认不执行 shadow OCR，不读取 Vision OCR 文本、ground truth、pre-crop plan、line plan 或 TextRegion crop 结果来生成 / 排序候选；不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`；`proxyNotRealKoharuTextBoxes = true`。
+- v1.39 `koharuNativeTextBoxDetectorLiteReport` 在 v1.38 RenderSprite fit planner 之后、最终 convergence 刷新前生成。它只用 source image 像素、bubble geometry、BubbleMask proxy 和 glyph / SegmentMask proxy 生成 OCR 前 `nativeDetectorLite` TextBox 候选池，每个 bubble 最多 4 个 component-cluster 候选 + 1 个不参与 shadow OCR 的 diagnostic union fallback，输出 candidate、candidate->block relation、block、bubble 和 gate ledger，并把 `WI-koharu-native-textbox-detector-lite` / `G-koharu-native-textbox-detector-lite-executed` 联动进 convergence。该报告默认不执行 shadow OCR，不读取 Vision OCR 文本、ground truth、pre-crop plan、line plan 或 TextRegion crop 结果来生成 / 排序候选；不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`；`proxyNotRealKoharuTextBoxes = true`。
+- v1.40 `koharuNativeTextBoxDetectorLiteShadowOCRReport` 在 v1.39 detector-lite 之后生成，只消费 `shadowOCREligible = true` 的 nativeDetectorLite bbox；`ci-fast` 每块最多 1 个候选、`full` 每块最多 2 个。候选按当前 block 与 bbox 的 overlap / center containment 优先排序；full 模式 block ledger 记录本块 report-only 最佳 shadow OCR 候选。`verticalCandidate` 候选会做有上限的 `[0,90]` rotation shadow OCR 对照，使用 `ja-JP/ja/en-US/en` language profile 并记录 `rotationApplied`，选择只看无真值 OCR 质量和当前文本保词率；ground truth 只进 evaluation signals。该报告不新增 LLM，不写回主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、active artifacts 或 `configuration.currentBlockSource`。
 - v1.41 `koharuNativeTextBoxDetectorLiteRefinementReport` 在 v1.40 detector-lite shadow OCR 之后、最终 convergence 刷新前生成。它只用 v1.39 / v1.40 内存报告、final blocks、source image pixels、bubble geometry 和既有诊断信号选择 target 并从 detector-lite 父 bbox 生成 refined bbox；`ci-fast` 总 OCR 预算为 `<= min(6,totalBlocksDetected)`，`full` 每块最多 2 个且有总上限。refined OCR 只进 JSON / TXT，不写回主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、active artifacts 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals。
 - v1.42 `koharuNativeTextBoxDetectorLiteClosedLoopReport` 在 v1.41 refinement 之后、最终 convergence 刷新前生成。它消费 v1.39 detector-lite、v1.40 shadow OCR、v1.41 refinement、final blocks、BubbleMask / SegmentMask proxy、翻译失败分类、Translation Model Floor、Render Regression Lock 和 external artifact readiness，把每块闭环路由到保留当前 fused OCR、full-probe 复核、停止 detector-lite 本地调参、等待真实 TextBoxes / BubbleMask / SegmentMask、模型地板或 render lock。该报告只写 JSON / TXT，不新增 OCR / LLM / PNG，不写回主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals，不参与 route、nextAction、gate 或 candidate family verdict。
-- v1.43 `koharuNativeBubbleMaskInstanceLiteReport` 在 v1.42 closed-loop 之后、最终 convergence 刷新前生成。它只用 `test/1.png` 内容裁切区源像素、现有 bubble geometry、final blocks、glyph / SegmentMask proxy、BubbleIndex / DistanceField / seam / RenderSprite fit、detector-lite closed-loop 和 render lock 证据，生成 shadow-only 近白连通域 instance-lite ID mask 账本、逐块 majority assignment、safe rect 对照、sibling / adjacency 和 gate ledger。该报告不新增 OCR / LLM / PNG，不创建 active Koharu artifact，不把 instance-lite 冒充真实 Koharu `BubbleMask`，不写回 `safeLayoutRect`、DistanceField safe rect、renderer、主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals，不参与 mask 生成、route、nextAction、verdict 或 gate。
-- v1.44 `koharuNativeSegmentMaskRefinementLiteReport` 在 v1.43 instance-lite 之后、最终 convergence 刷新前生成。它只用源图像像素、detector-lite TextBox 候选、final blocks、instance-lite BubbleMask、现有 glyph / SegmentMask proxy、render lock 和翻译失败分类，生成 TextBox 约束文字像素 mask refinement 的 candidate / block / sibling / gate 账本。该报告不新增 OCR / LLM / PNG，不创建 active Koharu artifact，不把 refinement-lite 冒充真实 Koharu `SegmentMask`，不写回主 OCR、翻译输入、覆盖图、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals，不参与阈值、TextBox 选择、mask、route、nextAction、verdict 或 gate。
-- v1.45 `koharuNativeArtifactBundleLiteReport` 在 v1.44 refinement-lite 之后、最终 convergence 刷新前生成。它只消费当前探针内存中的 final blocks、v1.39-v1.42 detector-lite / shadow OCR / refinement / closed-loop、v1.43 BubbleMask instance-lite、v1.44 SegmentMask refinement-lite、RenderSprite fit、Render Regression Lock、Translation Model Floor、external artifact readiness 和 diagnostics，组装每块 TextBox / BubbleMask / SegmentMask / OCR / Translation / Render 的 bundle-lite、consistency edges、primary blocking artifact、nextAction 和聚合 worklist。该报告不新增 OCR / LLM / PNG，不创建或修改 active Koharu artifact，不把 bundle-lite 冒充真实 Koharu artifacts，不写回主 OCR、翻译输入、覆盖图、renderer、`safeLayoutRect`、`glyphMaskFillRects`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals，不参与 component 选择、edge、verdict、gate、route、nextAction 或 worklist。
-- v1.46 `koharuNativePromotionGateLiteReport` 在 v1.45 bundle-lite 之后、最终 convergence 刷新前生成。它只消费当前探针内存中的 final blocks、diagnostics、v1.39-v1.45 native-lite reports、RenderSprite fit、Render Regression Lock、Translation Model Floor、clean text diagnostic 和 external artifact readiness，为每块输出 TextBoxes / BubbleMask / SegmentMask / OcrText / Translations / RenderedSprites / FinalRender 的晋级状态、stage gates、candidate export preview、work items 和 gate ledger。该报告不新增 OCR / LLM / PNG，不更换模型，不创建或修改 active `test/koharu_artifacts/`，不把 promotion gate 冒充真实 Koharu promotion / detector / artifact，不写回主 OCR、翻译输入、覆盖图、renderer、`safeLayoutRect`、`glyphMaskFillRects`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals，不参与 promotion eligibility、stage gate、candidate preview、route、nextAction 或 worklist。
-- v1.47 `koharuNativeShadowArtifactExportLiteReport` 在 v1.46 promotion gate 之后、最终 convergence 刷新前生成。它只消费 final blocks、v1.43 BubbleMask instance-lite、v1.44 SegmentMask refinement-lite、v1.45 bundle-lite、v1.46 promotion gate 和 external readiness，在 App 沙盒 `Output/koharu_native_shadow_artifacts/` 写出非 active shadow JSON 包：`1.native_manifest.json`、`1.native_textboxes.json`、`1.native_bubbles.json`、`1.native_segment_mask.json`、`1.native_artifact_bundle.json`。该包显式标记 `shadowOnly`、`contractExampleOnly`、`forbiddenAsActiveArtifact`，并保持 `readyForActiveArtifact = false`、`activeArtifactsWritten = false`、`wouldCreateActiveArtifact = false`；不写 `test/koharu_artifacts/`，不改变 external readiness、主 OCR、翻译输入、覆盖图、renderer、`blockPassed`、失败分类、`safeLayoutRect`、`glyphMaskFillRects`、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals。
+- v1.43 `koharuNativeBubbleMaskInstanceLiteReport` 在 v1.42 closed-loop 之后、最终 convergence 刷新前生成。它只用 `test/1.png` 内容裁切区源像素、现有 bubble geometry、final blocks、glyph / SegmentMask proxy、BubbleIndex / DistanceField / seam / RenderSprite fit、detector-lite closed-loop 和 render lock 证据，生成 shadow-only 近白连通域 instance-lite ID mask 账本、逐块 majority assignment、由实例像素 erosion / projection 派生的 safe rect 对照、同 instance 多 block 的 block-scoped safe rect policy、block-scoped sprite containment preview、same-instance sibling sprite collision preview、sibling / adjacency 和 gate ledger。该报告不新增 OCR / LLM / PNG，不创建 active Koharu artifact，不把 instance-lite 冒充真实 Koharu `BubbleMask`，不写回 `safeLayoutRect`、DistanceField safe rect、renderer、主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals，不参与 mask 生成、route、nextAction、verdict 或 gate。
+- v1.44 `koharuNativeSegmentMaskRefinementLiteReport` 在 v1.43 instance-lite 之后、最终 convergence 刷新前生成。它只用源图像像素、detector-lite TextBox 候选、final blocks、instance-lite BubbleMask、现有 glyph / SegmentMask proxy、render lock 和翻译失败分类，生成 TextBox 约束文字像素 mask refinement 的 candidate / block / sibling / gate 账本。candidate / block ledger 记录来源 TextBox candidate verdict、block overlap、same-bubble relation、accepted/fallback/rejected linkage verdict、mask 对 TextBox / Bubble 的 containment ratio，并用 v1.43 instance-lite ledger 输出 report-only majority agreement。该报告不新增 OCR / LLM / PNG，不创建 active Koharu artifact，不把 refinement-lite 冒充真实 Koharu `SegmentMask`，不写回主 OCR、翻译输入、覆盖图、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、renderer、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals，不参与阈值、TextBox 选择、mask、route、nextAction、verdict 或 gate。
+- v1.45 `koharuNativeArtifactBundleLiteReport` 在 v1.44 refinement-lite 之后、最终 convergence 刷新前生成。它只消费当前探针内存中的 final blocks、v1.39-v1.42 detector-lite / shadow OCR / refinement / closed-loop、v1.43 BubbleMask instance-lite、v1.44 SegmentMask refinement-lite、RenderSprite fit、Render Regression Lock、Translation Model Floor、external artifact readiness 和 diagnostics，组装每块 TextBox / BubbleMask / SegmentMask / OCR / Translation / Render 的 bundle-lite、consistency edges、primary blocking artifact、nextAction 和聚合 worklist。v1.57 起该报告还消费 v1.44 的 selected TextBox -> SegmentMask linkage，输出 `selectedTextBoxSegmentLinkVerdict`、`textBoxSegmentLinkageStatus`、`textBoxSegmentLinkageRisk`、`TextBoxSegmentMaskLinkage` edge、breakdown 和 review blocks；fallback、weak、rejected 或 wrong-bubble linkage 会阻塞 bundle readiness。该报告不新增 OCR / LLM / PNG，不创建或修改 active Koharu artifact，不把 bundle-lite 冒充真实 Koharu artifacts，不写回主 OCR、翻译输入、覆盖图、renderer、`safeLayoutRect`、`glyphMaskFillRects`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals，不参与 component 选择、edge、verdict、gate、route、nextAction 或 worklist。
+- v1.46 `koharuNativePromotionGateLiteReport` 在 v1.45 bundle-lite 之后、最终 convergence 刷新前生成。它只消费当前探针内存中的 final blocks、diagnostics、v1.39-v1.45 native-lite reports、RenderSprite fit、Render Regression Lock、Translation Model Floor、clean text diagnostic 和 external artifact readiness，为每块输出 TextBoxes / BubbleMask / SegmentMask / OcrText / Translations / RenderedSprites / FinalRender 的晋级状态、stage gates、candidate export preview、work items 和 gate ledger。v1.57 起 promotion ledger 继承 bundle / SegmentMask linkage verdict，输出 `textBoxSegmentLinkVerdict`、`textBoxSegmentLinkagePromotionStatus`、breakdown 和 blocked blocks；fallback、weak、rejected 或 wrong-bubble linkage 会加入 `mustNotPromoteReasons` 并阻塞 SegmentMask promotion。该报告不新增 OCR / LLM / PNG，不更换模型，不创建或修改 active `test/koharu_artifacts/`，不把 promotion gate 冒充真实 Koharu promotion / detector / artifact，不写回主 OCR、翻译输入、覆盖图、renderer、`safeLayoutRect`、`glyphMaskFillRects`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals，不参与 promotion eligibility、stage gate、candidate preview、route、nextAction 或 worklist。
+- v1.47 `koharuNativeArtifactContractDryRunReport` 在 v1.46 promotion gate 之后、最终 convergence 刷新前生成。它只消费 v1.46 candidate export preview 和 `externalArtifactReadinessReport`，把 native-lite / proxy 预览映射到 Koharu active 四件套 contract 的 required files、required fields、forbidden active sources、App 侧 identity receipt、validator commands 和 gate ledger，并把 `WI-koharu-native-artifact-contract-dry-run` / `G-koharu-native-artifact-contract-dry-run-executed` 联动进 convergence。v1.67 起 required file ledger 记录 `fileSizeBytes`、`sha256`、`identityStatus`，顶层记录 `appSideArtifactIdentityVerdict`、files present 和 hashes present；真实 active artifact ready 时，`contractDryRunVerdict = activeArtifactsReadyForShadowOCR` 还要求 App 侧 receipt 完整。该报告 `dryRunOnly = true`、`activeExportAllowed = false`，不创建、复制、修改 `test/koharu_artifacts/`，不新增 OCR / LLM / PNG，不改变主 OCR、翻译输入、覆盖图、renderer、`blockPassed`、失败分类、`safeLayoutRect`、`glyphMaskFillRects`、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`；ground truth 不参与 contract verdict、file status、preview readiness、nextAction 或 gates。
+- v1.68 `koharuArtifactIdentityReconciliationReport` 在 contract dry-run 后、最终 convergence 刷新前生成。它只消费 App 侧 `artifactIdentityReceipt` 和 contract dry-run required files，输出 SourceImage + manifest / TextBoxes / BubbleMask / SegmentMask 的 App size / SHA256、对应 `ci-artifact-manifest.koharuArtifactValidationIdentitySummary` 字段路径、comparison status 和 gate ledger；不读取 CI manifest、不新增 OCR / LLM / PNG、不创建或修改 active artifact、不改变主流程。Actions 在真实 artifact 注入探针后会把 validator identity 与 App rows 做 size/SHA256 比对，并在 manifest 写入 `koharuArtifactIdentityReconciliationMatch`。
 - v1.18 post-fusion cleanup 新增保守 `duplicateOrFragment` 拒绝规则，只使用 bbox 强重叠/邻域、bubble 或 mask-safe 邻域、token 覆盖、信息分、OCR 错误启发和保护文本检查；不使用 ground truth，不跨气泡合并，不删除 decorative 标题。
-- v1.12 / v22 外部 artifact 契约把 active 输入固定为 `test/koharu_artifacts/`，把非活动 fixture 固定为 `md/koharu研究/artifact_contract/examples/`，并用 `scripts/validate-koharu-artifacts.py` 在进入 App 探针前校验 schema、路径、坐标、bbox、confidence、source image、TextBoxes、BubbleMask summary 和 SegmentMask summary。只有 `readinessVerdict = readyForShadowOCR`、`activeArtifactsDirectory = true` 且 `contractExampleOnly = false` 时，`externalTextBoxesShadowOCRAllowed` 才能为 true。
-- v1.14 validator / CI 闭环不新增 detector 输入；缺真实 active artifact 时继续阻塞，并在 validator JSON 与 `ci-artifact-manifest.json` 中记录 `requiredFiles`、`nextAction`、`readinessBlockers`、`externalArtifactReadinessSummary` 和 `externalTextBoxShadowOCRSummary`，方便 Agent C 确认云端拿到的是缺 artifact 阻塞路径还是 executed=true 路径。
+- v1.12 / v22 外部 artifact 契约把 active 输入固定为 `test/koharu_artifacts/`，把非活动 fixture 固定为 `md/koharu研究/artifact_contract/examples/`，并用 `scripts/validate-koharu-artifacts.py` 在进入 App 探针前校验 schema、路径、坐标、bbox、confidence、source image、TextBoxes、BubbleMask summary 和 SegmentMask summary。`schemaVersion` 必须等于 `aitrans.koharu_artifact_contract.v1`，manifest 内 artifact path 必须留在 active 目录内，绝对路径和 `..` 逃逸都阻塞；v1.69 起 manifest 缺 `sourceImage`、缺 `contractExampleOnly` 或 `contractExampleOnly` 非布尔值也会阻塞；TextBox 可选 `sourceDirection`、`rotationDegrees` / `rotationDeg`、`linePolygons` 一旦提供，必须通过方向枚举、旋转范围和点位范围校验；active manifest 的 `generatedBy` 必须声明真实 detector / segmenter 来源，缺失或声明为 manual / fixture / Vision OCR / proxy / ground truth / handwritten 来源也会阻塞。只有 `readinessVerdict = readyForShadowOCR`、`activeArtifactsDirectory = true` 且 `contractExampleOnly = false` 时，`externalTextBoxesShadowOCRAllowed` 才能为 true。
+- v1.14 validator / CI 闭环不新增 detector 输入；缺真实 active artifact 时继续阻塞，并在 validator JSON 与 `ci-artifact-manifest.json` 中记录 `requiredFiles`、`nextAction`、`readinessBlockers`、`externalArtifactReadinessSummary` 和 `externalTextBoxShadowOCRSummary`，方便 Agent C 确认云端拿到的是缺 artifact 阻塞路径还是 executed=true 路径。v1.65 起 validator JSON 还包含 `orientationMetadataSummary`，CI manifest 透传为 `koharuArtifactValidationOrientationSummary`。v1.66 起 validator JSON 还包含 `artifactIdentitySummary`，记录 source image 与 manifest / TextBoxes / BubbleMask / SegmentMask 的存在性、size、SHA256、`generatedBy`、`generatedAt`、`contractExampleOnly`；CI manifest 透传为 `koharuArtifactValidationIdentitySummary`，failure summary 打印关键 identity，archive 注入只接受唯一一个同时包含四件套的目录。v1.67 起 App 侧探针报告也记录 `artifactIdentityReceipt`，Agent C 需要把 App runtime receipt 和 CI manifest identity 对齐。真实 artifact ready 后，convergence 的 external shadow OCR coverage gate 还要求 App 侧 identity receipt、contract dry-run verdict ready 且 `dryRunOnly=true`、`activeExportAllowed=false`，以及 external shadow OCR executed / candidate / OCR execution / OCR success 四项同时成立。
 - BubbleMask 当前是 bbox/rounded-rect 近似实例 ID mask，用于 seed 归属、归属修正诊断、保守 split candidate、mask-safe layout、crop coverage 和渲染碰撞诊断；不是 Koharu 真实分割 mask，不能把布局收益冒充 OCR 提升。
 - 确定性纠错当前是对照路径，不替换 `finalTextUsedForTranslation`。
 - tagged batch 当前是负面诊断，不替换逐块翻译。

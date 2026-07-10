@@ -1,5 +1,6 @@
 import Combine
 import AVFoundation
+import CryptoKit
 import Foundation
 import ImageIO
 import Speech
@@ -94,6 +95,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var proLiveTranscriptText = ""
     @Published var proLiveTranslationText = ""
     @Published var isCapturingProSpeech = false
+    @Published var speechRecognitionRunSummary: SpeechRecognitionRunSummary = .empty
     @Published var imageTranslationState: ImageTranslationState = .idle
     @Published var imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
     @Published var imageTranslationBlocks: [ImageTranslationBlock] = []
@@ -121,6 +123,8 @@ final class TranslationSessionStore: ObservableObject {
     private var audioRecognitionTask: SFSpeechRecognitionTask?
     private var liveAudioEngine: AVAudioEngine?
     private var liveSpeechRecognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var isProLiveSpeechCaptureRequested = false
+    private var speechRecognitionRunID = UUID()
     private var proSubscriptionProduct: Product?
     private var imageTranslationSourceURL: URL?
     private var activeSessionID = UUID()
@@ -370,9 +374,15 @@ final class TranslationSessionStore: ObservableObject {
         audioRecognitionTask?.cancel()
 
         let capability = currentSpeechCapability
+        let runID = beginSpeechRecognitionRun(
+            mode: .audioFile,
+            inputName: url.lastPathComponent,
+            capability: capability
+        )
         guard capability.supportsOnDeviceRecognition else {
             audioRecognitionState = .failed
             audioRecognitionMessage = "\(sourceLanguage.rawValue) 当前设备未报告支持 Apple 本机语音识别，断网测试不能保证成功"
+            failSpeechRecognitionRun(audioRecognitionMessage)
             dataTransferMessage = audioRecognitionMessage
             return
         }
@@ -390,6 +400,7 @@ final class TranslationSessionStore: ObservableObject {
         } catch {
             audioRecognitionState = .failed
             audioRecognitionMessage = "音频文件复制失败：\(error.localizedDescription)"
+            failSpeechRecognitionRun(audioRecognitionMessage)
             dataTransferMessage = audioRecognitionMessage
             return
         }
@@ -400,15 +411,17 @@ final class TranslationSessionStore: ObservableObject {
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                guard self.speechRecognitionRunID == runID else { return }
 
                 guard status == .authorized else {
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "Apple Speech 权限未授权，无法测试本机识别"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
 
-                self.startOnDeviceAudioRecognition(localAudioURL, capability: capability)
+                self.startOnDeviceAudioRecognition(localAudioURL, capability: capability, runID: runID)
             }
         }
     }
@@ -421,42 +434,70 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
         guard !isCapturingProSpeech else { return }
-
-        let capability = currentSpeechCapability
-        guard capability.supportsOnDeviceRecognition else {
-            audioRecognitionState = .failed
-            audioRecognitionMessage = "\(sourceLanguage.rawValue) 当前设备未报告支持 Apple 本机语音识别"
+        guard !isProcessing else {
+            audioRecognitionMessage = "当前翻译任务完成后再开始语音识别"
             dataTransferMessage = audioRecognitionMessage
             return
         }
 
+        let capability = currentSpeechCapability
+        let runID = beginSpeechRecognitionRun(
+            mode: .liveMicrophone,
+            inputName: "实时麦克风",
+            capability: capability
+        )
+        guard capability.supportsOnDeviceRecognition else {
+            audioRecognitionState = .failed
+            audioRecognitionMessage = "\(sourceLanguage.rawValue) 当前设备未报告支持 Apple 本机语音识别"
+            failSpeechRecognitionRun(audioRecognitionMessage)
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
+
+        isProLiveSpeechCaptureRequested = true
         audioRecognitionState = .checking
         audioRecognitionMessage = "正在请求麦克风和 Speech 权限"
 
         SFSpeechRecognizer.requestAuthorization { [weak self] speechStatus in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                guard self.speechRecognitionRunID == runID else { return }
                 guard speechStatus == .authorized else {
+                    self.isProLiveSpeechCaptureRequested = false
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "Apple Speech 权限未授权"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
 
                 let microphoneGranted = await self.requestMicrophoneAccess()
                 guard microphoneGranted else {
+                    self.isProLiveSpeechCaptureRequested = false
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "麦克风权限未授权"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
 
-                self.startProLiveSpeechRecognition(capability: capability)
+                self.startProLiveSpeechRecognition(capability: capability, runID: runID)
             }
         }
     }
 
     func endProLiveSpeechCapture() {
+        isProLiveSpeechCaptureRequested = false
+        guard isCapturingProSpeech || liveAudioEngine != nil || liveSpeechRecognitionRequest != nil else {
+            if audioRecognitionState == .checking {
+                audioRecognitionState = .idle
+                audioRecognitionMessage = "语音识别已取消"
+                invalidateSpeechRecognitionRun()
+                failSpeechRecognitionRun("用户取消")
+                dataTransferMessage = audioRecognitionMessage
+            }
+            return
+        }
         liveAudioEngine?.stop()
         liveAudioEngine?.inputNode.removeTap(onBus: 0)
         liveSpeechRecognitionRequest?.endAudio()
@@ -467,6 +508,11 @@ final class TranslationSessionStore: ObservableObject {
         isCapturingProSpeech = false
         audioRecognitionState = proLiveTranscriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .idle : .translated
         audioRecognitionMessage = proLiveTranscriptText.isEmpty ? "未识别到语音" : "识别完成，可点击翻译"
+        finishSpeechRecognitionRun(
+            finalText: proLiveTranscriptText,
+            failureMessage: proLiveTranscriptText.isEmpty ? "未识别到语音" : nil
+        )
+        invalidateSpeechRecognitionRun()
     }
 
     func translateProLiveTranscript() {
@@ -479,6 +525,7 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         isProcessing = true
+        audioRecognitionState = .translating
         audioRecognitionMessage = "正在翻译识别文本"
         Task { [weak self] in
             guard let self else { return }
@@ -526,10 +573,19 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
-    private func startProLiveSpeechRecognition(capability: SpeechRecognitionCapability) {
+    private func startProLiveSpeechRecognition(capability: SpeechRecognitionCapability, runID: UUID) {
+        guard isProLiveSpeechCaptureRequested, speechRecognitionRunID == runID else {
+            audioRecognitionState = .idle
+            audioRecognitionMessage = "语音识别已取消"
+            failSpeechRecognitionRun("用户取消")
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: capability.localeIdentifier)) else {
+            isProLiveSpeechCaptureRequested = false
             audioRecognitionState = .failed
             audioRecognitionMessage = "无法创建 \(capability.localeIdentifier) 语音识别器"
+            failSpeechRecognitionRun(audioRecognitionMessage)
             dataTransferMessage = audioRecognitionMessage
             return
         }
@@ -555,8 +611,10 @@ final class TranslationSessionStore: ObservableObject {
             try audioEngine.start()
         } catch {
             inputNode.removeTap(onBus: 0)
+            isProLiveSpeechCaptureRequested = false
             audioRecognitionState = .failed
             audioRecognitionMessage = "麦克风启动失败：\(error.localizedDescription)"
+            failSpeechRecognitionRun(audioRecognitionMessage)
             dataTransferMessage = audioRecognitionMessage
             return
         }
@@ -572,25 +630,36 @@ final class TranslationSessionStore: ObservableObject {
         audioRecognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                guard self.speechRecognitionRunID == runID else { return }
 
                 if let result {
                     self.proLiveTranscriptText = result.bestTranscription.formattedString
+                    self.updateSpeechRecognitionRun(from: result.bestTranscription, isFinal: result.isFinal)
                 }
 
                 if let error {
+                    guard self.isCapturingProSpeech else { return }
                     self.endProLiveSpeechCapture()
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "语音识别失败：\(error.localizedDescription)"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                     self.dataTransferMessage = self.audioRecognitionMessage
                 }
             }
         }
     }
 
-    private func startOnDeviceAudioRecognition(_ url: URL, capability: SpeechRecognitionCapability) {
+    private func startOnDeviceAudioRecognition(
+        _ url: URL,
+        capability: SpeechRecognitionCapability,
+        runID: UUID
+    ) {
+        guard speechRecognitionRunID == runID else { return }
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: capability.localeIdentifier)) else {
             audioRecognitionState = .failed
             audioRecognitionMessage = "无法创建 \(capability.localeIdentifier) 语音识别器"
+            failSpeechRecognitionRun(audioRecognitionMessage)
+            invalidateSpeechRecognitionRun()
             dataTransferMessage = audioRecognitionMessage
             return
         }
@@ -606,30 +675,37 @@ final class TranslationSessionStore: ObservableObject {
         audioRecognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                guard self.speechRecognitionRunID == runID else { return }
 
                 if let error {
                     self.audioRecognitionTask = nil
                     self.isProcessing = false
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "本机语音识别失败：\(error.localizedDescription)"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
+                    self.invalidateSpeechRecognitionRun()
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
 
                 guard let result, result.isFinal else { return }
                 self.audioRecognitionTask = nil
+                self.updateSpeechRecognitionRun(from: result.bestTranscription, isFinal: true, completedAt: Date())
 
                 let text = result.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else {
                     self.isProcessing = false
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "语音识别完成，但没有得到文本"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
+                    self.invalidateSpeechRecognitionRun()
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
 
                 self.lastRecognizedSpeechText = text
                 self.draftText = text
+                self.audioRecognitionState = .translating
                 self.audioRecognitionMessage = "识别成功，正在交给翻译模型"
 
                 let timestamp = Self.timeFormatter.string(from: Date())
@@ -637,13 +713,125 @@ final class TranslationSessionStore: ObservableObject {
                 if didTranslate {
                     self.audioRecognitionState = .translated
                     self.audioRecognitionMessage = "已离线识别并完成翻译"
+                    self.finishSpeechRecognitionRun(finalText: text)
                 } else {
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "已离线识别出文字，但翻译模型处理失败"
+                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                 }
+                self.invalidateSpeechRecognitionRun()
                 self.dataTransferMessage = self.audioRecognitionMessage
             }
         }
+    }
+
+    func cancelAudioRecognition() {
+        invalidateSpeechRecognitionRun()
+        isProLiveSpeechCaptureRequested = false
+        liveAudioEngine?.stop()
+        liveAudioEngine?.inputNode.removeTap(onBus: 0)
+        liveSpeechRecognitionRequest?.endAudio()
+        liveAudioEngine = nil
+        liveSpeechRecognitionRequest = nil
+        audioRecognitionTask?.cancel()
+        audioRecognitionTask = nil
+        isCapturingProSpeech = false
+        isProcessing = false
+        audioRecognitionState = .idle
+        audioRecognitionMessage = "语音识别已取消"
+        failSpeechRecognitionRun("用户取消")
+        dataTransferMessage = audioRecognitionMessage
+    }
+
+    private func beginSpeechRecognitionRun(
+        mode: SpeechRecognitionRunMode,
+        inputName: String,
+        capability: SpeechRecognitionCapability
+    ) -> UUID {
+        let runID = UUID()
+        speechRecognitionRunID = runID
+        speechRecognitionRunSummary = SpeechRecognitionRunSummary(
+            mode: mode,
+            inputName: inputName.isEmpty ? mode.displayName : inputName,
+            localeIdentifier: capability.localeIdentifier,
+            requiresOnDeviceRecognition: true,
+            supportsOnDeviceRecognition: capability.supportsOnDeviceRecognition,
+            startedAt: Date(),
+            completedAt: nil,
+            transcriptPreview: "",
+            wordCount: 0,
+            segmentCount: 0,
+            averageConfidence: nil,
+            isFinal: false,
+            failureMessage: nil
+        )
+        return runID
+    }
+
+    private func invalidateSpeechRecognitionRun() {
+        speechRecognitionRunID = UUID()
+    }
+
+    private func updateSpeechRecognitionRun(
+        from transcription: SFTranscription,
+        isFinal: Bool,
+        completedAt: Date? = nil
+    ) {
+        let text = transcription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let segments = transcription.segments
+        speechRecognitionRunSummary.transcriptPreview = text
+        speechRecognitionRunSummary.wordCount = Self.speechTokenCount(in: text)
+        speechRecognitionRunSummary.segmentCount = segments.count
+        speechRecognitionRunSummary.averageConfidence = Self.averageConfidence(for: segments)
+        speechRecognitionRunSummary.isFinal = isFinal
+        speechRecognitionRunSummary.completedAt = completedAt
+        speechRecognitionRunSummary.failureMessage = nil
+    }
+
+    private func finishSpeechRecognitionRun(finalText: String, failureMessage: String? = nil) {
+        let text = finalText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !text.isEmpty {
+            speechRecognitionRunSummary.transcriptPreview = text
+            speechRecognitionRunSummary.wordCount = Self.speechTokenCount(in: text)
+        }
+        speechRecognitionRunSummary.isFinal = failureMessage == nil
+        speechRecognitionRunSummary.completedAt = Date()
+        speechRecognitionRunSummary.failureMessage = failureMessage
+    }
+
+    private func failSpeechRecognitionRun(_ message: String) {
+        speechRecognitionRunSummary.completedAt = Date()
+        speechRecognitionRunSummary.isFinal = false
+        speechRecognitionRunSummary.failureMessage = message
+    }
+
+    private static func averageConfidence(for segments: [SFTranscriptionSegment]) -> Double? {
+        guard !segments.isEmpty else { return nil }
+        let total = segments.reduce(0.0) { partialResult, segment in
+            partialResult + min(max(Double(segment.confidence), 0), 1)
+        }
+        return total / Double(segments.count)
+    }
+
+    private static func speechTokenCount(in text: String) -> Int {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return 0 }
+
+        let whitespaceTokens = trimmed.split { character in
+            character.isWhitespace
+        }
+        if whitespaceTokens.count > 1 {
+            return whitespaceTokens.count
+        }
+
+        if trimmed.range(of: "\\p{Han}", options: .regularExpression) != nil {
+            return trimmed.unicodeScalars.filter { scalar in
+                !CharacterSet.whitespacesAndNewlines.contains(scalar) &&
+                !CharacterSet.punctuationCharacters.contains(scalar)
+            }.count
+        }
+
+        return 1
     }
 
     private func copyAudioFileIntoSandbox(_ url: URL) throws -> URL {
@@ -1604,7 +1792,8 @@ final class TranslationSessionStore: ObservableObject {
                 var koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?
                 var koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?
                 var koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport?
-                var koharuNativeShadowArtifactExportLiteReport: MangaKoharuNativeShadowArtifactExportLiteReport?
+                var koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport?
+                var koharuArtifactIdentityReconciliationReport: MangaKoharuArtifactIdentityReconciliationReport?
                 var translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport?
                 var koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport?
                 var bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport?
@@ -2395,17 +2584,20 @@ final class TranslationSessionStore: ObservableObject {
                     cleanTextDiagnostic: cleanTextDiagnostic
                 )
                 self.writeMangaProbeProgress(stage: "koharu-native-promotion-gate-lite-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
-                self.writeMangaProbeProgress(stage: "koharu-native-shadow-artifact-export-lite-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
-                koharuNativeShadowArtifactExportLiteReport = try Self.makeKoharuNativeShadowArtifactExportLiteReport(
+                self.writeMangaProbeProgress(stage: "koharu-native-artifact-contract-dry-run-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                koharuNativeArtifactContractDryRunReport = Self.makeKoharuNativeArtifactContractDryRunReport(
                     blocks: probeBlocks,
-                    outputDirectory: self.mangaOverlayOutputDirectory,
-                    artifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                     promotionGateLiteReport: koharuNativePromotionGateLiteReport,
-                    bubbleInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
-                    segmentRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
                     externalArtifactReadinessReport: externalArtifactReadinessReport
                 )
-                self.writeMangaProbeProgress(stage: "koharu-native-shadow-artifact-export-lite-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-native-artifact-contract-dry-run-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                self.writeMangaProbeProgress(stage: "koharu-artifact-identity-reconciliation-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
+                koharuArtifactIdentityReconciliationReport = Self.makeKoharuArtifactIdentityReconciliationReport(
+                    blocks: probeBlocks,
+                    externalArtifactReadinessReport: externalArtifactReadinessReport,
+                    koharuNativeArtifactContractDryRunReport: koharuNativeArtifactContractDryRunReport
+                )
+                self.writeMangaProbeProgress(stage: "koharu-artifact-identity-reconciliation-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-start", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 koharuArtifactConvergenceReport = Self.makeKoharuArtifactConvergenceReport(
                     blocks: probeBlocks,
@@ -2437,7 +2629,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
                     koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                     koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
-                    koharuNativeShadowArtifactExportLiteReport: koharuNativeShadowArtifactExportLiteReport
+                    koharuNativeArtifactContractDryRunReport: koharuNativeArtifactContractDryRunReport,
+                    koharuArtifactIdentityReconciliationReport: koharuArtifactIdentityReconciliationReport
                 )
                 self.writeMangaProbeProgress(stage: "koharu-final-convergence-refresh-done", startedAt: startedAt, blocks: probeBlocks.count, runOptions: runOptions)
                 if let ocrProbeTextPath = outputFiles.ocrProbeTextFile {
@@ -2482,7 +2675,8 @@ final class TranslationSessionStore: ObservableObject {
                         koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
                         koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                         koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
-                        koharuNativeShadowArtifactExportLiteReport: koharuNativeShadowArtifactExportLiteReport,
+                        koharuNativeArtifactContractDryRunReport: koharuNativeArtifactContractDryRunReport,
+                        koharuArtifactIdentityReconciliationReport: koharuArtifactIdentityReconciliationReport,
                         translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                         koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                         bubbleMaskReport: bubbleMaskReport,
@@ -2544,7 +2738,8 @@ final class TranslationSessionStore: ObservableObject {
                     koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
                     koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
                     koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
-                    koharuNativeShadowArtifactExportLiteReport: koharuNativeShadowArtifactExportLiteReport,
+                    koharuNativeArtifactContractDryRunReport: koharuNativeArtifactContractDryRunReport,
+                    koharuArtifactIdentityReconciliationReport: koharuArtifactIdentityReconciliationReport,
                     translationModelFloorComparisonReport: translationModelFloorComparisonReport,
                     koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
                     bubbleSubRegionReport: bubbleSubRegionReport,
@@ -8152,7 +8347,8 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
         koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
         koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport? = nil,
-        koharuNativeShadowArtifactExportLiteReport: MangaKoharuNativeShadowArtifactExportLiteReport? = nil,
+        koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport? = nil,
+        koharuArtifactIdentityReconciliationReport: MangaKoharuArtifactIdentityReconciliationReport? = nil,
         translationModelFloorComparisonReport: MangaTranslationModelFloorComparisonReport? = nil,
         koharuRenderRegressionLockReport: MangaKoharuRenderRegressionLockReport? = nil,
         bubbleSubRegionReport: MangaOverlayBubbleSubRegionReport? = nil,
@@ -8194,6 +8390,43 @@ final class TranslationSessionStore: ObservableObject {
         let filesPresent = Self.fileIsNonEmpty(path: outputFiles.debugBoxesImage)
             && Self.fileIsNonEmpty(path: outputFiles.overlayImage)
         let diagnostics = makeMangaOverlayProbeDiagnostics(blocks: blocks)
+        let artifactBundleLiteReport = koharuNativeArtifactBundleLiteReport ?? Self.makeKoharuNativeArtifactBundleLiteReport(
+            blocks: blocks,
+            detectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
+            shadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
+            refinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
+            closedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
+            bubbleInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+            segmentRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+            renderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
+            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
+            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+            externalArtifactReadinessReport: externalArtifactReadinessReport
+        )
+        let promotionGateLiteReport = koharuNativePromotionGateLiteReport ?? Self.makeKoharuNativePromotionGateLiteReport(
+            blocks: blocks,
+            diagnostics: diagnostics,
+            detectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
+            closedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
+            bubbleInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
+            segmentRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
+            artifactBundleLiteReport: artifactBundleLiteReport,
+            renderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
+            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
+            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
+            externalArtifactReadinessReport: externalArtifactReadinessReport,
+            cleanTextDiagnostic: cleanTextDiagnostic
+        )
+        let artifactContractDryRunReport = koharuNativeArtifactContractDryRunReport ?? Self.makeKoharuNativeArtifactContractDryRunReport(
+            blocks: blocks,
+            promotionGateLiteReport: promotionGateLiteReport,
+            externalArtifactReadinessReport: externalArtifactReadinessReport
+        )
+        let artifactIdentityReconciliationReport = koharuArtifactIdentityReconciliationReport ?? Self.makeKoharuArtifactIdentityReconciliationReport(
+            blocks: blocks,
+            externalArtifactReadinessReport: externalArtifactReadinessReport,
+            koharuNativeArtifactContractDryRunReport: artifactContractDryRunReport
+        )
         let convergenceReport = koharuArtifactConvergenceReport ?? Self.makeKoharuArtifactConvergenceReport(
             blocks: blocks,
             diagnostics: diagnostics,
@@ -8222,36 +8455,10 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeTextBoxDetectorLiteClosedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
             koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
             koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
-            koharuNativeArtifactBundleLiteReport: koharuNativeArtifactBundleLiteReport,
-            koharuNativePromotionGateLiteReport: koharuNativePromotionGateLiteReport,
-            koharuNativeShadowArtifactExportLiteReport: koharuNativeShadowArtifactExportLiteReport
-        )
-        let artifactBundleLiteReport = koharuNativeArtifactBundleLiteReport ?? Self.makeKoharuNativeArtifactBundleLiteReport(
-            blocks: blocks,
-            detectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
-            shadowOCRReport: koharuNativeTextBoxDetectorLiteShadowOCRReport,
-            refinementReport: koharuNativeTextBoxDetectorLiteRefinementReport,
-            closedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
-            bubbleInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
-            segmentRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
-            renderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
-            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
-            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
-            externalArtifactReadinessReport: externalArtifactReadinessReport
-        )
-        let promotionGateLiteReport = koharuNativePromotionGateLiteReport ?? Self.makeKoharuNativePromotionGateLiteReport(
-            blocks: blocks,
-            diagnostics: diagnostics,
-            detectorLiteReport: koharuNativeTextBoxDetectorLiteReport,
-            closedLoopReport: koharuNativeTextBoxDetectorLiteClosedLoopReport,
-            bubbleInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
-            segmentRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
-            artifactBundleLiteReport: artifactBundleLiteReport,
-            renderSpriteFitPlannerReport: koharuRenderSpriteFitPlannerReport,
-            koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
-            translationModelFloorComparisonReport: translationModelFloorComparisonReport,
-            externalArtifactReadinessReport: externalArtifactReadinessReport,
-            cleanTextDiagnostic: cleanTextDiagnostic
+            koharuNativeArtifactBundleLiteReport: artifactBundleLiteReport,
+            koharuNativePromotionGateLiteReport: promotionGateLiteReport,
+            koharuNativeArtifactContractDryRunReport: artifactContractDryRunReport,
+            koharuArtifactIdentityReconciliationReport: artifactIdentityReconciliationReport
         )
         let resolverReport = koharuPipelineResolverReport ?? Self.makeKoharuPipelineResolverReport(
             blocks: blocks,
@@ -8350,7 +8557,9 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeBubbleMaskInstanceLiteReport: koharuNativeBubbleMaskInstanceLiteReport,
             koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
             koharuNativeArtifactBundleLiteReport: artifactBundleLiteReport,
-            koharuNativePromotionGateLiteReport: promotionGateLiteReport
+            koharuNativePromotionGateLiteReport: promotionGateLiteReport,
+            koharuNativeArtifactContractDryRunReport: artifactContractDryRunReport,
+            koharuArtifactIdentityReconciliationReport: artifactIdentityReconciliationReport
         )
         let retainedFiles = Self.retainedProbeOutputFiles(from: outputFiles)
         let correctionGuardrailTest = Self.evaluateMangaCorrectionGuardrail(
@@ -8411,7 +8620,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeSegmentMaskRefinementLiteReport: koharuNativeSegmentMaskRefinementLiteReport,
             koharuNativeArtifactBundleLiteReport: artifactBundleLiteReport,
             koharuNativePromotionGateLiteReport: promotionGateLiteReport,
-            koharuNativeShadowArtifactExportLiteReport: koharuNativeShadowArtifactExportLiteReport,
+            koharuNativeArtifactContractDryRunReport: artifactContractDryRunReport,
+            koharuArtifactIdentityReconciliationReport: artifactIdentityReconciliationReport,
             translationModelFloorComparisonReport: translationModelFloorComparisonReport,
             koharuRenderRegressionLockReport: koharuRenderRegressionLockReport,
             bubbleSubRegionReport: bubbleSubRegionReport,
@@ -8476,18 +8686,36 @@ final class TranslationSessionStore: ObservableObject {
         let textBoxesURL = Self.externalArtifactURL(
             named: manifest?.textBoxesPath,
             fallback: "1.textboxes.json",
-            artifactsDirectory: artifactsDirectory
+            artifactsDirectory: artifactsDirectory,
+            label: "textBoxesPath",
+            parseErrors: &parseErrors
         )
         let bubbleMaskURL = Self.externalArtifactURL(
             named: manifest?.bubbleMaskPath,
             fallback: "1.bubbles.json",
-            artifactsDirectory: artifactsDirectory
+            artifactsDirectory: artifactsDirectory,
+            label: "bubbleMaskPath",
+            parseErrors: &parseErrors
         )
         let segmentMaskURL = Self.externalArtifactURL(
             named: manifest?.segmentMaskPath,
             fallback: "1.segment_mask.json",
-            artifactsDirectory: artifactsDirectory
+            artifactsDirectory: artifactsDirectory,
+            label: "segmentMaskPath",
+            parseErrors: &parseErrors
         )
+        let artifactIdentityReceipt = Self.externalArtifactIdentityReceipt(
+            sourceImageURL: bundledTestDirectory?.appendingPathComponent("1.png"),
+            manifestURL: manifestURL,
+            textBoxesURL: textBoxesURL,
+            bubbleMaskURL: bubbleMaskURL,
+            segmentMaskURL: segmentMaskURL,
+            manifest: manifest,
+            activeArtifactsDirectory: activeArtifactsDirectory
+        )
+        let expectedSourceImageSHA256 = artifactIdentityReceipt.files.first {
+            $0.artifactKind.lowercased() == "sourceimage"
+        }?.sha256
         let textBoxes = Self.decodeExternalArtifactList(
             MangaOverlayExternalTextBox.self,
             from: textBoxesURL,
@@ -8519,6 +8747,7 @@ final class TranslationSessionStore: ObservableObject {
             textBoxes: textBoxes,
             bubbleInstances: bubbleInstances,
             segmentMask: segmentMask,
+            expectedSourceImageSHA256: expectedSourceImageSHA256,
             imageWidth: imageWidth,
             imageHeight: imageHeight
         )
@@ -8556,6 +8785,8 @@ final class TranslationSessionStore: ObservableObject {
         if readinessVerdict != "readyForShadowOCR" {
             notes.append("external detector artifact evidence is insufficient; stop before shadow OCR")
         }
+        notes.append("artifactIdentityReceipt=\(artifactIdentityReceipt.identityVerdict)")
+        notes.append("sourceImageSHA256Matches=\(artifactIdentityReceipt.sourceImageSHA256Matches)")
         let shadowAllowed = readinessVerdict == "readyForShadowOCR"
             && activeArtifactsDirectory
             && manifest?.contractExampleOnly != true
@@ -8582,11 +8813,134 @@ final class TranslationSessionStore: ObservableObject {
             parseErrors: parseErrors,
             missingArtifacts: missingArtifacts,
             coordinateValidation: coordinateValidation,
+            artifactIdentityReceipt: artifactIdentityReceipt,
             blockAlignment: blockAlignment,
             readinessVerdict: readinessVerdict,
             nextAction: nextAction,
             notes: notes
         )
+    }
+
+    private static func externalArtifactIdentityReceipt(
+        sourceImageURL: URL?,
+        manifestURL: URL?,
+        textBoxesURL: URL?,
+        bubbleMaskURL: URL?,
+        segmentMaskURL: URL?,
+        manifest: MangaOverlayExternalArtifactManifest?,
+        activeArtifactsDirectory: Bool
+    ) -> MangaOverlayExternalArtifactIdentityReceipt {
+        let files = [
+            externalArtifactFileIdentityReceipt(kind: "SourceImage", url: sourceImageURL, required: true),
+            externalArtifactFileIdentityReceipt(kind: "Manifest", url: manifestURL, required: true),
+            externalArtifactFileIdentityReceipt(kind: "TextBoxes", url: textBoxesURL, required: true),
+            externalArtifactFileIdentityReceipt(kind: "BubbleMask", url: bubbleMaskURL, required: true),
+            externalArtifactFileIdentityReceipt(kind: "SegmentMask", url: segmentMaskURL, required: true)
+        ]
+        let requiredFiles = files.filter(\.required)
+        let sourceImageSHA256Expected = files.first { $0.artifactKind.lowercased() == "sourceimage" }?.sha256
+        let sourceImageSHA256Declared = manifest?.sourceImageSHA256
+        let sourceImageSHA256Normalized = Self.normalizedExternalArtifactSHA256(sourceImageSHA256Declared)
+        let sourceImageSHA256Matches = sourceImageSHA256Normalized != nil
+            && sourceImageSHA256Expected != nil
+            && sourceImageSHA256Normalized == sourceImageSHA256Expected
+        let allRequiredFilesPresent = requiredFiles.allSatisfy(\.exists)
+        let allRequiredFilesHaveSHA256 = requiredFiles.allSatisfy { $0.sha256?.isEmpty == false }
+        let identityVerdict: String
+        if !activeArtifactsDirectory {
+            identityVerdict = "activeDirectoryMissing"
+        } else if !allRequiredFilesPresent {
+            identityVerdict = "requiredIdentityFilesMissing"
+        } else if !allRequiredFilesHaveSHA256 {
+            identityVerdict = "requiredIdentityHashMissing"
+        } else if manifest?.contractExampleOnly == true {
+            identityVerdict = "blockedContractExampleOnly"
+        } else if manifest?.sourceImageFieldPresent != true || manifest?.sourceImage.isEmpty == true {
+            identityVerdict = "manifestSourceImageMissing"
+        } else if manifest?.sourceImageSHA256FieldPresent != true {
+            identityVerdict = "manifestSourceImageSHA256Missing"
+        } else if manifest?.sourceImageSHA256TypeValid != true || sourceImageSHA256Normalized == nil {
+            identityVerdict = "manifestSourceImageSHA256Invalid"
+        } else if !sourceImageSHA256Matches {
+            identityVerdict = "manifestSourceImageSHA256Mismatch"
+        } else if manifest?.contractExampleOnlyFieldPresent != true {
+            identityVerdict = "manifestContractExampleOnlyMissing"
+        } else if manifest?.contractExampleOnlyTypeValid != true {
+            identityVerdict = "manifestContractExampleOnlyInvalid"
+        } else {
+            identityVerdict = "activeArtifactIdentityRecorded"
+        }
+        return MangaOverlayExternalArtifactIdentityReceipt(
+            sourceImage: manifest?.sourceImage ?? "test/1.png",
+            sourceImageSHA256Declared: sourceImageSHA256Declared,
+            sourceImageSHA256Expected: sourceImageSHA256Expected,
+            sourceImageSHA256Matches: sourceImageSHA256Matches,
+            schemaVersion: manifest?.schemaVersion,
+            coordinateSpace: manifest?.coordinateSpace,
+            contractExampleOnly: manifest?.contractExampleOnly ?? false,
+            generatedBy: manifest?.generatedBy,
+            generatedAt: manifest?.generatedAt,
+            activeArtifactsDirectory: activeArtifactsDirectory,
+            allRequiredFilesPresent: allRequiredFilesPresent,
+            allRequiredFilesHaveSHA256: allRequiredFilesHaveSHA256,
+            identityVerdict: identityVerdict,
+            files: files,
+            notes: [
+                "App-side receipt records the active bundle files actually visible to the probe runtime.",
+                "Manifest sourceImageSHA256 must match the runtime-visible bundle test/1.png SHA256 before active artifacts can be treated as ready.",
+                "Compare these SHA256 values with ci-artifact-manifest.koharuArtifactValidationIdentitySummary before treating injected artifacts as consumed by the App.",
+                "This receipt is report-only and does not create, copy, modify, or promote active artifacts."
+            ]
+        )
+    }
+
+    private static func externalArtifactFileIdentityReceipt(
+        kind: String,
+        url: URL?,
+        required: Bool
+    ) -> MangaOverlayExternalArtifactFileIdentityReceipt {
+        guard let url else {
+            return MangaOverlayExternalArtifactFileIdentityReceipt(
+                artifactKind: kind,
+                path: nil,
+                required: required,
+                exists: false,
+                sizeBytes: nil,
+                sha256: nil
+            )
+        }
+        let exists = FileManager.default.fileExists(atPath: url.path)
+        var sizeBytes: Int?
+        var sha256: String?
+        if exists {
+            if let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+               let size = attributes[.size] as? NSNumber {
+                sizeBytes = size.intValue
+            }
+            if let data = try? Data(contentsOf: url) {
+                let digest = SHA256.hash(data: data)
+                sha256 = digest.map { String(format: "%02x", $0) }.joined()
+            }
+        }
+        return MangaOverlayExternalArtifactFileIdentityReceipt(
+            artifactKind: kind,
+            path: url.path,
+            required: required,
+            exists: exists,
+            sizeBytes: sizeBytes,
+            sha256: sha256
+        )
+    }
+
+    private static func normalizedExternalArtifactSHA256(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let hexCharacters = Set("0123456789abcdef")
+        guard normalized.count == 64,
+              normalized.allSatisfy({ hexCharacters.contains($0) }) else {
+            return nil
+        }
+        return normalized
     }
 
     private func makeExternalTextBoxShadowOCRReport(
@@ -8621,6 +8975,17 @@ final class TranslationSessionStore: ObservableObject {
                     selectedCandidateID: nil,
                     selectedTextBoxID: nil,
                     candidateBBox: nil,
+                    selectedSourceDirection: nil,
+                    selectedOrientationCategory: nil,
+                    selectedLinePolygonsPresent: false,
+                    selectedRotationDegrees: nil,
+                    orientationShadowPathNeeded: false,
+                    orientationShadowPathExecuted: false,
+                    orientationAttemptedRotations: [],
+                    orientationSelectedRotation: nil,
+                    orientationRecognitionLanguages: [],
+                    orientationUnsupportedReason: nil,
+                    orientationReadinessVerdict: "blockedByReadinessGate",
                     ocrExecuted: false,
                     ocrSucceeded: false,
                     ocrText: nil,
@@ -8649,6 +9014,18 @@ final class TranslationSessionStore: ObservableObject {
                 promotedExternalShadowBlocks: [],
                 wouldPromoteByExistingGateBlocks: [],
                 skippedBlocks: blocks.map(\.index).sorted(),
+                sourceDirectionBreakdown: [:],
+                orientationCategoryBreakdown: [:],
+                linePolygonCandidateBlocks: [],
+                rotationCandidateBlocks: [],
+                verticalCandidateBlocks: [],
+                orientationShadowPathNeededBlocks: [],
+                orientationShadowPathExecutedBlocks: [],
+                orientationShadowPathPartialBlocks: [],
+                orientationShadowPathNotExecutedBlocks: [],
+                orientationUnsupportedBlocks: [],
+                orientationUnsupportedReasonBreakdown: [:],
+                orientationReadinessVerdict: "blockedByReadinessGate",
                 blockSummaries: summaries,
                 candidates: [],
                 notes: notes
@@ -8667,12 +9044,16 @@ final class TranslationSessionStore: ObservableObject {
         let textBoxesURL = Self.externalArtifactURL(
             named: manifest?.textBoxesPath,
             fallback: "1.textboxes.json",
-            artifactsDirectory: artifactsDirectory
+            artifactsDirectory: artifactsDirectory,
+            label: "textBoxesPath",
+            parseErrors: &parseErrors
         )
         let bubbleMaskURL = Self.externalArtifactURL(
             named: manifest?.bubbleMaskPath,
             fallback: "1.bubbles.json",
-            artifactsDirectory: artifactsDirectory
+            artifactsDirectory: artifactsDirectory,
+            label: "bubbleMaskPath",
+            parseErrors: &parseErrors
         )
         let textBoxes = Self.decodeExternalArtifactList(
             MangaOverlayExternalTextBox.self,
@@ -8713,6 +9094,17 @@ final class TranslationSessionStore: ObservableObject {
                         selectedCandidateID: nil,
                         selectedTextBoxID: nil,
                         candidateBBox: nil,
+                        selectedSourceDirection: nil,
+                        selectedOrientationCategory: nil,
+                        selectedLinePolygonsPresent: false,
+                        selectedRotationDegrees: nil,
+                        orientationShadowPathNeeded: false,
+                        orientationShadowPathExecuted: false,
+                        orientationAttemptedRotations: [],
+                        orientationSelectedRotation: nil,
+                        orientationRecognitionLanguages: [],
+                        orientationUnsupportedReason: nil,
+                        orientationReadinessVerdict: "skippedNoMatchingExternalTextBox",
                         ocrExecuted: false,
                         ocrSucceeded: false,
                         ocrText: nil,
@@ -8726,38 +9118,105 @@ final class TranslationSessionStore: ObservableObject {
                 continue
             }
 
-            let crop = try await mangaOverlayProbeService.recognizeExternalTextBoxCrop(
-                in: image,
-                textBoxBBox: selected.textBox.bbox,
-                options: preprocessing
-            )
             let controlText = block.finalTextUsedForTranslation
             let controlQuality = Self.ocrCandidateQualityScore(controlText)
+            let controlWords = Self.ocrCandidateWords(controlText)
+            let normalizedSourceDirection = selected.textBox.sourceDirection.map(Self.normalizedExternalSourceDirection)
+            let orientationCategory = Self.externalTextBoxOrientationCategory(selected.textBox)
+            let linePolygonCount = selected.textBox.linePolygons?.count ?? 0
+            let orientationShadowPathNeeded = Self.externalTextBoxNeedsOrientationShadowPath(selected.textBox)
+            let orientationPlan = Self.externalTextBoxOrientationShadowOCRPlan(selected.textBox)
+            var attempts: [(text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double, rotationApplied: Double, errorCode: String?)] = []
+            for rotationAngle in orientationPlan.rotationAngles {
+                do {
+                    let crop = try await mangaOverlayProbeService.recognizeExternalTextBoxCrop(
+                        in: image,
+                        textBoxBBox: selected.textBox.bbox,
+                        options: preprocessing,
+                        rotationAngle: rotationAngle,
+                        recognitionLanguages: orientationPlan.recognitionLanguages
+                    )
+                    attempts.append((crop.text, crop.cropBBox, crop.paddingX, crop.paddingY, crop.rotationApplied, nil))
+                } catch {
+                    attempts.append((nil, selected.textBox.bbox, 0, 0, Double(rotationAngle), "\(type(of: error))"))
+                }
+            }
+            let crop = attempts.max { lhs, rhs in
+                let lhsText = (lhs.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                let rhsText = (rhs.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                if (lhs.errorCode == nil) != (rhs.errorCode == nil) {
+                    return lhs.errorCode != nil
+                }
+                if lhsText.isEmpty != rhsText.isEmpty {
+                    return lhsText.isEmpty
+                }
+                let lhsQuality = Self.ocrCandidateQualityScore(lhsText)
+                let rhsQuality = Self.ocrCandidateQualityScore(rhsText)
+                if abs(lhsQuality - rhsQuality) > 0.0001 {
+                    return lhsQuality < rhsQuality
+                }
+                let lhsPreservation = Self.wordPreservationRatio(
+                    sourceWords: controlWords,
+                    candidateWords: Self.ocrCandidateWords(lhsText)
+                )
+                let rhsPreservation = Self.wordPreservationRatio(
+                    sourceWords: controlWords,
+                    candidateWords: Self.ocrCandidateWords(rhsText)
+                )
+                if abs(lhsPreservation - rhsPreservation) > 0.0001 {
+                    return lhsPreservation < rhsPreservation
+                }
+                return lhs.rotationApplied > rhs.rotationApplied
+            } ?? (nil, selected.textBox.bbox, 0, 0, 0, "noExternalTextBoxShadowOCRAttempt")
             let ocrText = crop.text?.trimmingCharacters(in: .whitespacesAndNewlines)
             let ocrTextValue = ocrText ?? ""
             let candidateQuality = Self.ocrCandidateQualityScore(ocrTextValue)
             let preservation = Self.wordPreservationRatio(
-                sourceWords: Self.ocrCandidateWords(controlText),
+                sourceWords: controlWords,
                 candidateWords: Self.ocrCandidateWords(ocrTextValue)
             )
             let qualityDelta = candidateQuality - controlQuality
             var blockers = selected.rejectionReasons
+            if crop.errorCode != nil {
+                blockers.append("ocrExecutionFailed")
+            }
             if ocrTextValue.isEmpty {
                 blockers.append("emptyLocalOCR")
             }
-            if Self.ocrCandidateWords(controlText).count >= 3, preservation < 0.55 {
+            if controlWords.count >= 3, preservation < 0.55 {
                 blockers.append("rawWordsLost")
             }
-            if Self.ocrCandidateWords(controlText).count >= 2,
-               Self.ocrCandidateWords(ocrTextValue).count < max(2, Int(ceil(Double(Self.ocrCandidateWords(controlText).count) * 0.55))) {
+            if controlWords.count >= 2,
+               Self.ocrCandidateWords(ocrTextValue).count < max(2, Int(ceil(Double(controlWords.count) * 0.55))) {
                 blockers.append("wordCountRegression")
             }
-            if Self.ocrCandidateWords(ocrTextValue).joined(separator: " ") == Self.ocrCandidateWords(controlText).joined(separator: " ") {
+            if Self.ocrCandidateWords(ocrTextValue).joined(separator: " ") == controlWords.joined(separator: " ") {
                 blockers.append("sameAsFusedText")
             }
             if Self.containsLikelyOCRError(in: ocrTextValue), !Self.containsLikelyOCRError(in: controlText), candidateQuality <= controlQuality + 0.08 {
                 blockers.append("introducedLikelyOCRError")
             }
+            let orientationRotationExecuted = attempts.contains { attempt in
+                attempt.errorCode == nil && abs(attempt.rotationApplied) > 0.001
+            }
+            let orientationShadowPathExecuted = orientationShadowPathNeeded && orientationRotationExecuted
+            let orientationUnsupportedReason = orientationPlan.unsupportedReasons.isEmpty
+                ? nil
+                : orientationPlan.unsupportedReasons.joined(separator: ",")
+            let orientationReadinessVerdict: String
+            if !orientationShadowPathNeeded {
+                orientationReadinessVerdict = "orientationMetadataCaptured"
+            } else if orientationShadowPathExecuted && orientationPlan.unsupportedReasons.isEmpty {
+                orientationReadinessVerdict = "orientationShadowPathExecuted"
+            } else if orientationShadowPathExecuted {
+                orientationReadinessVerdict = "orientationShadowPathPartiallyExecuted"
+            } else {
+                orientationReadinessVerdict = "orientationShadowPathNeededNotExecuted"
+            }
+            if orientationShadowPathNeeded && !orientationShadowPathExecuted {
+                blockers.append("orientationShadowPathNeededNotExecuted")
+            }
+            blockers.append(contentsOf: orientationPlan.unsupportedReasons)
             let betterThanControl = candidateQuality > controlQuality + 0.03
             let wouldPromote = !ocrTextValue.isEmpty
                 && preservation >= 0.80
@@ -8767,9 +9226,22 @@ final class TranslationSessionStore: ObservableObject {
                 && !blockers.contains("sameAsFusedText")
                 && !blockers.contains("bubbleAlignmentMismatch")
                 && !blockers.contains("textBoxAreaTooLarge")
+                && !blockers.contains("orientationShadowPathNeededNotExecuted")
+                && !blockers.contains("linePolygonWarpUnsupported")
+                && !blockers.contains("arbitraryRotationUnsupported")
             let verdict = wouldPromote ? "wouldPromoteByExistingGateReportOnly" : (betterThanControl ? "betterThanControlButBlocked" : "controlStillBest")
             let candidateID = nextCandidateID
             nextCandidateID += 1
+            var riskFlags = selected.riskFlags
+            if orientationCategory == "vertical" && orientationShadowPathExecuted {
+                riskFlags.append("verticalSourceDirectionShadowExecuted")
+            } else if orientationCategory == "vertical" {
+                riskFlags.append("verticalSourceDirectionShadowNotExecuted")
+            }
+            if orientationShadowPathNeeded && !orientationShadowPathExecuted {
+                riskFlags.append("orientationShadowPathNeededNotExecuted")
+            }
+            riskFlags.append(contentsOf: orientationPlan.unsupportedReasons)
             candidates.append(
                 MangaOverlayExternalTextBoxShadowOCRCandidate(
                     candidateID: candidateID,
@@ -8785,9 +9257,18 @@ final class TranslationSessionStore: ObservableObject {
                     bubbleAlignmentMatched: selected.bubbleAlignmentMatched,
                     areaRatioToBlock: selected.areaRatio,
                     linePolygonsPresent: selected.textBox.linePolygons?.isEmpty == false,
+                    linePolygonCount: linePolygonCount,
                     sourceDirection: selected.textBox.sourceDirection,
+                    normalizedSourceDirection: normalizedSourceDirection,
+                    orientationCategory: orientationCategory,
                     rotationDegrees: selected.textBox.rotationDegrees,
                     deskewExecuted: false,
+                    orientationShadowPathNeeded: orientationShadowPathNeeded,
+                    orientationShadowPathExecuted: orientationShadowPathExecuted,
+                    orientationAttemptedRotations: orientationPlan.rotationAngles.map(Double.init),
+                    orientationSelectedRotation: crop.rotationApplied,
+                    orientationRecognitionLanguages: orientationPlan.recognitionLanguages ?? [],
+                    orientationUnsupportedReason: orientationUnsupportedReason,
                     ocrExecuted: true,
                     ocrSucceeded: !ocrTextValue.isEmpty,
                     controlText: controlText,
@@ -8799,11 +9280,17 @@ final class TranslationSessionStore: ObservableObject {
                     betterThanControl: betterThanControl,
                     promotionVerdict: verdict,
                     blockers: Array(Set(blockers)).sorted(),
-                    riskFlags: selected.riskFlags,
+                    riskFlags: Array(Set(riskFlags)).sorted(),
                     notes: [
                         "shadowOnly=true",
                         "variantName=externalArtifact.textBoxCrop",
                         "deskewExecuted=false",
+                        "orientationShadowPathExecuted=\(orientationShadowPathExecuted)",
+                        "orientationReadinessVerdict=\(orientationReadinessVerdict)",
+                        "orientationAttemptedRotations=\(orientationPlan.rotationAngles.map(String.init).joined(separator: ","))",
+                        "orientationSelectedRotation=\(crop.rotationApplied.formatted(.number.precision(.fractionLength(1))))",
+                        "orientationRecognitionLanguages=\(orientationPlan.recognitionLanguages?.joined(separator: ",") ?? "default")",
+                        "orientationUnsupportedReason=\(orientationUnsupportedReason ?? "none")",
                         "paddingX=\(crop.paddingX.formatted(.number.precision(.fractionLength(1))))",
                         "paddingY=\(crop.paddingY.formatted(.number.precision(.fractionLength(1))))",
                         "groundTruthUsedForSelection=false",
@@ -8817,6 +9304,17 @@ final class TranslationSessionStore: ObservableObject {
                     selectedCandidateID: candidateID,
                     selectedTextBoxID: selected.textBox.id,
                     candidateBBox: crop.cropBBox,
+                    selectedSourceDirection: selected.textBox.sourceDirection,
+                    selectedOrientationCategory: orientationCategory,
+                    selectedLinePolygonsPresent: linePolygonCount > 0,
+                    selectedRotationDegrees: selected.textBox.rotationDegrees,
+                    orientationShadowPathNeeded: orientationShadowPathNeeded,
+                    orientationShadowPathExecuted: orientationShadowPathExecuted,
+                    orientationAttemptedRotations: orientationPlan.rotationAngles.map(Double.init),
+                    orientationSelectedRotation: crop.rotationApplied,
+                    orientationRecognitionLanguages: orientationPlan.recognitionLanguages ?? [],
+                    orientationUnsupportedReason: orientationUnsupportedReason,
+                    orientationReadinessVerdict: orientationReadinessVerdict,
                     ocrExecuted: true,
                     ocrSucceeded: !ocrTextValue.isEmpty,
                     ocrText: ocrText,
@@ -8824,7 +9322,14 @@ final class TranslationSessionStore: ObservableObject {
                     wordPreservationRatio: preservation,
                     promotionVerdict: verdict,
                     blockers: Array(Set(blockers)).sorted(),
-                    notes: ["externalArtifact.textBoxCrop shadow candidate; not written to finalTextUsedForTranslation"]
+                    notes: [
+                        "externalArtifact.textBoxCrop shadow candidate; not written to finalTextUsedForTranslation",
+                        "orientationShadowPathExecuted=\(orientationShadowPathExecuted)",
+                        "orientationReadinessVerdict=\(orientationReadinessVerdict)",
+                        "orientationAttemptedRotations=\(orientationPlan.rotationAngles.map(String.init).joined(separator: ","))",
+                        "orientationSelectedRotation=\(crop.rotationApplied.formatted(.number.precision(.fractionLength(1))))",
+                        "orientationUnsupportedReason=\(orientationUnsupportedReason ?? "none")"
+                    ]
                 )
             )
         }
@@ -8833,7 +9338,59 @@ final class TranslationSessionStore: ObservableObject {
             .filter { $0.promotionVerdict == "wouldPromoteByExistingGateReportOnly" }
             .map(\.blockIndex)
             .sorted()
+        let linePolygonBlocks = candidates
+            .filter { $0.linePolygonCount > 0 }
+            .map(\.blockIndex)
+            .sorted()
+        let rotationBlocks = candidates
+            .filter { ($0.rotationDegrees.map { abs($0) > 0.001 }) ?? false }
+            .map(\.blockIndex)
+            .sorted()
+        let verticalBlocks = candidates
+            .filter { $0.orientationCategory == "vertical" }
+            .map(\.blockIndex)
+            .sorted()
+        let orientationNeededBlocks = candidates
+            .filter(\.orientationShadowPathNeeded)
+            .map(\.blockIndex)
+            .sorted()
+        let orientationExecutedBlocks = candidates
+            .filter(\.orientationShadowPathExecuted)
+            .map(\.blockIndex)
+            .sorted()
+        let orientationPartialBlocks = candidates
+            .filter { $0.orientationShadowPathExecuted && $0.orientationUnsupportedReason != nil }
+            .map(\.blockIndex)
+            .sorted()
+        let orientationNotExecutedBlocks = candidates
+            .filter { $0.orientationShadowPathNeeded && !$0.orientationShadowPathExecuted }
+            .map(\.blockIndex)
+            .sorted()
+        let orientationUnsupportedBlocks = candidates
+            .filter { $0.orientationUnsupportedReason != nil }
+            .map(\.blockIndex)
+            .sorted()
+        let orientationUnsupportedReasons = candidates
+            .flatMap { candidate in
+                (candidate.orientationUnsupportedReason ?? "")
+                    .split(separator: ",")
+                    .map { String($0) }
+            }
+        let reportOrientationVerdict: String
+        if orientationNotExecutedBlocks.isEmpty,
+           orientationUnsupportedBlocks.isEmpty,
+           candidates.contains(where: { $0.orientationShadowPathExecuted }) {
+            reportOrientationVerdict = "orientationShadowPathExecuted"
+        } else if orientationNotExecutedBlocks.isEmpty,
+                  candidates.contains(where: \.orientationShadowPathExecuted) {
+            reportOrientationVerdict = "orientationShadowPathPartiallyExecuted"
+        } else if orientationNotExecutedBlocks.isEmpty {
+            reportOrientationVerdict = "orientationMetadataCaptured"
+        } else {
+            reportOrientationVerdict = "orientationShadowPathNeededNotExecuted"
+        }
         notes.append("promotedExternalShadowBlocks intentionally remains empty; wouldPromoteByExistingGateBlocks is report-only")
+        notes.append("orientation-aware shadow OCR runs bounded 90-degree rotation variants for vertical or near-right-angle external TextBoxes; arbitrary deskew and line-polygon warp remain unsupported")
         return MangaOverlayExternalTextBoxShadowOCRReport(
             enabled: true,
             executed: true,
@@ -8852,6 +9409,18 @@ final class TranslationSessionStore: ObservableObject {
             promotedExternalShadowBlocks: [],
             wouldPromoteByExistingGateBlocks: wouldPromoteBlocks,
             skippedBlocks: skippedBlocks.sorted(),
+            sourceDirectionBreakdown: Self.countStrings(candidates.map { $0.normalizedSourceDirection ?? "unspecified" }),
+            orientationCategoryBreakdown: Self.countStrings(candidates.map(\.orientationCategory)),
+            linePolygonCandidateBlocks: linePolygonBlocks,
+            rotationCandidateBlocks: rotationBlocks,
+            verticalCandidateBlocks: verticalBlocks,
+            orientationShadowPathNeededBlocks: orientationNeededBlocks,
+            orientationShadowPathExecutedBlocks: orientationExecutedBlocks,
+            orientationShadowPathPartialBlocks: orientationPartialBlocks,
+            orientationShadowPathNotExecutedBlocks: orientationNotExecutedBlocks,
+            orientationUnsupportedBlocks: orientationUnsupportedBlocks,
+            orientationUnsupportedReasonBreakdown: Self.countStrings(orientationUnsupportedReasons),
+            orientationReadinessVerdict: reportOrientationVerdict,
             blockSummaries: summaries.sorted { $0.blockIndex < $1.blockIndex },
             candidates: candidates.sorted { $0.candidateID < $1.candidateID },
             notes: notes
@@ -9006,13 +9575,33 @@ final class TranslationSessionStore: ObservableObject {
 
         let limitPerBlock = max(1, candidateLimitPerBlock)
         let maxExecutions = blocks.count * limitPerBlock
+        let blockRectByIndex = Dictionary(uniqueKeysWithValues: blocks.map { ($0.index, Self.rect(from: $0.bbox)) })
+        func rectArea(_ rect: CGRect) -> Double {
+            Double(max(0, rect.width) * max(0, rect.height))
+        }
+        func overlapRatio(_ lhs: CGRect, _ rhs: CGRect) -> Double {
+            let intersection = lhs.intersection(rhs)
+            guard !intersection.isNull else { return 0 }
+            return rectArea(intersection) / max(1, min(rectArea(lhs), rectArea(rhs)))
+        }
+        func relationScore(candidate: MangaKoharuNativeTextBoxDetectorLiteCandidate, blockIndex: Int) -> Double {
+            guard let blockRect = blockRectByIndex[blockIndex] else { return 0 }
+            let candidateRect = Self.rect(from: candidate.bbox)
+            let center = CGPoint(x: blockRect.midX, y: blockRect.midY)
+            let containmentBonus = candidateRect.contains(center) ? 0.35 : 0
+            return overlapRatio(blockRect, candidateRect) + containmentBonus
+        }
         let eligibleByBlock = Dictionary(grouping: detectorLiteReport.candidates.flatMap { candidate in
             candidate.relatedCurrentBlockIndexes.map { (blockIndex: $0, candidate: candidate) }
         }) { $0.blockIndex }
             .mapValues { pairs in
-                pairs.map(\.candidate)
+                let blockIndex = pairs.first?.blockIndex ?? -1
+                return pairs.map(\.candidate)
                     .filter(\.shadowOCREligible)
                     .sorted { lhs, rhs in
+                        let lhsRelation = relationScore(candidate: lhs, blockIndex: blockIndex)
+                        let rhsRelation = relationScore(candidate: rhs, blockIndex: blockIndex)
+                        if abs(lhsRelation - rhsRelation) > 0.0001 { return lhsRelation > rhsRelation }
                         if lhs.score == rhs.score { return lhs.candidateID < rhs.candidateID }
                         return lhs.score > rhs.score
                     }
@@ -9044,6 +9633,8 @@ final class TranslationSessionStore: ObservableObject {
             var firstQuality: Double?
             var firstDelta: Double?
             var firstSimilarityDelta: Double?
+            var firstPreservation: Double?
+            var firstSourceScore: Double?
             var firstOutcome = "notSelected"
             var firstBottleneck = "manualReviewOnly"
             var firstNextAction = "keepDetectorLiteShadowOCRReportOnly"
@@ -9053,18 +9644,52 @@ final class TranslationSessionStore: ObservableObject {
                 let currentText = block.finalTextUsedForTranslation
                 let currentQuality = Self.ocrCandidateQualityScore(currentText)
                 let currentWords = Self.ocrCandidateWords(currentText)
-                let crop: (text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double)
-                var errorCode: String?
-                do {
-                    crop = try await mangaOverlayProbeService.recognizeExternalTextBoxCrop(
-                        in: image,
-                        textBoxBBox: sourceCandidate.bbox,
-                        options: preprocessing
-                    )
-                } catch {
-                    errorCode = "\(type(of: error))"
-                    crop = (nil, sourceCandidate.bbox, 0, 0)
+                let isVerticalCandidate = sourceCandidate.directionHint == "verticalCandidate"
+                let rotationAngles = isVerticalCandidate ? [0, 90] : [0]
+                let recognitionLanguages = isVerticalCandidate ? ["ja-JP", "ja", "en-US", "en"] : nil
+                var attempts: [(text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double, rotationApplied: Double, errorCode: String?)] = []
+                for rotationAngle in rotationAngles {
+                    do {
+                        let crop = try await mangaOverlayProbeService.recognizeExternalTextBoxCrop(
+                            in: image,
+                            textBoxBBox: sourceCandidate.bbox,
+                            options: preprocessing,
+                            rotationAngle: rotationAngle,
+                            recognitionLanguages: recognitionLanguages
+                        )
+                        attempts.append((crop.text, crop.cropBBox, crop.paddingX, crop.paddingY, crop.rotationApplied, nil))
+                    } catch {
+                        attempts.append((nil, sourceCandidate.bbox, 0, 0, Double(rotationAngle), "\(type(of: error))"))
+                    }
                 }
+                let crop = attempts.max { lhs, rhs in
+                    let lhsText = (lhs.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                    let rhsText = (rhs.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                    if (lhs.errorCode == nil) != (rhs.errorCode == nil) {
+                        return lhs.errorCode != nil
+                    }
+                    if lhsText.isEmpty != rhsText.isEmpty {
+                        return lhsText.isEmpty
+                    }
+                    let lhsQuality = Self.ocrCandidateQualityScore(lhsText)
+                    let rhsQuality = Self.ocrCandidateQualityScore(rhsText)
+                    if abs(lhsQuality - rhsQuality) > 0.0001 {
+                        return lhsQuality < rhsQuality
+                    }
+                    let lhsPreservation = Self.wordPreservationRatio(
+                        sourceWords: currentWords,
+                        candidateWords: Self.ocrCandidateWords(lhsText)
+                    )
+                    let rhsPreservation = Self.wordPreservationRatio(
+                        sourceWords: currentWords,
+                        candidateWords: Self.ocrCandidateWords(rhsText)
+                    )
+                    if abs(lhsPreservation - rhsPreservation) > 0.0001 {
+                        return lhsPreservation < rhsPreservation
+                    }
+                    return lhs.rotationApplied > rhs.rotationApplied
+                } ?? (nil, sourceCandidate.bbox, 0, 0, 0, "noShadowOCRAttempt")
+                let errorCode = crop.errorCode
                 executedCount += 1
                 let rawText = crop.text
                 let normalizedText = (rawText ?? "")
@@ -9117,7 +9742,7 @@ final class TranslationSessionStore: ObservableObject {
                         directionHint: sourceCandidate.directionHint,
                         cropPadding: [crop.paddingX, crop.paddingY],
                         scaleFactor: preprocessing.cropUpscaleEnabled ? preprocessing.cropScale : 1,
-                        rotationApplied: 0,
+                        rotationApplied: crop.rotationApplied,
                         ocrRawText: rawText,
                         ocrNormalizedText: normalizedText,
                         ocrSucceeded: errorCode == nil && !normalizedText.isEmpty,
@@ -9136,7 +9761,10 @@ final class TranslationSessionStore: ObservableObject {
                             signal("sourceCandidateID", sourceCandidate.candidateID, source: "koharuNativeTextBoxDetectorLiteReport"),
                             signal("sourceCandidateScore", formatted(sourceCandidate.score), source: "koharuNativeTextBoxDetectorLiteReport"),
                             signal("shadowOCREligible", String(sourceCandidate.shadowOCREligible), source: "koharuNativeTextBoxDetectorLiteReport"),
-                            signal("candidateLimitPerBlock", String(limitPerBlock), source: "probeRunMode")
+                            signal("candidateLimitPerBlock", String(limitPerBlock), source: "probeRunMode"),
+                            signal("rotationAttempts", rotationAngles.map(String.init).joined(separator: ","), source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"),
+                            signal("rotationApplied", formatted(crop.rotationApplied), source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"),
+                            signal("recognitionLanguages", recognitionLanguages?.joined(separator: ",") ?? "default", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport")
                         ],
                         evaluationSignals: [
                             signal("qualityDeltaVsCurrent", formatted(qualityDelta), source: "shadowOCRQuality", decision: false, evaluation: true),
@@ -9149,7 +9777,30 @@ final class TranslationSessionStore: ObservableObject {
                         diagnosticOnly: true
                     )
                 )
+                func outcomeRank(_ outcome: String) -> Int {
+                    switch outcome {
+                    case "betterThanCurrent": return 4
+                    case "sameAsCurrent": return 3
+                    case "worseThanCurrent": return 2
+                    case "emptyOCR": return 1
+                    default: return 0
+                    }
+                }
+                let shouldReplaceBest: Bool
                 if firstCandidateID == nil {
+                    shouldReplaceBest = true
+                } else if outcomeRank(outcome) != outcomeRank(firstOutcome) {
+                    shouldReplaceBest = outcomeRank(outcome) > outcomeRank(firstOutcome)
+                } else if abs(qualityDelta - (firstDelta ?? -Double.infinity)) > 0.0001 {
+                    shouldReplaceBest = qualityDelta > (firstDelta ?? -Double.infinity)
+                } else if abs(preservation - (firstPreservation ?? -Double.infinity)) > 0.0001 {
+                    shouldReplaceBest = preservation > (firstPreservation ?? -Double.infinity)
+                } else if abs(sourceCandidate.score - (firstSourceScore ?? -Double.infinity)) > 0.0001 {
+                    shouldReplaceBest = sourceCandidate.score > (firstSourceScore ?? -Double.infinity)
+                } else {
+                    shouldReplaceBest = candidateID < (firstCandidateID ?? candidateID)
+                }
+                if shouldReplaceBest {
                     firstCandidateID = candidateID
                     firstCandidateBBox = crop.cropBBox
                     firstText = rawText
@@ -9157,6 +9808,8 @@ final class TranslationSessionStore: ObservableObject {
                     firstQuality = shadowQuality
                     firstDelta = qualityDelta
                     firstSimilarityDelta = similarityDelta
+                    firstPreservation = preservation
+                    firstSourceScore = sourceCandidate.score
                     firstOutcome = outcome
                     firstBottleneck = {
                         switch outcome {
@@ -9233,6 +9886,9 @@ final class TranslationSessionStore: ObservableObject {
         let empty = shadowCandidates.filter { $0.outcome == "emptyOCR" }.count
         let succeeded = shadowCandidates.filter(\.ocrSucceeded).count
         let selected = shadowCandidates.count
+        let verticalCandidateCount = shadowCandidates.filter { $0.directionHint == "verticalCandidate" }.count
+        let rotatedAppliedCount = shadowCandidates.filter { abs($0.rotationApplied) > 0.0001 }.count
+        let rotationBreakdown = countBy(shadowCandidates.map { formatted($0.rotationApplied) })
         let qualityDeltaBreakdown = countBy(shadowCandidates.map {
             if $0.outcome == "emptyOCR" || $0.outcome == "ocrFailed" { return $0.outcome }
             if $0.qualityDeltaVsCurrent > 0.03 { return "positive" }
@@ -9258,6 +9914,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-native-textbox-detector-lite-shadow-ocr-ci-fast-budget", "CI fast budget", "ci-fast", selected <= ciFastLimit ? "passed" : "warning", "selectedCandidateCount<=totalBlocksDetected in ci-fast", allBlockIndexes, "ci-fast shadow OCR exceeds per-block budget", "reduceShadowOCRCandidateLimit", [signal("selectedCandidateCount", String(selected), source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"), signal("ciFastLimit", String(ciFastLimit), source: "probeRunMode")]),
             gate("G-native-textbox-detector-lite-shadow-ocr-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack shadow OCR ledger rows", "restoreBlockLedgerCoverage", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuNativeTextBoxDetectorLiteShadowOCRReport")]),
             gate("G-native-textbox-detector-lite-shadow-ocr-proxy-boundary", "Proxy boundary", "TextBoxes/OCR", "passed", "proxyNotRealKoharuTextBoxes=true and proxyNotRealKoharuOCR=true", allBlockIndexes, "detector-lite shadow OCR is promoted as real Koharu TextBoxes or OCR", "keepProxyBoundaryOrCollectRealArtifact", [signal("proxyNotRealKoharuTextBoxes", "true", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"), signal("proxyNotRealKoharuOCR", "true", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport")]),
+            gate("G-native-textbox-detector-lite-shadow-ocr-vertical-rotation-budget", "Vertical rotation budget", "OcrText", "passed", "verticalCandidate uses bounded [0,90] shadow OCR attempts only", allBlockIndexes, "vertical shadow OCR expands into unbounded rotation or candidate sweeps", "keepVerticalShadowOCRBounded", [signal("verticalCandidateCount", String(verticalCandidateCount), source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"), signal("rotatedAppliedCount", String(rotatedAppliedCount), source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"), signal("rotationBreakdown", rotationBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "koharuNativeTextBoxDetectorLiteShadowOCRReport")]),
             gate("G-native-textbox-detector-lite-shadow-ocr-no-llm", "No LLM", "Translations", "passed", "no LLM calls added", [], "shadow OCR triggers translation model calls or prompt changes", "removeLLMFromShadowOCR", [signal("llmCalls", "0", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport")]),
             gate("G-native-textbox-detector-lite-shadow-ocr-visible-failures", "Visible failures", "report", shadowCandidates.isEmpty || !countBy(shadowCandidates.map(\.outcome)).isEmpty ? "passed" : "warning", "empty/failed/worse outcomes recorded", allBlockIndexes, "shadow OCR failures are silently skipped", "writeFailureLedgers", [signal("ocrOutcomeBreakdown", countBy(shadowCandidates.map(\.outcome)).map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "koharuNativeTextBoxDetectorLiteShadowOCRReport")])
         ]
@@ -9301,6 +9958,7 @@ final class TranslationSessionStore: ObservableObject {
             notes: [
                 "koharuNativeTextBoxDetectorLiteShadowOCRReport runs report-only Vision OCR on v1.39 nativeDetectorLite candidates.",
                 "Candidate selection uses detector-lite score, eligibility, bubble coverage, glyph overlap, block relation, and direction hint; ground truth is evaluation-only.",
+                "verticalCandidate crops run a bounded report-only [0,90] rotation comparison with a ja-JP/ja/en-US/en Vision language profile and record rotationApplied; horizontal candidates keep the existing 0-degree default OCR path.",
                 "Shadow OCR output is not written to finalTextUsedForTranslation and does not change translation, overlay, blockPassed, failureCategory, currentBlockSource, or textRegionCropReport.adoptedCount.",
                 "proxyNotRealKoharuTextBoxes=true and proxyNotRealKoharuOCR=true: this is not a real Koharu TextBoxes/OcrText artifact."
             ]
@@ -10646,6 +11304,18 @@ final class TranslationSessionStore: ObservableObject {
                 groundTruthUsedForDecision: false
             )
         }
+        func textBoxSegmentLinkStatus(_ verdict: String) -> (status: String, severity: String, risk: Bool, promotionBlocked: Bool) {
+            switch verdict {
+            case "acceptedTextBoxCandidate":
+                return ("passed", "info", false, false)
+            case "weakAcceptedTextBoxRelation", "manualReviewTextBoxCandidate", "fallbackFinalBlockBBox":
+                return ("warning", "medium", true, true)
+            case "rejectedTextBoxCandidate", "sourceTextBoxBubbleMismatch":
+                return ("blocked", "high", true, true)
+            default:
+                return ("warning", "medium", true, true)
+            }
+        }
 
         let allBlockIndexes = blocks.map(\.index)
         let detectorByBlock = Dictionary(
@@ -10692,6 +11362,8 @@ final class TranslationSessionStore: ObservableObject {
             let renderFit = renderFitByBlock[block.index]
             let renderLock = renderLockByBlock[block.index]
             let modelFloor = modelFloorByBlock[block.index]
+            let textBoxSegmentLinkVerdict = segment?.selectedSourceTextBoxLinkVerdict ?? "fallbackFinalBlockBBox"
+            let textBoxSegmentLink = textBoxSegmentLinkStatus(textBoxSegmentLinkVerdict)
             let textBoxBBox = segment?.selectedCandidateID.flatMap { selectedID in
                 segmentRefinementLiteReport?.candidateLedgers.first { $0.candidateID == selectedID }?.bbox
             } ?? detector?.bestCandidateBBox ?? block.bbox
@@ -10739,11 +11411,15 @@ final class TranslationSessionStore: ObservableObject {
                 evidence: [
                     "detectorLiteBest=\(detector?.bestCandidateID ?? "nil")",
                     "segmentSelectedCandidate=\(segment?.selectedCandidateID ?? "nil")",
+                    "segmentSelectedSourceTextBox=\(segment?.selectedSourceTextBoxCandidateID ?? "nil")",
+                    "segmentTextBoxLinkVerdict=\(textBoxSegmentLinkVerdict)",
                     "closedLoopRoute=\(closedLoop?.closedLoopRoute ?? "nil")"
                 ],
                 decisions: [
                     signal("componentSource", textBoxSource, source: "koharuNativeArtifactBundleLiteReport"),
-                    signal("detectorLiteBestCandidateID", detector?.bestCandidateID ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport")
+                    signal("detectorLiteBestCandidateID", detector?.bestCandidateID ?? "nil", source: "koharuNativeTextBoxDetectorLiteReport"),
+                    signal("segmentSelectedSourceTextBoxCandidateID", segment?.selectedSourceTextBoxCandidateID ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                    signal("selectedTextBoxSegmentLinkVerdict", textBoxSegmentLinkVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport")
                 ],
                 evaluations: [
                     signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true),
@@ -10781,12 +11457,16 @@ final class TranslationSessionStore: ObservableObject {
                 fallback: segment?.selectedCandidateID == nil,
                 evidence: [
                     "selectedCandidateID=\(segment?.selectedCandidateID ?? "nil")",
+                    "selectedSourceTextBoxCandidateID=\(segment?.selectedSourceTextBoxCandidateID ?? "nil")",
+                    "selectedSourceTextBoxLinkVerdict=\(textBoxSegmentLinkVerdict)",
                     "maskContainedByTextBox=\(segment.map { String($0.maskContainedByTextBox) } ?? "nil")",
                     "maskContainedByBubble=\(segment.map { String($0.maskContainedByBubble) } ?? "nil")"
                 ],
                 decisions: [
                     signal("componentSource", segmentSource, source: "koharuNativeArtifactBundleLiteReport"),
-                    signal("segmentMaskReady", segmentReady, source: "koharuNativeSegmentMaskRefinementLiteReport")
+                    signal("segmentMaskReady", segmentReady, source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                    signal("selectedTextBoxSegmentLinkVerdict", textBoxSegmentLinkVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                    signal("textBoxSegmentLinkageStatus", textBoxSegmentLink.status, source: "koharuNativeArtifactBundleLiteReport")
                 ]
             )
 
@@ -10812,6 +11492,7 @@ final class TranslationSessionStore: ObservableObject {
 
             let blockEdges = [
                 edge(blockIndex: block.index, type: "TextBoxWithinBubble", status: textBoxWithinBubble ? "passed" : "warning", severity: textBoxWithinBubble ? "info" : "medium", evidence: ["textBoxSource=\(textBoxSource)", "bubbleSource=\(bubbleSource)"], decisions: [signal("textBoxWithinBubble", String(textBoxWithinBubble), source: "koharuNativeArtifactBundleLiteReport")]),
+                edge(blockIndex: block.index, type: "TextBoxSegmentMaskLinkage", status: textBoxSegmentLink.status, severity: textBoxSegmentLink.severity, evidence: ["selectedSourceTextBoxCandidateID=\(segment?.selectedSourceTextBoxCandidateID ?? "nil")", "selectedSourceTextBoxLinkVerdict=\(textBoxSegmentLinkVerdict)", "selectedSegmentCandidateID=\(segment?.selectedCandidateID ?? "nil")"], decisions: [signal("selectedTextBoxSegmentLinkVerdict", textBoxSegmentLinkVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("textBoxSegmentLinkageStatus", textBoxSegmentLink.status, source: "koharuNativeArtifactBundleLiteReport")]),
                 edge(blockIndex: block.index, type: "SegmentMaskWithinTextBox", status: segmentWithinTextBox ? "passed" : "warning", severity: segmentWithinTextBox ? "info" : "medium", evidence: ["segmentSource=\(segmentSource)", "textBoxSource=\(textBoxSource)"], decisions: [signal("segmentMaskWithinTextBox", String(segmentWithinTextBox), source: "koharuNativeArtifactBundleLiteReport")]),
                 edge(blockIndex: block.index, type: "SegmentMaskWithinBubble", status: segmentWithinBubble ? "passed" : "warning", severity: segmentWithinBubble ? "info" : "medium", evidence: ["segmentSource=\(segmentSource)", "bubbleSource=\(bubbleSource)"], decisions: [signal("segmentMaskWithinBubble", String(segmentWithinBubble), source: "koharuNativeArtifactBundleLiteReport")]),
                 edge(blockIndex: block.index, type: "FinalOCRBBoxAlignedWithTextBox", status: ocrAligned ? "passed" : "warning", severity: ocrAligned ? "info" : "low", evidence: ["finalBlockBBoxVsTextBoxIoU=\(formatted(finalOCRTextBoxIoU))"], decisions: [signal("finalOCRBBoxAlignedWithTextBox", String(ocrAligned), source: "koharuNativeArtifactBundleLiteReport")]),
@@ -10838,6 +11519,9 @@ final class TranslationSessionStore: ObservableObject {
             } else if renderLocked {
                 primaryBlockingArtifact = "RenderedSprites"
                 nextAction = "renderLockNoOCRAction"
+            } else if textBoxSegmentLink.risk {
+                primaryBlockingArtifact = "TextBoxes"
+                nextAction = "auditTextBoxSegmentLinkageBeforeBundleReadiness"
             } else if selectedTextBox.fallbackUsed || closedLoop?.closedLoopRoute == "routeToRealTextBoxesArtifact" {
                 primaryBlockingArtifact = "TextBoxes"
                 nextAction = "collectRealTextBoxesArtifact"
@@ -10858,7 +11542,7 @@ final class TranslationSessionStore: ObservableObject {
                 nextAction = "manualReviewOnly"
             }
             let readyForFullProbe = nextAction == "readyForFullProbeShadowReview"
-            let needsRealTextBoxes = nextAction == "collectRealTextBoxesArtifact"
+            let needsRealTextBoxes = nextAction == "collectRealTextBoxesArtifact" || nextAction == "auditTextBoxSegmentLinkageBeforeBundleReadiness"
             let needsRealBubble = nextAction == "collectRealBubbleMaskArtifact"
             let needsRealSegment = nextAction == "collectRealSegmentMaskArtifact"
             let manual = nextAction == "manualReviewOnly"
@@ -10873,6 +11557,9 @@ final class TranslationSessionStore: ObservableObject {
                     selectedTextBoxLite: selectedTextBox,
                     selectedBubbleInstanceLite: selectedBubble,
                     selectedSegmentMaskLite: selectedSegment,
+                    selectedTextBoxSegmentLinkVerdict: textBoxSegmentLinkVerdict,
+                    textBoxSegmentLinkageStatus: textBoxSegmentLink.status,
+                    textBoxSegmentLinkageRisk: textBoxSegmentLink.risk,
                     ocrEvidence: [
                         signal("finalOCRTextLength", String(block.finalTextUsedForTranslation.count), source: "blocks"),
                         signal("shadowOutcome", shadow?.shadowOutcome ?? "nil", source: "koharuNativeTextBoxDetectorLiteShadowOCRReport"),
@@ -10898,7 +11585,9 @@ final class TranslationSessionStore: ObservableObject {
                     decisionSignals: [
                         signal("artifactConsistencyVerdict", consistencyVerdict, source: "koharuNativeArtifactBundleLiteReport"),
                         signal("primaryBlockingArtifact", primaryBlockingArtifact, source: "koharuNativeArtifactBundleLiteReport"),
-                        signal("nextAction", nextAction, source: "koharuNativeArtifactBundleLiteReport")
+                        signal("nextAction", nextAction, source: "koharuNativeArtifactBundleLiteReport"),
+                        signal("selectedTextBoxSegmentLinkVerdict", textBoxSegmentLinkVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"),
+                        signal("textBoxSegmentLinkageStatus", textBoxSegmentLink.status, source: "koharuNativeArtifactBundleLiteReport")
                     ],
                     evaluationSignals: [
                         signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
@@ -10916,6 +11605,7 @@ final class TranslationSessionStore: ObservableObject {
             uniqueSorted(blockLedgers.filter { $0.nextAction == nextAction }.map(\.blockIndex))
         }
         let readyForFullProbeReviewBlocks = uniqueSorted(blockLedgers.filter(\.readyForFullProbeShadowReview).map(\.blockIndex))
+        let textBoxSegmentLinkageReviewBlocks = uniqueSorted(blockLedgers.filter(\.textBoxSegmentLinkageRisk).map(\.blockIndex))
         let needsRealTextBoxesBlocks = uniqueSorted(blockLedgers.filter(\.needsRealTextBoxes).map(\.blockIndex))
         let needsRealBubbleMaskBlocks = uniqueSorted(blockLedgers.filter(\.needsRealBubbleMask).map(\.blockIndex))
         let needsRealSegmentMaskBlocks = uniqueSorted(blockLedgers.filter(\.needsRealSegmentMask).map(\.blockIndex))
@@ -10932,6 +11622,23 @@ final class TranslationSessionStore: ObservableObject {
                 affectedBlocks: readyForFullProbeReviewBlocks,
                 nextAction: "readyForFullProbeShadowReview",
                 decisionSignals: [signal("readyForFullProbeReviewBlocks", readyForFullProbeReviewBlocks.map(String.init).joined(separator: ","), source: "koharuNativeArtifactBundleLiteReport")],
+                evaluationSignals: [],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            ),
+            MangaKoharuNativeArtifactBundleLiteWorkItem(
+                workItemID: "WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage",
+                title: "Audit TextBox to SegmentMask linkage before bundle readiness",
+                targetArtifact: "TextBoxes/SegmentMask",
+                status: textBoxSegmentLinkageReviewBlocks.isEmpty ? "notRequired" : "blockedByWeakTextBoxSegmentLinkage",
+                priority: textBoxSegmentLinkageReviewBlocks.isEmpty ? "low" : "high",
+                affectedBlocks: textBoxSegmentLinkageReviewBlocks,
+                nextAction: "auditTextBoxSegmentLinkageBeforeBundleReadiness",
+                decisionSignals: [
+                    signal("textBoxSegmentLinkageReviewBlocks", textBoxSegmentLinkageReviewBlocks.map(String.init).joined(separator: ","), source: "koharuNativeArtifactBundleLiteReport"),
+                    signal("textBoxSegmentLinkBreakdown", countBy(blockLedgers.map(\.selectedTextBoxSegmentLinkVerdict)).map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "koharuNativeArtifactBundleLiteReport")
+                ],
                 evaluationSignals: [],
                 groundTruthUsedForDecision: false,
                 wouldChangeMainFlow: false,
@@ -11009,6 +11716,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-native-artifact-bundle-lite-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth selects bundle components, edges, verdict, gate, worklist, or nextAction", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeArtifactBundleLiteReport")]),
             gate("G-native-artifact-bundle-lite-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "bundleLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack artifact bundle ledger rows", "restoreBundleLedgerCoverage", [signal("bundleLedgerCount", String(blockLedgers.count), source: "koharuNativeArtifactBundleLiteReport")]),
             gate("G-native-artifact-bundle-lite-edge-coverage", "Consistency edge coverage", "artifactEdges", edges.count >= blocks.count ? "passed" : "warning", "consistencyEdgeCount>=totalBlocksDetected", allBlockIndexes, "bundle report lacks per-block cross-artifact consistency edges", "restoreConsistencyEdges", [signal("consistencyEdgeCount", String(edges.count), source: "koharuNativeArtifactBundleLiteReport")]),
+            gate("G-native-artifact-bundle-lite-textbox-segment-linkage", "TextBox SegmentMask linkage", "TextBoxes->SegmentMask", textBoxSegmentLinkageReviewBlocks.isEmpty ? "passed" : "warning", "selected SegmentMask should come from accepted same-bubble TextBox linkage; fallback, weak, rejected, or wrong-bubble linkage blocks bundle readiness", textBoxSegmentLinkageReviewBlocks, "bundle-lite treats SegmentMask as consistent while its source TextBox linkage is fallback, weak, rejected, or wrong-bubble", "auditTextBoxSegmentLinkageBeforeBundleReadiness", [signal("textBoxSegmentLinkBreakdown", countBy(blockLedgers.map(\.selectedTextBoxSegmentLinkVerdict)).map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "koharuNativeArtifactBundleLiteReport")]),
             gate("G-native-artifact-bundle-lite-proxy-boundary", "Proxy boundary", "proxyBoundary", "passed", "proxyNotRealKoharuTextBoxes/BubbleMask/SegmentMask=true", allBlockIndexes, "bundle-lite is promoted as real Koharu artifact bundle", "keepProxyBoundaryOrCollectRealArtifacts", [signal("proxyNotRealKoharuTextBoxes", "true", source: "koharuNativeArtifactBundleLiteReport"), signal("proxyNotRealKoharuBubbleMask", "true", source: "koharuNativeArtifactBundleLiteReport"), signal("proxyNotRealKoharuSegmentMask", "true", source: "koharuNativeArtifactBundleLiteReport")]),
             gate("G-native-artifact-bundle-lite-worklist", "Worklist", "nextAction", workItems.isEmpty ? "warning" : "passed", "workItemCount>=1", allBlockIndexes, "bundle report repeats block rows without aggregated worklist", "restoreAggregatedWorkItems", [signal("workItemCount", String(workItems.count), source: "koharuNativeArtifactBundleLiteReport")]),
             gate("G-native-artifact-bundle-lite-no-ocr-llm-png", "No OCR LLM PNG", "budget", "passed", "no OCR/LLM calls and no PNG output", [], "bundle-lite adds OCR, LLM, model, prompt, or PNG work", "removeHeavyWorkFromBundleLite", [signal("ocrCalls", "0", source: "koharuNativeArtifactBundleLiteReport"), signal("llmCalls", "0", source: "koharuNativeArtifactBundleLiteReport"), signal("pngOutputs", "0", source: "koharuNativeArtifactBundleLiteReport")]),
@@ -11060,8 +11768,10 @@ final class TranslationSessionStore: ObservableObject {
             ocrRouteBreakdown: countBy(blockLedgers.map { $0.ocrEvidence.first { $0.name == "closedLoopRoute" }?.value ?? "nil" }),
             translationRouteBreakdown: countBy(blockLedgers.map(\.translationFailureRoute)),
             renderRouteBreakdown: countBy(blockLedgers.map { $0.renderFitEvidence.first { $0.name == "fitVerdict" }?.value ?? "nil" }),
+            textBoxSegmentLinkBreakdown: countBy(blockLedgers.map(\.selectedTextBoxSegmentLinkVerdict)),
             nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
             readyForFullProbeReviewBlocks: readyForFullProbeReviewBlocks,
+            textBoxSegmentLinkageReviewBlocks: textBoxSegmentLinkageReviewBlocks,
             needsRealTextBoxesBlocks: needsRealTextBoxesBlocks,
             needsRealBubbleMaskBlocks: needsRealBubbleMaskBlocks,
             needsRealSegmentMaskBlocks: needsRealSegmentMaskBlocks,
@@ -11158,6 +11868,18 @@ final class TranslationSessionStore: ObservableObject {
             if stopLocalTuning { return "stopLocalTuning" }
             return stable ? "reportOnlyStable" : "manualReviewOnly"
         }
+        func textBoxSegmentLinkPromotionStatus(_ verdict: String) -> String {
+            switch verdict {
+            case "acceptedTextBoxCandidate":
+                return "reportOnlyStable"
+            case "weakAcceptedTextBoxRelation", "manualReviewTextBoxCandidate", "fallbackFinalBlockBBox":
+                return "blockedByWeakTextBoxSegmentLinkage"
+            case "rejectedTextBoxCandidate", "sourceTextBoxBubbleMismatch":
+                return "blockedByRejectedTextBoxSegmentLinkage"
+            default:
+                return "blockedByWeakTextBoxSegmentLinkage"
+            }
+        }
         func stageGate(
             stage: String,
             artifact: String,
@@ -11224,14 +11946,8 @@ final class TranslationSessionStore: ObservableObject {
         let bundleByBlock = Dictionary(
             uniqueKeysWithValues: (artifactBundleLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
-        let detectorByBlock = Dictionary(
-            uniqueKeysWithValues: (detectorLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
-        )
         let closedLoopByBlock = Dictionary(
             uniqueKeysWithValues: (closedLoopReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
-        )
-        let bubbleByBlock = Dictionary(
-            uniqueKeysWithValues: (bubbleInstanceLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
         let segmentByBlock = Dictionary(
             uniqueKeysWithValues: (segmentRefinementLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
@@ -11258,6 +11974,9 @@ final class TranslationSessionStore: ObservableObject {
             let textBoxFallback = bundle?.selectedTextBoxLite.fallbackUsed ?? true
             let bubbleFallback = bundle?.selectedBubbleInstanceLite.fallbackUsed ?? true
             let segmentFallback = bundle?.selectedSegmentMaskLite.fallbackUsed ?? true
+            let textBoxSegmentLinkVerdict = bundle?.selectedTextBoxSegmentLinkVerdict ?? segmentByBlock[block.index]?.selectedSourceTextBoxLinkVerdict ?? "fallbackFinalBlockBBox"
+            let textBoxSegmentLinkStatus = textBoxSegmentLinkPromotionStatus(textBoxSegmentLinkVerdict)
+            let textBoxSegmentLinkBlocked = textBoxSegmentLinkStatus.hasPrefix("blocked")
             let modelBlocked = bundle?.modelFloorBlocked == true
                 || modelFloor?.modelFloorLimited == true
                 || block.failureCategory == "modelOutputFailure"
@@ -11282,6 +12001,7 @@ final class TranslationSessionStore: ObservableObject {
                 stopLocalTuning: false,
                 stable: bundle != nil
             )
+            let effectiveTextBoxesStatus = textBoxSegmentLinkBlocked ? textBoxSegmentLinkStatus : textBoxesStatus
             let bubbleMaskStatus = statusFor(
                 fallbackUsed: bubbleFallback,
                 needsRealArtifact: bundle?.needsRealBubbleMask ?? false,
@@ -11300,6 +12020,7 @@ final class TranslationSessionStore: ObservableObject {
                 stopLocalTuning: false,
                 stable: bundle != nil
             )
+            let effectiveSegmentMaskStatus = textBoxSegmentLinkBlocked ? textBoxSegmentLinkStatus : segmentMaskStatus
             let ocrStatus = statusFor(
                 fallbackUsed: block.failureCategory == "ocrInputSuspect",
                 needsRealArtifact: false,
@@ -11332,7 +12053,7 @@ final class TranslationSessionStore: ObservableObject {
                 primaryBlockingArtifact = "Translations"
             } else if renderLocked {
                 primaryBlockingArtifact = "RenderedSprites"
-            } else if bundle?.needsRealTextBoxes == true || textBoxFallback {
+            } else if textBoxSegmentLinkBlocked || bundle?.needsRealTextBoxes == true || textBoxFallback {
                 primaryBlockingArtifact = "TextBoxes"
             } else if bundle?.needsRealBubbleMask == true || bubbleFallback {
                 primaryBlockingArtifact = "BubbleMask"
@@ -11350,6 +12071,8 @@ final class TranslationSessionStore: ObservableObject {
                 bottleneck = block.failureCategory == "translationLanguageQualityFailure" ? "translationFailure" : "modelFloor"
             } else if renderLocked {
                 bottleneck = "renderContainment"
+            } else if textBoxSegmentLinkBlocked {
+                bottleneck = "textBoxSegmentMaskLinkage"
             } else if primaryBlockingArtifact == "BubbleMask" {
                 bottleneck = "bubbleAssignmentSplit"
             } else if primaryBlockingArtifact == "SegmentMask" {
@@ -11368,6 +12091,8 @@ final class TranslationSessionStore: ObservableObject {
                 eligibility = "blockedByModelFloor"
             } else if renderLocked {
                 eligibility = "blockedByRenderLock"
+            } else if textBoxSegmentLinkBlocked {
+                eligibility = "blockedByProxyEvidence"
             } else if bundle?.needsRealTextBoxes == true || bundle?.needsRealBubbleMask == true || bundle?.needsRealSegmentMask == true {
                 eligibility = "blockedByMissingRealArtifact"
             } else if textBoxFallback || bubbleFallback || segmentFallback {
@@ -11390,7 +12115,7 @@ final class TranslationSessionStore: ObservableObject {
             case "blockedByMissingRealArtifact":
                 nextAction = "collectRealKoharuArtifactsBeforePromotion"
             case "blockedByProxyEvidence":
-                nextAction = "keepReportOnlyUntilProxyEvidenceImproves"
+                nextAction = textBoxSegmentLinkBlocked ? "auditTextBoxSegmentLinkageBeforePromotion" : "keepReportOnlyUntilProxyEvidenceImproves"
             case "shadowReviewEligible":
                 nextAction = "runFullProbeShadowReviewBeforeAnyPromotion"
             case "stopLocalTuning":
@@ -11407,6 +12132,14 @@ final class TranslationSessionStore: ObservableObject {
                 "noMainFlowMutationInV146"
             ]
             if textBoxFallback || bubbleFallback || segmentFallback { mustNotPromote.append("fallbackProxyEvidencePresent") }
+            if textBoxSegmentLinkBlocked {
+                mustNotPromote.append("weakTextBoxSegmentMaskLinkage")
+                if textBoxSegmentLinkVerdict == "rejectedTextBoxCandidate"
+                    || textBoxSegmentLinkVerdict == "sourceTextBoxBubbleMismatch"
+                    || textBoxSegmentLinkVerdict == "fallbackFinalBlockBBox" {
+                    mustNotPromote.append("rejectedOrFallbackTextBoxDrivesSegmentMask")
+                }
+            }
             if modelBlocked { mustNotPromote.append("currentModelFloorBlocksPromotion") }
             if renderLocked { mustNotPromote.append("renderLockBlocksPromotion") }
             if externalArtifactReadinessReport?.readinessVerdict != "readyForShadowOCR" { mustNotPromote.append("realExternalArtifactsMissing") }
@@ -11420,9 +12153,11 @@ final class TranslationSessionStore: ObservableObject {
                     finalTextUsedForTranslation: block.finalTextUsedForTranslation,
                     bundleLiteVerdict: artifactBundleLiteReport?.bundleLiteVerdict ?? "notGenerated",
                     artifactConsistencyVerdict: bundle?.artifactConsistencyVerdict ?? "missingBundleLiteLedger",
-                    textBoxesPromotionStatus: textBoxesStatus,
+                    textBoxesPromotionStatus: effectiveTextBoxesStatus,
                     bubbleMaskPromotionStatus: bubbleMaskStatus,
-                    segmentMaskPromotionStatus: segmentMaskStatus,
+                    segmentMaskPromotionStatus: effectiveSegmentMaskStatus,
+                    textBoxSegmentLinkVerdict: textBoxSegmentLinkVerdict,
+                    textBoxSegmentLinkagePromotionStatus: textBoxSegmentLinkStatus,
                     ocrTextPromotionStatus: ocrStatus,
                     translationPromotionStatus: translationStatus,
                     renderPromotionStatus: renderStatus,
@@ -11435,6 +12170,8 @@ final class TranslationSessionStore: ObservableObject {
                         signal("promotionEligibility", eligibility, source: "koharuNativePromotionGateLiteReport"),
                         signal("primaryBlockingArtifact", primaryBlockingArtifact, source: "koharuNativePromotionGateLiteReport"),
                         signal("probeBottleneckCategory", bottleneck, source: "koharuNativePromotionGateLiteReport"),
+                        signal("textBoxSegmentLinkVerdict", textBoxSegmentLinkVerdict, source: "koharuNativeArtifactBundleLiteReport"),
+                        signal("textBoxSegmentLinkagePromotionStatus", textBoxSegmentLinkStatus, source: "koharuNativePromotionGateLiteReport"),
                         signal("bundleNextAction", bundle?.nextAction ?? "nil", source: "koharuNativeArtifactBundleLiteReport")
                     ],
                     evaluationSignals: [
@@ -11491,6 +12228,7 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         let shadowReviewEligibleBlocks = uniqueSorted(blockLedgers.filter { $0.promotionEligibility == "shadowReviewEligible" }.map(\.blockIndex))
+        let textBoxSegmentLinkageBlockedBlocks = uniqueSorted(blockLedgers.filter { $0.textBoxSegmentLinkagePromotionStatus.hasPrefix("blocked") }.map(\.blockIndex))
         let stopLocalTuningBlocks = uniqueSorted(blockLedgers.filter { $0.promotionEligibility == "stopLocalTuning" || $0.promotionEligibility == "blockedByModelFloor" || $0.promotionEligibility == "blockedByRenderLock" }.map(\.blockIndex))
         let needsRealTextBoxesBlocks = uniqueSorted(blockLedgers.filter { $0.textBoxesPromotionStatus == "blockedByMissingRealArtifact" || $0.primaryBlockingArtifact == "TextBoxes" }.map(\.blockIndex))
         let needsRealBubbleMaskBlocks = uniqueSorted(blockLedgers.filter { $0.bubbleMaskPromotionStatus == "blockedByMissingRealArtifact" || $0.primaryBlockingArtifact == "BubbleMask" }.map(\.blockIndex))
@@ -11522,6 +12260,23 @@ final class TranslationSessionStore: ObservableObject {
                 affectedBlocks: shadowReviewEligibleBlocks,
                 nextAction: "runFullProbeShadowReviewBeforeAnyPromotion",
                 decisionSignals: [signal("shadowReviewEligibleBlocks", shadowReviewEligibleBlocks.map(String.init).joined(separator: ","), source: "koharuNativePromotionGateLiteReport")],
+                evaluationSignals: [],
+                groundTruthUsedForDecision: false,
+                wouldChangeMainFlow: false,
+                diagnosticOnly: true
+            ),
+            MangaKoharuNativePromotionWorkItem(
+                workItemID: "WI-koharu-native-promotion-gate-lite-textbox-segment-linkage",
+                title: "Block promotion until TextBox to SegmentMask linkage is accepted",
+                targetArtifact: "TextBoxes/SegmentMask",
+                status: textBoxSegmentLinkageBlockedBlocks.isEmpty ? "notRequired" : "blockedByWeakTextBoxSegmentLinkage",
+                priority: textBoxSegmentLinkageBlockedBlocks.isEmpty ? "low" : "high",
+                affectedBlocks: textBoxSegmentLinkageBlockedBlocks,
+                nextAction: "auditTextBoxSegmentLinkageBeforePromotion",
+                decisionSignals: [
+                    signal("textBoxSegmentLinkageBlockedBlocks", textBoxSegmentLinkageBlockedBlocks.map(String.init).joined(separator: ","), source: "koharuNativePromotionGateLiteReport"),
+                    signal("textBoxSegmentLinkBreakdown", countBy(blockLedgers.map(\.textBoxSegmentLinkVerdict)).map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "koharuNativePromotionGateLiteReport")
+                ],
                 evaluationSignals: [],
                 groundTruthUsedForDecision: false,
                 wouldChangeMainFlow: false,
@@ -11577,6 +12332,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-native-promotion-gate-lite-no-ground-truth-decision", "No ground truth decision", "report", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth decides promotion status, stage gate, preview, route, nextAction, or worklist", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativePromotionGateLiteReport")]),
             gate("G-native-promotion-gate-lite-block-ledger-count", "Block ledger count", "blocks", blockLedgers.count == blocks.count ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack promotion ledger rows", "restorePromotionLedgerCoverage", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuNativePromotionGateLiteReport")]),
             gate("G-native-promotion-gate-lite-stage-gates", "Stage gates", "KoharuArtifacts", stageGates.count >= 8 ? "passed" : "warning", "stageGateCount>=8", allBlockIndexes, "promotion report does not cover canonical TextBoxes/BubbleMask/SegmentMask/OcrText/Translation/Render/External stages", "restoreCanonicalStageGates", [signal("stageGateCount", String(stageGates.count), source: "koharuNativePromotionGateLiteReport")]),
+            gate("G-native-promotion-gate-lite-textbox-segment-linkage", "TextBox SegmentMask linkage", "TextBoxes->SegmentMask", textBoxSegmentLinkageBlockedBlocks.isEmpty ? "passed" : "warning", "promotion must not treat SegmentMask as ready when selected source TextBox linkage is fallback, weak, rejected, or wrong-bubble", textBoxSegmentLinkageBlockedBlocks, "promotion treats SegmentMask as ready while its source TextBox linkage is rejected, fallback, wrong-bubble, or weak", "auditTextBoxSegmentLinkageBeforePromotion", [signal("textBoxSegmentLinkBreakdown", countBy(blockLedgers.map(\.textBoxSegmentLinkVerdict)).map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "koharuNativePromotionGateLiteReport")]),
             gate("G-native-promotion-gate-lite-preview-only", "Preview only", "candidateExportPreview", candidatePreviews.allSatisfy { !$0.canBeExportedNow && !$0.wouldCreateActiveArtifact } ? "passed" : "blocked", "candidate previews never create active artifacts", candidatePreviews.map(\.blockIndex), "candidate export preview creates or modifies active test/koharu_artifacts", "keepPreviewOnly", [signal("candidateExportPreviewCount", String(candidatePreviews.count), source: "koharuNativePromotionGateLiteReport")]),
             gate("G-native-promotion-gate-lite-proxy-boundary", "Proxy boundary", "proxyBoundary", "passed", "proxyNotRealKoharu* flags are true", allBlockIndexes, "native-lite proxy is promoted as real Koharu TextBoxes/BubbleMask/SegmentMask/OCR/Renderer", "collectRealArtifactsBeforePromotion", [signal("proxyNotRealKoharuTextBoxes", "true", source: "koharuNativePromotionGateLiteReport"), signal("proxyNotRealKoharuBubbleMask", "true", source: "koharuNativePromotionGateLiteReport"), signal("proxyNotRealKoharuSegmentMask", "true", source: "koharuNativePromotionGateLiteReport")]),
             gate("G-native-promotion-gate-lite-no-ocr-llm-png", "No OCR LLM PNG", "budget", "passed", "no OCR/LLM calls and no PNG output", [], "promotion gate adds OCR, LLM, prompt/model, PNG, or renderer work", "removeHeavyWorkFromPromotionGate", [signal("ocrCalls", "0", source: "koharuNativePromotionGateLiteReport"), signal("llmCalls", "0", source: "koharuNativePromotionGateLiteReport"), signal("pngOutputs", "0", source: "koharuNativePromotionGateLiteReport")]),
@@ -11631,8 +12387,10 @@ final class TranslationSessionStore: ObservableObject {
             promotionEligibilityBreakdown: countBy(blockLedgers.map(\.promotionEligibility)),
             primaryBlockingArtifactBreakdown: countBy(blockLedgers.map(\.primaryBlockingArtifact)),
             probeBottleneckBreakdown: countBy(blockLedgers.map(\.probeBottleneckCategory)),
+            textBoxSegmentLinkBreakdown: countBy(blockLedgers.map(\.textBoxSegmentLinkVerdict)),
             nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
             shadowReviewEligibleBlocks: shadowReviewEligibleBlocks,
+            textBoxSegmentLinkageBlockedBlocks: textBoxSegmentLinkageBlockedBlocks,
             stopLocalTuningBlocks: stopLocalTuningBlocks,
             needsRealTextBoxesBlocks: needsRealTextBoxesBlocks,
             needsRealBubbleMaskBlocks: needsRealBubbleMaskBlocks,
@@ -11654,21 +12412,14 @@ final class TranslationSessionStore: ObservableObject {
         )
     }
 
-    private static func makeKoharuNativeShadowArtifactExportLiteReport(
+    private static func makeKoharuNativeArtifactContractDryRunReport(
         blocks: [MangaOverlayProbeBlock],
-        outputDirectory: URL,
-        artifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport?,
         promotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport?,
-        bubbleInstanceLiteReport: MangaKoharuNativeBubbleMaskInstanceLiteReport?,
-        segmentRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport?,
         externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?
-    ) throws -> MangaKoharuNativeShadowArtifactExportLiteReport {
+    ) -> MangaKoharuNativeArtifactContractDryRunReport {
         func uniqueSorted(_ values: [Int]) -> [Int] { Array(Set(values)).sorted() }
         func countBy(_ values: [String]) -> [String: Int] {
             values.reduce(into: [:]) { partial, value in partial[value, default: 0] += 1 }
-        }
-        func formatted(_ value: Double?) -> String {
-            value?.formatted(.number.precision(.fractionLength(4))) ?? "nil"
         }
         func signal(
             _ name: String,
@@ -11676,8 +12427,8 @@ final class TranslationSessionStore: ObservableObject {
             source: String,
             decision: Bool = true,
             evaluation: Bool = false
-        ) -> MangaKoharuNativeShadowArtifactExportLiteSignal {
-            MangaKoharuNativeShadowArtifactExportLiteSignal(
+        ) -> MangaKoharuNativeArtifactContractDryRunSignal {
+            MangaKoharuNativeArtifactContractDryRunSignal(
                 name: name,
                 value: value,
                 sourceReport: source,
@@ -11694,468 +12445,276 @@ final class TranslationSessionStore: ObservableObject {
             _ affected: [Int],
             _ failure: String,
             _ action: String,
-            _ signals: [MangaKoharuNativeShadowArtifactExportLiteSignal]
-        ) -> MangaKoharuNativeShadowArtifactGate {
-            MangaKoharuNativeShadowArtifactGate(
+            _ signals: [MangaKoharuNativeArtifactContractDryRunSignal]
+        ) -> MangaKoharuNativeArtifactContractDryRunGate {
+            MangaKoharuNativeArtifactContractDryRunGate(
                 gateID: id,
                 gateName: name,
                 scope: scope,
                 status: status,
                 threshold: threshold,
                 affectedBlocks: uniqueSorted(affected),
-                decisionSignals: signals,
                 failureMeans: failure,
                 recommendedAction: action,
+                decisionSignals: signals,
                 groundTruthUsedForDecision: false
             )
         }
-        func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(value)
-            try data.write(to: url, options: .atomic)
-        }
-        func fileRecord(fileName: String, kind: String, recordCount: Int) -> MangaKoharuNativeShadowArtifactFileRecord {
-            let relativePath = "koharu_native_shadow_artifacts/\(fileName)"
-            let url = outputDirectory.appendingPathComponent(relativePath)
-            let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
-            let byteCount = (attributes?[.size] as? NSNumber)?.intValue ?? 0
-            return MangaKoharuNativeShadowArtifactFileRecord(
-                fileName: fileName,
-                relativePath: relativePath,
-                artifactKind: kind,
-                exists: FileManager.default.fileExists(atPath: url.path),
-                nonEmpty: byteCount > 0,
-                byteCount: byteCount,
-                recordCount: recordCount,
-                shadowOnly: true,
-                forbiddenAsActiveArtifact: true,
-                readyForActiveArtifact: false,
-                wouldCreateActiveArtifact: false,
-                notes: [
-                    "contractExampleOnly=true",
-                    "readyForActiveArtifact=false",
-                    "doNotCopyToTestKoharuArtifacts"
-                ]
-            )
-        }
-        func coordinateValid(_ bbox: [Double]?) -> Bool {
-            guard let bbox, bbox.count == 4 else { return false }
-            let rect = Self.rect(from: bbox)
-            guard rect.width > 0, rect.height > 0 else { return false }
-            let bounds = CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
-            return rect.minX >= bounds.minX
-                && rect.minY >= bounds.minY
-                && rect.maxX <= bounds.maxX
-                && rect.maxY <= bounds.maxY
-        }
-        func coordinateStatus(_ bbox: [Double]?) -> String {
-            coordinateValid(bbox) ? "validOriginalImageTopLeftPixels" : "invalidOrOutOfBounds"
-        }
-        func recordIDForBubble(block: MangaOverlayProbeBlock, bubble: MangaKoharuNativeBubbleMaskInstanceLiteBlockLedger?) -> String {
-            if let instanceID = bubble?.instanceLiteMajorityID {
-                return "shadow.bubble.instance.\(instanceID)"
-            }
-            if let bubbleID = block.bubbleID {
-                return "shadow.bubble.current.\(bubbleID)"
-            }
-            return "shadow.bubble.block.\(block.index)"
-        }
 
-        let relativeDirectory = "koharu_native_shadow_artifacts"
-        let shadowDirectory = outputDirectory.appendingPathComponent(relativeDirectory, isDirectory: true)
-        if FileManager.default.fileExists(atPath: shadowDirectory.path) {
-            try FileManager.default.removeItem(at: shadowDirectory)
-        }
-        try FileManager.default.createDirectory(at: shadowDirectory, withIntermediateDirectories: true)
-
-        let imageWidth = Double(segmentRefinementLiteReport?.sourceImageWidth ?? bubbleInstanceLiteReport?.sourceImageWidth ?? 576)
-        let imageHeight = Double(segmentRefinementLiteReport?.sourceImageHeight ?? bubbleInstanceLiteReport?.sourceImageHeight ?? 1280)
-        let allBlockIndexes = blocks.map(\.index)
-        let bundleByBlock = Dictionary(
-            uniqueKeysWithValues: (artifactBundleLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
-        )
-        let promotionByBlock = Dictionary(
-            uniqueKeysWithValues: (promotionGateLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
-        )
-        let textBoxPreviewByBlock = Dictionary(
-            (promotionGateLiteReport?.candidateExportPreviews ?? [])
-                .filter { $0.targetArtifactStage == "TextBoxes" }
-                .map { ($0.blockIndex, $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-        let bubbleByBlock = Dictionary(
-            uniqueKeysWithValues: (bubbleInstanceLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
-        )
-        let segmentByBlock = Dictionary(
-            uniqueKeysWithValues: (segmentRefinementLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
-        )
-
-        var textBoxRecords: [MangaKoharuNativeShadowArtifactTextBoxRecord] = []
-        var bundleRecords: [MangaKoharuNativeShadowArtifactBundleRecord] = []
-        var blockLedgers: [MangaKoharuNativeShadowArtifactBlockLedger] = []
-
-        for block in blocks.sorted(by: { $0.index < $1.index }) {
-            let bundle = bundleByBlock[block.index]
-            let promotion = promotionByBlock[block.index]
-            let preview = textBoxPreviewByBlock[block.index]
-            let bubble = bubbleByBlock[block.index]
-            let segment = segmentByBlock[block.index]
-            let textBoxID = "shadow.textbox.block.\(block.index)"
-            let segmentID = segment?.selectedCandidateID ?? "shadow.segment.block.\(block.index)"
-            let bubbleRecordID = recordIDForBubble(block: block, bubble: bubble)
-            let textBoxBBox = preview?.bbox ?? bundle?.selectedTextBoxLite.bbox ?? block.bbox
-            let textCoordinateValid = coordinateValid(textBoxBBox)
-            let bubbleBBox = bubble?.instanceLiteSafeRect
-                ?? bubble?.distanceFieldSafeRectFromInstanceLite
-                ?? block.safeLayoutRect
-                ?? block.bbox
-            let bubbleCoordinateValid = coordinateValid(bubbleBBox)
-            let segmentBBox = segment?.maskBBox ?? block.glyphMaskRect ?? block.bbox
-            let segmentCoordinateValid = coordinateValid(segmentBBox)
-            let sourceReport = preview?.sourceReport ?? bundle?.selectedTextBoxLite.sourceReport ?? "blocks"
-            let sourceCandidateID = preview?.previewID ?? bundle?.selectedTextBoxLite.componentID ?? "block\(block.index).finalBBox"
-            let fieldCompleteness: String
-            if textCoordinateValid, preview?.confidence != nil || bundle?.selectedTextBoxLite.confidence != nil {
-                fieldCompleteness = "completeShadowTextBoxRecord"
-            } else if textCoordinateValid {
-                fieldCompleteness = "missingOptionalConfidence"
-            } else {
-                fieldCompleteness = "invalidCoordinateFields"
-            }
-            let shadowEligibility: String
-            if promotion == nil {
-                shadowEligibility = "blockedByMissingPromotionPreview"
-            } else if !textCoordinateValid {
-                shadowEligibility = "blockedByInvalidCoordinates"
-            } else if bundle?.selectedTextBoxLite.fallbackUsed == true
-                || bundle?.selectedBubbleInstanceLite.fallbackUsed == true
-                || bundle?.selectedSegmentMaskLite.fallbackUsed == true {
-                shadowEligibility = "blockedByProxyBoundary"
-            } else {
-                shadowEligibility = "exportedShadowOnly"
-            }
-            let decisionSignals = [
-                signal("sourceReport", sourceReport, source: "koharuNativeShadowArtifactExportLiteReport"),
-                signal("promotionEligibility", promotion?.promotionEligibility ?? "nil", source: "koharuNativePromotionGateLiteReport"),
-                signal("bundleLiteVerdict", artifactBundleLiteReport?.bundleLiteVerdict ?? "nil", source: "koharuNativeArtifactBundleLiteReport"),
-                signal("externalReadinessVerdict", externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing", source: "externalArtifactReadinessReport")
-            ]
-            let evaluationSignals = [
-                signal("groundTruthMatch", block.groundTruthMatch, source: "blocks", decision: false, evaluation: true),
-                signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true),
-                signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true)
-            ]
-
-            textBoxRecords.append(
-                MangaKoharuNativeShadowArtifactTextBoxRecord(
-                    blockIndex: block.index,
-                    textBoxID: textBoxID,
-                    bbox: textBoxBBox,
-                    sourceReport: sourceReport,
-                    sourceCandidateID: sourceCandidateID,
-                    sourceDirection: Self.estimatedOrientation(for: textBoxBBox),
-                    confidence: preview?.confidence ?? bundle?.selectedTextBoxLite.confidence ?? 0,
-                    fieldCompleteness: fieldCompleteness,
-                    coordinateValid: textCoordinateValid,
-                    promotionStatus: promotion?.textBoxesPromotionStatus ?? "missingPromotionLedger",
-                    exportEligibility: shadowEligibility,
-                    shadowOnly: true,
-                    contractExampleOnly: true,
-                    forbiddenAsActiveArtifact: true,
-                    readyForActiveArtifact: false,
-                    wouldCreateActiveArtifact: false,
-                    proxyNotRealKoharuTextBox: true,
-                    decisionSignals: decisionSignals,
-                    evaluationSignals: evaluationSignals
-                )
-            )
-
-            let renderFitStatus = bundle?.renderFitEvidence.first { $0.name == "fitVerdict" }?.value
-                ?? (block.renderTextTruncated ? "renderTextTruncated" : "renderStatusReportOnly")
-            bundleRecords.append(
-                MangaKoharuNativeShadowArtifactBundleRecord(
-                    blockIndex: block.index,
-                    textBoxID: textBoxID,
-                    bubbleID: bubble?.instanceLiteMajorityID ?? block.bubbleID,
-                    segmentMaskCandidateID: segmentID,
-                    finalTextUsedForTranslation: block.finalTextUsedForTranslation,
-                    translationCandidate: block.translationCandidate,
-                    failureCategory: block.failureCategory,
-                    blockPassed: block.blockPassed,
-                    renderSafeRect: block.safeLayoutRect,
-                    renderFitStatus: renderFitStatus,
-                    promotionEligibility: promotion?.promotionEligibility ?? "missingPromotionLedger",
-                    primaryBlockingArtifact: promotion?.primaryBlockingArtifact ?? bundle?.primaryBlockingArtifact ?? "unknown",
-                    nextAction: promotion?.nextAction ?? bundle?.nextAction ?? "manualReviewOnly",
-                    shadowOnly: true,
-                    contractExampleOnly: true,
-                    forbiddenAsActiveArtifact: true,
-                    readyForActiveArtifact: false,
-                    wouldCreateActiveArtifact: false,
-                    wouldChangeMainFlow: false,
-                    groundTruthUsedForDecision: false,
-                    decisionSignals: decisionSignals + [
-                        signal("renderFitStatus", renderFitStatus, source: "koharuNativeArtifactBundleLiteReport"),
-                        signal("blockPassed", String(block.blockPassed), source: "blocks")
-                    ],
-                    evaluationSignals: evaluationSignals
-                )
-            )
-
-            blockLedgers.append(
-                MangaKoharuNativeShadowArtifactBlockLedger(
-                    blockIndex: block.index,
-                    bubbleID: block.bubbleID,
-                    blockPassed: block.blockPassed,
-                    failureCategory: block.failureCategory,
-                    finalTextUsedForTranslation: block.finalTextUsedForTranslation,
-                    textBoxExportRecordID: textBoxID,
-                    bubbleExportRecordID: bubbleRecordID,
-                    segmentMaskExportRecordID: segmentID,
-                    bundleExportRecordID: "shadow.bundle.block.\(block.index)",
-                    textBoxCoordinateStatus: coordinateStatus(textBoxBBox),
-                    bubbleCoordinateStatus: coordinateStatus(bubbleBBox),
-                    segmentMaskSummaryStatus: segmentCoordinateValid ? "summaryAvailable" : "summaryInvalidOrOutOfBounds",
-                    fieldCompletenessStatus: fieldCompleteness,
-                    promotionGateStatusFromV146: promotion?.promotionEligibility ?? "missingPromotionLedger",
-                    shadowExportEligibility: shadowEligibility,
-                    primaryBlockingArtifact: promotion?.primaryBlockingArtifact ?? bundle?.primaryBlockingArtifact ?? "unknown",
-                    nextAction: promotion?.nextAction ?? bundle?.nextAction ?? "manualReviewOnly",
-                    mustNotUseAsActiveArtifactReasons: [
-                        "shadowOnly=true",
-                        "contractExampleOnly=true",
-                        "forbiddenAsActiveArtifact=true",
-                        "readyForActiveArtifact=false",
-                        "wouldCreateActiveArtifact=false",
-                        "proxyNotRealKoharuArtifacts=true",
-                        "doNotCopyToTestKoharuArtifacts"
-                    ],
-                    decisionSignals: decisionSignals + [
-                        signal("textBoxCoordinateStatus", coordinateStatus(textBoxBBox), source: "koharuNativeShadowArtifactExportLiteReport"),
-                        signal("bubbleCoordinateStatus", coordinateStatus(bubbleBBox), source: "koharuNativeShadowArtifactExportLiteReport"),
-                        signal("segmentCoordinateStatus", coordinateStatus(segmentBBox), source: "koharuNativeShadowArtifactExportLiteReport")
-                    ],
-                    evaluationSignals: evaluationSignals,
-                    groundTruthUsedForDecision: false,
-                    wouldChangeMainFlow: false,
-                    diagnosticOnly: true
-                )
-            )
-        }
-
-        let groupedBubbleKeys = Dictionary(grouping: blocks.sorted(by: { $0.index < $1.index })) { block in
-            recordIDForBubble(block: block, bubble: bubbleByBlock[block.index])
-        }
-        let bubbleRecords: [MangaKoharuNativeShadowArtifactBubbleRecord] = groupedBubbleKeys.keys.sorted().compactMap { key in
-            guard let groupedBlocks = groupedBubbleKeys[key], let firstBlock = groupedBlocks.first else { return nil }
-            let firstBubble = bubbleByBlock[firstBlock.index]
-            let bbox = firstBubble?.instanceLiteSafeRect
-                ?? firstBubble?.distanceFieldSafeRectFromInstanceLite
-                ?? firstBlock.safeLayoutRect
-                ?? firstBlock.bbox
-            let majorityIndexes = uniqueSorted(groupedBlocks.map(\.index))
-            let pixelCount = groupedBlocks.reduce(0) { total, block in
-                total + (bubbleByBlock[block.index]?.instanceLiteMajorityPixelCount ?? 0)
-            }
-            return MangaKoharuNativeShadowArtifactBubbleRecord(
-                bubbleID: firstBlock.bubbleID,
-                instanceLiteID: firstBubble?.instanceLiteMajorityID,
-                bbox: bbox,
-                sourceReport: firstBubble?.instanceLiteMajorityID == nil ? "blocks/currentBubbleGeometry" : "koharuNativeBubbleMaskInstanceLiteReport",
-                majorityBlockIndexes: majorityIndexes,
-                maskValue: firstBubble?.instanceLiteMajorityID,
-                pixelCount: pixelCount,
-                safeRectSummary: "instanceLiteSafeRect=\(firstBubble?.instanceLiteSafeRect?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")",
-                assignmentStatus: firstBubble?.assignmentAgreement ?? "fallbackCurrentBubbleGeometry",
-                splitRisk: firstBubble?.splitRisk ?? "unknown",
-                shadowOnly: true,
-                contractExampleOnly: true,
-                forbiddenAsActiveArtifact: true,
-                readyForActiveArtifact: false,
-                wouldCreateActiveArtifact: false,
-                proxyNotRealKoharuBubbleMask: true,
-                decisionSignals: [
-                    signal("bubbleRecordID", key, source: "koharuNativeShadowArtifactExportLiteReport"),
-                    signal("assignmentStatus", firstBubble?.assignmentAgreement ?? "fallbackCurrentBubbleGeometry", source: "koharuNativeBubbleMaskInstanceLiteReport"),
-                    signal("coordinateStatus", coordinateStatus(bbox), source: "koharuNativeShadowArtifactExportLiteReport")
-                ],
-                evaluationSignals: groupedBlocks.map {
-                    signal("block\($0.index).groundTruthMatch", $0.groundTruthMatch, source: "blocks", decision: false, evaluation: true)
+        let forbiddenActiveSources = [
+            "contract examples",
+            "Vision OCR blocks",
+            "pre-crop plan",
+            "line plan",
+            "BubbleMask proxy",
+            "SegmentMask proxy",
+            "ground truth",
+            "handwritten ideal boxes",
+            "native-lite proxy"
+        ]
+        let requiredByStage: [String: [String]] = [
+            "TextBoxes": ["id", "bbox", "confidence", "sourceDirection", "detector", "coordinateSpace=originalImageTopLeftPixels"],
+            "BubbleMask": ["id", "bbox", "maskValue", "pixelCount", "coordinateSpace=originalImageTopLeftPixels"],
+            "SegmentMask": ["width", "height", "glyphPixelCount", "connectedComponentCount", "coordinateSpace=originalImageTopLeftPixels"]
+        ]
+        let destinationByStage = [
+            "TextBoxes": "test/koharu_artifacts/1.textboxes.json",
+            "BubbleMask": "test/koharu_artifacts/1.bubbles.json",
+            "SegmentMask": "test/koharu_artifacts/1.segment_mask.json"
+        ]
+        func missingFields(for preview: MangaKoharuNativeCandidateExportPreview) -> [String] {
+            let required = requiredByStage[preview.targetArtifactStage] ?? preview.requiredFieldsForFutureExport
+            return required.filter { field in
+                switch field {
+                case "id":
+                    return preview.previewID.isEmpty
+                case "bbox":
+                    return preview.bbox == nil
+                case "confidence":
+                    return preview.confidence == nil
+                case "sourceDirection", "detector", "maskValue", "pixelCount", "width", "height", "glyphPixelCount", "connectedComponentCount":
+                    return true
+                case "coordinateSpace=originalImageTopLeftPixels":
+                    return false
+                default:
+                    return !preview.requiredFieldsForFutureExport.contains(field)
                 }
-            )
+            }
+        }
+        func forbiddenReasons(for preview: MangaKoharuNativeCandidateExportPreview) -> [String] {
+            var reasons: [String] = []
+            let joinedSource = "\(preview.candidateSource) \(preview.sourceReport)".lowercased()
+            if joinedSource.contains("fallback") || joinedSource.contains("blocks") || joinedSource.contains("finalbbox") {
+                reasons.append("Vision OCR blocks")
+            }
+            if joinedSource.contains("precrop") {
+                reasons.append("pre-crop plan")
+            }
+            if joinedSource.contains("line") {
+                reasons.append("line plan")
+            }
+            if preview.targetArtifactStage == "BubbleMask" || joinedSource.contains("bubble") {
+                reasons.append("BubbleMask proxy")
+            }
+            if preview.targetArtifactStage == "SegmentMask" || joinedSource.contains("segment") || joinedSource.contains("glyph") {
+                reasons.append("SegmentMask proxy")
+            }
+            if joinedSource.contains("groundtruth") {
+                reasons.append("ground truth")
+            }
+            if joinedSource.contains("nativelite") || joinedSource.contains("native") {
+                reasons.append("native-lite proxy")
+            }
+            return Array(Set(reasons)).sorted()
         }
 
-        let segmentRecords: [MangaKoharuNativeShadowArtifactSegmentMaskRecord] = blocks.sorted(by: { $0.index < $1.index }).map { block in
-            let segment = segmentByBlock[block.index]
-            let candidateCount = segment?.candidateCount ?? 0
-            return MangaKoharuNativeShadowArtifactSegmentMaskRecord(
-                segmentMaskID: segment?.selectedCandidateID ?? "shadow.segment.block.\(block.index)",
-                blockIndex: block.index,
-                width: Int(imageWidth),
-                height: Int(imageHeight),
-                sourceReport: segment?.selectedCandidateID == nil ? "blocks/glyphMaskProxy" : "koharuNativeSegmentMaskRefinementLiteReport",
-                candidateCount: candidateCount,
-                glyphPixelCount: segment?.rawPixelCount ?? block.glyphMaskPixelCount,
-                connectedComponentCount: segment?.componentCount ?? 0,
-                blockSummaries: [
-                    "maskBBox=\(segment?.maskBBox?.map { String(Int($0.rounded())) }.joined(separator: ",") ?? "nil")",
-                    "textboxConstrained=\(segment != nil)",
-                    "bubbleConstrained=\(segment != nil)",
-                    "wouldBeUsableForClearTextMask=\(segment.map { String($0.wouldBeUsableForClearTextMask) } ?? "nil")"
-                ],
-                textboxConstrained: segment != nil,
-                bubbleConstrained: segment != nil,
-                shadowOnly: true,
-                contractExampleOnly: true,
-                forbiddenAsActiveArtifact: true,
-                readyForActiveArtifact: false,
-                wouldCreateActiveArtifact: false,
-                proxyNotRealKoharuSegmentMask: true,
+        let previews = (promotionGateLiteReport?.candidateExportPreviews ?? []).map { preview in
+            let missing = missingFields(for: preview)
+            let forbidden = forbiddenReasons(for: preview)
+            return MangaKoharuNativeArtifactContractDryRunPreview(
+                previewID: preview.previewID,
+                blockIndex: preview.blockIndex,
+                targetArtifactStage: preview.targetArtifactStage,
+                candidateSource: preview.candidateSource,
+                sourceReport: preview.sourceReport,
+                destinationPath: destinationByStage[preview.targetArtifactStage] ?? "test/koharu_artifacts/unknown.json",
+                bbox: preview.bbox,
+                confidence: preview.confidence,
+                requiredFields: requiredByStage[preview.targetArtifactStage] ?? preview.requiredFieldsForFutureExport,
+                missingRequiredFields: missing,
+                forbiddenSourceReasons: forbidden,
+                canSatisfyContractDryRun: missing.isEmpty && forbidden.isEmpty,
+                activeExportAllowed: false,
+                reasonNotExported: "dry-run only; native-lite/proxy previews must not create or modify active test/koharu_artifacts",
                 decisionSignals: [
-                    signal("candidateCount", String(candidateCount), source: "koharuNativeSegmentMaskRefinementLiteReport"),
-                    signal("coordinateStatus", coordinateStatus(segment?.maskBBox ?? block.glyphMaskRect ?? block.bbox), source: "koharuNativeShadowArtifactExportLiteReport")
+                    signal("targetArtifactStage", preview.targetArtifactStage, source: "koharuNativePromotionGateLiteReport"),
+                    signal("candidateSource", preview.candidateSource, source: preview.sourceReport),
+                    signal("missingRequiredFields", missing.joined(separator: ","), source: "koharuNativeArtifactContractDryRunReport"),
+                    signal("forbiddenSourceReasons", forbidden.joined(separator: ","), source: "koharuNativeArtifactContractDryRunReport")
                 ],
-                evaluationSignals: [
-                    signal("bestGroundTruthType", block.bestGroundTruthType ?? "nil", source: "blocks", decision: false, evaluation: true),
-                    signal("ocrGroundTruthSimilarity", formatted(block.ocrGroundTruthSimilarity), source: "blocks", decision: false, evaluation: true)
-                ]
+                groundTruthUsedForDecision: false,
+                wouldCreateActiveArtifact: false
             )
         }
-
-        let manifest = MangaKoharuNativeShadowArtifactManifest(
-            schemaVersion: "aitrans.koharu_native_shadow_artifact.v1",
-            sourceImage: "test/1.png",
-            coordinateSpace: "originalImageTopLeftPixels",
-            generatedBy: "AITRANS native-lite probe",
-            shadowOnly: true,
-            contractExampleOnly: true,
-            forbiddenAsActiveArtifact: true,
-            readyForActiveArtifact: false,
-            activeArtifactsDirectory: false,
-            activeArtifactsWritten: false,
-            groundTruthUsedForDecision: false,
-            wouldChangeMainFlow: false,
-            wouldCreateActiveArtifact: false,
-            textBoxesPath: "1.native_textboxes.json",
-            bubbleMaskPath: "1.native_bubbles.json",
-            segmentMaskPath: "1.native_segment_mask.json",
-            bundlePath: "1.native_artifact_bundle.json",
-            sourceReports: [
-                "koharuNativeTextBoxDetectorLiteReport",
-                "koharuNativeTextBoxDetectorLiteShadowOCRReport",
-                "koharuNativeTextBoxDetectorLiteRefinementReport",
-                "koharuNativeTextBoxDetectorLiteClosedLoopReport",
-                "koharuNativeBubbleMaskInstanceLiteReport",
-                "koharuNativeSegmentMaskRefinementLiteReport",
-                "koharuNativeArtifactBundleLiteReport",
-                "koharuNativePromotionGateLiteReport",
-                "blocks"
-            ],
-            notes: [
-                "This directory is a non-active shadow export packet.",
-                "Do not copy these files to test/koharu_artifacts/.",
-                "It keeps externalArtifactReadinessReport governed only by real active artifacts.",
-                "All records are proxy/native-lite report artifacts and cannot be used as real Koharu detector output."
-            ]
+        let previewsByStage = Dictionary(grouping: previews, by: \.targetArtifactStage)
+        let appSideArtifactIdentityReceipt = externalArtifactReadinessReport?.artifactIdentityReceipt
+        let identityReceiptByKind = Dictionary(
+            uniqueKeysWithValues: (appSideArtifactIdentityReceipt?.files ?? []).map { ($0.artifactKind.lowercased(), $0) }
         )
+        let appSideArtifactIdentityVerdict = appSideArtifactIdentityReceipt?.identityVerdict ?? "notRecorded"
+        let appSideArtifactIdentityFilesPresent = appSideArtifactIdentityReceipt?.allRequiredFilesPresent ?? false
+        let appSideArtifactIdentityHashesPresent = appSideArtifactIdentityReceipt?.allRequiredFilesHaveSHA256 ?? false
+        let appSideSourceImageSHA256Matches = appSideArtifactIdentityReceipt?.sourceImageSHA256Matches ?? false
+        let appSideArtifactIdentityReady = appSideArtifactIdentityVerdict == "activeArtifactIdentityRecorded"
+            && appSideArtifactIdentityFilesPresent
+            && appSideArtifactIdentityHashesPresent
+            && appSideSourceImageSHA256Matches
 
-        try writeJSON(manifest, to: shadowDirectory.appendingPathComponent("1.native_manifest.json"))
-        try writeJSON(textBoxRecords, to: shadowDirectory.appendingPathComponent("1.native_textboxes.json"))
-        try writeJSON(bubbleRecords, to: shadowDirectory.appendingPathComponent("1.native_bubbles.json"))
-        try writeJSON(segmentRecords, to: shadowDirectory.appendingPathComponent("1.native_segment_mask.json"))
-        try writeJSON(bundleRecords, to: shadowDirectory.appendingPathComponent("1.native_artifact_bundle.json"))
-
-        let files = [
-            fileRecord(fileName: "1.native_manifest.json", kind: "Manifest", recordCount: 1),
-            fileRecord(fileName: "1.native_textboxes.json", kind: "TextBoxes", recordCount: textBoxRecords.count),
-            fileRecord(fileName: "1.native_bubbles.json", kind: "BubbleMask", recordCount: bubbleRecords.count),
-            fileRecord(fileName: "1.native_segment_mask.json", kind: "SegmentMask", recordCount: segmentRecords.count),
-            fileRecord(fileName: "1.native_artifact_bundle.json", kind: "ArtifactBundle", recordCount: bundleRecords.count)
+        func file(
+            path: String,
+            kind: String,
+            found: Bool,
+            fields: [String]
+        ) -> MangaKoharuNativeArtifactContractDryRunFile {
+            let stagePreviews = previewsByStage[kind] ?? []
+            let missing = Array(Set(stagePreviews.flatMap(\.missingRequiredFields))).sorted()
+            let forbiddenCount = stagePreviews.reduce(0) { $0 + $1.forbiddenSourceReasons.count }
+            let identityKind = kind == "manifest" ? "manifest" : kind.lowercased()
+            let identityReceipt = identityReceiptByKind[identityKind]
+            let identityStatus: String
+            if !found {
+                identityStatus = "notApplicableMissingActiveFile"
+            } else if identityReceipt == nil {
+                identityStatus = "identityReceiptMissing"
+            } else if identityReceipt?.exists != true {
+                identityStatus = "identityReceiptFileMissing"
+            } else if identityReceipt?.sha256?.isEmpty != false {
+                identityStatus = "identityReceiptHashMissing"
+            } else {
+                identityStatus = "identityReceiptRecorded"
+            }
+            let status: String
+            if found {
+                status = "activeFileFound"
+            } else if stagePreviews.isEmpty {
+                status = "missingActiveFileNoDryRunPreview"
+            } else if missing.isEmpty && forbiddenCount == 0 {
+                status = "dryRunPreviewContractReadyButExportBlocked"
+            } else {
+                status = "dryRunPreviewBlocked"
+            }
+            return MangaKoharuNativeArtifactContractDryRunFile(
+                path: path,
+                artifactKind: kind,
+                required: true,
+                activeFileFound: found,
+                fileSizeBytes: identityReceipt?.sizeBytes,
+                sha256: identityReceipt?.sha256,
+                identityStatus: identityStatus,
+                dryRunPreviewCount: stagePreviews.count,
+                status: status,
+                requiredFields: fields,
+                missingRequiredFields: missing,
+                forbiddenSourceCount: forbiddenCount,
+                nextAction: found ? "validateActiveArtifactWithContract" : "collectRealKoharu\(kind)Artifact",
+                decisionSignals: [
+                    signal("activeFileFound", String(found), source: "externalArtifactReadinessReport"),
+                    signal("identityStatus", identityStatus, source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("sha256Present", String(identityReceipt?.sha256?.isEmpty == false), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("dryRunPreviewCount", String(stagePreviews.count), source: "koharuNativeArtifactContractDryRunReport"),
+                    signal("missingRequiredFields", missing.joined(separator: ","), source: "koharuNativeArtifactContractDryRunReport"),
+                    signal("forbiddenSourceCount", String(forbiddenCount), source: "koharuNativeArtifactContractDryRunReport")
+                ],
+                groundTruthUsedForDecision: false,
+                wouldCreateActiveArtifact: false
+            )
+        }
+        let manifestFound = externalArtifactReadinessReport?.manifestFound ?? false
+        let requiredFiles = [
+            file(path: "test/koharu_artifacts/1.manifest.json", kind: "manifest", found: manifestFound, fields: ["schemaVersion", "sourceImage=test/1.png", "sourceImageSHA256=\(externalArtifactReadinessReport?.coordinateValidation.expectedSourceImageSHA256 ?? "unknown")", "coordinateSpace=originalImageTopLeftPixels", "contractExampleOnly=false"]),
+            file(path: "test/koharu_artifacts/1.textboxes.json", kind: "TextBoxes", found: externalArtifactReadinessReport?.textBoxesFound ?? false, fields: requiredByStage["TextBoxes"] ?? []),
+            file(path: "test/koharu_artifacts/1.bubbles.json", kind: "BubbleMask", found: externalArtifactReadinessReport?.bubbleMaskFound ?? false, fields: requiredByStage["BubbleMask"] ?? []),
+            file(path: "test/koharu_artifacts/1.segment_mask.json", kind: "SegmentMask", found: externalArtifactReadinessReport?.segmentMaskFound ?? false, fields: requiredByStage["SegmentMask"] ?? [])
         ]
-        let outputFilesOK = files.allSatisfy { $0.exists && $0.nonEmpty }
-        let blockCoverageOK = blockLedgers.count == blocks.count
-        let coordinateOK = textBoxRecords.allSatisfy(\.coordinateValid)
-        let externalStillMissing = externalArtifactReadinessReport?.readinessVerdict == nil
-            || externalArtifactReadinessReport?.readinessVerdict == "manifestMissing"
-            || externalArtifactReadinessReport?.readinessVerdict == "stopUntilArtifactsProvided"
+        let readyPreviewIDs = previews.filter(\.canSatisfyContractDryRun).map(\.previewID).sorted()
+        let blockedPreviewIDs = previews.filter { !$0.canSatisfyContractDryRun }.map(\.previewID).sorted()
+        let allBlockIndexes = blocks.map(\.index)
+        let activeReady = externalArtifactReadinessReport?.readinessVerdict == "readyForShadowOCR"
+            && externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed == true
         let gates = [
-            gate("G-native-shadow-artifact-export-lite-output-files", "Output files", "files", outputFilesOK ? "passed" : "blocked", "five shadow JSON files exist and are non-empty", allBlockIndexes, "shadow export files are missing or empty", "restoreShadowExportWrites", [signal("exportedFileCount", String(files.filter { $0.exists && $0.nonEmpty }.count), source: "koharuNativeShadowArtifactExportLiteReport")]),
-            gate("G-native-shadow-artifact-export-lite-no-active-write", "No active write", "activeArtifacts", "passed", "activeArtifactsWritten=false and output directory is not test/koharu_artifacts", [], "shadow export writes active test/koharu_artifacts", "removeActiveWrites", [signal("activeArtifactsWritten", "false", source: "koharuNativeShadowArtifactExportLiteReport")]),
-            gate("G-native-shadow-artifact-export-lite-forbidden-active", "Forbidden active", "manifest/records", "passed", "manifest and records are shadow-only and forbidden as active artifacts", allBlockIndexes, "shadow records can be mistaken for active artifacts", "restoreForbiddenFlags", [signal("forbiddenAsActiveArtifact", "true", source: "koharuNativeShadowArtifactExportLiteReport")]),
-            gate("G-native-shadow-artifact-export-lite-no-ground-truth-decision", "No ground truth decision", "decisionSignals", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth affects export rows, bbox, ranking, gates, or nextAction", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeShadowArtifactExportLiteReport")]),
-            gate("G-native-shadow-artifact-export-lite-block-coverage", "Block coverage", "blocks", blockCoverageOK ? "passed" : "warning", "blockLedgerCount==totalBlocksDetected", allBlockIndexes, "some final blocks lack shadow export ledgers", "restoreBlockLedgerCoverage", [signal("blockLedgerCount", String(blockLedgers.count), source: "koharuNativeShadowArtifactExportLiteReport")]),
-            gate("G-native-shadow-artifact-export-lite-coordinate-validation", "Coordinate validation", "bbox", coordinateOK ? "passed" : "warning", "positive bbox within 576x1280 original-image top-left pixels or explicit blocked reason", blockLedgers.filter { $0.textBoxCoordinateStatus != "validOriginalImageTopLeftPixels" }.map(\.blockIndex), "invalid bbox is silently treated as active-ready", "keepInvalidCoordinatesBlocked", [signal("coordinateValidation", coordinateOK ? "allValid" : "hasInvalidCoordinates", source: "koharuNativeShadowArtifactExportLiteReport")]),
-            gate("G-native-shadow-artifact-export-lite-proxy-boundary", "Proxy boundary", "proxyBoundary", "passed", "proxy-not-real flags are true", allBlockIndexes, "native-lite proxy output is promoted as real Koharu artifacts", "collectRealArtifactsBeforeActiveUse", [signal("proxyNotRealKoharuTextBoxes", "true", source: "koharuNativeShadowArtifactExportLiteReport"), signal("proxyNotRealKoharuBubbleMask", "true", source: "koharuNativeShadowArtifactExportLiteReport"), signal("proxyNotRealKoharuSegmentMask", "true", source: "koharuNativeShadowArtifactExportLiteReport")]),
-            gate("G-native-shadow-artifact-export-lite-no-main-flow-mutation", "No main flow mutation", "mainFlow", "passed", "wouldChangeMainFlow=false", [], "shadow export changes OCR, translation, overlay, renderer, blockPassed, failureCategory, or currentBlockSource", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeShadowArtifactExportLiteReport")]),
-            gate("G-native-shadow-artifact-export-lite-external-readiness-unchanged", "External readiness unchanged", "ExternalArtifacts", externalStillMissing ? "passed" : "warning", "missing active artifacts stay manifestMissing/blocked unless real active files exist", allBlockIndexes, "shadow export makes external readiness ready", "keepShadowExportSeparateFromActiveReadiness", [signal("readinessVerdict", externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing", source: "externalArtifactReadinessReport")]),
-            gate("G-native-shadow-artifact-export-lite-ci-retained", "CI retained", "artifact", "passed", "shadow paths are reported in probe_report.json and TXT", allBlockIndexes, "CI artifact omits shadow export file list", "keepFileRecordsAndTXT", [signal("relativeOutputDirectory", relativeDirectory, source: "koharuNativeShadowArtifactExportLiteReport")])
+            gate("G-native-artifact-contract-dry-run-report-only", "Report only", "report", "passed", "wouldChangeMainFlow=false", [], "dry-run mutates OCR, translation, renderer, output files, active artifacts, or currentBlockSource", "revertBehavioralChange", [signal("wouldChangeMainFlow", "false", source: "koharuNativeArtifactContractDryRunReport")]),
+            gate("G-native-artifact-contract-dry-run-no-ground-truth", "No ground truth decision", "policy", "passed", "groundTruthUsedForDecision=false", allBlockIndexes, "ground truth selects export previews, file readiness, verdict, or next action", "moveGroundTruthToEvaluationSignalsOnly", [signal("groundTruthUsedForDecision", "false", source: "koharuNativeArtifactContractDryRunReport")]),
+            gate("G-native-artifact-contract-dry-run-required-files", "Required files", "test/koharu_artifacts", requiredFiles.allSatisfy(\.activeFileFound) ? "passed" : "blocked", "manifest/TextBoxes/BubbleMask/SegmentMask active files are present", allBlockIndexes, "active four-file artifact contract is incomplete", "collectRealKoharuArtifactFourPack", [signal("missingArtifacts", (externalArtifactReadinessReport?.missingArtifacts ?? ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"]).joined(separator: ","), source: "externalArtifactReadinessReport")]),
+            gate("G-native-artifact-contract-dry-run-app-side-identity", "App-side identity receipt", "ExternalArtifacts", appSideArtifactIdentityReady ? "passed" : "blocked", "App runtime records source image and active four-file size/SHA256 identity, and manifest sourceImageSHA256 matches the runtime source image SHA256", allBlockIndexes, "CI validator identity cannot be matched to the files actually visible inside the App probe runtime", "compareAppReceiptWithCIManifestIdentity", [signal("appSideArtifactIdentityVerdict", appSideArtifactIdentityVerdict, source: "externalArtifactReadinessReport.artifactIdentityReceipt"), signal("appSideArtifactIdentityFilesPresent", String(appSideArtifactIdentityFilesPresent), source: "externalArtifactReadinessReport.artifactIdentityReceipt"), signal("appSideArtifactIdentityHashesPresent", String(appSideArtifactIdentityHashesPresent), source: "externalArtifactReadinessReport.artifactIdentityReceipt"), signal("sourceImageSHA256Matches", String(appSideSourceImageSHA256Matches), source: "externalArtifactReadinessReport.artifactIdentityReceipt")]),
+            gate("G-native-artifact-contract-dry-run-preview-blocked", "Preview export blocked", "candidateExportPreview", previews.allSatisfy { !$0.activeExportAllowed && !$0.wouldCreateActiveArtifact } ? "passed" : "blocked", "native-lite previews never create active artifacts", previews.map(\.blockIndex), "candidate preview writes test/koharu_artifacts or marks proxy exportable", "keepDryRunOnly", [signal("dryRunPreviewCount", String(previews.count), source: "koharuNativeArtifactContractDryRunReport")]),
+            gate("G-native-artifact-contract-dry-run-validator-command", "Validator command", "validator", "passed", "validator commands are explicit and non-mutating", [], "Agent C cannot reproduce artifact contract readiness", "keepValidatorCommandsInReport", [signal("validatorCommands", "2", source: "koharuNativeArtifactContractDryRunReport")]),
+            gate("G-native-artifact-contract-dry-run-active-readiness", "Active readiness", "ExternalArtifacts", activeReady ? "passed" : "blocked", "readinessVerdict=readyForShadowOCR and externalTextBoxesShadowOCRAllowed=true", allBlockIndexes, "Swift readiness and validator contract are not ready for shadow OCR", "collectAndValidateRealArtifacts", [signal("readinessVerdict", externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing", source: "externalArtifactReadinessReport")])
         ]
-        let exportVerdict: String
-        if !outputFilesOK {
-            exportVerdict = "blockedByMissingOutputFiles"
-        } else if !blockCoverageOK {
-            exportVerdict = "blockedByMissingBlockLedgers"
-        } else if !coordinateOK {
-            exportVerdict = "shadowOnlyExportWrittenWithInvalidCoordinates"
-        } else if blockLedgers.contains(where: { $0.shadowExportEligibility == "blockedByProxyBoundary" }) {
-            exportVerdict = "shadowOnlyExportWrittenWithProxyBoundary"
+        let verdict: String
+        if !activeReady {
+            verdict = "blockedByMissingActiveArtifacts"
+        } else if !appSideArtifactIdentityReady {
+            verdict = "blockedByMissingAppSideArtifactIdentity"
+        } else if requiredFiles.allSatisfy(\.activeFileFound) {
+            verdict = "activeArtifactsReadyForShadowOCR"
+        } else if !blockedPreviewIDs.isEmpty {
+            verdict = "dryRunPreviewsBlockedByContract"
         } else {
-            exportVerdict = "shadowOnlyExportWritten"
+            verdict = "manualReviewOnly"
         }
 
-        return MangaKoharuNativeShadowArtifactExportLiteReport(
+        return MangaKoharuNativeArtifactContractDryRunReport(
             enabled: true,
             source: "AITRANSProbe",
             referencePipeline: "Koharu",
-            referenceConcept: "NativeShadowArtifactExportLite.ReportOnlyCandidatePacket",
-            referenceWorkItemID: "WI-koharu-native-shadow-artifact-export-lite",
+            referenceConcept: "NativeArtifactContractDryRun.FourFileReadiness",
+            referenceWorkItemID: "WI-koharu-native-artifact-contract-dry-run",
+            sourceImage: "test/1.png",
+            coordinateSpace: "originalImageTopLeftPixels",
+            imageWidth: externalArtifactReadinessReport?.coordinateValidation.imageWidth ?? 576,
+            imageHeight: externalArtifactReadinessReport?.coordinateValidation.imageHeight ?? 1280,
+            activeInputDirectory: "test/koharu_artifacts",
+            examplesDirectory: "md/koharu研究/artifact_contract/examples",
             evaluatedBlockCount: blocks.count,
-            exportedFileCount: files.filter { $0.exists && $0.nonEmpty }.count,
-            textBoxRecordCount: textBoxRecords.count,
-            bubbleRecordCount: bubbleRecords.count,
-            segmentMaskRecordCount: segmentRecords.count,
-            bundleRecordCount: bundleRecords.count,
-            blockLedgerCount: blockLedgers.count,
-            gateCount: gates.count,
-            outputDirectory: shadowDirectory.path,
-            relativeOutputDirectory: relativeDirectory,
-            activeArtifactsDirectory: false,
-            activeArtifactsWritten: false,
-            shadowOnly: true,
-            forbiddenAsActiveArtifact: true,
-            readyForActiveArtifact: false,
+            requiredFileCount: requiredFiles.count,
+            dryRunPreviewCount: previews.count,
+            contractGateCount: gates.count,
             groundTruthUsedForDecision: false,
             groundTruthUsedForEvaluationOnly: true,
             wouldChangeMainFlow: false,
-            wouldCreateActiveArtifact: false,
             diagnosticOnly: true,
-            nativeShadowExportLite: true,
-            proxyNotRealKoharuTextBoxes: true,
-            proxyNotRealKoharuBubbleMask: true,
-            proxyNotRealKoharuSegmentMask: true,
-            proxyNotRealKoharuOCR: true,
-            proxyNotRealKoharuRenderer: true,
+            dryRunOnly: true,
+            activeExportAllowed: false,
             externalArtifactsRequiredForThisReport: false,
-            exportVerdict: exportVerdict,
-            fieldCompletenessBreakdown: countBy(textBoxRecords.map(\.fieldCompleteness)),
-            coordinateValidationBreakdown: countBy(blockLedgers.flatMap { [$0.textBoxCoordinateStatus, $0.bubbleCoordinateStatus, $0.segmentMaskSummaryStatus] }),
-            recordSourceBreakdown: countBy(textBoxRecords.map(\.sourceReport) + bubbleRecords.map(\.sourceReport) + segmentRecords.map(\.sourceReport)),
-            primaryBlockingArtifactBreakdown: countBy(blockLedgers.map(\.primaryBlockingArtifact)),
-            nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
-            files: files,
-            textBoxRecords: textBoxRecords,
-            bubbleRecords: bubbleRecords,
-            segmentMaskRecords: segmentRecords,
-            bundleRecords: bundleRecords,
-            blockLedgers: blockLedgers,
+            appSideArtifactIdentityVerdict: appSideArtifactIdentityVerdict,
+            appSideArtifactIdentityFilesPresent: appSideArtifactIdentityFilesPresent,
+            appSideArtifactIdentityHashesPresent: appSideArtifactIdentityHashesPresent,
+            contractDryRunVerdict: verdict,
+            readinessVerdict: externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing",
+            activeArtifactsDirectory: externalArtifactReadinessReport?.activeArtifactsDirectory ?? false,
+            contractExampleOnly: externalArtifactReadinessReport?.contractExampleOnly ?? false,
+            externalTextBoxesShadowOCRAllowed: externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed ?? false,
+            requiredFileStatusBreakdown: countBy(requiredFiles.map(\.status)),
+            targetArtifactBreakdown: countBy(previews.map(\.targetArtifactStage)),
+            missingRequiredFieldBreakdown: countBy(previews.flatMap(\.missingRequiredFields)),
+            forbiddenSourceBreakdown: countBy(previews.flatMap(\.forbiddenSourceReasons)),
+            nextActionBreakdown: countBy(requiredFiles.map(\.nextAction) + ["collectAndValidateRealArtifacts"]),
+            contractReadyDryRunPreviewIDs: readyPreviewIDs,
+            blockedPreviewIDs: blockedPreviewIDs,
+            requiredFiles: requiredFiles,
+            previews: previews,
             gateLedger: gates,
+            validatorCommands: [
+                "python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --print-required-files",
+                "python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing"
+            ],
+            forbiddenActiveSources: forbiddenActiveSources,
             notes: [
-                "koharuNativeShadowArtifactExportLiteReport writes a non-active shadow JSON packet under Output/koharu_native_shadow_artifacts/.",
-                "The packet is contractExampleOnly and forbiddenAsActiveArtifact; it must not be copied to test/koharu_artifacts/.",
-                "It consumes final blocks and v1.43-v1.46 native-lite ledgers only; it does not add OCR, LLM, PNG, model, prompt, renderer, overlay, blockPassed, failureCategory, currentBlockSource, or active artifact changes.",
-                "Ground truth appears only in evaluationSignals and never decides export rows, bbox, grouping, gates, nextAction, or work items.",
-                "externalArtifactReadinessReport remains controlled by real active artifacts and is not made ready by this shadow export."
+                "koharuNativeArtifactContractDryRunReport maps v1.46 candidate export previews onto the four-file Koharu artifact contract without writing files.",
+                "App-side artifact identity receipt is included so Agent C can compare runtime-visible source image and active artifact SHA256 values with ci-artifact-manifest.koharuArtifactValidationIdentitySummary.",
+                "Active export remains false because native-lite/proxy previews are not real Koharu detector output.",
+                "The report is intended to make the next real-artifact handoff mechanically verifiable by Agent C and GitHub Actions artifacts.",
+                "No OCR, LLM, PNG, prompt/model, renderer, safeLayoutRect, glyphMaskFillRects, finalTextUsedForTranslation, blockPassed, failureCategory, currentBlockSource, or active test/koharu_artifacts behavior changes are made."
             ]
         )
     }
@@ -12219,7 +12778,7 @@ final class TranslationSessionStore: ObservableObject {
             if textBox.linePolygons?.isEmpty == false {
                 riskFlags.append("linePolygonsPresentDeskewNotExecuted")
             }
-            if textBox.rotationDegrees != nil {
+            if let rotationDegrees = textBox.rotationDegrees, abs(rotationDegrees) > 0.001 {
                 riskFlags.append("rotationRecordedDeskewNotExecuted")
             }
             guard rejectionReasons.isEmpty else { return nil }
@@ -12268,13 +12827,23 @@ final class TranslationSessionStore: ObservableObject {
             .0
     }
 
-    private static func externalArtifactURL(named path: String?, fallback: String, artifactsDirectory: URL?) -> URL? {
+    private static func externalArtifactURL(
+        named path: String?,
+        fallback: String,
+        artifactsDirectory: URL?,
+        label: String,
+        parseErrors: inout [String]
+    ) -> URL? {
         guard let artifactsDirectory else { return nil }
         guard let path, !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return artifactsDirectory.appendingPathComponent(fallback)
         }
-        let url = URL(fileURLWithPath: path)
-        return url.isFileURL && path.hasPrefix("/") ? url : artifactsDirectory.appendingPathComponent(path)
+        let pathParts = path.split(separator: "/").map(String.init)
+        if path.hasPrefix("/") || pathParts.contains("..") {
+            parseErrors.append("manifest:\(label):pathEscapesActiveArtifactRoot")
+            return artifactsDirectory.appendingPathComponent(fallback)
+        }
+        return artifactsDirectory.appendingPathComponent(path)
     }
 
     private static func decodeExternalArtifact<T: Decodable>(
@@ -12342,37 +12911,253 @@ final class TranslationSessionStore: ObservableObject {
         return FileManager.default.fileExists(atPath: url.path)
     }
 
+    private static func externalArtifactGeneratedByPolicyErrors(
+        manifest: MangaOverlayExternalArtifactManifest?
+    ) -> [String] {
+        guard let manifest, manifest.contractExampleOnly == false else { return [] }
+        guard let generatedBy = manifest.generatedBy?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !generatedBy.isEmpty else {
+            return ["generatedByMissing"]
+        }
+        let normalized = generatedBy
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+        let forbiddenTerms = [
+            "contract example",
+            "fixture",
+            "manual",
+            "vision ocr",
+            "visionocr",
+            "pre-crop",
+            "precrop",
+            "line plan",
+            "bubblemask proxy",
+            "bubble mask proxy",
+            "segmentmask proxy",
+            "segment mask proxy",
+            "ground truth",
+            "handwritten"
+        ]
+        return forbiddenTerms
+            .filter { normalized.contains($0) }
+            .map { "forbiddenGeneratedBy:\($0)" }
+    }
+
+    private static func normalizedExternalSourceDirection(_ value: String) -> String {
+        var normalized = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+            .replacingOccurrences(of: " ", with: "-")
+        while normalized.contains("--") {
+            normalized = normalized.replacingOccurrences(of: "--", with: "-")
+        }
+        return normalized
+    }
+
+    private static func isValidExternalSourceDirection(_ value: String) -> Bool {
+        let allowed = Set(["horizontal", "horizontal-lr", "vertical", "vertical-rl", "vertical-lr", "unknown"])
+        return allowed.contains(normalizedExternalSourceDirection(value))
+    }
+
+    private static func externalTextBoxOrientationCategory(_ textBox: MangaOverlayExternalTextBox) -> String {
+        guard let sourceDirection = textBox.sourceDirection else { return "unspecified" }
+        let normalized = normalizedExternalSourceDirection(sourceDirection)
+        if normalized.hasPrefix("vertical") {
+            return "vertical"
+        }
+        if normalized.hasPrefix("horizontal") {
+            return "horizontal"
+        }
+        return normalized == "unknown" ? "unknown" : "invalid"
+    }
+
+    private static func externalTextBoxNeedsOrientationShadowPath(_ textBox: MangaOverlayExternalTextBox) -> Bool {
+        if externalTextBoxOrientationCategory(textBox) == "vertical" {
+            return true
+        }
+        if textBox.linePolygons?.isEmpty == false {
+            return true
+        }
+        if let rotationDegrees = textBox.rotationDegrees, abs(rotationDegrees) > 0.001 {
+            return true
+        }
+        return false
+    }
+
+    private static func externalTextBoxOrientationShadowOCRPlan(
+        _ textBox: MangaOverlayExternalTextBox
+    ) -> (rotationAngles: [Int], recognitionLanguages: [String]?, unsupportedReasons: [String]) {
+        var rotationAngles = [0]
+        var unsupportedReasons: [String] = []
+        let normalizedDirection = textBox.sourceDirection.map(normalizedExternalSourceDirection)
+        let orientationCategory = externalTextBoxOrientationCategory(textBox)
+        if orientationCategory == "vertical" {
+            if normalizedDirection == "vertical-lr" {
+                rotationAngles.append(270)
+            } else {
+                rotationAngles.append(90)
+            }
+        }
+        if let rotation = textBox.rotationDegrees, abs(rotation) > 0.001 {
+            if let supportedRotation = nearestSupportedExternalTextBoxRotation(rotation) {
+                if supportedRotation != 0 {
+                    rotationAngles.append(supportedRotation)
+                }
+            } else {
+                unsupportedReasons.append("arbitraryRotationUnsupported")
+            }
+        }
+        if textBox.linePolygons?.isEmpty == false {
+            unsupportedReasons.append("linePolygonWarpUnsupported")
+        }
+        var seen = Set<Int>()
+        let uniqueAngles = rotationAngles.filter { angle in
+            if seen.contains(angle) { return false }
+            seen.insert(angle)
+            return true
+        }
+        let recognitionLanguages = orientationCategory == "vertical" ? ["ja-JP", "ja", "en-US", "en"] : nil
+        return (uniqueAngles, recognitionLanguages, Array(Set(unsupportedReasons)).sorted())
+    }
+
+    private static func nearestSupportedExternalTextBoxRotation(_ value: Double) -> Int? {
+        let normalized = value.truncatingRemainder(dividingBy: 360)
+        let positive = normalized < 0 ? normalized + 360 : normalized
+        let supported = [0, 90, 180, 270, 360]
+        let nearest = supported.min { lhs, rhs in
+            abs(Double(lhs) - positive) < abs(Double(rhs) - positive)
+        } ?? 0
+        guard abs(Double(nearest) - positive) <= 7.5 else {
+            return nil
+        }
+        return nearest == 360 ? 0 : nearest
+    }
+
+    private static func countStrings(_ values: [String]) -> [String: Int] {
+        values.reduce(into: [:]) { partial, value in
+            partial[value, default: 0] += 1
+        }
+    }
+
+    private static func externalTextBoxMetadataErrors(
+        textBox: MangaOverlayExternalTextBox,
+        imageWidth: Int,
+        imageHeight: Int
+    ) -> [String] {
+        var errors: [String] = []
+        if let sourceDirection = textBox.sourceDirection,
+           !isValidExternalSourceDirection(sourceDirection) {
+            errors.append("sourceDirectionInvalid")
+        }
+        if let rotation = textBox.rotationDegrees {
+            if !rotation.isFinite {
+                errors.append("rotationDegreesInvalid")
+            } else if rotation < -360 || rotation > 360 {
+                errors.append("rotationDegreesOutOfRange")
+            }
+        }
+        if let linePolygons = textBox.linePolygons {
+            if linePolygons.isEmpty {
+                errors.append("linePolygonsInvalid")
+            }
+            for (polygonIndex, polygon) in linePolygons.enumerated() {
+                if polygon.count < 4 {
+                    errors.append("linePolygonInvalid:\(polygonIndex)")
+                    continue
+                }
+                for (pointIndex, point) in polygon.enumerated() {
+                    if point.count != 2 {
+                        errors.append("linePolygonPointInvalid:\(polygonIndex):\(pointIndex)")
+                        continue
+                    }
+                    let x = point[0]
+                    let y = point[1]
+                    if !x.isFinite || !y.isFinite {
+                        errors.append("linePolygonPointInvalid:\(polygonIndex):\(pointIndex)")
+                    } else if x < 0 || y < 0 || x > Double(imageWidth) || y > Double(imageHeight) {
+                        errors.append("linePolygonPointOutOfBounds:\(polygonIndex):\(pointIndex)")
+                    }
+                }
+            }
+        }
+        return errors
+    }
+
     private static func validateExternalArtifactCoordinates(
         manifest: MangaOverlayExternalArtifactManifest?,
         textBoxes: [MangaOverlayExternalTextBox],
         bubbleInstances: [MangaOverlayExternalBubbleInstance],
         segmentMask: MangaOverlayExternalSegmentMaskSummary?,
+        expectedSourceImageSHA256: String?,
         imageWidth: Int,
         imageHeight: Int
     ) -> MangaOverlayExternalArtifactCoordinateValidation {
+        let expectedSchemaVersion = "aitrans.koharu_artifact_contract.v1"
         let expected = "originalImageTopLeftPixels"
+        let schemaVersion = manifest?.schemaVersion
+        let schemaVersionMatches = schemaVersion == expectedSchemaVersion
         let coordinateSpace = manifest?.coordinateSpace
-        let sourceImageMatches = manifest?.sourceImage == nil || manifest?.sourceImage == "test/1.png"
+        let sourceImageMissing = manifest != nil && (manifest?.sourceImageFieldPresent != true || manifest?.sourceImage.isEmpty == true)
+        let sourceImageMatches = manifest == nil || manifest?.sourceImage == "test/1.png"
+        let sourceImageSHA256Declared = manifest?.sourceImageSHA256
+        let sourceImageSHA256Normalized = Self.normalizedExternalArtifactSHA256(sourceImageSHA256Declared)
+        let sourceImageSHA256FieldPresent = manifest?.sourceImageSHA256FieldPresent ?? false
+        let sourceImageSHA256TypeValid = manifest?.sourceImageSHA256TypeValid ?? false
+        let sourceImageSHA256Matches = sourceImageSHA256Normalized != nil
+            && expectedSourceImageSHA256 != nil
+            && sourceImageSHA256Normalized == expectedSourceImageSHA256
+        let contractExampleOnlyMissing = manifest != nil && manifest?.contractExampleOnlyFieldPresent != true
+        let contractExampleOnlyInvalid = manifest != nil && manifest?.contractExampleOnlyFieldPresent == true && manifest?.contractExampleOnlyTypeValid != true
         var errors: [String] = []
+        if let schemaVersion, schemaVersion != expectedSchemaVersion {
+            errors.append("schemaVersionMismatch:\(schemaVersion)")
+        } else if schemaVersion == nil {
+            errors.append("schemaVersionMissing")
+        }
         if let coordinateSpace, coordinateSpace != expected {
             errors.append("coordinateSpaceMismatch:\(coordinateSpace)")
         } else if coordinateSpace == nil {
             errors.append("coordinateSpaceMissing")
         }
-        if !sourceImageMatches {
+        if sourceImageMissing {
+            errors.append("sourceImageMissing")
+        } else if !sourceImageMatches {
             errors.append("sourceImageMismatch:\(manifest?.sourceImage ?? "nil")")
         }
+        if manifest != nil {
+            if !sourceImageSHA256FieldPresent {
+                errors.append("sourceImageSHA256Missing")
+            } else if !sourceImageSHA256TypeValid || sourceImageSHA256Normalized == nil {
+                errors.append("sourceImageSHA256Invalid:\(sourceImageSHA256Declared ?? "nil")")
+            } else if !sourceImageSHA256Matches {
+                errors.append("sourceImageSHA256Mismatch:\(sourceImageSHA256Declared ?? "nil")")
+            }
+        }
         let bounds = CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
-        let invalidTextBoxes = textBoxes.compactMap { textBox -> String? in
+        var invalidTextBoxes: [String] = []
+        for textBox in textBoxes {
             let rect = rect(from: textBox.bbox)
             guard rect.width > 0, rect.height > 0, rect.minX >= 0, rect.minY >= 0,
                   rect.maxX <= bounds.maxX, rect.maxY <= bounds.maxY else {
-                return textBox.id
+                invalidTextBoxes.append(textBox.id)
+                continue
             }
             if let confidence = textBox.confidence, !(0...1).contains(confidence) {
-                return textBox.id
+                invalidTextBoxes.append(textBox.id)
+                continue
             }
-            return nil
+            let metadataErrors = externalTextBoxMetadataErrors(
+                textBox: textBox,
+                imageWidth: imageWidth,
+                imageHeight: imageHeight
+            )
+            if !metadataErrors.isEmpty {
+                invalidTextBoxes.append(textBox.id)
+                for metadataError in metadataErrors {
+                    errors.append("textBox:\(textBox.id):\(metadataError)")
+                }
+            }
         }
         let invalidBubbles = bubbleInstances.compactMap { bubble -> String? in
             let rect = rect(from: bubble.bbox)
@@ -12386,7 +13171,7 @@ final class TranslationSessionStore: ObservableObject {
             return nil
         }
         if !invalidTextBoxes.isEmpty {
-            errors.append("invalidTextBoxBBoxes=\(invalidTextBoxes.joined(separator: ","))")
+            errors.append("invalidTextBoxes=\(Array(Set(invalidTextBoxes)).sorted().joined(separator: ","))")
         }
         if !invalidBubbles.isEmpty {
             errors.append("invalidBubbleBBoxes=\(invalidBubbles.joined(separator: ","))")
@@ -12404,10 +13189,30 @@ final class TranslationSessionStore: ObservableObject {
         if manifest?.contractExampleOnly == true {
             notes.append("contractExampleOnly=true")
         }
+        if contractExampleOnlyMissing {
+            errors.append("contractExampleOnlyMissing")
+            notes.append("contractExampleOnlyMissing")
+        } else if contractExampleOnlyInvalid {
+            errors.append("contractExampleOnlyInvalid")
+            notes.append("contractExampleOnlyInvalid")
+        }
+        let sourcePolicyErrors = Self.externalArtifactGeneratedByPolicyErrors(manifest: manifest)
+        if !sourcePolicyErrors.isEmpty {
+            errors.append(contentsOf: sourcePolicyErrors)
+            notes.append("generatedBy source policy blocks active readiness unless it names a real detector/segmenter source")
+        }
         return MangaOverlayExternalArtifactCoordinateValidation(
+            schemaVersion: schemaVersion,
+            expectedSchemaVersion: expectedSchemaVersion,
+            schemaVersionMatches: schemaVersionMatches,
             coordinateSpace: coordinateSpace,
             expectedCoordinateSpace: expected,
             sourceImageMatches: sourceImageMatches,
+            sourceImageSHA256: sourceImageSHA256Declared,
+            expectedSourceImageSHA256: expectedSourceImageSHA256,
+            sourceImageSHA256FieldPresent: sourceImageSHA256FieldPresent,
+            sourceImageSHA256TypeValid: sourceImageSHA256TypeValid,
+            sourceImageSHA256Matches: sourceImageSHA256Matches,
             imageWidth: imageWidth,
             imageHeight: imageHeight,
             bboxValidationPassed: invalidTextBoxes.isEmpty && invalidBubbles.isEmpty,
@@ -12491,12 +13296,40 @@ final class TranslationSessionStore: ObservableObject {
     ) -> String {
         if !manifestFound { return "manifestMissing" }
         if !parseErrors.isEmpty { return "parseFailed" }
+        if coordinateValidation.errors.contains("schemaVersionMissing") { return "schemaVersionMissing" }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("schemaVersionMismatch") }) {
+            return "schemaVersionMismatch"
+        }
         if coordinateValidation.errors.contains("coordinateSpaceMissing") { return "coordinateSpaceMissing" }
         if coordinateValidation.errors.contains(where: { $0.hasPrefix("coordinateSpaceMismatch") }) {
             return "coordinateSpaceMismatch"
         }
+        if coordinateValidation.errors.contains("sourceImageMissing") {
+            return "sourceImageMissing"
+        }
         if coordinateValidation.errors.contains(where: { $0.hasPrefix("sourceImageMismatch") }) {
             return "sourceImageMismatch"
+        }
+        if coordinateValidation.errors.contains("sourceImageSHA256Missing") {
+            return "sourceImageSHA256Missing"
+        }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("sourceImageSHA256Invalid") }) {
+            return "sourceImageSHA256Invalid"
+        }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("sourceImageSHA256Mismatch") }) {
+            return "sourceImageSHA256Mismatch"
+        }
+        if coordinateValidation.errors.contains("contractExampleOnlyMissing") {
+            return "contractExampleOnlyMissing"
+        }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("contractExampleOnlyInvalid") }) {
+            return "contractExampleOnlyInvalid"
+        }
+        if coordinateValidation.errors.contains("generatedByMissing") {
+            return "generatedByMissing"
+        }
+        if coordinateValidation.errors.contains(where: { $0.hasPrefix("forbiddenGeneratedBy") }) {
+            return "forbiddenGeneratedBy"
         }
         if coordinateValidation.errors.contains(where: { $0.hasPrefix("invalidTextBoxBBoxes") || $0.hasPrefix("invalidBubbleBBoxes") || $0.hasPrefix("segmentMaskSizeMismatch") }) {
             return "coordinateValidationFailed"
@@ -12526,7 +13359,9 @@ final class TranslationSessionStore: ObservableObject {
             return "stopUntilParserFixed"
         case "contractExampleOnly":
             return "stopBecauseFixtureIsNotDetectorOutput"
-        case "coordinateSpaceMissing", "coordinateSpaceMismatch", "sourceImageMismatch", "coordinateValidationFailed":
+        case "contractExampleOnlyMissing", "contractExampleOnlyInvalid", "generatedByMissing", "forbiddenGeneratedBy":
+            return "stopUntilRealDetectorSourceDeclared"
+        case "schemaVersionMissing", "schemaVersionMismatch", "coordinateSpaceMissing", "coordinateSpaceMismatch", "sourceImageMissing", "sourceImageMismatch", "sourceImageSHA256Missing", "sourceImageSHA256Invalid", "sourceImageSHA256Mismatch", "coordinateValidationFailed":
             return "stopUntilArtifactContractFixed"
         default:
             return "stopUntilArtifactsProvided"
@@ -16949,6 +17784,10 @@ final class TranslationSessionStore: ObservableObject {
             uniqueSorted(values).map(String.init).joined(separator: ",")
         }
 
+        func joinedBreakdown(_ values: [String: Int]) -> String {
+            values.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",")
+        }
+
         func signal(
             _ name: String,
             _ value: String,
@@ -19258,6 +20097,278 @@ final class TranslationSessionStore: ObservableObject {
         )
     }
 
+    private static func makeKoharuArtifactIdentityReconciliationReport(
+        blocks: [MangaOverlayProbeBlock],
+        externalArtifactReadinessReport: MangaOverlayExternalArtifactReadinessReport?,
+        koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport?
+    ) -> MangaKoharuArtifactIdentityReconciliationReport {
+        func signal(
+            _ name: String,
+            _ value: String,
+            source: String,
+            decision: Bool = true,
+            evaluation: Bool = false
+        ) -> MangaKoharuArtifactIdentityReconciliationSignal {
+            MangaKoharuArtifactIdentityReconciliationSignal(
+                name: name,
+                value: value,
+                sourceReport: source,
+                groundTruthFreeDecisionSignal: decision,
+                groundTruthUsedForEvaluationOnly: evaluation
+            )
+        }
+
+        func gate(
+            _ id: String,
+            _ name: String,
+            _ status: String,
+            _ scope: String,
+            _ threshold: String,
+            _ affected: [Int],
+            _ failureMeans: String,
+            _ action: String,
+            _ decisions: [MangaKoharuArtifactIdentityReconciliationSignal]
+        ) -> MangaKoharuArtifactIdentityReconciliationGate {
+            MangaKoharuArtifactIdentityReconciliationGate(
+                gateID: id,
+                name: name,
+                status: status,
+                scope: scope,
+                threshold: threshold,
+                affectedBlocks: Array(Set(affected)).sorted(),
+                failureMeans: failureMeans,
+                recommendedAction: action,
+                decisionSignals: decisions
+            )
+        }
+
+        let receipt = externalArtifactReadinessReport?.artifactIdentityReceipt
+        var contractFilesByKind: [String: MangaKoharuNativeArtifactContractDryRunFile] = [:]
+        for file in koharuNativeArtifactContractDryRunReport?.requiredFiles ?? [] {
+            let key = file.artifactKind.lowercased()
+            if contractFilesByKind[key] == nil {
+                contractFilesByKind[key] = file
+            }
+        }
+        var receiptFilesByKind: [String: MangaOverlayExternalArtifactFileIdentityReceipt] = [:]
+        for file in receipt?.files ?? [] {
+            let key = file.artifactKind.lowercased()
+            if receiptFilesByKind[key] == nil {
+                receiptFilesByKind[key] = file
+            }
+        }
+
+        struct FileSpec {
+            let kind: String
+            let receiptKey: String
+            let ciSizePath: String
+            let ciSHAPath: String
+        }
+
+        let fileSpecs = [
+            FileSpec(
+                kind: "SourceImage",
+                receiptKey: "sourceimage",
+                ciSizePath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.sourceImage.sizeBytes",
+                ciSHAPath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.sourceImage.sha256"
+            ),
+            FileSpec(
+                kind: "manifest",
+                receiptKey: "manifest",
+                ciSizePath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.manifest.sizeBytes",
+                ciSHAPath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.manifest.sha256"
+            ),
+            FileSpec(
+                kind: "TextBoxes",
+                receiptKey: "textboxes",
+                ciSizePath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.TextBoxes.sizeBytes",
+                ciSHAPath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.TextBoxes.sha256"
+            ),
+            FileSpec(
+                kind: "BubbleMask",
+                receiptKey: "bubblemask",
+                ciSizePath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.BubbleMask.sizeBytes",
+                ciSHAPath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.BubbleMask.sha256"
+            ),
+            FileSpec(
+                kind: "SegmentMask",
+                receiptKey: "segmentmask",
+                ciSizePath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.SegmentMask.sizeBytes",
+                ciSHAPath: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary.artifactFiles.SegmentMask.sha256"
+            )
+        ]
+
+        let rows = fileSpecs.map { spec -> MangaKoharuArtifactIdentityReconciliationFileRow in
+            let fileReceipt = receiptFilesByKind[spec.receiptKey]
+            let contractFile = contractFilesByKind[spec.receiptKey]
+            let appIdentityStatus: String
+            if receipt == nil {
+                appIdentityStatus = "artifactIdentityReceiptMissing"
+            } else if fileReceipt == nil {
+                appIdentityStatus = "appReceiptFileRowMissing"
+            } else if fileReceipt?.exists != true {
+                appIdentityStatus = "appReceiptFileMissing"
+            } else if fileReceipt?.sha256?.isEmpty != false {
+                appIdentityStatus = "appReceiptHashMissing"
+            } else if fileReceipt?.sizeBytes == nil {
+                appIdentityStatus = "appReceiptSizeMissing"
+            } else {
+                appIdentityStatus = "appReceiptReady"
+            }
+            let comparisonStatus: String
+            switch appIdentityStatus {
+            case "appReceiptReady":
+                comparisonStatus = "appReceiptReady"
+            case "artifactIdentityReceiptMissing", "appReceiptFileRowMissing", "appReceiptFileMissing":
+                comparisonStatus = "appReceiptMissing"
+            case "appReceiptHashMissing":
+                comparisonStatus = "appHashMissing"
+            case "appReceiptSizeMissing":
+                comparisonStatus = "appSizeMissing"
+            default:
+                comparisonStatus = "awaitingCIManifest"
+            }
+            let nextAction = comparisonStatus == "appReceiptReady"
+                ? "compareWithCIManifestIdentitySummary"
+                : "runProbeWithActiveKoharuArtifactsAndAppSideIdentityReceipt"
+            return MangaKoharuArtifactIdentityReconciliationFileRow(
+                artifactKind: spec.kind,
+                appReceiptPath: fileReceipt?.path,
+                appRequired: fileReceipt?.required ?? true,
+                appExists: fileReceipt?.exists ?? false,
+                appSizeBytes: fileReceipt?.sizeBytes,
+                appSHA256: fileReceipt?.sha256,
+                appIdentityStatus: appIdentityStatus,
+                contractDryRunStatus: contractFile?.identityStatus,
+                ciManifestFieldPathForSize: spec.ciSizePath,
+                ciManifestFieldPathForSHA256: spec.ciSHAPath,
+                comparisonStatus: comparisonStatus,
+                nextAction: nextAction,
+                decisionSignals: [
+                    signal("artifactKind", spec.kind, source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("appExists", String(fileReceipt?.exists == true), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("appSizeBytesPresent", String(fileReceipt?.sizeBytes != nil), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("appSHA256Present", String(fileReceipt?.sha256?.isEmpty == false), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("ciManifestFieldPathForSHA256", spec.ciSHAPath, source: "ci-artifact-manifest.koharuArtifactValidationIdentitySummary")
+                ]
+            )
+        }
+
+        let allBlockIndexes = blocks.map(\.index)
+        let allRowsReady = rows.allSatisfy { $0.comparisonStatus == "appReceiptReady" }
+        let appReceiptVerdict = receipt?.identityVerdict ?? "notRecorded"
+        let contractVerdict = koharuNativeArtifactContractDryRunReport?.contractDryRunVerdict ?? "notExecuted"
+        let sourceImageSHA256Declared = receipt?.sourceImageSHA256Declared
+        let sourceImageSHA256Expected = receipt?.sourceImageSHA256Expected
+        let sourceImageSHA256Matches = receipt?.sourceImageSHA256Matches ?? false
+        let readyForCIManifestComparison = appReceiptVerdict == "activeArtifactIdentityRecorded"
+            && allRowsReady
+            && sourceImageSHA256Matches
+            && koharuNativeArtifactContractDryRunReport?.appSideArtifactIdentityFilesPresent == true
+            && koharuNativeArtifactContractDryRunReport?.appSideArtifactIdentityHashesPresent == true
+        let identityReconciliationVerdict: String
+        if readyForCIManifestComparison {
+            identityReconciliationVerdict = "readyForCIManifestComparison"
+        } else if receipt == nil {
+            identityReconciliationVerdict = "appReceiptMissing"
+        } else if !allRowsReady {
+            identityReconciliationVerdict = "appReceiptIncomplete"
+        } else if appReceiptVerdict != "activeArtifactIdentityRecorded" {
+            identityReconciliationVerdict = "appReceiptNotActiveArtifactIdentityRecorded"
+        } else {
+            identityReconciliationVerdict = "awaitingCIManifestComparison"
+        }
+        let gates = [
+            gate(
+                "G-koharu-artifact-identity-reconciliation-report-only",
+                "Report only",
+                "passed",
+                "policy",
+                "does not read CI manifest, mutate active artifacts, or alter OCR/translation/render flow",
+                [],
+                "identity reconciliation changes production candidate selection or writes active artifacts",
+                "keepIdentityReconciliationReportOnly",
+                [signal("wouldChangeMainFlow", "false", source: "koharuArtifactIdentityReconciliationReport")]
+            ),
+            gate(
+                "G-koharu-artifact-identity-reconciliation-app-receipt",
+                "App receipt ready",
+                readyForCIManifestComparison ? "passed" : "blocked",
+                "ExternalArtifacts",
+                "App runtime receipt has SourceImage plus four required artifact size/SHA256 rows",
+                allBlockIndexes,
+                "Agent C cannot prove App consumed the same files validated by CI",
+                "runProbeWithActiveKoharuArtifactsAndAppSideIdentityReceipt",
+                [
+                    signal("appReceiptVerdict", appReceiptVerdict, source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("allRowsReady", String(allRowsReady), source: "koharuArtifactIdentityReconciliationReport"),
+                    signal("sourceImageSHA256Matches", String(sourceImageSHA256Matches), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("contractDryRunVerdict", contractVerdict, source: "koharuNativeArtifactContractDryRunReport")
+                ]
+            ),
+            gate(
+                "G-koharu-artifact-identity-reconciliation-ready",
+                "Ready for CI manifest comparison",
+                readyForCIManifestComparison ? "passed" : "blocked",
+                "CIReview",
+                "fileRows expose ci-artifact-manifest.koharuArtifactValidationIdentitySummary field paths for size and SHA256 comparison",
+                allBlockIndexes,
+                "CI manifest identity and App runtime receipt cannot be compared mechanically",
+                readyForCIManifestComparison ? "compareAppReceiptWithCIManifestIdentitySummary" : "restoreAppSideArtifactIdentityReceipt",
+                [
+                    signal("readyForCIManifestComparison", String(readyForCIManifestComparison), source: "koharuArtifactIdentityReconciliationReport"),
+                    signal("sourceImageSHA256Declared", sourceImageSHA256Declared ?? "nil", source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("sourceImageSHA256Expected", sourceImageSHA256Expected ?? "nil", source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("sourceImageSHA256Matches", String(sourceImageSHA256Matches), source: "externalArtifactReadinessReport.artifactIdentityReceipt"),
+                    signal("manualCIComparisonRequired", "true", source: "koharuArtifactIdentityReconciliationReport")
+                ]
+            )
+        ]
+        return MangaKoharuArtifactIdentityReconciliationReport(
+            enabled: true,
+            source: "AITRANSProbe",
+            referencePipeline: "Koharu",
+            referenceConcept: "ArtifactIdentityReconciliation.CIManifestAppReceipt",
+            referenceWorkItemID: "WI-koharu-artifact-identity-reconciliation",
+            evaluatedBlockCount: blocks.count,
+            fileRowCount: rows.count,
+            gateCount: gates.count,
+            sourceImage: receipt?.sourceImage ?? "test/1.png",
+            sourceImageSHA256Declared: sourceImageSHA256Declared,
+            sourceImageSHA256Expected: sourceImageSHA256Expected,
+            sourceImageSHA256Matches: sourceImageSHA256Matches,
+            activeInputDirectory: "test/koharu_artifacts",
+            appReceiptVerdict: appReceiptVerdict,
+            contractDryRunVerdict: contractVerdict,
+            identityReconciliationVerdict: identityReconciliationVerdict,
+            readyForCIManifestComparison: readyForCIManifestComparison,
+            manualCIComparisonRequired: true,
+            groundTruthUsedForDecision: false,
+            groundTruthUsedForEvaluationOnly: true,
+            wouldChangeMainFlow: false,
+            diagnosticOnly: true,
+            dryRunOnly: true,
+            activeExportAllowed: false,
+            externalArtifactsRequiredForThisReport: false,
+            appReceiptStatusBreakdown: countBy(rows.map(\.appIdentityStatus)),
+            comparisonStatusBreakdown: countBy(rows.map(\.comparisonStatus)),
+            nextActionBreakdown: countBy(rows.map(\.nextAction)),
+            readyFileKinds: rows.filter { $0.comparisonStatus == "appReceiptReady" }.map(\.artifactKind),
+            missingFileKinds: rows.filter { $0.comparisonStatus == "appReceiptMissing" }.map(\.artifactKind),
+            hashMissingFileKinds: rows.filter { $0.comparisonStatus == "appHashMissing" || $0.comparisonStatus == "appSizeMissing" }.map(\.artifactKind),
+            fileRows: rows,
+            gateLedger: gates,
+            notes: [
+                "koharuArtifactIdentityReconciliationReport converts the App-side runtime artifactIdentityReceipt into a stable Agent C / CI comparison ledger.",
+                "The report intentionally does not read ci-artifact-manifest.json; GitHub Actions or Agent C compare the listed field paths against App receipt size/SHA256 values after export.",
+                "Manifest sourceImageSHA256 must match the App runtime source image SHA256 before readyForCIManifestComparison can become true.",
+                "SourceImage plus manifest, TextBoxes, BubbleMask, and SegmentMask are all required before readyForCIManifestComparison can become true.",
+                "This is a P0 real-artifact handoff evidence gate, not a detector, OCR, translation, renderer, or active artifact promotion.",
+                "No OCR, LLM, PNG, prompt/model, renderer, safeLayoutRect, glyphMaskFillRects, finalTextUsedForTranslation, blockPassed, failureCategory, currentBlockSource, or active test/koharu_artifacts behavior changes are made."
+            ]
+        )
+    }
+
     private static func makeKoharuArtifactConvergenceReport(
         blocks: [MangaOverlayProbeBlock],
         diagnostics: MangaOverlayProbeDiagnostics,
@@ -19288,7 +20399,8 @@ final class TranslationSessionStore: ObservableObject {
         koharuNativeSegmentMaskRefinementLiteReport: MangaKoharuNativeSegmentMaskRefinementLiteReport? = nil,
         koharuNativeArtifactBundleLiteReport: MangaKoharuNativeArtifactBundleLiteReport? = nil,
         koharuNativePromotionGateLiteReport: MangaKoharuNativePromotionGateLiteReport? = nil,
-        koharuNativeShadowArtifactExportLiteReport: MangaKoharuNativeShadowArtifactExportLiteReport? = nil
+        koharuNativeArtifactContractDryRunReport: MangaKoharuNativeArtifactContractDryRunReport? = nil,
+        koharuArtifactIdentityReconciliationReport: MangaKoharuArtifactIdentityReconciliationReport? = nil
     ) -> MangaKoharuArtifactConvergenceReport {
         func uniqueSorted(_ values: [Int]) -> [Int] {
             Array(Set(values)).sorted()
@@ -19300,6 +20412,10 @@ final class TranslationSessionStore: ObservableObject {
 
         func joined(_ values: [Int]) -> String {
             uniqueSorted(values).map(String.init).joined(separator: ",")
+        }
+
+        func joinedBreakdown(_ values: [String: Int]) -> String {
+            values.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ",")
         }
 
         func signal(
@@ -19730,30 +20846,89 @@ final class TranslationSessionStore: ObservableObject {
         let nativePromotionGateLiteNextAction = nativePromotionGateLiteExecuted
             ? (koharuNativePromotionGateLiteReport?.nextActionBreakdown.keys.sorted().first ?? "keepNativePromotionGateLiteReportOnly")
             : "generateKoharuNativePromotionGateLiteReport"
-        let nativeShadowArtifactExportLiteExecuted = koharuNativeShadowArtifactExportLiteReport?.enabled == true
-        let nativeShadowArtifactExportLiteVerdict = koharuNativeShadowArtifactExportLiteReport?.exportVerdict ?? "notExecuted"
-        let nativeShadowArtifactExportLiteBlocks = uniqueSorted(koharuNativeShadowArtifactExportLiteReport?.blockLedgers.map(\.blockIndex) ?? allBlockIndexes)
-        let nativeShadowArtifactExportLiteStatus: String
-        if !nativeShadowArtifactExportLiteExecuted {
-            nativeShadowArtifactExportLiteStatus = "blockedByMissingNativeLiteInputs"
-        } else if nativeShadowArtifactExportLiteVerdict == "blockedByMissingOutputFiles"
-            || nativeShadowArtifactExportLiteVerdict == "blockedByMissingBlockLedgers" {
-            nativeShadowArtifactExportLiteStatus = "blockedByMissingNativeLiteInputs"
-        } else if nativeShadowArtifactExportLiteVerdict == "shadowOnlyExportWrittenWithInvalidCoordinates" {
-            nativeShadowArtifactExportLiteStatus = "blockedByInvalidCoordinates"
-        } else if nativeShadowArtifactExportLiteVerdict == "shadowOnlyExportWrittenWithProxyBoundary" {
-            nativeShadowArtifactExportLiteStatus = "blockedByProxyBoundary"
-        } else if nativeShadowArtifactExportLiteVerdict == "shadowOnlyExportWritten" {
-            nativeShadowArtifactExportLiteStatus = "closedShadowExportOnly"
+        let nativeArtifactContractDryRunExecuted = koharuNativeArtifactContractDryRunReport?.enabled == true
+        let nativeArtifactContractDryRunVerdict = koharuNativeArtifactContractDryRunReport?.contractDryRunVerdict ?? "notExecuted"
+        let nativeArtifactContractDryRunBlocks = allBlockIndexes
+        let nativeArtifactContractDryRunStatus: String
+        if !nativeArtifactContractDryRunExecuted {
+            nativeArtifactContractDryRunStatus = "openNativeArtifactContractDryRun"
+        } else if koharuNativeArtifactContractDryRunReport?.dryRunOnly != true
+            || koharuNativeArtifactContractDryRunReport?.activeExportAllowed == true {
+            nativeArtifactContractDryRunStatus = "blockedByUnsafeActiveExport"
+        } else if nativeArtifactContractDryRunVerdict == "activeArtifactsReadyForShadowOCR" {
+            nativeArtifactContractDryRunStatus = "readyReportOnly"
+        } else if nativeArtifactContractDryRunVerdict == "blockedByMissingActiveArtifacts"
+            || nativeArtifactContractDryRunVerdict == "dryRunPreviewsBlockedByContract" {
+            nativeArtifactContractDryRunStatus = "blockedByMissingRealArtifact"
         } else {
-            nativeShadowArtifactExportLiteStatus = "manualReviewOnly"
+            nativeArtifactContractDryRunStatus = "closedReportOnly"
         }
-        let nativeShadowArtifactExportLiteBlockers = nativeShadowArtifactExportLiteExecuted
-            ? (koharuNativeShadowArtifactExportLiteReport?.gateLedger.filter { $0.status == "warning" || $0.status == "blocked" }.map(\.failureMeans) ?? [])
-            : ["koharuNativeShadowArtifactExportLiteReport not generated before convergence refresh"]
-        let nativeShadowArtifactExportLiteNextAction = nativeShadowArtifactExportLiteExecuted
-            ? "keepShadowExportNonActiveAndReviewCIArtifact"
-            : "generateKoharuNativeShadowArtifactExportLiteReport"
+        let nativeArtifactContractDryRunBlockers: [String]
+        if nativeArtifactContractDryRunExecuted {
+            let gateBlockers = koharuNativeArtifactContractDryRunReport?.gateLedger
+                .filter { $0.status == "warning" || $0.status == "blocked" }
+                .map(\.failureMeans) ?? []
+            let missingFiles = koharuNativeArtifactContractDryRunReport?.requiredFiles
+                .filter { !$0.activeFileFound }
+                .map { "missingActiveArtifact:\($0.artifactKind)" } ?? []
+            let blockedPreviews = koharuNativeArtifactContractDryRunReport?.blockedPreviewIDs
+                .prefix(12)
+                .map { "blockedDryRunPreview:\($0)" } ?? []
+            nativeArtifactContractDryRunBlockers = gateBlockers + missingFiles + blockedPreviews
+        } else {
+            nativeArtifactContractDryRunBlockers = ["koharuNativeArtifactContractDryRunReport not generated before convergence refresh"]
+        }
+        let nativeArtifactContractDryRunNextAction: String
+        if nativeArtifactContractDryRunVerdict == "activeArtifactsReadyForShadowOCR" {
+            nativeArtifactContractDryRunNextAction = "runExternalTextBoxShadowOCR"
+        } else if nativeArtifactContractDryRunStatus == "blockedByUnsafeActiveExport" {
+            nativeArtifactContractDryRunNextAction = "restoreDryRunOnlyArtifactBoundary"
+        } else {
+            nativeArtifactContractDryRunNextAction = "collectRealKoharuArtifactFourPack"
+        }
+        let artifactIdentityReconciliationExecuted = koharuArtifactIdentityReconciliationReport?.enabled == true
+        let artifactIdentityReconciliationVerdict = koharuArtifactIdentityReconciliationReport?.identityReconciliationVerdict ?? "notExecuted"
+        let artifactIdentityReconciliationReady = artifactIdentityReconciliationExecuted
+            && koharuArtifactIdentityReconciliationReport?.readyForCIManifestComparison == true
+            && koharuArtifactIdentityReconciliationReport?.dryRunOnly == true
+            && koharuArtifactIdentityReconciliationReport?.activeExportAllowed == false
+        let artifactIdentityReconciliationBlocks = allBlockIndexes
+        let artifactIdentityReconciliationStatus: String
+        if !artifactIdentityReconciliationExecuted {
+            artifactIdentityReconciliationStatus = "openIdentityReconciliation"
+        } else if koharuArtifactIdentityReconciliationReport?.dryRunOnly != true
+            || koharuArtifactIdentityReconciliationReport?.activeExportAllowed == true {
+            artifactIdentityReconciliationStatus = "blockedByUnsafeActiveExport"
+        } else if artifactIdentityReconciliationReady {
+            artifactIdentityReconciliationStatus = "readyForCIManifestComparison"
+        } else if artifactIdentityReconciliationVerdict == "appReceiptMissing"
+            || artifactIdentityReconciliationVerdict == "appReceiptIncomplete"
+            || artifactIdentityReconciliationVerdict == "appReceiptNotActiveArtifactIdentityRecorded" {
+            artifactIdentityReconciliationStatus = "blockedByAppReceipt"
+        } else {
+            artifactIdentityReconciliationStatus = "manualCIComparisonRequired"
+        }
+        let artifactIdentityReconciliationBlockers: [String]
+        if artifactIdentityReconciliationExecuted {
+            let gateBlockers = koharuArtifactIdentityReconciliationReport?.gateLedger
+                .filter { $0.status == "warning" || $0.status == "blocked" }
+                .map(\.failureMeans) ?? []
+            let missingKinds = koharuArtifactIdentityReconciliationReport?.missingFileKinds
+                .map { "missingAppReceipt:\($0)" } ?? []
+            let hashMissingKinds = koharuArtifactIdentityReconciliationReport?.hashMissingFileKinds
+                .map { "missingAppReceiptHashOrSize:\($0)" } ?? []
+            artifactIdentityReconciliationBlockers = gateBlockers + missingKinds + hashMissingKinds
+        } else {
+            artifactIdentityReconciliationBlockers = ["koharuArtifactIdentityReconciliationReport not generated before convergence refresh"]
+        }
+        let artifactIdentityReconciliationNextAction: String
+        if artifactIdentityReconciliationReady {
+            artifactIdentityReconciliationNextAction = "compareAppReceiptWithCIManifestIdentitySummary"
+        } else if artifactIdentityReconciliationStatus == "blockedByUnsafeActiveExport" {
+            artifactIdentityReconciliationNextAction = "restoreReportOnlyIdentityReconciliationBoundary"
+        } else {
+            artifactIdentityReconciliationNextAction = "runProbeWithActiveKoharuArtifactsAndAppSideIdentityReceipt"
+        }
         let textBoxByBlock = Dictionary(
             uniqueKeysWithValues: (nativeTextBoxProxyLedgerReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
         )
@@ -19769,6 +20944,29 @@ final class TranslationSessionStore: ObservableObject {
         let nativeByBlock = Dictionary(
             uniqueKeysWithValues: (koharuNativeReplicationScoreboardReport?.blockScorecards ?? []).map { ($0.blockIndex, $0) }
         )
+        let bundleLiteByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuNativeArtifactBundleLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let promotionLiteByBlock = Dictionary(
+            uniqueKeysWithValues: (koharuNativePromotionGateLiteReport?.blockLedgers ?? []).map { ($0.blockIndex, $0) }
+        )
+        let bundleLinkageReviewBlocks = uniqueSorted(koharuNativeArtifactBundleLiteReport?.textBoxSegmentLinkageReviewBlocks ?? [])
+        let promotionLinkageBlockedBlocks = uniqueSorted(koharuNativePromotionGateLiteReport?.textBoxSegmentLinkageBlockedBlocks ?? [])
+        let textBoxSegmentLinkageConvergenceBlocks = uniqueSorted(bundleLinkageReviewBlocks + promotionLinkageBlockedBlocks)
+
+        func textBoxSegmentLinkageBlocked(_ blockIndex: Int) -> Bool {
+            bundleLinkageReviewBlocks.contains(blockIndex) || promotionLinkageBlockedBlocks.contains(blockIndex)
+        }
+
+        func textBoxSegmentLinkageAction(for blockIndex: Int) -> String? {
+            if promotionLinkageBlockedBlocks.contains(blockIndex) {
+                return "auditTextBoxSegmentLinkageBeforePromotion"
+            }
+            if bundleLinkageReviewBlocks.contains(blockIndex) {
+                return "auditTextBoxSegmentLinkageBeforeBundleReadiness"
+            }
+            return nil
+        }
 
         func ocrTextStatus(for block: MangaOverlayProbeBlock) -> String {
             if diagnostics.likelyOCRIssueBlocks.contains(block.index) || block.failureCategory == "ocrInputSuspect" {
@@ -19855,6 +21053,9 @@ final class TranslationSessionStore: ObservableObject {
             segment: MangaSegmentMaskProxyBlockScorecard?,
             dag: MangaKoharuArtifactBlockTrace?
         ) -> String {
+            if textBoxSegmentLinkageBlocked(block.index) {
+                return "TextBoxes"
+            }
             if block.blockPassed && renderLocked(block: block) {
                 return "none"
             }
@@ -19882,7 +21083,16 @@ final class TranslationSessionStore: ObservableObject {
             return block.blockPassed ? "none" : "OcrText"
         }
 
-        func primaryNextAction(firstBlocking: String, modelLimited: Bool, renderLocked: Bool, needsReal: Bool) -> String {
+        func primaryNextAction(
+            firstBlocking: String,
+            modelLimited: Bool,
+            renderLocked: Bool,
+            needsReal: Bool,
+            linkageAction: String?
+        ) -> String {
+            if let linkageAction {
+                return linkageAction
+            }
             if firstBlocking == "none" && renderLocked {
                 return "routeToRenderRegressionLock"
             }
@@ -19901,6 +21111,7 @@ final class TranslationSessionStore: ObservableObject {
             return "keepReportOnly"
         }
 
+        let externalReadyForBlockPath = externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed == true
         var blockPaths: [MangaKoharuArtifactConvergenceBlockPath] = []
         blockPaths.reserveCapacity(blocks.count)
         for block in blocks {
@@ -19909,15 +21120,19 @@ final class TranslationSessionStore: ObservableObject {
             let segment = segmentByBlock[block.index]
             let dag = dagByBlock[block.index]
             let native = nativeByBlock[block.index]
+            let bundle = bundleLiteByBlock[block.index]
+            let promotion = promotionLiteByBlock[block.index]
             let modelLimited = modelFloorLimited(block: block)
             let renderLock = renderLocked(block: block)
+            let linkageAction = textBoxSegmentLinkageAction(for: block.index)
             let realArtifactNeeded = needsRealArtifact(textBox: textBox, bubble: bubble, segment: segment, dag: dag)
             let firstBlocking = firstBlockingArtifact(block: block, textBox: textBox, bubble: bubble, segment: segment, dag: dag)
             let nextAction = primaryNextAction(
                 firstBlocking: firstBlocking,
                 modelLimited: modelLimited,
                 renderLocked: renderLock,
-                needsReal: realArtifactNeeded
+                needsReal: realArtifactNeeded,
+                linkageAction: linkageAction
             )
             var closedWorkItems = [
                 nativeTextBoxProxyLedgerReport == nil ? nil : "WI-native-textbox-artifact-scorecard",
@@ -19925,6 +21140,12 @@ final class TranslationSessionStore: ObservableObject {
                 segmentMaskProxyCoverageScoreboardReport == nil ? nil : "WI-segmentmask-proxy-coverage-scorecard"
             ].compactMap { $0 }
             var openWorkItems: [String] = []
+            if bundleLinkageReviewBlocks.contains(block.index) {
+                openWorkItems.append("WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage")
+            }
+            if promotionLinkageBlockedBlocks.contains(block.index) {
+                openWorkItems.append("WI-koharu-native-promotion-gate-lite-textbox-segment-linkage")
+            }
             if modelLimited { openWorkItems.append("WI-translation-model-floor-comparison") }
             if renderLockStatus == "closedReportOnly" {
                 closedWorkItems.append("WI-render-regression-lock")
@@ -19932,12 +21153,28 @@ final class TranslationSessionStore: ObservableObject {
                 openWorkItems.append("WI-render-regression-lock")
             }
             if realArtifactNeeded { openWorkItems.append("WI-external-artifact-optional-handoff") }
+            if externalReadyForBlockPath && !artifactIdentityReconciliationReady {
+                openWorkItems.append("WI-koharu-artifact-identity-reconciliation")
+            }
             var mustNotPromote: [String] = []
             mustNotPromote.append(contentsOf: textBox?.mustNotPromoteReasons ?? [])
             mustNotPromote.append(contentsOf: bubble?.mustNotPromoteReasons ?? [])
             mustNotPromote.append(contentsOf: segment?.mustNotPromoteReasons ?? [])
+            mustNotPromote.append(contentsOf: promotion?.mustNotPromoteReasons ?? [])
+            if let bundle, bundle.textBoxSegmentLinkageRisk {
+                mustNotPromote.append("bundleTextBoxSegmentLinkage:\(bundle.selectedTextBoxSegmentLinkVerdict)")
+            }
+            if let promotion, promotion.textBoxSegmentLinkagePromotionStatus.hasPrefix("blocked") {
+                mustNotPromote.append("promotionTextBoxSegmentLinkage:\(promotion.textBoxSegmentLinkVerdict)")
+            }
             mustNotPromote.append("convergenceReportDiagnosticOnly")
             mustNotPromote.append("groundTruthUsedOnlyForEvaluationSignals")
+            let convergenceTextBoxStatus = linkageAction != nil
+                ? "textBoxSegmentLinkage:\(bundle?.textBoxSegmentLinkageStatus ?? promotion?.textBoxSegmentLinkagePromotionStatus ?? "blocked")"
+                : (textBox?.qualityStatus ?? "missingUpstreamReport")
+            let convergenceSegmentStatus = linkageAction != nil
+                ? "segmentMaskLinkage:\(bundle?.selectedTextBoxSegmentLinkVerdict ?? promotion?.textBoxSegmentLinkVerdict ?? "unknown")"
+                : (segment?.coverageStatus ?? "missingUpstreamReport")
 
             blockPaths.append(
                 MangaKoharuArtifactConvergenceBlockPath(
@@ -19948,14 +21185,14 @@ final class TranslationSessionStore: ObservableObject {
                     groundTruthMatch: block.groundTruthMatch,
                     bestGroundTruthType: block.bestGroundTruthType,
                     ocrSimilarityForEvaluation: block.ocrGroundTruthSimilarity,
-                    textBoxStatus: textBox?.qualityStatus ?? "missingUpstreamReport",
+                    textBoxStatus: convergenceTextBoxStatus,
                     bubbleMaskStatus: bubble?.assignmentStatus ?? "missingUpstreamReport",
-                    segmentMaskStatus: segment?.coverageStatus ?? "missingUpstreamReport",
+                    segmentMaskStatus: convergenceSegmentStatus,
                     ocrTextStatus: ocrTextStatus(for: block),
                     translationStatus: translationStatus(for: block),
                     renderStatus: renderStatus(for: block),
                     firstBlockingArtifact: firstBlocking,
-                    primaryStructuralBottleneck: native?.primaryBottleneck ?? dag?.firstBlockingReason ?? firstBlocking,
+                    primaryStructuralBottleneck: linkageAction == nil ? (native?.primaryBottleneck ?? dag?.firstBlockingReason ?? firstBlocking) : "textBoxSegmentMaskLinkage",
                     modelFloorLimited: modelLimited,
                     renderLocked: renderLock,
                     needsRealArtifact: realArtifactNeeded,
@@ -19971,7 +21208,11 @@ final class TranslationSessionStore: ObservableObject {
                         signal("segmentCoverageStatus", segment?.coverageStatus ?? "nil", source: "segmentMaskProxyCoverageScoreboardReport.blockScorecards"),
                         signal("segmentCleanupStatus", segment?.cleanupStatus ?? "nil", source: "segmentMaskProxyCoverageScoreboardReport.blockScorecards"),
                         signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic"),
-                        signal("renderStatus", renderStatus(for: block), source: "blocks.renderDiagnostics")
+                        signal("renderStatus", renderStatus(for: block), source: "blocks.renderDiagnostics"),
+                        signal("bundleTextBoxSegmentLinkVerdict", bundle?.selectedTextBoxSegmentLinkVerdict ?? "nil", source: "koharuNativeArtifactBundleLiteReport.blockLedgers"),
+                        signal("bundleTextBoxSegmentLinkageStatus", bundle?.textBoxSegmentLinkageStatus ?? "nil", source: "koharuNativeArtifactBundleLiteReport.blockLedgers"),
+                        signal("promotionTextBoxSegmentLinkVerdict", promotion?.textBoxSegmentLinkVerdict ?? "nil", source: "koharuNativePromotionGateLiteReport.blockLedgers"),
+                        signal("promotionTextBoxSegmentLinkageStatus", promotion?.textBoxSegmentLinkagePromotionStatus ?? "nil", source: "koharuNativePromotionGateLiteReport.blockLedgers")
                     ],
                     evaluationSignals: [
                         signal("groundTruthMatch", block.groundTruthMatch, source: "blocks.groundTruthMatch", decision: false, evaluation: true),
@@ -19997,6 +21238,147 @@ final class TranslationSessionStore: ObservableObject {
         let segmentNeedBlocks = uniqueSorted(segmentMaskProxyCoverageScoreboardReport?.needsRealSegmentMaskBlocks ?? [])
         let externalReady = externalArtifactReadinessReport?.externalTextBoxesShadowOCRAllowed == true
         let externalMissing = externalArtifactReadinessReport?.readinessVerdict ?? "manifestMissing"
+        let externalContractDryRunReady = nativeArtifactContractDryRunExecuted
+            && nativeArtifactContractDryRunVerdict == "activeArtifactsReadyForShadowOCR"
+            && koharuNativeArtifactContractDryRunReport?.dryRunOnly == true
+            && koharuNativeArtifactContractDryRunReport?.activeExportAllowed == false
+        let externalIdentityReconciliationReady = artifactIdentityReconciliationReady
+        let externalShadowOCRExecuted = externalTextBoxShadowOCRReport?.executed == true
+        let externalShadowCandidateCount = externalTextBoxShadowOCRReport?.candidateCount ?? 0
+        let externalShadowOCRExecutedCount = externalTextBoxShadowOCRReport?.ocrExecutedCount ?? 0
+        let externalShadowOCRSucceededCount = externalTextBoxShadowOCRReport?.ocrSucceededCount ?? 0
+        let externalShadowSkippedBlocks = uniqueSorted(externalTextBoxShadowOCRReport?.skippedBlocks ?? [])
+        let externalShadowCoverageBlockedBlocks: [Int]
+        if !externalReady {
+            externalShadowCoverageBlockedBlocks = []
+        } else if !externalContractDryRunReady || !externalIdentityReconciliationReady || externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted || externalShadowCandidateCount <= 0 || externalShadowOCRExecutedCount <= 0 || externalShadowOCRSucceededCount <= 0 {
+            externalShadowCoverageBlockedBlocks = allBlockIndexes
+        } else {
+            externalShadowCoverageBlockedBlocks = []
+        }
+        let externalShadowCoverageNextAction: String
+        if !externalReady {
+            externalShadowCoverageNextAction = "provideRealKoharuArtifactsBeforeShadowOCRCoverageGate"
+        } else if !externalContractDryRunReady {
+            externalShadowCoverageNextAction = nativeArtifactContractDryRunNextAction
+        } else if !externalIdentityReconciliationReady {
+            externalShadowCoverageNextAction = artifactIdentityReconciliationNextAction
+        } else if externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted {
+            externalShadowCoverageNextAction = "runExternalTextBoxShadowOCR"
+        } else if externalShadowCandidateCount <= 0 {
+            externalShadowCoverageNextAction = "fixExternalTextBoxBlockAlignment"
+        } else if externalShadowOCRExecutedCount <= 0 {
+            externalShadowCoverageNextAction = "runExternalTextBoxShadowOCRCandidates"
+        } else if externalShadowOCRSucceededCount <= 0 {
+            externalShadowCoverageNextAction = "fixExternalTextBoxCropOCRInputs"
+        } else {
+            externalShadowCoverageNextAction = "keepExternalTextBoxShadowOCRReportOnly"
+        }
+        let externalShadowCoverageWorkItemStatus: String
+        if !externalReady {
+            externalShadowCoverageWorkItemStatus = "notEvaluatedUntilExternalArtifactReady"
+        } else if !externalContractDryRunReady {
+            externalShadowCoverageWorkItemStatus = "blockedByNativeArtifactContractDryRun"
+        } else if !externalIdentityReconciliationReady {
+            externalShadowCoverageWorkItemStatus = "blockedByArtifactIdentityReconciliation"
+        } else if externalTextBoxShadowOCRReport == nil {
+            externalShadowCoverageWorkItemStatus = "blockedByMissingExternalShadowOCRReport"
+        } else if !externalShadowOCRExecuted {
+            externalShadowCoverageWorkItemStatus = "blockedByExternalShadowOCRNotExecuted"
+        } else if externalShadowCandidateCount <= 0 {
+            externalShadowCoverageWorkItemStatus = "blockedByNoExternalShadowCandidates"
+        } else if externalShadowOCRExecutedCount <= 0 {
+            externalShadowCoverageWorkItemStatus = "blockedByNoExternalShadowOCRExecutions"
+        } else if externalShadowOCRSucceededCount <= 0 {
+            externalShadowCoverageWorkItemStatus = "blockedByNoExternalShadowOCRSuccess"
+        } else {
+            externalShadowCoverageWorkItemStatus = "closedReportOnly"
+        }
+        let externalShadowCoverageBlockers = sortedUniqueStrings(
+            (externalReady ? [] : ["real external TextBox artifacts are not ready for shadow OCR coverage evaluation"])
+            + (externalReady && !externalContractDryRunReady ? ["koharuNativeArtifactContractDryRunReport must be activeArtifactsReadyForShadowOCR with dryRunOnly=true and activeExportAllowed=false before external shadow OCR coverage can close"] : [])
+            + (externalReady && externalContractDryRunReady && !externalIdentityReconciliationReady ? ["koharuArtifactIdentityReconciliationReport must expose App receipt size/SHA256 rows for CI manifest comparison before external shadow OCR coverage can close"] : [])
+            + (externalTextBoxShadowOCRReport == nil && externalReady ? ["externalTextBoxShadowOCRReport missing despite ready external artifacts"] : [])
+            + (externalTextBoxShadowOCRReport != nil && externalReady && !externalShadowOCRExecuted ? ["externalTextBoxShadowOCRReport.executed is false despite ready external artifacts"] : [])
+            + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowCandidateCount <= 0 ? ["external TextBoxes did not produce any block-matched shadow OCR candidates"] : [])
+            + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowOCRExecutedCount <= 0 ? ["external TextBox shadow OCR did not execute any candidate crops"] : [])
+            + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowOCRSucceededCount <= 0 ? ["external TextBox shadow OCR did not produce any successful crop OCR results"] : [])
+        )
+        let externalShadowCoverageGateStatus = externalReady
+            ? (externalShadowCoverageBlockedBlocks.isEmpty ? "passed" : "blocked")
+            : "open"
+        let externalShadowCoverageDecisionSignals = [
+            signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"),
+            signal("activeArtifactsDirectory", externalArtifactReadinessReport.map { String($0.activeArtifactsDirectory) } ?? "nil", source: "externalArtifactReadinessReport"),
+            signal("contractExampleOnly", externalArtifactReadinessReport.map { String($0.contractExampleOnly) } ?? "nil", source: "externalArtifactReadinessReport"),
+            signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport"),
+            signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"),
+            signal("contractDryRunReadyForShadowOCR", String(externalContractDryRunReady), source: "koharuNativeArtifactContractDryRunReport"),
+            signal("appSideArtifactIdentityVerdict", koharuNativeArtifactContractDryRunReport?.appSideArtifactIdentityVerdict ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
+            signal("appSideArtifactIdentityFilesPresent", koharuNativeArtifactContractDryRunReport.map { String($0.appSideArtifactIdentityFilesPresent) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
+            signal("appSideArtifactIdentityHashesPresent", koharuNativeArtifactContractDryRunReport.map { String($0.appSideArtifactIdentityHashesPresent) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
+            signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport"),
+            signal("readyForCIManifestComparison", String(externalIdentityReconciliationReady), source: "koharuArtifactIdentityReconciliationReport"),
+            signal("manualCIComparisonRequired", koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"),
+            signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
+            signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"),
+            signal("shadowExecuted", String(externalShadowOCRExecuted), source: "externalTextBoxShadowOCRReport"),
+            signal("candidateCount", String(externalShadowCandidateCount), source: "externalTextBoxShadowOCRReport"),
+            signal("ocrExecutedCount", String(externalShadowOCRExecutedCount), source: "externalTextBoxShadowOCRReport"),
+            signal("ocrSucceededCount", String(externalShadowOCRSucceededCount), source: "externalTextBoxShadowOCRReport"),
+            signal("skippedBlocks", joined(externalShadowSkippedBlocks), source: "externalTextBoxShadowOCRReport"),
+            signal("skippedBlockCount", String(externalShadowSkippedBlocks.count), source: "externalTextBoxShadowOCRReport")
+        ]
+        let externalOrientationVerdict = externalTextBoxShadowOCRReport?.orientationReadinessVerdict ?? "notEvaluated"
+        let externalOrientationExecutedBlocks = uniqueSorted(externalTextBoxShadowOCRReport?.orientationShadowPathExecutedBlocks ?? [])
+        let externalOrientationPartialBlocks = uniqueSorted(externalTextBoxShadowOCRReport?.orientationShadowPathPartialBlocks ?? [])
+        let externalOrientationNotExecutedBlocks = uniqueSorted(externalTextBoxShadowOCRReport?.orientationShadowPathNotExecutedBlocks ?? [])
+        let externalOrientationUnsupportedBlocks = uniqueSorted(externalTextBoxShadowOCRReport?.orientationUnsupportedBlocks ?? [])
+        let externalOrientationBlockedBlocks = uniqueSorted(externalOrientationNotExecutedBlocks + externalOrientationUnsupportedBlocks)
+        let externalOrientationUnsupportedBreakdown = joinedBreakdown(externalTextBoxShadowOCRReport?.orientationUnsupportedReasonBreakdown ?? [:])
+        let externalOrientationNextAction: String
+        if !externalReady {
+            externalOrientationNextAction = "provideRealKoharuArtifactsBeforeOrientationGate"
+        } else if !externalShadowCoverageBlockedBlocks.isEmpty {
+            externalOrientationNextAction = externalShadowCoverageNextAction
+        } else if !externalOrientationNotExecutedBlocks.isEmpty {
+            externalOrientationNextAction = "executeExternalTextBoxOrientationShadowPath"
+        } else if !externalOrientationUnsupportedBlocks.isEmpty {
+            externalOrientationNextAction = "implementLinePolygonWarpOrArbitraryRotationDeskew"
+        } else {
+            externalOrientationNextAction = "keepExternalTextBoxOrientationShadowReportOnly"
+        }
+        let externalOrientationWorkItemStatus: String
+        if externalTextBoxShadowOCRReport == nil {
+            externalOrientationWorkItemStatus = "notEvaluated"
+        } else if !externalReady {
+            externalOrientationWorkItemStatus = "notEvaluatedUntilExternalArtifactReady"
+        } else if !externalShadowCoverageBlockedBlocks.isEmpty {
+            externalOrientationWorkItemStatus = "blockedByExternalShadowOCRCoverage"
+        } else if externalOrientationBlockedBlocks.isEmpty {
+            externalOrientationWorkItemStatus = "closedReportOnly"
+        } else if !externalOrientationUnsupportedBlocks.isEmpty && externalOrientationNotExecutedBlocks.isEmpty {
+            externalOrientationWorkItemStatus = "blockedByUnsupportedOrientationPath"
+        } else {
+            externalOrientationWorkItemStatus = "blockedByMissingOrientationShadowPath"
+        }
+        let externalOrientationBlockers = sortedUniqueStrings(
+            (externalReady ? [] : ["real external TextBox artifacts are not ready for orientation gate evaluation"])
+            + (externalShadowCoverageBlockedBlocks.isEmpty ? [] : ["external TextBox shadow OCR must execute and produce at least one block-matched candidate before orientation gate can close"])
+            + (externalOrientationNotExecutedBlocks.isEmpty ? [] : ["external TextBox declares vertical direction or near-right-angle rotation but orientation-aware rotation OCR is not executed"])
+            + (externalOrientationUnsupportedBlocks.isEmpty ? [] : ["external TextBox declares linePolygons or arbitrary rotation that still needs warp/deskew support"])
+        )
+        let externalOrientationGateStatus = externalReady
+            ? (externalShadowCoverageBlockedBlocks.isEmpty && externalOrientationBlockedBlocks.isEmpty ? "passed" : "blocked")
+            : "open"
+        let externalOrientationDecisionSignals = [
+            signal("orientationReadinessVerdict", externalOrientationVerdict, source: "externalTextBoxShadowOCRReport"),
+            signal("orientationShadowPathExecutedBlocks", joined(externalOrientationExecutedBlocks), source: "externalTextBoxShadowOCRReport"),
+            signal("orientationShadowPathPartialBlocks", joined(externalOrientationPartialBlocks), source: "externalTextBoxShadowOCRReport"),
+            signal("orientationShadowPathNotExecutedBlocks", joined(externalOrientationNotExecutedBlocks), source: "externalTextBoxShadowOCRReport"),
+            signal("orientationUnsupportedBlocks", joined(externalOrientationUnsupportedBlocks), source: "externalTextBoxShadowOCRReport"),
+            signal("orientationUnsupportedReasonBreakdown", externalOrientationUnsupportedBreakdown, source: "externalTextBoxShadowOCRReport")
+        ]
 
         func stage(
             _ name: String,
@@ -20046,15 +21428,15 @@ final class TranslationSessionStore: ObservableObject {
         let stages: [MangaKoharuArtifactConvergenceStage] = [
             stage("SourceImage", artifact: "SourceImage", current: "test/1.png bundle image", status: "nativeReady", proxyOnly: false, realAvailable: true, reports: ["configuration"], affected: allBlockIndexes, firstBlocking: "none", closed: [], blocked: [], nextAction: "keepReportOnly", decisions: [signal("sourceImage", "test/1.png", source: "probeConfiguration")], mustNot: ["doNotChangeSourceImageForThisReport"]),
             stage("ContentCrop", artifact: "ContentCrop", current: "configured browser UI crop", status: "nativeReady", proxyOnly: false, realAvailable: true, reports: ["configuration"], affected: allBlockIndexes, firstBlocking: "none", closed: [], blocked: [], nextAction: "keepReportOnly", decisions: [signal("currentBlockSource", "fusedWholePageBubble", source: "configuration.currentBlockSource")], mustNot: ["doNotChangeCropRatiosForThisReport"]),
-            stage("TextBoxes", artifact: "TextBoxes", current: "Native TextBox proxy ledger", status: textBoxStopBlocks.isEmpty ? "proxyStableReportOnly" : "stopLocalTuning", proxyOnly: true, realAvailable: false, reports: ["nativeTextBoxProxyLedgerReport"], affected: uniqueSorted(textBoxStopBlocks + diagnostics.likelyOCRIssueBlocks), firstBlocking: textBoxStopBlocks.isEmpty ? "none" : "TextBoxes", closed: nativeTextBoxProxyLedgerReport == nil ? [] : ["WI-native-textbox-artifact-scorecard"], blocked: textBoxStopBlocks.isEmpty ? [] : ["WI-native-textbox-artifact-scorecard"], nextAction: textBoxStopBlocks.isEmpty ? "closeNativeProxyScoreboards" : "stopLocalCropLineDeskewTuning", decisions: [signal("stoplistBlocks", joined(textBoxStopBlocks), source: "nativeTextBoxProxyLedgerReport")], evaluations: evaluationSignals, mustNot: ["doNotPromoteTextBoxProxyAsRealKoharuArtifact"]),
+            stage("TextBoxes", artifact: "TextBoxes", current: "Native TextBox proxy ledger + TextBox SegmentMask linkage", status: textBoxSegmentLinkageConvergenceBlocks.isEmpty ? (textBoxStopBlocks.isEmpty ? "proxyStableReportOnly" : "stopLocalTuning") : "textBoxSegmentLinkageBlocked", proxyOnly: true, realAvailable: false, reports: ["nativeTextBoxProxyLedgerReport", "koharuNativeArtifactBundleLiteReport", "koharuNativePromotionGateLiteReport"], affected: uniqueSorted(textBoxStopBlocks + diagnostics.likelyOCRIssueBlocks + textBoxSegmentLinkageConvergenceBlocks), firstBlocking: textBoxStopBlocks.isEmpty && textBoxSegmentLinkageConvergenceBlocks.isEmpty ? "none" : "TextBoxes", closed: nativeTextBoxProxyLedgerReport == nil ? [] : ["WI-native-textbox-artifact-scorecard"], blocked: sortedUniqueStrings((textBoxStopBlocks.isEmpty ? [] : ["WI-native-textbox-artifact-scorecard"]) + (bundleLinkageReviewBlocks.isEmpty ? [] : ["WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage"]) + (promotionLinkageBlockedBlocks.isEmpty ? [] : ["WI-koharu-native-promotion-gate-lite-textbox-segment-linkage"])), nextAction: textBoxSegmentLinkageConvergenceBlocks.isEmpty ? (textBoxStopBlocks.isEmpty ? "closeNativeProxyScoreboards" : "stopLocalCropLineDeskewTuning") : "auditTextBoxSegmentLinkageBeforePromotion", decisions: [signal("stoplistBlocks", joined(textBoxStopBlocks), source: "nativeTextBoxProxyLedgerReport"), signal("bundleTextBoxSegmentLinkageReviewBlocks", joined(bundleLinkageReviewBlocks), source: "koharuNativeArtifactBundleLiteReport"), signal("promotionTextBoxSegmentLinkageBlockedBlocks", joined(promotionLinkageBlockedBlocks), source: "koharuNativePromotionGateLiteReport")], evaluations: evaluationSignals, mustNot: ["doNotPromoteTextBoxProxyAsRealKoharuArtifact", "doNotTreatWeakTextBoxSegmentLinkageAsReady"]),
             stage("BubbleMask", artifact: "BubbleMask", current: "BubbleMask assignment and split proxy scoreboard", status: bubbleNeedBlocks.isEmpty ? "proxyStableReportOnly" : "requiresRealArtifact", proxyOnly: true, realAvailable: false, reports: ["bubbleMaskAssignmentSplitScoreboardReport"], affected: bubbleNeedBlocks, firstBlocking: bubbleNeedBlocks.isEmpty ? "none" : "BubbleMask", closed: bubbleMaskAssignmentSplitScoreboardReport == nil ? [] : ["WI-bubblemask-assignment-split-scorecard"], blocked: bubbleNeedBlocks.isEmpty ? [] : ["WI-external-artifact-optional-handoff"], nextAction: bubbleNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", decisions: [signal("needsRealBubbleMaskBlocks", joined(bubbleNeedBlocks), source: "bubbleMaskAssignmentSplitScoreboardReport")], mustNot: ["doNotUseProxyMaskAsRealBubbleMask"]),
-            stage("SegmentMask", artifact: "SegmentMask", current: "Glyph mask SegmentMask proxy scoreboard", status: segmentNeedBlocks.isEmpty ? "proxyStableReportOnly" : "requiresRealArtifact", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport"], affected: segmentNeedBlocks, firstBlocking: segmentNeedBlocks.isEmpty ? "none" : "SegmentMask", closed: segmentMaskProxyCoverageScoreboardReport == nil ? [] : ["WI-segmentmask-proxy-coverage-scorecard"], blocked: segmentNeedBlocks.isEmpty ? [] : ["WI-external-artifact-optional-handoff"], nextAction: segmentNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport"), signal("needsRealSegmentMaskBlocks", joined(segmentNeedBlocks), source: "segmentMaskProxyCoverageScoreboardReport")], mustNot: ["doNotUseGlyphMaskProxyAsRealSegmentMask"]),
+            stage("SegmentMask", artifact: "SegmentMask", current: "Glyph mask SegmentMask proxy scoreboard + TextBox linkage gate", status: textBoxSegmentLinkageConvergenceBlocks.isEmpty ? (segmentNeedBlocks.isEmpty ? "proxyStableReportOnly" : "requiresRealArtifact") : "textBoxSegmentLinkageBlocked", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport", "koharuNativeSegmentMaskRefinementLiteReport", "koharuNativeArtifactBundleLiteReport", "koharuNativePromotionGateLiteReport"], affected: uniqueSorted(segmentNeedBlocks + textBoxSegmentLinkageConvergenceBlocks), firstBlocking: segmentNeedBlocks.isEmpty && textBoxSegmentLinkageConvergenceBlocks.isEmpty ? "none" : "SegmentMask", closed: segmentMaskProxyCoverageScoreboardReport == nil ? [] : ["WI-segmentmask-proxy-coverage-scorecard"], blocked: sortedUniqueStrings((segmentNeedBlocks.isEmpty ? [] : ["WI-external-artifact-optional-handoff"]) + (bundleLinkageReviewBlocks.isEmpty ? [] : ["WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage"]) + (promotionLinkageBlockedBlocks.isEmpty ? [] : ["WI-koharu-native-promotion-gate-lite-textbox-segment-linkage"])), nextAction: textBoxSegmentLinkageConvergenceBlocks.isEmpty ? (segmentNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact") : "auditTextBoxSegmentLinkageBeforePromotion", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport"), signal("needsRealSegmentMaskBlocks", joined(segmentNeedBlocks), source: "segmentMaskProxyCoverageScoreboardReport"), signal("bundleTextBoxSegmentLinkageReviewBlocks", joined(bundleLinkageReviewBlocks), source: "koharuNativeArtifactBundleLiteReport"), signal("promotionTextBoxSegmentLinkageBlockedBlocks", joined(promotionLinkageBlockedBlocks), source: "koharuNativePromotionGateLiteReport")], mustNot: ["doNotUseGlyphMaskProxyAsRealSegmentMask", "doNotPromoteSegmentMaskWhenTextBoxLinkageIsWeak"]),
             stage("OcrText", artifact: "OcrText", current: "fused whole-page + bubble-first OCR", status: diagnostics.likelyOCRIssueBlocks.isEmpty ? "proxyStableReportOnly" : "proxyBlocked", proxyOnly: false, realAvailable: true, reports: ["diagnostics", "nativeTextBoxProxyLedgerReport"], affected: diagnostics.likelyOCRIssueBlocks, firstBlocking: diagnostics.likelyOCRIssueBlocks.isEmpty ? "none" : "OcrText", closed: [], blocked: textBoxStopBlocks.isEmpty ? [] : ["WI-native-textbox-artifact-scorecard"], nextAction: textBoxStopBlocks.isEmpty ? "keepReportOnly" : "stopLocalCropLineDeskewTuning", decisions: [signal("likelyOCRIssueBlocks", joined(diagnostics.likelyOCRIssueBlocks), source: "diagnostics"), signal("textBoxStoplistBlocks", joined(textBoxStopBlocks), source: "nativeTextBoxProxyLedgerReport")], evaluations: evaluationSignals, mustNot: ["doNotUseGroundTruthToSelectOCRCandidate"]),
             stage("Translations", artifact: "Translations", current: "Local GGUF deterministic block translation plus v1.29 clean text floor comparison", status: translationFloorExecuted ? translationFloorStatus : (modelFloorLimitedBlocks.isEmpty ? "proxyStableReportOnly" : "modelLimited"), proxyOnly: false, realAvailable: true, reports: ["cleanTextDiagnostic", "translationModelFloorComparisonReport", "diagnostics"], affected: modelFloorLimitedBlocks, firstBlocking: modelFloorLimitedBlocks.isEmpty ? "none" : "Translations", closed: translationFloorStatus == "closedReportOnly" ? ["WI-translation-model-floor-comparison"] : [], blocked: translationFloorStatus == "closedReportOnly" ? [] : ["WI-translation-model-floor-comparison"], nextAction: translationFloorNextAction, decisions: [signal("cleanTextPassRate", cleanPassRate.formatted(.number.precision(.fractionLength(4))), source: "cleanTextDiagnostic"), signal("translationFloorVerdict", translationFloorVerdict, source: "translationModelFloorComparisonReport"), signal("translationFailureBreakdown", diagnostics.translationFailureBreakdown.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: ","), source: "diagnostics")], mustNot: ["doNotChangePromptOrModelInConvergenceReport"]),
             stage("Inpainted", artifact: "Inpainted", current: "glyph erase/background fill proxy", status: "proxyStableReportOnly", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport", "blocks.backgroundFill"], affected: segmentMaskProxyCoverageScoreboardReport?.backgroundFillAppliedBlocks ?? [], firstBlocking: "none", closed: segmentMaskProxyCoverageScoreboardReport == nil ? [] : ["WI-segmentmask-proxy-coverage-scorecard"], blocked: [], nextAction: "keepReportOnly", decisions: [signal("inpaintingImplemented", "false", source: "segmentMaskProxyCoverageScoreboardReport.cleanupLedgers")], mustNot: ["doNotImplementInpaintingInThisReport"]),
             stage("RenderedSprites", artifact: "RenderedSprites", current: "safeLayoutRect overlay text renderer plus v1.30 render lock", status: renderLockStatus == "closedReportOnly" ? "renderLockedReportOnly" : "renderIssueDetected", proxyOnly: true, realAvailable: false, reports: ["blocks.renderDiagnostics", "koharuRenderRegressionLockReport"], affected: renderLockStatus == "closedReportOnly" ? renderRegressionLockBlocks : renderIssueBlocks, firstBlocking: renderLockStatus == "closedReportOnly" ? "none" : "RenderedSprites", closed: renderLockStatus == "closedReportOnly" ? ["WI-render-regression-lock"] : [], blocked: renderLockStatus == "closedReportOnly" ? [] : ["WI-render-regression-lock"], nextAction: renderLockNextAction, decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics"), signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport")], mustNot: ["doNotChangeOverlayRendererInConvergenceReport", "doNotPromoteAITRANSRendererAsKoharuRenderedSprites"]),
             stage("FinalRender", artifact: "FinalRender", current: "debug boxes and translated overlay PNG plus v1.30 output file ledger", status: renderLockStatus == "closedReportOnly" ? "finalRenderLockedReportOnly" : "renderIssueDetected", proxyOnly: true, realAvailable: false, reports: ["outputFiles", "blocks.renderDiagnostics", "koharuRenderRegressionLockReport"], affected: renderLockStatus == "closedReportOnly" ? renderRegressionLockBlocks : renderIssueBlocks, firstBlocking: renderLockStatus == "closedReportOnly" ? "none" : "FinalRender", closed: renderLockStatus == "closedReportOnly" ? ["WI-render-regression-lock"] : [], blocked: renderLockStatus == "closedReportOnly" ? [] : ["WI-render-regression-lock"], nextAction: renderLockNextAction, decisions: [signal("renderTextTruncatedBlocks", joined(diagnostics.renderTextTruncatedBlocks), source: "diagnostics"), signal("renderCollisionUnresolvedBlocks", joined(diagnostics.renderCollisionUnresolvedBlocks), source: "diagnostics"), signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport")], mustNot: ["doNotChangePNGRenderingInConvergenceReport", "doNotTreatOutputFileLedgerAsPixelProof"]),
-            stage("ExternalArtifacts", artifact: "ExternalArtifacts", current: "test/koharu_artifacts readiness gate", status: externalReady ? "nativeReady" : "externalOptionalMissing", proxyOnly: false, realAvailable: externalReady, reports: ["externalArtifactReadinessReport", "externalTextBoxShadowOCRReport"], affected: needsRealArtifactBlocks, firstBlocking: externalReady ? "none" : "ExternalArtifacts", closed: [], blocked: ["WI-external-artifact-optional-handoff"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"), signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport")], mustNot: ["doNotCreateOrCopyActiveExternalArtifact"])
+            stage("ExternalArtifacts", artifact: "ExternalArtifacts", current: "test/koharu_artifacts readiness gate + identity reconciliation + shadow OCR coverage + orientation-aware shadow OCR ledger", status: externalReady ? (!externalShadowCoverageBlockedBlocks.isEmpty ? "externalShadowOCRCoverageBlocked" : (externalOrientationBlockedBlocks.isEmpty ? "nativeReady" : "orientationShadowPathBlocked")) : "externalOptionalMissing", proxyOnly: false, realAvailable: externalReady, reports: ["externalArtifactReadinessReport", "externalTextBoxShadowOCRReport", "koharuNativeArtifactContractDryRunReport", "koharuArtifactIdentityReconciliationReport"], affected: uniqueSorted(needsRealArtifactBlocks + externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), firstBlocking: externalReady ? (externalShadowCoverageBlockedBlocks.isEmpty && externalOrientationBlockedBlocks.isEmpty ? "none" : "ExternalArtifacts") : "ExternalArtifacts", closed: [], blocked: externalReady ? sortedUniqueStrings((externalShadowCoverageBlockedBlocks.isEmpty ? [] : ["WI-external-textbox-shadow-ocr-coverage"]) + (externalOrientationBlockedBlocks.isEmpty ? [] : ["WI-external-textbox-orientation-shadow-path"]) + (externalIdentityReconciliationReady ? [] : ["WI-koharu-artifact-identity-reconciliation"])) : ["WI-external-artifact-optional-handoff", "WI-koharu-native-artifact-contract-dry-run", "WI-koharu-artifact-identity-reconciliation"], nextAction: externalReady ? (!externalShadowCoverageBlockedBlocks.isEmpty ? externalShadowCoverageNextAction : externalOrientationNextAction) : nativeArtifactContractDryRunNextAction, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"), signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport"), signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport")] + externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals, mustNot: ["doNotCreateOrCopyActiveExternalArtifact", "doNotTreatReadyArtifactAsClosedWithoutAppReceiptCIIdentityReconciliation", "doNotTreatReadyArtifactAsClosedWithoutShadowOCRCandidates", "doNotPromoteVerticalOrLinePolygonTextBoxWithoutCompleteOrientationShadowPath"])
         ]
 
         func workItem(
@@ -20093,7 +21475,7 @@ final class TranslationSessionStore: ObservableObject {
             )
         }
 
-        let workItemLedger = [
+        let workItemLedger: [MangaKoharuArtifactConvergenceWorkItemLedger] = [
             workItem("WI-native-textbox-artifact-scorecard", title: "Native TextBox proxy quality ledger", status: nativeTextBoxProxyLedgerReport == nil ? "manualReviewOnly" : (textBoxStopBlocks.isEmpty ? "closedReportOnly" : "closedStoplist"), sourceReport: "nativeTextBoxProxyLedgerReport", stages: ["TextBoxes", "OcrText"], blocks: uniqueSorted(textBoxStopBlocks + diagnostics.likelyOCRIssueBlocks), version: nativeTextBoxProxyLedgerReport == nil ? nil : "v1.25", blockers: textBoxStopBlocks.isEmpty ? [] : ["local crop/line/deskew tuning is stoplisted"], nextAction: "stopLocalCropLineDeskewTuning", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(nativeTextBoxProxyLedgerReport != nil), source: "nativeTextBoxProxyLedgerReport")], evaluations: evaluationSignals),
             workItem("WI-bubblemask-assignment-split-scorecard", title: "BubbleMask assignment and split scoreboard", status: bubbleMaskAssignmentSplitScoreboardReport == nil ? "manualReviewOnly" : "closedReportOnly", sourceReport: "bubbleMaskAssignmentSplitScoreboardReport", stages: ["BubbleMask"], blocks: bubbleNeedBlocks, version: bubbleMaskAssignmentSplitScoreboardReport == nil ? nil : "v1.26", blockers: bubbleNeedBlocks.isEmpty ? [] : ["real BubbleMask artifact needed for promotion"], nextAction: bubbleNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(bubbleMaskAssignmentSplitScoreboardReport != nil), source: "bubbleMaskAssignmentSplitScoreboardReport")]),
             workItem("WI-segmentmask-proxy-coverage-scorecard", title: "SegmentMask proxy coverage and cleanup ledger", status: segmentMaskProxyCoverageScoreboardReport == nil ? "manualReviewOnly" : "closedReportOnly", sourceReport: "segmentMaskProxyCoverageScoreboardReport", stages: ["SegmentMask", "Inpainted"], blocks: segmentNeedBlocks, version: segmentMaskProxyCoverageScoreboardReport == nil ? nil : "v1.27", blockers: segmentNeedBlocks.isEmpty ? [] : ["real SegmentMask artifact needed for promotion"], nextAction: segmentNeedBlocks.isEmpty ? "closeNativeProxyScoreboards" : "collectRealKoharuArtifact", ciFast: true, full: false, external: false, decisions: [signal("reportAvailable", String(segmentMaskProxyCoverageScoreboardReport != nil), source: "segmentMaskProxyCoverageScoreboardReport"), signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
@@ -20114,20 +21496,28 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-koharu-native-bubblemask-instance-lite", title: "Koharu Native BubbleMask instance-lite", status: nativeBubbleMaskInstanceLiteStatus, sourceReport: nativeBubbleMaskInstanceLiteExecuted ? "koharuNativeBubbleMaskInstanceLiteReport" : "koharuArtifactConvergenceReport", stages: ["SourceImage", "BubbleMask", "BubbleIndex", "RenderedSprites"], blocks: nativeBubbleMaskInstanceLiteBlocks, version: nativeBubbleMaskInstanceLiteExecuted ? "v1.43" : nil, blockers: nativeBubbleMaskInstanceLiteBlockers, nextAction: nativeBubbleMaskInstanceLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("instanceLiteVerdict", nativeBubbleMaskInstanceLiteVerdict, source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("blockLedgerCount", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("proxyNotRealKoharuBubbleMask", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.proxyNotRealKoharuBubbleMask) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
             workItem("WI-koharu-native-segmentmask-refinement-lite", title: "Koharu Native SegmentMask refinement-lite", status: nativeSegmentMaskRefinementLiteStatus, sourceReport: nativeSegmentMaskRefinementLiteExecuted ? "koharuNativeSegmentMaskRefinementLiteReport" : "koharuArtifactConvergenceReport", stages: ["SourceImage", "TextBoxes", "SegmentMask", "BubbleMask", "RenderedSprites"], blocks: nativeSegmentMaskRefinementLiteBlocks, version: nativeSegmentMaskRefinementLiteExecuted ? "v1.44" : nil, blockers: nativeSegmentMaskRefinementLiteBlockers, nextAction: nativeSegmentMaskRefinementLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("refinementLiteVerdict", nativeSegmentMaskRefinementLiteVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("blockLedgerCount", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("proxyNotRealKoharuSegmentMask", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
             workItem("WI-koharu-native-artifact-bundle-lite", title: "Koharu Native Artifact bundle-lite consistency closure", status: nativeArtifactBundleLiteStatus, sourceReport: nativeArtifactBundleLiteExecuted ? "koharuNativeArtifactBundleLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "BubbleMask", "SegmentMask", "OcrText", "Translations", "RenderedSprites", "FinalRender"], blocks: nativeArtifactBundleLiteBlocks, version: nativeArtifactBundleLiteExecuted ? "v1.45" : nil, blockers: nativeArtifactBundleLiteBlockers, nextAction: nativeArtifactBundleLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("bundleLiteVerdict", nativeArtifactBundleLiteVerdict, source: "koharuNativeArtifactBundleLiteReport"), signal("bundleLedgerCount", koharuNativeArtifactBundleLiteReport.map { String($0.bundleLedgerCount) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("consistencyEdgeCount", koharuNativeArtifactBundleLiteReport.map { String($0.consistencyEdgeCount) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("nativeBundleLite", koharuNativeArtifactBundleLiteReport.map { String($0.nativeBundleLite) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport")]),
+            workItem("WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage", title: "Koharu Native Artifact bundle-lite TextBox SegmentMask linkage", status: nativeArtifactBundleLiteExecuted ? (bundleLinkageReviewBlocks.isEmpty ? "closedReportOnly" : "blockedByWeakTextBoxSegmentLinkage") : "openNativeArtifactBundleLite", sourceReport: nativeArtifactBundleLiteExecuted ? "koharuNativeArtifactBundleLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "SegmentMask"], blocks: bundleLinkageReviewBlocks, version: nativeArtifactBundleLiteExecuted ? "v1.58" : nil, blockers: bundleLinkageReviewBlocks.isEmpty ? [] : ["bundle readiness blocked by weak/fallback/rejected/wrong-bubble TextBox SegmentMask linkage"], nextAction: bundleLinkageReviewBlocks.isEmpty ? "keepNativeArtifactBundleLiteReportOnly" : "auditTextBoxSegmentLinkageBeforeBundleReadiness", ciFast: true, full: true, external: false, decisions: [signal("textBoxSegmentLinkageReviewBlocks", joined(bundleLinkageReviewBlocks), source: "koharuNativeArtifactBundleLiteReport"), signal("textBoxSegmentLinkBreakdown", joinedBreakdown(koharuNativeArtifactBundleLiteReport?.textBoxSegmentLinkBreakdown ?? [:]), source: "koharuNativeArtifactBundleLiteReport")]),
             workItem("WI-koharu-native-promotion-gate-lite", title: "Koharu Native Promotion Gate-Lite", status: nativePromotionGateLiteStatus, sourceReport: nativePromotionGateLiteExecuted ? "koharuNativePromotionGateLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "BubbleMask", "SegmentMask", "OcrText", "Translations", "RenderedSprites", "FinalRender", "ExternalArtifacts"], blocks: nativePromotionGateLiteBlocks, version: nativePromotionGateLiteExecuted ? "v1.46" : nil, blockers: nativePromotionGateLiteBlockers, nextAction: nativePromotionGateLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("promotionVerdict", nativePromotionGateLiteVerdict, source: "koharuNativePromotionGateLiteReport"), signal("blockLedgerCount", koharuNativePromotionGateLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("stageGateCount", koharuNativePromotionGateLiteReport.map { String($0.stageGateCount) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("candidateExportPreviewCount", koharuNativePromotionGateLiteReport.map { String($0.candidateExportPreviewCount) } ?? "nil", source: "koharuNativePromotionGateLiteReport")]),
-            workItem("WI-koharu-native-shadow-artifact-export-lite", title: "Koharu Native shadow artifact export-lite", status: nativeShadowArtifactExportLiteStatus, sourceReport: nativeShadowArtifactExportLiteExecuted ? "koharuNativeShadowArtifactExportLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "BubbleMask", "SegmentMask", "OcrText", "Translations", "RenderedSprites", "FinalRender"], blocks: nativeShadowArtifactExportLiteBlocks, version: nativeShadowArtifactExportLiteExecuted ? "v1.47" : nil, blockers: nativeShadowArtifactExportLiteBlockers, nextAction: nativeShadowArtifactExportLiteNextAction, ciFast: true, full: true, external: false, decisions: [signal("exportVerdict", nativeShadowArtifactExportLiteVerdict, source: "koharuNativeShadowArtifactExportLiteReport"), signal("exportedFileCount", koharuNativeShadowArtifactExportLiteReport.map { String($0.exportedFileCount) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport"), signal("blockLedgerCount", koharuNativeShadowArtifactExportLiteReport.map { String($0.blockLedgerCount) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport"), signal("activeArtifactsWritten", koharuNativeShadowArtifactExportLiteReport.map { String($0.activeArtifactsWritten) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport")]),
+            workItem("WI-koharu-native-promotion-gate-lite-textbox-segment-linkage", title: "Koharu Native Promotion Gate-Lite TextBox SegmentMask linkage", status: nativePromotionGateLiteExecuted ? (promotionLinkageBlockedBlocks.isEmpty ? "closedReportOnly" : "blockedByWeakTextBoxSegmentLinkage") : "openNativePromotionGateLite", sourceReport: nativePromotionGateLiteExecuted ? "koharuNativePromotionGateLiteReport" : "koharuArtifactConvergenceReport", stages: ["TextBoxes", "SegmentMask", "ExternalArtifacts"], blocks: promotionLinkageBlockedBlocks, version: nativePromotionGateLiteExecuted ? "v1.58" : nil, blockers: promotionLinkageBlockedBlocks.isEmpty ? [] : ["promotion must not export or preview SegmentMask readiness while TextBox SegmentMask linkage is weak/fallback/rejected/wrong-bubble"], nextAction: promotionLinkageBlockedBlocks.isEmpty ? "keepNativePromotionGateLiteReportOnly" : "auditTextBoxSegmentLinkageBeforePromotion", ciFast: true, full: true, external: false, decisions: [signal("textBoxSegmentLinkageBlockedBlocks", joined(promotionLinkageBlockedBlocks), source: "koharuNativePromotionGateLiteReport"), signal("textBoxSegmentLinkBreakdown", joinedBreakdown(koharuNativePromotionGateLiteReport?.textBoxSegmentLinkBreakdown ?? [:]), source: "koharuNativePromotionGateLiteReport")]),
+            workItem("WI-koharu-native-artifact-contract-dry-run", title: "Koharu Native Artifact contract dry-run", status: nativeArtifactContractDryRunStatus, sourceReport: nativeArtifactContractDryRunExecuted ? "koharuNativeArtifactContractDryRunReport" : "koharuArtifactConvergenceReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: nativeArtifactContractDryRunBlocks, version: nativeArtifactContractDryRunExecuted ? "v1.47" : nil, blockers: nativeArtifactContractDryRunBlockers, nextAction: nativeArtifactContractDryRunNextAction, ciFast: true, full: false, external: true, decisions: [signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("requiredFileCount", koharuNativeArtifactContractDryRunReport.map { String($0.requiredFileCount) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("contractGateCount", koharuNativeArtifactContractDryRunReport.map { String($0.contractGateCount) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport")]),
+            workItem("WI-koharu-artifact-identity-reconciliation", title: "Koharu artifact identity reconciliation", status: artifactIdentityReconciliationStatus, sourceReport: artifactIdentityReconciliationExecuted ? "koharuArtifactIdentityReconciliationReport" : "koharuArtifactConvergenceReport", stages: ["ExternalArtifacts", "CIReview"], blocks: artifactIdentityReconciliationBlocks, version: artifactIdentityReconciliationExecuted ? "v1.68" : nil, blockers: artifactIdentityReconciliationBlockers, nextAction: artifactIdentityReconciliationNextAction, ciFast: true, full: true, external: true, decisions: [signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport"), signal("readyForCIManifestComparison", koharuArtifactIdentityReconciliationReport.map { String($0.readyForCIManifestComparison) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("manualCIComparisonRequired", koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("fileRowCount", koharuArtifactIdentityReconciliationReport.map { String($0.fileRowCount) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport")]),
+            workItem("WI-external-textbox-shadow-ocr-coverage", title: "External TextBox shadow OCR coverage", status: externalShadowCoverageWorkItemStatus, sourceReport: "externalTextBoxShadowOCRReport", stages: ["ExternalArtifacts", "TextBoxes", "OcrText"], blocks: externalShadowCoverageBlockedBlocks, version: externalTextBoxShadowOCRReport == nil ? nil : "v1.65", blockers: externalShadowCoverageBlockers, nextAction: externalShadowCoverageNextAction, ciFast: true, full: true, external: true, decisions: externalShadowCoverageDecisionSignals),
+            workItem("WI-external-textbox-orientation-shadow-path", title: "External TextBox orientation shadow path", status: externalOrientationWorkItemStatus, sourceReport: "externalTextBoxShadowOCRReport", stages: ["ExternalArtifacts", "TextBoxes", "OcrText"], blocks: uniqueSorted(externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), version: externalTextBoxShadowOCRReport == nil ? nil : "v1.65", blockers: externalOrientationBlockers, nextAction: externalOrientationNextAction, ciFast: true, full: true, external: true, decisions: externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
         ]
 
-        let closedWorkItems = workItemLedger.filter { $0.status == "closedReportOnly" || $0.status == "closedStoplist" || $0.status == "closedShadowExportOnly" }.map(\.workItemID).sorted()
-        let openWorkItems = workItemLedger.filter {
-            $0.status.hasPrefix("open")
-                || $0.status == "blockedByMissingRealArtifact"
-                || $0.status == "blockedByMissingNativeLiteInputs"
-                || $0.status == "blockedByInvalidCoordinates"
-                || $0.status == "blockedByProxyBoundary"
-        }.map(\.workItemID).sorted()
-        let stopWorkItems = workItemLedger.filter { $0.status == "closedStoplist" }.map(\.workItemID).sorted()
+        let closedWorkItems = workItemLedger
+            .filter { item in item.status == "closedReportOnly" || item.status == "closedStoplist" }
+            .map { item in item.workItemID }
+            .sorted()
+        let openWorkItems = workItemLedger
+            .filter { item in item.status.hasPrefix("open") || item.status.hasPrefix("blocked") }
+            .map { item in item.workItemID }
+            .sorted()
+        let stopWorkItems = workItemLedger
+            .filter { item in item.status == "closedStoplist" }
+            .map { item in item.workItemID }
+            .sorted()
         let missingReports = [
             koharuNativeReplicationScoreboardReport == nil ? "koharuNativeReplicationScoreboardReport" : nil,
             nativeTextBoxProxyLedgerReport == nil ? "nativeTextBoxProxyLedgerReport" : nil,
@@ -20148,7 +21538,8 @@ final class TranslationSessionStore: ObservableObject {
             koharuNativeSegmentMaskRefinementLiteReport == nil ? "koharuNativeSegmentMaskRefinementLiteReport" : nil,
             koharuNativeArtifactBundleLiteReport == nil ? "koharuNativeArtifactBundleLiteReport" : nil,
             koharuNativePromotionGateLiteReport == nil ? "koharuNativePromotionGateLiteReport" : nil,
-            koharuNativeShadowArtifactExportLiteReport == nil ? "koharuNativeShadowArtifactExportLiteReport" : nil
+            koharuNativeArtifactContractDryRunReport == nil ? "koharuNativeArtifactContractDryRunReport" : nil,
+            koharuArtifactIdentityReconciliationReport == nil ? "koharuArtifactIdentityReconciliationReport" : nil
         ].compactMap { $0 }
 
         func gate(
@@ -20176,7 +21567,7 @@ final class TranslationSessionStore: ObservableObject {
             )
         }
 
-        let gateLedger = [
+        let gateLedger: [MangaKoharuArtifactConvergenceGate] = [
             gate("G-convergence-no-main-flow-mutation", name: "No main flow mutation", scope: "report", status: "passed", threshold: "wouldChangeMainFlow=false", affected: [], failureMeans: "convergence report changes OCR, translation, layout, rendering, cleanup, or block pass state", action: "revertBehavioralChange", decisions: [signal("wouldChangeMainFlow", "false", source: "koharuArtifactConvergenceReport")]),
             gate("G-convergence-no-ground-truth-decision", name: "No ground truth decision", scope: "report", status: "passed", threshold: "groundTruthUsedForDecision=false", affected: [], failureMeans: "ground truth influences firstBlockingArtifact, nextAction, or work item state", action: "moveGroundTruthToEvaluationSignalsOnly", decisions: [signal("groundTruthUsedForDecision", "false", source: "koharuArtifactConvergenceReport")]),
             gate("G-textbox-workitem-closed-report-only", name: "TextBox work item closed report-only", scope: "TextBoxes", status: nativeTextBoxProxyLedgerReport == nil ? "warning" : "passed", threshold: "nativeTextBoxProxyLedgerReport present", affected: textBoxStopBlocks, failureMeans: "v1.25 TextBox ledger is missing from convergence inputs", action: "restoreNativeTextBoxProxyLedgerReport", decisions: [signal("reportAvailable", String(nativeTextBoxProxyLedgerReport != nil), source: "nativeTextBoxProxyLedgerReport")]),
@@ -20199,11 +21590,16 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-native-bubblemask-instance-lite-executed", name: "Koharu Native BubbleMask instance-lite executed", scope: "BubbleMask", status: nativeBubbleMaskInstanceLiteExecuted ? (nativeBubbleMaskInstanceLiteStatus == "closedReportOnly" || nativeBubbleMaskInstanceLiteStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeBubbleMaskInstanceLiteReport.enabled=true with source pixels and no main-flow mutation", affected: nativeBubbleMaskInstanceLiteBlocks, failureMeans: "Native BubbleMask instance-lite report is missing, mutates OCR/translation/render/layout state, routes using ground truth, or is promoted as real Koharu BubbleMask", action: nativeBubbleMaskInstanceLiteNextAction, decisions: [signal("instanceLiteVerdict", nativeBubbleMaskInstanceLiteVerdict, source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("groundTruthUsedForDecision", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport"), signal("proxyNotRealKoharuBubbleMask", koharuNativeBubbleMaskInstanceLiteReport.map { String($0.proxyNotRealKoharuBubbleMask) } ?? "nil", source: "koharuNativeBubbleMaskInstanceLiteReport")]),
             gate("G-koharu-native-segmentmask-refinement-lite-executed", name: "Koharu Native SegmentMask refinement-lite executed", scope: "SegmentMask", status: nativeSegmentMaskRefinementLiteExecuted ? (nativeSegmentMaskRefinementLiteStatus == "closedReportOnly" || nativeSegmentMaskRefinementLiteStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeSegmentMaskRefinementLiteReport.enabled=true with TextBox-constrained source pixels and no main-flow mutation", affected: nativeSegmentMaskRefinementLiteBlocks, failureMeans: "Native SegmentMask refinement-lite report is missing, mutates OCR/translation/render/glyph fill/layout state, routes using ground truth, or is promoted as real Koharu SegmentMask", action: nativeSegmentMaskRefinementLiteNextAction, decisions: [signal("refinementLiteVerdict", nativeSegmentMaskRefinementLiteVerdict, source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("groundTruthUsedForDecision", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport"), signal("proxyNotRealKoharuSegmentMask", koharuNativeSegmentMaskRefinementLiteReport.map { String($0.proxyNotRealKoharuSegmentMask) } ?? "nil", source: "koharuNativeSegmentMaskRefinementLiteReport")]),
             gate("G-koharu-native-artifact-bundle-lite-executed", name: "Koharu Native Artifact bundle-lite executed", scope: "TextBoxes/BubbleMask/SegmentMask/OcrText/Render", status: nativeArtifactBundleLiteExecuted ? (nativeArtifactBundleLiteStatus == "closedReportOnly" || nativeArtifactBundleLiteStatus == "modelFloorBlocked" || nativeArtifactBundleLiteStatus == "renderLockedReportOnly" ? "passed" : "warning") : "open", threshold: "koharuNativeArtifactBundleLiteReport.enabled=true with bundleLedgerCount==totalBlocksDetected and no main-flow mutation", affected: nativeArtifactBundleLiteBlocks, failureMeans: "Native Artifact bundle-lite report is missing, emits empty bundle ledgers, mutates main OCR/translation/render state, routes using ground truth, or promotes proxy artifacts as real Koharu outputs", action: nativeArtifactBundleLiteNextAction, decisions: [signal("bundleLiteVerdict", nativeArtifactBundleLiteVerdict, source: "koharuNativeArtifactBundleLiteReport"), signal("groundTruthUsedForDecision", koharuNativeArtifactBundleLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("wouldChangeMainFlow", koharuNativeArtifactBundleLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport"), signal("nativeBundleLite", koharuNativeArtifactBundleLiteReport.map { String($0.nativeBundleLite) } ?? "nil", source: "koharuNativeArtifactBundleLiteReport")]),
+            gate("G-koharu-convergence-bundle-lite-textbox-segment-linkage", name: "Convergence bundle-lite TextBox SegmentMask linkage", scope: "TextBoxes->SegmentMask", status: bundleLinkageReviewBlocks.isEmpty ? "passed" : "warning", threshold: "bundle-lite linkage review blocks are surfaced in convergence work items and block paths", affected: bundleLinkageReviewBlocks, failureMeans: "convergence hides weak/fallback/rejected/wrong-bubble TextBox SegmentMask linkage from bundle readiness", action: bundleLinkageReviewBlocks.isEmpty ? "keepNativeArtifactBundleLiteReportOnly" : "auditTextBoxSegmentLinkageBeforeBundleReadiness", decisions: [signal("textBoxSegmentLinkageReviewBlocks", joined(bundleLinkageReviewBlocks), source: "koharuNativeArtifactBundleLiteReport"), signal("textBoxSegmentLinkBreakdown", joinedBreakdown(koharuNativeArtifactBundleLiteReport?.textBoxSegmentLinkBreakdown ?? [:]), source: "koharuNativeArtifactBundleLiteReport")]),
             gate("G-koharu-native-promotion-gate-lite-executed", name: "Koharu Native Promotion Gate-Lite executed", scope: "TextBoxes/BubbleMask/SegmentMask/OcrText/Translation/Render/ExternalArtifacts", status: nativePromotionGateLiteExecuted ? (nativePromotionGateLiteStatus == "closedReportOnly" || nativePromotionGateLiteStatus == "modelFloorBlocked" || nativePromotionGateLiteStatus == "renderLockedReportOnly" || nativePromotionGateLiteStatus == "closedStoplist" ? "passed" : "warning") : "open", threshold: "koharuNativePromotionGateLiteReport.enabled=true with blockLedgerCount==totalBlocksDetected, stageGateCount>=8, preview-only candidates, and no main-flow mutation", affected: nativePromotionGateLiteBlocks, failureMeans: "Native Promotion Gate-Lite report is missing, emits empty ledgers, mutates main OCR/translation/render state, routes using ground truth, or exports active artifacts", action: nativePromotionGateLiteNextAction, decisions: [signal("promotionVerdict", nativePromotionGateLiteVerdict, source: "koharuNativePromotionGateLiteReport"), signal("groundTruthUsedForDecision", koharuNativePromotionGateLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("wouldChangeMainFlow", koharuNativePromotionGateLiteReport.map { String($0.wouldChangeMainFlow) } ?? "nil", source: "koharuNativePromotionGateLiteReport"), signal("nativePromotionPreviewOnly", koharuNativePromotionGateLiteReport.map { String($0.nativePromotionPreviewOnly) } ?? "nil", source: "koharuNativePromotionGateLiteReport")]),
-            gate("G-koharu-native-shadow-artifact-export-lite-executed", name: "Koharu Native shadow artifact export-lite executed", scope: "TextBoxes/BubbleMask/SegmentMask/OcrText/Translation/Render", status: nativeShadowArtifactExportLiteExecuted ? (nativeShadowArtifactExportLiteStatus == "closedShadowExportOnly" || nativeShadowArtifactExportLiteStatus == "blockedByProxyBoundary" || nativeShadowArtifactExportLiteStatus == "blockedByInvalidCoordinates" ? "passed" : "warning") : "open", threshold: "koharuNativeShadowArtifactExportLiteReport.enabled=true with five non-active JSON files, blockLedgerCount==totalBlocksDetected, and no active artifact write", affected: nativeShadowArtifactExportLiteBlocks, failureMeans: "Native shadow artifact export-lite is missing, mutates main OCR/translation/render state, uses ground truth for decisions, or writes active test/koharu_artifacts", action: nativeShadowArtifactExportLiteNextAction, decisions: [signal("exportVerdict", nativeShadowArtifactExportLiteVerdict, source: "koharuNativeShadowArtifactExportLiteReport"), signal("groundTruthUsedForDecision", koharuNativeShadowArtifactExportLiteReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport"), signal("activeArtifactsWritten", koharuNativeShadowArtifactExportLiteReport.map { String($0.activeArtifactsWritten) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport"), signal("readyForActiveArtifact", koharuNativeShadowArtifactExportLiteReport.map { String($0.readyForActiveArtifact) } ?? "nil", source: "koharuNativeShadowArtifactExportLiteReport")]),
+            gate("G-koharu-convergence-promotion-lite-textbox-segment-linkage", name: "Convergence promotion-lite TextBox SegmentMask linkage", scope: "TextBoxes->SegmentMask", status: promotionLinkageBlockedBlocks.isEmpty ? "passed" : "warning", threshold: "promotion linkage blocked blocks are surfaced in convergence work items and block paths", affected: promotionLinkageBlockedBlocks, failureMeans: "convergence hides SegmentMask promotion blockers caused by weak/fallback/rejected/wrong-bubble TextBox linkage", action: promotionLinkageBlockedBlocks.isEmpty ? "keepNativePromotionGateLiteReportOnly" : "auditTextBoxSegmentLinkageBeforePromotion", decisions: [signal("textBoxSegmentLinkageBlockedBlocks", joined(promotionLinkageBlockedBlocks), source: "koharuNativePromotionGateLiteReport"), signal("textBoxSegmentLinkBreakdown", joinedBreakdown(koharuNativePromotionGateLiteReport?.textBoxSegmentLinkBreakdown ?? [:]), source: "koharuNativePromotionGateLiteReport")]),
+            gate("G-koharu-native-artifact-contract-dry-run-executed", name: "Koharu Native Artifact contract dry-run executed", scope: "ExternalArtifacts", status: nativeArtifactContractDryRunExecuted ? (nativeArtifactContractDryRunStatus == "blockedByUnsafeActiveExport" ? "blocked" : (nativeArtifactContractDryRunStatus == "blockedByMissingRealArtifact" ? "warning" : "passed")) : "open", threshold: "koharuNativeArtifactContractDryRunReport.enabled=true with requiredFileCount>=4, contractGateCount>=6, dryRunOnly=true, activeExportAllowed=false, and no active artifact mutation", affected: nativeArtifactContractDryRunBlocks, failureMeans: "Native Artifact contract dry-run is missing, unsafe for active export, or hides missing real Koharu artifact files", action: nativeArtifactContractDryRunNextAction, decisions: [signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("groundTruthUsedForDecision", koharuNativeArtifactContractDryRunReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport")]),
+            gate("G-koharu-artifact-identity-reconciliation-ready", name: "Koharu artifact identity reconciliation ready", scope: "ExternalArtifacts/CIReview", status: artifactIdentityReconciliationReady ? "passed" : (externalReady ? "warning" : "open"), threshold: "koharuArtifactIdentityReconciliationReport.enabled=true with SourceImage plus four artifact file rows ready for ci-artifact-manifest.koharuArtifactValidationIdentitySummary size/SHA256 comparison", affected: artifactIdentityReconciliationBlocks, failureMeans: "convergence treats injected artifact handoff as closed without a machine-readable App receipt to CI manifest identity reconciliation ledger", action: artifactIdentityReconciliationNextAction, decisions: [signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport"), signal("readyForCIManifestComparison", koharuArtifactIdentityReconciliationReport.map { String($0.readyForCIManifestComparison) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("manualCIComparisonRequired", koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport")]),
+            gate("G-external-textbox-shadow-ocr-coverage", name: "External TextBox shadow OCR coverage", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalShadowCoverageGateStatus, threshold: "ready external artifacts must produce an executed externalTextBoxShadowOCRReport with candidateCount > 0, ocrExecutedCount > 0, and ocrSucceededCount > 0 before ExternalArtifacts can be considered closed", affected: externalShadowCoverageBlockedBlocks, failureMeans: "convergence treats ready artifact files as an OCR coverage closure even though shadow OCR did not run, produced no block-matched candidates, or produced no successful crop OCR results", action: externalShadowCoverageNextAction, decisions: externalShadowCoverageDecisionSignals),
+            gate("G-external-textbox-orientation-shadow-path", name: "External TextBox orientation shadow path", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalOrientationGateStatus, threshold: "vertical, rotated, arbitrary-rotation, or line-polygon external TextBoxes must not be treated as fully closed until external shadow OCR coverage exists, orientation OCR is executed, and unsupported orientation features are surfaced", affected: uniqueSorted(externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), failureMeans: "convergence hides missing coverage or unsupported external TextBox orientation-aware shadow OCR work", action: externalOrientationNextAction, decisions: externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),
-            gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.27 dependency reports available", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides missing upstream report", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport")])
+            gate("G-ci-fast-report-availability", name: "CI fast report availability", scope: "reportInputs", status: missingReports.isEmpty ? "passed" : "warning", threshold: "v1.24-v1.70 convergence dependency reports available, including model floor, render lock, resolver/router/request, native replay, BubbleIndex/DistanceField/seam/render fit, detector-lite, native-lite artifact bundle/promotion, contract dry-run, identity reconciliation, shadow OCR coverage closure, and App/CI handoff strict closure", affected: allBlockIndexes, failureMeans: "convergence report crashes or hides a missing upstream report required by the current dependency ledger", action: "keepGeneratingWithWarningAndRestoreMissingReport", decisions: [signal("missingReportCount", String(missingReports.count), source: "koharuArtifactConvergenceReport"), signal("missingReports", missingReports.joined(separator: ","), source: "koharuArtifactConvergenceReport"), signal("requiredReportSpan", "v1.24-v1.70", source: "koharuArtifactConvergenceReport")])
         ]
 
         let referenceReports = [
@@ -20234,18 +21630,19 @@ final class TranslationSessionStore: ObservableObject {
             "koharuNativeSegmentMaskRefinementLiteReport",
             "koharuNativeArtifactBundleLiteReport",
             "koharuNativePromotionGateLiteReport",
-            "koharuNativeShadowArtifactExportLiteReport",
+            "koharuNativeArtifactContractDryRunReport",
+            "koharuArtifactIdentityReconciliationReport",
             "diagnostics",
             "blocks"
         ]
         var notes = [
-            "koharuArtifactConvergenceReport summarizes v1.22-v1.27 reports into a canonical Koharu artifact convergence matrix.",
-            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, v1.44 native SegmentMask refinement-lite, v1.45 native Artifact bundle-lite, v1.46 native promotion gate-lite, and v1.47 native shadow artifact export-lite report-only ledgers into a next-step decision ledger.",
+            "koharuArtifactConvergenceReport summarizes v1.22-v1.70 reports into a canonical Koharu artifact convergence matrix.",
+            "It closes the v1.25 TextBox, v1.26 BubbleMask, v1.27 SegmentMask, v1.29 translation model floor, v1.30 render regression lock, v1.31 resolver shadow DAG, v1.32 work order router, v1.33 external request packet, v1.34 native replay matrix, v1.35 BubbleIndex shadow ledger, v1.36 DistanceField safe-area, v1.37 Bubble adjacency seam, v1.38 RenderSprite fit planner, v1.39 Native TextBox detector-lite, v1.40 detector-lite shadow OCR, v1.41 detector-lite refinement, v1.42 detector-lite closed-loop router, v1.43 native BubbleMask instance-lite, v1.44 native SegmentMask refinement-lite, v1.45 native Artifact bundle-lite, v1.46 native promotion gate-lite, v1.47 native artifact contract dry-run, v1.58 TextBox SegmentMask linkage convergence gates, v1.68 artifact identity reconciliation, v1.69 shadow OCR coverage closure, and v1.70 App/CI artifact handoff strict closure into a next-step decision ledger.",
             "Ground truth metrics are stored only in evaluationSignals and do not drive firstBlockingArtifact, primaryNextAction, work item status, or gate status.",
             "This report does not add OCR or LLM calls and does not change OCR, translation input, blockPassed, failureCategory, safeLayoutRect, glyphMaskFillRects, background fill behavior, overlay rendering, cleanup, candidate selection, currentBlockSource, or metrics history."
         ]
         if !missingReports.isEmpty {
-            notes.append("Missing upstream reports in this run: \(missingReports.joined(separator: ",")). Report still generated with G-ci-fast-report-availability warning.")
+            notes.append("Missing upstream reports in this run: \(missingReports.joined(separator: ",")). Report still generated with G-ci-fast-report-availability warning across the current v1.24-v1.70 dependency set.")
         }
 
         return MangaKoharuArtifactConvergenceReport(
@@ -20266,7 +21663,7 @@ final class TranslationSessionStore: ObservableObject {
             convergenceStatusBreakdown: countBy(stages.map(\.convergenceStatus)),
             firstBlockingArtifactBreakdown: countBy(blockPaths.map(\.firstBlockingArtifact)),
             primaryNextActionBreakdown: countBy(blockPaths.map(\.primaryNextAction)),
-            workItemStatusBreakdown: countBy(workItemLedger.map(\.status)),
+            workItemStatusBreakdown: countBy(workItemLedger.map { item in item.status }),
             closedWorkItems: closedWorkItems,
             openWorkItems: openWorkItems,
             stopWorkItems: stopWorkItems,
@@ -21148,22 +22545,7 @@ final class TranslationSessionStore: ObservableObject {
             .compactMap { $0 }
             .filter { !$0.isEmpty }
             .map { URL(fileURLWithPath: $0).lastPathComponent }
-        let outputDirectory = [outputFiles.debugBoxesImage, outputFiles.overlayImage, outputFiles.ocrProbeTextFile]
-            .compactMap { $0 }
-            .first { !$0.isEmpty }
-            .map { URL(fileURLWithPath: $0).deletingLastPathComponent() }
-        let shadowFiles = [
-            "1.native_manifest.json",
-            "1.native_textboxes.json",
-            "1.native_bubbles.json",
-            "1.native_segment_mask.json",
-            "1.native_artifact_bundle.json"
-        ].map { "koharu_native_shadow_artifacts/\($0)" }
-            .filter { relativePath in
-                guard let outputDirectory else { return false }
-                return FileManager.default.fileExists(atPath: outputDirectory.appendingPathComponent(relativePath).path)
-            }
-        return Array(Set(fileNames + shadowFiles)).sorted()
+        return Array(Set(fileNames)).sorted()
     }
 
     private static func mangaOCRProbeNotes(

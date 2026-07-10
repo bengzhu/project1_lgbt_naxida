@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -132,6 +133,90 @@ struct SpeechCapabilityPanel: View {
     }
 }
 
+struct SpeechRecognitionRunSummaryPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        let summary = store.speechRecognitionRunSummary
+        if summary.hasContent {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Label("识别质量", systemImage: "sparkles")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Text(summary.mode.displayName)
+                        .font(.caption.bold())
+                        .foregroundStyle(summary.failureMessage == nil ? Color.appAccent : Color.danger)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.08), in: Capsule())
+                }
+
+                Text(summary.inputName)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
+                    SpeechMetricTile(title: "语言", value: summary.localeIdentifier, icon: "globe.asia.australia.fill")
+                    SpeechMetricTile(title: "离线", value: summary.requiresOnDeviceRecognition ? "强制本机" : "自动", icon: "wifi.slash")
+                    SpeechMetricTile(title: "耗时", value: elapsedText(summary.elapsedSeconds), icon: "timer")
+                    SpeechMetricTile(title: "词数", value: "\(summary.wordCount)", icon: "textformat.abc")
+                    SpeechMetricTile(title: "片段", value: "\(summary.segmentCount)", icon: "waveform.path.ecg")
+                    SpeechMetricTile(title: "置信", value: confidenceText(summary.averageConfidence), icon: "gauge.with.dots.needle.bottom.50percent")
+                }
+
+                if let failureMessage = summary.failureMessage {
+                    Label(failureMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color.danger)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if !summary.transcriptPreview.isEmpty {
+                    Text(summary.transcriptPreview)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.78))
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func elapsedText(_ elapsedSeconds: TimeInterval) -> String {
+        "\(Int(elapsedSeconds.rounded()))s"
+    }
+
+    private func confidenceText(_ confidence: Double?) -> String {
+        guard let confidence else { return "采集中" }
+        return "\(Int((confidence * 100).rounded()))%"
+    }
+}
+
+private struct SpeechMetricTile: View {
+    let title: String
+    let value: String
+    let icon: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Label(title, systemImage: icon)
+                .font(.caption.bold())
+                .foregroundStyle(.white.opacity(0.54))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+            Text(value)
+                .font(.body.bold())
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.74)
+        }
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 struct AudioRecognitionPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
 
@@ -164,6 +249,8 @@ struct AudioRecognitionPanel: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
+
+            SpeechRecognitionRunSummaryPanel()
         }
         .padding(12)
         .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
@@ -174,6 +261,7 @@ struct AudioRecognitionPanel: View {
         case .idle: "waveform"
         case .checking: "magnifyingglass"
         case .recognizing: "waveform.path"
+        case .translating: "character.bubble.fill"
         case .translated: "checkmark.circle.fill"
         case .failed: "xmark.octagon.fill"
         }
@@ -182,7 +270,7 @@ struct AudioRecognitionPanel: View {
     private var tint: Color {
         switch store.audioRecognitionState {
         case .idle: .white.opacity(0.58)
-        case .checking, .recognizing: Color.warning
+        case .checking, .recognizing, .translating: Color.warning
         case .translated: Color.success
         case .failed: Color.danger
         }
@@ -193,6 +281,7 @@ struct AudioRecognitionPanel: View {
         case .idle: "待选择"
         case .checking: "检查中"
         case .recognizing: "识别中"
+        case .translating: "翻译中"
         case .translated: "已翻译"
         case .failed: "失败"
         }

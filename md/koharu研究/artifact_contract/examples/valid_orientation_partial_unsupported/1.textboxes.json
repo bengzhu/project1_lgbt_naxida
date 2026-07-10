@@ -1,0 +1,31 @@
+{
+  "textBoxes": [
+    {
+      "id": "orientation-partial-vertical-linepolygon",
+      "bbox": [96, 144, 142, 164],
+      "confidence": 0.84,
+      "detector": "manual-contract-fixture",
+      "sourceDirection": "vertical-rl",
+      "rotationDegrees": 90,
+      "linePolygons": [
+        [[110, 156], [202, 156], [202, 292], [110, 292]]
+      ],
+      "notes": [
+        "legal metadata",
+        "expected orientation partial because bounded rotation is supported but line polygon warp is not"
+      ]
+    },
+    {
+      "id": "orientation-unsupported-arbitrary-rotation",
+      "bbox": [278, 394, 146, 58],
+      "confidence": 0.76,
+      "detector": "manual-contract-fixture",
+      "sourceDirection": "horizontal",
+      "rotationDegrees": 13,
+      "notes": [
+        "legal metadata",
+        "expected arbitraryRotationUnsupported because current shadow path only supports near right-angle rotations"
+      ]
+    }
+  ]
+}
