@@ -41,7 +41,7 @@ struct HistoryView: View {
                     AppEmptyState(title: "暂无历史", detail: "归档当前会话后，记录会保存在本机。", systemImage: "clock")
                 } else if filteredSessions.isEmpty {
                     ContentUnavailableView.search
-                        .foregroundStyle(.appTextSecondary)
+                        .foregroundStyle(Color.appTextSecondary)
                         .frame(minHeight: 240)
                 } else {
                     LazyVStack(spacing: 0) {
@@ -155,21 +155,21 @@ private struct HistorySessionRow: View {
             Button(action: open) {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
                     HStack {
-                        Text(record.title).font(.body.bold()).foregroundStyle(.appTextPrimary)
+                        Text(record.title).font(.body.bold()).foregroundStyle(Color.appTextPrimary)
                         Spacer(minLength: AppTheme.Spacing.control)
                         Text(record.updatedAt, format: .dateTime.month().day().hour().minute())
                             .font(.caption.monospacedDigit())
-                            .foregroundStyle(.appTextSecondary)
+                            .foregroundStyle(Color.appTextSecondary)
                     }
                     Label(
                         "\(record.sourceLanguage.shortName) -> \(record.targetLanguage.shortName) · \(record.transcript.count) 条",
                         systemImage: record.selectedEngine.systemImage
                     )
                     .font(.subheadline)
-                    .foregroundStyle(.appTextSecondary)
+                    .foregroundStyle(Color.appTextSecondary)
                     Text(record.transcript.first?.translation ?? record.summary.title)
                         .font(.subheadline)
-                        .foregroundStyle(.appTextPrimary)
+                        .foregroundStyle(Color.appTextPrimary)
                         .lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)

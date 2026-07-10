@@ -75,15 +75,15 @@ private struct SettingsLink: View {
         NavigationLink(value: destination) {
             HStack(spacing: AppTheme.Spacing.control) {
                 Image(systemName: systemImage)
-                    .foregroundStyle(.appAccent)
+                    .foregroundStyle(Color.appAccent)
                     .frame(width: 28)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.body.bold()).foregroundStyle(.appTextPrimary)
-                    Text(detail).font(.subheadline).foregroundStyle(.appTextSecondary).lineLimit(2)
+                    Text(title).font(.body.bold()).foregroundStyle(Color.appTextPrimary)
+                    Text(detail).font(.subheadline).foregroundStyle(Color.appTextSecondary).lineLimit(2)
                 }
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.right").foregroundStyle(.appTextSecondary).accessibilityHidden(true)
+                Image(systemName: "chevron.right").foregroundStyle(Color.appTextSecondary).accessibilityHidden(true)
             }
             .frame(minHeight: 58)
             .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
@@ -118,7 +118,7 @@ private struct DeveloperAccessSection: View {
                 AppPrimaryButton(title: "开启开发者模式", systemImage: "lock.open.fill") {
                     if store.unlockDeveloperMode(password: password) { password = "" }
                 }
-                Text(store.developerModeMessage).font(.subheadline).foregroundStyle(.appTextSecondary)
+                Text(store.developerModeMessage).font(.subheadline).foregroundStyle(Color.appTextSecondary)
             }
         }
         .appSurface()

@@ -341,15 +341,15 @@ private struct ImageTranslationBlockRow: View {
         HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
             Text(block.confidence, format: .percent.precision(.fractionLength(0)))
                 .font(.caption.monospacedDigit().bold())
-                .foregroundStyle(.appAccent)
+                .foregroundStyle(Color.appAccent)
                 .frame(width: 46, alignment: .leading)
             VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
                 Text(block.translation.isEmpty ? "等待翻译" : block.translation)
                     .font(.subheadline.bold())
-                    .foregroundStyle(.appTextPrimary)
+                    .foregroundStyle(Color.appTextPrimary)
                 Text(block.original)
                     .font(.caption)
-                    .foregroundStyle(.appTextSecondary)
+                    .foregroundStyle(Color.appTextSecondary)
             }
             Spacer(minLength: 0)
         }

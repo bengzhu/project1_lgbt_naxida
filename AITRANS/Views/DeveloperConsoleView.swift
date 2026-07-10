@@ -88,7 +88,7 @@ private struct DeveloperProbeCasesSection: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.control) {
                 AppSectionHeader(title: "批量结果", subtitle: "\(store.developerProbeCases.count) 条", systemImage: "list.bullet.rectangle")
                 LazyVStack(spacing: 0) {
-                    ForEach(store.developerProbeCases) { probeCase in
+                    ForEach(store.developerProbeCases, id: \.id) { probeCase in
                         DisclosureGroup {
                             VStack(alignment: .leading, spacing: AppTheme.Spacing.control) {
                                 if !probeCase.prompt.isEmpty { DeveloperCodeBlock(title: "prompt", text: probeCase.prompt) }
@@ -103,7 +103,7 @@ private struct DeveloperProbeCasesSection: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("\(probeCase.sourceLanguage.shortName) -> \(probeCase.targetLanguage.shortName)").font(.subheadline.bold())
-                                    Text(probeCase.input).font(.caption).foregroundStyle(.appTextSecondary).lineLimit(2)
+                                    Text(probeCase.input).font(.caption).foregroundStyle(Color.appTextSecondary).lineLimit(2)
                                 }
                                 Spacer()
                                 AppStatusLabel(text: probeCase.verdict, tone: probeCase.errorCode == nil ? .success : .danger)
@@ -214,7 +214,7 @@ private struct MangaProbeBlockRow: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("#\(block.index) · \(block.rotationAngleUsed) deg").font(.subheadline.bold())
-                    Text(block.ocrText).font(.caption).foregroundStyle(.appTextSecondary).lineLimit(2)
+                    Text(block.ocrText).font(.caption).foregroundStyle(Color.appTextSecondary).lineLimit(2)
                 }
                 Spacer()
                 AppStatusLabel(text: block.blockPassed ? "PASS" : "FAIL", tone: block.blockPassed ? .success : .danger)
@@ -232,7 +232,7 @@ private struct DeveloperCodeBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
             HStack {
-                Text(title).font(.caption.monospaced().bold()).foregroundStyle(.appTextSecondary)
+                Text(title).font(.caption.monospaced().bold()).foregroundStyle(Color.appTextSecondary)
                 Spacer()
                 ShareLink(item: text) { Label("复制或分享", systemImage: "doc.on.doc").labelStyle(.iconOnly) }
                     .accessibilityLabel("复制或分享 \(title)")
@@ -240,7 +240,7 @@ private struct DeveloperCodeBlock: View {
             ScrollView {
                 Text(text)
                     .font(.caption.monospaced())
-                    .foregroundStyle(.appTextPrimary)
+                    .foregroundStyle(Color.appTextPrimary)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }

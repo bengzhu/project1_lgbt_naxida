@@ -88,19 +88,19 @@ private struct PromptRow: View {
                     HStack {
                         Label(prompt.title, systemImage: selected ? "checkmark.circle.fill" : "circle")
                             .font(.body.bold())
-                            .foregroundStyle(selected ? .appAccent : .appTextPrimary)
+                            .foregroundStyle(selected ? Color.appAccent : Color.appTextPrimary)
                         if prompt.isBuiltIn {
                             Label("内置", systemImage: "lock.fill")
                                 .font(.caption.bold())
-                                .foregroundStyle(.locked)
+                                .foregroundStyle(Color.locked)
                         }
                     }
                     Text(prompt.instruction(for: direction))
                         .font(.subheadline)
-                        .foregroundStyle(.appTextSecondary)
+                        .foregroundStyle(Color.appTextSecondary)
                         .lineLimit(3)
                     if !prompt.tone.isEmpty {
-                        Text(prompt.tone).font(.caption).foregroundStyle(.appTextSecondary)
+                        Text(prompt.tone).font(.caption).foregroundStyle(Color.appTextSecondary)
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)

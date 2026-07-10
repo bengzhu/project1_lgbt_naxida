@@ -18,7 +18,7 @@ struct ProAccessPanel: View {
             )
             Text(store.proPurchaseMessage)
                 .font(.subheadline)
-                .foregroundStyle(.appTextSecondary)
+                .foregroundStyle(Color.appTextSecondary)
 
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: AppTheme.Spacing.control) { actions }
@@ -60,11 +60,11 @@ struct ProFeatureGrid: View {
             } label: {
                 HStack(spacing: AppTheme.Spacing.control) {
                     Image(systemName: "rectangle.on.rectangle.badge.gearshape")
-                        .foregroundStyle(.appAccent)
+                        .foregroundStyle(Color.appAccent)
                         .frame(width: 24)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("后台翻译路线").font(.subheadline.bold())
-                        Text("Share Extension 或 ReplayKit 合规方案").font(.caption).foregroundStyle(.appTextSecondary)
+                        Text("Share Extension 或 ReplayKit 合规方案").font(.caption).foregroundStyle(Color.appTextSecondary)
                     }
                     Spacer()
                     Image(systemName: "info.circle").accessibilityHidden(true)
@@ -72,7 +72,7 @@ struct ProFeatureGrid: View {
                 .frame(minHeight: AppTheme.Layout.minimumTarget)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.appTextPrimary)
+            .foregroundStyle(Color.appTextPrimary)
         }
         .alert("后台一键翻译", isPresented: $showBackgroundPlan) {} message: {
             Text("iOS 普通 App 不能常驻覆盖其他 App。可行路线是 Share Extension 处理截图或文本，或由用户显式启动 ReplayKit 屏幕广播后处理画面。")
@@ -88,14 +88,14 @@ private struct ProFeatureRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
-            Image(systemName: systemImage).foregroundStyle(unlocked ? .appAccent : .locked).frame(width: 24)
+            Image(systemName: systemImage).foregroundStyle(unlocked ? Color.appAccent : Color.locked).frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.subheadline.bold())
-                Text(detail).font(.caption).foregroundStyle(.appTextSecondary)
+                Text(detail).font(.caption).foregroundStyle(Color.appTextSecondary)
             }
             Spacer(minLength: 0)
             Image(systemName: unlocked ? "checkmark.circle.fill" : "lock.fill")
-                .foregroundStyle(unlocked ? .success : .locked)
+                .foregroundStyle(unlocked ? Color.success : Color.locked)
                 .accessibilityLabel(unlocked ? "已解锁" : "已锁定")
         }
         .padding(.vertical, AppTheme.Spacing.control)

@@ -185,10 +185,10 @@ struct SelectableTextBlock: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
-            Text(title).font(.caption.bold()).foregroundStyle(.appTextSecondary)
+            Text(title).font(.caption.bold()).foregroundStyle(Color.appTextSecondary)
             Text(text)
                 .font(.body)
-                .foregroundStyle(.appTextPrimary)
+                .foregroundStyle(Color.appTextPrimary)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

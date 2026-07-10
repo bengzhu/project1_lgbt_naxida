@@ -97,7 +97,7 @@ private struct LanguageControlBar: View {
             }
         }
         .pickerStyle(.menu)
-        .tint(.appTextPrimary)
+        .tint(Color.appTextPrimary)
         .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget, alignment: .leading)
         .padding(.horizontal, AppTheme.Spacing.control)
         .background(Color.appSurface, in: .rect(cornerRadius: AppTheme.Radius.control))
@@ -108,7 +108,7 @@ private struct LanguageControlBar: View {
         Button("交换语言", systemImage: "arrow.left.arrow.right", action: store.swapLanguages)
             .labelStyle(.iconOnly)
             .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
-            .foregroundStyle(.appTextPrimary)
+            .foregroundStyle(Color.appTextPrimary)
             .background(Color.appSurfaceRaised, in: .rect(cornerRadius: AppTheme.Radius.control))
             .overlay { controlBorder }
             .accessibilityHint("交换输入语言和目标语言")
@@ -129,7 +129,7 @@ private struct LanguageControlBar: View {
         }
         .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget, alignment: .leading)
         .padding(.horizontal, AppTheme.Spacing.control)
-        .foregroundStyle(.appTextPrimary)
+        .foregroundStyle(Color.appTextPrimary)
         .background(Color.appSurface, in: .rect(cornerRadius: AppTheme.Radius.control))
         .overlay { controlBorder }
         .accessibilityValue(store.targetLanguage.rawValue)
@@ -159,7 +159,7 @@ private struct TranslationInputPane: View {
                 .lineLimit(8...18)
                 .textFieldStyle(.plain)
                 .focused($inputFocused)
-                .foregroundStyle(.appTextPrimary)
+                .foregroundStyle(Color.appTextPrimary)
                 .padding(AppTheme.Spacing.section)
                 .frame(maxWidth: .infinity, minHeight: 190, alignment: .topLeading)
                 .background(Color.appCanvas, in: .rect(cornerRadius: AppTheme.Radius.control))
@@ -190,7 +190,7 @@ private struct TranslationInputPane: View {
                 .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.appTextSecondary)
+        .foregroundStyle(Color.appTextSecondary)
         .background(Color.appSurfaceRaised, in: .rect(cornerRadius: AppTheme.Radius.control))
         .accessibilityHint("前往设置管理提示词")
 
@@ -229,10 +229,10 @@ private struct TranslationOutputPane: View {
                 if store.isProcessing {
                     VStack(spacing: AppTheme.Spacing.section) {
                         ProgressView()
-                            .tint(.appAccent)
+                            .tint(Color.appAccent)
                         Text("正在使用 \(store.selectedEngine.rawValue) 生成译文")
                             .font(.subheadline)
-                            .foregroundStyle(.appTextSecondary)
+                            .foregroundStyle(Color.appTextSecondary)
                     }
                     .frame(maxWidth: .infinity, minHeight: 190)
                 } else if let latestLine {
@@ -240,13 +240,13 @@ private struct TranslationOutputPane: View {
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
                             Text(latestLine.translation)
                                 .font(.title3.bold())
-                                .foregroundStyle(.appTextPrimary)
+                                .foregroundStyle(Color.appTextPrimary)
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Divider().overlay(Color.appBorder)
                             Text(latestLine.original)
                                 .font(.subheadline)
-                                .foregroundStyle(.appTextSecondary)
+                                .foregroundStyle(Color.appTextSecondary)
                                 .textSelection(.enabled)
                         }
                     }
@@ -300,17 +300,17 @@ private struct RecentTranslationList: View {
                             VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
                                 Text(line.translation)
                                     .font(.body.bold())
-                                    .foregroundStyle(.appTextPrimary)
+                                    .foregroundStyle(Color.appTextPrimary)
                                     .lineLimit(3)
                                 Text(line.original)
                                     .font(.subheadline)
-                                    .foregroundStyle(.appTextSecondary)
+                                    .foregroundStyle(Color.appTextSecondary)
                                     .lineLimit(2)
                             }
                             Spacer(minLength: 0)
                             Text(line.time)
                                 .font(.caption.monospacedDigit())
-                                .foregroundStyle(.appTextSecondary)
+                                .foregroundStyle(Color.appTextSecondary)
                         }
                         .padding(.vertical, AppTheme.Spacing.control)
                         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }

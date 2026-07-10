@@ -90,7 +90,7 @@ private struct ModelFileSection: View {
 
             if store.modelDownload.isDownloading {
                 ProgressView(value: store.modelDownload.fractionCompleted)
-                    .tint(.appAccent)
+                    .tint(Color.appAccent)
                 LabeledContent("下载") { Text(store.modelDownloadProgressDisplay).monospacedDigit() }
                 LabeledContent("速度") { Text(store.modelDownloadSpeedDisplay).monospacedDigit() }
                 AppSecondaryButton(title: "取消下载", systemImage: "xmark.circle.fill", tone: .danger, action: store.cancelModelDownload)
@@ -100,7 +100,7 @@ private struct ModelFileSection: View {
                     VStack(spacing: AppTheme.Spacing.control) { fileActions }
                 }
             }
-            Text(store.dataTransferMessage).font(.subheadline).foregroundStyle(.appTextSecondary)
+            Text(store.dataTransferMessage).font(.subheadline).foregroundStyle(Color.appTextSecondary)
         }
         .appSurface()
     }
@@ -122,12 +122,12 @@ private struct SamplingSection: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
             AppSectionHeader(title: "生成参数", subtitle: "本地保存", systemImage: "dial.low.fill")
             LabeledContent("Temperature") {
-                Text(store.sampling.temperature, format: .number.precision(.fractionLength(2))).monospacedDigit().foregroundStyle(.appAccent)
+                Text(store.sampling.temperature, format: .number.precision(.fractionLength(2))).monospacedDigit().foregroundStyle(Color.appAccent)
             }
-            Slider(value: temperatureBinding, in: 0...1.2).tint(.appAccent)
+            Slider(value: temperatureBinding, in: 0...1.2).tint(Color.appAccent)
                 .accessibilityValue(store.sampling.temperature.formatted(.number.precision(.fractionLength(2))))
             Stepper(value: maxTokensBinding, in: 128...2_048, step: 128) {
-                LabeledContent("Max Tokens") { Text(store.sampling.maxTokens, format: .number).monospacedDigit().foregroundStyle(.appAccent) }
+                LabeledContent("Max Tokens") { Text(store.sampling.maxTokens, format: .number).monospacedDigit().foregroundStyle(Color.appAccent) }
             }
         }
         .appSurface()

@@ -15,7 +15,7 @@ struct BrandMark: View {
 
             Image(systemName: "bolt.horizontal.circle.fill")
                 .font(.title2.bold())
-                .foregroundStyle(.appTextPrimary)
+                .foregroundStyle(Color.appTextPrimary)
                 .accessibilityHidden(true)
         }
         .frame(width: 44, height: 44)
@@ -54,7 +54,7 @@ struct AppPageHeader: View {
         HStack(spacing: AppTheme.Spacing.control) {
             Image(systemName: systemImage)
                 .font(.headline)
-                .foregroundStyle(.appAccent)
+                .foregroundStyle(Color.appAccent)
                 .frame(width: 44, height: 44)
                 .background(Color.appSurfaceRaised, in: .rect(cornerRadius: AppTheme.Radius.surface))
                 .accessibilityHidden(true)
@@ -62,10 +62,10 @@ struct AppPageHeader: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.title2.bold())
-                    .foregroundStyle(.appTextPrimary)
+                    .foregroundStyle(Color.appTextPrimary)
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(.appTextSecondary)
+                    .foregroundStyle(Color.appTextSecondary)
             }
         }
     }
@@ -95,11 +95,11 @@ struct AppSectionHeader: View {
         if let systemImage {
             Label(title, systemImage: systemImage)
                 .font(.headline)
-                .foregroundStyle(.appTextPrimary)
+                .foregroundStyle(Color.appTextPrimary)
         } else {
             Text(title)
                 .font(.headline)
-                .foregroundStyle(.appTextPrimary)
+                .foregroundStyle(Color.appTextPrimary)
         }
     }
 
@@ -107,7 +107,7 @@ struct AppSectionHeader: View {
         if let subtitle {
             Text(subtitle)
                 .font(.subheadline)
-                .foregroundStyle(.appTextSecondary)
+                .foregroundStyle(Color.appTextSecondary)
         }
     }
 }
@@ -141,10 +141,10 @@ struct AppStatusRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline.bold())
-                    .foregroundStyle(.appTextPrimary)
+                    .foregroundStyle(Color.appTextPrimary)
                 Text(detail)
                     .font(.subheadline)
-                    .foregroundStyle(.appTextSecondary)
+                    .foregroundStyle(Color.appTextSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -231,7 +231,7 @@ struct AppEmptyState: View {
         } description: {
             Text(detail)
         }
-        .foregroundStyle(.appTextSecondary)
+        .foregroundStyle(Color.appTextSecondary)
         .frame(maxWidth: .infinity, minHeight: 180)
     }
 }
@@ -245,10 +245,10 @@ struct AppMetric: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
             Label(title, systemImage: systemImage)
                 .font(.caption.bold())
-                .foregroundStyle(.appTextSecondary)
+                .foregroundStyle(Color.appTextSecondary)
             Text(value)
                 .font(.body.bold())
-                .foregroundStyle(.appTextPrimary)
+                .foregroundStyle(Color.appTextPrimary)
                 .textSelection(.enabled)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

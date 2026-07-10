@@ -84,7 +84,7 @@ private struct PhoneRootView: View {
                     .accessibilityLabel(tab.title)
             }
         }
-        .tint(.appAccent)
+        .tint(Color.appAccent)
     }
 }
 
@@ -111,7 +111,7 @@ private struct TabletRootView: View {
                                 .font(.headline)
                             Text(store.selectedEngine.rawValue)
                                 .font(.caption)
-                                .foregroundStyle(.appTextSecondary)
+                                .foregroundStyle(Color.appTextSecondary)
                         }
                     }
                     .textCase(nil)
@@ -128,7 +128,7 @@ private struct TabletRootView: View {
                 .navigationBarTitleDisplayMode(.inline)
         }
         .navigationSplitViewStyle(.balanced)
-        .tint(.appAccent)
+        .tint(Color.appAccent)
     }
 }
 
