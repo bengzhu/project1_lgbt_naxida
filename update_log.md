@@ -116,6 +116,41 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.88 候选：文本首页极简科技工作台与剪贴板键盘交互
+日期：2026-07-10
+
+状态：Agent B 候选实现，分支 `codeb/v1.88-home-translation-ui`；正式版本号、Agent C 验收和 PR merge 尚未收口。
+
+核心变更：
+
+- 只重做文本翻译首页；新增独立 `TextWorkspaceBackground`，用静态冷中性层次、技术网格、导向线路和矩形节点替代旧纯色首页，不修改其他页面的全局背景。
+- 首页保留安全区页头、语言、输入、输出、Prompt、翻译、会话和最近翻译；青蓝翻译、青绿粘贴、琥珀 Prompt、小面积紫红交换和中性会话命令同时使用图标、文字、描边与层级，不只依赖颜色。
+- 新增系统纯文本 `PasteButton`。只有用户点击时读取兼容文本；空输入直接填入，非空输入以换行追加，不覆盖、不自动翻译、不记录剪贴板内容。
+- 文本页统一持有输入焦点；keyboard toolbar 新增“完成”，翻译、新会话、Prompt 跳转和离开文本 Tab 前先失焦，翻译随后仍调用 `store.submitDraft`。
+- 新增 `scripts/test-v188-home-ui-contract.py` 六项静态契约，并作为独立 CI step、JUnit testcase、manifest 字段和失败门控；v1.88 分支同时进入现有 current HEAD UI evidence 门控。
+- Preview 新增 iPad 横屏文本页状态，但当前 CI 仍按既有约束只生成 11 张紧凑 iPhone 运行态证据；Preview 不冒充运行态截图或点击测试。
+
+关键文件：
+
+- `AITRANS/Views/TextTranslationView.swift`
+- `AITRANS/Views/TextWorkspaceBackground.swift`
+- `AITRANS/Views/AppTheme.swift`
+- `AITRANS/Views/AppPreviewSupport.swift`
+- `scripts/test-v188-home-ui-contract.py`
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+
+本地轻量验证：Swift parse 与无产物全工程 typecheck、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、Speech contract 5/5、v1.87 UI interaction contract 6/6、v1.88 home UI contract 6/6 和三个 JSON parse 已通过；未跑本机 build / 探针，按规则交给云端验证。
+
+遗留事项：
+
+- 当前未执行真实剪贴板、键盘“完成”或 VoiceOver 点击回放；Agent C 必须在当前 PR HEAD 对应的模拟器或设备上人工检查。
+- 当前 UI evidence 仍没有 iPad / Mac 运行态截图；宽屏并排只有源码和 Preview 状态，不能当作运行态验收结论。
+- 模型、OCR、Speech、StoreKit、持久化、漫画探针、ground truth、仓库根 `output/` 和 `metrics/version_history.csv` 均未修改；本轮不追加漫画指标。
+
 ### v1.87：企业级视觉系统与核心体验重构
 日期：2026-07-10
 

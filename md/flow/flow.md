@@ -55,6 +55,7 @@
 - `AITRANS/Views/AppTheme.swift`
 - `AITRANS/Views/AppComponents.swift`
 - `AITRANS/Views/TextTranslationView.swift`
+- `AITRANS/Views/TextWorkspaceBackground.swift`
 - `AITRANS/Views/ImageTranslationViews.swift`
 - `AITRANS/Views/AudioTranslationView.swift`
 - `AITRANS/Views/HistoryView.swift`
@@ -70,6 +71,9 @@
 - iPhone 使用文本、图片、音频、历史、设置五入口 `TabView`。
 - iPad 使用 `NavigationSplitView`；宽内容优先输入/输出或主检查区/状态区并排，空间不足时通过 `ViewThatFits` 降为单列。
 - 文本页头和模型状态位于工作区 `ScrollView` 外的顶部 safe-area inset；键盘自动聚焦只滚动语言栏与输入/输出工作区，页头不会进入系统状态栏区域。
+- 文本首页根层使用独立 `TextWorkspaceBackground`：静态冷中性渐变、稳定技术网格和输入到译文的导向线路只服务文本页，不改变其他页面的 `AppCanvasBackground`。
+- 文本输入继续直接绑定 `store.draftText`。系统 `PasteButton(payloadType: String.self)` 只在用户点击时接收纯文本：空输入直接写入，已有输入换行追加，不读取或改写剪贴板后台状态，不自动触发翻译。
+- 文本页持有唯一 `FocusState`；keyboard toolbar 的“完成”、翻译、新会话和离开文本 Tab 都会先结束焦点。翻译随后仍调用 `store.submitDraft`，没有新增第二套 draft 或业务 store。
 - `AppTheme` 提供语义颜色、间距、圆角、动效、触控和宽度 token；`AppComponents` 提供页头、区段、状态、按钮、空状态、指标和页面宽度原语。
 - 日间/夜间颜色来自 `Assets.xcassets` 的 luminosity variants；`AppAppearance` 通过 `AppStorage` 选择跟随系统、日间或夜间，不进入业务 `state.json`。
 - 所有业务按钮只调用 store 公开方法；UI 不直接操作 `state.json`、模型 runtime、Speech task、Vision OCR 或漫画探针服务。
@@ -331,9 +335,11 @@ test/1.png
 ## 2. 核心执行流
 ### 2.1 文本翻译
 ```text
-用户输入文本
-  -> ContentView
-  -> TranslationSessionStore.makeRequest
+用户键入文本，或明确点击系统纯文本 PasteButton
+  -> 空 draft 直接填入 / 非空 draft 换行追加
+  -> store.draftText
+  -> 点击翻译，先令 inputFocused = false
+  -> TranslationSessionStore.submitDraft / makeRequest
   -> selectedEngine
   -> MockGemmaService 或 GemmaLocalService
   -> cleanTranslationOutput / 质量检查

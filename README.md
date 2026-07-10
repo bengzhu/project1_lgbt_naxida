@@ -46,11 +46,11 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - v1.70 起只要 workflow 填写 Koharu artifact archive，就必须使用 `ci-fast` 或 `full`，不能用 `probe_mode=skip`；云端 smoke 会核对 coverage / orientation work item 与 gate ID、status、App-side identity 摘要和 `ocrSucceededCount`，orientation blockers 未清空时不得误判 passed。
 - v1.74 起 `ci-fast/full` 的未加密 manifest 和 failure summary 也会直接汇总 v1.39-v1.46 native-lite detector / shadow OCR / refinement / closed-loop / instance-lite / SegmentMask refinement / bundle / promotion gate 的 verdict、counts、linkage blockers 和 convergence work item / gate 状态，避免 Agent C 为了确认 native-lite 阻塞再深挖完整 `probe_report.json`。
 - 云端探针验收口径是报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0`、关键 JSON/TXT/PNG 可用；`overallPassed=false` 仍可能是当前模型质量基线，不单独作为 CI 失败。若探针超时，结果包会保留 `manga-probe.log`、`app-console.log` 和 `output/manga_probe_progress.json`；`ci-fast` 启动后 180 秒未创建 progress 会提前失败、progress 300 秒不更新会提前收束，`full` 分别为 300 秒和 600 秒。
-- `codeb/v1.87-enterprise-ui` 的 App 相关 push CI 会复用当前 Debug simulator build，在一台紧凑 iPhone 上生成 11 张 `ui-evidence/` 运行态截图和 `ui-evidence-manifest.json`；独立 `ui-interaction-contract` 检查八类页面的动作绑定、录音 accessibility action、开发导航 reset 和 Reduce Motion 场景。截图或交互契约失败都会阻塞候选分支；当前不采集 iPad / Mac 证据。
+- `codeb/v1.87-enterprise-ui` 和 `codeb/v1.88-home-translation-ui` 的 App 相关 push CI 会复用当前 Debug simulator build，在一台紧凑 iPhone 上生成 11 张 `ui-evidence/` 运行态截图和 `ui-evidence-manifest.json`；v1.87 全 App interaction contract 与 v1.88 文本首页 contract 分别作为独立 testcase。截图或任一契约失败都会阻塞候选分支；当前不采集 iPad / Mac 运行态证据。
 
 ## 当前界面
 
-- `文本`：输入和译文是首屏主任务；语言、提示词、模型状态、处理中、成功和失败状态在同一工作台完成。iPad 宽屏使用输入/输出并排，iPhone 自动降为单列。
+- `文本`：首页使用静态技术网格与输入到译文的导向线路承托工作区，语言、粘贴、Prompt、翻译、模型状态和译文保持清晰动作层级。系统纯文本“粘贴”只在点击时读取剪贴板；空输入直接填入，已有输入换行追加且不自动翻译。软件键盘提供“完成”按钮，翻译、新会话或离开文本页前会先结束输入焦点。iPad 宽屏使用输入/输出并排，iPhone 自动降为单列。
 - `图片`：图片检查区保持主视觉，旁贴/覆盖使用 segmented control；照片、文件、取消、重试、导出和 OCR 块状态集中在工具区。
 - `音频`：实时长按识别与音频文件识别分区展示，保留取消入口和 locale、离线要求、耗时、词数、片段、置信度与失败原因。
 - `历史`：搜索、恢复、删除、归档、导入、导出和清空使用一致命令层级；空历史和无搜索结果使用系统空状态。

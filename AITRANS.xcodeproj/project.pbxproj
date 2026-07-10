@@ -35,6 +35,7 @@
 		0A00000100000000000000AE /* ModelManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000AD /* ModelManagementView.swift */; };
 		0A00000100000000000000B0 /* DeveloperConsoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000AF /* DeveloperConsoleView.swift */; };
 		0A00000100000000000000B2 /* AppPreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000B1 /* AppPreviewSupport.swift */; };
+		0A00000100000000000000B5 /* TextWorkspaceBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000B4 /* TextWorkspaceBackground.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -82,6 +83,7 @@
 		0A00000100000000000000AD /* ModelManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelManagementView.swift; sourceTree = "<group>"; };
 		0A00000100000000000000AF /* DeveloperConsoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeveloperConsoleView.swift; sourceTree = "<group>"; };
 		0A00000100000000000000B1 /* AppPreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreviewSupport.swift; sourceTree = "<group>"; };
+		0A00000100000000000000B4 /* TextWorkspaceBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextWorkspaceBackground.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -166,6 +168,7 @@
 				0A000001000000000000002B /* AppComponents.swift */,
 				0A0000010000000000000012 /* ContentView.swift */,
 				0A00000100000000000000A1 /* TextTranslationView.swift */,
+				0A00000100000000000000B4 /* TextWorkspaceBackground.swift */,
 				0A00000100000000000000A5 /* AudioTranslationView.swift */,
 				0A00000100000000000000A7 /* HistoryView.swift */,
 				0A00000100000000000000A9 /* PromptLibraryView.swift */,
@@ -293,6 +296,7 @@
 				0A00000100000000000000AE /* ModelManagementView.swift in Sources */,
 				0A00000100000000000000B0 /* DeveloperConsoleView.swift in Sources */,
 				0A00000100000000000000B2 /* AppPreviewSupport.swift in Sources */,
+				0A00000100000000000000B5 /* TextWorkspaceBackground.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

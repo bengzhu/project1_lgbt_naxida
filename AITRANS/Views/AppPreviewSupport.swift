@@ -219,6 +219,10 @@ private struct PreviewContainer<Content: View>: View {
         .dynamicTypeSize(.accessibility2)
 }
 
+#Preview("Text · iPad Landscape", traits: .fixedLayout(width: 1_180, height: 820)) {
+    PreviewContainer(scenario: .textSuccess) { TextTranslationView(selectedTab: .constant(.text)) }
+}
+
 #Preview("Image · iPad Landscape", traits: .fixedLayout(width: 1_180, height: 820)) {
     PreviewContainer(scenario: .imageSuccess) { ImageTranslationView() }
 }
