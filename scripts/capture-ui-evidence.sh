@@ -38,48 +38,32 @@ def choose(items, preferred):
     return items[-1]
 
 small = choose(phones, ["iPhone SE (3rd generation)", "iPhone 16e", "iPhone 15"])
-large = choose(phones, ["Pro Max", "Plus"])
 print(runtime["identifier"])
 print(small["identifier"])
-print(large["identifier"])
 PY
 )"
 
 runtime="$(echo "$device_selection" | sed -n '1p')"
 small_type="$(echo "$device_selection" | sed -n '2p')"
-large_type="$(echo "$device_selection" | sed -n '3p')"
 
 small_id="$(xcrun simctl create "AITRANS UI Small" "$small_type" "$runtime")"
-large_id="$(xcrun simctl create "AITRANS UI Large" "$large_type" "$runtime")"
 
 cleanup() {
   if [ "${CI:-false}" = "true" ]; then
     echo "Skipping simulator cleanup on ephemeral CI runner"
     return
   fi
-  for device_id in "$small_id" "$large_id"; do
-    (
-      xcrun simctl shutdown "$device_id" >/dev/null 2>&1 || true
-      xcrun simctl delete "$device_id" >/dev/null 2>&1 || true
-    ) &
-  done
-  wait || true
+  xcrun simctl shutdown "$small_id" >/dev/null 2>&1 || true
+  xcrun simctl delete "$small_id" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
-echo "Booting iPhone simulators and waiting for full readiness"
-xcrun simctl bootstatus "$small_id" -b &
-small_boot_pid=$!
-xcrun simctl bootstatus "$large_id" -b &
-large_boot_pid=$!
-wait "$small_boot_pid"
-wait "$large_boot_pid"
+echo "Booting compact iPhone simulator and waiting for full readiness"
+xcrun simctl bootstatus "$small_id" -b
 
-for device_id in "$small_id" "$large_id"; do
-  xcrun simctl install "$device_id" "$app_path"
-  xcrun simctl ui "$device_id" appearance dark
-  xcrun simctl spawn "$device_id" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
-done
+xcrun simctl install "$small_id" "$app_path"
+xcrun simctl ui "$small_id" appearance dark
+xcrun simctl spawn "$small_id" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
 
 capture() {
   local device_id="$1"
@@ -123,10 +107,10 @@ capture "$small_id" "compact-iPhone" imageEmpty large portrait image-empty-compa
 capture "$small_id" "compact-iPhone" history large portrait history-data-compact-day.png false 日间
 capture "$small_id" "compact-iPhone" proLocked large portrait settings-pro-locked-compact-night.png false 夜间
 
-capture "$large_id" "large-iPhone" textSuccess extra-extra-large portrait text-success-large-xxl-day.png false 日间
-capture "$large_id" "large-iPhone" textKeyboard large portrait text-keyboard-large-night.png false 夜间
-capture "$large_id" "large-iPhone" textFailure accessibility-extra-large portrait text-failure-large-accessibility-night.png false 夜间
-capture "$large_id" "large-iPhone" audioRecognizing large portrait audio-running-reduce-motion-night.png true 夜间
+capture "$small_id" "compact-iPhone" textSuccess extra-extra-large portrait text-success-compact-xxl-day.png false 日间
+capture "$small_id" "compact-iPhone" textKeyboard large portrait text-keyboard-compact-night.png false 夜间
+capture "$small_id" "compact-iPhone" textFailure accessibility-extra-large portrait text-failure-compact-accessibility-night.png false 夜间
+capture "$small_id" "compact-iPhone" audioRecognizing large portrait audio-running-compact-reduce-motion-night.png true 夜间
 
 python3 - "$metadata_tsv" "$output_dir/ui-evidence-manifest.json" <<'PY'
 import json
@@ -150,8 +134,8 @@ for line in source.read_text(encoding="utf-8").splitlines():
     })
 if len(items) != 8:
     raise SystemExit(f"Expected 8 iPhone screenshots, received {len(items)}")
-if any(item["device"] not in {"compact-iPhone", "large-iPhone"} for item in items):
-    raise SystemExit("UI evidence contains a non-iPhone device")
+if any(item["device"] != "compact-iPhone" for item in items):
+    raise SystemExit("UI evidence must use the compact iPhone device")
 if any(item["orientation"] != "portrait" for item in items):
     raise SystemExit("iPhone-only UI evidence must remain portrait")
 if {item["appearance"] for item in items} != {"日间", "夜间"}:

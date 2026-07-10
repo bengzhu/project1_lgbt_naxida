@@ -128,13 +128,13 @@
 - `ContentView.swift` 从 3277 行缩减为根路由；文本、图片、音频、历史、提示词、设置、模型、Pro 和开发控制台拆为独立文件，继续共享唯一 `TranslationSessionStore`。
 - 重做 iPhone 五入口 Tab 和 iPad `NavigationSplitView`；文本工作台、图片检查区、音频运行摘要、历史命令、提示词编辑、模型管理和开发报告使用一致的状态组件与响应式布局。
 - 新增隔离 `AppPreviewScenario`，preview 不恢复、不写入生产 `state.json`，覆盖多设备、Dynamic Type、Reduce Motion 及代表性成功/失败/锁定状态。
-- 新增 `scripts/capture-ui-evidence.sh` 与候选分支 CI 步骤，复用当前 Debug build 生成带设备、方向、Dynamic Type、状态、Reduce Motion 和 commit SHA 的截图 manifest；当前按人工要求收敛为 8 张两档 iPhone 竖屏证据，iPad / Mac 视觉证据延期，证据步骤失败仍会阻塞 CI。
-- 优化云端验证：两台 iPhone 通过并行 `bootstatus -b` 等待完整启动，避免“设备已标记 booted 但系统迁移未完成”导致首张截图阻塞；文档-only push 可走 build-skip，UI evidence workflow 变化仍强制 build，Koharu 完整 invalid-fixture 矩阵仅在真实 validator / artifact contract 相关变化时运行。
+- 新增 `scripts/capture-ui-evidence.sh` 与候选分支 CI 步骤，复用当前 Debug build 生成带设备、方向、Dynamic Type、状态、Reduce Motion 和 commit SHA 的截图 manifest；当前按人工要求收敛为同一台紧凑 iPhone 上的 8 张竖屏证据，iPad / Mac 视觉证据延期，证据步骤失败仍会阻塞 CI。
+- 优化云端验证：单台紧凑 iPhone 通过 `bootstatus -b` 等待完整启动，避免“设备已标记 booted 但系统迁移未完成”导致首张截图阻塞，并消除两台新模拟器并行迁移的资源争用；文档-only push 可走 build-skip，UI evidence workflow 变化仍强制 build，Koharu 完整 invalid-fixture 矩阵仅在真实 validator / artifact contract 相关变化时运行。
 - Speech contract 仅更新 UI 文件定位，保留取消、`translating` 和运行摘要断言强度。
 
 本地轻量验证：Swift parse、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、5 项 Speech contract 和三个 JSON parse；未跑本机 build / 探针，按规则交给云端验证。
 
-已知云端证据：`f3bde05` 对应 run `29074315687` 的静态检查、Xcode build 和结构化 UI evidence gate 均成功，manifest 与 8 张 iPhone PNG 的 SHA、日夜、Dynamic Type 和 Reduce Motion 字段匹配。但 Agent B 实际查看后拒绝该视觉证据：Pro 锁定设置图除状态栏外全黑，键盘图被 QuickPath 首次使用教学遮罩覆盖。当前修复改为隔离 evidence store、跳过设置页启动服务、预关闭键盘教学，并新增 50 KB 疑似空白图门槛；必须用新 HEAD 重新生成并逐张检查，旧 run 不能作为最终视觉验收。
+已知云端证据：`37c47587` 对应 run `29075611777` 的静态检查、Xcode build 和 UI evidence gate 均成功，manifest 与 8 张 iPhone PNG 的 SHA、日夜、Dynamic Type 和 Reduce Motion 字段匹配；Agent B 已逐张确认设置页不再空白、键盘为真实软件键盘，其余状态无重叠或截断。该 run 总耗时 20 分 30 秒，主要瓶颈仍是两台全新模拟器迁移；当前 HEAD 进一步收敛为一台紧凑 iPhone，必须重新生成同等 8 状态证据后才可作为最终验收。
 
 ### v1.86：Speech Recognition Insight and Audio UI Polish
 日期：2026-07-08

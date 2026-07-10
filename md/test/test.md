@@ -24,7 +24,7 @@
 
 `codeb/v1.87-enterprise-ui` 的 push CI 在 Xcode build 通过后必须运行 `scripts/capture-ui-evidence.sh`。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、`ui-evidence-manifest.json` 和 `ui-evidence.log`，manifest 的每张截图必须记录设备、方向、Dynamic Type、场景、Reduce Motion 和当前 `commitSha`。
 
-当前最低截图矩阵为 8 张 iPhone 竖屏证据：紧凑 iPhone 的文本空态、图片空态、历史有数据、Pro 锁定；大屏 iPhone 的文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频运行。矩阵必须同时包含日间和夜间外观，manifest 记录 `appearance`；截图步骤失败必须使候选分支 CI 失败。iPad / Mac 视觉证据本轮暂缓，不得把缺失证据描述为已验证。
+当前最低截图矩阵为同一台紧凑 iPhone 上的 8 张竖屏证据：文本空态、图片空态、历史有数据、Pro 锁定、文本成功 XXL、键盘显示、Accessibility 失败态和 Reduce Motion 音频运行。矩阵必须同时包含日间和夜间外观，manifest 记录 `appearance`；截图步骤失败必须使候选分支 CI 失败。iPad / Mac 视觉证据本轮暂缓，不得把缺失证据描述为已验证。
 
 截图脚本必须等待模拟器完整启动，关闭键盘首次使用教程干扰，并拒绝小于 50 KB 的疑似空白 PNG。键盘证据必须显示实际软件键盘，不得以 QuickPath / 输入法教学遮罩代替；文件存在、方向和尺寸检查通过仍不能替代 Agent B / C 逐张视觉审查。
 
