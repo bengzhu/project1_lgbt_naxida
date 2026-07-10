@@ -105,14 +105,21 @@ private struct TabletRootView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedTab) {
+            List {
                 Section {
                     ForEach(AppTab.allCases) { tab in
-                        Label(tab.title, systemImage: tab.systemImage)
-                            .font(.body.bold())
-                            .tag(tab)
-                            .frame(minHeight: AppTheme.Layout.minimumTarget)
-                            .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
+                        Button {
+                            selectedTab = tab
+                        } label: {
+                            Label(tab.title, systemImage: tab.systemImage)
+                                .font(selectedTab == tab ? .body.bold() : .body)
+                                .foregroundStyle(selectedTab == tab ? Color.appAccent : Color.appTextPrimary)
+                                .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget, alignment: .leading)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(selectedTab == tab ? Color.appSurfaceRaised : Color.clear)
+                        .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
                     }
                 } header: {
                     HStack(spacing: AppTheme.Spacing.control) {
