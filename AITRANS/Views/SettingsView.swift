@@ -10,9 +10,10 @@ struct SettingsView: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @Binding var selectedTab: AppTab
     @State private var developerPassword = ""
+    @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
                     AppPageHeader(
@@ -47,6 +48,11 @@ struct SettingsView: View {
             guard !isUIEvidenceScenario else { return }
             store.loadProSubscriptionProduct()
             store.refreshSpeechRecognitionCapabilities()
+        }
+        .onChange(of: store.isDeveloperModeEnabled) { _, isEnabled in
+            if !isEnabled {
+                navigationPath = NavigationPath()
+            }
         }
     }
 

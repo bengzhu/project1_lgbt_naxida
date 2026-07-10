@@ -587,6 +587,14 @@ jobs:
             fi
           } 2>&1 | tee "$RESULT_ROOT/static-checks.log"
 
+      - name: UI interaction contract
+        id: ui_interaction_contract
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 -B scripts/test-v187-ui-interaction-contract.py 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
+
       - name: Xcode build
         id: xcode_build
         if: steps.ci_scope.outputs.xcode_build_required == 'true'
@@ -1080,7 +1088,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" XCODE_BUILD_REQUIRED="${{ steps.ci_scope.outputs.xcode_build_required }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" SIMULATOR_BUILD_STATUS="${{ steps.simulator_build.outcome }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
+          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" UI_INTERACTION_STATUS="${{ steps.ui_interaction_contract.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" XCODE_BUILD_REQUIRED="${{ steps.ci_scope.outputs.xcode_build_required }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" SIMULATOR_BUILD_STATUS="${{ steps.simulator_build.outcome }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
           import os
           import xml.etree.ElementTree as ET
 
@@ -1101,6 +1109,7 @@ jobs:
           cases = [
               ("gguf-model", model_status, "GGUF model setup failed"),
               ("static-checks", os.environ["STATIC_STATUS"], "static checks failed"),
+              ("ui-interaction-contract", os.environ["UI_INTERACTION_STATUS"], "v1.87 UI interaction contract failed"),
               ("xcode-build", build_status, "xcode build failed"),
               ("simulator-build", simulator_status, "simulator build failed"),
               ("manga-probe", probe_status, "manga probe failed"),
@@ -1281,6 +1290,8 @@ jobs:
               "uiEvidenceOutcome": "${{ steps.ui_evidence.outcome }}",
               "uiEvidenceManifestPath": "${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json",
               "uiEvidenceLogPath": "${RESULT_ROOT}/ui-evidence.log",
+              "uiInteractionContractOutcome": "${{ steps.ui_interaction_contract.outcome }}",
+              "uiInteractionContractLogPath": "${RESULT_ROOT}/ui-interaction-contract.log",
               "koharuValidatorExtendedRequired": "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" == "true",
               "simulatorAppReusedFromXcodeBuild": "${{ steps.meta.outputs.probe_mode }}" != "skip" and "${{ steps.simulator_build.outcome }}" == "success",
               "simulatorAppPath": "${{ steps.simulator_build.outputs.simulator_app_path }}",
@@ -1654,6 +1665,7 @@ jobs:
             echo "- GGUF download: ${{ steps.download_model.outcome }}"
             echo "- GGUF verify: ${{ steps.verify_model.outcome }}"
             echo "- static checks: ${{ steps.static_checks.outcome }}"
+            echo "- UI interaction contract: ${{ steps.ui_interaction_contract.outcome }}"
             echo "- xcode build: ${{ steps.xcode_build.outcome }}"
             echo "- UI evidence: ${{ steps.ui_evidence.outcome }}"
             echo "- simulator build: ${{ steps.simulator_build.outcome }}"
@@ -1664,6 +1676,7 @@ jobs:
             echo "- Model download: ${RESULT_ROOT}/model-download.log"
             echo "- Model verify: ${RESULT_ROOT}/model-verify.log"
             echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
+            echo "- UI interaction contract: ${RESULT_ROOT}/ui-interaction-contract.log"
             echo "- Koharu active artifact validation: ${RESULT_ROOT}/koharu-active-artifacts-validation.json"
             echo "- Xcode build: ${RESULT_ROOT}/xcodebuild.log"
             echo "- UI evidence: ${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json"
@@ -1788,7 +1801,7 @@ jobs:
               echo "- active artifact validator output missing; inspect static checks."
             fi
             echo
-            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${GITHUB_REF_NAME}" = "codeb/v1.87-enterprise-ui" ] && [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${GITHUB_REF_NAME}" = "codeb/v1.87-enterprise-ui" ] && [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
               echo "## Return to Agent B"
               echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
             else
@@ -1813,7 +1826,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${GITHUB_REF_NAME}" = "codeb/v1.87-enterprise-ui" ] && [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${GITHUB_REF_NAME}" = "codeb/v1.87-enterprise-ui" ] && [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi

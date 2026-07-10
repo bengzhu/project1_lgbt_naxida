@@ -111,6 +111,9 @@ capture "$small_id" "compact-iPhone" textSuccess extra-extra-large portrait text
 capture "$small_id" "compact-iPhone" textKeyboard large portrait text-keyboard-compact-night.png false 夜间
 capture "$small_id" "compact-iPhone" textFailure accessibility-extra-large portrait text-failure-compact-accessibility-night.png false 夜间
 capture "$small_id" "compact-iPhone" audioRecognizing large portrait audio-running-compact-reduce-motion-night.png true 夜间
+capture "$small_id" "compact-iPhone" promptLibrary large portrait prompt-library-compact-day.png false 日间
+capture "$small_id" "compact-iPhone" localMissing large portrait model-missing-compact-night.png false 夜间
+capture "$small_id" "compact-iPhone" developerConsole large portrait developer-console-compact-day.png false 日间
 
 python3 - "$metadata_tsv" "$output_dir/ui-evidence-manifest.json" <<'PY'
 import json
@@ -132,8 +135,8 @@ for line in source.read_text(encoding="utf-8").splitlines():
         "appearance": appearance,
         "commitSha": commit_sha,
     })
-if len(items) != 8:
-    raise SystemExit(f"Expected 8 iPhone screenshots, received {len(items)}")
+if len(items) != 11:
+    raise SystemExit(f"Expected 11 iPhone screenshots, received {len(items)}")
 if any(item["device"] != "compact-iPhone" for item in items):
     raise SystemExit("UI evidence must use the compact iPhone device")
 if any(item["orientation"] != "portrait" for item in items):

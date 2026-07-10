@@ -33,7 +33,11 @@ flowchart TD
   C --> LR["Speech run ID<br/>取消 / 重试使旧回调失效"]
   LR --> L["音频识别<br/>Apple Speech on-device / requiresOnDeviceRecognition"]
   L --> LV["speechRecognitionRunSummary<br/>输入 / locale / 耗时 / 词数 / 片段 / 置信度 / 失败原因"]
+  AX["录音默认 accessibility action<br/>开始 / 停止"] --> L
   L --> D
+
+  SETTINGS["Settings NavigationPath"] --> DEVRESET{"开发模式仍开启?"}
+  DEVRESET -->|"否"| SETTINGSROOT["清空 path / 返回设置根页"]
 
   %% 漫画探针分支：固定 test/1.png
   C --> M["漫画覆盖翻译探针<br/>test/1.png"]
@@ -45,6 +49,7 @@ flowchart TD
   %% 输出：持久化和调试产物
   C --> R["state.json<br/>会话、历史、提示词、设置"]
   PREVIEW["隔离 Preview / DEBUG UI evidence 场景"] -. "仅展示状态，不执行业务服务" .-> B
+  CONTRACT["v1.87 UI interaction contract<br/>动作接线 / AX / 导航 / Reduce Motion"] -. "CI 独立 testcase" .-> B
   Q --> S["App 沙盒 Output<br/>JSON / TXT / PNG"]
   S --> T["scripts/export-probe-output.sh<br/>导出到项目根 output/"]
   T --> U["metrics/version_history.csv<br/>长期指标 append-only"]

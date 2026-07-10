@@ -11,8 +11,10 @@ enum AppPreviewScenario: String {
     case audioRecognizing
     case audioFailure
     case history
+    case promptLibrary
     case proLocked
     case proUnlocked
+    case developerConsole
     case localMissing
     case localReady
 
@@ -22,8 +24,16 @@ enum AppPreviewScenario: String {
         case .imageEmpty, .imageSuccess: .image
         case .audioRecognizing, .audioFailure: .audio
         case .history: .history
-        case .proLocked, .proUnlocked, .localMissing, .localReady: .settings
+        case .promptLibrary, .proLocked, .proUnlocked, .developerConsole, .localMissing, .localReady: .settings
         }
+    }
+
+    var presentsPromptDirectly: Bool {
+        self == .promptLibrary
+    }
+
+    var presentsDeveloperDirectly: Bool {
+        self == .developerConsole
     }
 
     var presentsModelDirectly: Bool {
@@ -82,6 +92,7 @@ enum AppPreviewScenario: String {
             ]
         case .audioRecognizing:
             store.isProUnlocked = true
+            store.isCapturingProSpeech = true
             store.audioRecognitionState = .recognizing
             store.audioRecognitionMessage = "正在使用 en-US 强制本机识别"
             store.speechRecognitionRunSummary = Self.audioSummary(isFinal: false, failureMessage: nil)
@@ -92,12 +103,17 @@ enum AppPreviewScenario: String {
             store.speechRecognitionRunSummary = Self.audioSummary(isFinal: true, failureMessage: store.audioRecognitionMessage)
         case .history:
             store.history = [Self.sampleRecord, Self.sampleRecordTwo]
+        case .promptLibrary:
+            store.selectedPromptID = PromptTemplate.translatorID
         case .proLocked:
             store.isProUnlocked = false
             store.proPurchaseMessage = "App Store 商品暂不可用"
         case .proUnlocked:
             store.isProUnlocked = true
             store.proPurchaseMessage = "开发环境已解锁 Pro"
+        case .developerConsole:
+            store.isDeveloperModeEnabled = true
+            store.developerModeMessage = "开发者模式已开启"
         case .localMissing:
             store.selectedEngine = .local
             store.modelStatus = ModelStatus(title: "Local GGUF", detail: "未找到 model.gguf", isReady: false)

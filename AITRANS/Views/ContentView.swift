@@ -32,7 +32,6 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
 
 struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @EnvironmentObject private var store: TranslationSessionStore
     @AppStorage("aitrans.ui.appearance") private var appearanceRawValue = AppAppearance.system.rawValue
     @State private var selectedTab: AppTab
 
@@ -53,17 +52,16 @@ struct ContentView: View {
         ZStack {
             AppCanvasBackground()
 
-            if evidenceScenario?.presentsModelDirectly == true {
+            if evidenceScenario?.presentsPromptDirectly == true {
+                PromptLibraryView()
+            } else if evidenceScenario?.presentsDeveloperDirectly == true {
+                DeveloperConsoleView()
+            } else if evidenceScenario?.presentsModelDirectly == true {
                 ModelManagementView()
             } else if horizontalSizeClass == .regular {
                 TabletRootView(selectedTab: $selectedTab)
             } else {
                 PhoneRootView(selectedTab: $selectedTab)
-            }
-        }
-        .onChange(of: store.isDeveloperModeEnabled) { _, isEnabled in
-            if !isEnabled, selectedTab == .settings {
-                selectedTab = .settings
             }
         }
         .preferredColorScheme(appearance.colorScheme)

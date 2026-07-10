@@ -100,7 +100,11 @@ private struct LiveSpeechPanel: View {
             )
             .scaleEffect(store.isCapturingProSpeech && !shouldReduceMotion ? 0.98 : 1)
             .animation(shouldReduceMotion ? nil : AppTheme.Motion.quick, value: store.isCapturingProSpeech)
-            .accessibilityHint(store.isProUnlocked ? "按住按钮说话，松开结束" : "需要先开通或开发解锁 Pro")
+            .accessibilityValue(store.isCapturingProSpeech ? "正在识别" : "已停止")
+            .accessibilityHint(accessibilityHint)
+            .accessibilityAction {
+                toggleAccessibleCapture()
+            }
 
             if !store.isProUnlocked {
                 AppStatusRow(title: "Pro 功能已锁定", detail: "开通 Pro 后可使用实时本机语音识别。", tone: .locked)
@@ -132,6 +136,19 @@ private struct LiveSpeechPanel: View {
 
     private var shouldReduceMotion: Bool {
         reduceMotion || reduceMotionOverride
+    }
+
+    private var accessibilityHint: String {
+        guard store.isProUnlocked else { return "需要先开通或开发解锁 Pro" }
+        return store.isCapturingProSpeech ? "双击停止识别" : "双击开始识别；触控用户也可按住说话"
+    }
+
+    private func toggleAccessibleCapture() {
+        if store.isCapturingProSpeech {
+            store.endProLiveSpeechCapture()
+        } else {
+            store.beginProLiveSpeechCapture()
+        }
     }
 }
 
