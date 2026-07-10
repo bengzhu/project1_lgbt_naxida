@@ -72,6 +72,7 @@ struct AudioTranslationView: View {
 
 private struct LiveSpeechPanel: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotionOverride) private var reduceMotionOverride
     @EnvironmentObject private var store: TranslationSessionStore
 
     var body: some View {
@@ -97,8 +98,8 @@ private struct LiveSpeechPanel: View {
                     }
                     .onEnded { _ in store.endProLiveSpeechCapture() }
             )
-            .scaleEffect(store.isCapturingProSpeech && !reduceMotion ? 0.98 : 1)
-            .animation(reduceMotion ? nil : AppTheme.Motion.quick, value: store.isCapturingProSpeech)
+            .scaleEffect(store.isCapturingProSpeech && !shouldReduceMotion ? 0.98 : 1)
+            .animation(shouldReduceMotion ? nil : AppTheme.Motion.quick, value: store.isCapturingProSpeech)
             .accessibilityHint(store.isProUnlocked ? "按住按钮说话，松开结束" : "需要先开通或开发解锁 Pro")
 
             if !store.isProUnlocked {
@@ -127,6 +128,10 @@ private struct LiveSpeechPanel: View {
             }
         }
         .appSurface()
+    }
+
+    private var shouldReduceMotion: Bool {
+        reduceMotion || reduceMotionOverride
     }
 }
 

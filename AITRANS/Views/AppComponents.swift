@@ -283,7 +283,7 @@ extension View {
 }
 
 private struct AppSurfaceModifier: ViewModifier {
-    @Environment(\.accessibilityContrast) private var contrast
+    @Environment(\.colorSchemeContrast) private var contrast
     let padded: Bool
 
     func body(content: Content) -> some View {

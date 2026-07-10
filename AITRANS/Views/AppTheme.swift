@@ -77,3 +77,14 @@ enum AppStatusTone {
         }
     }
 }
+
+private struct AppReduceMotionOverrideKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var appReduceMotionOverride: Bool {
+        get { self[AppReduceMotionOverrideKey.self] }
+        set { self[AppReduceMotionOverrideKey.self] = newValue }
+    }
+}

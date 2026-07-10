@@ -205,7 +205,7 @@ private struct PreviewContainer<Content: View>: View {
 
 #Preview("Audio · Reduce Motion", traits: .fixedLayout(width: 430, height: 932)) {
     PreviewContainer(scenario: .audioRecognizing) { AudioTranslationView() }
-        .environment(\.accessibilityReduceMotion, true)
+        .environment(\.appReduceMotionOverride, true)
 }
 
 #Preview("Audio · Failure", traits: .fixedLayout(width: 375, height: 812)) {

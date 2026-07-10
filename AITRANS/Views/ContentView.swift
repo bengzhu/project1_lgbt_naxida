@@ -32,7 +32,6 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
 
 struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var selectedTab: AppTab
 
@@ -67,7 +66,7 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .environment(\.accessibilityReduceMotion, systemReduceMotion || evidenceScenario == .audioRecognizing)
+        .environment(\.appReduceMotionOverride, evidenceScenario == .audioRecognizing)
     }
 }
 
