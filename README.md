@@ -46,7 +46,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - v1.70 起只要 workflow 填写 Koharu artifact archive，就必须使用 `ci-fast` 或 `full`，不能用 `probe_mode=skip`；云端 smoke 会核对 coverage / orientation work item 与 gate ID、status、App-side identity 摘要和 `ocrSucceededCount`，orientation blockers 未清空时不得误判 passed。
 - v1.74 起 `ci-fast/full` 的未加密 manifest 和 failure summary 也会直接汇总 v1.39-v1.46 native-lite detector / shadow OCR / refinement / closed-loop / instance-lite / SegmentMask refinement / bundle / promotion gate 的 verdict、counts、linkage blockers 和 convergence work item / gate 状态，避免 Agent C 为了确认 native-lite 阻塞再深挖完整 `probe_report.json`。
 - 云端探针验收口径是报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0`、关键 JSON/TXT/PNG 可用；`overallPassed=false` 仍可能是当前模型质量基线，不单独作为 CI 失败。若探针超时，结果包会保留 `manga-probe.log`、`app-console.log` 和 `output/manga_probe_progress.json`；`ci-fast` 启动后 180 秒未创建 progress 会提前失败、progress 300 秒不更新会提前收束，`full` 分别为 300 秒和 600 秒。
-- `codeb/v1.87-enterprise-ui` 的 push CI 会复用当前 Debug simulator build，生成 `ui-evidence/` 多设备、多状态截图和 `ui-evidence-manifest.json`；截图步骤失败会使该候选分支 CI 失败，不能用编译结果替代视觉验收。
+- `codeb/v1.87-enterprise-ui` 的 App 相关 push CI 会复用当前 Debug simulator build，生成 `ui-evidence/` 两档 iPhone、多状态截图和 `ui-evidence-manifest.json`；截图步骤失败会使该候选分支 CI 失败，不能用编译结果替代视觉验收。当前不采集 iPad / Mac 证据。
 
 ## 当前界面
 

@@ -27,9 +27,8 @@ if not runtimes:
 runtime = runtimes[-1]
 devices = [item for item in runtime.get("supportedDeviceTypes", []) if item.get("identifier")]
 phones = [item for item in devices if item.get("productFamily") == "iPhone"]
-tablets = [item for item in devices if item.get("productFamily") == "iPad"]
-if not phones or not tablets:
-    raise SystemExit("Both iPhone and iPad simulator device types are required")
+if not phones:
+    raise SystemExit("At least one iPhone simulator device type is required")
 
 def choose(items, preferred):
     for needle in preferred:
@@ -40,37 +39,36 @@ def choose(items, preferred):
 
 small = choose(phones, ["iPhone SE (3rd generation)", "iPhone 16e", "iPhone 15"])
 large = choose(phones, ["Pro Max", "Plus"])
-tablet = choose(tablets, ["13-inch", "12.9-inch", "iPad Pro"])
 print(runtime["identifier"])
 print(small["identifier"])
 print(large["identifier"])
-print(tablet["identifier"])
 PY
 )"
 
 runtime="$(echo "$device_selection" | sed -n '1p')"
 small_type="$(echo "$device_selection" | sed -n '2p')"
 large_type="$(echo "$device_selection" | sed -n '3p')"
-tablet_type="$(echo "$device_selection" | sed -n '4p')"
 
 small_id="$(xcrun simctl create "AITRANS UI Small" "$small_type" "$runtime")"
 large_id="$(xcrun simctl create "AITRANS UI Large" "$large_type" "$runtime")"
-tablet_id="$(xcrun simctl create "AITRANS UI iPad" "$tablet_type" "$runtime")"
 
 cleanup() {
-  for device_id in "$small_id" "$large_id" "$tablet_id"; do
+  for device_id in "$small_id" "$large_id"; do
     xcrun simctl shutdown "$device_id" >/dev/null 2>&1 || true
     xcrun simctl delete "$device_id" >/dev/null 2>&1 || true
   done
 }
 trap cleanup EXIT
 
-for device_id in "$small_id" "$large_id" "$tablet_id"; do
-  xcrun simctl boot "$device_id"
-done
+echo "Booting iPhone simulators and waiting for full readiness"
+xcrun simctl bootstatus "$small_id" -b &
+small_boot_pid=$!
+xcrun simctl bootstatus "$large_id" -b &
+large_boot_pid=$!
+wait "$small_boot_pid"
+wait "$large_boot_pid"
 
-for device_id in "$small_id" "$large_id" "$tablet_id"; do
-  xcrun simctl bootstatus "$device_id" -b
+for device_id in "$small_id" "$large_id"; do
   xcrun simctl install "$device_id" "$app_path"
   xcrun simctl ui "$device_id" appearance dark
 done
@@ -90,7 +88,6 @@ capture() {
   xcrun simctl terminate "$device_id" "$bundle_id" >/dev/null 2>&1 || true
   SIMCTL_CHILD_AITRANS_UI_EVIDENCE_SCENARIO="$scenario" \
     SIMCTL_CHILD_AITRANS_UI_EVIDENCE_APPEARANCE="$appearance" \
-    SIMCTL_CHILD_AITRANS_UI_EVIDENCE_ORIENTATION="$orientation" \
     xcrun simctl launch --terminate-running-process "$device_id" "$bundle_id"
   sleep 3
   xcrun simctl io "$device_id" screenshot "$output_dir/$filename"
@@ -103,11 +100,6 @@ capture() {
     echo "Expected portrait screenshot but received ${image_width}x${image_height}: $filename" >&2
     exit 1
   fi
-  if [ "$orientation" != "portrait" ] && [ "$image_width" -le "$image_height" ]; then
-    echo "Expected landscape screenshot but received ${image_width}x${image_height}: $filename" >&2
-    exit 1
-  fi
-
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
     "$filename" "$device_label" "$orientation" "$content_size" "$scenario" "$reduce_motion" "$appearance" "$commit_sha" >> "$metadata_tsv"
 }
@@ -121,11 +113,6 @@ capture "$large_id" "large-iPhone" textSuccess extra-extra-large portrait text-s
 capture "$large_id" "large-iPhone" textKeyboard large portrait text-keyboard-large-night.png false 夜间
 capture "$large_id" "large-iPhone" textFailure accessibility-extra-large portrait text-failure-large-accessibility-night.png false 夜间
 capture "$large_id" "large-iPhone" audioRecognizing large portrait audio-running-reduce-motion-night.png true 夜间
-
-capture "$tablet_id" "iPad" proUnlocked large portrait settings-pro-unlocked-ipad-portrait-day.png false 日间
-capture "$tablet_id" "iPad" imageSuccess large landscapeLeft image-success-ipad-landscape-night.png false 夜间
-capture "$tablet_id" "iPad" localMissing large portrait model-missing-ipad-portrait-day.png false 日间
-capture "$tablet_id" "iPad" localReady extra-extra-large landscapeLeft model-ready-ipad-landscape-xxl-night.png false 夜间
 
 python3 - "$metadata_tsv" "$output_dir/ui-evidence-manifest.json" <<'PY'
 import json
@@ -147,6 +134,18 @@ for line in source.read_text(encoding="utf-8").splitlines():
         "appearance": appearance,
         "commitSha": commit_sha,
     })
+if len(items) != 8:
+    raise SystemExit(f"Expected 8 iPhone screenshots, received {len(items)}")
+if any(item["device"] not in {"compact-iPhone", "large-iPhone"} for item in items):
+    raise SystemExit("UI evidence contains a non-iPhone device")
+if any(item["orientation"] != "portrait" for item in items):
+    raise SystemExit("iPhone-only UI evidence must remain portrait")
+if {item["appearance"] for item in items} != {"日间", "夜间"}:
+    raise SystemExit("Both day and night evidence are required")
+if not any(item["dynamicType"].startswith("accessibility-") for item in items):
+    raise SystemExit("Accessibility Dynamic Type evidence is required")
+if not any(item["reduceMotion"] for item in items):
+    raise SystemExit("Reduce Motion evidence is required")
 destination.write_text(json.dumps({"screenshots": items}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
 

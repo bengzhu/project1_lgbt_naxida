@@ -24,9 +24,9 @@
 
 `codeb/v1.87-enterprise-ui` 的 push CI 在 Xcode build 通过后必须运行 `scripts/capture-ui-evidence.sh`。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、`ui-evidence-manifest.json` 和 `ui-evidence.log`，manifest 的每张截图必须记录设备、方向、Dynamic Type、场景、Reduce Motion 和当前 `commitSha`。
 
-最低截图矩阵：紧凑 iPhone 的文本空态、图片空态、历史有数据、Pro 锁定；大屏 iPhone 的文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频运行；iPad 的 Pro 解锁竖屏、图片成功横屏、Local missing 竖屏和 Local ready XXL 横屏。矩阵必须同时包含日间和夜间外观，manifest 记录 `appearance`；截图步骤失败必须使候选分支 CI 失败。
+当前最低截图矩阵为 8 张 iPhone 竖屏证据：紧凑 iPhone 的文本空态、图片空态、历史有数据、Pro 锁定；大屏 iPhone 的文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频运行。矩阵必须同时包含日间和夜间外观，manifest 记录 `appearance`；截图步骤失败必须使候选分支 CI 失败。iPad / Mac 视觉证据本轮暂缓，不得把缺失证据描述为已验证。
 
-Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键盘遮挡；页面没有卡片套卡片；主操作层级唯一；颜色之外仍有图标和文字状态；44pt 触控、最长状态文案、Dynamic Type、横竖屏和安全区可用。Preview matrix 只用于复现状态和开发检查，不得当作当前 HEAD 运行截图。
+Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键盘遮挡；页面没有卡片套卡片；主操作层级唯一；颜色之外仍有图标和文字状态；44pt 触控、最长状态文案、Dynamic Type 和安全区可用。Preview matrix 只用于复现状态和开发检查，不得当作当前 HEAD 运行截图。
 
 交互回归至少覆盖：文本翻译/交换语言/目标语言/提示词；新会话与历史恢复/搜索/删除/导入/导出/清空；提示词新建/编辑/复制/删除/选择；Mock/Local、GGUF 下载/导入/移除和失败；图片导入/OCR/旁贴/覆盖/取消/重试/导出；音频导入/识别/取消/翻译/摘要；Pro 锁定/解锁/订阅校验；开发 raw probe、批量探针和漫画报告入口。
 
