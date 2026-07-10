@@ -13,6 +13,8 @@ flowchart TD
   TAB --> B["拆分的 SwiftUI feature views<br/>文本 / 图片 / 音频 / 历史 / 设置 / 开发"]
   SPLIT --> B
   DS["AppTheme + AppComponents<br/>语义 token / 状态 / 44pt / 响应式布局"] --> B
+  SH["文本页顶部 safe-area inset<br/>页头 + 模型状态"] --> B
+  SH -. "不参与键盘自动滚动" .-> D
 
   %% 状态中心：所有业务动作统一进入 store
   B --> C["TranslationSessionStore<br/>统一状态、调度、持久化、诊断"]

@@ -7,14 +7,6 @@ struct TextTranslationView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
-                AppPageHeader(
-                    title: "秒译",
-                    subtitle: "本地 AI 翻译工作台",
-                    systemImage: "bolt.horizontal.circle.fill",
-                    status: store.modelStatus.title,
-                    statusTone: store.modelStatus.isReady ? .success : .warning
-                )
-
                 LanguageControlBar()
 
                 ViewThatFits(in: .horizontal) {
@@ -39,6 +31,18 @@ struct TextTranslationView: View {
             .padding(.bottom, 72)
         }
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            AppPageHeader(
+                title: "秒译",
+                subtitle: "本地 AI 翻译工作台",
+                systemImage: "bolt.horizontal.circle.fill",
+                status: store.modelStatus.title,
+                statusTone: store.modelStatus.isReady ? .success : .warning
+            )
+            .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
+            .padding(.vertical, AppTheme.Spacing.section)
+            .background(Color.appCanvas)
+        }
         .background(Color.appCanvas)
     }
 }

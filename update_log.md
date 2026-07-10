@@ -132,8 +132,9 @@
 - 优化云端验证：单台紧凑 iPhone 通过 `bootstatus -b` 等待完整启动，避免“设备已标记 booted 但系统迁移未完成”导致首张截图阻塞，并消除两台新模拟器并行迁移的资源争用；文档-only push 可走 build-skip，UI evidence workflow 变化仍强制 build，Koharu 完整 invalid-fixture 矩阵仅在真实 validator / artifact contract 相关变化时运行。
 - Speech contract 仅更新 UI 文件定位，保留取消、`translating` 和运行摘要断言强度。
 - Agent C 在 `a925f944` 退回四项：录音按钮缺默认无障碍动作、关闭开发模式未退出开发控制台、Reduce Motion 场景未进入 capturing 分支、八类页面缺独立交互回归证据。当前修复为录音默认 accessibility toggle、`SettingsView` 显式 `NavigationPath` reset、`audioRecognizing.isCapturingProSpeech=true`，并新增 5 项 `test-v187-ui-interaction-contract.py`、独立 CI step / log / manifest 字段 / JUnit testcase。
+- Agent C 在 `4a6c05c3` 的键盘截图发现模型状态随整页 `ScrollView` 自动滚动到系统状态栏。当前把文本页头和模型状态移到顶部 safe-area inset，仅让语言栏与翻译工作区参与键盘滚动，并新增对应源码契约，防止页头重新进入自动滚动区。
 
-本地轻量验证：Swift parse、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、5 项 Speech contract、5 项 v1.87 UI interaction contract 和三个 JSON parse；未跑本机 build / 探针，按规则交给云端验证。
+本地轻量验证：Swift parse、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、5 项 Speech contract、6 项 v1.87 UI interaction contract 和三个 JSON parse；未跑本机 build / 探针，按规则交给云端验证。
 
 已知云端证据：`a925f944` 对应 run `29077009194` 的静态检查、Xcode build 和 8 张 UI evidence 均成功，总耗时已降至 11 分 9 秒；Agent C 核对 artifact 身份后仍因上述四项退回。当前修复 HEAD 必须重新生成 11 张 PNG，并证明 `uiInteractionContractOutcome=success`、JUnit 包含独立 interaction testcase；旧 run 不能作为修复后的验收证据。
 

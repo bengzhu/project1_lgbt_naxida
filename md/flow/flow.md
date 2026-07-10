@@ -69,6 +69,7 @@
 
 - iPhone 使用文本、图片、音频、历史、设置五入口 `TabView`。
 - iPad 使用 `NavigationSplitView`；宽内容优先输入/输出或主检查区/状态区并排，空间不足时通过 `ViewThatFits` 降为单列。
+- 文本页头和模型状态位于工作区 `ScrollView` 外的顶部 safe-area inset；键盘自动聚焦只滚动语言栏与输入/输出工作区，页头不会进入系统状态栏区域。
 - `AppTheme` 提供语义颜色、间距、圆角、动效、触控和宽度 token；`AppComponents` 提供页头、区段、状态、按钮、空状态、指标和页面宽度原语。
 - 日间/夜间颜色来自 `Assets.xcassets` 的 luminosity variants；`AppAppearance` 通过 `AppStorage` 选择跟随系统、日间或夜间，不进入业务 `state.json`。
 - 所有业务按钮只调用 store 公开方法；UI 不直接操作 `state.json`、模型 runtime、Speech task、Vision OCR 或漫画探针服务。

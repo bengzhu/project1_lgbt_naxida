@@ -49,6 +49,18 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertIn("store.isCapturingProSpeech && !shouldReduceMotion", audio)
         self.assertRegex(capture, r"audioRecognizing\s+large\s+portrait\s+\S+\s+true\s+夜间")
 
+    def test_keyboard_header_stays_outside_automatic_scroll(self) -> None:
+        text_view = read("AITRANS/Views/TextTranslationView.swift")
+        scroll_body = re.search(
+            r"ScrollView\s*\{(?P<body>.*?)\n        \}\n        \.scrollDismissesKeyboard",
+            text_view,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(scroll_body, "text workspace scroll view is missing")
+        self.assertNotIn("AppPageHeader(", scroll_body.group("body"))
+        self.assertRegex(text_view, r"\.safeAreaInset\(edge: \.top, spacing: 0\)\s*\{\s*AppPageHeader\(")
+        self.assertIn(".background(Color.appCanvas)", text_view)
+
     def test_runtime_evidence_covers_required_workflows(self) -> None:
         capture = read("scripts/capture-ui-evidence.sh")
         required_scenarios = {
