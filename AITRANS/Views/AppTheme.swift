@@ -46,18 +46,10 @@ enum AppTheme {
 }
 
 extension Color {
-    static let appCanvas = Color("AppCanvas")
-    static let appSurface = Color("AppSurface")
-    static let appSurfaceRaised = Color("AppSurfaceRaised")
-    static let appBorder = Color("AppBorder")
-    static let appTextPrimary = Color("AppTextPrimary")
-    static let appTextSecondary = Color("AppTextSecondary")
-    static let appAccent = Color("AppAccent")
-    static let appAccentStrong = Color("AppAccentStrong")
-    static let success = Color("AppSuccess")
-    static let warning = Color("AppWarning")
-    static let danger = Color("AppDanger")
-    static let locked = Color("AppLocked")
+    static let success = Color.appSuccess
+    static let warning = Color.appWarning
+    static let danger = Color.appDanger
+    static let locked = Color.appLocked
 
     // Compatibility for feature views migrated in later phases.
     static let panel = Color.appSurface
