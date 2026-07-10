@@ -1,97 +1,105 @@
-import Foundation
 import SwiftUI
-import UniformTypeIdentifiers
+
+struct ProAccessPanel: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+            AppSectionHeader(
+                title: store.proStatusTitle,
+                subtitle: store.proPlan.displayPrice,
+                systemImage: store.isProUnlocked ? "checkmark.seal.fill" : "lock.fill"
+            )
+
+            AppStatusRow(
+                title: store.isProUnlocked ? "已解锁" : "免费模式",
+                detail: store.isProUnlocked ? store.proPlan.detail : "中文、英语文本翻译可用；音频和扩展语言保持锁定。",
+                tone: store.isProUnlocked ? .success : .locked
+            )
+            Text(store.proPurchaseMessage)
+                .font(.subheadline)
+                .foregroundStyle(Color.appTextSecondary)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: AppTheme.Spacing.control) { actions }
+                VStack(spacing: AppTheme.Spacing.control) { actions }
+            }
+        }
+        .appSurface()
+    }
+
+    @ViewBuilder private var actions: some View {
+        if !store.isProUnlocked {
+            AppPrimaryButton(title: "开通 Pro", systemImage: "crown.fill", action: store.purchaseProSubscription)
+        }
+        AppSecondaryButton(title: "校验订阅", systemImage: "arrow.clockwise", action: store.refreshProEntitlements)
+        if store.isDeveloperModeEnabled {
+            AppSecondaryButton(title: "开发解锁", systemImage: "wrench.and.screwdriver.fill", tone: .warning, action: store.activateProForDevelopment)
+            if store.isProUnlocked {
+                AppSecondaryButton(title: "切回免费", systemImage: "person.crop.circle.badge.minus", action: store.restoreFreeModeForDevelopment)
+            }
+        }
+    }
+}
 
 struct ProFeatureGrid: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var showBackgroundPlan = false
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 142), spacing: 10)
-    ]
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: "Pro 功能", subtitle: store.isProUnlocked ? "已解锁" : "内购模式", icon: "crown.fill")
-
-            LazyVGrid(columns: columns, spacing: 10) {
-                ProFeatureCard(
-                    icon: "camera.viewfinder",
-                    title: "图片翻译",
-                    detail: "Vision OCR + 本地模型翻译",
-                    isUnlocked: store.isProUnlocked
-                ) {
-                    store.dataTransferMessage = store.isProUnlocked ? "请从图片页使用图片翻译" : "图片翻译需要 Pro"
-                }
-
-                ProFeatureCard(
-                    icon: "waveform.badge.magnifyingglass",
-                    title: "音频测试",
-                    detail: "选择音频，断网本机识别后翻译",
-                    isUnlocked: store.isProUnlocked
-                ) {
-                    store.dataTransferMessage = store.isProUnlocked ? "请从音频页使用音频翻译" : "音频离线识别测试需要 Pro"
-                }
-
-                ProFeatureCard(
-                    icon: "rectangle.on.rectangle.badge.gearshape",
-                    title: "后台翻译",
-                    detail: "悬浮窗能力评估与扩展路线",
-                    isUnlocked: store.isProUnlocked,
-                    isComingSoon: true
-                ) {
-                    showBackgroundPlan = true
-                }
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+            AppSectionHeader(title: "Pro 工具", subtitle: store.isProUnlocked ? "可用" : "已锁定", systemImage: "crown.fill")
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: AppTheme.Spacing.section)], spacing: 0) {
+                ProFeatureRow(title: "图片翻译", detail: "Vision OCR 与本地模型", systemImage: "camera.viewfinder", unlocked: store.isProUnlocked)
+                ProFeatureRow(title: "音频翻译", detail: "Apple Speech 本机识别", systemImage: "waveform", unlocked: store.isProUnlocked)
+                ProFeatureRow(title: "扩展语言", detail: "日语、法语与德语", systemImage: "globe", unlocked: store.isProUnlocked)
             }
 
-            SpeechCapabilityPanel()
+            Button {
+                showBackgroundPlan = true
+            } label: {
+                HStack(spacing: AppTheme.Spacing.control) {
+                    Image(systemName: "rectangle.on.rectangle.badge.gearshape")
+                        .foregroundStyle(Color.appAccent)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("后台翻译路线").font(.subheadline.bold())
+                        Text("Share Extension 或 ReplayKit 合规方案").font(.caption).foregroundStyle(Color.appTextSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "info.circle").accessibilityHidden(true)
+                }
+                .frame(minHeight: AppTheme.Layout.minimumTarget)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.appTextPrimary)
         }
-        .panelStyle()
-        .alert("后台一键翻译", isPresented: $showBackgroundPlan) {
-            Button("知道了", role: .cancel) {}
-        } message: {
-            Text("iOS 普通 App 不能常驻覆盖其他 App 的任意悬浮窗。可行路线是 Share Extension 处理截图/文本，或 ReplayKit Broadcast Upload Extension 获取屏幕帧后做本地 OCR，但需要用户显式启动屏幕广播。")
+        .alert("后台一键翻译", isPresented: $showBackgroundPlan) {} message: {
+            Text("iOS 普通 App 不能常驻覆盖其他 App。可行路线是 Share Extension 处理截图或文本，或由用户显式启动 ReplayKit 屏幕广播后处理画面。")
         }
     }
 }
 
-private struct ProFeatureCard: View {
-    let icon: String
+private struct ProFeatureRow: View {
     let title: String
     let detail: String
-    let isUnlocked: Bool
-    var isComingSoon = false
-    let action: () -> Void
+    let systemImage: String
+    let unlocked: Bool
 
     var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 9) {
-                HStack {
-                    Image(systemName: icon)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(isUnlocked ? Color.appAccent : Color.warning)
-                    Spacer()
-                    Image(systemName: isUnlocked ? "checkmark.circle.fill" : "lock.fill")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(isUnlocked ? Color.success : Color.warning)
-                }
-
-                Text(title)
-                    .font(.system(size: 15, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
-                Text(isComingSoon ? "开发中" : detail)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.58))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
+            Image(systemName: systemImage).foregroundStyle(unlocked ? Color.appAccent : Color.locked).frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.subheadline.bold())
+                Text(detail).font(.caption).foregroundStyle(Color.appTextSecondary)
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, minHeight: 118, alignment: .leading)
-            .background(Color.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            Spacer(minLength: 0)
+            Image(systemName: unlocked ? "checkmark.circle.fill" : "lock.fill")
+                .foregroundStyle(unlocked ? Color.success : Color.locked)
+                .accessibilityLabel(unlocked ? "已解锁" : "已锁定")
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, AppTheme.Spacing.control)
+        .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
     }
 }
 
@@ -99,37 +107,18 @@ struct SpeechCapabilityPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "iphone.gen3.radiowaves.left.and.right")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.appAccent)
-                Text("苹果本地语音识别")
-                    .font(.system(size: 13, weight: .bold))
-                Spacer()
-                Text(store.currentSpeechCapability.supportsOnDeviceRecognition ? "当前语言可用" : "当前语言需检测")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(store.currentSpeechCapability.supportsOnDeviceRecognition ? Color.success : Color.warning)
-            }
-
-            Text("iOS 13+ 的 Speech 框架可用 `supportsOnDeviceRecognition` 判断本机是否支持离线识别，并用 `requiresOnDeviceRecognition` 强制本地识别。支持情况取决于设备和语言包。")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.58))
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 6) {
-                ForEach(store.speechRecognitionCapabilities.prefix(4)) { capability in
-                    Text("\(capability.language.shortName) \(capability.supportsOnDeviceRecognition ? "本地" : "云端")")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(capability.supportsOnDeviceRecognition ? Color.success : .white.opacity(0.50))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 5)
-                        .background(Color.white.opacity(0.07), in: Capsule())
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+            AppSectionHeader(title: "本机识别能力", subtitle: store.currentSpeechCapability.localeIdentifier, systemImage: "iphone.gen3.radiowaves.left.and.right")
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: AppTheme.Spacing.section)], spacing: 0) {
+                ForEach(store.speechRecognitionCapabilities) { capability in
+                    AppStatusRow(
+                        title: capability.language.rawValue,
+                        detail: capability.supportsOnDeviceRecognition ? "支持本机识别" : "需要系统语言包",
+                        tone: capability.supportsOnDeviceRecognition ? .success : .warning
+                    )
                 }
             }
         }
-        .padding(12)
-        .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
     }
 }
 
@@ -139,81 +128,28 @@ struct SpeechRecognitionRunSummaryPanel: View {
     var body: some View {
         let summary = store.speechRecognitionRunSummary
         if summary.hasContent {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Label("识别质量", systemImage: "sparkles")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    Spacer()
-                    Text(summary.mode.displayName)
-                        .font(.caption.bold())
-                        .foregroundStyle(summary.failureMessage == nil ? Color.appAccent : Color.danger)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
-                        .background(Color.white.opacity(0.08), in: Capsule())
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+                AppSectionHeader(title: "本次运行", subtitle: summary.inputName, systemImage: "gauge.with.dots.needle.bottom.50percent")
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: AppTheme.Spacing.section)], spacing: 0) {
+                    AppMetric(title: "模式", value: summary.mode.displayName, systemImage: "waveform")
+                    AppMetric(title: "语言", value: summary.localeIdentifier, systemImage: "globe")
+                    AppMetric(title: "离线", value: summary.requiresOnDeviceRecognition ? "强制本机" : "自动", systemImage: "wifi.slash")
+                    AppMetric(title: "耗时", value: summary.elapsedSeconds.formatted(.number.precision(.fractionLength(1))) + "s", systemImage: "timer")
+                    AppMetric(title: "词数", value: "\(summary.wordCount)", systemImage: "textformat.abc")
+                    AppMetric(title: "片段", value: "\(summary.segmentCount)", systemImage: "waveform.path.ecg")
+                    AppMetric(title: "置信度", value: confidenceText(summary.averageConfidence), systemImage: "gauge.with.dots.needle.bottom.50percent")
                 }
-
-                Text(summary.inputName)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
-                    SpeechMetricTile(title: "语言", value: summary.localeIdentifier, icon: "globe.asia.australia.fill")
-                    SpeechMetricTile(title: "离线", value: summary.requiresOnDeviceRecognition ? "强制本机" : "自动", icon: "wifi.slash")
-                    SpeechMetricTile(title: "耗时", value: elapsedText(summary.elapsedSeconds), icon: "timer")
-                    SpeechMetricTile(title: "词数", value: "\(summary.wordCount)", icon: "textformat.abc")
-                    SpeechMetricTile(title: "片段", value: "\(summary.segmentCount)", icon: "waveform.path.ecg")
-                    SpeechMetricTile(title: "置信", value: confidenceText(summary.averageConfidence), icon: "gauge.with.dots.needle.bottom.50percent")
-                }
-
                 if let failureMessage = summary.failureMessage {
-                    Label(failureMessage, systemImage: "exclamationmark.triangle.fill")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Color.danger)
-                        .fixedSize(horizontal: false, vertical: true)
+                    AppStatusRow(title: "运行失败或取消", detail: failureMessage, tone: .danger)
                 } else if !summary.transcriptPreview.isEmpty {
-                    Text(summary.transcriptPreview)
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.78))
-                        .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
+                    SelectableTextBlock(title: "识别预览", text: summary.transcriptPreview)
                 }
             }
-            .padding(.vertical, 4)
         }
-    }
-
-    private func elapsedText(_ elapsedSeconds: TimeInterval) -> String {
-        "\(Int(elapsedSeconds.rounded()))s"
     }
 
     private func confidenceText(_ confidence: Double?) -> String {
-        guard let confidence else { return "采集中" }
-        return "\(Int((confidence * 100).rounded()))%"
-    }
-}
-
-private struct SpeechMetricTile: View {
-    let title: String
-    let value: String
-    let icon: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Label(title, systemImage: icon)
-                .font(.caption.bold())
-                .foregroundStyle(.white.opacity(0.54))
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-            Text(value)
-                .font(.body.bold())
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.74)
-        }
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        confidence?.formatted(.percent.precision(.fractionLength(0))) ?? "采集中"
     }
 }
 
@@ -221,69 +157,29 @@ struct AudioRecognitionPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(tint)
-                Text("音频文件断网测试")
-                    .font(.system(size: 13, weight: .bold))
-                Spacer()
-                Text(statusText)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(tint)
-            }
-
-            Text(store.audioRecognitionMessage)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.58))
-                .fixedSize(horizontal: false, vertical: true)
-
-            if !store.lastRecognizedSpeechText.isEmpty {
-                Text(store.lastRecognizedSpeechText)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.78))
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-
-            SpeechRecognitionRunSummaryPanel()
-        }
-        .padding(12)
-        .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-    }
-
-    private var icon: String {
-        switch store.audioRecognitionState {
-        case .idle: "waveform"
-        case .checking: "magnifyingglass"
-        case .recognizing: "waveform.path"
-        case .translating: "character.bubble.fill"
-        case .translated: "checkmark.circle.fill"
-        case .failed: "xmark.octagon.fill"
+        AppStatusRow(title: statusTitle, detail: store.audioRecognitionMessage, tone: statusTone)
+        if !store.lastRecognizedSpeechText.isEmpty {
+            SelectableTextBlock(title: "识别文本", text: store.lastRecognizedSpeechText)
         }
     }
 
-    private var tint: Color {
+    private var statusTitle: String {
         switch store.audioRecognitionState {
-        case .idle: .white.opacity(0.58)
-        case .checking, .recognizing, .translating: Color.warning
-        case .translated: Color.success
-        case .failed: Color.danger
+        case .idle: store.audioRecognitionMessage == "语音识别已取消" ? "已取消" : "等待音频"
+        case .checking: "检查本机能力"
+        case .recognizing: "正在识别"
+        case .translating: "正在翻译"
+        case .translated: "识别与翻译完成"
+        case .failed: "处理失败"
         }
     }
 
-    private var statusText: String {
+    private var statusTone: AppStatusTone {
         switch store.audioRecognitionState {
-        case .idle: "待选择"
-        case .checking: "检查中"
-        case .recognizing: "识别中"
-        case .translating: "翻译中"
-        case .translated: "已翻译"
-        case .failed: "失败"
+        case .idle: .neutral
+        case .checking, .recognizing, .translating: .active
+        case .translated: .success
+        case .failed: .danger
         }
     }
 }

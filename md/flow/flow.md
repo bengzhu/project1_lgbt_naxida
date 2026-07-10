@@ -52,7 +52,30 @@
 关键文件：
 
 - `AITRANS/Views/ContentView.swift`
+- `AITRANS/Views/AppTheme.swift`
+- `AITRANS/Views/AppComponents.swift`
+- `AITRANS/Views/TextTranslationView.swift`
 - `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS/Views/AudioTranslationView.swift`
+- `AITRANS/Views/HistoryView.swift`
+- `AITRANS/Views/PromptLibraryView.swift`
+- `AITRANS/Views/SettingsView.swift`
+- `AITRANS/Views/ModelManagementView.swift`
+- `AITRANS/Views/DeveloperConsoleView.swift`
+- `AITRANS/Views/ProFeatureViews.swift`
+- `AITRANS/Views/AppPreviewSupport.swift`
+
+当前布局：
+
+- iPhone 使用文本、图片、音频、历史、设置五入口 `TabView`。
+- iPad 使用 `NavigationSplitView`；宽内容优先输入/输出或主检查区/状态区并排，空间不足时通过 `ViewThatFits` 降为单列。
+- 文本页头和模型状态位于工作区 `ScrollView` 外的顶部 safe-area inset；键盘自动聚焦只滚动语言栏与输入/输出工作区，页头不会进入系统状态栏区域。
+- `AppTheme` 提供语义颜色、间距、圆角、动效、触控和宽度 token；`AppComponents` 提供页头、区段、状态、按钮、空状态、指标和页面宽度原语。
+- 日间/夜间颜色来自 `Assets.xcassets` 的 luminosity variants；`AppAppearance` 通过 `AppStorage` 选择跟随系统、日间或夜间，不进入业务 `state.json`。
+- 所有业务按钮只调用 store 公开方法；UI 不直接操作 `state.json`、模型 runtime、Speech task、Vision OCR 或漫画探针服务。
+- 实时录音保留触控按住手势，同时提供默认 accessibility action；VoiceOver / Voice Control 激活会在 `beginProLiveSpeechCapture` 与 `endProLiveSpeechCapture` 之间切换。
+- 设置页持有显式 `NavigationPath`；`isDeveloperModeEnabled` 关闭时清空 path，开发控制台不能在权限关闭后继续停留或操作。
+- `AppPreviewScenario` 通过临时 URL 和 `performsStartupWork=false` 隔离预览，不恢复或持久化生产数据。DEBUG CI 可用 `AITRANS_UI_EVIDENCE_SCENARIO` 复现 11 个截图状态；`audioRecognizing` 同时设置真实 capturing 状态以覆盖 Reduce Motion 分支，生产启动不读取这些场景。
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppTheme.swift`
 

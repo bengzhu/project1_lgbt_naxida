@@ -116,6 +116,28 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.87：企业级视觉系统与核心体验重构
+日期：2026-07-10
+
+状态：Agent C 已验收通过，工程正式版本号收口为 `1.87`；PR #40 负责合并到 `smalldata_test`，不触碰 `main`。
+
+核心变更：
+
+- 建立炭灰、冷白、电光青的语义设计 token，统一 canvas、surface、border、状态色、间距、8pt 以内圆角、44pt 触控目标和 Reduce Motion 行为。
+- 语义色迁入 Asset Catalog 的日间/夜间变体；设置页提供跟随系统、日间、夜间选择，外观偏好独立保存在 `AppStorage`，不改变 `state.json` schema。
+- `ContentView.swift` 从 3277 行缩减为根路由；文本、图片、音频、历史、提示词、设置、模型、Pro 和开发控制台拆为独立文件，继续共享唯一 `TranslationSessionStore`。
+- 重做 iPhone 五入口 Tab 和 iPad `NavigationSplitView`；文本工作台、图片检查区、音频运行摘要、历史命令、提示词编辑、模型管理和开发报告使用一致的状态组件与响应式布局。
+- 新增隔离 `AppPreviewScenario`，preview 不恢复、不写入生产 `state.json`，覆盖多设备、Dynamic Type、Reduce Motion 及代表性成功/失败/锁定状态。
+- 新增 `scripts/capture-ui-evidence.sh` 与候选分支 CI 步骤，复用当前 Debug build 生成带设备、方向、Dynamic Type、状态、Reduce Motion 和 commit SHA 的截图 manifest；当前按人工要求收敛为同一台紧凑 iPhone 上的 11 张竖屏证据，新增提示词、模型和开发路径，iPad / Mac 视觉证据延期，证据步骤失败仍会阻塞 CI。
+- 优化云端验证：单台紧凑 iPhone 通过 `bootstatus -b` 等待完整启动，避免“设备已标记 booted 但系统迁移未完成”导致首张截图阻塞，并消除两台新模拟器并行迁移的资源争用；文档-only push 可走 build-skip，UI evidence workflow 变化仍强制 build，Koharu 完整 invalid-fixture 矩阵仅在真实 validator / artifact contract 相关变化时运行。
+- Speech contract 仅更新 UI 文件定位，保留取消、`translating` 和运行摘要断言强度。
+- Agent C 在 `a925f944` 退回四项：录音按钮缺默认无障碍动作、关闭开发模式未退出开发控制台、Reduce Motion 场景未进入 capturing 分支、八类页面缺独立交互回归证据。当前修复为录音默认 accessibility toggle、`SettingsView` 显式 `NavigationPath` reset、`audioRecognizing.isCapturingProSpeech=true`，并新增 5 项 `test-v187-ui-interaction-contract.py`、独立 CI step / log / manifest 字段 / JUnit testcase。
+- Agent C 在 `4a6c05c3` 的键盘截图发现模型状态随整页 `ScrollView` 自动滚动到系统状态栏。当前把文本页头和模型状态移到顶部 safe-area inset，仅让语言栏与翻译工作区参与键盘滚动，并新增对应源码契约，防止页头重新进入自动滚动区。
+
+本地轻量验证：Swift parse、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、5 项 Speech contract、6 项 v1.87 UI interaction contract 和三个 JSON parse；未跑本机 build / 探针，按规则交给云端验证。
+
+Agent C 验收证据：`d2b6ab32` 对应 run `29082220409` attempt 1，manifest 的 branch / commitSha / runId / runAttempt 与 PR HEAD 一致；`.xcresult` 为 `succeeded`、0 errors、0 warnings，JUnit 6/6，UI interaction contract 6/6，11 张紧凑 iPhone 运行态截图全部匹配当前 commit。Agent C 逐张复核日夜、键盘、XXL、Accessibility Dynamic Type、Reduce Motion、提示词、Local 缺模型和开发控制台状态；最终键盘证据中系统状态栏、页头、模型状态、输入区与软件键盘清楚分离。漫画探针为 `probe_mode=skip`，iPad / Mac 视觉证据与 XCUITest 点击回放不在本轮范围；未重跑漫画质量探针，因此不追加 `metrics/version_history.csv` 指标行。
+
 ### v1.86：Speech Recognition Insight and Audio UI Polish
 日期：2026-07-08
 
@@ -131,7 +153,7 @@
 - 合并验收补强用 run UUID 隔离授权、Speech 和翻译回调，避免取消/重试后旧任务污染新摘要；当前翻译任务未结束时不启动实时语音采集。
 - App bundle ID 统一为 `com.local.aitransform114`；CI 改为从构建 App `Info.plist` 动态读取 bundle ID，并让 `1.*` 版本分支触发合并前快验。
 - Xcode `MARKETING_VERSION` 从 `0.1.0` 收口为 `1.86`，CI 也会把纯数字 `1.86` 分支记录为 artifact version `v1.86`。
-- 新增 `scripts/test-speech-recognition-contract.py` 并接入 CI static checks；完整 v1.47-v1.86 汇总见 `md/v1.47-to-v1.86-update-notes.md`。
+- 新增 `scripts/test-speech-recognition-contract.py` 并接入 CI static checks；完整 v1.47-v1.86 汇总见 `md/prompt/v1.47-to-v1.86-update-notes.md`。
 - 同步 `md/flow/flow.md` 和 `md/flow/flowchart.md` 的音频识别流程。
 
 关键文件：
@@ -144,7 +166,7 @@
 - `md/flow/flowchart.md`
 - `.github/workflows/ci-results.yml`
 - `scripts/test-speech-recognition-contract.py`
-- `md/v1.47-to-v1.86-update-notes.md`
+- `md/prompt/v1.47-to-v1.86-update-notes.md`
 - `update_log.md`
 
 验证结果：

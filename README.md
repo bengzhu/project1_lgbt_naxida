@@ -19,9 +19,9 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-当前仓库暂时没有把 `Assets.xcassets` 放进 target 的 Resources build phase；图标资源仍保留在项目目录中。需要 App 图标时，可以在 Xcode 里把 `Assets.xcassets` 加回 `Copy Bundle Resources`，并设置 `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`。
+`Assets.xcassets` 已进入 target 的 Resources build phase，包含 AppIcon、AccentColor 和日间/夜间语义色。设置页可选择跟随系统、日间或夜间；默认跟随系统。
 
-项目根目录的 `test/` 已作为 folder resource 打进 App bundle。往 `test/` 放入音频或 OCR 图片后，需要重新构建安装 App，Pro 页的测试按钮才会扫描到新文件。
+项目根目录的 `test/` 已作为 folder resource 打进 App bundle。往 `test/` 放入音频或 OCR 图片后，需要重新构建安装 App，开发控制台的测试按钮才会扫描到新文件。
 
 ## 协作与云端验证
 
@@ -46,15 +46,16 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - v1.70 起只要 workflow 填写 Koharu artifact archive，就必须使用 `ci-fast` 或 `full`，不能用 `probe_mode=skip`；云端 smoke 会核对 coverage / orientation work item 与 gate ID、status、App-side identity 摘要和 `ocrSucceededCount`，orientation blockers 未清空时不得误判 passed。
 - v1.74 起 `ci-fast/full` 的未加密 manifest 和 failure summary 也会直接汇总 v1.39-v1.46 native-lite detector / shadow OCR / refinement / closed-loop / instance-lite / SegmentMask refinement / bundle / promotion gate 的 verdict、counts、linkage blockers 和 convergence work item / gate 状态，避免 Agent C 为了确认 native-lite 阻塞再深挖完整 `probe_report.json`。
 - 云端探针验收口径是报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0`、关键 JSON/TXT/PNG 可用；`overallPassed=false` 仍可能是当前模型质量基线，不单独作为 CI 失败。若探针超时，结果包会保留 `manga-probe.log`、`app-console.log` 和 `output/manga_probe_progress.json`；`ci-fast` 启动后 180 秒未创建 progress 会提前失败、progress 300 秒不更新会提前收束，`full` 分别为 300 秒和 600 秒。
+- `codeb/v1.87-enterprise-ui` 的 App 相关 push CI 会复用当前 Debug simulator build，在一台紧凑 iPhone 上生成 11 张 `ui-evidence/` 运行态截图和 `ui-evidence-manifest.json`；独立 `ui-interaction-contract` 检查八类页面的动作绑定、录音 accessibility action、开发导航 reset 和 Reduce Motion 场景。截图或交互契约失败都会阻塞候选分支；当前不采集 iPad / Mac 证据。
 
 ## 当前界面
 
-- `工作台`：主界面是一个简洁翻译框，输入文字后点击 `翻译`，会使用当前提示词和 Mock/Local 模型接口生成译文；默认免费目标语言为中文和英语。
-- `历史`：查看和搜索本地会话记录，打开历史会话会回到工作台并恢复对应转录、摘要、语言、提示词和模型设置；也可以通过系统文件面板导出/导入 JSON 或清空历史。
-- `提示词`：选择内置提示词，新增自定义提示词，复制或编辑自定义提示词。当前支持 `英译中` / `中译英` 两套提示词内容，界面可切换方向查看和编辑；生成请求会按当前源语言/目标语言自动选择对应指令。
-- `模型`：切换 `Mock` / `Local` 引擎，查看模型目录，下载内置 Gemma 270M GGUF，导入或移除本地 GGUF 文件，运行自检，单独运行 LLM 接口自测，调整 temperature 和 max tokens，查看真实模型接入接口说明。
-- `开发`：在模型页输入密码 `114514` 开启。用于调试真实翻译接口，有一个用户输入框、一个“大模型实际输入”框、一个“大模型实际输出/错误代码”框，并新增批量 raw 探针。Local 模式会展示实际送入 `llama.cpp` 的完整 prompt 和 raw 输出，不做清洗、隐藏、重试或屏蔽；Mock 模式会明确标记为模拟输出，不代表真实模型。
-- `Pro`：从首页独立出来的 Pro 功能页，包含订阅入口、长按麦克风同声传译、音频文件本机识别测试、图片 OCR 翻译、`test/` 固定测试入口和后台翻译路线说明。
+- `文本`：输入和译文是首屏主任务；语言、提示词、模型状态、处理中、成功和失败状态在同一工作台完成。iPad 宽屏使用输入/输出并排，iPhone 自动降为单列。
+- `图片`：图片检查区保持主视觉，旁贴/覆盖使用 segmented control；照片、文件、取消、重试、导出和 OCR 块状态集中在工具区。
+- `音频`：实时长按识别与音频文件识别分区展示，保留取消入口和 locale、离线要求、耗时、词数、片段、置信度与失败原因。
+- `历史`：搜索、恢复、删除、归档、导入、导出和清空使用一致命令层级；空历史和无搜索结果使用系统空状态。
+- `设置`：集中管理 Pro、提示词、模型、本地数据和受保护的开发者入口。提示词支持方向、新建、复制、编辑、删除和内置锁定；模型页支持 Mock/Local、GGUF 下载/导入/移除、自检和生成参数。
+- `开发`：仅在开发者模式开启后显示。raw prompt/output、批量 raw probe、固定素材测试和漫画探针报告采用高密度、可选择的等宽文本布局，不改变任何探针字段或执行语义。
 - 音频识别页会显示本次运行的输入名、locale、本机识别要求、耗时、词数、分段数、平均置信度、文本或失败原因；识别和翻译状态分开，检查中或识别中可取消。
 
 ## Pro / 内购占位
@@ -68,7 +69,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - `开发解锁` 仍保留为本地调试开关，便于真机测试未上架功能。
 - 免费：中文、英语文本翻译。
 - Pro：解锁日语、法语、德语目标语言。
-- Pro：解锁同声传译入口。同声传译在 Pro 页长按麦克风开始采集，松手结束，Apple Speech 本机识别结果先进入文本框，再点击按钮交给当前 Mock/Local 翻译接口。识别侧使用 `requiresOnDeviceRecognition = true`，支持情况取决于设备、系统和语言包。
+- Pro：解锁同声传译入口。同声传译在音频页长按麦克风开始采集，松手结束，Apple Speech 本机识别结果先进入文本框，再点击按钮交给当前 Mock/Local 翻译接口。识别侧使用 `requiresOnDeviceRecognition = true`，支持情况取决于设备、系统和语言包。
 - Pro：音频文件断网识别测试入口。选择音频后，App 会复制到沙盒，用 `SFSpeechURLRecognitionRequest` 和 `requiresOnDeviceRecognition = true` 做 Apple 本机识别，成功后自动交给当前大模型翻译。
 - Pro：`test/` 音频/OCR 测试入口。App 会扫描 bundle 内 `test/` 的首个匹配文件；音频支持 `.m4a`、`.wav`、`.mp3`、`.caf`，图片支持 `.png`、`.jpg`、`.jpeg`、`.heic`。未找到文件时会显示 `test/ 未找到可测试音频/图片`。
 - Pro：后台一键翻译入口已做开发占位。iOS 普通 App 不能像 Android 一样常驻覆盖其他 App 的任意悬浮窗；可行路线是 Share Extension 处理截图/文本，或 ReplayKit Broadcast Upload Extension 在用户显式启动屏幕广播后处理屏幕帧。
@@ -147,7 +148,7 @@ test/
 
 1. 把语音或图片放进项目根目录 `test/`。
 2. 重新构建安装 App，因为 `test/` 是 bundle resource。
-3. 在 App 内打开 `Pro`，使用 `开发解锁` 或有效订阅解锁 Pro。
+3. 在 App 内打开 `设置`，使用有效订阅或开发者模式下的 `开发解锁` 解锁 Pro。
 4. 点击 `运行 test/ 音频` 或 `运行 test/ OCR`。
 5. 音频会走 `SFSpeechURLRecognitionRequest` + `requiresOnDeviceRecognition = true`，识别文本再交给当前 Mock/Local 翻译接口。
 6. 图片会走 `VNRecognizeTextRequest`，识别文字块和 `boundingBox` 后逐块翻译。

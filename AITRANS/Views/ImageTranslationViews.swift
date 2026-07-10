@@ -1,6 +1,38 @@
-import SwiftUI
 import PhotosUI
+import SwiftUI
 import UniformTypeIdentifiers
+
+struct ImageTranslationView: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
+                AppPageHeader(
+                    title: "图片翻译",
+                    subtitle: "Vision OCR 与本地翻译",
+                    systemImage: "photo.on.rectangle",
+                    status: store.imageTranslationProgressTitle,
+                    statusTone: statusTone
+                )
+                ImageTranslationPanel()
+            }
+            .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
+            .padding(.vertical, AppTheme.Spacing.section)
+            .padding(.bottom, 72)
+        }
+        .background(Color.appCanvas)
+    }
+
+    private var statusTone: AppStatusTone {
+        switch store.imageTranslationState {
+        case .idle: .neutral
+        case .loading, .recognizing, .translating: .active
+        case .translated: .success
+        case .failed: .danger
+        }
+    }
+}
 
 struct ImageTranslationPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
@@ -9,220 +41,184 @@ struct ImageTranslationPanel: View {
     @State private var shareURL: URL?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(tint)
-                Text("图片翻译")
-                    .font(.system(size: 13, weight: .bold))
-                Spacer()
-                Text(store.imageTranslationProgressTitle)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(tint)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: AppTheme.Spacing.section) {
+                imageWorkspace
+                    .frame(minWidth: 440)
+                inspector
+                    .frame(width: AppTheme.Layout.inspectorWidth)
             }
 
-            Text(store.imageTranslationMessage)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.58))
-                .fixedSize(horizontal: false, vertical: true)
-
-            actionBar
-
-            if store.imageTranslationData != nil {
-                HStack(spacing: 8) {
-                    ForEach(ImageTranslationOverlayMode.allCases) { mode in
-                        Button {
-                            store.setImageOverlayMode(mode)
-                        } label: {
-                            Text(mode.rawValue)
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(store.imageOverlayMode == mode ? .white : .white.opacity(0.58))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 30)
-                                .background(
-                                    store.imageOverlayMode == mode ? Color.appAccent : Color.white.opacity(0.07),
-                                    in: RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Button {
-                        store.clearImageTranslation()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .heavy))
-                            .frame(width: 34, height: 30)
-                            .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white.opacity(0.72))
-                    .accessibilityLabel("清空图片翻译")
-                }
-            }
-
-            ImageTranslationPreview()
-
-            if !store.imageTranslationBlocks.isEmpty {
-                Text(store.imageTranslationSummary)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.50))
-
-                LazyVStack(spacing: 7) {
-                    ForEach(store.imageTranslationBlocks.prefix(4)) { block in
-                        ImageTranslationBlockRow(block: block)
-                    }
-                }
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+                imageWorkspace
+                inspector
             }
         }
-        .padding(12)
-        .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-        .fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image]) { result in
-            switch result {
-            case .success(let url):
-                store.translateImage(from: url)
-            case .failure(let error):
-                store.imageTranslationState = .failed
-                store.imageTranslationMessage = "图片文件选择失败：\(error.localizedDescription)"
-                store.dataTransferMessage = store.imageTranslationMessage
-            }
-        }
-        .onChange(of: selectedPhotoItem) { _, item in
-            guard let item else { return }
-            Task {
-                do {
-                    if let data = try await item.loadTransferable(type: Data.self) {
-                        await MainActor.run {
-                            store.translateImageData(data, filename: item.itemIdentifier ?? "photo-library-image.png")
-                            selectedPhotoItem = nil
-                        }
-                    }
-                } catch {
-                    await MainActor.run {
-                        store.imageTranslationState = .failed
-                        store.imageTranslationMessage = "照片读取失败：\(error.localizedDescription)"
-                        store.dataTransferMessage = store.imageTranslationMessage
-                        selectedPhotoItem = nil
-                    }
-                }
-            }
+        .fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image], onCompletion: handleImport)
+        .onChange(of: selectedPhotoItem) { oldItem, newItem in
+            loadSelectedPhoto(oldItem, newItem)
         }
         .sheet(item: $shareURL) { url in
             ShareSheet(activityItems: [url])
         }
     }
 
-    private var actionBar: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
-                actionButtons
-            }
+    private var imageWorkspace: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.control) {
+            ImageCommandBar(
+                selectedPhotoItem: $selectedPhotoItem,
+                openImporter: { showImageImporter = true },
+                shareResult: shareResult
+            )
+            ImageTranslationPreview()
+        }
+    }
 
-            VStack(spacing: 8) {
-                actionButtons
+    private var inspector: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+            AppSectionHeader(
+                title: "识别结果",
+                subtitle: store.imageTranslationSummary,
+                systemImage: "viewfinder"
+            )
+
+            Picker("覆盖方式", selection: overlayModeBinding) {
+                ForEach(ImageTranslationOverlayMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(store.imageTranslationData == nil)
+
+            AppStatusRow(
+                title: store.imageTranslationProgressTitle,
+                detail: store.imageTranslationMessage,
+                tone: statusTone
+            )
+
+            if store.imageTranslationBlocks.isEmpty {
+                AppEmptyState(
+                    title: "等待图片",
+                    detail: "选择照片或图片文件后，本机 OCR 结果会显示在这里。",
+                    systemImage: "photo.badge.plus"
+                )
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(store.imageTranslationBlocks) { block in
+                        ImageTranslationBlockRow(block: block)
+                    }
+                }
+            }
+        }
+        .appSurface()
+    }
+
+    private var overlayModeBinding: Binding<ImageTranslationOverlayMode> {
+        Binding(
+            get: { store.imageOverlayMode },
+            set: { store.setImageOverlayMode($0) }
+        )
+    }
+
+    private var statusTone: AppStatusTone {
+        switch store.imageTranslationState {
+        case .idle: .neutral
+        case .loading, .recognizing, .translating: .active
+        case .translated: .success
+        case .failed: .danger
+        }
+    }
+
+    private func handleImport(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            store.translateImage(from: url)
+        case .failure(let error):
+            store.imageTranslationState = .failed
+            store.imageTranslationMessage = "图片文件选择失败：\(error.localizedDescription)"
+            store.dataTransferMessage = store.imageTranslationMessage
+        }
+    }
+
+    private func loadSelectedPhoto(_ oldItem: PhotosPickerItem?, _ newItem: PhotosPickerItem?) {
+        guard let newItem else { return }
+        Task {
+            do {
+                guard let data = try await newItem.loadTransferable(type: Data.self) else { return }
+                store.translateImageData(data, filename: newItem.itemIdentifier ?? "photo-library-image.png")
+                selectedPhotoItem = nil
+            } catch {
+                store.imageTranslationState = .failed
+                store.imageTranslationMessage = "照片读取失败：\(error.localizedDescription)"
+                store.dataTransferMessage = store.imageTranslationMessage
+                selectedPhotoItem = nil
             }
         }
     }
 
-    @ViewBuilder
-    private var actionButtons: some View {
-        photoPickerButton(title: store.imageTranslationData == nil ? "选择照片" : "换照片")
+    private func shareResult() {
+        shareURL = store.imageTranslationExportURL
+    }
+}
 
-        Button {
-            showImageImporter = true
-        } label: {
-            Label("文件", systemImage: "folder")
-                .font(.system(size: 12, weight: .bold))
-                .frame(maxWidth: .infinity)
-                .frame(height: 38)
-                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+private struct ImageCommandBar: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @Binding var selectedPhotoItem: PhotosPickerItem?
+    let openImporter: () -> Void
+    let shareResult: () -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: AppTheme.Spacing.control) { commands }
+            VStack(spacing: AppTheme.Spacing.control) { commands }
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(.white)
+    }
+
+    @ViewBuilder private var commands: some View {
+        PhotoPickerCommand(
+            title: store.imageTranslationData == nil ? "选择照片" : "更换照片",
+            selection: $selectedPhotoItem
+        )
         .disabled(isRunning)
-        .opacity(isRunning ? 0.55 : 1)
+
+        AppSecondaryButton(title: "图片文件", systemImage: "folder", action: openImporter)
+            .disabled(isRunning)
 
         if isRunning {
-            Button {
-                store.cancelImageTranslation()
-            } label: {
-                Label("取消", systemImage: "xmark.circle.fill")
-                    .font(.system(size: 12, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 38)
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.warning)
+            AppSecondaryButton(title: "取消", systemImage: "xmark.circle.fill", tone: .danger, action: store.cancelImageTranslation)
         } else if store.imageTranslationState == .failed {
-            Button {
-                store.retryImageTranslation()
-            } label: {
-                Label("重试", systemImage: "arrow.clockwise")
-                    .font(.system(size: 12, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 38)
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
+            AppSecondaryButton(title: "重试", systemImage: "arrow.clockwise", tone: .warning, action: store.retryImageTranslation)
         }
 
-        if let exportURL = store.imageTranslationExportURL {
-            Button {
-                shareURL = exportURL
-            } label: {
-                Label("分享结果", systemImage: "square.and.arrow.up")
-                    .font(.system(size: 12, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 38)
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
+        if store.imageTranslationExportURL != nil {
+            AppSecondaryButton(title: "导出", systemImage: "square.and.arrow.up", tone: .success, action: shareResult)
+        }
+
+        if store.imageTranslationData != nil {
+            AppIconButton(title: "清空图片翻译", systemImage: "trash", tone: .danger, action: store.clearImageTranslation)
         }
     }
 
     private var isRunning: Bool {
         switch store.imageTranslationState {
-        case .loading, .recognizing, .translating:
-            true
-        case .idle, .translated, .failed:
-            false
+        case .loading, .recognizing, .translating: true
+        case .idle, .translated, .failed: false
         }
     }
+}
 
-    private func photoPickerButton(title: String) -> some View {
-        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+private struct PhotoPickerCommand: View {
+    let title: String
+    @Binding var selection: PhotosPickerItem?
+
+    var body: some View {
+        PhotosPicker(selection: $selection, matching: .images) {
             Label(title, systemImage: "photo.on.rectangle")
-                .font(.system(size: 12, weight: .bold))
-                .frame(maxWidth: .infinity)
-                .frame(height: 38)
-                .background(Color.appAccent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .foregroundStyle(.white)
-        .disabled(isRunning)
-        .opacity(isRunning ? 0.55 : 1)
-    }
-
-    private var icon: String {
-        switch store.imageTranslationState {
-        case .idle: "photo"
-        case .loading: "photo.badge.arrow.down"
-        case .recognizing: "viewfinder"
-        case .translating: "character.book.closed"
-        case .translated: "checkmark.circle.fill"
-        case .failed: "xmark.octagon.fill"
-        }
-    }
-
-    private var tint: Color {
-        switch store.imageTranslationState {
-        case .idle: .white.opacity(0.58)
-        case .loading, .recognizing, .translating: Color.warning
-        case .translated: Color.success
-        case .failed: Color.danger
+                .font(.subheadline.bold())
+                .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget)
+                .padding(.horizontal, AppTheme.Spacing.control)
+                .foregroundStyle(Color.appCanvas)
+                .background(Color.appAccent, in: .rect(cornerRadius: AppTheme.Radius.control))
         }
     }
 }
@@ -233,22 +229,19 @@ private struct ImageTranslationPreview: View {
 
     var body: some View {
         Group {
-            if let image = previewImage {
+            if let previewImage {
                 GeometryReader { geometry in
-                    let containerSize = geometry.size
-                    let imageSize = image.size
-                    let fittedSize = fittedImageSize(imageSize: imageSize, containerSize: containerSize)
+                    let fittedSize = fittedImageSize(imageSize: previewImage.size, containerSize: geometry.size)
                     let origin = CGPoint(
-                        x: (containerSize.width - fittedSize.width) / 2,
-                        y: (containerSize.height - fittedSize.height) / 2
+                        x: (geometry.size.width - fittedSize.width) / 2,
+                        y: (geometry.size.height - fittedSize.height) / 2
                     )
 
                     ZStack(alignment: .topLeading) {
-                        Image(uiImage: image)
+                        Image(uiImage: previewImage)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: containerSize.width, height: containerSize.height)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .frame(width: geometry.size.width, height: geometry.size.height)
 
                         ForEach(store.imageTranslationBlocks) { block in
                             ImageTranslationOverlayBlock(
@@ -260,53 +253,35 @@ private struct ImageTranslationPreview: View {
                         }
                     }
                 }
-                .frame(height: previewHeight(for: image.size))
-                .background(Color.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            } else {
-                VStack(spacing: 8) {
-                    Image(systemName: "photo.on.rectangle.angled")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.42))
-                    Text("选择图片后显示 OCR 定位覆盖层")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.50))
+                .frame(minHeight: 360, idealHeight: 560, maxHeight: 720)
+                .background(Color.black)
+                .clipShape(.rect(cornerRadius: AppTheme.Radius.surface))
+                .overlay {
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.surface)
+                        .stroke(Color.appBorder, lineWidth: 1)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 122)
-                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            } else {
+                AppEmptyState(
+                    title: "选择图片",
+                    detail: "支持照片图库和图片文件，OCR 与翻译均在本机完成。",
+                    systemImage: "photo.on.rectangle.angled"
+                )
+                .frame(minHeight: 360)
+                .background(Color.appSurface)
+                .clipShape(.rect(cornerRadius: AppTheme.Radius.surface))
             }
         }
-        .onAppear(perform: refreshPreviewImage)
-        .onChange(of: store.imageTranslationRevision) { _, _ in
-            refreshPreviewImage()
+        .task(id: store.imageTranslationRevision) {
+            previewImage = store.imageTranslationData.flatMap(UIImage.init(data:))
         }
-    }
-
-    private func refreshPreviewImage() {
-        guard let data = store.imageTranslationData else {
-            previewImage = nil
-            return
-        }
-
-        previewImage = UIImage(data: data)
     }
 
     private func fittedImageSize(imageSize: CGSize, containerSize: CGSize) -> CGSize {
         guard imageSize.width > 0, imageSize.height > 0, containerSize.width > 0, containerSize.height > 0 else {
             return .zero
         }
-
         let scale = min(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
         return CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
-    }
-
-    private func previewHeight(for imageSize: CGSize) -> CGFloat {
-        guard imageSize.width > 0, imageSize.height > 0 else {
-            return 300
-        }
-
-        let aspectRatio = imageSize.height / imageSize.width
-        return min(max(320 * aspectRatio, 260), 520)
     }
 }
 
@@ -318,40 +293,31 @@ private struct ImageTranslationOverlayBlock: View {
 
     var body: some View {
         let rect = displayRect
-
         Group {
             switch mode {
             case .adjacent:
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(block.translation.isEmpty ? block.original : block.translation)
-                        .font(.system(size: 10, weight: .heavy))
+                        .font(.caption.bold())
                         .lineLimit(4)
-                        .minimumScaleFactor(0.70)
                     Text(block.original)
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.caption2)
                         .lineLimit(2)
-                        .foregroundStyle(.white.opacity(0.66))
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 5)
+                .padding(5)
                 .frame(width: bubbleWidth, alignment: .leading)
-                .background(Color.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                .overlay(alignment: .leading) {
-                    Rectangle()
-                        .fill(Color.appAccent)
-                        .frame(width: 3)
-                }
+                .background(Color.black.opacity(0.88), in: .rect(cornerRadius: 4))
+                .overlay(alignment: .leading) { Rectangle().fill(Color.appAccent).frame(width: 3) }
                 .position(x: adjacentCenterX(for: rect), y: rect.midY)
-
             case .replace:
                 Text(block.translation.isEmpty ? block.original : block.translation)
-                    .font(.system(size: 10, weight: .heavy))
+                    .font(.caption.bold())
                     .lineLimit(4)
-                    .minimumScaleFactor(0.64)
                     .multilineTextAlignment(.center)
-                    .padding(4)
+                    .padding(3)
                     .frame(width: max(rect.width, 44), height: max(rect.height, 24))
-                    .background(Color.appAccent.opacity(0.82), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .background(Color.appAccentStrong.opacity(0.94), in: .rect(cornerRadius: 4))
                     .position(x: rect.midX, y: rect.midY)
             }
         }
@@ -375,10 +341,7 @@ private struct ImageTranslationOverlayBlock: View {
     private func adjacentCenterX(for rect: CGRect) -> CGFloat {
         let rightCenter = rect.maxX + 6 + bubbleWidth / 2
         let rightLimit = imageOrigin.x + imageSize.width - bubbleWidth / 2
-        if rightCenter <= rightLimit {
-            return rightCenter
-        }
-
+        if rightCenter <= rightLimit { return rightCenter }
         return max(imageOrigin.x + bubbleWidth / 2, rect.minX - 6 - bubbleWidth / 2)
     }
 }
@@ -387,27 +350,24 @@ private struct ImageTranslationBlockRow: View {
     let block: ImageTranslationBlock
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text("\(Int(block.confidence * 100))%")
-                .font(.system(size: 10, weight: .heavy, design: .monospaced))
+        HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
+            Text(block.confidence, format: .percent.precision(.fractionLength(0)))
+                .font(.caption.monospacedDigit().bold())
                 .foregroundStyle(Color.appAccent)
-                .frame(width: 36, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 3) {
+                .frame(width: 46, alignment: .leading)
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
+                Text(block.translation.isEmpty ? "等待翻译" : block.translation)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Color.appTextPrimary)
                 Text(block.original)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.64))
-                    .lineLimit(2)
-                Text(block.translation.isEmpty ? "等待翻译..." : block.translation)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.86))
-                    .lineLimit(3)
+                    .font(.caption)
+                    .foregroundStyle(Color.appTextSecondary)
             }
-
             Spacer(minLength: 0)
         }
-        .padding(9)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        .padding(.vertical, AppTheme.Spacing.control)
+        .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
+        .accessibilityElement(children: .combine)
     }
 }
 

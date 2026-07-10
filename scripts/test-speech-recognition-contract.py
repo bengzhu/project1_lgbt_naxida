@@ -65,10 +65,10 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         self.assertIn("audioRecognitionState = .translating", store)
 
     def test_ui_exposes_summary_and_cancellation(self) -> None:
-        content = read("AITRANS/Views/ContentView.swift")
+        audio_views = read("AITRANS/Views/AudioTranslationView.swift")
         pro_views = read("AITRANS/Views/ProFeatureViews.swift")
-        self.assertIn("store.cancelAudioRecognition()", content)
-        self.assertIn("case .translating: \"翻译中\"", content)
+        self.assertIn("store.cancelAudioRecognition()", audio_views)
+        self.assertIn("case .translating: \"翻译中\"", audio_views)
         self.assertIn("struct SpeechRecognitionRunSummaryPanel: View", pro_views)
         self.assertIn("summary.inputName", pro_views)
         self.assertIn("summary.averageConfidence", pro_views)
@@ -83,7 +83,7 @@ class SpeechRecognitionContractTests(unittest.TestCase):
             re.findall(r"MARKETING_VERSION = ([^;]+);", project)
         )
         self.assertEqual(bundle_ids, {"com.local.aitransform114"})
-        self.assertEqual(marketing_versions, {"1.86"})
+        self.assertEqual(marketing_versions, {"1.87"})
         self.assertNotIn("BUNDLE_ID: com.local.aitrans\n", workflow)
         self.assertIn("Print :CFBundleIdentifier", workflow)
         self.assertIn("steps.simulator_build.outputs.bundle_id", workflow)
