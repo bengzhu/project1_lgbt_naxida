@@ -1,44 +1,5 @@
 import SwiftUI
 
-struct ImageTranslationView: View {
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
-                AppPageHeader(title: "图片翻译", subtitle: "Vision OCR 与本地翻译", systemImage: "photo.on.rectangle")
-                ImageTranslationPanel()
-            }
-            .enterprisePageFrame(maxWidth: 900)
-            .padding(.vertical, AppTheme.Spacing.section)
-            .padding(.bottom, 72)
-        }
-        .background(Color.appCanvas)
-    }
-}
-
-struct AudioTranslationView: View {
-    @EnvironmentObject private var store: TranslationSessionStore
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
-                AppPageHeader(
-                    title: "音频翻译",
-                    subtitle: "Apple Speech 本机识别",
-                    systemImage: "waveform.and.mic",
-                    status: store.audioRecognitionMessage,
-                    statusTone: .neutral
-                )
-                AudioRecognitionPanel()
-                SpeechCapabilityPanel()
-            }
-            .enterprisePageFrame(maxWidth: 900)
-            .padding(.vertical, AppTheme.Spacing.section)
-            .padding(.bottom, 72)
-        }
-        .background(Color.appCanvas)
-    }
-}
-
 struct HistoryView: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @Binding var selectedTab: AppTab

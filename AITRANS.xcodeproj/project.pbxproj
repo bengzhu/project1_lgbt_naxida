@@ -28,6 +28,7 @@
 		0A000001000000000000002C /* AppComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000002B /* AppComponents.swift */; };
 		0A00000100000000000000A2 /* TextTranslationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000A1 /* TextTranslationView.swift */; };
 		0A00000100000000000000A4 /* FeatureShellViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000A3 /* FeatureShellViews.swift */; };
+		0A00000100000000000000A6 /* AudioTranslationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000A5 /* AudioTranslationView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -69,6 +70,7 @@
 		0A000001000000000000002B /* AppComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppComponents.swift; sourceTree = "<group>"; };
 		0A00000100000000000000A1 /* TextTranslationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextTranslationView.swift; sourceTree = "<group>"; };
 		0A00000100000000000000A3 /* FeatureShellViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureShellViews.swift; sourceTree = "<group>"; };
+		0A00000100000000000000A5 /* AudioTranslationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTranslationView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -154,6 +156,7 @@
 				0A0000010000000000000012 /* ContentView.swift */,
 				0A00000100000000000000A1 /* TextTranslationView.swift */,
 				0A00000100000000000000A3 /* FeatureShellViews.swift */,
+				0A00000100000000000000A5 /* AudioTranslationView.swift */,
 				0A000001000000000000001B /* ImageTranslationViews.swift */,
 				0A000001000000000000001D /* ProFeatureViews.swift */,
 			);
@@ -267,6 +270,7 @@
 				0A000001000000000000002C /* AppComponents.swift in Sources */,
 				0A00000100000000000000A2 /* TextTranslationView.swift in Sources */,
 				0A00000100000000000000A4 /* FeatureShellViews.swift in Sources */,
+				0A00000100000000000000A6 /* AudioTranslationView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
