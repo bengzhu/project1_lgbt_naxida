@@ -37,7 +37,7 @@ enum AppTheme {
         static let workspaceSplitWidth: CGFloat = 820
         static let inspectorWidth: CGFloat = 360
         static let minimumTarget: CGFloat = 44
-        static let floatingTabBarClearance: CGFloat = 88
+        static let floatingTabBarClearance: CGFloat = 96
     }
 
     enum Motion {

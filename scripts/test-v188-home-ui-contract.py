@@ -16,12 +16,15 @@ def read(relative_path: str) -> str:
 class V188HomeUIContractTests(unittest.TestCase):
     def test_paste_is_explicit_plain_text_and_appends_existing_input(self) -> None:
         source = read("AITRANS/Views/TextTranslationView.swift")
-        self.assertIn("PasteButton(payloadType: String.self, onPaste: pasteText)", source)
-        self.assertIn(".buttonStyle(TextWorkspacePasteButtonStyle())", source)
-        style = read("AITRANS/Views/TextWorkspacePasteButtonStyle.swift")
-        self.assertIn('Label("粘贴", systemImage: "doc.on.clipboard")', style)
-        self.assertIn(r"@Environment(\.isEnabled)", style)
-        self.assertNotIn('Label("Paste"', style)
+        self.assertIn("TextWorkspacePasteButton(onPaste: pasteText)", source)
+        button = read("AITRANS/Views/TextWorkspacePasteButton.swift")
+        self.assertIn("PasteButton(payloadType: String.self, onPaste: onPaste)", button)
+        self.assertIn(".foregroundStyle(.clear)", button)
+        self.assertIn('Label("粘贴", systemImage: "doc.on.clipboard")', button)
+        self.assertIn("Color.appSurfaceRaised", button)
+        self.assertIn(".allowsHitTesting(false)", button)
+        self.assertIn(r"@Environment(\.isEnabled)", button)
+        self.assertNotIn('Label("Paste"', button)
         paste = re.search(
             r"private func pasteText\(_ items: \[String\]\) \{(?P<body>.*?)\n    \}",
             source,
@@ -69,13 +72,13 @@ class V188HomeUIContractTests(unittest.TestCase):
 
     def test_header_remains_outside_scroll_and_background_is_home_only(self) -> None:
         source = read("AITRANS/Views/TextTranslationView.swift")
-        scroll_body = re.search(
-            r"ScrollView\s*\{(?P<body>.*?)\n        \}\n        \.scrollDismissesKeyboard",
-            source,
-            re.DOTALL,
-        )
-        self.assertIsNotNone(scroll_body, "text workspace scroll view is missing")
-        self.assertNotIn("AppPageHeader(", scroll_body.group("body"))
+        scroll_start = source.index("ScrollView {")
+        scroll_end = source.index(".scrollDismissesKeyboard(.interactively)")
+        header_inset = source.index(".safeAreaInset(edge: .top, spacing: 0)")
+        header = source.index("AppPageHeader(")
+        self.assertLess(scroll_start, scroll_end)
+        self.assertLess(scroll_end, header_inset)
+        self.assertLess(header_inset, header)
         self.assertIn("TextWorkspaceBackground().ignoresSafeArea()", source)
         background = read("AITRANS/Views/TextWorkspaceBackground.swift")
         self.assertIn("Canvas", background)
@@ -101,11 +104,17 @@ class V188HomeUIContractTests(unittest.TestCase):
         source = read("AITRANS/Views/TextTranslationView.swift")
         theme = read("AITRANS/Views/AppTheme.swift")
         self.assertIn("@Environment(\\.horizontalSizeClass)", source)
-        self.assertRegex(
-            source,
-            r"(?s)\.safeAreaInset\(edge: \.bottom, spacing: 0\).*?horizontalSizeClass == \.compact.*?AppTheme\.Layout\.floatingTabBarClearance",
-        )
-        self.assertIn("static let floatingTabBarClearance: CGFloat = 88", theme)
+        self.assertIn("VStack(spacing: 0) {\n            ScrollView {", source)
+        scroll_start = source.index("ScrollView {")
+        scroll_modifier = source.index(".scrollDismissesKeyboard(.interactively)")
+        spacer = source.index("if horizontalSizeClass == .compact")
+        toolbar = source.index(".toolbar {")
+        self.assertLess(scroll_start, scroll_modifier)
+        self.assertLess(scroll_modifier, spacer)
+        self.assertLess(spacer, toolbar)
+        self.assertIn(".frame(height: AppTheme.Layout.floatingTabBarClearance)", source)
+        self.assertIn("static let floatingTabBarClearance: CGFloat = 96", theme)
+        self.assertNotIn(".safeAreaInset(edge: .bottom", source)
         self.assertNotIn(".padding(.bottom, 72)", source)
 
     def test_required_home_actions_remain_wired(self) -> None:

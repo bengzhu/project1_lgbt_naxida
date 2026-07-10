@@ -7,33 +7,34 @@ struct TextTranslationView: View {
     @FocusState private var inputFocused: Bool
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
-                LanguageControlBar()
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
+                    LanguageControlBar()
 
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: AppTheme.Spacing.section) {
-                        TranslationInputPane(selectedTab: $selectedTab, inputFocused: $inputFocused)
-                            .frame(minWidth: 320)
-                        TranslationOutputPane()
-                            .frame(minWidth: 320)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: AppTheme.Spacing.section) {
+                            TranslationInputPane(selectedTab: $selectedTab, inputFocused: $inputFocused)
+                                .frame(minWidth: 320)
+                            TranslationOutputPane()
+                                .frame(minWidth: 320)
+                        }
+
+                        VStack(spacing: AppTheme.Spacing.section) {
+                            TranslationInputPane(selectedTab: $selectedTab, inputFocused: $inputFocused)
+                            TranslationOutputPane()
+                        }
                     }
 
-                    VStack(spacing: AppTheme.Spacing.section) {
-                        TranslationInputPane(selectedTab: $selectedTab, inputFocused: $inputFocused)
-                        TranslationOutputPane()
-                    }
+                    SessionCommandBar(startNewSession: startNewSession)
+                    RecentTranslationList()
                 }
-
-                SessionCommandBar(startNewSession: startNewSession)
-                RecentTranslationList()
+                .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
+                .padding(.vertical, AppTheme.Spacing.section)
+                .padding(.bottom, AppTheme.Spacing.page)
             }
-            .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
-            .padding(.vertical, AppTheme.Spacing.section)
-            .padding(.bottom, AppTheme.Spacing.page)
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+            .scrollDismissesKeyboard(.interactively)
+
             if horizontalSizeClass == .compact {
                 Color.clear
                     .frame(height: AppTheme.Layout.floatingTabBarClearance)
@@ -255,8 +256,7 @@ private struct TranslationInputToolBar: View {
     }
 
     private var pasteButton: some View {
-        PasteButton(payloadType: String.self, onPaste: pasteText)
-            .buttonStyle(TextWorkspacePasteButtonStyle())
+        TextWorkspacePasteButton(onPaste: pasteText)
             .accessibilityLabel("粘贴剪贴板文本")
             .accessibilityHint("输入为空时填入文本，已有内容时换行追加")
     }

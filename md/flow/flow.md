@@ -56,7 +56,7 @@
 - `AITRANS/Views/AppComponents.swift`
 - `AITRANS/Views/TextTranslationView.swift`
 - `AITRANS/Views/TextWorkspaceBackground.swift`
-- `AITRANS/Views/TextWorkspacePasteButtonStyle.swift`
+- `AITRANS/Views/TextWorkspacePasteButton.swift`
 - `AITRANS/Views/ImageTranslationViews.swift`
 - `AITRANS/Views/AudioTranslationView.swift`
 - `AITRANS/Views/HistoryView.swift`
@@ -75,8 +75,8 @@
 - 文本首页根层使用独立 `TextWorkspaceBackground`：静态冷中性渐变、稳定技术网格和输入到译文的导向线路只服务文本页，不改变其他页面的 `AppCanvasBackground`。
 - 文本输入继续直接绑定 `store.draftText`。系统 `PasteButton(payloadType: String.self)` 只在用户点击时接收纯文本：空输入直接写入，已有输入换行追加，不读取或改写剪贴板后台状态，不自动触发翻译。
 - 文本页持有唯一 `FocusState`；keyboard toolbar 的“完成”、翻译、新会话和离开文本 Tab 都会先结束焦点。翻译随后仍调用 `store.submitDraft`，没有新增第二套 draft 或业务 store。
-- compact-width 文本页通过底部 `safeAreaInset` 为 iOS 浮动 Tab Bar 预留固定可视 clearance；这是 ScrollView viewport 边界，不是只在内容尾部追加 padding，因此 XXL / Accessibility Dynamic Type 下正文和主按钮不会绘制到 Tab Bar 下方。
-- `PasteButton` 继续承担系统纯文本粘贴和兼容内容禁用语义，`TextWorkspacePasteButtonStyle` 只稳定绘制中文“粘贴”可见标签、SF Symbol、按压和禁用外观，不绕开系统粘贴 API。
+- compact-width 文本页在根 `VStack` 中把固定净空放在 `ScrollView` 之后，使滚动视口本身终止于 iOS 浮动 Tab Bar 上方；不是只在内容尾部追加 padding，也不依赖会被浮动栏覆盖的 bottom safe-area inset。
+- `TextWorkspacePasteButton` 内部的真实系统 `PasteButton` 继续承担纯文本粘贴、隐私授权和兼容内容禁用语义；不可点击的实底中文 `Label("粘贴", systemImage: "doc.on.clipboard")` 覆盖系统 locale 标签，不绕开系统粘贴 API。
 - `AppTheme` 提供语义颜色、间距、圆角、动效、触控和宽度 token；`AppComponents` 提供页头、区段、状态、按钮、空状态、指标和页面宽度原语。
 - 日间/夜间颜色来自 `Assets.xcassets` 的 luminosity variants；`AppAppearance` 通过 `AppStorage` 选择跟随系统、日间或夜间，不进入业务 `state.json`。
 - 所有业务按钮只调用 store 公开方法；UI 不直接操作 `state.json`、模型 runtime、Speech task、Vision OCR 或漫画探针服务。
