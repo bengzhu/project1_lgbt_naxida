@@ -146,7 +146,7 @@
 
 本地轻量验证：Swift parse 与无产物全工程 typecheck、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、Speech contract 5/5、v1.87 UI interaction contract 6/6、v1.88 home UI contract 7/7 和三个 JSON parse 已通过；未跑本机 build / 探针，按规则交给云端验证。
 
-Agent C 首轮退回及 Agent B 二轮截图复核：run `29092032857` 证明 72pt 内容尾部 padding 无法阻止浮动 Tab Bar 覆盖，run `29098058258` 又证明 bottom `safeAreaInset` + 88pt clearance 仍会被浮动栏覆盖，且 `ButtonStyle` 不能替换 `PasteButton` 的系统英文标签。当前候选改为 compact-width 根 `VStack` 在 `ScrollView` 外预留 96pt，使滚动视口直接终止于浮动栏上方；真实 `PasteButton` 使用透明前景并由不接收触摸的实底中文标签覆盖。两个旧 run 都只作为失败证据，新 HEAD 必须重新生成 build、JUnit、manifest 和 UI evidence，并由 Agent B 先逐张查看后再交给 Agent C。
+Agent C 首轮退回及 Agent B 二轮截图复核：run `29092032857` 证明 72pt 内容尾部 padding 无法阻止浮动 Tab Bar 覆盖，run `29098058258` 又证明 bottom `safeAreaInset` + 88pt clearance 仍会被浮动栏覆盖，且 `ButtonStyle` 不能替换 `PasteButton` 的系统英文标签。run `29099734744` 已证明中文覆盖生效，但 96pt 外部净空压缩了标准字号首屏，且第四张设置截图被空白检测拦截，不能作为完整证据。当前候选改为 compact-width 根 `VStack` 在 `ScrollView` 外预留 48pt，使滚动视口直接终止于浮动栏上方，同时保留标准字号首屏工具动作；真实 `PasteButton` 使用透明前景并由不接收触摸的实底中文标签覆盖。上述旧 run 都只作为失败证据，新 HEAD 必须重新生成 build、JUnit、manifest 和 UI evidence，并由 Agent B 先逐张查看后再交给 Agent C。
 
 遗留事项：
 

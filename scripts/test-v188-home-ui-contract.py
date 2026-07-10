@@ -113,7 +113,7 @@ class V188HomeUIContractTests(unittest.TestCase):
         self.assertLess(scroll_modifier, spacer)
         self.assertLess(spacer, toolbar)
         self.assertIn(".frame(height: AppTheme.Layout.floatingTabBarClearance)", source)
-        self.assertIn("static let floatingTabBarClearance: CGFloat = 96", theme)
+        self.assertIn("static let floatingTabBarClearance: CGFloat = 48", theme)
         self.assertNotIn(".safeAreaInset(edge: .bottom", source)
         self.assertNotIn(".padding(.bottom, 72)", source)
 
