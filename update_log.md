@@ -146,7 +146,7 @@
 
 本地轻量验证：Swift parse 与无产物全工程 typecheck、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、Speech contract 5/5、v1.87 UI interaction contract 6/6、v1.88 home UI contract 7/7 和三个 JSON parse 已通过；未跑本机 build / 探针，按规则交给云端验证。
 
-Agent C 多轮退回及 Agent B 截图复核：run `29092032857` 证明 72pt 内容尾部 padding 无法阻止浮动 Tab Bar 覆盖，run `29098058258` 又证明 bottom `safeAreaInset` + 88pt clearance 仍会被浮动栏覆盖，且 `ButtonStyle` 不能替换 `PasteButton` 的系统英文标签。run `29099734744` 已证明中文覆盖生效，但 96pt 外部净空压缩了标准字号首屏，且第四张设置截图被空白检测拦截。run `29100584989` 的完整证据证明固定 48pt 已解决大字号覆盖，却仍把标准字号“翻译”主按钮裁成一条色带。当前候选仅在 compact-width 且 Dynamic Type 为 XXL 或更大时，于根 `VStack` 的 `ScrollView` 外预留 48pt；标准字号不插入净空，以同时满足首屏动作层级和大字号防遮挡。真实 `PasteButton` 继续使用透明前景并由不接收触摸的实底中文标签覆盖。上述旧 run 都只作为失败证据，新 HEAD 必须重新生成 build、JUnit、manifest 和 UI evidence，并由 Agent B 先逐张查看后再交给 Agent C。
+Agent C 多轮退回及 Agent B 截图复核：run `29092032857` 证明 72pt 内容尾部 padding 无法阻止浮动 Tab Bar 覆盖，run `29098058258` 又证明 bottom `safeAreaInset` + 88pt clearance 仍会被浮动栏覆盖，且 `ButtonStyle` 不能替换 `PasteButton` 的系统英文标签。run `29099734744` 已证明中文覆盖生效，但 96pt 外部净空压缩了标准字号首屏，且第四张设置截图被空白检测拦截。run `29100584989` 的完整证据证明固定 48pt 已解决大字号覆盖，却仍把标准字号“翻译”主按钮裁成一条色带。run `29102934707` 证明标准键盘关闭时取消净空可完整恢复“翻译”，但输入聚焦后键盘“完成”区域不可见。当前候选仅在 compact-width 且 Dynamic Type 为 XXL 或更大、或输入已聚焦时，于根 `VStack` 的 `ScrollView` 外预留 48pt；标准字号且键盘关闭时不插入净空，以同时满足首屏动作层级、大字号防遮挡和键盘附件可见。真实 `PasteButton` 继续使用透明前景并由不接收触摸的实底中文标签覆盖。上述旧 run 都只作为失败证据，新 HEAD 必须重新生成 build、JUnit、manifest 和 UI evidence，并由 Agent B 先逐张查看后再交给 Agent C。
 
 遗留事项：
 

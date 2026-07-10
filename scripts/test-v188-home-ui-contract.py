@@ -108,7 +108,9 @@ class V188HomeUIContractTests(unittest.TestCase):
         self.assertIn("VStack(spacing: 0) {\n            ScrollView {", source)
         scroll_start = source.index("ScrollView {")
         scroll_modifier = source.index(".scrollDismissesKeyboard(.interactively)")
-        spacer = source.index("if horizontalSizeClass == .compact && dynamicTypeSize >= .xxLarge")
+        spacer = source.index(
+            "if horizontalSizeClass == .compact && (dynamicTypeSize >= .xxLarge || inputFocused)"
+        )
         toolbar = source.index(".toolbar {")
         self.assertLess(scroll_start, scroll_modifier)
         self.assertLess(scroll_modifier, spacer)
@@ -117,6 +119,7 @@ class V188HomeUIContractTests(unittest.TestCase):
         self.assertIn("static let floatingTabBarClearance: CGFloat = 48", theme)
         self.assertIn('title: store.isProcessing ? "翻译中" : "翻译"', source)
         self.assertNotIn("if horizontalSizeClass == .compact {", source)
+        self.assertNotIn("if horizontalSizeClass == .compact && dynamicTypeSize >= .xxLarge {", source)
         self.assertNotIn(".safeAreaInset(edge: .bottom", source)
         self.assertNotIn(".padding(.bottom, 72)", source)
 

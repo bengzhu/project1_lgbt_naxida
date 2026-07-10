@@ -36,7 +36,7 @@ struct TextTranslationView: View {
             }
             .scrollDismissesKeyboard(.interactively)
 
-            if horizontalSizeClass == .compact && dynamicTypeSize >= .xxLarge {
+            if horizontalSizeClass == .compact && (dynamicTypeSize >= .xxLarge || inputFocused) {
                 Color.clear
                     .frame(height: AppTheme.Layout.floatingTabBarClearance)
                     .accessibilityHidden(true)
