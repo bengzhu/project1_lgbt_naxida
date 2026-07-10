@@ -17,6 +17,11 @@ class V188HomeUIContractTests(unittest.TestCase):
     def test_paste_is_explicit_plain_text_and_appends_existing_input(self) -> None:
         source = read("AITRANS/Views/TextTranslationView.swift")
         self.assertIn("PasteButton(payloadType: String.self, onPaste: pasteText)", source)
+        self.assertIn(".buttonStyle(TextWorkspacePasteButtonStyle())", source)
+        style = read("AITRANS/Views/TextWorkspacePasteButtonStyle.swift")
+        self.assertIn('Label("粘贴", systemImage: "doc.on.clipboard")', style)
+        self.assertIn(r"@Environment(\.isEnabled)", style)
+        self.assertNotIn('Label("Paste"', style)
         paste = re.search(
             r"private func pasteText\(_ items: \[String\]\) \{(?P<body>.*?)\n    \}",
             source,
@@ -91,6 +96,17 @@ class V188HomeUIContractTests(unittest.TestCase):
         for name in other_views:
             with self.subTest(view=name):
                 self.assertNotIn("TextWorkspaceBackground", read(f"AITRANS/Views/{name}"))
+
+    def test_compact_layout_reserves_floating_tab_bar_clearance(self) -> None:
+        source = read("AITRANS/Views/TextTranslationView.swift")
+        theme = read("AITRANS/Views/AppTheme.swift")
+        self.assertIn("@Environment(\\.horizontalSizeClass)", source)
+        self.assertRegex(
+            source,
+            r"(?s)\.safeAreaInset\(edge: \.bottom, spacing: 0\).*?horizontalSizeClass == \.compact.*?AppTheme\.Layout\.floatingTabBarClearance",
+        )
+        self.assertIn("static let floatingTabBarClearance: CGFloat = 88", theme)
+        self.assertNotIn(".padding(.bottom, 72)", source)
 
     def test_required_home_actions_remain_wired(self) -> None:
         source = read("AITRANS/Views/TextTranslationView.swift")

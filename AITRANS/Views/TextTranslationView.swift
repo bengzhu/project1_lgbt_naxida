@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TextTranslationView: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Binding var selectedTab: AppTab
     @FocusState private var inputFocused: Bool
 
@@ -29,9 +30,17 @@ struct TextTranslationView: View {
             }
             .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
             .padding(.vertical, AppTheme.Spacing.section)
-            .padding(.bottom, 72)
+            .padding(.bottom, AppTheme.Spacing.page)
         }
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if horizontalSizeClass == .compact {
+                Color.clear
+                    .frame(height: AppTheme.Layout.floatingTabBarClearance)
+                    .accessibilityHidden(true)
+                    .allowsHitTesting(false)
+            }
+        }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -247,17 +256,7 @@ private struct TranslationInputToolBar: View {
 
     private var pasteButton: some View {
         PasteButton(payloadType: String.self, onPaste: pasteText)
-            .labelStyle(.titleAndIcon)
-            .font(.subheadline.bold())
-            .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget)
-            .padding(.horizontal, AppTheme.Spacing.control)
-            .buttonStyle(.plain)
-            .foregroundStyle(AppTheme.TextWorkspace.paste)
-            .background(AppTheme.TextWorkspace.paste.opacity(0.12), in: .rect(cornerRadius: AppTheme.Radius.control))
-            .overlay {
-                RoundedRectangle(cornerRadius: AppTheme.Radius.control)
-                    .stroke(AppTheme.TextWorkspace.paste.opacity(0.72), lineWidth: 1)
-            }
+            .buttonStyle(TextWorkspacePasteButtonStyle())
             .accessibilityLabel("粘贴剪贴板文本")
             .accessibilityHint("输入为空时填入文本，已有内容时换行追加")
     }

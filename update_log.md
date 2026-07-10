@@ -134,6 +134,7 @@
 
 - `AITRANS/Views/TextTranslationView.swift`
 - `AITRANS/Views/TextWorkspaceBackground.swift`
+- `AITRANS/Views/TextWorkspacePasteButtonStyle.swift`
 - `AITRANS/Views/AppTheme.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 - `scripts/test-v188-home-ui-contract.py`
@@ -143,7 +144,9 @@
 - `md/flow/flowchart.md`
 - `md/test/test.md`
 
-本地轻量验证：Swift parse 与无产物全工程 typecheck、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、Speech contract 5/5、v1.87 UI interaction contract 6/6、v1.88 home UI contract 6/6 和三个 JSON parse 已通过；未跑本机 build / 探针，按规则交给云端验证。
+本地轻量验证：Swift parse 与无产物全工程 typecheck、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、Speech contract 5/5、v1.87 UI interaction contract 6/6、v1.88 home UI contract 7/7 和三个 JSON parse 已通过；未跑本机 build / 探针，按规则交给云端验证。
+
+Agent C 首轮退回修复：run `29092032857` 的 XXL / Accessibility 截图证明 72pt 内容尾部 padding 不能阻止浮动 Tab Bar 覆盖当前 viewport，且系统 `PasteButton` 随模拟器 locale 显示英文 “Paste”。候选分支改为 compact-width bottom `safeAreaInset` + 88pt 浮动 Tab clearance，并为真实 `PasteButton` 增加稳定中文可见样式；旧 run 仅作为失败证据，新 HEAD 必须重新生成 build、JUnit、manifest 和 UI evidence。
 
 遗留事项：
 

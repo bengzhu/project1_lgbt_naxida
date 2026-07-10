@@ -42,6 +42,8 @@ Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键
 
 `scripts/test-v188-home-ui-contract.py` 独立验证：显式纯文本 `PasteButton`、空输入填入与非空换行追加、不在生命周期读取剪贴板、不自动翻译、keyboard toolbar“完成”、翻译前失焦、safe-area 页头仍位于 `ScrollView` 外、首页专属非纯色背景不进入其他页面、首页关键 store action 与非颜色身份仍接线。CI 必须把结果写入 `v188-home-ui-contract.log`、manifest 的 `v188HomeUIContractOutcome` 和 JUnit 独立 testcase，失败阻塞候选分支。
 
+Agent C 首轮退回后，v1.88 contract 还必须锁定两项回归：compact-width ScrollView 使用 bottom `safeAreaInset` 和 `floatingTabBarClearance`，不得退回只在内容尾部写固定 padding；真实 `PasteButton` 必须应用 `TextWorkspacePasteButtonStyle`，样式中存在中文可见 `Label("粘贴", systemImage: "doc.on.clipboard")`，不能依赖运行设备 locale 显示英文 “Paste”。新 HEAD 的 XXL / Accessibility 截图必须证明 Tab Bar 不再遮挡输入文字或翻译主按钮。
+
 人工交互必须另行核对：无兼容剪贴板内容不清空输入；空输入粘贴直接填入；非空输入粘贴换行追加；粘贴不自动翻译；“完成”一次收起键盘；翻译前键盘先收起；交换语言、Prompt、新会话和归档仍可用；VoiceOver 能读出粘贴、翻译、交换语言、完成和状态。当前 CI 没有 XCUITest 点击回放，也仍只采集紧凑 iPhone，iPad / Mac 运行态和真实剪贴板点击不得描述为已验证。
 
 ## 1. 固定前缀 / 环境要求
