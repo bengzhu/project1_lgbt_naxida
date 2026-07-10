@@ -86,32 +86,34 @@ capture() {
   local orientation="$5"
   local filename="$6"
   local reduce_motion="$7"
+  local appearance="$8"
 
   xcrun simctl ui "$device_id" content_size "$content_size"
   set_orientation "$device_id" "$orientation"
   xcrun simctl terminate "$device_id" "$bundle_id" >/dev/null 2>&1 || true
   SIMCTL_CHILD_AITRANS_UI_EVIDENCE_SCENARIO="$scenario" \
+    SIMCTL_CHILD_AITRANS_UI_EVIDENCE_APPEARANCE="$appearance" \
     xcrun simctl launch --terminate-running-process "$device_id" "$bundle_id"
   sleep 3
   xcrun simctl io "$device_id" screenshot "$output_dir/$filename"
-  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-    "$filename" "$device_label" "$orientation" "$content_size" "$scenario" "$reduce_motion" "$commit_sha" >> "$metadata_tsv"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$filename" "$device_label" "$orientation" "$content_size" "$scenario" "$reduce_motion" "$appearance" "$commit_sha" >> "$metadata_tsv"
 }
 
-capture "$small_id" "compact-iPhone" empty large portrait text-empty-compact-standard.png false
-capture "$small_id" "compact-iPhone" imageEmpty large portrait image-empty-compact-standard.png false
-capture "$small_id" "compact-iPhone" history large portrait history-data-compact-standard.png false
-capture "$small_id" "compact-iPhone" proLocked large portrait settings-pro-locked-compact-standard.png false
+capture "$small_id" "compact-iPhone" empty large portrait text-empty-compact-day.png false 日间
+capture "$small_id" "compact-iPhone" imageEmpty large portrait image-empty-compact-night.png false 夜间
+capture "$small_id" "compact-iPhone" history large portrait history-data-compact-day.png false 日间
+capture "$small_id" "compact-iPhone" proLocked large portrait settings-pro-locked-compact-night.png false 夜间
 
-capture "$large_id" "large-iPhone" textSuccess extra-extra-large portrait text-success-large-xxl.png false
-capture "$large_id" "large-iPhone" textKeyboard large portrait text-keyboard-large-standard.png false
-capture "$large_id" "large-iPhone" textFailure accessibility-extra-large portrait text-failure-large-accessibility.png false
-capture "$large_id" "large-iPhone" audioRecognizing large portrait audio-running-reduce-motion.png true
+capture "$large_id" "large-iPhone" textSuccess extra-extra-large portrait text-success-large-xxl-day.png false 日间
+capture "$large_id" "large-iPhone" textKeyboard large portrait text-keyboard-large-night.png false 夜间
+capture "$large_id" "large-iPhone" textFailure accessibility-extra-large portrait text-failure-large-accessibility-night.png false 夜间
+capture "$large_id" "large-iPhone" audioRecognizing large portrait audio-running-reduce-motion-night.png true 夜间
 
-capture "$tablet_id" "iPad" proUnlocked large portrait settings-pro-unlocked-ipad-portrait.png false
-capture "$tablet_id" "iPad" imageSuccess large landscapeLeft image-success-ipad-landscape.png false
-capture "$tablet_id" "iPad" localMissing large portrait model-missing-ipad-portrait.png false
-capture "$tablet_id" "iPad" localReady extra-extra-large landscapeLeft model-ready-ipad-landscape-xxl.png false
+capture "$tablet_id" "iPad" proUnlocked large portrait settings-pro-unlocked-ipad-portrait-day.png false 日间
+capture "$tablet_id" "iPad" imageSuccess large landscapeLeft image-success-ipad-landscape-night.png false 夜间
+capture "$tablet_id" "iPad" localMissing large portrait model-missing-ipad-portrait-day.png false 日间
+capture "$tablet_id" "iPad" localReady extra-extra-large landscapeLeft model-ready-ipad-landscape-xxl-night.png false 夜间
 
 python3 - "$metadata_tsv" "$output_dir/ui-evidence-manifest.json" <<'PY'
 import json
@@ -122,7 +124,7 @@ source = Path(sys.argv[1])
 destination = Path(sys.argv[2])
 items = []
 for line in source.read_text(encoding="utf-8").splitlines():
-    filename, device, orientation, dynamic_type, scenario, reduce_motion, commit_sha = line.split("\t")
+    filename, device, orientation, dynamic_type, scenario, reduce_motion, appearance, commit_sha = line.split("\t")
     items.append({
         "file": filename,
         "device": device,
@@ -130,6 +132,7 @@ for line in source.read_text(encoding="utf-8").splitlines():
         "dynamicType": dynamic_type,
         "scenario": scenario,
         "reduceMotion": reduce_motion == "true",
+        "appearance": appearance,
         "commitSha": commit_sha,
     })
 destination.write_text(json.dumps({"screenshots": items}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

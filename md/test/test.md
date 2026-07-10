@@ -24,7 +24,7 @@
 
 `codeb/v1.87-enterprise-ui` 的 push CI 在 Xcode build 通过后必须运行 `scripts/capture-ui-evidence.sh`。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、`ui-evidence-manifest.json` 和 `ui-evidence.log`，manifest 的每张截图必须记录设备、方向、Dynamic Type、场景、Reduce Motion 和当前 `commitSha`。
 
-最低截图矩阵：紧凑 iPhone 的文本空态、图片空态、历史有数据、Pro 锁定；大屏 iPhone 的文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频运行；iPad 的 Pro 解锁竖屏、图片成功横屏、Local missing 竖屏和 Local ready XXL 横屏。截图步骤失败必须使候选分支 CI 失败。
+最低截图矩阵：紧凑 iPhone 的文本空态、图片空态、历史有数据、Pro 锁定；大屏 iPhone 的文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频运行；iPad 的 Pro 解锁竖屏、图片成功横屏、Local missing 竖屏和 Local ready XXL 横屏。矩阵必须同时包含日间和夜间外观，manifest 记录 `appearance`；截图步骤失败必须使候选分支 CI 失败。
 
 Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键盘遮挡；页面没有卡片套卡片；主操作层级唯一；颜色之外仍有图标和文字状态；44pt 触控、最长状态文案、Dynamic Type、横竖屏和安全区可用。Preview matrix 只用于复现状态和开发检查，不得当作当前 HEAD 运行截图。
 

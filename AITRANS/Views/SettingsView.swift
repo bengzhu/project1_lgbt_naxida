@@ -23,6 +23,7 @@ struct SettingsView: View {
                         statusTone: store.isProUnlocked ? .success : .locked
                     )
 
+                    AppearanceSection()
                     ProAccessPanel()
                     SettingsNavigationSection()
                     ProFeatureGrid()
@@ -46,6 +47,28 @@ struct SettingsView: View {
             store.loadProSubscriptionProduct()
             store.refreshSpeechRecognitionCapabilities()
         }
+    }
+}
+
+private struct AppearanceSection: View {
+    @AppStorage("aitrans.ui.appearance") private var appearanceRawValue = AppAppearance.system.rawValue
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+            AppSectionHeader(title: "外观", subtitle: appearance.rawValue, systemImage: "circle.lefthalf.filled")
+            Picker("外观", selection: $appearanceRawValue) {
+                ForEach(AppAppearance.allCases) { option in
+                    Text(option.rawValue).tag(option.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityValue(appearance.rawValue)
+        }
+        .appSurface()
+    }
+
+    private var appearance: AppAppearance {
+        AppAppearance(rawValue: appearanceRawValue) ?? .system
     }
 }
 

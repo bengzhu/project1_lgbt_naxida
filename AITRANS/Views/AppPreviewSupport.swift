@@ -181,12 +181,16 @@ private struct PreviewContainer<Content: View>: View {
     var body: some View {
         content
             .environmentObject(store)
-            .preferredColorScheme(.dark)
     }
 }
 
 #Preview("Text · iPhone · Empty", traits: .fixedLayout(width: 375, height: 812)) {
     PreviewContainer(scenario: .empty) { TextTranslationView(selectedTab: .constant(.text)) }
+}
+
+#Preview("Text · Day", traits: .fixedLayout(width: 430, height: 932)) {
+    PreviewContainer(scenario: .textSuccess) { TextTranslationView(selectedTab: .constant(.text)) }
+        .preferredColorScheme(.light)
 }
 
 #Preview("Text · iPhone · XXL", traits: .fixedLayout(width: 430, height: 932)) {

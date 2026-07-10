@@ -70,7 +70,10 @@ private struct EngineSection: View {
     }
 
     private var engineBinding: Binding<ModelEngine> {
-        Binding(get: { store.selectedEngine }, set: store.selectEngine)
+        Binding(
+            get: { store.selectedEngine },
+            set: { store.selectEngine($0) }
+        )
     }
 }
 
@@ -133,8 +136,19 @@ private struct SamplingSection: View {
         .appSurface()
     }
 
-    private var temperatureBinding: Binding<Double> { Binding(get: { store.sampling.temperature }, set: store.setTemperature) }
-    private var maxTokensBinding: Binding<Int> { Binding(get: { store.sampling.maxTokens }, set: store.setMaxTokens) }
+    private var temperatureBinding: Binding<Double> {
+        Binding(
+            get: { store.sampling.temperature },
+            set: { store.setTemperature($0) }
+        )
+    }
+
+    private var maxTokensBinding: Binding<Int> {
+        Binding(
+            get: { store.sampling.maxTokens },
+            set: { store.setMaxTokens($0) }
+        )
+    }
 }
 
 private struct DiagnosticsSection: View {

@@ -124,6 +124,7 @@
 核心变更：
 
 - 建立炭灰、冷白、电光青的语义设计 token，统一 canvas、surface、border、状态色、间距、8pt 以内圆角、44pt 触控目标和 Reduce Motion 行为。
+- 语义色迁入 Asset Catalog 的日间/夜间变体；设置页提供跟随系统、日间、夜间选择，外观偏好独立保存在 `AppStorage`，不改变 `state.json` schema。
 - `ContentView.swift` 从 3277 行缩减为根路由；文本、图片、音频、历史、提示词、设置、模型、Pro 和开发控制台拆为独立文件，继续共享唯一 `TranslationSessionStore`。
 - 重做 iPhone 五入口 Tab 和 iPad `NavigationSplitView`；文本工作台、图片检查区、音频运行摘要、历史命令、提示词编辑、模型管理和开发报告使用一致的状态组件与响应式布局。
 - 新增隔离 `AppPreviewScenario`，preview 不恢复、不写入生产 `state.json`，覆盖多设备、Dynamic Type、Reduce Motion 及代表性成功/失败/锁定状态。

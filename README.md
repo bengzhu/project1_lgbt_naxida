@@ -19,7 +19,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-当前仓库暂时没有把 `Assets.xcassets` 放进 target 的 Resources build phase；图标资源仍保留在项目目录中。需要 App 图标时，可以在 Xcode 里把 `Assets.xcassets` 加回 `Copy Bundle Resources`，并设置 `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`。
+`Assets.xcassets` 已进入 target 的 Resources build phase，包含 AppIcon、AccentColor 和日间/夜间语义色。设置页可选择跟随系统、日间或夜间；默认跟随系统。
 
 项目根目录的 `test/` 已作为 folder resource 打进 App bundle。往 `test/` 放入音频或 OCR 图片后，需要重新构建安装 App，开发控制台的测试按钮才会扫描到新文件。
 

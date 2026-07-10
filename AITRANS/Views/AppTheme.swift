@@ -1,5 +1,21 @@
 import SwiftUI
 
+enum AppAppearance: String, CaseIterable, Identifiable {
+    case system = "跟随系统"
+    case light = "日间"
+    case dark = "夜间"
+
+    var id: String { rawValue }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+}
+
 enum AppTheme {
     enum Spacing {
         static let compact: CGFloat = 6
@@ -30,18 +46,18 @@ enum AppTheme {
 }
 
 extension Color {
-    static let appCanvas = Color(red: 0.035, green: 0.043, blue: 0.047)
-    static let appSurface = Color(red: 0.070, green: 0.082, blue: 0.087)
-    static let appSurfaceRaised = Color(red: 0.100, green: 0.116, blue: 0.122)
-    static let appBorder = Color(red: 0.20, green: 0.24, blue: 0.25)
-    static let appTextPrimary = Color(red: 0.95, green: 0.97, blue: 0.97)
-    static let appTextSecondary = Color(red: 0.66, green: 0.70, blue: 0.71)
-    static let appAccent = Color(red: 0.08, green: 0.78, blue: 0.82)
-    static let appAccentStrong = Color(red: 0.02, green: 0.58, blue: 0.64)
-    static let success = Color(red: 0.24, green: 0.78, blue: 0.47)
-    static let warning = Color(red: 0.96, green: 0.68, blue: 0.22)
-    static let danger = Color(red: 0.94, green: 0.28, blue: 0.32)
-    static let locked = Color(red: 0.56, green: 0.58, blue: 0.61)
+    static let appCanvas = Color("AppCanvas")
+    static let appSurface = Color("AppSurface")
+    static let appSurfaceRaised = Color("AppSurfaceRaised")
+    static let appBorder = Color("AppBorder")
+    static let appTextPrimary = Color("AppTextPrimary")
+    static let appTextSecondary = Color("AppTextSecondary")
+    static let appAccent = Color("AppAccent")
+    static let appAccentStrong = Color("AppAccentStrong")
+    static let success = Color("AppSuccess")
+    static let warning = Color("AppWarning")
+    static let danger = Color("AppDanger")
+    static let locked = Color("AppLocked")
 
     // Compatibility for feature views migrated in later phases.
     static let panel = Color.appSurface

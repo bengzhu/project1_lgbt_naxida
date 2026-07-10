@@ -70,6 +70,7 @@
 - iPhone 使用文本、图片、音频、历史、设置五入口 `TabView`。
 - iPad 使用 `NavigationSplitView`；宽内容优先输入/输出或主检查区/状态区并排，空间不足时通过 `ViewThatFits` 降为单列。
 - `AppTheme` 提供语义颜色、间距、圆角、动效、触控和宽度 token；`AppComponents` 提供页头、区段、状态、按钮、空状态、指标和页面宽度原语。
+- 日间/夜间颜色来自 `Assets.xcassets` 的 luminosity variants；`AppAppearance` 通过 `AppStorage` 选择跟随系统、日间或夜间，不进入业务 `state.json`。
 - 所有业务按钮只调用 store 公开方法；UI 不直接操作 `state.json`、模型 runtime、Speech task、Vision OCR 或漫画探针服务。
 - `AppPreviewScenario` 通过临时 URL 和 `performsStartupWork=false` 隔离预览，不恢复或持久化生产数据。DEBUG CI 可用 `AITRANS_UI_EVIDENCE_SCENARIO` 复现截图状态；生产启动不读取这些场景。
 - `AITRANS/Views/ProFeatureViews.swift`

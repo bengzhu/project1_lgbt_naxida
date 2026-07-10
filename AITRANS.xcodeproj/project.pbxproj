@@ -24,6 +24,7 @@
 		0A0000010000000000000022 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000023 /* Accelerate.framework */; };
 		0A0000010000000000000025 /* LocalModelDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000026 /* LocalModelDownloadService.swift */; };
 		0A0000010000000000000027 /* test in Resources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000028 /* test */; };
+		0A00000100000000000000B3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000016 /* Assets.xcassets */; };
 		0A0000010000000000000029 /* MangaOverlayProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000002A /* MangaOverlayProbeService.swift */; };
 		0A000001000000000000002C /* AppComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000002B /* AppComponents.swift */; };
 		0A00000100000000000000A2 /* TextTranslationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000A1 /* TextTranslationView.swift */; };
@@ -258,6 +259,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0A00000100000000000000B3 /* Assets.xcassets in Resources */,
 				0A0000010000000000000027 /* test in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

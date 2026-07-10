@@ -116,7 +116,7 @@ struct ImageTranslationPanel: View {
     private var overlayModeBinding: Binding<ImageTranslationOverlayMode> {
         Binding(
             get: { store.imageOverlayMode },
-            set: store.setImageOverlayMode
+            set: { store.setImageOverlayMode($0) }
         )
     }
 

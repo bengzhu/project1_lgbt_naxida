@@ -33,6 +33,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
 struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var store: TranslationSessionStore
+    @AppStorage("aitrans.ui.appearance") private var appearanceRawValue = AppAppearance.system.rawValue
     @State private var selectedTab: AppTab
 
     private let evidenceScenario: AppPreviewScenario?
@@ -65,8 +66,18 @@ struct ContentView: View {
                 selectedTab = .settings
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(appearance.colorScheme)
         .environment(\.appReduceMotionOverride, evidenceScenario == .audioRecognizing)
+    }
+
+    private var appearance: AppAppearance {
+#if DEBUG
+        if let evidenceValue = ProcessInfo.processInfo.environment["AITRANS_UI_EVIDENCE_APPEARANCE"],
+           let evidenceAppearance = AppAppearance(rawValue: evidenceValue) {
+            return evidenceAppearance
+        }
+#endif
+        return AppAppearance(rawValue: appearanceRawValue) ?? .system
     }
 }
 
