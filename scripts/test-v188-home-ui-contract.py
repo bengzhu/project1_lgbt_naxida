@@ -100,20 +100,23 @@ class V188HomeUIContractTests(unittest.TestCase):
             with self.subTest(view=name):
                 self.assertNotIn("TextWorkspaceBackground", read(f"AITRANS/Views/{name}"))
 
-    def test_compact_layout_reserves_floating_tab_bar_clearance(self) -> None:
+    def test_compact_layout_adapts_floating_tab_bar_clearance_to_dynamic_type(self) -> None:
         source = read("AITRANS/Views/TextTranslationView.swift")
         theme = read("AITRANS/Views/AppTheme.swift")
         self.assertIn("@Environment(\\.horizontalSizeClass)", source)
+        self.assertIn("@Environment(\\.dynamicTypeSize)", source)
         self.assertIn("VStack(spacing: 0) {\n            ScrollView {", source)
         scroll_start = source.index("ScrollView {")
         scroll_modifier = source.index(".scrollDismissesKeyboard(.interactively)")
-        spacer = source.index("if horizontalSizeClass == .compact")
+        spacer = source.index("if horizontalSizeClass == .compact && dynamicTypeSize >= .xxLarge")
         toolbar = source.index(".toolbar {")
         self.assertLess(scroll_start, scroll_modifier)
         self.assertLess(scroll_modifier, spacer)
         self.assertLess(spacer, toolbar)
         self.assertIn(".frame(height: AppTheme.Layout.floatingTabBarClearance)", source)
         self.assertIn("static let floatingTabBarClearance: CGFloat = 48", theme)
+        self.assertIn('title: store.isProcessing ? "翻译中" : "翻译"', source)
+        self.assertNotIn("if horizontalSizeClass == .compact {", source)
         self.assertNotIn(".safeAreaInset(edge: .bottom", source)
         self.assertNotIn(".padding(.bottom, 72)", source)
 

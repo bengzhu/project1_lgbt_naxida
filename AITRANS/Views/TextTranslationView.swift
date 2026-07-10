@@ -3,6 +3,7 @@ import SwiftUI
 struct TextTranslationView: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var selectedTab: AppTab
     @FocusState private var inputFocused: Bool
 
@@ -35,7 +36,7 @@ struct TextTranslationView: View {
             }
             .scrollDismissesKeyboard(.interactively)
 
-            if horizontalSizeClass == .compact {
+            if horizontalSizeClass == .compact && dynamicTypeSize >= .xxLarge {
                 Color.clear
                     .frame(height: AppTheme.Layout.floatingTabBarClearance)
                     .accessibilityHidden(true)
