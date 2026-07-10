@@ -128,6 +128,9 @@
 - 文件音频识别和同声传译都会维护 `speechRecognitionRunSummary`；识别失败、权限拒绝、设备不支持、空文本、用户取消都会留下明确失败原因。
 - 长按同声传译松手后，主动结束导致的 recognition task cancel error 不再覆盖为失败状态。
 - 音频页新增识别质量摘要面板和识别取消入口，展示 locale、强制本机、耗时、词数、片段和置信度，让语音链路更可诊断、UI 信息层次更完整。
+- 合并验收补强用 run UUID 隔离授权、Speech 和翻译回调，避免取消/重试后旧任务污染新摘要；当前翻译任务未结束时不启动实时语音采集。
+- App bundle ID 统一为 `com.local.aitransform114`；CI 改为从构建 App `Info.plist` 动态读取 bundle ID，并让 `1.*` 版本分支触发合并前快验。
+- 新增 `scripts/test-speech-recognition-contract.py` 并接入 CI static checks；完整 v1.47-v1.86 汇总见 `md/v1.47-to-v1.86-update-notes.md`。
 - 同步 `md/flow/flow.md` 和 `md/flow/flowchart.md` 的音频识别流程。
 
 关键文件：
@@ -138,11 +141,15 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `md/flow/flow.md`
 - `md/flow/flowchart.md`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-speech-recognition-contract.py`
+- `md/v1.47-to-v1.86-update-notes.md`
 - `update_log.md`
 
 验证结果：
 
 - 本地轻量验证通过：`git diff --check`、`python3 -m json.tool test/1.ground_truth.json`、`python3 -m json.tool output/clean_text_diagnostic.json`、`python3 -m json.tool output/probe_report.json`。
+- 合并验收补强通过：5 个 speech/CI contract tests、plist lint、workflow YAML parse、Swift parse、Python compile、Koharu draft/valid/orientation/missing/invalid fixture smoke。
 - Swift / Xcode build 按项目规则交给 GitHub Actions；本轮 push 后需核对 `AITRANS CI Results` 和 `AITRANS - Build IPA`。
 
 遗留事项：

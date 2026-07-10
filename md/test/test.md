@@ -64,6 +64,7 @@ git diff --check
 python3 -m json.tool test/1.ground_truth.json
 python3 -m json.tool output/probe_report.json
 python3 -m json.tool output/clean_text_diagnostic.json
+python3 -B scripts/test-speech-recognition-contract.py
 python3 scripts/make-koharu-native-draft-artifacts.py --out build/koharu_native_draft
 python3 scripts/validate-koharu-artifacts.py --root build/koharu_native_draft
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid
@@ -87,6 +88,8 @@ python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allo
 
 `build/koharu_native_draft/` 是 `scripts/make-koharu-native-draft-artifacts.py` 生成的非 active 四件套草稿，只用于 contract shape / validator smoke。它必须保持 `contractExampleOnly=true`，validator 应输出 `verdict = contractExampleOnly`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`；不得复制到 `test/koharu_artifacts/`，不得作为真实 detector / SegmentMask / BubbleMask 验收证据。
 
+`scripts/test-speech-recognition-contract.py` 是无设备依赖的源代码契约测试，覆盖 v1.86 状态枚举、运行摘要字段、异步 run ID 隔离、UI 取消/翻译状态和 CI 动态 bundle ID。它不能代替真机 Speech 权限、麦克风采集或识别质量测试。
+
 当前基线：
 
 - `output/probe_report.json` 可解析。
@@ -103,6 +106,7 @@ python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allo
 - Swift 代码或 Xcode 工程文件改变。
 - `TranslationSessionStore`、模型接口、OCR 服务、SwiftUI 入口或 Info.plist 改变。
 - 需要确认 target 能编译。
+- Speech 状态机或 bundle ID / simulator launch 工作流改变。
 
 默认动作：
 

@@ -5,6 +5,7 @@ on:
     branches:
       - smalldata_test
       - 'codeb/**'
+      - '1.*'
   workflow_dispatch:
     inputs:
       probe_mode:
@@ -49,7 +50,6 @@ jobs:
       SCHEME: AITRANS
       DESTINATION: generic/platform=iOS Simulator
       SIMULATOR_RUNTIME: iOS
-      BUNDLE_ID: com.local.aitrans
       DERIVED_DATA: .derivedData-ci
       RESULT_ROOT: ci-results
       TEST_RESULTS_DIR: ci-results/TestResults
@@ -393,6 +393,7 @@ jobs:
           {
             echo "## Static checks"
             git diff --check
+            python3 -B scripts/test-speech-recognition-contract.py
             python3 -m json.tool test/1.ground_truth.json >/dev/null
             if [ -f output/probe_report.json ]; then
               python3 -m json.tool output/probe_report.json >/dev/null
@@ -627,7 +628,14 @@ jobs:
             fi
             echo "simulatorAppReusedFromXcodeBuild=true"
             echo "simulatorAppPath=$app_path"
+            bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Info.plist")"
+            if [ -z "$bundle_id" ]; then
+              echo "Built app bundle identifier is empty" >&2
+              exit 1
+            fi
+            echo "bundleIdentifier=$bundle_id"
             echo "simulator_app_path=$app_path" >> "$GITHUB_OUTPUT"
+            echo "bundle_id=$bundle_id" >> "$GITHUB_OUTPUT"
           } 2>&1 | tee "$RESULT_ROOT/simulator-build.log"
 
       - name: Run cloud manga probe
@@ -674,8 +682,13 @@ jobs:
             xcrun simctl bootstatus "$device_id" -b
 
             app_path="${{ steps.simulator_build.outputs.simulator_app_path }}"
+            BUNDLE_ID="${{ steps.simulator_build.outputs.bundle_id }}"
             if [ -z "$app_path" ]; then
               echo "Debug simulator app path is missing from locate step" >&2
+              exit 1
+            fi
+            if [ -z "$BUNDLE_ID" ]; then
+              echo "Debug simulator app bundle identifier is missing from locate step" >&2
               exit 1
             fi
             echo "Installing $app_path"

@@ -34,6 +34,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - Agent C 通过 PR 合并后必须删除远端 `codeb/...` 候选分支，避免分支无限堆积；无权限删除时要明确说明。
 - 现有加密软件包 artifact 只用于软件包交付，不作为 Agent C 验收依据。
 - `AITRANS CI Results` 对 `codeb/**` 和 `smalldata_test` push 默认走 `probe_mode=skip` 快验，只跑静态检查、按 scope 必要时 Xcode build、manifest 和未加密结果包，不下载 GGUF、不启动模拟器漫画探针。
+- 版本整合分支 `1.*` 也会触发同一快验；云端探针从构建出的 App `Info.plist` 动态读取 bundle ID，当前工程值为 `com.local.aitransform114`。
 - push CI 会先检测变更范围：非 App 构建相关变更跳过 Xcode build，只上传静态检查、manifest、`xcodebuild.log` skip 说明和未加密结果包；Swift、Xcode 工程、资源、`test/` 素材、手动探针或 Koharu artifact 注入仍会跑 Xcode build。
 - Koharu artifact validator 的完整 invalid fixture 矩阵只在 validator、artifact contract 或 workflow 相关文件变化时跑；普通 push 保留核心 active/valid 校验以减少 CI 时间。
 - 手动 `workflow_dispatch` 可选填 `koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256`，从 Release 下载真实 Koharu 四件套 archive 并在 Xcode build 前注入 `test/koharu_artifacts/`；archive 必须只有一个目录同时包含四件套，CI 结果包会记录 source image 和四件套文件的 SHA256 / size identity；`koharu_artifact_required=true` 时下载、SHA、解压、唯一目录检查或 validator 失败会直接失败。
@@ -54,6 +55,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - `模型`：切换 `Mock` / `Local` 引擎，查看模型目录，下载内置 Gemma 270M GGUF，导入或移除本地 GGUF 文件，运行自检，单独运行 LLM 接口自测，调整 temperature 和 max tokens，查看真实模型接入接口说明。
 - `开发`：在模型页输入密码 `114514` 开启。用于调试真实翻译接口，有一个用户输入框、一个“大模型实际输入”框、一个“大模型实际输出/错误代码”框，并新增批量 raw 探针。Local 模式会展示实际送入 `llama.cpp` 的完整 prompt 和 raw 输出，不做清洗、隐藏、重试或屏蔽；Mock 模式会明确标记为模拟输出，不代表真实模型。
 - `Pro`：从首页独立出来的 Pro 功能页，包含订阅入口、长按麦克风同声传译、音频文件本机识别测试、图片 OCR 翻译、`test/` 固定测试入口和后台翻译路线说明。
+- 音频识别页会显示本次运行的输入名、locale、本机识别要求、耗时、词数、分段数、平均置信度、文本或失败原因；识别和翻译状态分开，检查中或识别中可取消。
 
 ## Pro / 内购占位
 

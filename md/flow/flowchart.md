@@ -25,8 +25,9 @@ flowchart TD
   J --> K["图片旁贴 / 覆盖 UI"]
 
   %% 音频分支：Apple 本机语音识别
-  C --> L["音频识别<br/>Apple Speech on-device / requiresOnDeviceRecognition"]
-  L --> LV["speechRecognitionRunSummary<br/>locale / 耗时 / 词数 / 片段 / 置信度 / 失败原因"]
+  C --> LR["Speech run ID<br/>取消 / 重试使旧回调失效"]
+  LR --> L["音频识别<br/>Apple Speech on-device / requiresOnDeviceRecognition"]
+  L --> LV["speechRecognitionRunSummary<br/>输入 / locale / 耗时 / 词数 / 片段 / 置信度 / 失败原因"]
   L --> D
 
   %% 漫画探针分支：固定 test/1.png
@@ -235,11 +236,11 @@ flowchart TD
   P --> B0["从 smalldata_test 开分支<br/>codeb/vX.Y-短标题"]
   B0 --> B1["Agent B<br/>按提示词小步实现"]
   B1 --> B2["本地轻量检查<br/>git diff --check / JSON / YAML smoke"]
-  B2 --> B3["push codeb/...<br/>不合并 main"]
+  B2 --> B3["push codeb/... 或版本整合 1.*<br/>不合并 main"]
   B3 --> B4["创建 PR<br/>base=smalldata_test / head=codeb/..."]
 
   %% 云端验证和结果包
-  B4 --> G1["GitHub Actions<br/>变更范围检测 / 静态检查 / 必要时 Xcode build / 手动 ci-fast 探针"]
+  B4 --> G1["GitHub Actions<br/>变更范围检测 / 契约测试 / 必要时 Xcode build / 动态读取 App bundle ID / 手动 ci-fast 探针"]
   G0["workflow_dispatch<br/>可选 full 或 skip"] --> G1
   G1 --> G2["未加密 CI 结果包<br/>xcresult / junit.xml / xcodebuild.log / manifest / failure summary / Koharu gate 摘要"]
   G1 --> G3["加密打包 workflow<br/>软件包交付，Agent C 不以此验收"]

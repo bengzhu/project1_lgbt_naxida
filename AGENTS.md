@@ -20,6 +20,8 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
+- v1.86 已把 Koharu 四件套 contract / Release handoff / identity reconciliation 收束到云端验收，并新增 Apple Speech 本机识别运行摘要；版本总览见 `md/v1.47-to-v1.86-update-notes.md`。
+- 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
 ## 2. 每轮必读
@@ -49,6 +51,7 @@ README 不再承载历史基线；涉及验收时以当前代码、`update_log.m
 ## 3. 架构硬边界
 - `TranslationSessionStore` 是 UI 状态、模型调用、历史、诊断和持久化的统一调度中心。
 - UI 层只触发 store 方法，不绕开 store 直接改持久化、模型状态或报告状态。
+- Speech 授权、识别和翻译回调必须按当前 run ID 隔离；取消或重试后，旧回调不得覆盖新状态。
 - 普通图片 OCR 使用 `VisionOCRService`；漫画覆盖探针使用 `MangaOverlayProbeService` 的独立诊断链路。
 - 用户实际翻译和 summary 走 sampled 解码；漫画探针、raw 诊断、clean text、batch 对照和纠错翻译对照走 deterministic 解码。
 - `test/1.ground_truth.json` 只能用于探针验证和统计，不能用于真实产品路径或生产候选选择。

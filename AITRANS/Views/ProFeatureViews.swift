@@ -142,16 +142,21 @@ struct SpeechRecognitionRunSummaryPanel: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     Label("识别质量", systemImage: "sparkles")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.headline)
                         .foregroundStyle(.white)
                     Spacer()
                     Text(summary.mode.displayName)
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.caption.bold())
                         .foregroundStyle(summary.failureMessage == nil ? Color.appAccent : Color.danger)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 5)
                         .background(Color.white.opacity(0.08), in: Capsule())
                 }
+
+                Text(summary.inputName)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
                     SpeechMetricTile(title: "语言", value: summary.localeIdentifier, icon: "globe.asia.australia.fill")
@@ -164,29 +169,18 @@ struct SpeechRecognitionRunSummaryPanel: View {
 
                 if let failureMessage = summary.failureMessage {
                     Label(failureMessage, systemImage: "exclamationmark.triangle.fill")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.subheadline.bold())
                         .foregroundStyle(Color.danger)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if !summary.transcriptPreview.isEmpty {
                     Text(summary.transcriptPreview)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.78))
                         .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(12)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color.appAccent.opacity(0.20),
-                        Color.white.opacity(0.07)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                in: RoundedRectangle(cornerRadius: 15, style: .continuous)
-            )
+            .padding(.vertical, 4)
         }
     }
 
@@ -208,19 +202,18 @@ private struct SpeechMetricTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Label(title, systemImage: icon)
-                .font(.system(size: 10, weight: .bold))
+                .font(.caption.bold())
                 .foregroundStyle(.white.opacity(0.54))
                 .lineLimit(1)
                 .minimumScaleFactor(0.78)
             Text(value)
-                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .font(.body.bold())
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.74)
         }
-        .padding(9)
+        .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

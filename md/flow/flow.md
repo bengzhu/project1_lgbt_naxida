@@ -169,6 +169,7 @@
 - 文件识别和实时识别都强制 `requiresOnDeviceRecognition = true`。
 - UI 只调用 store 方法，不直接创建 Speech recognizer。
 - 识别中和翻译中状态分开展示；用户可取消正在检查或识别的音频任务。
+- 每次识别生成独立 run ID；授权、Speech result/error 和翻译完成回调只有在 run ID 仍匹配时才能更新 store。
 
 禁止：
 
@@ -406,7 +407,7 @@ test/1.png
 - 手动探针 workflow 会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，并缓存到 `.ci-models/`。
 - push 默认 `probe_mode=skip` 快验，只跑静态检查、按 `xcodeBuildRequired` 决定是否跑 Xcode build、manifest 和未加密结果包；不下载 GGUF、不创建模拟器、不安装 App、不跑漫画探针。
 - 手动 `workflow_dispatch` 选择 `ci-fast` 或 `full` 时，云端 CI 单次 Debug simulator build 同时产出 `.xcresult` 和可安装 App；探针步骤只定位并复用该 App，不重复完整 `xcodebuild build`。
-- 云端漫画探针会创建并启动 iPhone 模拟器，安装 `com.local.aitrans`，把缓存 GGUF 复制到 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 和 `AITRANS_MANGA_PROBE_MODE` 启动 App，等待并导出本轮 `output/`。
+- 云端漫画探针会创建并启动 iPhone 模拟器，从构建 App 的 `Info.plist` 读取实际 bundle ID，安装 App，把缓存 GGUF 复制到 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 和 `AITRANS_MANGA_PROBE_MODE` 启动 App，等待并导出本轮 `output/`。
 - `ci-artifact-manifest.json` 必须记录 `probeMode`、`probeFastPathEnabled`、`probeSkippedDiagnostics`、`probeOutputRequiredFiles`、`probeOutputRetainedFiles`、`simulatorAppReusedFromXcodeBuild` 和 `simulatorAppPath`。
 - push 快验验收静态检查通过；若 `xcodeBuildRequired=true` 还必须 Xcode build 通过，若 `xcodeBuildRequired=false` 必须在 manifest 写明 skip reason。手动探针验收 Release 模型可下载且 SHA 通过、报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0` 和关键产物存在；`overallPassed=false` 不单独判 CI 失败，因为当前质量基线本身仍有失败块。
 - 本阶段不提交模型文件，Release asset 是云端模型来源。

@@ -124,6 +124,7 @@ final class TranslationSessionStore: ObservableObject {
     private var liveAudioEngine: AVAudioEngine?
     private var liveSpeechRecognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var isProLiveSpeechCaptureRequested = false
+    private var speechRecognitionRunID = UUID()
     private var proSubscriptionProduct: Product?
     private var imageTranslationSourceURL: URL?
     private var activeSessionID = UUID()
@@ -373,7 +374,11 @@ final class TranslationSessionStore: ObservableObject {
         audioRecognitionTask?.cancel()
 
         let capability = currentSpeechCapability
-        beginSpeechRecognitionRun(mode: .audioFile, inputName: url.lastPathComponent, capability: capability)
+        let runID = beginSpeechRecognitionRun(
+            mode: .audioFile,
+            inputName: url.lastPathComponent,
+            capability: capability
+        )
         guard capability.supportsOnDeviceRecognition else {
             audioRecognitionState = .failed
             audioRecognitionMessage = "\(sourceLanguage.rawValue) 当前设备未报告支持 Apple 本机语音识别，断网测试不能保证成功"
@@ -406,6 +411,7 @@ final class TranslationSessionStore: ObservableObject {
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                guard self.speechRecognitionRunID == runID else { return }
 
                 guard status == .authorized else {
                     self.audioRecognitionState = .failed
@@ -415,7 +421,7 @@ final class TranslationSessionStore: ObservableObject {
                     return
                 }
 
-                self.startOnDeviceAudioRecognition(localAudioURL, capability: capability)
+                self.startOnDeviceAudioRecognition(localAudioURL, capability: capability, runID: runID)
             }
         }
     }
@@ -428,9 +434,18 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
         guard !isCapturingProSpeech else { return }
+        guard !isProcessing else {
+            audioRecognitionMessage = "当前翻译任务完成后再开始语音识别"
+            dataTransferMessage = audioRecognitionMessage
+            return
+        }
 
         let capability = currentSpeechCapability
-        beginSpeechRecognitionRun(mode: .liveMicrophone, inputName: "实时麦克风", capability: capability)
+        let runID = beginSpeechRecognitionRun(
+            mode: .liveMicrophone,
+            inputName: "实时麦克风",
+            capability: capability
+        )
         guard capability.supportsOnDeviceRecognition else {
             audioRecognitionState = .failed
             audioRecognitionMessage = "\(sourceLanguage.rawValue) 当前设备未报告支持 Apple 本机语音识别"
@@ -446,6 +461,7 @@ final class TranslationSessionStore: ObservableObject {
         SFSpeechRecognizer.requestAuthorization { [weak self] speechStatus in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                guard self.speechRecognitionRunID == runID else { return }
                 guard speechStatus == .authorized else {
                     self.isProLiveSpeechCaptureRequested = false
                     self.audioRecognitionState = .failed
@@ -465,7 +481,7 @@ final class TranslationSessionStore: ObservableObject {
                     return
                 }
 
-                self.startProLiveSpeechRecognition(capability: capability)
+                self.startProLiveSpeechRecognition(capability: capability, runID: runID)
             }
         }
     }
@@ -476,6 +492,7 @@ final class TranslationSessionStore: ObservableObject {
             if audioRecognitionState == .checking {
                 audioRecognitionState = .idle
                 audioRecognitionMessage = "语音识别已取消"
+                invalidateSpeechRecognitionRun()
                 failSpeechRecognitionRun("用户取消")
                 dataTransferMessage = audioRecognitionMessage
             }
@@ -495,6 +512,7 @@ final class TranslationSessionStore: ObservableObject {
             finalText: proLiveTranscriptText,
             failureMessage: proLiveTranscriptText.isEmpty ? "未识别到语音" : nil
         )
+        invalidateSpeechRecognitionRun()
     }
 
     func translateProLiveTranscript() {
@@ -555,8 +573,8 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
-    private func startProLiveSpeechRecognition(capability: SpeechRecognitionCapability) {
-        guard isProLiveSpeechCaptureRequested else {
+    private func startProLiveSpeechRecognition(capability: SpeechRecognitionCapability, runID: UUID) {
+        guard isProLiveSpeechCaptureRequested, speechRecognitionRunID == runID else {
             audioRecognitionState = .idle
             audioRecognitionMessage = "语音识别已取消"
             failSpeechRecognitionRun("用户取消")
@@ -612,6 +630,7 @@ final class TranslationSessionStore: ObservableObject {
         audioRecognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                guard self.speechRecognitionRunID == runID else { return }
 
                 if let result {
                     self.proLiveTranscriptText = result.bestTranscription.formattedString
@@ -630,10 +649,17 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
-    private func startOnDeviceAudioRecognition(_ url: URL, capability: SpeechRecognitionCapability) {
+    private func startOnDeviceAudioRecognition(
+        _ url: URL,
+        capability: SpeechRecognitionCapability,
+        runID: UUID
+    ) {
+        guard speechRecognitionRunID == runID else { return }
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: capability.localeIdentifier)) else {
             audioRecognitionState = .failed
             audioRecognitionMessage = "无法创建 \(capability.localeIdentifier) 语音识别器"
+            failSpeechRecognitionRun(audioRecognitionMessage)
+            invalidateSpeechRecognitionRun()
             dataTransferMessage = audioRecognitionMessage
             return
         }
@@ -649,6 +675,7 @@ final class TranslationSessionStore: ObservableObject {
         audioRecognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                guard self.speechRecognitionRunID == runID else { return }
 
                 if let error {
                     self.audioRecognitionTask = nil
@@ -656,6 +683,7 @@ final class TranslationSessionStore: ObservableObject {
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "本机语音识别失败：\(error.localizedDescription)"
                     self.failSpeechRecognitionRun(self.audioRecognitionMessage)
+                    self.invalidateSpeechRecognitionRun()
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
@@ -670,6 +698,7 @@ final class TranslationSessionStore: ObservableObject {
                     self.audioRecognitionState = .failed
                     self.audioRecognitionMessage = "语音识别完成，但没有得到文本"
                     self.failSpeechRecognitionRun(self.audioRecognitionMessage)
+                    self.invalidateSpeechRecognitionRun()
                     self.dataTransferMessage = self.audioRecognitionMessage
                     return
                 }
@@ -690,12 +719,14 @@ final class TranslationSessionStore: ObservableObject {
                     self.audioRecognitionMessage = "已离线识别出文字，但翻译模型处理失败"
                     self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                 }
+                self.invalidateSpeechRecognitionRun()
                 self.dataTransferMessage = self.audioRecognitionMessage
             }
         }
     }
 
     func cancelAudioRecognition() {
+        invalidateSpeechRecognitionRun()
         isProLiveSpeechCaptureRequested = false
         liveAudioEngine?.stop()
         liveAudioEngine?.inputNode.removeTap(onBus: 0)
@@ -716,7 +747,9 @@ final class TranslationSessionStore: ObservableObject {
         mode: SpeechRecognitionRunMode,
         inputName: String,
         capability: SpeechRecognitionCapability
-    ) {
+    ) -> UUID {
+        let runID = UUID()
+        speechRecognitionRunID = runID
         speechRecognitionRunSummary = SpeechRecognitionRunSummary(
             mode: mode,
             inputName: inputName.isEmpty ? mode.displayName : inputName,
@@ -732,6 +765,11 @@ final class TranslationSessionStore: ObservableObject {
             isFinal: false,
             failureMessage: nil
         )
+        return runID
+    }
+
+    private func invalidateSpeechRecognitionRun() {
+        speechRecognitionRunID = UUID()
     }
 
     private func updateSpeechRecognitionRun(
