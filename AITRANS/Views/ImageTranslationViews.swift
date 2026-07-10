@@ -175,14 +175,10 @@ private struct ImageCommandBar: View {
     }
 
     @ViewBuilder private var commands: some View {
-        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-            Label(store.imageTranslationData == nil ? "选择照片" : "更换照片", systemImage: "photo.on.rectangle")
-                .font(.subheadline.bold())
-                .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget)
-                .padding(.horizontal, AppTheme.Spacing.control)
-                .foregroundStyle(Color.appCanvas)
-                .background(Color.appAccent, in: .rect(cornerRadius: AppTheme.Radius.control))
-        }
+        PhotoPickerCommand(
+            title: store.imageTranslationData == nil ? "选择照片" : "更换照片",
+            selection: $selectedPhotoItem
+        )
         .disabled(isRunning)
 
         AppSecondaryButton(title: "图片文件", systemImage: "folder", action: openImporter)
@@ -207,6 +203,22 @@ private struct ImageCommandBar: View {
         switch store.imageTranslationState {
         case .loading, .recognizing, .translating: true
         case .idle, .translated, .failed: false
+        }
+    }
+}
+
+private struct PhotoPickerCommand: View {
+    let title: String
+    @Binding var selection: PhotosPickerItem?
+
+    var body: some View {
+        PhotosPicker(selection: $selection, matching: .images) {
+            Label(title, systemImage: "photo.on.rectangle")
+                .font(.subheadline.bold())
+                .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget)
+                .padding(.horizontal, AppTheme.Spacing.control)
+                .foregroundStyle(Color.appCanvas)
+                .background(Color.appAccent, in: .rect(cornerRadius: AppTheme.Radius.control))
         }
     }
 }

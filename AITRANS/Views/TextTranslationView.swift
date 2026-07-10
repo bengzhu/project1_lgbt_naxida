@@ -18,7 +18,7 @@ struct TextTranslationView: View {
                 LanguageControlBar()
 
                 ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .stretch, spacing: AppTheme.Spacing.section) {
+                    HStack(alignment: .top, spacing: AppTheme.Spacing.section) {
                         TranslationInputPane(selectedTab: $selectedTab)
                             .frame(minWidth: 320)
                         TranslationOutputPane()
