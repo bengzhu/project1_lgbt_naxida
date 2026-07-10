@@ -134,6 +134,8 @@ jobs:
           version="unversioned"
           if [[ "$branch" =~ v([0-9]+(\.[0-9]+)*) ]]; then
             version="v${BASH_REMATCH[1]}"
+          elif [[ "$branch" =~ ^([0-9]+(\.[0-9]+)*)$ ]]; then
+            version="v${BASH_REMATCH[1]}"
           fi
           artifact_name="aitrans-ci-${version}-${branch_slug}-${short_sha}-run${GITHUB_RUN_ID}-attempt${GITHUB_RUN_ATTEMPT}"
           result_bundle="${TEST_RESULTS_DIR}/AITRANS-${version}-${short_sha}.xcresult"

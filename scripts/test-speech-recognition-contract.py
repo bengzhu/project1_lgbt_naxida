@@ -79,10 +79,15 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         bundle_ids = set(
             re.findall(r"PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);", project)
         )
+        marketing_versions = set(
+            re.findall(r"MARKETING_VERSION = ([^;]+);", project)
+        )
         self.assertEqual(bundle_ids, {"com.local.aitransform114"})
+        self.assertEqual(marketing_versions, {"1.86"})
         self.assertNotIn("BUNDLE_ID: com.local.aitrans\n", workflow)
         self.assertIn("Print :CFBundleIdentifier", workflow)
         self.assertIn("steps.simulator_build.outputs.bundle_id", workflow)
+        self.assertIn('elif [[ "$branch" =~ ^([0-9]+(\\.[0-9]+)*)$ ]]', workflow)
 
 
 if __name__ == "__main__":

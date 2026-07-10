@@ -130,6 +130,7 @@
 - 音频页新增识别质量摘要面板和识别取消入口，展示 locale、强制本机、耗时、词数、片段和置信度，让语音链路更可诊断、UI 信息层次更完整。
 - 合并验收补强用 run UUID 隔离授权、Speech 和翻译回调，避免取消/重试后旧任务污染新摘要；当前翻译任务未结束时不启动实时语音采集。
 - App bundle ID 统一为 `com.local.aitransform114`；CI 改为从构建 App `Info.plist` 动态读取 bundle ID，并让 `1.*` 版本分支触发合并前快验。
+- Xcode `MARKETING_VERSION` 从 `0.1.0` 收口为 `1.86`，CI 也会把纯数字 `1.86` 分支记录为 artifact version `v1.86`。
 - 新增 `scripts/test-speech-recognition-contract.py` 并接入 CI static checks；完整 v1.47-v1.86 汇总见 `md/v1.47-to-v1.86-update-notes.md`。
 - 同步 `md/flow/flow.md` 和 `md/flow/flowchart.md` 的音频识别流程。
 
