@@ -200,7 +200,10 @@ jobs:
 
           xcode_build_required=false
           xcode_build_skip_reason="non_app_build_related_fast_path"
-          if [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ]; then
+          if [ "$GITHUB_REF_NAME" = "codeb/v1.87-enterprise-ui" ]; then
+            xcode_build_required=true
+            xcode_build_skip_reason=""
+          elif [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ]; then
             xcode_build_required=true
             xcode_build_skip_reason=""
           elif [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ]; then
