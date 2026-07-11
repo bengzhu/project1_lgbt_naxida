@@ -116,10 +116,10 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
-### v1.90 候选：Speech 运行摘要增强与契约
+### v1.90：Speech 运行摘要增强与契约
 日期：2026-07-12
 
-状态：Agent X / B 候选，分支 `codeb/v1.90-speech-diagnostics-koharu-gates`；正式版本号仍 `1.89` 直至云端通过收口。
+状态：Agent X 正式收口。PR #43 合入 `smalldata_test`。验收 HEAD `69a86eb1`，云端 run `29167025229` SUCCESS。`MARKETING_VERSION=1.90`。未触碰 `main`。
 
 核心变更：
 
