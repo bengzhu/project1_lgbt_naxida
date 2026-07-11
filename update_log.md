@@ -116,10 +116,10 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
-### v1.91 候选：Speech 人工矩阵与 Speech CI 契约独立门控
+### v1.91：Speech 人工矩阵与 Speech CI 契约独立门控
 日期：2026-07-12
 
-状态：候选分支 `codeb/v1.91-koharu-speech-matrix`；正式版本仍 `1.90` 直至收口。
+状态：Agent X 正式收口。PR #44 合入 `smalldata_test`。验收 HEAD `8d9145ae`，云端 run `29167471696` SUCCESS。`MARKETING_VERSION=1.91`。未触碰 `main`。
 
 核心变更：
 
