@@ -134,10 +134,13 @@ struct SpeechRecognitionRunSummaryPanel: View {
                     AppMetric(title: "模式", value: summary.mode.displayName, systemImage: "waveform")
                     AppMetric(title: "语言", value: summary.localeIdentifier, systemImage: "globe")
                     AppMetric(title: "离线", value: summary.requiresOnDeviceRecognition ? "强制本机" : "自动", systemImage: "wifi.slash")
+                    AppMetric(title: "本机能力", value: summary.supportsOnDeviceRecognition ? "支持" : "未知/不支持", systemImage: "iphone")
                     AppMetric(title: "耗时", value: summary.elapsedSeconds.formatted(.number.precision(.fractionLength(1))) + "s", systemImage: "timer")
                     AppMetric(title: "词数", value: "\(summary.wordCount)", systemImage: "textformat.abc")
                     AppMetric(title: "片段", value: "\(summary.segmentCount)", systemImage: "waveform.path.ecg")
                     AppMetric(title: "置信度", value: confidenceText(summary.averageConfidence), systemImage: "gauge.with.dots.needle.bottom.50percent")
+                    AppMetric(title: "终态", value: summary.isFinal ? "最终" : "进行中", systemImage: "flag.checkered")
+                    AppMetric(title: "Run", value: summary.runToken, systemImage: "number")
                 }
                 if let failureMessage = summary.failureMessage {
                     AppStatusRow(title: "运行失败或取消", detail: failureMessage, tone: .danger)

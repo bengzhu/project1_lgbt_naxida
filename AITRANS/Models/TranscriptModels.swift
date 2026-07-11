@@ -194,6 +194,8 @@ struct SpeechRecognitionRunSummary: Equatable, Codable, Sendable {
     var localeIdentifier: String
     var requiresOnDeviceRecognition: Bool
     var supportsOnDeviceRecognition: Bool
+    /// Short opaque token for the current speech run; used only for diagnostics and UI identity.
+    var runToken: String
     var startedAt: Date
     var completedAt: Date?
     var transcriptPreview: String
@@ -209,6 +211,7 @@ struct SpeechRecognitionRunSummary: Equatable, Codable, Sendable {
         localeIdentifier: "en-US",
         requiresOnDeviceRecognition: true,
         supportsOnDeviceRecognition: false,
+        runToken: "—",
         startedAt: Date(timeIntervalSince1970: 0),
         completedAt: nil,
         transcriptPreview: "",

@@ -762,6 +762,7 @@ final class TranslationSessionStore: ObservableObject {
             localeIdentifier: capability.localeIdentifier,
             requiresOnDeviceRecognition: true,
             supportsOnDeviceRecognition: capability.supportsOnDeviceRecognition,
+            runToken: String(runID.uuidString.prefix(8)),
             startedAt: Date(),
             completedAt: nil,
             transcriptPreview: "",

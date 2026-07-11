@@ -44,6 +44,7 @@ class SpeechRecognitionContractTests(unittest.TestCase):
             "averageConfidence",
             "isFinal",
             "failureMessage",
+            "runToken",
         }
         match = re.search(
             r"struct SpeechRecognitionRunSummary[^\{]*\{(?P<body>.*?)\n\}",
@@ -72,6 +73,33 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         self.assertIn("struct SpeechRecognitionRunSummaryPanel: View", pro_views)
         self.assertIn("summary.inputName", pro_views)
         self.assertIn("summary.averageConfidence", pro_views)
+
+
+    def test_cancel_invalidates_run_before_idle_and_records_failure(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+        cancel = re.search(
+            r"func cancelAudioRecognition\(\) \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(cancel, "cancelAudioRecognition missing")
+        body = cancel.group("body")
+        self.assertIn("invalidateSpeechRecognitionRun()", body)
+        self.assertLess(
+            body.index("invalidateSpeechRecognitionRun()"),
+            body.index("audioRecognitionState = .idle"),
+        )
+        self.assertIn('failSpeechRecognitionRun("用户取消")', body)
+        self.assertIn("audioRecognitionMessage = \"语音识别已取消\"", body)
+
+    def test_summary_panel_exposes_offline_capability_finality_and_run_token(self) -> None:
+        pro_views = read("AITRANS/Views/ProFeatureViews.swift")
+        self.assertIn('AppMetric(title: "离线"', pro_views)
+        self.assertIn("summary.requiresOnDeviceRecognition", pro_views)
+        self.assertIn("summary.supportsOnDeviceRecognition", pro_views)
+        self.assertIn("summary.isFinal", pro_views)
+        self.assertIn("summary.runToken", pro_views)
+        self.assertIn("store.cancelAudioRecognition()", read("AITRANS/Views/AudioTranslationView.swift"))
 
     def test_probe_uses_the_built_app_bundle_identifier(self) -> None:
         workflow = read(".github/workflows/ci-results.yml")
