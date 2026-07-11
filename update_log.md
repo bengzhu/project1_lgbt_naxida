@@ -126,10 +126,17 @@
 - `scripts/capture-ui-evidence.sh`：iPhone 矩阵完成后关机，再 create/boot iPad，避免双机 Data Migration 争用。
 - `.github/workflows/ci-results.yml`：UI evidence timeout 15→25；`codeb/v1.89-*` UI evidence 失败硬失败；v1.89 contract 失败硬失败。
 
-### v1.89 候选：人工交互矩阵、Paste 可测性与 wide-iPad 证据
+### v1.89：人工交互矩阵、Paste 可测性与 wide-iPad 证据
 日期：2026-07-12
 
-状态：Agent B / Agent X 候选实现，分支 `codeb/v1.89-paste-manual-matrix-wide-evidence`；基于 v1.88 正式收口 commit，待 push 后云端 CI 与 Agent C 验收。正式版本号仍为 `1.88` 直至收口。
+状态：Agent X 正式收口。PR #42 已合入 `smalldata_test`（merge `07b3e34b`）。验收 HEAD `3c8528d0`，云端 run `29166136570` SUCCESS。工程 `MARKETING_VERSION=1.89`。未触碰 `main`。
+
+云端验收证据：
+
+- artifact：`aitrans-ci-v1.89-codeb-v1.89-paste-manual-matrix-wide-evidence--3c8528d047f5-run29166136570-attempt1`
+- JUnit 7/7；v1.87/v1.88/v1.89 contracts success
+- UI evidence 12 张（11 compact-iPhone + 1 wide-iPad `text-empty-wide-ipad-day.png`），均 >135KB，commitSha 对齐 `3c8528d0`
+- 真实系统 PasteButton 点击 / VoiceOver 回放仍属人工矩阵遗留，不得写成已验证
 
 核心变更：
 
