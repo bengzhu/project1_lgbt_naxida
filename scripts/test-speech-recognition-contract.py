@@ -92,6 +92,12 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         self.assertIn('failSpeechRecognitionRun("用户取消")', body)
         self.assertIn("audioRecognitionMessage = \"语音识别已取消\"", body)
 
+    def test_preview_and_store_summary_initializers_include_run_token(self) -> None:
+        preview = read("AITRANS/Views/AppPreviewSupport.swift")
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+        self.assertIn("runToken:", preview)
+        self.assertIn("runToken: String(runID.uuidString.prefix(8))", store)
+
     def test_summary_panel_exposes_offline_capability_finality_and_run_token(self) -> None:
         pro_views = read("AITRANS/Views/ProFeatureViews.swift")
         self.assertIn('AppMetric(title: "离线"', pro_views)

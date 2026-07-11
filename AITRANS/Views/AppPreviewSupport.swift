@@ -173,6 +173,7 @@ enum AppPreviewScenario: String {
             localeIdentifier: "en-US",
             requiresOnDeviceRecognition: true,
             supportsOnDeviceRecognition: true,
+            runToken: "PREVIEW1",
             startedAt: .now.addingTimeInterval(-12.4),
             completedAt: isFinal ? .now : nil,
             transcriptPreview: "The meeting starts at nine thirty tomorrow.",
