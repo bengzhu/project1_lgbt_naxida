@@ -67,6 +67,8 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
+正式版本：`1.88`（文本首页科技工作台 + PasteButton + keyboard toolbar 已收口）。
+
 当前布局：
 
 - iPhone 使用文本、图片、音频、历史、设置五入口 `TabView`。

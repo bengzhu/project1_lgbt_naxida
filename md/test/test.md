@@ -44,7 +44,7 @@ Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键
 
 Agent C 多轮视觉退回后，v1.88 contract 还必须锁定两项回归：compact-width 根 `VStack` 只能在 XXL Dynamic Type 起或输入已聚焦时把 `floatingTabBarClearance` 放在 `ScrollView` 之后；标准字号且键盘关闭时不得插入该净空，源码仍须保留“翻译”主按钮；不得退回所有字号固定净空、内容尾部 padding 或 bottom `safeAreaInset`。真实 `PasteButton` 必须保留为交互层，并以透明前景加不接收触摸的实底中文 `Label("粘贴", systemImage: "doc.on.clipboard")` 覆盖系统 locale 标签。新 HEAD 的空输入截图必须同时完整显示中文“粘贴”和带图标/文字的“翻译”，键盘截图必须显示“完成”，XXL 与 Accessibility 截图必须证明 Tab Bar 不再遮挡输入文字或主按钮。
 
-人工交互必须另行核对：无兼容剪贴板内容不清空输入；空输入粘贴直接填入；非空输入粘贴换行追加；粘贴不自动翻译；“完成”一次收起键盘；翻译前键盘先收起；交换语言、Prompt、新会话和归档仍可用；VoiceOver 能读出粘贴、翻译、交换语言、完成和状态。当前 CI 没有 XCUITest 点击回放，也仍只采集紧凑 iPhone，iPad / Mac 运行态和真实剪贴板点击不得描述为已验证。
+人工交互必须另行核对：无兼容剪贴板内容不清空输入；空输入粘贴直接填入；非空输入粘贴换行追加；粘贴不自动翻译；“完成”一次收起键盘；翻译前键盘先收起；交换语言、Prompt、新会话和归档仍可用；VoiceOver 能读出粘贴、翻译、交换语言、完成和状态。当前 CI 没有 XCUITest 点击回放，也仍只采集紧凑 iPhone，iPad / Mac 运行态和真实剪贴板点击不得描述为已验证。v1.88 正式收口以云端 run `29104261998` 的 build / contract / 11 张 UI evidence 为准；真实粘贴路径与 VoiceOver 回放列入 v1.89 人工矩阵，不得回写为 v1.88 已验证。
 
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：
