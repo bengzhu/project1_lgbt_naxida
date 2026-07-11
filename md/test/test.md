@@ -77,6 +77,23 @@ DEBUG 可测性：仅在用户点击粘贴时，若系统 `PasteButton` payload 
 
 该契约随 static checks 进入云端 CI，不冒充真机录音点击验收。
 
+### 0.5 v1.91 Speech 人工交互矩阵
+
+v1.90 已用静态契约锁定 run-id 隔离与摘要字段。下列人工矩阵**不能**被 CI 截图替代；未勾选不得写成已验证。
+
+| ID | 场景 | 期望 | 人工勾选 |
+|---|---|---|---|
+| S1 | 授权拒绝 | 状态 failed/可恢复提示，不崩，不覆盖其他 Tab | [ ] |
+| S2 | 文件识别成功 | 识别文本非空；摘要显示 locale、强制本机、耗时、词数、片段、置信度、runToken | [ ] |
+| S3 | 识别中取消 | 先 invalidate run；UI「已取消」；旧回调不覆盖新状态 | [ ] |
+| S4 | 取消后立即重试 | 新 runToken 不同于上一轮；状态机从 checking/recognizing 正常前进 | [ ] |
+| S5 | 识别后翻译 | 识别态与翻译态分离；translating 期间可取消 | [ ] |
+| S6 | 长按实时采集（Pro） | accessibility action 可 toggle；松手结束；摘要更新 | [ ] |
+| S7 | 无离线语音包 | supportsOnDevice 与失败原因可读，不静默成功 | [ ] |
+| S8 | Reduce Motion | 采集动画降级；capturing 状态仍正确 | [ ] |
+
+`scripts/test-speech-recognition-contract.py` 只证明源码接线；真机麦克风/权限/质量必须走本矩阵或后续专用云端 UI smoke。
+
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：
 
