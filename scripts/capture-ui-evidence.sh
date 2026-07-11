@@ -53,17 +53,21 @@ small_type="$(echo "$device_selection" | sed -n '2p')"
 wide_type="$(echo "$device_selection" | sed -n '3p')"
 
 small_id="$(xcrun simctl create "AITRANS UI Small" "$small_type" "$runtime")"
-wide_id="$(xcrun simctl create "AITRANS UI Wide" "$wide_type" "$runtime")"
+wide_id=""
 
 cleanup() {
   if [ "${CI:-false}" = "true" ]; then
     echo "Skipping simulator cleanup on ephemeral CI runner"
     return
   fi
-  xcrun simctl shutdown "$small_id" >/dev/null 2>&1 || true
-  xcrun simctl delete "$small_id" >/dev/null 2>&1 || true
-  xcrun simctl shutdown "$wide_id" >/dev/null 2>&1 || true
-  xcrun simctl delete "$wide_id" >/dev/null 2>&1 || true
+  if [ -n "${small_id:-}" ]; then
+    xcrun simctl shutdown "$small_id" >/dev/null 2>&1 || true
+    xcrun simctl delete "$small_id" >/dev/null 2>&1 || true
+  fi
+  if [ -n "${wide_id:-}" ]; then
+    xcrun simctl shutdown "$wide_id" >/dev/null 2>&1 || true
+    xcrun simctl delete "$wide_id" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT
 
@@ -128,7 +132,13 @@ capture "$small_id" "compact-iPhone" promptLibrary large portrait prompt-library
 capture "$small_id" "compact-iPhone" localMissing large portrait model-missing-compact-night.png false 夜间
 capture "$small_id" "compact-iPhone" developerConsole large portrait developer-console-compact-day.png false 日间
 
-echo "Booting wide iPad simulator for home workspace evidence"
+echo "Shutting down compact iPhone before wide-iPad evidence to avoid dual-simulator migration contention"
+xcrun simctl shutdown "$small_id" >/dev/null 2>&1 || true
+
+echo "Creating and booting wide iPad simulator for home workspace evidence"
+wide_id="$(xcrun simctl create "AITRANS UI Wide" "$wide_type" "$runtime")"
+# Explicit boot then wait; dual create+bootstatus previously spent the whole 15m on Data Migration
+xcrun simctl boot "$wide_id" >/dev/null 2>&1 || true
 xcrun simctl bootstatus "$wide_id" -b
 xcrun simctl install "$wide_id" "$app_path"
 xcrun simctl ui "$wide_id" appearance light

@@ -116,6 +116,16 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.89 修复候选：wide-iPad UI evidence 串行 boot + CI 硬失败
+日期：2026-07-12
+
+状态：修复 push 至 `codeb/v1.89-paste-manual-matrix-wide-evidence`。run `29165244349` 中 contracts/Xcode 通过，但 `uiEvidenceOutcome=failure`：第二台 iPad 与 iPhone 并行迁移导致超时，11 张 compact 已有、缺 `text-empty-wide-ipad-day.png`；且 fail-job 未把 `codeb/v1.89-*` 的 UI evidence 失败计为硬失败（job 仍 SUCCESS）。
+
+修复：
+
+- `scripts/capture-ui-evidence.sh`：iPhone 矩阵完成后关机，再 create/boot iPad，避免双机 Data Migration 争用。
+- `.github/workflows/ci-results.yml`：UI evidence timeout 15→25；`codeb/v1.89-*` UI evidence 失败硬失败；v1.89 contract 失败硬失败。
+
 ### v1.89 候选：人工交互矩阵、Paste 可测性与 wide-iPad 证据
 日期：2026-07-12
 
