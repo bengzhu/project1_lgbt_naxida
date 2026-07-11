@@ -287,13 +287,40 @@ private struct TranslationInputToolBar: View {
     }
 
     private func pasteText(_ items: [String]) {
-        guard let text = items.first, !text.isEmpty else { return }
+        guard let text = resolvedPasteText(from: items), !text.isEmpty else { return }
         if store.draftText.isEmpty {
             store.draftText = text
         } else {
             store.draftText += "\n\(text)"
         }
         inputFocused.wrappedValue = true
+    }
+
+    /// Pure text paste resolution. Release only uses the system PasteButton payload.
+    /// DEBUG may fall back to `AITRANS_UI_TEST_PASTE_TEXT` when the payload is empty so
+    /// XCUITest can exercise fill/append without sharing the host pasteboard.
+    /// Never called from lifecycle hooks; only from the user-facing paste control.
+    private func resolvedPasteText(from items: [String]) -> String? {
+        if let text = items.first, !text.isEmpty {
+            return text
+        }
+#if DEBUG
+        if let injected = ProcessInfo.processInfo.environment["AITRANS_UI_TEST_PASTE_TEXT"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !injected.isEmpty {
+            return injected
+        }
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-AITRANS_UI_TEST_PASTE_TEXT"),
+           arguments.index(after: index) < arguments.endIndex {
+            let injected = arguments[arguments.index(after: index)]
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !injected.isEmpty {
+                return injected
+            }
+        }
+#endif
+        return nil
     }
 
     private func openPromptLibrary() {

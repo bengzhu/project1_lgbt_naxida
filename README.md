@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前正式版本：`1.88`（文本首页科技工作台已收口）。日常开发合入 `smalldata_test`，不合并到 `main`。
+当前正式版本：`1.88`（文本首页科技工作台已收口）。v1.89 候选推进人工交互矩阵、DEBUG paste 可测性与 wide-iPad UI evidence。日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 
