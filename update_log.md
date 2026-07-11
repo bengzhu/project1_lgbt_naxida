@@ -116,6 +116,19 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.91 候选：Speech 人工矩阵与 Speech CI 契约独立门控
+日期：2026-07-12
+
+状态：候选分支 `codeb/v1.91-koharu-speech-matrix`；正式版本仍 `1.90` 直至收口。
+
+核心变更：
+
+- `md/test/test.md` §0.5 Speech 人工矩阵 S1–S8（授权/取消/重试/runToken/离线包等），明确不可被 CI 冒充。
+- CI：Speech contract 独立 step + JUnit/manifest 字段 + fail-job 硬失败；UI evidence 门控覆盖 `codeb/v1.9*` / `codeb/v2.*`。
+- Koharu gap 文档状态更新到 v1.90；重申下一步是真实四件套 + ci-fast，禁止伪造 ready。
+
+未跑本机 build / 探针；交给云端。无真实 Koharu artifact 时不触发 ci-fast 注入。
+
 ### v1.90：Speech 运行摘要增强与契约
 日期：2026-07-12
 
