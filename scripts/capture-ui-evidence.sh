@@ -27,8 +27,11 @@ if not runtimes:
 runtime = runtimes[-1]
 devices = [item for item in runtime.get("supportedDeviceTypes", []) if item.get("identifier")]
 phones = [item for item in devices if item.get("productFamily") == "iPhone"]
+pads = [item for item in devices if item.get("productFamily") == "iPad"]
 if not phones:
     raise SystemExit("At least one iPhone simulator device type is required")
+if not pads:
+    raise SystemExit("At least one iPad simulator device type is required for wide evidence")
 
 def choose(items, preferred):
     for needle in preferred:
@@ -38,23 +41,33 @@ def choose(items, preferred):
     return items[-1]
 
 small = choose(phones, ["iPhone SE (3rd generation)", "iPhone 16e", "iPhone 15"])
+wide = choose(pads, ["iPad (10th generation)", "iPad Air", "iPad Pro (11-inch)", "iPad"])
 print(runtime["identifier"])
 print(small["identifier"])
+print(wide["identifier"])
 PY
 )"
 
 runtime="$(echo "$device_selection" | sed -n '1p')"
 small_type="$(echo "$device_selection" | sed -n '2p')"
+wide_type="$(echo "$device_selection" | sed -n '3p')"
 
 small_id="$(xcrun simctl create "AITRANS UI Small" "$small_type" "$runtime")"
+wide_id=""
 
 cleanup() {
   if [ "${CI:-false}" = "true" ]; then
     echo "Skipping simulator cleanup on ephemeral CI runner"
     return
   fi
-  xcrun simctl shutdown "$small_id" >/dev/null 2>&1 || true
-  xcrun simctl delete "$small_id" >/dev/null 2>&1 || true
+  if [ -n "${small_id:-}" ]; then
+    xcrun simctl shutdown "$small_id" >/dev/null 2>&1 || true
+    xcrun simctl delete "$small_id" >/dev/null 2>&1 || true
+  fi
+  if [ -n "${wide_id:-}" ]; then
+    xcrun simctl shutdown "$wide_id" >/dev/null 2>&1 || true
+    xcrun simctl delete "$wide_id" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT
 
@@ -94,6 +107,10 @@ capture() {
     echo "Expected portrait screenshot but received ${image_width}x${image_height}: $filename" >&2
     exit 1
   fi
+  if [ "$orientation" = "landscape" ] && [ "$image_width" -le "$image_height" ]; then
+    echo "Expected landscape screenshot but received ${image_width}x${image_height}: $filename" >&2
+    exit 1
+  fi
   if [ "$image_bytes" -lt 50000 ]; then
     echo "Screenshot appears blank (${image_bytes} bytes): $filename" >&2
     exit 1
@@ -115,6 +132,19 @@ capture "$small_id" "compact-iPhone" promptLibrary large portrait prompt-library
 capture "$small_id" "compact-iPhone" localMissing large portrait model-missing-compact-night.png false 夜间
 capture "$small_id" "compact-iPhone" developerConsole large portrait developer-console-compact-day.png false 日间
 
+echo "Shutting down compact iPhone before wide-iPad evidence to avoid dual-simulator migration contention"
+xcrun simctl shutdown "$small_id" >/dev/null 2>&1 || true
+
+echo "Creating and booting wide iPad simulator for home workspace evidence"
+wide_id="$(xcrun simctl create "AITRANS UI Wide" "$wide_type" "$runtime")"
+# Explicit boot then wait; dual create+bootstatus previously spent the whole 15m on Data Migration
+xcrun simctl boot "$wide_id" >/dev/null 2>&1 || true
+xcrun simctl bootstatus "$wide_id" -b
+xcrun simctl install "$wide_id" "$app_path"
+xcrun simctl ui "$wide_id" appearance light
+xcrun simctl spawn "$wide_id" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
+capture "$wide_id" "wide-iPad" empty large portrait text-empty-wide-ipad-day.png false 日间
+
 python3 - "$metadata_tsv" "$output_dir/ui-evidence-manifest.json" <<'PY'
 import json
 import sys
@@ -135,12 +165,20 @@ for line in source.read_text(encoding="utf-8").splitlines():
         "appearance": appearance,
         "commitSha": commit_sha,
     })
-if len(items) != 11:
-    raise SystemExit(f"Expected 11 iPhone screenshots, received {len(items)}")
-if any(item["device"] != "compact-iPhone" for item in items):
-    raise SystemExit("UI evidence must use the compact iPhone device")
-if any(item["orientation"] != "portrait" for item in items):
-    raise SystemExit("iPhone-only UI evidence must remain portrait")
+if len(items) != 12:
+    raise SystemExit(f"Expected 12 screenshots (11 compact iPhone + 1 wide iPad), received {len(items)}")
+compact = [item for item in items if item["device"] == "compact-iPhone"]
+wide = [item for item in items if item["device"] == "wide-iPad"]
+if len(compact) != 11:
+    raise SystemExit(f"Expected 11 compact-iPhone screenshots, received {len(compact)}")
+if len(wide) != 1:
+    raise SystemExit(f"Expected 1 wide-iPad screenshot, received {len(wide)}")
+if any(item["orientation"] != "portrait" for item in compact):
+    raise SystemExit("compact-iPhone UI evidence must remain portrait")
+if wide[0]["scenario"] != "empty":
+    raise SystemExit("wide-iPad evidence must capture the empty text workspace")
+if wide[0]["orientation"] != "portrait":
+    raise SystemExit("wide-iPad evidence orientation must be portrait for this matrix")
 if {item["appearance"] for item in items} != {"日间", "夜间"}:
     raise SystemExit("Both day and night evidence are required")
 if not any(item["dynamicType"].startswith("accessibility-") for item in items):

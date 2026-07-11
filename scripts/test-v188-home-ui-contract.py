@@ -34,7 +34,8 @@ class V188HomeUIContractTests(unittest.TestCase):
         body = paste.group("body")
         self.assertIn("store.draftText = text", body)
         self.assertIn('store.draftText += "\\n\\(text)"', body)
-        self.assertIn("guard let text = items.first, !text.isEmpty", body)
+        self.assertIn("guard let text = resolvedPasteText(from: items), !text.isEmpty", body)
+        self.assertIn("AITRANS_UI_TEST_PASTE_TEXT", source)
         self.assertNotIn("store.submitDraft", body)
 
     def test_clipboard_is_not_read_from_lifecycle_hooks(self) -> None:

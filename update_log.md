@@ -116,6 +116,46 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.89 修复候选：wide-iPad UI evidence 串行 boot + CI 硬失败
+日期：2026-07-12
+
+状态：修复 push 至 `codeb/v1.89-paste-manual-matrix-wide-evidence`。run `29165244349` 中 contracts/Xcode 通过，但 `uiEvidenceOutcome=failure`：第二台 iPad 与 iPhone 并行迁移导致超时，11 张 compact 已有、缺 `text-empty-wide-ipad-day.png`；且 fail-job 未把 `codeb/v1.89-*` 的 UI evidence 失败计为硬失败（job 仍 SUCCESS）。
+
+修复：
+
+- `scripts/capture-ui-evidence.sh`：iPhone 矩阵完成后关机，再 create/boot iPad，避免双机 Data Migration 争用。
+- `.github/workflows/ci-results.yml`：UI evidence timeout 15→25；`codeb/v1.89-*` UI evidence 失败硬失败；v1.89 contract 失败硬失败。
+
+### v1.89 候选：人工交互矩阵、Paste 可测性与 wide-iPad 证据
+日期：2026-07-12
+
+状态：Agent B / Agent X 候选实现，分支 `codeb/v1.89-paste-manual-matrix-wide-evidence`；基于 v1.88 正式收口 commit，待 push 后云端 CI 与 Agent C 验收。正式版本号仍为 `1.88` 直至收口。
+
+核心变更：
+
+- `md/test/test.md` 新增 §0.3 可勾选人工交互与 a11y 矩阵（M1–M8），明确 CI 截图不能替代真实粘贴点击。
+- DEBUG-only 粘贴注入：用户点击 `PasteButton` 且系统 payload 为空时，可读 `AITRANS_UI_TEST_PASTE_TEXT` 或 `-AITRANS_UI_TEST_PASTE_TEXT`；Release 无注入，lifecycle 不读剪贴板，系统 PasteButton 保留。
+- `scripts/capture-ui-evidence.sh` 在 11 张 compact-iPhone 之外新增 1 张 `wide-iPad` 文本空态运行态证据（共 12 张）。
+- 新增 `scripts/test-v189-paste-manual-matrix-contract.py`；CI 对 `codeb/v1.89-*` 开启 UI evidence，JUnit / manifest 增加 v1.89 contract 字段。
+
+关键文件：
+
+- `AITRANS/Views/TextTranslationView.swift`
+- `scripts/capture-ui-evidence.sh`
+- `scripts/test-v189-paste-manual-matrix-contract.py`
+- `scripts/test-v188-home-ui-contract.py`
+- `.github/workflows/ci-results.yml`
+- `md/test/test.md`
+- `md/prompt/v1.89（首页持续优化）/v1.89（人工交互矩阵与Paste可测性及宽屏证据）.md`
+
+本地轻量验证：Speech 5/5、v1.87 6/6、v1.88 7/7、v1.89 4/4、workflow YAML parse、`git diff --check`；未跑本机 build / 探针，按规则交给云端验证。
+
+遗留事项：
+
+- 真实剪贴板与 VoiceOver 仍依赖人工矩阵勾选；DEBUG 注入不能冒充 Release 隐私路径已点通。
+- 网络不可达时无法 push / 创建 PR / 合并 v1.88。
+- 未改漫画探针与 `metrics/version_history.csv`。
+
 ### v1.88：文本首页极简科技工作台与剪贴板键盘交互
 日期：2026-07-12
 

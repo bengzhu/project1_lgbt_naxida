@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`1.88`（文本首页科技工作台 + PasteButton + keyboard toolbar 已收口）。
+正式版本：`1.88`（文本首页科技工作台 + PasteButton + keyboard toolbar 已收口）。v1.89 候选补充 DEBUG paste 可测性与 wide-iPad UI evidence，不改变生产粘贴隐私模型。
 
 当前布局：
 

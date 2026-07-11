@@ -46,6 +46,27 @@ Agent C 多轮视觉退回后，v1.88 contract 还必须锁定两项回归：com
 
 人工交互必须另行核对：无兼容剪贴板内容不清空输入；空输入粘贴直接填入；非空输入粘贴换行追加；粘贴不自动翻译；“完成”一次收起键盘；翻译前键盘先收起；交换语言、Prompt、新会话和归档仍可用；VoiceOver 能读出粘贴、翻译、交换语言、完成和状态。当前 CI 没有 XCUITest 点击回放，也仍只采集紧凑 iPhone，iPad / Mac 运行态和真实剪贴板点击不得描述为已验证。v1.88 正式收口以云端 run `29104261998` 的 build / contract / 11 张 UI evidence 为准；真实粘贴路径与 VoiceOver 回放列入 v1.89 人工矩阵，不得回写为 v1.88 已验证。
 
+### 0.3 v1.89 人工交互与 a11y 矩阵
+
+v1.89 把 v1.88 遗留的真实点击与无障碍路径固化为可勾选人工矩阵。CI 的 v1.88 home UI contract、v1.89 paste/matrix contract 与 12 张 UI evidence（11 张 compact-iPhone + 1 张 wide-iPad）**不能**替代本矩阵的 M1–M6；Agent C 不得把未勾选项写成已验证。
+
+| ID | 场景 | 期望 | 人工勾选 |
+|---|---|---|---|
+| M1 | 空剪贴板点「粘贴」 | 已有输入保留，不崩，不自动翻译；不得以 `isEnabled == false` 作为唯一标准 | [ ] |
+| M2 | 空输入 + 有文本剪贴板 | 直接填入，状态仍等待翻译 / 不自动 `submitDraft` | [ ] |
+| M3 | 非空输入再粘贴 | 换行追加，不覆盖已有内容 | [ ] |
+| M4 | keyboard toolbar「完成」 | 一次点击收起键盘 | [ ] |
+| M5 | 点「翻译」 | 先失焦再 `store.submitDraft()` | [ ] |
+| M6 | VoiceOver / 标签 | 粘贴、翻译、交换语言、完成与关键状态可读 | [ ] |
+| M7 | 标准字号 + 键盘关闭 | 首屏完整可见中文「粘贴」与「翻译」，无固定 48pt 外部净空 | [ ] |
+| M8 | XXL / Accessibility 或输入聚焦 | 48pt 外部净空，浮动 Tab 不遮挡输入与主按钮；键盘「完成」可见 | [ ] |
+
+宽屏证据：`scripts/capture-ui-evidence.sh` 必须额外产出 `wide-iPad` / `text-empty-wide-ipad-day.png` 运行态截图；Preview 的 iPad landscape 状态不冒充运行态。
+
+DEBUG 可测性：仅在用户点击粘贴时，若系统 `PasteButton` payload 为空，DEBUG 构建可回退 `AITRANS_UI_TEST_PASTE_TEXT` 环境变量或 `-AITRANS_UI_TEST_PASTE_TEXT <text>` launch argument。Release 无注入；禁止 lifecycle / 后台读剪贴板；禁止把系统 `PasteButton` 换成普通 Button。
+
+`scripts/test-v189-paste-manual-matrix-contract.py` 校验人工矩阵文档、debug 注入边界、wide-iPad evidence 与 CI wiring；结果写入 `v189-paste-manual-matrix-contract.log`、manifest `v189PasteManualMatrixContractOutcome` 与 JUnit testcase。
+
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：
 
