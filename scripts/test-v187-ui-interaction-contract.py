@@ -51,13 +51,13 @@ class V187UIInteractionContractTests(unittest.TestCase):
 
     def test_keyboard_header_stays_outside_automatic_scroll(self) -> None:
         text_view = read("AITRANS/Views/TextTranslationView.swift")
-        scroll_body = re.search(
-            r"ScrollView\s*\{(?P<body>.*?)\n        \}\n        \.scrollDismissesKeyboard",
-            text_view,
-            re.DOTALL,
-        )
-        self.assertIsNotNone(scroll_body, "text workspace scroll view is missing")
-        self.assertNotIn("AppPageHeader(", scroll_body.group("body"))
+        scroll_start = text_view.index("ScrollView {")
+        scroll_end = text_view.index(".scrollDismissesKeyboard(.interactively)")
+        header_inset = text_view.index(".safeAreaInset(edge: .top, spacing: 0)")
+        header = text_view.index("AppPageHeader(")
+        self.assertLess(scroll_start, scroll_end)
+        self.assertLess(scroll_end, header_inset)
+        self.assertLess(header_inset, header)
         self.assertRegex(text_view, r"\.safeAreaInset\(edge: \.top, spacing: 0\)\s*\{\s*AppPageHeader\(")
         self.assertIn(".background(Color.appCanvas)", text_view)
 

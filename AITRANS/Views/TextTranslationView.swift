@@ -2,39 +2,59 @@ import SwiftUI
 
 struct TextTranslationView: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var selectedTab: AppTab
+    @FocusState private var inputFocused: Bool
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
-                LanguageControlBar()
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
+                    LanguageControlBar()
 
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: AppTheme.Spacing.section) {
-                        TranslationInputPane(selectedTab: $selectedTab)
-                            .frame(minWidth: 320)
-                        TranslationOutputPane()
-                            .frame(minWidth: 320)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: AppTheme.Spacing.section) {
+                            TranslationInputPane(selectedTab: $selectedTab, inputFocused: $inputFocused)
+                                .frame(minWidth: 320)
+                            TranslationOutputPane()
+                                .frame(minWidth: 320)
+                        }
+
+                        VStack(spacing: AppTheme.Spacing.section) {
+                            TranslationInputPane(selectedTab: $selectedTab, inputFocused: $inputFocused)
+                            TranslationOutputPane()
+                        }
                     }
 
-                    VStack(spacing: AppTheme.Spacing.section) {
-                        TranslationInputPane(selectedTab: $selectedTab)
-                        TranslationOutputPane()
-                    }
+                    SessionCommandBar(startNewSession: startNewSession)
+                    RecentTranslationList()
                 }
-
-                SessionCommandBar()
-                RecentTranslationList()
+                .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
+                .padding(.vertical, AppTheme.Spacing.section)
+                .padding(.bottom, AppTheme.Spacing.page)
             }
-            .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
-            .padding(.vertical, AppTheme.Spacing.section)
-            .padding(.bottom, 72)
+            .scrollDismissesKeyboard(.interactively)
+
+            if horizontalSizeClass == .compact && (dynamicTypeSize >= .xxLarge || inputFocused) {
+                Color.clear
+                    .frame(height: AppTheme.Layout.floatingTabBarClearance)
+                    .accessibilityHidden(true)
+                    .allowsHitTesting(false)
+            }
         }
-        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("完成", action: dismissKeyboard)
+                    .bold()
+                    .accessibilityLabel("完成输入并收起键盘")
+            }
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             AppPageHeader(
                 title: "秒译",
-                subtitle: "本地 AI 翻译工作台",
+                subtitle: "本地处理",
                 systemImage: "bolt.horizontal.circle.fill",
                 status: store.modelStatus.title,
                 statusTone: store.modelStatus.isReady ? .success : .warning
@@ -42,13 +62,31 @@ struct TextTranslationView: View {
             .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
             .padding(.vertical, AppTheme.Spacing.section)
             .background(Color.appCanvas)
+            .overlay(alignment: .bottom) {
+                Divider().overlay(Color.appBorder)
+            }
         }
-        .background(Color.appCanvas)
+        .background { TextWorkspaceBackground().ignoresSafeArea() }
+        .onChange(of: selectedTab) { _, tab in
+            if tab != .text {
+                dismissKeyboard()
+            }
+        }
+    }
+
+    private func dismissKeyboard() {
+        inputFocused = false
+    }
+
+    private func startNewSession() {
+        inputFocused = false
+        store.startNewSession()
     }
 }
 
 private struct SessionCommandBar: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    let startNewSession: () -> Void
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -58,9 +96,7 @@ private struct SessionCommandBar: View {
     }
 
     @ViewBuilder private var actions: some View {
-        AppSecondaryButton(title: "新会话", systemImage: "plus.rectangle.on.rectangle") {
-            store.startNewSession()
-        }
+        AppSecondaryButton(title: "新会话", systemImage: "plus.rectangle.on.rectangle", action: startNewSession)
         AppSecondaryButton(title: "归档当前", systemImage: "tray.and.arrow.down") {
             store.archiveCurrentSession()
         }
@@ -112,9 +148,12 @@ private struct LanguageControlBar: View {
         Button("交换语言", systemImage: "arrow.left.arrow.right", action: store.swapLanguages)
             .labelStyle(.iconOnly)
             .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
-            .foregroundStyle(Color.appTextPrimary)
-            .background(Color.appSurfaceRaised, in: .rect(cornerRadius: AppTheme.Radius.control))
-            .overlay { controlBorder }
+            .foregroundStyle(AppTheme.TextWorkspace.swap)
+            .background(AppTheme.TextWorkspace.swap.opacity(0.12), in: .rect(cornerRadius: AppTheme.Radius.control))
+            .overlay {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.control)
+                    .stroke(AppTheme.TextWorkspace.swap.opacity(0.72), lineWidth: 1)
+            }
             .accessibilityHint("交换输入语言和目标语言")
     }
 
@@ -148,7 +187,7 @@ private struct LanguageControlBar: View {
 private struct TranslationInputPane: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @Binding var selectedTab: AppTab
-    @FocusState private var inputFocused: Bool
+    let inputFocused: FocusState<Bool>.Binding
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
@@ -160,59 +199,111 @@ private struct TranslationInputPane: View {
 
             TextField("输入要翻译的文字", text: $store.draftText, axis: .vertical)
                 .font(.body)
-                .lineLimit(8...18)
+                .lineLimit(6...18)
                 .textFieldStyle(.plain)
-                .focused($inputFocused)
+                .focused(inputFocused)
                 .foregroundStyle(Color.appTextPrimary)
                 .padding(AppTheme.Spacing.section)
-                .frame(maxWidth: .infinity, minHeight: 190, alignment: .topLeading)
-                .background(Color.appCanvas, in: .rect(cornerRadius: AppTheme.Radius.control))
+                .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+                .background(Color.appSurfaceRaised, in: .rect(cornerRadius: AppTheme.Radius.control))
                 .overlay {
                     RoundedRectangle(cornerRadius: AppTheme.Radius.control)
                         .stroke(Color.appBorder, lineWidth: 1)
                 }
 
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: AppTheme.Spacing.control) { actions }
-                VStack(spacing: AppTheme.Spacing.control) { actions }
-            }
+            TranslationInputToolBar(
+                selectedTab: $selectedTab,
+                inputFocused: inputFocused
+            )
         }
         .appSurface()
         .task {
 #if DEBUG
-            inputFocused = ProcessInfo.processInfo.environment["AITRANS_UI_EVIDENCE_SCENARIO"] == AppPreviewScenario.textKeyboard.rawValue
+            inputFocused.wrappedValue = ProcessInfo.processInfo.environment["AITRANS_UI_EVIDENCE_SCENARIO"] == AppPreviewScenario.textKeyboard.rawValue
 #endif
         }
     }
 
-    @ViewBuilder private var actions: some View {
-        Button {
-            selectedTab = .settings
-        } label: {
+}
+
+private struct TranslationInputToolBar: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @Binding var selectedTab: AppTab
+    let inputFocused: FocusState<Bool>.Binding
+
+    var body: some View {
+        VStack(spacing: AppTheme.Spacing.control) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: AppTheme.Spacing.control) {
+                    pasteButton
+                    promptButton
+                }
+                VStack(spacing: AppTheme.Spacing.control) {
+                    pasteButton
+                    promptButton
+                }
+            }
+
+            AppPrimaryButton(
+                title: store.isProcessing ? "翻译中" : "翻译",
+                systemImage: "arrow.right.circle.fill",
+                isWorking: store.isProcessing,
+                action: submitTranslation
+            )
+            .disabled(!canSubmit)
+            .opacity(canSubmit ? 1 : 0.62)
+            .accessibilityHint(canSubmit ? "使用当前提示词和模型翻译输入内容" : "请输入内容并选择可用目标语言")
+        }
+    }
+
+    private var pasteButton: some View {
+        TextWorkspacePasteButton(onPaste: pasteText)
+            .accessibilityLabel("粘贴剪贴板文本")
+            .accessibilityHint("输入为空时填入文本，已有内容时换行追加")
+    }
+
+    private var promptButton: some View {
+        Button(action: openPromptLibrary) {
             Label(store.selectedPrompt.title, systemImage: "text.badge.star")
                 .font(.subheadline.bold())
+                .lineLimit(2)
                 .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget)
+                .padding(.horizontal, AppTheme.Spacing.control)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.appTextSecondary)
-        .background(Color.appSurfaceRaised, in: .rect(cornerRadius: AppTheme.Radius.control))
+        .foregroundStyle(AppTheme.TextWorkspace.prompt)
+        .background(AppTheme.TextWorkspace.prompt.opacity(0.12), in: .rect(cornerRadius: AppTheme.Radius.control))
+        .overlay {
+            RoundedRectangle(cornerRadius: AppTheme.Radius.control)
+                .stroke(AppTheme.TextWorkspace.prompt.opacity(0.72), lineWidth: 1)
+        }
         .accessibilityHint("前往设置管理提示词")
-
-        AppPrimaryButton(
-            title: store.isProcessing ? "翻译中" : "翻译",
-            systemImage: "arrow.right.circle.fill",
-            isWorking: store.isProcessing,
-            action: store.submitDraft
-        )
-        .disabled(!canSubmit)
-        .opacity(canSubmit ? 1 : 0.46)
-        .accessibilityHint(canSubmit ? "使用当前提示词和模型翻译输入内容" : "请输入内容并选择可用目标语言")
     }
 
     private var canSubmit: Bool {
         !store.draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !store.isProcessing
             && store.canUseLanguage(store.targetLanguage)
+    }
+
+    private func pasteText(_ items: [String]) {
+        guard let text = items.first, !text.isEmpty else { return }
+        if store.draftText.isEmpty {
+            store.draftText = text
+        } else {
+            store.draftText += "\n\(text)"
+        }
+        inputFocused.wrappedValue = true
+    }
+
+    private func openPromptLibrary() {
+        inputFocused.wrappedValue = false
+        selectedTab = .settings
+    }
+
+    private func submitTranslation() {
+        inputFocused.wrappedValue = false
+        store.submitDraft()
     }
 }
 
@@ -258,7 +349,7 @@ private struct TranslationOutputPane: View {
                 } else {
                     AppEmptyState(
                         title: "等待翻译",
-                        detail: "译文会在这里显示，不会上传到云端。",
+                        detail: "译文将在此显示。",
                         systemImage: "text.bubble"
                     )
                 }

@@ -1,6 +1,8 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
+正式版本：`1.88`。
+
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
 
@@ -13,6 +15,7 @@ flowchart TD
   TAB --> B["拆分的 SwiftUI feature views<br/>文本 / 图片 / 音频 / 历史 / 设置 / 开发"]
   SPLIT --> B
   DS["AppTheme + AppComponents<br/>语义 token / 状态 / 44pt / 响应式布局"] --> B
+  TWB["TextWorkspaceBackground<br/>静态网格 / 导向线路 / 文本页专属"] --> B
   SH["文本页顶部 safe-area inset<br/>页头 + 模型状态"] --> B
   SH -. "不参与键盘自动滚动" .-> D
 
@@ -20,7 +23,14 @@ flowchart TD
   B --> C["TranslationSessionStore<br/>统一状态、调度、持久化、诊断"]
 
   %% 文本翻译分支：普通用户输入
-  C --> D["文本翻译请求<br/>ModelGenerationRequest"]
+  PASTE["用户点击纯文本 PasteButton"] --> APPEND{"draftText 是否为空?"}
+  APPEND -->|"是"| FILL["直接写入 store.draftText"]
+  APPEND -->|"否"| ADD["换行追加，不覆盖"]
+  FILL --> C
+  ADD --> C
+  DONE["键盘完成 / 翻译 / 新会话 / 离开文本页"] --> FOCUS["inputFocused = false"]
+  FOCUS --> C
+  C --> D["submitDraft<br/>ModelGenerationRequest"]
   D --> E["LocalLanguageModeling<br/>Mock 或 Local"]
   E --> F["MockGemmaService<br/>UI 和数据流冒烟"]
   E --> G["GemmaLocalService<br/>GGUF 本地模型适配"]
@@ -52,6 +62,7 @@ flowchart TD
   C --> R["state.json<br/>会话、历史、提示词、设置"]
   PREVIEW["隔离 Preview / DEBUG UI evidence 场景"] -. "仅展示状态，不执行业务服务" .-> B
   CONTRACT["v1.87 UI interaction contract<br/>动作接线 / AX / 导航 / Reduce Motion"] -. "CI 独立 testcase" .-> B
+  HOME_CONTRACT["v1.88 home UI contract<br/>paste / keyboard / 背景 / 首页动作"] -. "CI 独立 testcase" .-> B
   Q --> S["App 沙盒 Output<br/>JSON / TXT / PNG"]
   S --> T["scripts/export-probe-output.sh<br/>导出到项目根 output/"]
   T --> U["metrics/version_history.csv<br/>长期指标 append-only"]

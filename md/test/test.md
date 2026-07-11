@@ -36,6 +36,16 @@ Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键
 
 `scripts/test-v187-ui-interaction-contract.py` 是独立源码契约检查，必须验证：录音按钮有默认 accessibility action 且能开始/停止、`SettingsView` 绑定 `NavigationPath` 并在关闭开发模式后清空、Reduce Motion 场景进入 `isCapturingProSpeech=true`、文本页头位于自动滚动区外的顶部 safe-area inset、上述八类页面的关键 store action 仍接线、11 张运行态证据至少覆盖八类页面。CI 必须把结果写入 `ui-interaction-contract.log`、manifest 的 `uiInteractionContractOutcome` 和 JUnit 的独立 testcase。该契约和运行态截图不冒充 XCUITest 点击；Agent C 仍按本段交互清单抽查高风险操作。
 
+### 0.2 v1.88 文本首页视觉与交互契约
+
+`codeb/v1.88-home-translation-ui` 复用 v1.87 的 11 张紧凑 iPhone 运行态矩阵，文本相关证据至少覆盖：日间空输入的新背景与动作层级、夜间软件键盘与安全区页头、XXL 成功态、Accessibility Dynamic Type 失败态。截图的 `commitSha` 必须等于 PR HEAD，且 Agent B / C 必须逐张查看背景、对比度、按钮区分、Dynamic Type、Tab、键盘和安全区；文件存在与大于 50 KB 只属于非空 smoke。
+
+`scripts/test-v188-home-ui-contract.py` 独立验证：显式纯文本 `PasteButton`、空输入填入与非空换行追加、不在生命周期读取剪贴板、不自动翻译、keyboard toolbar“完成”、翻译前失焦、safe-area 页头仍位于 `ScrollView` 外、首页专属非纯色背景不进入其他页面、首页关键 store action 与非颜色身份仍接线。CI 必须把结果写入 `v188-home-ui-contract.log`、manifest 的 `v188HomeUIContractOutcome` 和 JUnit 独立 testcase，失败阻塞候选分支。
+
+Agent C 多轮视觉退回后，v1.88 contract 还必须锁定两项回归：compact-width 根 `VStack` 只能在 XXL Dynamic Type 起或输入已聚焦时把 `floatingTabBarClearance` 放在 `ScrollView` 之后；标准字号且键盘关闭时不得插入该净空，源码仍须保留“翻译”主按钮；不得退回所有字号固定净空、内容尾部 padding 或 bottom `safeAreaInset`。真实 `PasteButton` 必须保留为交互层，并以透明前景加不接收触摸的实底中文 `Label("粘贴", systemImage: "doc.on.clipboard")` 覆盖系统 locale 标签。新 HEAD 的空输入截图必须同时完整显示中文“粘贴”和带图标/文字的“翻译”，键盘截图必须显示“完成”，XXL 与 Accessibility 截图必须证明 Tab Bar 不再遮挡输入文字或主按钮。
+
+人工交互必须另行核对：无兼容剪贴板内容不清空输入；空输入粘贴直接填入；非空输入粘贴换行追加；粘贴不自动翻译；“完成”一次收起键盘；翻译前键盘先收起；交换语言、Prompt、新会话和归档仍可用；VoiceOver 能读出粘贴、翻译、交换语言、完成和状态。当前 CI 没有 XCUITest 点击回放，也仍只采集紧凑 iPhone，iPad / Mac 运行态和真实剪贴板点击不得描述为已验证。v1.88 正式收口以云端 run `29104261998` 的 build / contract / 11 张 UI evidence 为准；真实粘贴路径与 VoiceOver 回放列入 v1.89 人工矩阵，不得回写为 v1.88 已验证。
+
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：
 
@@ -81,6 +91,8 @@ python3 -m json.tool test/1.ground_truth.json
 python3 -m json.tool output/probe_report.json
 python3 -m json.tool output/clean_text_diagnostic.json
 python3 -B scripts/test-speech-recognition-contract.py
+python3 -B scripts/test-v187-ui-interaction-contract.py
+python3 -B scripts/test-v188-home-ui-contract.py
 python3 scripts/make-koharu-native-draft-artifacts.py --out build/koharu_native_draft
 python3 scripts/validate-koharu-artifacts.py --root build/koharu_native_draft
 python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid

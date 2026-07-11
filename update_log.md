@@ -116,6 +116,55 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.88：文本首页极简科技工作台与剪贴板键盘交互
+日期：2026-07-12
+
+状态：Agent C / Agent X 正式收口。工程 `MARKETING_VERSION = 1.88`。PR #41 基于 `codeb/v1.88-home-translation-ui` HEAD `c8326bb068e512dbd8139271e65b38ddb3235b9c` 验收；云端 run `29104261998` attempt 1 SUCCESS 作为 build / contract / UI evidence 依据。本轮未做本机 Xcode / Simulator 交互点击验收，按用户约束只认云端结果；真实剪贴板点击、VoiceOver 回放与 iPad/Mac 运行态仍属遗留人工清单。合并目标仅为 `smalldata_test`，严禁触碰 `main`。
+
+核心变更：
+
+- 只重做文本翻译首页；新增独立 `TextWorkspaceBackground`，用静态冷中性层次、技术网格、导向线路和矩形节点替代旧纯色首页，不修改其他页面的全局背景。
+- 首页保留安全区页头、语言、输入、输出、Prompt、翻译、会话和最近翻译；青蓝翻译、青绿粘贴、琥珀 Prompt、小面积紫红交换和中性会话命令同时使用图标、文字、描边与层级，不只依赖颜色。
+- 新增系统纯文本 `PasteButton`。只有用户点击时读取兼容文本；空输入直接填入，非空输入以换行追加，不覆盖、不自动翻译、不记录剪贴板内容。
+- 文本页统一持有输入焦点；keyboard toolbar 新增“完成”，翻译、新会话、Prompt 跳转和离开文本 Tab 前先失焦，翻译随后仍调用 `store.submitDraft`。
+- 新增 `scripts/test-v188-home-ui-contract.py` 六项静态契约，并作为独立 CI step、JUnit testcase、manifest 字段和失败门控；v1.88 分支同时进入现有 current HEAD UI evidence 门控。
+- Preview 新增 iPad 横屏文本页状态，但当前 CI 仍按既有约束只生成 11 张紧凑 iPhone 运行态证据；Preview 不冒充运行态截图或点击测试。
+
+关键文件：
+
+- `AITRANS/Views/TextTranslationView.swift`
+- `AITRANS/Views/TextWorkspaceBackground.swift`
+- `AITRANS/Views/TextWorkspacePasteButton.swift`
+- `AITRANS/Views/AppTheme.swift`
+- `AITRANS/Views/AppPreviewSupport.swift`
+- `scripts/test-v188-home-ui-contract.py`
+- `.github/workflows/ci-results.yml`
+- `README.md`
+- `md/flow/flow.md`
+- `md/flow/flowchart.md`
+- `md/test/test.md`
+
+本地轻量验证：Swift parse 与无产物全工程 typecheck、`git diff --check`、PBX/plist lint、shell syntax、workflow YAML parse、Speech contract 5/5、v1.87 UI interaction contract 6/6、v1.88 home UI contract 7/7 和三个 JSON parse 已通过；未跑本机 build / 探针，按规则交给云端验证。
+
+Agent C 多轮退回及 Agent B 截图复核：run `29092032857` 证明 72pt 内容尾部 padding 无法阻止浮动 Tab Bar 覆盖，run `29098058258` 又证明 bottom `safeAreaInset` + 88pt clearance 仍会被浮动栏覆盖，且 `ButtonStyle` 不能替换 `PasteButton` 的系统英文标签。run `29099734744` 已证明中文覆盖生效，但 96pt 外部净空压缩了标准字号首屏，且第四张设置截图被空白检测拦截。run `29100584989` 的完整证据证明固定 48pt 已解决大字号覆盖，却仍把标准字号“翻译”主按钮裁成一条色带。run `29102934707` 证明标准键盘关闭时取消净空可完整恢复“翻译”，但输入聚焦后键盘“完成”区域不可见。当前候选仅在 compact-width 且 Dynamic Type 为 XXL 或更大、或输入已聚焦时，于根 `VStack` 的 `ScrollView` 外预留 48pt；标准字号且键盘关闭时不插入净空，以同时满足首屏动作层级、大字号防遮挡和键盘附件可见。真实 `PasteButton` 继续使用透明前景并由不接收触摸的实底中文标签覆盖。上述旧 run 都只作为失败证据，新 HEAD 必须重新生成 build、JUnit、manifest 和 UI evidence，并由 Agent B 先逐张查看后再交给 Agent C。
+
+云端验收证据（正式收口）：
+
+- 产品 UI evidence HEAD：`c8326bb068e512dbd8139271e65b38ddb3235b9c`（`fix(ui): keep keyboard toolbar visible`）。
+- 收口 commit：版本号/文档/contract assert 升到 1.88；merge 前以 push 后新 HEAD 的 CI manifest `commitSha` 核对。
+- GitHub Actions run：`29104261998` attempt 1 SUCCESS。
+- 结果包：`aitrans-ci-v1.88-codeb-v1.88-home-translation-ui--c8326bb068e5-run29104261998-attempt1`（2,772,091 bytes；SHA256 `f15c2ad59fcaba0eec3ae5795d9adc060bd3e06405374ce7e747a172cc87983e`）。
+- `.xcresult`：0 errors / 0 warnings；JUnit 7/7；Speech contract 5/5；v1.87 UI interaction contract 6/6；v1.88 home UI contract 7/7。
+- UI evidence：11 张紧凑 iPhone 运行态截图均 >135KB，覆盖空态中文“粘贴/翻译”、键盘“完成”、XXL / Accessibility Tab 净空。
+- 本轮收口额外把 `MARKETING_VERSION` 从 `1.87` 升到 `1.88`，并将候选记录改为正式通过。
+
+遗留事项：
+
+- 真实系统 `PasteButton` 剪贴板投递、空剪贴板保留输入、换行追加、VoiceOver 标签与键盘“完成”点击回放未在本机 Simulator/真机重跑；XCUITest 在 iOS 26.5 上难以稳定注入 runner/app 隔离剪贴板。按用户约束不改生产粘贴语义仅为可测性让步；后续可用人工清单或 debug-only 注入补闭环。
+- 当前 UI evidence 仍没有 iPad / Mac 运行态截图；宽屏并排只有源码和 Preview 状态，不能当作运行态验收结论。
+- 模型、OCR、Speech、StoreKit、持久化、漫画探针、ground truth、仓库根 `output/` 和 `metrics/version_history.csv` 均未修改；本轮不追加漫画指标。
+- 收口后进入 v1.89：固化人工交互矩阵、PasteButton 可测性、宽屏证据与首页信息密度再平衡。
+
 ### v1.87：企业级视觉系统与核心体验重构
 日期：2026-07-10
 

@@ -595,6 +595,14 @@ jobs:
           set -o pipefail
           python3 -B scripts/test-v187-ui-interaction-contract.py 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
+      - name: v1.88 home UI contract
+        id: home_ui_contract
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 -B scripts/test-v188-home-ui-contract.py 2>&1 | tee "$RESULT_ROOT/v188-home-ui-contract.log"
+
       - name: Xcode build
         id: xcode_build
         if: steps.ci_scope.outputs.xcode_build_required == 'true'
@@ -634,7 +642,7 @@ jobs:
 
       - name: Capture current HEAD UI evidence
         id: ui_evidence
-        if: github.ref_name == 'codeb/v1.87-enterprise-ui' && steps.ci_scope.outputs.xcode_build_required == 'true' && steps.xcode_build.outcome == 'success'
+        if: (github.ref_name == 'codeb/v1.87-enterprise-ui' || github.ref_name == 'codeb/v1.88-home-translation-ui') && steps.ci_scope.outputs.xcode_build_required == 'true' && steps.xcode_build.outcome == 'success'
         timeout-minutes: 15
         shell: bash
         continue-on-error: true
@@ -1088,7 +1096,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" UI_INTERACTION_STATUS="${{ steps.ui_interaction_contract.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" XCODE_BUILD_REQUIRED="${{ steps.ci_scope.outputs.xcode_build_required }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" SIMULATOR_BUILD_STATUS="${{ steps.simulator_build.outcome }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
+          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" UI_INTERACTION_STATUS="${{ steps.ui_interaction_contract.outcome }}" HOME_UI_STATUS="${{ steps.home_ui_contract.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" XCODE_BUILD_REQUIRED="${{ steps.ci_scope.outputs.xcode_build_required }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" SIMULATOR_BUILD_STATUS="${{ steps.simulator_build.outcome }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
           import os
           import xml.etree.ElementTree as ET
 
@@ -1110,6 +1118,7 @@ jobs:
               ("gguf-model", model_status, "GGUF model setup failed"),
               ("static-checks", os.environ["STATIC_STATUS"], "static checks failed"),
               ("ui-interaction-contract", os.environ["UI_INTERACTION_STATUS"], "v1.87 UI interaction contract failed"),
+              ("v188-home-ui-contract", os.environ["HOME_UI_STATUS"], "v1.88 home UI contract failed"),
               ("xcode-build", build_status, "xcode build failed"),
               ("simulator-build", simulator_status, "simulator build failed"),
               ("manga-probe", probe_status, "manga probe failed"),
@@ -1130,6 +1139,12 @@ jobs:
       - name: Write manifest
         if: always()
         shell: bash
+        env:
+          MANIFEST_XCODE_BUILD_REQUIRED: ${{ steps.ci_scope.outputs.xcode_build_required }}
+          MANIFEST_XCODE_BUILD_SKIPPED_REASON: ${{ steps.ci_scope.outputs.xcode_build_skip_reason }}
+          MANIFEST_UI_EVIDENCE_REQUIRED: ${{ (github.ref_name == 'codeb/v1.87-enterprise-ui' || github.ref_name == 'codeb/v1.88-home-translation-ui') && steps.ci_scope.outputs.xcode_build_required == 'true' }}
+          MANIFEST_UI_EVIDENCE_OUTCOME: ${{ steps.ui_evidence.outcome }}
+          MANIFEST_UI_INTERACTION_CONTRACT_OUTCOME: ${{ steps.ui_interaction_contract.outcome }}
         run: |
           set -euo pipefail
           xcode_version="$(xcodebuild -version | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
@@ -1284,13 +1299,13 @@ jobs:
               "destination": "${DESTINATION}",
               "resultBundlePath": "${{ steps.meta.outputs.result_bundle }}",
               "changedFilesPath": "${RESULT_ROOT}/changed-files.txt",
-              "xcodeBuildRequired": "${{ steps.ci_scope.outputs.xcode_build_required }}" == "true",
-              "xcodeBuildSkippedReason": "${{ steps.ci_scope.outputs.xcode_build_skip_reason }}",
-              "uiEvidenceRequired": "${GITHUB_REF_NAME}" == "codeb/v1.87-enterprise-ui" and "${{ steps.ci_scope.outputs.xcode_build_required }}" == "true",
-              "uiEvidenceOutcome": "${{ steps.ui_evidence.outcome }}",
+              "xcodeBuildRequired": "$MANIFEST_XCODE_BUILD_REQUIRED" == "true",
+              "xcodeBuildSkippedReason": "$MANIFEST_XCODE_BUILD_SKIPPED_REASON",
+              "uiEvidenceRequired": "$MANIFEST_UI_EVIDENCE_REQUIRED" == "true",
+              "uiEvidenceOutcome": "$MANIFEST_UI_EVIDENCE_OUTCOME",
               "uiEvidenceManifestPath": "${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json",
               "uiEvidenceLogPath": "${RESULT_ROOT}/ui-evidence.log",
-              "uiInteractionContractOutcome": "${{ steps.ui_interaction_contract.outcome }}",
+              "uiInteractionContractOutcome": "$MANIFEST_UI_INTERACTION_CONTRACT_OUTCOME",
               "uiInteractionContractLogPath": "${RESULT_ROOT}/ui-interaction-contract.log",
               "koharuValidatorExtendedRequired": "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" == "true",
               "simulatorAppReusedFromXcodeBuild": "${{ steps.meta.outputs.probe_mode }}" != "skip" and "${{ steps.simulator_build.outcome }}" == "success",
@@ -1471,6 +1486,25 @@ jobs:
           with open("${RESULT_ROOT}/ci-artifact-manifest.json", "w", encoding="utf-8") as f:
               json.dump(manifest, f, ensure_ascii=False, indent=2)
               f.write("\n")
+          PY
+
+      - name: Append v1.88 home UI manifest status
+        if: always()
+        shell: bash
+        env:
+          V188_HOME_UI_CONTRACT_OUTCOME: ${{ steps.home_ui_contract.outcome }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("ci-results/ci-artifact-manifest.json")
+          manifest = json.loads(path.read_text(encoding="utf-8"))
+          manifest["v188HomeUIContractOutcome"] = os.environ["V188_HOME_UI_CONTRACT_OUTCOME"]
+          manifest["v188HomeUIContractLogPath"] = "ci-results/v188-home-ui-contract.log"
+          path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
 
       - name: Append native-lite manifest summary
@@ -1666,6 +1700,7 @@ jobs:
             echo "- GGUF verify: ${{ steps.verify_model.outcome }}"
             echo "- static checks: ${{ steps.static_checks.outcome }}"
             echo "- UI interaction contract: ${{ steps.ui_interaction_contract.outcome }}"
+            echo "- v1.88 home UI contract: ${{ steps.home_ui_contract.outcome }}"
             echo "- xcode build: ${{ steps.xcode_build.outcome }}"
             echo "- UI evidence: ${{ steps.ui_evidence.outcome }}"
             echo "- simulator build: ${{ steps.simulator_build.outcome }}"
@@ -1677,6 +1712,7 @@ jobs:
             echo "- Model verify: ${RESULT_ROOT}/model-verify.log"
             echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
             echo "- UI interaction contract: ${RESULT_ROOT}/ui-interaction-contract.log"
+            echo "- v1.88 home UI contract: ${RESULT_ROOT}/v188-home-ui-contract.log"
             echo "- Koharu active artifact validation: ${RESULT_ROOT}/koharu-active-artifacts-validation.json"
             echo "- Xcode build: ${RESULT_ROOT}/xcodebuild.log"
             echo "- UI evidence: ${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json"
@@ -1801,7 +1837,7 @@ jobs:
               echo "- active artifact validator output missing; inspect static checks."
             fi
             echo
-            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${GITHUB_REF_NAME}" = "codeb/v1.87-enterprise-ui" ] && [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ] || [ "${{ steps.home_ui_contract.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [[ "${GITHUB_REF_NAME}" == "codeb/v1.87-enterprise-ui" || "${GITHUB_REF_NAME}" == "codeb/v1.88-home-translation-ui" ]] && [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
               echo "## Return to Agent B"
               echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
             else
@@ -1826,7 +1862,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${GITHUB_REF_NAME}" = "codeb/v1.87-enterprise-ui" ] && [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ] || [ "${{ steps.home_ui_contract.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [[ "${GITHUB_REF_NAME}" == "codeb/v1.87-enterprise-ui" || "${GITHUB_REF_NAME}" == "codeb/v1.88-home-translation-ui" ]] && [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi

@@ -37,11 +37,21 @@ enum AppTheme {
         static let workspaceSplitWidth: CGFloat = 820
         static let inspectorWidth: CGFloat = 360
         static let minimumTarget: CGFloat = 44
+        static let floatingTabBarClearance: CGFloat = 48
     }
 
     enum Motion {
         static let quick = Animation.easeOut(duration: 0.16)
         static let standard = Animation.easeInOut(duration: 0.22)
+    }
+
+    enum TextWorkspace {
+        static let gridStep: CGFloat = 32
+        static let majorGridInterval = 4
+        static let pathLineWidth: CGFloat = 1.5
+        static let paste = Color.appSuccess
+        static let prompt = Color.appWarning
+        static let swap = Color(red: 0.78, green: 0.24, blue: 0.58)
     }
 }
 
