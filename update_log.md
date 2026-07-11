@@ -116,6 +116,20 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.90 候选：Speech 运行摘要增强与契约
+日期：2026-07-12
+
+状态：Agent X / B 候选，分支 `codeb/v1.90-speech-diagnostics-koharu-gates`；正式版本号仍 `1.89` 直至云端通过收口。
+
+核心变更：
+
+- `SpeechRecognitionRunSummary` 增加 `runToken` 诊断字段，begin run 写入 UUID 前 8 位。
+- 音频页运行摘要展示本机能力、终态与 Run token，保留离线强制/耗时/词数/置信度。
+- Speech contract 增补：cancel 必须先 `invalidateSpeechRecognitionRun` 再 idle；UI 接线本机能力/终态/runToken。
+- 不改 ASR 引擎、不引入第三方语音、不改漫画探针。
+
+验证：本地 light contracts only；未跑本机 build / 探针，交给云端。
+
 ### v1.89 修复候选：wide-iPad UI evidence 串行 boot + CI 硬失败
 日期：2026-07-12
 

@@ -67,6 +67,16 @@ DEBUG 可测性：仅在用户点击粘贴时，若系统 `PasteButton` payload 
 
 `scripts/test-v189-paste-manual-matrix-contract.py` 校验人工矩阵文档、debug 注入边界、wide-iPad evidence 与 CI wiring；结果写入 `v189-paste-manual-matrix-contract.log`、manifest `v189PasteManualMatrixContractOutcome` 与 JUnit testcase。
 
+### 0.4 v1.90 Speech 诊断契约
+
+`scripts/test-speech-recognition-contract.py` 除既有状态机与 run-id 隔离外，还必须验证：
+
+- `cancelAudioRecognition` 先 `invalidateSpeechRecognitionRun()` 再置 idle，并写入取消失败摘要
+- 运行摘要 UI 展示离线强制、本机能力、终态与 `runToken`
+- `SpeechRecognitionRunSummary` 含 `runToken`
+
+该契约随 static checks 进入云端 CI，不冒充真机录音点击验收。
+
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：
 
