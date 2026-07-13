@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- v1.89 已收口人工交互矩阵/DEBUG paste 可测性/wide-iPad 证据；v1.88 已收口文本首页极简科技工作台；正式版本号 `1.91`。v1.92 候选实现 external TextBox `linePolygons` 有上限透视校正 shadow OCR，仍不改变主 OCR、翻译或覆盖图，也不代表真实四件套已经交付。v1.87 为企业级视觉系统与页面拆分基线；v1.47-v1.86 历史总览见 `md/prompt/v1.47-to-v1.86-update-notes.md`。
+- 正式版本号 `1.92`：external TextBox 合法凸四点 `linePolygons` 可执行有上限透视校正 shadow OCR；bbox fallback 与失败保持可拒绝，仍不改变主 OCR、翻译或覆盖图，也不代表真实四件套已经交付。v1.91 为 Speech 人工矩阵/独立 CI 契约，v1.89 为人工交互矩阵/DEBUG paste/wide-iPad 证据，v1.88 为文本首页工作台；v1.47-v1.86 历史总览见 `md/prompt/v1.47-to-v1.86-update-notes.md`。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
