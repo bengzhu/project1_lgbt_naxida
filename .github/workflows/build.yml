@@ -1,9 +1,7 @@
 name: AITRANS - Build IPA
 
 on:
-  push:
-    branches: [ smalldata_test ]   # 只在这个分支触发
-  workflow_dispatch:               # 也可以在 Actions 页面手动点触发
+  workflow_dispatch:               # 软件包交付时手动触发，日常 merge 不重复 archive
 
 jobs:
   # ─────────────────────────────────────────────

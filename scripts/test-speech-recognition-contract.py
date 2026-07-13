@@ -221,6 +221,10 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         command = "python3 -B scripts/test-speech-recognition-contract.py"
         self.assertEqual(workflow.count(command), 1)
         self.assertIn("- name: Speech recognition contract", workflow)
+        self.assertIn(
+            "if: steps.ci_scope.outputs.speech_contract_required == 'true'",
+            workflow,
+        )
         required_gate = '[ "${{ steps.speech_contract.outcome }}" != "success" ]'
         self.assertGreaterEqual(workflow.count(required_gate), 2)
 
@@ -234,7 +238,7 @@ class SpeechRecognitionContractTests(unittest.TestCase):
             re.findall(r"MARKETING_VERSION = ([^;]+);", project)
         )
         self.assertEqual(bundle_ids, {"com.local.aitransform114"})
-        self.assertEqual(marketing_versions, {"1.93"})
+        self.assertEqual(marketing_versions, {"1.94"})
         self.assertNotIn("BUNDLE_ID: com.local.aitrans\n", workflow)
         self.assertIn("Print :CFBundleIdentifier", workflow)
         self.assertIn("steps.simulator_build.outputs.bundle_id", workflow)

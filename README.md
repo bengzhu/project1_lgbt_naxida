@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前正式版本：`1.93`（Speech 取消、立即重试和旧回调隔离已收口）。v1.92 的 external TextBox 四点 line polygon warp 仍等待真实四件套 `ci-fast` 运行态证据，不改变主 OCR、翻译或覆盖图。日常开发合入 `smalldata_test`，不合并到 `main`。
+当前正式版本：`1.94`（云端 full-once / fast-follow-up 分层、task-scoped contracts、显式 UI evidence 和手动 IPA 交付）。v1.93 已收口 Speech 取消、立即重试和旧回调隔离；v1.92 的 external TextBox 四点 line polygon warp 仍等待真实四件套 `ci-fast` 运行态证据。日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 
@@ -28,17 +28,19 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 ## 协作与云端验证
 
 - 日常工作主分支是 `smalldata_test`；`main` 只作外观展示，不合并日常开发成果。
-- Agent B 候选实现分支使用 `codeb/vX.Y-短标题`，push 后创建 PR 到 `smalldata_test` 并由 GitHub Actions 重验证。
+- Agent B 候选实现分支使用 `codeb/vX.Y-短标题`。核心代码 push 执行一次 task-scoped full；成功 SHA 获得 `AITRANS CI/full-validation` status，随后 PR 和已验证 merge 只做 fast follow-up。
 - 本机默认只跑轻量检查；除非人工明确要求，不默认跑本机 Xcode build 或漫画探针。
 - Agent C 验收使用未加密的 `AITRANS CI Results` artifact；`xcodeBuildRequired=true` 时核对 `.xcresult`，build-skip 快路径则核对 skip reason，同时核对 `junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json` 和失败摘要。
 - 云端验证必须先用 `gh auth login` 拿到 GitHub 权限，Agent C 才能下载 Actions 结果包。
 - Agent C 下载的云端测试缓存默认放在 `/private/tmp/aitrans-c-review-<run_id>/`，由人工确认后删除。
 - Agent C 通过 PR 合并后必须删除远端 `codeb/...` 候选分支，避免分支无限堆积；无权限删除时要明确说明。
-- 现有加密软件包 artifact 只用于软件包交付，不作为 Agent C 验收依据。
-- `AITRANS CI Results` 对 `codeb/**` 和 `smalldata_test` push 默认走 `probe_mode=skip` 快验，只跑静态检查、按 scope 必要时 Xcode build、manifest 和未加密结果包，不下载 GGUF、不启动模拟器漫画探针。
+- 现有加密软件包 artifact 只用于软件包交付，workflow 仅手动触发，不再随 merge 自动 archive，也不作为 Agent C 验收依据。
+- `AITRANS CI Results` 对 `codeb/**` 核心 push 默认 `validationProfile=full`、`probe_mode=skip`：按变更领域运行契约，App 相关任务跑一次 Xcode build，不下载 GGUF、不启动漫画探针。
+- PR 只在 opened / reopened / ready-for-review 时执行 fast，不监听 synchronize；merge 只有核验第二父 SHA 的 full-validation status 成功后才执行 fast，否则自动回退 full。
+- fast follow-up 跳过 Xcode、Speech/UI/Koharu 领域大契约和 UI evidence，manifest 必须写明复用 SHA、status、profile、reason 和 skip reason；Agent C 仍需验收候选 full 结果，不能只看 fast 包。
 - 版本整合分支 `1.*` 也会触发同一快验；云端探针从构建出的 App `Info.plist` 动态读取 bundle ID，当前工程值为 `com.local.aitransform114`。
-- push CI 会先检测变更范围：非 App 构建相关变更跳过 Xcode build，只上传静态检查、manifest、`xcodebuild.log` skip 说明和未加密结果包；Swift、Xcode 工程、资源、`test/` 素材、手动探针或 Koharu artifact 注入仍会跑 Xcode build。
-- Koharu artifact validator 的完整 invalid fixture 矩阵只在 validator、artifact contract 或 workflow 相关文件变化时跑；普通 push 保留核心 active/valid 校验以减少 CI 时间。
+- full CI 会按变更范围选择 Speech、UI、文本首页或 Koharu 契约；非 App 构建相关 full 仍可跳过 Xcode。父提交 full 成功后的纯文档/metrics follow-up 可传播收据；父收据缺失或失败时自动扩展到整条候选 diff。
+- UI evidence 默认不运行。重大 UI 任务在候选 commit 标记 `[ui evidence]` 或手动选择 `ui_evidence_mode=full`；Speech 和普通 PR/merge 不截图。漫画/翻译结果图由手动 `ci-fast/full` 的 `output/` 产物提供。
 - 手动 `workflow_dispatch` 可选填 `koharu_artifact_release_tag`、`koharu_artifact_asset`、`koharu_artifact_sha256`，从 Release 下载真实 Koharu 四件套 archive 并在 Xcode build 前注入 `test/koharu_artifacts/`；archive 必须只有一个目录同时包含四件套，CI 结果包会记录 source image 和四件套文件的 SHA256 / size identity；`koharu_artifact_required=true` 时下载、SHA、解压、唯一目录检查或 validator 失败会直接失败。
 - 注入 Koharu artifact 且运行 `ci-fast` / `full` 时，云端探针 smoke 必须证明 App 侧 `externalArtifactReadinessReport.artifactIdentityReceipt.identityVerdict = activeArtifactIdentityRecorded`、`artifactIdentityReceipt.sourceImageSHA256Matches = true`，`koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison = true`、`koharuArtifactIdentityReconciliationReport.sourceImageSHA256Matches = true`，`ci-artifact-manifest.koharuArtifactIdentityReconciliationMatch.matchVerdict = matched`，且 source image / 四件套 size 与 SHA256 逐项匹配 CI manifest identity，`externalArtifactReadinessReport.readinessVerdict = readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed = true`、`koharuNativeArtifactContractDryRunReport.contractDryRunVerdict = activeArtifactsReadyForShadowOCR`、`dryRunOnly = true`、`activeExportAllowed = false`、`externalTextBoxShadowOCRReport.executed = true`、`candidateCount > 0`、`ocrExecutedCount > 0`、`ocrSucceededCount > 0`；不能只看下载、validator 日志或单独的 `readyForShadowOCR`。
 - 手动 `ci-fast` / `full` 探针会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，用 Actions cache 复用 `.ci-models/`，并把模型导入模拟器 App 沙盒。

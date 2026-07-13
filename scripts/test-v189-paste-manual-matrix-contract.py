@@ -72,17 +72,17 @@ class V189PasteManualMatrixContractTests(unittest.TestCase):
             r'capture "\$wide_id" "wide-iPad" empty large portrait text-empty-wide-ipad-day\.png false 日间',
         )
 
-    def test_ci_wires_v189_contract_and_ui_evidence_branch_family(self) -> None:
+    def test_ci_wires_v189_contract_with_task_scoped_ui_evidence(self) -> None:
         workflow = read(".github/workflows/ci-results.yml")
         self.assertIn("scripts/test-v189-paste-manual-matrix-contract.py", workflow)
         self.assertIn("v189-paste-manual-matrix-contract", workflow)
         self.assertIn("v189PasteManualMatrixContractOutcome", workflow)
-        # evidence gate must include v1.89 branch family, not only hard-coded 1.87/1.88
-        self.assertIn("codeb/v1.89-", workflow)
-        self.assertRegex(
+        self.assertIn(
+            "if: steps.ci_scope.outputs.paste_matrix_contract_required == 'true'",
             workflow,
-            r"github\.ref_name == 'codeb/v1\.87-enterprise-ui' \|\| github\.ref_name == 'codeb/v1\.88-home-translation-ui' \|\| startsWith\(github\.ref_name, 'codeb/v1\.89-'\)",
         )
+        self.assertIn("steps.ci_scope.outputs.ui_evidence_required == 'true'", workflow)
+        self.assertNotIn("startsWith(github.ref_name, 'codeb/v1.89-')", workflow)
 
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 正式版本号 `1.93`：Speech 麦克风权限、模型翻译和摘要的 `await` 返回后必须复验 run ID；store 持有并取消 `speechTranslationTask`，`.translating` 可取消，旧回调不得写入立即重试的新 run。v1.92 为 external TextBox 合法凸四点 line polygon warp shadow OCR，仍不代表真实四件套已经交付；v1.91 为 Speech 人工矩阵/独立 CI 契约，v1.89 为人工交互矩阵/DEBUG paste/wide-iPad 证据，v1.88 为文本首页工作台；v1.47-v1.86 历史总览见 `md/prompt/v1.47-to-v1.86-update-notes.md`。
+- 正式版本号 `1.94`：云端验证按任务分层为候选 full、PR/merge fast follow-up，并以 `AITRANS CI/full-validation` commit status 作为 merge 复用收据；UI evidence 与 IPA 打包不再随普通版本 push/merge 自动运行。v1.93 已收口 Speech 取消、立即重试和旧回调隔离；v1.92 为 external TextBox 合法凸四点 line polygon warp shadow OCR，仍不代表真实四件套已经交付；v1.47-v1.91 历史总览见 `update_log.md`。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
@@ -103,11 +103,15 @@ test/1.png
 
 - 除非人工明确要求“本机测试”“本地 build”“本地跑探针”“本地 xcodebuild”，否则完整 build、Xcode 测试、漫画探针、报告生成和重验证默认交给 GitHub Actions。
 - 本地仍可做 `git diff --check`、JSON 解析、YAML smoke 等轻量检查；这些不算重负载本机测试。
-- Swift / Xcode / 漫画探针相关任务完成后，默认 push `codeb/...`，由 GitHub Actions 跑静态检查、Xcode build 快验和 artifact 上传。
-- GitHub Actions push 会先做变更范围检测：非 App 构建相关变更走更快的 build-skip CI，只保留静态检查、manifest 和 skip 日志；Swift、Xcode 工程、资源、`test/` 素材、手动 `ci-fast/full` 或 Koharu artifact 注入仍必须跑 Xcode build。
-- Koharu artifact validator 的完整 invalid fixture 矩阵只在 validator、artifact contract 或 workflow 相关文件变化时跑；普通 push 只跑核心 active/valid 校验以加速。
+- Agent B 完成版本核心代码后 push `codeb/...`：`validationProfile=full`，只运行本任务涉及的领域契约；App 构建相关变更再跑一次 Xcode build。成功后 workflow 为该 SHA 写 `AITRANS CI/full-validation` status，并上传未加密结果包。
+- PR 只在 opened / reopened / ready-for-review 时运行 `validationProfile=fast`；不监听 synchronize，避免修复 push 同时触发 full + PR fast。fast 只跑基础静态/路由契约并记录 skip reason，不重复 Xcode、Speech/UI/Koharu 大契约或截图。
+- 合并到 `smalldata_test` 后，workflow 读取 merge 第二父 SHA 的 full-validation status；只有 `success` 才走 fast follow-up，否则自动回退 full。C 退回后新的核心修复 push 必须重新产生 full 收据。
+- 已通过 full 后的纯 README / AGENTS / update log / `md/` / metrics 提交可复用父提交收据并走 fast；若父提交收据缺失或失败，workflow 会把 diff 扩展到整条候选分支，不能用文档提交掩盖失败。
+- Speech 功能默认只跑 Xcode build、Speech run-id/取消/翻译链路契约和任务所需结果检查，不采 UI 截图；漫画/翻译改动需要结果图时手动跑 `ci-fast/full`，只验收探针输出 PNG，不等同 UI evidence。
+- UI evidence 默认跳过；只有重大 UI 任务在候选核心 commit 使用 `[ui evidence]`，或手动 `workflow_dispatch ui_evidence_mode=full` 才运行。普通 UI 小改、Speech、PR 和 merge 不截图。
+- Koharu artifact validator 的完整 invalid fixture 矩阵只在 Koharu validator、artifact contract 或 CI workflow 相关 full 任务中运行；其他任务不加载该领域套件。
 - GitHub Actions push 默认 `probe_mode=skip`，不启动模拟器漫画探针；需要云端探针验收时手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。
-- 现有加密打包 workflow 只产出受密码保护的软件包；Agent C 不以该包验收。
+- 现有加密打包 workflow 只在软件包交付时手动 `workflow_dispatch`，不再随 `smalldata_test` merge 自动 archive；Agent C 不以该包验收。
 - 独立 CI 结果包必须未加密，至少包含 `junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`；`xcodeBuildRequired=true` 时还必须包含 `.xcresult`，手动探针运行还必须包含可用的 `output/` 报告。
 - 若 `workflow_dispatch` 注入 Koharu artifact archive，Agent C 必须核对 `koharuArtifactInjection*` manifest 字段、Release tag / asset / SHA、validator verdict、`koharuArtifactValidationIdentitySummary`、`koharuArtifactValidationOrientationSummary`、App 侧 `externalArtifactReadinessReport.artifactIdentityReceipt`、external readiness、`koharuNativeArtifactContractDryRunReport.contractDryRunVerdict = activeArtifactsReadyForShadowOCR`、`appSideArtifactIdentityVerdict = activeArtifactIdentityRecorded`、`appSideArtifactIdentityHashesPresent = true`、`koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison = true`、`ci-artifact-manifest.koharuArtifactIdentityReconciliationMatch.matchVerdict = matched`、`dryRunOnly = true`、`activeExportAllowed = false`、`externalTextBoxShadowOCRReport.executed = true`、`candidateCount > 0`、`ocrExecutedCount > 0` 和 `ocrSucceededCount > 0`，不得只看注入步骤日志。
 - 若注入 artifact 的 TextBox 带 `sourceDirection`、`linePolygons` 或 `rotationDegrees`，Agent C 还必须核对 `orientationShadowPathPartialBlocks`、`orientationUnsupportedBlocks`、`orientationUnsupportedReasonBreakdown`、convergence 的 `WI/G-external-textbox-shadow-ocr-coverage` 和 `WI/G-external-textbox-orientation-shadow-path`，确认 no-candidate / partial / unsupported 未被误判为 `closedReportOnly` 或 passed。
@@ -124,13 +128,13 @@ test/1.png
 - 从最新 `smalldata_test` 开 `codeb/vX.Y-短标题` 分支。
 - 按 Agent A 提示词小步实现，不做无关重构。
 - 默认本地只跑轻量检查；除非人工明确要求，不跑本机完整 Xcode build 或漫画探针。
-- 完成后 push 分支并创建 PR 到 `smalldata_test`，让 GitHub Actions 运行。
+- 完成后集中 push 核心候选 commit，让 GitHub Actions 运行一次 task-scoped full；通过后再创建 PR 到 `smalldata_test`，PR 只跑 fast follow-up。若 C 退回，修复 push 重新跑对应 full。
 - 最终回复必须列出分支名、PR 链接、commit SHA、push 结果、CI 入口或 run 信息、本地已跑检查、未跑测试原因、artifact 名称；若 Actions 尚未完成，必须说明等待云端结果。
 
 ### Agent C
 - 拉取 `codeb/...` 分支，查看实际 diff、文档同步、架构边界、GitHub Actions 结论、日志和 artifacts。
 - 只能验收与当前 `codeb/...` HEAD 完全一致的 `commitSha`。
-- 必须核对 `ci-artifact-manifest.json` 中的 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`，确认没有拿旧包、错包或其他分支的包。
+- 必须核对 `ci-artifact-manifest.json` 中的 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`validationProfile`、`validationReason` 和 full-validation 收据字段，确认没有拿旧包、错包或其他分支的包。fast 结果不能单独冒充候选编译证据。
 - 必须查看 `.xcresult` 或摘要、`junit.xml`、`xcodebuild.log`、`ci-failure-summary.md`；涉及探针时还必须检查云端生成或上传的 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和关键 PNG。涉及 external TextBox 时，还必须检查 shadow OCR coverage、orientation partial / unsupported 摘要及 convergence gate 状态。
 - 有 bug 或云端验证失败时，输出退回清单，说明应由 Agent B 修复的日志位置和失败原因，不合并。
 - 通过后更新版本号和核心文档，通过 PR merge 合并到 `smalldata_test`，push。严禁合并到 `main`。

@@ -6,8 +6,32 @@ on:
       - smalldata_test
       - 'codeb/**'
       - '1.*'
+  pull_request:
+    branches:
+      - smalldata_test
+    types:
+      - opened
+      - reopened
+      - ready_for_review
   workflow_dispatch:
     inputs:
+      validation_profile:
+        description: 'Validation profile: auto routes development to full and verified PR/merge follow-ups to fast'
+        required: false
+        default: auto
+        type: choice
+        options:
+          - auto
+          - full
+          - fast
+      ui_evidence_mode:
+        description: 'Runtime UI screenshots: skip by default; full only for substantial UI work'
+        required: false
+        default: skip
+        type: choice
+        options:
+          - skip
+          - full
       probe_mode:
         description: 'Manga probe mode: skip for fast build-only CI, ci-fast/full for probe validation'
         required: false
@@ -39,8 +63,13 @@ on:
           - 'true'
 
 concurrency:
-  group: ci-results-${{ github.ref }}
+  group: ci-results-${{ github.event_name }}-${{ github.event.pull_request.head.ref || github.ref }}
   cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  statuses: write
 
 jobs:
   ci-results:
@@ -63,6 +92,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 2
 
       - name: Prepare metadata
@@ -71,9 +101,35 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$TEST_RESULTS_DIR" "$OUTPUT_COPY_DIR"
-          branch="${GITHUB_REF_NAME}"
+          branch="${{ github.head_ref }}"
+          if [ -z "$branch" ]; then
+            branch="${GITHUB_REF_NAME}"
+          fi
           branch_slug="$(echo "$branch" | tr '/[:space:]' '-' | tr -cd '[:alnum:]._-')"
-          short_sha="${GITHUB_SHA:0:12}"
+          commit_sha="$(git rev-parse HEAD)"
+          short_sha="${commit_sha:0:12}"
+          requested_validation_profile="${{ github.event.inputs.validation_profile }}"
+          if [ -z "$requested_validation_profile" ]; then
+            requested_validation_profile="auto"
+          fi
+          case "$requested_validation_profile" in
+            auto|full|fast) ;;
+            *)
+              echo "Invalid validation_profile=$requested_validation_profile" >&2
+              exit 1
+              ;;
+          esac
+          requested_ui_evidence_mode="${{ github.event.inputs.ui_evidence_mode }}"
+          if [ -z "$requested_ui_evidence_mode" ]; then
+            requested_ui_evidence_mode="skip"
+          fi
+          case "$requested_ui_evidence_mode" in
+            skip|full) ;;
+            *)
+              echo "Invalid ui_evidence_mode=$requested_ui_evidence_mode" >&2
+              exit 1
+              ;;
+          esac
           requested_probe_mode="${{ github.event.inputs.probe_mode }}"
           if [ -z "$requested_probe_mode" ]; then
             requested_probe_mode="skip"
@@ -142,10 +198,13 @@ jobs:
           {
             echo "branch=$branch"
             echo "branch_slug=$branch_slug"
+            echo "commit_sha=$commit_sha"
             echo "short_sha=$short_sha"
             echo "version=$version"
             echo "artifact_name=$artifact_name"
             echo "result_bundle=$result_bundle"
+            echo "requested_validation_profile=$requested_validation_profile"
+            echo "requested_ui_evidence_mode=$requested_ui_evidence_mode"
             echo "probe_mode=$requested_probe_mode"
             echo "probe_timeout_seconds=$probe_timeout_seconds"
             echo "probe_stall_timeout_seconds=$probe_stall_timeout_seconds"
@@ -158,6 +217,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           {
             echo "PROBE_MODE=$requested_probe_mode"
+            echo "CI_COMMIT_SHA=$commit_sha"
             echo "PROBE_TIMEOUT_SECONDS=$probe_timeout_seconds"
             echo "PROBE_STALL_TIMEOUT_SECONDS=$probe_stall_timeout_seconds"
             echo "PROBE_NO_PROGRESS_TIMEOUT_SECONDS=$probe_no_progress_timeout_seconds"
@@ -169,10 +229,15 @@ jobs:
       - name: Detect CI scope
         id: ci_scope
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p "$RESULT_ROOT"
-          before="${{ github.event.before }}"
+          before="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$before" ]; then
+            before="${{ github.event.before }}"
+          fi
           if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
             before="$(git rev-parse HEAD^ 2>/dev/null || true)"
           fi
@@ -191,43 +256,182 @@ jobs:
             if [ "$scope_diff_method" = "none" ]; then
               scope_diff_method="checkout_before"
             fi
-            git diff --name-only "$before" "$GITHUB_SHA" > "$RESULT_ROOT/changed-files.txt"
+            git diff --name-only "$before" "$CI_COMMIT_SHA" > "$RESULT_ROOT/changed-files.txt"
           else
             scope_diff_method="full_repo_fallback"
             scope_diff_fallback_used=true
             git ls-files > "$RESULT_ROOT/changed-files.txt"
           fi
 
-          xcode_build_required=false
-          xcode_build_skip_reason="non_app_build_related_fast_path"
-          if [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ]; then
-            xcode_build_required=true
-            xcode_build_skip_reason=""
-          elif [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ]; then
-            xcode_build_required=true
-            xcode_build_skip_reason=""
-          elif grep -E '^(AITRANS/|AITRANS\.xcodeproj/|build-apple/|test/|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
-            xcode_build_required=true
-            xcode_build_skip_reason=""
-          elif grep -Fx '.github/workflows/ci-results.yml' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
-            if [ "$scope_diff_fallback_used" = "true" ] || git diff "$scope_diff_base_sha" "$GITHUB_SHA" -- .github/workflows/ci-results.yml | grep -E '^[+-].*(ui_evidence|UI evidence|uiEvidence|capture-ui-evidence)' >/dev/null; then
-              xcode_build_required=true
-              xcode_build_skip_reason=""
+          candidate_parent_sha=""
+          candidate_parent_full_validation_state="not_applicable"
+          candidate_incremental_metadata_only=false
+          receipt_propagation_allowed=false
+          if [[ "${{ steps.meta.outputs.branch }}" == codeb/* ]]; then
+            candidate_parent_sha="$(git rev-parse HEAD^ 2>/dev/null || true)"
+            if [ -n "$candidate_parent_sha" ]; then
+              candidate_parent_full_validation_state="$(gh api \
+                -H 'Accept: application/vnd.github+json' \
+                "repos/${GITHUB_REPOSITORY}/commits/${candidate_parent_sha}/status" \
+                --jq '[.statuses[] | select(.context == "AITRANS CI/full-validation")][0].state // "missing"' \
+                2>/dev/null || echo lookup_failed)"
+            fi
+            if ! grep -Ev '^(AGENTS\.md|README\.md|update_log\.md|md/|metrics/)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+              candidate_incremental_metadata_only=true
+            fi
+            if [ "$candidate_incremental_metadata_only" = "true" ] && [ "$candidate_parent_full_validation_state" != "success" ]; then
+              echo "Metadata-only follow-up has no successful parent receipt; expanding scope to the full candidate diff."
+              if git fetch --no-tags --depth=200 origin smalldata_test 2>/dev/null; then
+                candidate_base="$(git merge-base HEAD FETCH_HEAD 2>/dev/null || true)"
+              else
+                candidate_base=""
+              fi
+              if [ -n "$candidate_base" ]; then
+                git diff --name-only "$candidate_base" "$CI_COMMIT_SHA" > "$RESULT_ROOT/changed-files.txt"
+                scope_diff_method="candidate_merge_base"
+                scope_diff_base_sha="$candidate_base"
+              else
+                git ls-files > "$RESULT_ROOT/changed-files.txt"
+                scope_diff_method="candidate_full_repo_fallback"
+                scope_diff_fallback_used=true
+              fi
             fi
           fi
 
-          koharu_validator_extended_required=false
-          if [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ] || grep -E '^(scripts/validate-koharu-artifacts\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
-            koharu_validator_extended_required=true
-          elif grep -Fx '.github/workflows/ci-results.yml' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
-            if [ "$scope_diff_fallback_used" = "true" ] || git diff "$scope_diff_base_sha" "$GITHUB_SHA" -- .github/workflows/ci-results.yml | grep -E '^[+-].*(KOHARU_ARTIFACT_|koharu_artifact_(release|asset|sha)|Prepare Koharu active artifacts|scripts/validate-koharu-artifacts\.py --)' | grep -Ev '^[+-].*grep -E' >/dev/null; then
-              koharu_validator_extended_required=true
+          app_build_changed=false
+          speech_contract_required=false
+          ui_interaction_contract_required=false
+          home_ui_contract_required=false
+          paste_matrix_contract_required=false
+          koharu_contract_required=false
+          workflow_changed=false
+          if grep -E '^(AITRANS/|AITRANS\.xcodeproj/|build-apple/|test/|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            app_build_changed=true
+          fi
+          if grep -Fx '.github/workflows/ci-results.yml' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            workflow_changed=true
+          fi
+          if grep -E '^(AITRANS/Services/TranslationSessionStore\.swift|AITRANS/Models/TranscriptModels\.swift|AITRANS/Views/AudioTranslationView\.swift|AITRANS/Views/ProViews\.swift|scripts/test-speech-recognition-contract\.py)$' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+            speech_contract_required=true
+          fi
+          if grep -E '^(AITRANS/Views/|AITRANS/Services/TranslationSessionStore\.swift|scripts/test-v187-ui-interaction-contract\.py|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -E '^(AITRANS/Views/TextTranslationView\.swift|AITRANS/Views/AppPreviewSupport\.swift|scripts/test-v188-home-ui-contract\.py|scripts/test-v189-paste-manual-matrix-contract\.py|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+            home_ui_contract_required=true
+            paste_matrix_contract_required=true
+          fi
+          if grep -E '^(AITRANS/Services/MangaOverlayProbeService\.swift|AITRANS/Models/TranscriptModels\.swift|test/1\.|scripts/validate-koharu-artifacts\.py|scripts/test-v192-koharu-line-polygon-warp-contract\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+            koharu_contract_required=true
+          fi
+
+          validation_profile="${{ steps.meta.outputs.requested_validation_profile }}"
+          validation_reason="manual_${validation_profile}"
+          reused_full_validation_sha=""
+          reused_full_validation_state="not_applicable"
+          if [ "$validation_profile" = "auto" ]; then
+            if [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] || [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ]; then
+              validation_profile="full"
+              validation_reason="probe_or_koharu_artifact_requires_full"
+            elif [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              validation_profile="fast"
+              validation_reason="pull_request_followup_no_synchronize"
+            elif [[ "${{ steps.meta.outputs.branch }}" == codeb/* ]]; then
+              if [ "$candidate_incremental_metadata_only" = "true" ] && [ "$candidate_parent_full_validation_state" = "success" ]; then
+                validation_profile="fast"
+                validation_reason="candidate_metadata_followup_reuses_parent_full_validation"
+                reused_full_validation_sha="$candidate_parent_sha"
+                reused_full_validation_state="$candidate_parent_full_validation_state"
+                receipt_propagation_allowed=true
+              else
+                validation_profile="full"
+                validation_reason="candidate_development_push"
+              fi
+            elif [[ "${{ steps.meta.outputs.branch }}" == 1.* ]]; then
+              validation_profile="full"
+              validation_reason="integration_development_push"
+            elif [ "${{ steps.meta.outputs.branch }}" = "smalldata_test" ] && [ "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d '[:space:]')" -gt 2 ]; then
+              reused_full_validation_sha="$(git rev-parse HEAD^2)"
+              reused_full_validation_state="$(gh api \
+                -H 'Accept: application/vnd.github+json' \
+                "repos/${GITHUB_REPOSITORY}/commits/${reused_full_validation_sha}/status" \
+                --jq '[.statuses[] | select(.context == "AITRANS CI/full-validation")][0].state // "missing"' \
+                2>/dev/null || echo lookup_failed)"
+              if [ "$reused_full_validation_state" = "success" ]; then
+                validation_profile="fast"
+                validation_reason="merge_reuses_successful_candidate_full_validation"
+              else
+                validation_profile="full"
+                validation_reason="merge_missing_successful_candidate_full_validation"
+              fi
+            else
+              validation_profile="full"
+              validation_reason="direct_or_unclassified_push"
             fi
+          fi
+
+          if [ "$validation_profile" = "fast" ]; then
+            speech_contract_required=false
+            ui_interaction_contract_required=false
+            home_ui_contract_required=false
+            paste_matrix_contract_required=false
+            koharu_contract_required=false
+          fi
+
+          ui_evidence_required=false
+          ui_evidence_reason="not_requested"
+          if [ "${{ steps.meta.outputs.requested_ui_evidence_mode }}" = "full" ]; then
+            ui_evidence_required=true
+            ui_evidence_reason="manual_full"
+            validation_profile="full"
+            validation_reason="ui_evidence_requires_full"
+          elif [ "$GITHUB_EVENT_NAME" != "pull_request" ] && git log -1 --format=%B | grep -Fqi '[ui evidence]'; then
+            ui_evidence_required=true
+            ui_evidence_reason="commit_marker"
+            validation_profile="full"
+            validation_reason="ui_evidence_requires_full"
+          fi
+          if [ "$ui_evidence_required" = "true" ]; then
+            ui_interaction_contract_required=true
+            home_ui_contract_required=true
+            paste_matrix_contract_required=true
+          fi
+
+          xcode_build_required=false
+          xcode_build_skip_reason="non_app_build_related_full_validation"
+          if [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] || [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ]; then
+            xcode_build_required=true
+            xcode_build_skip_reason=""
+          elif [ "$validation_profile" = "fast" ]; then
+            xcode_build_skip_reason="fast_followup_reuses_candidate_full_validation"
+          elif [ "$app_build_changed" = "true" ] || [ "$ui_evidence_required" = "true" ]; then
+            xcode_build_required=true
+            xcode_build_skip_reason=""
+          fi
+
+          koharu_validator_extended_required=false
+          if [ "$koharu_contract_required" = "true" ] && { [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ] || grep -E '^(scripts/validate-koharu-artifacts\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; }; then
+            koharu_validator_extended_required=true
           fi
 
           {
             echo "xcode_build_required=$xcode_build_required"
             echo "xcode_build_skip_reason=$xcode_build_skip_reason"
+            echo "validation_profile=$validation_profile"
+            echo "validation_reason=$validation_reason"
+            echo "reused_full_validation_sha=$reused_full_validation_sha"
+            echo "reused_full_validation_state=$reused_full_validation_state"
+            echo "candidate_parent_sha=$candidate_parent_sha"
+            echo "candidate_parent_full_validation_state=$candidate_parent_full_validation_state"
+            echo "candidate_incremental_metadata_only=$candidate_incremental_metadata_only"
+            echo "receipt_propagation_allowed=$receipt_propagation_allowed"
+            echo "speech_contract_required=$speech_contract_required"
+            echo "ui_interaction_contract_required=$ui_interaction_contract_required"
+            echo "home_ui_contract_required=$home_ui_contract_required"
+            echo "paste_matrix_contract_required=$paste_matrix_contract_required"
+            echo "koharu_contract_required=$koharu_contract_required"
+            echo "ui_evidence_required=$ui_evidence_required"
+            echo "ui_evidence_reason=$ui_evidence_reason"
             echo "koharu_validator_extended_required=$koharu_validator_extended_required"
             echo "scope_diff_method=$scope_diff_method"
             echo "scope_diff_base_sha=$scope_diff_base_sha"
@@ -236,6 +440,8 @@ jobs:
           {
             echo "XCODE_BUILD_REQUIRED=$xcode_build_required"
             echo "XCODE_BUILD_SKIP_REASON=$xcode_build_skip_reason"
+            echo "VALIDATION_PROFILE=$validation_profile"
+            echo "VALIDATION_REASON=$validation_reason"
             echo "KOHARU_VALIDATOR_EXTENDED_REQUIRED=$koharu_validator_extended_required"
             echo "SCOPE_DIFF_METHOD=$scope_diff_method"
             echo "SCOPE_DIFF_BASE_SHA=$scope_diff_base_sha"
@@ -247,6 +453,11 @@ jobs:
           echo "scope_diff_base_sha=$scope_diff_base_sha"
           echo "scope_diff_fallback_used=$scope_diff_fallback_used"
           echo "xcode_build_required=$xcode_build_required"
+          echo "validation_profile=$validation_profile"
+          echo "validation_reason=$validation_reason"
+          echo "reused_full_validation_sha=$reused_full_validation_sha"
+          echo "reused_full_validation_state=$reused_full_validation_state"
+          echo "ui_evidence_required=$ui_evidence_required"
           echo "koharu_validator_extended_required=$koharu_validator_extended_required"
 
       - name: Restore GGUF model cache
@@ -404,7 +615,7 @@ jobs:
           {
             echo "## Static checks"
             git diff --check
-            python3 -B scripts/test-v192-koharu-line-polygon-warp-contract.py
+            python3 -B scripts/test-v194-ci-validation-tier-contract.py
             bash -n scripts/capture-ui-evidence.sh
             python3 -m json.tool test/1.ground_truth.json >/dev/null
             if [ -f output/probe_report.json ]; then
@@ -417,7 +628,9 @@ jobs:
             else
               echo "output/clean_text_diagnostic.json not present; skipping existing clean text parse"
             fi
-            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
+            if [ "${{ steps.ci_scope.outputs.koharu_contract_required }}" = "true" ]; then
+              python3 -B scripts/test-v192-koharu-line-polygon-warp-contract.py
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
             python3 - <<'PY'
           import json
           with open("ci-results/koharu-valid-fixture-validation.json", "r", encoding="utf-8") as handle:
@@ -589,10 +802,14 @@ jobs:
             else
               echo "Skipping extended Koharu invalid fixture matrix for fast CI scope"
             fi
+            else
+              echo "Skipping Koharu artifact contract suite for task-scoped fast validation"
+            fi
           } 2>&1 | tee "$RESULT_ROOT/static-checks.log"
 
       - name: Speech recognition contract
         id: speech_contract
+        if: steps.ci_scope.outputs.speech_contract_required == 'true'
         shell: bash
         continue-on-error: true
         run: |
@@ -601,6 +818,7 @@ jobs:
 
       - name: UI interaction contract
         id: ui_interaction_contract
+        if: steps.ci_scope.outputs.ui_interaction_contract_required == 'true'
         shell: bash
         continue-on-error: true
         run: |
@@ -609,6 +827,7 @@ jobs:
 
       - name: v1.88 home UI contract
         id: home_ui_contract
+        if: steps.ci_scope.outputs.home_ui_contract_required == 'true'
         shell: bash
         continue-on-error: true
         run: |
@@ -617,6 +836,7 @@ jobs:
 
       - name: v1.89 paste manual matrix contract
         id: v189_paste_matrix_contract
+        if: steps.ci_scope.outputs.paste_matrix_contract_required == 'true'
         shell: bash
         continue-on-error: true
         run: |
@@ -654,15 +874,17 @@ jobs:
           set -euo pipefail
           mkdir -p "$TEST_RESULTS_DIR"
           {
-            echo "Xcode build skipped by fast CI scope."
+            echo "Xcode build skipped by CI validation routing."
             echo "reason=${{ steps.ci_scope.outputs.xcode_build_skip_reason }}"
-            echo "This run changed only docs, metadata, or validator-independent files."
-            echo "Choose workflow_dispatch probe_mode=ci-fast/full or change Swift/Xcode/resources/test files to force build validation."
+            echo "validationProfile=${{ steps.ci_scope.outputs.validation_profile }}"
+            echo "validationReason=${{ steps.ci_scope.outputs.validation_reason }}"
+            echo "reusedFullValidationSha=${{ steps.ci_scope.outputs.reused_full_validation_sha }}"
+            echo "Choose workflow_dispatch validation_profile=full, probe_mode=ci-fast/full, or push a new core code fix when full validation is required."
           } > "$RESULT_ROOT/xcodebuild.log"
 
       - name: Capture current HEAD UI evidence
         id: ui_evidence
-        if: (github.ref_name == 'codeb/v1.87-enterprise-ui' || github.ref_name == 'codeb/v1.88-home-translation-ui' || startsWith(github.ref_name, 'codeb/v1.89-') || startsWith(github.ref_name, 'codeb/v1.9') || startsWith(github.ref_name, 'codeb/v2.')) && steps.ci_scope.outputs.xcode_build_required == 'true' && steps.xcode_build.outcome == 'success'
+        if: steps.ci_scope.outputs.ui_evidence_required == 'true' && steps.ci_scope.outputs.xcode_build_required == 'true' && steps.xcode_build.outcome == 'success'
         timeout-minutes: 25
         shell: bash
         continue-on-error: true
@@ -680,7 +902,7 @@ jobs:
               "$app_path" \
               "$bundle_id" \
               "$RESULT_ROOT/ui-evidence" \
-              "$GITHUB_SHA"
+              "$CI_COMMIT_SHA"
           } 2>&1 | tee "$RESULT_ROOT/ui-evidence.log"
 
       - name: Locate simulator app for manga probe
@@ -1116,7 +1338,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" UI_INTERACTION_STATUS="${{ steps.ui_interaction_contract.outcome }}" SPEECH_STATUS="${{ steps.speech_contract.outcome }}" HOME_UI_STATUS="${{ steps.home_ui_contract.outcome }}" V189_PASTE_MATRIX_STATUS="${{ steps.v189_paste_matrix_contract.outcome }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" XCODE_BUILD_REQUIRED="${{ steps.ci_scope.outputs.xcode_build_required }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" SIMULATOR_BUILD_STATUS="${{ steps.simulator_build.outcome }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
+          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" UI_INTERACTION_STATUS="${{ steps.ui_interaction_contract.outcome }}" UI_INTERACTION_REQUIRED="${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" SPEECH_STATUS="${{ steps.speech_contract.outcome }}" SPEECH_REQUIRED="${{ steps.ci_scope.outputs.speech_contract_required }}" HOME_UI_STATUS="${{ steps.home_ui_contract.outcome }}" HOME_UI_REQUIRED="${{ steps.ci_scope.outputs.home_ui_contract_required }}" V189_PASTE_MATRIX_STATUS="${{ steps.v189_paste_matrix_contract.outcome }}" V189_PASTE_MATRIX_REQUIRED="${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" UI_EVIDENCE_STATUS="${{ steps.ui_evidence.outcome }}" UI_EVIDENCE_REQUIRED="${{ steps.ci_scope.outputs.ui_evidence_required }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" XCODE_BUILD_REQUIRED="${{ steps.ci_scope.outputs.xcode_build_required }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" SIMULATOR_BUILD_STATUS="${{ steps.simulator_build.outcome }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
           import os
           import xml.etree.ElementTree as ET
 
@@ -1134,13 +1356,19 @@ jobs:
           build_status = os.environ["BUILD_STATUS"]
           if os.environ["XCODE_BUILD_REQUIRED"] != "true" and build_status == "skipped":
               build_status = "success"
+          def scoped_status(status, required):
+              if required != "true" and status == "skipped":
+                  return "success"
+              return status
           cases = [
               ("gguf-model", model_status, "GGUF model setup failed"),
               ("static-checks", os.environ["STATIC_STATUS"], "static checks failed"),
-              ("speech-recognition-contract", os.environ.get("SPEECH_STATUS", "skipped"), "speech recognition contract failed"),
-              ("ui-interaction-contract", os.environ["UI_INTERACTION_STATUS"], "v1.87 UI interaction contract failed"),
-              ("v188-home-ui-contract", os.environ["HOME_UI_STATUS"], "v1.88 home UI contract failed"),
+              ("speech-recognition-contract", scoped_status(os.environ.get("SPEECH_STATUS", "skipped"), os.environ["SPEECH_REQUIRED"]), "speech recognition contract failed"),
+              ("ui-interaction-contract", scoped_status(os.environ["UI_INTERACTION_STATUS"], os.environ["UI_INTERACTION_REQUIRED"]), "v1.87 UI interaction contract failed"),
+              ("v188-home-ui-contract", scoped_status(os.environ["HOME_UI_STATUS"], os.environ["HOME_UI_REQUIRED"]), "v1.88 home UI contract failed"),
+              ("v189-paste-matrix-contract", scoped_status(os.environ["V189_PASTE_MATRIX_STATUS"], os.environ["V189_PASTE_MATRIX_REQUIRED"]), "v1.89 paste matrix contract failed"),
               ("xcode-build", build_status, "xcode build failed"),
+              ("ui-evidence", scoped_status(os.environ["UI_EVIDENCE_STATUS"], os.environ["UI_EVIDENCE_REQUIRED"]), "UI evidence failed"),
               ("simulator-build", simulator_status, "simulator build failed"),
               ("manga-probe", probe_status, "manga probe failed"),
           ]
@@ -1163,7 +1391,7 @@ jobs:
         env:
           MANIFEST_XCODE_BUILD_REQUIRED: ${{ steps.ci_scope.outputs.xcode_build_required }}
           MANIFEST_XCODE_BUILD_SKIPPED_REASON: ${{ steps.ci_scope.outputs.xcode_build_skip_reason }}
-          MANIFEST_UI_EVIDENCE_REQUIRED: ${{ (github.ref_name == 'codeb/v1.87-enterprise-ui' || github.ref_name == 'codeb/v1.88-home-translation-ui' || startsWith(github.ref_name, 'codeb/v1.89-') || startsWith(github.ref_name, 'codeb/v1.9') || startsWith(github.ref_name, 'codeb/v2.')) && steps.ci_scope.outputs.xcode_build_required == 'true' }}
+          MANIFEST_UI_EVIDENCE_REQUIRED: ${{ steps.ci_scope.outputs.ui_evidence_required }}
           MANIFEST_UI_EVIDENCE_OUTCOME: ${{ steps.ui_evidence.outcome }}
           MANIFEST_UI_INTERACTION_CONTRACT_OUTCOME: ${{ steps.ui_interaction_contract.outcome }}
         run: |
@@ -1309,7 +1537,7 @@ jobs:
           manifest = {
               "version": "${{ steps.meta.outputs.version }}",
               "branch": "${{ steps.meta.outputs.branch }}",
-              "commitSha": "${GITHUB_SHA}",
+              "commitSha": "${CI_COMMIT_SHA}",
               "shortSha": "${{ steps.meta.outputs.short_sha }}",
               "runId": "${GITHUB_RUN_ID}",
               "runAttempt": "${GITHUB_RUN_ATTEMPT}",
@@ -1320,14 +1548,28 @@ jobs:
               "destination": "${DESTINATION}",
               "resultBundlePath": "${{ steps.meta.outputs.result_bundle }}",
               "changedFilesPath": "${RESULT_ROOT}/changed-files.txt",
+              "validationProfile": "${{ steps.ci_scope.outputs.validation_profile }}",
+              "validationReason": "${{ steps.ci_scope.outputs.validation_reason }}",
+              "requestedValidationProfile": "${{ steps.meta.outputs.requested_validation_profile }}",
+              "reusedFullValidationSha": "${{ steps.ci_scope.outputs.reused_full_validation_sha }}" or None,
+              "reusedFullValidationState": "${{ steps.ci_scope.outputs.reused_full_validation_state }}",
+              "candidateParentSha": "${{ steps.ci_scope.outputs.candidate_parent_sha }}" or None,
+              "candidateParentFullValidationState": "${{ steps.ci_scope.outputs.candidate_parent_full_validation_state }}",
+              "receiptPropagationAllowed": "${{ steps.ci_scope.outputs.receipt_propagation_allowed }}" == "true",
               "xcodeBuildRequired": "$MANIFEST_XCODE_BUILD_REQUIRED" == "true",
               "xcodeBuildSkippedReason": "$MANIFEST_XCODE_BUILD_SKIPPED_REASON",
               "uiEvidenceRequired": "$MANIFEST_UI_EVIDENCE_REQUIRED" == "true",
+              "uiEvidenceReason": "${{ steps.ci_scope.outputs.ui_evidence_reason }}",
               "uiEvidenceOutcome": "$MANIFEST_UI_EVIDENCE_OUTCOME",
               "uiEvidenceManifestPath": "${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json",
               "uiEvidenceLogPath": "${RESULT_ROOT}/ui-evidence.log",
               "uiInteractionContractOutcome": "$MANIFEST_UI_INTERACTION_CONTRACT_OUTCOME",
+              "uiInteractionContractRequired": "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" == "true",
               "uiInteractionContractLogPath": "${RESULT_ROOT}/ui-interaction-contract.log",
+              "speechRecognitionContractRequired": "${{ steps.ci_scope.outputs.speech_contract_required }}" == "true",
+              "v188HomeUIContractRequired": "${{ steps.ci_scope.outputs.home_ui_contract_required }}" == "true",
+              "v189PasteManualMatrixContractRequired": "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" == "true",
+              "koharuContractRequired": "${{ steps.ci_scope.outputs.koharu_contract_required }}" == "true",
               "koharuValidatorExtendedRequired": "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" == "true",
               "simulatorAppReusedFromXcodeBuild": "${{ steps.meta.outputs.probe_mode }}" != "skip" and "${{ steps.simulator_build.outcome }}" == "success",
               "simulatorAppPath": "${{ steps.simulator_build.outputs.simulator_app_path }}",
@@ -1722,7 +1964,7 @@ jobs:
             echo "# AITRANS CI Failure Summary"
             echo
             echo "- branch: ${{ steps.meta.outputs.branch }}"
-            echo "- commitSha: ${GITHUB_SHA}"
+            echo "- commitSha: ${CI_COMMIT_SHA}"
             echo "- runId: ${GITHUB_RUN_ID}"
             echo "- runAttempt: ${GITHUB_RUN_ATTEMPT}"
             echo "- runUrl: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
@@ -1755,6 +1997,20 @@ jobs:
             echo "- Koharu artifact injection: ${{ steps.koharu_artifacts.outcome }} / ${{ steps.koharu_artifacts.outputs.status }}"
             echo "- Xcode build required: ${{ steps.ci_scope.outputs.xcode_build_required }}"
             echo "- Xcode build skip reason: ${{ steps.ci_scope.outputs.xcode_build_skip_reason }}"
+            echo "- validation profile: ${{ steps.ci_scope.outputs.validation_profile }}"
+            echo "- validation reason: ${{ steps.ci_scope.outputs.validation_reason }}"
+            echo "- reused full validation SHA: ${{ steps.ci_scope.outputs.reused_full_validation_sha }}"
+            echo "- reused full validation state: ${{ steps.ci_scope.outputs.reused_full_validation_state }}"
+            echo "- candidate parent SHA: ${{ steps.ci_scope.outputs.candidate_parent_sha }}"
+            echo "- candidate parent full-validation state: ${{ steps.ci_scope.outputs.candidate_parent_full_validation_state }}"
+            echo "- receipt propagation allowed: ${{ steps.ci_scope.outputs.receipt_propagation_allowed }}"
+            echo "- Speech contract required: ${{ steps.ci_scope.outputs.speech_contract_required }}"
+            echo "- UI interaction contract required: ${{ steps.ci_scope.outputs.ui_interaction_contract_required }}"
+            echo "- home UI contract required: ${{ steps.ci_scope.outputs.home_ui_contract_required }}"
+            echo "- paste matrix contract required: ${{ steps.ci_scope.outputs.paste_matrix_contract_required }}"
+            echo "- Koharu contract required: ${{ steps.ci_scope.outputs.koharu_contract_required }}"
+            echo "- UI evidence required: ${{ steps.ci_scope.outputs.ui_evidence_required }}"
+            echo "- UI evidence reason: ${{ steps.ci_scope.outputs.ui_evidence_reason }}"
             echo "- extended Koharu validator matrix: ${{ steps.ci_scope.outputs.koharu_validator_extended_required }}"
             echo "- GGUF cache hit: ${{ steps.gguf_cache.outputs.cache-hit }}"
             echo "- GGUF download: ${{ steps.download_model.outcome }}"
@@ -1898,7 +2154,7 @@ jobs:
               echo "- active artifact validator output missing; inspect static checks."
             fi
             echo
-            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.speech_contract.outcome }}" != "success" ] || [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ] || [ "${{ steps.home_ui_contract.outcome }}" != "success" ] || { [[ "${GITHUB_REF_NAME}" == codeb/v1.89-* ]] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { { [[ "${GITHUB_REF_NAME}" == "codeb/v1.87-enterprise-ui" || "${GITHUB_REF_NAME}" == "codeb/v1.88-home-translation-ui" ]] || [[ "${GITHUB_REF_NAME}" == codeb/v1.89-* ]] || [[ "${GITHUB_REF_NAME}" == codeb/v1.9* ]] || [[ "${GITHUB_REF_NAME}" == codeb/v2.* ]]; } && [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
               echo "## Return to Agent B"
               echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
             else
@@ -1912,6 +2168,7 @@ jobs:
           } > "$RESULT_ROOT/ci-failure-summary.md"
 
       - name: Upload CI result bundle
+        id: upload_results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -1919,11 +2176,36 @@ jobs:
           path: ci-results
           retention-days: 14
 
+      - name: Publish full validation receipt
+        if: always() && (steps.ci_scope.outputs.validation_profile == 'full' || steps.ci_scope.outputs.receipt_propagation_allowed == 'true') && github.event_name != 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          state=success
+          description="Task-scoped full validation passed"
+          if [ "${{ steps.ci_scope.outputs.receipt_propagation_allowed }}" = "true" ]; then
+            description="Reused successful parent full validation"
+          fi
+          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; } || [ "${{ steps.upload_results.outcome }}" != "success" ]; then
+            state=failure
+            description="Task-scoped full validation failed"
+          fi
+          gh api \
+            --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/statuses/${CI_COMMIT_SHA}" \
+            -f state="$state" \
+            -f context='AITRANS CI/full-validation' \
+            -f description="$description" \
+            -f target_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
       - name: Fail job if checks failed
         if: always()
         shell: bash
         run: |
-          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || [ "${{ steps.speech_contract.outcome }}" != "success" ] || [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ] || [ "${{ steps.home_ui_contract.outcome }}" != "success" ] || { [[ "${GITHUB_REF_NAME}" == codeb/v1.89-* ]] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { { [[ "${GITHUB_REF_NAME}" == "codeb/v1.87-enterprise-ui" || "${GITHUB_REF_NAME}" == "codeb/v1.88-home-translation-ui" ]] || [[ "${GITHUB_REF_NAME}" == codeb/v1.89-* ]] || [[ "${GITHUB_REF_NAME}" == codeb/v1.9* ]] || [[ "${GITHUB_REF_NAME}" == codeb/v2.* ]]; } && [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; } || [ "${{ steps.upload_results.outcome }}" != "success" ]; then
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi
