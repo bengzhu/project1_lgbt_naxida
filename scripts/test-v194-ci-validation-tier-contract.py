@@ -113,6 +113,13 @@ class CIValidationTierContractTests(unittest.TestCase):
             self.assertIn(key, self.workflow)
         self.assertIn('"commitSha": "${CI_COMMIT_SHA}"', self.workflow)
 
+    def test_large_manifest_script_has_no_inline_actions_expressions(self) -> None:
+        manifest_step = self.workflow.split("      - name: Write manifest", 1)[1]
+        manifest_step = manifest_step.split("      - name: Append v1.88", 1)[0]
+        run_script = manifest_step.split("        run: |", 1)[1]
+        self.assertNotIn("${{", run_script)
+        self.assertIn('os.environ["MANIFEST_VALIDATION_PROFILE"]', run_script)
+
     def test_ipa_packaging_is_manual_only(self) -> None:
         trigger = self.ipa_workflow.split("jobs:", 1)[0]
         self.assertIn("  workflow_dispatch:", trigger)

@@ -1394,6 +1394,45 @@ jobs:
           MANIFEST_UI_EVIDENCE_REQUIRED: ${{ steps.ci_scope.outputs.ui_evidence_required }}
           MANIFEST_UI_EVIDENCE_OUTCOME: ${{ steps.ui_evidence.outcome }}
           MANIFEST_UI_INTERACTION_CONTRACT_OUTCOME: ${{ steps.ui_interaction_contract.outcome }}
+          MANIFEST_VERSION: ${{ steps.meta.outputs.version }}
+          MANIFEST_BRANCH: ${{ steps.meta.outputs.branch }}
+          MANIFEST_SHORT_SHA: ${{ steps.meta.outputs.short_sha }}
+          MANIFEST_RESULT_BUNDLE: ${{ steps.meta.outputs.result_bundle }}
+          MANIFEST_VALIDATION_PROFILE: ${{ steps.ci_scope.outputs.validation_profile }}
+          MANIFEST_VALIDATION_REASON: ${{ steps.ci_scope.outputs.validation_reason }}
+          MANIFEST_REQUESTED_VALIDATION_PROFILE: ${{ steps.meta.outputs.requested_validation_profile }}
+          MANIFEST_REUSED_FULL_VALIDATION_SHA: ${{ steps.ci_scope.outputs.reused_full_validation_sha }}
+          MANIFEST_REUSED_FULL_VALIDATION_STATE: ${{ steps.ci_scope.outputs.reused_full_validation_state }}
+          MANIFEST_CANDIDATE_PARENT_SHA: ${{ steps.ci_scope.outputs.candidate_parent_sha }}
+          MANIFEST_CANDIDATE_PARENT_FULL_VALIDATION_STATE: ${{ steps.ci_scope.outputs.candidate_parent_full_validation_state }}
+          MANIFEST_RECEIPT_PROPAGATION_ALLOWED: ${{ steps.ci_scope.outputs.receipt_propagation_allowed }}
+          MANIFEST_UI_EVIDENCE_REASON: ${{ steps.ci_scope.outputs.ui_evidence_reason }}
+          MANIFEST_UI_INTERACTION_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.ui_interaction_contract_required }}
+          MANIFEST_SPEECH_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.speech_contract_required }}
+          MANIFEST_HOME_UI_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.home_ui_contract_required }}
+          MANIFEST_PASTE_MATRIX_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.paste_matrix_contract_required }}
+          MANIFEST_KOHARU_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.koharu_contract_required }}
+          MANIFEST_KOHARU_VALIDATOR_EXTENDED_REQUIRED: ${{ steps.ci_scope.outputs.koharu_validator_extended_required }}
+          MANIFEST_SIMULATOR_BUILD_OUTCOME: ${{ steps.simulator_build.outcome }}
+          MANIFEST_SIMULATOR_APP_PATH: ${{ steps.simulator_build.outputs.simulator_app_path }}
+          MANIFEST_KOHARU_ARTIFACT_REQUESTED: ${{ steps.meta.outputs.koharu_artifact_requested }}
+          MANIFEST_KOHARU_ARTIFACT_REQUIRED: ${{ steps.meta.outputs.koharu_artifact_required }}
+          MANIFEST_KOHARU_ARTIFACT_STATUS: ${{ steps.koharu_artifacts.outputs.status }}
+          MANIFEST_KOHARU_ARTIFACT_OUTCOME: ${{ steps.koharu_artifacts.outcome }}
+          MANIFEST_KOHARU_ARTIFACT_INJECTED: ${{ steps.koharu_artifacts.outputs.injected }}
+          MANIFEST_KOHARU_ARTIFACT_RELEASE_TAG: ${{ steps.meta.outputs.koharu_artifact_release_tag }}
+          MANIFEST_KOHARU_ARTIFACT_ASSET: ${{ steps.meta.outputs.koharu_artifact_asset }}
+          MANIFEST_KOHARU_ARTIFACT_SHA256: ${{ steps.meta.outputs.koharu_artifact_sha256 }}
+          MANIFEST_STATIC_CHECKS_OUTCOME: ${{ steps.static_checks.outcome }}
+          MANIFEST_PROBE_MODE: ${{ steps.meta.outputs.probe_mode }}
+          MANIFEST_PROBE_TIMEOUT_SECONDS: ${{ steps.meta.outputs.probe_timeout_seconds }}
+          MANIFEST_PROBE_STALL_TIMEOUT_SECONDS: ${{ steps.meta.outputs.probe_stall_timeout_seconds }}
+          MANIFEST_PROBE_NO_PROGRESS_TIMEOUT_SECONDS: ${{ steps.meta.outputs.probe_no_progress_timeout_seconds }}
+          MANIFEST_MODEL_CACHE_HIT: ${{ steps.gguf_cache.outputs.cache-hit }}
+          MANIFEST_MODEL_DOWNLOAD_OUTCOME: ${{ steps.download_model.outcome }}
+          MANIFEST_MODEL_VERIFY_OUTCOME: ${{ steps.verify_model.outcome }}
+          MANIFEST_XCODE_BUILD_OUTCOME: ${{ steps.xcode_build.outcome }}
+          MANIFEST_MANGA_PROBE_OUTCOME: ${{ steps.manga_probe.outcome }}
         run: |
           set -euo pipefail
           xcode_version="$(xcodebuild -version | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
@@ -1418,6 +1457,7 @@ jobs:
           fi
           python3 - <<PY
           import json
+          import os
           from pathlib import Path
 
           def load_json(path):
@@ -1535,10 +1575,10 @@ jobs:
               return summary
 
           manifest = {
-              "version": "${{ steps.meta.outputs.version }}",
-              "branch": "${{ steps.meta.outputs.branch }}",
+              "version": os.environ["MANIFEST_VERSION"],
+              "branch": os.environ["MANIFEST_BRANCH"],
               "commitSha": "${CI_COMMIT_SHA}",
-              "shortSha": "${{ steps.meta.outputs.short_sha }}",
+              "shortSha": os.environ["MANIFEST_SHORT_SHA"],
               "runId": "${GITHUB_RUN_ID}",
               "runAttempt": "${GITHUB_RUN_ATTEMPT}",
               "workflowName": "${GITHUB_WORKFLOW}",
@@ -1546,51 +1586,51 @@ jobs:
               "xcodeVersion": "$xcode_version",
               "scheme": "${SCHEME}",
               "destination": "${DESTINATION}",
-              "resultBundlePath": "${{ steps.meta.outputs.result_bundle }}",
+              "resultBundlePath": os.environ["MANIFEST_RESULT_BUNDLE"],
               "changedFilesPath": "${RESULT_ROOT}/changed-files.txt",
-              "validationProfile": "${{ steps.ci_scope.outputs.validation_profile }}",
-              "validationReason": "${{ steps.ci_scope.outputs.validation_reason }}",
-              "requestedValidationProfile": "${{ steps.meta.outputs.requested_validation_profile }}",
-              "reusedFullValidationSha": "${{ steps.ci_scope.outputs.reused_full_validation_sha }}" or None,
-              "reusedFullValidationState": "${{ steps.ci_scope.outputs.reused_full_validation_state }}",
-              "candidateParentSha": "${{ steps.ci_scope.outputs.candidate_parent_sha }}" or None,
-              "candidateParentFullValidationState": "${{ steps.ci_scope.outputs.candidate_parent_full_validation_state }}",
-              "receiptPropagationAllowed": "${{ steps.ci_scope.outputs.receipt_propagation_allowed }}" == "true",
+              "validationProfile": os.environ["MANIFEST_VALIDATION_PROFILE"],
+              "validationReason": os.environ["MANIFEST_VALIDATION_REASON"],
+              "requestedValidationProfile": os.environ["MANIFEST_REQUESTED_VALIDATION_PROFILE"],
+              "reusedFullValidationSha": os.environ.get("MANIFEST_REUSED_FULL_VALIDATION_SHA") or None,
+              "reusedFullValidationState": os.environ["MANIFEST_REUSED_FULL_VALIDATION_STATE"],
+              "candidateParentSha": os.environ.get("MANIFEST_CANDIDATE_PARENT_SHA") or None,
+              "candidateParentFullValidationState": os.environ["MANIFEST_CANDIDATE_PARENT_FULL_VALIDATION_STATE"],
+              "receiptPropagationAllowed": os.environ["MANIFEST_RECEIPT_PROPAGATION_ALLOWED"] == "true",
               "xcodeBuildRequired": "$MANIFEST_XCODE_BUILD_REQUIRED" == "true",
               "xcodeBuildSkippedReason": "$MANIFEST_XCODE_BUILD_SKIPPED_REASON",
               "uiEvidenceRequired": "$MANIFEST_UI_EVIDENCE_REQUIRED" == "true",
-              "uiEvidenceReason": "${{ steps.ci_scope.outputs.ui_evidence_reason }}",
+              "uiEvidenceReason": os.environ["MANIFEST_UI_EVIDENCE_REASON"],
               "uiEvidenceOutcome": "$MANIFEST_UI_EVIDENCE_OUTCOME",
               "uiEvidenceManifestPath": "${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json",
               "uiEvidenceLogPath": "${RESULT_ROOT}/ui-evidence.log",
               "uiInteractionContractOutcome": "$MANIFEST_UI_INTERACTION_CONTRACT_OUTCOME",
-              "uiInteractionContractRequired": "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" == "true",
+              "uiInteractionContractRequired": os.environ["MANIFEST_UI_INTERACTION_CONTRACT_REQUIRED"] == "true",
               "uiInteractionContractLogPath": "${RESULT_ROOT}/ui-interaction-contract.log",
-              "speechRecognitionContractRequired": "${{ steps.ci_scope.outputs.speech_contract_required }}" == "true",
-              "v188HomeUIContractRequired": "${{ steps.ci_scope.outputs.home_ui_contract_required }}" == "true",
-              "v189PasteManualMatrixContractRequired": "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" == "true",
-              "koharuContractRequired": "${{ steps.ci_scope.outputs.koharu_contract_required }}" == "true",
-              "koharuValidatorExtendedRequired": "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" == "true",
-              "simulatorAppReusedFromXcodeBuild": "${{ steps.meta.outputs.probe_mode }}" != "skip" and "${{ steps.simulator_build.outcome }}" == "success",
-              "simulatorAppPath": "${{ steps.simulator_build.outputs.simulator_app_path }}",
+              "speechRecognitionContractRequired": os.environ["MANIFEST_SPEECH_CONTRACT_REQUIRED"] == "true",
+              "v188HomeUIContractRequired": os.environ["MANIFEST_HOME_UI_CONTRACT_REQUIRED"] == "true",
+              "v189PasteManualMatrixContractRequired": os.environ["MANIFEST_PASTE_MATRIX_CONTRACT_REQUIRED"] == "true",
+              "koharuContractRequired": os.environ["MANIFEST_KOHARU_CONTRACT_REQUIRED"] == "true",
+              "koharuValidatorExtendedRequired": os.environ["MANIFEST_KOHARU_VALIDATOR_EXTENDED_REQUIRED"] == "true",
+              "simulatorAppReusedFromXcodeBuild": os.environ["MANIFEST_PROBE_MODE"] != "skip" and os.environ["MANIFEST_SIMULATOR_BUILD_OUTCOME"] == "success",
+              "simulatorAppPath": os.environ.get("MANIFEST_SIMULATOR_APP_PATH", ""),
               "junitPath": "${RESULT_ROOT}/junit.xml",
               "xcodebuildLogPath": "${RESULT_ROOT}/xcodebuild.log",
               "simulatorBuildLogPath": "${RESULT_ROOT}/simulator-build.log",
               "mangaProbeLogPath": "${RESULT_ROOT}/manga-probe.log",
               "appConsoleLogPath": "${RESULT_ROOT}/app-console.log",
               "staticChecksLogPath": "${RESULT_ROOT}/static-checks.log",
-              "koharuArtifactInjectionRequested": "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true",
-              "koharuArtifactInjectionRequired": "${{ steps.meta.outputs.koharu_artifact_required }}" == "true",
-              "koharuArtifactInjectionStatus": "${{ steps.koharu_artifacts.outputs.status }}",
-              "koharuArtifactInjectionOutcome": "${{ steps.koharu_artifacts.outcome }}",
-              "koharuArtifactInjected": "${{ steps.koharu_artifacts.outputs.injected }}" == "true",
+              "koharuArtifactInjectionRequested": os.environ["MANIFEST_KOHARU_ARTIFACT_REQUESTED"] == "true",
+              "koharuArtifactInjectionRequired": os.environ["MANIFEST_KOHARU_ARTIFACT_REQUIRED"] == "true",
+              "koharuArtifactInjectionStatus": os.environ.get("MANIFEST_KOHARU_ARTIFACT_STATUS", ""),
+              "koharuArtifactInjectionOutcome": os.environ.get("MANIFEST_KOHARU_ARTIFACT_OUTCOME", ""),
+              "koharuArtifactInjected": os.environ.get("MANIFEST_KOHARU_ARTIFACT_INJECTED") == "true",
               "koharuArtifactInjectionLogPath": "$koharu_injection_log_path",
-              "koharuArtifactReleaseTag": "${{ steps.meta.outputs.koharu_artifact_release_tag }}",
-              "koharuArtifactAsset": "${{ steps.meta.outputs.koharu_artifact_asset }}",
-              "koharuArtifactSha256": "${{ steps.meta.outputs.koharu_artifact_sha256 }}",
+              "koharuArtifactReleaseTag": os.environ.get("MANIFEST_KOHARU_ARTIFACT_RELEASE_TAG", ""),
+              "koharuArtifactAsset": os.environ.get("MANIFEST_KOHARU_ARTIFACT_ASSET", ""),
+              "koharuArtifactSha256": os.environ.get("MANIFEST_KOHARU_ARTIFACT_SHA256", ""),
               "koharuArtifactValidatorLogPath": "${RESULT_ROOT}/static-checks.log",
               "koharuActiveArtifactValidationPath": "$koharu_validation_path",
-              "koharuArtifactValidatorRan": "${{ steps.static_checks.outcome }}" == "success",
+              "koharuArtifactValidatorRan": os.environ["MANIFEST_STATIC_CHECKS_OUTCOME"] == "success",
               "koharuActiveArtifactsDirectoryPresent": "$koharu_active_artifacts_present" == "true",
               "koharuArtifactValidation": koharu_validation,
               "koharuArtifactValidationIdentitySummary": validator_identity,
@@ -1687,12 +1727,12 @@ jobs:
               "cleanTextDiagnosticPath": "$clean_path",
               "ocrProbeTextPath": "$ocr_text_path",
               "probeProgressPath": "$probe_progress_path",
-              "probeMode": "${{ steps.meta.outputs.probe_mode }}",
-              "probeFastPathEnabled": "${{ steps.meta.outputs.probe_mode }}" == "ci-fast",
-              "probeSkippedReason": "default_push_fast_ci_or_manual_skip" if "${{ steps.meta.outputs.probe_mode }}" == "skip" else None,
-              "probeTimeoutSeconds": int("${{ steps.meta.outputs.probe_timeout_seconds }}"),
-              "probeStallTimeoutSeconds": int("${{ steps.meta.outputs.probe_stall_timeout_seconds }}"),
-              "probeNoProgressTimeoutSeconds": int("${{ steps.meta.outputs.probe_no_progress_timeout_seconds }}"),
+              "probeMode": os.environ["MANIFEST_PROBE_MODE"],
+              "probeFastPathEnabled": os.environ["MANIFEST_PROBE_MODE"] == "ci-fast",
+              "probeSkippedReason": "default_push_fast_ci_or_manual_skip" if os.environ["MANIFEST_PROBE_MODE"] == "skip" else None,
+              "probeTimeoutSeconds": int(os.environ["MANIFEST_PROBE_TIMEOUT_SECONDS"]),
+              "probeStallTimeoutSeconds": int(os.environ["MANIFEST_PROBE_STALL_TIMEOUT_SECONDS"]),
+              "probeNoProgressTimeoutSeconds": int(os.environ["MANIFEST_PROBE_NO_PROGRESS_TIMEOUT_SECONDS"]),
               "probeDurationSeconds": (probe_progress or {}).get("elapsedSeconds"),
               "probeStageDurationsSeconds": (probe_progress or {}).get("stageDurationsSeconds"),
               "probeSkippedDiagnostics": probe_configuration.get("skippedDiagnostics") or (probe_progress or {}).get("skippedDiagnostics") or [],
@@ -1706,9 +1746,9 @@ jobs:
                       "manga_probe_progress.json",
                       "1_probe_contact_sheet.png",
                   ]
-                  if "${{ steps.meta.outputs.probe_mode }}" == "full"
+                  if os.environ["MANIFEST_PROBE_MODE"] == "full"
                   else []
-                  if "${{ steps.meta.outputs.probe_mode }}" == "skip"
+                  if os.environ["MANIFEST_PROBE_MODE"] == "skip"
                   else [
                       "probe_report.json",
                       "clean_text_diagnostic.json",
@@ -1733,16 +1773,16 @@ jobs:
               "modelAsset": "${MODEL_ASSET}",
               "modelSha256": "${MODEL_SHA256}",
               "modelCacheKey": "gguf-${MODEL_TAG}-${MODEL_SHA256}",
-              "modelCacheHit": "${{ steps.gguf_cache.outputs.cache-hit }}",
+              "modelCacheHit": os.environ.get("MANIFEST_MODEL_CACHE_HIT", ""),
               "modelLocalPath": "${MODEL_CACHE_DIR}/${MODEL_ASSET}",
-              "modelSetupSkippedReason": "probe_mode_skip_fast_ci_does_not_need_model" if "${{ steps.meta.outputs.probe_mode }}" == "skip" else None,
-              "modelDownloadOutcome": "${{ steps.download_model.outcome }}",
-              "modelVerifyOutcome": "${{ steps.verify_model.outcome }}",
-              "staticChecksOutcome": "${{ steps.static_checks.outcome }}",
-              "xcodeBuildOutcome": "${{ steps.xcode_build.outcome }}",
-              "simulatorBuildOutcome": "${{ steps.simulator_build.outcome }}",
-              "mangaProbeOutcome": "${{ steps.manga_probe.outcome }}",
-              "probeRunInWorkflow": "${{ steps.manga_probe.outcome }}" == "success",
+              "modelSetupSkippedReason": "probe_mode_skip_fast_ci_does_not_need_model" if os.environ["MANIFEST_PROBE_MODE"] == "skip" else None,
+              "modelDownloadOutcome": os.environ["MANIFEST_MODEL_DOWNLOAD_OUTCOME"],
+              "modelVerifyOutcome": os.environ["MANIFEST_MODEL_VERIFY_OUTCOME"],
+              "staticChecksOutcome": os.environ["MANIFEST_STATIC_CHECKS_OUTCOME"],
+              "xcodeBuildOutcome": os.environ["MANIFEST_XCODE_BUILD_OUTCOME"],
+              "simulatorBuildOutcome": os.environ["MANIFEST_SIMULATOR_BUILD_OUTCOME"],
+              "mangaProbeOutcome": os.environ["MANIFEST_MANGA_PROBE_OUTCOME"],
+              "probeRunInWorkflow": os.environ["MANIFEST_MANGA_PROBE_OUTCOME"] == "success",
               "probeRunNote": "probe_mode=skip runs fast CI without simulator probe; ci-fast/full install the reused simulator app, import model.gguf into the app container, launch with AITRANS_RUN_MANGA_PROBE=1 and AITRANS_MANGA_PROBE_MODE, and export output/ when successful.",
               "encryptedPackageArtifactUsedForReview": False
           }

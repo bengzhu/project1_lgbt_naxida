@@ -131,7 +131,9 @@
 - `AITRANS - Build IPA` 移除 `smalldata_test` push trigger，仅在软件包交付时手动 dispatch，日常 merge 不再重复 Release archive、加密、fakesign 和 IPA package。
 - `ci-artifact-manifest.json`、JUnit、failure summary 与最终 gate 记录/消费 validation profile、reason、复用 receipt、领域 required flags、UI evidence reason 和 Xcode skip reason。新增 `scripts/test-v194-ci-validation-tier-contract.py` 锁定分层行为。
 
-本地轻量验证：v1.94 CI tier contract 8/8、Speech contract 14/14、UI interaction 7/7、v1.88 home UI 7/7、v1.89 paste matrix 4/4 通过；两个 workflow YAML 可解析，所有内嵌 bash block `bash -n` 通过，`capture-ui-evidence.sh` syntax、三个基线 JSON、`MARKETING_VERSION=1.94` 唯一值与 `git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证；候选核心 commit 只触发一次 full，PR 与 merge 用 fast 验证分层本身。
+本地轻量验证：v1.94 CI tier contract 9/9、Speech contract 14/14、UI interaction 7/7、v1.88 home UI 7/7、v1.89 paste matrix 4/4 通过；两个 workflow YAML 可解析，所有内嵌 bash block `bash -n` 通过，`capture-ui-evidence.sh` syntax、三个基线 JSON、`MARKETING_VERSION=1.94` 唯一值与 `git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证；候选核心 commit 只触发一次 full，PR 与 merge 用 fast 验证分层本身。
+
+首轮云端 run `29231418192` 在 job 创建前失败，GitHub annotation 明确为 `.github/workflows/ci-results.yml` manifest step `Exceeded max expression length 21000`；没有 jobs、日志或 artifact，且没有触发 Build IPA。修复将超大 manifest `run:` 内的 Actions expressions 全部移到 step `env`，Python 只读环境变量，并由 v1.94 contract 锁定 manifest script 不再内联 `${{ ... }}`，防止字段增长再次越过 GitHub 表达式上限。该失败属于 CI 配置，按规则修复 SHA 必须重新 full。
 
 非目标与遗留：不改变 Koharu report-only/active artifact 边界，不伪造真实四件套，不改善 WER/CER，不调整 App UI；本轮未跑漫画探针，不追加 `metrics/version_history.csv`。
 
