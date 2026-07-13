@@ -204,6 +204,14 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         self.assertIn("store.audioRecognitionState == .translating", live_panel)
         self.assertIn('title: "取消翻译"', live_panel)
         self.assertIn("action: store.cancelAudioRecognition", live_panel)
+        file_actions = swift_body(audio_views, "@ViewBuilder private var actions: some View")
+        cancel_action = file_actions.index("store.cancelAudioRecognition()")
+        select_action = file_actions.index('AppPrimaryButton(title: "选择音频"')
+        self.assertLess(cancel_action, select_action)
+        self.assertIn(
+            'store.audioRecognitionState == .translating ? "取消翻译" : "取消识别"',
+            file_actions,
+        )
 
     def test_speech_contract_runs_once_and_is_a_required_ci_gate(self) -> None:
         workflow = read(".github/workflows/ci-results.yml")

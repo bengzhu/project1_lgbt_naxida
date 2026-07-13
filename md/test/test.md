@@ -102,7 +102,7 @@ v1.90 已用静态契约锁定 run-id 隔离与摘要字段。下列人工矩阵
 - 文件识别后的 `submit` 在模型 `await` 返回后、`transcript.insert` 前核对当前 Speech run；summary `await` 返回后、`summary` 写入前再次核对。
 - 实时语音翻译在模型 `await` 返回后、写入译文 / transcript / state 前核对 Task cancellation 与 run ID。
 - `cancelAudioRecognition` 先 invalidate run，再取消 `speechTranslationTask`，最后回到 idle；新 run 在生成新 run ID 前取消并清空旧翻译 Task。
-- 文件面板与实时语音面板都在 `.translating` 暴露取消入口。
+- 文件面板与实时语音面板都在 `.translating` 暴露取消入口；文件运行态的取消按钮必须排在两个已禁用的启动按钮之前，不能落到 compact iPhone 浮动 Tab Bar 后方。
 - workflow 中 Speech contract 命令只出现一次，但 failure summary 与最终 fail-job 都把该独立 step 的非 success 作为硬失败。
 
 本契约证明的是源码所有权和云端接线，不证明 Apple Speech 的实际识别质量。S1-S8 仍需真机；后续固定语料必须另行报告音频 SHA、locale、参考 transcript、WER/CER、延迟和设备/系统信息。GitHub-hosted simulator 没有真实麦克风输入，不能作为 WER/CER 或权限弹窗证据。

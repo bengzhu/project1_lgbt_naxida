@@ -127,6 +127,7 @@
 - 实时麦克风授权在 `requestMicrophoneAccess()` 的 `await` 返回后重新核对 run ID 与 capture request，旧授权回调不能把已取消或已重试的 run 写成失败或重新启动录音。
 - 文件识别后的模型翻译与实时语音翻译都在 `await` 返回后核对 Task cancellation + run ID；`submit` 在 transcript 写入、summary 回写和错误状态写入前核对 Speech 所有权，旧翻译不会覆盖新 run。
 - 音频文件和实时语音的 `.translating` 状态都提供取消入口；Speech contract 从 8 项增强为 14 项，按函数体顺序锁定授权、翻译、摘要、取消和立即重试边界。
+- 第一轮 exact-SHA UI evidence 暴露 compact iPhone 运行态取消按钮被浮动 Tab Bar 遮挡；文件面板已把取消提升为运行态第一操作，并按状态显示“取消识别/取消翻译”，旧 run `29224663327` 因此不作为最终 UI 验收证据。
 - Speech contract 从 static checks 去重，只保留独立 step，并进入 failure summary / fail-job 硬门控；失败仍会写入 JUnit、manifest 和独立日志。
 
 本地轻量验证：Speech contract 14/14、两个变更 Swift 文件 `swiftc -parse`、workflow YAML 解析和 `git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证；GitHub-hosted simulator 不能冒充真机麦克风、权限弹窗或 Apple Speech 识别质量证据。

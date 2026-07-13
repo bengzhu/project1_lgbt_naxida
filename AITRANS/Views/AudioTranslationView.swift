@@ -178,15 +178,18 @@ private struct AudioFilePanel: View {
     }
 
     @ViewBuilder private var actions: some View {
+        if canCancel {
+            AppSecondaryButton(
+                title: store.audioRecognitionState == .translating ? "取消翻译" : "取消识别",
+                systemImage: "xmark.circle.fill",
+                tone: .danger,
+                action: { store.cancelAudioRecognition() }
+            )
+        }
         AppPrimaryButton(title: "选择音频", systemImage: "folder", action: openImporter)
             .disabled(isRunning)
         AppSecondaryButton(title: "运行 test/ 音频", systemImage: "testtube.2", action: store.runBundledAudioTest)
             .disabled(isRunning)
-        if canCancel {
-            AppSecondaryButton(title: "取消识别", systemImage: "xmark.circle.fill", tone: .danger) {
-                store.cancelAudioRecognition()
-            }
-        }
     }
 
     private var isRunning: Bool {
