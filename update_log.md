@@ -116,10 +116,27 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.93 候选：Speech Run 取消与旧回调隔离
+日期：2026-07-13
+
+状态：Agent X 实现中，分支 `codeb/v1.93-speech-run-cancellation`，基于 `smalldata_test` merge `b374c19e99c784c5a933302a317a62572ba26355`。工程版本暂保持 `1.92`，待候选 exact-SHA 云端验收后收口为 `1.93`。未触碰 `main`。
+
+核心变更：
+
+- store 持有独立 `speechTranslationTask`；取消先失效 Speech run ID，再取消 Speech recognition / translation Task 并回到 idle。新 run 在生成新 token 前取消并清理旧翻译 Task，支持取消后立即重试。
+- 实时麦克风授权在 `requestMicrophoneAccess()` 的 `await` 返回后重新核对 run ID 与 capture request，旧授权回调不能把已取消或已重试的 run 写成失败或重新启动录音。
+- 文件识别后的模型翻译与实时语音翻译都在 `await` 返回后核对 Task cancellation + run ID；`submit` 在 transcript 写入、summary 回写和错误状态写入前核对 Speech 所有权，旧翻译不会覆盖新 run。
+- 音频文件和实时语音的 `.translating` 状态都提供取消入口；Speech contract 从 8 项增强为 14 项，按函数体顺序锁定授权、翻译、摘要、取消和立即重试边界。
+- Speech contract 从 static checks 去重，只保留独立 step，并进入 failure summary / fail-job 硬门控；失败仍会写入 JUnit、manifest 和独立日志。
+
+本地轻量验证：Speech contract 14/14、两个变更 Swift 文件 `swiftc -parse`、workflow YAML 解析和 `git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证；GitHub-hosted simulator 不能冒充真机麦克风、权限弹窗或 Apple Speech 识别质量证据。
+
+非目标与遗留：不更换 Apple Speech / 模型、不引入第三方 ASR、不声称改善 WER/CER；固定多语言音频 corpus、WER/CER/延迟报告和真机 S1-S8 人工矩阵仍是后续 Speech 质量阶段。漫画路径与 v1.92 指标均未改变，因此不追加 `metrics/version_history.csv`。
+
 ### v1.92：External TextBox Line Polygon Warp Shadow OCR
 日期：2026-07-13
 
-状态：Agent C / Agent X 收口中，分支 `codeb/v1.92-koharu-line-polygon-warp`，PR #45，工程 `MARKETING_VERSION=1.92`。实现 HEAD `a514b2c8ffd99463859b7c715e1b5708f444d3fd` 的云端 run `29219563408` SUCCESS；版本收口 commit 仍须获得 exact-SHA 新 run 后才能合并到 `smalldata_test`。未触碰 `main`。
+状态：Agent C / Agent X 已正式收口。PR #45 已合入 `smalldata_test`，merge `b374c19e99c784c5a933302a317a62572ba26355`，工程 `MARKETING_VERSION=1.92`。实现 HEAD `a514b2c8ffd99463859b7c715e1b5708f444d3fd` 与版本收口 HEAD `90b750821809f66b799e223919807a4fd4668940` 的云端 run 均 SUCCESS；未触碰 `main`。
 
 核心变更：
 
@@ -129,6 +146,8 @@
 - 仍为 shadow-only，不改 `finalTextUsedForTranslation`、主 OCR、翻译、覆盖图、`blockPassed` 或 active artifact；仓库仍没有真实四件套，不能声称完成 Koharu handoff。
 
 云端实现验收：run `29219563408` attempt 1、artifact `aitrans-ci-v1.92-codeb-v1.92-koharu-line-polygon-warp--a514b2c8ffd9-run29219563408-attempt1`（3,869,756 bytes；SHA256 `5ffbc56b39057fde69e25e90f4fd562b028d6fbf07695005d208e61d72fd4f8c`）。manifest branch/commit/run/workflow 对齐，Xcode build / static / Speech / v1.87-v1.89 contracts / 12 张 UI evidence success，JUnit 8/8。`probe_mode=skip`，active artifact 仍为 `manifestMissing`；未跑真实四件套 Core Image/Vision runtime，不能声称 warp 已获 `ci-fast` 运行态证据。
+
+版本收口验收：run `29220142240` SUCCESS，artifact `aitrans-ci-v1.92-codeb-v1.92-koharu-line-polygon-warp--90b750821809-run29220142240-attempt1`（3,871,273 bytes；SHA256 `8a3869af62d3f3b1516e4b01a3e0cab14c18189fbf69b3ccd335439b0742389e`），manifest exact SHA / branch / run / workflow 对齐，Xcode build、JUnit 8/8、v1.92 contract 5/5、Speech 8/8 和 12 张 UI evidence 通过。合并后 CI Results run `29220977461` 与 Build IPA run `29220977459` 均 SUCCESS；远端候选分支已删除。
 
 本地轻量验证：Swift parse、v1.92 5/5、Speech 8/8、v1.87 6/6、v1.88 7/7、v1.89 4/4、validator/YAML/JSON/shell/`git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证。
 

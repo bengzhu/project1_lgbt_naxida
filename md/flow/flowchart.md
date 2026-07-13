@@ -42,11 +42,14 @@ flowchart TD
   J --> K["图片旁贴 / 覆盖 UI"]
 
   %% 音频分支：Apple 本机语音识别
-  C --> LR["Speech run ID<br/>取消 / 重试使旧回调失效"]
+  C --> LR["Speech run ID + store-owned translation Task<br/>取消 / 重试使旧回调失效"]
   LR --> L["音频识别<br/>Apple Speech on-device / requiresOnDeviceRecognition"]
+  L --> LA{"授权 / 模型 await 后<br/>run ID 仍匹配且 Task 未取消?"}
+  LA -->|否| LD["丢弃旧回调<br/>不写 state / transcript / summary"]
+  LA -->|是| D
   L --> LV["speechRecognitionRunSummary<br/>输入 / locale / 耗时 / 词数 / 片段 / 置信度 / 失败原因"]
   AX["录音默认 accessibility action<br/>开始 / 停止"] --> L
-  L --> D
+  LC["checking / recognizing / translating<br/>均可取消"] --> LR
 
   SETTINGS["Settings NavigationPath"] --> DEVRESET{"开发模式仍开启?"}
   DEVRESET -->|"否"| SETTINGSROOT["清空 path / 返回设置根页"]

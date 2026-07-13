@@ -75,7 +75,7 @@ DEBUG 可测性：仅在用户点击粘贴时，若系统 `PasteButton` payload 
 - 运行摘要 UI 展示离线强制、本机能力、终态与 `runToken`
 - `SpeechRecognitionRunSummary` 含 `runToken`
 
-该契约随 static checks 进入云端 CI，不冒充真机录音点击验收。
+该契约由云端独立 `Speech recognition contract` step 执行，并写入 JUnit、manifest 和独立日志；不得在 static checks 重复执行，也不冒充真机录音点击验收。
 
 ### 0.5 v1.91 Speech 人工交互矩阵
 
@@ -93,6 +93,19 @@ v1.90 已用静态契约锁定 run-id 隔离与摘要字段。下列人工矩阵
 | S8 | Reduce Motion | 采集动画降级；capturing 状态仍正确 | [ ] |
 
 `scripts/test-speech-recognition-contract.py` 只证明源码接线；真机麦克风/权限/质量必须走本矩阵或后续专用云端 UI smoke。
+
+### 0.6 v1.93 Speech 取消与立即重试竞态契约
+
+`scripts/test-speech-recognition-contract.py` 必须按函数体与语句顺序验证下列边界，而不是只统计 guard 字符串：
+
+- 麦克风权限 `await` 返回后，先核对 `speechRecognitionRunID == runID` 和 capture request，再处理授权结果或启动录音。
+- 文件识别后的 `submit` 在模型 `await` 返回后、`transcript.insert` 前核对当前 Speech run；summary `await` 返回后、`summary` 写入前再次核对。
+- 实时语音翻译在模型 `await` 返回后、写入译文 / transcript / state 前核对 Task cancellation 与 run ID。
+- `cancelAudioRecognition` 先 invalidate run，再取消 `speechTranslationTask`，最后回到 idle；新 run 在生成新 run ID 前取消并清空旧翻译 Task。
+- 文件面板与实时语音面板都在 `.translating` 暴露取消入口。
+- workflow 中 Speech contract 命令只出现一次，但 failure summary 与最终 fail-job 都把该独立 step 的非 success 作为硬失败。
+
+本契约证明的是源码所有权和云端接线，不证明 Apple Speech 的实际识别质量。S1-S8 仍需真机；后续固定语料必须另行报告音频 SHA、locale、参考 transcript、WER/CER、延迟和设备/系统信息。GitHub-hosted simulator 没有真实麦克风输入，不能作为 WER/CER 或权限弹窗证据。
 
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：

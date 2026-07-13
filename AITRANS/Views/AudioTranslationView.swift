@@ -125,6 +125,14 @@ private struct LiveSpeechPanel: View {
                     action: store.translateProLiveTranscript
                 )
                 .disabled(store.isProcessing)
+                if store.audioRecognitionState == .translating {
+                    AppSecondaryButton(
+                        title: "取消翻译",
+                        systemImage: "xmark.circle.fill",
+                        tone: .danger,
+                        action: store.cancelAudioRecognition
+                    )
+                }
             }
 
             if !store.proLiveTranslationText.isEmpty {
@@ -190,8 +198,8 @@ private struct AudioFilePanel: View {
 
     private var canCancel: Bool {
         switch store.audioRecognitionState {
-        case .checking, .recognizing: true
-        case .idle, .translating, .translated, .failed: false
+        case .checking, .recognizing, .translating: true
+        case .idle, .translated, .failed: false
         }
     }
 }

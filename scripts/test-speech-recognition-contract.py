@@ -13,6 +13,26 @@ def read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
 
 
+def swift_body(source: str, declaration: str) -> str:
+    start = source.find(declaration)
+    if start < 0:
+        raise AssertionError(f"Swift declaration missing: {declaration}")
+    opening_brace = source.find("{", start)
+    if opening_brace < 0:
+        raise AssertionError(f"Swift body missing: {declaration}")
+
+    depth = 0
+    for index in range(opening_brace, len(source)):
+        character = source[index]
+        if character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                return source[opening_brace + 1:index]
+    raise AssertionError(f"Swift body is unbalanced: {declaration}")
+
+
 class SpeechRecognitionContractTests(unittest.TestCase):
     def test_audio_state_covers_recognition_and_translation(self) -> None:
         models = read("AITRANS/Models/TranscriptModels.swift")
@@ -65,6 +85,67 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         self.assertIn("private func invalidateSpeechRecognitionRun()", store)
         self.assertIn("audioRecognitionState = .translating", store)
 
+    def test_microphone_authorization_revalidates_run_after_await(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+        body = swift_body(store, "func beginProLiveSpeechCapture()")
+        permission_await = body.index(
+            "let microphoneGranted = await self.requestMicrophoneAccess()"
+        )
+        run_guard = body.index(
+            "guard self.speechRecognitionRunID == runID,", permission_await
+        )
+        permission_result = body.index("guard microphoneGranted else", permission_await)
+        start_recognition = body.index(
+            "self.startProLiveSpeechRecognition(capability: capability, runID: runID)"
+        )
+        self.assertLess(permission_await, run_guard)
+        self.assertLess(run_guard, permission_result)
+        self.assertLess(permission_result, start_recognition)
+
+    def test_translation_awaits_revalidate_before_shared_state_writes(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+
+        submit = swift_body(store, "private func submit(")
+        submit_await = submit.index("let translation = try await translate(text)")
+        submit_guard = submit.index(
+            "guard isCurrentSpeechTranslation(expectedSpeechRunID) else", submit_await
+        )
+        transcript_write = submit.index("transcript.insert(line, at: 0)")
+        self.assertLess(submit_await, submit_guard)
+        self.assertLess(submit_guard, transcript_write)
+
+        audio_file = swift_body(store, "private func startAudioFileTranslation(")
+        file_await = audio_file.index("let didTranslate = await self.submit(")
+        file_guard = audio_file.index(
+            "guard !Task.isCancelled, self.speechRecognitionRunID == runID else",
+            file_await,
+        )
+        file_state_write = audio_file.index("self.audioRecognitionState = .translated")
+        self.assertLess(file_await, file_guard)
+        self.assertLess(file_guard, file_state_write)
+
+        live = swift_body(store, "func translateProLiveTranscript()")
+        live_await = live.index("let translation = try await self.translate(text)")
+        live_guard = live.index(
+            "guard !Task.isCancelled, self.speechRecognitionRunID == runID else",
+            live_await,
+        )
+        live_write = live.index("self.proLiveTranslationText = translation")
+        self.assertLess(live_await, live_guard)
+        self.assertLess(live_guard, live_write)
+
+    def test_summary_await_revalidates_before_summary_write(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+        body = swift_body(store, "private func refreshSummaryAfterTranslation(")
+        summary_await = body.index("let refreshedSummary = try await summarize()")
+        run_guard = body.index(
+            "guard isCurrentSpeechTranslation(expectedSpeechRunID) else",
+            summary_await,
+        )
+        summary_write = body.index("summary = refreshedSummary")
+        self.assertLess(summary_await, run_guard)
+        self.assertLess(run_guard, summary_write)
+
     def test_ui_exposes_summary_and_cancellation(self) -> None:
         audio_views = read("AITRANS/Views/AudioTranslationView.swift")
         pro_views = read("AITRANS/Views/ProFeatureViews.swift")
@@ -77,20 +158,28 @@ class SpeechRecognitionContractTests(unittest.TestCase):
 
     def test_cancel_invalidates_run_before_idle_and_records_failure(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")
-        cancel = re.search(
-            r"func cancelAudioRecognition\(\) \{(?P<body>.*?)\n    \}",
-            store,
-            re.DOTALL,
-        )
-        self.assertIsNotNone(cancel, "cancelAudioRecognition missing")
-        body = cancel.group("body")
+        body = swift_body(store, "func cancelAudioRecognition()")
         self.assertIn("invalidateSpeechRecognitionRun()", body)
+        self.assertIn("speechTranslationTask?.cancel()", body)
         self.assertLess(
             body.index("invalidateSpeechRecognitionRun()"),
+            body.index("speechTranslationTask?.cancel()"),
+        )
+        self.assertLess(
+            body.index("speechTranslationTask?.cancel()"),
             body.index("audioRecognitionState = .idle"),
         )
         self.assertIn('failSpeechRecognitionRun("用户取消")', body)
         self.assertIn("audioRecognitionMessage = \"语音识别已取消\"", body)
+
+    def test_new_run_cancels_stale_translation_before_replacing_run_id(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+        body = swift_body(store, "private func beginSpeechRecognitionRun(")
+        cancel = body.index("speechTranslationTask?.cancel()")
+        clear = body.index("speechTranslationTask = nil")
+        new_id = body.index("let runID = UUID()")
+        self.assertLess(cancel, clear)
+        self.assertLess(clear, new_id)
 
     def test_preview_and_store_summary_initializers_include_run_token(self) -> None:
         preview = read("AITRANS/Views/AppPreviewSupport.swift")
@@ -106,6 +195,23 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         self.assertIn("summary.isFinal", pro_views)
         self.assertIn("summary.runToken", pro_views)
         self.assertIn("store.cancelAudioRecognition()", read("AITRANS/Views/AudioTranslationView.swift"))
+
+    def test_translating_state_exposes_cancel_for_file_and_live_paths(self) -> None:
+        audio_views = read("AITRANS/Views/AudioTranslationView.swift")
+        can_cancel = swift_body(audio_views, "private var canCancel: Bool")
+        self.assertIn("case .checking, .recognizing, .translating: true", can_cancel)
+        live_panel = swift_body(audio_views, "private struct LiveSpeechPanel: View")
+        self.assertIn("store.audioRecognitionState == .translating", live_panel)
+        self.assertIn('title: "取消翻译"', live_panel)
+        self.assertIn("action: store.cancelAudioRecognition", live_panel)
+
+    def test_speech_contract_runs_once_and_is_a_required_ci_gate(self) -> None:
+        workflow = read(".github/workflows/ci-results.yml")
+        command = "python3 -B scripts/test-speech-recognition-contract.py"
+        self.assertEqual(workflow.count(command), 1)
+        self.assertIn("- name: Speech recognition contract", workflow)
+        required_gate = '[ "${{ steps.speech_contract.outcome }}" != "success" ]'
+        self.assertGreaterEqual(workflow.count(required_gate), 2)
 
     def test_probe_uses_the_built_app_bundle_identifier(self) -> None:
         workflow = read(".github/workflows/ci-results.yml")

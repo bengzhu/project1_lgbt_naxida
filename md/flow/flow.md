@@ -47,7 +47,7 @@
 
 - 调用 `TranslationSessionStore` 方法。
 - 展示翻译、历史、模型状态、OCR 块、探针报告和错误。
-- 音频页展示 Apple Speech 本机识别能力、识别运行摘要、识别文本、译文和取消入口。
+- 音频页展示 Apple Speech 本机识别能力、识别运行摘要、识别文本、译文和取消入口；checking、recognizing、translating 三种运行态均可取消。
 
 关键文件：
 
@@ -200,8 +200,10 @@
 
 - 文件识别和实时识别都强制 `requiresOnDeviceRecognition = true`。
 - UI 只调用 store 方法，不直接创建 Speech recognizer。
-- 识别中和翻译中状态分开展示；用户可取消正在检查或识别的音频任务。
-- 每次识别生成独立 run ID；授权、Speech result/error 和翻译完成回调只有在 run ID 仍匹配时才能更新 store。
+- 识别中和翻译中状态分开展示；用户可取消正在检查、识别或翻译的音频任务。
+- 每次识别生成独立 run ID；实时语音翻译会续接一个新的翻译 run token。授权、Speech result/error、模型翻译和 summary 回调只有在 run ID 仍匹配且 Task 未取消时才能更新 store。
+- `speechTranslationTask` 由 store 持有。取消先失效 run ID，再取消 Speech recognition / translation Task；新 run 在生成新 token 前取消并清空旧翻译 Task，避免旧 defer 或旧回调污染立即重试。
+- 麦克风权限 `await` 返回后必须复验 run ID 与 capture request；模型翻译 `await` 返回后必须在 transcript、summary、状态或错误写入前复验 Speech 所有权。
 
 禁止：
 
@@ -366,7 +368,9 @@ test/1.png
 用户选择或长按录音
   -> Apple Speech on-device recognition
   -> recognized text
+  -> store-owned speechTranslationTask
   -> TranslationSessionStore.translate
+  -> await 后核对 Task cancellation + Speech run ID
   -> UI 展示
 ```
 
