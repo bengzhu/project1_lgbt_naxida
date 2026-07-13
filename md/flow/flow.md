@@ -268,7 +268,7 @@ test/1.png
   -> line-level TextBox / deskew shadow 验证（仅目标块，不替换主输入）
   -> external artifact readiness gate（真实 TextBoxes / BubbleMask / SegmentMask 输入解析、校验、App 侧 identity receipt、sourceImageSHA256 match 和阻塞报告）
   -> external TextBoxes shadow OCR（仅 readiness ready 时执行，每块最多 1 个 externalArtifact.textBoxCrop，不替换主输入；ready 后 candidate coverage 也进入 convergence gate）
-  -> external TextBox orientation-aware shadow OCR（真实 artifact ready 后对竖排 / 近 90 度倍数旋转 TextBox 执行有上限 rotation OCR；partial / unsupported / line polygon / 任意角度进入 convergence blockers，阻塞误判闭环）
+  -> external TextBox orientation-aware shadow OCR（真实 artifact ready 后对竖排 / 近 90 度倍数旋转 TextBox 执行有上限 rotation OCR；v1.92 候选对合法四点 line polygon 透视校正后逐行 OCR；执行失败与任意角度 rotation 继续进入 convergence blockers）
   -> internal structure bottleneck routing（聚合 OCR / bubble / crop / translation / render 证据，只写报告和 TXT）
   -> reading order structure audit（审计阅读顺序、气泡归属、多块气泡和结构动作，只写报告和 TXT）
   -> structure action candidate matrix（把结构建议转成 report-only work candidates）

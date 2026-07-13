@@ -9133,7 +9133,21 @@ final class TranslationSessionStore: ObservableObject {
             let linePolygonCount = selected.textBox.linePolygons?.count ?? 0
             let orientationShadowPathNeeded = Self.externalTextBoxNeedsOrientationShadowPath(selected.textBox)
             let orientationPlan = Self.externalTextBoxOrientationShadowOCRPlan(selected.textBox)
-            var attempts: [(text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double, rotationApplied: Double, errorCode: String?)] = []
+            var attempts: [(
+                text: String?,
+                cropBBox: [Double],
+                paddingX: Double,
+                paddingY: Double,
+                rotationApplied: Double,
+                linePolygonWarpAttempted: Bool,
+                linePolygonWarpExecuted: Bool,
+                linePolygonWarpedLineCount: Int,
+                linePolygonWarpFailureReasons: [String],
+                ocrPath: String,
+                bboxFallbackReason: String?,
+                bboxFallbackError: String?,
+                errorCode: String?
+            )] = []
             for rotationAngle in orientationPlan.rotationAngles {
                 do {
                     let crop = try await mangaOverlayProbeService.recognizeExternalTextBoxCrop(
@@ -9141,11 +9155,44 @@ final class TranslationSessionStore: ObservableObject {
                         textBoxBBox: selected.textBox.bbox,
                         options: preprocessing,
                         rotationAngle: rotationAngle,
-                        recognitionLanguages: orientationPlan.recognitionLanguages
+                        recognitionLanguages: orientationPlan.recognitionLanguages,
+                        linePolygons: selected.textBox.linePolygons
                     )
-                    attempts.append((crop.text, crop.cropBBox, crop.paddingX, crop.paddingY, crop.rotationApplied, nil))
+                    attempts.append((
+                        crop.text,
+                        crop.cropBBox,
+                        crop.paddingX,
+                        crop.paddingY,
+                        crop.rotationApplied,
+                        crop.linePolygonWarpAttempted,
+                        crop.linePolygonWarpExecuted,
+                        crop.linePolygonWarpedLineCount,
+                        crop.linePolygonWarpFailureReasons,
+                        crop.ocrPath,
+                        crop.bboxFallbackReason,
+                        crop.bboxFallbackError,
+                        crop.bboxFallbackError
+                    ))
                 } catch {
-                    attempts.append((nil, selected.textBox.bbox, 0, 0, Double(rotationAngle), "\(type(of: error))"))
+                    let preciseError = error.localizedDescription
+                    let warpError = error as? MangaOverlayLinePolygonWarpError
+                    let warpReason = warpError?.reason ?? preciseError
+                    let fallbackError = warpError?.fallbackError ?? preciseError
+                    attempts.append((
+                        nil,
+                        selected.textBox.bbox,
+                        0,
+                        0,
+                        Double(rotationAngle),
+                        selected.textBox.linePolygons?.isEmpty == false,
+                        false,
+                        0,
+                        [warpReason],
+                        "linePolygonWarpAndBBoxFallbackFailed",
+                        warpReason,
+                        fallbackError,
+                        preciseError
+                    ))
                 }
             }
             let crop = attempts.max { lhs, rhs in
@@ -9173,8 +9220,25 @@ final class TranslationSessionStore: ObservableObject {
                 if abs(lhsPreservation - rhsPreservation) > 0.0001 {
                     return lhsPreservation < rhsPreservation
                 }
+                if lhs.linePolygonWarpExecuted != rhs.linePolygonWarpExecuted {
+                    return !lhs.linePolygonWarpExecuted
+                }
                 return lhs.rotationApplied > rhs.rotationApplied
-            } ?? (nil, selected.textBox.bbox, 0, 0, 0, "noExternalTextBoxShadowOCRAttempt")
+            } ?? (
+                nil,
+                selected.textBox.bbox,
+                0,
+                0,
+                0,
+                selected.textBox.linePolygons?.isEmpty == false,
+                false,
+                0,
+                ["linePolygonWarpNoAttempt"],
+                "noExternalTextBoxShadowOCRAttempt",
+                nil,
+                nil,
+                "noExternalTextBoxShadowOCRAttempt"
+            )
             let ocrText = crop.text?.trimmingCharacters(in: .whitespacesAndNewlines)
             let ocrTextValue = ocrText ?? ""
             let candidateQuality = Self.ocrCandidateQualityScore(ocrTextValue)
@@ -9186,6 +9250,9 @@ final class TranslationSessionStore: ObservableObject {
             var blockers = selected.rejectionReasons
             if crop.errorCode != nil {
                 blockers.append("ocrExecutionFailed")
+            }
+            if crop.bboxFallbackError != nil {
+                blockers.append("linePolygonBBoxFallbackFailed")
             }
             if ocrTextValue.isEmpty {
                 blockers.append("emptyLocalOCR")
@@ -9206,14 +9273,34 @@ final class TranslationSessionStore: ObservableObject {
             let orientationRotationExecuted = attempts.contains { attempt in
                 attempt.errorCode == nil && abs(attempt.rotationApplied) > 0.001
             }
-            let orientationShadowPathExecuted = orientationShadowPathNeeded && orientationRotationExecuted
-            let orientationUnsupportedReason = orientationPlan.unsupportedReasons.isEmpty
+            let linePolygonWarpExecuted = attempts.contains { attempt in
+                attempt.errorCode == nil && attempt.linePolygonWarpExecuted
+            }
+            let linePolygonWarpOutputSelected = crop.linePolygonWarpExecuted
+                && crop.ocrPath == "linePolygonPerspectiveWarp"
+            let linePolygonWarpFailureReasons = linePolygonWarpExecuted
+                ? []
+                : Array(Set(attempts.flatMap(\.linePolygonWarpFailureReasons)).sorted())
+            var orientationUnsupportedReasons = orientationPlan.unsupportedReasons
+            if linePolygonCount > 0, !linePolygonWarpExecuted {
+                orientationUnsupportedReasons.append("linePolygonWarpFailed")
+                orientationUnsupportedReasons.append(contentsOf: linePolygonWarpFailureReasons)
+            } else if linePolygonCount > 0, !linePolygonWarpOutputSelected {
+                orientationUnsupportedReasons.append("linePolygonWarpOutputNotSelected")
+                if let fallbackReason = crop.bboxFallbackReason {
+                    orientationUnsupportedReasons.append(fallbackReason)
+                }
+            }
+            orientationUnsupportedReasons = Array(Set(orientationUnsupportedReasons)).sorted()
+            let orientationShadowPathExecuted = orientationShadowPathNeeded
+                && (orientationRotationExecuted || linePolygonWarpExecuted)
+            let orientationUnsupportedReason = orientationUnsupportedReasons.isEmpty
                 ? nil
-                : orientationPlan.unsupportedReasons.joined(separator: ",")
+                : orientationUnsupportedReasons.joined(separator: ",")
             let orientationReadinessVerdict: String
             if !orientationShadowPathNeeded {
                 orientationReadinessVerdict = "orientationMetadataCaptured"
-            } else if orientationShadowPathExecuted && orientationPlan.unsupportedReasons.isEmpty {
+            } else if orientationShadowPathExecuted && orientationUnsupportedReasons.isEmpty {
                 orientationReadinessVerdict = "orientationShadowPathExecuted"
             } else if orientationShadowPathExecuted {
                 orientationReadinessVerdict = "orientationShadowPathPartiallyExecuted"
@@ -9223,7 +9310,7 @@ final class TranslationSessionStore: ObservableObject {
             if orientationShadowPathNeeded && !orientationShadowPathExecuted {
                 blockers.append("orientationShadowPathNeededNotExecuted")
             }
-            blockers.append(contentsOf: orientationPlan.unsupportedReasons)
+            blockers.append(contentsOf: orientationUnsupportedReasons)
             let betterThanControl = candidateQuality > controlQuality + 0.03
             let wouldPromote = !ocrTextValue.isEmpty
                 && preservation >= 0.80
@@ -9234,7 +9321,8 @@ final class TranslationSessionStore: ObservableObject {
                 && !blockers.contains("bubbleAlignmentMismatch")
                 && !blockers.contains("textBoxAreaTooLarge")
                 && !blockers.contains("orientationShadowPathNeededNotExecuted")
-                && !blockers.contains("linePolygonWarpUnsupported")
+                && !blockers.contains("linePolygonWarpFailed")
+                && !blockers.contains("linePolygonWarpOutputNotSelected")
                 && !blockers.contains("arbitraryRotationUnsupported")
             let verdict = wouldPromote ? "wouldPromoteByExistingGateReportOnly" : (betterThanControl ? "betterThanControlButBlocked" : "controlStillBest")
             let candidateID = nextCandidateID
@@ -9248,13 +9336,17 @@ final class TranslationSessionStore: ObservableObject {
             if orientationShadowPathNeeded && !orientationShadowPathExecuted {
                 riskFlags.append("orientationShadowPathNeededNotExecuted")
             }
-            riskFlags.append(contentsOf: orientationPlan.unsupportedReasons)
+            riskFlags.append(contentsOf: orientationUnsupportedReasons)
             candidates.append(
                 MangaOverlayExternalTextBoxShadowOCRCandidate(
                     candidateID: candidateID,
                     blockIndex: block.index,
                     selectedTextBoxID: selected.textBox.id,
-                    variantName: "externalArtifact.textBoxCrop",
+                    variantName: linePolygonWarpOutputSelected
+                        ? "externalArtifact.linePolygonWarp"
+                        : (crop.linePolygonWarpAttempted
+                            ? "externalArtifact.textBoxCropFallback"
+                            : "externalArtifact.textBoxCrop"),
                     textBoxBBox: selected.textBox.bbox,
                     cropBBox: crop.cropBBox,
                     textBoxConfidence: selected.textBox.confidence,
@@ -9269,7 +9361,7 @@ final class TranslationSessionStore: ObservableObject {
                     normalizedSourceDirection: normalizedSourceDirection,
                     orientationCategory: orientationCategory,
                     rotationDegrees: selected.textBox.rotationDegrees,
-                    deskewExecuted: false,
+                    deskewExecuted: linePolygonWarpOutputSelected,
                     orientationShadowPathNeeded: orientationShadowPathNeeded,
                     orientationShadowPathExecuted: orientationShadowPathExecuted,
                     orientationAttemptedRotations: orientationPlan.rotationAngles.map(Double.init),
@@ -9290,8 +9382,17 @@ final class TranslationSessionStore: ObservableObject {
                     riskFlags: Array(Set(riskFlags)).sorted(),
                     notes: [
                         "shadowOnly=true",
-                        "variantName=externalArtifact.textBoxCrop",
-                        "deskewExecuted=false",
+                        "variantName=\(linePolygonWarpOutputSelected ? "externalArtifact.linePolygonWarp" : (crop.linePolygonWarpAttempted ? "externalArtifact.textBoxCropFallback" : "externalArtifact.textBoxCrop"))",
+                        "linePolygonWarpAttempted=\(crop.linePolygonWarpAttempted)",
+                        "linePolygonWarpExecuted=\(crop.linePolygonWarpExecuted)",
+                        "linePolygonWarpOutputSelected=\(linePolygonWarpOutputSelected)",
+                        "linePolygonWarpedLineCount=\(crop.linePolygonWarpedLineCount)",
+                        "linePolygonWarpFailureReasons=\(crop.linePolygonWarpFailureReasons.joined(separator: ","))",
+                        "ocrPath=\(crop.ocrPath)",
+                        "bboxFallbackReason=\(crop.bboxFallbackReason ?? "none")",
+                        "bboxFallbackError=\(crop.bboxFallbackError ?? "none")",
+                        "linePolygonWarpAttempts=\(attempts.map { "rotation:\(Int($0.rotationApplied)),path:\($0.ocrPath),executed:\($0.linePolygonWarpExecuted),lines:\($0.linePolygonWarpedLineCount),warpFailures:\($0.linePolygonWarpFailureReasons.joined(separator: "+")),fallbackReason:\($0.bboxFallbackReason ?? "none"),fallbackError:\($0.bboxFallbackError ?? "none")" }.joined(separator: " | "))",
+                        "deskewExecuted=\(linePolygonWarpOutputSelected)",
                         "orientationShadowPathExecuted=\(orientationShadowPathExecuted)",
                         "orientationReadinessVerdict=\(orientationReadinessVerdict)",
                         "orientationAttemptedRotations=\(orientationPlan.rotationAngles.map(String.init).joined(separator: ","))",
@@ -9331,6 +9432,13 @@ final class TranslationSessionStore: ObservableObject {
                     blockers: Array(Set(blockers)).sorted(),
                     notes: [
                         "externalArtifact.textBoxCrop shadow candidate; not written to finalTextUsedForTranslation",
+                        "linePolygonWarpAttempted=\(crop.linePolygonWarpAttempted)",
+                        "linePolygonWarpExecuted=\(crop.linePolygonWarpExecuted)",
+                        "linePolygonWarpedLineCount=\(crop.linePolygonWarpedLineCount)",
+                        "linePolygonWarpFailureReasons=\(crop.linePolygonWarpFailureReasons.joined(separator: ","))",
+                        "ocrPath=\(crop.ocrPath)",
+                        "bboxFallbackReason=\(crop.bboxFallbackReason ?? "none")",
+                        "bboxFallbackError=\(crop.bboxFallbackError ?? "none")",
                         "orientationShadowPathExecuted=\(orientationShadowPathExecuted)",
                         "orientationReadinessVerdict=\(orientationReadinessVerdict)",
                         "orientationAttemptedRotations=\(orientationPlan.rotationAngles.map(String.init).joined(separator: ","))",
@@ -12783,10 +12891,10 @@ final class TranslationSessionStore: ObservableObject {
                 rejectionReasons.append("bubbleAlignmentMismatch")
             }
             if textBox.linePolygons?.isEmpty == false {
-                riskFlags.append("linePolygonsPresentDeskewNotExecuted")
+                riskFlags.append("linePolygonsPresentRequiresWarp")
             }
             if let rotationDegrees = textBox.rotationDegrees, abs(rotationDegrees) > 0.001 {
-                riskFlags.append("rotationRecordedDeskewNotExecuted")
+                riskFlags.append("rotationRecordedRequiresOrientationPath")
             }
             guard rejectionReasons.isEmpty else { return nil }
             let confidence = textBox.confidence ?? 0
@@ -13014,9 +13122,6 @@ final class TranslationSessionStore: ObservableObject {
             } else {
                 unsupportedReasons.append("arbitraryRotationUnsupported")
             }
-        }
-        if textBox.linePolygons?.isEmpty == false {
-            unsupportedReasons.append("linePolygonWarpUnsupported")
         }
         var seen = Set<Int>()
         let uniqueAngles = rotationAngles.filter { angle in
@@ -21373,7 +21478,7 @@ final class TranslationSessionStore: ObservableObject {
             (externalReady ? [] : ["real external TextBox artifacts are not ready for orientation gate evaluation"])
             + (externalShadowCoverageBlockedBlocks.isEmpty ? [] : ["external TextBox shadow OCR must execute and produce at least one block-matched candidate before orientation gate can close"])
             + (externalOrientationNotExecutedBlocks.isEmpty ? [] : ["external TextBox declares vertical direction or near-right-angle rotation but orientation-aware rotation OCR is not executed"])
-            + (externalOrientationUnsupportedBlocks.isEmpty ? [] : ["external TextBox declares linePolygons or arbitrary rotation that still needs warp/deskew support"])
+            + (externalOrientationUnsupportedBlocks.isEmpty ? [] : ["external TextBox line polygon warp failed or arbitrary rotation still needs deskew support"])
         )
         let externalOrientationGateStatus = externalReady
             ? (externalShadowCoverageBlockedBlocks.isEmpty && externalOrientationBlockedBlocks.isEmpty ? "passed" : "blocked")

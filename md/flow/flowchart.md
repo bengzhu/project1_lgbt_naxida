@@ -118,7 +118,7 @@ flowchart TD
   LTB --> EAR["externalArtifactReadinessReport<br/>真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门 + App-side identity receipt / sourceImageSHA256 match"]
   EAR --> ETS["externalTextBoxShadowOCRReport<br/>ready 后每块最多 1 个 externalArtifact.textBoxCrop / shadow-only"]
   ETS --> ESC["external TextBox shadow OCR coverage gate<br/>ready 后要求 identity reconciliation + contract dry-run + executed + candidate / OCR execution / OCR success"]
-  ESC --> ETO["external TextBox orientation-aware shadow OCR<br/>bounded rotation OCR / partial 与 unsupported 进入 convergence blockers"]
+  ESC --> ETO["external TextBox orientation-aware shadow OCR<br/>bounded rotation + v1.92 四点 line polygon warp / 失败与 arbitrary rotation 进入 blockers"]
   ETO --> ISR["internalStructureBottleneckReport<br/>OCR / bubble / crop / translation / render 路由诊断"]
   ISR --> RTA["routingDrivenTranslationComparisonReport<br/>modelTranslationQuality 块 strict prompt 对照 / report-only"]
   RTA --> TMF["translationModelFloorComparisonReport<br/>clean text baseline + strict prompt 地板对照"]

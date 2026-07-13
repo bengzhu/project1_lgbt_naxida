@@ -849,6 +849,56 @@ def orientation_category_for(item: dict[str, Any]) -> str:
     return "invalid"
 
 
+def four_point_polygon_warp_eligible(polygon: Any) -> bool:
+    if not isinstance(polygon, list) or len(polygon) != 4:
+        return False
+    points: list[tuple[float, float]] = []
+    for point in polygon:
+        if not isinstance(point, list) or len(point) != 2:
+            return False
+        try:
+            x, y = float(point[0]), float(point[1])
+        except (TypeError, ValueError):
+            return False
+        if not math.isfinite(x) or not math.isfinite(y):
+            return False
+        points.append((x, y))
+    if len(set(points)) != 4:
+        return False
+    centroid = (
+        sum(point[0] for point in points) / 4,
+        sum(point[1] for point in points) / 4,
+    )
+    ordered = sorted(
+        points,
+        key=lambda point: math.atan2(point[1] - centroid[1], point[0] - centroid[0]),
+    )
+    area = abs(
+        sum(
+            current[0] * following[1] - following[0] * current[1]
+            for current, following in zip(ordered, ordered[1:] + ordered[:1])
+        )
+        / 2
+    )
+    edge_lengths = [
+        math.hypot(following[0] - current[0], following[1] - current[1])
+        for current, following in zip(ordered, ordered[1:] + ordered[:1])
+    ]
+    cross_products = []
+    for index in range(4):
+        current = ordered[index]
+        following = ordered[(index + 1) % 4]
+        after = ordered[(index + 2) % 4]
+        cross_products.append(
+            (following[0] - current[0]) * (after[1] - following[1])
+            - (following[1] - current[1]) * (after[0] - following[0])
+        )
+    convex = all(value > 0.5 for value in cross_products) or all(
+        value < -0.5 for value in cross_products
+    )
+    return area >= 4 and all(length >= 2 for length in edge_lengths) and convex
+
+
 def orientation_shadow_plan_for(item: dict[str, Any]) -> tuple[list[int], list[str]]:
     rotation_angles = [0]
     unsupported_reasons: list[str] = []
@@ -867,7 +917,10 @@ def orientation_shadow_plan_for(item: dict[str, Any]) -> tuple[list[int], list[s
 
     line_polygons = item.get("linePolygons")
     if isinstance(line_polygons, list) and line_polygons:
-        unsupported_reasons.append("linePolygonWarpUnsupported")
+        if any(not isinstance(polygon, list) or len(polygon) != 4 for polygon in line_polygons):
+            unsupported_reasons.append("linePolygonWarpRequiresFourPoints")
+        elif any(not four_point_polygon_warp_eligible(polygon) for polygon in line_polygons):
+            unsupported_reasons.append("linePolygonWarpShapeUnsupported")
 
     unique_angles: list[int] = []
     seen: set[int] = set()
@@ -889,6 +942,7 @@ def summarize_orientation_metadata(text_boxes: list[dict[str, Any]]) -> dict[str
     arbitrary_rotation_ids: list[str] = []
     orientation_needed_ids: list[str] = []
     rotation_shadow_supported_ids: list[str] = []
+    line_polygon_warp_supported_ids: list[str] = []
     orientation_partial_ids: list[str] = []
     unsupported_ids: list[str] = []
     unsupported_reasons: list[str] = []
@@ -907,6 +961,8 @@ def summarize_orientation_metadata(text_boxes: list[dict[str, Any]]) -> dict[str
         line_polygons_present = isinstance(line_polygons, list) and bool(line_polygons)
         if line_polygons_present:
             line_polygon_ids.append(item_id)
+            if all(four_point_polygon_warp_eligible(polygon) for polygon in line_polygons):
+                line_polygon_warp_supported_ids.append(item_id)
 
         rotation = rotation_degrees_for(item)
         has_nonzero_rotation = rotation is not None and math.isfinite(rotation) and abs(rotation) > 0.001
@@ -943,13 +999,15 @@ def summarize_orientation_metadata(text_boxes: list[dict[str, Any]]) -> dict[str
         "arbitraryRotationTextBoxIDs": sorted(set(arbitrary_rotation_ids)),
         "orientationShadowPathNeededTextBoxIDs": sorted(set(orientation_needed_ids)),
         "orientationRotationShadowSupportedTextBoxIDs": sorted(set(rotation_shadow_supported_ids)),
+        "orientationLinePolygonWarpSupportedTextBoxIDs": sorted(set(line_polygon_warp_supported_ids)),
         "orientationPartialTextBoxIDs": sorted(set(orientation_partial_ids)),
         "orientationUnsupportedTextBoxIDs": sorted(set(unsupported_ids)),
         "orientationUnsupportedReasonBreakdown": count_strings(unsupported_reasons),
         "currentShadowOCRSupport": {
             "boundedRightAngleRotationOCR": True,
             "verticalRotationOCR": True,
-            "linePolygonWarp": False,
+            "linePolygonWarp": True,
+            "linePolygonWarpRequiresExactlyFourPoints": True,
             "arbitraryAngleDeskew": False,
         },
     }

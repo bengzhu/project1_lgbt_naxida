@@ -116,6 +116,20 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.92 候选：External TextBox Line Polygon Warp Shadow OCR
+日期：2026-07-13
+
+状态：Agent X 候选实现，分支 `codeb/v1.92-koharu-line-polygon-warp`；正式版本号仍为 `1.91`，待云端 Xcode build / contract 与 Agent C 验收后收口。
+
+核心变更：
+
+- 对真实 external TextBox 的合法四点 `linePolygons` 使用 Core Image perspective correction 生成规整 line crop，逐行执行 Vision OCR 后合并；bbox + 0/90/180/270 rotation 路径继续作为 fallback。
+- warp 只有真实执行成功时才写 `deskewExecuted = true` 并移除 line polygon blocker；warp 失败或任意角度 rotation 继续阻塞 orientation convergence，不能误判 passed。
+- validator / CI orientation fixture 改为声明 `linePolygonWarp = true`，新增 `orientationLinePolygonWarpSupportedTextBoxIDs`；`arbitraryRotationUnsupported` 仍保留。
+- 仍为 shadow-only，不改 `finalTextUsedForTranslation`、主 OCR、翻译、覆盖图、`blockPassed` 或 active artifact；仓库仍没有真实四件套，不能声称完成 Koharu handoff。
+
+验证计划：本地只跑 Swift parse、Python contract/validator、YAML parse、JSON parse 与 `git diff --check`；不跑本机 build / 探针，按规则交给云端验证。push CI 先跑 Xcode build；真实四件套缺失时不触发注入式 `ci-fast`，并明确保留 `manifestMissing` 风险。
+
 ### v1.91：Speech 人工矩阵与 Speech CI 契约独立门控
 日期：2026-07-12
 

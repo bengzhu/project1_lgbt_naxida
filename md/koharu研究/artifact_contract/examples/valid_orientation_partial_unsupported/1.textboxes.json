@@ -12,7 +12,7 @@
       ],
       "notes": [
         "legal metadata",
-        "expected orientation partial because bounded rotation is supported but line polygon warp is not"
+        "expected bounded vertical rotation plus line polygon warp shadow OCR"
       ]
     },
     {
