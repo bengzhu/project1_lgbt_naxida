@@ -405,6 +405,7 @@ jobs:
             echo "## Static checks"
             git diff --check
             python3 -B scripts/test-speech-recognition-contract.py
+            python3 -B scripts/test-v192-koharu-line-polygon-warp-contract.py
             bash -n scripts/capture-ui-evidence.sh
             python3 -m json.tool test/1.ground_truth.json >/dev/null
             if [ -f output/probe_report.json ]; then
@@ -553,18 +554,22 @@ jobs:
           orientation = data.get("orientationMetadataSummary") or {}
           if data.get("verdict") != "contractExampleOnly":
               raise SystemExit(f"orientation fixture verdict={data.get('verdict')!r}")
-          expected_partial = {"orientation-partial-vertical-linepolygon"}
-          expected_unsupported = {"orientation-partial-vertical-linepolygon", "orientation-unsupported-arbitrary-rotation"}
+          expected_warp_supported = {"orientation-partial-vertical-linepolygon"}
+          expected_unsupported = {"orientation-unsupported-arbitrary-rotation"}
           partial = set(orientation.get("orientationPartialTextBoxIDs") or [])
           unsupported = set(orientation.get("orientationUnsupportedTextBoxIDs") or [])
+          warp_supported = set(orientation.get("orientationLinePolygonWarpSupportedTextBoxIDs") or [])
           reasons = orientation.get("orientationUnsupportedReasonBreakdown") or {}
-          if not expected_partial.issubset(partial):
-              raise SystemExit(f"orientation fixture missing partial IDs: {orientation}")
+          if partial:
+              raise SystemExit(f"orientation fixture unexpectedly partial after line polygon warp support: {orientation}")
+          if not expected_warp_supported.issubset(warp_supported):
+              raise SystemExit(f"orientation fixture missing line polygon warp support: {orientation}")
           if not expected_unsupported.issubset(unsupported):
               raise SystemExit(f"orientation fixture missing unsupported IDs: {orientation}")
-          for key in ["linePolygonWarpUnsupported", "arbitraryRotationUnsupported"]:
-              if int(reasons.get(key) or 0) <= 0:
-                  raise SystemExit(f"orientation fixture missing unsupported reason {key}: {orientation}")
+          if int(reasons.get("arbitraryRotationUnsupported") or 0) <= 0:
+              raise SystemExit(f"orientation fixture missing arbitrary rotation blocker: {orientation}")
+          if "linePolygonWarpUnsupported" in reasons:
+              raise SystemExit(f"orientation fixture retained obsolete line polygon blocker: {orientation}")
           PY
             python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files
             python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing > "$RESULT_ROOT/koharu-active-artifacts-validation.json"

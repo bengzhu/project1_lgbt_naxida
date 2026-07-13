@@ -1,4 +1,5 @@
 import CoreGraphics
+import CoreImage
 import CoreText
 import Foundation
 import ImageIO
@@ -315,6 +316,38 @@ struct MangaOverlayTextRegionCropResult: Equatable, Sendable {
     var orientationHint: String
 }
 
+struct MangaOverlayExternalTextBoxCropResult: Equatable, Sendable {
+    var text: String?
+    var cropBBox: [Double]
+    var paddingX: Double
+    var paddingY: Double
+    var rotationApplied: Double
+    var linePolygonWarpAttempted: Bool
+    var linePolygonWarpExecuted: Bool
+    var linePolygonWarpedLineCount: Int
+    var linePolygonWarpFailureReasons: [String]
+    var ocrPath: String
+    var bboxFallbackReason: String?
+    var bboxFallbackError: String?
+}
+
+struct MangaOverlayLinePolygonWarpError: LocalizedError, Sendable {
+    var reason: String
+    var fallbackError: String?
+
+    init(reason: String, fallbackError: String? = nil) {
+        self.reason = reason
+        self.fallbackError = fallbackError
+    }
+
+    var errorDescription: String? {
+        if let fallbackError {
+            return "warpReason=\(reason);fallbackError=\(fallbackError)"
+        }
+        return reason
+    }
+}
+
 struct MangaOverlayCropFallbackSelfTest: Equatable, Codable, Sendable {
     var triggered: Bool
     var blockIndex: Int?
@@ -610,29 +643,376 @@ struct MangaOverlayProbeService: Sendable {
         textBoxBBox: [Double],
         options: MangaOverlayPreprocessingOptions = .defaultValue,
         rotationAngle: Int,
-        recognitionLanguages: [String]? = nil
-    ) async throws -> (text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double, rotationApplied: Double) {
+        recognitionLanguages: [String]? = nil,
+        linePolygons: [[[Double]]]? = nil
+    ) async throws -> MangaOverlayExternalTextBoxCropResult {
         try await Task.detached(priority: .userInitiated) {
             let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
             let seedRect = Self.clamp(Self.rect(from: textBoxBBox), to: bounds).integral
             let normalizedRotation = [0, 90, 180, 270].contains(rotationAngle) ? rotationAngle : 0
             guard seedRect.width >= 2, seedRect.height >= 2 else {
-                return (nil, Self.bboxArray(from: seedRect), 0, 0, Double(normalizedRotation))
+                return MangaOverlayExternalTextBoxCropResult(
+                    text: nil,
+                    cropBBox: Self.bboxArray(from: seedRect),
+                    paddingX: 0,
+                    paddingY: 0,
+                    rotationApplied: Double(normalizedRotation),
+                    linePolygonWarpAttempted: linePolygons?.isEmpty == false,
+                    linePolygonWarpExecuted: false,
+                    linePolygonWarpedLineCount: 0,
+                    linePolygonWarpFailureReasons: linePolygons?.isEmpty == false ? ["linePolygonWarpInvalidTextBoxBBox"] : [],
+                    ocrPath: "invalidTextBoxBBox",
+                    bboxFallbackReason: nil,
+                    bboxFallbackError: nil
+                )
             }
-            let padding = Self.adaptiveCropPadding(for: seedRect)
-            let cropRect = Self.clamp(
-                seedRect.insetBy(dx: -padding.x, dy: -padding.y),
-                to: bounds
-            ).integral
-            let text = try Self.recognizePreprocessedText(
+            if let linePolygons, !linePolygons.isEmpty {
+                do {
+                    let warped = try Self.recognizeLinePolygonWarpedText(
+                        in: image,
+                        linePolygons: linePolygons,
+                        options: options,
+                        rotationAngle: normalizedRotation,
+                        recognitionLanguages: recognitionLanguages
+                    )
+                    if warped.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
+                        do {
+                            let fallback = try Self.recognizeExternalTextBoxBBoxCrop(
+                                in: image,
+                                seedRect: seedRect,
+                                bounds: bounds,
+                                options: options,
+                                rotationAngle: normalizedRotation,
+                                recognitionLanguages: recognitionLanguages
+                            )
+                            return MangaOverlayExternalTextBoxCropResult(
+                                text: fallback.text,
+                                cropBBox: fallback.cropBBox,
+                                paddingX: fallback.paddingX,
+                                paddingY: fallback.paddingY,
+                                rotationApplied: Double(normalizedRotation),
+                                linePolygonWarpAttempted: true,
+                                linePolygonWarpExecuted: true,
+                                linePolygonWarpedLineCount: warped.lineCount,
+                                linePolygonWarpFailureReasons: [],
+                                ocrPath: "bboxFallbackAfterEmptyLinePolygonWarpOCR",
+                                bboxFallbackReason: "linePolygonWarpOCRReturnedEmpty",
+                                bboxFallbackError: nil
+                            )
+                        } catch {
+                            return MangaOverlayExternalTextBoxCropResult(
+                                text: warped.text,
+                                cropBBox: warped.cropBBox,
+                                paddingX: 0,
+                                paddingY: 0,
+                                rotationApplied: Double(normalizedRotation),
+                                linePolygonWarpAttempted: true,
+                                linePolygonWarpExecuted: true,
+                                linePolygonWarpedLineCount: warped.lineCount,
+                                linePolygonWarpFailureReasons: [],
+                                ocrPath: "linePolygonWarpEmptyBBoxFallbackFailed",
+                                bboxFallbackReason: "linePolygonWarpOCRReturnedEmpty",
+                                bboxFallbackError: Self.externalTextBoxOCRFailureDescription(error)
+                            )
+                        }
+                    }
+                    return MangaOverlayExternalTextBoxCropResult(
+                        text: warped.text,
+                        cropBBox: warped.cropBBox,
+                        paddingX: 0,
+                        paddingY: 0,
+                        rotationApplied: Double(normalizedRotation),
+                        linePolygonWarpAttempted: true,
+                        linePolygonWarpExecuted: true,
+                        linePolygonWarpedLineCount: warped.lineCount,
+                        linePolygonWarpFailureReasons: [],
+                        ocrPath: "linePolygonPerspectiveWarp",
+                        bboxFallbackReason: nil,
+                        bboxFallbackError: nil
+                    )
+                } catch let error as MangaOverlayLinePolygonWarpError {
+                    let warpReason = error.reason
+                    do {
+                        let fallback = try Self.recognizeExternalTextBoxBBoxCrop(
+                            in: image,
+                            seedRect: seedRect,
+                            bounds: bounds,
+                            options: options,
+                            rotationAngle: normalizedRotation,
+                            recognitionLanguages: recognitionLanguages
+                        )
+                        return MangaOverlayExternalTextBoxCropResult(
+                            text: fallback.text,
+                            cropBBox: fallback.cropBBox,
+                            paddingX: fallback.paddingX,
+                            paddingY: fallback.paddingY,
+                            rotationApplied: Double(normalizedRotation),
+                            linePolygonWarpAttempted: true,
+                            linePolygonWarpExecuted: false,
+                            linePolygonWarpedLineCount: 0,
+                            linePolygonWarpFailureReasons: [warpReason],
+                            ocrPath: "bboxFallbackAfterLinePolygonWarpFailure",
+                            bboxFallbackReason: warpReason,
+                            bboxFallbackError: nil
+                        )
+                    } catch {
+                        throw MangaOverlayLinePolygonWarpError(
+                            reason: warpReason,
+                            fallbackError: Self.externalTextBoxOCRFailureDescription(error)
+                        )
+                    }
+                } catch {
+                    let warpReason = "linePolygonWarpExecutionFailed:\(Self.externalTextBoxOCRFailureDescription(error))"
+                    do {
+                        let fallback = try Self.recognizeExternalTextBoxBBoxCrop(
+                            in: image,
+                            seedRect: seedRect,
+                            bounds: bounds,
+                            options: options,
+                            rotationAngle: normalizedRotation,
+                            recognitionLanguages: recognitionLanguages
+                        )
+                        return MangaOverlayExternalTextBoxCropResult(
+                            text: fallback.text,
+                            cropBBox: fallback.cropBBox,
+                            paddingX: fallback.paddingX,
+                            paddingY: fallback.paddingY,
+                            rotationApplied: Double(normalizedRotation),
+                            linePolygonWarpAttempted: true,
+                            linePolygonWarpExecuted: false,
+                            linePolygonWarpedLineCount: 0,
+                            linePolygonWarpFailureReasons: [warpReason],
+                            ocrPath: "bboxFallbackAfterLinePolygonWarpFailure",
+                            bboxFallbackReason: warpReason,
+                            bboxFallbackError: nil
+                        )
+                    } catch {
+                        throw MangaOverlayLinePolygonWarpError(
+                            reason: warpReason,
+                            fallbackError: Self.externalTextBoxOCRFailureDescription(error)
+                        )
+                    }
+                }
+            }
+
+            let fallback = try Self.recognizeExternalTextBoxBBoxCrop(
                 in: image,
-                cropRect: cropRect,
+                seedRect: seedRect,
+                bounds: bounds,
                 options: options,
                 rotationAngle: normalizedRotation,
                 recognitionLanguages: recognitionLanguages
             )
-            return (text, Self.bboxArray(from: cropRect), Double(padding.x), Double(padding.y), Double(normalizedRotation))
+            return MangaOverlayExternalTextBoxCropResult(
+                text: fallback.text,
+                cropBBox: fallback.cropBBox,
+                paddingX: fallback.paddingX,
+                paddingY: fallback.paddingY,
+                rotationApplied: Double(normalizedRotation),
+                linePolygonWarpAttempted: false,
+                linePolygonWarpExecuted: false,
+                linePolygonWarpedLineCount: 0,
+                linePolygonWarpFailureReasons: [],
+                ocrPath: "textBoxBBox",
+                bboxFallbackReason: nil,
+                bboxFallbackError: nil
+            )
         }.value
+    }
+
+    private static func externalTextBoxOCRFailureDescription(_ error: Error) -> String {
+        "\(String(reflecting: type(of: error))):\(error.localizedDescription)"
+    }
+
+    private static func recognizeExternalTextBoxBBoxCrop(
+        in image: CGImage,
+        seedRect: CGRect,
+        bounds: CGRect,
+        options: MangaOverlayPreprocessingOptions,
+        rotationAngle: Int,
+        recognitionLanguages: [String]?
+    ) throws -> (text: String?, cropBBox: [Double], paddingX: Double, paddingY: Double) {
+        let padding = adaptiveCropPadding(for: seedRect)
+        let cropRect = clamp(seedRect.insetBy(dx: -padding.x, dy: -padding.y), to: bounds).integral
+        let text = try recognizePreprocessedText(
+            in: image,
+            cropRect: cropRect,
+            options: options,
+            rotationAngle: rotationAngle,
+            recognitionLanguages: recognitionLanguages
+        )
+        return (text, bboxArray(from: cropRect), Double(padding.x), Double(padding.y))
+    }
+
+    private static func recognizeLinePolygonWarpedText(
+        in image: CGImage,
+        linePolygons: [[[Double]]],
+        options: MangaOverlayPreprocessingOptions,
+        rotationAngle: Int,
+        recognitionLanguages: [String]?
+    ) throws -> (text: String?, cropBBox: [Double], lineCount: Int) {
+        let maximumLineCount = 24
+        let maximumTotalOutputPixels: CGFloat = 16_000_000
+        guard linePolygons.count <= maximumLineCount else {
+            throw MangaOverlayLinePolygonWarpError(reason: "linePolygonWarpLineLimitExceeded")
+        }
+
+        let ciImage = CIImage(cgImage: image)
+        let context = CIContext(options: [.cacheIntermediates: false])
+        var recognizedLines: [String] = []
+        var sourceBounds = CGRect.null
+        var totalOutputPixels: CGFloat = 0
+
+        for (index, polygon) in linePolygons.enumerated() {
+            let corners = try orderedLinePolygonCorners(
+                polygon,
+                imageWidth: image.width,
+                imageHeight: image.height,
+                index: index
+            )
+            let polygonBounds = corners.reduce(CGRect.null) { partial, point in
+                partial.union(CGRect(origin: point, size: .zero))
+            }.integral
+            sourceBounds = sourceBounds.union(polygonBounds)
+
+            let ciHeight = CGFloat(image.height)
+            let filter = CIFilter(name: "CIPerspectiveCorrection")
+            filter?.setValue(ciImage, forKey: kCIInputImageKey)
+            filter?.setValue(CIVector(cgPoint: CGPoint(x: corners[0].x, y: ciHeight - corners[0].y)), forKey: "inputTopLeft")
+            filter?.setValue(CIVector(cgPoint: CGPoint(x: corners[1].x, y: ciHeight - corners[1].y)), forKey: "inputTopRight")
+            filter?.setValue(CIVector(cgPoint: CGPoint(x: corners[2].x, y: ciHeight - corners[2].y)), forKey: "inputBottomRight")
+            filter?.setValue(CIVector(cgPoint: CGPoint(x: corners[3].x, y: ciHeight - corners[3].y)), forKey: "inputBottomLeft")
+            guard let output = filter?.outputImage else {
+                throw MangaOverlayLinePolygonWarpError(reason: "linePolygonWarpFilterFailed:\(index)")
+            }
+            let outputExtent = output.extent.integral
+            guard outputExtent.width >= 2,
+                  outputExtent.height >= 2,
+                  outputExtent.width <= 4096,
+                  outputExtent.height <= 4096 else {
+                throw MangaOverlayLinePolygonWarpError(reason: "linePolygonWarpOutputBoundsInvalid:\(index)")
+            }
+            totalOutputPixels += outputExtent.width * outputExtent.height
+            guard totalOutputPixels <= maximumTotalOutputPixels else {
+                throw MangaOverlayLinePolygonWarpError(reason: "linePolygonWarpPixelLimitExceeded")
+            }
+            guard let warpedImage = context.createCGImage(output, from: outputExtent) else {
+                throw MangaOverlayLinePolygonWarpError(reason: "linePolygonWarpRenderFailed:\(index)")
+            }
+            let prepared = try preprocessedImage(warpedImage, options: options)
+            let rotated = try rotatedImage(prepared, angle: rotationAngle)
+            let candidates = try recognizeTextCandidates(
+                in: rotated,
+                angle: 0,
+                scaledContentSize: CGSize(width: CGFloat(rotated.width), height: CGFloat(rotated.height)),
+                contentOrigin: .zero,
+                scale: 1,
+                customWords: [],
+                recognitionLanguages: recognitionLanguages
+            )
+            let text = candidates
+                .sorted {
+                    if abs($0.boundingBox.minY - $1.boundingBox.minY) > 8 {
+                        return $0.boundingBox.minY < $1.boundingBox.minY
+                    }
+                    return $0.boundingBox.minX < $1.boundingBox.minX
+                }
+                .map(\.text)
+                .joined(separator: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty {
+                recognizedLines.append(text)
+            }
+        }
+
+        let merged = recognizedLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        return (merged.isEmpty ? nil : merged, bboxArray(from: sourceBounds), linePolygons.count)
+    }
+
+    private static func orderedLinePolygonCorners(
+        _ polygon: [[Double]],
+        imageWidth: Int,
+        imageHeight: Int,
+        index: Int
+    ) throws -> [CGPoint] {
+        guard polygon.count == 4 else {
+            throw MangaOverlayLinePolygonWarpError(reason: "linePolygonWarpRequiresFourPoints:\(index)")
+        }
+        let points = try polygon.enumerated().map { pointIndex, values -> CGPoint in
+            guard values.count == 2,
+                  values[0].isFinite,
+                  values[1].isFinite else {
+                throw MangaOverlayLinePolygonWarpError(reason: "linePolygonWarpPointInvalid:\(index):\(pointIndex)")
+            }
+            let point = CGPoint(x: values[0], y: values[1])
+            guard point.x >= 0,
+                  point.y >= 0,
+                  point.x <= CGFloat(imageWidth),
+                  point.y <= CGFloat(imageHeight) else {
+                throw MangaOverlayLinePolygonWarpError(reason: "linePolygonWarpPointOutOfBounds:\(index):\(pointIndex)")
+            }
+            return point
+        }
+        let centroid = CGPoint(
+            x: points.map(\.x).reduce(0, +) / CGFloat(points.count),
+            y: points.map(\.y).reduce(0, +) / CGFloat(points.count)
+        )
+        let winding = points.sorted { lhs, rhs in
+            atan2(lhs.y - centroid.y, lhs.x - centroid.x)
+                < atan2(rhs.y - centroid.y, rhs.x - centroid.x)
+        }
+        guard let startIndex = winding.indices.min(by: { lhs, rhs in
+            let lhsScore = winding[lhs].x + winding[lhs].y
+            let rhsScore = winding[rhs].x + winding[rhs].y
+            if abs(lhsScore - rhsScore) > 0.001 {
+                return lhsScore < rhsScore
+            }
+            if abs(winding[lhs].y - winding[rhs].y) > 0.001 {
+                return winding[lhs].y < winding[rhs].y
+            }
+            return winding[lhs].x < winding[rhs].x
+        }) else {
+            throw MangaOverlayLinePolygonWarpError(reason: "linePolygonWarpOrderingFailed:\(index)")
+        }
+        let ordered = Array(winding[startIndex...]) + Array(winding[..<startIndex])
+        let closedTail = Array(ordered.dropFirst()) + [ordered[0]]
+        let signedArea = zip(ordered, closedTail).reduce(CGFloat.zero) { partial, pair in
+            partial + pair.0.x * pair.1.y - pair.1.x * pair.0.y
+        } / 2
+        let edgeLengths = zip(ordered, closedTail).map { hypot($0.1.x - $0.0.x, $0.1.y - $0.0.y) }
+        let crossProducts = ordered.indices.map { pointIndex -> CGFloat in
+            let current = ordered[pointIndex]
+            let next = ordered[(pointIndex + 1) % ordered.count]
+            let following = ordered[(pointIndex + 2) % ordered.count]
+            return (next.x - current.x) * (following.y - next.y)
+                - (next.y - current.y) * (following.x - next.x)
+        }
+        let convex = crossProducts.allSatisfy { $0 > 0.5 } || crossProducts.allSatisfy { $0 < -0.5 }
+        let selfIntersects = lineSegmentsProperlyIntersect(ordered[0], ordered[1], ordered[2], ordered[3])
+            || lineSegmentsProperlyIntersect(ordered[1], ordered[2], ordered[3], ordered[0])
+        guard abs(signedArea) >= 4,
+              edgeLengths.allSatisfy({ $0 >= 2 }),
+              convex,
+              !selfIntersects else {
+            throw MangaOverlayLinePolygonWarpError(reason: "linePolygonWarpDegenerate:\(index)")
+        }
+        return ordered
+    }
+
+    private static func lineSegmentsProperlyIntersect(
+        _ a: CGPoint,
+        _ b: CGPoint,
+        _ c: CGPoint,
+        _ d: CGPoint
+    ) -> Bool {
+        func orientation(_ p: CGPoint, _ q: CGPoint, _ r: CGPoint) -> CGFloat {
+            (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x)
+        }
+        let abC = orientation(a, b, c)
+        let abD = orientation(a, b, d)
+        let cdA = orientation(c, d, a)
+        let cdB = orientation(c, d, b)
+        return abC * abD < 0 && cdA * cdB < 0
     }
 
     func runCropFallbackSelfTest(

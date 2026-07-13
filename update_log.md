@@ -116,6 +116,22 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.92：External TextBox Line Polygon Warp Shadow OCR
+日期：2026-07-13
+
+状态：Agent C / Agent X 收口中，分支 `codeb/v1.92-koharu-line-polygon-warp`，PR #45，工程 `MARKETING_VERSION=1.92`。实现 HEAD `a514b2c8ffd99463859b7c715e1b5708f444d3fd` 的云端 run `29219563408` SUCCESS；版本收口 commit 仍须获得 exact-SHA 新 run 后才能合并到 `smalldata_test`。未触碰 `main`。
+
+核心变更：
+
+- 对真实 external TextBox 的合法四点 `linePolygons` 使用 Core Image perspective correction 生成规整 line crop，逐行执行 Vision OCR 后合并；bbox + 0/90/180/270 rotation 路径继续作为 fallback。
+- 只有 warp OCR 输出被最终候选选中时才写 `deskewExecuted = true`；bbox fallback 写独立 variant 并由 `linePolygonWarpOutputNotSelected` 阻止 report-only promotion，warp 失败或任意角度 rotation 继续阻塞 orientation convergence。
+- validator / CI orientation fixture 改为声明 `linePolygonWarp = true`，新增 `orientationLinePolygonWarpSupportedTextBoxIDs`；`arbitraryRotationUnsupported` 仍保留。
+- 仍为 shadow-only，不改 `finalTextUsedForTranslation`、主 OCR、翻译、覆盖图、`blockPassed` 或 active artifact；仓库仍没有真实四件套，不能声称完成 Koharu handoff。
+
+云端实现验收：run `29219563408` attempt 1、artifact `aitrans-ci-v1.92-codeb-v1.92-koharu-line-polygon-warp--a514b2c8ffd9-run29219563408-attempt1`（3,869,756 bytes；SHA256 `5ffbc56b39057fde69e25e90f4fd562b028d6fbf07695005d208e61d72fd4f8c`）。manifest branch/commit/run/workflow 对齐，Xcode build / static / Speech / v1.87-v1.89 contracts / 12 张 UI evidence success，JUnit 8/8。`probe_mode=skip`，active artifact 仍为 `manifestMissing`；未跑真实四件套 Core Image/Vision runtime，不能声称 warp 已获 `ci-fast` 运行态证据。
+
+本地轻量验证：Swift parse、v1.92 5/5、Speech 8/8、v1.87 6/6、v1.88 7/7、v1.89 4/4、validator/YAML/JSON/shell/`git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证。
+
 ### v1.91：Speech 人工矩阵与 Speech CI 契约独立门控
 日期：2026-07-12
 
