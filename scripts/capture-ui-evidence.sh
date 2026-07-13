@@ -128,6 +128,7 @@ capture "$small_id" "compact-iPhone" textSuccess extra-extra-large portrait text
 capture "$small_id" "compact-iPhone" textKeyboard large portrait text-keyboard-compact-night.png false 夜间
 capture "$small_id" "compact-iPhone" textFailure accessibility-extra-large portrait text-failure-compact-accessibility-night.png false 夜间
 capture "$small_id" "compact-iPhone" audioRecognizing large portrait audio-running-compact-reduce-motion-night.png true 夜间
+capture "$small_id" "compact-iPhone" audioTranslating large portrait audio-translating-compact-night.png false 夜间
 capture "$small_id" "compact-iPhone" promptLibrary large portrait prompt-library-compact-day.png false 日间
 capture "$small_id" "compact-iPhone" localMissing large portrait model-missing-compact-night.png false 夜间
 capture "$small_id" "compact-iPhone" developerConsole large portrait developer-console-compact-day.png false 日间
@@ -165,12 +166,12 @@ for line in source.read_text(encoding="utf-8").splitlines():
         "appearance": appearance,
         "commitSha": commit_sha,
     })
-if len(items) != 12:
-    raise SystemExit(f"Expected 12 screenshots (11 compact iPhone + 1 wide iPad), received {len(items)}")
+if len(items) != 13:
+    raise SystemExit(f"Expected 13 screenshots (12 compact iPhone + 1 wide iPad), received {len(items)}")
 compact = [item for item in items if item["device"] == "compact-iPhone"]
 wide = [item for item in items if item["device"] == "wide-iPad"]
-if len(compact) != 11:
-    raise SystemExit(f"Expected 11 compact-iPhone screenshots, received {len(compact)}")
+if len(compact) != 12:
+    raise SystemExit(f"Expected 12 compact-iPhone screenshots, received {len(compact)}")
 if len(wide) != 1:
     raise SystemExit(f"Expected 1 wide-iPad screenshot, received {len(wide)}")
 if any(item["orientation"] != "portrait" for item in compact):

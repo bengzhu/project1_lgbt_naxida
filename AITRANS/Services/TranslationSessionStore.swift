@@ -121,6 +121,7 @@ final class TranslationSessionStore: ObservableObject {
     private var imageTranslationTask: Task<Void, Never>?
     private var imageTranslationTaskID = UUID()
     private var audioRecognitionTask: SFSpeechRecognitionTask?
+    private var speechTranslationTask: Task<Void, Never>?
     private var liveAudioEngine: AVAudioEngine?
     private var liveSpeechRecognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var isProLiveSpeechCaptureRequested = false
@@ -164,6 +165,7 @@ final class TranslationSessionStore: ObservableObject {
         ticker?.cancel()
         modelDownloadTask?.cancel()
         imageTranslationTask?.cancel()
+        speechTranslationTask?.cancel()
     }
 
     private func runLaunchLLMSmokeTestIfNeeded() {
@@ -478,6 +480,8 @@ final class TranslationSessionStore: ObservableObject {
                 }
 
                 let microphoneGranted = await self.requestMicrophoneAccess()
+                guard self.speechRecognitionRunID == runID,
+                      self.isProLiveSpeechCaptureRequested else { return }
                 guard microphoneGranted else {
                     self.isProLiveSpeechCaptureRequested = false
                     self.audioRecognitionState = .failed
@@ -511,6 +515,8 @@ final class TranslationSessionStore: ObservableObject {
         liveSpeechRecognitionRequest = nil
         audioRecognitionTask?.cancel()
         audioRecognitionTask = nil
+        speechTranslationTask?.cancel()
+        speechTranslationTask = nil
         isCapturingProSpeech = false
         audioRecognitionState = proLiveTranscriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .idle : .translated
         audioRecognitionMessage = proLiveTranscriptText.isEmpty ? "未识别到语音" : "识别完成，可点击翻译"
@@ -530,18 +536,16 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
+        let runID = beginSpeechTranslationRun()
         isProcessing = true
         audioRecognitionState = .translating
         audioRecognitionMessage = "正在翻译识别文本"
-        Task { [weak self] in
+        speechTranslationTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            defer {
-                self.isProcessing = false
-                self.persist()
-            }
 
             do {
                 let translation = try await self.translate(text)
+                guard !Task.isCancelled, self.speechRecognitionRunID == runID else { return }
                 self.proLiveTranslationText = translation
                 self.draftText = text
                 self.transcript.insert(
@@ -556,12 +560,20 @@ final class TranslationSessionStore: ObservableObject {
                 )
                 self.audioRecognitionState = .translated
                 self.audioRecognitionMessage = "同声传译已完成"
+                self.finishSpeechRecognitionRun(finalText: text)
                 self.dataTransferMessage = self.audioRecognitionMessage
             } catch {
+                guard !Task.isCancelled, self.speechRecognitionRunID == runID else { return }
                 self.audioRecognitionState = .failed
                 self.audioRecognitionMessage = "翻译失败：\(error.localizedDescription)"
+                self.failSpeechRecognitionRun(self.audioRecognitionMessage)
                 self.dataTransferMessage = self.audioRecognitionMessage
             }
+            guard self.speechRecognitionRunID == runID else { return }
+            self.speechTranslationTask = nil
+            self.isProcessing = false
+            self.persist()
+            self.invalidateSpeechRecognitionRun()
         }
     }
 
@@ -715,19 +727,34 @@ final class TranslationSessionStore: ObservableObject {
                 self.audioRecognitionMessage = "识别成功，正在交给翻译模型"
 
                 let timestamp = Self.timeFormatter.string(from: Date())
-                let didTranslate = await self.submit(text, timestamp: timestamp)
-                if didTranslate {
-                    self.audioRecognitionState = .translated
-                    self.audioRecognitionMessage = "已离线识别并完成翻译"
-                    self.finishSpeechRecognitionRun(finalText: text)
-                } else {
-                    self.audioRecognitionState = .failed
-                    self.audioRecognitionMessage = "已离线识别出文字，但翻译模型处理失败"
-                    self.failSpeechRecognitionRun(self.audioRecognitionMessage)
-                }
-                self.invalidateSpeechRecognitionRun()
-                self.dataTransferMessage = self.audioRecognitionMessage
+                self.startAudioFileTranslation(text, timestamp: timestamp, runID: runID)
             }
+        }
+    }
+
+    private func startAudioFileTranslation(_ text: String, timestamp: String, runID: UUID) {
+        speechTranslationTask?.cancel()
+        speechTranslationTask = Task { @MainActor [weak self] in
+            guard let self, self.speechRecognitionRunID == runID else { return }
+            let didTranslate = await self.submit(
+                text,
+                timestamp: timestamp,
+                expectedSpeechRunID: runID
+            )
+            guard !Task.isCancelled, self.speechRecognitionRunID == runID else { return }
+
+            if didTranslate {
+                self.audioRecognitionState = .translated
+                self.audioRecognitionMessage = "已离线识别并完成翻译"
+                self.finishSpeechRecognitionRun(finalText: text)
+            } else {
+                self.audioRecognitionState = .failed
+                self.audioRecognitionMessage = "已离线识别出文字，但翻译模型处理失败"
+                self.failSpeechRecognitionRun(self.audioRecognitionMessage)
+            }
+            self.speechTranslationTask = nil
+            self.dataTransferMessage = self.audioRecognitionMessage
+            self.invalidateSpeechRecognitionRun()
         }
     }
 
@@ -741,6 +768,8 @@ final class TranslationSessionStore: ObservableObject {
         liveSpeechRecognitionRequest = nil
         audioRecognitionTask?.cancel()
         audioRecognitionTask = nil
+        speechTranslationTask?.cancel()
+        speechTranslationTask = nil
         isCapturingProSpeech = false
         isProcessing = false
         audioRecognitionState = .idle
@@ -754,6 +783,8 @@ final class TranslationSessionStore: ObservableObject {
         inputName: String,
         capability: SpeechRecognitionCapability
     ) -> UUID {
+        speechTranslationTask?.cancel()
+        speechTranslationTask = nil
         let runID = UUID()
         speechRecognitionRunID = runID
         speechRecognitionRunSummary = SpeechRecognitionRunSummary(
@@ -772,6 +803,16 @@ final class TranslationSessionStore: ObservableObject {
             isFinal: false,
             failureMessage: nil
         )
+        return runID
+    }
+
+    private func beginSpeechTranslationRun() -> UUID {
+        speechTranslationTask?.cancel()
+        let runID = UUID()
+        speechRecognitionRunID = runID
+        speechRecognitionRunSummary.runToken = String(runID.uuidString.prefix(8))
+        speechRecognitionRunSummary.completedAt = nil
+        speechRecognitionRunSummary.failureMessage = nil
         return runID
     }
 
@@ -3086,18 +3127,26 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     @discardableResult
-    private func submit(_ text: String, timestamp: String, refreshesSummary: Bool = true) async -> Bool {
+    private func submit(
+        _ text: String,
+        timestamp: String,
+        refreshesSummary: Bool = true,
+        expectedSpeechRunID: UUID? = nil
+    ) async -> Bool {
         writeLaunchLLMSmokeProbe(
             "submit-start source=\(sourceLanguage.rawValue) target=\(targetLanguage.rawValue) " +
             "engine=\(selectedEngine.rawValue) installed=\(isLocalModelInstalled) input=\(Self.probeField(text))"
         )
         defer {
-            isProcessing = false
-            persist()
+            if expectedSpeechRunID == nil || speechRecognitionRunID == expectedSpeechRunID {
+                isProcessing = false
+                persist()
+            }
         }
 
         do {
             let translation = try await translate(text)
+            guard isCurrentSpeechTranslation(expectedSpeechRunID) else { return false }
             let line = TranscriptLine(
                 speaker: "You",
                 original: text,
@@ -3113,10 +3162,11 @@ final class TranslationSessionStore: ObservableObject {
             )
             draftText = ""
             if refreshesSummary {
-                await refreshSummaryAfterTranslation()
+                await refreshSummaryAfterTranslation(expectedSpeechRunID: expectedSpeechRunID)
             }
-            return true
+            return isCurrentSpeechTranslation(expectedSpeechRunID)
         } catch {
+            guard isCurrentSpeechTranslation(expectedSpeechRunID) else { return false }
             writeLaunchLLMSmokeProbe(
                 "submit-error source=\(sourceLanguage.rawValue) target=\(targetLanguage.rawValue) " +
                 "engine=\(selectedEngine.rawValue) input=\(Self.probeField(text)) " +
@@ -3129,6 +3179,12 @@ final class TranslationSessionStore: ObservableObject {
             )
             return false
         }
+    }
+
+    private func isCurrentSpeechTranslation(_ expectedRunID: UUID?) -> Bool {
+        guard !Task.isCancelled else { return false }
+        guard let expectedRunID else { return true }
+        return speechRecognitionRunID == expectedRunID
     }
 
     private func startTicker() {
@@ -3185,10 +3241,13 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
-    private func refreshSummaryAfterTranslation() async {
+    private func refreshSummaryAfterTranslation(expectedSpeechRunID: UUID? = nil) async {
         do {
-            try await refreshSummary()
+            let refreshedSummary = try await summarize()
+            guard isCurrentSpeechTranslation(expectedSpeechRunID) else { return }
+            summary = refreshedSummary
         } catch {
+            guard isCurrentSpeechTranslation(expectedSpeechRunID) else { return }
             dataTransferMessage = "翻译已完成，摘要生成失败：\(error.localizedDescription)"
         }
     }

@@ -9,6 +9,7 @@ enum AppPreviewScenario: String {
     case imageEmpty
     case imageSuccess
     case audioRecognizing
+    case audioTranslating
     case audioFailure
     case history
     case promptLibrary
@@ -22,7 +23,7 @@ enum AppPreviewScenario: String {
         switch self {
         case .empty, .textSuccess, .textFailure, .textKeyboard: .text
         case .imageEmpty, .imageSuccess: .image
-        case .audioRecognizing, .audioFailure: .audio
+        case .audioRecognizing, .audioTranslating, .audioFailure: .audio
         case .history: .history
         case .promptLibrary, .proLocked, .proUnlocked, .developerConsole, .localMissing, .localReady: .settings
         }
@@ -96,6 +97,14 @@ enum AppPreviewScenario: String {
             store.audioRecognitionState = .recognizing
             store.audioRecognitionMessage = "正在使用 en-US 强制本机识别"
             store.speechRecognitionRunSummary = Self.audioSummary(isFinal: false, failureMessage: nil)
+        case .audioTranslating:
+            store.isProUnlocked = true
+            store.isProcessing = true
+            store.proLiveTranscriptText = "Keep the model on device."
+            store.lastRecognizedSpeechText = store.proLiveTranscriptText
+            store.audioRecognitionState = .translating
+            store.audioRecognitionMessage = "识别成功，正在交给翻译模型"
+            store.speechRecognitionRunSummary = Self.audioSummary(isFinal: true, failureMessage: nil)
         case .audioFailure:
             store.isProUnlocked = true
             store.audioRecognitionState = .failed
@@ -231,6 +240,10 @@ private struct PreviewContainer<Content: View>: View {
 #Preview("Audio · Reduce Motion", traits: .fixedLayout(width: 430, height: 932)) {
     PreviewContainer(scenario: .audioRecognizing) { AudioTranslationView() }
         .environment(\.appReduceMotionOverride, true)
+}
+
+#Preview("Audio · Translating", traits: .fixedLayout(width: 375, height: 812)) {
+    PreviewContainer(scenario: .audioTranslating) { AudioTranslationView() }
 }
 
 #Preview("Audio · Failure", traits: .fixedLayout(width: 375, height: 812)) {

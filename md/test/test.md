@@ -24,7 +24,7 @@
 
 `codeb/v1.87-enterprise-ui` 的 push CI 在 Xcode build 通过后必须运行 `scripts/capture-ui-evidence.sh`。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、`ui-evidence-manifest.json` 和 `ui-evidence.log`，manifest 的每张截图必须记录设备、方向、Dynamic Type、场景、Reduce Motion 和当前 `commitSha`。
 
-当前最低截图矩阵为同一台紧凑 iPhone 上的 11 张竖屏证据：文本空态、图片空态、历史有数据、Pro 锁定、文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频运行、提示词库、Local 模型缺失和开发控制台。矩阵必须同时包含日间和夜间外观，manifest 记录 `appearance`；截图步骤失败必须使候选分支 CI 失败。iPad / Mac 视觉证据本轮暂缓，不得把缺失证据描述为已验证。
+当前最低截图矩阵为 13 张证据：同一台紧凑 iPhone 上 12 张竖屏，覆盖文本空态、图片空态、历史有数据、Pro 锁定、文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频 recognizing、音频 translating 取消入口、提示词库、Local 模型缺失和开发控制台；另有 1 张 wide iPad 文本空态。矩阵必须同时包含日间和夜间外观，manifest 记录 `appearance`；截图步骤失败必须使候选分支 CI 失败。Mac 视觉证据仍未覆盖，不得描述为已验证。
 
 截图脚本必须等待模拟器完整启动，关闭键盘首次使用教程干扰，并拒绝小于 50 KB 的疑似空白 PNG。键盘证据必须显示实际软件键盘，不得以 QuickPath / 输入法教学遮罩代替；文件存在、方向和尺寸检查通过仍不能替代 Agent B / C 逐张视觉审查。
 
@@ -34,7 +34,7 @@ Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键
 
 交互回归至少覆盖：文本翻译/交换语言/目标语言/提示词；新会话与历史恢复/搜索/删除/导入/导出/清空；提示词新建/编辑/复制/删除/选择；Mock/Local、GGUF 下载/导入/移除和失败；图片导入/OCR/旁贴/覆盖/取消/重试/导出；音频导入/识别/取消/翻译/摘要；Pro 锁定/解锁/订阅校验；开发 raw probe、批量探针和漫画报告入口。
 
-`scripts/test-v187-ui-interaction-contract.py` 是独立源码契约检查，必须验证：录音按钮有默认 accessibility action 且能开始/停止、`SettingsView` 绑定 `NavigationPath` 并在关闭开发模式后清空、Reduce Motion 场景进入 `isCapturingProSpeech=true`、文本页头位于自动滚动区外的顶部 safe-area inset、上述八类页面的关键 store action 仍接线、11 张运行态证据至少覆盖八类页面。CI 必须把结果写入 `ui-interaction-contract.log`、manifest 的 `uiInteractionContractOutcome` 和 JUnit 的独立 testcase。该契约和运行态截图不冒充 XCUITest 点击；Agent C 仍按本段交互清单抽查高风险操作。
+`scripts/test-v187-ui-interaction-contract.py` 是独立源码契约检查，必须验证：录音按钮有默认 accessibility action 且能开始/停止、`SettingsView` 绑定 `NavigationPath` 并在关闭开发模式后清空、Reduce Motion 场景进入 `isCapturingProSpeech=true`、`audioTranslating` 进入 translating + 非空 transcript 状态、文本页头位于自动滚动区外的顶部 safe-area inset、上述八类页面的关键 store action 仍接线、13 张运行态证据至少覆盖八类页面。CI 必须把结果写入 `ui-interaction-contract.log`、manifest 的 `uiInteractionContractOutcome` 和 JUnit 的独立 testcase。该契约和运行态截图不冒充 XCUITest 点击；Agent C 仍按本段交互清单抽查高风险操作。
 
 ### 0.2 v1.88 文本首页视觉与交互契约
 
@@ -75,7 +75,7 @@ DEBUG 可测性：仅在用户点击粘贴时，若系统 `PasteButton` payload 
 - 运行摘要 UI 展示离线强制、本机能力、终态与 `runToken`
 - `SpeechRecognitionRunSummary` 含 `runToken`
 
-该契约随 static checks 进入云端 CI，不冒充真机录音点击验收。
+该契约由云端独立 `Speech recognition contract` step 执行，并写入 JUnit、manifest 和独立日志；不得在 static checks 重复执行，也不冒充真机录音点击验收。
 
 ### 0.5 v1.91 Speech 人工交互矩阵
 
@@ -93,6 +93,19 @@ v1.90 已用静态契约锁定 run-id 隔离与摘要字段。下列人工矩阵
 | S8 | Reduce Motion | 采集动画降级；capturing 状态仍正确 | [ ] |
 
 `scripts/test-speech-recognition-contract.py` 只证明源码接线；真机麦克风/权限/质量必须走本矩阵或后续专用云端 UI smoke。
+
+### 0.6 v1.93 Speech 取消与立即重试竞态契约
+
+`scripts/test-speech-recognition-contract.py` 必须按函数体与语句顺序验证下列边界，而不是只统计 guard 字符串：
+
+- 麦克风权限 `await` 返回后，先核对 `speechRecognitionRunID == runID` 和 capture request，再处理授权结果或启动录音。
+- 文件识别后的 `submit` 在模型 `await` 返回后、`transcript.insert` 前核对当前 Speech run；summary `await` 返回后、`summary` 写入前再次核对。
+- 实时语音翻译在模型 `await` 返回后、写入译文 / transcript / state 前核对 Task cancellation 与 run ID。
+- `cancelAudioRecognition` 先 invalidate run，再取消 `speechTranslationTask`，最后回到 idle；新 run 在生成新 run ID 前取消并清空旧翻译 Task。
+- 文件面板与实时语音面板都在 `.translating` 暴露取消入口；文件运行态的取消按钮必须排在两个已禁用的启动按钮之前，不能落到 compact iPhone 浮动 Tab Bar 后方。
+- workflow 中 Speech contract 命令只出现一次，但 failure summary 与最终 fail-job 都把该独立 step 的非 success 作为硬失败。
+
+本契约证明的是源码所有权和云端接线，不证明 Apple Speech 的实际识别质量。S1-S8 仍需真机；后续固定语料必须另行报告音频 SHA、locale、参考 transcript、WER/CER、延迟和设备/系统信息。GitHub-hosted simulator 没有真实麦克风输入，不能作为 WER/CER 或权限弹窗证据。
 
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：

@@ -65,7 +65,7 @@ class V189PasteManualMatrixContractTests(unittest.TestCase):
         self.assertIn("wide-iPad", capture)
         self.assertIn("text-empty-wide-ipad-day.png", capture)
         self.assertIn('productFamily") == "iPad"', capture)
-        self.assertIn("Expected 12 screenshots", capture)
+        self.assertIn("Expected 13 screenshots", capture)
         self.assertIn('item["device"] == "wide-iPad"', capture)
         self.assertRegex(
             capture,

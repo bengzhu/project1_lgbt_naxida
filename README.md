@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前正式版本：`1.92`（external TextBox 四点 line polygon warp shadow path 已收口）。该能力仍等待真实四件套 `ci-fast` 运行态证据，不改变主 OCR、翻译或覆盖图。日常开发合入 `smalldata_test`，不合并到 `main`。
+当前正式版本：`1.93`（Speech 取消、立即重试和旧回调隔离已收口）。v1.92 的 external TextBox 四点 line polygon warp 仍等待真实四件套 `ci-fast` 运行态证据，不改变主 OCR、翻译或覆盖图。日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 
@@ -49,7 +49,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - v1.92 更新 v1.64 的 orientation 边界：合法、非退化的凸四点 `linePolygons` 会用有上限的透视校正生成逐行 shadow OCR crop，只有 warp OCR 输出被选中时才标记 `deskewExecuted`；bbox fallback、warp 失败和任意角度 deskew 继续作为 convergence blockers。该能力仍只消费真实四件套，保持 shadow-only，不改变主 OCR、翻译或覆盖图。
 - v1.74 起 `ci-fast/full` 的未加密 manifest 和 failure summary 也会直接汇总 v1.39-v1.46 native-lite detector / shadow OCR / refinement / closed-loop / instance-lite / SegmentMask refinement / bundle / promotion gate 的 verdict、counts、linkage blockers 和 convergence work item / gate 状态，避免 Agent C 为了确认 native-lite 阻塞再深挖完整 `probe_report.json`。
 - 云端探针验收口径是报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0`、关键 JSON/TXT/PNG 可用；`overallPassed=false` 仍可能是当前模型质量基线，不单独作为 CI 失败。若探针超时，结果包会保留 `manga-probe.log`、`app-console.log` 和 `output/manga_probe_progress.json`；`ci-fast` 启动后 180 秒未创建 progress 会提前失败、progress 300 秒不更新会提前收束，`full` 分别为 300 秒和 600 秒。
-- `codeb/v1.87-enterprise-ui` 和 `codeb/v1.88-home-translation-ui` 的 App 相关 push CI 会复用当前 Debug simulator build，在一台紧凑 iPhone 上生成 11 张 `ui-evidence/` 运行态截图和 `ui-evidence-manifest.json`；v1.87 全 App interaction contract 与 v1.88 文本首页 contract 分别作为独立 testcase。截图或任一契约失败都会阻塞候选分支；当前不采集 iPad / Mac 运行态证据。
+- App 相关候选 push CI 会复用当前 Debug simulator build，生成 13 张 `ui-evidence/`（12 张 compact iPhone + 1 张 wide iPad）和 manifest；音频矩阵分别覆盖 recognizing + Reduce Motion 与 translating + 取消入口。v1.87 全 App interaction contract 与 v1.88 文本首页 contract 分别作为独立 testcase，截图或任一契约失败都会阻塞候选分支；当前不采集 Mac 运行态证据。
 
 ## 当前界面
 
@@ -59,7 +59,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - `历史`：搜索、恢复、删除、归档、导入、导出和清空使用一致命令层级；空历史和无搜索结果使用系统空状态。
 - `设置`：集中管理 Pro、提示词、模型、本地数据和受保护的开发者入口。提示词支持方向、新建、复制、编辑、删除和内置锁定；模型页支持 Mock/Local、GGUF 下载/导入/移除、自检和生成参数。
 - `开发`：仅在开发者模式开启后显示。raw prompt/output、批量 raw probe、固定素材测试和漫画探针报告采用高密度、可选择的等宽文本布局，不改变任何探针字段或执行语义。
-- 音频识别页会显示本次运行的输入名、locale、本机识别要求、耗时、词数、分段数、平均置信度、文本或失败原因；识别和翻译状态分开，检查中或识别中可取消。
+- 音频识别页会显示本次运行的输入名、locale、本机识别要求、耗时、词数、分段数、平均置信度、文本或失败原因；识别和翻译状态分开，检查中、识别中或翻译中均可取消。取消会先失效当前 run，再取消识别与模型翻译 Task；旧授权、识别、翻译或摘要回调不会覆盖立即重试后的新状态。
 
 ## Pro / 内购占位
 

@@ -40,7 +40,7 @@ class V187UIInteractionContractTests(unittest.TestCase):
         audio = read("AITRANS/Views/AudioTranslationView.swift")
         capture = read("scripts/capture-ui-evidence.sh")
         scenario = re.search(
-            r"case \.audioRecognizing:(?P<body>.*?)case \.audioFailure:",
+            r"case \.audioRecognizing:(?P<body>.*?)case \.audioTranslating:",
             scenarios,
             re.DOTALL,
         )
@@ -48,6 +48,24 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertIn("store.isCapturingProSpeech = true", scenario.group("body"))
         self.assertIn("store.isCapturingProSpeech && !shouldReduceMotion", audio)
         self.assertRegex(capture, r"audioRecognizing\s+large\s+portrait\s+\S+\s+true\s+夜间")
+
+    def test_translating_scenario_captures_cancel_state(self) -> None:
+        scenarios = read("AITRANS/Views/AppPreviewSupport.swift")
+        capture = read("scripts/capture-ui-evidence.sh")
+        scenario = re.search(
+            r"case \.audioTranslating:(?P<body>.*?)case \.audioFailure:",
+            scenarios,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(scenario, "audioTranslating scenario is missing")
+        body = scenario.group("body")
+        self.assertIn("store.isProcessing = true", body)
+        self.assertIn("store.proLiveTranscriptText", body)
+        self.assertIn("store.audioRecognitionState = .translating", body)
+        self.assertRegex(
+            capture,
+            r"audioTranslating\s+large\s+portrait\s+audio-translating-compact-night\.png\s+false\s+夜间",
+        )
 
     def test_keyboard_header_stays_outside_automatic_scroll(self) -> None:
         text_view = read("AITRANS/Views/TextTranslationView.swift")
@@ -70,6 +88,7 @@ class V187UIInteractionContractTests(unittest.TestCase):
             "promptLibrary",
             "localMissing",
             "audioRecognizing",
+            "audioTranslating",
             "proLocked",
             "developerConsole",
         }

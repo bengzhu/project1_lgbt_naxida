@@ -47,7 +47,7 @@
 
 - 调用 `TranslationSessionStore` 方法。
 - 展示翻译、历史、模型状态、OCR 块、探针报告和错误。
-- 音频页展示 Apple Speech 本机识别能力、识别运行摘要、识别文本、译文和取消入口。
+- 音频页展示 Apple Speech 本机识别能力、识别运行摘要、识别文本、译文和取消入口；checking、recognizing、translating 三种运行态均可取消。
 
 关键文件：
 
@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`1.92`（external TextBox 合法凸四点 line polygon warp shadow OCR 已收口；真实四件套运行态仍待 `ci-fast`）。
+正式版本：`1.93`（Speech 取消、立即重试与旧回调隔离已收口；v1.92 external TextBox 真实四件套运行态仍待 `ci-fast`）。
 
 当前布局：
 
@@ -84,7 +84,7 @@
 - 所有业务按钮只调用 store 公开方法；UI 不直接操作 `state.json`、模型 runtime、Speech task、Vision OCR 或漫画探针服务。
 - 实时录音保留触控按住手势，同时提供默认 accessibility action；VoiceOver / Voice Control 激活会在 `beginProLiveSpeechCapture` 与 `endProLiveSpeechCapture` 之间切换。
 - 设置页持有显式 `NavigationPath`；`isDeveloperModeEnabled` 关闭时清空 path，开发控制台不能在权限关闭后继续停留或操作。
-- `AppPreviewScenario` 通过临时 URL 和 `performsStartupWork=false` 隔离预览，不恢复或持久化生产数据。DEBUG CI 可用 `AITRANS_UI_EVIDENCE_SCENARIO` 复现 11 个截图状态；`audioRecognizing` 同时设置真实 capturing 状态以覆盖 Reduce Motion 分支，生产启动不读取这些场景。
+- `AppPreviewScenario` 通过临时 URL 和 `performsStartupWork=false` 隔离预览，不恢复或持久化生产数据。DEBUG CI 可用 `AITRANS_UI_EVIDENCE_SCENARIO` 复现 13 张运行态证据；`audioRecognizing` 设置 capturing 状态覆盖 Reduce Motion，`audioTranslating` 设置非空 transcript + translating 状态覆盖取消翻译入口，生产启动不读取这些场景。
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppTheme.swift`
 
@@ -200,8 +200,10 @@
 
 - 文件识别和实时识别都强制 `requiresOnDeviceRecognition = true`。
 - UI 只调用 store 方法，不直接创建 Speech recognizer。
-- 识别中和翻译中状态分开展示；用户可取消正在检查或识别的音频任务。
-- 每次识别生成独立 run ID；授权、Speech result/error 和翻译完成回调只有在 run ID 仍匹配时才能更新 store。
+- 识别中和翻译中状态分开展示；用户可取消正在检查、识别或翻译的音频任务。
+- 每次识别生成独立 run ID；实时语音翻译会续接一个新的翻译 run token。授权、Speech result/error、模型翻译和 summary 回调只有在 run ID 仍匹配且 Task 未取消时才能更新 store。
+- `speechTranslationTask` 由 store 持有。取消先失效 run ID，再取消 Speech recognition / translation Task；新 run 在生成新 token 前取消并清空旧翻译 Task，避免旧 defer 或旧回调污染立即重试。
+- 麦克风权限 `await` 返回后必须复验 run ID 与 capture request；模型翻译 `await` 返回后必须在 transcript、summary、状态或错误写入前复验 Speech 所有权。
 
 禁止：
 
@@ -366,7 +368,9 @@ test/1.png
 用户选择或长按录音
   -> Apple Speech on-device recognition
   -> recognized text
+  -> store-owned speechTranslationTask
   -> TranslationSessionStore.translate
+  -> await 后核对 Task cancellation + Speech run ID
   -> UI 展示
 ```
 
