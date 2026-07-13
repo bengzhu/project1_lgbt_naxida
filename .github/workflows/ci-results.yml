@@ -279,8 +279,8 @@ jobs:
             if ! grep -Ev '^(AGENTS\.md|README\.md|update_log\.md|md/|metrics/)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
               candidate_incremental_metadata_only=true
             fi
-            if [ "$candidate_incremental_metadata_only" = "true" ] && [ "$candidate_parent_full_validation_state" != "success" ]; then
-              echo "Metadata-only follow-up has no successful parent receipt; expanding scope to the full candidate diff."
+            if [ "$candidate_parent_full_validation_state" != "success" ] || grep -Fx '.github/workflows/ci-results.yml' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+              echo "Candidate parent receipt is unavailable or CI routing changed; expanding scope to the full candidate diff."
               if git fetch --no-tags --depth=200 origin smalldata_test 2>/dev/null; then
                 candidate_base="$(git merge-base HEAD FETCH_HEAD 2>/dev/null || true)"
               else

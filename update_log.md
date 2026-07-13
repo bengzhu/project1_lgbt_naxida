@@ -135,6 +135,8 @@
 
 首轮云端 run `29231418192` 在 job 创建前失败，GitHub annotation 明确为 `.github/workflows/ci-results.yml` manifest step `Exceeded max expression length 21000`；没有 jobs、日志或 artifact，且没有触发 Build IPA。修复将超大 manifest `run:` 内的 Actions expressions 全部移到 step `env`，Python 只读环境变量，并由 v1.94 contract 锁定 manifest script 不再内联 `${{ ... }}`，防止字段增长再次越过 GitHub 表达式上限。该失败属于 CI 配置，按规则修复 SHA 必须重新 full。
 
+第二轮 run `29231948576` 在 SHA `aac5f8dc10bd89445cba70330dcca56b3702dd1b` 上 17 秒绿色结束，full-validation status 也写入成功，但验收发现它只比较失败提交到修复提交的增量 diff，未把首提交的工程版本变化纳入 changed-files，`xcodeBuildRequired=false`。该 run 只证明 expression-limit 修复能启动，不能作为 v1.94 候选 full/Xcode 证据。路由继续收紧：只要候选父 SHA 没有成功 full 收据，或本次修改 CI routing workflow，就必须从 `smalldata_test` merge-base 重新计算完整候选 diff，再决定 Xcode 与领域契约；因此下一 SHA 必须重新 full。
+
 非目标与遗留：不改变 Koharu report-only/active artifact 边界，不伪造真实四件套，不改善 WER/CER，不调整 App UI；本轮未跑漫画探针，不追加 `metrics/version_history.csv`。
 
 ### v1.93：Speech Run 取消与旧回调隔离

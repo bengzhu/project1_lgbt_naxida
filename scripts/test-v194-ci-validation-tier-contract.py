@@ -54,9 +54,11 @@ class CIValidationTierContractTests(unittest.TestCase):
         self.assertIn("candidate_merge_base", self.workflow)
         self.assertIn("receipt_propagation_allowed=true", self.workflow)
         self.assertIn(
-            "Metadata-only follow-up has no successful parent receipt; expanding scope",
+            'if [ "$candidate_parent_full_validation_state" != "success" ] || '
+            "grep -Fx '.github/workflows/ci-results.yml'",
             self.workflow,
         )
+        self.assertIn("expanding scope to the full candidate diff", self.workflow)
 
     def test_fast_followup_skips_expensive_task_suites(self) -> None:
         fast_block = re.search(
