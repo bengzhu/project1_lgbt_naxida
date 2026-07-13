@@ -49,7 +49,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - v1.92 更新 v1.64 的 orientation 边界：合法、非退化的凸四点 `linePolygons` 会用有上限的透视校正生成逐行 shadow OCR crop，只有 warp OCR 输出被选中时才标记 `deskewExecuted`；bbox fallback、warp 失败和任意角度 deskew 继续作为 convergence blockers。该能力仍只消费真实四件套，保持 shadow-only，不改变主 OCR、翻译或覆盖图。
 - v1.74 起 `ci-fast/full` 的未加密 manifest 和 failure summary 也会直接汇总 v1.39-v1.46 native-lite detector / shadow OCR / refinement / closed-loop / instance-lite / SegmentMask refinement / bundle / promotion gate 的 verdict、counts、linkage blockers 和 convergence work item / gate 状态，避免 Agent C 为了确认 native-lite 阻塞再深挖完整 `probe_report.json`。
 - 云端探针验收口径是报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0`、关键 JSON/TXT/PNG 可用；`overallPassed=false` 仍可能是当前模型质量基线，不单独作为 CI 失败。若探针超时，结果包会保留 `manga-probe.log`、`app-console.log` 和 `output/manga_probe_progress.json`；`ci-fast` 启动后 180 秒未创建 progress 会提前失败、progress 300 秒不更新会提前收束，`full` 分别为 300 秒和 600 秒。
-- `codeb/v1.87-enterprise-ui` 和 `codeb/v1.88-home-translation-ui` 的 App 相关 push CI 会复用当前 Debug simulator build，在一台紧凑 iPhone 上生成 11 张 `ui-evidence/` 运行态截图和 `ui-evidence-manifest.json`；v1.87 全 App interaction contract 与 v1.88 文本首页 contract 分别作为独立 testcase。截图或任一契约失败都会阻塞候选分支；当前不采集 iPad / Mac 运行态证据。
+- App 相关候选 push CI 会复用当前 Debug simulator build，生成 13 张 `ui-evidence/`（12 张 compact iPhone + 1 张 wide iPad）和 manifest；音频矩阵分别覆盖 recognizing + Reduce Motion 与 translating + 取消入口。v1.87 全 App interaction contract 与 v1.88 文本首页 contract 分别作为独立 testcase，截图或任一契约失败都会阻塞候选分支；当前不采集 Mac 运行态证据。
 
 ## 当前界面
 

@@ -212,6 +212,9 @@ class SpeechRecognitionContractTests(unittest.TestCase):
             'store.audioRecognitionState == .translating ? "取消翻译" : "取消识别"',
             file_actions,
         )
+        capture = read("scripts/capture-ui-evidence.sh")
+        self.assertIn("audioTranslating", capture)
+        self.assertIn("audio-translating-compact-night.png", capture)
 
     def test_speech_contract_runs_once_and_is_a_required_ci_gate(self) -> None:
         workflow = read(".github/workflows/ci-results.yml")

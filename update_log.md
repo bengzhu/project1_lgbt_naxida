@@ -129,6 +129,7 @@
 - 音频文件和实时语音的 `.translating` 状态都提供取消入口；Speech contract 从 8 项增强为 14 项，按函数体顺序锁定授权、翻译、摘要、取消和立即重试边界。
 - 第一轮 exact-SHA UI evidence 暴露 compact iPhone 运行态取消按钮被浮动 Tab Bar 遮挡；文件面板已把取消提升为运行态第一操作，并按状态显示“取消识别/取消翻译”，旧 run `29224663327` 因此不作为最终 UI 验收证据。
 - Speech contract 从 static checks 去重，只保留独立 step，并进入 failure summary / fail-job 硬门控；失败仍会写入 JUnit、manifest 和独立日志。
+- 最终证据矩阵新增 `audioTranslating` compact 场景，直接渲染非空实时 transcript、`.translating` 和“取消翻译”；总矩阵为 13 张（12 compact + 1 wide），不再只用 recognizing 截图间接证明 S5。
 
 本地轻量验证：Speech contract 14/14、两个变更 Swift 文件 `swiftc -parse`、workflow YAML 解析和 `git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证；GitHub-hosted simulator 不能冒充真机麦克风、权限弹窗或 Apple Speech 识别质量证据。
 
