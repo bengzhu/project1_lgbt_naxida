@@ -116,10 +116,33 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.94：云端 Full-Once / Fast-Follow-Up 验证分层
+日期：2026-07-13
+
+状态：候选实现中，分支 `codeb/v1.94-ci-validation-tiers`，基于 v1.93 merge `efd9c56a1001c6fcb9d2e6e4f153d4fe6f7fe184`；工程 `MARKETING_VERSION=1.94`。本轮是 CI 制度与验证路由优化，不改变 App 业务主链、漫画 OCR/翻译/覆盖结果或 Speech 运行语义。
+
+核心变更：
+
+- `codeb/**` 核心 push 进入 task-scoped full：基础静态检查始终运行，Speech、UI、文本首页、Koharu 契约按 changed files 启用；App 相关变更只在该 full 执行 Xcode build。成功后 workflow 为 exact SHA 写 `AITRANS CI/full-validation` commit status。
+- PR 新增 opened / reopened / ready-for-review fast follow-up，但不监听 synchronize，避免同一修复 push 同时运行 full 和 PR fast。PR fast 跳过 Xcode、领域大契约、GGUF/探针和 UI evidence，只保留静态/CI 路由与可审计结果包。
+- `smalldata_test` merge 读取第二父候选 SHA 的 full-validation status；success 才复用并走 fast，missing / failure / lookup failure 自动回退 full。C 退回后的新修复 SHA 必须重新 full。
+- full 成功后的纯 README / AGENTS / update log / `md/` / metrics follow-up 可传播父提交收据；若父收据缺失或失败，workflow 会把 changed-files 扩展到完整候选 diff，防止失败代码被最后一个文档 commit 掩盖。
+- UI evidence 不再按 `codeb/v1.9*` / `v2.*` 分支族自动跑。只有非 PR 候选 commit 的 `[ui evidence]` 或手动 `ui_evidence_mode=full` 启用；Speech 功能默认只验编译、run-id/取消/翻译链路契约，不截图。漫画/翻译需要图像证据时仍使用手动 `ci-fast/full` 的探针 output PNG。
+- `AITRANS - Build IPA` 移除 `smalldata_test` push trigger，仅在软件包交付时手动 dispatch，日常 merge 不再重复 Release archive、加密、fakesign 和 IPA package。
+- `ci-artifact-manifest.json`、JUnit、failure summary 与最终 gate 记录/消费 validation profile、reason、复用 receipt、领域 required flags、UI evidence reason 和 Xcode skip reason。新增 `scripts/test-v194-ci-validation-tier-contract.py` 锁定分层行为。
+
+本地轻量验证：v1.94 CI tier contract 9/9、Speech contract 14/14、UI interaction 7/7、v1.88 home UI 7/7、v1.89 paste matrix 4/4 通过；两个 workflow YAML 可解析，所有内嵌 bash block `bash -n` 通过，`capture-ui-evidence.sh` syntax、三个基线 JSON、`MARKETING_VERSION=1.94` 唯一值与 `git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证；候选核心 commit 只触发一次 full，PR 与 merge 用 fast 验证分层本身。
+
+首轮云端 run `29231418192` 在 job 创建前失败，GitHub annotation 明确为 `.github/workflows/ci-results.yml` manifest step `Exceeded max expression length 21000`；没有 jobs、日志或 artifact，且没有触发 Build IPA。修复将超大 manifest `run:` 内的 Actions expressions 全部移到 step `env`，Python 只读环境变量，并由 v1.94 contract 锁定 manifest script 不再内联 `${{ ... }}`，防止字段增长再次越过 GitHub 表达式上限。该失败属于 CI 配置，按规则修复 SHA 必须重新 full。
+
+第二轮 run `29231948576` 在 SHA `aac5f8dc10bd89445cba70330dcca56b3702dd1b` 上 17 秒绿色结束，full-validation status 也写入成功，但验收发现它只比较失败提交到修复提交的增量 diff，未把首提交的工程版本变化纳入 changed-files，`xcodeBuildRequired=false`。该 run 只证明 expression-limit 修复能启动，不能作为 v1.94 候选 full/Xcode 证据。路由继续收紧：只要候选父 SHA 没有成功 full 收据，或本次修改 CI routing workflow，就必须从 `smalldata_test` merge-base 重新计算完整候选 diff，再决定 Xcode 与领域契约；因此下一 SHA 必须重新 full。
+
+非目标与遗留：不改变 Koharu report-only/active artifact 边界，不伪造真实四件套，不改善 WER/CER，不调整 App UI；本轮未跑漫画探针，不追加 `metrics/version_history.csv`。
+
 ### v1.93：Speech Run 取消与旧回调隔离
 日期：2026-07-13
 
-状态：Agent C / Agent X 验收通过，分支 `codeb/v1.93-speech-run-cancellation`，PR #46，基于 `smalldata_test` merge `b374c19e99c784c5a933302a317a62572ba26355`。实现验收 HEAD `dd77fe76bb351b29a320c55cad772514d0dac3ae` 与版本收口 HEAD `89180363068631c22396acd81ddedb5f2c214731` 的 exact-SHA run 均 SUCCESS；工程 `MARKETING_VERSION=1.93`。合并目标仅 `smalldata_test`，未触碰 `main`。
+状态：Agent C / Agent X 验收通过。候选分支 `codeb/v1.93-speech-run-cancellation` 最终 HEAD `1b4f13ecab375387823428ebe6b305503eaa38c8`；PR #46 已合入 `smalldata_test`，merge `efd9c56a1001c6fcb9d2e6e4f153d4fe6f7fe184`，远端候选分支已删除。工程 `MARKETING_VERSION=1.93`；`main` 未触碰。
 
 核心变更：
 
@@ -136,6 +159,10 @@
 云端实现验收：run `29225409696` attempt 1，artifact `aitrans-ci-v1.93-codeb-v1.93-speech-run-cancellation--dd77fe76bb35-run29225409696-attempt1`（2,780,359 bytes）。manifest 的 version / branch / commit / run / workflow 精确匹配；Xcode build、Speech 14/14、JUnit 8/8、v1.87-v1.89 contracts 和 12 张 current-HEAD UI evidence 全部通过。音频运行态截图 SHA256 `6bae5cac562a0de183d1cb794aa4010a4a9df1b093f543709f6b831228aebe3f`，取消按钮完整位于浮动 Tab Bar 上方。`probe_mode=skip`，符合本轮不改漫画路径的范围；本机缺 `xcresulttool`，但 `.xcresult` 结构、Info.plist、CI step 与 manifest 均可用。
 
 版本收口验收：run `29226081679` attempt 1，artifact `aitrans-ci-v1.93-codeb-v1.93-speech-run-cancellation--891803630686-run29226081679-attempt1`（3,816,472 bytes）。manifest exact SHA / version / branch / run / workflow 对齐，`xcodeBuildRequired=true`，Xcode build、Speech 14/14、JUnit 8/8、v1.87-v1.89 contracts 和 12 张 current-HEAD UI evidence 通过；最终音频截图 SHA256 `ef627a294d056c03b5a380f73c9966740ee0c0a78c453cd54d1102431b1770ed`，取消动作仍完整可见。`probe_mode=skip`，未运行漫画探针或真实语音质量测试。
+
+最终候选验收：run `29227415411` attempt 1，artifact `aitrans-ci-v1.93-codeb-v1.93-speech-run-cancellation--1b4f13ecab37-run29227415411-attempt1`（4,053,954 bytes）。manifest 精确匹配最终 HEAD；Xcode build、Speech 14/14、UI interaction 7/7、JUnit 8/8 与 13 张 current-HEAD UI evidence 成功，新增 `audioTranslating` 图证明“取消翻译”在 compact 夜间状态可见。`probe_mode=skip`。
+
+post-merge 验收：CI Results run `29229554065` 与 Build IPA run `29229554033` 均 SUCCESS，head SHA 均为 `efd9c56a1001c6fcb9d2e6e4f153d4fe6f7fe184`。未加密 artifact `aitrans-ci-unversioned-smalldata_test--efd9c56a1001-run29229554065-attempt1` 的 manifest 匹配 branch / commit / run / workflow，`xcodeBuildRequired=true`、Xcode success、Speech success、JUnit 8/8、`.xcresult` 结构存在；UI evidence 与 manga probe 按 merge 范围跳过。IPA archive / fakesign / package 同 SHA 成功。
 
 非目标与遗留：不更换 Apple Speech / 模型、不引入第三方 ASR、不声称改善 WER/CER；固定多语言音频 corpus、WER/CER/延迟报告和真机 S1-S8 人工矩阵仍是后续 Speech 质量阶段。漫画路径与 v1.92 指标均未改变，因此不追加 `metrics/version_history.csv`。
 

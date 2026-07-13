@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`1.93`（Speech 取消、立即重试与旧回调隔离已收口；v1.92 external TextBox 真实四件套运行态仍待 `ci-fast`）。
+正式版本：`1.94`（task-scoped full-once / fast-follow-up CI；v1.93 Speech 取消、立即重试与旧回调隔离已收口；v1.92 external TextBox 真实四件套运行态仍待 `ci-fast`）。
 
 当前布局：
 
@@ -305,7 +305,7 @@ test/1.png
 
 探针运行模式：
 
-- `skip`：GitHub Actions push 默认快验模式，不下载 GGUF、不启动模拟器、不跑漫画探针，manifest 必须写明 `probeSkippedReason` 和 `modelSetupSkippedReason`。CI 会先检测变更范围；Swift / Xcode / 资源 / `test/` 素材变化仍跑 Xcode build，非 App 构建相关变更可跳过 Xcode build 并在 manifest 写 `xcodeBuildRequired=false` 与 skip reason。
+- `skip`：不下载 GGUF、不启动模拟器、不跑漫画探针，manifest 必须写明 `probeSkippedReason` 和 `modelSetupSkippedReason`。候选核心 push 的 task-scoped full 仍按需跑 Xcode；PR/已验证 merge 的 fast follow-up 复用候选 full 收据并跳过 Xcode。非 App full 也可写 `xcodeBuildRequired=false` 与任务级 skip reason。
 - `ci-fast`：手动 `workflow_dispatch` 快速探针模式，使用真实 simulator、Local GGUF、`test/1.png`、deterministic 解码、whole-page OCR、bubble-first 融合、逐块翻译、失败块覆盖、clean text diagnostic 和 external artifact gate；跳过 lexicon / Vision API / slice / TextRegion crop shadow / crop experiment / line shadow / tagged batch / 模型纠错 / 纠错翻译对照 / contact sheet 等高成本诊断。
 - `full`：开发页按钮和人工 full 回归默认模式，运行完整 shadow-only 对照、diagnostic PNG 和 contact sheet。
 
@@ -418,13 +418,15 @@ test/1.png
   -> Agent A 本地分析并写版本化提示词
   -> Agent B 从 smalldata_test 开 codeb/vX.Y-短标题 分支
   -> Agent B 本地只跑轻量检查
-  -> Agent B push codeb/... 到 GitHub
+  -> Agent B 集中 push 核心 commit 到 codeb/...
+  -> GitHub Actions 跑一次 task-scoped full：基础静态 + 相关领域契约 + 必要 Xcode build
+  -> full 成功，为候选 SHA 写 AITRANS CI/full-validation status 并上传未加密结果包
   -> Agent B 创建 PR：base=smalldata_test, head=codeb/...
-  -> GitHub Actions 运行 JSON / 静态检查 / Xcode build 快验
-  -> GitHub Actions 上传未加密 CI 结果包
+  -> PR opened/reopened/ready-for-review 只跑 fast；不监听 synchronize
   -> Agent C 通过 PR 和结果包核对 diff、日志、manifest 和 artifact
-      -> 失败：C 输出退回清单，B 按结果包日志继续修
-      -> 通过：C 更新核心文档，经 PR merge 合并回 smalldata_test
+      -> 失败：C 输出退回清单，B 修复 push 并重新跑对应 full
+      -> 通过：C 经 PR merge 合并回 smalldata_test
+  -> merge workflow 核验第二父 full status：success 走 fast，缺失/失败回退 full
       -> C 删除远端 codeb/... 候选分支
 ```
 
@@ -438,12 +440,13 @@ test/1.png
 
 结果包规则：
 
-- 加密打包 workflow 只负责软件包交付，不作为 Agent C 验收依据，不为验收改动密码或解密流程。
+- 加密打包 workflow 只在软件包交付时手动触发，不随 `smalldata_test` merge 自动 archive；不作为 Agent C 验收依据，不为验收改动密码或解密流程。
 - Agent C 使用独立未加密 CI 结果包验收；`xcodeBuildRequired=true` 时必须核对 `.xcresult`，build-skip 快路径必须核对 skip reason，同时核对 `junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`。
-- `ci-artifact-manifest.json` 必须能追溯 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`scheme`、`destination`、结果路径和探针报告路径。
+- `ci-artifact-manifest.json` 必须能追溯 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`validationProfile`、`validationReason`、复用 full SHA/status、各领域 required flags、`scheme`、`destination`、结果路径和探针报告路径。
 - 云端失败时，workflow 必须保留日志和失败摘要，Agent C 按结果包指出应交回 Agent B 修复的失败阶段和日志位置。
 - 手动探针 workflow 会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，并缓存到 `.ci-models/`。
-- push 默认 `probe_mode=skip` 快验，只跑静态检查、按 `xcodeBuildRequired` 决定是否跑 Xcode build、manifest 和未加密结果包；不下载 GGUF、不创建模拟器、不安装 App、不跑漫画探针。
+- 候选核心 push 默认 `validationProfile=full`、`probe_mode=skip`；PR fast 与有成功候选收据的 merge fast 只跑基础静态/路由契约。fast 不下载 GGUF、不创建模拟器、不安装 App、不跑 Xcode、不跑领域大契约。
+- full 按 changed files 路由 Speech、UI、文本首页和 Koharu 契约。UI evidence 仅由候选 commit `[ui evidence]` 或手动 `ui_evidence_mode=full` 启用；Speech 默认不截图。漫画/翻译结果图只来自手动 `ci-fast/full` 的探针 `output/`。
 - 手动 `workflow_dispatch` 选择 `ci-fast` 或 `full` 时，云端 CI 单次 Debug simulator build 同时产出 `.xcresult` 和可安装 App；探针步骤只定位并复用该 App，不重复完整 `xcodebuild build`。
 - 云端漫画探针会创建并启动 iPhone 模拟器，从构建 App 的 `Info.plist` 读取实际 bundle ID，安装 App，把缓存 GGUF 复制到 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 和 `AITRANS_MANGA_PROBE_MODE` 启动 App，等待并导出本轮 `output/`。
 - `ci-artifact-manifest.json` 必须记录 `probeMode`、`probeFastPathEnabled`、`probeSkippedDiagnostics`、`probeOutputRequiredFiles`、`probeOutputRetainedFiles`、`simulatorAppReusedFromXcodeBuild` 和 `simulatorAppPath`。

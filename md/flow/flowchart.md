@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-正式版本：`1.93`。
+正式版本：`1.94`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -263,23 +263,32 @@ flowchart TD
   P --> B0["从 smalldata_test 开分支<br/>codeb/vX.Y-短标题"]
   B0 --> B1["Agent B<br/>按提示词小步实现"]
   B1 --> B2["本地轻量检查<br/>git diff --check / JSON / YAML smoke"]
-  B2 --> B3["push codeb/... 或版本整合 1.*<br/>不合并 main"]
-  B3 --> B4["创建 PR<br/>base=smalldata_test / head=codeb/..."]
+  B2 --> B3["集中 push 候选核心 commit<br/>codeb/... / 不合并 main"]
 
   %% 云端验证和结果包
-  B4 --> G1["GitHub Actions<br/>变更范围检测 / 契约测试 / 必要时 Xcode build / 动态读取 App bundle ID / 手动 ci-fast 探针"]
-  G0["workflow_dispatch<br/>可选 full 或 skip"] --> G1
-  G1 --> G2["未加密 CI 结果包<br/>xcresult / junit.xml / xcodebuild.log / manifest / failure summary / Koharu gate 摘要"]
-  G1 --> G3["加密打包 workflow<br/>软件包交付，Agent C 不以此验收"]
+  B3 --> GF["Task-scoped full（一次）<br/>基础静态 + 相关领域契约 + 必要 Xcode build"]
+  GF --> RCP["full-validation status<br/>绑定候选 SHA"]
+  RCP --> B4["创建 PR<br/>base=smalldata_test / head=codeb/..."]
+  B4 --> GFAST["PR fast follow-up<br/>opened / reopened / ready<br/>不监听 synchronize"]
+  G0["workflow_dispatch<br/>full / fast / ci-fast / UI evidence"] --> G1["GitHub Actions task router"]
+  GF --> G1
+  GFAST --> G1
+  G1 --> G2["未加密 CI 结果包<br/>profile / reuse receipt / required flags / logs / manifest"]
+  PKG["手动 workflow_dispatch"] --> G3["加密 IPA 打包<br/>仅软件包交付，Agent C 不以此验收"]
 
   %% Agent C 验收和文档同步
   G2 --> C1["Agent C<br/>核对 HEAD commit、diff、Actions 结论、日志和 artifact"]
   C1 --> CFail{"是否通过"}
-  CFail -- "失败" --> R["退回清单<br/>失败阶段、日志路径、manifest、交给 B 修复"]
+  CFail -- "失败" --> R["退回清单<br/>B 修复 push 后重新跑对应 full"]
   R --> B1
   CFail -- "通过" --> C2["更新核心文档<br/>flow.md / flowchart.md / update_log.md"]
   C2 --> C3["PR merge 到 smalldata_test<br/>禁止合并到 main"]
-  C3 --> C4["删除远端 codeb/...<br/>避免候选分支堆积"]
+  C3 --> MR{"第二父 SHA<br/>full status = success?"}
+  MR -- "是" --> MF["merge fast follow-up<br/>不重复 Xcode / 大契约 / 截图"]
+  MR -- "否" --> MFULL["自动回退 task-scoped full"]
+  MF --> C4
+  MFULL --> C4
+  C4["删除远端 codeb/...<br/>避免候选分支堆积"]
 
   %% 回到人工
   C4 --> H2["人工复核<br/>确认后进入下一轮"]

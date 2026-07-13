@@ -3,18 +3,18 @@
 
 ## 0. 默认验证策略
 - Agent B 默认本地只跑 `git diff --check`、JSON 解析、YAML smoke 等轻量检查。
-- Swift / Xcode / 漫画探针相关任务完成后，默认 push 到 `codeb/vX.Y-短标题`，由 GitHub Actions 执行快验；需要探针重验证时手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。
+- Swift / Xcode / 漫画探针相关任务完成后，默认集中 push 到 `codeb/vX.Y-短标题`，由 GitHub Actions 对核心 commit 执行一次 task-scoped full；需要探针重验证时手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
-- 加密打包 workflow 只用于软件包交付，不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
+- 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 - 如果云端验证失败，Agent C 按 `ci-failure-summary.md`、`xcodebuild.log`、`junit.xml`、`.xcresult` 和 manifest 输出退回清单，Agent B 修复后继续 push。
 - 如果云端环境缺少模拟器、GGUF、App 容器权限或外部 artifact，必须说明哪个测试未运行、缺什么依赖、是否影响验收、需要人工提供什么。
 - GGUF 云端模型只在手动 `ci-fast` / `full` 探针中通过 GitHub Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载，并用 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6` 校验后缓存到 `.ci-models/`；本规范不要求提交 GGUF。
 - 云端漫画探针复用同一次 Debug simulator build 产物安装 App，把 `.ci-models/gemma-3-270m-it-qat-Q4_0.gguf` 复制为 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，再用 `AITRANS_RUN_MANGA_PROBE=1` 和 `AITRANS_MANGA_PROBE_MODE` 启动 App 并导出 `output/`。`Gemma-1.5B` 是历史目录名；验收实际模型时看 asset 名、字节数和 SHA256。
-- `AITRANS CI Results` 对 push 默认 `probe_mode = skip`，只跑静态检查、Xcode build、manifest 和未加密结果包，不下载 GGUF、不创建模拟器、不安装 App、不跑漫画探针。manifest 必须写 `probeSkippedReason = default_push_fast_ci_or_manual_skip` 和 `modelSetupSkippedReason = probe_mode_skip_fast_ci_does_not_need_model`。例外：只要填写 Koharu artifact archive，`probe_mode` 必须为 `ci-fast` 或 `full`，不能用 skip 验收 artifact handoff。
+- `AITRANS CI Results` 的候选核心 push 默认 `validationProfile=full`、`probe_mode=skip`，按任务运行基础静态、相关领域契约与必要 Xcode build；不下载 GGUF、不创建模拟器、不安装 App、不跑漫画探针。PR/已验证 merge 使用 `validationProfile=fast`，跳过 Xcode 和领域大套件。例外：只要填写 Koharu artifact archive，`probe_mode` 必须为 `ci-fast` 或 `full`。
 - `probe_mode=skip` 或云端探针失败时，CI 结果包不得复制仓库里已有的旧 `output/probe_report.json` / `clean_text_diagnostic.json` / `1_ocr_probe_text.txt` 当成本次产物；只能保留 `output/probe-not-run.txt` 和 manifest skip / failure reason。只有 `probe_mode != skip` 且 `manga_probe` 成功时才复制本轮 `output/`。
-- push CI 会先做变更范围检测：非 App 构建相关变更可跳过 Xcode build，manifest 写 `xcodeBuildRequired = false` 和 `xcodeBuildSkippedReason`，结果包保留 `xcodebuild.log` skip 说明；Swift、Xcode 工程、资源、`test/` 素材、手动 `ci-fast/full` 或 Koharu artifact 注入仍必须跑 Xcode build。
+- full CI 先按 changed files 路由 Speech、UI、文本首页和 Koharu 契约；App 相关 full 才跑 Xcode，非 App full 可写 `xcodeBuildRequired=false`。fast 必须写 `fast_followup_reuses_candidate_full_validation` skip reason，不能当作新的编译证据。
 - `AITRANS CI Results` checkout 至少保留最近 2 个提交，确保普通单提交 push 能 diff 到 `github.event.before`；若一次 push 含多提交导致 before commit 不在浅克隆内，workflow 必须先定向 fetch `github.event.before` 再 diff。只有 checkout 和 targeted fetch 都拿不到 before commit 时，才允许把 `changed-files.txt` 回退成全仓列表；manifest / failure summary 必须记录 `scopeDiffMethod`、`scopeDiffBaseSha` 和 `scopeDiffFallbackUsed`。
-- Koharu artifact validator 的完整 invalid fixture 矩阵只在 validator、artifact contract 或 workflow 相关文件变化时跑；普通 push 保留 valid example、active allow-missing 和 required-files 核心校验。
+- Koharu artifact validator 只在 Koharu 领域 full 中运行；完整 invalid fixture 矩阵限 validator、artifact contract、artifact injection 或 CI workflow 相关 full。Speech、普通 UI、PR 和 merge fast 不运行该套件。
 - 手动注入 Koharu artifact archive 且运行 `ci-fast/full` 时，云端 smoke 必须核对 archive 只有一个目录同时包含四件套，并在 `ci-artifact-manifest.json` / `koharu-active-artifacts-validation.json` 中核对 `koharuArtifactValidationIdentitySummary` / `artifactIdentitySummary` 的 source image 与四件套 SHA256、size、`generatedBy`、`contractExampleOnly=false`，且 `1.manifest.json` 声明的 `sourceImageSHA256` 必须等于当前仓库 `test/1.png` 的 SHA256，validator 侧 `sourceImageSHA256Matches=true`。还必须核对 `probe_report.json` 中 App 侧 `externalArtifactReadinessReport.artifactIdentityReceipt.identityVerdict = activeArtifactIdentityRecorded`、`artifactIdentityReceipt.sourceImageSHA256Declared` / `sourceImageSHA256Expected` / `sourceImageSHA256Matches=true`、`koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison = true`、`koharuArtifactIdentityReconciliationReport.sourceImageSHA256Declared` / `sourceImageSHA256Expected` / `sourceImageSHA256Matches=true`、`ci-artifact-manifest.koharuArtifactIdentityReconciliationMatch.matchVerdict = matched`、required files size / SHA256 与 CI identity 逐项匹配、`externalArtifactReadinessReport` 为 `readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed = true`、`koharuNativeArtifactContractDryRunReport.contractDryRunVerdict = activeArtifactsReadyForShadowOCR`、`appSideArtifactIdentityVerdict = activeArtifactIdentityRecorded`、`appSideArtifactIdentityHashesPresent = true`、`dryRunOnly = true`、`activeExportAllowed = false`、`externalTextBoxShadowOCRReport.executed = true`、`candidateCount > 0`、`ocrExecutedCount > 0`、`ocrSucceededCount > 0`，以及 convergence 的 `WI/G-external-textbox-shadow-ocr-coverage` 已消费这些证据；不能只用 Release 下载、SHA、validator 日志或 `readyForShadowOCR` 作为 App 已消费 artifact 的证据。
 - 若注入的真实 TextBox 带 `sourceDirection`、`linePolygons` 或 `rotationDegrees`，还必须核对 validator / manifest 的 `koharuArtifactValidationOrientationSummary`，以及 `externalTextBoxShadowOCRReport.orientationReadinessVerdict`、`orientationShadowPathNeededBlocks`、`orientationShadowPathExecutedBlocks`、`orientationShadowPathPartialBlocks`、`orientationShadowPathNotExecutedBlocks`、`orientationUnsupportedBlocks`、`orientationUnsupportedReasonBreakdown`、候选 `orientationAttemptedRotations`、`orientationSelectedRotation`、`orientationRecognitionLanguages`、`orientationUnsupportedReason`、`deskewExecuted`、`riskFlags/blockers`、`koharuArtifactConvergenceReport` 的 `WI-external-textbox-shadow-ocr-coverage` / `G-external-textbox-shadow-ocr-coverage` 和 `WI-external-textbox-orientation-shadow-path` / `G-external-textbox-orientation-shadow-path`，以及 `1_ocr_probe_text.txt` 的 coverage / orientation / app-side identity 摘要。v1.64 支持竖排或接近 90/180/270 度 TextBox 的有上限 rotation shadow OCR；v1.92 候选支持合法四点 line polygon 透视校正，只有 warp 成功执行才允许移除 line polygon blocker；任意角度 deskew 与 warp 失败仍必须作为 unsupported / convergence blockers。v1.69 要求 ready artifact 后有 executed shadow OCR、`candidateCount > 0`、`ocrExecutedCount > 0`、`ocrSucceededCount > 0` 且未闭合时 coverage gate 为 blocked；v1.66 要求 coverage gate 同时拿到 contract dry-run ready 与 CI identity；v1.67 要求 App 侧 runtime identity receipt 完整。
 - 需要探针验收时，手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。`ci-fast` 仍跑真实模拟器、Local GGUF、真实 `test/1.png`、deterministic 解码、主 OCR / bubble-first 融合 / 逐块翻译 / 失败块覆盖 / clean text / external artifact gate，以及 v1.18+ 必需的 report-only / detector-lite 受限 shadow 报告；只跳过明确列出的高成本对照和诊断 PNG。`ci-fast` 必须保留 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt`、`1_debug_boxes.png`、`1_translated_overlay.png`、`manga_probe_progress.json`。`full` 额外要求 contact sheet 等完整关键 PNG。
@@ -22,7 +22,7 @@
 
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
-`codeb/v1.87-enterprise-ui` 的 push CI 在 Xcode build 通过后必须运行 `scripts/capture-ui-evidence.sh`。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、`ui-evidence-manifest.json` 和 `ui-evidence.log`，manifest 的每张截图必须记录设备、方向、Dynamic Type、场景、Reduce Motion 和当前 `commitSha`。
+v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。
 
 当前最低截图矩阵为 13 张证据：同一台紧凑 iPhone 上 12 张竖屏，覆盖文本空态、图片空态、历史有数据、Pro 锁定、文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频 recognizing、音频 translating 取消入口、提示词库、Local 模型缺失和开发控制台；另有 1 张 wide iPad 文本空态。矩阵必须同时包含日间和夜间外观，manifest 记录 `appearance`；截图步骤失败必须使候选分支 CI 失败。Mac 视觉证据仍未覆盖，不得描述为已验证。
 
@@ -38,7 +38,7 @@ Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键
 
 ### 0.2 v1.88 文本首页视觉与交互契约
 
-`codeb/v1.88-home-translation-ui` 复用 v1.87 的 11 张紧凑 iPhone 运行态矩阵，文本相关证据至少覆盖：日间空输入的新背景与动作层级、夜间软件键盘与安全区页头、XXL 成功态、Accessibility Dynamic Type 失败态。截图的 `commitSha` 必须等于 PR HEAD，且 Agent B / C 必须逐张查看背景、对比度、按钮区分、Dynamic Type、Tab、键盘和安全区；文件存在与大于 50 KB 只属于非空 smoke。
+v1.88 原始验收复用了 v1.87 运行态矩阵。后续重大文本 UI 任务若显式启用 UI evidence，文本相关证据仍至少覆盖日间空输入、夜间键盘/安全区、XXL 成功态和 Accessibility 失败态；截图 `commitSha` 必须等于候选 full HEAD。PR/merge fast 不重复该矩阵。
 
 `scripts/test-v188-home-ui-contract.py` 独立验证：显式纯文本 `PasteButton`、空输入填入与非空换行追加、不在生命周期读取剪贴板、不自动翻译、keyboard toolbar“完成”、翻译前失焦、safe-area 页头仍位于 `ScrollView` 外、首页专属非纯色背景不进入其他页面、首页关键 store action 与非颜色身份仍接线。CI 必须把结果写入 `v188-home-ui-contract.log`、manifest 的 `v188HomeUIContractOutcome` 和 JUnit 独立 testcase，失败阻塞候选分支。
 
@@ -107,6 +107,20 @@ v1.90 已用静态契约锁定 run-id 隔离与摘要字段。下列人工矩阵
 
 本契约证明的是源码所有权和云端接线，不证明 Apple Speech 的实际识别质量。S1-S8 仍需真机；后续固定语料必须另行报告音频 SHA、locale、参考 transcript、WER/CER、延迟和设备/系统信息。GitHub-hosted simulator 没有真实麦克风输入，不能作为 WER/CER 或权限弹窗证据。
 
+### 0.7 v1.94 云端验证分层契约
+
+`scripts/test-v194-ci-validation-tier-contract.py` 必须锁定以下行为：
+
+- `codeb/**` 核心 push 自动选择 `validationProfile=full`，只跑 changed-files 命中的领域契约；App 相关 full 执行 Xcode build，成功后为精确 SHA 写 `AITRANS CI/full-validation` status。
+- PR 只监听 opened / reopened / ready-for-review，不监听 synchronize。PR fast 只做基础静态与路由检查，不能冒充候选 full/Xcode 证据。
+- `smalldata_test` merge 读取第二父 SHA 的 full-validation status；`success` 才可 fast，missing / failure / lookup failure 必须回退 full。
+- full 成功后的纯 `README.md`、`AGENTS.md`、`update_log.md`、`md/`、`metrics/` follow-up 可复用并传播父收据；父收据失败或缺失时必须扩展到整条候选 diff，不能只测最后一个文档 commit。
+- Speech full 跑 Speech 契约与必要 Xcode，不自动截图；UI evidence 默认 skip，只能由非 PR 候选 commit 的 `[ui evidence]` 或手动 `ui_evidence_mode=full` 启用。
+- `AITRANS - Build IPA` 不监听 push，只允许手动 `workflow_dispatch`。日常 merge 不做 Release archive/fakesign/package。
+- manifest / failure summary 必须记录 `validationProfile`、reason、复用 SHA/status、领域 required flags、UI evidence reason 和 Xcode skip reason。fast artifact 仍可审计，但 Agent C 必须同时核对候选 full artifact/status。
+
+任何 C 退回后的核心修复都会产生新 SHA，必须重新跑对应 full。不要为“记录 CI 已通过”追加无功能文档 commit；结果以 GitHub status、run 和 artifact 为准。
+
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：
 
@@ -152,6 +166,7 @@ python3 -m json.tool test/1.ground_truth.json
 python3 -m json.tool output/probe_report.json
 python3 -m json.tool output/clean_text_diagnostic.json
 python3 -B scripts/test-speech-recognition-contract.py
+python3 -B scripts/test-v194-ci-validation-tier-contract.py
 python3 -B scripts/test-v192-koharu-line-polygon-warp-contract.py
 python3 -B scripts/test-v187-ui-interaction-contract.py
 python3 -B scripts/test-v188-home-ui-contract.py
@@ -201,13 +216,14 @@ python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allo
 默认动作：
 
 ```text
-Agent B push codeb/vX.Y-短标题 并创建 PR 到 smalldata_test
-  -> GitHub Actions 做变更范围检测
-  -> Swift / Xcode / 资源 / test 素材变化时运行 xcodebuild
-  -> 非 App 构建相关变化时跳过 xcodebuild 并写明 skip reason
-  -> 上传未加密 CI 结果包
-  -> Agent C 按 manifest 核对分支、commitSha、runId、runAttempt
-  -> Agent C 通过 PR merge 后删除远端 codeb/... 候选分支
+Agent B 集中 push codeb/vX.Y-短标题 的核心 commit
+  -> task-scoped full：基础静态 + 相关领域契约 + 必要 xcodebuild
+  -> 成功后写 full-validation status 并上传未加密 full 结果包
+  -> 创建 PR；opened/reopened/ready-for-review 只跑 fast，不监听 synchronize
+  -> Agent C 按 manifest 核对 exact SHA、profile、required flags、full status 和 artifact
+  -> C 退回：B 修复 push，新 SHA 重新跑对应 full
+  -> C 通过：PR merge；第二父 full status success 才走 merge fast，否则回退 full
+  -> 删除远端 codeb/... 候选分支
 ```
 
 云端最低命令等价于：
