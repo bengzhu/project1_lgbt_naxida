@@ -116,10 +116,31 @@
 - tagged batch 翻译分支格式崩坏，不替换逐块翻译。
 
 ## 历史记录
+### v1.95：Speech 真实语料质量算法与探针接线
+日期：2026-07-13
+
+状态：候选实现中，分支 `codeb/v1.95-speech-quality-corpus`，基于 v1.94 merge `aa829bc14bedc91fe1c54b629a8ac50dda0e4833`；工程 `MARKETING_VERSION=1.95`。本轮不生成 TTS 或占位音频，不声称 Apple Speech 识别质量已经提升；v1.96 等人工上传真实音频后再产生 WER/CER 和延迟证据。
+
+核心变更：
+
+- 新增 `aitrans.speech_corpus.v1` manifest：每项固定 ID、文件名、SHA256、字节数、locale、参考 transcript 和来源说明；Python validator 拒绝路径逃逸、重复 ID、缺字段和音频身份漂移。仓库缺 manifest 时输出 `manifestMissing` / `qualityExecuted=false`，不会把“未执行”伪装成质量通过或失败。
+- 新增纯 `SpeechQualityEvaluator`：兼容大小写/宽度/标点规范化、通用 Levenshtein、词级 WER、字符级 CER 和按 reference token 加权 aggregate。中日文在没有稳定分词器时 `wordErrorRate=nil`，不把字符指标伪装成 WER。
+- 新增独立 `SpeechQualityProbeService`：逐项校验音频身份，强制 `SFSpeechURLRecognitionRequest.requiresOnDeviceRecognition=true`，记录最终 transcript、延迟、segment、平均 confidence、on-device 能力和失败分类；120 秒超时与取消会终止当前 Speech task。
+- 参考 transcript 只在 Apple Speech 返回最终文本后传给 evaluator；报告固定 `referenceUsedForEvaluationOnly=true`、`referenceUsedForRecognitionDecision=false`，不参与请求、候选、纠错或产品翻译。
+- `TranslationSessionStore` 持有质量探针 Published 状态、独立 run ID/Task、取消与 DEBUG `AITRANS_RUN_SPEECH_QUALITY_PROBE` 入口；开发控制台只调用 store，展示报告摘要，不新增截图流程。
+- JSON/TXT 写入既有 `Application Support/AITRANS/Output/`；报告包含 corpus/manifest/audio 身份、runtime、逐项指标、加权 WER/CER、平均延迟和 failure breakdown。
+- Speech full CI 增加质量源码契约、纯 Swift evaluator、corpus validator 和新文件 changed-scope routing；候选核心 push 仍只跑一次 full + Xcode，不采 UI evidence，PR/merge 复用 v1.94 fast follow-up。
+
+本地轻量验证：Speech 旧 contract 14/14、v1.95 quality contract 6/6、缺 corpus validator 的 `manifestMissing` 审计结果、纯 Swift evaluator contract、Swift 6 iOS Simulator 目标三文件 typecheck 均通过。未跑本机 build / 探针，按规则交给云端验证；未运行真实 WER/CER，因为仓库没有用户提供的音频和 manifest。
+
+关键文件：`AITRANS/Models/SpeechQualityModels.swift`、`AITRANS/Services/SpeechQualityEvaluator.swift`、`AITRANS/Services/SpeechQualityProbeService.swift`、`AITRANS/Services/TranslationSessionStore.swift`、`AITRANS/Views/DeveloperConsoleView.swift`、`scripts/validate-speech-corpus.py`、`test/speech_corpus/README.md`、`.github/workflows/ci-results.yml`。
+
+非目标与遗留：不更换 Apple Speech、不引入第三方 ASR、不改产品识别候选、不做 UI 重构或截图；真实语音质量必须等 v1.96 音频后在目标设备运行。漫画图像链路仍缺真实 Koharu manifest/TextBoxes/BubbleMask/SegmentMask 四件套和 `ci-fast` 对照，detector/mask/renderer 的 report-only proxy 不能描述为已完成 Koharu 复刻；本轮未改漫画算法、未跑漫画探针、不追加 `metrics/version_history.csv`。
+
 ### v1.94：云端 Full-Once / Fast-Follow-Up 验证分层
 日期：2026-07-13
 
-状态：候选实现中，分支 `codeb/v1.94-ci-validation-tiers`，基于 v1.93 merge `efd9c56a1001c6fcb9d2e6e4f153d4fe6f7fe184`；工程 `MARKETING_VERSION=1.94`。本轮是 CI 制度与验证路由优化，不改变 App 业务主链、漫画 OCR/翻译/覆盖结果或 Speech 运行语义。
+状态：已合入 `smalldata_test`。最终候选 `6864bd889fbab60f0c70d9df5d7b43e9440b594b`，PR #47，merge `aa829bc14bedc91fe1c54b629a8ac50dda0e4833`，远端候选分支已删除，`main` 未触碰；工程 `MARKETING_VERSION=1.94`。本轮是 CI 制度与验证路由优化，不改变 App 业务主链、漫画 OCR/翻译/覆盖结果或 Speech 运行语义。
 
 核心变更：
 
@@ -136,6 +157,8 @@
 首轮云端 run `29231418192` 在 job 创建前失败，GitHub annotation 明确为 `.github/workflows/ci-results.yml` manifest step `Exceeded max expression length 21000`；没有 jobs、日志或 artifact，且没有触发 Build IPA。修复将超大 manifest `run:` 内的 Actions expressions 全部移到 step `env`，Python 只读环境变量，并由 v1.94 contract 锁定 manifest script 不再内联 `${{ ... }}`，防止字段增长再次越过 GitHub 表达式上限。该失败属于 CI 配置，按规则修复 SHA 必须重新 full。
 
 第二轮 run `29231948576` 在 SHA `aac5f8dc10bd89445cba70330dcca56b3702dd1b` 上 17 秒绿色结束，full-validation status 也写入成功，但验收发现它只比较失败提交到修复提交的增量 diff，未把首提交的工程版本变化纳入 changed-files，`xcodeBuildRequired=false`。该 run 只证明 expression-limit 修复能启动，不能作为 v1.94 候选 full/Xcode 证据。路由继续收紧：只要候选父 SHA 没有成功 full 收据，或本次修改 CI routing workflow，就必须从 `smalldata_test` merge-base 重新计算完整候选 diff，再决定 Xcode 与领域契约；因此下一 SHA 必须重新 full。
+
+最终候选 full run `29232147877` 成功，耗时约 3 分 9 秒，Xcode success、JUnit 10/10、`.xcresult` 存在且 UI evidence skipped。PR fast run `29232478137` 约 19 秒，Xcode/领域大契约/UI 均 skipped。merge fast run `29233489356` 约 12 秒，manifest 为 `validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`、`reusedFullValidationSha=6864bd88...`、`reusedFullValidationState=success`、`xcodeBuildRequired=false`；merge 未触发 Build IPA。
 
 非目标与遗留：不改变 Koharu report-only/active artifact 边界，不伪造真实四件套，不改善 WER/CER，不调整 App UI；本轮未跑漫画探针，不追加 `metrics/version_history.csv`。
 

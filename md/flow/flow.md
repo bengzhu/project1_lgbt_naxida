@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`1.94`（task-scoped full-once / fast-follow-up CI；v1.93 Speech 取消、立即重试与旧回调隔离已收口；v1.92 external TextBox 真实四件套运行态仍待 `ci-fast`）。
+正式版本：`1.95`（Speech corpus 身份契约、WER/CER 评测和真实音频 runner；v1.96 待上传真实音频后运行；v1.94 task-scoped full-once / fast-follow-up CI 已收口；v1.92 external TextBox 真实四件套运行态仍待 `ci-fast`）。
 
 当前布局：
 
@@ -110,6 +110,7 @@
 - `output/probe_report.json` 相关报告模型。
 - 诊断汇总和质量判定结果。
 - `speechRecognitionRunSummary`：记录音频文件或实时麦克风识别的模式、语言、离线要求、耗时、词数、分段数、平均置信度、最终文本和失败原因。
+- `speechQualityProbeReport`：记录 corpus/manifest/audio 身份、Apple Speech 最终文本、WER/CER、延迟、分段、置信度和失败分类；参考文本只在识别完成后进入纯评测器。
 
 关键文件：
 
@@ -209,6 +210,35 @@
 
 - 不要把 Apple Speech 结果绕过 store 直接写入历史。
 - 不要把未授权、设备不支持或空识别文本伪装成成功。
+
+### 1.6.1 语音识别质量探针
+职责：对版本化真实音频 corpus 运行 Apple 本机 Speech，并以确定性算法生成可审计质量报告，不参与产品识别候选选择。
+
+输入：
+
+- `test/speech_corpus/manifest.json`。
+- 同目录真实音频；每项声明 SHA256、字节数、locale 和参考 transcript。
+
+输出：
+
+- `Output/speech_quality_report.json`。
+- `Output/speech_quality_report.txt`。
+- 英文等空格分词语言的词级 WER，以及所有语言的 CER、延迟、分段、平均置信度和失败 breakdown。
+
+关键文件：
+
+- `AITRANS/Models/SpeechQualityModels.swift`
+- `AITRANS/Services/SpeechQualityEvaluator.swift`
+- `AITRANS/Services/SpeechQualityProbeService.swift`
+- `scripts/validate-speech-corpus.py`
+
+规则：
+
+- `TranslationSessionStore` 持有探针状态、run ID 和取消入口；UI 不直接调用服务。
+- runner 强制 `requiresOnDeviceRecognition = true`，逐项先校验音频身份。
+- 参考 transcript 只传给识别完成后的 evaluator，不传给 `SFSpeechURLRecognitionRequest`。
+- 中文、日文没有稳定词分割时 `wordErrorRate = nil`，只报告 CER。
+- corpus 缺失时报告 `manifestMissing` / `qualityExecuted=false`，不产生质量结论。
 
 ### 1.7 漫画覆盖翻译探针
 职责：固定读取 bundle 内 `test/1.png`，跑 OCR、翻译、覆盖绘制和诊断报告。
@@ -374,6 +404,18 @@ test/1.png
   -> UI 展示
 ```
 
+### 2.3.1 语音质量评测
+```text
+开发页或 DEBUG launch flag
+  -> TranslationSessionStore.runSpeechQualityProbe
+  -> 读取 manifest + 校验 manifest/audio SHA256/字节数
+  -> Apple Speech URL recognition（on-device required）
+  -> 最终 transcript 返回
+  -> SpeechQualityEvaluator（参考文本仅在此处参与）
+  -> 英文等词级 WER / 全语言 CER / latency / confidence / failure category
+  -> Output/speech_quality_report.json + .txt
+```
+
 ### 2.4 漫画探针
 ```text
 开发页运行漫画覆盖翻译探针
@@ -446,7 +488,7 @@ test/1.png
 - 云端失败时，workflow 必须保留日志和失败摘要，Agent C 按结果包指出应交回 Agent B 修复的失败阶段和日志位置。
 - 手动探针 workflow 会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，并缓存到 `.ci-models/`。
 - 候选核心 push 默认 `validationProfile=full`、`probe_mode=skip`；PR fast 与有成功候选收据的 merge fast 只跑基础静态/路由契约。fast 不下载 GGUF、不创建模拟器、不安装 App、不跑 Xcode、不跑领域大契约。
-- full 按 changed files 路由 Speech、UI、文本首页和 Koharu 契约。UI evidence 仅由候选 commit `[ui evidence]` 或手动 `ui_evidence_mode=full` 启用；Speech 默认不截图。漫画/翻译结果图只来自手动 `ci-fast/full` 的探针 `output/`。
+- full 按 changed files 路由 Speech、UI、文本首页和 Koharu 契约。Speech 领域同时运行 run-id contract、质量算法 contract、纯 Swift evaluator 和 corpus validator；当前缺 corpus 时只记录 `manifestMissing`。UI evidence 仅由候选 commit `[ui evidence]` 或手动 `ui_evidence_mode=full` 启用；Speech 默认不截图。漫画/翻译结果图只来自手动 `ci-fast/full` 的探针 `output/`。
 - 手动 `workflow_dispatch` 选择 `ci-fast` 或 `full` 时，云端 CI 单次 Debug simulator build 同时产出 `.xcresult` 和可安装 App；探针步骤只定位并复用该 App，不重复完整 `xcodebuild build`。
 - 云端漫画探针会创建并启动 iPhone 模拟器，从构建 App 的 `Info.plist` 读取实际 bundle ID，安装 App，把缓存 GGUF 复制到 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 和 `AITRANS_MANGA_PROBE_MODE` 启动 App，等待并导出本轮 `output/`。
 - `ci-artifact-manifest.json` 必须记录 `probeMode`、`probeFastPathEnabled`、`probeSkippedDiagnostics`、`probeOutputRequiredFiles`、`probeOutputRetainedFiles`、`simulatorAppReusedFromXcodeBuild` 和 `simulatorAppPath`。

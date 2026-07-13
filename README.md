@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前正式版本：`1.94`（云端 full-once / fast-follow-up 分层、task-scoped contracts、显式 UI evidence 和手动 IPA 交付）。v1.93 已收口 Speech 取消、立即重试和旧回调隔离；v1.92 的 external TextBox 四点 line polygon warp 仍等待真实四件套 `ci-fast` 运行态证据。日常开发合入 `smalldata_test`，不合并到 `main`。
+当前正式版本：`1.95`（真实音频语料契约、身份校验、WER/CER/延迟评测和 Apple Speech 文件探针）。仓库尚无真实 Speech corpus，因此本版只证明算法与接线，不声称识别质量提升；v1.96 待上传真实音频后实测。v1.94 已收口云端 full-once / fast-follow-up 分层；v1.92 的 external TextBox 四点 line polygon warp 仍等待真实四件套 `ci-fast` 运行态证据。日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 
@@ -157,6 +157,16 @@ test/
 4. 点击 `运行 test/ 音频` 或 `运行 test/ OCR`。
 5. 音频会走 `SFSpeechURLRecognitionRequest` + `requiresOnDeviceRecognition = true`，识别文本再交给当前 Mock/Local 翻译接口。
 6. 图片会走 `VNRecognizeTextRequest`，识别文字块和 `boundingBox` 后逐块翻译。
+
+### 语音识别质量探针
+
+开发页的语音质量探针读取 `test/speech_corpus/manifest.json`，逐项校验音频 SHA256 和字节数，再按每项 `localeIdentifier` 使用 `SFSpeechURLRecognitionRequest` 与 `requiresOnDeviceRecognition = true` 识别。最终文本返回后才与参考 transcript 计算指标，并写入 `Application Support/AITRANS/Output/speech_quality_report.json` 和 `.txt`。
+
+- 英文等空格分词语言报告词级 WER 和字符级 CER；中文、日文只报告 CER。
+- 报告包含 corpus/manifest 身份、设备与系统、识别文本、延迟、分段、平均置信度、失败分类和加权汇总。
+- 参考 transcript 只用于事后评估，不进入 Speech 请求、候选选择、纠错或产品路径。
+- v1.95 未提交或生成占位音频。当前 validator 输出 `manifestMissing` 和 `qualityExecuted=false`；这不是质量失败，也不是质量通过。
+- v1.96 上传真实文件后按 `test/speech_corpus/README.md` 生成 manifest，再在目标设备运行并保留报告，才能比较实际 WER/CER 和延迟。
 
 ### 漫画覆盖翻译探针
 

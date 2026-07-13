@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-正式版本：`1.94`。
+正式版本：`1.95`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -50,6 +50,13 @@ flowchart TD
   L --> LV["speechRecognitionRunSummary<br/>输入 / locale / 耗时 / 词数 / 片段 / 置信度 / 失败原因"]
   AX["录音默认 accessibility action<br/>开始 / 停止"] --> L
   LC["checking / recognizing / translating<br/>均可取消"] --> LR
+
+  %% Speech 质量分支：真实 corpus 事后评估
+  C --> SQ["Speech quality probe<br/>versioned corpus + audio identity"]
+  SQ --> SQR["Apple Speech URL recognition<br/>on-device required"]
+  SQR --> SQE["事后 evaluator<br/>WER / CER / latency / confidence"]
+  REF["reference transcript"] -. "只在最终识别文本返回后参与评估" .-> SQE
+  SQE --> SQO["speech_quality_report.json / .txt<br/>failure breakdown + runtime identity"]
 
   SETTINGS["Settings NavigationPath"] --> DEVRESET{"开发模式仍开启?"}
   DEVRESET -->|"否"| SETTINGSROOT["清空 path / 返回设置根页"]

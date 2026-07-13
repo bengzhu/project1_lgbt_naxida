@@ -96,6 +96,10 @@ final class TranslationSessionStore: ObservableObject {
     @Published var proLiveTranslationText = ""
     @Published var isCapturingProSpeech = false
     @Published var speechRecognitionRunSummary: SpeechRecognitionRunSummary = .empty
+    @Published var speechQualityProbeState: SpeechQualityProbeState = .idle
+    @Published var speechQualityProbeMessage = "等待加载 test/speech_corpus/manifest.json"
+    @Published var speechQualityProbeReport: SpeechQualityProbeReport?
+    @Published var isRunningSpeechQualityProbe = false
     @Published var imageTranslationState: ImageTranslationState = .idle
     @Published var imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
     @Published var imageTranslationBlocks: [ImageTranslationBlock] = []
@@ -116,12 +120,15 @@ final class TranslationSessionStore: ObservableObject {
     private let modelDownloadService = LocalModelDownloadService()
     private let visionOCRService = VisionOCRService()
     private let mangaOverlayProbeService = MangaOverlayProbeService()
+    private let speechQualityProbeService = SpeechQualityProbeService()
     private var ticker: Task<Void, Never>?
     private var modelDownloadTask: Task<Void, Never>?
     private var imageTranslationTask: Task<Void, Never>?
     private var imageTranslationTaskID = UUID()
     private var audioRecognitionTask: SFSpeechRecognitionTask?
     private var speechTranslationTask: Task<Void, Never>?
+    private var speechQualityProbeTask: Task<Void, Never>?
+    private var speechQualityProbeRunID = UUID()
     private var liveAudioEngine: AVAudioEngine?
     private var liveSpeechRecognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var isProLiveSpeechCaptureRequested = false
@@ -159,6 +166,7 @@ final class TranslationSessionStore: ObservableObject {
         persist()
         runLaunchLLMSmokeTestIfNeeded()
         runLaunchMangaOverlayProbeIfNeeded()
+        runLaunchSpeechQualityProbeIfNeeded()
     }
 
     deinit {
@@ -166,6 +174,7 @@ final class TranslationSessionStore: ObservableObject {
         modelDownloadTask?.cancel()
         imageTranslationTask?.cancel()
         speechTranslationTask?.cancel()
+        speechQualityProbeTask?.cancel()
     }
 
     private func runLaunchLLMSmokeTestIfNeeded() {
@@ -206,6 +215,13 @@ final class TranslationSessionStore: ObservableObject {
             )
             self.runMangaOverlayProbe()
         }
+#endif
+    }
+
+    private func runLaunchSpeechQualityProbeIfNeeded() {
+#if DEBUG
+        guard Self.shouldRunSpeechQualityProbeFromLaunchEnvironment else { return }
+        runSpeechQualityProbe()
 #endif
     }
 
@@ -324,6 +340,10 @@ final class TranslationSessionStore: ObservableObject {
         persistenceURL
             .deletingLastPathComponent()
             .appendingPathComponent("Output", isDirectory: true)
+    }
+
+    private var speechQualityCorpusDirectory: URL? {
+        bundledTestDirectory?.appendingPathComponent("speech_corpus", isDirectory: true)
     }
 
     var imageTranslationProgressTitle: String {
@@ -776,6 +796,46 @@ final class TranslationSessionStore: ObservableObject {
         audioRecognitionMessage = "语音识别已取消"
         failSpeechRecognitionRun("用户取消")
         dataTransferMessage = audioRecognitionMessage
+    }
+
+    func runSpeechQualityProbe() {
+        guard !isRunningSpeechQualityProbe else { return }
+
+        speechQualityProbeTask?.cancel()
+        speechQualityProbeService.cancel()
+        let runID = UUID()
+        speechQualityProbeRunID = runID
+        isRunningSpeechQualityProbe = true
+        speechQualityProbeReport = nil
+        speechQualityProbeState = .loadingManifest
+        speechQualityProbeMessage = "正在准备 Speech 质量语料"
+
+        speechQualityProbeTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let report = await self.speechQualityProbeService.run(
+                corpusDirectory: self.speechQualityCorpusDirectory,
+                outputDirectory: self.mangaOverlayOutputDirectory
+            ) { [weak self] state, message in
+                guard let self, self.speechQualityProbeRunID == runID else { return }
+                self.speechQualityProbeState = state
+                self.speechQualityProbeMessage = message
+            }
+            guard !Task.isCancelled, self.speechQualityProbeRunID == runID else { return }
+            self.speechQualityProbeReport = report
+            self.isRunningSpeechQualityProbe = false
+            self.speechQualityProbeTask = nil
+        }
+    }
+
+    func cancelSpeechQualityProbe() {
+        guard isRunningSpeechQualityProbe else { return }
+        speechQualityProbeRunID = UUID()
+        speechQualityProbeTask?.cancel()
+        speechQualityProbeTask = nil
+        speechQualityProbeService.cancel()
+        isRunningSpeechQualityProbe = false
+        speechQualityProbeState = .cancelled
+        speechQualityProbeMessage = "Speech 质量探针已取消"
     }
 
     private func beginSpeechRecognitionRun(
@@ -25061,6 +25121,10 @@ final class TranslationSessionStore: ObservableObject {
 
     private static var shouldRunMangaOverlayProbeFromLaunchEnvironment: Bool {
         launchFlagEnabled("AITRANS_RUN_MANGA_PROBE")
+    }
+
+    private static var shouldRunSpeechQualityProbeFromLaunchEnvironment: Bool {
+        launchFlagEnabled("AITRANS_RUN_SPEECH_QUALITY_PROBE")
     }
 
     private static func launchFlagEnabled(_ key: String) -> Bool {

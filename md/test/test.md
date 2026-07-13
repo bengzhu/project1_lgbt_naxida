@@ -12,7 +12,7 @@
 - 云端漫画探针复用同一次 Debug simulator build 产物安装 App，把 `.ci-models/gemma-3-270m-it-qat-Q4_0.gguf` 复制为 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，再用 `AITRANS_RUN_MANGA_PROBE=1` 和 `AITRANS_MANGA_PROBE_MODE` 启动 App 并导出 `output/`。`Gemma-1.5B` 是历史目录名；验收实际模型时看 asset 名、字节数和 SHA256。
 - `AITRANS CI Results` 的候选核心 push 默认 `validationProfile=full`、`probe_mode=skip`，按任务运行基础静态、相关领域契约与必要 Xcode build；不下载 GGUF、不创建模拟器、不安装 App、不跑漫画探针。PR/已验证 merge 使用 `validationProfile=fast`，跳过 Xcode 和领域大套件。例外：只要填写 Koharu artifact archive，`probe_mode` 必须为 `ci-fast` 或 `full`。
 - `probe_mode=skip` 或云端探针失败时，CI 结果包不得复制仓库里已有的旧 `output/probe_report.json` / `clean_text_diagnostic.json` / `1_ocr_probe_text.txt` 当成本次产物；只能保留 `output/probe-not-run.txt` 和 manifest skip / failure reason。只有 `probe_mode != skip` 且 `manga_probe` 成功时才复制本轮 `output/`。
-- full CI 先按 changed files 路由 Speech、UI、文本首页和 Koharu 契约；App 相关 full 才跑 Xcode，非 App full 可写 `xcodeBuildRequired=false`。fast 必须写 `fast_followup_reuses_candidate_full_validation` skip reason，不能当作新的编译证据。
+- full CI 先按 changed files 路由 Speech、UI、文本首页和 Koharu 契约；Speech 领域包含 run-id contract、v1.95 质量 contract、纯 Swift evaluator 和 corpus validator。App 相关 full 才跑 Xcode，非 App full 可写 `xcodeBuildRequired=false`。fast 必须写 `fast_followup_reuses_candidate_full_validation` skip reason，不能当作新的编译证据。
 - `AITRANS CI Results` checkout 至少保留最近 2 个提交，确保普通单提交 push 能 diff 到 `github.event.before`；若一次 push 含多提交导致 before commit 不在浅克隆内，workflow 必须先定向 fetch `github.event.before` 再 diff。只有 checkout 和 targeted fetch 都拿不到 before commit 时，才允许把 `changed-files.txt` 回退成全仓列表；manifest / failure summary 必须记录 `scopeDiffMethod`、`scopeDiffBaseSha` 和 `scopeDiffFallbackUsed`。
 - Koharu artifact validator 只在 Koharu 领域 full 中运行；完整 invalid fixture 矩阵限 validator、artifact contract、artifact injection 或 CI workflow 相关 full。Speech、普通 UI、PR 和 merge fast 不运行该套件。
 - 手动注入 Koharu artifact archive 且运行 `ci-fast/full` 时，云端 smoke 必须核对 archive 只有一个目录同时包含四件套，并在 `ci-artifact-manifest.json` / `koharu-active-artifacts-validation.json` 中核对 `koharuArtifactValidationIdentitySummary` / `artifactIdentitySummary` 的 source image 与四件套 SHA256、size、`generatedBy`、`contractExampleOnly=false`，且 `1.manifest.json` 声明的 `sourceImageSHA256` 必须等于当前仓库 `test/1.png` 的 SHA256，validator 侧 `sourceImageSHA256Matches=true`。还必须核对 `probe_report.json` 中 App 侧 `externalArtifactReadinessReport.artifactIdentityReceipt.identityVerdict = activeArtifactIdentityRecorded`、`artifactIdentityReceipt.sourceImageSHA256Declared` / `sourceImageSHA256Expected` / `sourceImageSHA256Matches=true`、`koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison = true`、`koharuArtifactIdentityReconciliationReport.sourceImageSHA256Declared` / `sourceImageSHA256Expected` / `sourceImageSHA256Matches=true`、`ci-artifact-manifest.koharuArtifactIdentityReconciliationMatch.matchVerdict = matched`、required files size / SHA256 与 CI identity 逐项匹配、`externalArtifactReadinessReport` 为 `readyForShadowOCR`、`externalTextBoxesShadowOCRAllowed = true`、`koharuNativeArtifactContractDryRunReport.contractDryRunVerdict = activeArtifactsReadyForShadowOCR`、`appSideArtifactIdentityVerdict = activeArtifactIdentityRecorded`、`appSideArtifactIdentityHashesPresent = true`、`dryRunOnly = true`、`activeExportAllowed = false`、`externalTextBoxShadowOCRReport.executed = true`、`candidateCount > 0`、`ocrExecutedCount > 0`、`ocrSucceededCount > 0`，以及 convergence 的 `WI/G-external-textbox-shadow-ocr-coverage` 已消费这些证据；不能只用 Release 下载、SHA、validator 日志或 `readyForShadowOCR` 作为 App 已消费 artifact 的证据。
@@ -121,6 +121,17 @@ v1.90 已用静态契约锁定 run-id 隔离与摘要字段。下列人工矩阵
 
 任何 C 退回后的核心修复都会产生新 SHA，必须重新跑对应 full。不要为“记录 CI 已通过”追加无功能文档 commit；结果以 GitHub status、run 和 artifact 为准。
 
+### 0.8 v1.95 Speech 质量算法与 corpus 契约
+
+v1.95 验收算法和接线，不验收不存在的真实音频质量提升：
+
+- `scripts/test-speech-quality-evaluator.swift` 必须锁定 Levenshtein、英文词级 WER、CER 和加权 aggregate；中文、日文 `wordErrorRate` 必须为 `nil`。
+- `scripts/test-speech-quality-contract.py` 必须锁定参考 transcript 不进入 recognition request、音频 SHA256/字节硬门控、`requiresOnDeviceRecognition=true`、store run ID/取消、Xcode 工程和 CI 接线。
+- `scripts/validate-speech-corpus.py` 在没有 `manifest.json` 时返回成功但明确输出 `verdict=manifestMissing`、`qualityExecuted=false`；使用 `--require-manifest` 时缺失必须失败。manifest 存在时，任何路径逃逸、重复 ID、缺字段、字节数或 SHA 漂移都必须失败。
+- 真实报告必须记录 corpus/manifest/audio 身份、设备/系统、locale、参考与识别文本、WER/CER、延迟、segment、confidence、失败分类，并固定 `referenceUsedForEvaluationOnly=true`、`referenceUsedForRecognitionDecision=false`。
+- GitHub-hosted simulator full 只证明编译和无设备算法契约；没有人工上传的真实 corpus 和目标设备运行报告时，不得给出 WER/CER 提升结论。
+- v1.96 上传真实音频后，先用 `--require-manifest` 校验，再运行开发页或 `AITRANS_RUN_SPEECH_QUALITY_PROBE=1`，验收 `Output/speech_quality_report.json` / `.txt`。Speech 功能不采 UI 截图。
+
 ## 1. 固定前缀 / 环境要求
 人工明确要求本机命令行构建时，固定使用完整 Xcode：
 
@@ -166,6 +177,10 @@ python3 -m json.tool test/1.ground_truth.json
 python3 -m json.tool output/probe_report.json
 python3 -m json.tool output/clean_text_diagnostic.json
 python3 -B scripts/test-speech-recognition-contract.py
+python3 -B scripts/test-speech-quality-contract.py
+python3 -B scripts/validate-speech-corpus.py --root test/speech_corpus
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun --sdk macosx swiftc -module-cache-path /private/tmp/aitrans-swift-module-cache AITRANS/Models/SpeechQualityModels.swift AITRANS/Services/SpeechQualityEvaluator.swift scripts/test-speech-quality-evaluator.swift -o /private/tmp/aitrans-speech-quality-contract
+/private/tmp/aitrans-speech-quality-contract
 python3 -B scripts/test-v194-ci-validation-tier-contract.py
 python3 -B scripts/test-v192-koharu-line-polygon-warp-contract.py
 python3 -B scripts/test-v187-ui-interaction-contract.py
@@ -194,6 +209,8 @@ python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allo
 `build/koharu_native_draft/` 是 `scripts/make-koharu-native-draft-artifacts.py` 生成的非 active 四件套草稿，只用于 contract shape / validator smoke。它必须保持 `contractExampleOnly=true`，validator 应输出 `verdict = contractExampleOnly`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`；不得复制到 `test/koharu_artifacts/`，不得作为真实 detector / SegmentMask / BubbleMask 验收证据。
 
 `scripts/test-speech-recognition-contract.py` 是无设备依赖的源代码契约测试，覆盖 v1.86 状态枚举、运行摘要字段、异步 run ID 隔离、UI 取消/翻译状态和 CI 动态 bundle ID。它不能代替真机 Speech 权限、麦克风采集或识别质量测试。
+
+`scripts/test-speech-quality-evaluator.swift` 和 `scripts/test-speech-quality-contract.py` 证明评分算法、隐私边界和 App/CI 接线；`scripts/validate-speech-corpus.py` 证明 manifest 与音频身份。三者都不能代替 v1.96 的真实 Apple Speech 运行报告。
 
 当前基线：
 
