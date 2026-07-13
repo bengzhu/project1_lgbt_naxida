@@ -119,7 +119,7 @@
 ### v1.93：Speech Run 取消与旧回调隔离
 日期：2026-07-13
 
-状态：Agent X 版本收口中，分支 `codeb/v1.93-speech-run-cancellation`，PR #46，基于 `smalldata_test` merge `b374c19e99c784c5a933302a317a62572ba26355`。实现验收 HEAD `dd77fe76bb351b29a320c55cad772514d0dac3ae` 的 exact-SHA run `29225409696` SUCCESS；工程 `MARKETING_VERSION=1.93`，版本收口提交仍须获得新 exact-SHA run 后才能合并。未触碰 `main`。
+状态：Agent C / Agent X 验收通过，分支 `codeb/v1.93-speech-run-cancellation`，PR #46，基于 `smalldata_test` merge `b374c19e99c784c5a933302a317a62572ba26355`。实现验收 HEAD `dd77fe76bb351b29a320c55cad772514d0dac3ae` 与版本收口 HEAD `89180363068631c22396acd81ddedb5f2c214731` 的 exact-SHA run 均 SUCCESS；工程 `MARKETING_VERSION=1.93`。合并目标仅 `smalldata_test`，未触碰 `main`。
 
 核心变更：
 
@@ -133,6 +133,8 @@
 本地轻量验证：Speech contract 14/14、两个变更 Swift 文件 `swiftc -parse`、workflow YAML 解析和 `git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证；GitHub-hosted simulator 不能冒充真机麦克风、权限弹窗或 Apple Speech 识别质量证据。
 
 云端实现验收：run `29225409696` attempt 1，artifact `aitrans-ci-v1.93-codeb-v1.93-speech-run-cancellation--dd77fe76bb35-run29225409696-attempt1`（2,780,359 bytes）。manifest 的 version / branch / commit / run / workflow 精确匹配；Xcode build、Speech 14/14、JUnit 8/8、v1.87-v1.89 contracts 和 12 张 current-HEAD UI evidence 全部通过。音频运行态截图 SHA256 `6bae5cac562a0de183d1cb794aa4010a4a9df1b093f543709f6b831228aebe3f`，取消按钮完整位于浮动 Tab Bar 上方。`probe_mode=skip`，符合本轮不改漫画路径的范围；本机缺 `xcresulttool`，但 `.xcresult` 结构、Info.plist、CI step 与 manifest 均可用。
+
+版本收口验收：run `29226081679` attempt 1，artifact `aitrans-ci-v1.93-codeb-v1.93-speech-run-cancellation--891803630686-run29226081679-attempt1`（3,816,472 bytes）。manifest exact SHA / version / branch / run / workflow 对齐，`xcodeBuildRequired=true`，Xcode build、Speech 14/14、JUnit 8/8、v1.87-v1.89 contracts 和 12 张 current-HEAD UI evidence 通过；最终音频截图 SHA256 `ef627a294d056c03b5a380f73c9966740ee0c0a78c453cd54d1102431b1770ed`，取消动作仍完整可见。`probe_mode=skip`，未运行漫画探针或真实语音质量测试。
 
 非目标与遗留：不更换 Apple Speech / 模型、不引入第三方 ASR、不声称改善 WER/CER；固定多语言音频 corpus、WER/CER/延迟报告和真机 S1-S8 人工矩阵仍是后续 Speech 质量阶段。漫画路径与 v1.92 指标均未改变，因此不追加 `metrics/version_history.csv`。
 
