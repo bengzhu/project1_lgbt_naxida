@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前正式版本：`1.92`（external TextBox 四点 line polygon warp shadow path 已收口）。该能力仍等待真实四件套 `ci-fast` 运行态证据，不改变主 OCR、翻译或覆盖图。日常开发合入 `smalldata_test`，不合并到 `main`。
+当前正式版本：`1.93`（Speech 取消、立即重试和旧回调隔离已收口）。v1.92 的 external TextBox 四点 line polygon warp 仍等待真实四件套 `ci-fast` 运行态证据，不改变主 OCR、翻译或覆盖图。日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 

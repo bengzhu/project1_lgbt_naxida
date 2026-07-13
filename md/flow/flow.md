@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`1.92`（external TextBox 合法凸四点 line polygon warp shadow OCR 已收口；真实四件套运行态仍待 `ci-fast`）。
+正式版本：`1.93`（Speech 取消、立即重试与旧回调隔离已收口；v1.92 external TextBox 真实四件套运行态仍待 `ci-fast`）。
 
 当前布局：
 
