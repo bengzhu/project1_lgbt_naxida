@@ -127,6 +127,7 @@ class V187UIInteractionContractTests(unittest.TestCase):
             ],
             "AITRANS/Views/ImageTranslationViews.swift": [
                 "store.translateImage(from: url)",
+                "store.selectImageTargetLanguage(language)",
                 "store.cancelImageTranslation",
                 "store.retryImageTranslation",
                 "store.imageTranslationExportURL",
@@ -153,6 +154,25 @@ class V187UIInteractionContractTests(unittest.TestCase):
             with self.subTest(path=relative_path):
                 missing = [needle for needle in required if needle not in source]
                 self.assertEqual(missing, [], f"unwired workflow actions in {relative_path}")
+
+    def test_image_target_language_control_uses_store_and_retries_completed_images(self) -> None:
+        image = read("AITRANS/Views/ImageTranslationViews.swift")
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+
+        self.assertIn("ImageTargetLanguageControl()", image)
+        self.assertIn("store.availableTargetLanguages", image)
+        self.assertIn("store.selectImageTargetLanguage(language)", image)
+        self.assertIn("已完成的图片会重新翻译", image)
+
+        selector = re.search(
+            r"func selectImageTargetLanguage\(_ language: SupportedLanguage\) \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(selector, "image target language selector is missing")
+        self.assertIn("selectTargetLanguage(language)", selector.group("body"))
+        self.assertIn("imageTranslationState == .translated", selector.group("body"))
+        self.assertIn("retryImageTranslation()", selector.group("body"))
 
 
 if __name__ == "__main__":

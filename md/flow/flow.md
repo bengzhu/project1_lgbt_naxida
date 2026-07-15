@@ -159,11 +159,13 @@
 输入：
 
 - 用户选择的图片数据。
+- 当前源语言和用户在图片页选择的目标语言。
 
 输出：
 
 - `ImageTranslationBlock`
 - 旁贴或覆盖展示。
+- 任务启动时固定源/目标语言；已完成图片切换目标语言时从沙盒原图重新翻译。
 
 关键文件：
 
@@ -386,9 +388,11 @@ test/1.png
 ### 2.2 图片翻译
 ```text
 用户选择图片
+  -> 图片页选择目标语言（Pro 门控）
   -> TranslationSessionStore.translateImage
+  -> 固定本次源/目标语言
   -> VisionOCRService.recognizeTextBlocks
-  -> 每块调用 translate
+  -> 每块按固定目标语言调用 translate
   -> ImageTranslationBlock
   -> 旁贴或覆盖 UI
 ```

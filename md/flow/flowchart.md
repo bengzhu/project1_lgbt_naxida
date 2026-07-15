@@ -37,7 +37,8 @@ flowchart TD
   G --> H["LlamaRuntime<br/>llama.cpp C API 封装"]
 
   %% 图片 OCR 分支：普通图片翻译
-  C --> I["普通图片翻译<br/>VisionOCRService"]
+  IMG_TARGET["图片目标语言菜单<br/>Pro 门控 / 完成后重新翻译"] --> C
+  C --> I["普通图片翻译<br/>VisionOCRService + 源/目标语言快照"]
   I --> J["ImageTranslationBlock<br/>bbox + OCR 文本 + 译文"]
   J --> K["图片旁贴 / 覆盖 UI"]
 

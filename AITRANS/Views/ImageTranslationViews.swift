@@ -77,6 +77,14 @@ struct ImageTranslationPanel: View {
     private var inspector: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
             AppSectionHeader(
+                title: "翻译设置",
+                subtitle: "译为 \(store.targetLanguage.rawValue)",
+                systemImage: "character.bubble"
+            )
+
+            ImageTargetLanguageControl()
+
+            AppSectionHeader(
                 title: "识别结果",
                 subtitle: store.imageTranslationSummary,
                 systemImage: "viewfinder"
@@ -158,6 +166,69 @@ struct ImageTranslationPanel: View {
 
     private func shareResult() {
         shareURL = store.imageTranslationExportURL
+    }
+}
+
+private struct ImageTargetLanguageControl: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @State private var showLockedLanguage = false
+
+    var body: some View {
+        Menu {
+            ForEach(store.availableTargetLanguages) { language in
+                Button {
+                    store.selectImageTargetLanguage(language)
+                    if !store.canUseLanguage(language) {
+                        showLockedLanguage = true
+                    }
+                } label: {
+                    Label(language.rawValue, systemImage: menuSymbol(for: language))
+                }
+            }
+        } label: {
+            HStack(spacing: AppTheme.Spacing.control) {
+                Label("目标语言", systemImage: "character.bubble")
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 0)
+                Text(store.targetLanguage.rawValue)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.appTextSecondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget)
+            .padding(.horizontal, AppTheme.Spacing.control)
+            .foregroundStyle(Color.appTextPrimary)
+            .background(Color.appCanvas, in: .rect(cornerRadius: AppTheme.Radius.control))
+            .overlay {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.control)
+                    .stroke(Color.appBorder, lineWidth: 1)
+            }
+        }
+        .disabled(isRunning)
+        .accessibilityLabel("目标语言")
+        .accessibilityValue(store.targetLanguage.rawValue)
+        .accessibilityHint("选择图片翻译的目标语言；已完成的图片会重新翻译")
+        .alert("Pro 语言", isPresented: $showLockedLanguage) {
+            Button("知道了", role: .cancel) {}
+        } message: {
+            Text(store.dataTransferMessage)
+        }
+    }
+
+    private var isRunning: Bool {
+        switch store.imageTranslationState {
+        case .loading, .recognizing, .translating: true
+        case .idle, .translated, .failed: false
+        }
+    }
+
+    private func menuSymbol(for language: SupportedLanguage) -> String {
+        if store.targetLanguage == language {
+            return "checkmark.circle.fill"
+        }
+        return store.canUseLanguage(language) ? "circle" : "lock.fill"
     }
 }
 

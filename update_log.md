@@ -8,6 +8,26 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## 未发布工作区：图片翻译目标语言选择
+日期：2026-07-15
+
+核心变更：
+
+- 图片页新增目标语言菜单，复用 `TranslationSessionStore.targetLanguage`、既有 Pro 门控和锁定提示；不新增独立持久化状态，也不改变漫画探针固定英译中路径。
+- 图片翻译任务在开始时固定源语言和目标语言。逐块 OCR/翻译期间，即使其他页面修改全局语言，当前任务也不会混用不同语言方向。
+- 已完成的图片切换为新的可用目标语言时，从沙盒原图重新执行 OCR、翻译和覆盖导出；运行态菜单禁用，防止同一任务内改写目标语言。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `scripts/test-v187-ui-interaction-contract.py`
+
+验证与遗留：
+
+- 已通过 `python3 -B scripts/test-v187-ui-interaction-contract.py`、`git diff --check` 和现有漫画 JSON 解析。
+- 未跑本机 build / 探针，按规则交给云端验证；本轮没有修改漫画算法或报告模型，因此未更新 `metrics/version_history.csv`。
+
 ## 当前漫画指标基线
 日期：2026-06-29
 

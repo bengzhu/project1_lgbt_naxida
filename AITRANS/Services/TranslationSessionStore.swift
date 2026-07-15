@@ -1018,7 +1018,12 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationTaskID == taskID && !Task.isCancelled
     }
 
-    private func runImageTranslationPipeline(with data: Data, taskID: UUID) async throws {
+    private func runImageTranslationPipeline(
+        with data: Data,
+        taskID: UUID,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) async throws {
         guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
         imageTranslationData = data
         imageTranslationRevision += 1
@@ -1042,14 +1047,18 @@ final class TranslationSessionStore: ObservableObject {
 
         imageTranslationBlocks = recognizedBlocks
         imageTranslationState = .translating
-        imageTranslationMessage = "已识别 \(recognizedBlocks.count) 个文本块，正在交给本地模型翻译"
+        imageTranslationMessage = "已识别 \(recognizedBlocks.count) 个文本块，正在翻译为\(targetLanguage.rawValue)"
 
         var translatedBlocks: [ImageTranslationBlock] = []
         for (index, block) in recognizedBlocks.enumerated() {
             try Task.checkCancellation()
             guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
             var translatedBlock = block
-            translatedBlock.translation = try await translate(block.original)
+            translatedBlock.translation = try await translate(
+                block.original,
+                sourceLanguage: sourceLanguage,
+                targetLanguage: targetLanguage
+            )
             guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
             translatedBlocks.append(translatedBlock)
             imageTranslationBlocks = translatedBlocks + Array(recognizedBlocks.dropFirst(translatedBlocks.count))
@@ -1065,8 +1074,8 @@ final class TranslationSessionStore: ObservableObject {
         )
         imageTranslationState = .translated
         imageTranslationMessage = imageTranslationExportURL == nil
-            ? "已完成 Vision OCR、本地翻译和定位覆盖"
-            : "已完成 Vision OCR、本地翻译和覆盖图导出"
+            ? "已完成 Vision OCR、\(targetLanguage.rawValue)翻译和定位覆盖"
+            : "已完成 Vision OCR、\(targetLanguage.rawValue)翻译和覆盖图导出"
         dataTransferMessage = imageTranslationMessage
         appendImageTranslationTranscript(blocks: translatedBlocks)
         isProcessing = false
@@ -1093,14 +1102,24 @@ final class TranslationSessionStore: ObservableObject {
         persist()
     }
 
-    private func runImageTranslation(fromSandboxURL url: URL, taskID: UUID) {
+    private func runImageTranslation(
+        fromSandboxURL url: URL,
+        taskID: UUID,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) {
         imageTranslationTask = Task { [weak self] in
             guard let self else { return }
 
             do {
                 guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
                 let data = try await Self.loadSecurityScopedData(from: url)
-                try await self.runImageTranslationPipeline(with: data, taskID: taskID)
+                try await self.runImageTranslationPipeline(
+                    with: data,
+                    taskID: taskID,
+                    sourceLanguage: sourceLanguage,
+                    targetLanguage: targetLanguage
+                )
             } catch {
                 self.finishImageTranslation(taskID: taskID, with: error)
             }
@@ -1124,6 +1143,8 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
+        let selectedSourceLanguage = sourceLanguage
+        let selectedTargetLanguage = targetLanguage
         let taskID = beginImageTranslationTask(filename: url.lastPathComponent)
 
         imageTranslationTask = Task { [weak self] in
@@ -1136,7 +1157,12 @@ final class TranslationSessionStore: ObservableObject {
                 guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
 
                 let data = try await Self.loadSecurityScopedData(from: sandboxURL)
-                try await self.runImageTranslationPipeline(with: data, taskID: taskID)
+                try await self.runImageTranslationPipeline(
+                    with: data,
+                    taskID: taskID,
+                    sourceLanguage: selectedSourceLanguage,
+                    targetLanguage: selectedTargetLanguage
+                )
             } catch {
                 self.finishImageTranslation(taskID: taskID, with: error)
             }
@@ -1160,6 +1186,8 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
+        let selectedSourceLanguage = sourceLanguage
+        let selectedTargetLanguage = targetLanguage
         let taskID = beginImageTranslationTask(filename: filename)
 
         imageTranslationTask = Task { [weak self] in
@@ -1171,7 +1199,12 @@ final class TranslationSessionStore: ObservableObject {
                 guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
                 self.imageTranslationSourceURL = sandboxURL
                 self.imageTranslationFilename = sandboxURL.lastPathComponent
-                try await self.runImageTranslationPipeline(with: data, taskID: taskID)
+                try await self.runImageTranslationPipeline(
+                    with: data,
+                    taskID: taskID,
+                    sourceLanguage: selectedSourceLanguage,
+                    targetLanguage: selectedTargetLanguage
+                )
             } catch {
                 self.finishImageTranslation(taskID: taskID, with: error)
             }
@@ -1215,9 +1248,16 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
+        let selectedSourceLanguage = sourceLanguage
+        let selectedTargetLanguage = targetLanguage
         let taskID = beginImageTranslationTask(filename: url.lastPathComponent)
         imageTranslationSourceURL = url
-        runImageTranslation(fromSandboxURL: url, taskID: taskID)
+        runImageTranslation(
+            fromSandboxURL: url,
+            taskID: taskID,
+            sourceLanguage: selectedSourceLanguage,
+            targetLanguage: selectedTargetLanguage
+        )
     }
 
     func refreshSummary() async throws {
@@ -1463,6 +1503,19 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         targetLanguage = language
+    }
+
+    func selectImageTargetLanguage(_ language: SupportedLanguage) {
+        guard language != targetLanguage else { return }
+
+        selectTargetLanguage(language)
+        guard targetLanguage == language,
+              isProUnlocked,
+              imageTranslationState == .translated else {
+            return
+        }
+
+        retryImageTranslation()
     }
 
     func activateProForDevelopment() {
@@ -3313,7 +3366,24 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     private func translate(_ text: String) async throws -> String {
-        let request = makeRequest(task: .translation, inputText: text)
+        try await translate(
+            text,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage
+        )
+    }
+
+    private func translate(
+        _ text: String,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) async throws -> String {
+        let request = makeRequest(
+            task: .translation,
+            inputText: text,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage
+        )
         writeLaunchLLMSmokeProbe(
             "translate-request source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
             "prompt=\(request.prompt.title) input=\(Self.probeField(text))"
@@ -24297,14 +24367,19 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
-    private func makeRequest(task: ModelTask, inputText: String) -> ModelGenerationRequest {
+    private func makeRequest(
+        task: ModelTask,
+        inputText: String,
+        sourceLanguage requestSourceLanguage: SupportedLanguage? = nil,
+        targetLanguage requestTargetLanguage: SupportedLanguage? = nil
+    ) -> ModelGenerationRequest {
         ModelGenerationRequest(
             task: task,
             mode: mode,
             inputText: inputText,
             transcriptContext: transcript,
-            sourceLanguage: sourceLanguage,
-            targetLanguage: targetLanguage,
+            sourceLanguage: requestSourceLanguage ?? sourceLanguage,
+            targetLanguage: requestTargetLanguage ?? targetLanguage,
             prompt: selectedPrompt,
             sampling: sampling
         )
