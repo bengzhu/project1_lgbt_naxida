@@ -311,7 +311,7 @@ jobs:
           if grep -Fx '.github/workflows/ci-results.yml' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             workflow_changed=true
           fi
-          if grep -E '^(AITRANS/Services/TranslationSessionStore\.swift|AITRANS/Models/TranscriptModels\.swift|AITRANS/Views/AudioTranslationView\.swift|AITRANS/Views/ProViews\.swift|scripts/test-speech-recognition-contract\.py)$' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+          if grep -E '^(AITRANS/Services/(TranslationSessionStore|SpeechQualityEvaluator|SpeechQualityProbeService)\.swift|AITRANS/Models/(TranscriptModels|SpeechQualityModels)\.swift|AITRANS/Views/(AudioTranslationView|ProViews|DeveloperConsoleView)\.swift|scripts/(test-speech-recognition-contract|test-speech-quality-contract|test-speech-quality-evaluator)\.(py|swift)|scripts/validate-speech-corpus\.py|test/speech_corpus/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             speech_contract_required=true
           fi
           if grep -E '^(AITRANS/Views/|AITRANS/Services/TranslationSessionStore\.swift|scripts/test-v187-ui-interaction-contract\.py|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
@@ -814,7 +814,19 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          python3 -B scripts/test-speech-recognition-contract.py 2>&1 | tee "$RESULT_ROOT/speech-recognition-contract.log"
+          {
+            python3 -B scripts/test-speech-recognition-contract.py
+            python3 -B scripts/test-speech-quality-contract.py
+            python3 -B scripts/validate-speech-corpus.py \
+              --root test/speech_corpus \
+              --output "$RESULT_ROOT/speech-corpus-validation.json"
+            xcrun --sdk macosx swiftc \
+              AITRANS/Models/SpeechQualityModels.swift \
+              AITRANS/Services/SpeechQualityEvaluator.swift \
+              scripts/test-speech-quality-evaluator.swift \
+              -o "$RUNNER_TEMP/speech-quality-evaluator-contract"
+            "$RUNNER_TEMP/speech-quality-evaluator-contract"
+          } 2>&1 | tee "$RESULT_ROOT/speech-recognition-contract.log"
 
       - name: UI interaction contract
         id: ui_interaction_contract
@@ -1845,8 +1857,12 @@ jobs:
           path = Path("ci-results/ci-artifact-manifest.json")
           if path.is_file():
               manifest = json.loads(path.read_text(encoding="utf-8"))
-              manifest["speechRecognitionContractOutcome"] = os.environ.get("SPEECH_CONTRACT_OUTCOME", "skipped")
-              manifest["speechRecognitionContractLogPath"] = "ci-results/speech-recognition-contract.log"
+              outcome = os.environ.get("SPEECH_CONTRACT_OUTCOME", "skipped")
+              validation_path = Path("ci-results/speech-corpus-validation.json")
+              manifest["speechRecognitionContractOutcome"] = outcome
+              manifest["speechRecognitionContractLogPath"] = "ci-results/speech-recognition-contract.log" if outcome != "skipped" else None
+              manifest["speechQualityContractIncluded"] = outcome != "skipped"
+              manifest["speechCorpusValidationPath"] = str(validation_path) if validation_path.is_file() else None
               path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
 

@@ -37,6 +37,9 @@
 		0A00000100000000000000B2 /* AppPreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000B1 /* AppPreviewSupport.swift */; };
 		0A00000100000000000000B5 /* TextWorkspaceBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000B4 /* TextWorkspaceBackground.swift */; };
 		0A00000100000000000000B7 /* TextWorkspacePasteButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000B6 /* TextWorkspacePasteButton.swift */; };
+		0A00000100000000000000B8 /* SpeechQualityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000B9 /* SpeechQualityModels.swift */; };
+		0A00000100000000000000BA /* SpeechQualityEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000BB /* SpeechQualityEvaluator.swift */; };
+		0A00000100000000000000BC /* SpeechQualityProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000BD /* SpeechQualityProbeService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -86,6 +89,9 @@
 		0A00000100000000000000B1 /* AppPreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreviewSupport.swift; sourceTree = "<group>"; };
 		0A00000100000000000000B4 /* TextWorkspaceBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextWorkspaceBackground.swift; sourceTree = "<group>"; };
 		0A00000100000000000000B6 /* TextWorkspacePasteButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextWorkspacePasteButton.swift; sourceTree = "<group>"; };
+		0A00000100000000000000B9 /* SpeechQualityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechQualityModels.swift; sourceTree = "<group>"; };
+		0A00000100000000000000BB /* SpeechQualityEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechQualityEvaluator.swift; sourceTree = "<group>"; };
+		0A00000100000000000000BD /* SpeechQualityProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechQualityProbeService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -145,6 +151,7 @@
 			isa = PBXGroup;
 			children = (
 				0A0000010000000000000013 /* TranscriptModels.swift */,
+				0A00000100000000000000B9 /* SpeechQualityModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -159,6 +166,8 @@
 				0A000001000000000000001E /* LlamaRuntime.swift */,
 				0A0000010000000000000026 /* LocalModelDownloadService.swift */,
 				0A000001000000000000002A /* MangaOverlayProbeService.swift */,
+				0A00000100000000000000BB /* SpeechQualityEvaluator.swift */,
+				0A00000100000000000000BD /* SpeechQualityProbeService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -301,6 +310,9 @@
 				0A00000100000000000000B2 /* AppPreviewSupport.swift in Sources */,
 				0A00000100000000000000B5 /* TextWorkspaceBackground.swift in Sources */,
 				0A00000100000000000000B7 /* TextWorkspacePasteButton.swift in Sources */,
+				0A00000100000000000000B8 /* SpeechQualityModels.swift in Sources */,
+				0A00000100000000000000BA /* SpeechQualityEvaluator.swift in Sources */,
+				0A00000100000000000000BC /* SpeechQualityProbeService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -437,7 +449,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.94;
+				MARKETING_VERSION = 1.95;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -464,7 +476,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.94;
+				MARKETING_VERSION = 1.95;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

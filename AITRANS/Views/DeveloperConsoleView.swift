@@ -17,6 +17,7 @@ struct DeveloperConsoleView: View {
                 RawProbeSection()
                 DeveloperProbeCasesSection()
                 DeveloperRawOutputSection()
+                SpeechQualityProbeSection()
                 MangaProbeSection()
                 AppSecondaryButton(title: "关闭开发者模式", systemImage: "lock.fill", tone: .warning, action: store.disableDeveloperMode)
             }
@@ -25,6 +26,72 @@ struct DeveloperConsoleView: View {
             .padding(.bottom, 72)
         }
         .background(Color.appCanvas)
+    }
+}
+
+private struct SpeechQualityProbeSection: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+            AppSectionHeader(
+                title: "语音识别质量探针",
+                subtitle: "speech_corpus -> Output",
+                systemImage: "waveform.badge.magnifyingglass"
+            )
+            AppStatusRow(title: statusTitle, detail: store.speechQualityProbeMessage, tone: statusTone)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: AppTheme.Spacing.control) { actions }
+                VStack(spacing: AppTheme.Spacing.control) { actions }
+            }
+            if let report = store.speechQualityProbeReport {
+                DeveloperCodeBlock(title: "speech_quality_report summary", text: summary(report))
+            }
+        }
+        .appSurface()
+    }
+
+    @ViewBuilder private var actions: some View {
+        AppPrimaryButton(
+            title: store.isRunningSpeechQualityProbe ? "质量探针运行中" : "运行语音质量探针",
+            systemImage: "play.fill",
+            isWorking: store.isRunningSpeechQualityProbe,
+            action: store.runSpeechQualityProbe
+        )
+        .disabled(store.isRunningSpeechQualityProbe)
+        if store.isRunningSpeechQualityProbe {
+            AppSecondaryButton(title: "取消", systemImage: "stop.fill", tone: .warning, action: store.cancelSpeechQualityProbe)
+        }
+    }
+
+    private var statusTitle: String {
+        switch store.speechQualityProbeState {
+        case .idle: "等待语料"
+        case .loadingManifest: "读取清单"
+        case .requestingAuthorization: "请求权限"
+        case .validatingAudio: "校验音频"
+        case .recognizing: "识别与评分"
+        case .completed: "已完成"
+        case .failed: "未执行"
+        case .cancelled: "已取消"
+        }
+    }
+
+    private var statusTone: AppStatusTone {
+        switch store.speechQualityProbeState {
+        case .idle: .neutral
+        case .loadingManifest, .requestingAuthorization, .validatingAudio, .recognizing: .active
+        case .completed: .success
+        case .failed, .cancelled: .warning
+        }
+    }
+
+    private func summary(_ report: SpeechQualityProbeReport) -> String {
+        let aggregate = report.aggregate
+        let wer = aggregate.weightedWordErrorRate.map { String(format: "%.4f", $0) } ?? "n/a"
+        let cer = aggregate.weightedCharacterErrorRate.map { String(format: "%.4f", $0) } ?? "n/a"
+        let latency = aggregate.averageLatencySeconds.map { String(format: "%.3fs", $0) } ?? "n/a"
+        return "verdict=\(report.verdict.rawValue)\ncorpus=\(report.corpusID ?? "n/a")@\(report.corpusVersion ?? "n/a")\nmanifestSHA256=\(report.corpusManifestSHA256 ?? "n/a")\nscored=\(aggregate.recognizedCaseCount)/\(aggregate.totalCaseCount)\nweightedWER=\(wer)\nweightedCER=\(cer)\naverageLatency=\(latency)\nfailures=\(aggregate.failureBreakdown)\nreferenceUsedForRecognitionDecision=\(report.referenceUsedForRecognitionDecision)\nwarnings=\(report.warnings.joined(separator: " | "))"
     }
 }
 

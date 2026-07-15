@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 正式版本号 `1.94`：云端验证按任务分层为候选 full、PR/merge fast follow-up，并以 `AITRANS CI/full-validation` commit status 作为 merge 复用收据；UI evidence 与 IPA 打包不再随普通版本 push/merge 自动运行。v1.93 已收口 Speech 取消、立即重试和旧回调隔离；v1.92 为 external TextBox 合法凸四点 line polygon warp shadow OCR，仍不代表真实四件套已经交付；v1.47-v1.91 历史总览见 `update_log.md`。
+- 正式版本号 `1.95`：新增可版本化的真实音频 corpus contract、SHA256/字节身份校验、WER/CER、延迟/分段/置信度、失败分类、Apple Speech URL runner 和 JSON/TXT 报告；仓库尚无真实音频，v1.95 不声称识别质量提升，v1.96 待人工上传后实测。v1.94 为候选 full、PR/merge fast follow-up 的云端验证分层；v1.92 的 external TextBox line polygon warp 仍不代表真实 Koharu 四件套已经交付。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
@@ -52,6 +52,7 @@ README 不再承载历史基线；涉及验收时以当前代码、`update_log.m
 - `TranslationSessionStore` 是 UI 状态、模型调用、历史、诊断和持久化的统一调度中心。
 - UI 层只触发 store 方法，不绕开 store 直接改持久化、模型状态或报告状态。
 - Speech 授权、识别和翻译回调必须按当前 run ID 隔离；取消或重试后，旧回调不得覆盖新状态。
+- Speech 质量 corpus 的参考 transcript 只能在 Apple Speech 返回最终文本后参与评估；禁止用于识别请求、候选选择、纠错或生产翻译。中日文没有稳定分词器时只报告 CER，不把字符编辑率标成 WER。
 - 普通图片 OCR 使用 `VisionOCRService`；漫画覆盖探针使用 `MangaOverlayProbeService` 的独立诊断链路。
 - 用户实际翻译和 summary 走 sampled 解码；漫画探针、raw 诊断、clean text、batch 对照和纠错翻译对照走 deterministic 解码。
 - `test/1.ground_truth.json` 只能用于探针验证和统计，不能用于真实产品路径或生产候选选择。
@@ -107,7 +108,7 @@ test/1.png
 - PR 只在 opened / reopened / ready-for-review 时运行 `validationProfile=fast`；不监听 synchronize，避免修复 push 同时触发 full + PR fast。fast 只跑基础静态/路由契约并记录 skip reason，不重复 Xcode、Speech/UI/Koharu 大契约或截图。
 - 合并到 `smalldata_test` 后，workflow 读取 merge 第二父 SHA 的 full-validation status；只有 `success` 才走 fast follow-up，否则自动回退 full。C 退回后新的核心修复 push 必须重新产生 full 收据。
 - 已通过 full 后的纯 README / AGENTS / update log / `md/` / metrics 提交可复用父提交收据并走 fast；若父提交收据缺失或失败，workflow 会把 diff 扩展到整条候选分支，不能用文档提交掩盖失败。
-- Speech 功能默认只跑 Xcode build、Speech run-id/取消/翻译链路契约和任务所需结果检查，不采 UI 截图；漫画/翻译改动需要结果图时手动跑 `ci-fast/full`，只验收探针输出 PNG，不等同 UI evidence。
+- Speech 功能默认只跑 Xcode build、Speech run-id/取消/翻译链路契约、质量算法契约和 corpus validator，不采 UI 截图；缺少 `test/speech_corpus/manifest.json` 时 validator 必须写 `manifestMissing`、`qualityExecuted=false`，不能伪造质量结果。漫画/翻译改动需要结果图时手动跑 `ci-fast/full`，只验收探针输出 PNG，不等同 UI evidence。
 - UI evidence 默认跳过；只有重大 UI 任务在候选核心 commit 使用 `[ui evidence]`，或手动 `workflow_dispatch ui_evidence_mode=full` 才运行。普通 UI 小改、Speech、PR 和 merge 不截图。
 - Koharu artifact validator 的完整 invalid fixture 矩阵只在 Koharu validator、artifact contract 或 CI workflow 相关 full 任务中运行；其他任务不加载该领域套件。
 - GitHub Actions push 默认 `probe_mode=skip`，不启动模拟器漫画探针；需要云端探针验收时手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。
@@ -144,6 +145,7 @@ test/1.png
 - 非 App 构建相关修改至少运行 `git diff --check`，可加 JSON/YAML smoke。
 - 非 App 构建相关变更的云端 CI 可接受 `xcodeBuildRequired=false` 的 build-skip 结果包；Agent C 必须核对 manifest 的 skip reason，不能把它当作 Swift/Xcode 编译证据。
 - Swift 或 Xcode 工程修改默认不在本机跑完整 build；按规则推分支交给 GitHub Actions 快验。
+- Speech 质量算法修改至少运行 `scripts/test-speech-quality-contract.py`、纯 Swift evaluator contract 和 `scripts/validate-speech-corpus.py`；没有真实音频时只能验收算法与接线，不能给出 WER/CER 改善结论。
 - 漫画探针、翻译链路或报告模型修改需要云端探针证据时，手动 `workflow_dispatch` 运行 `ci-fast` 或 `full` 生成报告；若当前云端因模拟器、GGUF、App 容器或外部 artifact 缺失不能稳定运行，必须在最终回复和文档中列明未验证范围、缺失依赖、是否影响验收和需要人工提供什么。
 - 不得伪造测试结果，不得把旧 artifact 当新结果。
 
