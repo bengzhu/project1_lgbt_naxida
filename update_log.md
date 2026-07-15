@@ -128,10 +128,10 @@
 - 新增独立 `SpeechQualityProbeService`：逐项校验音频身份，强制 `SFSpeechURLRecognitionRequest.requiresOnDeviceRecognition=true`，记录最终 transcript、延迟、segment、平均 confidence、on-device 能力和失败分类；120 秒超时与取消会终止当前 Speech task。
 - 参考 transcript 只在 Apple Speech 返回最终文本后传给 evaluator；报告固定 `referenceUsedForEvaluationOnly=true`、`referenceUsedForRecognitionDecision=false`，不参与请求、候选、纠错或产品翻译。
 - `TranslationSessionStore` 持有质量探针 Published 状态、独立 run ID/Task、取消与 DEBUG `AITRANS_RUN_SPEECH_QUALITY_PROBE` 入口；开发控制台只调用 store，展示报告摘要，不新增截图流程。
-- JSON/TXT 写入既有 `Application Support/AITRANS/Output/`；报告包含 corpus/manifest/audio 身份、runtime、逐项指标、加权 WER/CER、平均延迟和 failure breakdown。
+- JSON/TXT 写入既有 `Application Support/AITRANS/Output/`；报告包含 corpus/manifest/audio 身份、runtime、逐项指标、加权 WER/CER、平均延迟和 failure breakdown。磁盘写入错误必须附加 `outputWriteFailed` warning 并把 UI 置为失败，不能把只有内存报告的运行显示为已写出。
 - Speech full CI 增加质量源码契约、纯 Swift evaluator、corpus validator 和新文件 changed-scope routing；候选核心 push 仍只跑一次 full + Xcode，不采 UI evidence，PR/merge 复用 v1.94 fast follow-up。
 
-本地轻量验证：Speech 旧 contract 14/14、v1.95 quality contract 6/6、缺 corpus validator 的 `manifestMissing` 审计结果、纯 Swift evaluator contract、Swift 6 iOS Simulator 目标三文件 typecheck 均通过。未跑本机 build / 探针，按规则交给云端验证；未运行真实 WER/CER，因为仓库没有用户提供的音频和 manifest。
+本地轻量验证：Speech 旧 contract 14/14、v1.95 quality contract 7/7、缺 corpus validator 的 `manifestMissing` 审计结果、纯 Swift evaluator contract、Swift 6 iOS Simulator 目标三文件 typecheck 均通过。未跑本机 build / 探针，按规则交给云端验证；未运行真实 WER/CER，因为仓库没有用户提供的音频和 manifest。
 
 关键文件：`AITRANS/Models/SpeechQualityModels.swift`、`AITRANS/Services/SpeechQualityEvaluator.swift`、`AITRANS/Services/SpeechQualityProbeService.swift`、`AITRANS/Services/TranslationSessionStore.swift`、`AITRANS/Views/DeveloperConsoleView.swift`、`scripts/validate-speech-corpus.py`、`test/speech_corpus/README.md`、`.github/workflows/ci-results.yml`。
 

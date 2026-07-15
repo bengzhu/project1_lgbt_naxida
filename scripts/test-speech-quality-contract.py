@@ -38,6 +38,13 @@ class SpeechQualityContractTests(unittest.TestCase):
         self.assertIn("request.requiresOnDeviceRecognition = true", service)
         self.assertIn("recognizer.supportsOnDeviceRecognition", service)
 
+    def test_report_write_failure_cannot_look_successful(self) -> None:
+        service = read("AITRANS/Services/SpeechQualityProbeService.swift")
+        self.assertIn("private func write(_ report: SpeechQualityProbeReport, to outputDirectory: URL) throws", service)
+        self.assertIn('report.warnings.append("outputWriteFailed:', service)
+        self.assertIn("reportPersisted && report.aggregate.recognizedCaseCount > 0", service)
+        self.assertIn('"Speech 识别已结束，但质量报告写入失败"', service)
+
     def test_store_owns_probe_state_and_run_identity(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")
         self.assertIn("@Published var speechQualityProbeReport", store)

@@ -52,12 +52,17 @@ final class SpeechQualityProbeService {
         let manifestURL = corpusDirectory?.appendingPathComponent(Self.manifestFilename)
 
         guard let manifestURL, FileManager.default.fileExists(atPath: manifestURL.path) else {
-            let report = emptyReport(
+            var report = emptyReport(
                 verdict: .manifestMissing,
                 warning: "test/speech_corpus/manifest.json 不存在；未执行真实语音质量测试"
             )
-            write(report, to: outputDirectory)
-            stateDidChange(.failed, "缺少 speech_corpus/manifest.json；已写出可审计报告")
+            let reportPersisted = persist(&report, to: outputDirectory)
+            stateDidChange(
+                .failed,
+                reportPersisted
+                    ? "缺少 speech_corpus/manifest.json；已写出可审计报告"
+                    : "缺少 speech_corpus/manifest.json，且审计报告写入失败"
+            )
             return report
         }
 
@@ -68,13 +73,16 @@ final class SpeechQualityProbeService {
             manifest = try JSONDecoder().decode(SpeechQualityCorpusManifest.self, from: manifestData)
             try validate(manifest, corpusDirectory: manifestURL.deletingLastPathComponent())
         } catch {
-            let report = emptyReport(
+            var report = emptyReport(
                 verdict: .invalidManifest,
                 manifestSHA256: (try? Data(contentsOf: manifestURL)).map(Self.sha256),
                 warning: "语料清单无效：\(error.localizedDescription)"
             )
-            write(report, to: outputDirectory)
-            stateDidChange(.failed, "Speech 语料清单无效；已写出报告")
+            let reportPersisted = persist(&report, to: outputDirectory)
+            stateDidChange(
+                .failed,
+                reportPersisted ? "Speech 语料清单无效；已写出报告" : "Speech 语料清单无效，且报告写入失败"
+            )
             return report
         }
 
@@ -92,15 +100,15 @@ final class SpeechQualityProbeService {
         let corpusRoot = manifestURL.deletingLastPathComponent()
         for (index, corpusCase) in manifest.cases.enumerated() {
             if Task.isCancelled {
-                let report = makeReport(
+                var report = makeReport(
                     verdict: .cancelled,
                     manifest: manifest,
                     manifestData: manifestData,
                     cases: caseReports,
                     warnings: ["用户取消；剩余语料未执行"]
                 )
-                write(report, to: outputDirectory)
-                stateDidChange(.cancelled, "Speech 质量探针已取消")
+                let reportPersisted = persist(&report, to: outputDirectory)
+                stateDidChange(.cancelled, reportPersisted ? "Speech 质量探针已取消" : "探针已取消，取消报告写入失败")
                 return report
             }
 
@@ -156,15 +164,15 @@ final class SpeechQualityProbeService {
                     )
                 )
             } catch is CancellationError {
-                let report = makeReport(
+                var report = makeReport(
                     verdict: .cancelled,
                     manifest: manifest,
                     manifestData: manifestData,
                     cases: caseReports,
                     warnings: ["用户取消；当前及剩余语料未计入质量指标"]
                 )
-                write(report, to: outputDirectory)
-                stateDidChange(.cancelled, "Speech 质量探针已取消")
+                let reportPersisted = persist(&report, to: outputDirectory)
+                stateDidChange(.cancelled, reportPersisted ? "Speech 质量探针已取消" : "探针已取消，取消报告写入失败")
                 return report
             } catch {
                 let failure = classify(error)
@@ -174,18 +182,20 @@ final class SpeechQualityProbeService {
 
         let failedCount = caseReports.filter { $0.failureCategory != nil }.count
         let verdict: SpeechQualityProbeVerdict = failedCount == 0 ? .qualityMeasured : .completedWithFailures
-        let report = makeReport(
+        var report = makeReport(
             verdict: verdict,
             manifest: manifest,
             manifestData: manifestData,
             cases: caseReports,
             warnings: failedCount == 0 ? [] : ["\(failedCount) 个语料未得到可评分识别结果"]
         )
-        write(report, to: outputDirectory)
-        let finalState: SpeechQualityProbeState = report.aggregate.recognizedCaseCount > 0 ? .completed : .failed
+        let reportPersisted = persist(&report, to: outputDirectory)
+        let finalState: SpeechQualityProbeState = reportPersisted && report.aggregate.recognizedCaseCount > 0 ? .completed : .failed
         stateDidChange(
             finalState,
-            "Speech 质量探针完成：\(report.aggregate.recognizedCaseCount)/\(report.aggregate.totalCaseCount) 可评分"
+            reportPersisted
+                ? "Speech 质量探针完成：\(report.aggregate.recognizedCaseCount)/\(report.aggregate.totalCaseCount) 可评分"
+                : "Speech 识别已结束，但质量报告写入失败"
         )
         return report
     }
@@ -411,33 +421,40 @@ final class SpeechQualityProbeService {
         manifestData: Data,
         outputDirectory: URL
     ) -> SpeechQualityProbeReport {
-        let report = makeReport(
+        var report = makeReport(
             verdict: .cancelled,
             manifest: manifest,
             manifestData: manifestData,
             cases: [],
             warnings: ["用户取消；未执行语料"]
         )
-        write(report, to: outputDirectory)
+        persist(&report, to: outputDirectory)
         return report
     }
 
-    private func write(_ report: SpeechQualityProbeReport, to outputDirectory: URL) {
+    @discardableResult
+    private func persist(_ report: inout SpeechQualityProbeReport, to outputDirectory: URL) -> Bool {
         do {
-            try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            encoder.dateEncodingStrategy = .iso8601
-            let data = try encoder.encode(report)
-            try data.write(to: outputDirectory.appendingPathComponent(Self.reportJSONFilename), options: .atomic)
-            try Self.textSummary(report).write(
-                to: outputDirectory.appendingPathComponent(Self.reportTextFilename),
-                atomically: true,
-                encoding: .utf8
-            )
+            try write(report, to: outputDirectory)
+            return true
         } catch {
-            // The caller still receives the in-memory report and exposes the write failure through the UI state.
+            report.warnings.append("outputWriteFailed: \(error.localizedDescription)")
+            return false
         }
+    }
+
+    private func write(_ report: SpeechQualityProbeReport, to outputDirectory: URL) throws {
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(report)
+        try data.write(to: outputDirectory.appendingPathComponent(Self.reportJSONFilename), options: .atomic)
+        try Self.textSummary(report).write(
+            to: outputDirectory.appendingPathComponent(Self.reportTextFilename),
+            atomically: true,
+            encoding: .utf8
+        )
     }
 
     private static func textSummary(_ report: SpeechQualityProbeReport) -> String {
