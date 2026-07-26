@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`2.1`（Koharu external TextBox shadow OCR coverage 同时要求完整 OCR outcome 和可信 assignment geometry；weak overlap / Bubble unknown 只保留 shadow 诊断；v2.0 稳定一对一最大基数匹配、v1.99 polygon containment 和 v1.98 普通图片导出一致性仍保留；Speech 真实 corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`2.2`（PhotosPicker transfer 到 OCR / 翻译 / 导出均由 Store-owned 图片 task ID 隔离，运行中可更换来源，旧回调和无 source 重试被拒绝；v2.1 Koharu trusted geometry coverage、v2.0 稳定一对一匹配、v1.99 polygon containment 和 v1.98 普通图片导出一致性仍保留；Speech 真实 corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
@@ -389,10 +389,13 @@ CI artifact version 优先从带 `vX.Y` 的候选 ref 解析；`smalldata_test` 
 
 ### 2.2 图片翻译
 ```text
-用户选择图片
+用户从 PhotosPicker 或文件选择器选择图片
   -> 图片页选择目标语言（Pro 门控）
-  -> TranslationSessionStore.translateImage
-  -> 固定本次源/目标语言
+  -> View 只把 loader / 带 selection UUID 的 result 交给 TranslationSessionStore
+  -> Store 创建图片 task ID，立即固定本次源/目标语言并进入 loading
+  -> 新照片 / 文件可抢占运行中任务；取消、清空和新 task 使旧 transfer 回调失效
+  -> task UUID 隔离 sandbox 输入；await 后 identity 匹配才发布 retry source
+  -> 被抢占的临时输入、被替换或清空的旧源删除；取消后的当前源可保留重试
   -> VisionOCRService.recognizeTextBlocks
   -> 每块按固定目标语言调用 translate
   -> ImageTranslationBlock

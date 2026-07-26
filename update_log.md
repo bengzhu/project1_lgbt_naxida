@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.2：图片导入 run isolation
+日期：2026-07-26
+
+状态：Agent X 已完成候选实现、独立复审和核心 exact-SHA 云端 full，工程正式版本收口为 `MARKETING_VERSION=2.2`；分支为 `codeb/v2.2-image-import-run-isolation`，尚待版本收口 SHA 的云端验证和 PR 合并，未触碰 `main`。
+
+核心变更：
+
+- PhotosPicker 的 `loadTransferable` 不再由 View 创建未持有的 `Task`；Store 从选择发生时即创建 task ID、固定源/目标语言、进入 loading，并持有 transfer、sandbox 写入、OCR、翻译和导出完整任务。旧照片的成功、失败或 nil 回调在新选择、文件导入、取消或清空后都不能覆盖当前状态。
+- 新照片或图片文件可以在 OCR / 翻译运行中直接抢占旧任务。文件选择 completion 使用独立 UUID 精确匹配；View 只传 loader / result，不直接写业务状态。nil transferable 明确进入“照片读取失败”，新任务开始即清除旧 retry source。
+- sandbox 输入使用 task UUID 隔离同名文件；helper 只返回 URL，只有 await 后 task identity 仍匹配才发布 source。被抢占的 detached 写入、被替换的旧源和清空的当前源会删除；取消后仍允许保留当前源并立即重试。
+
+验证与遗留：
+
+- 新增 `scripts/test-v202-image-import-run-isolation-contract.py` 与纯 Swift evaluator，当前 10/10 通过；覆盖 A/B 反序完成、nil、取消、清空、照片/文件交错、source 发布门槛、同名 sandbox 隔离、文件选择 UUID、选择器失败保留现有任务、旧源清理、retry source 门槛和组合 CI fail-fast。v1.87 UI interaction 回归 12/12、Swift parse、workflow YAML 与 `git diff --check` 通过。
+- 核心 SHA `e59bc4fc13946ff91383a9c3a128cc55f7ca2108` 的云端 full run `30202007400` attempt 1 成功；artifact `aitrans-ci-v2.2-codeb-v2.2-image-import-run-isolation--e59bc4fc1394-run30202007400-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.2 10/10、v1.87 12/12、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。父 SHA 的 superseded run `30201926721` 已取消，不作为证据；scope 因父收据失败安全回退全仓并记录 `candidate_full_repo_fallback`。
+- 版本收口 SHA `6086c24af42d629937ae61bf8a3d01e9ce3f684d` 的云端 full run `30202239509` attempt 1 成功；artifact `aitrans-ci-v2.2-codeb-v2.2-image-import-run-isolation--6086c24af42d-run30202239509-attempt1` 与 identity 完全一致，`MARKETING_VERSION=2.2`、Xcode build success、JUnit 10/10、`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改版本与入口文档，领域契约按 changed-files 路由跳过，由父核心 full 提供证据。
+- v2.2 contract 已接入 UI interaction CI 路由。未跑本机 build / 探针，按规则交给云端验证。
+- 本轮不改变 Vision OCR 算法、漫画探针、Koharu shadow OCR、翻译 prompt 或模型，不声称 OCR 指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+
 ## v2.1：Koharu assignment geometry coverage
 日期：2026-07-26
 
