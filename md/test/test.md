@@ -32,7 +32,7 @@ v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-u
 
 Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键盘遮挡；页面没有卡片套卡片；主操作层级唯一；颜色之外仍有图标和文字状态；44pt 触控、最长状态文案、Dynamic Type 和安全区可用。Preview matrix 只用于复现状态和开发检查，不得当作当前 HEAD 运行截图。
 
-交互回归至少覆盖：文本翻译/交换语言/目标语言/提示词；新会话与历史恢复/搜索/删除/导入/导出/清空；提示词新建/编辑/复制/删除/选择；Mock/Local、GGUF 下载/导入/移除和失败；图片导入/OCR/目标语言选择/跨页面改语言后仍显示实际结果语言/失败与取消后可见内容仍保留语言凭据/清空后重置凭据/全局语言已相同时的已完成图片重译/旁贴/覆盖/重试/导出；音频导入/识别/取消/翻译/摘要；Pro 锁定/解锁/订阅校验；开发 raw probe、批量探针和漫画报告入口。
+交互回归至少覆盖：文本翻译/交换语言/目标语言/提示词；新会话与历史恢复/搜索/删除/导入/导出/清空；提示词新建/编辑/复制/删除/选择；Mock/Local、GGUF 下载/导入/移除和失败；图片导入/OCR/目标语言选择/loading 且图片数据为空时仍显示任务语言/跨页面改语言后仍显示实际结果语言/失败与取消后可见内容仍保留语言凭据/清空后重置凭据/全局语言已相同时的已完成图片重译/旁贴/覆盖/重试/导出；音频导入/识别/取消/翻译/摘要；Pro 锁定/解锁/订阅校验；开发 raw probe、批量探针和漫画报告入口。
 
 `scripts/test-v187-ui-interaction-contract.py` 是独立源码契约检查，必须验证：录音按钮有默认 accessibility action 且能开始/停止、`SettingsView` 绑定 `NavigationPath` 并在关闭开发模式后清空、Reduce Motion 场景进入 `isCapturingProSpeech=true`、`audioTranslating` 进入 translating + 非空 transcript 状态、文本页头位于自动滚动区外的顶部 safe-area inset、上述八类页面的关键 store action 仍接线、13 张运行态证据至少覆盖八类页面。CI 必须把结果写入 `ui-interaction-contract.log`、manifest 的 `uiInteractionContractOutcome` 和 JUnit 的独立 testcase。该契约和运行态截图不冒充 XCUITest 点击；Agent C 仍按本段交互清单抽查高风险操作。
 

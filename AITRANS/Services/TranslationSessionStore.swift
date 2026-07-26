@@ -301,10 +301,15 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     var imageTranslationDisplayedTargetLanguage: SupportedLanguage {
-        guard imageTranslationData != nil || !imageTranslationBlocks.isEmpty else {
-            return targetLanguage
+        switch imageTranslationState {
+        case .loading, .recognizing, .translating:
+            return imageTranslationContentTargetLanguage ?? targetLanguage
+        case .idle, .translated, .failed:
+            guard imageTranslationData != nil || !imageTranslationBlocks.isEmpty else {
+                return targetLanguage
+            }
+            return imageTranslationContentTargetLanguage ?? targetLanguage
         }
-        return imageTranslationContentTargetLanguage ?? targetLanguage
     }
 
     var currentSpeechCapability: SpeechRecognitionCapability {
