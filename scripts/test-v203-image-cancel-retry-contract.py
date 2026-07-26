@@ -78,7 +78,9 @@ class ImageCancelRetryContractTests(unittest.TestCase):
         clear = function_body(store, "func clearImageTranslation()")
         self.assertNotIn("imageTranslationSourceURL = nil", cancel)
         self.assertNotIn("removeImageTranslationInputFile(imageTranslationSourceURL)", cancel)
-        self.assertIn("removeImageTranslationInputFile(imageTranslationSourceURL)", clear)
+        self.assertIn("removeImageTranslationInputFile(", clear)
+        self.assertIn("imageTranslationSourceURL", clear)
+        self.assertIn("directory: imageTranslationDirectory", clear)
         self.assertIn("imageTranslationSourceURL = nil", clear)
 
     def test_view_and_ci_use_the_v23_retry_contract(self) -> None:

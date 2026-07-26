@@ -14,6 +14,12 @@ private enum PhotoLibraryTransferError: LocalizedError {
     }
 }
 
+private enum ImageTranslationManagedFileKind {
+    case input
+    case staging
+    case stableExport
+}
+
 @MainActor
 final class TranslationSessionStore: ObservableObject {
     @Published var mode: SessionMode = .live {
@@ -134,6 +140,7 @@ final class TranslationSessionStore: ObservableObject {
     private var imageTranslationTaskID = UUID()
     private var imageTranslationFileSelectionID: UUID?
     private var imageTranslationOwnedExportURLs: Set<URL> = []
+    private var imageTranslationOwnedOrphanURLs: Set<URL> = []
     private var imageOverlayRenderTask: Task<Void, Never>?
     private var imageOverlayRenderID = UUID()
     private var audioRecognitionTask: SFSpeechRecognitionTask?
@@ -164,7 +171,7 @@ final class TranslationSessionStore: ObservableObject {
 
         guard performsStartupWork else { return }
 
-        discardOrphanedImageTranslationExportsAtStartup()
+        reconcileOrphanedImageTranslationWorkspaceAtStartup()
         restoreSnapshot()
         updateModelDownloadStateFromDisk()
 #if DEBUG
@@ -1046,7 +1053,10 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
         if imageTranslationSourceURL != preservingSourceURL {
-            Self.removeImageTranslationInputFile(imageTranslationSourceURL)
+            removeImageTranslationInputFile(
+                imageTranslationSourceURL,
+                directory: imageTranslationDirectory
+            )
         }
         discardImageTranslationExport()
         let taskID = UUID()
@@ -1127,22 +1137,34 @@ final class TranslationSessionStore: ObservableObject {
             renderID: renderID
         )
         guard isCurrentImageTranslationTask(taskID) else {
-            Self.removeImageTranslationStagingFile(stagedExportURL)
+            removeImageTranslationStagingFile(
+                stagedExportURL,
+                directory: imageTranslationDirectory
+            )
             throw CancellationError()
         }
         if imageOverlayRenderID == renderID,
            imageOverlayMode == renderedMode,
            let stagedExportURL {
-            defer { Self.removeImageTranslationStagingFile(stagedExportURL) }
+            defer {
+                removeImageTranslationStagingFile(
+                    stagedExportURL,
+                    directory: imageTranslationDirectory
+                )
+            }
             if let outputURL = try? Self.publishImageTranslationOverlay(
                 stagedURL: stagedExportURL,
                 filename: imageTranslationFilename,
-                directory: imageTranslationDirectory
+                directory: imageTranslationDirectory,
+                renderID: renderID
             ) {
                 publishImageTranslationExport(outputURL)
             }
         } else {
-            Self.removeImageTranslationStagingFile(stagedExportURL)
+            removeImageTranslationStagingFile(
+                stagedExportURL,
+                directory: imageTranslationDirectory
+            )
             discardImageTranslationExport()
         }
         imageTranslationState = .translated
@@ -1251,7 +1273,10 @@ final class TranslationSessionStore: ObservableObject {
                 unclaimedSandboxURL = sandboxURL
                 try Task.checkCancellation()
                 guard self.isCurrentImageTranslationTask(taskID) else {
-                    Self.removeImageTranslationInputFile(sandboxURL)
+                    self.removeImageTranslationInputFile(
+                        sandboxURL,
+                        directory: self.imageTranslationDirectory
+                    )
                     unclaimedSandboxURL = nil
                     throw CancellationError()
                 }
@@ -1266,7 +1291,10 @@ final class TranslationSessionStore: ObservableObject {
                     targetLanguage: selectedTargetLanguage
                 )
             } catch {
-                Self.removeImageTranslationInputFile(unclaimedSandboxURL)
+                self.removeImageTranslationInputFile(
+                    unclaimedSandboxURL,
+                    directory: self.imageTranslationDirectory
+                )
                 self.finishImageTranslation(taskID: taskID, with: error)
             }
         }
@@ -1326,7 +1354,10 @@ final class TranslationSessionStore: ObservableObject {
                 unclaimedSandboxURL = sandboxURL
                 try Task.checkCancellation()
                 guard self.isCurrentImageTranslationTask(taskID) else {
-                    Self.removeImageTranslationInputFile(sandboxURL)
+                    self.removeImageTranslationInputFile(
+                        sandboxURL,
+                        directory: self.imageTranslationDirectory
+                    )
                     unclaimedSandboxURL = nil
                     throw CancellationError()
                 }
@@ -1339,7 +1370,10 @@ final class TranslationSessionStore: ObservableObject {
                     targetLanguage: selectedTargetLanguage
                 )
             } catch {
-                Self.removeImageTranslationInputFile(unclaimedSandboxURL)
+                self.removeImageTranslationInputFile(
+                    unclaimedSandboxURL,
+                    directory: self.imageTranslationDirectory
+                )
                 self.finishImageTranslation(taskID: taskID, with: error)
             }
         }
@@ -1383,7 +1417,10 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationTask = nil
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
-        Self.removeImageTranslationInputFile(imageTranslationSourceURL)
+        removeImageTranslationInputFile(
+            imageTranslationSourceURL,
+            directory: imageTranslationDirectory
+        )
         discardImageTranslationExport()
         imageTranslationTaskID = UUID()
         imageTranslationState = .idle
@@ -1455,24 +1492,25 @@ final class TranslationSessionStore: ObservableObject {
                 guard self.imageOverlayRenderID == renderID,
                       self.imageTranslationTaskID == contentTaskID,
                       self.imageOverlayMode == mode else {
-                    Self.removeImageTranslationStagingFile(stagedURL)
+                    self.removeImageTranslationStagingFile(stagedURL, directory: directory)
                     return
                 }
                 guard let stagedURL else { return }
                 let outputURL = try Self.publishImageTranslationOverlay(
                     stagedURL: stagedURL,
                     filename: filename,
-                    directory: directory
+                    directory: directory,
+                    renderID: renderID
                 )
                 self.publishImageTranslationExport(outputURL)
                 self.imageTranslationMessage = "已更新\(mode.rawValue)预览和导出图"
                 self.dataTransferMessage = self.imageTranslationMessage
                 self.imageOverlayRenderTask = nil
             } catch is CancellationError {
-                Self.removeImageTranslationStagingFile(stagedURL)
+                self.removeImageTranslationStagingFile(stagedURL, directory: directory)
                 return
             } catch {
-                Self.removeImageTranslationStagingFile(stagedURL)
+                self.removeImageTranslationStagingFile(stagedURL, directory: directory)
                 guard self.imageOverlayRenderID == renderID,
                       self.imageTranslationTaskID == contentTaskID else {
                     return
@@ -25131,10 +25169,13 @@ final class TranslationSessionStore: ObservableObject {
     nonisolated private static func publishImageTranslationOverlay(
         stagedURL: URL,
         filename: String,
-        directory: URL
+        directory: URL,
+        renderID: UUID
     ) throws -> URL {
         let baseName = filename.isEmpty ? "image-translation" : (filename as NSString).deletingPathExtension
-        let outputURL = directory.appendingPathComponent("\(baseName)-translated.png")
+        let outputURL = directory.appendingPathComponent(
+            "aitrans-export-\(renderID.uuidString)-\(baseName)-translated.png"
+        )
         let fileManager = FileManager.default
         if fileManager.fileExists(atPath: outputURL.path) {
             _ = try fileManager.replaceItemAt(outputURL, withItemAt: stagedURL)
@@ -25144,14 +25185,42 @@ final class TranslationSessionStore: ObservableObject {
         return outputURL
     }
 
-    nonisolated private static func removeImageTranslationStagingFile(_ url: URL?) {
-        guard let url, FileManager.default.fileExists(atPath: url.path) else { return }
-        try? FileManager.default.removeItem(at: url)
+    @discardableResult
+    private func removeImageTranslationStagingFile(
+        _ url: URL?,
+        directory: URL
+    ) -> Bool {
+        removeImageTranslationRuntimeFile(url, directory: directory, kind: .staging)
     }
 
-    nonisolated private static func removeImageTranslationInputFile(_ url: URL?) {
-        guard let url, FileManager.default.fileExists(atPath: url.path) else { return }
-        try? FileManager.default.removeItem(at: url)
+    @discardableResult
+    private func removeImageTranslationInputFile(
+        _ url: URL?,
+        directory: URL
+    ) -> Bool {
+        removeImageTranslationRuntimeFile(url, directory: directory, kind: .input)
+    }
+
+    private func removeImageTranslationRuntimeFile(
+        _ url: URL?,
+        directory: URL,
+        kind: ImageTranslationManagedFileKind
+    ) -> Bool {
+        guard let url else { return true }
+        let managedDirectory = directory.standardizedFileURL
+        let managedFile = url.standardizedFileURL
+        let removed = Self.removeImageTranslationManagedFile(
+            managedFile,
+            directory: managedDirectory,
+            kind: kind
+        )
+        if removed {
+            imageTranslationOwnedOrphanURLs.remove(managedFile)
+        } else if managedFile.deletingLastPathComponent() == managedDirectory,
+                  Self.isImageTranslationManagedFilename(managedFile.lastPathComponent, kind: kind) {
+            imageTranslationOwnedOrphanURLs.insert(managedFile)
+        }
+        return removed
     }
 
     private func publishImageTranslationExport(_ url: URL) {
@@ -25160,7 +25229,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationExportURL = standardizedURL
     }
 
-    private func discardOrphanedImageTranslationExportsAtStartup() {
+    private func reconcileOrphanedImageTranslationWorkspaceAtStartup() {
         let directory = imageTranslationDirectory.standardizedFileURL
         guard let candidates = try? FileManager.default.contentsOfDirectory(
             at: directory,
@@ -25171,12 +25240,12 @@ final class TranslationSessionStore: ObservableObject {
         for candidate in candidates {
             let managedFile = candidate.standardizedFileURL
             let filename = managedFile.lastPathComponent
-            guard managedFile.deletingLastPathComponent() == directory,
-                  !filename.hasPrefix("."),
-                  filename.hasSuffix("-translated.png") else {
-                continue
+            if Self.isImageTranslationStableExportFilename(filename) {
+                imageTranslationOwnedExportURLs.insert(managedFile)
+            } else if Self.isImageTranslationInputFilename(filename) ||
+                        Self.isImageTranslationStagingFilename(filename) {
+                imageTranslationOwnedOrphanURLs.insert(managedFile)
             }
-            imageTranslationOwnedExportURLs.insert(managedFile)
         }
         discardImageTranslationExport()
     }
@@ -25189,18 +25258,38 @@ final class TranslationSessionStore: ObservableObject {
                 imageTranslationOwnedExportURLs.remove(url)
             }
         }
+        discardImageTranslationWorkspaceOrphans(directory: directory)
+    }
+
+    private func discardImageTranslationWorkspaceOrphans(directory: URL) {
+        for url in Array(imageTranslationOwnedOrphanURLs) {
+            let filename = url.standardizedFileURL.lastPathComponent
+            let kind: ImageTranslationManagedFileKind = Self.isImageTranslationInputFilename(filename)
+                ? .input
+                : .staging
+            if Self.removeImageTranslationManagedFile(url, directory: directory, kind: kind) {
+                imageTranslationOwnedOrphanURLs.remove(url)
+            }
+        }
     }
 
     nonisolated private static func removeImageTranslationManagedExport(
         _ url: URL,
         directory: URL
     ) -> Bool {
+        removeImageTranslationManagedFile(url, directory: directory, kind: .stableExport)
+    }
+
+    nonisolated private static func removeImageTranslationManagedFile(
+        _ url: URL,
+        directory: URL,
+        kind: ImageTranslationManagedFileKind
+    ) -> Bool {
         let managedDirectory = directory.standardizedFileURL
         let managedFile = url.standardizedFileURL
         let filename = managedFile.lastPathComponent
         guard managedFile.deletingLastPathComponent() == managedDirectory,
-              !filename.hasPrefix("."),
-              filename.hasSuffix("-translated.png") else {
+              isImageTranslationManagedFilename(filename, kind: kind) else {
             return false
         }
 
@@ -25220,6 +25309,55 @@ final class TranslationSessionStore: ObservableObject {
         } catch {
             return false
         }
+    }
+
+    nonisolated private static func isImageTranslationManagedFilename(
+        _ filename: String,
+        kind: ImageTranslationManagedFileKind
+    ) -> Bool {
+        switch kind {
+        case .input:
+            return isImageTranslationInputFilename(filename)
+        case .staging:
+            return isImageTranslationStagingFilename(filename)
+        case .stableExport:
+            return isImageTranslationStableExportFilename(filename)
+        }
+    }
+
+    nonisolated private static func isImageTranslationInputFilename(_ filename: String) -> Bool {
+        guard !filename.hasPrefix("."), filename.count > 37 else { return false }
+        let uuidEnd = filename.index(filename.startIndex, offsetBy: 36)
+        let separator = filename[uuidEnd]
+        let uuid = String(filename[..<uuidEnd])
+        let remainder = filename[filename.index(after: uuidEnd)...]
+        return separator == "-" && UUID(uuidString: uuid) != nil && !remainder.isEmpty
+    }
+
+    nonisolated private static func isImageTranslationStagingFilename(_ filename: String) -> Bool {
+        let suffix = ".staging.png"
+        guard filename.hasPrefix("."), filename.hasSuffix(suffix) else { return false }
+        let stem = String(filename.dropLast(suffix.count))
+        guard stem.count > 48 else { return false }
+        let uuid = String(stem.suffix(36))
+        let prefix = String(stem.dropLast(36))
+        return UUID(uuidString: uuid) != nil && prefix.hasSuffix("-translated-")
+    }
+
+    nonisolated private static func isImageTranslationStableExportFilename(_ filename: String) -> Bool {
+        let prefix = "aitrans-export-"
+        let suffix = "-translated.png"
+        guard filename.hasPrefix(prefix), filename.hasSuffix(suffix) else { return false }
+        let remainder = String(filename.dropFirst(prefix.count))
+        guard remainder.count > 36 + 1 + suffix.count else { return false }
+        let uuidEnd = remainder.index(remainder.startIndex, offsetBy: 36)
+        let uuid = String(remainder[..<uuidEnd])
+        let separator = remainder[uuidEnd]
+        let baseAndSuffix = remainder[remainder.index(after: uuidEnd)...]
+        return separator == "-" &&
+            UUID(uuidString: uuid) != nil &&
+            baseAndSuffix.count > suffix.count &&
+            baseAndSuffix.hasSuffix(suffix)
     }
 
     nonisolated private static func imageTranslationPixelRect(

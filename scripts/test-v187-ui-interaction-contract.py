@@ -337,16 +337,16 @@ class V187UIInteractionContractTests(unittest.TestCase):
             rerender.group("body").index("publishImageTranslationOverlay("),
             "stable export must only be published after stale-render identity checks",
         )
-        self.assertIn("removeImageTranslationStagingFile(stagedURL)", rerender.group("body"))
-        publisher = re.search(
-            r"nonisolated private static func publishImageTranslationOverlay\((?P<body>.*?)"
-            r"\n    \}\n\n    nonisolated private static func removeImageTranslationStagingFile",
-            store,
-            re.DOTALL,
+        self.assertIn(
+            "self.removeImageTranslationStagingFile(stagedURL, directory: directory)",
+            rerender.group("body"),
         )
-        self.assertIsNotNone(publisher, "identity-gated export publisher is missing")
-        self.assertIn('appendingPathComponent("\\(baseName)-translated.png")', publisher.group("body"))
-        self.assertIn("replaceItemAt(outputURL, withItemAt: stagedURL)", publisher.group("body"))
+        publisher = function_body(
+            store,
+            "nonisolated private static func publishImageTranslationOverlay(",
+        )
+        self.assertIn('"aitrans-export-\\(renderID.uuidString)-\\(baseName)-translated.png"', publisher)
+        self.assertIn("replaceItemAt(outputURL, withItemAt: stagedURL)", publisher)
         initial_pipeline = re.search(
             r"private func runImageTranslationPipeline\((?P<body>.*?)"
             r"\n    private func finishImageTranslation",
@@ -354,9 +354,10 @@ class V187UIInteractionContractTests(unittest.TestCase):
             re.DOTALL,
         )
         self.assertIsNotNone(initial_pipeline, "initial image pipeline is missing")
-        self.assertIn(
-            "defer { Self.removeImageTranslationStagingFile(stagedExportURL) }",
+        self.assertRegex(
             initial_pipeline.group("body"),
+            r"defer\s*\{\s*removeImageTranslationStagingFile\(\s*"
+            r"stagedExportURL,\s*directory:\s*imageTranslationDirectory\s*\)\s*\}",
             "failed initial publication must not leave a staging PNG",
         )
         self.assertIn(
