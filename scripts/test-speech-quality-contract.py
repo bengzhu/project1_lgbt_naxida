@@ -2,7 +2,7 @@
 """Static contract for the v1.95 real-audio Speech quality probe."""
 
 from pathlib import Path
-import re
+import subprocess
 import unittest
 
 
@@ -62,7 +62,15 @@ class SpeechQualityContractTests(unittest.TestCase):
             "SpeechQualityProbeService.swift",
         ):
             self.assertGreaterEqual(project.count(filename), 3)
-        self.assertEqual(set(re.findall(r"MARKETING_VERSION = ([^;]+);", project)), {"1.96"})
+        version_result = subprocess.run(
+            ["python3", str(ROOT / "scripts/resolve-project-version.py")],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(version_result.returncode, 0, version_result.stderr)
+        self.assertRegex(version_result.stdout.strip(), r"^v[0-9]+(?:\.[0-9]+)+$")
         self.assertIn("scripts/test-speech-quality-contract.py", workflow)
         self.assertIn("scripts/test-speech-quality-evaluator.swift", workflow)
         self.assertIn("scripts/validate-speech-corpus.py", workflow)

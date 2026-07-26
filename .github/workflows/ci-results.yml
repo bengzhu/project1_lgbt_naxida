@@ -203,12 +203,7 @@ jobs:
             echo "Koharu artifact injection requires probe_mode=ci-fast or full so App-side readiness, identity, shadow OCR coverage, and convergence gates can be verified." >&2
             exit 1
           fi
-          version="unversioned"
-          if [[ "$branch" =~ v([0-9]+(\.[0-9]+)*) ]]; then
-            version="v${BASH_REMATCH[1]}"
-          elif [[ "$branch" =~ ^([0-9]+(\.[0-9]+)*)$ ]]; then
-            version="v${BASH_REMATCH[1]}"
-          fi
+          version="$(python3 scripts/resolve-project-version.py --ref "$branch")"
           artifact_name="aitrans-ci-${version}-${branch_slug}-${short_sha}-run${GITHUB_RUN_ID}-attempt${GITHUB_RUN_ATTEMPT}"
           result_bundle="${TEST_RESULTS_DIR}/AITRANS-${version}-${short_sha}.xcresult"
           {
@@ -632,6 +627,7 @@ jobs:
             echo "## Static checks"
             git diff --check
             python3 -B scripts/test-v194-ci-validation-tier-contract.py
+            python3 -B scripts/test-v197-ci-version-identity-contract.py
             bash -n scripts/capture-ui-evidence.sh
             python3 -m json.tool test/1.ground_truth.json >/dev/null
             if [ -f output/probe_report.json ]; then
