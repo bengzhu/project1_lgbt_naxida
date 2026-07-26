@@ -62,7 +62,7 @@ class SpeechQualityContractTests(unittest.TestCase):
             "SpeechQualityProbeService.swift",
         ):
             self.assertGreaterEqual(project.count(filename), 3)
-        self.assertEqual(set(re.findall(r"MARKETING_VERSION = ([^;]+);", project)), {"1.95"})
+        self.assertEqual(set(re.findall(r"MARKETING_VERSION = ([^;]+);", project)), {"1.96"})
         self.assertIn("scripts/test-speech-quality-contract.py", workflow)
         self.assertIn("scripts/test-speech-quality-evaluator.swift", workflow)
         self.assertIn("scripts/validate-speech-corpus.py", workflow)

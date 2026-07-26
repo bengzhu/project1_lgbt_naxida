@@ -238,7 +238,7 @@ class SpeechRecognitionContractTests(unittest.TestCase):
             re.findall(r"MARKETING_VERSION = ([^;]+);", project)
         )
         self.assertEqual(bundle_ids, {"com.local.aitransform114"})
-        self.assertEqual(marketing_versions, {"1.95"})
+        self.assertEqual(marketing_versions, {"1.96"})
         self.assertNotIn("BUNDLE_ID: com.local.aitrans\n", workflow)
         self.assertIn("Print :CFBundleIdentifier", workflow)
         self.assertIn("steps.simulator_build.outputs.bundle_id", workflow)

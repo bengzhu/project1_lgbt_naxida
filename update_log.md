@@ -8,8 +8,10 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
-## v1.96 候选：图片翻译目标语言一致性
+## v1.96：图片翻译目标语言一致性
 日期：2026-07-26
+
+状态：Agent C 已完成核心候选验收并执行版本收口，工程 `MARKETING_VERSION=1.96`。核心候选 HEAD `03f6f731f79e7345abf69ca01f9ad8583e273705`；PR #49 仅在收口提交的 exact-SHA CI 通过后合并到 `smalldata_test`，不触碰 `main`。
 
 核心变更：
 
@@ -29,6 +31,7 @@
 验证与遗留：
 
 - 已通过 `python3 -B scripts/test-v187-ui-interaction-contract.py`（10 项）、`python3 -B scripts/test-speech-recognition-contract.py`（14 项）、`git diff --check` 和三份现有 JSON 解析；独立契约验证任务语言先于 `.loading` 发布且 running 分支不依赖图片数据/blocks，并继续覆盖跨页面改语言、同值重译及无 OCR/错误/取消/清空状态转换。
+- 核心候选云端 full run `30193309626` attempt 1 成功；artifact `aitrans-ci-v1.96-codeb-v1.96-image-language-consistency--03f6f731f79e-run30193309626-attempt1` 的 version、branch、commit、run、workflow 和 changed-files identity 与候选 HEAD 一致，Xcode build、JUnit 10/10、UI interaction 10/10、Speech 14/14 均通过，`.xcresult`、日志和失败摘要可用。
 - 未跑本机 build / 探针，按规则交给云端验证；本轮没有修改漫画算法或报告模型，因此未更新 `metrics/version_history.csv`。
 
 ## 当前漫画指标基线
