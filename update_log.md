@@ -11,7 +11,7 @@
 ## v2.2：图片导入 run isolation
 日期：2026-07-26
 
-状态：Agent X 已完成候选实现、独立复审和核心 exact-SHA 云端 full，工程正式版本收口为 `MARKETING_VERSION=2.2`；分支为 `codeb/v2.2-image-import-run-isolation`，尚待版本收口 SHA 的云端验证和 PR 合并，未触碰 `main`。
+状态：Agent X 已完成候选实现、独立复审和两个 exact-SHA 云端 full，工程正式版本为 `MARKETING_VERSION=2.2`。PR #56 已合入 `smalldata_test`，merge SHA `eb18519d5d4e1629f79835beb37e8005e6dd8a81`；远端 `codeb/v2.2-image-import-run-isolation` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -24,6 +24,7 @@
 - 新增 `scripts/test-v202-image-import-run-isolation-contract.py` 与纯 Swift evaluator，当前 10/10 通过；覆盖 A/B 反序完成、nil、取消、清空、照片/文件交错、source 发布门槛、同名 sandbox 隔离、文件选择 UUID、选择器失败保留现有任务、旧源清理、retry source 门槛和组合 CI fail-fast。v1.87 UI interaction 回归 12/12、Swift parse、workflow YAML 与 `git diff --check` 通过。
 - 核心 SHA `e59bc4fc13946ff91383a9c3a128cc55f7ca2108` 的云端 full run `30202007400` attempt 1 成功；artifact `aitrans-ci-v2.2-codeb-v2.2-image-import-run-isolation--e59bc4fc1394-run30202007400-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.2 10/10、v1.87 12/12、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。父 SHA 的 superseded run `30201926721` 已取消，不作为证据；scope 因父收据失败安全回退全仓并记录 `candidate_full_repo_fallback`。
 - 版本收口 SHA `6086c24af42d629937ae61bf8a3d01e9ce3f684d` 的云端 full run `30202239509` attempt 1 成功；artifact `aitrans-ci-v2.2-codeb-v2.2-image-import-run-isolation--6086c24af42d-run30202239509-attempt1` 与 identity 完全一致，`MARKETING_VERSION=2.2`、Xcode build success、JUnit 10/10、`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改版本与入口文档，领域契约按 changed-files 路由跳过，由父核心 full 提供证据。
+- 纯文档 follow-up fast run `30202386858` 正确复用父 SHA `6086c24af42d629937ae61bf8a3d01e9ce3f684d` 的 full-validation success；PR fast run `30202421300` 成功。merge fast run `30202456969` 的 artifact `aitrans-ci-v2.2-smalldata_test--eb18519d5d4e-run30202456969-attempt1` 与 merge HEAD 一致，`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用第二父候选 SHA `04d20baeb74603ab0778f8ce09b87023526ca364` 的 success。
 - v2.2 contract 已接入 UI interaction CI 路由。未跑本机 build / 探针，按规则交给云端验证。
 - 本轮不改变 Vision OCR 算法、漫画探针、Koharu shadow OCR、翻译 prompt 或模型，不声称 OCR 指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
 
