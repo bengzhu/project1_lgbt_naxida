@@ -13500,6 +13500,12 @@ final class TranslationSessionStore: ObservableObject {
             if linePolygons.isEmpty {
                 errors.append("linePolygonsInvalid")
             }
+            let bbox = rect(from: textBox.bbox)
+            let bboxTolerance = min(
+                8.0,
+                max(2.0, min(bbox.width, bbox.height) * 0.02)
+            )
+            let toleratedBBox = bbox.insetBy(dx: -bboxTolerance, dy: -bboxTolerance)
             for (polygonIndex, polygon) in linePolygons.enumerated() {
                 if polygon.count < 4 {
                     errors.append("linePolygonInvalid:\(polygonIndex)")
@@ -13516,6 +13522,11 @@ final class TranslationSessionStore: ObservableObject {
                         errors.append("linePolygonPointInvalid:\(polygonIndex):\(pointIndex)")
                     } else if x < 0 || y < 0 || x > Double(imageWidth) || y > Double(imageHeight) {
                         errors.append("linePolygonPointOutOfBounds:\(polygonIndex):\(pointIndex)")
+                    } else if x < Double(toleratedBBox.minX)
+                        || y < Double(toleratedBBox.minY)
+                        || x > Double(toleratedBBox.maxX)
+                        || y > Double(toleratedBBox.maxY) {
+                        errors.append("linePolygonOutsideTextBoxBBox:\(polygonIndex):\(pointIndex)")
                     }
                 }
             }

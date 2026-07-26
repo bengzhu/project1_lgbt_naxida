@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v1.99：Koharu line polygon 所属关系校验
+日期：2026-07-26
+
+状态：Agent X 已完成核心候选复审和版本收口，工程正式版本为 `MARKETING_VERSION=1.99`。分支 `codeb/v1.99-koharu-polygon-containment` 基于 v1.98 merge follow-up `e66906e01c1adbe8f61305bcdb50a77264122a5d`；核心候选 SHA `1be5b53d7593932ab203dce4304f6eb0a577dec6` 与版本收口 SHA `8fdfc41b26f2b91cc4db284f321b967196f1ee9c` 的 task-scoped full 均已通过。
+
+核心变更：
+
+- Python artifact validator 与 App runtime readiness 不再只验证 `linePolygons` 位于整张源图内；每个 point 还必须属于对应 TextBox bbox，统一允许 `min(8px, max(2px, bbox 短边 2%))` 的舍入容差。
+- 超出所属 bbox 容差的点写入 `linePolygonOutsideTextBoxBBox:<polygon>:<point>`，对应 TextBox 进入 invalid ledger，artifact verdict 为 `coordinateValidationFailed`，不能进入 external shadow OCR。
+- invalid metadata fixture 新增“bbox 在一个区域、polygon 完全位于源图另一处”的样本，避免错误区域 warp OCR 被当作合法 TextBox 证据。
+
+验证与遗留：
+
+- 新增 `scripts/test-v199-koharu-line-polygon-containment-contract.py`，覆盖 bbox 内、容差边缘、部分越界、完全脱离、Python/Swift 同口径与 CI 接线，当前 5/5 通过；v1.92 warp contract 5/5、Swift parse、YAML parse、fixture JSON 与 `git diff --check` 通过。
+- 核心候选云端 full run `30197944841` attempt 1 成功；artifact `aitrans-ci-v1.99-codeb-v1.99-koharu-polygon-containment--1be5b53d7593-run30197944841-attempt1` 与候选 HEAD 一致，extended Koharu validator matrix、v1.99 contract 5/5、Speech/UI/home/paste 契约和 Xcode build 均成功；JUnit 10/10，`.xcresult` build status succeeded、0 error、0 warning，commit status `AITRANS CI/full-validation=success`。
+- 版本收口云端 full run `30198122722` attempt 1 成功；artifact `aitrans-ci-v1.99-codeb-v1.99-koharu-polygon-containment--8fdfc41b26f2-run30198122722-attempt1` 的 version、branch、commit、run 和 workflow identity 与收口 HEAD 一致，`validationProfile=full`、`xcodeBuildRequired=true`、Xcode build success、JUnit 10/10，commit status `AITRANS CI/full-validation=success`。本次 push 使用默认 `probe_mode=skip`，结果包仅保留 `probe-not-run.txt`，没有伪装为真实 Koharu 运行态证据。
+- 本轮只加固真实 external artifact 的准入证据，保持 shadow-only，不改变主 OCR、翻译、覆盖图、`blockPassed` 或 promotion；仓库仍无真实四件套，不声称 OCR 数字提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+- 未跑本机 build / 探针，按规则交给云端验证。
+
 ## v1.98：图片预览与导出一致性
 日期：2026-07-26
 

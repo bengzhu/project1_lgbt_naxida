@@ -23,6 +23,17 @@
         [[278, 394], [424, 394], [424, 452], [700, 452]]
       ],
       "notes": ["line polygon point is outside source image bounds"]
+    },
+    {
+      "id": "bad-textbox-line-polygon-detached",
+      "bbox": [96, 144, 142, 164],
+      "confidence": 0.81,
+      "detector": "koharu-real-detector-export",
+      "sourceDirection": "horizontal",
+      "linePolygons": [
+        [[310, 400], [390, 400], [390, 430], [310, 430]]
+      ],
+      "notes": ["polygon is inside the source image but detached from its owning TextBox bbox"]
     }
   ]
 }

@@ -54,7 +54,7 @@ manifest 可指定等价相对路径：
 - `linePolygons`、`sourceDirection`、`rotationDegrees` / `rotationDeg`、`detectedFontSizePx` 是可选字段，不作为 readiness 必填；但一旦提供，validator 和 Swift readiness 会校验方向枚举、旋转范围和 line polygon 点位。
 - `sourceDirection` 支持 `horizontal`、`horizontal-lr`、`vertical`、`vertical-rl`、`vertical-lr`、`unknown`，大小写、空格和下划线会规范化后比较。
 - `rotationDegrees` / `rotationDeg` 必须是有限数值，范围为 `[-360, 360]`。
-- `linePolygons` 必须是非空 polygon 数组；每个 polygon 至少 4 个 `[x, y]` 点，点位必须在 `test/1.png` 原图范围内。
+- `linePolygons` 必须是非空 polygon 数组；每个 polygon 至少 4 个 `[x, y]` 点，点位必须在 `test/1.png` 原图范围内，并落在所属 TextBox bbox 的 `min(8px, max(2px, bbox 短边 2%))` 容差内。脱离 bbox 写 `linePolygonOutsideTextBoxBBox` 并阻塞 readiness。
 - manifest 中 `textBoxesPath`、`bubbleMaskPath`、`segmentMaskPath` 必须是 active artifact 目录内的相对路径；绝对路径和包含 `..` 的路径会被 validator 和 Swift readiness 阻塞。
 - active manifest 的 `generatedBy` 必须声明真实 detector / segmenter 来源；缺失或包含 `manual`、`fixture`、`Vision OCR`、`pre-crop`、`line plan`、`BubbleMask proxy`、`SegmentMask proxy`、`ground truth`、`handwritten` 等禁用来源词时，validator 和 Swift readiness 都会阻塞，不允许进入 `readyForShadowOCR`。
 
