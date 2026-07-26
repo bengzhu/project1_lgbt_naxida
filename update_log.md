@@ -11,7 +11,7 @@
 ## v2.5：图片 workspace 异常恢复
 日期：2026-07-26
 
-状态：Agent X 已从最新 `smalldata_test@71430810a90483090a7a47910bc018edd55f0671` 创建 `codeb/v2.5-image-workspace-recovery`，完成候选实现、本地轻量验证、两轮独立复审，以及核心与版本收口 exact-SHA 云端 full；工程正式版本为 `MARKETING_VERSION=2.5`，尚待 PR 合入 `smalldata_test`，未触碰 `main`。
+状态：Agent X 已完成候选实现、本地轻量验证、两轮独立复审，以及核心与版本收口 exact-SHA 云端 full；工程正式版本为 `MARKETING_VERSION=2.5`。PR #59 已合入 `smalldata_test`，merge SHA `322296e2bb8a664706a332bc65c610c917557dbc`；远端 `codeb/v2.5-image-workspace-recovery` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -25,6 +25,7 @@
 - v2.5 10/10、v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、CI 分层 9/9、版本身份 5/5、Swift parse 与 `git diff --check` 通过；v1.87 旧 staging 断言已升级为可信 workspace 签名，并保留发布身份门控与初始 staging 清理约束。
 - 核心 SHA `8626c9c3799b3e4a6b65249c9fc28ac993b448e4` 的云端 full run `30205285339` attempt 1 成功；artifact `aitrans-ci-v2.5-codeb-v2.5-image-workspace-recovery--8626c9c3799b-run30205285339-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.5 10/10、v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` build succeeded 且 issue summaries 为空，commit status `AITRANS CI/full-validation=success`。
 - 版本收口 SHA `efba55b0d59644801fd995207fbd33a3e41fdedb` 的云端 full run `30205587693` attempt 1 成功；artifact `aitrans-ci-v2.5-codeb-v2.5-image-workspace-recovery--efba55b0d596-run30205587693-attempt1` 与 identity 完全一致，`MARKETING_VERSION=2.5`、Xcode build success、JUnit 10/10、`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改工程版本和入口文档，领域合同按 changed-files 路由跳过，由父核心 full 提供证据。
+- 纯文档 follow-up fast run `30205758867` 正确复用父 SHA `efba55b0d59644801fd995207fbd33a3e41fdedb` 的 full-validation success；PR fast run `30205796901` 成功。merge fast run `30205833063` 的 artifact `aitrans-ci-v2.5-smalldata_test--322296e2bb8a-run30205833063-attempt1` 与 merge HEAD 一致，`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用第二父候选 SHA `bab9b050ab99c31a154f02781aa71c14ef5bf834` 的 success，JUnit 10/10。
 - 未跑本机 build / 探针，按规则交给云端验证。本轮不改变 Vision OCR、Koharu、翻译或覆盖算法，不声称质量指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
 - 已知升级遗留：v2.4 的 `<base>-translated.png` 没有 marker 或 receipt，无法与同后缀用户源文件无歧义区分；v2.5 为避免误删不自动接管这批 legacy 文件。新 marker 中的 render UUID 会出现在系统分享文件名，后续版本应在 Store-owned 分享层提供人类可读建议文件名，不在 View 直接创建临时副本。
 
