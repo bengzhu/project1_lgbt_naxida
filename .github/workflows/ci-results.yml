@@ -878,6 +878,7 @@ jobs:
             python3 -B scripts/test-v203-image-cancel-retry-contract.py
             python3 -B scripts/test-v204-image-export-lifecycle-contract.py
             python3 -B scripts/test-v205-image-workspace-recovery-contract.py
+            python3 -B scripts/test-v206-image-share-lifecycle-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract
