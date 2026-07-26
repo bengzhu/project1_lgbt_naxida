@@ -19,6 +19,7 @@
 - 部分成功使用 `linePolygonPerspectiveWarpPartial` / `externalArtifact.linePolygonWarpPartial`，保留逐行失败原因并加入 `linePolygonWarpPartialFailure`。该结果可进入 shadow OCR 对照，但不得通过既有 promotion gate，orientation convergence 必须保持 partial / blocked。
 - Koharu handoff packet 不再默认指向旧仓库。repo、workflow ref 和 expected commit SHA 由显式参数或 GitHub / 当前 git 环境解析为同一 `targetIdentity`，并统一驱动 upload、dispatch、run list、manifest assertions、review 清单和 stale-run rejection；workflow 入口在任何验证前硬核对 expected SHA，ref 已移动时立即失败。
 - CI fixture 改为显式假 repo/ref/SHA，新增 v1.97 独立契约，避免再次把本机默认或错误远端锁成“测试通过”。
+- PR #50 merge fast follow-up run `30195296033` 暴露 `smalldata_test` 不含版本号时 artifact 被标为 `unversioned`。后续维护分支 `codeb/v1.97-ci-version-identity` 增加工程版本解析器：无版本 ref 回退到唯一 `MARKETING_VERSION`，缺失或配置冲突直接失败；Speech quality 接线契约也不再硬编码旧 `1.96`。
 
 验证与遗留：
 
