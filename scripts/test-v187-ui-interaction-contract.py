@@ -13,6 +13,22 @@ def read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
 
 
+def function_body(source: str, signature: str) -> str:
+    start = source.find(signature)
+    if start < 0:
+        raise AssertionError(f"missing function signature: {signature}")
+    brace = source.find("{", start)
+    depth = 0
+    for index in range(brace, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[brace + 1:index]
+    raise AssertionError(f"unterminated function body: {signature}")
+
+
 class V187UIInteractionContractTests(unittest.TestCase):
     def test_live_speech_has_default_accessibility_toggle(self) -> None:
         audio = read("AITRANS/Views/AudioTranslationView.swift")
@@ -304,7 +320,15 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertIsNotNone(setter, "overlay mode setter is missing")
         self.assertIsNotNone(rerender, "overlay export rerender path is missing")
         self.assertIn("rerenderImageTranslationExport()", setter.group("body"))
-        self.assertIn("imageTranslationExportURL = nil", rerender.group("body"))
+        self.assertIn("discardImageTranslationExport()", rerender.group("body"))
+        self.assertNotIn("imageTranslationExportURL = nil", rerender.group("body"))
+        discard = function_body(store, "private func discardImageTranslationExport()")
+        self.assertIn("imageTranslationExportURL = nil", discard)
+        self.assertIn("removeImageTranslationManagedExport", discard)
+        self.assertLess(
+            discard.index("imageTranslationExportURL = nil"),
+            discard.index("removeImageTranslationManagedExport"),
+        )
         self.assertIn("imageOverlayRenderID == renderID", rerender.group("body"))
         self.assertIn("imageTranslationTaskID == contentTaskID", rerender.group("body"))
         self.assertIn("imageOverlayMode == mode", rerender.group("body"))

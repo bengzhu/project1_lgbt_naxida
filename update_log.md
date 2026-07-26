@@ -8,6 +8,26 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.4：图片稳定导出生命周期
+日期：2026-07-26
+
+状态：Agent X 已完成候选实现、两轮独立复审和核心 exact-SHA 云端 full，工程正式版本收口为 `MARKETING_VERSION=2.4`；分支为 `codeb/v2.4-image-export-lifecycle`，尚待版本收口 SHA 的云端验证和 PR 合并，未触碰 `main`。
+
+核心变更：
+
+- 新图片任务、清空和模式重渲染开始时，删除当前 Store-owned 稳定导出 PNG，避免 UI 清空 URL 后不同文件名的旧导出继续在 `Application Support/ImageTranslations` 累积。
+- 稳定导出使用独立私有 ownership 集合；两个真实 publish 点统一登记 ownership。App 启动时接管并清理上次进程遗留的稳定导出，避免重启或升级后旧 PNG 永久不可达。
+- 统一 discard 会立即撤销公开 share URL，只允许删除 `ImageTranslations` 直属、非隐藏 `*-translated.png` 常规文件；同目录 source、staging、目录外、嵌套、`..` escape、symlink 和 dangling symlink 均拒绝。删除失败项保留 ownership，后续新任务、clear 或重渲染继续重试。
+- 取消仍保留已发布 source 和 v2.3 Retry 边界；stale renderer 仍只清理自己的 staging 文件，A/B 反序或当前 render failure 不得发布过期 export。
+- 新增 v2.4 纯 Swift 文件生命周期 evaluator 与 Python 源码合同，并接入 v1.87 / v2.2 / v2.3 / v2.4 fail-fast UI interaction CI step。
+
+验证与遗留：
+
+- v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、Swift parse、workflow YAML 与 `git diff --check` 通过。
+- 核心 SHA `a48fb2a461160ebd4445347dcb5c094dcc16e400` 的云端 full run `30203732662` attempt 1 成功；artifact `aitrans-ci-v2.4-codeb-v2.4-image-export-lifecycle--a48fb2a46116-run30203732662-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- 版本收口 SHA `cac60468310d2a287b26a07ea42f840292002f89` 的云端 full run `30204029328` attempt 1 成功；artifact `aitrans-ci-v2.4-codeb-v2.4-image-export-lifecycle--cac60468310d-run30204029328-attempt1` 与 version / branch / SHA / run / profile 完全一致，Xcode build succeeded、JUnit 10/10、`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改工程版本和入口文档，领域契约按 changed-files 路由跳过，由父核心 full 提供证据。
+- 未跑本机 build / 探针，按规则交给云端验证。本轮不改变 Vision OCR、Koharu、翻译或覆盖算法，不声称质量指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+
 ## v2.3：图片取消后重试一致性
 日期：2026-07-26
 
