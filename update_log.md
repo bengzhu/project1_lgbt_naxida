@@ -11,7 +11,7 @@
 ## v2.1：Koharu assignment geometry coverage
 日期：2026-07-26
 
-状态：Agent X 已完成核心候选实现、独立复审和两个 exact-SHA 云端 full 验证，工程正式版本收口为 `MARKETING_VERSION=2.1`；候选分支为 `codeb/v2.1-koharu-geometry-coverage`，尚待 PR 合并，未触碰 `main`。
+状态：Agent X 已完成核心候选实现、独立复审和两个 exact-SHA 云端 full 验证，工程正式版本为 `MARKETING_VERSION=2.1`。PR #55 已合入 `smalldata_test`，merge SHA `9d92ab7c3c74c4a78b266bf5bb7c5531e96040c9`；远端 `codeb/v2.1-koharu-geometry-coverage` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -25,6 +25,7 @@
 - 新增 v2.1 Python contract 与真实 Swift evaluator，覆盖弱/强阈值、center containment、Bubble conflict / unknown、OCR/geometry 正交、完整/阻塞 verdict、旧 JSON 解码和 Bubble invalid fixture；v2.1 6/6、v2.0 6/6、v1.99 5/5、v1.92 5/5、v1.97 handoff 6/6、CI tier 9/9、version identity 5/5 均通过。
 - 核心 SHA `b9a3ebcdd49e7329511d750e005ce7452e27b047` 的云端 full run `30200743723` attempt 1 成功；artifact `aitrans-ci-v2.1-codeb-v2.1-koharu-geometry-coverage--b9a3ebcdd49e-run30200743723-attempt1` 与 SHA / branch / run / profile 完全一致，JUnit 10/10、Xcode build success、Koharu extended validator matrix 与 Speech/UI/home/paste 契约通过，commit status `AITRANS CI/full-validation=success`。
 - 版本收口 SHA `e555916f4c5db3db1711231a807390bb26b178de` 的云端 full run `30201087646` attempt 1 成功；artifact `aitrans-ci-v2.1-codeb-v2.1-koharu-geometry-coverage--e555916f4c5d-run30201087646-attempt1` 与 SHA / branch / run / profile 完全一致，Xcode build success、JUnit 10/10、`.xcresult` build status succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改版本与文档，领域契约按 changed-files 路由跳过，并由父核心 SHA `b9a3ebcdd49e7329511d750e005ce7452e27b047` 的 full 收据提供证据。
+- 纯文档 follow-up fast run `30201329109` 正确复用父 SHA `e555916f4c5db3db1711231a807390bb26b178de` 的 full-validation success；PR fast run `30201362562` 成功。merge fast run `30201394710` 的 artifact `aitrans-ci-v2.1-smalldata_test--9d92ab7c3c74-run30201394710-attempt1` 与 merge HEAD 一致，`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用第二父候选 SHA `54ce9e1218b85c4509361214ec1f8c5970eddf60` 的 success。
 - 本轮保持 shadow-only，不改变主 OCR、翻译、覆盖图、`blockPassed` 或 promotion。默认 push 使用 `probe_mode=skip`，artifact 仅含 `probe-not-run.txt`；仓库仍无真实四件套，不声称 OCR 数字提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
 - 未跑本机 build / 探针，按规则交给云端验证。
 
