@@ -8,6 +8,24 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v1.97 候选：Koharu 真实路径加固
+日期：2026-07-26
+
+状态：Agent X 候选实现中，分支 `codeb/v1.97-koharu-real-path-hardening`，基于 `smalldata_test` merge `b4ff502b7b666ad761577ee916a609fc41335cba`。正式版本仍为 `1.96`，等待候选 exact-SHA 云端 full 和独立复审后再决定版本收口。
+
+核心变更：
+
+- external TextBox 的多条 `linePolygons` 改为逐行隔离 warp / OCR 失败。单行异常不再丢弃同一 TextBox 内已成功的行；只有全部行失败才整块回退 bbox OCR。
+- 部分成功使用 `linePolygonPerspectiveWarpPartial` / `externalArtifact.linePolygonWarpPartial`，保留逐行失败原因并加入 `linePolygonWarpPartialFailure`。该结果可进入 shadow OCR 对照，但不得通过既有 promotion gate，orientation convergence 必须保持 partial / blocked。
+- Koharu handoff packet 不再默认指向旧仓库。repo、workflow ref 和 expected commit SHA 由显式参数或 GitHub / 当前 git 环境解析为同一 `targetIdentity`，并统一驱动 upload、dispatch、run list、manifest assertions、review 清单和 stale-run rejection；workflow 入口在任何验证前硬核对 expected SHA，ref 已移动时立即失败。
+- CI fixture 改为显式假 repo/ref/SHA，新增 v1.97 独立契约，避免再次把本机默认或错误远端锁成“测试通过”。
+
+验证与遗留：
+
+- 本地轻量验证包括 v1.92 line polygon contract、v1.97 handoff target contract、Python parse 和 `git diff --check`；Swift/Xcode 编译交给候选 push 的 task-scoped full。
+- 当前仓库仍无真实 `test/koharu_artifacts/` 或 Release 四件套，根 `output/` 仍是 `manifestMissing` 基线。因此本轮不声称 OCR 数字、翻译通过率或覆盖质量提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+- 未跑本机 build / 探针，按规则交给云端验证。真实四件套到位后，使用 packet 的 exact repo/ref/SHA 手动 dispatch `ci-fast`，再核对 App runtime identity、partial orientation blocker、external shadow OCR coverage 和 reconciliation。
+
 ## v1.96：图片翻译目标语言一致性
 日期：2026-07-26
 

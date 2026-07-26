@@ -9395,6 +9395,9 @@ final class TranslationSessionStore: ObservableObject {
                     let warpError = error as? MangaOverlayLinePolygonWarpError
                     let warpReason = warpError?.reason ?? preciseError
                     let fallbackError = warpError?.fallbackError ?? preciseError
+                    let warpFailureReasons = warpError?.lineFailureReasons.isEmpty == false
+                        ? (warpError?.lineFailureReasons ?? [])
+                        : [warpReason]
                     attempts.append((
                         nil,
                         selected.textBox.bbox,
@@ -9404,7 +9407,7 @@ final class TranslationSessionStore: ObservableObject {
                         selected.textBox.linePolygons?.isEmpty == false,
                         false,
                         0,
-                        [warpReason],
+                        warpFailureReasons,
                         "linePolygonWarpAndBBoxFallbackFailed",
                         warpReason,
                         fallbackError,
@@ -9494,13 +9497,16 @@ final class TranslationSessionStore: ObservableObject {
                 attempt.errorCode == nil && attempt.linePolygonWarpExecuted
             }
             let linePolygonWarpOutputSelected = crop.linePolygonWarpExecuted
-                && crop.ocrPath == "linePolygonPerspectiveWarp"
-            let linePolygonWarpFailureReasons = linePolygonWarpExecuted
-                ? []
-                : Array(Set(attempts.flatMap(\.linePolygonWarpFailureReasons)).sorted())
+                && ["linePolygonPerspectiveWarp", "linePolygonPerspectiveWarpPartial"].contains(crop.ocrPath)
+            let linePolygonWarpPartialOutputSelected = linePolygonWarpOutputSelected
+                && crop.ocrPath == "linePolygonPerspectiveWarpPartial"
+            let linePolygonWarpFailureReasons = Array(Set(crop.linePolygonWarpFailureReasons)).sorted()
             var orientationUnsupportedReasons = orientationPlan.unsupportedReasons
             if linePolygonCount > 0, !linePolygonWarpExecuted {
                 orientationUnsupportedReasons.append("linePolygonWarpFailed")
+                orientationUnsupportedReasons.append(contentsOf: linePolygonWarpFailureReasons)
+            } else if linePolygonCount > 0, !linePolygonWarpFailureReasons.isEmpty {
+                orientationUnsupportedReasons.append("linePolygonWarpPartialFailure")
                 orientationUnsupportedReasons.append(contentsOf: linePolygonWarpFailureReasons)
             } else if linePolygonCount > 0, !linePolygonWarpOutputSelected {
                 orientationUnsupportedReasons.append("linePolygonWarpOutputNotSelected")
@@ -9539,6 +9545,7 @@ final class TranslationSessionStore: ObservableObject {
                 && !blockers.contains("textBoxAreaTooLarge")
                 && !blockers.contains("orientationShadowPathNeededNotExecuted")
                 && !blockers.contains("linePolygonWarpFailed")
+                && !blockers.contains("linePolygonWarpPartialFailure")
                 && !blockers.contains("linePolygonWarpOutputNotSelected")
                 && !blockers.contains("arbitraryRotationUnsupported")
             let verdict = wouldPromote ? "wouldPromoteByExistingGateReportOnly" : (betterThanControl ? "betterThanControlButBlocked" : "controlStillBest")
@@ -9560,7 +9567,9 @@ final class TranslationSessionStore: ObservableObject {
                     blockIndex: block.index,
                     selectedTextBoxID: selected.textBox.id,
                     variantName: linePolygonWarpOutputSelected
-                        ? "externalArtifact.linePolygonWarp"
+                        ? (linePolygonWarpPartialOutputSelected
+                            ? "externalArtifact.linePolygonWarpPartial"
+                            : "externalArtifact.linePolygonWarp")
                         : (crop.linePolygonWarpAttempted
                             ? "externalArtifact.textBoxCropFallback"
                             : "externalArtifact.textBoxCrop"),
@@ -9599,7 +9608,7 @@ final class TranslationSessionStore: ObservableObject {
                     riskFlags: Array(Set(riskFlags)).sorted(),
                     notes: [
                         "shadowOnly=true",
-                        "variantName=\(linePolygonWarpOutputSelected ? "externalArtifact.linePolygonWarp" : (crop.linePolygonWarpAttempted ? "externalArtifact.textBoxCropFallback" : "externalArtifact.textBoxCrop"))",
+                        "variantName=\(linePolygonWarpOutputSelected ? (linePolygonWarpPartialOutputSelected ? "externalArtifact.linePolygonWarpPartial" : "externalArtifact.linePolygonWarp") : (crop.linePolygonWarpAttempted ? "externalArtifact.textBoxCropFallback" : "externalArtifact.textBoxCrop"))",
                         "linePolygonWarpAttempted=\(crop.linePolygonWarpAttempted)",
                         "linePolygonWarpExecuted=\(crop.linePolygonWarpExecuted)",
                         "linePolygonWarpOutputSelected=\(linePolygonWarpOutputSelected)",
@@ -9722,7 +9731,7 @@ final class TranslationSessionStore: ObservableObject {
             reportOrientationVerdict = "orientationShadowPathNeededNotExecuted"
         }
         notes.append("promotedExternalShadowBlocks intentionally remains empty; wouldPromoteByExistingGateBlocks is report-only")
-        notes.append("orientation-aware shadow OCR runs bounded 90-degree rotation variants for vertical or near-right-angle external TextBoxes; arbitrary deskew and line-polygon warp remain unsupported")
+        notes.append("orientation-aware shadow OCR runs bounded 90-degree rotation variants and four-point line-polygon warp; partial line failures stay blocked, and arbitrary-angle deskew remains unsupported")
         return MangaOverlayExternalTextBoxShadowOCRReport(
             enabled: true,
             executed: true,
