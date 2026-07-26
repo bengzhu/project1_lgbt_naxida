@@ -11,7 +11,7 @@
 ## v2.0：Koharu external TextBox 一对一 coverage
 日期：2026-07-26
 
-状态：Agent X 已完成核心候选复审和版本收口，工程正式版本为 `MARKETING_VERSION=2.0`；分支 `codeb/v2.0-koharu-shadow-coverage` 尚未合入 `smalldata_test`，未触碰 `main`。
+状态：Agent X 已完成核心候选复审和版本收口，工程正式版本为 `MARKETING_VERSION=2.0`。PR #54 已合入 `smalldata_test`，merge SHA `88c6b303d619a8234054865d4a735bc1de7c76a7`；远端 `codeb/v2.0-koharu-shadow-coverage` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -25,6 +25,7 @@
 - 新增 `scripts/test-v200-koharu-shadow-coverage-contract.py` 与纯 Swift fixture `scripts/test-v200-koharu-shadow-coverage-evaluator.swift`，实际编译并执行增广重分配、单 TextBox 争用、complete / partial / no-success / duplicate / invalid partition、旧报告 Codable 兼容、ID 门槛和 CI/TXT 接线；保留旧 counts 与 `skippedBlocks` 便于报告消费者渐进迁移。
 - 核心候选 SHA `9a4ad74e2c0d41b7b09f7a57a41d2b211082ce4d` 的云端 full run `30199459993` attempt 1 成功；artifact `aitrans-ci-v2.0-codeb-v2.0-koharu-shadow-coverage--9a4ad74e2c0d-run30199459993-attempt1` 与候选 HEAD 一致，v2.0 contract 6/6、extended Koharu validator matrix、Speech/UI/home/paste 契约和 Xcode build 均成功，JUnit 10/10，`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
 - 版本收口 SHA `dd894c667d157aa5b2ef762b838143b88052ae66` 的云端 full run `30199669320` attempt 1 成功；artifact `aitrans-ci-v2.0-codeb-v2.0-koharu-shadow-coverage--dd894c667d15-run30199669320-attempt1` 与收口 HEAD 一致，`validationProfile=full`、`xcodeBuildRequired=true`、Xcode build success、JUnit 10/10、`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次只改工程版本与文档，Koharu 领域契约按 changed-files 路由跳过，并由父核心 full 提供领域证据。
+- 纯文档 follow-up fast run `30199855503` 正确复用父 SHA `dd894c667d157aa5b2ef762b838143b88052ae66` 的 full-validation success；PR fast run `30199891233` 成功。merge fast run `30199913442` 的 artifact 与 merge HEAD `88c6b303d619a8234054865d4a735bc1de7c76a7` 一致，`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用第二父 SHA `c58bd3fe9ad819bbc9a4df950bdebbb97507befe` 的 success。
 - 首次核心 push SHA `a22f7cab40b5711ffcdbddf203fec0f02d3766a6` 的 run `30199283447` 在创建 job 前因漫画探针长 `run` block 超过 GitHub 21000 字符表达式上限失败；后续把 Actions 表达式移至 step env，并顺带消除 `github.head_ref` shell 注入 lint 警告。该失败 run 无 jobs / artifact，不作为验证收据。
 - 本轮保持 shadow-only，不改变主 OCR、翻译、覆盖图、`blockPassed` 或 promotion；仓库仍无真实四件套，不声称 OCR 数字提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
 - 未跑本机 build / 探针，按规则交给云端验证。
