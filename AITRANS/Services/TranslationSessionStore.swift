@@ -9332,13 +9332,24 @@ final class TranslationSessionStore: ObservableObject {
                 groundTruthNotUsed: true,
                 doesNotChangeFinalTextUsedForTranslation: true,
                 doesNotChangeMainOverlay: true,
+                evaluatedBlockCount: Set(blocks.map(\.index)).count,
                 candidateCount: 0,
                 ocrExecutedCount: 0,
                 ocrSucceededCount: 0,
                 betterThanControlCount: 0,
+                matchedBlockIndexes: [],
+                succeededBlockIndexes: [],
+                failedBlockIndexes: [],
                 promotedExternalShadowBlocks: [],
                 wouldPromoteByExistingGateBlocks: [],
-                skippedBlocks: blocks.map(\.index).sorted(),
+                skippedBlocks: Array(Set(blocks.map(\.index))).sorted(),
+                uniqueMatchedTextBoxCount: 0,
+                duplicateAssignmentLedgers: [],
+                duplicateAssignedTextBoxIDs: [],
+                matchedCoverageRatio: 0,
+                successfulCoverageRatio: 0,
+                matchedOCRSuccessRatio: 0,
+                coverageVerdict: "notExecuted",
                 sourceDirectionBreakdown: [:],
                 orientationCategoryBreakdown: [:],
                 linePolygonCandidateBlocks: [],
@@ -9402,17 +9413,25 @@ final class TranslationSessionStore: ObservableObject {
         var candidates: [MangaOverlayExternalTextBoxShadowOCRCandidate] = []
         var summaries: [MangaOverlayExternalTextBoxShadowOCRBlockSummary] = []
         var skippedBlocks: [Int] = []
+        let matching = Self.stableOneToOneExternalTextBoxShadowMatching(
+            blocks: blocks,
+            textBoxes: textBoxes,
+            bubbleInstances: bubbleInstances,
+            imageWidth: image.width,
+            imageHeight: image.height
+        )
 
-        for block in blocks {
-            let selected = Self.selectExternalTextBoxShadowCandidate(
-                for: block,
-                textBoxes: textBoxes,
-                bubbleInstances: bubbleInstances,
-                imageWidth: image.width,
-                imageHeight: image.height
-            )
+        for block in blocks.sorted(by: { $0.index < $1.index }) {
+            let selected = matching.assignmentsByBlockIndex[block.index]
             guard let selected else {
                 skippedBlocks.append(block.index)
+                let lostContention = matching.eligibleBlockIndexesByTextBoxID.values.contains { $0.contains(block.index) }
+                let skipVerdict = lostContention
+                    ? "skippedLostOneToOneAssignmentContention"
+                    : "skippedNoMatchingExternalTextBox"
+                let skipBlocker = lostContention
+                    ? "lostOneToOneAssignmentContention"
+                    : "noMatchingExternalTextBox"
                 summaries.append(
                     MangaOverlayExternalTextBoxShadowOCRBlockSummary(
                         blockIndex: block.index,
@@ -9429,15 +9448,17 @@ final class TranslationSessionStore: ObservableObject {
                         orientationSelectedRotation: nil,
                         orientationRecognitionLanguages: [],
                         orientationUnsupportedReason: nil,
-                        orientationReadinessVerdict: "skippedNoMatchingExternalTextBox",
+                        orientationReadinessVerdict: skipVerdict,
                         ocrExecuted: false,
                         ocrSucceeded: false,
                         ocrText: nil,
                         qualityDelta: nil,
                         wordPreservationRatio: nil,
-                        promotionVerdict: "skippedNoMatchingExternalTextBox",
-                        blockers: ["noMatchingExternalTextBox"],
-                        notes: ["external TextBox candidate rejected before OCR"]
+                        promotionVerdict: skipVerdict,
+                        blockers: [skipBlocker],
+                        notes: [lostContention
+                            ? "eligible external TextBox was assigned to another block by stable one-to-one matching"
+                            : "external TextBox candidate rejected before OCR"]
                     )
                 )
                 continue
@@ -9818,6 +9839,20 @@ final class TranslationSessionStore: ObservableObject {
                     .split(separator: ",")
                     .map { String($0) }
             }
+        let evaluatedBlockIndexes = Array(Set(blocks.map(\.index))).sorted()
+        let matchedBlockIndexes = Array(Set(candidates.map(\.blockIndex))).sorted()
+        let succeededBlockIndexes = Array(Set(candidates.filter(\.ocrSucceeded).map(\.blockIndex))).sorted()
+        let failedBlockIndexes = Array(Set(candidates.filter { !$0.ocrSucceeded }.map(\.blockIndex))).sorted()
+        skippedBlocks = Array(Set(skippedBlocks)).sorted()
+        let matchedTextBoxIDs = candidates.compactMap(\.selectedTextBoxID)
+        let coverage = MangaOverlayExternalTextBoxCoverageEvaluator.evaluate(
+            evaluatedBlockIndexes: evaluatedBlockIndexes,
+            matchedBlockIndexes: matchedBlockIndexes,
+            succeededBlockIndexes: succeededBlockIndexes,
+            failedBlockIndexes: failedBlockIndexes,
+            skippedBlockIndexes: skippedBlocks,
+            matchedTextBoxIDs: matchedTextBoxIDs
+        )
         let reportOrientationVerdict: String
         if orientationNotExecutedBlocks.isEmpty,
            orientationUnsupportedBlocks.isEmpty,
@@ -9833,6 +9868,7 @@ final class TranslationSessionStore: ObservableObject {
         }
         notes.append("promotedExternalShadowBlocks intentionally remains empty; wouldPromoteByExistingGateBlocks is report-only")
         notes.append("orientation-aware shadow OCR runs bounded 90-degree rotation variants and four-point line-polygon warp; partial line failures stay blocked, and arbitrary-angle deskew remains unsupported")
+        notes.append("stable one-to-one maximum-cardinality matching prevents a TextBox from being consumed by multiple OCR blocks")
         return MangaOverlayExternalTextBoxShadowOCRReport(
             enabled: true,
             executed: true,
@@ -9844,13 +9880,24 @@ final class TranslationSessionStore: ObservableObject {
             groundTruthNotUsed: true,
             doesNotChangeFinalTextUsedForTranslation: true,
             doesNotChangeMainOverlay: true,
+            evaluatedBlockCount: coverage.evaluatedBlockIndexes.count,
             candidateCount: candidates.count,
             ocrExecutedCount: candidates.filter(\.ocrExecuted).count,
             ocrSucceededCount: candidates.filter(\.ocrSucceeded).count,
             betterThanControlCount: candidates.filter(\.betterThanControl).count,
+            matchedBlockIndexes: coverage.matchedBlockIndexes,
+            succeededBlockIndexes: coverage.succeededBlockIndexes,
+            failedBlockIndexes: coverage.failedBlockIndexes,
             promotedExternalShadowBlocks: [],
             wouldPromoteByExistingGateBlocks: wouldPromoteBlocks,
-            skippedBlocks: skippedBlocks.sorted(),
+            skippedBlocks: coverage.skippedBlockIndexes,
+            uniqueMatchedTextBoxCount: Set(matchedTextBoxIDs).count,
+            duplicateAssignmentLedgers: matching.duplicateAssignmentLedgers,
+            duplicateAssignedTextBoxIDs: coverage.duplicateAssignedTextBoxIDs,
+            matchedCoverageRatio: coverage.matchedCoverageRatio,
+            successfulCoverageRatio: coverage.successfulCoverageRatio,
+            matchedOCRSuccessRatio: coverage.matchedOCRSuccessRatio,
+            coverageVerdict: coverage.coverageVerdict,
             sourceDirectionBreakdown: Self.countStrings(candidates.map { $0.normalizedSourceDirection ?? "unspecified" }),
             orientationCategoryBreakdown: Self.countStrings(candidates.map(\.orientationCategory)),
             linePolygonCandidateBlocks: linePolygonBlocks,
@@ -13173,13 +13220,90 @@ final class TranslationSessionStore: ObservableObject {
         var score: Double
     }
 
-    private static func selectExternalTextBoxShadowCandidate(
+    private struct ExternalTextBoxShadowMatching {
+        var assignmentsByBlockIndex: [Int: ExternalTextBoxShadowSelection]
+        var eligibleBlockIndexesByTextBoxID: [String: [Int]]
+        var duplicateAssignmentLedgers: [MangaOverlayExternalTextBoxDuplicateAssignmentLedger]
+    }
+
+    private static func stableOneToOneExternalTextBoxShadowMatching(
+        blocks: [MangaOverlayProbeBlock],
+        textBoxes: [MangaOverlayExternalTextBox],
+        bubbleInstances: [MangaOverlayExternalBubbleInstance],
+        imageWidth: Int,
+        imageHeight: Int
+    ) -> ExternalTextBoxShadowMatching {
+        let orderedBlocks = blocks.sorted { $0.index < $1.index }
+        let eligibleByBlock = Dictionary(uniqueKeysWithValues: orderedBlocks.map { block in
+            (
+                block.index,
+                eligibleExternalTextBoxShadowCandidates(
+                    for: block,
+                    textBoxes: textBoxes,
+                    bubbleInstances: bubbleInstances,
+                    imageWidth: imageWidth,
+                    imageHeight: imageHeight
+                )
+            )
+        })
+        var eligibleBlockIndexesByTextBoxID: [String: [Int]] = [:]
+        for block in orderedBlocks {
+            for selection in eligibleByBlock[block.index] ?? [] {
+                eligibleBlockIndexesByTextBoxID[selection.textBox.id, default: []].append(block.index)
+            }
+        }
+
+        let preferencesByBlockIndex = eligibleByBlock.mapValues { selections in
+            selections.map(\.textBox.id)
+        }
+        let assignedTextBoxIDByBlockIndex = MangaOverlayStableOneToOneTextBoxMatcher.assignments(
+            preferencesByBlockIndex: preferencesByBlockIndex
+        )
+        let assignmentsByBlockIndex: [Int: ExternalTextBoxShadowSelection] = Dictionary(
+            uniqueKeysWithValues: assignedTextBoxIDByBlockIndex.compactMap { blockIndex, textBoxID in
+            guard let selection = eligibleByBlock[blockIndex]?.first(where: { $0.textBox.id == textBoxID }) else {
+                return nil
+            }
+            return (blockIndex, selection)
+            }
+        )
+        let ownerByTextBoxID = Dictionary(uniqueKeysWithValues: assignedTextBoxIDByBlockIndex.map { blockIndex, textBoxID in
+            (textBoxID, blockIndex)
+        })
+
+        let ledgers = eligibleBlockIndexesByTextBoxID.compactMap { textBoxID, rawBlockIndexes -> MangaOverlayExternalTextBoxDuplicateAssignmentLedger? in
+            let blockIndexes = Array(Set(rawBlockIndexes)).sorted()
+            guard blockIndexes.count > 1 else { return nil }
+            let selectedBlockIndex = ownerByTextBoxID[textBoxID]
+            return MangaOverlayExternalTextBoxDuplicateAssignmentLedger(
+                textBoxID: textBoxID,
+                competingBlockIndexes: blockIndexes,
+                selectedBlockIndex: selectedBlockIndex,
+                rejectedBlockIndexes: blockIndexes.filter { $0 != selectedBlockIndex },
+                resolutionVerdict: selectedBlockIndex == nil ? "unassignedAfterOneToOneMatching" : "resolvedByStableOneToOneMatching",
+                decisionSignals: [
+                    "maximumCardinalityAugmentingPath=true",
+                    "blockOrder=ascendingBlockIndex",
+                    "edgeOrder=centerContainment,iou,confidence,score,textBoxID"
+                ]
+            )
+        }
+        .sorted { $0.textBoxID < $1.textBoxID }
+
+        return ExternalTextBoxShadowMatching(
+            assignmentsByBlockIndex: assignmentsByBlockIndex,
+            eligibleBlockIndexesByTextBoxID: eligibleBlockIndexesByTextBoxID,
+            duplicateAssignmentLedgers: ledgers
+        )
+    }
+
+    private static func eligibleExternalTextBoxShadowCandidates(
         for block: MangaOverlayProbeBlock,
         textBoxes: [MangaOverlayExternalTextBox],
         bubbleInstances: [MangaOverlayExternalBubbleInstance],
         imageWidth: Int,
         imageHeight: Int
-    ) -> ExternalTextBoxShadowSelection? {
+    ) -> [ExternalTextBoxShadowSelection] {
         let imageBounds = CGRect(x: 0, y: 0, width: CGFloat(imageWidth), height: CGFloat(imageHeight))
         let blockRect = rect(from: block.bbox)
         let blockArea = max(blockRect.width * blockRect.height, 1)
@@ -13253,9 +13377,11 @@ final class TranslationSessionStore: ObservableObject {
             if ($0.textBox.confidence ?? 0) != ($1.textBox.confidence ?? 0) {
                 return ($0.textBox.confidence ?? 0) > ($1.textBox.confidence ?? 0)
             }
-            return $0.score > $1.score
+            if abs($0.score - $1.score) > 0.0001 {
+                return $0.score > $1.score
+            }
+            return $0.textBox.id < $1.textBox.id
         }
-        .first
     }
 
     private static func bestExternalBubble(
@@ -13586,15 +13712,25 @@ final class TranslationSessionStore: ObservableObject {
         }
         let bounds = CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
         var invalidTextBoxes: [String] = []
-        for textBox in textBoxes {
+        var seenTextBoxIDs: Set<String> = []
+        for (textBoxIndex, textBox) in textBoxes.enumerated() {
+            let normalizedTextBoxID = textBox.id.trimmingCharacters(in: .whitespacesAndNewlines)
+            let ledgerID = normalizedTextBoxID.isEmpty ? "index-\(textBoxIndex)" : normalizedTextBoxID
+            if normalizedTextBoxID.isEmpty {
+                invalidTextBoxes.append(ledgerID)
+                errors.append("textBoxIDMissing:\(textBoxIndex)")
+            } else if !seenTextBoxIDs.insert(normalizedTextBoxID).inserted {
+                invalidTextBoxes.append(ledgerID)
+                errors.append("duplicateTextBoxID:\(normalizedTextBoxID)")
+            }
             let rect = rect(from: textBox.bbox)
             guard rect.width > 0, rect.height > 0, rect.minX >= 0, rect.minY >= 0,
                   rect.maxX <= bounds.maxX, rect.maxY <= bounds.maxY else {
-                invalidTextBoxes.append(textBox.id)
+                invalidTextBoxes.append(ledgerID)
                 continue
             }
             if let confidence = textBox.confidence, !(0...1).contains(confidence) {
-                invalidTextBoxes.append(textBox.id)
+                invalidTextBoxes.append(ledgerID)
                 continue
             }
             let metadataErrors = externalTextBoxMetadataErrors(
@@ -13603,9 +13739,9 @@ final class TranslationSessionStore: ObservableObject {
                 imageHeight: imageHeight
             )
             if !metadataErrors.isEmpty {
-                invalidTextBoxes.append(textBox.id)
+                invalidTextBoxes.append(ledgerID)
                 for metadataError in metadataErrors {
-                    errors.append("textBox:\(textBox.id):\(metadataError)")
+                    errors.append("textBox:\(ledgerID):\(metadataError)")
                 }
             }
         }
@@ -21698,13 +21834,29 @@ final class TranslationSessionStore: ObservableObject {
         let externalShadowOCRExecutedCount = externalTextBoxShadowOCRReport?.ocrExecutedCount ?? 0
         let externalShadowOCRSucceededCount = externalTextBoxShadowOCRReport?.ocrSucceededCount ?? 0
         let externalShadowSkippedBlocks = uniqueSorted(externalTextBoxShadowOCRReport?.skippedBlocks ?? [])
+        let externalShadowFailedBlocks = uniqueSorted(externalTextBoxShadowOCRReport?.failedBlockIndexes ?? [])
+        let externalShadowSucceededBlocks = uniqueSorted(externalTextBoxShadowOCRReport?.succeededBlockIndexes ?? [])
+        let externalShadowEvaluatedBlockCount = externalTextBoxShadowOCRReport?.evaluatedBlockCount ?? 0
+        let externalShadowCoverageRatio = externalTextBoxShadowOCRReport?.successfulCoverageRatio ?? 0
+        let externalShadowCoverageVerdict = externalTextBoxShadowOCRReport?.coverageVerdict ?? "reportMissing"
+        let externalShadowDuplicateAssignedTextBoxIDs = externalTextBoxShadowOCRReport?.duplicateAssignedTextBoxIDs ?? []
+        let externalShadowCoverageComplete = externalShadowCoverageVerdict == "complete"
+            && externalShadowEvaluatedBlockCount == allBlockIndexes.count
+            && Set(externalShadowSucceededBlocks) == Set(allBlockIndexes)
+            && externalShadowFailedBlocks.isEmpty
+            && externalShadowSkippedBlocks.isEmpty
+            && externalShadowDuplicateAssignedTextBoxIDs.isEmpty
+            && abs(externalShadowCoverageRatio - 1) < 0.000_001
         let externalShadowCoverageBlockedBlocks: [Int]
         if !externalReady {
             externalShadowCoverageBlockedBlocks = []
         } else if !externalContractDryRunReady || !externalIdentityReconciliationReady || externalTextBoxShadowOCRReport == nil || !externalShadowOCRExecuted || externalShadowCandidateCount <= 0 || externalShadowOCRExecutedCount <= 0 || externalShadowOCRSucceededCount <= 0 {
             externalShadowCoverageBlockedBlocks = allBlockIndexes
-        } else {
+        } else if externalShadowCoverageComplete {
             externalShadowCoverageBlockedBlocks = []
+        } else {
+            let reportedBlockedBlocks = uniqueSorted(externalShadowFailedBlocks + externalShadowSkippedBlocks)
+            externalShadowCoverageBlockedBlocks = reportedBlockedBlocks.isEmpty ? allBlockIndexes : reportedBlockedBlocks
         }
         let externalShadowCoverageNextAction: String
         if !externalReady {
@@ -21721,6 +21873,10 @@ final class TranslationSessionStore: ObservableObject {
             externalShadowCoverageNextAction = "runExternalTextBoxShadowOCRCandidates"
         } else if externalShadowOCRSucceededCount <= 0 {
             externalShadowCoverageNextAction = "fixExternalTextBoxCropOCRInputs"
+        } else if !externalShadowDuplicateAssignedTextBoxIDs.isEmpty {
+            externalShadowCoverageNextAction = "fixExternalTextBoxOneToOneAssignment"
+        } else if !externalShadowCoverageComplete {
+            externalShadowCoverageNextAction = "closeExternalTextBoxShadowOCRPerBlockCoverage"
         } else {
             externalShadowCoverageNextAction = "keepExternalTextBoxShadowOCRReportOnly"
         }
@@ -21741,6 +21897,10 @@ final class TranslationSessionStore: ObservableObject {
             externalShadowCoverageWorkItemStatus = "blockedByNoExternalShadowOCRExecutions"
         } else if externalShadowOCRSucceededCount <= 0 {
             externalShadowCoverageWorkItemStatus = "blockedByNoExternalShadowOCRSuccess"
+        } else if !externalShadowDuplicateAssignedTextBoxIDs.isEmpty {
+            externalShadowCoverageWorkItemStatus = "blockedByDuplicateExternalTextBoxAssignment"
+        } else if !externalShadowCoverageComplete {
+            externalShadowCoverageWorkItemStatus = "blockedByPartialExternalShadowOCRCoverage"
         } else {
             externalShadowCoverageWorkItemStatus = "closedReportOnly"
         }
@@ -21753,6 +21913,8 @@ final class TranslationSessionStore: ObservableObject {
             + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowCandidateCount <= 0 ? ["external TextBoxes did not produce any block-matched shadow OCR candidates"] : [])
             + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowOCRExecutedCount <= 0 ? ["external TextBox shadow OCR did not execute any candidate crops"] : [])
             + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowOCRSucceededCount <= 0 ? ["external TextBox shadow OCR did not produce any successful crop OCR results"] : [])
+            + (!externalShadowDuplicateAssignedTextBoxIDs.isEmpty ? ["external TextBox shadow OCR assigned the same TextBox to multiple blocks"] : [])
+            + (externalTextBoxShadowOCRReport != nil && externalReady && externalShadowOCRSucceededCount > 0 && !externalShadowCoverageComplete ? ["external TextBox shadow OCR per-block coverage is incomplete"] : [])
         )
         let externalShadowCoverageGateStatus = externalReady
             ? (externalShadowCoverageBlockedBlocks.isEmpty ? "passed" : "blocked")
@@ -21776,8 +21938,14 @@ final class TranslationSessionStore: ObservableObject {
             signal("candidateCount", String(externalShadowCandidateCount), source: "externalTextBoxShadowOCRReport"),
             signal("ocrExecutedCount", String(externalShadowOCRExecutedCount), source: "externalTextBoxShadowOCRReport"),
             signal("ocrSucceededCount", String(externalShadowOCRSucceededCount), source: "externalTextBoxShadowOCRReport"),
+            signal("evaluatedBlockCount", String(externalShadowEvaluatedBlockCount), source: "externalTextBoxShadowOCRReport"),
+            signal("succeededBlocks", joined(externalShadowSucceededBlocks), source: "externalTextBoxShadowOCRReport"),
+            signal("failedBlocks", joined(externalShadowFailedBlocks), source: "externalTextBoxShadowOCRReport"),
             signal("skippedBlocks", joined(externalShadowSkippedBlocks), source: "externalTextBoxShadowOCRReport"),
-            signal("skippedBlockCount", String(externalShadowSkippedBlocks.count), source: "externalTextBoxShadowOCRReport")
+            signal("skippedBlockCount", String(externalShadowSkippedBlocks.count), source: "externalTextBoxShadowOCRReport"),
+            signal("duplicateAssignedTextBoxIDs", externalShadowDuplicateAssignedTextBoxIDs.sorted().joined(separator: ","), source: "externalTextBoxShadowOCRReport"),
+            signal("successfulCoverageRatio", externalShadowCoverageRatio.formatted(.number.precision(.fractionLength(4))), source: "externalTextBoxShadowOCRReport"),
+            signal("coverageVerdict", externalShadowCoverageVerdict, source: "externalTextBoxShadowOCRReport")
         ]
         let externalOrientationVerdict = externalTextBoxShadowOCRReport?.orientationReadinessVerdict ?? "notEvaluated"
         let externalOrientationExecutedBlocks = uniqueSorted(externalTextBoxShadowOCRReport?.orientationShadowPathExecutedBlocks ?? [])
@@ -22045,7 +22213,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-convergence-promotion-lite-textbox-segment-linkage", name: "Convergence promotion-lite TextBox SegmentMask linkage", scope: "TextBoxes->SegmentMask", status: promotionLinkageBlockedBlocks.isEmpty ? "passed" : "warning", threshold: "promotion linkage blocked blocks are surfaced in convergence work items and block paths", affected: promotionLinkageBlockedBlocks, failureMeans: "convergence hides SegmentMask promotion blockers caused by weak/fallback/rejected/wrong-bubble TextBox linkage", action: promotionLinkageBlockedBlocks.isEmpty ? "keepNativePromotionGateLiteReportOnly" : "auditTextBoxSegmentLinkageBeforePromotion", decisions: [signal("textBoxSegmentLinkageBlockedBlocks", joined(promotionLinkageBlockedBlocks), source: "koharuNativePromotionGateLiteReport"), signal("textBoxSegmentLinkBreakdown", joinedBreakdown(koharuNativePromotionGateLiteReport?.textBoxSegmentLinkBreakdown ?? [:]), source: "koharuNativePromotionGateLiteReport")]),
             gate("G-koharu-native-artifact-contract-dry-run-executed", name: "Koharu Native Artifact contract dry-run executed", scope: "ExternalArtifacts", status: nativeArtifactContractDryRunExecuted ? (nativeArtifactContractDryRunStatus == "blockedByUnsafeActiveExport" ? "blocked" : (nativeArtifactContractDryRunStatus == "blockedByMissingRealArtifact" ? "warning" : "passed")) : "open", threshold: "koharuNativeArtifactContractDryRunReport.enabled=true with requiredFileCount>=4, contractGateCount>=6, dryRunOnly=true, activeExportAllowed=false, and no active artifact mutation", affected: nativeArtifactContractDryRunBlocks, failureMeans: "Native Artifact contract dry-run is missing, unsafe for active export, or hides missing real Koharu artifact files", action: nativeArtifactContractDryRunNextAction, decisions: [signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("groundTruthUsedForDecision", koharuNativeArtifactContractDryRunReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-koharu-artifact-identity-reconciliation-ready", name: "Koharu artifact identity reconciliation ready", scope: "ExternalArtifacts/CIReview", status: artifactIdentityReconciliationReady ? "passed" : (externalReady ? "warning" : "open"), threshold: "koharuArtifactIdentityReconciliationReport.enabled=true with SourceImage plus four artifact file rows ready for ci-artifact-manifest.koharuArtifactValidationIdentitySummary size/SHA256 comparison", affected: artifactIdentityReconciliationBlocks, failureMeans: "convergence treats injected artifact handoff as closed without a machine-readable App receipt to CI manifest identity reconciliation ledger", action: artifactIdentityReconciliationNextAction, decisions: [signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport"), signal("readyForCIManifestComparison", koharuArtifactIdentityReconciliationReport.map { String($0.readyForCIManifestComparison) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("manualCIComparisonRequired", koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport")]),
-            gate("G-external-textbox-shadow-ocr-coverage", name: "External TextBox shadow OCR coverage", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalShadowCoverageGateStatus, threshold: "ready external artifacts must produce an executed externalTextBoxShadowOCRReport with candidateCount > 0, ocrExecutedCount > 0, and ocrSucceededCount > 0 before ExternalArtifacts can be considered closed", affected: externalShadowCoverageBlockedBlocks, failureMeans: "convergence treats ready artifact files as an OCR coverage closure even though shadow OCR did not run, produced no block-matched candidates, or produced no successful crop OCR results", action: externalShadowCoverageNextAction, decisions: externalShadowCoverageDecisionSignals),
+            gate("G-external-textbox-shadow-ocr-coverage", name: "External TextBox shadow OCR coverage", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalShadowCoverageGateStatus, threshold: "ready external artifacts require stable one-to-one TextBox assignment, a complete succeeded/failed/skipped block partition, no duplicate assigned TextBox IDs, and successfulCoverageRatio == 1 before ExternalArtifacts can be considered closed", affected: externalShadowCoverageBlockedBlocks, failureMeans: "convergence treats partial or duplicate external TextBox shadow OCR evidence as complete block coverage", action: externalShadowCoverageNextAction, decisions: externalShadowCoverageDecisionSignals),
             gate("G-external-textbox-orientation-shadow-path", name: "External TextBox orientation shadow path", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalOrientationGateStatus, threshold: "vertical, rotated, arbitrary-rotation, or line-polygon external TextBoxes must not be treated as fully closed until external shadow OCR coverage exists, orientation OCR is executed, and unsupported orientation features are surfaced", affected: uniqueSorted(externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), failureMeans: "convergence hides missing coverage or unsupported external TextBox orientation-aware shadow OCR work", action: externalOrientationNextAction, decisions: externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),
             gate("G-proxy-not-real-koharu-artifact", name: "Proxy is not real Koharu artifact", scope: "proxyBoundary", status: "passed", threshold: "TextBox/BubbleMask/SegmentMask proxy labels retained", affected: uniqueSorted(textBoxStopBlocks + bubbleNeedBlocks + segmentNeedBlocks), failureMeans: "AITRANS proxy is promoted as real Koharu detector artifact", action: "keepProxyBoundaryOrCollectRealArtifact", decisions: [signal("proxyNotRealSegmentMask", "true", source: "segmentMaskProxyCoverageScoreboardReport")]),

@@ -34,6 +34,29 @@
         [[310, 400], [390, 400], [390, 430], [310, 430]]
       ],
       "notes": ["polygon is inside the source image but detached from its owning TextBox bbox"]
+    },
+    {
+      "bbox": [42, 560, 96, 40],
+      "confidence": 0.71,
+      "detector": "koharu-real-detector-export",
+      "sourceDirection": "horizontal",
+      "notes": ["missing TextBox ID must be rejected before one-to-one matching"]
+    },
+    {
+      "id": "bad-textbox-line-polygon-detached",
+      "bbox": [180, 560, 96, 40],
+      "confidence": 0.72,
+      "detector": "koharu-real-detector-export",
+      "sourceDirection": "horizontal",
+      "notes": ["duplicate TextBox ID must be rejected before one-to-one matching"]
+    },
+    {
+      "id": 123,
+      "bbox": [310, 560, 96, 40],
+      "confidence": 0.73,
+      "detector": "koharu-real-detector-export",
+      "sourceDirection": "horizontal",
+      "notes": ["non-string TextBox ID must be diagnosed as missing without aborting the document parse"]
     }
   ]
 }

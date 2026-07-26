@@ -224,6 +224,9 @@ externalTextBoxShadowOCRSummary.executed = true
 externalTextBoxShadowOCRSummary.candidateCount > 0
 externalTextBoxShadowOCRSummary.ocrExecutedCount > 0
 externalTextBoxShadowOCRSummary.ocrSucceededCount > 0
+externalTextBoxShadowOCRSummary.coverageVerdict = complete
+externalTextBoxShadowOCRSummary.successfulCoverageRatio = 1
+externalTextBoxShadowOCRSummary.duplicateAssignedTextBoxIDs = []
 koharuNativeArtifactContractDryRunReport.contractDryRunVerdict = activeArtifactsReadyForShadowOCR
 koharuNativeArtifactContractDryRunReport.appSideArtifactIdentityVerdict = activeArtifactIdentityRecorded
 koharuNativeArtifactContractDryRunReport.appSideArtifactIdentityHashesPresent = true
@@ -270,6 +273,9 @@ externalTextBoxShadowOCRReport.executed == true
 externalTextBoxShadowOCRReport.candidateCount > 0
 externalTextBoxShadowOCRReport.ocrExecutedCount > 0
 externalTextBoxShadowOCRReport.ocrSucceededCount > 0
+externalTextBoxShadowOCRReport.coverageVerdict == "complete"
+externalTextBoxShadowOCRReport.successfulCoverageRatio == 1
+externalTextBoxShadowOCRReport.duplicateAssignedTextBoxIDs == []
 WI-external-textbox-shadow-ocr-coverage.status == "closedReportOnly"
 G-external-textbox-shadow-ocr-coverage.status == "passed"
 WI/G-external-textbox-orientation-shadow-path 不得在 partial / unsupported blockers 存在时 passed

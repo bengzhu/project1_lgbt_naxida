@@ -8,6 +8,24 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.0 候选：Koharu external TextBox 一对一 coverage
+日期：2026-07-26
+
+状态：Agent X 正在分支 `codeb/v2.0-koharu-shadow-coverage` 实现并验证，尚未合入 `smalldata_test`，正式版本仍为 `1.99`。
+
+核心变更：
+
+- external TextBox shadow OCR 从逐块独立取最佳候选改为确定性的最大基数二分匹配；block 与 TextBox 都最多消费一次，增广路径避免多候选 block 抢占单候选 block，最终以 TextBox ID 稳定 tie-break。
+- active TextBox ID 必须是非空唯一字符串；Python validator 与 App readiness 同步拒绝缺失/重复 ID，避免随机 UUID 参与匹配身份。
+- `externalTextBoxShadowOCRReport` 新增逐块 matched / succeeded / failed / skipped partition、争用账本、最终 duplicate ledger、matched / successful / matched-OCR-success ratios 和 `coverageVerdict`。
+- convergence 与 injected-artifact CI smoke 只有在分区一致、最终无重复 TextBox、所有 block OCR 成功且 `successfulCoverageRatio = 1` 时才允许 coverage gate passed；局部成功只阻塞 failed + skipped blocks，不再以任意一个成功块伪装整体闭合。
+
+验证与遗留：
+
+- 新增 `scripts/test-v200-koharu-shadow-coverage-contract.py` 与纯 Swift fixture `scripts/test-v200-koharu-shadow-coverage-evaluator.swift`，实际编译并执行增广重分配、单 TextBox 争用、complete / partial / no-success / duplicate / invalid partition、旧报告 Codable 兼容、ID 门槛和 CI/TXT 接线；保留旧 counts 与 `skippedBlocks` 便于报告消费者渐进迁移。
+- 本轮保持 shadow-only，不改变主 OCR、翻译、覆盖图、`blockPassed` 或 promotion；仓库仍无真实四件套，不声称 OCR 数字提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+- 未跑本机 build / 探针，按规则交给云端验证。
+
 ## v1.99：Koharu line polygon 所属关系校验
 日期：2026-07-26
 
