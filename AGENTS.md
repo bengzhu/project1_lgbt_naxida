@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 正式版本号 `1.96`：图片翻译任务和可见结果独立保留实际目标语言，跨页面改语言、失败、取消和 loading 空窗不再错标，已完成图片可按所选结果语言重译。v1.95 的真实音频 corpus contract、身份校验和 WER/CER/延迟链路仍保留；仓库尚无真实音频，不声称识别质量提升。v1.94 为候选 full、PR/merge fast follow-up 的云端验证分层；v1.92 的 external TextBox line polygon warp 仍不代表真实 Koharu 四件套已经交付。
+- 正式版本号 `1.97`：Koharu external TextBox 多行 `linePolygons` 逐行隔离 warp / OCR 失败，partial 结果只参与 shadow 对照且继续阻塞 promotion；handoff 的 repo/ref/expected SHA 同源并由 workflow 在验证前硬校验。v1.96 的图片任务语言一致性仍保留。仓库尚无真实 Koharu 四件套和 Speech 音频，不声称 OCR、翻译或识别质量提升。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
