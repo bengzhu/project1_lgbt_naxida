@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 正式版本号 `2.0`：Koharu external TextBox shadow OCR 使用稳定最大基数一对一匹配，active TextBox ID 必须非空唯一，完整 matched / succeeded / failed / skipped 分区、无重复 assignment 且 `successfulCoverageRatio = 1` 才能关闭 coverage gate。v1.99 的 line polygon 所属 TextBox bbox 校验与 v1.98 的普通图片预览/PNG 导出一致性仍保留。仓库尚无真实 Koharu 四件套和 Speech 音频，不声称 OCR、翻译或识别质量提升。
+- 正式版本号 `2.1`：Koharu external TextBox shadow OCR 只有在完整逐块 OCR 成功且 assignment geometry 全可信时才能关闭 coverage gate；可信空间证据为中心包含或 `IoU >= 0.10`，Bubble ID 必须非空唯一且 block / TextBox 双方匹配。弱 overlap 和 Bubble unknown 只保留 shadow 诊断。v2.0 的稳定最大基数一对一匹配与完整 partition 仍保留。仓库尚无真实 Koharu 四件套和 Speech 音频，不声称 OCR、翻译或识别质量提升。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
