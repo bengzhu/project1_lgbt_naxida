@@ -42,6 +42,9 @@ flowchart TD
   IT --> IG{"transfer / sandbox await 后<br/>task ID 仍匹配?"}
   IG -->|否| IDROP["丢弃旧回调并清理未采用输入<br/>不恢复旧 retry source"]
   IG -->|是| I["普通图片翻译<br/>VisionOCRService + 源/目标语言快照"]
+  ICANCEL["取消图片任务"] --> IRETRY{"sandbox source 已发布且仍存在?"}
+  IRETRY -->|是| IR["idle + 显示重试"]
+  IRETRY -->|否| IDROP
   I --> J["ImageTranslationBlock<br/>bbox + OCR 文本 + 译文"]
   J --> K["图片旁贴 / 覆盖 UI<br/>同模式顶左坐标 PNG 导出"]
 

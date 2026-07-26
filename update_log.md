@@ -8,6 +8,21 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.3：图片取消后重试一致性
+日期：2026-07-26
+
+状态：Agent X 已完成候选实现和本地轻量契约，分支为 `codeb/v2.3-image-cancel-retry`；尚待 exact-SHA 云端 full、版本收口和 PR 验收，未触碰 `main`。
+
+核心变更：
+
+- v2.2 已在取消后保留完成 sandbox 发布的当前 source，但 retry 门槛只接受 `.failed`，导致取消后的 `.idle` 没有可见重试入口。v2.3 在 source 文件真实存在时允许 `.idle` / `.failed` 显示重试；transfer 尚未落盘的取消仍无重试，translated 结果继续走重译控制而不是 Retry，clear 继续删除 source。
+- 新增独立 v2.3 纯 Swift evaluator 与 Python contract，并接入 fail-fast UI interaction CI step；任一 v1.87 / v2.2 / v2.3 契约失败都会阻塞候选 full。
+
+验证与遗留：
+
+- v2.3 4/4、v2.2 10/10、v1.87 12/12、Swift parse、workflow YAML 和 `git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证。
+- 本轮不改变 Vision OCR、Koharu、翻译或覆盖算法，不声称质量指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+
 ## v2.2：图片导入 run isolation
 日期：2026-07-26
 
