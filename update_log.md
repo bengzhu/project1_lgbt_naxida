@@ -8,6 +8,26 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.1：Koharu assignment geometry coverage
+日期：2026-07-26
+
+状态：Agent X 已完成核心候选实现、独立复审和两个 exact-SHA 云端 full 验证，工程正式版本收口为 `MARKETING_VERSION=2.1`；候选分支为 `codeb/v2.1-koharu-geometry-coverage`，尚待 PR 合并，未触碰 `main`。
+
+核心变更：
+
+- external TextBox shadow OCR 将 OCR outcome 与 assignment geometry 分账。空间可信标准统一为中心包含或 `IoU >= 0.10`；弱 overlap 仍可执行 shadow OCR，但写入 `geometryWeakBlockIndexes` 并不得关闭 coverage gate。
+- Bubble alignment 从旧的缺失即 matched 改为 `matched / unknown / conflict`：双方 external Bubble ID 相同才 matched，任一侧缺失为 unknown 且不获得 score bonus，双方不同继续拒绝 edge。
+- Bubble instance ID 与 TextBox ID 同样强制非空唯一；缺失、空白或非字符串输出 `bubbleIDMissing:<index>`，重复输出 `duplicateBubbleID:<id>`。Swift 解码不再为缺 ID 生成随机 UUID。
+- 报告、TXT、handoff、convergence 和 CI manifest 新增 `minimumTrustedIoU`、trusted / weak / unknown Bubble block arrays、geometry ratio / verdict；只有 OCR 与 geometry 两条 ledger 都完整才允许 `WI/G-external-textbox-shadow-ocr-coverage` closed / passed。
+
+验证与遗留：
+
+- 新增 v2.1 Python contract 与真实 Swift evaluator，覆盖弱/强阈值、center containment、Bubble conflict / unknown、OCR/geometry 正交、完整/阻塞 verdict、旧 JSON 解码和 Bubble invalid fixture；v2.1 6/6、v2.0 6/6、v1.99 5/5、v1.92 5/5、v1.97 handoff 6/6、CI tier 9/9、version identity 5/5 均通过。
+- 核心 SHA `b9a3ebcdd49e7329511d750e005ce7452e27b047` 的云端 full run `30200743723` attempt 1 成功；artifact `aitrans-ci-v2.1-codeb-v2.1-koharu-geometry-coverage--b9a3ebcdd49e-run30200743723-attempt1` 与 SHA / branch / run / profile 完全一致，JUnit 10/10、Xcode build success、Koharu extended validator matrix 与 Speech/UI/home/paste 契约通过，commit status `AITRANS CI/full-validation=success`。
+- 版本收口 SHA `e555916f4c5db3db1711231a807390bb26b178de` 的云端 full run `30201087646` attempt 1 成功；artifact `aitrans-ci-v2.1-codeb-v2.1-koharu-geometry-coverage--e555916f4c5d-run30201087646-attempt1` 与 SHA / branch / run / profile 完全一致，Xcode build success、JUnit 10/10、`.xcresult` build status succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改版本与文档，领域契约按 changed-files 路由跳过，并由父核心 SHA `b9a3ebcdd49e7329511d750e005ce7452e27b047` 的 full 收据提供证据。
+- 本轮保持 shadow-only，不改变主 OCR、翻译、覆盖图、`blockPassed` 或 promotion。默认 push 使用 `probe_mode=skip`，artifact 仅含 `probe-not-run.txt`；仓库仍无真实四件套，不声称 OCR 数字提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+- 未跑本机 build / 探针，按规则交给云端验证。
+
 ## v2.0：Koharu external TextBox 一对一 coverage
 日期：2026-07-26
 

@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-正式版本：`2.0`。
+正式版本：`2.1`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -128,7 +128,7 @@ flowchart TD
   TBF --> LTB["lineTextBoxPlanReport / lineCropExperimentReport<br/>目标块行级 TextBox / deskew shadow 验证"]
   LTB --> EAR["externalArtifactReadinessReport<br/>真实 TextBoxes / BubbleMask / SegmentMask 适配前证据闸门 + App-side identity receipt / sourceImageSHA256 match"]
   EAR --> ETS["externalTextBoxShadowOCRReport<br/>ready 后每块最多 1 个 externalArtifact.textBoxCrop / shadow-only"]
-  ETS --> ESC["external TextBox shadow OCR coverage gate<br/>v2.0 稳定一对一匹配 + 完整 block partition + 无重复 TextBox + successfulCoverageRatio=1"]
+  ETS --> ESC["external TextBox shadow OCR coverage gate<br/>v2.1 一对一 + 完整 partition + OCR 全成功<br/>center-contained 或 IoU>=0.10 + Bubble ID matched + geometryCoverageRatio=1"]
   ESC --> ETO["external TextBox orientation-aware shadow OCR<br/>bounded rotation + v1.92 polygon warp + v1.97 逐行失败隔离<br/>v1.99 polygon 必须属于 TextBox bbox / 非法 artifact 阻塞"]
   ETO --> ISR["internalStructureBottleneckReport<br/>OCR / bubble / crop / translation / render 路由诊断"]
   ISR --> RTA["routingDrivenTranslationComparisonReport<br/>modelTranslationQuality 块 strict prompt 对照 / report-only"]

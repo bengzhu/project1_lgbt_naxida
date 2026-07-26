@@ -5214,7 +5214,7 @@ struct MangaOverlayExternalBubbleInstance: Equatable, Codable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        id = (try? container.decode(String.self, forKey: .id)) ?? ""
         if let bbox = try container.decodeIfPresent([Double].self, forKey: .bbox), bbox.count == 4 {
             self.bbox = bbox
         } else {
@@ -5375,6 +5375,9 @@ struct MangaOverlayExternalTextBoxShadowOCRCandidate: Equatable, Codable, Sendab
     var blockCenterContained: Bool
     var bubbleInstanceID: String?
     var bubbleAlignmentMatched: Bool
+    var spatialGeometryVerdict: String?
+    var bubbleAlignmentVerdict: String?
+    var assignmentGeometryTrusted: Bool?
     var areaRatioToBlock: Double?
     var linePolygonsPresent: Bool
     var linePolygonCount: Int
@@ -5413,6 +5416,9 @@ struct MangaOverlayExternalTextBoxShadowOCRBlockSummary: Equatable, Codable, Sen
     var selectedOrientationCategory: String?
     var selectedLinePolygonsPresent: Bool
     var selectedRotationDegrees: Double?
+    var spatialGeometryVerdict: String?
+    var bubbleAlignmentVerdict: String?
+    var assignmentGeometryTrusted: Bool?
     var orientationShadowPathNeeded: Bool
     var orientationShadowPathExecuted: Bool
     var orientationAttemptedRotations: [Double]
@@ -5465,6 +5471,55 @@ enum MangaOverlayStableOneToOneTextBoxMatcher {
     }
 }
 
+struct MangaOverlayExternalTextBoxGeometryEvaluation: Equatable, Sendable {
+    var minimumTrustedIoU: Double
+    var spatialGeometryVerdict: String
+    var bubbleAlignmentVerdict: String
+    var assignmentGeometryTrusted: Bool
+}
+
+enum MangaOverlayExternalTextBoxGeometryEvaluator {
+    static let minimumTrustedIoU = 0.10
+
+    static func evaluate(
+        iou: Double,
+        centerContained: Bool,
+        blockBubbleID: String?,
+        textBoxBubbleID: String?
+    ) -> MangaOverlayExternalTextBoxGeometryEvaluation {
+        let spatialVerdict: String
+        if centerContained {
+            spatialVerdict = "trustedCenterContained"
+        } else if iou >= minimumTrustedIoU {
+            spatialVerdict = "trustedIoU"
+        } else if iou > 0.01 {
+            spatialVerdict = "weakIoUShadowOnly"
+        } else {
+            spatialVerdict = "rejectedNoSpatialEvidence"
+        }
+
+        let normalizedBlockBubbleID = blockBubbleID?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedTextBoxBubbleID = textBoxBubbleID?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let bubbleVerdict: String
+        if let normalizedBlockBubbleID,
+           !normalizedBlockBubbleID.isEmpty,
+           let normalizedTextBoxBubbleID,
+           !normalizedTextBoxBubbleID.isEmpty {
+            bubbleVerdict = normalizedBlockBubbleID == normalizedTextBoxBubbleID ? "matched" : "conflict"
+        } else {
+            bubbleVerdict = "unknown"
+        }
+
+        let spatialTrusted = centerContained || iou >= minimumTrustedIoU
+        return MangaOverlayExternalTextBoxGeometryEvaluation(
+            minimumTrustedIoU: minimumTrustedIoU,
+            spatialGeometryVerdict: spatialVerdict,
+            bubbleAlignmentVerdict: bubbleVerdict,
+            assignmentGeometryTrusted: spatialTrusted && bubbleVerdict == "matched"
+        )
+    }
+}
+
 struct MangaOverlayExternalTextBoxCoverageEvaluation: Equatable, Sendable {
     var evaluatedBlockIndexes: [Int]
     var matchedBlockIndexes: [Int]
@@ -5475,6 +5530,12 @@ struct MangaOverlayExternalTextBoxCoverageEvaluation: Equatable, Sendable {
     var matchedCoverageRatio: Double
     var successfulCoverageRatio: Double
     var matchedOCRSuccessRatio: Double
+    var minimumTrustedIoU: Double
+    var geometryTrustedBlockIndexes: [Int]
+    var geometryWeakBlockIndexes: [Int]
+    var geometryUnknownBubbleBlockIndexes: [Int]
+    var geometryCoverageRatio: Double
+    var geometryCoverageVerdict: String
     var outcomePartitionValid: Bool
     var coverageVerdict: String
 }
@@ -5486,7 +5547,9 @@ enum MangaOverlayExternalTextBoxCoverageEvaluator {
         succeededBlockIndexes: [Int],
         failedBlockIndexes: [Int],
         skippedBlockIndexes: [Int],
-        matchedTextBoxIDs: [String]
+        matchedTextBoxIDs: [String],
+        geometryTrustedBlockIndexes: [Int]? = nil,
+        geometryUnknownBubbleBlockIndexes: [Int] = []
     ) -> MangaOverlayExternalTextBoxCoverageEvaluation {
         let evaluated = Array(Set(evaluatedBlockIndexes)).sorted()
         let matched = Array(Set(matchedBlockIndexes)).sorted()
@@ -5511,16 +5574,45 @@ enum MangaOverlayExternalTextBoxCoverageEvaluator {
         let matchedRatio = evaluatedCount > 0 ? Double(matched.count) / Double(evaluatedCount) : 0
         let successfulRatio = evaluatedCount > 0 ? Double(succeeded.count) / Double(evaluatedCount) : 0
         let matchedSuccessRatio = matched.isEmpty ? 0 : Double(succeeded.count) / Double(matched.count)
+        let geometryTrusted = Array(Set(geometryTrustedBlockIndexes ?? succeeded)).sorted()
+        let geometryUnknownBubble = Array(Set(geometryUnknownBubbleBlockIndexes)).sorted()
+        let geometryTrustedSet = Set(geometryTrusted)
+        let geometryUnknownBubbleSet = Set(geometryUnknownBubble)
+        let geometryLedgerValid = geometryTrustedSet.isSubset(of: matchedSet)
+            && geometryUnknownBubbleSet.isSubset(of: matchedSet)
+        let geometryWeak = Array(matchedSet.subtracting(geometryTrustedSet)).sorted()
+        let geometryRatio = evaluatedCount > 0 ? Double(geometryTrusted.count) / Double(evaluatedCount) : 0
+        let geometryVerdict: String
+        if !geometryLedgerValid {
+            geometryVerdict = "inconsistentGeometryLedger"
+        } else if evaluatedCount == 0 {
+            geometryVerdict = "emptyInput"
+        } else if geometryTrusted.count == evaluatedCount,
+                  geometryWeak.isEmpty,
+                  geometryUnknownBubble.isEmpty,
+                  abs(geometryRatio - 1) < 0.000_001 {
+            geometryVerdict = "complete"
+        } else if geometryTrusted.isEmpty {
+            geometryVerdict = "noTrustedGeometryCoverage"
+        } else {
+            geometryVerdict = "partial"
+        }
         let verdict: String
-        if !partitionValid || !duplicateIDs.isEmpty {
+        if !partitionValid || !duplicateIDs.isEmpty || !geometryLedgerValid {
             verdict = "inconsistentAssignmentLedger"
         } else if evaluatedCount == 0 {
             verdict = "emptyInput"
         } else if succeeded.count == evaluatedCount,
                   failed.isEmpty,
                   skipped.isEmpty,
+                  geometryVerdict == "complete",
                   abs(successfulRatio - 1) < 0.000_001 {
             verdict = "complete"
+        } else if succeeded.count == evaluatedCount,
+                  failed.isEmpty,
+                  skipped.isEmpty,
+                  geometryVerdict != "complete" {
+            verdict = "geometryBlocked"
         } else if succeeded.isEmpty {
             verdict = "noSuccessfulCoverage"
         } else {
@@ -5536,6 +5628,12 @@ enum MangaOverlayExternalTextBoxCoverageEvaluator {
             matchedCoverageRatio: matchedRatio,
             successfulCoverageRatio: successfulRatio,
             matchedOCRSuccessRatio: matchedSuccessRatio,
+            minimumTrustedIoU: MangaOverlayExternalTextBoxGeometryEvaluator.minimumTrustedIoU,
+            geometryTrustedBlockIndexes: geometryTrusted,
+            geometryWeakBlockIndexes: geometryWeak,
+            geometryUnknownBubbleBlockIndexes: geometryUnknownBubble,
+            geometryCoverageRatio: geometryRatio,
+            geometryCoverageVerdict: geometryVerdict,
             outcomePartitionValid: partitionValid,
             coverageVerdict: verdict
         )
@@ -5571,6 +5669,12 @@ struct MangaOverlayExternalTextBoxShadowOCRReport: Equatable, Codable, Sendable 
     var successfulCoverageRatio: Double?
     var matchedOCRSuccessRatio: Double?
     var coverageVerdict: String?
+    var minimumTrustedIoU: Double?
+    var geometryTrustedBlockIndexes: [Int]?
+    var geometryWeakBlockIndexes: [Int]?
+    var geometryUnknownBubbleBlockIndexes: [Int]?
+    var geometryCoverageRatio: Double?
+    var geometryCoverageVerdict: String?
     var sourceDirectionBreakdown: [String: Int]
     var orientationCategoryBreakdown: [String: Int]
     var linePolygonCandidateBlocks: [Int]
