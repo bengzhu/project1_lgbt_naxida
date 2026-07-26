@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`2.3`（图片取消后的 Retry 只有在 sandbox source 已发布且文件仍存在时可用；v2.2 Store-owned transfer/run isolation、v2.1 Koharu trusted geometry coverage、v2.0 稳定一对一匹配、v1.99 polygon containment 和 v1.98 普通图片导出一致性仍保留；Speech 真实 corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`2.4`（普通图片稳定导出由 Store 统一持有，启动和内容生命周期安全清理且删除失败可重试；v2.3 取消后 Retry、v2.2 Store-owned transfer/run isolation、v2.1 Koharu trusted geometry coverage、v2.0 稳定一对一匹配、v1.99 polygon containment 和 v1.98 导出一致性仍保留；Speech 真实 corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
