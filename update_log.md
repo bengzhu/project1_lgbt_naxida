@@ -8,10 +8,10 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
-## v1.99 候选：Koharu line polygon 所属关系校验
+## v1.99：Koharu line polygon 所属关系校验
 日期：2026-07-26
 
-状态：Agent X 候选实现中，分支 `codeb/v1.99-koharu-polygon-containment`，基于 v1.98 merge follow-up `e66906e01c1adbe8f61305bcdb50a77264122a5d`。正式版本仍为 `1.98`，等待 exact-SHA 云端 full 与独立结果包复审。
+状态：Agent X 已完成核心候选复审，工程正式版本收口为 `MARKETING_VERSION=1.99`。分支 `codeb/v1.99-koharu-polygon-containment` 基于 v1.98 merge follow-up `e66906e01c1adbe8f61305bcdb50a77264122a5d`；核心候选 SHA `1be5b53d7593932ab203dce4304f6eb0a577dec6` 的 task-scoped full 已通过，等待版本收口 SHA 的云端 full 后创建 PR。
 
 核心变更：
 
@@ -22,6 +22,7 @@
 验证与遗留：
 
 - 新增 `scripts/test-v199-koharu-line-polygon-containment-contract.py`，覆盖 bbox 内、容差边缘、部分越界、完全脱离、Python/Swift 同口径与 CI 接线，当前 5/5 通过；v1.92 warp contract 5/5、Swift parse、YAML parse、fixture JSON 与 `git diff --check` 通过。
+- 核心候选云端 full run `30197944841` attempt 1 成功；artifact `aitrans-ci-v1.99-codeb-v1.99-koharu-polygon-containment--1be5b53d7593-run30197944841-attempt1` 与候选 HEAD 一致，extended Koharu validator matrix、v1.99 contract 5/5、Speech/UI/home/paste 契约和 Xcode build 均成功；JUnit 10/10，`.xcresult` build status succeeded、0 error、0 warning，commit status `AITRANS CI/full-validation=success`。
 - 本轮只加固真实 external artifact 的准入证据，保持 shadow-only，不改变主 OCR、翻译、覆盖图、`blockPassed` 或 promotion；仓库仍无真实四件套，不声称 OCR 数字提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
 - 未跑本机 build / 探针，按规则交给云端验证。
 
