@@ -40,7 +40,7 @@ flowchart TD
   IMG_TARGET["图片目标语言菜单<br/>Pro 门控 / 按结果语言重译"] --> C
   C --> I["普通图片翻译<br/>VisionOCRService + 源/目标语言快照"]
   I --> J["ImageTranslationBlock<br/>bbox + OCR 文本 + 译文"]
-  J --> K["图片旁贴 / 覆盖 UI"]
+  J --> K["图片旁贴 / 覆盖 UI<br/>同模式顶左坐标 PNG 导出"]
 
   %% 音频分支：Apple 本机语音识别
   C --> LR["Speech run ID + store-owned translation Task<br/>取消 / 重试使旧回调失效"]

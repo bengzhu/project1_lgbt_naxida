@@ -2,11 +2,9 @@ import Combine
 import AVFoundation
 import CryptoKit
 import Foundation
-import ImageIO
 import Speech
 import StoreKit
 import UIKit
-import UniformTypeIdentifiers
 
 @MainActor
 final class TranslationSessionStore: ObservableObject {
@@ -126,6 +124,8 @@ final class TranslationSessionStore: ObservableObject {
     private var modelDownloadTask: Task<Void, Never>?
     private var imageTranslationTask: Task<Void, Never>?
     private var imageTranslationTaskID = UUID()
+    private var imageOverlayRenderTask: Task<Void, Never>?
+    private var imageOverlayRenderID = UUID()
     private var audioRecognitionTask: SFSpeechRecognitionTask?
     private var speechTranslationTask: Task<Void, Never>?
     private var speechQualityProbeTask: Task<Void, Never>?
@@ -174,6 +174,7 @@ final class TranslationSessionStore: ObservableObject {
         ticker?.cancel()
         modelDownloadTask?.cancel()
         imageTranslationTask?.cancel()
+        imageOverlayRenderTask?.cancel()
         speechTranslationTask?.cancel()
         speechQualityProbeTask?.cancel()
     }
@@ -1017,6 +1018,7 @@ final class TranslationSessionStore: ObservableObject {
         targetLanguage: SupportedLanguage
     ) -> UUID {
         imageTranslationTask?.cancel()
+        invalidateImageOverlayRender()
         let taskID = UUID()
         imageTranslationTaskID = taskID
         imageTranslationContentTargetLanguage = targetLanguage
@@ -1083,12 +1085,34 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         imageTranslationBlocks = translatedBlocks
-        imageTranslationExportURL = try? await Self.renderImageTranslationOverlay(
+        let renderedMode = imageOverlayMode
+        let renderID = UUID()
+        imageOverlayRenderID = renderID
+        let stagedExportURL = try? await Self.renderImageTranslationOverlay(
             imageData: data,
             blocks: translatedBlocks,
             filename: imageTranslationFilename,
-            directory: imageTranslationDirectory
+            directory: imageTranslationDirectory,
+            mode: renderedMode,
+            renderID: renderID
         )
+        guard isCurrentImageTranslationTask(taskID) else {
+            Self.removeImageTranslationStagingFile(stagedExportURL)
+            throw CancellationError()
+        }
+        if imageOverlayRenderID == renderID,
+           imageOverlayMode == renderedMode,
+           let stagedExportURL {
+            defer { Self.removeImageTranslationStagingFile(stagedExportURL) }
+            imageTranslationExportURL = try? Self.publishImageTranslationOverlay(
+                stagedURL: stagedExportURL,
+                filename: imageTranslationFilename,
+                directory: imageTranslationDirectory
+            )
+        } else {
+            Self.removeImageTranslationStagingFile(stagedExportURL)
+            imageTranslationExportURL = nil
+        }
         imageTranslationState = .translated
         imageTranslationMessage = imageTranslationExportURL == nil
             ? "已完成 Vision OCR、\(targetLanguage.rawValue)翻译和定位覆盖"
@@ -1096,6 +1120,10 @@ final class TranslationSessionStore: ObservableObject {
         dataTransferMessage = imageTranslationMessage
         appendImageTranslationTranscript(blocks: translatedBlocks)
         isProcessing = false
+        imageTranslationTask = nil
+        if imageOverlayMode != renderedMode {
+            rerenderImageTranslationExport()
+        }
         persist()
     }
 
@@ -1237,6 +1265,7 @@ final class TranslationSessionStore: ObservableObject {
     func clearImageTranslation() {
         imageTranslationTask?.cancel()
         imageTranslationTask = nil
+        invalidateImageOverlayRender()
         imageTranslationTaskID = UUID()
         imageTranslationState = .idle
         imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
@@ -1251,17 +1280,89 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func setImageOverlayMode(_ mode: ImageTranslationOverlayMode) {
+        guard imageOverlayMode != mode else { return }
         imageOverlayMode = mode
+        rerenderImageTranslationExport()
     }
 
     func cancelImageTranslation() {
         imageTranslationTask?.cancel()
         imageTranslationTask = nil
+        invalidateImageOverlayRender()
         imageTranslationTaskID = UUID()
         imageTranslationState = .idle
         imageTranslationMessage = "图片翻译已取消"
         dataTransferMessage = imageTranslationMessage
         isProcessing = false
+    }
+
+    private func invalidateImageOverlayRender() {
+        imageOverlayRenderTask?.cancel()
+        imageOverlayRenderTask = nil
+        imageOverlayRenderID = UUID()
+    }
+
+    private func rerenderImageTranslationExport() {
+        guard imageTranslationState == .translated,
+              let data = imageTranslationData,
+              !imageTranslationBlocks.isEmpty else {
+            return
+        }
+
+        imageOverlayRenderTask?.cancel()
+        let renderID = UUID()
+        let contentTaskID = imageTranslationTaskID
+        let mode = imageOverlayMode
+        let blocks = imageTranslationBlocks
+        let filename = imageTranslationFilename
+        let directory = imageTranslationDirectory
+        imageOverlayRenderID = renderID
+        imageTranslationExportURL = nil
+        imageTranslationMessage = "正在生成\(mode.rawValue)导出图"
+
+        imageOverlayRenderTask = Task { [weak self] in
+            guard let self else { return }
+            var stagedURL: URL?
+            do {
+                stagedURL = try await Self.renderImageTranslationOverlay(
+                    imageData: data,
+                    blocks: blocks,
+                    filename: filename,
+                    directory: directory,
+                    mode: mode,
+                    renderID: renderID
+                )
+                try Task.checkCancellation()
+                guard self.imageOverlayRenderID == renderID,
+                      self.imageTranslationTaskID == contentTaskID,
+                      self.imageOverlayMode == mode else {
+                    Self.removeImageTranslationStagingFile(stagedURL)
+                    return
+                }
+                guard let stagedURL else { return }
+                let outputURL = try Self.publishImageTranslationOverlay(
+                    stagedURL: stagedURL,
+                    filename: filename,
+                    directory: directory
+                )
+                self.imageTranslationExportURL = outputURL
+                self.imageTranslationMessage = "已更新\(mode.rawValue)预览和导出图"
+                self.dataTransferMessage = self.imageTranslationMessage
+                self.imageOverlayRenderTask = nil
+            } catch is CancellationError {
+                Self.removeImageTranslationStagingFile(stagedURL)
+                return
+            } catch {
+                Self.removeImageTranslationStagingFile(stagedURL)
+                guard self.imageOverlayRenderID == renderID,
+                      self.imageTranslationTaskID == contentTaskID else {
+                    return
+                }
+                self.imageTranslationMessage = "\(mode.rawValue)预览已更新，导出图生成失败：\(error.localizedDescription)"
+                self.dataTransferMessage = self.imageTranslationMessage
+                self.imageOverlayRenderTask = nil
+            }
+        }
     }
 
     func retryImageTranslation() {
@@ -24561,86 +24662,144 @@ final class TranslationSessionStore: ObservableObject {
         imageData: Data,
         blocks: [ImageTranslationBlock],
         filename: String,
-        directory: URL
+        directory: URL,
+        mode: ImageTranslationOverlayMode,
+        renderID: UUID
     ) async throws -> URL {
         try await Task.detached(priority: .userInitiated) {
-            guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
-                  let image = CGImageSourceCreateImageAtIndex(source, 0, [
-                    kCGImageSourceShouldCacheImmediately: true
-                  ] as CFDictionary) else {
+            guard let image = UIImage(data: imageData),
+                  image.size.width > 0,
+                  image.size.height > 0 else {
                 throw VisionOCRServiceError.imageDecodeFailed
             }
 
-            let width = image.width
-            let height = image.height
-            let colorSpace = CGColorSpaceCreateDeviceRGB()
-            guard let context = CGContext(
-                data: nil,
-                width: width,
-                height: height,
-                bitsPerComponent: 8,
-                bytesPerRow: 0,
-                space: colorSpace,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else {
-                throw VisionOCRServiceError.imageDecodeFailed
-            }
+            let canvas = CGRect(origin: .zero, size: image.size)
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1
+            format.opaque = false
+            let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
+            let outputData = renderer.pngData { rendererContext in
+                image.draw(in: canvas)
 
-            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+                for block in blocks {
+                    let sourceRect = imageTranslationPixelRect(
+                        block.boundingBox,
+                        canvas: canvas
+                    )
+                    let overlayRect = imageTranslationOverlayRect(
+                        sourceRect: sourceRect,
+                        canvas: canvas,
+                        mode: mode
+                    )
+                    guard !overlayRect.isEmpty else { continue }
 
-            for block in blocks {
-                let rect = CGRect(
-                    x: CGFloat(block.boundingBox.x) * CGFloat(width),
-                    y: CGFloat(block.boundingBox.y) * CGFloat(height),
-                    width: CGFloat(block.boundingBox.width) * CGFloat(width),
-                    height: CGFloat(block.boundingBox.height) * CGFloat(height)
-                ).insetBy(dx: -4, dy: -4)
+                    let context = rendererContext.cgContext
+                    context.setFillColor(
+                        mode == .adjacent
+                            ? UIColor.black.withAlphaComponent(0.88).cgColor
+                            : UIColor.systemTeal.withAlphaComponent(0.94).cgColor
+                    )
+                    context.fill(overlayRect)
+                    context.setStrokeColor(UIColor.systemTeal.cgColor)
+                    context.setLineWidth(max(canvas.width * 0.002, 2))
+                    context.stroke(overlayRect)
 
-                context.setFillColor(UIColor.black.withAlphaComponent(0.72).cgColor)
-                context.fill(rect)
-                context.setStrokeColor(UIColor.systemTeal.cgColor)
-                context.setLineWidth(max(CGFloat(width) * 0.002, 2))
-                context.stroke(rect)
-
-                let text = (block.translation.isEmpty ? block.original : block.translation)
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !text.isEmpty else { continue }
-
-                let fontSize = max(min(rect.height * 0.42, 32), 11)
-                let attributes: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
-                    .foregroundColor: UIColor.white
-                ]
-                let attributed = NSAttributedString(string: text, attributes: attributes)
-                let textRect = rect.insetBy(dx: 7, dy: 5)
-
-                UIGraphicsPushContext(context)
-                attributed.draw(with: textRect, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
-                UIGraphicsPopContext()
-            }
-
-            guard let outputImage = context.makeImage() else {
-                throw VisionOCRServiceError.imageDecodeFailed
+                    let translation = (block.translation.isEmpty ? block.original : block.translation)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !translation.isEmpty else { continue }
+                    let text = mode == .adjacent && translation != block.original
+                        ? "\(translation)\n\(block.original)"
+                        : translation
+                    let fontSize = max(min(overlayRect.height * 0.30, canvas.width * 0.034), 11)
+                    let paragraph = NSMutableParagraphStyle()
+                    paragraph.alignment = mode == .replace ? .center : .left
+                    let attributes: [NSAttributedString.Key: Any] = [
+                        .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
+                        .foregroundColor: UIColor.white,
+                        .paragraphStyle: paragraph
+                    ]
+                    NSAttributedString(string: text, attributes: attributes).draw(
+                        with: overlayRect.insetBy(
+                            dx: max(canvas.width * 0.009, 6),
+                            dy: max(canvas.height * 0.005, 5)
+                        ),
+                        options: [.usesLineFragmentOrigin, .usesFontLeading, .truncatesLastVisibleLine],
+                        context: nil
+                    )
+                }
             }
 
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let baseName = filename.isEmpty ? "image-translation" : (filename as NSString).deletingPathExtension
-            let outputURL = directory.appendingPathComponent("\(baseName)-translated.png")
-            if FileManager.default.fileExists(atPath: outputURL.path) {
-                try FileManager.default.removeItem(at: outputURL)
-            }
-
-            guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, UTType.png.identifier as CFString, 1, nil) else {
-                throw VisionOCRServiceError.imageDecodeFailed
-            }
-
-            CGImageDestinationAddImage(destination, outputImage, nil)
-            guard CGImageDestinationFinalize(destination) else {
-                throw VisionOCRServiceError.imageDecodeFailed
-            }
-
-            return outputURL
+            let stagingURL = directory.appendingPathComponent(
+                ".\(baseName)-translated-\(renderID.uuidString).staging.png"
+            )
+            try outputData.write(to: stagingURL, options: .atomic)
+            return stagingURL
         }.value
+    }
+
+    nonisolated private static func publishImageTranslationOverlay(
+        stagedURL: URL,
+        filename: String,
+        directory: URL
+    ) throws -> URL {
+        let baseName = filename.isEmpty ? "image-translation" : (filename as NSString).deletingPathExtension
+        let outputURL = directory.appendingPathComponent("\(baseName)-translated.png")
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: outputURL.path) {
+            _ = try fileManager.replaceItemAt(outputURL, withItemAt: stagedURL)
+        } else {
+            try fileManager.moveItem(at: stagedURL, to: outputURL)
+        }
+        return outputURL
+    }
+
+    nonisolated private static func removeImageTranslationStagingFile(_ url: URL?) {
+        guard let url, FileManager.default.fileExists(atPath: url.path) else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    nonisolated private static func imageTranslationPixelRect(
+        _ box: NormalizedImageRect,
+        canvas: CGRect
+    ) -> CGRect {
+        CGRect(
+            x: canvas.width * box.x,
+            y: canvas.height * box.y,
+            width: canvas.width * box.width,
+            height: canvas.height * box.height
+        )
+        .insetBy(dx: -max(canvas.width * 0.004, 3), dy: -max(canvas.height * 0.004, 3))
+        .intersection(canvas)
+    }
+
+    nonisolated private static func imageTranslationOverlayRect(
+        sourceRect: CGRect,
+        canvas: CGRect,
+        mode: ImageTranslationOverlayMode
+    ) -> CGRect {
+        guard mode == .adjacent else { return sourceRect }
+
+        let gap = max(canvas.width * 0.008, 4)
+        let bubbleWidth = min(
+            max(sourceRect.width * 1.45, canvas.width * 0.16),
+            canvas.width * 0.46
+        )
+        let bubbleHeight = min(
+            max(sourceRect.height * 1.65, canvas.height * 0.075),
+            canvas.height * 0.32
+        )
+        let rightX = sourceRect.maxX + gap
+        let x = rightX + bubbleWidth <= canvas.maxX
+            ? rightX
+            : max(canvas.minX, sourceRect.minX - gap - bubbleWidth)
+        let y = min(
+            max(canvas.minY, sourceRect.midY - bubbleHeight / 2),
+            canvas.maxY - bubbleHeight
+        )
+        return CGRect(x: x, y: y, width: bubbleWidth, height: bubbleHeight)
+            .intersection(canvas)
     }
 
     private func currentSessionRecord() -> TranslationSessionRecord {

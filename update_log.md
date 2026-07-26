@@ -8,10 +8,28 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v1.98 候选：图片预览与导出一致性
+日期：2026-07-26
+
+状态：Agent X 候选实现中，分支 `codeb/v1.98-image-export-consistency`，基于 v1.97 maintenance merge `5566b2bff8f7f1afef4a98a1fdbe96da0c8813be`。正式版本仍为 `1.97`，等待 exact-SHA 云端 full 与独立结果包复审。
+
+核心变更：
+
+- 普通图片导出从默认 Core Graphics 坐标改为顶左原点的 `UIGraphicsImageRenderer`，直接消费 Vision OCR 的 normalized top-left bbox，并由 `UIImage` 绘制处理源图方向，避免预览在顶部而导出落到垂直镜像位置。
+- 导出 renderer 显式消费 `ImageTranslationOverlayMode`：`旁贴` 在原文字块侧边生成译文/原文气泡，`覆盖` 才在原 bbox 上绘制译文，不再出现预览切模式但导出固定覆盖。
+- 已完成图片切换模式时立即清除旧 export URL 并异步重绘；后台 renderer 每次只写 render ID 独占的 staging PNG，独立 render ID、图片 task ID 与 mode 三重核对通过后才原子发布稳定 export，避免已拒收的旧 detached render 反向覆盖新文件。新任务、清空、取消都会取消并失效旧 render，过期 staging 会清理。
+- 图片 OCR/翻译运行中禁用模式选择；最终 render 后再次核对图片 task ID。若程序化模式切换与最终 render 交错，完成翻译后按当前模式重绘。
+
+验证与遗留：
+
+- `scripts/test-v187-ui-interaction-contract.py` 新增顶左坐标、mode renderer、模式重绘和 stale export 契约，当前 12/12 通过；两份修改 Swift 源码通过完整 Xcode toolchain `swiftc -frontend -parse`，`git diff --check` 通过。
+- 本轮没有修改 Vision OCR 识别/聚类、翻译 prompt、模型或漫画探针，不声称 OCR/翻译质量数字提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+- 未跑本机 build / 探针，按规则交给云端验证。
+
 ## v1.97：Koharu 真实路径加固
 日期：2026-07-26
 
-状态：Agent X 已完成核心候选独立复审并进入版本收口，工程 `MARKETING_VERSION=1.97`。分支 `codeb/v1.97-koharu-real-path-hardening` 基于 `smalldata_test` merge `b4ff502b7b666ad761577ee916a609fc41335cba`；核心候选 SHA `d6d6fcc82aafbee7ab49aa083be4da8bf8e23149` 的 task-scoped full 已通过。
+状态：Agent X 已完成核心候选独立复审与版本收口，工程 `MARKETING_VERSION=1.97`。核心 PR #50 已合入 `smalldata_test` merge `326a160596edc36051d8e345cb3311ed6715cb73`；CI 版本身份 maintenance PR #51 已合入 merge `5566b2bff8f7f1afef4a98a1fdbe96da0c8813be`，均未触碰 `main`。
 
 核心变更：
 

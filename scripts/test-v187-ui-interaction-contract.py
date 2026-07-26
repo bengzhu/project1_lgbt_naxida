@@ -261,6 +261,83 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertNotIn("imageTranslationData", running_case.group("body"))
         self.assertNotIn("imageTranslationBlocks", running_case.group("body"))
 
+    def test_image_export_uses_top_left_coordinates_and_selected_mode(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+
+        renderer = re.search(
+            r"nonisolated private static func renderImageTranslationOverlay\((?P<body>.*?)"
+            r"\n    nonisolated private static func publishImageTranslationOverlay",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(renderer, "image export renderer is missing")
+        body = renderer.group("body")
+        self.assertIn("mode: ImageTranslationOverlayMode", body)
+        self.assertIn("renderID: UUID", body)
+        self.assertIn("UIGraphicsImageRenderer", body)
+        self.assertIn("y: canvas.height * box.y", store)
+        self.assertIn("guard mode == .adjacent else { return sourceRect }", store)
+        self.assertIn("mode == .adjacent", body)
+        self.assertIn("renderID.uuidString", body)
+        self.assertIn(".staging.png", body)
+        self.assertNotIn("CGImageDestinationCreateWithURL", body)
+        self.assertNotIn('appendingPathComponent("\\(baseName)-translated.png")', body)
+
+    def test_image_overlay_mode_rerenders_without_stale_export(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+        image = read("AITRANS/Views/ImageTranslationViews.swift")
+
+        setter = re.search(
+            r"func setImageOverlayMode\(_ mode: ImageTranslationOverlayMode\) "
+            r"\{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        rerender = re.search(
+            r"private func rerenderImageTranslationExport\(\) \{(?P<body>.*?)"
+            r"\n    \}\n\n    func retryImageTranslation",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(setter, "overlay mode setter is missing")
+        self.assertIsNotNone(rerender, "overlay export rerender path is missing")
+        self.assertIn("rerenderImageTranslationExport()", setter.group("body"))
+        self.assertIn("imageTranslationExportURL = nil", rerender.group("body"))
+        self.assertIn("imageOverlayRenderID == renderID", rerender.group("body"))
+        self.assertIn("imageTranslationTaskID == contentTaskID", rerender.group("body"))
+        self.assertIn("imageOverlayMode == mode", rerender.group("body"))
+        self.assertLess(
+            rerender.group("body").index("imageOverlayRenderID == renderID"),
+            rerender.group("body").index("publishImageTranslationOverlay("),
+            "stable export must only be published after stale-render identity checks",
+        )
+        self.assertIn("removeImageTranslationStagingFile(stagedURL)", rerender.group("body"))
+        publisher = re.search(
+            r"nonisolated private static func publishImageTranslationOverlay\((?P<body>.*?)"
+            r"\n    \}\n\n    nonisolated private static func removeImageTranslationStagingFile",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(publisher, "identity-gated export publisher is missing")
+        self.assertIn('appendingPathComponent("\\(baseName)-translated.png")', publisher.group("body"))
+        self.assertIn("replaceItemAt(outputURL, withItemAt: stagedURL)", publisher.group("body"))
+        initial_pipeline = re.search(
+            r"private func runImageTranslationPipeline\((?P<body>.*?)"
+            r"\n    private func finishImageTranslation",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(initial_pipeline, "initial image pipeline is missing")
+        self.assertIn(
+            "defer { Self.removeImageTranslationStagingFile(stagedExportURL) }",
+            initial_pipeline.group("body"),
+            "failed initial publication must not leave a staging PNG",
+        )
+        self.assertIn(
+            ".disabled(store.imageTranslationData == nil || isRunning)",
+            image,
+        )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
