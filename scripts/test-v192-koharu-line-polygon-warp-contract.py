@@ -29,6 +29,15 @@ class KoharuLinePolygonWarpContractTests(unittest.TestCase):
         self.assertIn("let convex = crossProducts.allSatisfy", service)
         self.assertIn('ocrPath: "bboxFallbackAfterEmptyLinePolygonWarpOCR"', service)
         self.assertIn('bboxFallbackReason: "linePolygonWarpOCRReturnedEmpty"', service)
+        self.assertIn("for (index, polygon) in linePolygons.enumerated()", service)
+        self.assertIn("failureReasons.append(error.reason)", service)
+        self.assertIn("linePolygonWarpLineExecutionFailed", service)
+        self.assertIn("if warpedLineCount == 0, !failureReasons.isEmpty", service)
+        self.assertIn("linePolygonWarpAllLinesFailed", service)
+        self.assertIn('failureReasons.append("linePolygonWarpOCRReturnedEmpty:\\(index)")', service)
+        self.assertIn("lineFailureReasons: failureReasons", service)
+        self.assertIn("linePolygonWarpFailureReasons: warpFailureReasons", service)
+        self.assertIn('"linePolygonPerspectiveWarpPartial"', service)
 
     def test_store_keeps_warp_shadow_only_and_blocks_failed_warp(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")
@@ -36,8 +45,21 @@ class KoharuLinePolygonWarpContractTests(unittest.TestCase):
         self.assertIn('orientationUnsupportedReasons.append("linePolygonWarpFailed")', store)
         self.assertIn("deskewExecuted: linePolygonWarpOutputSelected", store)
         self.assertIn('variantName: linePolygonWarpOutputSelected', store)
-        self.assertIn('crop.ocrPath == "linePolygonPerspectiveWarp"', store)
+        self.assertIn(
+            '["linePolygonPerspectiveWarp", "linePolygonPerspectiveWarpPartial"].contains(crop.ocrPath)',
+            store,
+        )
         self.assertIn('orientationUnsupportedReasons.append("linePolygonWarpOutputNotSelected")', store)
+        self.assertIn('orientationUnsupportedReasons.append("linePolygonWarpPartialFailure")', store)
+        self.assertIn('!blockers.contains("linePolygonWarpPartialFailure")', store)
+        self.assertIn('crop.ocrPath == "linePolygonPerspectiveWarpPartial"', store)
+        self.assertIn('"externalArtifact.linePolygonWarpPartial"', store)
+        self.assertIn("warpError?.lineFailureReasons.isEmpty == false", store)
+        self.assertIn(
+            "let linePolygonWarpFailureReasons = Array(Set(crop.linePolygonWarpFailureReasons)).sorted()",
+            store,
+        )
+        self.assertNotIn("Set(attempts.flatMap(\\.linePolygonWarpFailureReasons))", store)
         self.assertIn('!blockers.contains("linePolygonWarpOutputNotSelected")', store)
         self.assertIn("if lhsText.isEmpty != rhsText.isEmpty", store)
         self.assertIn("if lhs.linePolygonWarpExecuted != rhs.linePolygonWarpExecuted", store)
@@ -47,6 +69,7 @@ class KoharuLinePolygonWarpContractTests(unittest.TestCase):
         )
         self.assertIn('"wouldPromoteByExistingGateReportOnly"', store)
         self.assertNotIn('unsupportedReasons.append("linePolygonWarpUnsupported")', store)
+        self.assertNotIn("line-polygon warp remain unsupported", store)
 
     def test_validator_reports_only_four_point_warp_as_supported(self) -> None:
         result = subprocess.run(

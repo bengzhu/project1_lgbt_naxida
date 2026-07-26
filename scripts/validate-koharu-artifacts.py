@@ -7,9 +7,12 @@ import argparse
 import hashlib
 import json
 import math
+import os
+import re
 import shlex
 import shutil
 import struct
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -104,6 +107,79 @@ CANONICAL_ARTIFACT_FILE_LIST = [
     "1.bubbles.json",
     "1.segment_mask.json",
 ]
+GITHUB_REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+GIT_COMMIT_SHA_PATTERN = re.compile(r"^[0-9a-fA-F]{40}$")
+
+
+def git_output(*args: str) -> str | None:
+    result = subprocess.run(
+        ["git", *args],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    value = result.stdout.strip()
+    return value if result.returncode == 0 and value else None
+
+
+def github_repo_from_remote(remote: str) -> str | None:
+    normalized = remote.strip()
+    match = re.match(
+        r"^(?:git@github\.com:|ssh://git@github\.com/|https?://github\.com/)([^/]+/[^/]+?)(?:\.git)?$",
+        normalized,
+    )
+    if not match:
+        return None
+    repo = match.group(1)
+    return repo if GITHUB_REPOSITORY_PATTERN.fullmatch(repo) else None
+
+
+def resolve_handoff_target(
+    repo: str | None,
+    workflow_ref: str | None,
+    expected_commit_sha: str | None,
+) -> dict[str, str]:
+    resolved_repo = repo
+    repo_source = "argument"
+    if not resolved_repo:
+        resolved_repo = os.environ.get("GITHUB_REPOSITORY")
+        repo_source = "GITHUB_REPOSITORY"
+    if not resolved_repo:
+        resolved_repo = github_repo_from_remote(git_output("config", "--get", "remote.origin.url") or "")
+        repo_source = "gitRemoteOrigin"
+    if not resolved_repo or not GITHUB_REPOSITORY_PATTERN.fullmatch(resolved_repo):
+        raise ValueError("Unable to resolve a valid GitHub owner/repo; pass --repo explicitly.")
+
+    resolved_ref = workflow_ref
+    ref_source = "argument"
+    if not resolved_ref:
+        resolved_ref = os.environ.get("GITHUB_REF_NAME")
+        ref_source = "GITHUB_REF_NAME"
+    if not resolved_ref:
+        resolved_ref = git_output("branch", "--show-current")
+        ref_source = "gitCurrentBranch"
+    if not resolved_ref or resolved_ref == "HEAD" or any(char.isspace() for char in resolved_ref):
+        raise ValueError("Unable to resolve a valid workflow ref; pass --workflow-ref explicitly.")
+
+    resolved_sha = expected_commit_sha
+    sha_source = "argument"
+    if not resolved_sha:
+        resolved_sha = os.environ.get("GITHUB_SHA")
+        sha_source = "GITHUB_SHA"
+    if not resolved_sha:
+        resolved_sha = git_output("rev-parse", "HEAD")
+        sha_source = "gitHead"
+    if not resolved_sha or not GIT_COMMIT_SHA_PATTERN.fullmatch(resolved_sha):
+        raise ValueError("Unable to resolve a full 40-character commit SHA; pass --expected-commit-sha explicitly.")
+
+    return {
+        "repo": resolved_repo,
+        "repoSource": repo_source,
+        "workflowRef": resolved_ref,
+        "workflowRefSource": ref_source,
+        "expectedCommitSha": resolved_sha.lower(),
+        "expectedCommitShaSource": sha_source,
+    }
 
 
 def count_strings(values: list[str]) -> dict[str, int]:
@@ -321,12 +397,15 @@ def package_release_archive(
 def handoff_packet(
     summary: dict[str, Any],
     *,
-    repo: str,
+    target_identity: dict[str, str],
     probe_mode: str,
     release_tag: str,
     release_asset: str | None,
     archive_identity: dict[str, Any] | None,
 ) -> dict[str, Any]:
+    repo = target_identity["repo"]
+    workflow_ref = target_identity["workflowRef"]
+    expected_commit_sha = target_identity["expectedCommitSha"]
     archive_sha = (archive_identity or {}).get("sha256")
     archive_asset = release_asset or Path(str((archive_identity or {}).get("path") or "koharu-artifacts.zip")).name
     archive_path = str((archive_identity or {}).get("path") or "<archive-path>")
@@ -394,7 +473,9 @@ def handoff_packet(
         "--repo",
         repo,
         "--ref",
-        "smalldata_test",
+        workflow_ref,
+        "-f",
+        f"expected_commit_sha={expected_commit_sha}",
         "-f",
         f"probe_mode={probe_mode}",
         "-f",
@@ -439,6 +520,7 @@ def handoff_packet(
         and archive_inspection_passed
     )
     return {
+        "targetIdentity": target_identity,
         "handoffReadyForReleaseUpload": handoff_ready,
         "handoffReadyForWorkflowDispatch": handoff_ready,
         "validationVerdict": summary.get("verdict"),
@@ -462,6 +544,7 @@ def handoff_packet(
         "releaseArchiveInspectionVerdict": archive_inspection.get("verdict"),
         "inspectReleaseArchiveCommand": shlex.join(inspect_args),
         "workflowDispatchInputs": {
+            "expected_commit_sha": expected_commit_sha,
             "probe_mode": probe_mode,
             "koharu_artifact_release_tag": release_tag,
             "koharu_artifact_asset": archive_asset,
@@ -477,6 +560,9 @@ def handoff_packet(
             "clobberByDefault": False,
         },
         "expectedCIManifestEcho": {
+            "repository": repo,
+            "branch": workflow_ref,
+            "commitSha": expected_commit_sha,
             "koharuArtifactReleaseTag": release_tag,
             "koharuArtifactAsset": archive_asset,
             "koharuArtifactSha256": archive_sha or "<archive-sha256>",
@@ -496,7 +582,8 @@ def handoff_packet(
         "expectedCloudIdentityRows": expected_cloud_identity_rows,
         "expectedCIManifestAssertions": [
             expected_assertion("ci-artifact-manifest.json", "workflowName", "==", "AITRANS CI Results"),
-            expected_assertion("ci-artifact-manifest.json", "branch", "==", "smalldata_test"),
+            expected_assertion("ci-artifact-manifest.json", "branch", "==", workflow_ref),
+            expected_assertion("ci-artifact-manifest.json", "commitSha", "==", expected_commit_sha),
             expected_assertion("ci-artifact-manifest.json", "repository", "==", repo),
             expected_assertion("ci-artifact-manifest.json", "eventName", "==", "workflow_dispatch"),
             expected_assertion("ci-artifact-manifest.json", "probeMode", "==", probe_mode),
@@ -575,10 +662,11 @@ def handoff_packet(
             "convergenceExternalTextBoxOrientation",
         ],
         "staleRunRejectionAssertions": [
-            expected_assertion("ci-artifact-manifest.json", "commitSha", "==", "<reviewed-head-sha>", source="Agent C reviewed HEAD"),
+            expected_assertion("ci-artifact-manifest.json", "repository", "==", repo),
+            expected_assertion("ci-artifact-manifest.json", "branch", "==", workflow_ref),
+            expected_assertion("ci-artifact-manifest.json", "commitSha", "==", expected_commit_sha, source="handoff target identity"),
             expected_assertion("ci-artifact-manifest.json", "runId", "==", run_id_placeholder, source="selected GitHub run"),
             expected_assertion("ci-artifact-manifest.json", "runAttempt", "==", "<downloaded-run-attempt>", source="downloaded artifact metadata"),
-            expected_assertion("ci-artifact-manifest.json", "artifactName", "contains", "smalldata_test"),
             expected_assertion("ci-artifact-manifest.json", "probeMode", "!=", "skip"),
         ],
         "ghReleaseUploadCommand": shlex.join(release_upload_args),
@@ -590,7 +678,7 @@ def handoff_packet(
             "--workflow",
             "ci-results.yml",
             "--branch",
-            "smalldata_test",
+            workflow_ref,
             "--limit",
             "1",
             "--repo",
@@ -616,8 +704,9 @@ def handoff_packet(
             ],
             "manifestIdentityChecks": {
                 "workflowName": "AITRANS CI Results",
-                "branch": "smalldata_test",
-                "commitSha": "must match the reviewed smalldata_test HEAD or workflow run headSha",
+                "repository": repo,
+                "branch": workflow_ref,
+                "commitSha": expected_commit_sha,
                 "runId": run_id_placeholder,
                 "runAttempt": "must match the downloaded run attempt",
                 "probeMode": probe_mode,
@@ -650,14 +739,17 @@ def handoff_packet(
                 "orientation partial or unsupported blocks must not be marked passed",
             ],
             "staleArtifactRejectionRules": [
-                "Discard the result if manifest.commitSha does not match the reviewed commit.",
+                f"Discard the result if manifest.repository is not {repo}.",
+                f"Discard the result if manifest.branch is not {workflow_ref}.",
+                f"Discard the result if manifest.commitSha is not {expected_commit_sha}.",
                 "Discard the result if manifest.runId or runAttempt differs from the downloaded run.",
-                "Discard older runs after any new push to smalldata_test.",
+                f"Discard older runs after any new push to {workflow_ref}.",
                 "Do not accept probe_mode=skip for Koharu artifact handoff.",
                 "Do not accept local releaseArchive.inspection as cloud App runtime proof.",
             ],
         },
         "notes": [
+            "targetIdentity is the single source for repository, workflow ref, and exact commit SHA checks.",
             "ghReleaseUploadCommand requires the named GitHub Release tag to already exist.",
             "Do not add --clobber unless a human intentionally wants to replace an existing asset.",
             "CI will reject archives that do not contain exactly one directory with the four canonical JSON files.",
@@ -1468,7 +1560,9 @@ def main() -> int:
     parser.add_argument("--emit-handoff-packet", action="store_true", help="Print Release upload and workflow_dispatch handoff guidance.")
     parser.add_argument("--package-release-archive", help="Write a zip archive with exactly one directory containing the four canonical artifact JSON files.")
     parser.add_argument("--inspect-release-archive", help="Inspect a zip/tar Release archive with the same unique four-file directory contract used by CI.")
-    parser.add_argument("--repo", default="Altman-sam114/x113451", help="GitHub repository used in emitted gh handoff commands.")
+    parser.add_argument("--repo", help="GitHub owner/repo used in handoff commands; defaults to GITHUB_REPOSITORY or origin.")
+    parser.add_argument("--workflow-ref", help="Git ref dispatched and reviewed; defaults to GITHUB_REF_NAME or the current branch.")
+    parser.add_argument("--expected-commit-sha", help="Exact 40-character commit SHA expected in the CI manifest; defaults to GITHUB_SHA or HEAD.")
     parser.add_argument("--probe-mode", default="ci-fast", choices=["ci-fast", "full"], help="Probe mode to include in emitted workflow_dispatch inputs.")
     parser.add_argument("--release-tag", default="<release-tag>", help="Release tag to include in the emitted workflow_dispatch inputs.")
     parser.add_argument("--release-asset", help="Release asset name to include in the emitted workflow_dispatch inputs.")
@@ -1582,11 +1676,19 @@ def main() -> int:
 
     output = summary
     if args.emit_handoff_packet or archive_identity is not None:
+        try:
+            target_identity = resolve_handoff_target(
+                args.repo,
+                args.workflow_ref,
+                args.expected_commit_sha,
+            )
+        except ValueError as error:
+            parser.error(str(error))
         output = {
             "validation": summary,
             "handoffPacket": handoff_packet(
                 summary,
-                repo=args.repo,
+                target_identity=target_identity,
                 probe_mode=args.probe_mode,
                 release_tag=args.release_tag,
                 release_asset=args.release_asset,

@@ -98,13 +98,17 @@ python3 scripts/validate-koharu-artifacts.py \
   --root test/koharu_artifacts \
   --package-release-archive /tmp/koharu-artifacts.zip \
   --emit-handoff-packet \
-  --repo Altman-sam114/x113451 \
+  --repo bengzhu/project1_lgbt_naxida \
+  --workflow-ref codeb/v1.97-koharu-real-path-hardening \
+  --expected-commit-sha <candidate-full-sha> \
   --probe-mode ci-fast \
   --release-tag <release-tag> \
   --release-asset koharu-artifacts.zip
 ```
 
 输出的 `handoffPacket.releaseArchive.sha256` 就是 GitHub Release asset 的 `koharu_artifact_sha256` 输入；`handoffPacket.releaseArchive.inspection` 是上传前 archive proof；`handoffPacket.inspectReleaseArchiveCommand` 可复跑同口径检查；`handoffPacket.expectedCIManifestEcho` 和 `expectedCIManifestIdentityEcho` 列出云端 manifest 应回显的 Release tag、asset、SHA、identity / orientation 摘要和 reconciliation match。`handoffPacket.ghReleaseUploadCommand` 是上传到已有 Release tag 的命令，`handoffPacket.ghWorkflowDispatchCommand` 是上传 asset 后的手动 CI 触发模板，`handoffPacket.ghRunListCommand` 用于触发后找最新 `AITRANS CI Results` run；拿到 run id 后，用 `handoffPacket.ghRunWatchCommand` 等待结论，再用 `handoffPacket.ghRunDownloadCommand` 下载未加密结果包。`handoffPacket.ciResultReview` 和各 `expected*Assertions` 是 Agent C 的机器可读核对清单，至少要求当前 run 的 `ci-artifact-manifest.json`、`junit.xml`、`xcodebuild.log`、`ci-failure-summary.md`，探针运行时还要核对 `output/probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt` 和核心 PNG，并拒收 commit / runId / runAttempt 不匹配或 `probe_mode=skip` 的结果。若同名 asset 已存在，不要默认覆盖；只有人工确认要替换时才给 `gh release upload` 增加 `--clobber`。Agent C 仍必须以云端结果包里的 App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates 为最终验收证据，不能只凭本地包生成成功或本地 inspection proof 放行。
+
+v1.97 候选起 handoff packet 包含单一 `targetIdentity`。`--repo`、`--workflow-ref`、`--expected-commit-sha` 可显式指定；省略时依次从 GitHub Actions 环境与当前 `origin` / branch / HEAD 解析。生成的 upload、dispatch、run list、manifest assertions、review 清单和 stale-run rejection 必须全部复用该 identity，不能把候选 artifact dispatch 到固定 `smalldata_test` 或其他仓库；workflow 在开始验证前核对 `expected_commit_sha == GITHUB_SHA`，ref 已移动时直接失败。
 
 ## 从 Koharu 导出到 AITRANS contract
 

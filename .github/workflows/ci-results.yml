@@ -41,6 +41,10 @@ on:
           - skip
           - ci-fast
           - full
+      expected_commit_sha:
+        description: 'Optional exact SHA guard for workflow_dispatch; fails before validation when ref moved'
+        required: false
+        type: string
       koharu_artifact_release_tag:
         description: 'Optional Release tag containing a real Koharu artifact archive'
         required: false
@@ -108,6 +112,18 @@ jobs:
           branch_slug="$(echo "$branch" | tr '/[:space:]' '-' | tr -cd '[:alnum:]._-')"
           commit_sha="$(git rev-parse HEAD)"
           short_sha="${commit_sha:0:12}"
+          expected_commit_sha="${{ github.event.inputs.expected_commit_sha }}"
+          if [ -n "$expected_commit_sha" ]; then
+            expected_commit_sha="$(echo "$expected_commit_sha" | tr '[:upper:]' '[:lower:]')"
+            if [[ ! "$expected_commit_sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Invalid expected_commit_sha=$expected_commit_sha" >&2
+              exit 1
+            fi
+            if [ "$expected_commit_sha" != "$commit_sha" ]; then
+              echo "workflow_dispatch SHA mismatch: expected=$expected_commit_sha actual=$commit_sha ref=$branch" >&2
+              exit 1
+            fi
+          fi
           requested_validation_profile="${{ github.event.inputs.validation_profile }}"
           if [ -z "$requested_validation_profile" ]; then
             requested_validation_profile="auto"
@@ -630,6 +646,7 @@ jobs:
             fi
             if [ "${{ steps.ci_scope.outputs.koharu_contract_required }}" = "true" ]; then
               python3 -B scripts/test-v192-koharu-line-polygon-warp-contract.py
+              python3 -B scripts/test-v197-koharu-handoff-target-contract.py
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
             python3 - <<'PY'
           import json
@@ -662,6 +679,9 @@ jobs:
               --package-release-archive "$RUNNER_TEMP/koharu-fixture-package.zip" \
               --allow-fixture-package \
               --emit-handoff-packet \
+              --repo fixture-owner/fixture-repo \
+              --workflow-ref codeb/fixture-target \
+              --expected-commit-sha 0123456789abcdef0123456789abcdef01234567 \
               --release-tag "fixture tag" \
               --release-asset "koharu fixture package.zip" \
               > "$RESULT_ROOT/koharu-package-fixture-smoke.json"
@@ -700,12 +720,17 @@ jobs:
               raise SystemExit(f"handoff packet missing inspect command: {packet}")
           if not (packet.get("expectedCIManifestEcho") or {}).get("koharuArtifactIdentityReconciliationMatch.matchVerdict"):
               raise SystemExit(f"handoff packet missing expected CI manifest echo: {packet}")
-          if "gh release upload 'fixture tag'" not in upload_command or "--repo Altman-sam114/x113451" not in upload_command:
+          if "gh release upload 'fixture tag'" not in upload_command or "--repo fixture-owner/fixture-repo" not in upload_command:
               raise SystemExit(f"release upload command missing repo or quoted tag: {upload_command}")
           if "'koharu_artifact_release_tag=fixture tag'" not in dispatch_command or "'koharu_artifact_asset=koharu fixture package.zip'" not in dispatch_command:
               raise SystemExit(f"workflow dispatch command did not quote spaced inputs: {dispatch_command}")
-          if "--repo Altman-sam114/x113451" not in dispatch_command or "--repo Altman-sam114/x113451" not in run_list_command:
+          if "--repo fixture-owner/fixture-repo" not in dispatch_command or "--repo fixture-owner/fixture-repo" not in run_list_command:
               raise SystemExit(f"handoff commands missing repo: dispatch={dispatch_command} run_list={run_list_command}")
+          if "--ref codeb/fixture-target" not in dispatch_command or "--branch codeb/fixture-target" not in run_list_command:
+              raise SystemExit(f"handoff commands missing target ref: dispatch={dispatch_command} run_list={run_list_command}")
+          target_identity = packet.get("targetIdentity") or {}
+          if target_identity.get("repo") != "fixture-owner/fixture-repo" or target_identity.get("workflowRef") != "codeb/fixture-target" or target_identity.get("expectedCommitSha") != "0123456789abcdef0123456789abcdef01234567":
+              raise SystemExit(f"handoff packet target identity mismatch: {target_identity}")
           if "<run-id>" not in run_watch_command or "--exit-status" not in run_watch_command:
               raise SystemExit(f"handoff packet missing run watch command: {run_watch_command}")
           if "<run-id>" not in run_download_command or "/private/tmp/aitrans-koharu-handoff-<run-id>" not in run_download_command:
@@ -719,7 +744,7 @@ jobs:
               raise SystemExit(f"handoff packet missing cloud identity rows: {packet}")
           manifest_assertions = packet.get("expectedCIManifestAssertions") or []
           manifest_paths = {assertion.get("jsonPath") for assertion in manifest_assertions}
-          for expected_path in ["workflowName", "repository", "eventName", "probeMode", "koharuArtifactInjected", "koharuArtifactValidation.verdict", "xcodeBuildRequired"]:
+          for expected_path in ["workflowName", "repository", "branch", "commitSha", "eventName", "probeMode", "koharuArtifactInjected", "koharuArtifactValidation.verdict", "xcodeBuildRequired"]:
               if expected_path not in manifest_paths:
                   raise SystemExit(f"handoff packet missing manifest assertion {expected_path}: {manifest_assertions}")
           app_runtime_assertions = packet.get("expectedAppRuntimeAssertions") or []
@@ -744,11 +769,13 @@ jobs:
               if expected_probe_file not in probe_files:
                   raise SystemExit(f"CI result review missing probe output file {expected_probe_file}: {ci_result_review}")
           identity_checks = ci_result_review.get("manifestIdentityChecks") or {}
-          for expected_key in ["workflowName", "branch", "commitSha", "runId", "runAttempt", "probeMode", "koharuArtifactReleaseTag", "koharuArtifactAsset", "koharuArtifactSha256"]:
+          for expected_key in ["workflowName", "repository", "branch", "commitSha", "runId", "runAttempt", "probeMode", "koharuArtifactReleaseTag", "koharuArtifactAsset", "koharuArtifactSha256"]:
               if expected_key not in identity_checks:
                   raise SystemExit(f"CI result review missing manifest identity key {expected_key}: {identity_checks}")
           if identity_checks.get("probeMode") != "ci-fast" or identity_checks.get("koharuArtifactReleaseTag") != "fixture tag":
               raise SystemExit(f"CI result review manifest identity mismatch: {identity_checks}")
+          if identity_checks.get("repository") != "fixture-owner/fixture-repo" or identity_checks.get("branch") != "codeb/fixture-target" or identity_checks.get("commitSha") != "0123456789abcdef0123456789abcdef01234567":
+              raise SystemExit(f"CI result review target identity mismatch: {identity_checks}")
           required_koharu_checks = ci_result_review.get("requiredKoharuChecks") or []
           if not any("ocrSucceededCount > 0" in check for check in required_koharu_checks):
               raise SystemExit(f"CI result review missing shadow OCR success check: {ci_result_review}")

@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v1.97：Koharu 真实路径加固
+日期：2026-07-26
+
+状态：Agent X 已完成核心候选独立复审并进入版本收口，工程 `MARKETING_VERSION=1.97`。分支 `codeb/v1.97-koharu-real-path-hardening` 基于 `smalldata_test` merge `b4ff502b7b666ad761577ee916a609fc41335cba`；核心候选 SHA `d6d6fcc82aafbee7ab49aa083be4da8bf8e23149` 的 task-scoped full 已通过。
+
+核心变更：
+
+- external TextBox 的多条 `linePolygons` 改为逐行隔离 warp / OCR 失败。单行异常不再丢弃同一 TextBox 内已成功的行；只有全部行失败才整块回退 bbox OCR。
+- 部分成功使用 `linePolygonPerspectiveWarpPartial` / `externalArtifact.linePolygonWarpPartial`，保留逐行失败原因并加入 `linePolygonWarpPartialFailure`。该结果可进入 shadow OCR 对照，但不得通过既有 promotion gate，orientation convergence 必须保持 partial / blocked。
+- Koharu handoff packet 不再默认指向旧仓库。repo、workflow ref 和 expected commit SHA 由显式参数或 GitHub / 当前 git 环境解析为同一 `targetIdentity`，并统一驱动 upload、dispatch、run list、manifest assertions、review 清单和 stale-run rejection；workflow 入口在任何验证前硬核对 expected SHA，ref 已移动时立即失败。
+- CI fixture 改为显式假 repo/ref/SHA，新增 v1.97 独立契约，避免再次把本机默认或错误远端锁成“测试通过”。
+
+验证与遗留：
+
+- 本地轻量验证包括 v1.92 line polygon contract、v1.97 handoff target contract、v1.94 CI tier contract、validator fixture 矩阵、JSON/YAML parse、Swift parse 和 `git diff --check`。
+- 核心候选云端 full run `30194847103` attempt 1 成功；artifact `aitrans-ci-v1.97-codeb-v1.97-koharu-real-path-hardening--d6d6fcc82aaf-run30194847103-attempt1` 的 version、branch、commit、run、workflow 和 changed-files identity 与候选 HEAD 一致。JUnit 10/10、Xcode `.xcresult` build status succeeded、0 error、0 warning，commit status `AITRANS CI/full-validation=success`。
+- 当前仓库仍无真实 `test/koharu_artifacts/` 或 Release 四件套，根 `output/` 仍是 `manifestMissing` 基线。因此本轮不声称 OCR 数字、翻译通过率或覆盖质量提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+- 未跑本机 build / 探针，按规则交给云端验证。核心候选云端 `probe_mode=skip`，没有真实四件套注入；真实四件套到位后，使用 packet 的 exact repo/ref/SHA 手动 dispatch `ci-fast`，再核对 App runtime identity、partial orientation blocker、external shadow OCR coverage 和 reconciliation。
+
 ## v1.96：图片翻译目标语言一致性
 日期：2026-07-26
 
