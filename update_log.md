@@ -11,7 +11,7 @@
 ## v1.98：图片预览与导出一致性
 日期：2026-07-26
 
-状态：Agent X 已完成核心候选独立复审与版本收口，工程 `MARKETING_VERSION=1.98`。分支 `codeb/v1.98-image-export-consistency` 基于 v1.97 maintenance merge `5566b2bff8f7f1afef4a98a1fdbe96da0c8813be`；核心候选 SHA `87de0cd9503146f08c149a77ef99b4570813b6f4` 与版本收口 SHA `3dbb5d5bc2b683dc0505c86a9589c6fad960116b` 的 task-scoped full 均已通过，等待 PR fast follow-up 后合入 `smalldata_test`。
+状态：Agent X 已完成核心候选独立复审与版本收口，工程 `MARKETING_VERSION=1.98`。PR #52 已合入 `smalldata_test`，merge SHA `28836f2d935828d30f1f187cf6706c387b00cb41`；远端 `codeb/v1.98-image-export-consistency` 已删除，未触碰 `main`。核心候选 SHA `87de0cd9503146f08c149a77ef99b4570813b6f4` 与版本收口 SHA `3dbb5d5bc2b683dc0505c86a9589c6fad960116b` 的 task-scoped full 均已通过。
 
 核心变更：
 
@@ -25,6 +25,7 @@
 - `scripts/test-v187-ui-interaction-contract.py` 新增顶左坐标、mode renderer、模式重绘、先验身份后发布和 staging 清理契约，当前 12/12 通过；两份修改 Swift 源码通过完整 Xcode toolchain `swiftc -frontend -parse`，`git diff --check` 通过。
 - 核心候选云端 full run `30196905125` attempt 1 成功；artifact `aitrans-ci-v1.98-codeb-v1.98-image-export-consistency--87de0cd95031-run30196905125-attempt1` 的 version、branch、commit、run、workflow 和 changed-files identity 与候选 HEAD 一致。JUnit 10/10、UI interaction 12/12、Speech 14/14，Xcode `.xcresult` build status succeeded、0 error、0 warning，commit status `AITRANS CI/full-validation=success`。
 - 版本收口云端 full run `30197163124` attempt 1 成功；artifact `aitrans-ci-v1.98-codeb-v1.98-image-export-consistency--3dbb5d5bc2b6-run30197163124-attempt1` 与收口 HEAD 一致，`MARKETING_VERSION=1.98`，JUnit 10/10，Xcode `.xcresult` build status succeeded、0 error、0 warning，commit status `AITRANS CI/full-validation=success`；Speech/UI 大契约按纯版本与文档 scope 跳过，仍以上一核心 SHA 的 exact artifact 为证据。
+- PR fast run `30197360465` 与 merge fast run `30197407724` 均成功；merge artifact `aitrans-ci-v1.98-smalldata_test--28836f2d9358-run30197407724-attempt1` 的 version、branch、commit、run identity 正确，`validationReason=merge_reuses_successful_candidate_full_validation`，复用第二父候选 SHA `dfca6563c0b3e9105a23de194d7b0f11e5086825` 的成功 full-validation status。
 - 本轮没有修改 Vision OCR 识别/聚类、翻译 prompt、模型或漫画探针，不声称 OCR/翻译质量数字提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
 - 未跑本机 build / 探针，按规则交给云端验证。
 
