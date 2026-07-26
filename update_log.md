@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.3：图片取消后重试一致性
+日期：2026-07-26
+
+状态：Agent X 已完成候选实现、独立审计、核心与版本收口 exact-SHA 云端 full，工程正式版本为 `MARKETING_VERSION=2.3`；分支为 `codeb/v2.3-image-cancel-retry`，尚待 PR 合并，未触碰 `main`。
+
+核心变更：
+
+- v2.2 已在取消后保留完成 sandbox 发布的当前 source，但 retry 门槛只接受 `.failed`，导致取消后的 `.idle` 没有可见重试入口。v2.3 在 source 文件真实存在时允许 `.idle` / `.failed` 显示重试；transfer 尚未落盘的取消仍无重试，translated 结果继续走重译控制而不是 Retry，clear 继续删除 source。
+- 新增独立 v2.3 纯 Swift evaluator 与 Python contract，并接入 fail-fast UI interaction CI step；任一 v1.87 / v2.2 / v2.3 契约失败都会阻塞候选 full。
+
+验证与遗留：
+
+- v2.3 4/4、v2.2 10/10、v1.87 12/12、Swift parse、workflow YAML 和 `git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证。
+- 核心 SHA `ec41f72c0fc53ccf2a52100e1806888641910857` 的云端 full run `30202633449` attempt 1 成功；artifact `aitrans-ci-v2.3-codeb-v2.3-image-cancel-retry--ec41f72c0fc5-run30202633449-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.3 4/4、v2.2 10/10、v1.87 12/12、Speech/home/paste 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- 版本收口 SHA `9367267260bb879a56a52c1c85804f638ad13dd9` 的云端 full run `30202806922` attempt 1 成功；artifact `aitrans-ci-v2.3-codeb-v2.3-image-cancel-retry--9367267260bb-run30202806922-attempt1` 与 version / branch / SHA / run / profile 完全一致，Xcode build succeeded、JUnit 10/10、`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改工程版本和入口文档，领域契约按 changed-files 路由跳过，由父核心 full 提供证据。
+- 本轮不改变 Vision OCR、Koharu、翻译或覆盖算法，不声称质量指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+
 ## v2.2：图片导入 run isolation
 日期：2026-07-26
 

@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-正式版本：`2.2`。
+正式版本：`2.3`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -42,6 +42,9 @@ flowchart TD
   IT --> IG{"transfer / sandbox await 后<br/>task ID 仍匹配?"}
   IG -->|否| IDROP["丢弃旧回调并清理未采用输入<br/>不恢复旧 retry source"]
   IG -->|是| I["普通图片翻译<br/>VisionOCRService + 源/目标语言快照"]
+  ICANCEL["取消图片任务"] --> IRETRY{"sandbox source 已发布且仍存在?"}
+  IRETRY -->|是| IR["idle + 显示重试"]
+  IRETRY -->|否| IDROP
   I --> J["ImageTranslationBlock<br/>bbox + OCR 文本 + 译文"]
   J --> K["图片旁贴 / 覆盖 UI<br/>同模式顶左坐标 PNG 导出"]
 

@@ -323,7 +323,7 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     var canRetryImageTranslation: Bool {
-        guard imageTranslationState == .failed,
+        guard imageTranslationState == .failed || imageTranslationState == .idle,
               let url = imageTranslationSourceURL else {
             return false
         }
