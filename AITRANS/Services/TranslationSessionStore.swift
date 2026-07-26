@@ -301,12 +301,10 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     var imageTranslationDisplayedTargetLanguage: SupportedLanguage {
-        switch imageTranslationState {
-        case .loading, .recognizing, .translating, .translated:
-            imageTranslationContentTargetLanguage ?? targetLanguage
-        case .idle, .failed:
-            targetLanguage
+        guard imageTranslationData != nil || !imageTranslationBlocks.isEmpty else {
+            return targetLanguage
         }
+        return imageTranslationContentTargetLanguage ?? targetLanguage
     }
 
     var currentSpeechCapability: SpeechRecognitionCapability {
@@ -1052,7 +1050,6 @@ final class TranslationSessionStore: ObservableObject {
         guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
 
         guard !recognizedBlocks.isEmpty else {
-            imageTranslationContentTargetLanguage = nil
             imageTranslationState = .failed
             imageTranslationMessage = "Vision OCR 没有识别到可翻译文字"
             dataTransferMessage = imageTranslationMessage
@@ -1101,7 +1098,6 @@ final class TranslationSessionStore: ObservableObject {
         guard imageTranslationTaskID == taskID else { return }
 
         if error is CancellationError {
-            imageTranslationContentTargetLanguage = nil
             imageTranslationState = .idle
             imageTranslationMessage = "图片翻译已取消"
             dataTransferMessage = imageTranslationMessage
@@ -1110,7 +1106,6 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
-        imageTranslationContentTargetLanguage = nil
         imageTranslationState = .failed
         imageTranslationMessage = "图片翻译失败：\(error.localizedDescription)"
         dataTransferMessage = imageTranslationMessage
@@ -1258,7 +1253,6 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationTask?.cancel()
         imageTranslationTask = nil
         imageTranslationTaskID = UUID()
-        imageTranslationContentTargetLanguage = nil
         imageTranslationState = .idle
         imageTranslationMessage = "图片翻译已取消"
         dataTransferMessage = imageTranslationMessage

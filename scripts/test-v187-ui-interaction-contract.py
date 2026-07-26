@@ -182,6 +182,48 @@ class V187UIInteractionContractTests(unittest.TestCase):
             store,
         )
 
+    def test_image_content_language_survives_failure_and_cancel_until_content_is_cleared(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+
+        displayed_language = re.search(
+            r"var imageTranslationDisplayedTargetLanguage: SupportedLanguage \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(displayed_language, "image displayed target language is missing")
+        self.assertIn("imageTranslationData != nil", displayed_language.group("body"))
+        self.assertIn("!imageTranslationBlocks.isEmpty", displayed_language.group("body"))
+        self.assertNotIn("imageTranslationState", displayed_language.group("body"))
+
+        finish = re.search(
+            r"private func finishImageTranslation\(taskID: UUID, with error: Error\) \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        empty_ocr = re.search(
+            r"guard !recognizedBlocks\.isEmpty else \{(?P<body>.*?)\n        \}",
+            store,
+            re.DOTALL,
+        )
+        cancel = re.search(
+            r"func cancelImageTranslation\(\) \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        clear = re.search(
+            r"func clearImageTranslation\(\) \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(finish, "image translation finish handler is missing")
+        self.assertIsNotNone(empty_ocr, "empty OCR failure handler is missing")
+        self.assertIsNotNone(cancel, "image translation cancel handler is missing")
+        self.assertIsNotNone(clear, "image translation clear handler is missing")
+        self.assertNotIn("imageTranslationContentTargetLanguage = nil", finish.group("body"))
+        self.assertNotIn("imageTranslationContentTargetLanguage = nil", empty_ocr.group("body"))
+        self.assertNotIn("imageTranslationContentTargetLanguage = nil", cancel.group("body"))
+        self.assertIn("imageTranslationContentTargetLanguage = nil", clear.group("body"))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
