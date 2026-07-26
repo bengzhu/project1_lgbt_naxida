@@ -256,7 +256,7 @@ private struct ImageCommandBar: View {
 
         if isRunning {
             AppSecondaryButton(title: "取消", systemImage: "xmark.circle.fill", tone: .danger, action: store.cancelImageTranslation)
-        } else if store.imageTranslationState == .failed {
+        } else if store.canRetryImageTranslation {
             AppSecondaryButton(title: "重试", systemImage: "arrow.clockwise", tone: .warning, action: store.retryImageTranslation)
         }
 

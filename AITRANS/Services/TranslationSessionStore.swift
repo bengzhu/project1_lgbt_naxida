@@ -322,6 +322,14 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
+    var canRetryImageTranslation: Bool {
+        guard imageTranslationState == .failed,
+              let url = imageTranslationSourceURL else {
+            return false
+        }
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
     var currentSpeechCapability: SpeechRecognitionCapability {
         speechRecognitionCapabilities.first { $0.language == sourceLanguage } ?? SpeechRecognitionCapability(
             language: sourceLanguage,
@@ -1351,9 +1359,18 @@ final class TranslationSessionStore: ObservableObject {
         case .success(let url):
             translateImage(from: url)
         case .failure(let error):
+            if let cocoaError = error as? CocoaError,
+               cocoaError.code == .userCancelled {
+                return
+            }
+            let message = "图片文件选择失败：\(error.localizedDescription)"
+            dataTransferMessage = message
+            guard imageTranslationState == .idle,
+                  imageTranslationData == nil else {
+                return
+            }
             imageTranslationState = .failed
-            imageTranslationMessage = "图片文件选择失败：\(error.localizedDescription)"
-            dataTransferMessage = imageTranslationMessage
+            imageTranslationMessage = message
         }
     }
 

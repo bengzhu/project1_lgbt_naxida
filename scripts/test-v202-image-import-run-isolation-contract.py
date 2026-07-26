@@ -148,6 +148,30 @@ class ImageImportRunIsolationContractTests(unittest.TestCase):
             self.assertIn("imageTranslationFileSelectionID = nil", body)
         self.assertIn("imageFileSelectionID = store.beginImageFileSelection()", view)
         self.assertIn("store.handleSelectedImageFile(result, selectionID: selectionID)", view)
+        self.assertIn("cocoaError.code == .userCancelled", handle_selection)
+        self.assertIn("guard imageTranslationState == .idle", handle_selection)
+        self.assertIn("imageTranslationData == nil", handle_selection)
+
+    def test_retry_is_only_offered_for_a_retained_source(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+        view = read("AITRANS/Views/ImageTranslationViews.swift")
+        retry_gate = function_body(store, "var canRetryImageTranslation: Bool")
+
+        self.assertIn("imageTranslationState == .failed", retry_gate)
+        self.assertIn("let url = imageTranslationSourceURL", retry_gate)
+        self.assertIn("FileManager.default.fileExists(atPath: url.path)", retry_gate)
+        self.assertIn("else if store.canRetryImageTranslation", view)
+        self.assertNotIn("else if store.imageTranslationState == .failed", view)
+
+    def test_combined_ui_contracts_fail_fast(self) -> None:
+        workflow = read(".github/workflows/ci-results.yml")
+        step = workflow[workflow.index("- name: UI interaction contract"):]
+        step = step[:step.index("- name: v1.88 home UI contract")]
+        self.assertIn("set -euo pipefail", step)
+        self.assertLess(
+            step.index("scripts/test-v187-ui-interaction-contract.py"),
+            step.index("scripts/test-v202-image-import-run-isolation-contract.py"),
+        )
 
     def test_task_scoped_filenames_and_stale_input_cleanup(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")

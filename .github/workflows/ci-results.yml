@@ -871,7 +871,7 @@ jobs:
         shell: bash
         continue-on-error: true
         run: |
-          set -o pipefail
+          set -euo pipefail
           {
             python3 -B scripts/test-v187-ui-interaction-contract.py
             python3 -B scripts/test-v202-image-import-run-isolation-contract.py
