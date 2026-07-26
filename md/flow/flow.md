@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`1.99`（Koharu line polygon 与所属 TextBox bbox 的准入关系已由 Python validator / App readiness 同步收口；v1.98 普通图片预览与 PNG 导出一致性仍保留；Speech 真实 corpus 和 Koharu 真实四件套运行态仍待提供）。
+正式版本：`2.0`（Koharu external TextBox shadow OCR 已收紧为稳定一对一最大基数匹配与完整逐块 coverage gate；v1.99 line polygon 所属 TextBox bbox 校验和 v1.98 普通图片预览与 PNG 导出一致性仍保留；Speech 真实 corpus 和 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
