@@ -389,10 +389,13 @@ CI artifact version 优先从带 `vX.Y` 的候选 ref 解析；`smalldata_test` 
 
 ### 2.2 图片翻译
 ```text
-用户选择图片
+用户从 PhotosPicker 或文件选择器选择图片
   -> 图片页选择目标语言（Pro 门控）
-  -> TranslationSessionStore.translateImage
-  -> 固定本次源/目标语言
+  -> View 只把 loader / 带 selection UUID 的 result 交给 TranslationSessionStore
+  -> Store 创建图片 task ID，立即固定本次源/目标语言并进入 loading
+  -> 新照片 / 文件可抢占运行中任务；取消、清空和新 task 使旧 transfer 回调失效
+  -> task UUID 隔离 sandbox 输入；await 后 identity 匹配才发布 retry source
+  -> 被抢占的临时输入、被替换或清空的旧源删除；取消后的当前源可保留重试
   -> VisionOCRService.recognizeTextBlocks
   -> 每块按固定目标语言调用 translate
   -> ImageTranslationBlock

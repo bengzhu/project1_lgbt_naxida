@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.2：图片导入 run isolation
+日期：2026-07-26
+
+状态：Agent X 已完成候选实现和本地轻量契约，分支为 `codeb/v2.2-image-import-run-isolation`；尚待 exact-SHA 云端 full、版本收口和 PR 验收，未触碰 `main`。
+
+核心变更：
+
+- PhotosPicker 的 `loadTransferable` 不再由 View 创建未持有的 `Task`；Store 从选择发生时即创建 task ID、固定源/目标语言、进入 loading，并持有 transfer、sandbox 写入、OCR、翻译和导出完整任务。旧照片的成功、失败或 nil 回调在新选择、文件导入、取消或清空后都不能覆盖当前状态。
+- 新照片或图片文件可以在 OCR / 翻译运行中直接抢占旧任务。文件选择 completion 使用独立 UUID 精确匹配；View 只传 loader / result，不直接写业务状态。nil transferable 明确进入“照片读取失败”，新任务开始即清除旧 retry source。
+- sandbox 输入使用 task UUID 隔离同名文件；helper 只返回 URL，只有 await 后 task identity 仍匹配才发布 source。被抢占的 detached 写入、被替换的旧源和清空的当前源会删除；取消后仍允许保留当前源并立即重试。
+
+验证与遗留：
+
+- 新增 `scripts/test-v202-image-import-run-isolation-contract.py` 与纯 Swift evaluator，当前 8/8 通过；覆盖 A/B 反序完成、nil、取消、清空、照片/文件交错、source 发布门槛、同名 sandbox 隔离、文件选择 UUID、旧源清理和 retry 保留。v1.87 UI interaction 回归 12/12、Swift parse、workflow YAML 与 `git diff --check` 通过。
+- v2.2 contract 已接入 UI interaction CI 路由；Swift / Xcode 编译和 exact-SHA artifact 尚待候选 push 的 task-scoped full。未跑本机 build / 探针，按规则交给云端验证。
+- 本轮不改变 Vision OCR 算法、漫画探针、Koharu shadow OCR、翻译 prompt 或模型，不声称 OCR 指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+
 ## v2.1：Koharu assignment geometry coverage
 日期：2026-07-26
 

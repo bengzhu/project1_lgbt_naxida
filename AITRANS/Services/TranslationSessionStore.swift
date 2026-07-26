@@ -6,6 +6,14 @@ import Speech
 import StoreKit
 import UIKit
 
+private enum PhotoLibraryTransferError: LocalizedError {
+    case noData
+
+    var errorDescription: String? {
+        "照片没有可读取的图片数据"
+    }
+}
+
 @MainActor
 final class TranslationSessionStore: ObservableObject {
     @Published var mode: SessionMode = .live {
@@ -124,6 +132,7 @@ final class TranslationSessionStore: ObservableObject {
     private var modelDownloadTask: Task<Void, Never>?
     private var imageTranslationTask: Task<Void, Never>?
     private var imageTranslationTaskID = UUID()
+    private var imageTranslationFileSelectionID: UUID?
     private var imageOverlayRenderTask: Task<Void, Never>?
     private var imageOverlayRenderID = UUID()
     private var audioRecognitionTask: SFSpeechRecognitionTask?
@@ -970,9 +979,9 @@ final class TranslationSessionStore: ObservableObject {
         return destination
     }
 
-    private func copyImageFileIntoSandbox(_ url: URL) async throws -> URL {
+    private func copyImageFileIntoSandbox(_ url: URL, taskID: UUID) async throws -> URL {
         let directory = imageTranslationDirectory
-        let destinationName = Self.sanitizedImageFilename(from: url)
+        let destinationName = "\(taskID.uuidString)-\(Self.sanitizedImageFilename(from: url))"
 
         let copiedURL = try await Task.detached(priority: .userInitiated) {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -993,14 +1002,19 @@ final class TranslationSessionStore: ObservableObject {
             return destination
         }.value
 
-        imageTranslationSourceURL = copiedURL
-        imageTranslationFilename = copiedURL.lastPathComponent
         return copiedURL
     }
 
-    private func writeImageDataIntoSandbox(_ data: Data, filename: String) async throws -> URL {
+    private func writeImageDataIntoSandbox(
+        _ data: Data,
+        filename: String,
+        taskID: UUID
+    ) async throws -> URL {
         let directory = imageTranslationDirectory
-        let destinationName = Self.sanitizedImageFilename(filename.isEmpty ? "photo-library-image.png" : filename)
+        let cleanName = Self.sanitizedImageFilename(
+            filename.isEmpty ? "photo-library-image.png" : filename
+        )
+        let destinationName = "\(taskID.uuidString)-\(cleanName)"
 
         return try await Task.detached(priority: .userInitiated) {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -1015,10 +1029,15 @@ final class TranslationSessionStore: ObservableObject {
 
     private func beginImageTranslationTask(
         filename: String,
-        targetLanguage: SupportedLanguage
+        targetLanguage: SupportedLanguage,
+        preservingSourceURL: URL? = nil
     ) -> UUID {
         imageTranslationTask?.cancel()
+        imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
+        if imageTranslationSourceURL != preservingSourceURL {
+            Self.removeImageTranslationInputFile(imageTranslationSourceURL)
+        }
         let taskID = UUID()
         imageTranslationTaskID = taskID
         imageTranslationContentTargetLanguage = targetLanguage
@@ -1027,6 +1046,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationBlocks = []
         imageTranslationData = nil
         imageTranslationExportURL = nil
+        imageTranslationSourceURL = nil
         imageTranslationRevision += 1
         imageTranslationFilename = filename
         isProcessing = true
@@ -1147,6 +1167,22 @@ final class TranslationSessionStore: ObservableObject {
         persist()
     }
 
+    private func finishPhotoLibraryTransfer(taskID: UUID, with error: Error) {
+        guard imageTranslationTaskID == taskID else { return }
+
+        if error is CancellationError {
+            imageTranslationState = .idle
+            imageTranslationMessage = "照片读取已取消"
+        } else {
+            imageTranslationState = .failed
+            imageTranslationMessage = "照片读取失败：\(error.localizedDescription)"
+        }
+        dataTransferMessage = imageTranslationMessage
+        isProcessing = false
+        imageTranslationTask = nil
+        persist()
+    }
+
     private func runImageTranslation(
         fromSandboxURL url: URL,
         taskID: UUID,
@@ -1172,9 +1208,6 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func translateImage(from url: URL) {
-        guard imageTranslationState != .loading,
-              imageTranslationState != .recognizing,
-              imageTranslationState != .translating else { return }
         guard isProUnlocked else {
             imageTranslationState = .failed
             imageTranslationMessage = "图片翻译需要 Pro"
@@ -1188,21 +1221,30 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
+        let cleanFilename = Self.sanitizedImageFilename(from: url)
         let selectedSourceLanguage = sourceLanguage
         let selectedTargetLanguage = targetLanguage
         let taskID = beginImageTranslationTask(
-            filename: url.lastPathComponent,
+            filename: cleanFilename,
             targetLanguage: selectedTargetLanguage
         )
 
         imageTranslationTask = Task { [weak self] in
             guard let self else { return }
 
+            var unclaimedSandboxURL: URL?
             do {
                 guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
-                let sandboxURL = try await self.copyImageFileIntoSandbox(url)
+                let sandboxURL = try await self.copyImageFileIntoSandbox(url, taskID: taskID)
+                unclaimedSandboxURL = sandboxURL
                 try Task.checkCancellation()
-                guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                guard self.isCurrentImageTranslationTask(taskID) else {
+                    Self.removeImageTranslationInputFile(sandboxURL)
+                    unclaimedSandboxURL = nil
+                    throw CancellationError()
+                }
+                self.imageTranslationSourceURL = sandboxURL
+                unclaimedSandboxURL = nil
 
                 let data = try await Self.loadSecurityScopedData(from: sandboxURL)
                 try await self.runImageTranslationPipeline(
@@ -1212,15 +1254,16 @@ final class TranslationSessionStore: ObservableObject {
                     targetLanguage: selectedTargetLanguage
                 )
             } catch {
+                Self.removeImageTranslationInputFile(unclaimedSandboxURL)
                 self.finishImageTranslation(taskID: taskID, with: error)
             }
         }
     }
 
-    func translateImageData(_ data: Data, filename: String) {
-        guard imageTranslationState != .loading,
-              imageTranslationState != .recognizing,
-              imageTranslationState != .translating else { return }
+    func translateImageTransfer(
+        filename: String,
+        loadData: @escaping @Sendable () async throws -> Data?
+    ) {
         guard isProUnlocked else {
             imageTranslationState = .failed
             imageTranslationMessage = "图片翻译需要 Pro"
@@ -1234,22 +1277,49 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
+        let cleanFilename = Self.sanitizedImageFilename(
+            filename.isEmpty ? "photo-library-image.png" : filename
+        )
         let selectedSourceLanguage = sourceLanguage
         let selectedTargetLanguage = targetLanguage
         let taskID = beginImageTranslationTask(
-            filename: filename,
+            filename: cleanFilename,
             targetLanguage: selectedTargetLanguage
         )
 
         imageTranslationTask = Task { [weak self] in
             guard let self else { return }
 
+            let data: Data
             do {
                 guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
-                let sandboxURL = try await self.writeImageDataIntoSandbox(data, filename: filename)
+                guard let loadedData = try await loadData() else {
+                    throw PhotoLibraryTransferError.noData
+                }
+                data = loadedData
+            } catch {
+                self.finishPhotoLibraryTransfer(taskID: taskID, with: error)
+                return
+            }
+
+            var unclaimedSandboxURL: URL?
+            do {
+                try Task.checkCancellation()
                 guard self.isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                let sandboxURL = try await self.writeImageDataIntoSandbox(
+                    data,
+                    filename: cleanFilename,
+                    taskID: taskID
+                )
+                unclaimedSandboxURL = sandboxURL
+                try Task.checkCancellation()
+                guard self.isCurrentImageTranslationTask(taskID) else {
+                    Self.removeImageTranslationInputFile(sandboxURL)
+                    unclaimedSandboxURL = nil
+                    throw CancellationError()
+                }
                 self.imageTranslationSourceURL = sandboxURL
-                self.imageTranslationFilename = sandboxURL.lastPathComponent
+                unclaimedSandboxURL = nil
                 try await self.runImageTranslationPipeline(
                     with: data,
                     taskID: taskID,
@@ -1257,15 +1327,42 @@ final class TranslationSessionStore: ObservableObject {
                     targetLanguage: selectedTargetLanguage
                 )
             } catch {
+                Self.removeImageTranslationInputFile(unclaimedSandboxURL)
                 self.finishImageTranslation(taskID: taskID, with: error)
             }
+        }
+    }
+
+    func translateImageData(_ data: Data, filename: String) {
+        translateImageTransfer(filename: filename) { data }
+    }
+
+    func beginImageFileSelection() -> UUID {
+        let selectionID = UUID()
+        imageTranslationFileSelectionID = selectionID
+        return selectionID
+    }
+
+    func handleSelectedImageFile(_ result: Result<URL, Error>, selectionID: UUID) {
+        guard imageTranslationFileSelectionID == selectionID else { return }
+        imageTranslationFileSelectionID = nil
+
+        switch result {
+        case .success(let url):
+            translateImage(from: url)
+        case .failure(let error):
+            imageTranslationState = .failed
+            imageTranslationMessage = "图片文件选择失败：\(error.localizedDescription)"
+            dataTransferMessage = imageTranslationMessage
         }
     }
 
     func clearImageTranslation() {
         imageTranslationTask?.cancel()
         imageTranslationTask = nil
+        imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
+        Self.removeImageTranslationInputFile(imageTranslationSourceURL)
         imageTranslationTaskID = UUID()
         imageTranslationState = .idle
         imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
@@ -1288,6 +1385,7 @@ final class TranslationSessionStore: ObservableObject {
     func cancelImageTranslation() {
         imageTranslationTask?.cancel()
         imageTranslationTask = nil
+        imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
         imageTranslationTaskID = UUID()
         imageTranslationState = .idle
@@ -1373,11 +1471,15 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
+        let sourceFilename = imageTranslationFilename.isEmpty
+            ? Self.sanitizedImageFilename(from: url)
+            : imageTranslationFilename
         let selectedSourceLanguage = sourceLanguage
         let selectedTargetLanguage = targetLanguage
         let taskID = beginImageTranslationTask(
-            filename: url.lastPathComponent,
-            targetLanguage: selectedTargetLanguage
+            filename: sourceFilename,
+            targetLanguage: selectedTargetLanguage,
+            preservingSourceURL: url
         )
         imageTranslationSourceURL = url
         runImageTranslation(
@@ -25022,6 +25124,11 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     nonisolated private static func removeImageTranslationStagingFile(_ url: URL?) {
+        guard let url, FileManager.default.fileExists(atPath: url.path) else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    nonisolated private static func removeImageTranslationInputFile(_ url: URL?) {
         guard let url, FileManager.default.fileExists(atPath: url.path) else { return }
         try? FileManager.default.removeItem(at: url)
     }

@@ -126,7 +126,9 @@ class V187UIInteractionContractTests(unittest.TestCase):
                 "store.removeLocalModel",
             ],
             "AITRANS/Views/ImageTranslationViews.swift": [
-                "store.translateImage(from: url)",
+                "store.beginImageFileSelection()",
+                "store.handleSelectedImageFile(result, selectionID: selectionID)",
+                "store.translateImageTransfer(",
                 "store.selectImageTargetLanguage(language)",
                 "store.cancelImageTranslation",
                 "store.retryImageTranslation",

@@ -37,6 +37,7 @@ struct ImageTranslationView: View {
 struct ImageTranslationPanel: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var showImageImporter = false
+    @State private var imageFileSelectionID: UUID?
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var shareURL: URL?
 
@@ -67,7 +68,10 @@ struct ImageTranslationPanel: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.control) {
             ImageCommandBar(
                 selectedPhotoItem: $selectedPhotoItem,
-                openImporter: { showImageImporter = true },
+                openImporter: {
+                    imageFileSelectionID = store.beginImageFileSelection()
+                    showImageImporter = true
+                },
                 shareResult: shareResult
             )
             ImageTranslationPreview()
@@ -145,29 +149,19 @@ struct ImageTranslationPanel: View {
     }
 
     private func handleImport(_ result: Result<URL, Error>) {
-        switch result {
-        case .success(let url):
-            store.translateImage(from: url)
-        case .failure(let error):
-            store.imageTranslationState = .failed
-            store.imageTranslationMessage = "图片文件选择失败：\(error.localizedDescription)"
-            store.dataTransferMessage = store.imageTranslationMessage
-        }
+        guard let selectionID = imageFileSelectionID else { return }
+        imageFileSelectionID = nil
+        store.handleSelectedImageFile(result, selectionID: selectionID)
     }
 
     private func loadSelectedPhoto(_ oldItem: PhotosPickerItem?, _ newItem: PhotosPickerItem?) {
         guard let newItem else { return }
-        Task {
-            do {
-                guard let data = try await newItem.loadTransferable(type: Data.self) else { return }
-                store.translateImageData(data, filename: newItem.itemIdentifier ?? "photo-library-image.png")
-                selectedPhotoItem = nil
-            } catch {
-                store.imageTranslationState = .failed
-                store.imageTranslationMessage = "照片读取失败：\(error.localizedDescription)"
-                store.dataTransferMessage = store.imageTranslationMessage
-                selectedPhotoItem = nil
-            }
+        imageFileSelectionID = nil
+        selectedPhotoItem = nil
+        store.translateImageTransfer(
+            filename: "photo-library-image.png"
+        ) {
+            try await newItem.loadTransferable(type: Data.self)
         }
     }
 
@@ -257,10 +251,8 @@ private struct ImageCommandBar: View {
             title: store.imageTranslationData == nil ? "选择照片" : "更换照片",
             selection: $selectedPhotoItem
         )
-        .disabled(isRunning)
 
         AppSecondaryButton(title: "图片文件", systemImage: "folder", action: openImporter)
-            .disabled(isRunning)
 
         if isRunning {
             AppSecondaryButton(title: "取消", systemImage: "xmark.circle.fill", tone: .danger, action: store.cancelImageTranslation)

@@ -38,7 +38,10 @@ flowchart TD
 
   %% 图片 OCR 分支：普通图片翻译
   IMG_TARGET["图片目标语言菜单<br/>Pro 门控 / 按结果语言重译"] --> C
-  C --> I["普通图片翻译<br/>VisionOCRService + 源/目标语言快照"]
+  C --> IT["Store-owned 图片 transfer<br/>task ID + 文件 selection UUID<br/>运行中可更换来源"]
+  IT --> IG{"transfer / sandbox await 后<br/>task ID 仍匹配?"}
+  IG -->|否| IDROP["丢弃旧回调并清理未采用输入<br/>不恢复旧 retry source"]
+  IG -->|是| I["普通图片翻译<br/>VisionOCRService + 源/目标语言快照"]
   I --> J["ImageTranslationBlock<br/>bbox + OCR 文本 + 译文"]
   J --> K["图片旁贴 / 覆盖 UI<br/>同模式顶左坐标 PNG 导出"]
 
