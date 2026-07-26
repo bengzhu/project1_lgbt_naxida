@@ -47,6 +47,13 @@ flowchart TD
   IRETRY -->|否| IDROP
   I --> J["ImageTranslationBlock<br/>bbox + OCR 文本 + 译文"]
   J --> K["图片旁贴 / 覆盖 UI<br/>同模式顶左坐标 PNG 导出"]
+  K --> IEXPORT["Store-owned 稳定导出<br/>新任务 / 清空 / 重渲染时清理"]
+  ISTART["App 启动<br/>接管上次进程稳定导出"] --> IEXPORT
+  IEXPORT --> IGUARD{"直属非隐藏 *-translated.png<br/>常规文件?"}
+  IGUARD -->|是| IDELETE["删除被替代导出"]
+  IGUARD -->|否| IREJECT["拒绝 source / staging / escape<br/>symlink / dangling symlink"]
+  IDELETE --> IFAIL{"删除成功或已不存在?"}
+  IFAIL -->|否| IKEEP["保留私有 ownership<br/>后续生命周期重试"]
 
   %% 音频分支：Apple 本机语音识别
   C --> LR["Speech run ID + store-owned translation Task<br/>取消 / 重试使旧回调失效"]

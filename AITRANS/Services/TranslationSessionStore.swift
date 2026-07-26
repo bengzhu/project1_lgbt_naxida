@@ -113,7 +113,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var imageTranslationFilename = ""
     @Published var imageTranslationRevision = 0
     @Published var imageOverlayMode: ImageTranslationOverlayMode = .adjacent
-    @Published var imageTranslationExportURL: URL?
+    @Published private(set) var imageTranslationExportURL: URL?
     @Published private(set) var imageTranslationContentTargetLanguage: SupportedLanguage?
     @Published private(set) var speechRecognitionCapabilities: [SpeechRecognitionCapability] = []
 
@@ -133,6 +133,7 @@ final class TranslationSessionStore: ObservableObject {
     private var imageTranslationTask: Task<Void, Never>?
     private var imageTranslationTaskID = UUID()
     private var imageTranslationFileSelectionID: UUID?
+    private var imageTranslationOwnedExportURLs: Set<URL> = []
     private var imageOverlayRenderTask: Task<Void, Never>?
     private var imageOverlayRenderID = UUID()
     private var audioRecognitionTask: SFSpeechRecognitionTask?
@@ -163,6 +164,7 @@ final class TranslationSessionStore: ObservableObject {
 
         guard performsStartupWork else { return }
 
+        discardOrphanedImageTranslationExportsAtStartup()
         restoreSnapshot()
         updateModelDownloadStateFromDisk()
 #if DEBUG
@@ -1046,6 +1048,7 @@ final class TranslationSessionStore: ObservableObject {
         if imageTranslationSourceURL != preservingSourceURL {
             Self.removeImageTranslationInputFile(imageTranslationSourceURL)
         }
+        discardImageTranslationExport()
         let taskID = UUID()
         imageTranslationTaskID = taskID
         imageTranslationContentTargetLanguage = targetLanguage
@@ -1053,7 +1056,6 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationMessage = "正在载入图片"
         imageTranslationBlocks = []
         imageTranslationData = nil
-        imageTranslationExportURL = nil
         imageTranslationSourceURL = nil
         imageTranslationRevision += 1
         imageTranslationFilename = filename
@@ -1132,14 +1134,16 @@ final class TranslationSessionStore: ObservableObject {
            imageOverlayMode == renderedMode,
            let stagedExportURL {
             defer { Self.removeImageTranslationStagingFile(stagedExportURL) }
-            imageTranslationExportURL = try? Self.publishImageTranslationOverlay(
+            if let outputURL = try? Self.publishImageTranslationOverlay(
                 stagedURL: stagedExportURL,
                 filename: imageTranslationFilename,
                 directory: imageTranslationDirectory
-            )
+            ) {
+                publishImageTranslationExport(outputURL)
+            }
         } else {
             Self.removeImageTranslationStagingFile(stagedExportURL)
-            imageTranslationExportURL = nil
+            discardImageTranslationExport()
         }
         imageTranslationState = .translated
         imageTranslationMessage = imageTranslationExportURL == nil
@@ -1380,6 +1384,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
         Self.removeImageTranslationInputFile(imageTranslationSourceURL)
+        discardImageTranslationExport()
         imageTranslationTaskID = UUID()
         imageTranslationState = .idle
         imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
@@ -1387,7 +1392,6 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationData = nil
         imageTranslationFilename = ""
         imageTranslationSourceURL = nil
-        imageTranslationExportURL = nil
         imageTranslationContentTargetLanguage = nil
         imageTranslationRevision += 1
         isProcessing = false
@@ -1432,7 +1436,7 @@ final class TranslationSessionStore: ObservableObject {
         let filename = imageTranslationFilename
         let directory = imageTranslationDirectory
         imageOverlayRenderID = renderID
-        imageTranslationExportURL = nil
+        discardImageTranslationExport()
         imageTranslationMessage = "正在生成\(mode.rawValue)导出图"
 
         imageOverlayRenderTask = Task { [weak self] in
@@ -1460,7 +1464,7 @@ final class TranslationSessionStore: ObservableObject {
                     filename: filename,
                     directory: directory
                 )
-                self.imageTranslationExportURL = outputURL
+                self.publishImageTranslationExport(outputURL)
                 self.imageTranslationMessage = "已更新\(mode.rawValue)预览和导出图"
                 self.dataTransferMessage = self.imageTranslationMessage
                 self.imageOverlayRenderTask = nil
@@ -25148,6 +25152,74 @@ final class TranslationSessionStore: ObservableObject {
     nonisolated private static func removeImageTranslationInputFile(_ url: URL?) {
         guard let url, FileManager.default.fileExists(atPath: url.path) else { return }
         try? FileManager.default.removeItem(at: url)
+    }
+
+    private func publishImageTranslationExport(_ url: URL) {
+        let standardizedURL = url.standardizedFileURL
+        imageTranslationOwnedExportURLs.insert(standardizedURL)
+        imageTranslationExportURL = standardizedURL
+    }
+
+    private func discardOrphanedImageTranslationExportsAtStartup() {
+        let directory = imageTranslationDirectory.standardizedFileURL
+        guard let candidates = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil
+        ) else {
+            return
+        }
+        for candidate in candidates {
+            let managedFile = candidate.standardizedFileURL
+            let filename = managedFile.lastPathComponent
+            guard managedFile.deletingLastPathComponent() == directory,
+                  !filename.hasPrefix("."),
+                  filename.hasSuffix("-translated.png") else {
+                continue
+            }
+            imageTranslationOwnedExportURLs.insert(managedFile)
+        }
+        discardImageTranslationExport()
+    }
+
+    private func discardImageTranslationExport() {
+        imageTranslationExportURL = nil
+        let directory = imageTranslationDirectory
+        for url in Array(imageTranslationOwnedExportURLs) {
+            if Self.removeImageTranslationManagedExport(url, directory: directory) {
+                imageTranslationOwnedExportURLs.remove(url)
+            }
+        }
+    }
+
+    nonisolated private static func removeImageTranslationManagedExport(
+        _ url: URL,
+        directory: URL
+    ) -> Bool {
+        let managedDirectory = directory.standardizedFileURL
+        let managedFile = url.standardizedFileURL
+        let filename = managedFile.lastPathComponent
+        guard managedFile.deletingLastPathComponent() == managedDirectory,
+              !filename.hasPrefix("."),
+              filename.hasSuffix("-translated.png") else {
+            return false
+        }
+
+        let fileManager = FileManager.default
+        guard (try? fileManager.destinationOfSymbolicLink(atPath: managedFile.path)) == nil else {
+            return false
+        }
+        guard fileManager.fileExists(atPath: managedFile.path) else { return true }
+        guard let values = try? managedFile.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]),
+              values.isRegularFile == true,
+              values.isSymbolicLink != true else {
+            return false
+        }
+        do {
+            try fileManager.removeItem(at: managedFile)
+            return !fileManager.fileExists(atPath: managedFile.path)
+        } catch {
+            return false
+        }
     }
 
     nonisolated private static func imageTranslationPixelRect(

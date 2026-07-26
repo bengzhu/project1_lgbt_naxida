@@ -8,6 +8,24 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.4 候选：图片稳定导出生命周期
+日期：2026-07-26
+
+状态：Agent X 已从最新 `smalldata_test@63887cc14c2634152c317ef8675beaa191bd4519` 创建 `codeb/v2.4-image-export-lifecycle` 并完成候选实现、独立复审与本地轻量验证；尚待云端 full，正式版本仍为 `2.3`，未触碰 `main`。
+
+核心变更：
+
+- 新图片任务、清空和模式重渲染开始时，删除当前 Store-owned 稳定导出 PNG，避免 UI 清空 URL 后不同文件名的旧导出继续在 `Application Support/ImageTranslations` 累积。
+- 稳定导出使用独立私有 ownership 集合；两个真实 publish 点统一登记 ownership。App 启动时接管并清理上次进程遗留的稳定导出，避免重启或升级后旧 PNG 永久不可达。
+- 统一 discard 会立即撤销公开 share URL，只允许删除 `ImageTranslations` 直属、非隐藏 `*-translated.png` 常规文件；同目录 source、staging、目录外、嵌套、`..` escape、symlink 和 dangling symlink 均拒绝。删除失败项保留 ownership，后续新任务、clear 或重渲染继续重试。
+- 取消仍保留已发布 source 和 v2.3 Retry 边界；stale renderer 仍只清理自己的 staging 文件，A/B 反序或当前 render failure 不得发布过期 export。
+- 新增 v2.4 纯 Swift 文件生命周期 evaluator 与 Python 源码合同，并接入 v1.87 / v2.2 / v2.3 / v2.4 fail-fast UI interaction CI step。
+
+验证与遗留：
+
+- v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、Swift parse、workflow YAML 与 `git diff --check` 通过。
+- 未跑本机 build / 探针，按规则交给云端验证。本轮不改变 Vision OCR、Koharu、翻译或覆盖算法，不声称质量指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+
 ## v2.3：图片取消后重试一致性
 日期：2026-07-26
 

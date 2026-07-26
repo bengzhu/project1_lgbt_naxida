@@ -164,7 +164,7 @@
 输出：
 
 - `ImageTranslationBlock`
-- 旁贴或覆盖预览与同模式 PNG 导出；Vision OCR bbox、SwiftUI 预览和导出 renderer 统一使用图片顶左原点坐标。后台 render 只写 render ID 独占 staging PNG，已完成图片切换模式会使旧导出失效并按 render ID / 图片 task ID / mode 验明身份后发布稳定文件，旧 detached render 不得覆盖新任务。
+- 旁贴或覆盖预览与同模式 PNG 导出；Vision OCR bbox、SwiftUI 预览和导出 renderer 统一使用图片顶左原点坐标。后台 render 只写 render ID 独占 staging PNG，已完成图片切换模式会使旧导出失效并按 render ID / 图片 task ID / mode 验明身份后发布稳定文件，旧 detached render 不得覆盖新任务。启动时会接管并清理上次进程遗留的稳定导出；新任务、清空或模式重渲染会撤销公开 export URL 并删除当前 Store-owned 稳定导出。只有 `Application Support/ImageTranslations` 直属、非隐藏 `*-translated.png` 常规文件可删，source、staging、目录外、嵌套、escape、symlink 和 dangling symlink 一律拒绝。删除失败时私有 ownership 保留，后续生命周期继续重试。
 - 任务启动时固定源/目标语言，并单独记录当前图片内容实际使用的目标语言；从 `.loading` 起即使图片数据和 blocks 尚为空，UI 也使用任务语言。失败或取消后若图片数据/部分 OCR 块仍可见，继续保留对应语言凭据，只有清空或新任务替换内容时才重置。已完成图片选择不同结果语言时，即使全局目标已提前相同，也从沙盒原图重新翻译。
 
 关键文件：
@@ -397,6 +397,10 @@ CI artifact version 优先从带 `vX.Y` 的候选 ref 解析；`smalldata_test` 
   -> task UUID 隔离 sandbox 输入；await 后 identity 匹配才发布 retry source
   -> 被抢占的临时输入、被替换或清空的旧源删除；取消后的当前源可保留重试
   -> Retry 只在 failed，或取消后 idle 且 source 文件仍存在时显示
+  -> 新任务 / 清空删除当前稳定导出；模式重渲染先删除被替代导出
+  -> App 启动接管并清理上次进程遗留的直属稳定导出
+  -> 稳定导出删除只接受 ImageTranslations 直属非隐藏 *-translated.png 常规文件
+  -> 拒绝 source / staging / 目录外 / 嵌套 / escape / symlink / dangling symlink；失败保留 ownership 后续重试
   -> VisionOCRService.recognizeTextBlocks
   -> 每块按固定目标语言调用 translate
   -> ImageTranslationBlock
