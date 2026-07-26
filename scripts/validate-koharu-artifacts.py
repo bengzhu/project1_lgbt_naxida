@@ -24,6 +24,9 @@ from typing import Any
 EXPECTED_COORDINATE_SPACE = "originalImageTopLeftPixels"
 EXPECTED_SOURCE_IMAGE = "test/1.png"
 EXPECTED_SCHEMA_VERSION = "aitrans.koharu_artifact_contract.v1"
+LINE_POLYGON_BBOX_MIN_TOLERANCE_PIXELS = 2.0
+LINE_POLYGON_BBOX_MAX_TOLERANCE_PIXELS = 8.0
+LINE_POLYGON_BBOX_TOLERANCE_RATIO = 0.02
 DEFAULT_IMAGE_PATH = Path("test/1.png")
 ACTIVE_ARTIFACT_ROOT = Path("test/koharu_artifacts")
 FORBIDDEN_GENERATED_BY_TERMS = [
@@ -73,7 +76,7 @@ REQUIRED_ARTIFACT_FILES = [
             "confidence, when present, must be in [0, 1]",
             "sourceDirection, when present, must be horizontal/vertical/vertical-rl/vertical-lr/unknown",
             "rotationDegrees or rotationDeg, when present, must be finite and within [-360, 360]",
-            "linePolygons, when present, must contain point pairs within source image bounds",
+            "linePolygons, when present, must contain point pairs within source image bounds and their owning TextBox bbox tolerance",
         ],
     },
     {
@@ -1149,6 +1152,7 @@ def summarize_artifact_identity(
 def validate_textbox_metadata(
     item: dict[str, Any],
     item_id: str,
+    bbox: tuple[float, float, float, float],
     image_width: int,
     image_height: int,
     coordinate_errors: list[str],
@@ -1172,6 +1176,14 @@ def validate_textbox_metadata(
         if not isinstance(line_polygons, list) or not line_polygons:
             coordinate_errors.append(f"textBox:{item_id}:linePolygonsInvalid")
             return False
+        bbox_x, bbox_y, bbox_width, bbox_height = bbox
+        bbox_tolerance = min(
+            LINE_POLYGON_BBOX_MAX_TOLERANCE_PIXELS,
+            max(
+                LINE_POLYGON_BBOX_MIN_TOLERANCE_PIXELS,
+                min(bbox_width, bbox_height) * LINE_POLYGON_BBOX_TOLERANCE_RATIO,
+            ),
+        )
         for polygon_index, polygon in enumerate(line_polygons):
             if not isinstance(polygon, list) or len(polygon) < 4:
                 coordinate_errors.append(f"textBox:{item_id}:linePolygonInvalid:{polygon_index}")
@@ -1194,6 +1206,16 @@ def validate_textbox_metadata(
                     valid = False
                 elif x < 0 or y < 0 or x > image_width or y > image_height:
                     coordinate_errors.append(f"textBox:{item_id}:linePolygonPointOutOfBounds:{polygon_index}:{point_index}")
+                    valid = False
+                elif (
+                    x < bbox_x - bbox_tolerance
+                    or y < bbox_y - bbox_tolerance
+                    or x > bbox_x + bbox_width + bbox_tolerance
+                    or y > bbox_y + bbox_height + bbox_tolerance
+                ):
+                    coordinate_errors.append(
+                        f"textBox:{item_id}:linePolygonOutsideTextBoxBBox:{polygon_index}:{point_index}"
+                    )
                     valid = False
     return valid
 
@@ -1231,6 +1253,7 @@ def validate_boxes(
         if label == "textBox" and not validate_textbox_metadata(
             item,
             item_id,
+            bbox,
             image_width,
             image_height,
             coordinate_errors,

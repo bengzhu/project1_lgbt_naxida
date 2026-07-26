@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v1.99 候选：Koharu line polygon 所属关系校验
+日期：2026-07-26
+
+状态：Agent X 候选实现中，分支 `codeb/v1.99-koharu-polygon-containment`，基于 v1.98 merge follow-up `e66906e01c1adbe8f61305bcdb50a77264122a5d`。正式版本仍为 `1.98`，等待 exact-SHA 云端 full 与独立结果包复审。
+
+核心变更：
+
+- Python artifact validator 与 App runtime readiness 不再只验证 `linePolygons` 位于整张源图内；每个 point 还必须属于对应 TextBox bbox，统一允许 `min(8px, max(2px, bbox 短边 2%))` 的舍入容差。
+- 超出所属 bbox 容差的点写入 `linePolygonOutsideTextBoxBBox:<polygon>:<point>`，对应 TextBox 进入 invalid ledger，artifact verdict 为 `coordinateValidationFailed`，不能进入 external shadow OCR。
+- invalid metadata fixture 新增“bbox 在一个区域、polygon 完全位于源图另一处”的样本，避免错误区域 warp OCR 被当作合法 TextBox 证据。
+
+验证与遗留：
+
+- 新增 `scripts/test-v199-koharu-line-polygon-containment-contract.py`，覆盖 bbox 内、容差边缘、部分越界、完全脱离、Python/Swift 同口径与 CI 接线，当前 5/5 通过；v1.92 warp contract 5/5、Swift parse、YAML parse、fixture JSON 与 `git diff --check` 通过。
+- 本轮只加固真实 external artifact 的准入证据，保持 shadow-only，不改变主 OCR、翻译、覆盖图、`blockPassed` 或 promotion；仓库仍无真实四件套，不声称 OCR 数字提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+- 未跑本机 build / 探针，按规则交给云端验证。
+
 ## v1.98：图片预览与导出一致性
 日期：2026-07-26
 

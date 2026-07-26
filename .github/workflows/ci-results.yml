@@ -332,7 +332,7 @@ jobs:
             home_ui_contract_required=true
             paste_matrix_contract_required=true
           fi
-          if grep -E '^(AITRANS/Services/MangaOverlayProbeService\.swift|AITRANS/Models/TranscriptModels\.swift|test/1\.|scripts/validate-koharu-artifacts\.py|scripts/test-v192-koharu-line-polygon-warp-contract\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+          if grep -E '^(AITRANS/Services/MangaOverlayProbeService\.swift|AITRANS/Models/TranscriptModels\.swift|test/1\.|scripts/validate-koharu-artifacts\.py|scripts/test-v19(2-koharu-line-polygon-warp|9-koharu-line-polygon-containment)-contract\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             koharu_contract_required=true
           fi
 
@@ -642,6 +642,7 @@ jobs:
             fi
             if [ "${{ steps.ci_scope.outputs.koharu_contract_required }}" = "true" ]; then
               python3 -B scripts/test-v192-koharu-line-polygon-warp-contract.py
+              python3 -B scripts/test-v199-koharu-line-polygon-containment-contract.py
               python3 -B scripts/test-v197-koharu-handoff-target-contract.py
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
             python3 - <<'PY'
