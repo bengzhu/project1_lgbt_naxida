@@ -11,7 +11,7 @@
 ## v2.4：图片稳定导出生命周期
 日期：2026-07-26
 
-状态：Agent X 已完成候选实现、两轮独立复审和核心 exact-SHA 云端 full，工程正式版本收口为 `MARKETING_VERSION=2.4`；分支为 `codeb/v2.4-image-export-lifecycle`，尚待版本收口 SHA 的云端验证和 PR 合并，未触碰 `main`。
+状态：Agent X 已完成候选实现、两轮独立复审、核心与版本收口 exact-SHA 云端 full，工程正式版本为 `MARKETING_VERSION=2.4`。PR #58 已合入 `smalldata_test`，merge SHA `63f6f109703c31207dd4b8027cdecf73994e8b32`；远端 `codeb/v2.4-image-export-lifecycle` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -26,6 +26,7 @@
 - v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、Swift parse、workflow YAML 与 `git diff --check` 通过。
 - 核心 SHA `a48fb2a461160ebd4445347dcb5c094dcc16e400` 的云端 full run `30203732662` attempt 1 成功；artifact `aitrans-ci-v2.4-codeb-v2.4-image-export-lifecycle--a48fb2a46116-run30203732662-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
 - 版本收口 SHA `cac60468310d2a287b26a07ea42f840292002f89` 的云端 full run `30204029328` attempt 1 成功；artifact `aitrans-ci-v2.4-codeb-v2.4-image-export-lifecycle--cac60468310d-run30204029328-attempt1` 与 version / branch / SHA / run / profile 完全一致，Xcode build succeeded、JUnit 10/10、`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改工程版本和入口文档，领域契约按 changed-files 路由跳过，由父核心 full 提供证据。
+- 纯文档 follow-up fast run `30204223555` 正确复用父 SHA `cac60468310d2a287b26a07ea42f840292002f89` 的 full-validation success；PR fast run `30204270154` 成功。merge fast run `30204295914` 的 artifact `aitrans-ci-v2.4-smalldata_test--63f6f109703c-run30204295914-attempt1` 与 merge HEAD 一致，`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用第二父候选 SHA `1fc7d229be72e01a22f02e4b83c04d441d651fe3` 的 success，JUnit 10/10。
 - 未跑本机 build / 探针，按规则交给云端验证。本轮不改变 Vision OCR、Koharu、翻译或覆盖算法，不声称质量指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
 
 ## v2.3：图片取消后重试一致性
