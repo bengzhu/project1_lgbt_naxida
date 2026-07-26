@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import re
+import subprocess
 import unittest
 
 
@@ -234,15 +235,23 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         bundle_ids = set(
             re.findall(r"PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);", project)
         )
-        marketing_versions = set(
-            re.findall(r"MARKETING_VERSION = ([^;]+);", project)
+        version_result = subprocess.run(
+            ["python3", str(ROOT / "scripts/resolve-project-version.py")],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
         )
         self.assertEqual(bundle_ids, {"com.local.aitransform114"})
-        self.assertEqual(marketing_versions, {"1.96"})
+        self.assertEqual(version_result.returncode, 0, version_result.stderr)
+        self.assertRegex(version_result.stdout.strip(), r"^v[0-9]+(?:\.[0-9]+)+$")
         self.assertNotIn("BUNDLE_ID: com.local.aitrans\n", workflow)
         self.assertIn("Print :CFBundleIdentifier", workflow)
         self.assertIn("steps.simulator_build.outputs.bundle_id", workflow)
-        self.assertIn('elif [[ "$branch" =~ ^([0-9]+(\\.[0-9]+)*)$ ]]', workflow)
+        self.assertIn(
+            'version="$(python3 scripts/resolve-project-version.py --ref "$branch")"',
+            workflow,
+        )
 
 
 if __name__ == "__main__":
