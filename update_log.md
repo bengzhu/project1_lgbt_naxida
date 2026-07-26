@@ -8,14 +8,15 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
-## 未发布工作区：图片翻译目标语言选择
-日期：2026-07-15
+## v1.96 候选：图片翻译目标语言一致性
+日期：2026-07-26
 
 核心变更：
 
 - 图片页新增目标语言菜单，复用 `TranslationSessionStore.targetLanguage`、既有 Pro 门控和锁定提示；不新增独立持久化状态，也不改变漫画探针固定英译中路径。
 - 图片翻译任务在开始时固定源语言和目标语言。逐块 OCR/翻译期间，即使其他页面修改全局语言，当前任务也不会混用不同语言方向。
 - 已完成的图片切换为新的可用目标语言时，从沙盒原图重新执行 OCR、翻译和覆盖导出；运行态菜单禁用，防止同一任务内改写目标语言。
+- 图片任务单独记录当前内容实际使用的目标语言。其他页面修改全局目标语言后，图片页的标题、菜单、选中标记和 VoiceOver 仍显示实际译文语言；再次选择全局已选但与图片结果不同的语言时仍会触发重译。
 
 关键文件：
 
@@ -25,7 +26,7 @@
 
 验证与遗留：
 
-- 已通过 `python3 -B scripts/test-v187-ui-interaction-contract.py`、`git diff --check` 和现有漫画 JSON 解析。
+- 已通过 `python3 -B scripts/test-v187-ui-interaction-contract.py`（8 项）、`python3 -B scripts/test-speech-recognition-contract.py`（14 项）、`git diff --check` 和现有漫画 JSON 解析；新增契约覆盖跨页面改语言后的完成态显示与同值重译判定。
 - 未跑本机 build / 探针，按规则交给云端验证；本轮没有修改漫画算法或报告模型，因此未更新 `metrics/version_history.csv`。
 
 ## 当前漫画指标基线

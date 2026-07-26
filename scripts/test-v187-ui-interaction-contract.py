@@ -162,6 +162,7 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertIn("ImageTargetLanguageControl()", image)
         self.assertIn("store.availableTargetLanguages", image)
         self.assertIn("store.selectImageTargetLanguage(language)", image)
+        self.assertGreaterEqual(image.count("store.imageTranslationDisplayedTargetLanguage"), 4)
         self.assertIn("已完成的图片会重新翻译", image)
 
         selector = re.search(
@@ -172,7 +173,14 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertIsNotNone(selector, "image target language selector is missing")
         self.assertIn("selectTargetLanguage(language)", selector.group("body"))
         self.assertIn("imageTranslationState == .translated", selector.group("body"))
+        self.assertIn("imageTranslationContentTargetLanguage != language", selector.group("body"))
+        self.assertNotIn("guard language != targetLanguage else", selector.group("body"))
         self.assertIn("retryImageTranslation()", selector.group("body"))
+
+        self.assertIn(
+            "imageTranslationContentTargetLanguage = targetLanguage",
+            store,
+        )
 
 
 if __name__ == "__main__":
