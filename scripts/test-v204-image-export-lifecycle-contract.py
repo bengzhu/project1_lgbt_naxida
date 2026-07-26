@@ -81,16 +81,22 @@ class ImageExportLifecycleContractTests(unittest.TestCase):
         self.assertNotIn("imageTranslationExportURL = nil", rerender)
         self.assertIn("self.imageOverlayRenderID == renderID", rerender)
         self.assertIn("self.imageTranslationTaskID == contentTaskID", rerender)
-        self.assertIn("Self.removeImageTranslationStagingFile(stagedURL)", rerender)
+        self.assertIn("self.removeImageTranslationStagingFile(stagedURL, directory: directory)", rerender)
 
     def test_export_deletion_is_confined_to_the_managed_directory(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")
-        helper = function_body(store, "nonisolated private static func removeImageTranslationManagedExport(")
+        export_helper = function_body(store, "nonisolated private static func removeImageTranslationManagedExport(")
+        helper = function_body(store, "nonisolated private static func removeImageTranslationManagedFile(")
+        stable_name = function_body(store, "nonisolated private static func isImageTranslationStableExportFilename(")
+        self.assertIn("removeImageTranslationManagedFile", export_helper)
+        self.assertIn("kind: .stableExport", export_helper)
         self.assertIn("directory.standardizedFileURL", helper)
         self.assertIn("url.standardizedFileURL", helper)
         self.assertIn("managedFile.deletingLastPathComponent() == managedDirectory", helper)
-        self.assertIn('!filename.hasPrefix(".")', helper)
-        self.assertIn('filename.hasSuffix("-translated.png")', helper)
+        self.assertIn("isImageTranslationManagedFilename(filename, kind: kind)", helper)
+        self.assertIn('let prefix = "aitrans-export-"', stable_name)
+        self.assertIn("UUID(uuidString: uuid) != nil", stable_name)
+        self.assertIn('baseAndSuffix.hasSuffix(suffix)', stable_name)
         self.assertIn("values.isRegularFile == true", helper)
         self.assertIn("values.isSymbolicLink != true", helper)
         self.assertIn("destinationOfSymbolicLink(atPath: managedFile.path)", helper)
@@ -107,16 +113,15 @@ class ImageExportLifecycleContractTests(unittest.TestCase):
     def test_startup_adopts_and_discards_prior_stable_exports(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")
         initializer = function_body(store, "init(")
-        startup = function_body(store, "private func discardOrphanedImageTranslationExportsAtStartup()")
+        startup = function_body(store, "private func reconcileOrphanedImageTranslationWorkspaceAtStartup()")
         self.assertIn("guard performsStartupWork else { return }", initializer)
-        self.assertIn("discardOrphanedImageTranslationExportsAtStartup()", initializer)
+        self.assertIn("reconcileOrphanedImageTranslationWorkspaceAtStartup()", initializer)
         self.assertLess(
             initializer.index("guard performsStartupWork else { return }"),
-            initializer.index("discardOrphanedImageTranslationExportsAtStartup()"),
+            initializer.index("reconcileOrphanedImageTranslationWorkspaceAtStartup()"),
         )
         self.assertIn("contentsOfDirectory(", startup)
-        self.assertIn('!filename.hasPrefix(".")', startup)
-        self.assertIn('filename.hasSuffix("-translated.png")', startup)
+        self.assertIn("isImageTranslationStableExportFilename(filename)", startup)
         self.assertIn("imageTranslationOwnedExportURLs.insert(managedFile)", startup)
         self.assertIn("discardImageTranslationExport()", startup)
 

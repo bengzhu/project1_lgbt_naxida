@@ -100,7 +100,9 @@ class ImageImportRunIsolationContractTests(unittest.TestCase):
         self.assertIn("imageTranslationTask?.cancel()", begin)
         self.assertIn("imageTranslationTaskID = taskID", begin)
         self.assertIn("imageTranslationSourceURL = nil", begin)
-        self.assertIn("removeImageTranslationInputFile(imageTranslationSourceURL)", begin)
+        self.assertIn("removeImageTranslationInputFile(", begin)
+        self.assertIn("imageTranslationSourceURL", begin)
+        self.assertIn("directory: imageTranslationDirectory", begin)
 
     def test_transfer_nil_and_all_late_results_are_task_id_gated(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")
@@ -197,7 +199,9 @@ class ImageImportRunIsolationContractTests(unittest.TestCase):
         retry = function_body(store, "func retryImageTranslation()")
         clear = function_body(store, "func clearImageTranslation()")
         self.assertIn("preservingSourceURL: url", retry)
-        self.assertIn("removeImageTranslationInputFile(imageTranslationSourceURL)", clear)
+        self.assertIn("removeImageTranslationInputFile(", clear)
+        self.assertIn("imageTranslationSourceURL", clear)
+        self.assertIn("directory: imageTranslationDirectory", clear)
 
     def test_cancel_clear_and_failure_cannot_restore_stale_state(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")

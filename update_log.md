@@ -8,6 +8,26 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.5：图片 workspace 异常恢复
+日期：2026-07-26
+
+状态：Agent X 已从最新 `smalldata_test@71430810a90483090a7a47910bc018edd55f0671` 创建 `codeb/v2.5-image-workspace-recovery`，完成候选实现、本地轻量验证、两轮独立复审，以及核心与版本收口 exact-SHA 云端 full；工程正式版本为 `MARKETING_VERSION=2.5`，尚待 PR 合入 `smalldata_test`，未触碰 `main`。
+
+核心变更：
+
+- App 正常启动时扫描 `ImageTranslations` 直属文件，分账接管 `aitrans-export-<render UUID>-<base>-translated.png` 稳定导出、`<task UUID>-<name>` 输入副本和 `.<base>-translated-<render UUID>.staging.png`，清理上次崩溃、强退或升级遗留的不可恢复文件；`performsStartupWork=false` 的 Preview / 测试 Store 不扫描。
+- input、staging 与 stable export 共享目录、文件名 kind、regular-file 和 symlink 安全门槛；正常运行中的 input/staging 删除也必须显式传入可信 workspace，wrong-kind、任意文件名、目录外、嵌套、`..` escape、symlink 和 dangling symlink 均拒绝。
+- 启动或正常运行清理失败的 input/staging 进入独立 orphan ownership 集合，后续新任务、clear 或重渲染继续重试；稳定导出必须带 Store marker 与真实 render UUID，普通 `*-translated.png` 和 task UUID source 不再被误认。v2.3 Retry source 边界保持不变。
+- 新增 v2.5 纯 Swift workspace recovery evaluator 与 Python 源码合同，并接入 v1.87 / v2.2 / v2.3 / v2.4 / v2.5 fail-fast UI interaction CI step；旧合同同步要求可信 workspace 参数。
+
+验证与遗留：
+
+- v2.5 10/10、v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、CI 分层 9/9、版本身份 5/5、Swift parse 与 `git diff --check` 通过；v1.87 旧 staging 断言已升级为可信 workspace 签名，并保留发布身份门控与初始 staging 清理约束。
+- 核心 SHA `8626c9c3799b3e4a6b65249c9fc28ac993b448e4` 的云端 full run `30205285339` attempt 1 成功；artifact `aitrans-ci-v2.5-codeb-v2.5-image-workspace-recovery--8626c9c3799b-run30205285339-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.5 10/10、v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` build succeeded 且 issue summaries 为空，commit status `AITRANS CI/full-validation=success`。
+- 版本收口 SHA `efba55b0d59644801fd995207fbd33a3e41fdedb` 的云端 full run `30205587693` attempt 1 成功；artifact `aitrans-ci-v2.5-codeb-v2.5-image-workspace-recovery--efba55b0d596-run30205587693-attempt1` 与 identity 完全一致，`MARKETING_VERSION=2.5`、Xcode build success、JUnit 10/10、`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改工程版本和入口文档，领域合同按 changed-files 路由跳过，由父核心 full 提供证据。
+- 未跑本机 build / 探针，按规则交给云端验证。本轮不改变 Vision OCR、Koharu、翻译或覆盖算法，不声称质量指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+- 已知升级遗留：v2.4 的 `<base>-translated.png` 没有 marker 或 receipt，无法与同后缀用户源文件无歧义区分；v2.5 为避免误删不自动接管这批 legacy 文件。新 marker 中的 render UUID 会出现在系统分享文件名，后续版本应在 Store-owned 分享层提供人类可读建议文件名，不在 View 直接创建临时副本。
+
 ## v2.4：图片稳定导出生命周期
 日期：2026-07-26
 
