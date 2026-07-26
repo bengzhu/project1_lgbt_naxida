@@ -11,7 +11,7 @@
 ## v2.3：图片取消后重试一致性
 日期：2026-07-26
 
-状态：Agent X 已完成候选实现、独立审计、核心与版本收口 exact-SHA 云端 full，工程正式版本为 `MARKETING_VERSION=2.3`；分支为 `codeb/v2.3-image-cancel-retry`，尚待 PR 合并，未触碰 `main`。
+状态：Agent X 已完成候选实现、独立审计、核心与版本收口 exact-SHA 云端 full，工程正式版本为 `MARKETING_VERSION=2.3`。PR #57 已合入 `smalldata_test`，merge SHA `4159251340375aec9f518ea03222f7a81d79b8d7`；远端 `codeb/v2.3-image-cancel-retry` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -23,6 +23,7 @@
 - v2.3 4/4、v2.2 10/10、v1.87 12/12、Swift parse、workflow YAML 和 `git diff --check` 通过。未跑本机 build / 探针，按规则交给云端验证。
 - 核心 SHA `ec41f72c0fc53ccf2a52100e1806888641910857` 的云端 full run `30202633449` attempt 1 成功；artifact `aitrans-ci-v2.3-codeb-v2.3-image-cancel-retry--ec41f72c0fc5-run30202633449-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.3 4/4、v2.2 10/10、v1.87 12/12、Speech/home/paste 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
 - 版本收口 SHA `9367267260bb879a56a52c1c85804f638ad13dd9` 的云端 full run `30202806922` attempt 1 成功；artifact `aitrans-ci-v2.3-codeb-v2.3-image-cancel-retry--9367267260bb-run30202806922-attempt1` 与 version / branch / SHA / run / profile 完全一致，Xcode build succeeded、JUnit 10/10、`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改工程版本和入口文档，领域契约按 changed-files 路由跳过，由父核心 full 提供证据。
+- 纯文档 follow-up fast run `30203035151` 正确复用父 SHA `9367267260bb879a56a52c1c85804f638ad13dd9` 的 full-validation success；PR fast run `30203070611` 成功。merge fast run `30203092489` 的 artifact `aitrans-ci-v2.3-smalldata_test--415925134037-run30203092489-attempt1` 与 merge HEAD 一致，`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用第二父候选 SHA `7a148081b4bb7e53384b8882ebeaa5ebfd751d1b` 的 success，JUnit 10/10。
 - 本轮不改变 Vision OCR、Koharu、翻译或覆盖算法，不声称质量指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
 
 ## v2.2：图片导入 run isolation
