@@ -1,0 +1,38 @@
+{
+  "bubbleInstances": [
+    {
+      "id": "duplicate-bubble",
+      "bbox": [20, 80, 90, 60],
+      "confidence": 0.80,
+      "maskValue": 1,
+      "pixelCount": 1200
+    },
+    {
+      "bbox": [130, 80, 90, 60],
+      "confidence": 0.79,
+      "maskValue": 2,
+      "pixelCount": 1180
+    },
+    {
+      "id": "   ",
+      "bbox": [240, 80, 90, 60],
+      "confidence": 0.78,
+      "maskValue": 3,
+      "pixelCount": 1160
+    },
+    {
+      "id": 123,
+      "bbox": [350, 80, 90, 60],
+      "confidence": 0.77,
+      "maskValue": 4,
+      "pixelCount": 1140
+    },
+    {
+      "id": "duplicate-bubble",
+      "bbox": [460, 80, 90, 60],
+      "confidence": 0.76,
+      "maskValue": 5,
+      "pixelCount": 1120
+    }
+  ]
+}

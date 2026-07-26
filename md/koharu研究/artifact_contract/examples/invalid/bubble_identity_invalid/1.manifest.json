@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "aitrans.koharu_artifact_contract.v1",
+  "sourceImage": "test/1.png",
+  "sourceImageSHA256": "9c3dc0ee9dfc4a6b664c4b4dd32e5b74b214f6f0d16f32ef97ef02ce47c2ed21",
+  "coordinateSpace": "originalImageTopLeftPixels",
+  "contractExampleOnly": false,
+  "generatedBy": "koharu-real-detector-export",
+  "generatedAt": "2026-07-26T00:00:00Z",
+  "textBoxesPath": "1.textboxes.json",
+  "bubbleMaskPath": "1.bubbles.json",
+  "segmentMaskPath": "1.segment_mask.json",
+  "notes": [
+    "invalid fixture for Bubble instance identity validation",
+    "bbox values are valid; missing, blank, non-string, and duplicate IDs are intentionally invalid"
+  ]
+}

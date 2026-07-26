@@ -1,0 +1,10 @@
+{
+  "textBoxes": [
+    {
+      "id": "bubble-identity-fixture-textbox",
+      "bbox": [118, 172, 120, 46],
+      "confidence": 0.82,
+      "detector": "koharu-real-detector-export"
+    }
+  ]
+}

@@ -227,6 +227,11 @@ externalTextBoxShadowOCRSummary.ocrSucceededCount > 0
 externalTextBoxShadowOCRSummary.coverageVerdict = complete
 externalTextBoxShadowOCRSummary.successfulCoverageRatio = 1
 externalTextBoxShadowOCRSummary.duplicateAssignedTextBoxIDs = []
+externalTextBoxShadowOCRSummary.minimumTrustedIoU >= 0.1
+externalTextBoxShadowOCRSummary.geometryWeakBlockIndexes = []
+externalTextBoxShadowOCRSummary.geometryUnknownBubbleBlockIndexes = []
+externalTextBoxShadowOCRSummary.geometryCoverageRatio = 1
+externalTextBoxShadowOCRSummary.geometryCoverageVerdict = complete
 koharuNativeArtifactContractDryRunReport.contractDryRunVerdict = activeArtifactsReadyForShadowOCR
 koharuNativeArtifactContractDryRunReport.appSideArtifactIdentityVerdict = activeArtifactIdentityRecorded
 koharuNativeArtifactContractDryRunReport.appSideArtifactIdentityHashesPresent = true
@@ -276,9 +281,18 @@ externalTextBoxShadowOCRReport.ocrSucceededCount > 0
 externalTextBoxShadowOCRReport.coverageVerdict == "complete"
 externalTextBoxShadowOCRReport.successfulCoverageRatio == 1
 externalTextBoxShadowOCRReport.duplicateAssignedTextBoxIDs == []
+externalTextBoxShadowOCRReport.minimumTrustedIoU >= 0.1
+externalTextBoxShadowOCRReport.geometryWeakBlockIndexes == []
+externalTextBoxShadowOCRReport.geometryUnknownBubbleBlockIndexes == []
+externalTextBoxShadowOCRReport.geometryCoverageRatio == 1
+externalTextBoxShadowOCRReport.geometryCoverageVerdict == "complete"
 WI-external-textbox-shadow-ocr-coverage.status == "closedReportOnly"
 G-external-textbox-shadow-ocr-coverage.status == "passed"
 WI/G-external-textbox-orientation-shadow-path 不得在 partial / unsupported blockers 存在时 passed
 ```
 
 若 TextBox 带 `sourceDirection`、`linePolygons`、`rotationDegrees` / `rotationDeg`，orientation partial / unsupported 必须进入 `WI/G-external-textbox-orientation-shadow-path`，不能把相关块判为 `closedReportOnly` 或把 gate 判为 `passed`。
+
+每个 Bubble instance 的 `id` 必须是非空唯一字符串。缺失、空白或非字符串 ID 统一记为 `bubbleIDMissing:<index>`，trim 后重复记为 `duplicateBubbleID:<id>`；validator 与 App readiness 必须使用相同错误码并阻塞 shadow OCR readiness。
+
+v2.1 起，合法弱 edge 仍可用于 shadow 诊断，但不能关闭 coverage gate。assignment 只有在 `centerContained == true` 或 `IoU >= 0.10`，并且 block 与 TextBox 各自匹配到同一个 external Bubble ID 时才是 geometry trusted。任一侧 Bubble 缺失记为 `bubbleAlignmentVerdict = unknown`，双方 Bubble ID 不同记为 `conflict`；unknown 不获得 Bubble alignment score bonus，conflict 继续拒绝 edge。geometry ledger 与 OCR outcome ledger 独立，最终 `coverageVerdict = complete` 必须同时满足全部 OCR 成功和 `geometryCoverageVerdict = complete`。

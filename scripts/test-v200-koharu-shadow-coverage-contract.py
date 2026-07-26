@@ -142,7 +142,13 @@ class KoharuShadowCoverageContractTests(unittest.TestCase):
     def test_partial_coverage_cannot_close_convergence_gate(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")
         self.assertIn('externalShadowCoverageVerdict == "complete"', store)
-        self.assertIn("externalShadowFailedBlocks + externalShadowSkippedBlocks", store)
+        for ledger in [
+            "externalShadowFailedBlocks",
+            "externalShadowSkippedBlocks",
+            "externalShadowGeometryWeakBlocks",
+            "externalShadowGeometryUnknownBubbleBlocks",
+        ]:
+            self.assertIn(ledger, store)
         self.assertIn('externalShadowCoverageWorkItemStatus = "blockedByPartialExternalShadowOCRCoverage"', store)
         self.assertIn('signal("successfulCoverageRatio"', store)
         self.assertIn("successfulCoverageRatio == 1", store)
