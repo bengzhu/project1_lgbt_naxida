@@ -23,7 +23,8 @@
 
 - 新增 `scripts/test-v202-image-import-run-isolation-contract.py` 与纯 Swift evaluator，当前 10/10 通过；覆盖 A/B 反序完成、nil、取消、清空、照片/文件交错、source 发布门槛、同名 sandbox 隔离、文件选择 UUID、选择器失败保留现有任务、旧源清理、retry source 门槛和组合 CI fail-fast。v1.87 UI interaction 回归 12/12、Swift parse、workflow YAML 与 `git diff --check` 通过。
 - 核心 SHA `e59bc4fc13946ff91383a9c3a128cc55f7ca2108` 的云端 full run `30202007400` attempt 1 成功；artifact `aitrans-ci-v2.2-codeb-v2.2-image-import-run-isolation--e59bc4fc1394-run30202007400-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.2 10/10、v1.87 12/12、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。父 SHA 的 superseded run `30201926721` 已取消，不作为证据；scope 因父收据失败安全回退全仓并记录 `candidate_full_repo_fallback`。
-- v2.2 contract 已接入 UI interaction CI 路由；版本收口 SHA 尚待 task-scoped full。未跑本机 build / 探针，按规则交给云端验证。
+- 版本收口 SHA `6086c24af42d629937ae61bf8a3d01e9ce3f684d` 的云端 full run `30202239509` attempt 1 成功；artifact `aitrans-ci-v2.2-codeb-v2.2-image-import-run-isolation--6086c24af42d-run30202239509-attempt1` 与 identity 完全一致，`MARKETING_VERSION=2.2`、Xcode build success、JUnit 10/10、`.xcresult` succeeded 且 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次仅改版本与入口文档，领域契约按 changed-files 路由跳过，由父核心 full 提供证据。
+- v2.2 contract 已接入 UI interaction CI 路由。未跑本机 build / 探针，按规则交给云端验证。
 - 本轮不改变 Vision OCR 算法、漫画探针、Koharu shadow OCR、翻译 prompt 或模型，不声称 OCR 指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
 
 ## v2.1：Koharu assignment geometry coverage
