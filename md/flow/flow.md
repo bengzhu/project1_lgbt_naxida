@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`1.97`（Koharu 多行 line polygon partial 隔离与 handoff exact-SHA 硬校验已收口；v1.96 图片翻译任务语言一致性仍保留；Speech 真实 corpus 和 Koharu 真实四件套运行态仍待提供）。
+正式版本：`1.98`（普通图片预览与 PNG 导出坐标、模式和并发发布一致性已收口；v1.97 Koharu 多行 line polygon partial 隔离与 handoff exact-SHA 硬校验仍保留；Speech 真实 corpus 和 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 

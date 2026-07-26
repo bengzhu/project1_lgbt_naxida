@@ -2,6 +2,7 @@
 """Contract tests for CI artifact version identity."""
 
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import unittest
@@ -67,7 +68,14 @@ class CIVersionIdentityContractTests(unittest.TestCase):
             text=True,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.strip(), "v1.97")
+        assignments = re.findall(
+            r"^\s*MARKETING_VERSION\s*=\s*([^;]+);",
+            PROJECT.read_text(encoding="utf-8"),
+            re.MULTILINE,
+        )
+        normalized = {value.strip().strip('"').strip() for value in assignments}
+        self.assertEqual(len(normalized), 1, "App build configurations must agree")
+        self.assertEqual(result.stdout.strip(), f"v{normalized.pop()}")
 
     def test_matching_quoted_build_configurations_resolve_once(self) -> None:
         result = self.run_resolver(
