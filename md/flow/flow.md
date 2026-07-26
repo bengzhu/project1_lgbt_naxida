@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`1.97`（Koharu 多行 line polygon partial 隔离与 handoff exact-SHA 硬校验已收口；v1.96 图片翻译任务语言一致性仍保留；Speech 真实 corpus 和 Koharu 真实四件套运行态仍待提供）。
+正式版本：`1.98`（普通图片预览与 PNG 导出坐标、模式和并发发布一致性已收口；v1.97 Koharu 多行 line polygon partial 隔离与 handoff exact-SHA 硬校验仍保留；Speech 真实 corpus 和 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
@@ -164,7 +164,7 @@
 输出：
 
 - `ImageTranslationBlock`
-- 旁贴或覆盖展示。
+- 旁贴或覆盖预览与同模式 PNG 导出；Vision OCR bbox、SwiftUI 预览和导出 renderer 统一使用图片顶左原点坐标。后台 render 只写 render ID 独占 staging PNG，已完成图片切换模式会使旧导出失效并按 render ID / 图片 task ID / mode 验明身份后发布稳定文件，旧 detached render 不得覆盖新任务。
 - 任务启动时固定源/目标语言，并单独记录当前图片内容实际使用的目标语言；从 `.loading` 起即使图片数据和 blocks 尚为空，UI 也使用任务语言。失败或取消后若图片数据/部分 OCR 块仍可见，继续保留对应语言凭据，只有清空或新任务替换内容时才重置。已完成图片选择不同结果语言时，即使全局目标已提前相同，也从沙盒原图重新翻译。
 
 关键文件：
@@ -397,6 +397,7 @@ CI artifact version 优先从带 `vX.Y` 的候选 ref 解析；`smalldata_test` 
   -> 每块按固定目标语言调用 translate
   -> ImageTranslationBlock
   -> 旁贴或覆盖 UI
+  -> 同模式顶左坐标 PNG 导出
 ```
 
 ### 2.3 音频翻译

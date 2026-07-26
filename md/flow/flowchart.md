@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-正式版本：`1.97`。
+正式版本：`1.98`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -40,7 +40,7 @@ flowchart TD
   IMG_TARGET["图片目标语言菜单<br/>Pro 门控 / 按结果语言重译"] --> C
   C --> I["普通图片翻译<br/>VisionOCRService + 源/目标语言快照"]
   I --> J["ImageTranslationBlock<br/>bbox + OCR 文本 + 译文"]
-  J --> K["图片旁贴 / 覆盖 UI"]
+  J --> K["图片旁贴 / 覆盖 UI<br/>同模式顶左坐标 PNG 导出"]
 
   %% 音频分支：Apple 本机语音识别
   C --> LR["Speech run ID + store-owned translation Task<br/>取消 / 重试使旧回调失效"]

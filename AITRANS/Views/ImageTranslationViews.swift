@@ -96,7 +96,7 @@ struct ImageTranslationPanel: View {
                 }
             }
             .pickerStyle(.segmented)
-            .disabled(store.imageTranslationData == nil)
+            .disabled(store.imageTranslationData == nil || isRunning)
 
             AppStatusRow(
                 title: store.imageTranslationProgressTitle,
@@ -134,6 +134,13 @@ struct ImageTranslationPanel: View {
         case .loading, .recognizing, .translating: .active
         case .translated: .success
         case .failed: .danger
+        }
+    }
+
+    private var isRunning: Bool {
+        switch store.imageTranslationState {
+        case .loading, .recognizing, .translating: true
+        case .idle, .translated, .failed: false
         }
     }
 
