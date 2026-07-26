@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`2.1`（Koharu external TextBox shadow OCR coverage 同时要求完整 OCR outcome 和可信 assignment geometry；weak overlap / Bubble unknown 只保留 shadow 诊断；v2.0 稳定一对一最大基数匹配、v1.99 polygon containment 和 v1.98 普通图片导出一致性仍保留；Speech 真实 corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`2.2`（PhotosPicker transfer 到 OCR / 翻译 / 导出均由 Store-owned 图片 task ID 隔离，运行中可更换来源，旧回调和无 source 重试被拒绝；v2.1 Koharu trusted geometry coverage、v2.0 稳定一对一匹配、v1.99 polygon containment 和 v1.98 普通图片导出一致性仍保留；Speech 真实 corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
