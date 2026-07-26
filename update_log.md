@@ -8,6 +8,27 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.0：Koharu external TextBox 一对一 coverage
+日期：2026-07-26
+
+状态：Agent X 已完成核心候选复审和版本收口，工程正式版本为 `MARKETING_VERSION=2.0`；分支 `codeb/v2.0-koharu-shadow-coverage` 尚未合入 `smalldata_test`，未触碰 `main`。
+
+核心变更：
+
+- external TextBox shadow OCR 从逐块独立取最佳候选改为确定性的最大基数二分匹配；block 与 TextBox 都最多消费一次，增广路径避免多候选 block 抢占单候选 block，最终以 TextBox ID 稳定 tie-break。
+- active TextBox ID 必须是非空唯一字符串；Python validator 与 App readiness 同步拒绝缺失/重复 ID，避免随机 UUID 参与匹配身份。
+- `externalTextBoxShadowOCRReport` 新增逐块 matched / succeeded / failed / skipped partition、争用账本、最终 duplicate ledger、matched / successful / matched-OCR-success ratios 和 `coverageVerdict`。
+- convergence 与 injected-artifact CI smoke 只有在分区一致、最终无重复 TextBox、所有 block OCR 成功且 `successfulCoverageRatio = 1` 时才允许 coverage gate passed；局部成功只阻塞 failed + skipped blocks，不再以任意一个成功块伪装整体闭合。
+
+验证与遗留：
+
+- 新增 `scripts/test-v200-koharu-shadow-coverage-contract.py` 与纯 Swift fixture `scripts/test-v200-koharu-shadow-coverage-evaluator.swift`，实际编译并执行增广重分配、单 TextBox 争用、complete / partial / no-success / duplicate / invalid partition、旧报告 Codable 兼容、ID 门槛和 CI/TXT 接线；保留旧 counts 与 `skippedBlocks` 便于报告消费者渐进迁移。
+- 核心候选 SHA `9a4ad74e2c0d41b7b09f7a57a41d2b211082ce4d` 的云端 full run `30199459993` attempt 1 成功；artifact `aitrans-ci-v2.0-codeb-v2.0-koharu-shadow-coverage--9a4ad74e2c0d-run30199459993-attempt1` 与候选 HEAD 一致，v2.0 contract 6/6、extended Koharu validator matrix、Speech/UI/home/paste 契约和 Xcode build 均成功，JUnit 10/10，`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- 版本收口 SHA `dd894c667d157aa5b2ef762b838143b88052ae66` 的云端 full run `30199669320` attempt 1 成功；artifact `aitrans-ci-v2.0-codeb-v2.0-koharu-shadow-coverage--dd894c667d15-run30199669320-attempt1` 与收口 HEAD 一致，`validationProfile=full`、`xcodeBuildRequired=true`、Xcode build success、JUnit 10/10、`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次只改工程版本与文档，Koharu 领域契约按 changed-files 路由跳过，并由父核心 full 提供领域证据。
+- 首次核心 push SHA `a22f7cab40b5711ffcdbddf203fec0f02d3766a6` 的 run `30199283447` 在创建 job 前因漫画探针长 `run` block 超过 GitHub 21000 字符表达式上限失败；后续把 Actions 表达式移至 step env，并顺带消除 `github.head_ref` shell 注入 lint 警告。该失败 run 无 jobs / artifact，不作为验证收据。
+- 本轮保持 shadow-only，不改变主 OCR、翻译、覆盖图、`blockPassed` 或 promotion；仓库仍无真实四件套，不声称 OCR 数字提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
+- 未跑本机 build / 探针，按规则交给云端验证。
+
 ## v1.99：Koharu line polygon 所属关系校验
 日期：2026-07-26
 

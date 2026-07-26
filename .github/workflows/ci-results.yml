@@ -102,10 +102,12 @@ jobs:
       - name: Prepare metadata
         id: meta
         shell: bash
+        env:
+          PR_HEAD_REF: ${{ github.head_ref }}
         run: |
           set -euo pipefail
           mkdir -p "$TEST_RESULTS_DIR" "$OUTPUT_COPY_DIR"
-          branch="${{ github.head_ref }}"
+          branch="$PR_HEAD_REF"
           if [ -z "$branch" ]; then
             branch="${GITHUB_REF_NAME}"
           fi
@@ -643,6 +645,7 @@ jobs:
             if [ "${{ steps.ci_scope.outputs.koharu_contract_required }}" = "true" ]; then
               python3 -B scripts/test-v192-koharu-line-polygon-warp-contract.py
               python3 -B scripts/test-v199-koharu-line-polygon-containment-contract.py
+              python3 -B scripts/test-v200-koharu-shadow-coverage-contract.py
               python3 -B scripts/test-v197-koharu-handoff-target-contract.py
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
             python3 - <<'PY'
@@ -751,6 +754,8 @@ jobs:
               raise SystemExit(f"handoff packet missing reconciliation assertion: {packet}")
           if not any(assertion.get("jsonPath") == "externalTextBoxShadowOCRSummary.ocrSucceededCount" for assertion in packet.get("expectedExternalShadowOCRAssertions") or []):
               raise SystemExit(f"handoff packet missing external shadow OCR assertion: {packet}")
+          if not any(assertion.get("jsonPath") == "externalTextBoxShadowOCRSummary.coverageVerdict" and assertion.get("expected") == "complete" for assertion in packet.get("expectedExternalShadowOCRAssertions") or []):
+              raise SystemExit(f"handoff packet missing complete external shadow OCR coverage assertion: {packet}")
           if not any(assertion.get("jsonPath") == "koharuArtifactConvergenceGateSummary.externalShadowCoverageGate.id" for assertion in packet.get("expectedConvergenceAssertions") or []):
               raise SystemExit(f"handoff packet missing convergence assertion: {packet}")
           if not (packet.get("expectedProbeTextNeedles") or []):
@@ -776,6 +781,8 @@ jobs:
           required_koharu_checks = ci_result_review.get("requiredKoharuChecks") or []
           if not any("ocrSucceededCount > 0" in check for check in required_koharu_checks):
               raise SystemExit(f"CI result review missing shadow OCR success check: {ci_result_review}")
+          if not any("successfulCoverageRatio == 1" in check for check in required_koharu_checks):
+              raise SystemExit(f"CI result review missing complete shadow OCR coverage check: {ci_result_review}")
           stale_rules = ci_result_review.get("staleArtifactRejectionRules") or []
           if not any("commitSha" in rule for rule in stale_rules):
               raise SystemExit(f"CI result review missing stale artifact rejection rule: {ci_result_review}")
@@ -972,6 +979,11 @@ jobs:
         if: steps.meta.outputs.probe_mode != 'skip' && steps.xcode_build.outcome == 'success' && steps.verify_model.outcome == 'success' && steps.simulator_build.outcome == 'success'
         shell: bash
         continue-on-error: true
+        env:
+          SIMULATOR_APP_PATH: ${{ steps.simulator_build.outputs.simulator_app_path }}
+          PROBE_BUNDLE_ID: ${{ steps.simulator_build.outputs.bundle_id }}
+          PROBE_MODE: ${{ steps.meta.outputs.probe_mode }}
+          KOHARU_ARTIFACT_REQUESTED: ${{ steps.meta.outputs.koharu_artifact_requested }}
         run: |
           set -euo pipefail
           {
@@ -1010,8 +1022,8 @@ jobs:
             xcrun simctl boot "$device_id"
             xcrun simctl bootstatus "$device_id" -b
 
-            app_path="${{ steps.simulator_build.outputs.simulator_app_path }}"
-            BUNDLE_ID="${{ steps.simulator_build.outputs.bundle_id }}"
+            app_path="$SIMULATOR_APP_PATH"
+            BUNDLE_ID="$PROBE_BUNDLE_ID"
             if [ -z "$app_path" ]; then
               echo "Debug simulator app path is missing from locate step" >&2
               exit 1
@@ -1146,7 +1158,7 @@ jobs:
           PY
             BUNDLE_ID="$BUNDLE_ID" scripts/export-probe-output.sh "$device_id"
             python3 - <<'PY'
-          import pathlib, sys
+          import os, pathlib, sys
           required = [
               "probe_report.json",
               "clean_text_diagnostic.json",
@@ -1155,7 +1167,7 @@ jobs:
               "1_translated_overlay.png",
               "manga_probe_progress.json",
           ]
-          if "${{ steps.meta.outputs.probe_mode }}" == "full":
+          if os.environ["PROBE_MODE"] == "full":
               required.append("1_probe_contact_sheet.png")
           missing = [name for name in required if not pathlib.Path("output", name).is_file()]
           if missing:
@@ -1183,7 +1195,7 @@ jobs:
           missing_report_fields = [name for name, value in required_report_fields if value is None]
           if missing_report_fields:
               raise SystemExit(f"missing linkage report fields: {missing_report_fields}")
-          if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
+          if os.environ["KOHARU_ARTIFACT_REQUESTED"] == "true":
               external_expected = {
                   "readinessVerdict": "readyForShadowOCR",
                   "activeArtifactsDirectory": True,
@@ -1209,6 +1221,24 @@ jobs:
                   raise SystemExit(f"externalTextBoxShadowOCRReport.ocrExecutedCount={external_shadow.get('ocrExecutedCount')!r}")
               if int(external_shadow.get("ocrSucceededCount") or 0) <= 0:
                   raise SystemExit(f"externalTextBoxShadowOCRReport.ocrSucceededCount={external_shadow.get('ocrSucceededCount')!r}")
+              evaluated_blocks = {int(item.get("index")) for item in report.get("blocks") or []}
+              matched_blocks = {int(value) for value in external_shadow.get("matchedBlockIndexes") or []}
+              succeeded_blocks = {int(value) for value in external_shadow.get("succeededBlockIndexes") or []}
+              failed_blocks = {int(value) for value in external_shadow.get("failedBlockIndexes") or []}
+              skipped_blocks = {int(value) for value in external_shadow.get("skippedBlocks") or []}
+              partition_valid = (
+                  succeeded_blocks.isdisjoint(failed_blocks)
+                  and succeeded_blocks.isdisjoint(skipped_blocks)
+                  and failed_blocks.isdisjoint(skipped_blocks)
+                  and succeeded_blocks | failed_blocks | skipped_blocks == evaluated_blocks
+                  and matched_blocks == succeeded_blocks | failed_blocks
+              )
+              if not partition_valid:
+                  raise SystemExit(f"external TextBox shadow OCR block partition invalid: evaluated={sorted(evaluated_blocks)} matched={sorted(matched_blocks)} succeeded={sorted(succeeded_blocks)} failed={sorted(failed_blocks)} skipped={sorted(skipped_blocks)}")
+              if external_shadow.get("duplicateAssignedTextBoxIDs"):
+                  raise SystemExit(f"external TextBox shadow OCR duplicate assignments: {external_shadow.get('duplicateAssignedTextBoxIDs')}")
+              if external_shadow.get("coverageVerdict") != "complete" or float(external_shadow.get("successfulCoverageRatio") or 0) != 1.0:
+                  raise SystemExit(f"external TextBox shadow OCR coverage incomplete: verdict={external_shadow.get('coverageVerdict')!r} ratio={external_shadow.get('successfulCoverageRatio')!r} failed={sorted(failed_blocks)} skipped={sorted(skipped_blocks)}")
               if contract.get("contractDryRunVerdict") != "activeArtifactsReadyForShadowOCR":
                   raise SystemExit(f"contractDryRunVerdict={contract.get('contractDryRunVerdict')!r}")
               if contract.get("activeExportAllowed") is not False or contract.get("dryRunOnly") is not True:
@@ -1289,7 +1319,7 @@ jobs:
           ]:
               if required_id not in gate_ids:
                   raise SystemExit(f"missing convergence gate: {required_id}")
-          if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
+          if os.environ["KOHARU_ARTIFACT_REQUESTED"] == "true":
               coverage_work_item = work_items_by_id.get("WI-external-textbox-shadow-ocr-coverage") or {}
               coverage_gate = gates_by_id.get("G-external-textbox-shadow-ocr-coverage") or {}
               report_availability_gate = gates_by_id.get("G-ci-fast-report-availability") or {}
@@ -1333,12 +1363,14 @@ jobs:
           ]:
               if needle not in txt:
                   raise SystemExit(f"missing probe TXT summary: {needle}")
-          if "${{ steps.meta.outputs.koharu_artifact_requested }}" == "true":
+          if os.environ["KOHARU_ARTIFACT_REQUESTED"] == "true":
               for needle in [
                   "externalArtifacts: readiness=readyForShadowOCR",
                   "shadowOCRAllowed=true",
                   "externalTextBoxShadowOCR:",
                   "ocrSucceeded=",
+                  "successfulCoverage=",
+                  "coverageVerdict=complete",
                   "nativeArtifactContractDryRunReport",
                   "nativeArtifactContractDryRunPreview",
                   "appSideIdentity=activeArtifactIdentityRecorded",
@@ -1726,6 +1758,17 @@ jobs:
                   "candidateCount": (external_shadow or {}).get("candidateCount"),
                   "ocrExecutedCount": (external_shadow or {}).get("ocrExecutedCount"),
                   "ocrSucceededCount": (external_shadow or {}).get("ocrSucceededCount"),
+                  "evaluatedBlockCount": (external_shadow or {}).get("evaluatedBlockCount"),
+                  "matchedBlockIndexes": (external_shadow or {}).get("matchedBlockIndexes"),
+                  "succeededBlockIndexes": (external_shadow or {}).get("succeededBlockIndexes"),
+                  "failedBlockIndexes": (external_shadow or {}).get("failedBlockIndexes"),
+                  "uniqueMatchedTextBoxCount": (external_shadow or {}).get("uniqueMatchedTextBoxCount"),
+                  "duplicateAssignmentLedgers": (external_shadow or {}).get("duplicateAssignmentLedgers"),
+                  "duplicateAssignedTextBoxIDs": (external_shadow or {}).get("duplicateAssignedTextBoxIDs"),
+                  "matchedCoverageRatio": (external_shadow or {}).get("matchedCoverageRatio"),
+                  "successfulCoverageRatio": (external_shadow or {}).get("successfulCoverageRatio"),
+                  "matchedOCRSuccessRatio": (external_shadow or {}).get("matchedOCRSuccessRatio"),
+                  "coverageVerdict": (external_shadow or {}).get("coverageVerdict"),
                   "betterThanControlCount": (external_shadow or {}).get("betterThanControlCount"),
                   "promotedExternalShadowBlocks": (external_shadow or {}).get("promotedExternalShadowBlocks"),
                   "wouldPromoteByExistingGateBlocks": (external_shadow or {}).get("wouldPromoteByExistingGateBlocks"),
@@ -2191,7 +2234,7 @@ jobs:
               print(f"- identity reconciliation readyForCIManifestComparison: {reconciliation.get('readyForCIManifestComparison')}")
               for row in reconciliation.get("fileRows") or []:
                   print(f"- identity reconciliation {row.get('artifactKind')}: appSize={row.get('appSizeBytes')} appSHA256={row.get('appSHA256')} status={row.get('comparisonStatus')}")
-              print(f"- external shadow OCR: executed={external_shadow.get('executed')} candidateCount={external_shadow.get('candidateCount')} ocrExecutedCount={external_shadow.get('ocrExecutedCount')} ocrSucceededCount={external_shadow.get('ocrSucceededCount')}")
+              print(f"- external shadow OCR: executed={external_shadow.get('executed')} candidateCount={external_shadow.get('candidateCount')} ocrExecutedCount={external_shadow.get('ocrExecutedCount')} ocrSucceededCount={external_shadow.get('ocrSucceededCount')} evaluated={external_shadow.get('evaluatedBlockCount')} matched={external_shadow.get('matchedBlockIndexes')} succeeded={external_shadow.get('succeededBlockIndexes')} failed={external_shadow.get('failedBlockIndexes')} skipped={external_shadow.get('skippedBlocks')} duplicateAssignedTextBoxIDs={external_shadow.get('duplicateAssignedTextBoxIDs')} successfulCoverageRatio={external_shadow.get('successfulCoverageRatio')} coverageVerdict={external_shadow.get('coverageVerdict')}")
               print(f"- external shadow orientation: verdict={external_shadow.get('orientationReadinessVerdict')} partial={external_shadow.get('orientationShadowPathPartialBlocks')} unsupported={external_shadow.get('orientationUnsupportedBlocks')} reasons={external_shadow.get('orientationUnsupportedReasonBreakdown')}")
               print_work_item("WI-external-textbox-shadow-ocr-coverage")
               print_gate("G-external-textbox-shadow-ocr-coverage")

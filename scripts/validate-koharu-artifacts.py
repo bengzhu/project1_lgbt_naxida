@@ -72,6 +72,7 @@ REQUIRED_ARTIFACT_FILES = [
         "required": True,
         "notes": [
             "array or object with textBoxes/textboxes/items",
+            "each TextBox id must be a non-empty unique string",
             "each bbox is [x, y, width, height] in original image top-left pixels",
             "confidence, when present, must be in [0, 1]",
             "sourceDirection, when present, must be horizontal/vertical/vertical-rl/vertical-lr/unknown",
@@ -626,10 +627,16 @@ def handoff_packet(
             expected_assertion("ci-artifact-manifest.json", "externalTextBoxShadowOCRSummary.candidateCount", ">", 0),
             expected_assertion("ci-artifact-manifest.json", "externalTextBoxShadowOCRSummary.ocrExecutedCount", ">", 0),
             expected_assertion("ci-artifact-manifest.json", "externalTextBoxShadowOCRSummary.ocrSucceededCount", ">", 0),
+            expected_assertion("ci-artifact-manifest.json", "externalTextBoxShadowOCRSummary.coverageVerdict", "==", "complete"),
+            expected_assertion("ci-artifact-manifest.json", "externalTextBoxShadowOCRSummary.successfulCoverageRatio", "==", 1),
+            expected_assertion("ci-artifact-manifest.json", "externalTextBoxShadowOCRSummary.duplicateAssignedTextBoxIDs", "==", []),
             expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.executed", "==", True),
             expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.candidateCount", ">", 0),
             expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.ocrExecutedCount", ">", 0),
             expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.ocrSucceededCount", ">", 0),
+            expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.coverageVerdict", "==", "complete"),
+            expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.successfulCoverageRatio", "==", 1),
+            expected_assertion("output/probe_report.json", "externalTextBoxShadowOCRReport.duplicateAssignedTextBoxIDs", "==", []),
         ],
         "expectedConvergenceAssertions": [
             expected_assertion("ci-artifact-manifest.json", "koharuArtifactConvergenceGateSummary.externalShadowCoverageWorkItem.id", "==", "WI-external-textbox-shadow-ocr-coverage"),
@@ -659,6 +666,8 @@ def handoff_packet(
             "shadowOCRAllowed=true",
             "externalTextBoxShadowOCR",
             "ocrSucceeded",
+            "successfulCoverage",
+            "coverageVerdict=complete",
             "nativeArtifactContractDryRunReport",
             "activeArtifactIdentityRecorded",
             "convergenceExternalShadowOCRCoverage",
@@ -726,6 +735,9 @@ def handoff_packet(
                 "externalTextBoxShadowOCRSummary.candidateCount > 0",
                 "externalTextBoxShadowOCRSummary.ocrExecutedCount > 0",
                 "externalTextBoxShadowOCRSummary.ocrSucceededCount > 0",
+                "externalTextBoxShadowOCRSummary.coverageVerdict == complete",
+                "externalTextBoxShadowOCRSummary.successfulCoverageRatio == 1",
+                "externalTextBoxShadowOCRSummary.duplicateAssignedTextBoxIDs == []",
                 "koharuArtifactIdentityReconciliationMatch.matchVerdict == matched",
             ],
             "requiredAppRuntimeReportChecks": [
@@ -738,6 +750,9 @@ def handoff_packet(
                 "koharuArtifactIdentityReconciliationReport.sourceImageSHA256Matches == true",
                 "externalTextBoxShadowOCRReport.executed == true",
                 "externalTextBoxShadowOCRReport.ocrSucceededCount > 0",
+                "externalTextBoxShadowOCRReport.coverageVerdict == complete",
+                "externalTextBoxShadowOCRReport.successfulCoverageRatio == 1",
+                "externalTextBoxShadowOCRReport.duplicateAssignedTextBoxIDs == []",
                 "koharuArtifactConvergenceReport consumes WI/G-external-textbox-shadow-ocr-coverage",
                 "orientation partial or unsupported blocks must not be marked passed",
             ],
@@ -1465,7 +1480,24 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
             source_policy_errors.append(f"contractExampleOnlyInvalid:{contract_example_only_raw}")
     contract_example_only = contract_example_only_raw if isinstance(contract_example_only_raw, bool) else False
     source_policy_errors.extend(generated_by_policy_errors(manifest, contract_example_only))
-    invalid_text_box_ids = validate_boxes(text_boxes, "textBox", image_width, image_height, coordinate_errors)
+    text_box_ids: set[str] = set()
+    invalid_identity_ids: list[str] = []
+    for index, text_box in enumerate(text_boxes):
+        raw_id = text_box.get("id")
+        normalized_id = raw_id.strip() if isinstance(raw_id, str) else ""
+        ledger_id = normalized_id or f"index-{index}"
+        if not normalized_id:
+            coordinate_errors.append(f"textBoxIDMissing:{index}")
+            invalid_identity_ids.append(ledger_id)
+        elif normalized_id in text_box_ids:
+            coordinate_errors.append(f"duplicateTextBoxID:{normalized_id}")
+            invalid_identity_ids.append(ledger_id)
+        else:
+            text_box_ids.add(normalized_id)
+    invalid_text_box_ids = sorted(set(
+        validate_boxes(text_boxes, "textBox", image_width, image_height, coordinate_errors)
+        + invalid_identity_ids
+    ))
     invalid_bubble_ids = validate_boxes(bubbles, "bubble", image_width, image_height, coordinate_errors)
     orientation_metadata_summary = summarize_orientation_metadata(text_boxes)
 

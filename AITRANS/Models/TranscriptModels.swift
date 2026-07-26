@@ -5157,7 +5157,7 @@ struct MangaOverlayExternalTextBox: Equatable, Codable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        id = (try? container.decode(String.self, forKey: .id)) ?? ""
         if let bbox = try container.decodeIfPresent([Double].self, forKey: .bbox), bbox.count == 4 {
             self.bbox = bbox
         } else {
@@ -5430,6 +5430,118 @@ struct MangaOverlayExternalTextBoxShadowOCRBlockSummary: Equatable, Codable, Sen
     var notes: [String]
 }
 
+struct MangaOverlayExternalTextBoxDuplicateAssignmentLedger: Equatable, Codable, Sendable {
+    var textBoxID: String
+    var competingBlockIndexes: [Int]
+    var selectedBlockIndex: Int?
+    var rejectedBlockIndexes: [Int]
+    var resolutionVerdict: String
+    var decisionSignals: [String]
+}
+
+enum MangaOverlayStableOneToOneTextBoxMatcher {
+    static func assignments(preferencesByBlockIndex: [Int: [String]]) -> [Int: String] {
+        var assignmentByBlockIndex: [Int: String] = [:]
+        var ownerByTextBoxID: [String: Int] = [:]
+
+        func assign(_ blockIndex: Int, visitedTextBoxIDs: inout Set<String>) -> Bool {
+            for textBoxID in preferencesByBlockIndex[blockIndex] ?? [] {
+                guard visitedTextBoxIDs.insert(textBoxID).inserted else { continue }
+                if let currentOwner = ownerByTextBoxID[textBoxID] {
+                    guard assign(currentOwner, visitedTextBoxIDs: &visitedTextBoxIDs) else { continue }
+                }
+                ownerByTextBoxID[textBoxID] = blockIndex
+                assignmentByBlockIndex[blockIndex] = textBoxID
+                return true
+            }
+            return false
+        }
+
+        for blockIndex in preferencesByBlockIndex.keys.sorted() {
+            var visitedTextBoxIDs: Set<String> = []
+            _ = assign(blockIndex, visitedTextBoxIDs: &visitedTextBoxIDs)
+        }
+        return assignmentByBlockIndex
+    }
+}
+
+struct MangaOverlayExternalTextBoxCoverageEvaluation: Equatable, Sendable {
+    var evaluatedBlockIndexes: [Int]
+    var matchedBlockIndexes: [Int]
+    var succeededBlockIndexes: [Int]
+    var failedBlockIndexes: [Int]
+    var skippedBlockIndexes: [Int]
+    var duplicateAssignedTextBoxIDs: [String]
+    var matchedCoverageRatio: Double
+    var successfulCoverageRatio: Double
+    var matchedOCRSuccessRatio: Double
+    var outcomePartitionValid: Bool
+    var coverageVerdict: String
+}
+
+enum MangaOverlayExternalTextBoxCoverageEvaluator {
+    static func evaluate(
+        evaluatedBlockIndexes: [Int],
+        matchedBlockIndexes: [Int],
+        succeededBlockIndexes: [Int],
+        failedBlockIndexes: [Int],
+        skippedBlockIndexes: [Int],
+        matchedTextBoxIDs: [String]
+    ) -> MangaOverlayExternalTextBoxCoverageEvaluation {
+        let evaluated = Array(Set(evaluatedBlockIndexes)).sorted()
+        let matched = Array(Set(matchedBlockIndexes)).sorted()
+        let succeeded = Array(Set(succeededBlockIndexes)).sorted()
+        let failed = Array(Set(failedBlockIndexes)).sorted()
+        let skipped = Array(Set(skippedBlockIndexes)).sorted()
+        let textBoxIDCounts = matchedTextBoxIDs.reduce(into: [String: Int]()) { counts, textBoxID in
+            counts[textBoxID, default: 0] += 1
+        }
+        let duplicateIDs = textBoxIDCounts.filter { $0.value > 1 }.map { $0.key }.sorted()
+        let evaluatedSet = Set(evaluated)
+        let matchedSet = Set(matched)
+        let succeededSet = Set(succeeded)
+        let failedSet = Set(failed)
+        let skippedSet = Set(skipped)
+        let partitionValid = succeededSet.isDisjoint(with: failedSet)
+            && succeededSet.isDisjoint(with: skippedSet)
+            && failedSet.isDisjoint(with: skippedSet)
+            && succeededSet.union(failedSet).union(skippedSet) == evaluatedSet
+            && matchedSet == succeededSet.union(failedSet)
+        let evaluatedCount = evaluated.count
+        let matchedRatio = evaluatedCount > 0 ? Double(matched.count) / Double(evaluatedCount) : 0
+        let successfulRatio = evaluatedCount > 0 ? Double(succeeded.count) / Double(evaluatedCount) : 0
+        let matchedSuccessRatio = matched.isEmpty ? 0 : Double(succeeded.count) / Double(matched.count)
+        let verdict: String
+        if !partitionValid || !duplicateIDs.isEmpty {
+            verdict = "inconsistentAssignmentLedger"
+        } else if evaluatedCount == 0 {
+            verdict = "emptyInput"
+        } else if succeeded.count == evaluatedCount,
+                  failed.isEmpty,
+                  skipped.isEmpty,
+                  abs(successfulRatio - 1) < 0.000_001 {
+            verdict = "complete"
+        } else if succeeded.isEmpty {
+            verdict = "noSuccessfulCoverage"
+        } else {
+            verdict = "partial"
+        }
+        return MangaOverlayExternalTextBoxCoverageEvaluation(
+            evaluatedBlockIndexes: evaluated,
+            matchedBlockIndexes: matched,
+            succeededBlockIndexes: succeeded,
+            failedBlockIndexes: failed,
+            skippedBlockIndexes: skipped,
+            duplicateAssignedTextBoxIDs: duplicateIDs,
+            matchedCoverageRatio: matchedRatio,
+            successfulCoverageRatio: successfulRatio,
+            matchedOCRSuccessRatio: matchedSuccessRatio,
+            outcomePartitionValid: partitionValid,
+            coverageVerdict: verdict
+        )
+    }
+}
+
 struct MangaOverlayExternalTextBoxShadowOCRReport: Equatable, Codable, Sendable {
     var enabled: Bool
     var executed: Bool
@@ -5441,13 +5553,24 @@ struct MangaOverlayExternalTextBoxShadowOCRReport: Equatable, Codable, Sendable 
     var groundTruthNotUsed: Bool
     var doesNotChangeFinalTextUsedForTranslation: Bool
     var doesNotChangeMainOverlay: Bool
+    var evaluatedBlockCount: Int?
     var candidateCount: Int
     var ocrExecutedCount: Int
     var ocrSucceededCount: Int
     var betterThanControlCount: Int
+    var matchedBlockIndexes: [Int]?
+    var succeededBlockIndexes: [Int]?
+    var failedBlockIndexes: [Int]?
     var promotedExternalShadowBlocks: [Int]
     var wouldPromoteByExistingGateBlocks: [Int]
     var skippedBlocks: [Int]
+    var uniqueMatchedTextBoxCount: Int?
+    var duplicateAssignmentLedgers: [MangaOverlayExternalTextBoxDuplicateAssignmentLedger]?
+    var duplicateAssignedTextBoxIDs: [String]?
+    var matchedCoverageRatio: Double?
+    var successfulCoverageRatio: Double?
+    var matchedOCRSuccessRatio: Double?
+    var coverageVerdict: String?
     var sourceDirectionBreakdown: [String: Int]
     var orientationCategoryBreakdown: [String: Int]
     var linePolygonCandidateBlocks: [Int]

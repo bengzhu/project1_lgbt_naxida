@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 正式版本号 `1.99`：Koharu external TextBox 的 line polygon point 除源图边界外还必须属于其 TextBox bbox 的有界容差，Python validator 与 App readiness 同口径拒绝脱离所属框的 warp 输入。v1.98 的普通图片预览/PNG 导出一致性仍保留。仓库尚无真实 Koharu 四件套和 Speech 音频，不声称 OCR、翻译或识别质量提升。
+- 正式版本号 `2.0`：Koharu external TextBox shadow OCR 使用稳定最大基数一对一匹配，active TextBox ID 必须非空唯一，完整 matched / succeeded / failed / skipped 分区、无重复 assignment 且 `successfulCoverageRatio = 1` 才能关闭 coverage gate。v1.99 的 line polygon 所属 TextBox bbox 校验与 v1.98 的普通图片预览/PNG 导出一致性仍保留。仓库尚无真实 Koharu 四件套和 Speech 音频，不声称 OCR、翻译或识别质量提升。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
@@ -114,7 +114,7 @@ test/1.png
 - GitHub Actions push 默认 `probe_mode=skip`，不启动模拟器漫画探针；需要云端探针验收时手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。
 - 现有加密打包 workflow 只在软件包交付时手动 `workflow_dispatch`，不再随 `smalldata_test` merge 自动 archive；Agent C 不以该包验收。
 - 独立 CI 结果包必须未加密，至少包含 `junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`；`xcodeBuildRequired=true` 时还必须包含 `.xcresult`，手动探针运行还必须包含可用的 `output/` 报告。
-- 若 `workflow_dispatch` 注入 Koharu artifact archive，Agent C 必须核对 `koharuArtifactInjection*` manifest 字段、Release tag / asset / SHA、validator verdict、`koharuArtifactValidationIdentitySummary`、`koharuArtifactValidationOrientationSummary`、App 侧 `externalArtifactReadinessReport.artifactIdentityReceipt`、external readiness、`koharuNativeArtifactContractDryRunReport.contractDryRunVerdict = activeArtifactsReadyForShadowOCR`、`appSideArtifactIdentityVerdict = activeArtifactIdentityRecorded`、`appSideArtifactIdentityHashesPresent = true`、`koharuArtifactIdentityReconciliationReport.readyForCIManifestComparison = true`、`ci-artifact-manifest.koharuArtifactIdentityReconciliationMatch.matchVerdict = matched`、`dryRunOnly = true`、`activeExportAllowed = false`、`externalTextBoxShadowOCRReport.executed = true`、`candidateCount > 0`、`ocrExecutedCount > 0` 和 `ocrSucceededCount > 0`，不得只看注入步骤日志。
+- 若 `workflow_dispatch` 注入 Koharu artifact archive，Agent C 必须核对 Release / artifact / App / CI identity、validator、orientation、dry-run 与 reconciliation 证据。external shadow OCR 除 executed / candidate / OCR count sanity 外，还必须核对 TextBox ID 非空唯一、matched / succeeded / failed / skipped 分区一致、`duplicateAssignedTextBoxIDs = []`、`coverageVerdict = complete`、`successfulCoverageRatio = 1`，且 `WI/G-external-textbox-shadow-ocr-coverage` closed / passed；不得用任意一个 OCR 成功或注入步骤日志冒充完整 coverage。
 - 若注入 artifact 的 TextBox 带 `sourceDirection`、`linePolygons` 或 `rotationDegrees`，Agent C 还必须核对 `orientationShadowPathPartialBlocks`、`orientationUnsupportedBlocks`、`orientationUnsupportedReasonBreakdown`、convergence 的 `WI/G-external-textbox-shadow-ocr-coverage` 和 `WI/G-external-textbox-orientation-shadow-path`，确认 no-candidate / partial / unsupported 未被误判为 `closedReportOnly` 或 passed。
 - 若云端失败，Agent B 根据结果包中的失败摘要、日志路径和 manifest 修复后继续 push，不改回默认本机循环。
 
