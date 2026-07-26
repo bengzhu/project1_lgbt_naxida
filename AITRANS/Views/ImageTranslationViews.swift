@@ -78,7 +78,7 @@ struct ImageTranslationPanel: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
             AppSectionHeader(
                 title: "翻译设置",
-                subtitle: "译为 \(store.targetLanguage.rawValue)",
+                subtitle: "译为 \(store.imageTranslationDisplayedTargetLanguage.rawValue)",
                 systemImage: "character.bubble"
             )
 
@@ -190,7 +190,7 @@ private struct ImageTargetLanguageControl: View {
                 Label("目标语言", systemImage: "character.bubble")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 0)
-                Text(store.targetLanguage.rawValue)
+                Text(store.imageTranslationDisplayedTargetLanguage.rawValue)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                 Image(systemName: "chevron.up.chevron.down")
@@ -208,7 +208,7 @@ private struct ImageTargetLanguageControl: View {
         }
         .disabled(isRunning)
         .accessibilityLabel("目标语言")
-        .accessibilityValue(store.targetLanguage.rawValue)
+        .accessibilityValue(store.imageTranslationDisplayedTargetLanguage.rawValue)
         .accessibilityHint("选择图片翻译的目标语言；已完成的图片会重新翻译")
         .alert("Pro 语言", isPresented: $showLockedLanguage) {
             Button("知道了", role: .cancel) {}
@@ -225,7 +225,7 @@ private struct ImageTargetLanguageControl: View {
     }
 
     private func menuSymbol(for language: SupportedLanguage) -> String {
-        if store.targetLanguage == language {
+        if store.imageTranslationDisplayedTargetLanguage == language {
             return "checkmark.circle.fill"
         }
         return store.canUseLanguage(language) ? "circle" : "lock.fill"

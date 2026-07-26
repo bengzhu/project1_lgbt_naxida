@@ -162,6 +162,7 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertIn("ImageTargetLanguageControl()", image)
         self.assertIn("store.availableTargetLanguages", image)
         self.assertIn("store.selectImageTargetLanguage(language)", image)
+        self.assertGreaterEqual(image.count("store.imageTranslationDisplayedTargetLanguage"), 4)
         self.assertIn("已完成的图片会重新翻译", image)
 
         selector = re.search(
@@ -172,7 +173,93 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertIsNotNone(selector, "image target language selector is missing")
         self.assertIn("selectTargetLanguage(language)", selector.group("body"))
         self.assertIn("imageTranslationState == .translated", selector.group("body"))
+        self.assertIn("imageTranslationContentTargetLanguage != language", selector.group("body"))
+        self.assertNotIn("guard language != targetLanguage else", selector.group("body"))
         self.assertIn("retryImageTranslation()", selector.group("body"))
+
+        self.assertIn(
+            "imageTranslationContentTargetLanguage = targetLanguage",
+            store,
+        )
+
+    def test_image_content_language_survives_failure_and_cancel_until_content_is_cleared(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+
+        displayed_language = re.search(
+            r"var imageTranslationDisplayedTargetLanguage: SupportedLanguage \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(displayed_language, "image displayed target language is missing")
+        self.assertIn("imageTranslationData != nil", displayed_language.group("body"))
+        self.assertIn("!imageTranslationBlocks.isEmpty", displayed_language.group("body"))
+        self.assertRegex(
+            displayed_language.group("body"),
+            r"case \.idle, \.translated, \.failed:",
+        )
+
+        finish = re.search(
+            r"private func finishImageTranslation\(taskID: UUID, with error: Error\) \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        empty_ocr = re.search(
+            r"guard !recognizedBlocks\.isEmpty else \{(?P<body>.*?)\n        \}",
+            store,
+            re.DOTALL,
+        )
+        cancel = re.search(
+            r"func cancelImageTranslation\(\) \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        clear = re.search(
+            r"func clearImageTranslation\(\) \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(finish, "image translation finish handler is missing")
+        self.assertIsNotNone(empty_ocr, "empty OCR failure handler is missing")
+        self.assertIsNotNone(cancel, "image translation cancel handler is missing")
+        self.assertIsNotNone(clear, "image translation clear handler is missing")
+        self.assertNotIn("imageTranslationContentTargetLanguage = nil", finish.group("body"))
+        self.assertNotIn("imageTranslationContentTargetLanguage = nil", empty_ocr.group("body"))
+        self.assertNotIn("imageTranslationContentTargetLanguage = nil", cancel.group("body"))
+        self.assertIn("imageTranslationContentTargetLanguage = nil", clear.group("body"))
+
+    def test_image_loading_uses_fixed_task_language_before_image_data_arrives(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
+
+        begin = re.search(
+            r"private func beginImageTranslationTask\((?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        displayed_language = re.search(
+            r"var imageTranslationDisplayedTargetLanguage: SupportedLanguage \{(?P<body>.*?)\n    \}",
+            store,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(begin, "image translation task initializer is missing")
+        self.assertIsNotNone(displayed_language, "image displayed target language is missing")
+        self.assertLess(
+            begin.group("body").index("imageTranslationContentTargetLanguage = targetLanguage"),
+            begin.group("body").index("imageTranslationState = .loading"),
+        )
+
+        running_case = re.search(
+            r"case \.loading, \.recognizing, \.translating:(?P<body>.*?)"
+            r"case \.idle, \.translated, \.failed:",
+            displayed_language.group("body"),
+            re.DOTALL,
+        )
+        self.assertIsNotNone(running_case, "running image task language branch is missing")
+        self.assertIn(
+            "return imageTranslationContentTargetLanguage ?? targetLanguage",
+            running_case.group("body"),
+        )
+        self.assertNotIn("imageTranslationData", running_case.group("body"))
+        self.assertNotIn("imageTranslationBlocks", running_case.group("body"))
 
 
 if __name__ == "__main__":

@@ -8,14 +8,19 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
-## 未发布工作区：图片翻译目标语言选择
-日期：2026-07-15
+## v1.96：图片翻译目标语言一致性
+日期：2026-07-26
+
+状态：Agent C 已完成核心候选验收并执行版本收口，工程 `MARKETING_VERSION=1.96`。核心候选 HEAD `03f6f731f79e7345abf69ca01f9ad8583e273705`；PR #49 仅在收口提交的 exact-SHA CI 通过后合并到 `smalldata_test`，不触碰 `main`。
 
 核心变更：
 
 - 图片页新增目标语言菜单，复用 `TranslationSessionStore.targetLanguage`、既有 Pro 门控和锁定提示；不新增独立持久化状态，也不改变漫画探针固定英译中路径。
 - 图片翻译任务在开始时固定源语言和目标语言。逐块 OCR/翻译期间，即使其他页面修改全局语言，当前任务也不会混用不同语言方向。
 - 已完成的图片切换为新的可用目标语言时，从沙盒原图重新执行 OCR、翻译和覆盖导出；运行态菜单禁用，防止同一任务内改写目标语言。
+- 图片任务单独记录当前内容实际使用的目标语言。其他页面修改全局目标语言后，图片页的标题、菜单、选中标记和 VoiceOver 仍显示实际译文语言；再次选择全局已选但与图片结果不同的语言时仍会触发重译。
+- Agent C 首轮退回后补齐失败/取消生命周期：只要图片数据或部分 OCR/译文仍可见，就保留对应目标语言；只有清空图片或新任务替换内容时才重置，避免错误态和取消态重新按全局语言错标。
+- Agent C 二次退回后补齐 loading 空窗：任务运行状态无条件使用已固定的任务语言，即使图片数据与 blocks 尚为空，跨页面修改全局语言也不会短暂错标标题、菜单或 VoiceOver。
 
 关键文件：
 
@@ -25,7 +30,8 @@
 
 验证与遗留：
 
-- 已通过 `python3 -B scripts/test-v187-ui-interaction-contract.py`、`git diff --check` 和现有漫画 JSON 解析。
+- 已通过 `python3 -B scripts/test-v187-ui-interaction-contract.py`（10 项）、`python3 -B scripts/test-speech-recognition-contract.py`（14 项）、`git diff --check` 和三份现有 JSON 解析；独立契约验证任务语言先于 `.loading` 发布且 running 分支不依赖图片数据/blocks，并继续覆盖跨页面改语言、同值重译及无 OCR/错误/取消/清空状态转换。
+- 核心候选云端 full run `30193309626` attempt 1 成功；artifact `aitrans-ci-v1.96-codeb-v1.96-image-language-consistency--03f6f731f79e-run30193309626-attempt1` 的 version、branch、commit、run、workflow 和 changed-files identity 与候选 HEAD 一致，Xcode build、JUnit 10/10、UI interaction 10/10、Speech 14/14 均通过，`.xcresult`、日志和失败摘要可用。
 - 未跑本机 build / 探针，按规则交给云端验证；本轮没有修改漫画算法或报告模型，因此未更新 `metrics/version_history.csv`。
 
 ## 当前漫画指标基线
