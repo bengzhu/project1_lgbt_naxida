@@ -361,7 +361,7 @@ class V187UIInteractionContractTests(unittest.TestCase):
             "failed initial publication must not leave a staging PNG",
         )
         self.assertIn(
-            ".disabled(store.imageTranslationData == nil || isRunning)",
+            ".disabled(store.imageTranslationData == nil || isRunning || isRenderingExport)",
             image,
         )
 

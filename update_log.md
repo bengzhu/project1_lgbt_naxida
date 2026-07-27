@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.9 候选：图片重渲染状态与重试
+日期：2026-07-27
+
+状态：Agent X 已从最新 `smalldata_test@f74af5a3df08b86806914129a2ffa295acad586b` 创建 `codeb/v2.9-image-render-feedback` 并完成核心候选实现与本地轻量回归；尚待云端 full，正式版本仍为 `2.8`，未触碰 `main`。
+
+核心变更：
+
+- Store 新增图片导出重渲染 `idle / rendering / failed` 状态；覆盖模式切换开始前发布 rendering，成功、取消、失败和内容失效均按 render ID / task ID 收口，旧 render 不覆盖新内容。
+- rendering 时 segmented Picker 和 Store API 双重拒绝重复模式切换；当前失败使用 danger 状态并显示具体消息，提供 Store-owned“重试导出”入口。
+- 无 staging URL 不再静默 return 并永久停留在活动态，而是进入可重试失败；既有稳定导出 ownership、staging 清理、分享状态、OCR、翻译、Koharu 和探针不变。
+- 新增 v2.9 纯 Swift 状态 evaluator 与 Python 源码合同，并接入 v1.87 / v2.2-v2.9 fail-fast UI interaction CI step。
+
+验证与遗留：
+
+- v1.87、v2.2-v2.9 图片/UI 契约共 73 项通过；CI validation tier / version identity 契约 14 项通过。三份改动 Swift 源码 parse、工程 plist、workflow YAML、ground truth 与现有 output JSON 解析、`git diff --check` 均通过。
+- 未跑本机 build / 探针，按规则交给云端验证；尚待候选核心 SHA 的 task-scoped full 与未加密结果包核验。
+
 ## v2.8：图片分享准备反馈
 日期：2026-07-27
 

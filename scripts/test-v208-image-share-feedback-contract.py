@@ -87,8 +87,8 @@ class ImageShareFeedbackContractTests(unittest.TestCase):
         self.assertIn("guard store.imageTranslationShareState != .preparing", share)
         self.assertIn("case .failed: return .danger", view)
         self.assertGreaterEqual(view.count("case .idle: return .neutral"), 2)
-        self.assertIn('case .failed: "分享准备失败"', view)
-        self.assertIn("case .failed(let message): message", view)
+        self.assertIn('case .failed: return "分享准备失败"', view)
+        self.assertIn("case .failed(let message): return message", view)
         self.assertNotIn("FileManager.default", view)
 
     def test_ci_runs_v28_after_direction_contract(self) -> None:

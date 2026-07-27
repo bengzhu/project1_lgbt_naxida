@@ -51,6 +51,7 @@ flowchart TD
   IV --> J["ImageTranslationBlock<br/>bbox + OCR + 方向证据 + 译文"]
   IH --> J
   J --> K["图片旁贴 / 覆盖 UI<br/>同模式顶左坐标 PNG 导出"]
+  K --> IRENDER["覆盖模式重渲染<br/>rendering / failed / retry<br/>render ID 拒收晚到结果"]
   K --> IEXPORT["Store-owned 稳定导出<br/>新任务 / 清空 / 重渲染时清理"]
   ISTART["App 启动 workspace reconciliation<br/>marker + render UUID 导出 / task UUID 输入 / render UUID staging"] --> IEXPORT
   IEXPORT --> IGUARD{"直属 aitrans-export-renderUUID-*<br/>常规文件?"}
