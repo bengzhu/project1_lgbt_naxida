@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`2.7`（普通图片显式输入/目标语言凭据、完成后输入语言重跑，以及保守横排/竖排方向证据与稳定读序已收口；v2.6 可读分享生命周期、v2.5 workspace 恢复、v2.4 稳定导出、v2.3 取消后 Retry、v2.2 Store-owned transfer/run isolation、v2.1 Koharu trusted geometry coverage 和 v2.0 稳定一对一匹配仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`2.8`（图片分享 preparing/failed 反馈、重复操作禁用和 request-scoped 复位已收口；v2.7 普通图片输入/目标语言凭据与横/竖排读序、v2.6 可读分享生命周期、v2.5 workspace 恢复、v2.4 稳定导出、v2.3 取消后 Retry 和 v2.2 Store-owned transfer/run isolation 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
