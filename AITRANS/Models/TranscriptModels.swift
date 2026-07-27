@@ -6244,6 +6244,12 @@ enum ImageTranslationOverlayMode: String, CaseIterable, Identifiable, Codable, S
     var id: String { rawValue }
 }
 
+enum ImageTextDirection: String, Codable, Sendable {
+    case horizontal
+    case vertical
+    case unknown
+}
+
 struct NormalizedImageRect: Equatable, Codable, Sendable {
     var x: Double
     var y: Double
@@ -6257,19 +6263,28 @@ struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
     var translation: String
     var confidence: Float
     var boundingBox: NormalizedImageRect
+    var sourceDirection: ImageTextDirection?
+    var directionConfidence: Double?
+    var directionReason: String?
 
     init(
         id: UUID = UUID(),
         original: String,
         translation: String = "",
         confidence: Float,
-        boundingBox: NormalizedImageRect
+        boundingBox: NormalizedImageRect,
+        sourceDirection: ImageTextDirection? = nil,
+        directionConfidence: Double? = nil,
+        directionReason: String? = nil
     ) {
         self.id = id
         self.original = original
         self.translation = translation
         self.confidence = confidence
         self.boundingBox = boundingBox
+        self.sourceDirection = sourceDirection
+        self.directionConfidence = directionConfidence
+        self.directionReason = directionReason
     }
 }
 

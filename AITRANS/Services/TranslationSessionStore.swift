@@ -120,6 +120,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var imageTranslationRevision = 0
     @Published var imageOverlayMode: ImageTranslationOverlayMode = .adjacent
     @Published private(set) var imageTranslationExportURL: URL?
+    @Published private(set) var imageTranslationContentSourceLanguage: SupportedLanguage?
     @Published private(set) var imageTranslationContentTargetLanguage: SupportedLanguage?
     @Published private(set) var speechRecognitionCapabilities: [SpeechRecognitionCapability] = []
 
@@ -331,6 +332,18 @@ final class TranslationSessionStore: ObservableObject {
                 return targetLanguage
             }
             return imageTranslationContentTargetLanguage ?? targetLanguage
+        }
+    }
+
+    var imageTranslationDisplayedSourceLanguage: SupportedLanguage {
+        switch imageTranslationState {
+        case .loading, .recognizing, .translating:
+            return imageTranslationContentSourceLanguage ?? sourceLanguage
+        case .idle, .translated, .failed:
+            guard imageTranslationData != nil || !imageTranslationBlocks.isEmpty else {
+                return sourceLanguage
+            }
+            return imageTranslationContentSourceLanguage ?? sourceLanguage
         }
     }
 
@@ -1055,6 +1068,7 @@ final class TranslationSessionStore: ObservableObject {
 
     private func beginImageTranslationTask(
         filename: String,
+        sourceLanguage: SupportedLanguage,
         targetLanguage: SupportedLanguage,
         preservingSourceURL: URL? = nil
     ) -> UUID {
@@ -1070,6 +1084,7 @@ final class TranslationSessionStore: ObservableObject {
         discardImageTranslationExport()
         let taskID = UUID()
         imageTranslationTaskID = taskID
+        imageTranslationContentSourceLanguage = sourceLanguage
         imageTranslationContentTargetLanguage = targetLanguage
         imageTranslationState = .loading
         imageTranslationMessage = "正在载入图片"
@@ -1269,6 +1284,7 @@ final class TranslationSessionStore: ObservableObject {
         let selectedTargetLanguage = targetLanguage
         let taskID = beginImageTranslationTask(
             filename: cleanFilename,
+            sourceLanguage: selectedSourceLanguage,
             targetLanguage: selectedTargetLanguage
         )
 
@@ -1333,6 +1349,7 @@ final class TranslationSessionStore: ObservableObject {
         let selectedTargetLanguage = targetLanguage
         let taskID = beginImageTranslationTask(
             filename: cleanFilename,
+            sourceLanguage: selectedSourceLanguage,
             targetLanguage: selectedTargetLanguage
         )
 
@@ -1438,6 +1455,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationData = nil
         imageTranslationFilename = ""
         imageTranslationSourceURL = nil
+        imageTranslationContentSourceLanguage = nil
         imageTranslationContentTargetLanguage = nil
         imageTranslationRevision += 1
         isProcessing = false
@@ -1592,10 +1610,11 @@ final class TranslationSessionStore: ObservableObject {
         let sourceFilename = imageTranslationFilename.isEmpty
             ? Self.sanitizedImageFilename(from: url)
             : imageTranslationFilename
-        let selectedSourceLanguage = sourceLanguage
-        let selectedTargetLanguage = targetLanguage
+        let selectedSourceLanguage = imageTranslationContentSourceLanguage ?? sourceLanguage
+        let selectedTargetLanguage = imageTranslationContentTargetLanguage ?? targetLanguage
         let taskID = beginImageTranslationTask(
             filename: sourceFilename,
+            sourceLanguage: selectedSourceLanguage,
             targetLanguage: selectedTargetLanguage,
             preservingSourceURL: url
         )
@@ -1864,7 +1883,33 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
+        imageTranslationContentTargetLanguage = language
         retryImageTranslation()
+    }
+
+    func selectImageSourceLanguage(_ language: SupportedLanguage) {
+        if language != sourceLanguage {
+            sourceLanguage = language
+        }
+        guard isProUnlocked,
+              imageTranslationContentSourceLanguage != language else {
+            return
+        }
+
+        switch imageTranslationState {
+        case .translated:
+            guard let url = imageTranslationSourceURL,
+                  FileManager.default.fileExists(atPath: url.path) else {
+                return
+            }
+            imageTranslationContentSourceLanguage = language
+            retryImageTranslation()
+        case .idle, .failed:
+            guard canRetryImageTranslation else { return }
+            imageTranslationContentSourceLanguage = language
+        case .loading, .recognizing, .translating:
+            return
+        }
     }
 
     func activateProForDevelopment() {

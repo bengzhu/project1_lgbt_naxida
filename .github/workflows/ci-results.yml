@@ -327,7 +327,7 @@ jobs:
           if grep -E '^(AITRANS/Services/(TranslationSessionStore|SpeechQualityEvaluator|SpeechQualityProbeService)\.swift|AITRANS/Models/(TranscriptModels|SpeechQualityModels)\.swift|AITRANS/Views/(AudioTranslationView|ProViews|DeveloperConsoleView)\.swift|scripts/(test-speech-recognition-contract|test-speech-quality-contract|test-speech-quality-evaluator)\.(py|swift)|scripts/validate-speech-corpus\.py|test/speech_corpus/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             speech_contract_required=true
           fi
-          if grep -E '^(AITRANS/Views/|AITRANS/Services/TranslationSessionStore\.swift|scripts/test-v(187-ui-interaction|202-image-import-run-isolation|203-image-cancel-retry)-(contract\.py|evaluator\.swift)|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+          if grep -E '^(AITRANS/Views/|AITRANS/Services/(ImageOCRLayoutEngine|TranslationSessionStore|VisionOCRService)\.swift|scripts/test-v(187-ui-interaction|202-image-import-run-isolation|203-image-cancel-retry|204-image-export-lifecycle|205-image-workspace-recovery|206-image-share-lifecycle|207-image-ocr-direction)-(contract\.py|evaluator\.swift)|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             ui_interaction_contract_required=true
           fi
           if grep -E '^(AITRANS/Views/TextTranslationView\.swift|AITRANS/Views/AppPreviewSupport\.swift|scripts/test-v188-home-ui-contract\.py|scripts/test-v189-paste-manual-matrix-contract\.py|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
@@ -879,6 +879,7 @@ jobs:
             python3 -B scripts/test-v204-image-export-lifecycle-contract.py
             python3 -B scripts/test-v205-image-workspace-recovery-contract.py
             python3 -B scripts/test-v206-image-share-lifecycle-contract.py
+            python3 -B scripts/test-v207-image-ocr-direction-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract
