@@ -90,10 +90,11 @@ struct ImageTranslationPanel: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
             AppSectionHeader(
                 title: "翻译设置",
-                subtitle: "译为 \(store.imageTranslationDisplayedTargetLanguage.rawValue)",
+                subtitle: "识别 \(store.imageTranslationDisplayedSourceLanguage.rawValue) · 译为 \(store.imageTranslationDisplayedTargetLanguage.rawValue)",
                 systemImage: "character.bubble"
             )
 
+            ImageSourceLanguageControl()
             ImageTargetLanguageControl()
 
             AppSectionHeader(
@@ -187,6 +188,58 @@ struct ImageTranslationPanel: View {
         sharePresentationID = UUID()
         shareURL = nil
         store.finishImageTranslationSharing()
+    }
+}
+
+private struct ImageSourceLanguageControl: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    var body: some View {
+        Menu {
+            ForEach(SupportedLanguage.allCases) { language in
+                Button {
+                    store.selectImageSourceLanguage(language)
+                } label: {
+                    Label(
+                        language.rawValue,
+                        systemImage: store.imageTranslationDisplayedSourceLanguage == language
+                            ? "checkmark.circle.fill"
+                            : "circle"
+                    )
+                }
+            }
+        } label: {
+            HStack(spacing: AppTheme.Spacing.control) {
+                Label("输入语言", systemImage: "text.viewfinder")
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 0)
+                Text(store.imageTranslationDisplayedSourceLanguage.rawValue)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.appTextSecondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget)
+            .padding(.horizontal, AppTheme.Spacing.control)
+            .foregroundStyle(Color.appTextPrimary)
+            .background(Color.appCanvas, in: .rect(cornerRadius: AppTheme.Radius.control))
+            .overlay {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.control)
+                    .stroke(Color.appBorder, lineWidth: 1)
+            }
+        }
+        .disabled(isRunning)
+        .accessibilityLabel("输入语言")
+        .accessibilityValue(store.imageTranslationDisplayedSourceLanguage.rawValue)
+        .accessibilityHint("选择图片 OCR 的输入语言；已完成的图片会重新识别和翻译")
+    }
+
+    private var isRunning: Bool {
+        switch store.imageTranslationState {
+        case .loading, .recognizing, .translating: true
+        case .idle, .translated, .failed: false
+        }
     }
 }
 

@@ -37,15 +37,19 @@ flowchart TD
   G --> H["LlamaRuntime<br/>llama.cpp C API 封装"]
 
   %% 图片 OCR 分支：普通图片翻译
-  IMG_TARGET["图片目标语言菜单<br/>Pro 门控 / 按结果语言重译"] --> C
+  IMG_LANGUAGE["图片输入 / 目标语言菜单<br/>任务凭据冻结 / 完成后按需重跑"] --> C
   C --> IT["Store-owned 图片 transfer<br/>task ID + 文件 selection UUID<br/>运行中可更换来源"]
   IT --> IG{"transfer / sandbox await 后<br/>task ID 仍匹配?"}
   IG -->|否| IDROP["丢弃旧回调并清理未采用输入<br/>不恢复旧 retry source"]
-  IG -->|是| I["普通图片翻译<br/>VisionOCRService + 源/目标语言快照"]
+  IG -->|是| I["普通图片翻译<br/>VisionOCRService + 输入/目标语言快照"]
   ICANCEL["取消图片任务"] --> IRETRY{"sandbox source 已发布且仍存在?"}
   IRETRY -->|是| IR["idle + 显示重试"]
   IRETRY -->|否| IDROP
-  I --> J["ImageTranslationBlock<br/>bbox + OCR 文本 + 译文"]
+  I --> ILAYOUT{"CJK + 明确高宽几何证据?"}
+  ILAYOUT -->|是| IV["竖排列右到左<br/>列内上到下"]
+  ILAYOUT -->|否| IH["横排 / unknown fallback<br/>上到下、行内左到右"]
+  IV --> J["ImageTranslationBlock<br/>bbox + OCR + 方向证据 + 译文"]
+  IH --> J
   J --> K["图片旁贴 / 覆盖 UI<br/>同模式顶左坐标 PNG 导出"]
   K --> IEXPORT["Store-owned 稳定导出<br/>新任务 / 清空 / 重渲染时清理"]
   ISTART["App 启动 workspace reconciliation<br/>marker + render UUID 导出 / task UUID 输入 / render UUID staging"] --> IEXPORT

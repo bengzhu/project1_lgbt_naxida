@@ -16,6 +16,7 @@
 		0A0000010000000000000008 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001A /* AppTheme.swift */; };
 		0A0000010000000000000009 /* ImageTranslationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001B /* ImageTranslationViews.swift */; };
 		0A000001000000000000000A /* VisionOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001C /* VisionOCRService.swift */; };
+		0A00000100000000000000BE /* ImageOCRLayoutEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000BF /* ImageOCRLayoutEngine.swift */; };
 		0A000001000000000000000B /* ProFeatureViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001D /* ProFeatureViews.swift */; };
 		0A000001000000000000000C /* LlamaRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001E /* LlamaRuntime.swift */; };
 		0A000001000000000000000D /* build-apple/llama.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001F /* build-apple/llama.xcframework */; };
@@ -70,6 +71,7 @@
 		0A000001000000000000001A /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		0A000001000000000000001B /* ImageTranslationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTranslationViews.swift; sourceTree = "<group>"; };
 		0A000001000000000000001C /* VisionOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionOCRService.swift; sourceTree = "<group>"; };
+		0A00000100000000000000BF /* ImageOCRLayoutEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRLayoutEngine.swift; sourceTree = "<group>"; };
 		0A000001000000000000001D /* ProFeatureViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFeatureViews.swift; sourceTree = "<group>"; };
 		0A000001000000000000001E /* LlamaRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaRuntime.swift; sourceTree = "<group>"; };
 		0A000001000000000000001F /* build-apple/llama.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = "build-apple/llama.xcframework"; sourceTree = SOURCE_ROOT; };
@@ -160,6 +162,7 @@
 			isa = PBXGroup;
 			children = (
 				0A0000010000000000000014 /* TranslationSessionStore.swift */,
+				0A00000100000000000000BF /* ImageOCRLayoutEngine.swift */,
 				0A000001000000000000001C /* VisionOCRService.swift */,
 				0A0000010000000000000015 /* MockGemmaService.swift */,
 				0A0000010000000000000019 /* GemmaLocalService.swift */,
@@ -294,6 +297,7 @@
 				0A0000010000000000000007 /* GemmaLocalService.swift in Sources */,
 				0A0000010000000000000008 /* AppTheme.swift in Sources */,
 				0A0000010000000000000009 /* ImageTranslationViews.swift in Sources */,
+				0A00000100000000000000BE /* ImageOCRLayoutEngine.swift in Sources */,
 				0A000001000000000000000A /* VisionOCRService.swift in Sources */,
 				0A000001000000000000000B /* ProFeatureViews.swift in Sources */,
 				0A000001000000000000000C /* LlamaRuntime.swift in Sources */,

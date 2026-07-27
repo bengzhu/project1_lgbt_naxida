@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.7 候选：图片 OCR 输入语言与方向闭环
+日期：2026-07-27
+
+状态：Agent X 已从最新 `smalldata_test@7093bc58d7b154bffcb897f9b2d7b3bf6c6789db` 创建 `codeb/v2.7-image-ocr-direction` 并完成核心候选实现、本地轻量回归与两轮独立复审；尚待云端 full，正式版本仍为 `2.6`，未触碰 `main`。
+
+核心变更：
+
+- 图片页新增显式输入语言菜单，不再要求用户回到文本页猜测当前 Vision OCR 语言。Store 从 `.loading` 前同时冻结图片输入/目标语言；失败、取消和跨页全局语言修改不覆盖当前内容凭据，清空才重置，已完成图片改输入语言会从 Store-owned source 重跑 OCR 和翻译。
+- `VisionOCRService` 增加保守方向证据。只有日语/中文 prior、bbox 高宽比至少 `1.6`、高度至少 `0.035`，并包含多字 CJK run 或具有同列邻居且没有近同行邻居时才判 vertical；同行单字 CJK 碎片、孤立单字、非 CJK 高框和近方形 CJK 保持 unknown / 原横排 fallback。横排上到下、行内左到右；竖排列右到左、列内上到下；两类 observation 分开聚类。
+- `ImageTranslationBlock` 新增可选 `sourceDirection`、`directionConfidence` 和 `directionReason`，保留后续 Koharu 风格布局证据，同时兼容旧 Codable 数据。本版不修改覆盖 renderer、漫画探针、ground truth、模型或翻译 prompt。
+- 新增 v2.7 纯 Swift 几何 evaluator 与 Python 源码合同，并接入 v1.87 / v2.2-v2.7 fail-fast UI interaction CI step。
+- 两轮独立复审发现并修复：带容差的成对比较器可能形成排序环；行优先输入只检查最后 cluster 会拆散交错双栏；同行单字 CJK 高框可能误升竖排；失败/取消保留态不能为下次 Retry 更新输入凭据；evaluator 重复实现产品算法；布局引擎文件未命中 CI 合同路由。当前 evaluator 直接链接产品引擎，并穷举 mixed、比较器链和双栏 fixture 的输入排列。
+
+验证与遗留：
+
+- v2.7 9/9、v2.6 7/7、v2.5 10/10、v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、CI 分层 9/9、版本身份 5/5，以及五份修改 Swift parse、Xcode 工程 lint、YAML 解析、三份 JSON 解析和 `git diff --check` 已通过。独立复审的实现与合同问题均已修复；云端 Xcode build / full 尚待执行。
+- 合成 bbox fixture 只证明排序、聚类和 fallback 契约，不证明真实日文 OCR 字符准确率提升。本轮不刷新 `output/`，不追加 `metrics/version_history.csv`；真实竖排收益需要后续合法日文图片 corpus 或人工图像验收。
+- 未跑本机 build / 探针，按规则交给云端验证。
+
 ## v2.6：图片分享文件生命周期
 日期：2026-07-26
 

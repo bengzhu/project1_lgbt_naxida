@@ -159,13 +159,14 @@
 输入：
 
 - 用户选择的图片数据。
-- 当前源语言和用户在图片页选择的目标语言。
+- 用户在图片页选择的输入语言和目标语言。
 
 输出：
 
 - `ImageTranslationBlock`
 - 旁贴或覆盖预览与同模式 PNG 导出；Vision OCR bbox、SwiftUI 预览和导出 renderer 统一使用图片顶左原点坐标。后台 render 只写 render ID 独占 staging PNG，已完成图片切换模式会使旧导出失效并按 render ID / 图片 task ID / mode 验明身份后发布 `aitrans-export-<render UUID>-<base>-translated.png` 稳定文件，旧 detached render 不得覆盖新任务。启动时会扫描 `Application Support/ImageTranslations` 直属文件，分账接管带 Store marker 的稳定导出、`<task UUID>-<name>` 输入副本和 `.<base>-translated-<render UUID>.staging.png`，清理上次异常退出残留；普通后缀文件、wrong-kind、目录外、嵌套、escape、symlink 和 dangling symlink 一律拒绝。新任务、清空或模式重渲染会撤销公开 export URL 并删除当前 Store-owned 稳定导出；正常 input/staging 清理同样必须携带可信 workspace 与对应文件类型，删除失败也登记 orphan ownership。所有删除失败项都在后续生命周期继续重试。分享前由 Store 在 `ImageTranslationShares/<share UUID>/` 创建人类可读 `<base>-translated.png` 硬链接或副本；Store request ID 与 View presentation ID 共同拒绝晚到结果和旧 Task 的 `nil` 回写，dismiss / export 失效 / View 离开与启动恢复统一清理分享目录，删除失败保留 ownership。
-- 任务启动时固定源/目标语言，并单独记录当前图片内容实际使用的目标语言；从 `.loading` 起即使图片数据和 blocks 尚为空，UI 也使用任务语言。失败或取消后若图片数据/部分 OCR 块仍可见，继续保留对应语言凭据，只有清空或新任务替换内容时才重置。已完成图片选择不同结果语言时，即使全局目标已提前相同，也从沙盒原图重新翻译。
+- 任务启动时固定输入/目标语言，并单独记录当前图片内容实际使用的两份语言凭据；从 `.loading` 起即使图片数据和 blocks 尚为空，UI 也使用任务语言。失败或取消后若图片数据/部分 OCR 块仍可见，继续保留对应凭据，只有清空或新任务替换内容时才重置。已完成图片选择不同输入语言会从沙盒原图重新 OCR + 翻译，选择不同目标语言会重新翻译。
+- 普通图片 OCR 对每个 observation 记录 `horizontal / vertical / unknown` 方向证据。只有日语/中文 prior、bbox 高宽比至少 `1.6`、高度至少 `0.035`，并且包含至少两个 CJK 字符或具有同列邻居且没有近同行邻居时，才进入竖排路径；孤立单字高框、同行 CJK 碎片及非 CJK 高框继续走横排/unknown fallback。横排按上到下、行内左到右聚类；竖排按列从右到左、列内上到下聚类，两种方向不会互相合并。方向、置信度与 reason 随 `ImageTranslationBlock` 保留，不改变漫画探针链路。
 
 关键文件：
 
@@ -390,7 +391,7 @@ CI artifact version 优先从带 `vX.Y` 的候选 ref 解析；`smalldata_test` 
 ### 2.2 图片翻译
 ```text
 用户从 PhotosPicker 或文件选择器选择图片
-  -> 图片页选择目标语言（Pro 门控）
+  -> 图片页显式选择输入语言和目标语言（目标语言 Pro 门控）
   -> View 只把 loader / 带 selection UUID 的 result 交给 TranslationSessionStore
   -> Store 创建图片 task ID，立即固定本次源/目标语言并进入 loading
   -> 新照片 / 文件可抢占运行中任务；取消、清空和新 task 使旧 transfer 回调失效
@@ -405,6 +406,8 @@ CI artifact version 优先从带 `vX.Y` 的候选 ref 解析；`smalldata_test` 
   -> 分享时 Store 创建 ImageTranslationShares/share UUID/可读文件名
   -> dismiss / 新任务 / 清空 / 重渲染 / 启动时清理，晚到 share request 拒收
   -> VisionOCRService.recognizeTextBlocks
+  -> 保守方向证据：CJK 高框竖排，否则 horizontal / unknown fallback
+  -> 横排上->下/左->右；竖排列右->左、列内上->下；方向隔离聚类
   -> 每块按固定目标语言调用 translate
   -> ImageTranslationBlock
   -> 旁贴或覆盖 UI
