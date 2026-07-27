@@ -141,6 +141,8 @@ final class TranslationSessionStore: ObservableObject {
     private var imageTranslationFileSelectionID: UUID?
     private var imageTranslationOwnedExportURLs: Set<URL> = []
     private var imageTranslationOwnedOrphanURLs: Set<URL> = []
+    private var imageTranslationOwnedShareDirectories: Set<URL> = []
+    private var imageTranslationShareRequestID = UUID()
     private var imageOverlayRenderTask: Task<Void, Never>?
     private var imageOverlayRenderID = UUID()
     private var audioRecognitionTask: SFSpeechRecognitionTask?
@@ -171,6 +173,7 @@ final class TranslationSessionStore: ObservableObject {
 
         guard performsStartupWork else { return }
 
+        reconcileOrphanedImageTranslationSharesAtStartup()
         reconcileOrphanedImageTranslationWorkspaceAtStartup()
         restoreSnapshot()
         updateModelDownloadStateFromDisk()
@@ -363,6 +366,12 @@ final class TranslationSessionStore: ObservableObject {
         persistenceURL
             .deletingLastPathComponent()
             .appendingPathComponent("ImageTranslations", isDirectory: true)
+    }
+
+    private var imageTranslationShareDirectory: URL {
+        persistenceURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("ImageTranslationShares", isDirectory: true)
     }
 
     private var bundledTestDirectory: URL? {
@@ -1432,6 +1441,56 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationContentTargetLanguage = nil
         imageTranslationRevision += 1
         isProcessing = false
+    }
+
+    func prepareImageTranslationShareURL() async -> URL? {
+        discardImageTranslationShareCopies()
+        guard let sourceURL = imageTranslationExportURL?.standardizedFileURL else {
+            return nil
+        }
+
+        let requestID = UUID()
+        imageTranslationShareRequestID = requestID
+        let shareRoot = imageTranslationShareDirectory.standardizedFileURL
+        let shareDirectory = shareRoot.appendingPathComponent(requestID.uuidString, isDirectory: true)
+        let baseName = imageTranslationFilename.isEmpty
+            ? "image-translation"
+            : (imageTranslationFilename as NSString).deletingPathExtension
+        let shareURL = shareDirectory.appendingPathComponent("\(baseName)-translated.png")
+
+        do {
+            try await Task.detached(priority: .userInitiated) {
+                let fileManager = FileManager.default
+                try fileManager.createDirectory(at: shareRoot, withIntermediateDirectories: true)
+                try fileManager.createDirectory(at: shareDirectory, withIntermediateDirectories: false)
+                do {
+                    try fileManager.linkItem(at: sourceURL, to: shareURL)
+                } catch {
+                    try fileManager.copyItem(at: sourceURL, to: shareURL)
+                }
+            }.value
+
+            guard imageTranslationShareRequestID == requestID,
+                  imageTranslationExportURL?.standardizedFileURL == sourceURL else {
+                retainImageTranslationShareDirectoryIfCleanupFails(
+                    shareDirectory,
+                    root: shareRoot
+                )
+                return nil
+            }
+            imageTranslationOwnedShareDirectories.insert(shareDirectory)
+            return shareURL
+        } catch {
+            retainImageTranslationShareDirectoryIfCleanupFails(shareDirectory, root: shareRoot)
+            guard imageTranslationShareRequestID == requestID else { return nil }
+            imageTranslationMessage = "导出图准备失败：\(error.localizedDescription)"
+            dataTransferMessage = imageTranslationMessage
+            return nil
+        }
+    }
+
+    func finishImageTranslationSharing() {
+        discardImageTranslationShareCopies()
     }
 
     func setImageOverlayMode(_ mode: ImageTranslationOverlayMode) {
@@ -25251,6 +25310,7 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     private func discardImageTranslationExport() {
+        discardImageTranslationShareCopies()
         imageTranslationExportURL = nil
         let directory = imageTranslationDirectory
         for url in Array(imageTranslationOwnedExportURLs) {
@@ -25259,6 +25319,76 @@ final class TranslationSessionStore: ObservableObject {
             }
         }
         discardImageTranslationWorkspaceOrphans(directory: directory)
+    }
+
+    private func reconcileOrphanedImageTranslationSharesAtStartup() {
+        let root = imageTranslationShareDirectory.standardizedFileURL
+        guard let candidates = try? FileManager.default.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: nil
+        ) else {
+            return
+        }
+        for candidate in candidates {
+            let directory = candidate.standardizedFileURL
+            guard directory.deletingLastPathComponent() == root,
+                  UUID(uuidString: directory.lastPathComponent) != nil else {
+                continue
+            }
+            imageTranslationOwnedShareDirectories.insert(directory)
+        }
+        discardImageTranslationShareCopies()
+    }
+
+    private func discardImageTranslationShareCopies() {
+        imageTranslationShareRequestID = UUID()
+        let root = imageTranslationShareDirectory
+        for directory in Array(imageTranslationOwnedShareDirectories) {
+            if Self.removeImageTranslationShareDirectory(directory, root: root) {
+                imageTranslationOwnedShareDirectories.remove(directory)
+            }
+        }
+    }
+
+    private func retainImageTranslationShareDirectoryIfCleanupFails(
+        _ directory: URL,
+        root: URL
+    ) {
+        let managedDirectory = directory.standardizedFileURL
+        if !Self.removeImageTranslationShareDirectory(managedDirectory, root: root) {
+            imageTranslationOwnedShareDirectories.insert(managedDirectory)
+        }
+    }
+
+    nonisolated private static func removeImageTranslationShareDirectory(
+        _ directory: URL,
+        root: URL
+    ) -> Bool {
+        let managedRoot = root.standardizedFileURL
+        let managedDirectory = directory.standardizedFileURL
+        guard managedDirectory.deletingLastPathComponent() == managedRoot,
+              UUID(uuidString: managedDirectory.lastPathComponent) != nil else {
+            return false
+        }
+
+        let fileManager = FileManager.default
+        guard (try? fileManager.destinationOfSymbolicLink(atPath: managedDirectory.path)) == nil else {
+            return false
+        }
+        guard fileManager.fileExists(atPath: managedDirectory.path) else { return true }
+        guard let values = try? managedDirectory.resourceValues(
+            forKeys: [.isDirectoryKey, .isSymbolicLinkKey]
+        ),
+        values.isDirectory == true,
+        values.isSymbolicLink != true else {
+            return false
+        }
+        do {
+            try fileManager.removeItem(at: managedDirectory)
+            return !fileManager.fileExists(atPath: managedDirectory.path)
+        } catch {
+            return false
+        }
     }
 
     private func discardImageTranslationWorkspaceOrphans(directory: URL) {

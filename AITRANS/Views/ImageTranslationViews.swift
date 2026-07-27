@@ -40,6 +40,7 @@ struct ImageTranslationPanel: View {
     @State private var imageFileSelectionID: UUID?
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var shareURL: URL?
+    @State private var sharePresentationID = UUID()
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -59,8 +60,15 @@ struct ImageTranslationPanel: View {
         .onChange(of: selectedPhotoItem) { oldItem, newItem in
             loadSelectedPhoto(oldItem, newItem)
         }
-        .sheet(item: $shareURL) { url in
+        .sheet(item: $shareURL, onDismiss: finishSharing) { url in
             ShareSheet(activityItems: [url])
+        }
+        .onChange(of: store.imageTranslationExportURL) { _, exportURL in
+            guard exportURL == nil else { return }
+            finishSharing()
+        }
+        .onDisappear {
+            finishSharing()
         }
     }
 
@@ -166,7 +174,19 @@ struct ImageTranslationPanel: View {
     }
 
     private func shareResult() {
-        shareURL = store.imageTranslationExportURL
+        let presentationID = UUID()
+        sharePresentationID = presentationID
+        Task {
+            let preparedURL = await store.prepareImageTranslationShareURL()
+            guard sharePresentationID == presentationID else { return }
+            shareURL = preparedURL
+        }
+    }
+
+    private func finishSharing() {
+        sharePresentationID = UUID()
+        shareURL = nil
+        store.finishImageTranslationSharing()
     }
 }
 
