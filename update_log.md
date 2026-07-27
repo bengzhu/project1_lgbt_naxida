@@ -11,7 +11,7 @@
 ## v2.9：图片重渲染状态与重试
 日期：2026-07-27
 
-状态：Agent X 已完成核心候选实现、本地轻量回归和核心 exact-SHA 云端 full；工程正式版本收口为 `MARKETING_VERSION=2.9`，尚待版本收口 SHA 的云端 full、PR 与合并，未触碰 `main`。
+状态：Agent X 已完成核心候选实现、本地轻量回归、核心与版本收口 exact-SHA 云端 full；工程正式版本为 `MARKETING_VERSION=2.9`。PR #63 已合入 `smalldata_test`，merge SHA `1154e474627084544d52a5230340c56b986f2824`；远端 `codeb/v2.9-image-render-feedback` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -25,6 +25,7 @@
 - v1.87、v2.2-v2.9 图片/UI 契约共 73 项通过；CI validation tier / version identity 契约 14 项通过。三份改动 Swift 源码 parse、工程 plist、workflow YAML、ground truth 与现有 output JSON 解析、`git diff --check` 均通过。
 - 核心 SHA `42eac84cdbf111e948ff32296d1fa73d1d7938c9` 的云端 full run `30233705540` attempt 1 成功；artifact `aitrans-ci-v2.9-codeb-v2.9-image-render-feedback--42eac84cdbf1-run30233705540-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` build succeeded，commit status `AITRANS CI/full-validation=success`。
 - 版本收口 SHA `37ea55b4c75597852a87163ac67ee9c77daeaaed` 的云端 full run `30234070675` attempt 1 成功；artifact `aitrans-ci-v2.9-codeb-v2.9-image-render-feedback--37ea55b4c755-run30234070675-attempt1` 与 identity 完全一致，`MARKETING_VERSION=2.9`、Xcode build success、JUnit 10/10、`.xcresult` build succeeded，commit status `AITRANS CI/full-validation=success`。本次仅改工程版本和入口文档，领域合同按 changed-files 路由跳过，由核心 full 提供证据。
+- PR #63 exact HEAD fast run `30234308535` 成功后合并；merge follow-up run `30234339482` 成功，artifact `aitrans-ci-v2.9-smalldata_test--1154e4746270-run30234339482-attempt1` 以 `validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation` 复用候选 HEAD `c9f0b55e4ae9d8e6a786917fd2be63740598d6dc` 的成功 full 收据，JUnit 10/10。
 - 未跑本机 build / 探针，按规则交给云端验证；`probe_mode=skip`，没有刷新 output 或漫画指标。真实 Koharu 四件套仍缺失，validator 正确报告 `manifestMissing` / `stopUntilArtifactsProvided`。
 
 ## v2.8：图片分享准备反馈
