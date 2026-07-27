@@ -120,6 +120,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var imageTranslationRevision = 0
     @Published var imageOverlayMode: ImageTranslationOverlayMode = .adjacent
     @Published private(set) var imageTranslationExportURL: URL?
+    @Published private(set) var imageTranslationShareState: ImageTranslationShareState = .idle
     @Published private(set) var imageTranslationContentSourceLanguage: SupportedLanguage?
     @Published private(set) var imageTranslationContentTargetLanguage: SupportedLanguage?
     @Published private(set) var speechRecognitionCapabilities: [SpeechRecognitionCapability] = []
@@ -1462,13 +1463,18 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func prepareImageTranslationShareURL() async -> URL? {
+        guard imageTranslationShareState != .preparing else { return nil }
         discardImageTranslationShareCopies()
         guard let sourceURL = imageTranslationExportURL?.standardizedFileURL else {
+            let message = "没有可分享的图片导出"
+            imageTranslationShareState = .failed(message)
+            dataTransferMessage = message
             return nil
         }
 
         let requestID = UUID()
         imageTranslationShareRequestID = requestID
+        imageTranslationShareState = .preparing
         let shareRoot = imageTranslationShareDirectory.standardizedFileURL
         let shareDirectory = shareRoot.appendingPathComponent(requestID.uuidString, isDirectory: true)
         let baseName = imageTranslationFilename.isEmpty
@@ -1497,12 +1503,14 @@ final class TranslationSessionStore: ObservableObject {
                 return nil
             }
             imageTranslationOwnedShareDirectories.insert(shareDirectory)
+            imageTranslationShareState = .idle
             return shareURL
         } catch {
             retainImageTranslationShareDirectoryIfCleanupFails(shareDirectory, root: shareRoot)
             guard imageTranslationShareRequestID == requestID else { return nil }
-            imageTranslationMessage = "导出图准备失败：\(error.localizedDescription)"
-            dataTransferMessage = imageTranslationMessage
+            let message = "导出图准备失败：\(error.localizedDescription)"
+            imageTranslationShareState = .failed(message)
+            dataTransferMessage = message
             return nil
         }
     }
@@ -25387,6 +25395,7 @@ final class TranslationSessionStore: ObservableObject {
 
     private func discardImageTranslationShareCopies() {
         imageTranslationShareRequestID = UUID()
+        imageTranslationShareState = .idle
         let root = imageTranslationShareDirectory
         for directory in Array(imageTranslationOwnedShareDirectories) {
             if Self.removeImageTranslationShareDirectory(directory, root: root) {

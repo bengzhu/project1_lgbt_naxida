@@ -58,7 +58,7 @@ flowchart TD
   IGUARD -->|否| IREJECT["拒绝任意文件名 / wrong-kind / escape<br/>symlink / dangling symlink"]
   IDELETE --> IFAIL{"删除成功或已不存在?"}
   IFAIL -->|否| IKEEP["保留私有 ownership<br/>后续生命周期重试"]
-  IEXPORT --> ISHARE["Store-owned 分享目录<br/>share UUID / 可读 leaf filename"]
+  IEXPORT --> ISHARE["Store-owned 分享目录<br/>preparing / failed 反馈<br/>share UUID / 可读 leaf filename"]
   ISHARE --> ISHAREEND["dismiss / export 失效 / 启动<br/>request ID 拒收晚到并清理"]
 
   %% 音频分支：Apple 本机语音识别

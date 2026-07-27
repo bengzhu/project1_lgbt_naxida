@@ -8,6 +8,22 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.8 候选：图片分享准备反馈
+日期：2026-07-27
+
+状态：Agent X 已从最新 `smalldata_test@3d1a67b2246c3d309ef3c3a7eb3de20a42ca69b7` 创建 `codeb/v2.8-image-share-feedback`，完成核心候选实现和本地轻量回归；尚待云端 full，正式版本仍为 `2.7`，未触碰 `main`。
+
+核心变更：
+
+- Store 新增 request-scoped `idle / preparing / failed` 图片分享状态；异步硬链接/复制开始前发布 preparing，当前请求成功复位，当前请求失败保留独立消息，旧请求不得覆盖新状态。
+- 图片页准备分享时将导出按钮切换为“准备中”并禁用重复点击；页面标题和状态行优先显示分享进度/失败，失败使用 danger，不再让已翻译状态掩盖分享错误。
+- 既有 share request、View presentation identity、可读文件名、目录 ownership 和删除失败重试保持不变；dismiss、内容失效和页面离开继续统一清理并复位反馈。本版不修改 OCR、Koharu、翻译、renderer、探针或 metrics。
+- 新增 v2.8 纯 Swift 状态 evaluator 与 Python 源码合同，并接入 v1.87 / v2.2-v2.8 fail-fast UI interaction CI step。
+
+验证与遗留：
+
+- v2.8 6/6、v2.7 9/9、v2.6 7/7、v2.5 10/10、v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、CI 分层 9/9、版本身份 5/5，以及三份修改 Swift parse、Xcode 工程 lint、YAML 解析、三份 JSON 解析和 `git diff --check` 已通过。未跑本机 build / 探针，按规则交给云端验证。
+
 ## v2.7：图片 OCR 输入语言与方向闭环
 日期：2026-07-27
 
