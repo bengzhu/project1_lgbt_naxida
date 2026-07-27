@@ -31,10 +31,10 @@ struct ImageTranslationView: View {
         case .idle: break
         }
         switch store.imageTranslationState {
-        case .idle: .neutral
-        case .loading, .recognizing, .translating: .active
-        case .translated: .success
-        case .failed: .danger
+        case .idle: return .neutral
+        case .loading, .recognizing, .translating: return .active
+        case .translated: return .success
+        case .failed: return .danger
         }
     }
 
@@ -161,10 +161,10 @@ struct ImageTranslationPanel: View {
         case .idle: break
         }
         switch store.imageTranslationState {
-        case .idle: .neutral
-        case .loading, .recognizing, .translating: .active
-        case .translated: .success
-        case .failed: .danger
+        case .idle: return .neutral
+        case .loading, .recognizing, .translating: return .active
+        case .translated: return .success
+        case .failed: return .danger
         }
     }
 
