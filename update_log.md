@@ -11,7 +11,7 @@
 ## v2.7：图片 OCR 输入语言与方向闭环
 日期：2026-07-27
 
-状态：Agent X 已从最新 `smalldata_test@7093bc58d7b154bffcb897f9b2d7b3bf6c6789db` 创建 `codeb/v2.7-image-ocr-direction`，完成核心候选实现、本地轻量回归、两轮独立复审，以及核心和版本收口 exact-SHA 云端 full；工程正式版本为 `MARKETING_VERSION=2.7`，尚待 PR 合入 `smalldata_test`，未触碰 `main`。
+状态：Agent X 已完成核心候选实现、本地轻量回归、两轮独立复审，以及核心和版本收口 exact-SHA 云端 full；工程正式版本为 `MARKETING_VERSION=2.7`。PR #61 已合入 `smalldata_test`，merge SHA `f98426f17ae8bfc2a6c2937008ca4f4f6436aaf4`；远端 `codeb/v2.7-image-ocr-direction` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -26,6 +26,7 @@
 - v2.7 9/9、v2.6 7/7、v2.5 10/10、v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、CI 分层 9/9、版本身份 5/5，以及五份修改 Swift parse、Xcode 工程 lint、YAML 解析、三份 JSON 解析和 `git diff --check` 已通过。独立复审的实现与合同问题均已修复。
 - 核心 SHA `61168f3f81a3bd1b87cfa724134eefdc47f1d289` 的云端 full run `30231620821` attempt 1 成功；artifact `aitrans-ci-v2.7-codeb-v2.7-image-ocr-direction--61168f3f81a3-run30231620821-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.7 9/9、既有图片合同、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` 无 error / warning summary，commit status `AITRANS CI/full-validation=success`。
 - 版本收口 SHA `41e9a1df4591752de13d5cd37a16addd35fa7793` 的云端 full run `30231918177` attempt 1 成功；artifact `aitrans-ci-v2.7-codeb-v2.7-image-ocr-direction--41e9a1df4591-run30231918177-attempt1` 与 identity 完全一致，`MARKETING_VERSION=2.7`、Xcode build success、JUnit 10/10、`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次只改工程版本和入口文档，领域合同按 changed-files 路由跳过，由核心 full 提供证据。
+- 纯文档 follow-up fast run `30232087193` 正确复用父 SHA `41e9a1df4591752de13d5cd37a16addd35fa7793` 的 full-validation success；PR fast run `30232132423` 成功。merge fast run `30232173778` 的 artifact 与 merge HEAD `f98426f17ae8bfc2a6c2937008ca4f4f6436aaf4` 一致，`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用第二父候选 SHA `8122de32ecf2fbec69b36b77b8831567a6325025` 的 propagated success，JUnit 10/10。
 - 合成 bbox fixture 只证明排序、聚类和 fallback 契约，不证明真实日文 OCR 字符准确率提升。本轮不刷新 `output/`，不追加 `metrics/version_history.csv`；真实竖排收益需要后续合法日文图片 corpus 或人工图像验收。
 - 未跑本机 build / 探针，按规则交给云端验证。
 
