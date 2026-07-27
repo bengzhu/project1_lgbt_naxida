@@ -6250,6 +6250,12 @@ enum ImageTextDirection: String, Codable, Sendable {
     case unknown
 }
 
+enum ImageTranslationShareState: Equatable, Sendable {
+    case idle
+    case preparing
+    case failed(String)
+}
+
 struct NormalizedImageRect: Equatable, Codable, Sendable {
     var x: Double
     var y: Double

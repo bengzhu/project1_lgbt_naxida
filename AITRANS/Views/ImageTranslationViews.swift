@@ -12,7 +12,7 @@ struct ImageTranslationView: View {
                     title: "图片翻译",
                     subtitle: "Vision OCR 与本地翻译",
                     systemImage: "photo.on.rectangle",
-                    status: store.imageTranslationProgressTitle,
+                    status: statusTitle,
                     statusTone: statusTone
                 )
                 ImageTranslationPanel()
@@ -25,11 +25,24 @@ struct ImageTranslationView: View {
     }
 
     private var statusTone: AppStatusTone {
+        switch store.imageTranslationShareState {
+        case .preparing: return .active
+        case .failed: return .danger
+        case .idle: break
+        }
         switch store.imageTranslationState {
-        case .idle: .neutral
-        case .loading, .recognizing, .translating: .active
-        case .translated: .success
-        case .failed: .danger
+        case .idle: return .neutral
+        case .loading, .recognizing, .translating: return .active
+        case .translated: return .success
+        case .failed: return .danger
+        }
+    }
+
+    private var statusTitle: String {
+        switch store.imageTranslationShareState {
+        case .preparing: "准备分享"
+        case .failed: "分享失败"
+        case .idle: store.imageTranslationProgressTitle
         }
     }
 }
@@ -112,8 +125,8 @@ struct ImageTranslationPanel: View {
             .disabled(store.imageTranslationData == nil || isRunning)
 
             AppStatusRow(
-                title: store.imageTranslationProgressTitle,
-                detail: store.imageTranslationMessage,
+                title: statusTitle,
+                detail: statusDetail,
                 tone: statusTone
             )
 
@@ -142,11 +155,32 @@ struct ImageTranslationPanel: View {
     }
 
     private var statusTone: AppStatusTone {
+        switch store.imageTranslationShareState {
+        case .preparing: return .active
+        case .failed: return .danger
+        case .idle: break
+        }
         switch store.imageTranslationState {
-        case .idle: .neutral
-        case .loading, .recognizing, .translating: .active
-        case .translated: .success
-        case .failed: .danger
+        case .idle: return .neutral
+        case .loading, .recognizing, .translating: return .active
+        case .translated: return .success
+        case .failed: return .danger
+        }
+    }
+
+    private var statusTitle: String {
+        switch store.imageTranslationShareState {
+        case .preparing: "正在准备分享"
+        case .failed: "分享准备失败"
+        case .idle: store.imageTranslationProgressTitle
+        }
+    }
+
+    private var statusDetail: String {
+        switch store.imageTranslationShareState {
+        case .preparing: "正在创建可供系统分享的图片文件"
+        case .failed(let message): message
+        case .idle: store.imageTranslationMessage
         }
     }
 
@@ -175,6 +209,7 @@ struct ImageTranslationPanel: View {
     }
 
     private func shareResult() {
+        guard store.imageTranslationShareState != .preparing else { return }
         let presentationID = UUID()
         sharePresentationID = presentationID
         Task {
@@ -334,7 +369,13 @@ private struct ImageCommandBar: View {
         }
 
         if store.imageTranslationExportURL != nil {
-            AppSecondaryButton(title: "导出", systemImage: "square.and.arrow.up", tone: .success, action: shareResult)
+            AppSecondaryButton(
+                title: isPreparingShare ? "准备中" : "导出",
+                systemImage: isPreparingShare ? "hourglass" : "square.and.arrow.up",
+                tone: .success,
+                action: shareResult
+            )
+            .disabled(isPreparingShare)
         }
 
         if store.imageTranslationData != nil {
@@ -347,6 +388,10 @@ private struct ImageCommandBar: View {
         case .loading, .recognizing, .translating: true
         case .idle, .translated, .failed: false
         }
+    }
+
+    private var isPreparingShare: Bool {
+        store.imageTranslationShareState == .preparing
     }
 }
 

@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`2.7`（普通图片显式输入/目标语言凭据、完成后输入语言重跑，以及保守横排/竖排方向证据与稳定读序已收口；v2.6 可读分享生命周期、v2.5 workspace 恢复、v2.4 稳定导出、v2.3 取消后 Retry、v2.2 Store-owned transfer/run isolation、v2.1 Koharu trusted geometry coverage 和 v2.0 稳定一对一匹配仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`2.8`（图片分享 preparing/failed 反馈、重复操作禁用和 request-scoped 复位已收口；v2.7 普通图片输入/目标语言凭据与横/竖排读序、v2.6 可读分享生命周期、v2.5 workspace 恢复、v2.4 稳定导出、v2.3 取消后 Retry 和 v2.2 Store-owned transfer/run isolation 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
@@ -164,7 +164,7 @@
 输出：
 
 - `ImageTranslationBlock`
-- 旁贴或覆盖预览与同模式 PNG 导出；Vision OCR bbox、SwiftUI 预览和导出 renderer 统一使用图片顶左原点坐标。后台 render 只写 render ID 独占 staging PNG，已完成图片切换模式会使旧导出失效并按 render ID / 图片 task ID / mode 验明身份后发布 `aitrans-export-<render UUID>-<base>-translated.png` 稳定文件，旧 detached render 不得覆盖新任务。启动时会扫描 `Application Support/ImageTranslations` 直属文件，分账接管带 Store marker 的稳定导出、`<task UUID>-<name>` 输入副本和 `.<base>-translated-<render UUID>.staging.png`，清理上次异常退出残留；普通后缀文件、wrong-kind、目录外、嵌套、escape、symlink 和 dangling symlink 一律拒绝。新任务、清空或模式重渲染会撤销公开 export URL 并删除当前 Store-owned 稳定导出；正常 input/staging 清理同样必须携带可信 workspace 与对应文件类型，删除失败也登记 orphan ownership。所有删除失败项都在后续生命周期继续重试。分享前由 Store 在 `ImageTranslationShares/<share UUID>/` 创建人类可读 `<base>-translated.png` 硬链接或副本；Store request ID 与 View presentation ID 共同拒绝晚到结果和旧 Task 的 `nil` 回写，dismiss / export 失效 / View 离开与启动恢复统一清理分享目录，删除失败保留 ownership。
+- 旁贴或覆盖预览与同模式 PNG 导出；Vision OCR bbox、SwiftUI 预览和导出 renderer 统一使用图片顶左原点坐标。后台 render 只写 render ID 独占 staging PNG，已完成图片切换模式会使旧导出失效并按 render ID / 图片 task ID / mode 验明身份后发布 `aitrans-export-<render UUID>-<base>-translated.png` 稳定文件，旧 detached render 不得覆盖新任务。启动时会扫描 `Application Support/ImageTranslations` 直属文件，分账接管带 Store marker 的稳定导出、`<task UUID>-<name>` 输入副本和 `.<base>-translated-<render UUID>.staging.png`，清理上次异常退出残留；普通后缀文件、wrong-kind、目录外、嵌套、escape、symlink 和 dangling symlink 一律拒绝。新任务、清空或模式重渲染会撤销公开 export URL 并删除当前 Store-owned 稳定导出；正常 input/staging 清理同样必须携带可信 workspace 与对应文件类型，删除失败也登记 orphan ownership。所有删除失败项都在后续生命周期继续重试。分享前由 Store 在 `ImageTranslationShares/<share UUID>/` 创建人类可读 `<base>-translated.png` 硬链接或副本，并公开 request-scoped `idle / preparing / failed` 状态；准备中禁用重复导出，当前请求失败覆盖翻译成功色调。Store request ID 与 View presentation ID 共同拒绝晚到结果和旧 Task 的 `nil` 回写，dismiss / export 失效 / View 离开与启动恢复统一清理分享目录并复位反馈，删除失败保留 ownership。
 - 任务启动时固定输入/目标语言，并单独记录当前图片内容实际使用的两份语言凭据；从 `.loading` 起即使图片数据和 blocks 尚为空，UI 也使用任务语言。失败或取消后若图片数据/部分 OCR 块仍可见，继续保留对应凭据，只有清空或新任务替换内容时才重置。已完成图片选择不同输入语言会从沙盒原图重新 OCR + 翻译，选择不同目标语言会重新翻译。
 - 普通图片 OCR 对每个 observation 记录 `horizontal / vertical / unknown` 方向证据。只有日语/中文 prior、bbox 高宽比至少 `1.6`、高度至少 `0.035`，并且包含至少两个 CJK 字符或具有同列邻居且没有近同行邻居时，才进入竖排路径；孤立单字高框、同行 CJK 碎片及非 CJK 高框继续走横排/unknown fallback。横排按上到下、行内左到右聚类；竖排按列从右到左、列内上到下聚类，两种方向不会互相合并。方向、置信度与 reason 随 `ImageTranslationBlock` 保留，不改变漫画探针链路。
 
@@ -403,7 +403,8 @@ CI artifact version 优先从带 `vX.Y` 的候选 ref 解析；`smalldata_test` 
   -> 清理上次异常退出残留；正常 input / staging 删除也校验 workspace + 文件类型并登记失败 ownership
   -> 拒绝任意文件名 / wrong-kind / 目录外 / 嵌套 / escape / symlink / dangling symlink
   -> 删除失败保留对应 ownership，后续生命周期重试
-  -> 分享时 Store 创建 ImageTranslationShares/share UUID/可读文件名
+  -> 分享时 Store 发布 preparing，创建 ImageTranslationShares/share UUID/可读文件名
+  -> 准备中禁用重复导出；当前失败显示 danger，旧 request 不覆盖新状态
   -> dismiss / 新任务 / 清空 / 重渲染 / 启动时清理，晚到 share request 拒收
   -> VisionOCRService.recognizeTextBlocks
   -> 保守方向证据：CJK 高框竖排，否则 horizontal / unknown fallback
