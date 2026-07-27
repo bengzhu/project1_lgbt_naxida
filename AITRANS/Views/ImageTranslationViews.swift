@@ -397,6 +397,14 @@ private struct ImageCommandBar: View {
             AppSecondaryButton(title: "重试", systemImage: "arrow.clockwise", tone: .warning, action: store.retryImageTranslation)
         }
 
+        if store.canRerunImageRecognition {
+            AppSecondaryButton(
+                title: "重新识别",
+                systemImage: "text.viewfinder",
+                action: store.rerunImageRecognition
+            )
+        }
+
         if hasRenderFailure {
             AppSecondaryButton(
                 title: "重试导出",

@@ -357,6 +357,14 @@ final class TranslationSessionStore: ObservableObject {
         return FileManager.default.fileExists(atPath: url.path)
     }
 
+    var canRerunImageRecognition: Bool {
+        guard imageTranslationState == .translated,
+              let url = imageTranslationSourceURL else {
+            return false
+        }
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
     var currentSpeechCapability: SpeechRecognitionCapability {
         speechRecognitionCapabilities.first { $0.language == sourceLanguage } ?? SpeechRecognitionCapability(
             language: sourceLanguage,
@@ -422,9 +430,23 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     var imageTranslationSummary: String {
-        let translatedCount = imageTranslationBlocks.filter { !$0.translation.isEmpty }.count
-        guard !imageTranslationBlocks.isEmpty else { return "0 个文本块" }
-        return "\(translatedCount)/\(imageTranslationBlocks.count) 个文本块"
+        let summary = ImageOCRResultSummary(blocks: imageTranslationBlocks)
+        guard summary.totalBlockCount > 0 else { return "0 个文本块" }
+
+        var parts = ["\(summary.translatedBlockCount)/\(summary.totalBlockCount) 个文本块"]
+        if let averageConfidence = summary.averageConfidence {
+            parts.append("平均 \(averageConfidence.formatted(.percent.precision(.fractionLength(0))))")
+        }
+        if summary.lowConfidenceBlockCount > 0 {
+            parts.append("低置信 \(summary.lowConfidenceBlockCount)")
+        }
+        if summary.verticalBlockCount > 0 {
+            parts.append("竖排 \(summary.verticalBlockCount)")
+        }
+        if summary.unknownDirectionBlockCount > 0 {
+            parts.append("方向待定 \(summary.unknownDirectionBlockCount)")
+        }
+        return parts.joined(separator: " · ")
     }
 
     func toggleRecording() {
@@ -1659,6 +1681,11 @@ final class TranslationSessionStore: ObservableObject {
             sourceLanguage: selectedSourceLanguage,
             targetLanguage: selectedTargetLanguage
         )
+    }
+
+    func rerunImageRecognition() {
+        guard canRerunImageRecognition else { return }
+        retryImageTranslation()
     }
 
     func refreshSummary() async throws {
