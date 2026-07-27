@@ -8,10 +8,10 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
-## v2.6 候选：图片分享文件生命周期
+## v2.6：图片分享文件生命周期
 日期：2026-07-26
 
-状态：Agent X 已从最新 `smalldata_test@78d9d9df4f28c91654db55697ab85fa2b4cfd2b0` 创建 `codeb/v2.6-image-share-lifecycle` 并完成候选实现与本地轻量验证；尚待独立复审和云端 full，正式版本仍为 `2.5`，未触碰 `main`。
+状态：Agent X 已从最新 `smalldata_test@78d9d9df4f28c91654db55697ab85fa2b4cfd2b0` 创建 `codeb/v2.6-image-share-lifecycle`，完成候选实现、本地轻量验证、独立复审和核心 exact-SHA 云端 full；工程版本已收口为 `MARKETING_VERSION=2.6`，尚待版本收口 SHA 云端 full，未触碰 `main`。
 
 核心变更：
 
@@ -23,6 +23,7 @@
 验证与遗留：
 
 - v2.6 7/7、v2.5 10/10、v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、Store/View Swift parse 与 `git diff --check` 通过。
+- 核心 SHA `dfe459a9a5be265422c9d4bfd80dc0b0db6dc914` 的云端 full run `30229667313` attempt 1 成功；artifact `aitrans-ci-v2.6-codeb-v2.6-image-share-lifecycle--dfe459a9a5be-run30229667313-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.6 7/7、v2.5 10/10、v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` 可用，commit status `AITRANS CI/full-validation=success`。独立复审未发现 P1/P2/P3 问题。
 - 未跑本机 build / 探针，按规则交给云端验证。本轮不改变 Vision OCR、Koharu、翻译或覆盖算法，不声称质量指标提升，不刷新 `output/`，不追加 `metrics/version_history.csv`。
 
 ## v2.5：图片 workspace 异常恢复

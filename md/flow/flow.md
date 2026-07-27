@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`2.5`（图片 workspace 启动恢复与运行期 input/staging 删除失败 ownership 重试已收口；v2.4 稳定导出生命周期、v2.3 取消后 Retry、v2.2 Store-owned transfer/run isolation、v2.1 Koharu trusted geometry coverage、v2.0 稳定一对一匹配、v1.99 polygon containment 和 v1.98 导出一致性仍保留；Speech 真实 corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`2.6`（图片分享使用 Store-owned 可读副本、双层请求身份隔离和完整 dismiss / 内容生命周期清理；v2.5 workspace 恢复、v2.4 稳定导出生命周期、v2.3 取消后 Retry、v2.2 Store-owned transfer/run isolation、v2.1 Koharu trusted geometry coverage、v2.0 稳定一对一匹配、v1.99 polygon containment 和 v1.98 导出一致性仍保留；Speech 真实 corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
