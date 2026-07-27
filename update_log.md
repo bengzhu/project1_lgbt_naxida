@@ -11,7 +11,7 @@
 ## v2.8：图片分享准备反馈
 日期：2026-07-27
 
-状态：Agent X 已从最新 `smalldata_test@3d1a67b2246c3d309ef3c3a7eb3de20a42ca69b7` 创建 `codeb/v2.8-image-share-feedback`，完成核心候选实现、本地轻量回归和核心 exact-SHA 云端 full；工程版本已收口为 `MARKETING_VERSION=2.8`，尚待版本收口 SHA 云端 full，未触碰 `main`。
+状态：Agent X 已从最新 `smalldata_test@3d1a67b2246c3d309ef3c3a7eb3de20a42ca69b7` 创建 `codeb/v2.8-image-share-feedback`，完成核心候选实现、本地轻量回归，以及核心和版本收口 exact-SHA 云端 full；工程正式版本为 `MARKETING_VERSION=2.8`，尚待 PR 合入 `smalldata_test`，未触碰 `main`。
 
 核心变更：
 
@@ -25,6 +25,7 @@
 - v2.8 6/6、v2.7 9/9、v2.6 7/7、v2.5 10/10、v2.4 9/9、v2.3 4/4、v2.2 10/10、v1.87 12/12、CI 分层 9/9、版本身份 5/5，以及三份修改 Swift parse、Xcode 工程 lint、YAML 解析、三份 JSON 解析和 `git diff --check` 已通过。未跑本机 build / 探针，按规则交给云端验证。
 - 首个核心 SHA `4442166e026c846ae004be753851cf08d913807e` 的云端 full run `30232563563` 中全部合同通过，但 Xcode build 因两个 `statusTone` getter 在多语句函数中继续使用无上下文隐式 enum member 而失败；已按结果包 `xcodebuild.log` 改为显式 return，并加入合同防回归。该失败 run 不作为编译收据。
 - 修复后核心 SHA `c9ce5681532289c905fd4d5b3cecdac89be922a7` 的云端 full run `30232677854` attempt 1 成功；artifact `aitrans-ci-v2.8-codeb-v2.8-image-share-feedback--c9ce56815322-run30232677854-attempt1` 与 version / branch / SHA / run / profile 完全一致，v2.8 与既有图片合同、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- 版本收口 SHA `f43e957d89ad2ad2716641ee61697e2ed855cf65` 的云端 full run `30233086479` attempt 1 成功；artifact `aitrans-ci-v2.8-codeb-v2.8-image-share-feedback--f43e957d89ad-run30233086479-attempt1` 与 identity 完全一致，`MARKETING_VERSION=2.8`、Xcode build success、JUnit 10/10、`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次只改工程版本和入口文档，领域合同按 changed-files 路由跳过，由核心 full 提供证据。
 
 ## v2.7：图片 OCR 输入语言与方向闭环
 日期：2026-07-27
