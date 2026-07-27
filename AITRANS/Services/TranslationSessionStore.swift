@@ -121,6 +121,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var imageOverlayMode: ImageTranslationOverlayMode = .adjacent
     @Published private(set) var imageTranslationExportURL: URL?
     @Published private(set) var imageTranslationShareState: ImageTranslationShareState = .idle
+    @Published private(set) var imageTranslationExportRenderState: ImageTranslationExportRenderState = .idle
     @Published private(set) var imageTranslationContentSourceLanguage: SupportedLanguage?
     @Published private(set) var imageTranslationContentTargetLanguage: SupportedLanguage?
     @Published private(set) var speechRecognitionCapabilities: [SpeechRecognitionCapability] = []
@@ -1520,8 +1521,14 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func setImageOverlayMode(_ mode: ImageTranslationOverlayMode) {
-        guard imageOverlayMode != mode else { return }
+        guard imageTranslationExportRenderState != .rendering,
+              imageOverlayMode != mode else { return }
         imageOverlayMode = mode
+        rerenderImageTranslationExport()
+    }
+
+    func retryImageTranslationExportRender() {
+        guard case .failed = imageTranslationExportRenderState else { return }
         rerenderImageTranslationExport()
     }
 
@@ -1541,10 +1548,12 @@ final class TranslationSessionStore: ObservableObject {
         imageOverlayRenderTask?.cancel()
         imageOverlayRenderTask = nil
         imageOverlayRenderID = UUID()
+        imageTranslationExportRenderState = .idle
     }
 
     private func rerenderImageTranslationExport() {
-        guard imageTranslationState == .translated,
+        guard imageTranslationExportRenderState != .rendering,
+              imageTranslationState == .translated,
               let data = imageTranslationData,
               !imageTranslationBlocks.isEmpty else {
             return
@@ -1558,6 +1567,7 @@ final class TranslationSessionStore: ObservableObject {
         let filename = imageTranslationFilename
         let directory = imageTranslationDirectory
         imageOverlayRenderID = renderID
+        imageTranslationExportRenderState = .rendering
         discardImageTranslationExport()
         imageTranslationMessage = "正在生成\(mode.rawValue)导出图"
 
@@ -1580,7 +1590,14 @@ final class TranslationSessionStore: ObservableObject {
                     self.removeImageTranslationStagingFile(stagedURL, directory: directory)
                     return
                 }
-                guard let stagedURL else { return }
+                guard let stagedURL else {
+                    let message = "\(mode.rawValue)导出图生成失败：没有可发布的暂存文件"
+                    self.imageTranslationExportRenderState = .failed(message)
+                    self.imageTranslationMessage = message
+                    self.dataTransferMessage = message
+                    self.imageOverlayRenderTask = nil
+                    return
+                }
                 let outputURL = try Self.publishImageTranslationOverlay(
                     stagedURL: stagedURL,
                     filename: filename,
@@ -1588,11 +1605,18 @@ final class TranslationSessionStore: ObservableObject {
                     renderID: renderID
                 )
                 self.publishImageTranslationExport(outputURL)
+                self.imageTranslationExportRenderState = .idle
                 self.imageTranslationMessage = "已更新\(mode.rawValue)预览和导出图"
                 self.dataTransferMessage = self.imageTranslationMessage
                 self.imageOverlayRenderTask = nil
             } catch is CancellationError {
                 self.removeImageTranslationStagingFile(stagedURL, directory: directory)
+                guard self.imageOverlayRenderID == renderID,
+                      self.imageTranslationTaskID == contentTaskID else {
+                    return
+                }
+                self.imageTranslationExportRenderState = .idle
+                self.imageOverlayRenderTask = nil
                 return
             } catch {
                 self.removeImageTranslationStagingFile(stagedURL, directory: directory)
@@ -1600,8 +1624,10 @@ final class TranslationSessionStore: ObservableObject {
                       self.imageTranslationTaskID == contentTaskID else {
                     return
                 }
-                self.imageTranslationMessage = "\(mode.rawValue)预览已更新，导出图生成失败：\(error.localizedDescription)"
-                self.dataTransferMessage = self.imageTranslationMessage
+                let message = "\(mode.rawValue)预览已更新，导出图生成失败：\(error.localizedDescription)"
+                self.imageTranslationExportRenderState = .failed(message)
+                self.imageTranslationMessage = message
+                self.dataTransferMessage = message
                 self.imageOverlayRenderTask = nil
             }
         }

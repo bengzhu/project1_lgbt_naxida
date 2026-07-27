@@ -30,6 +30,11 @@ struct ImageTranslationView: View {
         case .failed: return .danger
         case .idle: break
         }
+        switch store.imageTranslationExportRenderState {
+        case .rendering: return .active
+        case .failed: return .danger
+        case .idle: break
+        }
         switch store.imageTranslationState {
         case .idle: return .neutral
         case .loading, .recognizing, .translating: return .active
@@ -40,9 +45,14 @@ struct ImageTranslationView: View {
 
     private var statusTitle: String {
         switch store.imageTranslationShareState {
-        case .preparing: "准备分享"
-        case .failed: "分享失败"
-        case .idle: store.imageTranslationProgressTitle
+        case .preparing: return "准备分享"
+        case .failed: return "分享失败"
+        case .idle: break
+        }
+        switch store.imageTranslationExportRenderState {
+        case .rendering: return "更新导出"
+        case .failed: return "导出失败"
+        case .idle: return store.imageTranslationProgressTitle
         }
     }
 }
@@ -122,7 +132,7 @@ struct ImageTranslationPanel: View {
                 }
             }
             .pickerStyle(.segmented)
-            .disabled(store.imageTranslationData == nil || isRunning)
+            .disabled(store.imageTranslationData == nil || isRunning || isRenderingExport)
 
             AppStatusRow(
                 title: statusTitle,
@@ -160,6 +170,11 @@ struct ImageTranslationPanel: View {
         case .failed: return .danger
         case .idle: break
         }
+        switch store.imageTranslationExportRenderState {
+        case .rendering: return .active
+        case .failed: return .danger
+        case .idle: break
+        }
         switch store.imageTranslationState {
         case .idle: return .neutral
         case .loading, .recognizing, .translating: return .active
@@ -170,17 +185,27 @@ struct ImageTranslationPanel: View {
 
     private var statusTitle: String {
         switch store.imageTranslationShareState {
-        case .preparing: "正在准备分享"
-        case .failed: "分享准备失败"
-        case .idle: store.imageTranslationProgressTitle
+        case .preparing: return "正在准备分享"
+        case .failed: return "分享准备失败"
+        case .idle: break
+        }
+        switch store.imageTranslationExportRenderState {
+        case .rendering: return "正在更新导出图"
+        case .failed: return "导出图生成失败"
+        case .idle: return store.imageTranslationProgressTitle
         }
     }
 
     private var statusDetail: String {
         switch store.imageTranslationShareState {
-        case .preparing: "正在创建可供系统分享的图片文件"
-        case .failed(let message): message
-        case .idle: store.imageTranslationMessage
+        case .preparing: return "正在创建可供系统分享的图片文件"
+        case .failed(let message): return message
+        case .idle: break
+        }
+        switch store.imageTranslationExportRenderState {
+        case .rendering: return "正在按所选覆盖方式重新生成图片"
+        case .failed(let message): return message
+        case .idle: return store.imageTranslationMessage
         }
     }
 
@@ -189,6 +214,10 @@ struct ImageTranslationPanel: View {
         case .loading, .recognizing, .translating: true
         case .idle, .translated, .failed: false
         }
+    }
+
+    private var isRenderingExport: Bool {
+        store.imageTranslationExportRenderState == .rendering
     }
 
     private func handleImport(_ result: Result<URL, Error>) {
@@ -368,6 +397,15 @@ private struct ImageCommandBar: View {
             AppSecondaryButton(title: "重试", systemImage: "arrow.clockwise", tone: .warning, action: store.retryImageTranslation)
         }
 
+        if hasRenderFailure {
+            AppSecondaryButton(
+                title: "重试导出",
+                systemImage: "arrow.clockwise.circle",
+                tone: .warning,
+                action: store.retryImageTranslationExportRender
+            )
+        }
+
         if store.imageTranslationExportURL != nil {
             AppSecondaryButton(
                 title: isPreparingShare ? "准备中" : "导出",
@@ -392,6 +430,13 @@ private struct ImageCommandBar: View {
 
     private var isPreparingShare: Bool {
         store.imageTranslationShareState == .preparing
+    }
+
+    private var hasRenderFailure: Bool {
+        if case .failed = store.imageTranslationExportRenderState {
+            return true
+        }
+        return false
     }
 }
 

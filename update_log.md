@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v2.9：图片重渲染状态与重试
+日期：2026-07-27
+
+状态：Agent X 已完成核心候选实现、本地轻量回归和核心 exact-SHA 云端 full；工程正式版本收口为 `MARKETING_VERSION=2.9`，尚待版本收口 SHA 的云端 full、PR 与合并，未触碰 `main`。
+
+核心变更：
+
+- Store 新增图片导出重渲染 `idle / rendering / failed` 状态；覆盖模式切换开始前发布 rendering，成功、取消、失败和内容失效均按 render ID / task ID 收口，旧 render 不覆盖新内容。
+- rendering 时 segmented Picker 和 Store API 双重拒绝重复模式切换；当前失败使用 danger 状态并显示具体消息，提供 Store-owned“重试导出”入口。
+- 无 staging URL 不再静默 return 并永久停留在活动态，而是进入可重试失败；既有稳定导出 ownership、staging 清理、分享状态、OCR、翻译、Koharu 和探针不变。
+- 新增 v2.9 纯 Swift 状态 evaluator 与 Python 源码合同，并接入 v1.87 / v2.2-v2.9 fail-fast UI interaction CI step。
+
+验证与遗留：
+
+- v1.87、v2.2-v2.9 图片/UI 契约共 73 项通过；CI validation tier / version identity 契约 14 项通过。三份改动 Swift 源码 parse、工程 plist、workflow YAML、ground truth 与现有 output JSON 解析、`git diff --check` 均通过。
+- 核心 SHA `42eac84cdbf111e948ff32296d1fa73d1d7938c9` 的云端 full run `30233705540` attempt 1 成功；artifact `aitrans-ci-v2.9-codeb-v2.9-image-render-feedback--42eac84cdbf1-run30233705540-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` build succeeded，commit status `AITRANS CI/full-validation=success`。
+- 版本收口 SHA `37ea55b4c75597852a87163ac67ee9c77daeaaed` 的云端 full run `30234070675` attempt 1 成功；artifact `aitrans-ci-v2.9-codeb-v2.9-image-render-feedback--37ea55b4c755-run30234070675-attempt1` 与 identity 完全一致，`MARKETING_VERSION=2.9`、Xcode build success、JUnit 10/10、`.xcresult` build succeeded，commit status `AITRANS CI/full-validation=success`。本次仅改工程版本和入口文档，领域合同按 changed-files 路由跳过，由核心 full 提供证据。
+- 未跑本机 build / 探针，按规则交给云端验证；`probe_mode=skip`，没有刷新 output 或漫画指标。真实 Koharu 四件套仍缺失，validator 正确报告 `manifestMissing` / `stopUntilArtifactsProvided`。
+
 ## v2.8：图片分享准备反馈
 日期：2026-07-27
 

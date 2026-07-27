@@ -6256,6 +6256,12 @@ enum ImageTranslationShareState: Equatable, Sendable {
     case failed(String)
 }
 
+enum ImageTranslationExportRenderState: Equatable, Sendable {
+    case idle
+    case rendering
+    case failed(String)
+}
+
 struct NormalizedImageRect: Equatable, Codable, Sendable {
     var x: Double
     var y: Double
