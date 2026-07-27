@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.0：图片 OCR 复查与重新识别
+日期：2026-07-27
+
+状态：Agent X 已完成核心候选实现、本地轻量回归和核心 exact-SHA 云端 full；工程正式版本收口为 `MARKETING_VERSION=3.0`，尚待版本收口 SHA 的云端 full、PR 与合并，未触碰 `main`。
+
+核心变更：
+
+- 新增纯模型 `ImageOCRResultSummary`，从当前图片 blocks 计算翻译覆盖、平均 Vision confidence、低于 `50%` 的块数，以及 horizontal / vertical / unknown 方向分账；confidence 先夹取到 `0...1`，空结果不虚构平均值。
+- 图片识别结果标题显示平均置信、低置信块、竖排与方向待定数量，帮助用户定位需要复查的 OCR 结果；不读取 ground truth，不改变 OCR 候选或排序。
+- `.translated` 且 Store-owned 原图仍存在时显示“重新识别”。View 只调用 Store API；Store 复用内容输入/目标语言和既有 `retryImageTranslation()`，因此保留 task ID 隔离、源文件 ownership、render/share 失效和晚到结果拒收。
+- 新增 v3.0 真实产品 summary evaluator 与 Python 源码合同，并接入 v1.87 / v2.2-v3.0 fail-fast UI interaction CI step。
+
+验证与遗留：
+
+- v1.87、v2.2-v3.0 图片/UI 契约共 78 项通过；CI validation tier / version identity 契约 14 项通过。三份改动 Swift 源码 parse、工程 plist、workflow YAML、ground truth 与现有 output JSON 解析、工程版本唯一解析为 `v2.9` 和 `git diff --check` 均通过；尚待云端 exact-SHA full。
+- 核心 SHA `2169eb9cb156406c524f57583ae79cb300d4919f` 的云端 full run `30234737017` attempt 1 成功；artifact `aitrans-ci-v3.0-codeb-v3.0-image-ocr-rerun--2169eb9cb156-run30234737017-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` build succeeded，commit status `AITRANS CI/full-validation=success`。
+- 版本收口 SHA `c2886c10ee2c19079df7234cbf224db9c8dd8df2` 的云端 full run `30234997262` attempt 1 成功；artifact `aitrans-ci-v3.0-codeb-v3.0-image-ocr-rerun--c2886c10ee2c-run30234997262-attempt1` 与 identity 完全一致，`MARKETING_VERSION=3.0`、Xcode build success、JUnit 10/10、`.xcresult` build succeeded，commit status `AITRANS CI/full-validation=success`。本次仅改工程版本和入口文档，领域合同按 changed-files 路由跳过，由核心 full 提供证据。
+- 未跑本机 build / 探针，按规则交给云端验证。本版不改 Vision 请求、OCR layout、漫画探针、翻译或 metrics，不声称 OCR 字符准确率提升，也不刷新 output。
+
 ## v2.9：图片重渲染状态与重试
 日期：2026-07-27
 
