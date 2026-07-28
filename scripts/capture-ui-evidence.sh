@@ -145,6 +145,7 @@ xcrun simctl install "$wide_id" "$app_path"
 xcrun simctl ui "$wide_id" appearance light
 xcrun simctl spawn "$wide_id" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
 capture "$wide_id" "wide-iPad" empty large portrait text-empty-wide-ipad-day.png false 日间
+capture "$wide_id" "wide-iPad" imageSuccess large portrait image-success-wide-ipad-day.png false 日间
 
 python3 - "$metadata_tsv" "$output_dir/ui-evidence-manifest.json" <<'PY'
 import json
@@ -166,20 +167,20 @@ for line in source.read_text(encoding="utf-8").splitlines():
         "appearance": appearance,
         "commitSha": commit_sha,
     })
-if len(items) != 13:
-    raise SystemExit(f"Expected 13 screenshots (12 compact iPhone + 1 wide iPad), received {len(items)}")
+if len(items) != 14:
+    raise SystemExit(f"Expected 14 screenshots (12 compact iPhone + 2 wide iPad), received {len(items)}")
 compact = [item for item in items if item["device"] == "compact-iPhone"]
 wide = [item for item in items if item["device"] == "wide-iPad"]
 if len(compact) != 12:
     raise SystemExit(f"Expected 12 compact-iPhone screenshots, received {len(compact)}")
-if len(wide) != 1:
-    raise SystemExit(f"Expected 1 wide-iPad screenshot, received {len(wide)}")
+if len(wide) != 2:
+    raise SystemExit(f"Expected 2 wide-iPad screenshots, received {len(wide)}")
 if any(item["orientation"] != "portrait" for item in compact):
     raise SystemExit("compact-iPhone UI evidence must remain portrait")
-if wide[0]["scenario"] != "empty":
-    raise SystemExit("wide-iPad evidence must capture the empty text workspace")
-if wide[0]["orientation"] != "portrait":
-    raise SystemExit("wide-iPad evidence orientation must be portrait for this matrix")
+if {item["scenario"] for item in wide} != {"empty", "imageSuccess"}:
+    raise SystemExit("wide-iPad evidence must capture empty and imageSuccess scenarios")
+if any(item["orientation"] != "portrait" for item in wide):
+    raise SystemExit("wide-iPad evidence orientations must be portrait for this matrix")
 if {item["appearance"] for item in items} != {"日间", "夜间"}:
     raise SystemExit("Both day and night evidence are required")
 if not any(item["dynamicType"].startswith("accessibility-") for item in items):

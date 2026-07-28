@@ -45,6 +45,7 @@
 - v3.15 候选要求完整图片预览仍遍历全部 `store.imageTranslationBlocks`，两种覆盖模式的每个 block 都必须是 plain Button，提供 OCR 原文、译文、选中状态和动作提示的 accessibility 语义，点击区至少 44pt。点同一块取消，点其他块直接打开局部放大；若当前“待复查”筛选隐藏被点块，必须先切回 `.all` 再发布 View 私有选择。`scripts/test-v315-image-preview-direct-selection-contract.py` 与全部既有图片合同在同一 fail-fast step 运行。本版不改变 Store blocks、Vision OCR、layout、翻译、renderer、导出、漫画探针、Koharu 报告、metrics 或 output。
 - v3.16 候选要求待复查队列入口只在 `reviewRequiredBlocks` 非空时出现，必须复用 `ImageOCRReviewFilter.needsReview.blocks(from:)` 的共享风险定义。入口使用至少 44pt 命名命令；点击后切换 `.needsReview`，保留仍属于队列的选中 ID，否则选首块，且只调用一次现有 `revealPreview()`。`scripts/test-v316-image-review-queue-entry-contract.py` 与全部既有图片合同在同一 fail-fast step 运行。本版不创建已复查业务状态，不改变 Store blocks、Vision OCR、layout、翻译、renderer、导出、漫画探针、Koharu 报告、metrics 或 output。
 - v3.17 候选要求复查进度由 `ImageTranslationPanel` 的 View 私有 block ID 集合持有，并在图片 revision 变化时与选择一起清零。未复查队列必须先复用 `ImageOCRReviewFilter.needsReview.blocks(from:)`，再排除本次已复查 ID；完成当前块后优先定位其后的未复查块，否则回到前一个，队列为空时关闭局部放大并显示完成态。局部放大提供 44pt 命名完成/撤销命令，全部完成后提供重新复查入口，列表用文字和图标显示本次已复查状态。`scripts/test-v317-image-review-progress-contract.py` 与全部既有图片合同在同一 fail-fast step 运行。本版不写 Store 或持久化，不改变完整 blocks、Vision OCR、layout、翻译、renderer、导出、漫画探针、Koharu 报告、metrics 或 output。
+- v3.18 候选要求只在共享风险集合非空时显示 `ProgressView`，数值必须复用本次完成数和完整风险总数，并通过文字与 accessibility value 同时报告完成、总数和剩余数；pending / complete 色调不能成为唯一状态表达。DEBUG `imageSuccess` fixture 必须显式覆盖低置信横排与方向待定两类风险，wide iPad UI evidence 必须新增图片成功态。`scripts/test-v318-image-review-progress-evidence-contract.py` 在 v3.17 后接入同一图片/UI fail-fast step。本版不写 Store 或持久化，不改变完整 blocks、Vision OCR、layout、翻译、renderer、导出、漫画探针、Koharu 报告、metrics 或 output。
 - v1.98 候选要求普通图片的 Vision OCR bbox、SwiftUI 预览和 PNG 导出统一使用顶左原点；export renderer 必须显式消费 `旁贴/覆盖` mode。后台 renderer 只能写 render ID 独占的 staging PNG；模式切换后旧 export URL 立即失效并重绘，只有同时核对 render ID、图片 task ID 和 mode 后才能原子发布稳定 export，过期 staging 必须清理；运行中模式控制禁用。`scripts/test-v187-ui-interaction-contract.py` 锁定这些边界。
 - 需要探针验收时，手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。`ci-fast` 仍跑真实模拟器、Local GGUF、真实 `test/1.png`、deterministic 解码、主 OCR / bubble-first 融合 / 逐块翻译 / 失败块覆盖 / clean text / external artifact gate，以及 v1.18+ 必需的 report-only / detector-lite 受限 shadow 报告；只跳过明确列出的高成本对照和诊断 PNG。`ci-fast` 必须保留 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt`、`1_debug_boxes.png`、`1_translated_overlay.png`、`manga_probe_progress.json`。`full` 额外要求 contact sheet 等完整关键 PNG。
 - 探针模式等待期间 `ci-fast` 每 30 秒打印 `output/manga_probe_progress.json` 和输出目录快照，1800 秒总超时、启动后 180 秒未创建 progress 提前失败、进度 300 秒不更新提前失败；`full` 为 3600 秒总超时、300 秒 no-progress 阈值、600 秒停滞阈值。失败时仍复制已有 `output/`，并在结果包保留 `manga-probe.log`、`app-console.log`、manifest 和失败摘要。
@@ -53,7 +54,7 @@
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。
 
-当前最低截图矩阵为 13 张证据：同一台紧凑 iPhone 上 12 张竖屏，覆盖文本空态、图片空态、历史有数据、Pro 锁定、文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频 recognizing、音频 translating 取消入口、提示词库、Local 模型缺失和开发控制台；另有 1 张 wide iPad 文本空态。矩阵必须同时包含日间和夜间外观，manifest 记录 `appearance`；截图步骤失败必须使候选分支 CI 失败。Mac 视觉证据仍未覆盖，不得描述为已验证。
+当前最低截图矩阵为 14 张证据：同一台紧凑 iPhone 上 12 张竖屏，覆盖文本空态、图片空态、历史有数据、Pro 锁定、文本成功 XXL、键盘显示、Accessibility 失败态、Reduce Motion 音频 recognizing、音频 translating 取消入口、提示词库、Local 模型缺失和开发控制台；另有 2 张 wide iPad，分别覆盖文本空态和图片成功/风险复查态。矩阵必须同时包含日间和夜间外观，manifest 记录 `appearance`；截图步骤失败必须使候选分支 CI 失败。Mac 视觉证据仍未覆盖，不得描述为已验证。
 
 截图脚本必须等待模拟器完整启动，关闭键盘首次使用教程干扰，并拒绝小于 50 KB 的疑似空白 PNG。键盘证据必须显示实际软件键盘，不得以 QuickPath / 输入法教学遮罩代替；文件存在、方向和尺寸检查通过仍不能替代 Agent B / C 逐张视觉审查。
 
@@ -63,7 +64,7 @@ Agent C 逐张检查：文字和控件不重叠、不越界、不被底栏或键
 
 交互回归至少覆盖：文本翻译/交换语言/目标语言/提示词；新会话与历史恢复/搜索/删除/导入/导出/清空；提示词新建/编辑/复制/删除/选择；Mock/Local、GGUF 下载/导入/移除和失败；图片导入/OCR/运行中更换照片或文件/A-B 反序回调/目标语言选择/loading 且图片数据为空时仍显示任务语言/跨页面改语言后仍显示实际结果语言/失败与取消后可见内容仍保留语言凭据/清空后重置凭据/新照片失败后不重试旧源/取消后当前源可重试/全局语言已相同时的已完成图片重译/旁贴/覆盖/导出；音频导入/识别/取消/翻译/摘要；Pro 锁定/解锁/订阅校验；开发 raw probe、批量探针和漫画报告入口。
 
-`scripts/test-v187-ui-interaction-contract.py` 是独立源码契约检查，必须验证：录音按钮有默认 accessibility action 且能开始/停止、`SettingsView` 绑定 `NavigationPath` 并在关闭开发模式后清空、Reduce Motion 场景进入 `isCapturingProSpeech=true`、`audioTranslating` 进入 translating + 非空 transcript 状态、文本页头位于自动滚动区外的顶部 safe-area inset、上述八类页面的关键 store action 仍接线、13 张运行态证据至少覆盖八类页面，以及普通图片导出的顶左坐标、mode 消费和 stale render 拒收。CI 必须把结果写入 `ui-interaction-contract.log`、manifest 的 `uiInteractionContractOutcome` 和 JUnit 的独立 testcase。该契约和运行态截图不冒充 XCUITest 点击；Agent C 仍按本段交互清单抽查高风险操作。
+`scripts/test-v187-ui-interaction-contract.py` 是独立源码契约检查，必须验证：录音按钮有默认 accessibility action 且能开始/停止、`SettingsView` 绑定 `NavigationPath` 并在关闭开发模式后清空、Reduce Motion 场景进入 `isCapturingProSpeech=true`、`audioTranslating` 进入 translating + 非空 transcript 状态、文本页头位于自动滚动区外的顶部 safe-area inset、上述八类页面的关键 store action 仍接线、14 张运行态证据至少覆盖八类页面，以及普通图片导出的顶左坐标、mode 消费和 stale render 拒收。CI 必须把结果写入 `ui-interaction-contract.log`、manifest 的 `uiInteractionContractOutcome` 和 JUnit 的独立 testcase。该契约和运行态截图不冒充 XCUITest 点击；Agent C 仍按本段交互清单抽查高风险操作。
 
 ### 0.2 v1.88 文本首页视觉与交互契约
 
@@ -77,7 +78,7 @@ Agent C 多轮视觉退回后，v1.88 contract 还必须锁定两项回归：com
 
 ### 0.3 v1.89 人工交互与 a11y 矩阵
 
-v1.89 把 v1.88 遗留的真实点击与无障碍路径固化为可勾选人工矩阵。CI 的 v1.88 home UI contract、v1.89 paste/matrix contract 与 12 张 UI evidence（11 张 compact-iPhone + 1 张 wide-iPad）**不能**替代本矩阵的 M1–M6；Agent C 不得把未勾选项写成已验证。
+v1.89 当时把 v1.88 遗留的真实点击与无障碍路径固化为可勾选人工矩阵。该版本 CI 的 v1.88 home UI contract、v1.89 paste/matrix contract 与当时 12 张 UI evidence（11 张 compact-iPhone + 1 张 wide-iPad）**不能**替代本矩阵的 M1–M6；Agent C 不得把未勾选项写成已验证。
 
 | ID | 场景 | 期望 | 人工勾选 |
 |---|---|---|---|
@@ -90,7 +91,7 @@ v1.89 把 v1.88 遗留的真实点击与无障碍路径固化为可勾选人工�
 | M7 | 标准字号 + 键盘关闭 | 首屏完整可见中文「粘贴」与「翻译」，无固定 48pt 外部净空 | [ ] |
 | M8 | XXL / Accessibility 或输入聚焦 | 48pt 外部净空，浮动 Tab 不遮挡输入与主按钮；键盘「完成」可见 | [ ] |
 
-宽屏证据：`scripts/capture-ui-evidence.sh` 必须额外产出 `wide-iPad` / `text-empty-wide-ipad-day.png` 运行态截图；Preview 的 iPad landscape 状态不冒充运行态。
+宽屏证据：`scripts/capture-ui-evidence.sh` 必须产出 `wide-iPad` / `text-empty-wide-ipad-day.png` 与 `image-success-wide-ipad-day.png` 两张运行态截图；后者必须显示图片成功态、风险入口和本次复查进度。Preview 的 iPad landscape 状态不冒充运行态。
 
 DEBUG 可测性：仅在用户点击粘贴时，若系统 `PasteButton` payload 为空，DEBUG 构建可回退 `AITRANS_UI_TEST_PASTE_TEXT` 环境变量或 `-AITRANS_UI_TEST_PASTE_TEXT <text>` launch argument。Release 无注入；禁止 lifecycle / 后台读剪贴板；禁止把系统 `PasteButton` 换成普通 Button。
 
