@@ -11,7 +11,7 @@
 ## v3.3：Koharu mask 拓扑与稳定 assignment
 日期：2026-07-28
 
-状态：Agent X 已完成候选实现与本地轻量验证；工程版本已更新为 `MARKETING_VERSION=3.3`，等待候选 exact-SHA 云端 full、PR 和合并收口。当前分支 `codeb/v3.3-koharu-mask-topology`，未触碰 `main`。
+状态：Agent X 已完成候选实现、本地轻量验证、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.3`。PR #67 已合入 `smalldata_test`，merge SHA `42be9e1751d1f06d007e15197b5078235c661284`；远端 `codeb/v3.3-koharu-mask-topology` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -23,6 +23,8 @@
 验证与遗留：
 
 - v3.3 topology contract 8/8（含 Swift evaluator `-warnings-as-errors`）、v3.2 payload contract 7/7 与 v3.2 evaluator 回归已通过；相关 Swift parse 与 `git diff --check` 通过。
+- 候选 exact SHA `83c0bd3335168a8ca7f9ef5af26991f822dffdb8` 的云端 full run `30326605788` attempt 1 成功；artifact `aitrans-ci-v3.3-codeb-v3.3-koharu-mask-topology--83c0bd333516-run30326605788-attempt1` 与 version / branch / SHA / run / profile 完全一致，Koharu topology / payload 及相关静态契约、Speech/home/paste/UI contract 和 Xcode build 均通过，JUnit 10/10，`.xcresult` 可用，commit status `AITRANS CI/full-validation=success`。
+- PR #67 exact HEAD fast run `30326937331` 成功后合并；merge follow-up run `30326964832` 成功，artifact 与 merge HEAD `42be9e1751d1f06d007e15197b5078235c661284` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `83c0bd3335168a8ca7f9ef5af26991f822dffdb8` 的成功 full 收据，JUnit 10/10。
 - 未跑本机 build / 探针，按规则交给云端验证。仓库仍无真实 Koharu 四件套，因此本轮只验收算法、报告、CI 和编译接线，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译、覆盖或识别质量提升。
 
 ## v3.2：Koharu mask 像素载荷契约
