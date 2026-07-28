@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.6：图片待重试语言可撤销
+日期：2026-07-28
+
+状态：Agent X 候选实现中，分支 `codeb/v3.6-image-retry-language-reset`；工程候选版本为 `MARKETING_VERSION=3.6`，尚未合入 `smalldata_test`，未触碰 `main`。
+
+核心变更：
+
+- failed/cancelled 图片先选择新的输入或目标语言、再选回 actual-content 语言时，对应 pending Retry 字段归一化为 `nil`；源/目标都没有实际差异后，“重试语言已更新”状态自动消失。
+- `imageTranslationDisplayed*Language` 不再以 data/blocks 已产出为前提；Store-owned source 已发布但后续读图失败时，标题、菜单和实际 Retry 仍统一使用 task-scoped content 凭据。选择器在修改全局语言前快照该比较基准，避免目标语言全局更新掩盖差异。
+- 完成态即时重跑、运行态冻结、目标语言 Pro 授权、Retry/clear/cancel 与 v3.5 的凭据边界保持不变。
+- VoiceOver 提示同步说明可撤销行为；新增 v3.6 contract 并接入图片/UI fail-fast 路由。不修改 Vision OCR、布局、翻译、renderer、漫画探针或 Koharu 报告。
+
+验证与遗留：
+
+- v3.6 新契约 5/5，v1.87 与 v2.2-v3.5 全部图片/UI 契约合计 99 项通过；两个改动 Swift 文件以完整 Xcode toolchain parse 通过，workflow YAML、三份基线 JSON、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.6` 和 `git diff --check` 均通过。exact-SHA 云端 full 待执行。
+- 未跑本机 build / 探针，按规则交给云端验证。本版是图片操作与状态反馈一致性修复，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
+
 ## v3.5：图片内容与 Retry 语言分账
 日期：2026-07-28
 

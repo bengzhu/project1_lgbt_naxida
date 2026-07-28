@@ -211,12 +211,12 @@ class V187UIInteractionContractTests(unittest.TestCase):
             re.DOTALL,
         )
         self.assertIsNotNone(displayed_language, "image displayed target language is missing")
-        self.assertIn("imageTranslationData != nil", displayed_language.group("body"))
-        self.assertIn("!imageTranslationBlocks.isEmpty", displayed_language.group("body"))
-        self.assertRegex(
+        self.assertIn(
+            "imageTranslationContentTargetLanguage ?? targetLanguage",
             displayed_language.group("body"),
-            r"case \.idle, \.translated, \.failed:",
         )
+        self.assertNotIn("imageTranslationData", displayed_language.group("body"))
+        self.assertNotIn("imageTranslationBlocks", displayed_language.group("body"))
 
         finish = re.search(
             r"private func finishImageTranslation\(taskID: UUID, with error: Error\) \{(?P<body>.*?)\n    \}",
@@ -267,19 +267,12 @@ class V187UIInteractionContractTests(unittest.TestCase):
             begin.group("body").index("imageTranslationState = .loading"),
         )
 
-        running_case = re.search(
-            r"case \.loading, \.recognizing, \.translating:(?P<body>.*?)"
-            r"case \.idle, \.translated, \.failed:",
-            displayed_language.group("body"),
-            re.DOTALL,
-        )
-        self.assertIsNotNone(running_case, "running image task language branch is missing")
         self.assertIn(
-            "return imageTranslationContentTargetLanguage ?? targetLanguage",
-            running_case.group("body"),
+            "imageTranslationContentTargetLanguage ?? targetLanguage",
+            displayed_language.group("body"),
         )
-        self.assertNotIn("imageTranslationData", running_case.group("body"))
-        self.assertNotIn("imageTranslationBlocks", running_case.group("body"))
+        self.assertNotIn("imageTranslationData", displayed_language.group("body"))
+        self.assertNotIn("imageTranslationBlocks", displayed_language.group("body"))
 
     def test_image_export_uses_top_left_coordinates_and_selected_mode(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")

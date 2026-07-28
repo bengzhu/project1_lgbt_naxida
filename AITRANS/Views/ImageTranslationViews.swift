@@ -333,7 +333,7 @@ private struct ImageSourceLanguageControl: View {
         .disabled(isRunning)
         .accessibilityLabel("输入语言")
         .accessibilityValue(store.imageTranslationSelectedSourceLanguage.rawValue)
-        .accessibilityHint("选择图片 OCR 的输入语言；已完成的图片会重新识别和翻译")
+        .accessibilityHint("选择图片 OCR 的输入语言；已完成的图片会重新识别和翻译；失败或取消后选回当前内容语言会撤销待重试更改")
     }
 
     private var isRunning: Bool {
@@ -384,7 +384,7 @@ private struct ImageTargetLanguageControl: View {
         .disabled(isRunning)
         .accessibilityLabel("目标语言")
         .accessibilityValue(store.imageTranslationSelectedTargetLanguage.rawValue)
-        .accessibilityHint("选择图片翻译的目标语言；已完成的图片会重新翻译，失败或取消的图片会在重试时使用新语言")
+        .accessibilityHint("选择图片翻译的目标语言；已完成的图片会重新翻译，失败或取消的图片会在重试时使用新语言；选回当前内容语言会撤销待重试更改")
         .alert("Pro 语言", isPresented: $showLockedLanguage) {
             Button("知道了", role: .cancel) {}
         } message: {
