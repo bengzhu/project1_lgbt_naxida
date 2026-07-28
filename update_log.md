@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.1 候选：图片 OCR 待复查筛选
+日期：2026-07-28
+
+状态：Agent X 已在 `codeb/v3.1-image-ocr-review-filter` 完成核心候选实现与本地轻量回归；正式工程版本仍为 `3.0`，等待 exact-SHA 云端 full 编译验证后再收口版本、PR 与合并。未触碰 `main`。
+
+核心变更：
+
+- 图片识别结果新增“全部 / 待复查”分段筛选，并显示各自数量；待复查严格定义为 confidence 低于 `50%`，或方向证据为 nil / unknown，重叠原因只计一个 block，原始顺序不变。
+- 筛选状态只属于 `ImageTranslationPanel` 的本地展示状态。预览、覆盖渲染、稳定导出、分享、翻译和持久化仍消费完整 `imageTranslationBlocks`，不会因列表筛选丢失内容。
+- 待复查行以图标和文字分别显示“低置信”“方向待定”；筛选为空时显示“无需复查”。共享判定由 `ImageOCRResultSummary` 持有，confidence 与阈值均夹取到 `0...1`，恰好 `0.5` 不算低置信。
+- 新增 `ImageOCRReviewFilter`、纯 Swift 产品模型 evaluator 和 v3.1 Python 契约，并接入 v1.87 / v2.2-v3.1 fail-fast 图片 UI CI step；同步修正 v3.0 契约，使其接受共享 helper 与分组 changed-files 路由，同时继续锁定严格阈值语义。
+
+验证与遗留：
+
+- v1.87、v2.2-v3.1 图片/UI 契约共 84 项通过；CI validation tier / version identity 契约 14 项通过。四份改动 Swift 源码 parse、Xcode 工程 plist、workflow YAML、ground truth 与现有 output JSON 解析、工程版本唯一解析为 `v3.0` 和 `git diff --check` 均通过；尚待 exact-SHA 云端 full 结果。
+- 未跑本机 build / 探针，按规则交给云端验证。本版不修改 Vision 请求、OCR layout、漫画探针、翻译、ground truth、`metrics/version_history.csv` 或 `output/`，不声称 OCR 字符准确率提升。
+
 ## v3.0：图片 OCR 复查与重新识别
 日期：2026-07-27
 

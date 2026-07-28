@@ -50,7 +50,8 @@ flowchart TD
   ILAYOUT -->|否| IH["横排 / unknown fallback<br/>上到下、行内左到右"]
   IV --> J["ImageTranslationBlock<br/>bbox + OCR + 方向证据 + 译文"]
   IH --> J
-  J --> IQUALITY["OCR 结果摘要<br/>平均/低置信 + 竖排/方向待定<br/>Store-owned 重新识别"]
+  J --> IQUALITY["OCR 结果摘要<br/>平均/低置信 + 竖排/方向待定<br/>全部 / 待复查列表筛选<br/>Store-owned 重新识别"]
+  IQUALITY -. "仅筛检查列表；完整 blocks 不变" .-> K
   J --> K["图片旁贴 / 覆盖 UI<br/>同模式顶左坐标 PNG 导出"]
   K --> IRENDER["覆盖模式重渲染<br/>rendering / failed / retry<br/>render ID 拒收晚到结果"]
   K --> IEXPORT["Store-owned 稳定导出<br/>新任务 / 清空 / 重渲染时清理"]

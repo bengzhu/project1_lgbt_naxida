@@ -59,7 +59,8 @@ class ImageOCRRerunContractTests(unittest.TestCase):
         summary = read("AITRANS/Models/ImageOCRResultSummary.swift")
         self.assertIn("static let lowConfidenceThreshold: Float = 0.5", summary)
         self.assertIn("blocks.count(where: { !$0.translation.isEmpty })", summary)
-        self.assertIn("confidences.count(where: { $0 < threshold })", summary)
+        self.assertIn("Self.hasLowConfidence($0, lowConfidenceThreshold: lowConfidenceThreshold)", summary)
+        self.assertIn("return confidence < threshold", summary)
         self.assertIn("$0.sourceDirection == .vertical", summary)
         self.assertIn("$0.sourceDirection == nil || $0.sourceDirection == .unknown", summary)
 
@@ -98,7 +99,7 @@ class ImageOCRRerunContractTests(unittest.TestCase):
             workflow.index("scripts/test-v300-image-ocr-rerun-contract.py"),
         )
         self.assertIn("300-image-ocr-rerun", workflow)
-        self.assertIn("AITRANS/Models/ImageOCRResultSummary", workflow)
+        self.assertIn("AITRANS/Models/ImageOCR(ResultSummary|ReviewFilter)", workflow)
 
 
 if __name__ == "__main__":

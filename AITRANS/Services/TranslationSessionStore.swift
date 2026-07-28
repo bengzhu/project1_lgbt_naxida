@@ -446,6 +446,9 @@ final class TranslationSessionStore: ObservableObject {
         if summary.unknownDirectionBlockCount > 0 {
             parts.append("方向待定 \(summary.unknownDirectionBlockCount)")
         }
+        if summary.reviewRequiredBlockCount > 0 {
+            parts.append("待复查 \(summary.reviewRequiredBlockCount)")
+        }
         return parts.joined(separator: " · ")
     }
 
