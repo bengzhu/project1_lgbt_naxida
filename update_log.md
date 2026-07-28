@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.16：一键进入图片待复查队列
+日期：2026-07-28
+
+状态：Agent X 已完成候选实现和本地轻量回归，工程候选版本为 `MARKETING_VERSION=3.16`；待 exact-SHA 云端 full、PR 和 merge 收口。候选分支为 `codeb/v3.16-image-review-queue-entry`，未触碰 `main`。
+
+核心变更：
+
+- “识别结果”在确有低置信或方向待定块时显示“定位待复查 N”命名命令，空队列不显示无效入口。
+- 点击后复用 `ImageOCRReviewFilter.needsReview` 切到共享风险集合；当前选择仍属于队列时保留，否则选中首个风险块，再调用一次现有 workspace 定位，直接进入局部放大与前后导航。
+- 入口复用 `AppSecondaryButton` 的 44pt 点击区，并说明会定位当前或首个文字块。队列、筛选和选择仍是 View 私有展示状态，不创建“已复查”业务状态，不进入 Store、OCR、翻译、renderer、导出或持久化。
+- 新增 v3.16 源码合同并接入图片/UI fail-fast 路由。本版不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
+
+验证与遗留：
+
+- v3.16 新合同 5/5、24 个图片/UI 合同脚本共 150/150 通过；Swift parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析（`v3.16`）、工程 plist、3 份 JSON 基线和 `git diff --check` 均通过。
+- 未跑本机 build / 探针，按规则交给云端验证。紧凑宽度按钮文字、Dynamic Type、VoiceOver 进入队列后的顺序与真实多块操作仍需后续人工运行态检查；云端结果将在候选提交后补录。
+
 ## v3.15：图片预览文字块直接点选
 日期：2026-07-28
 

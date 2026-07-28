@@ -177,6 +177,16 @@ struct ImageTranslationPanel: View {
                     }
                 }
                 .pickerStyle(.segmented)
+
+                if !reviewRequiredBlocks.isEmpty {
+                    AppSecondaryButton(
+                        title: "定位待复查 \(reviewRequiredBlocks.count)",
+                        systemImage: "checklist",
+                        tone: .warning,
+                        action: beginReviewQueue
+                    )
+                    .accessibilityHint("显示待复查结果并定位当前或第一个文字块")
+                }
             }
 
             Picker("覆盖方式", selection: overlayModeBinding) {
@@ -231,6 +241,10 @@ struct ImageTranslationPanel: View {
         reviewFilter.blocks(from: store.imageTranslationBlocks)
     }
 
+    private var reviewRequiredBlocks: [ImageTranslationBlock] {
+        ImageOCRReviewFilter.needsReview.blocks(from: store.imageTranslationBlocks)
+    }
+
     private func filterTitle(_ filter: ImageOCRReviewFilter) -> String {
         switch filter {
         case .all:
@@ -258,6 +272,16 @@ struct ImageTranslationPanel: View {
             reviewFilter = .all
         }
         selectedImageTranslationBlockID = blockID
+    }
+
+    private func beginReviewQueue() {
+        guard let firstBlockID = reviewRequiredBlocks.first?.id else { return }
+        let retainedBlockID = selectedImageTranslationBlockID.flatMap { selectedBlockID in
+            reviewRequiredBlocks.contains(where: { $0.id == selectedBlockID }) ? selectedBlockID : nil
+        }
+        reviewFilter = .needsReview
+        selectedImageTranslationBlockID = retainedBlockID ?? firstBlockID
+        revealPreview()
     }
 
     private var selectedVisibleBlockIndex: Int? {
