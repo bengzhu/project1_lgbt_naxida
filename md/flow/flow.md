@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`3.0`（v3.1 图片 OCR“全部 / 待复查”列表筛选处于候选验证阶段；图片 OCR 平均/低置信与方向摘要、成功后 Store-owned 重新识别已完成；v2.9 覆盖重渲染反馈、v2.8 图片分享反馈、v2.7 普通图片输入/目标语言凭据与横/竖排读序、v2.6 可读分享生命周期、v2.5 workspace 恢复、v2.4 稳定导出、v2.3 取消后 Retry 和 v2.2 Store-owned transfer/run isolation 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`3.1`（图片 OCR“全部 / 待复查”列表筛选已完成；v3.0 的图片 OCR 平均/低置信与方向摘要、成功后 Store-owned 重新识别，v2.9 覆盖重渲染反馈、v2.8 图片分享反馈、v2.7 普通图片输入/目标语言凭据与横/竖排读序、v2.6 可读分享生命周期、v2.5 workspace 恢复、v2.4 稳定导出、v2.3 取消后 Retry 和 v2.2 Store-owned transfer/run isolation 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
