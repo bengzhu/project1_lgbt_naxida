@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-正式版本：`3.5`。
+候选版本：`3.8`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -38,7 +38,9 @@ flowchart TD
 
   %% 图片 OCR 分支：普通图片翻译
   IMG_LANGUAGE["图片输入 / 目标语言菜单<br/>输入先验 Pro / 拒绝无跨页副作用<br/>actual content 与 pending Retry 分账<br/>选回 actual 清除 pending<br/>运行态冻结 / 完成态重跑"] --> C
-  C --> IT["Store-owned 图片 transfer<br/>task ID + 文件 selection UUID<br/>运行中可更换来源"]
+  C --> IACCESS{"Store-owned 图片入口 Pro 授权?"}
+  IACCESS -->|否| ILOCK["lock.fill + Pro Alert<br/>不打开系统选择器"]
+  IACCESS -->|是| IT["PhotosPicker / 文件 importer<br/>Store-owned 图片 transfer<br/>task ID + 文件 selection UUID"]
   IT --> IG{"transfer / sandbox await 后<br/>task ID 仍匹配?"}
   IG -->|否| IDROP["丢弃旧回调并清理未采用输入<br/>不恢复旧 retry source"]
   IG -->|是| I["普通图片翻译<br/>VisionOCRService + 输入/目标语言快照"]

@@ -1298,6 +1298,15 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
+    @discardableResult
+    func requestImageTranslationAccess() -> Bool {
+        guard isProUnlocked else {
+            dataTransferMessage = "图片翻译需要 Pro"
+            return false
+        }
+        return true
+    }
+
     func translateImage(from url: URL) {
         guard isProUnlocked else {
             imageTranslationState = .failed
