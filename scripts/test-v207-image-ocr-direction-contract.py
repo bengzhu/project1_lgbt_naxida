@@ -130,15 +130,18 @@ class ImageOCRDirectionContractTests(unittest.TestCase):
         ]
         self.assertLess(
             retained_case.index("guard canRetryImageTranslation else { return }"),
-            retained_case.index("imageTranslationContentSourceLanguage = language"),
+            retained_case.index("imageTranslationRetrySourceLanguage = language"),
         )
+        self.assertNotIn("imageTranslationContentSourceLanguage = language", retained_case)
         self.assertNotIn("retryImageTranslation()", retained_case)
         running_case = selector[selector.index("case .loading, .recognizing, .translating:"):]
         self.assertIn("return", running_case)
         self.assertNotIn("imageTranslationContentSourceLanguage = language", running_case)
         self.assertNotIn("retryImageTranslation()", running_case)
-        self.assertIn("imageTranslationContentSourceLanguage ?? sourceLanguage", retry)
-        self.assertIn("imageTranslationContentTargetLanguage ?? targetLanguage", retry)
+        self.assertIn("imageTranslationRetrySourceLanguage", retry)
+        self.assertIn("imageTranslationContentSourceLanguage", retry)
+        self.assertIn("imageTranslationRetryTargetLanguage", retry)
+        self.assertIn("imageTranslationContentTargetLanguage", retry)
         self.assertIn("imageTranslationContentSourceLanguage = nil", clear)
         self.assertNotIn("imageTranslationContentSourceLanguage = nil", cancel)
 
@@ -146,7 +149,8 @@ class ImageOCRDirectionContractTests(unittest.TestCase):
         view = read("AITRANS/Views/ImageTranslationViews.swift")
         self.assertIn("ImageSourceLanguageControl()", view)
         self.assertIn("store.selectImageSourceLanguage(language)", view)
-        self.assertGreaterEqual(view.count("store.imageTranslationDisplayedSourceLanguage"), 4)
+        self.assertIn("store.imageTranslationDisplayedSourceLanguage", view)
+        self.assertGreaterEqual(view.count("store.imageTranslationSelectedSourceLanguage"), 3)
         self.assertIn('accessibilityLabel("输入语言")', view)
         self.assertIn("已完成的图片会重新识别和翻译", view)
         source_control = re.search(

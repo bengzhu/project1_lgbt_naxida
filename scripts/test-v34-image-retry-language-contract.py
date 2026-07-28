@@ -70,10 +70,11 @@ class ImageRetryLanguageContractTests(unittest.TestCase):
 
         self.assertLess(
             retained.index("guard canRetryImageTranslation else { return }"),
-            retained.index("imageTranslationContentTargetLanguage = language"),
+            retained.index("imageTranslationRetryTargetLanguage = language"),
         )
+        self.assertNotIn("imageTranslationContentTargetLanguage = language", retained)
         self.assertNotIn("retryImageTranslation()", retained)
-        self.assertNotIn("imageTranslationContentTargetLanguage = language", running)
+        self.assertNotIn("imageTranslationRetryTargetLanguage = language", running)
         self.assertNotIn("retryImageTranslation()", running)
 
     def test_retry_and_clear_preserve_the_credential_boundary(self) -> None:
@@ -82,9 +83,12 @@ class ImageRetryLanguageContractTests(unittest.TestCase):
         clear = function_body(store, "func clearImageTranslation()")
         cancel = function_body(store, "func cancelImageTranslation()")
 
-        self.assertIn("imageTranslationContentTargetLanguage ?? targetLanguage", retry)
+        self.assertIn("imageTranslationRetryTargetLanguage", retry)
+        self.assertIn("imageTranslationContentTargetLanguage", retry)
         self.assertIn("imageTranslationContentTargetLanguage = nil", clear)
+        self.assertIn("imageTranslationRetryTargetLanguage = nil", clear)
         self.assertNotIn("imageTranslationContentTargetLanguage = nil", cancel)
+        self.assertNotIn("imageTranslationRetryTargetLanguage = nil", cancel)
 
     def test_view_and_ci_expose_the_v34_contract(self) -> None:
         view = read("AITRANS/Views/ImageTranslationViews.swift")

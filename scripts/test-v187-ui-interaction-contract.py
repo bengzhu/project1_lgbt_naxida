@@ -180,7 +180,8 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertIn("ImageTargetLanguageControl()", image)
         self.assertIn("store.availableTargetLanguages", image)
         self.assertIn("store.selectImageTargetLanguage(language)", image)
-        self.assertGreaterEqual(image.count("store.imageTranslationDisplayedTargetLanguage"), 4)
+        self.assertIn("store.imageTranslationDisplayedTargetLanguage", image)
+        self.assertGreaterEqual(image.count("store.imageTranslationSelectedTargetLanguage"), 3)
         self.assertIn("已完成的图片会重新翻译", image)
 
         selector = function_body(
@@ -192,7 +193,7 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertIn("case .translated:", selector)
         self.assertIn("case .idle, .failed:", selector)
         self.assertIn("case .loading, .recognizing, .translating:", selector)
-        self.assertIn("imageTranslationContentTargetLanguage != language", selector)
+        self.assertIn("imageTranslationSelectedTargetLanguage != language", selector)
         self.assertNotIn("guard language != targetLanguage else", selector)
         self.assertEqual(selector.count("retryImageTranslation()"), 1)
 

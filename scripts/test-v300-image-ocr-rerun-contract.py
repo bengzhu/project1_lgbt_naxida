@@ -73,8 +73,10 @@ class ImageOCRRerunContractTests(unittest.TestCase):
         self.assertIn("let url = imageTranslationSourceURL", capability)
         self.assertIn("FileManager.default.fileExists(atPath: url.path)", capability)
         self.assertLess(rerun.index("guard canRerunImageRecognition"), rerun.index("retryImageTranslation()"))
-        self.assertIn("imageTranslationContentSourceLanguage ?? sourceLanguage", retry)
-        self.assertIn("imageTranslationContentTargetLanguage ?? targetLanguage", retry)
+        self.assertIn("imageTranslationRetrySourceLanguage", retry)
+        self.assertIn("imageTranslationContentSourceLanguage", retry)
+        self.assertIn("imageTranslationRetryTargetLanguage", retry)
+        self.assertIn("imageTranslationContentTargetLanguage", retry)
         self.assertIn("preservingSourceURL: url", retry)
 
     def test_view_exposes_summary_and_store_owned_rerun(self) -> None:

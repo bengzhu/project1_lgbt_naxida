@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.5：图片内容与 Retry 语言分账
+日期：2026-07-28
+
+状态：Agent X 已建立候选分支 `codeb/v3.5-image-retry-credentials`，完成核心实现与本地轻量回归，等待 exact-SHA 云端 full、PR 和合并收口；未触碰 `main`。
+
+核心变更：
+
+- 新增独立 pending Retry 输入/目标语言。失败或取消后修改菜单不再覆盖 actual-content 凭据，因此已保留的 OCR 块或部分旧译文不会被新选择误标。
+- 图片结果区副标题继续显示实际内容语言；输入/目标菜单显示下一次 Retry 选择，并以“重试语言已更新”状态明确区分。完成态仍即时重新识别/翻译，运行态仍冻结。
+- Retry 按 pending -> actual-content -> global 顺序选择语言，新任务开始后清空 pending；clear 清空两组，cancel 保留实际内容。v2.2 起的 source ownership、task ID、render/share 失效和晚到回调拒收保持不变。
+- 新增 v3.5 contract，并收紧 v1.87/v2.7/v3.0/v3.4 历史契约；不修改 Vision OCR、布局算法、翻译实现、renderer、漫画探针或 Koharu 报告。
+
+验证与遗留：
+
+- v3.5 新契约 5/5，v1.87 与 v2.2-v3.4 全部图片/UI 契约合计 94 项通过；两个改动 Swift 文件以完整 Xcode 工具链 parse 通过，workflow YAML、pbxproj、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.5` 和 `git diff --check` 均通过。
+- 未跑本机 build / 探针，按规则交给云端验证。本版是图片状态与显示一致性修复，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
+
 ## v3.4：图片 Retry 目标语言凭据
 日期：2026-07-28
 
