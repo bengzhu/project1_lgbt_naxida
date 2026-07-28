@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.8：图片来源选择前置 Pro 门控
+日期：2026-07-28
+
+状态：Agent X 候选实现中；分支 `codeb/v3.8-image-entry-pro-gate`，工程候选版本为 `MARKETING_VERSION=3.8`。尚未 push、创建 PR 或触碰 `smalldata_test` / `main`。
+
+核心变更：
+
+- 新增 Store-owned `requestImageTranslationAccess()`，免费模式统一写入“图片翻译需要 Pro”并拒绝进入来源选择流程。
+- `ImageCommandBar` 只有在 Pro 模式才实例化真实 `PhotosPicker` 和 file importer 动作；免费模式改为两个 `lock.fill` 命令并展示 Store 反馈 Alert。
+- `translateImage(from:)` 与 `translateImageTransfer` 原有底层 Pro guard 保留；授权后的 selection UUID、task ID、source ownership、late callback isolation、Retry、语言、OCR、翻译和 renderer 行为不变。
+- 新增 v3.8 contract 并接入图片/UI fail-fast 路由。本版不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
+
+验证与遗留：
+
+- v3.8 新合同 5/5，v1.87 与 v2.2-v3.8 全部图片/UI 合同合计 108 项通过；两个改动 Swift 文件以完整 Xcode toolchain parse 通过，两个 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.8`、plist/project、三份基线 JSON 和 `git diff --check` 均通过。云端 exact-SHA full 待运行。
+- 未跑本机 build / 探针，按规则交给云端验证。仓库仍无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus。
+
 ## v3.7：图片输入语言 Pro 拒绝无副作用
 日期：2026-07-28
 

@@ -424,6 +424,7 @@ private struct ImageTargetLanguageControl: View {
 private struct ImageCommandBar: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @Binding var selectedPhotoItem: PhotosPickerItem?
+    @State private var showLockedImageTranslation = false
     let openImporter: () -> Void
     let shareResult: () -> Void
 
@@ -432,15 +433,33 @@ private struct ImageCommandBar: View {
             HStack(spacing: AppTheme.Spacing.control) { commands }
             VStack(spacing: AppTheme.Spacing.control) { commands }
         }
+        .alert("Pro 功能", isPresented: $showLockedImageTranslation) {
+            Button("知道了", role: .cancel) {}
+        } message: {
+            Text(store.dataTransferMessage)
+        }
     }
 
     @ViewBuilder private var commands: some View {
-        PhotoPickerCommand(
-            title: store.imageTranslationData == nil ? "选择照片" : "更换照片",
-            selection: $selectedPhotoItem
-        )
+        if store.isProUnlocked {
+            PhotoPickerCommand(
+                title: store.imageTranslationData == nil ? "选择照片" : "更换照片",
+                selection: $selectedPhotoItem
+            )
 
-        AppSecondaryButton(title: "图片文件", systemImage: "folder", action: openImporter)
+            AppSecondaryButton(title: "图片文件", systemImage: "folder", action: openImporter)
+        } else {
+            AppSecondaryButton(
+                title: store.imageTranslationData == nil ? "选择照片" : "更换照片",
+                systemImage: "lock.fill",
+                action: requestImageTranslationAccess
+            )
+            AppSecondaryButton(
+                title: "图片文件",
+                systemImage: "lock.fill",
+                action: requestImageTranslationAccess
+            )
+        }
 
         if isRunning {
             AppSecondaryButton(title: "取消", systemImage: "xmark.circle.fill", tone: .danger, action: store.cancelImageTranslation)
@@ -496,6 +515,10 @@ private struct ImageCommandBar: View {
             return true
         }
         return false
+    }
+
+    private func requestImageTranslationAccess() {
+        showLockedImageTranslation = !store.requestImageTranslationAccess()
     }
 }
 
