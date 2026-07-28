@@ -11,7 +11,7 @@
 ## v3.6：图片待重试语言可撤销
 日期：2026-07-28
 
-状态：Agent X 候选实现中，分支 `codeb/v3.6-image-retry-language-reset`；工程候选版本为 `MARKETING_VERSION=3.6`，尚未合入 `smalldata_test`，未触碰 `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.6`。PR #70 已合入 `smalldata_test`，merge SHA `80f80502997833914a528daa284a4bd4daeab43c`；远端 `codeb/v3.6-image-retry-language-reset` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,7 +22,9 @@
 
 验证与遗留：
 
-- v3.6 新契约 5/5，v1.87 与 v2.2-v3.5 全部图片/UI 契约合计 99 项通过；两个改动 Swift 文件以完整 Xcode toolchain parse 通过，workflow YAML、三份基线 JSON、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.6` 和 `git diff --check` 均通过。exact-SHA 云端 full 待执行。
+- v3.6 新契约 5/5，v1.87 与 v2.2-v3.5 全部图片/UI 契约合计 99 项通过；两个改动 Swift 文件以完整 Xcode toolchain parse 通过，workflow YAML、三份基线 JSON、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.6` 和 `git diff --check` 均通过。
+- 候选 exact SHA `5fc9d6e3c3f232df0b1c4f68b50a741145ad3bd6` 的云端 full run `30328786522` attempt 1 成功；artifact `aitrans-ci-v3.6-codeb-v3.6-image-retry-language-reset--5fc9d6e3c3f2-run30328786522-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded、0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- PR #70 exact HEAD fast run `30329087730` 成功后合并；merge follow-up run `30329144284` 成功，artifact 与 merge HEAD `80f80502997833914a528daa284a4bd4daeab43c` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `5fc9d6e3c3f232df0b1c4f68b50a741145ad3bd6` 的成功 full 收据，JUnit 10/10。
 - 未跑本机 build / 探针，按规则交给云端验证。本版是图片操作与状态反馈一致性修复，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
 
 ## v3.5：图片内容与 Retry 语言分账

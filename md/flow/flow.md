@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-候选版本：`3.6`（图片实际内容语言与 pending Retry 语言继续分账；失败/取消后选回当前内容语言会清除对应 pending，避免无效的重试提示；v3.5-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`3.6`（图片实际内容语言与 pending Retry 语言继续分账；失败/取消后选回当前内容语言会清除对应 pending，避免无效的重试提示；v3.5-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
