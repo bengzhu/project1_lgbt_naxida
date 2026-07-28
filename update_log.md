@@ -11,7 +11,7 @@
 ## v3.14：图片复查定位与连续导航
 日期：2026-07-28
 
-状态：Agent X 已完成候选实现与本地轻量回归，工程候选版本为 `MARKETING_VERSION=3.14`；等待 exact-SHA 云端 full、PR 和 merge 收口。候选分支为 `codeb/v3.14-image-review-navigation`，未触碰 `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.14`。PR #78 已合入 `smalldata_test`，merge SHA `862c405c8ad5b15dec729df05fffec3011496ee7`；远端 `codeb/v3.14-image-review-navigation` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -23,8 +23,10 @@
 
 验证与遗留：
 
-- v3.14 新合同 7/7，v1.87 与 v2.2-v3.14 全部图片/UI 合同合计 140 项通过；完整 Xcode toolchain Swift parse、实际 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.14`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。云端结果将在候选提交后补录。
-- 未跑本机 build / 探针，按规则交给云端验证。自动滚动落点、紧凑宽度按钮遮挡、Dynamic Type 和 VoiceOver 顺序仍需云端 build 与后续人工运行态检查。
+- v3.14 新合同 7/7，v1.87 与 v2.2-v3.14 全部图片/UI 合同合计 140 项通过；完整 Xcode toolchain Swift parse、实际 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.14`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。
+- 候选 exact SHA `a6156b05069d61f15604cb30391598edb53b1895` 的云端 full run `30336902810` attempt 1 成功；artifact `aitrans-ci-v3.14-codeb-v3.14-image-review-navigation--a6156b05069d-run30336902810-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI 140 项、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded、0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- PR #78 exact HEAD fast run `30337375615` 成功后合并；merge follow-up run `30337452798` 成功，artifact 与 merge HEAD `862c405c8ad5b15dec729df05fffec3011496ee7` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `a6156b05069d61f15604cb30391598edb53b1895` 的成功 full 收据，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit 10/10。
+- 未跑本机 build / 探针，按规则交给云端验证。本版未运行 UI evidence；真实设备上的自动滚动落点、紧凑宽度按钮遮挡、Dynamic Type 和 VoiceOver 顺序仍需后续人工运行态检查。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
 
 ## v3.13：选中文字块局部放大复查
 日期：2026-07-28
