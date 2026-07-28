@@ -5241,10 +5241,61 @@ struct MangaOverlayExternalBubbleInstance: Equatable, Codable, Sendable {
     }
 }
 
+struct MangaOverlayExternalBubbleMaskPayload: Equatable, Codable, Sendable {
+    var width: Int?
+    var height: Int?
+    var encoding: String?
+    var runs: [[Int]]?
+    var bubbleInstances: [MangaOverlayExternalBubbleInstance]
+
+    private enum CodingKeys: String, CodingKey {
+        case width
+        case height
+        case encoding
+        case runs
+        case bubbleInstances
+        case bubbles
+        case instances
+        case items
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        width = try container.decodeIfPresent(Int.self, forKey: .width)
+        height = try container.decodeIfPresent(Int.self, forKey: .height)
+        encoding = try container.decodeIfPresent(String.self, forKey: .encoding)
+        runs = try container.decodeIfPresent([[Int]].self, forKey: .runs)
+        bubbleInstances = try container.decodeIfPresent(
+            [MangaOverlayExternalBubbleInstance].self,
+            forKey: .bubbleInstances
+        ) ?? container.decodeIfPresent(
+            [MangaOverlayExternalBubbleInstance].self,
+            forKey: .bubbles
+        ) ?? container.decodeIfPresent(
+            [MangaOverlayExternalBubbleInstance].self,
+            forKey: .instances
+        ) ?? container.decodeIfPresent(
+            [MangaOverlayExternalBubbleInstance].self,
+            forKey: .items
+        ) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(width, forKey: .width)
+        try container.encodeIfPresent(height, forKey: .height)
+        try container.encodeIfPresent(encoding, forKey: .encoding)
+        try container.encodeIfPresent(runs, forKey: .runs)
+        try container.encode(bubbleInstances, forKey: .bubbleInstances)
+    }
+}
+
 struct MangaOverlayExternalSegmentMaskSummary: Equatable, Codable, Sendable {
     var sourcePath: String?
     var width: Int?
     var height: Int?
+    var encoding: String?
+    var runs: [[Int]]?
     var glyphPixelCount: Int?
     var connectedComponentCount: Int?
     var notes: [String]
@@ -5253,6 +5304,8 @@ struct MangaOverlayExternalSegmentMaskSummary: Equatable, Codable, Sendable {
         case sourcePath
         case width
         case height
+        case encoding
+        case runs
         case glyphPixelCount
         case connectedComponentCount
         case notes
@@ -5263,6 +5316,8 @@ struct MangaOverlayExternalSegmentMaskSummary: Equatable, Codable, Sendable {
         sourcePath = try container.decodeIfPresent(String.self, forKey: .sourcePath)
         width = try container.decodeIfPresent(Int.self, forKey: .width)
         height = try container.decodeIfPresent(Int.self, forKey: .height)
+        encoding = try container.decodeIfPresent(String.self, forKey: .encoding)
+        runs = try container.decodeIfPresent([[Int]].self, forKey: .runs)
         glyphPixelCount = try container.decodeIfPresent(Int.self, forKey: .glyphPixelCount)
         connectedComponentCount = try container.decodeIfPresent(Int.self, forKey: .connectedComponentCount)
         notes = try container.decodeIfPresent([String].self, forKey: .notes) ?? []
@@ -5328,6 +5383,10 @@ struct MangaOverlayExternalArtifactBlockAlignment: Equatable, Codable, Sendable 
     var bestBubbleIoU: Double?
     var currentBubbleID: Int?
     var bestExternalBubbleMaskValue: Int?
+    var bubbleMajorityMaskValue: Int?
+    var bubblePixelCoverageRatio: Double?
+    var segmentPixelCoverageRatio: Double?
+    var textBoxSegmentContainmentRatio: Double?
     var segmentCoverageLevel: String
     var alignmentVerdict: String
     var notes: [String]
@@ -5353,6 +5412,9 @@ struct MangaOverlayExternalArtifactReadinessReport: Equatable, Codable, Sendable
     var segmentGlyphPixelCount: Int?
     var parsedTextBoxCount: Int
     var parsedBubbleInstanceCount: Int
+    var bubbleMaskPayloadVerdict: String?
+    var segmentMaskPayloadVerdict: String?
+    var maskPayloadGateReady: Bool?
     var parseErrors: [String]
     var missingArtifacts: [String]
     var coordinateValidation: MangaOverlayExternalArtifactCoordinateValidation

@@ -23,7 +23,10 @@ from typing import Any
 
 EXPECTED_COORDINATE_SPACE = "originalImageTopLeftPixels"
 EXPECTED_SOURCE_IMAGE = "test/1.png"
-EXPECTED_SCHEMA_VERSION = "aitrans.koharu_artifact_contract.v1"
+LEGACY_SCHEMA_VERSION = "aitrans.koharu_artifact_contract.v1"
+MASK_PAYLOAD_SCHEMA_VERSION = "aitrans.koharu_artifact_contract.v2"
+EXPECTED_SCHEMA_VERSION = MASK_PAYLOAD_SCHEMA_VERSION
+SUPPORTED_SCHEMA_VERSIONS = {LEGACY_SCHEMA_VERSION, MASK_PAYLOAD_SCHEMA_VERSION}
 LINE_POLYGON_BBOX_MIN_TOLERANCE_PIXELS = 2.0
 LINE_POLYGON_BBOX_MAX_TOLERANCE_PIXELS = 8.0
 LINE_POLYGON_BBOX_TOLERANCE_RATIO = 0.02
@@ -59,7 +62,7 @@ REQUIRED_ARTIFACT_FILES = [
         "kind": "manifest",
         "required": True,
         "notes": [
-            "schemaVersion must be aitrans.koharu_artifact_contract.v1",
+            "schemaVersion v1 is accepted as summary-only; v2 is required for a ready mask payload gate",
             "sourceImage must be test/1.png",
             "sourceImageSHA256 must match the current repository test/1.png",
             "coordinateSpace must be originalImageTopLeftPixels",
@@ -87,7 +90,7 @@ REQUIRED_ARTIFACT_FILES = [
         "notes": [
             "array or object with bubbleInstances/bubbles/instances/items",
             "each Bubble instance id must be a non-empty unique string",
-            "summary must include per-instance id and bbox; maskValue/pixelCount are recommended",
+            "v2 requires width/height, rowMajorRLE runs, and exact per-instance maskValue/pixelCount/bbox evidence",
         ],
     },
     {
@@ -96,7 +99,7 @@ REQUIRED_ARTIFACT_FILES = [
         "required": True,
         "notes": [
             "summary object with width and height matching test/1.png",
-            "glyphPixelCount and connectedComponentCount are recommended",
+            "v2 requires binary rowMajorRLE runs and exact glyphPixelCount/connectedComponentCount evidence",
         ],
     },
 ]
@@ -936,6 +939,191 @@ def bbox_for(item: dict[str, Any]) -> list[float] | None:
     return None
 
 
+def strict_int(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def decode_row_major_rle(
+    payload: dict[str, Any],
+    label: str,
+    image_width: int,
+    image_height: int,
+    allowed_labels: set[int],
+    payload_errors: list[str],
+) -> tuple[int, int, list[int]] | None:
+    width = strict_int(payload.get("width"))
+    height = strict_int(payload.get("height"))
+    if width is None or height is None or width <= 0 or height <= 0:
+        payload_errors.append(f"{label}:dimensionsInvalid")
+        return None
+
+    source_pixels = image_width * image_height
+    declared_pixels = width * height
+    if width != image_width or height != image_height:
+        payload_errors.append(f"{label}:dimensionsMismatch:{width}x{height}")
+    if declared_pixels > source_pixels:
+        payload_errors.append(f"{label}:decodedPixelLimitExceeded:{declared_pixels}:{source_pixels}")
+        return None
+    if payload.get("encoding") != "rowMajorRLE":
+        payload_errors.append(f"{label}:encodingInvalid")
+        return None
+
+    runs = payload.get("runs")
+    if not isinstance(runs, list) or not runs:
+        payload_errors.append(f"{label}:runsInvalid")
+        return None
+
+    decoded: list[int] = []
+    decoded_count = 0
+    for index, run in enumerate(runs):
+        if not isinstance(run, list) or len(run) != 2:
+            payload_errors.append(f"{label}:runInvalid:{index}")
+            continue
+        run_label = strict_int(run[0])
+        count = strict_int(run[1])
+        if run_label is None or run_label not in allowed_labels:
+            payload_errors.append(f"{label}:runLabelInvalid:{index}:{run[0]}")
+        if count is None or count <= 0:
+            payload_errors.append(f"{label}:runCountInvalid:{index}:{run[1]}")
+        if run_label is None or run_label not in allowed_labels or count is None or count <= 0:
+            continue
+        if decoded_count + count > declared_pixels or decoded_count + count > source_pixels:
+            payload_errors.append(f"{label}:decodedPixelLimitExceeded:{index}")
+            return None
+        decoded.extend([run_label] * count)
+        decoded_count += count
+
+    if decoded_count != declared_pixels:
+        payload_errors.append(f"{label}:decodedPixelCountMismatch:{decoded_count}:{declared_pixels}")
+        return None
+    return width, height, decoded
+
+
+def validate_bubble_mask_payload(
+    payload: Any,
+    bubbles: list[dict[str, Any]],
+    image_width: int,
+    image_height: int,
+    payload_errors: list[str],
+) -> dict[str, Any]:
+    summary: dict[str, Any] = {"decodedPixelCount": None, "instanceCount": len(bubbles)}
+    if not isinstance(payload, dict):
+        payload_errors.append("bubbleMask:payloadObjectRequired")
+        return summary
+
+    instances_by_mask_value: dict[int, tuple[str, dict[str, Any]]] = {}
+    for index, bubble in enumerate(bubbles):
+        bubble_id = bubble.get("id") if isinstance(bubble.get("id"), str) else f"index-{index}"
+        mask_value = strict_int(bubble.get("maskValue"))
+        if mask_value is None or mask_value <= 0:
+            payload_errors.append(f"bubbleMask:{bubble_id}:maskValueInvalid")
+            continue
+        if mask_value in instances_by_mask_value:
+            payload_errors.append(f"bubbleMask:{bubble_id}:maskValueDuplicate:{mask_value}")
+            continue
+        instances_by_mask_value[mask_value] = (bubble_id, bubble)
+
+    decoded_result = decode_row_major_rle(
+        payload,
+        "bubbleMask",
+        image_width,
+        image_height,
+        {0, *instances_by_mask_value.keys()},
+        payload_errors,
+    )
+    if decoded_result is None:
+        return summary
+    width, height, decoded = decoded_result
+    summary["decodedPixelCount"] = len(decoded)
+
+    pixels_by_mask_value: dict[int, list[int]] = {value: [] for value in instances_by_mask_value}
+    for offset, value in enumerate(decoded):
+        if value != 0:
+            pixels_by_mask_value[value].append(offset)
+
+    for mask_value, (bubble_id, bubble) in instances_by_mask_value.items():
+        offsets = pixels_by_mask_value[mask_value]
+        if not offsets:
+            payload_errors.append(f"bubbleMask:{bubble_id}:maskValueHasNoPixels")
+            continue
+        xs = [offset % width for offset in offsets]
+        ys = [offset // width for offset in offsets]
+        recomputed_bbox = [min(xs), min(ys), max(xs) - min(xs) + 1, max(ys) - min(ys) + 1]
+        declared_bbox = bbox_for(bubble)
+        if declared_bbox != [float(value) for value in recomputed_bbox]:
+            payload_errors.append(f"bubbleMask:{bubble_id}:bboxMismatch")
+        pixel_count = strict_int(bubble.get("pixelCount"))
+        if pixel_count != len(offsets):
+            payload_errors.append(f"bubbleMask:{bubble_id}:pixelCountMismatch:{pixel_count}:{len(offsets)}")
+    return summary
+
+
+def four_neighbor_component_count(decoded: list[int], width: int) -> int:
+    glyph_pixels = {index for index, value in enumerate(decoded) if value == 1}
+    component_count = 0
+    while glyph_pixels:
+        component_count += 1
+        pending = [glyph_pixels.pop()]
+        while pending:
+            offset = pending.pop()
+            x = offset % width
+            neighbors = [offset - width, offset + width]
+            if x > 0:
+                neighbors.append(offset - 1)
+            if x + 1 < width:
+                neighbors.append(offset + 1)
+            for neighbor in neighbors:
+                if neighbor in glyph_pixels:
+                    glyph_pixels.remove(neighbor)
+                    pending.append(neighbor)
+    return component_count
+
+
+def validate_segment_mask_payload(
+    payload: Any,
+    image_width: int,
+    image_height: int,
+    payload_errors: list[str],
+) -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "decodedPixelCount": None,
+        "glyphPixelCount": None,
+        "connectedComponentCount": None,
+    }
+    if not isinstance(payload, dict):
+        payload_errors.append("segmentMask:payloadObjectRequired")
+        return summary
+    decoded_result = decode_row_major_rle(
+        payload,
+        "segmentMask",
+        image_width,
+        image_height,
+        {0, 1},
+        payload_errors,
+    )
+    if decoded_result is None:
+        return summary
+    width, _, decoded = decoded_result
+    glyph_pixel_count = sum(value == 1 for value in decoded)
+    component_count = four_neighbor_component_count(decoded, width)
+    summary.update(
+        decodedPixelCount=len(decoded),
+        glyphPixelCount=glyph_pixel_count,
+        connectedComponentCount=component_count,
+    )
+    declared_glyph_count = strict_int(payload.get("glyphPixelCount"))
+    if declared_glyph_count != glyph_pixel_count:
+        payload_errors.append(
+            f"segmentMask:glyphPixelCountMismatch:{declared_glyph_count}:{glyph_pixel_count}"
+        )
+    declared_component_count = strict_int(payload.get("connectedComponentCount"))
+    if declared_component_count != component_count:
+        payload_errors.append(
+            f"segmentMask:connectedComponentCountMismatch:{declared_component_count}:{component_count}"
+        )
+    return summary
+
+
 def normalized_source_direction(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
@@ -1319,6 +1507,7 @@ def verdict_for(
     missing_artifacts: list[str],
     parse_errors: list[str],
     coordinate_errors: list[str],
+    payload_errors: list[str],
     source_policy_errors: list[str],
     text_boxes: list[dict[str, Any]],
     bubbles: list[dict[str, Any]],
@@ -1349,6 +1538,8 @@ def verdict_for(
         return "sourceImageSHA256Mismatch"
     if coordinate_errors:
         return "coordinateValidationFailed"
+    if payload_errors:
+        return "maskPayloadValidationFailed"
     if any(error.startswith("contractExampleOnlyMissing") for error in source_policy_errors):
         return "contractExampleOnlyMissing"
     if any(error.startswith("contractExampleOnlyInvalid") for error in source_policy_errors):
@@ -1375,6 +1566,8 @@ def next_action_for(verdict: str) -> str:
         return "continueWithExternalTextBoxesShadowOCR"
     if verdict == "parseFailed":
         return "stopUntilParserFixed"
+    if verdict == "maskPayloadValidationFailed":
+        return "stopUntilMaskPayloadFixed"
     if verdict == "contractExampleOnly":
         return "stopBecauseFixtureIsNotDetectorOutput"
     if verdict in {
@@ -1405,6 +1598,7 @@ def readiness_blockers(
     missing_artifacts: list[str],
     parse_errors: list[str],
     coordinate_errors: list[str],
+    payload_errors: list[str],
     source_policy_errors: list[str],
     contract_example_only: bool,
     active_artifacts_directory: bool,
@@ -1419,6 +1613,7 @@ def readiness_blockers(
     blockers.extend(f"missing:{item}" for item in missing_artifacts)
     blockers.extend(f"parse:{item}" for item in parse_errors)
     blockers.extend(f"coordinate:{item}" for item in coordinate_errors)
+    blockers.extend(f"payload:{item}" for item in payload_errors)
     blockers.extend(f"sourcePolicy:{item}" for item in source_policy_errors)
     if not blockers:
         blockers.append(verdict)
@@ -1428,6 +1623,7 @@ def readiness_blockers(
 def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any]:
     parse_errors: list[str] = []
     coordinate_errors: list[str] = []
+    payload_errors: list[str] = []
     image_width, image_height = read_image_size(image_path)
     manifest_path = root / "1.manifest.json"
     manifest_raw = load_json(manifest_path, "manifest", parse_errors)
@@ -1469,7 +1665,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
     if manifest is not None:
         if schema_version is None:
             coordinate_errors.append("schemaVersionMissing")
-        elif schema_version != EXPECTED_SCHEMA_VERSION:
+        elif schema_version not in SUPPORTED_SCHEMA_VERSIONS:
             coordinate_errors.append(f"schemaVersionMismatch:{schema_version}")
 
         if coordinate_space is None:
@@ -1541,6 +1737,24 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
     ))
     orientation_metadata_summary = summarize_orientation_metadata(text_boxes)
 
+    bubble_payload_summary: dict[str, Any] | None = None
+    segment_payload_summary: dict[str, Any] | None = None
+    mask_payload_gate_required = schema_version == MASK_PAYLOAD_SCHEMA_VERSION
+    if mask_payload_gate_required:
+        bubble_payload_summary = validate_bubble_mask_payload(
+            bubbles_data,
+            bubbles,
+            image_width,
+            image_height,
+            payload_errors,
+        )
+        segment_payload_summary = validate_segment_mask_payload(
+            segment_mask,
+            image_width,
+            image_height,
+            payload_errors,
+        )
+
     segment_size_matches = None
     if segment_mask is not None:
         width = segment_mask.get("width")
@@ -1572,6 +1786,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         missing_artifacts=missing_artifacts,
         parse_errors=parse_errors,
         coordinate_errors=coordinate_errors,
+        payload_errors=payload_errors,
         source_policy_errors=source_policy_errors,
         text_boxes=text_boxes,
         bubbles=bubbles,
@@ -1584,6 +1799,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         missing_artifacts,
         parse_errors,
         coordinate_errors,
+        payload_errors,
         source_policy_errors,
         contract_example_only,
         active_artifacts_directory,
@@ -1618,6 +1834,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         "missingArtifacts": missing_artifacts,
         "parseErrors": parse_errors,
         "coordinateErrors": coordinate_errors,
+        "payloadErrors": payload_errors,
         "sourcePolicyErrors": source_policy_errors,
         "sourceImage": source_image,
         "sourceImageSHA256": source_image_sha,
@@ -1629,6 +1846,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         ),
         "schemaVersion": schema_version,
         "expectedSchemaVersion": EXPECTED_SCHEMA_VERSION,
+        "supportedSchemaVersions": sorted(SUPPORTED_SCHEMA_VERSIONS),
         "coordinateSpace": coordinate_space,
         "imageWidth": image_width,
         "imageHeight": image_height,
@@ -1639,6 +1857,14 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         "textBoxCount": len(text_boxes),
         "bubbleInstanceCount": len(bubbles),
         "segmentMaskSizeMatches": segment_size_matches,
+        "maskPayloadGateReady": mask_payload_gate_required and not payload_errors,
+        "maskPayloadValidation": {
+            "required": mask_payload_gate_required,
+            "ready": mask_payload_gate_required and not payload_errors,
+            "legacySummaryOnlyAccepted": schema_version == LEGACY_SCHEMA_VERSION,
+            "bubbleMask": bubble_payload_summary,
+            "segmentMask": segment_payload_summary,
+        },
         "invalidTextBoxIDs": invalid_text_box_ids,
         "invalidBubbleInstanceIDs": invalid_bubble_ids,
         "artifactIdentitySummary": artifact_identity_summary,
@@ -1736,6 +1962,7 @@ def main() -> int:
             "missingArtifacts": ["manifest", "TextBoxes", "BubbleMask", "SegmentMask"],
             "parseErrors": [],
             "coordinateErrors": [],
+            "payloadErrors": [],
             "sourcePolicyErrors": [],
             "sourceImage": None,
             "sourceImageSHA256": None,
@@ -1744,6 +1971,14 @@ def main() -> int:
             "textBoxCount": 0,
             "bubbleInstanceCount": 0,
             "segmentMaskSizeMatches": None,
+            "maskPayloadGateReady": False,
+            "maskPayloadValidation": {
+                "required": False,
+                "ready": False,
+                "legacySummaryOnlyAccepted": False,
+                "bubbleMask": None,
+                "segmentMask": None,
+            },
             "artifactIdentitySummary": summarize_artifact_identity(
                 root,
                 image_path,
