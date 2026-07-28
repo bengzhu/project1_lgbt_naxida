@@ -1941,14 +1941,24 @@ final class TranslationSessionStore: ObservableObject {
             selectTargetLanguage(language)
         }
         guard targetLanguage == language,
-              isProUnlocked,
-              imageTranslationState == .translated,
               imageTranslationContentTargetLanguage != language else {
             return
         }
 
-        imageTranslationContentTargetLanguage = language
-        retryImageTranslation()
+        switch imageTranslationState {
+        case .translated:
+            guard let url = imageTranslationSourceURL,
+                  FileManager.default.fileExists(atPath: url.path) else {
+                return
+            }
+            imageTranslationContentTargetLanguage = language
+            retryImageTranslation()
+        case .idle, .failed:
+            guard canRetryImageTranslation else { return }
+            imageTranslationContentTargetLanguage = language
+        case .loading, .recognizing, .translating:
+            return
+        }
     }
 
     func selectImageSourceLanguage(_ language: SupportedLanguage) {
