@@ -11,7 +11,7 @@
 ## v3.2：Koharu mask 像素载荷契约
 日期：2026-07-28
 
-状态：Agent X 已完成候选实现、并行审计与本地轻量验证；工程版本已更新为 `MARKETING_VERSION=3.2`，等待候选 exact-SHA 云端 full、PR 和合并收口。当前分支 `codeb/v3.2-koharu-mask-payload`，未触碰 `main`。
+状态：Agent X 已完成候选实现、并行审计、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.2`。PR #66 已合入 `smalldata_test`，merge SHA `d172d8d171b80ce753eaaf5bf61079ae32b54898`；远端 `codeb/v3.2-koharu-mask-payload` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -23,6 +23,8 @@
 验证与遗留：
 
 - `scripts/test-v32-koharu-mask-payload-contract.py` 7/7 通过，内部真实执行 Swift evaluator `-warnings-as-errors` 编译；相关 Swift 文件 parse、workflow YAML、pbxproj、fixture JSON 和 `git diff --check` 通过。
+- 候选 exact SHA `ac822b6186f39de3c73216047ed1126d5596cea4` 的云端 full run `30324330547` 成功；artifact `aitrans-ci-v3.2-codeb-v3.2-koharu-mask-payload--ac822b6186f3-run30324330547-attempt1` 与 version / branch / SHA / run / profile 完全一致，JUnit 10/10，`.xcresult` build succeeded 且 0 error / 0 warning，mask payload contract 7/7，commit status `AITRANS CI/full-validation=success`。
+- PR #66 exact HEAD fast run `30324725260` 成功后合并；merge follow-up run `30324971434` 成功，artifact `aitrans-ci-v3.2-smalldata_test--d172d8d171b8-run30324971434-attempt1` 以 `validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation` 精确复用候选 SHA `ac822b6186f39de3c73216047ed1126d5596cea4` 的成功 full 收据。
 - 未跑本机 build / 探针，按规则交给云端验证。仓库没有真实 Koharu 四件套，当前 `output/` 仍是旧 `manifestMissing / stopUntilArtifactsProvided` 证据；本轮不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译、覆盖或识别质量提升。
 
 ## v3.1：图片 OCR 待复查筛选
