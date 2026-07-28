@@ -11,7 +11,7 @@
 ## v3.18：图片复查汇总进度与运行态证据
 日期：2026-07-28
 
-状态：Agent X 正在 `codeb/v3.18-image-review-progress-evidence` 实现并等待 exact-SHA 云端 full / UI evidence 验收；未触碰 `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full / UI evidence 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.18`。PR #82 已合入 `smalldata_test`，merge SHA `1a4d321f73842852b9d77d1b50e8c51f56478a47`；远端 `codeb/v3.18-image-review-progress-evidence` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,8 +22,11 @@
 
 验证与遗留：
 
-- v3.18 新合同 7/7、26 个图片/UI 合同脚本共 164/164 通过；Swift parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析（`v3.18`）、工程 plist、3 份 JSON 基线和 `git diff --check` 均通过。候选提交和云端 full / UI evidence 尚未运行。
-- 未跑本机 build / 探针，按规则交给云端验证。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+- v3.18 新合同 7/7、26 个图片/UI 合同脚本共 164/164 通过；Swift parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析（`v3.18`）、工程 plist、3 份 JSON 基线和 `git diff --check` 均通过。
+- 候选 exact SHA `596af740d4e1d1ce426446e9e2a6201f0ba3372b` 的云端 full run `30343297952` attempt 1 成功；artifact `aitrans-ci-v3.18-codeb-v3.18-image-review-progress-evidence--596af740d4e1-run30343297952-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI 164 项、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- UI evidence 因候选 commit marker 实际执行成功，manifest 精确包含同一 SHA 的 14 张截图（12 compact iPhone + 2 wide iPad）。新增 `image-success-wide-ipad-day.png` 为 1640×2360、979430 bytes；人工检查确认图片成功态、低置信/方向待定汇总、“本次复查 0/2”进度和队列入口清晰可见，无文字、控件重叠或越界。
+- PR #82 exact HEAD fast run `30344483424` 成功后合并；merge follow-up run `30344554549` 成功，artifact 与 merge HEAD `1a4d321f73842852b9d77d1b50e8c51f56478a47` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `596af740d4e1d1ce426446e9e2a6201f0ba3372b` 的成功 full 收据，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit 10/10。
+- 未跑本机 build / 探针，按规则交给云端验证。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失；本版没有真实 OCR/翻译质量新数据，不刷新 `output/` 或 `metrics/version_history.csv`，不声称识别质量提升。
 
 ## v3.17：图片待复查进度与自动出队
 日期：2026-07-28
