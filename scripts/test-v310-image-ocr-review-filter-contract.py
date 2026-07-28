@@ -15,6 +15,22 @@ def read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
 
 
+def braced_body(source: str, signature: str) -> str:
+    start = source.find(signature)
+    if start < 0:
+        raise AssertionError(f"missing signature: {signature}")
+    brace = source.find("{", start)
+    depth = 0
+    for index in range(brace, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[brace + 1:index]
+    raise AssertionError(f"unterminated body: {signature}")
+
+
 class ImageOCRReviewFilterContractTests(unittest.TestCase):
     def test_executable_filter_evaluator_uses_product_models(self) -> None:
         with tempfile.TemporaryDirectory(prefix="aitrans-v310-swift-") as temporary_directory:
@@ -63,12 +79,20 @@ class ImageOCRReviewFilterContractTests(unittest.TestCase):
         self.assertIn("reviewFilter.blocks(from: store.imageTranslationBlocks)", view)
 
     def test_filter_never_changes_preview_or_product_blocks(self) -> None:
+        store = read("AITRANS/Services/TranslationSessionStore.swift")
         view = read("AITRANS/Views/ImageTranslationViews.swift")
-        self.assertIn("ForEach(visibleImageTranslationBlocks)", view)
-        self.assertIn("ForEach(store.imageTranslationBlocks)", view)
-        self.assertIn('title: "无需复查"', view)
-        self.assertIn('detail: "当前结果没有低置信或方向待定文字块。"', view)
-        self.assertNotIn("imageTranslationBlocks = visibleImageTranslationBlocks", view)
+        inspector = braced_body(view, "private var inspector: some View")
+        preview = braced_body(view, "private struct ImageTranslationPreview: View")
+        rerender = braced_body(store, "private func rerenderImageTranslationExport()")
+
+        self.assertIn("ForEach(visibleImageTranslationBlocks)", inspector)
+        self.assertIn('title: "无需复查"', inspector)
+        self.assertIn('detail: "当前结果没有低置信或方向待定文字块。"', inspector)
+        self.assertIn("ForEach(store.imageTranslationBlocks)", preview)
+        self.assertNotIn("visibleImageTranslationBlocks", preview)
+        self.assertIn("let blocks = imageTranslationBlocks", rerender)
+        self.assertIn("blocks: blocks", rerender)
+        self.assertNotIn("ImageOCRReviewFilter", store)
 
     def test_review_reasons_are_visible_without_color_only_signaling(self) -> None:
         view = read("AITRANS/Views/ImageTranslationViews.swift")

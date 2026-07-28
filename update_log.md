@@ -18,7 +18,7 @@
 - 图片识别结果新增“全部 / 待复查”分段筛选，并显示各自数量；待复查严格定义为 confidence 低于 `50%`，或方向证据为 nil / unknown，重叠原因只计一个 block，原始顺序不变。
 - 筛选状态只属于 `ImageTranslationPanel` 的本地展示状态。预览、覆盖渲染、稳定导出、分享、翻译和持久化仍消费完整 `imageTranslationBlocks`，不会因列表筛选丢失内容。
 - 待复查行以图标和文字分别显示“低置信”“方向待定”；筛选为空时显示“无需复查”。共享判定由 `ImageOCRResultSummary` 持有，confidence 与阈值均夹取到 `0...1`，恰好 `0.5` 不算低置信。
-- 新增 `ImageOCRReviewFilter`、纯 Swift 产品模型 evaluator 和 v3.1 Python 契约，并接入 v1.87 / v2.2-v3.1 fail-fast 图片 UI CI step；同步修正 v3.0 契约，使其接受共享 helper 与分组 changed-files 路由，同时继续锁定严格阈值语义。
+- 新增 `ImageOCRReviewFilter`、纯 Swift 产品模型 evaluator 和 v3.1 Python 契约，并接入 v1.87 / v2.2-v3.1 fail-fast 图片 UI CI step；同步修正 v3.0 契约，使其接受共享 helper 与分组 changed-files 路由，同时继续锁定严格阈值语义。独立复审后将列表、预览与 Store 重渲染断言收紧到各自源码作用域，避免全文件 substring 对错误接线产生假绿。
 
 验证与遗留：
 
