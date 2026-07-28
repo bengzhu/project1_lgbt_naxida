@@ -11,7 +11,7 @@
 ## v3.13：选中文字块局部放大复查
 日期：2026-07-28
 
-状态：Agent X 已完成候选实现与本地轻量检查；工程候选版本为 `MARKETING_VERSION=3.13`，等待 exact-SHA 云端 full、PR 和 merge 收口。候选分支为 `codeb/v3.13-image-block-focus`，未触碰 `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.13`。PR #77 已合入 `smalldata_test`，merge SHA `97fcd4174621494e7756fed31a30b7304bae6d73`；远端 `codeb/v3.13-image-block-focus` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,8 +22,10 @@
 
 验证与遗留：
 
-- v3.13 新合同 6/6，v1.87 与 v2.2-v3.13 全部图片/UI 合同合计 133 项通过；完整 Xcode toolchain Swift parse、实际 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.13`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。云端结果将在候选提交后补录。
-- 未跑本机 build / 探针，按规则交给云端验证。真实设备上的裁切方向、紧凑宽度遮挡、Dynamic Type 和 VoiceOver 顺序仍需云端 build 与后续人工运行态检查。
+- v3.13 新合同 6/6，v1.87 与 v2.2-v3.13 全部图片/UI 合同合计 133 项通过；完整 Xcode toolchain Swift parse、实际 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.13`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。
+- 候选 exact SHA `86d91084f908adfd4f69a73d0e55568d36276d52` 的云端 full run `30335627953` attempt 1 成功；artifact `aitrans-ci-v3.13-codeb-v3.13-image-block-focus--86d91084f908-run30335627953-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI 133 项、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded、0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- PR #77 exact HEAD fast run `30336122541` 成功后合并；merge follow-up run `30336180421` 成功，artifact 与 merge HEAD `97fcd4174621494e7756fed31a30b7304bae6d73` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `86d91084f908adfd4f69a73d0e55568d36276d52` 的成功 full 收据，JUnit 10/10。
+- 未跑本机 build / 探针，按规则交给云端验证。本版未运行 UI evidence；真实设备上的裁切方向、紧凑宽度遮挡、Dynamic Type 和 VoiceOver 顺序仍需后续人工运行态检查。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
 
 ## v3.12：OCR 结果与预览定位联动
 日期：2026-07-28
