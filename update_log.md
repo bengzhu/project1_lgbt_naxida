@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.13：选中文字块局部放大复查
+日期：2026-07-28
+
+状态：Agent X 已完成候选实现与本地轻量检查；工程候选版本为 `MARKETING_VERSION=3.13`，等待 exact-SHA 云端 full、PR 和 merge 收口。候选分支为 `codeb/v3.13-image-block-focus`，未触碰 `main`。
+
+核心变更：
+
+- 选中 OCR 结果行后，完整预览继续高亮对应 block，同时从当前最大边 2048px 的已下采样预览裁切局部放大窗，改善小 bbox 的可检查性，不重新解码 Store 原图。
+- 局部裁切以 block 中心为基准，至少覆盖 bbox 宽高的 1.8 倍，以归一化宽 16%、高 10% 为下限并扩展到 16:9；裁切夹取在图片范围内，放大窗用至少 24pt 的警示色边框再次标出原 bbox。
+- 放大窗提供带可访问名称的 44pt 关闭命令，清除同一 View 私有选择。选择、裁切和关闭均不进入 Store、OCR、翻译、renderer、导出或持久化。
+- 新增 v3.13 源码合同并接入图片/UI fail-fast 路由；为新增预览参数更新 v3.12 字符串合同，但不放松其完整 blocks、高亮和状态隔离约束。本版不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
+
+验证与遗留：
+
+- v3.13 新合同 6/6，v1.87 与 v2.2-v3.13 全部图片/UI 合同合计 133 项通过；完整 Xcode toolchain Swift parse、实际 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.13`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。云端结果将在候选提交后补录。
+- 未跑本机 build / 探针，按规则交给云端验证。真实设备上的裁切方向、紧凑宽度遮挡、Dynamic Type 和 VoiceOver 顺序仍需云端 build 与后续人工运行态检查。
+
 ## v3.12：OCR 结果与预览定位联动
 日期：2026-07-28
 

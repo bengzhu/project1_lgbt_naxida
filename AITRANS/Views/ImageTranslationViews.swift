@@ -113,7 +113,10 @@ struct ImageTranslationPanel: View {
                 },
                 shareResult: shareResult
             )
-            ImageTranslationPreview(selectedBlockID: selectedImageTranslationBlockID)
+            ImageTranslationPreview(
+                selectedBlockID: selectedImageTranslationBlockID,
+                clearSelection: { selectedImageTranslationBlockID = nil }
+            )
         }
     }
 
@@ -598,6 +601,7 @@ private enum ImagePreviewPhase: Equatable {
 private struct ImageTranslationPreview: View {
     @EnvironmentObject private var store: TranslationSessionStore
     let selectedBlockID: UUID?
+    let clearSelection: () -> Void
     @State private var previewImage: UIImage?
     @State private var previewRevision: Int?
     @State private var previewAttempt = 0
@@ -628,6 +632,20 @@ private struct ImageTranslationPreview: View {
                                 imageSize: fittedSize,
                                 isSelected: selectedBlockID == block.id
                             )
+                        }
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        if let selectedBlock = store.imageTranslationBlocks.first(where: { $0.id == selectedBlockID }) {
+                            ImageTranslationFocusPreview(
+                                previewImage: previewImage,
+                                block: selectedBlock,
+                                close: clearSelection
+                            )
+                            .frame(
+                                width: max(180, min(320, geometry.size.width - AppTheme.Spacing.control * 2)),
+                                height: 180
+                            )
+                            .padding(AppTheme.Spacing.control)
                         }
                     }
                 }
@@ -734,6 +752,156 @@ private struct ImageTranslationPreview: View {
     private func retryPreview() {
         previewPhase = .loading(revision: store.imageTranslationRevision)
         previewAttempt += 1
+    }
+
+    private func fittedImageSize(imageSize: CGSize, containerSize: CGSize) -> CGSize {
+        guard imageSize.width > 0, imageSize.height > 0, containerSize.width > 0, containerSize.height > 0 else {
+            return .zero
+        }
+        let scale = min(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
+        return CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+    }
+}
+
+private struct ImageTranslationFocusPreview: View {
+    let previewImage: UIImage
+    let block: ImageTranslationBlock
+    let close: () -> Void
+
+    var body: some View {
+        Group {
+            if let crop = focusCrop {
+                GeometryReader { geometry in
+                    let fittedSize = fittedImageSize(
+                        imageSize: CGSize(width: CGFloat(crop.image.width), height: CGFloat(crop.image.height)),
+                        containerSize: geometry.size
+                    )
+                    let relativeRect = relativeBlockRect(in: crop.normalizedRect)
+                    let origin = CGPoint(
+                        x: (geometry.size.width - fittedSize.width) / 2,
+                        y: (geometry.size.height - fittedSize.height) / 2
+                    )
+
+                    ZStack(alignment: .topLeading) {
+                        Image(decorative: crop.image, scale: 1, orientation: .up)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .accessibilityHidden(true)
+
+                        RoundedRectangle(cornerRadius: 4)
+                            .strokeBorder(Color.appWarning, lineWidth: 4)
+                            .frame(
+                                width: max(fittedSize.width * relativeRect.width, 24),
+                                height: max(fittedSize.height * relativeRect.height, 24)
+                            )
+                            .position(
+                                x: origin.x + fittedSize.width * relativeRect.midX,
+                                y: origin.y + fittedSize.height * relativeRect.midY
+                            )
+                            .accessibilityHidden(true)
+                    }
+                }
+            } else {
+                Color.black
+            }
+        }
+        .background(Color.black)
+        .clipShape(.rect(cornerRadius: AppTheme.Radius.control))
+        .overlay {
+            RoundedRectangle(cornerRadius: AppTheme.Radius.control)
+                .stroke(Color.white, lineWidth: 2)
+        }
+        .overlay(alignment: .topLeading) {
+            Label("局部放大", systemImage: "magnifyingglass")
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .padding(.horizontal, AppTheme.Spacing.control)
+                .frame(minHeight: 44)
+                .background(Color.black.opacity(0.82), in: .rect(cornerRadius: AppTheme.Radius.control))
+        }
+        .overlay(alignment: .topTrailing) {
+            Button("关闭局部放大", systemImage: "xmark", action: close)
+                .labelStyle(.iconOnly)
+                .foregroundStyle(.white)
+                .frame(minWidth: 44, minHeight: 44)
+                .background(Color.black.opacity(0.82), in: Circle())
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("已定位文字块局部放大")
+        .accessibilityValue(block.original)
+    }
+
+    private var focusCrop: (image: CGImage, normalizedRect: CGRect)? {
+        guard let sourceImage = previewImage.cgImage else { return nil }
+        let normalizedRect = normalizedFocusRect
+        let sourceBounds = CGRect(
+            x: 0,
+            y: 0,
+            width: CGFloat(sourceImage.width),
+            height: CGFloat(sourceImage.height)
+        )
+        let pixelRect = CGRect(
+            x: normalizedRect.minX * sourceBounds.width,
+            y: normalizedRect.minY * sourceBounds.height,
+            width: normalizedRect.width * sourceBounds.width,
+            height: normalizedRect.height * sourceBounds.height
+        )
+        .integral
+        .intersection(sourceBounds)
+        guard !pixelRect.isEmpty,
+              let croppedImage = sourceImage.cropping(to: pixelRect) else {
+            return nil
+        }
+        let effectiveRect = CGRect(
+            x: pixelRect.minX / sourceBounds.width,
+            y: pixelRect.minY / sourceBounds.height,
+            width: pixelRect.width / sourceBounds.width,
+            height: pixelRect.height / sourceBounds.height
+        )
+        return (croppedImage, effectiveRect)
+    }
+
+    private var normalizedFocusRect: CGRect {
+        let box = block.boundingBox
+        let sourceRect = CGRect(
+            x: CGFloat(box.x),
+            y: CGFloat(box.y),
+            width: CGFloat(box.width),
+            height: CGFloat(box.height)
+        )
+            .standardized
+            .intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
+        guard !sourceRect.isEmpty else {
+            return CGRect(x: 0, y: 0, width: 1, height: 1)
+        }
+        let targetAspectRatio: CGFloat = 16.0 / 9.0
+        var width = min(1, max(sourceRect.width * 1.8, 0.16))
+        var height = min(1, max(sourceRect.height * 1.8, 0.10))
+        if width / height < targetAspectRatio {
+            width = min(1, height * targetAspectRatio)
+        } else {
+            height = min(1, width / targetAspectRatio)
+        }
+        return CGRect(
+            x: min(max(sourceRect.midX - width / 2, 0), 1 - width),
+            y: min(max(sourceRect.midY - height / 2, 0), 1 - height),
+            width: width,
+            height: height
+        )
+    }
+
+    private func relativeBlockRect(in cropRect: CGRect) -> CGRect {
+        let box = block.boundingBox
+        let rect = CGRect(
+            x: (CGFloat(box.x) - cropRect.minX) / cropRect.width,
+            y: (CGFloat(box.y) - cropRect.minY) / cropRect.height,
+            width: CGFloat(box.width) / cropRect.width,
+            height: CGFloat(box.height) / cropRect.height
+        )
+        return rect.standardized.intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
     }
 
     private func fittedImageSize(imageSize: CGSize, containerSize: CGSize) -> CGSize {
