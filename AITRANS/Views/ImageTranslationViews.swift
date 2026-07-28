@@ -64,6 +64,7 @@ struct ImageTranslationPanel: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var shareURL: URL?
     @State private var sharePresentationID = UUID()
+    @State private var reviewFilter: ImageOCRReviewFilter = .all
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -126,6 +127,15 @@ struct ImageTranslationPanel: View {
                 systemImage: "viewfinder"
             )
 
+            if !store.imageTranslationBlocks.isEmpty {
+                Picker("识别结果筛选", selection: $reviewFilter) {
+                    ForEach(ImageOCRReviewFilter.allCases) { filter in
+                        Text(filterTitle(filter)).tag(filter)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
             Picker("覆盖方式", selection: overlayModeBinding) {
                 ForEach(ImageTranslationOverlayMode.allCases) { mode in
                     Text(mode.rawValue).tag(mode)
@@ -146,9 +156,15 @@ struct ImageTranslationPanel: View {
                     detail: "选择照片或图片文件后，本机 OCR 结果会显示在这里。",
                     systemImage: "photo.badge.plus"
                 )
+            } else if visibleImageTranslationBlocks.isEmpty {
+                AppEmptyState(
+                    title: "无需复查",
+                    detail: "当前结果没有低置信或方向待定文字块。",
+                    systemImage: "checkmark.circle"
+                )
             } else {
                 LazyVStack(spacing: 0) {
-                    ForEach(store.imageTranslationBlocks) { block in
+                    ForEach(visibleImageTranslationBlocks) { block in
                         ImageTranslationBlockRow(block: block)
                     }
                 }
@@ -162,6 +178,19 @@ struct ImageTranslationPanel: View {
             get: { store.imageOverlayMode },
             set: { store.setImageOverlayMode($0) }
         )
+    }
+
+    private var visibleImageTranslationBlocks: [ImageTranslationBlock] {
+        reviewFilter.blocks(from: store.imageTranslationBlocks)
+    }
+
+    private func filterTitle(_ filter: ImageOCRReviewFilter) -> String {
+        switch filter {
+        case .all:
+            "全部 \(store.imageTranslationBlocks.count)"
+        case .needsReview:
+            "待复查 \(ImageOCRResultSummary(blocks: store.imageTranslationBlocks).reviewRequiredBlockCount)"
+        }
     }
 
     private var statusTone: AppStatusTone {
@@ -603,6 +632,18 @@ private struct ImageTranslationBlockRow: View {
                 Text(block.original)
                     .font(.caption)
                     .foregroundStyle(Color.appTextSecondary)
+                if ImageOCRResultSummary.requiresReview(block) {
+                    HStack(spacing: AppTheme.Spacing.control) {
+                        if ImageOCRResultSummary.hasLowConfidence(block) {
+                            Label("低置信", systemImage: "exclamationmark.triangle.fill")
+                        }
+                        if ImageOCRResultSummary.hasUnknownDirection(block) {
+                            Label("方向待定", systemImage: "questionmark.diamond.fill")
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Color.appWarning)
+                }
             }
             Spacer(minLength: 0)
         }

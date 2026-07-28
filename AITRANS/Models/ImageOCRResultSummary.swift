@@ -10,12 +10,12 @@ struct ImageOCRResultSummary: Equatable, Sendable {
     var horizontalBlockCount: Int
     var verticalBlockCount: Int
     var unknownDirectionBlockCount: Int
+    var reviewRequiredBlockCount: Int
 
     init(
         blocks: [ImageTranslationBlock],
         lowConfidenceThreshold: Float = Self.lowConfidenceThreshold
     ) {
-        let threshold = min(max(Double(lowConfidenceThreshold), 0), 1)
         let confidences = blocks.map { min(max(Double($0.confidence), 0), 1) }
 
         totalBlockCount = blocks.count
@@ -23,11 +23,36 @@ struct ImageOCRResultSummary: Equatable, Sendable {
         averageConfidence = confidences.isEmpty
             ? nil
             : confidences.reduce(0, +) / Double(confidences.count)
-        lowConfidenceBlockCount = confidences.count(where: { $0 < threshold })
+        lowConfidenceBlockCount = blocks.count(where: {
+            Self.hasLowConfidence($0, lowConfidenceThreshold: lowConfidenceThreshold)
+        })
         horizontalBlockCount = blocks.count(where: { $0.sourceDirection == .horizontal })
         verticalBlockCount = blocks.count(where: { $0.sourceDirection == .vertical })
         unknownDirectionBlockCount = blocks.count(where: {
             $0.sourceDirection == nil || $0.sourceDirection == .unknown
         })
+        reviewRequiredBlockCount = blocks.count(where: {
+            Self.requiresReview($0, lowConfidenceThreshold: lowConfidenceThreshold)
+        })
+    }
+
+    static func requiresReview(
+        _ block: ImageTranslationBlock,
+        lowConfidenceThreshold: Float = Self.lowConfidenceThreshold
+    ) -> Bool {
+        hasLowConfidence(block, lowConfidenceThreshold: lowConfidenceThreshold) || hasUnknownDirection(block)
+    }
+
+    static func hasLowConfidence(
+        _ block: ImageTranslationBlock,
+        lowConfidenceThreshold: Float = Self.lowConfidenceThreshold
+    ) -> Bool {
+        let threshold = min(max(lowConfidenceThreshold, 0), 1)
+        let confidence = min(max(block.confidence, 0), 1)
+        return confidence < threshold
+    }
+
+    static func hasUnknownDirection(_ block: ImageTranslationBlock) -> Bool {
+        block.sourceDirection == nil || block.sourceDirection == .unknown
     }
 }

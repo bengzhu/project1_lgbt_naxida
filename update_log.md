@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.1：图片 OCR 待复查筛选
+日期：2026-07-28
+
+状态：Agent X 已在 `codeb/v3.1-image-ocr-review-filter` 完成核心候选实现、本地轻量回归、核心与版本收口 exact-SHA 云端 full；工程正式版本为 `MARKETING_VERSION=3.1`，等待 PR 与合并。未触碰 `main`。
+
+核心变更：
+
+- 图片识别结果新增“全部 / 待复查”分段筛选，并显示各自数量；待复查严格定义为 confidence 低于 `50%`，或方向证据为 nil / unknown，重叠原因只计一个 block，原始顺序不变。
+- 筛选状态只属于 `ImageTranslationPanel` 的本地展示状态。预览、覆盖渲染、稳定导出、分享、翻译和持久化仍消费完整 `imageTranslationBlocks`，不会因列表筛选丢失内容。
+- 待复查行以图标和文字分别显示“低置信”“方向待定”；筛选为空时显示“无需复查”。共享判定由 `ImageOCRResultSummary` 持有，confidence 与阈值均夹取到 `0...1`，恰好 `0.5` 不算低置信。
+- 新增 `ImageOCRReviewFilter`、纯 Swift 产品模型 evaluator 和 v3.1 Python 契约，并接入 v1.87 / v2.2-v3.1 fail-fast 图片 UI CI step；同步修正 v3.0 契约，使其接受共享 helper 与分组 changed-files 路由，同时继续锁定严格阈值语义。独立复审后将列表、预览与 Store 重渲染断言收紧到各自源码作用域，避免全文件 substring 对错误接线产生假绿。
+
+验证与遗留：
+
+- v1.87、v2.2-v3.1 图片/UI 契约共 84 项通过；CI validation tier / version identity 契约 14 项通过。四份改动 Swift 源码 parse、Xcode 工程 plist、workflow YAML、ground truth 与现有 output JSON 解析、工程版本唯一解析为 `v3.0` 和 `git diff --check` 均通过。
+- 核心 SHA `281c74ea9c8b00c522dec6edc9682e1f46e51b4f` 的云端 full run `30321376115` attempt 1 成功；artifact `aitrans-ci-v3.1-codeb-v3.1-image-ocr-review-filter--281c74ea9c8b-run30321376115-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI 84 项、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` build succeeded，commit status `AITRANS CI/full-validation=success`。
+- 版本收口 SHA `88da91e050928a42164233d75d9b12f696f4eb9b` 的云端 full run `30321736785` attempt 1 成功；artifact `aitrans-ci-v3.1-codeb-v3.1-image-ocr-review-filter--88da91e05092-run30321736785-attempt1` 与 identity 完全一致，`MARKETING_VERSION=3.1`、Xcode build success、JUnit 10/10、`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次只改工程版本和入口文档，领域合同按 changed-files 路由跳过，由核心 full 提供证据。
+- 未跑本机 build / 探针，按规则交给云端验证。本版不修改 Vision 请求、OCR layout、漫画探针、翻译、ground truth、`metrics/version_history.csv` 或 `output/`，不声称 OCR 字符准确率提升。
+
 ## v3.0：图片 OCR 复查与重新识别
 日期：2026-07-27
 
