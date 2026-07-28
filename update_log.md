@@ -11,7 +11,7 @@
 ## v3.12：OCR 结果与预览定位联动
 日期：2026-07-28
 
-状态：Agent X 候选实现中；分支 `codeb/v3.12-image-block-selection`，工程候选版本为 `MARKETING_VERSION=3.12`。尚未 push、创建 PR 或触碰 `smalldata_test` / `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.12`。PR #76 已合入 `smalldata_test`，merge SHA `45b0b57180a7cababdcc55e1c77134a342efa352`；远端 `codeb/v3.12-image-block-selection` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,8 +22,10 @@
 
 验证与遗留：
 
-- v3.12 新合同 5/5，v1.87 与 v2.2-v3.12 全部图片/UI 合同合计 127 项通过；改动 Swift 文件以完整 Xcode toolchain parse 通过，实际 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.12`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。云端 exact-SHA full 待运行。
-- 未跑本机 build / 探针，按规则交给云端验证。真实小 bbox 的高亮可见性、Dynamic Type 和 VoiceOver 点击顺序仍需模拟器或真机人工验证。
+- v3.12 新合同 5/5，v1.87 与 v2.2-v3.12 全部图片/UI 合同合计 127 项通过；改动 Swift 文件以完整 Xcode toolchain parse 通过，实际 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.12`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。
+- 候选 exact SHA `f1ccdc097b8a1e8eff2fc7687b1c0e463f7a3dee` 的云端 full run `30334267143` attempt 1 成功；artifact `aitrans-ci-v3.12-codeb-v3.12-image-block-selection--f1ccdc097b8a-run30334267143-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI 127 项、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded、0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- PR #76 exact HEAD fast run `30334677992` 成功后合并；merge follow-up run `30334744315` 成功，artifact 与 merge HEAD `45b0b57180a7cababdcc55e1c77134a342efa352` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `f1ccdc097b8a1e8eff2fc7687b1c0e463f7a3dee` 的成功 full 收据，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit 10/10。
+- 未跑本机 build / 探针，按规则交给云端验证。本版不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。真实小 bbox 的高亮可见性、Dynamic Type 和 VoiceOver 点击顺序仍需模拟器或真机人工验证。
 
 ## v3.11：图片预览状态与独立重试
 日期：2026-07-28

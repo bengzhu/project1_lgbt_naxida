@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-候选版本：`3.12`（OCR 结果行新增 View 私有选择状态并联动图片预览覆盖高亮；图片 revision 变化或筛选隐藏选中行时清除选择。v3.11-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`3.12`（OCR 结果行新增 View 私有选择状态并联动图片预览覆盖高亮；图片 revision 变化或筛选隐藏选中行时清除选择。v3.11-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
