@@ -30,7 +30,7 @@ class ImageBlockSelectionContractTests(unittest.TestCase):
         self.assertIn("selectedImageTranslationBlockID == blockID", self.view)
 
     def test_preview_highlights_only_the_matching_full_product_block(self) -> None:
-        self.assertIn("ImageTranslationPreview(selectedBlockID: selectedImageTranslationBlockID)", self.view)
+        self.assertIn("selectedBlockID: selectedImageTranslationBlockID", self.view)
         self.assertIn("ForEach(store.imageTranslationBlocks)", self.view)
         self.assertIn("isSelected: selectedBlockID == block.id", self.view)
         self.assertIn("selectionBorder", self.view)

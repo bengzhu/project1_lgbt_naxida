@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`3.12`（OCR 结果行新增 View 私有选择状态并联动图片预览覆盖高亮；图片 revision 变化或筛选隐藏选中行时清除选择。v3.11-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+当前候选版本：`3.13`（OCR 结果行选择新增基于已下采样预览的 16:9 局部放大窗，裁切保留上下文并夹取到图片范围；完整预览高亮、revision / 筛选清除和 View 私有状态边界保持不变。v3.12-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
@@ -167,6 +167,7 @@
 - 识别结果摘要由 `ImageOCRResultSummary` 从当前 blocks 计算：显示已翻译/总块数、夹取到 `0...1` 后的平均 Vision 置信度、低于 `50%` 的块数，以及竖排与 unknown 方向计数。空结果不虚构平均值。成功图片在 Store-owned 原图仍存在时提供“重新识别”，复用当前内容的输入/目标语言凭据并走既有 task ID、render/share 失效和源文件保留链路；View 不读文件或直接启动 OCR。
 - 检查列表可在“全部 / 待复查”间切换。待复查是低于 `50%` 或方向为 nil / unknown 的并集，重叠块只计一次且保留原始顺序；行内以图标和文字展示具体原因。筛选仅是 View 私有展示状态，图片预览、覆盖、翻译、导出、分享与持久化继续使用完整 `imageTranslationBlocks`。
 - 检查列表行可切换 View 私有 selected block ID；选中行显示取景框标记，图片预览仅对相同 ID 的完整产品 block 增加边框。图片 revision 变化会清除选择；切到“待复查”后若选中块被隐藏也会清除。该联动不写 Store、不筛预览 blocks、不改变导出或持久化。
+- 选中 block 时，预览从当前最大边 2048px 的缩略图裁切 16:9 局部放大窗；裁切范围至少覆盖 bbox 宽高的 1.8 倍，并以归一化宽 16%、高 10% 为下限，再夹取在顶左原点图片范围内。放大窗以至少 24pt 的警示色框再次标出原 bbox，提供命名明确的 44pt 关闭命令；关闭只清除 View 私有选择。该路径不重新解码 Store 原图、不调用 OCR / 翻译、不进入 renderer、导出或持久化。
 - 旁贴或覆盖预览与同模式 PNG 导出；Vision OCR bbox、SwiftUI 预览和导出 renderer 统一使用图片顶左原点坐标。后台 render 只写 render ID 独占 staging PNG，已完成图片切换模式会使旧导出失效并按 render ID / 图片 task ID / mode 验明身份后发布 `aitrans-export-<render UUID>-<base>-translated.png` 稳定文件，旧 detached render 不得覆盖新任务。覆盖模式重渲染公开 `idle / rendering / failed` 状态；rendering 时 Store 与 Picker 双重拒绝重复切换，当前失败显示 danger 并提供同模式重试，无 staging URL 也必须进入可重试失败。新任务、清空或其他内容失效会取消 render Task、更新 render ID 并复位状态。启动时会扫描 `Application Support/ImageTranslations` 直属文件，分账接管带 Store marker 的稳定导出、`<task UUID>-<name>` 输入副本和 `.<base>-translated-<render UUID>.staging.png`，清理上次异常退出残留；普通后缀文件、wrong-kind、目录外、嵌套、escape、symlink 和 dangling symlink 一律拒绝。新任务、清空或模式重渲染会撤销公开 export URL 并删除当前 Store-owned 稳定导出；正常 input/staging 清理同样必须携带可信 workspace 与对应文件类型，删除失败也登记 orphan ownership。所有删除失败项都在后续生命周期继续重试。分享前由 Store 在 `ImageTranslationShares/<share UUID>/` 创建人类可读 `<base>-translated.png` 硬链接或副本，并公开 request-scoped `idle / preparing / failed` 状态；准备中禁用重复导出，当前请求失败覆盖翻译成功色调。Store request ID 与 View presentation ID 共同拒绝晚到结果和旧 Task 的 `nil` 回写，dismiss / export 失效 / View 离开与启动恢复统一清理分享目录并复位反馈，删除失败保留 ownership。
 - 任务启动时固定输入/目标语言，并分别记录 actual-content 与 pending-Retry 凭据；只要 content 凭据尚未被 clear，从 `.loading` 到失败/取消即使图片 data/blocks 为空，结果标题和菜单回退也继续使用任务实际语言，不受跨页全局语言漂移影响。失败或取消且 Store-owned source 仍可重试时，菜单只在选择与 actual-content 不同时写入独立 pending 字段并显示“重试语言已更新”；选回 actual-content 会把对应 pending 归一化为 `nil`，两项均无差异时提示消失，不会改写或误标屏幕上保留的 OCR/译文。Retry 优先消费 pending，再回退 actual-content，任务开始即清空 pending。clear 同时清空两组凭据，cancel 保留 actual-content。已完成图片选择不同输入语言会从沙盒原图重新 OCR + 翻译，选择不同目标语言会重新翻译；运行中菜单禁用且 Store 拒绝改写本次凭据。
 - 图片输入语言选择先检查 `isProUnlocked`；免费模式的非当前菜单项显示 `lock.fill`，拒绝时只更新 Store-owned 反馈并由菜单显示 Alert，不得修改跨页 `sourceLanguage`、content 或 pending。VoiceOver hint 同步说明 Pro 门槛。目标语言继续由 `selectTargetLanguage` / `canUseLanguage` 判定，英语、中文等免费目标不增加额外图片 Pro 门槛。
