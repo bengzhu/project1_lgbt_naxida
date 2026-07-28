@@ -558,13 +558,29 @@ private struct PhotoPickerCommand: View {
     }
 }
 
+private struct ImagePreviewRequestID: Hashable {
+    let revision: Int
+    let attempt: Int
+}
+
+private enum ImagePreviewPhase: Equatable {
+    case empty
+    case loading(revision: Int)
+    case ready(revision: Int)
+    case failed(revision: Int)
+}
+
 private struct ImageTranslationPreview: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var previewImage: UIImage?
+    @State private var previewRevision: Int?
+    @State private var previewAttempt = 0
+    @State private var previewPhase: ImagePreviewPhase = .empty
 
     var body: some View {
         Group {
-            if let previewImage {
+            if let previewImage,
+               previewRevision == store.imageTranslationRevision {
                 GeometryReader { geometry in
                     let fittedSize = fittedImageSize(imageSize: previewImage.size, containerSize: geometry.size)
                     let origin = CGPoint(
@@ -595,6 +611,8 @@ private struct ImageTranslationPreview: View {
                     RoundedRectangle(cornerRadius: AppTheme.Radius.surface)
                         .stroke(Color.appBorder, lineWidth: 1)
                 }
+            } else if store.imageTranslationData != nil {
+                previewStatus
             } else {
                 AppEmptyState(
                     title: "选择图片",
@@ -606,21 +624,89 @@ private struct ImageTranslationPreview: View {
                 .clipShape(.rect(cornerRadius: AppTheme.Radius.surface))
             }
         }
-        .task(id: store.imageTranslationRevision) {
+        .task(
+            id: ImagePreviewRequestID(
+                revision: store.imageTranslationRevision,
+                attempt: previewAttempt
+            )
+        ) {
             let revision = store.imageTranslationRevision
             guard let data = store.imageTranslationData else {
                 previewImage = nil
+                previewRevision = nil
+                previewPhase = .empty
                 return
             }
 
             previewImage = nil
-            guard let preview = await ImagePreviewService.makePreview(from: data),
-                  !Task.isCancelled,
+            previewRevision = nil
+            previewPhase = .loading(revision: revision)
+            guard let preview = await ImagePreviewService.makePreview(from: data) else {
+                guard !Task.isCancelled,
+                      revision == store.imageTranslationRevision else { return }
+                previewPhase = .failed(revision: revision)
+                return
+            }
+            guard !Task.isCancelled,
                   revision == store.imageTranslationRevision else {
                 return
             }
             previewImage = UIImage(cgImage: preview.cgImage)
+            previewRevision = revision
+            previewPhase = .ready(revision: revision)
         }
+    }
+
+    @ViewBuilder private var previewStatus: some View {
+        VStack(spacing: AppTheme.Spacing.control) {
+            if previewFailedForCurrentRevision {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.largeTitle)
+                    .foregroundStyle(Color.appWarning)
+                Text("预览生成失败")
+                    .font(.headline)
+                    .foregroundStyle(Color.appTextPrimary)
+                Text("原图仍保留用于 OCR 与导出，可单独重试屏幕预览。")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.appTextSecondary)
+                    .multilineTextAlignment(.center)
+                AppSecondaryButton(
+                    title: "重试预览",
+                    systemImage: "arrow.clockwise",
+                    tone: .warning,
+                    action: retryPreview
+                )
+                .frame(maxWidth: 220)
+            } else {
+                ProgressView()
+                    .controlSize(.large)
+                Text("正在准备预览")
+                    .font(.headline)
+                    .foregroundStyle(Color.appTextPrimary)
+                Text("图片已载入，正在后台生成屏幕预览。")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.appTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(AppTheme.Spacing.section)
+        .frame(maxWidth: .infinity, minHeight: 360)
+        .background(Color.appSurface)
+        .clipShape(.rect(cornerRadius: AppTheme.Radius.surface))
+        .overlay {
+            RoundedRectangle(cornerRadius: AppTheme.Radius.surface)
+                .stroke(Color.appBorder, lineWidth: 1)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var previewFailedForCurrentRevision: Bool {
+        previewPhase == .failed(revision: store.imageTranslationRevision)
+    }
+
+    private func retryPreview() {
+        previewPhase = .loading(revision: store.imageTranslationRevision)
+        previewAttempt += 1
     }
 
     private func fittedImageSize(imageSize: CGSize, containerSize: CGSize) -> CGSize {

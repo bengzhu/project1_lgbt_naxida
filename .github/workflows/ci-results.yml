@@ -338,6 +338,10 @@ jobs:
             koharu_contract_required=true
           fi
 
+          if grep -Fx 'scripts/test-v311-image-preview-state-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+
           validation_profile="${{ steps.meta.outputs.requested_validation_profile }}"
           validation_reason="manual_${validation_profile}"
           reused_full_validation_sha=""
@@ -901,6 +905,7 @@ jobs:
             python3 -B scripts/test-v38-image-entry-pro-gate-contract.py
             python3 -B scripts/test-v39-image-clear-confirmation-contract.py
             python3 -B scripts/test-v310-image-preview-downsample-contract.py
+            python3 -B scripts/test-v311-image-preview-state-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract
