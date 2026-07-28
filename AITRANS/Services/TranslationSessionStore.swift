@@ -9468,6 +9468,21 @@ final class TranslationSessionStore: ObservableObject {
         let maskPayloadGateReady = maskPayloadRequired
             && validatedBubbleMask != nil
             && validatedSegmentMask != nil
+        let stableMatching = Self.stableOneToOneExternalTextBoxShadowMatching(
+            blocks: blocks,
+            textBoxes: textBoxes,
+            bubbleInstances: bubbleInstances,
+            imageWidth: imageWidth,
+            imageHeight: imageHeight
+        )
+        let maskTopologyReport = Self.externalMaskTopologyReport(
+            blocks: blocks,
+            matching: stableMatching,
+            validatedBubbleMask: validatedBubbleMask,
+            validatedSegmentMask: validatedSegmentMask
+        )
+        let maskTopologyGateReady = maskPayloadGateReady
+            && maskTopologyReport.topologyVerdict == "complete"
         let blockAlignment = Self.externalArtifactBlockAlignment(
             blocks: blocks,
             textBoxes: textBoxes,
@@ -9475,7 +9490,8 @@ final class TranslationSessionStore: ObservableObject {
             segmentMask: segmentMask,
             segmentMaskReport: segmentMaskReport,
             validatedBubbleMask: validatedBubbleMask,
-            validatedSegmentMask: validatedSegmentMask
+            validatedSegmentMask: validatedSegmentMask,
+            matching: stableMatching
         )
         let readinessVerdict = Self.externalArtifactReadinessVerdict(
             manifestFound: manifest != nil,
@@ -9512,6 +9528,8 @@ final class TranslationSessionStore: ObservableObject {
         notes.append("segmentMaskPayloadVerdict=\(segmentMaskPayloadVerdict)")
         notes.append("maskPayloadRequired=\(maskPayloadRequired)")
         notes.append("maskPayloadGateReady=\(maskPayloadGateReady)")
+        notes.append("maskTopologyGateReady=\(maskTopologyGateReady)")
+        notes.append("maskTopologyVerdict=\(maskTopologyReport.topologyVerdict)")
         let shadowAllowed = readinessVerdict == "readyForShadowOCR"
             && activeArtifactsDirectory
             && manifest?.contractExampleOnly != true
@@ -9538,6 +9556,8 @@ final class TranslationSessionStore: ObservableObject {
             bubbleMaskPayloadVerdict: bubbleMaskPayloadVerdict,
             segmentMaskPayloadVerdict: segmentMaskPayloadVerdict,
             maskPayloadGateReady: maskPayloadGateReady,
+            maskTopologyGateReady: maskTopologyGateReady,
+            maskTopologyReport: maskTopologyReport,
             parseErrors: parseErrors,
             missingArtifacts: missingArtifacts,
             coordinateValidation: coordinateValidation,
@@ -14300,6 +14320,174 @@ final class TranslationSessionStore: ObservableObject {
         )
     }
 
+    private static func externalMaskTopologyReport(
+        blocks: [MangaOverlayProbeBlock],
+        matching: ExternalTextBoxShadowMatching,
+        validatedBubbleMask: KoharuValidatedBubbleMask?,
+        validatedSegmentMask: KoharuValidatedSegmentMask?
+    ) -> MangaOverlayExternalMaskTopologyReport {
+        let allBlockIndexes = blocks.map(\.index).sorted()
+        guard let validatedBubbleMask, let validatedSegmentMask else {
+            return MangaOverlayExternalMaskTopologyReport(
+                evaluated: false,
+                assignmentSource: "stableOneToOneExternalTextBoxShadowMatching",
+                totalBlockCount: blocks.count,
+                assignedBlockIndexes: [],
+                missingBlockIndexes: allBlockIndexes,
+                totalGlyphPixelCount: 0,
+                insideAssignedTextBoxGlyphPixelCount: 0,
+                segmentPixelsInExpectedBubble: 0,
+                foreignBubbleSegmentPixels: 0,
+                noBubbleSegmentPixels: 0,
+                orphanSegmentPixels: 0,
+                multiplyAssignedSegmentPixels: 0,
+                partitionPixelCount: 0,
+                partitionConserved: false,
+                duplicateBlockIndexes: [],
+                duplicateAssignedTextBoxIDs: [],
+                invalidExpectedBubbleBlockIndexes: [],
+                crossBubbleComponentIndexes: [],
+                orphanComponentIndexes: [],
+                assignmentLedgers: [],
+                componentLedgers: [],
+                blockers: ["validatedMaskPayloadsRequired"],
+                topologyVerdict: "notEvaluated",
+                shadowOnly: true,
+                notes: [
+                    "v2 validated BubbleMask and SegmentMask payloads are required",
+                    "topology evaluation never changes OCR, translation, rendering, blockPassed, or currentBlockSource"
+                ]
+            )
+        }
+
+        func pixelRect(_ bbox: [Double]) -> KoharuMaskPixelRect {
+            guard bbox.count == 4 else { return KoharuMaskPixelRect(x: 0, y: 0, width: 0, height: 0) }
+            let minX = Int(floor(bbox[0]))
+            let minY = Int(floor(bbox[1]))
+            let maxX = Int(ceil(bbox[0] + bbox[2]))
+            let maxY = Int(ceil(bbox[1] + bbox[3]))
+            return KoharuMaskPixelRect(
+                x: minX,
+                y: minY,
+                width: max(0, maxX - minX),
+                height: max(0, maxY - minY)
+            )
+        }
+
+        let assignments = matching.assignmentsByBlockIndex.map { blockIndex, selection in
+            KoharuMaskTopologyAssignment(
+                blockIndex: blockIndex,
+                textBoxID: selection.textBox.id,
+                rect: pixelRect(selection.textBox.bbox),
+                expectedBubbleLabel: selection.bubbleInstance?.maskValue ?? 0
+            )
+        }
+        let assignedBlockIndexes = assignments.map(\.blockIndex).sorted()
+        let assignedBlockSet = Set(assignedBlockIndexes)
+        let missingBlockIndexes = allBlockIndexes.filter { !assignedBlockSet.contains($0) }
+
+        do {
+            let evaluation = try KoharuMaskPayloadEvaluator.evaluateTopology(
+                segmentMask: validatedSegmentMask.mask,
+                bubbleMask: validatedBubbleMask.mask,
+                assignments: assignments
+            )
+            var blockers = evaluation.blockers.map(\.rawValue)
+            if blocks.isEmpty { blockers.append("emptyBlockSet") }
+            if !missingBlockIndexes.isEmpty { blockers.append("missingStableAssignment") }
+            blockers = Array(Set(blockers)).sorted()
+            let complete = blockers.isEmpty
+            return MangaOverlayExternalMaskTopologyReport(
+                evaluated: true,
+                assignmentSource: "stableOneToOneExternalTextBoxShadowMatching",
+                totalBlockCount: blocks.count,
+                assignedBlockIndexes: assignedBlockIndexes,
+                missingBlockIndexes: missingBlockIndexes,
+                totalGlyphPixelCount: evaluation.totalGlyphPixelCount,
+                insideAssignedTextBoxGlyphPixelCount: evaluation.insideAssignedBoxGlyphPixelCount,
+                segmentPixelsInExpectedBubble: evaluation.expectedBubbleGlyphPixelCount,
+                foreignBubbleSegmentPixels: evaluation.foreignBubbleGlyphPixelCount,
+                noBubbleSegmentPixels: evaluation.noBubbleGlyphPixelCount,
+                orphanSegmentPixels: evaluation.orphanGlyphPixelCount,
+                multiplyAssignedSegmentPixels: evaluation.multiplyAssignedGlyphPixelCount,
+                partitionPixelCount: evaluation.partitionPixelCount,
+                partitionConserved: evaluation.partitionConserved,
+                duplicateBlockIndexes: evaluation.duplicateBlockIndexes,
+                duplicateAssignedTextBoxIDs: evaluation.duplicateTextBoxIDs,
+                invalidExpectedBubbleBlockIndexes: evaluation.invalidExpectedBubbleBlockIndexes,
+                crossBubbleComponentIndexes: evaluation.crossBubbleComponentIndexes,
+                orphanComponentIndexes: evaluation.orphanComponentIndexes,
+                assignmentLedgers: evaluation.assignmentLedgers.map {
+                    MangaOverlayExternalMaskTopologyAssignmentLedger(
+                        blockIndex: $0.blockIndex,
+                        textBoxID: $0.textBoxID,
+                        expectedBubbleMaskValue: $0.expectedBubbleLabel,
+                        glyphPixelCount: $0.glyphPixelCount,
+                        segmentPixelsInExpectedBubble: $0.expectedBubbleGlyphPixelCount,
+                        foreignBubbleSegmentPixels: $0.foreignBubbleGlyphPixelCount,
+                        noBubbleSegmentPixels: $0.noBubbleGlyphPixelCount,
+                        componentIndexes: $0.componentIndexes,
+                        partitionConserved: $0.partitionConserved
+                    )
+                },
+                componentLedgers: evaluation.componentLedgers.map {
+                    MangaOverlayExternalMaskTopologyComponentLedger(
+                        componentIndex: $0.componentIndex,
+                        bbox: [$0.bbox.x, $0.bbox.y, $0.bbox.width, $0.bbox.height],
+                        pixelCount: $0.pixelCount,
+                        assignedBlockIndexes: $0.assignedBlockIndexes,
+                        assignedTextBoxIDs: $0.assignedTextBoxIDs,
+                        bubbleMaskValues: $0.bubbleLabels,
+                        segmentPixelsInExpectedBubble: $0.expectedBubbleGlyphPixelCount,
+                        foreignBubbleSegmentPixels: $0.foreignBubbleGlyphPixelCount,
+                        noBubbleSegmentPixels: $0.noBubbleGlyphPixelCount,
+                        orphanSegmentPixels: $0.orphanGlyphPixelCount,
+                        multiplyAssignedSegmentPixels: $0.multiplyAssignedGlyphPixelCount,
+                        partitionConserved: $0.partitionConserved,
+                        crossesBubble: $0.crossesBubble,
+                        hasOrphanGlyph: $0.hasOrphanGlyph
+                    )
+                },
+                blockers: blockers,
+                topologyVerdict: complete ? "complete" : "blocked",
+                shadowOnly: true,
+                notes: [
+                    "assignments reuse the external shadow OCR stable one-to-one matcher",
+                    "component and pixel partitions are deterministic and ground-truth-free",
+                    "topology evidence does not change OCR, translation, rendering, blockPassed, or currentBlockSource"
+                ]
+            )
+        } catch {
+            return MangaOverlayExternalMaskTopologyReport(
+                evaluated: false,
+                assignmentSource: "stableOneToOneExternalTextBoxShadowMatching",
+                totalBlockCount: blocks.count,
+                assignedBlockIndexes: assignedBlockIndexes,
+                missingBlockIndexes: missingBlockIndexes,
+                totalGlyphPixelCount: 0,
+                insideAssignedTextBoxGlyphPixelCount: 0,
+                segmentPixelsInExpectedBubble: 0,
+                foreignBubbleSegmentPixels: 0,
+                noBubbleSegmentPixels: 0,
+                orphanSegmentPixels: 0,
+                multiplyAssignedSegmentPixels: 0,
+                partitionPixelCount: 0,
+                partitionConserved: false,
+                duplicateBlockIndexes: [],
+                duplicateAssignedTextBoxIDs: [],
+                invalidExpectedBubbleBlockIndexes: [],
+                crossBubbleComponentIndexes: [],
+                orphanComponentIndexes: [],
+                assignmentLedgers: [],
+                componentLedgers: [],
+                blockers: ["topologyEvaluationFailed"],
+                topologyVerdict: "evaluationFailed",
+                shadowOnly: true,
+                notes: ["topologyEvaluationError=\(error)"]
+            )
+        }
+    }
+
     private static func externalArtifactBlockAlignment(
         blocks: [MangaOverlayProbeBlock],
         textBoxes: [MangaOverlayExternalTextBox],
@@ -14307,7 +14495,8 @@ final class TranslationSessionStore: ObservableObject {
         segmentMask: MangaOverlayExternalSegmentMaskSummary?,
         segmentMaskReport: MangaOverlaySegmentMaskReport?,
         validatedBubbleMask: KoharuValidatedBubbleMask?,
-        validatedSegmentMask: KoharuValidatedSegmentMask?
+        validatedSegmentMask: KoharuValidatedSegmentMask?,
+        matching: ExternalTextBoxShadowMatching
     ) -> [MangaOverlayExternalArtifactBlockAlignment] {
         func pixelRect(_ rect: CGRect) -> KoharuMaskPixelRect {
             let minX = Int(floor(rect.minX))
@@ -14327,15 +14516,11 @@ final class TranslationSessionStore: ObservableObject {
         )
         return blocks.map { block in
             let blockRect = rect(from: block.bbox)
-            let bestTextBox = textBoxes
-                .map { ($0, rectIoU(blockRect, rect(from: $0.bbox))) }
-                .max { $0.1 < $1.1 }
-            let bestBubble = bubbleInstances
-                .map { ($0, rectIoU(blockRect, rect(from: $0.bbox))) }
-                .max { $0.1 < $1.1 }
-            let textBoxRect = bestTextBox.map { rect(from: $0.0.bbox) }
-            let center = CGPoint(x: blockRect.midX, y: blockRect.midY)
-            let centerContained = textBoxRect?.contains(center) ?? false
+            let stableAssignment = matching.assignmentsByBlockIndex[block.index]
+            let assignedTextBox = stableAssignment?.textBox
+            let assignedBubble = stableAssignment?.bubbleInstance
+            let textBoxRect = assignedTextBox.map { rect(from: $0.bbox) }
+            let centerContained = stableAssignment?.centerContained ?? false
             let bubbleStatistics = validatedBubbleMask?.mask.statistics(in: pixelRect(blockRect))
             let segmentStatistics = validatedSegmentMask?.mask.statistics(in: pixelRect(blockRect))
             let textBoxSegmentContainmentRatio: Double?
@@ -14363,8 +14548,8 @@ final class TranslationSessionStore: ObservableObject {
             } else {
                 segmentCoverageLevel = "missing"
             }
-            let hasTextBoxMatch = (bestTextBox?.1 ?? 0) >= 0.10 || centerContained
-            let hasBubbleMatch = (bestBubble?.1 ?? 0) >= 0.10
+            let hasTextBoxMatch = stableAssignment != nil
+            let hasBubbleMatch = assignedBubble != nil
             let verdict: String
             if textBoxes.isEmpty && bubbleInstances.isEmpty {
                 verdict = "notEvaluatedMissingArtifacts"
@@ -14380,13 +14565,13 @@ final class TranslationSessionStore: ObservableObject {
             return MangaOverlayExternalArtifactBlockAlignment(
                 blockIndex: block.index,
                 blockBBox: block.bbox,
-                bestTextBoxID: hasTextBoxMatch ? bestTextBox?.0.id : nil,
-                bestTextBoxIoU: bestTextBox?.1,
+                bestTextBoxID: hasTextBoxMatch ? assignedTextBox?.id : nil,
+                bestTextBoxIoU: stableAssignment?.iou,
                 textBoxCenterContained: centerContained,
-                bestBubbleInstanceID: hasBubbleMatch ? bestBubble?.0.id : nil,
-                bestBubbleIoU: bestBubble?.1,
+                bestBubbleInstanceID: hasBubbleMatch ? assignedBubble?.id : nil,
+                bestBubbleIoU: assignedBubble.map { rectIoU(blockRect, rect(from: $0.bbox)) },
                 currentBubbleID: block.bubbleID,
-                bestExternalBubbleMaskValue: hasBubbleMatch ? bestBubble?.0.maskValue : nil,
+                bestExternalBubbleMaskValue: hasBubbleMatch ? assignedBubble?.maskValue : nil,
                 bubbleMajorityMaskValue: bubbleStatistics?.majorityNonzeroLabel,
                 bubblePixelCoverageRatio: bubbleStatistics?.majorityNonzeroCoverageRatio,
                 segmentPixelCoverageRatio: segmentStatistics?.nonzeroCoverageRatio,
@@ -14394,7 +14579,7 @@ final class TranslationSessionStore: ObservableObject {
                 segmentCoverageLevel: segmentCoverageLevel,
                 alignmentVerdict: verdict,
                 notes: [
-                    "alignment is shadow-only and uses IoU/center containment without ground truth",
+                    "alignment is shadow-only and reuses stableOneToOneExternalTextBoxShadowMatching without ground truth",
                     "pixel payload statistics do not change OCR, translation, rendering, blockPassed, or currentBlockSource"
                 ]
             )
@@ -22417,6 +22602,75 @@ final class TranslationSessionStore: ObservableObject {
             signal("pixelCoverageBlockedBlocks", joined(externalMaskPixelCoverageBlockedBlocks), source: "externalArtifactReadinessReport.blockAlignment"),
             signal("minimumTextBoxSegmentContainmentRatio", "0.5", source: "externalArtifactReadinessReport.blockAlignment")
         ]
+        let externalMaskTopologyReport = externalArtifactReadinessReport?.maskTopologyReport
+        let externalMaskTopologyBlockedBlocks = uniqueSorted(
+            (externalMaskTopologyReport?.missingBlockIndexes ?? [])
+            + (externalMaskTopologyReport?.invalidExpectedBubbleBlockIndexes ?? [])
+            + (externalMaskTopologyReport?.assignmentLedgers.filter {
+                $0.glyphPixelCount <= 0
+                    || $0.foreignBubbleSegmentPixels > 0
+                    || $0.noBubbleSegmentPixels > 0
+                    || !$0.partitionConserved
+            }.map(\.blockIndex) ?? [])
+        )
+        let externalMaskTopologyComplete = externalReady
+            && externalMaskPayloadValidated
+            && externalArtifactReadinessReport?.maskTopologyGateReady == true
+            && externalMaskTopologyReport?.evaluated == true
+            && externalMaskTopologyReport?.topologyVerdict == "complete"
+            && externalMaskTopologyReport?.assignedBlockIndexes == allBlockIndexes
+            && externalMaskTopologyReport?.missingBlockIndexes.isEmpty == true
+            && externalMaskTopologyReport?.duplicateBlockIndexes.isEmpty == true
+            && externalMaskTopologyReport?.duplicateAssignedTextBoxIDs.isEmpty == true
+            && externalMaskTopologyReport?.crossBubbleComponentIndexes.isEmpty == true
+            && externalMaskTopologyReport?.orphanComponentIndexes.isEmpty == true
+            && externalMaskTopologyReport?.partitionConserved == true
+        let externalMaskTopologyStatus: String
+        if externalArtifactReadinessReport?.manifestFound != true {
+            externalMaskTopologyStatus = "notEvaluatedUntilExternalArtifactReady"
+        } else if !externalMaskPayloadValidated {
+            externalMaskTopologyStatus = "blockedByInvalidOrMissingPixelPayload"
+        } else if !externalReady {
+            externalMaskTopologyStatus = "blockedByExternalArtifactReadiness"
+        } else if externalMaskTopologyReport?.evaluated != true {
+            externalMaskTopologyStatus = "blockedByMissingTopologyEvaluation"
+        } else if !externalMaskTopologyComplete {
+            externalMaskTopologyStatus = "blockedByMaskTopologyLinkage"
+        } else {
+            externalMaskTopologyStatus = "closedReportOnly"
+        }
+        let externalMaskTopologyNextAction: String
+        if externalArtifactReadinessReport?.manifestFound != true {
+            externalMaskTopologyNextAction = "provideRealKoharuArtifactsBeforeMaskTopologyGate"
+        } else if !externalMaskPayloadValidated {
+            externalMaskTopologyNextAction = "provideValidatedV2MaskPixelPayloads"
+        } else if !externalReady {
+            externalMaskTopologyNextAction = "provideActiveNonFixtureKoharuArtifacts"
+        } else if externalMaskTopologyReport?.evaluated != true {
+            externalMaskTopologyNextAction = "runExternalMaskTopologyEvaluation"
+        } else if !externalMaskTopologyComplete {
+            externalMaskTopologyNextAction = "fixExternalTextBoxBubbleSegmentTopology"
+        } else {
+            externalMaskTopologyNextAction = "keepExternalMaskTopologyReportOnly"
+        }
+        let externalMaskTopologyGateStatus = externalArtifactReadinessReport?.manifestFound == true
+            ? (externalMaskTopologyComplete ? "passed" : "blocked")
+            : "open"
+        let externalMaskTopologyDecisionSignals = [
+            signal("maskTopologyGateReady", externalArtifactReadinessReport.map { String($0.maskTopologyGateReady == true) } ?? "nil", source: "externalArtifactReadinessReport"),
+            signal("topologyVerdict", externalMaskTopologyReport?.topologyVerdict ?? "reportMissing", source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("assignmentSource", externalMaskTopologyReport?.assignmentSource ?? "nil", source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("assignedBlockIndexes", joined(externalMaskTopologyReport?.assignedBlockIndexes ?? []), source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("missingBlockIndexes", joined(externalMaskTopologyReport?.missingBlockIndexes ?? []), source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("duplicateAssignedTextBoxIDs", (externalMaskTopologyReport?.duplicateAssignedTextBoxIDs ?? []).joined(separator: ","), source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("foreignBubbleSegmentPixels", String(externalMaskTopologyReport?.foreignBubbleSegmentPixels ?? 0), source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("orphanSegmentPixels", String(externalMaskTopologyReport?.orphanSegmentPixels ?? 0), source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("multiplyAssignedSegmentPixels", String(externalMaskTopologyReport?.multiplyAssignedSegmentPixels ?? 0), source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("crossBubbleComponentIndexes", joined(externalMaskTopologyReport?.crossBubbleComponentIndexes ?? []), source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("orphanComponentIndexes", joined(externalMaskTopologyReport?.orphanComponentIndexes ?? []), source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("partitionConserved", String(externalMaskTopologyReport?.partitionConserved == true), source: "externalArtifactReadinessReport.maskTopologyReport"),
+            signal("topologyBlockers", (externalMaskTopologyReport?.blockers ?? []).joined(separator: ","), source: "externalArtifactReadinessReport.maskTopologyReport")
+        ]
         let externalContractDryRunReady = nativeArtifactContractDryRunExecuted
             && nativeArtifactContractDryRunVerdict == "activeArtifactsReadyForShadowOCR"
             && koharuNativeArtifactContractDryRunReport?.dryRunOnly == true
@@ -22674,7 +22928,7 @@ final class TranslationSessionStore: ObservableObject {
             stage("Inpainted", artifact: "Inpainted", current: "glyph erase/background fill proxy", status: "proxyStableReportOnly", proxyOnly: true, realAvailable: false, reports: ["segmentMaskProxyCoverageScoreboardReport", "blocks.backgroundFill"], affected: segmentMaskProxyCoverageScoreboardReport?.backgroundFillAppliedBlocks ?? [], firstBlocking: "none", closed: segmentMaskProxyCoverageScoreboardReport == nil ? [] : ["WI-segmentmask-proxy-coverage-scorecard"], blocked: [], nextAction: "keepReportOnly", decisions: [signal("inpaintingImplemented", "false", source: "segmentMaskProxyCoverageScoreboardReport.cleanupLedgers")], mustNot: ["doNotImplementInpaintingInThisReport"]),
             stage("RenderedSprites", artifact: "RenderedSprites", current: "safeLayoutRect overlay text renderer plus v1.30 render lock", status: renderLockStatus == "closedReportOnly" ? "renderLockedReportOnly" : "renderIssueDetected", proxyOnly: true, realAvailable: false, reports: ["blocks.renderDiagnostics", "koharuRenderRegressionLockReport"], affected: renderLockStatus == "closedReportOnly" ? renderRegressionLockBlocks : renderIssueBlocks, firstBlocking: renderLockStatus == "closedReportOnly" ? "none" : "RenderedSprites", closed: renderLockStatus == "closedReportOnly" ? ["WI-render-regression-lock"] : [], blocked: renderLockStatus == "closedReportOnly" ? [] : ["WI-render-regression-lock"], nextAction: renderLockNextAction, decisions: [signal("renderRegressionLockBlocks", joined(renderRegressionLockBlocks), source: "blocks.renderDiagnostics"), signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport")], mustNot: ["doNotChangeOverlayRendererInConvergenceReport", "doNotPromoteAITRANSRendererAsKoharuRenderedSprites"]),
             stage("FinalRender", artifact: "FinalRender", current: "debug boxes and translated overlay PNG plus v1.30 output file ledger", status: renderLockStatus == "closedReportOnly" ? "finalRenderLockedReportOnly" : "renderIssueDetected", proxyOnly: true, realAvailable: false, reports: ["outputFiles", "blocks.renderDiagnostics", "koharuRenderRegressionLockReport"], affected: renderLockStatus == "closedReportOnly" ? renderRegressionLockBlocks : renderIssueBlocks, firstBlocking: renderLockStatus == "closedReportOnly" ? "none" : "FinalRender", closed: renderLockStatus == "closedReportOnly" ? ["WI-render-regression-lock"] : [], blocked: renderLockStatus == "closedReportOnly" ? [] : ["WI-render-regression-lock"], nextAction: renderLockNextAction, decisions: [signal("renderTextTruncatedBlocks", joined(diagnostics.renderTextTruncatedBlocks), source: "diagnostics"), signal("renderCollisionUnresolvedBlocks", joined(diagnostics.renderCollisionUnresolvedBlocks), source: "diagnostics"), signal("renderLockVerdict", renderLockVerdict, source: "koharuRenderRegressionLockReport")], mustNot: ["doNotChangePNGRenderingInConvergenceReport", "doNotTreatOutputFileLedgerAsPixelProof"]),
-            stage("ExternalArtifacts", artifact: "ExternalArtifacts", current: "test/koharu_artifacts readiness gate + mask pixel payload + identity reconciliation + shadow OCR coverage + orientation-aware shadow OCR ledger", status: externalReady ? (!externalMaskPixelPayloadComplete ? "externalMaskPixelPayloadBlocked" : (!externalShadowCoverageBlockedBlocks.isEmpty ? "externalShadowOCRCoverageBlocked" : (externalOrientationBlockedBlocks.isEmpty ? "nativeReady" : "orientationShadowPathBlocked"))) : "externalOptionalMissing", proxyOnly: false, realAvailable: externalReady, reports: ["externalArtifactReadinessReport", "externalTextBoxShadowOCRReport", "koharuNativeArtifactContractDryRunReport", "koharuArtifactIdentityReconciliationReport"], affected: uniqueSorted(needsRealArtifactBlocks + externalMaskPixelCoverageBlockedBlocks + externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), firstBlocking: externalReady ? (externalMaskPixelPayloadComplete && externalShadowCoverageBlockedBlocks.isEmpty && externalOrientationBlockedBlocks.isEmpty ? "none" : "ExternalArtifacts") : "ExternalArtifacts", closed: [], blocked: externalReady ? sortedUniqueStrings((externalMaskPixelPayloadComplete ? [] : ["WI-external-mask-pixel-payload"]) + (externalShadowCoverageBlockedBlocks.isEmpty ? [] : ["WI-external-textbox-shadow-ocr-coverage"]) + (externalOrientationBlockedBlocks.isEmpty ? [] : ["WI-external-textbox-orientation-shadow-path"]) + (externalIdentityReconciliationReady ? [] : ["WI-koharu-artifact-identity-reconciliation"])) : ["WI-external-artifact-optional-handoff", "WI-koharu-native-artifact-contract-dry-run", "WI-koharu-artifact-identity-reconciliation", "WI-external-mask-pixel-payload"], nextAction: externalReady ? (!externalMaskPixelPayloadComplete ? externalMaskPixelPayloadNextAction : (!externalShadowCoverageBlockedBlocks.isEmpty ? externalShadowCoverageNextAction : externalOrientationNextAction)) : nativeArtifactContractDryRunNextAction, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"), signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport"), signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport")] + externalMaskPixelPayloadDecisionSignals + externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals, mustNot: ["doNotCreateOrCopyActiveExternalArtifact", "doNotTreatMaskSummariesAsPixelPayload", "doNotTreatReadyArtifactAsClosedWithoutAppReceiptCIIdentityReconciliation", "doNotTreatReadyArtifactAsClosedWithoutShadowOCRCandidates", "doNotPromoteVerticalOrLinePolygonTextBoxWithoutCompleteOrientationShadowPath"])
+            stage("ExternalArtifacts", artifact: "ExternalArtifacts", current: "test/koharu_artifacts readiness gate + mask pixel payload/topology + identity reconciliation + shadow OCR coverage + orientation-aware shadow OCR ledger", status: externalReady ? (!externalMaskPixelPayloadComplete ? "externalMaskPixelPayloadBlocked" : (!externalMaskTopologyComplete ? "externalMaskTopologyBlocked" : (!externalShadowCoverageBlockedBlocks.isEmpty ? "externalShadowOCRCoverageBlocked" : (externalOrientationBlockedBlocks.isEmpty ? "nativeReady" : "orientationShadowPathBlocked")))) : "externalOptionalMissing", proxyOnly: false, realAvailable: externalReady, reports: ["externalArtifactReadinessReport", "externalTextBoxShadowOCRReport", "koharuNativeArtifactContractDryRunReport", "koharuArtifactIdentityReconciliationReport"], affected: uniqueSorted(needsRealArtifactBlocks + externalMaskPixelCoverageBlockedBlocks + externalMaskTopologyBlockedBlocks + externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), firstBlocking: externalReady ? (externalMaskPixelPayloadComplete && externalMaskTopologyComplete && externalShadowCoverageBlockedBlocks.isEmpty && externalOrientationBlockedBlocks.isEmpty ? "none" : "ExternalArtifacts") : "ExternalArtifacts", closed: [], blocked: externalReady ? sortedUniqueStrings((externalMaskPixelPayloadComplete ? [] : ["WI-external-mask-pixel-payload"]) + (externalMaskTopologyComplete ? [] : ["WI-external-mask-topology-linkage"]) + (externalShadowCoverageBlockedBlocks.isEmpty ? [] : ["WI-external-textbox-shadow-ocr-coverage"]) + (externalOrientationBlockedBlocks.isEmpty ? [] : ["WI-external-textbox-orientation-shadow-path"]) + (externalIdentityReconciliationReady ? [] : ["WI-koharu-artifact-identity-reconciliation"])) : ["WI-external-artifact-optional-handoff", "WI-koharu-native-artifact-contract-dry-run", "WI-koharu-artifact-identity-reconciliation", "WI-external-mask-pixel-payload", "WI-external-mask-topology-linkage"], nextAction: externalReady ? (!externalMaskPixelPayloadComplete ? externalMaskPixelPayloadNextAction : (!externalMaskTopologyComplete ? externalMaskTopologyNextAction : (!externalShadowCoverageBlockedBlocks.isEmpty ? externalShadowCoverageNextAction : externalOrientationNextAction))) : nativeArtifactContractDryRunNextAction, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport"), signal("externalTextBoxesShadowOCRAllowed", String(externalReady), source: "externalArtifactReadinessReport"), signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport")] + externalMaskPixelPayloadDecisionSignals + externalMaskTopologyDecisionSignals + externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals, mustNot: ["doNotCreateOrCopyActiveExternalArtifact", "doNotTreatMaskSummariesAsPixelPayload", "doNotTreatMaskTopologyAsCompleteWithoutStableOneToOneAssignment", "doNotTreatReadyArtifactAsClosedWithoutAppReceiptCIIdentityReconciliation", "doNotTreatReadyArtifactAsClosedWithoutShadowOCRCandidates", "doNotPromoteVerticalOrLinePolygonTextBoxWithoutCompleteOrientationShadowPath"])
         ]
 
         func workItem(
@@ -22740,6 +22994,7 @@ final class TranslationSessionStore: ObservableObject {
             workItem("WI-koharu-native-artifact-contract-dry-run", title: "Koharu Native Artifact contract dry-run", status: nativeArtifactContractDryRunStatus, sourceReport: nativeArtifactContractDryRunExecuted ? "koharuNativeArtifactContractDryRunReport" : "koharuArtifactConvergenceReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: nativeArtifactContractDryRunBlocks, version: nativeArtifactContractDryRunExecuted ? "v1.47" : nil, blockers: nativeArtifactContractDryRunBlockers, nextAction: nativeArtifactContractDryRunNextAction, ciFast: true, full: false, external: true, decisions: [signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("requiredFileCount", koharuNativeArtifactContractDryRunReport.map { String($0.requiredFileCount) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("contractGateCount", koharuNativeArtifactContractDryRunReport.map { String($0.contractGateCount) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport")]),
             workItem("WI-koharu-artifact-identity-reconciliation", title: "Koharu artifact identity reconciliation", status: artifactIdentityReconciliationStatus, sourceReport: artifactIdentityReconciliationExecuted ? "koharuArtifactIdentityReconciliationReport" : "koharuArtifactConvergenceReport", stages: ["ExternalArtifacts", "CIReview"], blocks: artifactIdentityReconciliationBlocks, version: artifactIdentityReconciliationExecuted ? "v1.68" : nil, blockers: artifactIdentityReconciliationBlockers, nextAction: artifactIdentityReconciliationNextAction, ciFast: true, full: true, external: true, decisions: [signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport"), signal("readyForCIManifestComparison", koharuArtifactIdentityReconciliationReport.map { String($0.readyForCIManifestComparison) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("manualCIComparisonRequired", koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("fileRowCount", koharuArtifactIdentityReconciliationReport.map { String($0.fileRowCount) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport")]),
             workItem("WI-external-mask-pixel-payload", title: "External BubbleMask and SegmentMask pixel payload", status: externalMaskPixelPayloadStatus, sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: externalMaskPixelPayloadComplete ? [] : (externalMaskPixelCoverageBlockedBlocks.isEmpty ? allBlockIndexes : externalMaskPixelCoverageBlockedBlocks), version: externalMaskPayloadValidated ? "v3.2" : nil, blockers: externalMaskPixelPayloadComplete ? [] : ["v2 BubbleMask and SegmentMask payloads must validate and provide trustworthy per-block pixel coverage"], nextAction: externalMaskPixelPayloadNextAction, ciFast: true, full: true, external: true, decisions: externalMaskPixelPayloadDecisionSignals),
+            workItem("WI-external-mask-topology-linkage", title: "External TextBox BubbleMask SegmentMask topology linkage", status: externalMaskTopologyStatus, sourceReport: "externalArtifactReadinessReport.maskTopologyReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: externalMaskTopologyComplete ? [] : (externalMaskTopologyBlockedBlocks.isEmpty ? allBlockIndexes : externalMaskTopologyBlockedBlocks), version: externalMaskTopologyReport?.evaluated == true ? "v3.3" : nil, blockers: externalMaskTopologyComplete ? [] : ["stable one-to-one TextBox assignments must partition every SegmentMask glyph pixel into exactly one expected BubbleMask label without foreign, orphan, duplicate, or cross-Bubble components"], nextAction: externalMaskTopologyNextAction, ciFast: true, full: true, external: true, decisions: externalMaskTopologyDecisionSignals),
             workItem("WI-external-textbox-shadow-ocr-coverage", title: "External TextBox shadow OCR coverage", status: externalShadowCoverageWorkItemStatus, sourceReport: "externalTextBoxShadowOCRReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "OcrText"], blocks: externalShadowCoverageBlockedBlocks, version: externalTextBoxShadowOCRReport == nil ? nil : "v2.1", blockers: externalShadowCoverageBlockers, nextAction: externalShadowCoverageNextAction, ciFast: true, full: true, external: true, decisions: externalShadowCoverageDecisionSignals),
             workItem("WI-external-textbox-orientation-shadow-path", title: "External TextBox orientation shadow path", status: externalOrientationWorkItemStatus, sourceReport: "externalTextBoxShadowOCRReport", stages: ["ExternalArtifacts", "TextBoxes", "OcrText"], blocks: uniqueSorted(externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), version: externalTextBoxShadowOCRReport == nil ? nil : "v1.65", blockers: externalOrientationBlockers, nextAction: externalOrientationNextAction, ciFast: true, full: true, external: true, decisions: externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals),
             workItem("WI-external-artifact-optional-handoff", title: "External Koharu artifact optional handoff", status: externalReady ? "openExternalOptionalHandoff" : "blockedByMissingRealArtifact", sourceReport: "externalArtifactReadinessReport", stages: ["ExternalArtifacts", "TextBoxes", "BubbleMask", "SegmentMask"], blocks: needsRealArtifactBlocks, version: nil, blockers: externalReady ? [] : ["test/koharu_artifacts not ready: \(externalMissing)"], nextAction: externalReady ? "keepReportOnly" : "recordExternalArtifactOptionalHandoff", ciFast: true, full: false, external: true, decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")])
@@ -22835,6 +23090,7 @@ final class TranslationSessionStore: ObservableObject {
             gate("G-koharu-native-artifact-contract-dry-run-executed", name: "Koharu Native Artifact contract dry-run executed", scope: "ExternalArtifacts", status: nativeArtifactContractDryRunExecuted ? (nativeArtifactContractDryRunStatus == "blockedByUnsafeActiveExport" ? "blocked" : (nativeArtifactContractDryRunStatus == "blockedByMissingRealArtifact" ? "warning" : "passed")) : "open", threshold: "koharuNativeArtifactContractDryRunReport.enabled=true with requiredFileCount>=4, contractGateCount>=6, dryRunOnly=true, activeExportAllowed=false, and no active artifact mutation", affected: nativeArtifactContractDryRunBlocks, failureMeans: "Native Artifact contract dry-run is missing, unsafe for active export, or hides missing real Koharu artifact files", action: nativeArtifactContractDryRunNextAction, decisions: [signal("contractDryRunVerdict", nativeArtifactContractDryRunVerdict, source: "koharuNativeArtifactContractDryRunReport"), signal("dryRunOnly", koharuNativeArtifactContractDryRunReport.map { String($0.dryRunOnly) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("activeExportAllowed", koharuNativeArtifactContractDryRunReport.map { String($0.activeExportAllowed) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport"), signal("groundTruthUsedForDecision", koharuNativeArtifactContractDryRunReport.map { String($0.groundTruthUsedForDecision) } ?? "nil", source: "koharuNativeArtifactContractDryRunReport")]),
             gate("G-koharu-artifact-identity-reconciliation-ready", name: "Koharu artifact identity reconciliation ready", scope: "ExternalArtifacts/CIReview", status: artifactIdentityReconciliationReady ? "passed" : (externalReady ? "warning" : "open"), threshold: "koharuArtifactIdentityReconciliationReport.enabled=true with SourceImage plus four artifact file rows ready for ci-artifact-manifest.koharuArtifactValidationIdentitySummary size/SHA256 comparison", affected: artifactIdentityReconciliationBlocks, failureMeans: "convergence treats injected artifact handoff as closed without a machine-readable App receipt to CI manifest identity reconciliation ledger", action: artifactIdentityReconciliationNextAction, decisions: [signal("identityReconciliationVerdict", artifactIdentityReconciliationVerdict, source: "koharuArtifactIdentityReconciliationReport"), signal("readyForCIManifestComparison", koharuArtifactIdentityReconciliationReport.map { String($0.readyForCIManifestComparison) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport"), signal("manualCIComparisonRequired", koharuArtifactIdentityReconciliationReport.map { String($0.manualCIComparisonRequired) } ?? "nil", source: "koharuArtifactIdentityReconciliationReport")]),
             gate("G-external-mask-pixel-payload", name: "External mask pixel payload", scope: "ExternalArtifacts/TextBoxes/BubbleMask/SegmentMask", status: externalMaskPixelPayloadGateStatus, threshold: "v2 BubbleMask and SegmentMask RLE payloads must validate; every block must align to the majority Bubble mask label, contain nonzero Bubble and Segment pixels, and keep at least 50% of block Segment pixels inside the matched TextBox", affected: externalMaskPixelPayloadComplete ? [] : (externalMaskPixelCoverageBlockedBlocks.isEmpty ? allBlockIndexes : externalMaskPixelCoverageBlockedBlocks), failureMeans: "convergence treats summary-only, malformed, inactive, fixture-only, or spatially untrusted mask data as complete pixel evidence", action: externalMaskPixelPayloadNextAction, decisions: externalMaskPixelPayloadDecisionSignals),
+            gate("G-external-mask-topology-linkage", name: "External mask topology linkage", scope: "ExternalArtifacts/TextBoxes/BubbleMask/SegmentMask", status: externalMaskTopologyGateStatus, threshold: "v2 validated masks must reuse stable one-to-one external shadow OCR TextBox assignments; all blocks and SegmentMask glyph pixels must have one expected BubbleMask owner with conserved partitions, no duplicate assignments, and no foreign, orphan, overlapping, or cross-Bubble components", affected: externalMaskTopologyComplete ? [] : (externalMaskTopologyBlockedBlocks.isEmpty ? allBlockIndexes : externalMaskTopologyBlockedBlocks), failureMeans: "convergence treats independently selected TextBoxes/Bubbles or incomplete pixel topology as safe downstream mask evidence", action: externalMaskTopologyNextAction, decisions: externalMaskTopologyDecisionSignals),
             gate("G-external-textbox-shadow-ocr-coverage", name: "External TextBox shadow OCR coverage", scope: "ExternalArtifacts/TextBoxes/BubbleMask/OcrText", status: externalShadowCoverageGateStatus, threshold: "ready external artifacts require stable one-to-one TextBox assignment, a complete succeeded/failed/skipped block partition, no duplicate assigned TextBox IDs, successfulCoverageRatio == 1, geometryCoverageRatio == 1, geometryCoverageVerdict == complete, no weak geometry, and no unknown Bubble alignment before ExternalArtifacts can be considered closed", affected: externalShadowCoverageBlockedBlocks, failureMeans: "convergence treats partial, duplicate, or geometrically untrusted external TextBox shadow OCR evidence as complete block coverage", action: externalShadowCoverageNextAction, decisions: externalShadowCoverageDecisionSignals),
             gate("G-external-textbox-orientation-shadow-path", name: "External TextBox orientation shadow path", scope: "ExternalArtifacts/TextBoxes/OcrText", status: externalOrientationGateStatus, threshold: "vertical, rotated, arbitrary-rotation, or line-polygon external TextBoxes must not be treated as fully closed until external shadow OCR coverage exists, orientation OCR is executed, and unsupported orientation features are surfaced", affected: uniqueSorted(externalShadowCoverageBlockedBlocks + externalOrientationBlockedBlocks), failureMeans: "convergence hides missing coverage or unsupported external TextBox orientation-aware shadow OCR work", action: externalOrientationNextAction, decisions: externalShadowCoverageDecisionSignals + externalOrientationDecisionSignals),
             gate("G-external-artifact-optional", name: "External artifact optional", scope: "ExternalArtifacts", status: externalReady ? "ready" : "warning", threshold: "missing active artifacts do not block native convergence report", affected: needsRealArtifactBlocks, failureMeans: "missing external artifacts are treated as fake detector output or hard failure", action: "recordExternalArtifactOptionalHandoff", decisions: [signal("readinessVerdict", externalMissing, source: "externalArtifactReadinessReport")]),

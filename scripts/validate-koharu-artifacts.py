@@ -62,7 +62,7 @@ REQUIRED_ARTIFACT_FILES = [
         "kind": "manifest",
         "required": True,
         "notes": [
-            "schemaVersion v1 is accepted as summary-only; v2 is required for a ready mask payload gate",
+            "schemaVersion v1 is accepted as summary-only; v2 is required for ready mask payload and topology gates",
             "sourceImage must be test/1.png",
             "sourceImageSHA256 must match the current repository test/1.png",
             "coordinateSpace must be originalImageTopLeftPixels",
@@ -81,6 +81,7 @@ REQUIRED_ARTIFACT_FILES = [
             "sourceDirection, when present, must be horizontal/vertical/vertical-rl/vertical-lr/unknown",
             "rotationDegrees or rotationDeg, when present, must be finite and within [-360, 360]",
             "linePolygons, when present, must contain point pairs within source image bounds and their owning TextBox bbox tolerance",
+            "v2 topology requires each TextBox to own nonzero SegmentMask glyph pixels from exactly one BubbleMask label without component overlap",
         ],
     },
     {
@@ -1005,6 +1006,7 @@ def validate_bubble_mask_payload(
     image_width: int,
     image_height: int,
     payload_errors: list[str],
+    decoded_results: list[tuple[int, int, list[int]]] | None = None,
 ) -> dict[str, Any]:
     summary: dict[str, Any] = {"decodedPixelCount": None, "instanceCount": len(bubbles)}
     if not isinstance(payload, dict):
@@ -1055,15 +1057,19 @@ def validate_bubble_mask_payload(
         pixel_count = strict_int(bubble.get("pixelCount"))
         if pixel_count != len(offsets):
             payload_errors.append(f"bubbleMask:{bubble_id}:pixelCountMismatch:{pixel_count}:{len(offsets)}")
+    if decoded_results is not None:
+        decoded_results.append(decoded_result)
     return summary
 
 
-def four_neighbor_component_count(decoded: list[int], width: int) -> int:
+def four_neighbor_components(decoded: list[int], width: int) -> list[set[int]]:
     glyph_pixels = {index for index, value in enumerate(decoded) if value == 1}
-    component_count = 0
+    components: list[set[int]] = []
     while glyph_pixels:
-        component_count += 1
-        pending = [glyph_pixels.pop()]
+        start = min(glyph_pixels)
+        glyph_pixels.remove(start)
+        component = {start}
+        pending = [start]
         while pending:
             offset = pending.pop()
             x = offset % width
@@ -1075,8 +1081,14 @@ def four_neighbor_component_count(decoded: list[int], width: int) -> int:
             for neighbor in neighbors:
                 if neighbor in glyph_pixels:
                     glyph_pixels.remove(neighbor)
+                    component.add(neighbor)
                     pending.append(neighbor)
-    return component_count
+        components.append(component)
+    return components
+
+
+def four_neighbor_component_count(decoded: list[int], width: int) -> int:
+    return len(four_neighbor_components(decoded, width))
 
 
 def validate_segment_mask_payload(
@@ -1084,6 +1096,7 @@ def validate_segment_mask_payload(
     image_width: int,
     image_height: int,
     payload_errors: list[str],
+    decoded_results: list[tuple[int, int, list[int]]] | None = None,
 ) -> dict[str, Any]:
     summary: dict[str, Any] = {
         "decodedPixelCount": None,
@@ -1121,7 +1134,132 @@ def validate_segment_mask_payload(
         payload_errors.append(
             f"segmentMask:connectedComponentCountMismatch:{declared_component_count}:{component_count}"
         )
+    if decoded_results is not None:
+        decoded_results.append(decoded_result)
     return summary
+
+
+def pixel_bounds_in_bbox(bbox: list[float], width: int, height: int) -> tuple[int, int, int, int]:
+    min_x = max(0, min(width, math.floor(bbox[0])))
+    min_y = max(0, min(height, math.floor(bbox[1])))
+    max_x = max(0, min(width, math.ceil(bbox[0] + bbox[2])))
+    max_y = max(0, min(height, math.ceil(bbox[1] + bbox[3])))
+    return min_x, min_y, max_x, max_y
+
+
+def pixel_offset_in_bounds(offset: int, width: int, bounds: tuple[int, int, int, int]) -> bool:
+    x = offset % width
+    y = offset // width
+    min_x, min_y, max_x, max_y = bounds
+    return min_x <= x < max_x and min_y <= y < max_y
+
+
+def summarize_mask_topology(
+    text_boxes: list[dict[str, Any]],
+    bubble_decoded_result: tuple[int, int, list[int]] | None,
+    segment_decoded_result: tuple[int, int, list[int]] | None,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    if bubble_decoded_result is None or segment_decoded_result is None:
+        return None, ["maskTopology:validatedPayloadsRequired"]
+    bubble_width, bubble_height, bubble_pixels = bubble_decoded_result
+    segment_width, segment_height, segment_pixels = segment_decoded_result
+    if bubble_width != segment_width or bubble_height != segment_height:
+        return None, ["maskTopology:maskDimensionsMismatch"]
+
+    components = four_neighbor_components(segment_pixels, segment_width)
+    all_glyph_offsets = [offset for offset, value in enumerate(segment_pixels) if value == 1]
+    component_owners: dict[int, list[str]] = {index: [] for index in range(len(components))}
+    ledgers: list[dict[str, Any]] = []
+    topology_errors: list[str] = []
+    if not text_boxes:
+        topology_errors.append("maskTopology:textBoxesMissing")
+    if not components:
+        topology_errors.append("maskTopology:glyphPixelsMissing")
+
+    ordered_text_boxes = sorted(
+        [
+            (
+            (text_box.get("id") if isinstance(text_box.get("id"), str) else f"index-{index}"),
+            text_box,
+            )
+            for index, text_box in enumerate(text_boxes)
+        ],
+        key=lambda item: item[0],
+    )
+    for text_box_id, text_box in ordered_text_boxes:
+        bbox = bbox_for(text_box)
+        if bbox is None:
+            continue
+        bounds = pixel_bounds_in_bbox(bbox, segment_width, segment_height)
+        glyph_offsets = [
+            offset
+            for offset in all_glyph_offsets
+            if pixel_offset_in_bounds(offset, segment_width, bounds)
+        ]
+        bubble_counts: dict[int, int] = {}
+        orphan_pixels = 0
+        for offset in glyph_offsets:
+            bubble_label = bubble_pixels[offset]
+            if bubble_label == 0:
+                orphan_pixels += 1
+            else:
+                bubble_counts[bubble_label] = bubble_counts.get(bubble_label, 0) + 1
+
+        ordered_bubbles = sorted(bubble_counts.items(), key=lambda item: (-item[1], item[0]))
+        expected_bubble = ordered_bubbles[0][0] if ordered_bubbles else None
+        ambiguous = len(ordered_bubbles) > 1 and ordered_bubbles[0][1] == ordered_bubbles[1][1]
+        expected_pixels = bubble_counts.get(expected_bubble, 0) if expected_bubble is not None else 0
+        foreign_pixels = sum(bubble_counts.values()) - expected_pixels
+        component_ids = [
+            component_id
+            for component_id, component in enumerate(components)
+            if any(pixel_offset_in_bounds(offset, segment_width, bounds) for offset in component)
+        ]
+        for component_id in component_ids:
+            component_owners[component_id].append(text_box_id)
+
+        reasons: list[str] = []
+        if not glyph_offsets:
+            reasons.append("segmentPixelsMissing")
+        if expected_bubble is None:
+            reasons.append("expectedBubbleMissing")
+        if ambiguous:
+            reasons.append("expectedBubbleAmbiguous")
+        if foreign_pixels:
+            reasons.append("foreignBubbleSegmentPixels")
+        if orphan_pixels:
+            reasons.append("orphanSegmentPixels")
+        topology_errors.extend(f"maskTopology:{text_box_id}:{reason}" for reason in reasons)
+        ledgers.append({
+            "textBoxID": text_box_id,
+            "expectedBubbleMaskValue": expected_bubble,
+            "segmentPixelCount": len(glyph_offsets),
+            "segmentPixelsInExpectedBubble": expected_pixels,
+            "foreignBubbleSegmentPixels": foreign_pixels,
+            "orphanSegmentPixels": orphan_pixels,
+            "componentIDs": component_ids,
+            "topologyVerdict": "complete" if not reasons else "blocked",
+            "failureReasons": reasons,
+        })
+
+    duplicate_components = sorted(
+        component_id for component_id, owners in component_owners.items() if len(set(owners)) > 1
+    )
+    unassigned_components = sorted(
+        component_id for component_id, owners in component_owners.items() if not owners
+    )
+    if duplicate_components:
+        topology_errors.append("maskTopology:duplicateComponentAssignment")
+    if unassigned_components:
+        topology_errors.append("maskTopology:unassignedComponents")
+    return {
+        "textBoxLedgers": ledgers,
+        "componentCount": len(components),
+        "duplicateAssignedComponentIDs": duplicate_components,
+        "unassignedComponentIDs": unassigned_components,
+        "partitionConserved": sum(len(component) for component in components) == sum(value == 1 for value in segment_pixels),
+        "topologyVerdict": "complete" if not topology_errors else "blocked",
+    }, topology_errors
 
 
 def normalized_source_direction(value: Any) -> str | None:
@@ -1739,6 +1877,12 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
 
     bubble_payload_summary: dict[str, Any] | None = None
     segment_payload_summary: dict[str, Any] | None = None
+    bubble_decoded_result: tuple[int, int, list[int]] | None = None
+    segment_decoded_result: tuple[int, int, list[int]] | None = None
+    mask_topology_summary: dict[str, Any] | None = None
+    mask_topology_errors: list[str] = []
+    bubble_decoded_results: list[tuple[int, int, list[int]]] = []
+    segment_decoded_results: list[tuple[int, int, list[int]]] = []
     mask_payload_gate_required = schema_version == MASK_PAYLOAD_SCHEMA_VERSION
     if mask_payload_gate_required:
         bubble_payload_summary = validate_bubble_mask_payload(
@@ -1747,12 +1891,21 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
             image_width,
             image_height,
             payload_errors,
+            bubble_decoded_results,
         )
         segment_payload_summary = validate_segment_mask_payload(
             segment_mask,
             image_width,
             image_height,
             payload_errors,
+            segment_decoded_results,
+        )
+        bubble_decoded_result = bubble_decoded_results[0] if bubble_decoded_results else None
+        segment_decoded_result = segment_decoded_results[0] if segment_decoded_results else None
+        mask_topology_summary, mask_topology_errors = summarize_mask_topology(
+            text_boxes,
+            bubble_decoded_result,
+            segment_decoded_result,
         )
 
     segment_size_matches = None
@@ -1864,6 +2017,23 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
             "legacySummaryOnlyAccepted": schema_version == LEGACY_SCHEMA_VERSION,
             "bubbleMask": bubble_payload_summary,
             "segmentMask": segment_payload_summary,
+        },
+        "maskTopologyGateReady": (
+            mask_payload_gate_required
+            and not payload_errors
+            and not mask_topology_errors
+            and mask_topology_summary is not None
+        ),
+        "maskTopologyValidation": {
+            "required": mask_payload_gate_required,
+            "ready": (
+                mask_payload_gate_required
+                and not payload_errors
+                and not mask_topology_errors
+                and mask_topology_summary is not None
+            ),
+            "errors": mask_topology_errors,
+            "summary": mask_topology_summary,
         },
         "invalidTextBoxIDs": invalid_text_box_ids,
         "invalidBubbleInstanceIDs": invalid_bubble_ids,

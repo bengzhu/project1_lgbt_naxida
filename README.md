@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前正式版本：`3.2`（Koharu artifact contract v2 支持有界 BubbleMask / SegmentMask RLE 像素载荷校验、逐块 shadow coverage 和 convergence gate；v1 摘要仍可读取但不能关闭像素载荷 gate）。v3.1 的图片 OCR 待复查筛选、v3.0 的 OCR 摘要与 Store-owned 重新识别，以及既有图片生命周期能力仍保留。仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。日常开发合入 `smalldata_test`，不合并到 `main`。
+当前正式版本：`3.3`（Koharu contract v2 在 v3.2 有界 BubbleMask / SegmentMask RLE 载荷上，新增复用 external shadow OCR 稳定一对一 TextBox assignment 的 SegmentMask→BubbleMask 像素/component 拓扑 gate；foreign、orphan、重复或跨 Bubble 归属都不得关闭 gate）。v3.2 载荷校验、v3.1 的图片 OCR 待复查筛选、v3.0 的 OCR 摘要与 Store-owned 重新识别，以及既有图片生命周期能力仍保留。仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 

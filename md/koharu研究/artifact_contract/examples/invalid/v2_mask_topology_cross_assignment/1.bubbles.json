@@ -1,0 +1,10 @@
+{
+  "width": 576,
+  "height": 1280,
+  "encoding": "rowMajorRLE",
+  "runs": [[0, 577], [7, 2], [0, 2], [9, 2], [0, 570], [7, 2], [0, 2], [9, 2], [0, 736121]],
+  "bubbleInstances": [
+    {"id": "topology-bubble-1", "bbox": [1, 1, 2, 2], "maskValue": 7, "pixelCount": 4},
+    {"id": "topology-bubble-2", "bbox": [5, 1, 2, 2], "maskValue": 9, "pixelCount": 4}
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "width": 576,
+  "height": 1280,
+  "encoding": "rowMajorRLE",
+  "runs": [[0, 577], [1, 1], [0, 3], [1, 1], [0, 572], [1, 1], [0, 3], [1, 1], [0, 736121]],
+  "glyphPixelCount": 4,
+  "connectedComponentCount": 4
+}
