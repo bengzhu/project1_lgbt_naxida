@@ -11,7 +11,7 @@
 ## v3.11：图片预览状态与独立重试
 日期：2026-07-28
 
-状态：Agent X 候选实现中；分支 `codeb/v3.11-image-preview-state`，工程候选版本为 `MARKETING_VERSION=3.11`。尚未 push、创建 PR 或触碰 `smalldata_test` / `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.11`。PR #75 已合入 `smalldata_test`，merge SHA `c784419f1f6c04f35186f94e245344e12a073561`；远端 `codeb/v3.11-image-preview-state` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,8 +22,10 @@
 
 验证与遗留：
 
-- v3.11 新合同 5/5，v1.87 与 v2.2-v3.11 全部图片/UI 合同合计 122 项通过；两个改动 Swift 文件以完整 Xcode toolchain parse 通过，实际 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.11`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。云端 exact-SHA full 待运行。
-- 未跑本机 build / 探针，按规则交给云端验证。真实慢速解码与失败格式的运行态按钮点击仍需模拟器或真机人工验证。
+- v3.11 新合同 5/5，v1.87 与 v2.2-v3.11 全部图片/UI 合同合计 122 项通过；改动 Swift 文件以完整 Xcode toolchain parse 通过，实际 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.11`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。
+- 候选 exact SHA `721041d99529e6222fa9c00b669bdd9be7feae58` 的云端 full run `30333358372` attempt 1 成功；artifact `aitrans-ci-v3.11-codeb-v3.11-image-preview-state--721041d99529-run30333358372-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI 122 项、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded、0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- PR #75 exact HEAD fast run `30333750486` 成功后合并；merge follow-up run `30333813351` 成功，artifact 与 merge HEAD `c784419f1f6c04f35186f94e245344e12a073561` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `721041d99529e6222fa9c00b669bdd9be7feae58` 的成功 full 收据，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit 10/10。
+- 未跑本机 build / 探针，按规则交给云端验证。本版不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。真实慢速解码与失败格式的运行态按钮点击仍需模拟器或真机人工验证。
 
 ## v3.10：图片预览有界后台下采样
 日期：2026-07-28
