@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.19：图片结果行快速复查
+日期：2026-07-28
+
+状态：Agent X 正在 `codeb/v3.19-image-review-quick-action` 实现并等待 exact-SHA 云端 full / UI evidence 验收；未触碰 `main`。
+
+核心变更：
+
+- 每个低置信或方向待定结果行新增独立 44pt 完成并继续/撤销复查动作；主行 Button 仍只负责图片定位与局部放大，避免嵌套交互和误触职责混合。
+- 快速动作复用既有 View 私有 `toggleReviewCompletion`：完成后按未复查顺序定位下一块，撤销后把该块放回队列并定位；不新增 Store 或持久化状态。
+- 队列入口在尚无完成项时显示“开始复查 N”，已有进度时显示“继续复查 N”；风险原因和已复查标签改为纵向排列，降低 360pt inspector 与 Dynamic Type 下的横向拥挤。
+- 局部放大动作同步命名为“完成并继续复查”；新增 v3.19 源码合同并接入图片/UI fail-fast 路由。本版不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
+
+验证与遗留：
+
+- v3.19 新合同 6/6、27 个图片/UI 合同脚本共 170/170 通过；Swift parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析（`v3.19`）、工程 plist、3 份 JSON 基线和 `git diff --check` 均通过。候选提交和云端 full / UI evidence 尚未运行。
+- 未跑本机 build / 探针，按规则交给云端验证。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+
 ## v3.18：图片复查汇总进度与运行态证据
 日期：2026-07-28
 

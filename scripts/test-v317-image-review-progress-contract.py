@@ -85,7 +85,7 @@ class ImageReviewProgressContractTests(unittest.TestCase):
 
     def test_focus_exposes_named_44pt_completion_and_undo(self) -> None:
         focus = braced_body(self.view, "private struct ImageTranslationFocusPreview: View")
-        self.assertIn('isReviewCompleted ? "重新加入待复查" : "完成当前复查"', focus)
+        self.assertIn('isReviewCompleted ? "重新加入待复查" : "完成并继续复查"', focus)
         self.assertIn(
             'systemImage: isReviewCompleted ? "arrow.uturn.backward" : "checkmark"',
             focus,
