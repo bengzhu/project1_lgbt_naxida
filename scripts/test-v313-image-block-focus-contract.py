@@ -37,7 +37,7 @@ class ImageBlockFocusContractTests(unittest.TestCase):
         self.assertIn("max(fittedSize.width * relativeRect.width, 24)", self.view)
         self.assertIn('Label("局部放大", systemImage: "magnifyingglass")', self.view)
         self.assertIn('accessibilityLabel("已定位文字块局部放大")', self.view)
-        self.assertIn(".accessibilityValue(block.original)", self.view)
+        self.assertIn('.accessibilityValue("\\(positionText)，\\(block.original)")', self.view)
 
     def test_close_is_named_and_has_minimum_tap_target(self) -> None:
         self.assertIn(

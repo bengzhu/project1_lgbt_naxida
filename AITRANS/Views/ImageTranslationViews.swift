@@ -3,25 +3,40 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ImageTranslationView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var store: TranslationSessionStore
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
-                AppPageHeader(
-                    title: "图片翻译",
-                    subtitle: "Vision OCR 与本地翻译",
-                    systemImage: "photo.on.rectangle",
-                    status: statusTitle,
-                    statusTone: statusTone
-                )
-                ImageTranslationPanel()
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
+                    AppPageHeader(
+                        title: "图片翻译",
+                        subtitle: "Vision OCR 与本地翻译",
+                        systemImage: "photo.on.rectangle",
+                        status: statusTitle,
+                        statusTone: statusTone
+                    )
+                    ImageTranslationPanel {
+                        revealImagePreview(using: proxy)
+                    }
+                }
+                .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
+                .padding(.vertical, AppTheme.Spacing.section)
+                .padding(.bottom, 72)
             }
-            .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
-            .padding(.vertical, AppTheme.Spacing.section)
-            .padding(.bottom, 72)
+            .background(Color.appCanvas)
         }
-        .background(Color.appCanvas)
+    }
+
+    private func revealImagePreview(using proxy: ScrollViewProxy) {
+        if reduceMotion {
+            proxy.scrollTo(ImageTranslationPanel.previewScrollID, anchor: .top)
+        } else {
+            withAnimation(AppTheme.Motion.standard) {
+                proxy.scrollTo(ImageTranslationPanel.previewScrollID, anchor: .top)
+            }
+        }
     }
 
     private var statusTone: AppStatusTone {
@@ -58,6 +73,8 @@ struct ImageTranslationView: View {
 }
 
 struct ImageTranslationPanel: View {
+    static let previewScrollID = "imageTranslationPreview"
+
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var showImageImporter = false
     @State private var imageFileSelectionID: UUID?
@@ -66,6 +83,7 @@ struct ImageTranslationPanel: View {
     @State private var sharePresentationID = UUID()
     @State private var reviewFilter: ImageOCRReviewFilter = .all
     @State private var selectedImageTranslationBlockID: UUID?
+    let revealPreview: () -> Void
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -81,6 +99,7 @@ struct ImageTranslationPanel: View {
                 inspector
             }
         }
+        .id(Self.previewScrollID)
         .fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image], onCompletion: handleImport)
         .onChange(of: selectedPhotoItem) { oldItem, newItem in
             loadSelectedPhoto(oldItem, newItem)
@@ -115,7 +134,12 @@ struct ImageTranslationPanel: View {
             )
             ImageTranslationPreview(
                 selectedBlockID: selectedImageTranslationBlockID,
-                clearSelection: { selectedImageTranslationBlockID = nil }
+                positionText: selectedBlockPositionText,
+                canSelectPrevious: canSelectPreviousBlock,
+                canSelectNext: canSelectNextBlock,
+                clearSelection: { selectedImageTranslationBlockID = nil },
+                selectPrevious: { selectAdjacentBlock(offset: -1) },
+                selectNext: { selectAdjacentBlock(offset: 1) }
             )
         }
     }
@@ -216,9 +240,39 @@ struct ImageTranslationPanel: View {
     }
 
     private func toggleSelection(of blockID: UUID) {
-        selectedImageTranslationBlockID = selectedImageTranslationBlockID == blockID
-            ? nil
-            : blockID
+        if selectedImageTranslationBlockID == blockID {
+            selectedImageTranslationBlockID = nil
+        } else {
+            selectedImageTranslationBlockID = blockID
+            revealPreview()
+        }
+    }
+
+    private var selectedVisibleBlockIndex: Int? {
+        guard let selectedImageTranslationBlockID else { return nil }
+        return visibleImageTranslationBlocks.firstIndex(where: { $0.id == selectedImageTranslationBlockID })
+    }
+
+    private var selectedBlockPositionText: String {
+        guard let selectedVisibleBlockIndex else { return "" }
+        return "\(selectedVisibleBlockIndex + 1) / \(visibleImageTranslationBlocks.count)"
+    }
+
+    private var canSelectPreviousBlock: Bool {
+        guard let selectedVisibleBlockIndex else { return false }
+        return selectedVisibleBlockIndex > visibleImageTranslationBlocks.startIndex
+    }
+
+    private var canSelectNextBlock: Bool {
+        guard let selectedVisibleBlockIndex else { return false }
+        return selectedVisibleBlockIndex < visibleImageTranslationBlocks.index(before: visibleImageTranslationBlocks.endIndex)
+    }
+
+    private func selectAdjacentBlock(offset: Int) {
+        guard let selectedVisibleBlockIndex else { return }
+        let targetIndex = selectedVisibleBlockIndex + offset
+        guard visibleImageTranslationBlocks.indices.contains(targetIndex) else { return }
+        selectedImageTranslationBlockID = visibleImageTranslationBlocks[targetIndex].id
     }
 
     private func clearHiddenReviewSelection() {
@@ -601,7 +655,12 @@ private enum ImagePreviewPhase: Equatable {
 private struct ImageTranslationPreview: View {
     @EnvironmentObject private var store: TranslationSessionStore
     let selectedBlockID: UUID?
+    let positionText: String
+    let canSelectPrevious: Bool
+    let canSelectNext: Bool
     let clearSelection: () -> Void
+    let selectPrevious: () -> Void
+    let selectNext: () -> Void
     @State private var previewImage: UIImage?
     @State private var previewRevision: Int?
     @State private var previewAttempt = 0
@@ -639,7 +698,12 @@ private struct ImageTranslationPreview: View {
                             ImageTranslationFocusPreview(
                                 previewImage: previewImage,
                                 block: selectedBlock,
-                                close: clearSelection
+                                positionText: positionText,
+                                canSelectPrevious: canSelectPrevious,
+                                canSelectNext: canSelectNext,
+                                close: clearSelection,
+                                selectPrevious: selectPrevious,
+                                selectNext: selectNext
                             )
                             .frame(
                                 width: max(180, min(320, geometry.size.width - AppTheme.Spacing.control * 2)),
@@ -766,7 +830,12 @@ private struct ImageTranslationPreview: View {
 private struct ImageTranslationFocusPreview: View {
     let previewImage: UIImage
     let block: ImageTranslationBlock
+    let positionText: String
+    let canSelectPrevious: Bool
+    let canSelectNext: Bool
     let close: () -> Void
+    let selectPrevious: () -> Void
+    let selectNext: () -> Void
 
     var body: some View {
         Group {
@@ -829,9 +898,35 @@ private struct ImageTranslationFocusPreview: View {
                 .frame(minWidth: 44, minHeight: 44)
                 .background(Color.black.opacity(0.82), in: Circle())
         }
+        .overlay(alignment: .bottomLeading) {
+            Text(positionText)
+                .font(.caption.monospacedDigit().bold())
+                .foregroundStyle(.white)
+                .padding(.horizontal, AppTheme.Spacing.control)
+                .frame(minHeight: AppTheme.Layout.minimumTarget)
+                .background(Color.black.opacity(0.82), in: .rect(cornerRadius: AppTheme.Radius.control))
+                .accessibilityHidden(true)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            HStack(spacing: AppTheme.Spacing.compact) {
+                Button("上一个文字块", systemImage: "chevron.left", action: selectPrevious)
+                    .labelStyle(.iconOnly)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .background(Color.black.opacity(0.82), in: Circle())
+                    .disabled(!canSelectPrevious)
+                    .opacity(canSelectPrevious ? 1 : 0.35)
+                Button("下一个文字块", systemImage: "chevron.right", action: selectNext)
+                    .labelStyle(.iconOnly)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .background(Color.black.opacity(0.82), in: Circle())
+                    .disabled(!canSelectNext)
+                    .opacity(canSelectNext ? 1 : 0.35)
+            }
+            .foregroundStyle(.white)
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("已定位文字块局部放大")
-        .accessibilityValue(block.original)
+        .accessibilityValue("\(positionText)，\(block.original)")
     }
 
     private var focusCrop: (image: CGImage, normalizedRect: CGRect)? {
