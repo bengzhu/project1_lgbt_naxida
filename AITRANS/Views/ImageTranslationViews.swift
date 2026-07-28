@@ -294,18 +294,20 @@ struct ImageTranslationPanel: View {
 
 private struct ImageSourceLanguageControl: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @State private var showLockedLanguage = false
 
     var body: some View {
         Menu {
             ForEach(SupportedLanguage.allCases) { language in
                 Button {
                     store.selectImageSourceLanguage(language)
+                    if !store.isProUnlocked {
+                        showLockedLanguage = true
+                    }
                 } label: {
                     Label(
                         language.rawValue,
-                        systemImage: store.imageTranslationSelectedSourceLanguage == language
-                            ? "checkmark.circle.fill"
-                            : "circle"
+                        systemImage: menuSymbol(for: language)
                     )
                 }
             }
@@ -333,7 +335,12 @@ private struct ImageSourceLanguageControl: View {
         .disabled(isRunning)
         .accessibilityLabel("输入语言")
         .accessibilityValue(store.imageTranslationSelectedSourceLanguage.rawValue)
-        .accessibilityHint("选择图片 OCR 的输入语言；已完成的图片会重新识别和翻译；失败或取消后选回当前内容语言会撤销待重试更改")
+        .accessibilityHint("图片输入语言设置需要 Pro；已完成的图片会重新识别和翻译；失败或取消后选回当前内容语言会撤销待重试更改")
+        .alert("Pro 功能", isPresented: $showLockedLanguage) {
+            Button("知道了", role: .cancel) {}
+        } message: {
+            Text(store.dataTransferMessage)
+        }
     }
 
     private var isRunning: Bool {
@@ -341,6 +348,13 @@ private struct ImageSourceLanguageControl: View {
         case .loading, .recognizing, .translating: true
         case .idle, .translated, .failed: false
         }
+    }
+
+    private func menuSymbol(for language: SupportedLanguage) -> String {
+        if store.imageTranslationSelectedSourceLanguage == language {
+            return "checkmark.circle.fill"
+        }
+        return store.isProUnlocked ? "circle" : "lock.fill"
     }
 }
 

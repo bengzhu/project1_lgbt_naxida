@@ -1976,12 +1976,15 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func selectImageSourceLanguage(_ language: SupportedLanguage) {
+        guard isProUnlocked else {
+            dataTransferMessage = "图片输入语言设置需要 Pro"
+            return
+        }
         let displayedLanguage = imageTranslationDisplayedSourceLanguage
         if language != sourceLanguage {
             sourceLanguage = language
         }
-        guard isProUnlocked,
-              imageTranslationSelectedSourceLanguage != language else {
+        guard imageTranslationSelectedSourceLanguage != language else {
             return
         }
 

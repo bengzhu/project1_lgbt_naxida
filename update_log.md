@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.7：图片输入语言 Pro 拒绝无副作用
+日期：2026-07-28
+
+状态：Agent X 候选实现中，分支 `codeb/v3.7-image-source-pro-feedback`；工程候选版本为 `MARKETING_VERSION=3.7`，尚未合入 `smalldata_test`，未触碰 `main`。
+
+核心变更：
+
+- `selectImageSourceLanguage` 把 `isProUnlocked` 提升到任何读取/写入图片语言状态之前；免费模式拒绝时不再先改全局 `sourceLanguage`，因此不会从图片页静默污染文本页语言。
+- Store 写入明确的“图片输入语言设置需要 Pro”反馈，免费模式的非当前菜单项显示 `lock.fill`，图片输入语言菜单用 Alert 展示拒绝，VoiceOver hint 同步说明门槛；授权通过后的完成态重跑、失败/取消 pending 与 v3.6 撤销语义不变。
+- v3.4 的目标语言政策保持不变：目标仍由 `selectTargetLanguage` / `canUseLanguage` 判定，不额外阻断英语、中文等免费目标。
+- 新增 v3.7 contract 并接入图片/UI fail-fast 路由。不修改 Vision OCR、布局、翻译、renderer、漫画探针或 Koharu 报告。
+
+验证与遗留：
+
+- v3.7 新契约 4/4，v1.87 与 v2.2-v3.6 全部图片/UI 契约合计 103 项通过；两个改动 Swift 文件以完整 Xcode toolchain parse 通过，workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.7` 和 `git diff --check` 均通过。exact-SHA 云端 full 待执行。
+- 未跑本机 build / 探针，按规则交给云端验证。本版是授权拒绝与跨页状态一致性修复，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
+
 ## v3.6：图片待重试语言可撤销
 日期：2026-07-28
 
