@@ -11,7 +11,7 @@
 ## v3.1：图片 OCR 待复查筛选
 日期：2026-07-28
 
-状态：Agent X 已在 `codeb/v3.1-image-ocr-review-filter` 完成核心候选实现、本地轻量回归、核心与版本收口 exact-SHA 云端 full；工程正式版本为 `MARKETING_VERSION=3.1`，等待 PR 与合并。未触碰 `main`。
+状态：Agent X 已完成核心候选实现、本地轻量回归、独立复审、核心与版本收口 exact-SHA 云端 full；工程正式版本为 `MARKETING_VERSION=3.1`。PR #65 已合入 `smalldata_test`，merge SHA `54c6ad5b548b093406c1a8387d4e35519290e627`；远端 `codeb/v3.1-image-ocr-review-filter` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -25,6 +25,8 @@
 - v1.87、v2.2-v3.1 图片/UI 契约共 84 项通过；CI validation tier / version identity 契约 14 项通过。四份改动 Swift 源码 parse、Xcode 工程 plist、workflow YAML、ground truth 与现有 output JSON 解析、工程版本唯一解析为 `v3.0` 和 `git diff --check` 均通过。
 - 核心 SHA `281c74ea9c8b00c522dec6edc9682e1f46e51b4f` 的云端 full run `30321376115` attempt 1 成功；artifact `aitrans-ci-v3.1-codeb-v3.1-image-ocr-review-filter--281c74ea9c8b-run30321376115-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI 84 项、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` build succeeded，commit status `AITRANS CI/full-validation=success`。
 - 版本收口 SHA `88da91e050928a42164233d75d9b12f696f4eb9b` 的云端 full run `30321736785` attempt 1 成功；artifact `aitrans-ci-v3.1-codeb-v3.1-image-ocr-review-filter--88da91e05092-run30321736785-attempt1` 与 identity 完全一致，`MARKETING_VERSION=3.1`、Xcode build success、JUnit 10/10、`.xcresult` 0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。本次只改工程版本和入口文档，领域合同按 changed-files 路由跳过，由核心 full 提供证据。
+- 独立复审发现全文件 substring 可能让错误预览接线假绿；加固 HEAD `1bb8ee258667240e705a5ba2311e9eae4417f0a5` 将列表、预览与 Store 重渲染断言限定到各自源码作用域。云端 full run `30322310824` attempt 1 成功，artifact identity 完全一致，图片/UI 84 项通过，JUnit 10/10；manifest 明确 `xcodeBuildRequired=false`、`xcodeBuildSkippedReason=non_app_build_related_full_validation`，不冒充编译证据，编译继续由版本 SHA 的成功 `.xcresult` 证明。
+- PR #65 exact HEAD fast run `30322411646` 成功后合并；merge follow-up run `30322449624` 成功，artifact `aitrans-ci-v3.1-smalldata_test--54c6ad5b548b-run30322449624-attempt1` 以 `validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation` 精确复用候选 HEAD `1bb8ee258667240e705a5ba2311e9eae4417f0a5` 的成功 full 收据，JUnit 10/10。
 - 未跑本机 build / 探针，按规则交给云端验证。本版不修改 Vision 请求、OCR layout、漫画探针、翻译、ground truth、`metrics/version_history.csv` 或 `output/`，不声称 OCR 字符准确率提升。
 
 ## v3.0：图片 OCR 复查与重新识别
