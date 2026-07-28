@@ -81,14 +81,16 @@ enum AppPreviewScenario: String {
                 ImageTranslationBlock(
                     original: "Let's Battle!",
                     translation: "来对战吧！",
-                    confidence: 0.96,
-                    boundingBox: NormalizedImageRect(x: 0.12, y: 0.14, width: 0.24, height: 0.08)
+                    confidence: 0.42,
+                    boundingBox: NormalizedImageRect(x: 0.12, y: 0.14, width: 0.24, height: 0.08),
+                    sourceDirection: .horizontal
                 ),
                 ImageTranslationBlock(
                     original: "The tournament starts tomorrow.",
                     translation: "比赛明天开始。",
                     confidence: 0.88,
-                    boundingBox: NormalizedImageRect(x: 0.58, y: 0.42, width: 0.28, height: 0.10)
+                    boundingBox: NormalizedImageRect(x: 0.58, y: 0.42, width: 0.28, height: 0.10),
+                    sourceDirection: .unknown
                 )
             ]
         case .audioRecognizing:

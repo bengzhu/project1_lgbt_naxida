@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前正式版本：`3.17`（图片待复查队列支持本次复查进度；在局部放大中完成当前块后自动定位下一个未复查块，也可撤销或在全部完成后重新开始。进度只属于当前图片 revision，不写 Store 或持久化）。v3.16-v2.2 的队列入口、直接点选、定位、局部放大、预览、交互、Retry、Koharu gate 与图片生命周期能力仍保留。仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。日常开发合入 `smalldata_test`，不合并到 `main`。
+当前正式版本：`3.18`（图片风险块存在时显示本次复查完成/总数/剩余进度，并补充 wide iPad 图片成功运行态证据；DEBUG fixture 固定覆盖低置信与方向待定两类风险）。v3.17-v2.2 的复查队列、直接点选、定位、局部放大、预览、交互、Retry、Koharu gate 与图片生命周期能力仍保留。进度只属于当前图片 revision，不写 Store 或持久化；仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 
@@ -51,12 +51,12 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - v1.92 更新 v1.64 的 orientation 边界：合法、非退化的凸四点 `linePolygons` 会用有上限的透视校正生成逐行 shadow OCR crop，只有 warp OCR 输出被选中时才标记 `deskewExecuted`；bbox fallback、warp 失败和任意角度 deskew 继续作为 convergence blockers。该能力仍只消费真实四件套，保持 shadow-only，不改变主 OCR、翻译或覆盖图。
 - v1.74 起 `ci-fast/full` 的未加密 manifest 和 failure summary 也会直接汇总 v1.39-v1.46 native-lite detector / shadow OCR / refinement / closed-loop / instance-lite / SegmentMask refinement / bundle / promotion gate 的 verdict、counts、linkage blockers 和 convergence work item / gate 状态，避免 Agent C 为了确认 native-lite 阻塞再深挖完整 `probe_report.json`。
 - 云端探针验收口径是报告可解析、`engineUsed = Local GGUF`、`totalBlocksDetected > 0`、关键 JSON/TXT/PNG 可用；`overallPassed=false` 仍可能是当前模型质量基线，不单独作为 CI 失败。若探针超时，结果包会保留 `manga-probe.log`、`app-console.log` 和 `output/manga_probe_progress.json`；`ci-fast` 启动后 180 秒未创建 progress 会提前失败、progress 300 秒不更新会提前收束，`full` 分别为 300 秒和 600 秒。
-- App 相关候选 push CI 会复用当前 Debug simulator build，生成 13 张 `ui-evidence/`（12 张 compact iPhone + 1 张 wide iPad）和 manifest；音频矩阵分别覆盖 recognizing + Reduce Motion 与 translating + 取消入口。v1.87 全 App interaction contract 与 v1.88 文本首页 contract 分别作为独立 testcase，截图或任一契约失败都会阻塞候选分支；当前不采集 Mac 运行态证据。
+- 显式启用 UI evidence 的 App 候选 CI 会复用当前 Debug simulator build，生成 14 张 `ui-evidence/`（12 张 compact iPhone + 2 张 wide iPad）和 manifest；wide iPad 同时覆盖文本空态和图片成功/风险复查态，音频矩阵分别覆盖 recognizing + Reduce Motion 与 translating + 取消入口。v1.87 全 App interaction contract 与 v1.88 文本首页 contract 分别作为独立 testcase，截图或任一契约失败都会阻塞候选分支；当前不采集 Mac 运行态证据。
 
 ## 当前界面
 
 - `文本`：首页使用静态技术网格与输入到译文的导向线路承托工作区，语言、粘贴、Prompt、翻译、模型状态和译文保持清晰动作层级。系统纯文本“粘贴”只在点击时读取剪贴板；空输入直接填入，已有输入换行追加且不自动翻译。软件键盘提供“完成”按钮，翻译、新会话或离开文本页前会先结束输入焦点。iPad 宽屏使用输入/输出并排，iPhone 自动降为单列。
-- `图片`：图片检查区保持主视觉，有低置信或方向待定块时可一键进入待复查队列；局部放大中可把当前风险块标记为本次已复查并自动定位下一个未复查块，也可撤销或在全部完成后重新开始。完整预览中的 OCR 覆盖块可直接点选或取消；点击 OCR 结果行会把图片工作区带回视口、高亮对应块，并显示带上下文的局部放大窗；放大窗可按当前“全部/待复查”顺序前后切换。目标语言菜单与旁贴/覆盖 segmented control 位于工具区，照片、文件、取消、重试、导出和 OCR 块状态集中展示。任务从 loading 起冻结内容语言；失败或取消后修改输入/目标语言只更新下次 Retry 选择，选回当前内容语言会撤销对应待重试更改，菜单和状态不会继续显示无效差异；免费模式的图片输入语言菜单显示锁定图标，尝试修改时明确提示 Pro 且不污染文本页语言；结果标题始终显示当前内容实际语言，已完成图片选择不同语言后会重新识别或翻译。
+- `图片`：图片检查区保持主视觉，有低置信或方向待定块时显示本次复查完成/总数/剩余进度并可一键进入待复查队列；局部放大中可把当前风险块标记为本次已复查并自动定位下一个未复查块，也可撤销或在全部完成后重新开始。完整预览中的 OCR 覆盖块可直接点选或取消；点击 OCR 结果行会把图片工作区带回视口、高亮对应块，并显示带上下文的局部放大窗；放大窗可按当前“全部/待复查”顺序前后切换。目标语言菜单与旁贴/覆盖 segmented control 位于工具区，照片、文件、取消、重试、导出和 OCR 块状态集中展示。任务从 loading 起冻结内容语言；失败或取消后修改输入/目标语言只更新下次 Retry 选择，选回当前内容语言会撤销对应待重试更改，菜单和状态不会继续显示无效差异；免费模式的图片输入语言菜单显示锁定图标，尝试修改时明确提示 Pro 且不污染文本页语言；结果标题始终显示当前内容实际语言，已完成图片选择不同语言后会重新识别或翻译。
 - `音频`：实时长按识别与音频文件识别分区展示，保留取消入口和 locale、离线要求、耗时、词数、片段、置信度与失败原因。
 - `历史`：搜索、恢复、删除、归档、导入、导出和清空使用一致命令层级；空历史和无搜索结果使用系统空状态。
 - `设置`：集中管理 Pro、提示词、模型、本地数据和受保护的开发者入口。提示词支持方向、新建、复制、编辑、删除和内置锁定；模型页支持 Mock/Local、GGUF 下载/导入/移除、自检和生成参数。

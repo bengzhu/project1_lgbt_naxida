@@ -182,6 +182,25 @@ struct ImageTranslationPanel: View {
                 }
                 .pickerStyle(.segmented)
 
+                if !allReviewRequiredBlocks.isEmpty {
+                    ProgressView(
+                        value: Double(reviewCompletedBlockCount),
+                        total: Double(allReviewRequiredBlocks.count)
+                    ) {
+                        HStack {
+                            Label("本次复查", systemImage: "checklist")
+                            Spacer(minLength: AppTheme.Spacing.compact)
+                            Text("已完成 \(reviewCompletedBlockCount) / \(allReviewRequiredBlocks.count)")
+                        }
+                        .font(.subheadline)
+                    }
+                    .tint(reviewRequiredBlocks.isEmpty ? Color.appSuccess : Color.appWarning)
+                    .accessibilityLabel("本次复查进度")
+                    .accessibilityValue(
+                        "已完成 \(reviewCompletedBlockCount) 个，共 \(allReviewRequiredBlocks.count) 个，剩余 \(reviewRequiredBlocks.count) 个"
+                    )
+                }
+
                 if !reviewRequiredBlocks.isEmpty {
                     AppSecondaryButton(
                         title: "定位待复查 \(reviewRequiredBlocks.count)",

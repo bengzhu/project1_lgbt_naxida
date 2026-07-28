@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前正式版本：`3.17`（图片待复查队列增加当前 revision 的 View 私有复查进度；完成当前风险块后自动定位下一个未复查块，可撤销或在全部完成后重新开始，revision 变化即清零。v3.16-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+当前正式版本：`3.18`（图片风险块存在时显示当前 revision 的 View 私有复查完成/总数/剩余进度；DEBUG 图片成功 fixture 和 wide iPad UI evidence 覆盖低置信与方向待定风险。v3.17-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
@@ -84,7 +84,7 @@
 - 所有业务按钮只调用 store 公开方法；UI 不直接操作 `state.json`、模型 runtime、Speech task、Vision OCR 或漫画探针服务。
 - 实时录音保留触控按住手势，同时提供默认 accessibility action；VoiceOver / Voice Control 激活会在 `beginProLiveSpeechCapture` 与 `endProLiveSpeechCapture` 之间切换。
 - 设置页持有显式 `NavigationPath`；`isDeveloperModeEnabled` 关闭时清空 path，开发控制台不能在权限关闭后继续停留或操作。
-- `AppPreviewScenario` 通过临时 URL 和 `performsStartupWork=false` 隔离预览，不恢复或持久化生产数据。DEBUG CI 可用 `AITRANS_UI_EVIDENCE_SCENARIO` 复现 13 张运行态证据；`audioRecognizing` 设置 capturing 状态覆盖 Reduce Motion，`audioTranslating` 设置非空 transcript + translating 状态覆盖取消翻译入口，生产启动不读取这些场景。
+- `AppPreviewScenario` 通过临时 URL 和 `performsStartupWork=false` 隔离预览，不恢复或持久化生产数据。DEBUG CI 可用 `AITRANS_UI_EVIDENCE_SCENARIO` 复现 14 张运行态证据，其中两个 wide iPad 场景分别覆盖文本空态和图片成功/风险复查态；`audioRecognizing` 设置 capturing 状态覆盖 Reduce Motion，`audioTranslating` 设置非空 transcript + translating 状态覆盖取消翻译入口，生产启动不读取这些场景。
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppTheme.swift`
 
