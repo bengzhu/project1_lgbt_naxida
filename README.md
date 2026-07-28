@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前候选版本：`3.17`（图片待复查队列支持本次复查进度；在局部放大中完成当前块后自动定位下一个未复查块，也可撤销或在全部完成后重新开始。进度只属于当前图片 revision，不写 Store 或持久化）。v3.16-v2.2 的队列入口、直接点选、定位、局部放大、预览、交互、Retry、Koharu gate 与图片生命周期能力仍保留。仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。日常开发合入 `smalldata_test`，不合并到 `main`。
+当前正式版本：`3.17`（图片待复查队列支持本次复查进度；在局部放大中完成当前块后自动定位下一个未复查块，也可撤销或在全部完成后重新开始。进度只属于当前图片 revision，不写 Store 或持久化）。v3.16-v2.2 的队列入口、直接点选、定位、局部放大、预览、交互、Retry、Koharu gate 与图片生命周期能力仍保留。仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 
