@@ -65,6 +65,7 @@ struct ImageTranslationPanel: View {
     @State private var shareURL: URL?
     @State private var sharePresentationID = UUID()
     @State private var reviewFilter: ImageOCRReviewFilter = .all
+    @State private var selectedImageTranslationBlockID: UUID?
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -94,6 +95,12 @@ struct ImageTranslationPanel: View {
         .onDisappear {
             finishSharing()
         }
+        .onChange(of: store.imageTranslationRevision) { _, _ in
+            selectedImageTranslationBlockID = nil
+        }
+        .onChange(of: reviewFilter) { _, _ in
+            clearHiddenReviewSelection()
+        }
     }
 
     private var imageWorkspace: some View {
@@ -106,7 +113,7 @@ struct ImageTranslationPanel: View {
                 },
                 shareResult: shareResult
             )
-            ImageTranslationPreview()
+            ImageTranslationPreview(selectedBlockID: selectedImageTranslationBlockID)
         }
     }
 
@@ -173,7 +180,11 @@ struct ImageTranslationPanel: View {
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(visibleImageTranslationBlocks) { block in
-                        ImageTranslationBlockRow(block: block)
+                        ImageTranslationBlockRow(
+                            block: block,
+                            isSelected: selectedImageTranslationBlockID == block.id,
+                            select: { toggleSelection(of: block.id) }
+                        )
                     }
                 }
             }
@@ -199,6 +210,20 @@ struct ImageTranslationPanel: View {
         case .needsReview:
             "待复查 \(ImageOCRResultSummary(blocks: store.imageTranslationBlocks).reviewRequiredBlockCount)"
         }
+    }
+
+    private func toggleSelection(of blockID: UUID) {
+        selectedImageTranslationBlockID = selectedImageTranslationBlockID == blockID
+            ? nil
+            : blockID
+    }
+
+    private func clearHiddenReviewSelection() {
+        guard let selectedImageTranslationBlockID,
+              !visibleImageTranslationBlocks.contains(where: { $0.id == selectedImageTranslationBlockID }) else {
+            return
+        }
+        self.selectedImageTranslationBlockID = nil
     }
 
     private var statusTone: AppStatusTone {
@@ -572,6 +597,7 @@ private enum ImagePreviewPhase: Equatable {
 
 private struct ImageTranslationPreview: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    let selectedBlockID: UUID?
     @State private var previewImage: UIImage?
     @State private var previewRevision: Int?
     @State private var previewAttempt = 0
@@ -599,7 +625,8 @@ private struct ImageTranslationPreview: View {
                                 block: block,
                                 mode: store.imageOverlayMode,
                                 imageOrigin: origin,
-                                imageSize: fittedSize
+                                imageSize: fittedSize,
+                                isSelected: selectedBlockID == block.id
                             )
                         }
                     }
@@ -723,6 +750,7 @@ private struct ImageTranslationOverlayBlock: View {
     let mode: ImageTranslationOverlayMode
     let imageOrigin: CGPoint
     let imageSize: CGSize
+    let isSelected: Bool
 
     var body: some View {
         let rect = displayRect
@@ -742,6 +770,7 @@ private struct ImageTranslationOverlayBlock: View {
                 .frame(width: bubbleWidth, alignment: .leading)
                 .background(Color.black.opacity(0.88), in: .rect(cornerRadius: 4))
                 .overlay(alignment: .leading) { Rectangle().fill(Color.appAccent).frame(width: 3) }
+                .overlay { selectionBorder }
                 .position(x: adjacentCenterX(for: rect), y: rect.midY)
             case .replace:
                 Text(block.translation.isEmpty ? block.original : block.translation)
@@ -751,10 +780,18 @@ private struct ImageTranslationOverlayBlock: View {
                     .padding(3)
                     .frame(width: max(rect.width, 44), height: max(rect.height, 24))
                     .background(Color.appAccentStrong.opacity(0.94), in: .rect(cornerRadius: 4))
+                    .overlay { selectionBorder }
                     .position(x: rect.midX, y: rect.midY)
             }
         }
         .foregroundStyle(.white)
+    }
+
+    @ViewBuilder private var selectionBorder: some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.white, lineWidth: 3)
+        }
     }
 
     private var displayRect: CGRect {
@@ -781,38 +818,53 @@ private struct ImageTranslationOverlayBlock: View {
 
 private struct ImageTranslationBlockRow: View {
     let block: ImageTranslationBlock
+    let isSelected: Bool
+    let select: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
-            Text(block.confidence, format: .percent.precision(.fractionLength(0)))
-                .font(.caption.monospacedDigit().bold())
-                .foregroundStyle(Color.appAccent)
-                .frame(width: 46, alignment: .leading)
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
-                Text(block.translation.isEmpty ? "等待翻译" : block.translation)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(Color.appTextPrimary)
-                Text(block.original)
-                    .font(.caption)
-                    .foregroundStyle(Color.appTextSecondary)
-                if ImageOCRResultSummary.requiresReview(block) {
-                    HStack(spacing: AppTheme.Spacing.control) {
-                        if ImageOCRResultSummary.hasLowConfidence(block) {
-                            Label("低置信", systemImage: "exclamationmark.triangle.fill")
+        Button(action: select) {
+            HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
+                Text(block.confidence, format: .percent.precision(.fractionLength(0)))
+                    .font(.caption.monospacedDigit().bold())
+                    .foregroundStyle(Color.appAccent)
+                    .frame(width: 46, alignment: .leading)
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
+                    Text(block.translation.isEmpty ? "等待翻译" : block.translation)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color.appTextPrimary)
+                    Text(block.original)
+                        .font(.caption)
+                        .foregroundStyle(Color.appTextSecondary)
+                    if ImageOCRResultSummary.requiresReview(block) {
+                        HStack(spacing: AppTheme.Spacing.control) {
+                            if ImageOCRResultSummary.hasLowConfidence(block) {
+                                Label("低置信", systemImage: "exclamationmark.triangle.fill")
+                            }
+                            if ImageOCRResultSummary.hasUnknownDirection(block) {
+                                Label("方向待定", systemImage: "questionmark.diamond.fill")
+                            }
                         }
-                        if ImageOCRResultSummary.hasUnknownDirection(block) {
-                            Label("方向待定", systemImage: "questionmark.diamond.fill")
-                        }
+                        .font(.caption)
+                        .foregroundStyle(Color.appWarning)
                     }
-                    .font(.caption)
-                    .foregroundStyle(Color.appWarning)
+                }
+                Spacer(minLength: 0)
+                if isSelected {
+                    Image(systemName: "viewfinder.circle.fill")
+                        .foregroundStyle(Color.appAccent)
+                        .accessibilityHidden(true)
                 }
             }
-            Spacer(minLength: 0)
+            .padding(.horizontal, AppTheme.Spacing.compact)
+            .padding(.vertical, AppTheme.Spacing.control)
+            .contentShape(.rect)
         }
-        .padding(.vertical, AppTheme.Spacing.control)
+        .buttonStyle(.plain)
+        .background(isSelected ? Color.appAccent.opacity(0.12) : Color.clear)
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
         .accessibilityElement(children: .combine)
+        .accessibilityValue(isSelected ? "已在图片中定位" : "未定位")
+        .accessibilityHint("在图片预览中定位此文字块")
     }
 }
 

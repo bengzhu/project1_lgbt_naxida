@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-正式版本：`3.11`。
+候选版本：`3.12`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -56,6 +56,8 @@ flowchart TD
   IV --> J["ImageTranslationBlock<br/>bbox + OCR + 方向证据 + 译文"]
   IH --> J
   J --> IQUALITY["OCR 结果摘要<br/>平均/低置信 + 竖排/方向待定<br/>全部 / 待复查列表筛选<br/>Store-owned 重新识别"]
+  IQUALITY --> ISELECT["View 私有 block 选择<br/>结果行取景框 + 预览覆盖高亮<br/>revision / 隐藏筛选清除"]
+  ISELECT -. "只联动展示；完整 blocks 不变" .-> IPREVIEW
   IQUALITY -. "仅筛检查列表；完整 blocks 不变" .-> IPREVIEW
   J --> IPREVIEW["后台 ImageIO 预览下采样<br/>最大边 2048px + EXIF transform<br/>revision / cancellation 拒收旧结果<br/>准备 / 失败 / 本地重试反馈"]
   IPREVIEW --> K["图片旁贴 / 覆盖 UI<br/>同模式顶左坐标 PNG 导出"]
