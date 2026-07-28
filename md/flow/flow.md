@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`3.10`（图片预览改用后台 ImageIO 有界下采样并按 revision 拒收旧结果；Store 原始图片仍供 OCR 与导出使用。v3.9-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+候选版本：`3.11`（图片预览新增 revision-scoped 加载、成功、失败和本地重试反馈；v3.10 的后台 ImageIO 有界下采样继续保留，Store 原始图片仍供 OCR 与导出使用。v3.9-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
@@ -171,7 +171,7 @@
 - 图片输入语言选择先检查 `isProUnlocked`；免费模式的非当前菜单项显示 `lock.fill`，拒绝时只更新 Store-owned 反馈并由菜单显示 Alert，不得修改跨页 `sourceLanguage`、content 或 pending。VoiceOver hint 同步说明 Pro 门槛。目标语言继续由 `selectTargetLanguage` / `canUseLanguage` 判定，英语、中文等免费目标不增加额外图片 Pro 门槛。
 - 图片来源入口先调用 Store-owned `requestImageTranslationAccess()`。只有 Pro 模式才实例化 `PhotosPicker` 并提供 file importer 动作；免费模式显示两个 `lock.fill` 命令并用 Alert 展示 Store 反馈，不进入系统照片或文件选择流程。`translateImage(from:)` 与 `translateImageTransfer` 的底层 Pro guard 继续作为纵深防线。
 - 图片清空命令先显示附着于 `ImageCommandBar` 的破坏性确认，明确列出当前图片、识别结果、译文和导出文件；取消不调用 Store，只有确认按钮调用一次既有 `clearImageTranslation()`，其 task/source/export/share 清理边界不变。
-- 图片预览不再在 SwiftUI task 中通过 `UIImage(data:)` 解压 Store 原始 Data。`ImagePreviewService` 使用 `Task.detached` + ImageIO 生成最大边 2048px 的已缓存 `CGImage`，应用 EXIF transform 且不缓存完整 source；外层 task 取消会取消后台任务，发布前再次核对 `imageTranslationRevision`。Store 原始 Data、OCR、覆盖坐标与导出输入保持不变。
+- 图片预览不再在 SwiftUI task 中通过 `UIImage(data:)` 解压 Store 原始 Data。`ImagePreviewService` 使用 `Task.detached` + ImageIO 生成最大边 2048px 的已缓存 `CGImage`，应用 EXIF transform 且不缓存完整 source；外层 task 取消会取消后台任务。View 同时记录 preview revision，只有与当前 `imageTranslationRevision` 一致时才显示；数据已载入但预览未就绪时显示准备状态，生成失败时可只递增本地 attempt 重试预览，不重跑 OCR / 翻译。Store 原始 Data、OCR、覆盖坐标与导出输入保持不变。
 - 普通图片 OCR 对每个 observation 记录 `horizontal / vertical / unknown` 方向证据。只有日语/中文 prior、bbox 高宽比至少 `1.6`、高度至少 `0.035`，并且包含至少两个 CJK 字符或具有同列邻居且没有近同行邻居时，才进入竖排路径；孤立单字高框、同行 CJK 碎片及非 CJK 高框继续走横排/unknown fallback。横排按上到下、行内左到右聚类；竖排按列从右到左、列内上到下聚类，两种方向不会互相合并。方向、置信度与 reason 随 `ImageTranslationBlock` 保留，不改变漫画探针链路。
 
 关键文件：

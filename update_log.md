@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.11：图片预览状态与独立重试
+日期：2026-07-28
+
+状态：Agent X 候选实现中；分支 `codeb/v3.11-image-preview-state`，工程候选版本为 `MARKETING_VERSION=3.11`。尚未 push、创建 PR 或触碰 `smalldata_test` / `main`。
+
+核心变更：
+
+- 图片预览另存已发布 revision，只有与 Store 当前 `imageTranslationRevision` 一致的缩略图才显示，避免新任务首帧短暂回显旧图。
+- 图片 Data 已载入而缩略图未就绪时显示“正在准备预览”，ImageIO 生成失败时显示独立失败反馈，不再误导为“选择图片”。
+- 失败态提供“重试预览”，只递增 View 私有 attempt 并重跑下采样，不调用 Store OCR / 翻译 Retry，不改变原图 ownership。
+- 新增 v3.11 源码合同并接入图片/UI fail-fast 路由。本版不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
+
+验证与遗留：
+
+- v3.11 新合同 5/5，v1.87 与 v2.2-v3.11 全部图片/UI 合同合计 122 项通过；两个改动 Swift 文件以完整 Xcode toolchain parse 通过，实际 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.11`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。云端 exact-SHA full 待运行。
+- 未跑本机 build / 探针，按规则交给云端验证。真实慢速解码与失败格式的运行态按钮点击仍需模拟器或真机人工验证。
+
 ## v3.10：图片预览有界后台下采样
 日期：2026-07-28
 
