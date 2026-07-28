@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.3：Koharu mask 拓扑与稳定 assignment
+日期：2026-07-28
+
+状态：Agent X 已完成候选实现与本地轻量验证；工程版本已更新为 `MARKETING_VERSION=3.3`，等待候选 exact-SHA 云端 full、PR 和合并收口。当前分支 `codeb/v3.3-koharu-mask-topology`，未触碰 `main`。
+
+核心变更：
+
+- 新增纯 Swift `evaluateTopology`，在 v3.2 已验证 BubbleMask / SegmentMask 载荷上，统计 expected / foreign / no-bubble / orphan / multiply-assigned glyph pixels，并生成四连通 component 的 Bubble label、TextBox owner、cross-Bubble 和 partition ledger。重复 block / TextBox、重叠 claim、无效 expected Bubble、空 glyph、孤儿或分区不守恒均阻止。
+- App `maskTopologyReport` 直接复用 external shadow OCR 的 `stableOneToOneExternalTextBoxShadowMatching`，逐块 block alignment 也改用同一 assignment，不再独立选最大 IoU TextBox / Bubble。新增 `WI-external-mask-topology-linkage` / `G-external-mask-topology-linkage`，探针 JSON / TXT 与 CI manifest 透传逐块、component 和 convergence 证据。
+- Python validator 新增独立 `maskTopologyValidation` / `maskTopologyGateReady`，v3.2 payload gate 与 topology gate 分开报告；新 valid fixture 验证两个 TextBox / Bubble 和四个 component 的唯一归属，cross-assignment invalid fixture 验证 payload 仍有效时 topology 仍能拒绝 ambiguity、foreign pixels 和 duplicate components。云端注入真实 v2 archive 时强制 validator / App / convergence 三层 topology 闭环。
+- 所有新证据保持 shadow-only，不改 OCR 请求、候选选择、翻译、renderer、`blockPassed`、`failureCategory` 或 `currentBlockSource`；不使用 ground truth 做决策。
+
+验证与遗留：
+
+- v3.3 topology contract 8/8（含 Swift evaluator `-warnings-as-errors`）、v3.2 payload contract 7/7 与 v3.2 evaluator 回归已通过；相关 Swift parse 与 `git diff --check` 通过。
+- 未跑本机 build / 探针，按规则交给云端验证。仓库仍无真实 Koharu 四件套，因此本轮只验收算法、报告、CI 和编译接线，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译、覆盖或识别质量提升。
+
 ## v3.2：Koharu mask 像素载荷契约
 日期：2026-07-28
 

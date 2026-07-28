@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 正式版本号 `3.2`：Koharu artifact contract v2 支持有界 BubbleMask / SegmentMask RLE 像素载荷校验、逐块 shadow coverage 和 convergence gate；v1 摘要仍可读取但不能关闭像素载荷 gate。v3.1 的图片 OCR 待复查筛选、v3.0 的 OCR 摘要与 Store-owned 重新识别，以及 v2.9-v2.2 的图片生命周期能力仍保留。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
+- 正式版本号 `3.3`：Koharu artifact contract v2 在 v3.2 有界 BubbleMask / SegmentMask RLE 载荷校验上，新增复用 external shadow OCR 稳定一对一 TextBox assignment 的 SegmentMask→BubbleMask 像素/component 拓扑 gate；foreign、orphan、重复或跨 Bubble 归属都不得关闭 gate。v3.2 载荷校验、v3.1 的图片 OCR 待复查筛选、v3.0 的 OCR 摘要与 Store-owned 重新识别，以及 v2.9-v2.2 的图片生命周期能力仍保留。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
@@ -116,6 +116,7 @@ test/1.png
 - 独立 CI 结果包必须未加密，至少包含 `junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`；`xcodeBuildRequired=true` 时还必须包含 `.xcresult`，手动探针运行还必须包含可用的 `output/` 报告。
 - 若 `workflow_dispatch` 注入 Koharu artifact archive，Agent C 必须核对 Release / artifact / App / CI identity、validator、orientation、dry-run 与 reconciliation 证据。external shadow OCR 除 executed / candidate / OCR count sanity 外，还必须核对 TextBox ID 非空唯一、matched / succeeded / failed / skipped 分区一致、`duplicateAssignedTextBoxIDs = []`、`coverageVerdict = complete`、`successfulCoverageRatio = 1`，且 `WI/G-external-textbox-shadow-ocr-coverage` closed / passed；不得用任意一个 OCR 成功或注入步骤日志冒充完整 coverage。
 - 若注入 artifact 的 TextBox 带 `sourceDirection`、`linePolygons` 或 `rotationDegrees`，Agent C 还必须核对 `orientationShadowPathPartialBlocks`、`orientationUnsupportedBlocks`、`orientationUnsupportedReasonBreakdown`、convergence 的 `WI/G-external-textbox-shadow-ocr-coverage` 和 `WI/G-external-textbox-orientation-shadow-path`，确认 no-candidate / partial / unsupported 未被误判为 `closedReportOnly` 或 passed。
+- 注入 contract v2 artifact 时，Agent C 必须同时核对 validator / App / manifest 的 `maskTopologyGateReady`、`maskTopologyValidation` / `maskTopologyReport`，以及 convergence `WI/G-external-mask-topology-linkage`。assignment 必须复用 external shadow OCR 的稳定一对一 TextBox 结果；missing / duplicate block 或 TextBox、foreign / no-bubble / orphan / multiply-assigned pixels、cross-Bubble / orphan component 或 partition 不守恒时不得 passed。
 - 若云端失败，Agent B 根据结果包中的失败摘要、日志路径和 manifest 修复后继续 push，不改回默认本机循环。
 
 ## 6. Agent A/B/C 职责

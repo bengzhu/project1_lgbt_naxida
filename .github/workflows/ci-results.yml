@@ -334,7 +334,7 @@ jobs:
             home_ui_contract_required=true
             paste_matrix_contract_required=true
           fi
-          if grep -E '^(AITRANS/Services/(MangaOverlayProbeService|TranslationSessionStore)\.swift|AITRANS/Models/(TranscriptModels|KoharuMaskPayloadEvaluator)\.swift|test/1\.|scripts/validate-koharu-artifacts\.py|scripts/test-v(192-koharu-line-polygon-warp|199-koharu-line-polygon-containment|200-koharu-shadow-coverage|201-koharu-geometry-coverage|32-koharu-mask-payload)-contract\.py|scripts/test-v32-koharu-mask-payload-evaluator\.swift|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+          if grep -E '^(AITRANS/Services/(MangaOverlayProbeService|TranslationSessionStore)\.swift|AITRANS/Models/(TranscriptModels|KoharuMaskPayloadEvaluator)\.swift|test/1\.|scripts/validate-koharu-artifacts\.py|scripts/test-v(192-koharu-line-polygon-warp|199-koharu-line-polygon-containment|200-koharu-shadow-coverage|201-koharu-geometry-coverage|32-koharu-mask-payload|33-koharu-mask-topology)-contract\.py|scripts/test-v3(2-koharu-mask-payload|3-koharu-mask-topology)-evaluator\.swift|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             koharu_contract_required=true
           fi
 
@@ -608,6 +608,8 @@ jobs:
               raise SystemExit(f"injected Koharu artifact is not shadow-OCR ready: {data}")
           if data.get("maskPayloadGateReady") is not True:
               raise SystemExit(f"injected Koharu artifact lacks validated v2 mask payload: {data.get('maskPayloadValidation')}")
+          if data.get("maskTopologyGateReady") is not True:
+              raise SystemExit(f"injected Koharu artifact lacks complete TextBox/BubbleMask/SegmentMask topology: {data.get('maskTopologyValidation')}")
           identity = data.get("artifactIdentitySummary") or {}
           source_image = identity.get("sourceImage") or {}
           declared_sha = identity.get("sourceImageSHA256Declared")
@@ -650,9 +652,12 @@ jobs:
               python3 -B scripts/test-v200-koharu-shadow-coverage-contract.py
               python3 -B scripts/test-v201-koharu-geometry-coverage-contract.py
               python3 -B scripts/test-v32-koharu-mask-payload-contract.py
+              python3 -B scripts/test-v33-koharu-mask-topology-contract.py
               python3 -B scripts/test-v197-koharu-handoff-target-contract.py
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_v2_mask_payload > "$RESULT_ROOT/koharu-valid-v2-mask-payload-validation.json"
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_v2_mask_topology > "$RESULT_ROOT/koharu-valid-v2-mask-topology-validation.json"
+              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/v2_mask_topology_cross_assignment > "$RESULT_ROOT/koharu-invalid-v2-mask-topology-validation.json"
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/v2_mask_payload_mismatch --expect-fail > "$RESULT_ROOT/koharu-invalid-v2-mask-payload-validation.json"
             python3 - <<'PY'
           import json
@@ -1214,6 +1219,7 @@ jobs:
               ("koharuArtifactIdentityReconciliationReport.gateLedger", reconciliation.get("gateLedger")),
               ("koharuArtifactConvergenceReport.workItemLedger", convergence.get("workItemLedger")),
               ("koharuArtifactConvergenceReport.gateLedger", convergence.get("gateLedger")),
+              ("externalArtifactReadinessReport.maskTopologyReport", external.get("maskTopologyReport")),
           ]
           missing_report_fields = [name for name, value in required_report_fields if value is None]
           if missing_report_fields:
@@ -1229,6 +1235,7 @@ jobs:
                   "bubbleMaskFound": True,
                   "segmentMaskFound": True,
                   "maskPayloadGateReady": True,
+                  "maskTopologyGateReady": True,
               }
               mismatches = {
                   key: {"expected": expected, "actual": external.get(key)}
@@ -1237,6 +1244,28 @@ jobs:
               }
               if mismatches:
                   raise SystemExit(f"injected Koharu artifact not visible in App readiness report: {mismatches}")
+              topology = external.get("maskTopologyReport") or {}
+              topology_expected = {
+                  "evaluated": True,
+                  "assignmentSource": "stableOneToOneExternalTextBoxShadowMatching",
+                  "topologyVerdict": "complete",
+                  "partitionConserved": True,
+              }
+              topology_mismatches = {
+                  key: {"expected": expected, "actual": topology.get(key)}
+                  for key, expected in topology_expected.items()
+                  if topology.get(key) != expected
+              }
+              if topology_mismatches:
+                  raise SystemExit(f"external mask topology report incomplete: {topology_mismatches}")
+              if topology.get("missingBlockIndexes") or topology.get("duplicateBlockIndexes") or topology.get("duplicateAssignedTextBoxIDs"):
+                  raise SystemExit(f"external mask topology assignment incomplete: {topology}")
+              if topology.get("crossBubbleComponentIndexes") or topology.get("orphanComponentIndexes"):
+                  raise SystemExit(f"external mask topology component partition incomplete: {topology}")
+              if any(int(topology.get(key) or 0) != 0 for key in ["foreignBubbleSegmentPixels", "noBubbleSegmentPixels", "orphanSegmentPixels", "multiplyAssignedSegmentPixels"]):
+                  raise SystemExit(f"external mask topology contains untrusted glyph pixels: {topology}")
+              if topology.get("blockers"):
+                  raise SystemExit(f"external mask topology blockers remain: {topology.get('blockers')}")
               if external_shadow.get("executed") is not True:
                   raise SystemExit(f"externalTextBoxShadowOCRReport.executed={external_shadow.get('executed')!r}")
               if int(external_shadow.get("candidateCount") or 0) <= 0:
@@ -1340,6 +1369,7 @@ jobs:
               "WI-koharu-artifact-identity-reconciliation",
               "WI-external-textbox-shadow-ocr-coverage",
               "WI-external-textbox-orientation-shadow-path",
+              "WI-external-mask-topology-linkage",
           ]:
               if required_id not in work_item_ids:
                   raise SystemExit(f"missing convergence work item: {required_id}")
@@ -1349,6 +1379,7 @@ jobs:
               "G-koharu-artifact-identity-reconciliation-ready",
               "G-external-textbox-shadow-ocr-coverage",
               "G-external-textbox-orientation-shadow-path",
+              "G-external-mask-topology-linkage",
           ]:
               if required_id not in gate_ids:
                   raise SystemExit(f"missing convergence gate: {required_id}")
@@ -1357,6 +1388,8 @@ jobs:
               coverage_gate = gates_by_id.get("G-external-textbox-shadow-ocr-coverage") or {}
               mask_payload_work_item = work_items_by_id.get("WI-external-mask-pixel-payload") or {}
               mask_payload_gate = gates_by_id.get("G-external-mask-pixel-payload") or {}
+              mask_topology_work_item = work_items_by_id.get("WI-external-mask-topology-linkage") or {}
+              mask_topology_gate = gates_by_id.get("G-external-mask-topology-linkage") or {}
               report_availability_gate = gates_by_id.get("G-ci-fast-report-availability") or {}
               report_availability_signals = {
                   signal.get("name"): signal.get("value")
@@ -1378,6 +1411,10 @@ jobs:
                   raise SystemExit(f"external mask pixel payload work item not closed: {mask_payload_work_item}")
               if mask_payload_gate.get("status") != "passed" or mask_payload_gate.get("affectedBlocks"):
                   raise SystemExit(f"external mask pixel payload gate not passed: {mask_payload_gate}")
+              if mask_topology_work_item.get("status") != "closedReportOnly" or mask_topology_work_item.get("targetBlocks"):
+                  raise SystemExit(f"external mask topology work item not closed: {mask_topology_work_item}")
+              if mask_topology_gate.get("status") != "passed" or mask_topology_gate.get("affectedBlocks"):
+                  raise SystemExit(f"external mask topology gate not passed: {mask_topology_gate}")
               orientation_work_item = work_items_by_id.get("WI-external-textbox-orientation-shadow-path") or {}
               orientation_gate = gates_by_id.get("G-external-textbox-orientation-shadow-path") or {}
               if orientation_gate.get("status") == "passed" and (orientation_gate.get("affectedBlocks") or orientation_work_item.get("targetBlocks")):
@@ -1414,7 +1451,9 @@ jobs:
                   "nativeArtifactContractDryRunPreview",
                   "appSideIdentity=activeArtifactIdentityRecorded",
                   "externalMaskPixelPayload: bubbleVerdict=validated segmentVerdict=validated gateReady=true",
+                  "externalMaskTopology: gateReady=true evaluated=true verdict=complete assignmentSource=stableOneToOneExternalTextBoxShadowMatching",
                   "convergenceExternalMaskPixelPayload",
+                  "convergenceExternalMaskTopologyLinkage",
                   "convergenceExternalShadowOCRCoverage",
                   "convergenceExternalTextBoxOrientation",
               ]:
@@ -1744,6 +1783,8 @@ jobs:
               "koharuArtifactValidation": koharu_validation,
               "koharuArtifactValidationMaskPayloadSummary": (koharu_validation or {}).get("maskPayloadValidation"),
               "koharuArtifactValidationMaskPayloadGateReady": (koharu_validation or {}).get("maskPayloadGateReady"),
+              "koharuArtifactValidationMaskTopologySummary": (koharu_validation or {}).get("maskTopologyValidation"),
+              "koharuArtifactValidationMaskTopologyGateReady": (koharu_validation or {}).get("maskTopologyGateReady"),
               "koharuArtifactValidationIdentitySummary": validator_identity,
               "koharuArtifactValidationOrientationSummary": validator_orientation,
               "appSideArtifactIdentityReceiptSummary": {
@@ -1795,6 +1836,8 @@ jobs:
                   "bubbleMaskPayloadVerdict": (external_readiness or {}).get("bubbleMaskPayloadVerdict"),
                   "segmentMaskPayloadVerdict": (external_readiness or {}).get("segmentMaskPayloadVerdict"),
                   "maskPayloadGateReady": (external_readiness or {}).get("maskPayloadGateReady"),
+                  "maskTopologyGateReady": (external_readiness or {}).get("maskTopologyGateReady"),
+                  "maskTopologyReport": (external_readiness or {}).get("maskTopologyReport"),
                   "blockAlignment": (external_readiness or {}).get("blockAlignment"),
                   "missingArtifacts": (external_readiness or {}).get("missingArtifacts"),
                   "nextAction": (external_readiness or {}).get("nextAction"),
@@ -1848,6 +1891,8 @@ jobs:
                   "externalShadowCoverageGate": convergence_item_summary("gate", "G-external-textbox-shadow-ocr-coverage"),
                   "externalMaskPixelPayloadWorkItem": convergence_item_summary("workItem", "WI-external-mask-pixel-payload"),
                   "externalMaskPixelPayloadGate": convergence_item_summary("gate", "G-external-mask-pixel-payload"),
+                  "externalMaskTopologyWorkItem": convergence_item_summary("workItem", "WI-external-mask-topology-linkage"),
+                  "externalMaskTopologyGate": convergence_item_summary("gate", "G-external-mask-topology-linkage"),
                   "externalOrientationWorkItem": convergence_item_summary("workItem", "WI-external-textbox-orientation-shadow-path"),
                   "externalOrientationGate": convergence_item_summary("gate", "G-external-textbox-orientation-shadow-path"),
                   "artifactIdentityReconciliationWorkItem": convergence_item_summary("workItem", "WI-koharu-artifact-identity-reconciliation"),
@@ -2263,6 +2308,8 @@ jobs:
               reconciliation = probe.get("koharuArtifactIdentityReconciliationReport") or {}
               convergence = probe.get("koharuArtifactConvergenceReport") or {}
               print(f"- App mask payload: bubble={external.get('bubbleMaskPayloadVerdict')} segment={external.get('segmentMaskPayloadVerdict')} ready={external.get('maskPayloadGateReady')}")
+              topology = external.get("maskTopologyReport") or {}
+              print(f"- App mask topology: ready={external.get('maskTopologyGateReady')} verdict={topology.get('topologyVerdict')} assignmentSource={topology.get('assignmentSource')} missingBlocks={topology.get('missingBlockIndexes')} foreignPixels={topology.get('foreignBubbleSegmentPixels')} orphanPixels={topology.get('orphanSegmentPixels')} duplicateTextBoxes={topology.get('duplicateAssignedTextBoxIDs')} crossBubbleComponents={topology.get('crossBubbleComponentIndexes')} blockers={topology.get('blockers')}")
               detector_lite = probe.get("koharuNativeTextBoxDetectorLiteReport") or {}
               detector_shadow = probe.get("koharuNativeTextBoxDetectorLiteShadowOCRReport") or {}
               detector_refinement = probe.get("koharuNativeTextBoxDetectorLiteRefinementReport") or {}
@@ -2296,6 +2343,8 @@ jobs:
               print(f"- external shadow orientation: verdict={external_shadow.get('orientationReadinessVerdict')} partial={external_shadow.get('orientationShadowPathPartialBlocks')} unsupported={external_shadow.get('orientationUnsupportedBlocks')} reasons={external_shadow.get('orientationUnsupportedReasonBreakdown')}")
               print_work_item("WI-external-mask-pixel-payload")
               print_gate("G-external-mask-pixel-payload")
+              print_work_item("WI-external-mask-topology-linkage")
+              print_gate("G-external-mask-topology-linkage")
               print_work_item("WI-external-textbox-shadow-ocr-coverage")
               print_gate("G-external-textbox-shadow-ocr-coverage")
               print_work_item("WI-external-textbox-orientation-shadow-path")

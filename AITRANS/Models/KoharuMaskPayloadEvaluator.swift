@@ -17,6 +17,8 @@ enum KoharuMaskPayloadError: Error, Equatable, CustomStringConvertible {
     case bubbleBoundingBoxMismatch(id: String, expected: [Double], actual: [Double]?)
     case segmentGlyphPixelCountMismatch(expected: Int, actual: Int)
     case segmentComponentCountMismatch(expected: Int, actual: Int)
+    case invalidDecodedMask
+    case topologyMaskDimensionMismatch
 
     var description: String {
         switch self {
@@ -52,6 +54,10 @@ enum KoharuMaskPayloadError: Error, Equatable, CustomStringConvertible {
             return "segment mask reports \(expected) glyph pixels; payload contains \(actual)"
         case let .segmentComponentCountMismatch(expected, actual):
             return "segment mask reports \(expected) components; payload contains \(actual)"
+        case .invalidDecodedMask:
+            return "decoded mask dimensions do not match its pixel storage"
+        case .topologyMaskDimensionMismatch:
+            return "segment and bubble masks must have identical dimensions"
         }
     }
 }
@@ -171,6 +177,75 @@ struct KoharuValidatedSegmentMask: Equatable, Sendable {
 enum KoharuSegmentMaskPayloadEvaluation: Equatable, Sendable {
     case summaryOnly
     case validated(KoharuValidatedSegmentMask)
+}
+
+struct KoharuMaskTopologyAssignment: Equatable, Sendable {
+    var blockIndex: Int
+    var textBoxID: String
+    var rect: KoharuMaskPixelRect
+    var expectedBubbleLabel: Int
+}
+
+enum KoharuMaskTopologyBlocker: String, Equatable, Sendable {
+    case duplicateAssignment
+    case overlappingAssignments
+    case invalidExpectedBubbleLabel
+    case emptyGlyphMask
+    case emptyAssignedTextBox
+    case glyphOutsideAssignedTextBox
+    case glyphOutsideBubble
+    case crossBubble
+    case partitionMismatch
+}
+
+struct KoharuMaskTopologyAssignmentLedger: Equatable, Sendable {
+    var blockIndex: Int
+    var textBoxID: String
+    var expectedBubbleLabel: Int
+    var glyphPixelCount: Int
+    var expectedBubbleGlyphPixelCount: Int
+    var foreignBubbleGlyphPixelCount: Int
+    var noBubbleGlyphPixelCount: Int
+    var componentIndexes: [Int]
+    var partitionConserved: Bool
+}
+
+struct KoharuMaskTopologyComponentLedger: Equatable, Sendable {
+    var componentIndex: Int
+    var bbox: KoharuMaskPixelRect
+    var pixelCount: Int
+    var assignedBlockIndexes: [Int]
+    var assignedTextBoxIDs: [String]
+    var bubbleLabels: [Int]
+    var expectedBubbleGlyphPixelCount: Int
+    var foreignBubbleGlyphPixelCount: Int
+    var noBubbleGlyphPixelCount: Int
+    var orphanGlyphPixelCount: Int
+    var multiplyAssignedGlyphPixelCount: Int
+    var partitionConserved: Bool
+    var crossesBubble: Bool
+    var hasOrphanGlyph: Bool
+}
+
+struct KoharuMaskTopologyEvaluation: Equatable, Sendable {
+    var totalGlyphPixelCount: Int
+    var insideAssignedBoxGlyphPixelCount: Int
+    var expectedBubbleGlyphPixelCount: Int
+    var foreignBubbleGlyphPixelCount: Int
+    var noBubbleGlyphPixelCount: Int
+    var orphanGlyphPixelCount: Int
+    var multiplyAssignedGlyphPixelCount: Int
+    var partitionPixelCount: Int
+    var partitionConserved: Bool
+    var duplicateBlockIndexes: [Int]
+    var duplicateTextBoxIDs: [String]
+    var invalidExpectedBubbleBlockIndexes: [Int]
+    var crossBubbleComponentIndexes: [Int]
+    var orphanComponentIndexes: [Int]
+    var assignmentLedgers: [KoharuMaskTopologyAssignmentLedger]
+    var componentLedgers: [KoharuMaskTopologyComponentLedger]
+    var blockers: [KoharuMaskTopologyBlocker]
+    var passed: Bool
 }
 
 enum KoharuMaskPayloadEvaluator {
@@ -336,14 +411,205 @@ enum KoharuMaskPayloadEvaluator {
     }
 
     static func fourConnectedComponentCount(in mask: KoharuDecodedMask, foregroundLabel: Int) -> Int {
+        fourConnectedComponents(in: mask, foregroundLabel: foregroundLabel).count
+    }
+
+    static func evaluateTopology(
+        segmentMask: KoharuDecodedMask,
+        bubbleMask: KoharuDecodedMask,
+        assignments: [KoharuMaskTopologyAssignment]
+    ) throws -> KoharuMaskTopologyEvaluation {
+        guard isStorageValid(segmentMask), isStorageValid(bubbleMask) else {
+            throw KoharuMaskPayloadError.invalidDecodedMask
+        }
+        guard segmentMask.width == bubbleMask.width,
+              segmentMask.height == bubbleMask.height else {
+            throw KoharuMaskPayloadError.topologyMaskDimensionMismatch
+        }
+
+        let stableAssignments = assignments.sorted(by: assignmentSort)
+        let duplicateBlockIndexes = duplicateValues(stableAssignments.map(\.blockIndex))
+        let duplicateTextBoxIDs = duplicateValues(stableAssignments.map(\.textBoxID))
+        let invalidExpectedBubbleBlockIndexes = stableAssignments
+            .filter { $0.expectedBubbleLabel <= 0 }
+            .map(\.blockIndex)
+            .sorted()
+
+        let components = fourConnectedComponents(in: segmentMask, foregroundLabel: 1)
+        var assignmentGlyphCounts = Array(repeating: 0, count: stableAssignments.count)
+        var assignmentExpectedCounts = Array(repeating: 0, count: stableAssignments.count)
+        var assignmentForeignCounts = Array(repeating: 0, count: stableAssignments.count)
+        var assignmentNoBubbleCounts = Array(repeating: 0, count: stableAssignments.count)
+        var assignmentComponentIndexes = Array(repeating: Set<Int>(), count: stableAssignments.count)
+        var componentLedgers: [KoharuMaskTopologyComponentLedger] = []
+        componentLedgers.reserveCapacity(components.count)
+
+        var expectedBubbleGlyphPixelCount = 0
+        var foreignBubbleGlyphPixelCount = 0
+        var noBubbleGlyphPixelCount = 0
+        var orphanGlyphPixelCount = 0
+        var multiplyAssignedGlyphPixelCount = 0
+        var claimantIndexes: [Int] = []
+        claimantIndexes.reserveCapacity(stableAssignments.count)
+
+        for (componentIndex, componentPixels) in components.enumerated() {
+            var assignedBlockIndexes = Set<Int>()
+            var assignedTextBoxIDs = Set<String>()
+            var bubbleLabels = Set<Int>()
+            var componentExpectedCount = 0
+            var componentForeignCount = 0
+            var componentNoBubbleCount = 0
+            var componentOrphanCount = 0
+            var componentMultiplyAssignedCount = 0
+
+            for pixelIndex in componentPixels {
+                let x = pixelIndex % segmentMask.width
+                let y = pixelIndex / segmentMask.width
+                let bubbleLabel = bubbleMask.pixels[pixelIndex]
+                bubbleLabels.insert(bubbleLabel)
+                claimantIndexes.removeAll(keepingCapacity: true)
+                for assignmentIndex in stableAssignments.indices where contains(
+                    x: x,
+                    y: y,
+                    in: stableAssignments[assignmentIndex].rect
+                ) {
+                    claimantIndexes.append(assignmentIndex)
+                }
+                guard let ownerIndex = claimantIndexes.first else {
+                    componentOrphanCount += 1
+                    orphanGlyphPixelCount += 1
+                    continue
+                }
+
+                if claimantIndexes.count > 1 {
+                    componentMultiplyAssignedCount += 1
+                    multiplyAssignedGlyphPixelCount += 1
+                }
+                for claimantIndex in claimantIndexes {
+                    let assignment = stableAssignments[claimantIndex]
+                    assignedBlockIndexes.insert(assignment.blockIndex)
+                    assignedTextBoxIDs.insert(assignment.textBoxID)
+                    assignmentGlyphCounts[claimantIndex] += 1
+                    assignmentComponentIndexes[claimantIndex].insert(componentIndex)
+                    if bubbleLabel == assignment.expectedBubbleLabel {
+                        assignmentExpectedCounts[claimantIndex] += 1
+                    } else if bubbleLabel == 0 {
+                        assignmentNoBubbleCounts[claimantIndex] += 1
+                    } else {
+                        assignmentForeignCounts[claimantIndex] += 1
+                    }
+                }
+
+                let owner = stableAssignments[ownerIndex]
+                if bubbleLabel == owner.expectedBubbleLabel {
+                    componentExpectedCount += 1
+                    expectedBubbleGlyphPixelCount += 1
+                } else if bubbleLabel == 0 {
+                    componentNoBubbleCount += 1
+                    noBubbleGlyphPixelCount += 1
+                } else {
+                    componentForeignCount += 1
+                    foreignBubbleGlyphPixelCount += 1
+                }
+            }
+
+            let componentPartitionCount = componentExpectedCount
+                + componentForeignCount
+                + componentNoBubbleCount
+                + componentOrphanCount
+            let nonzeroBubbleLabels = bubbleLabels.filter { $0 != 0 }
+            let crossesBubble = componentForeignCount > 0 || nonzeroBubbleLabels.count > 1
+            componentLedgers.append(KoharuMaskTopologyComponentLedger(
+                componentIndex: componentIndex,
+                bbox: componentBoundingBox(componentPixels, width: segmentMask.width),
+                pixelCount: componentPixels.count,
+                assignedBlockIndexes: assignedBlockIndexes.sorted(),
+                assignedTextBoxIDs: assignedTextBoxIDs.sorted(),
+                bubbleLabels: bubbleLabels.sorted(),
+                expectedBubbleGlyphPixelCount: componentExpectedCount,
+                foreignBubbleGlyphPixelCount: componentForeignCount,
+                noBubbleGlyphPixelCount: componentNoBubbleCount,
+                orphanGlyphPixelCount: componentOrphanCount,
+                multiplyAssignedGlyphPixelCount: componentMultiplyAssignedCount,
+                partitionConserved: componentPartitionCount == componentPixels.count,
+                crossesBubble: crossesBubble,
+                hasOrphanGlyph: componentOrphanCount > 0
+            ))
+        }
+
+        let assignmentLedgers = stableAssignments.indices.map { index in
+            let partitionCount = assignmentExpectedCounts[index]
+                + assignmentForeignCounts[index]
+                + assignmentNoBubbleCounts[index]
+            return KoharuMaskTopologyAssignmentLedger(
+                blockIndex: stableAssignments[index].blockIndex,
+                textBoxID: stableAssignments[index].textBoxID,
+                expectedBubbleLabel: stableAssignments[index].expectedBubbleLabel,
+                glyphPixelCount: assignmentGlyphCounts[index],
+                expectedBubbleGlyphPixelCount: assignmentExpectedCounts[index],
+                foreignBubbleGlyphPixelCount: assignmentForeignCounts[index],
+                noBubbleGlyphPixelCount: assignmentNoBubbleCounts[index],
+                componentIndexes: assignmentComponentIndexes[index].sorted(),
+                partitionConserved: partitionCount == assignmentGlyphCounts[index]
+            )
+        }
+        let totalGlyphPixelCount = components.reduce(0) { $0 + $1.count }
+        let insideAssignedBoxGlyphPixelCount = expectedBubbleGlyphPixelCount
+            + foreignBubbleGlyphPixelCount
+            + noBubbleGlyphPixelCount
+        let partitionPixelCount = insideAssignedBoxGlyphPixelCount + orphanGlyphPixelCount
+        let partitionConserved = partitionPixelCount == totalGlyphPixelCount
+            && assignmentLedgers.allSatisfy(\.partitionConserved)
+            && componentLedgers.allSatisfy(\.partitionConserved)
+        let crossBubbleComponentIndexes = componentLedgers.filter(\.crossesBubble).map(\.componentIndex)
+        let orphanComponentIndexes = componentLedgers.filter(\.hasOrphanGlyph).map(\.componentIndex)
+
+        var blockers: [KoharuMaskTopologyBlocker] = []
+        if !duplicateBlockIndexes.isEmpty || !duplicateTextBoxIDs.isEmpty { blockers.append(.duplicateAssignment) }
+        if multiplyAssignedGlyphPixelCount > 0 { blockers.append(.overlappingAssignments) }
+        if !invalidExpectedBubbleBlockIndexes.isEmpty { blockers.append(.invalidExpectedBubbleLabel) }
+        if totalGlyphPixelCount == 0 {
+            blockers.append(.emptyGlyphMask)
+        } else if assignmentLedgers.contains(where: { $0.glyphPixelCount == 0 }) {
+            blockers.append(.emptyAssignedTextBox)
+        }
+        if orphanGlyphPixelCount > 0 { blockers.append(.glyphOutsideAssignedTextBox) }
+        if noBubbleGlyphPixelCount > 0 { blockers.append(.glyphOutsideBubble) }
+        if foreignBubbleGlyphPixelCount > 0 || !crossBubbleComponentIndexes.isEmpty { blockers.append(.crossBubble) }
+        if !partitionConserved { blockers.append(.partitionMismatch) }
+
+        return KoharuMaskTopologyEvaluation(
+            totalGlyphPixelCount: totalGlyphPixelCount,
+            insideAssignedBoxGlyphPixelCount: insideAssignedBoxGlyphPixelCount,
+            expectedBubbleGlyphPixelCount: expectedBubbleGlyphPixelCount,
+            foreignBubbleGlyphPixelCount: foreignBubbleGlyphPixelCount,
+            noBubbleGlyphPixelCount: noBubbleGlyphPixelCount,
+            orphanGlyphPixelCount: orphanGlyphPixelCount,
+            multiplyAssignedGlyphPixelCount: multiplyAssignedGlyphPixelCount,
+            partitionPixelCount: partitionPixelCount,
+            partitionConserved: partitionConserved,
+            duplicateBlockIndexes: duplicateBlockIndexes,
+            duplicateTextBoxIDs: duplicateTextBoxIDs,
+            invalidExpectedBubbleBlockIndexes: invalidExpectedBubbleBlockIndexes,
+            crossBubbleComponentIndexes: crossBubbleComponentIndexes,
+            orphanComponentIndexes: orphanComponentIndexes,
+            assignmentLedgers: assignmentLedgers,
+            componentLedgers: componentLedgers,
+            blockers: blockers,
+            passed: blockers.isEmpty
+        )
+    }
+
+    private static func fourConnectedComponents(in mask: KoharuDecodedMask, foregroundLabel: Int) -> [[Int]] {
         var visited = Array(repeating: false, count: mask.pixels.count)
-        var componentCount = 0
+        var components: [[Int]] = []
         var stack: [Int] = []
         for start in mask.pixels.indices where mask.pixels[start] == foregroundLabel && !visited[start] {
-            componentCount += 1
+            var component: [Int] = []
             visited[start] = true
             stack.append(start)
             while let index = stack.popLast() {
+                component.append(index)
                 let x = index % mask.width
                 let y = index / mask.width
                 if x > 0 { enqueue(index - 1, label: foregroundLabel, mask: mask, visited: &visited, stack: &stack) }
@@ -351,8 +617,65 @@ enum KoharuMaskPayloadEvaluator {
                 if y > 0 { enqueue(index - mask.width, label: foregroundLabel, mask: mask, visited: &visited, stack: &stack) }
                 if y + 1 < mask.height { enqueue(index + mask.width, label: foregroundLabel, mask: mask, visited: &visited, stack: &stack) }
             }
+            components.append(component)
         }
-        return componentCount
+        return components
+    }
+
+    private static func isStorageValid(_ mask: KoharuDecodedMask) -> Bool {
+        guard mask.width > 0, mask.height > 0 else { return false }
+        let (pixelCount, overflow) = mask.width.multipliedReportingOverflow(by: mask.height)
+        return !overflow && pixelCount == mask.pixels.count
+    }
+
+    private static func assignmentSort(
+        _ lhs: KoharuMaskTopologyAssignment,
+        _ rhs: KoharuMaskTopologyAssignment
+    ) -> Bool {
+        if lhs.blockIndex != rhs.blockIndex { return lhs.blockIndex < rhs.blockIndex }
+        if lhs.textBoxID != rhs.textBoxID { return lhs.textBoxID < rhs.textBoxID }
+        if lhs.rect.y != rhs.rect.y { return lhs.rect.y < rhs.rect.y }
+        if lhs.rect.x != rhs.rect.x { return lhs.rect.x < rhs.rect.x }
+        if lhs.rect.height != rhs.rect.height { return lhs.rect.height < rhs.rect.height }
+        if lhs.rect.width != rhs.rect.width { return lhs.rect.width < rhs.rect.width }
+        return lhs.expectedBubbleLabel < rhs.expectedBubbleLabel
+    }
+
+    private static func duplicateValues<T: Hashable & Comparable>(_ values: [T]) -> [T] {
+        Dictionary(grouping: values, by: { $0 })
+            .filter { $0.value.count > 1 }
+            .map(\.key)
+            .sorted()
+    }
+
+    private static func contains(x: Int, y: Int, in rect: KoharuMaskPixelRect) -> Bool {
+        guard rect.width > 0, rect.height > 0 else { return false }
+        let (maxX, xOverflow) = rect.x.addingReportingOverflow(rect.width)
+        let (maxY, yOverflow) = rect.y.addingReportingOverflow(rect.height)
+        let effectiveMaxX = xOverflow ? Int.max : maxX
+        let effectiveMaxY = yOverflow ? Int.max : maxY
+        return x >= rect.x && x < effectiveMaxX && y >= rect.y && y < effectiveMaxY
+    }
+
+    private static func componentBoundingBox(_ pixels: [Int], width: Int) -> KoharuMaskPixelRect {
+        var minX = width
+        var minY = Int.max
+        var maxX = -1
+        var maxY = -1
+        for index in pixels {
+            let x = index % width
+            let y = index / width
+            minX = min(minX, x)
+            minY = min(minY, y)
+            maxX = max(maxX, x)
+            maxY = max(maxY, y)
+        }
+        return KoharuMaskPixelRect(
+            x: minX,
+            y: minY,
+            width: maxX - minX + 1,
+            height: maxY - minY + 1
+        )
     }
 
     private static func enqueue(

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "aitrans.koharu_artifact_contract.v2",
+  "sourceImage": "test/1.png",
+  "sourceImageSHA256": "9c3dc0ee9dfc4a6b664c4b4dd32e5b74b214f6f0d16f32ef97ef02ce47c2ed21",
+  "coordinateSpace": "originalImageTopLeftPixels",
+  "contractExampleOnly": true,
+  "generatedBy": "koharu-v2-mask-topology-invalid-example",
+  "textBoxesPath": "1.textboxes.json",
+  "bubbleMaskPath": "1.bubbles.json",
+  "segmentMaskPath": "1.segment_mask.json"
+}

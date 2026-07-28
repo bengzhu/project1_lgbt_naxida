@@ -5392,6 +5392,63 @@ struct MangaOverlayExternalArtifactBlockAlignment: Equatable, Codable, Sendable 
     var notes: [String]
 }
 
+struct MangaOverlayExternalMaskTopologyAssignmentLedger: Equatable, Codable, Sendable {
+    var blockIndex: Int
+    var textBoxID: String
+    var expectedBubbleMaskValue: Int
+    var glyphPixelCount: Int
+    var segmentPixelsInExpectedBubble: Int
+    var foreignBubbleSegmentPixels: Int
+    var noBubbleSegmentPixels: Int
+    var componentIndexes: [Int]
+    var partitionConserved: Bool
+}
+
+struct MangaOverlayExternalMaskTopologyComponentLedger: Equatable, Codable, Sendable {
+    var componentIndex: Int
+    var bbox: [Int]
+    var pixelCount: Int
+    var assignedBlockIndexes: [Int]
+    var assignedTextBoxIDs: [String]
+    var bubbleMaskValues: [Int]
+    var segmentPixelsInExpectedBubble: Int
+    var foreignBubbleSegmentPixels: Int
+    var noBubbleSegmentPixels: Int
+    var orphanSegmentPixels: Int
+    var multiplyAssignedSegmentPixels: Int
+    var partitionConserved: Bool
+    var crossesBubble: Bool
+    var hasOrphanGlyph: Bool
+}
+
+struct MangaOverlayExternalMaskTopologyReport: Equatable, Codable, Sendable {
+    var evaluated: Bool
+    var assignmentSource: String
+    var totalBlockCount: Int
+    var assignedBlockIndexes: [Int]
+    var missingBlockIndexes: [Int]
+    var totalGlyphPixelCount: Int
+    var insideAssignedTextBoxGlyphPixelCount: Int
+    var segmentPixelsInExpectedBubble: Int
+    var foreignBubbleSegmentPixels: Int
+    var noBubbleSegmentPixels: Int
+    var orphanSegmentPixels: Int
+    var multiplyAssignedSegmentPixels: Int
+    var partitionPixelCount: Int
+    var partitionConserved: Bool
+    var duplicateBlockIndexes: [Int]
+    var duplicateAssignedTextBoxIDs: [String]
+    var invalidExpectedBubbleBlockIndexes: [Int]
+    var crossBubbleComponentIndexes: [Int]
+    var orphanComponentIndexes: [Int]
+    var assignmentLedgers: [MangaOverlayExternalMaskTopologyAssignmentLedger]
+    var componentLedgers: [MangaOverlayExternalMaskTopologyComponentLedger]
+    var blockers: [String]
+    var topologyVerdict: String
+    var shadowOnly: Bool
+    var notes: [String]
+}
+
 struct MangaOverlayExternalArtifactReadinessReport: Equatable, Codable, Sendable {
     var enabled: Bool
     var sourceImage: String
@@ -5415,6 +5472,8 @@ struct MangaOverlayExternalArtifactReadinessReport: Equatable, Codable, Sendable
     var bubbleMaskPayloadVerdict: String?
     var segmentMaskPayloadVerdict: String?
     var maskPayloadGateReady: Bool?
+    var maskTopologyGateReady: Bool?
+    var maskTopologyReport: MangaOverlayExternalMaskTopologyReport?
     var parseErrors: [String]
     var missingArtifacts: [String]
     var coordinateValidation: MangaOverlayExternalArtifactCoordinateValidation

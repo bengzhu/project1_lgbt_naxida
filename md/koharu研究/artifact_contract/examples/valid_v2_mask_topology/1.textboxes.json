@@ -1,0 +1,6 @@
+{
+  "textBoxes": [
+    {"id": "topology-textbox-1", "bbox": [1, 1, 2, 2], "confidence": 0.9},
+    {"id": "topology-textbox-2", "bbox": [5, 1, 2, 2], "confidence": 0.9}
+  ]
+}
