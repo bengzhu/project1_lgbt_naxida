@@ -328,27 +328,11 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     var imageTranslationDisplayedTargetLanguage: SupportedLanguage {
-        switch imageTranslationState {
-        case .loading, .recognizing, .translating:
-            return imageTranslationContentTargetLanguage ?? targetLanguage
-        case .idle, .translated, .failed:
-            guard imageTranslationData != nil || !imageTranslationBlocks.isEmpty else {
-                return targetLanguage
-            }
-            return imageTranslationContentTargetLanguage ?? targetLanguage
-        }
+        imageTranslationContentTargetLanguage ?? targetLanguage
     }
 
     var imageTranslationDisplayedSourceLanguage: SupportedLanguage {
-        switch imageTranslationState {
-        case .loading, .recognizing, .translating:
-            return imageTranslationContentSourceLanguage ?? sourceLanguage
-        case .idle, .translated, .failed:
-            guard imageTranslationData != nil || !imageTranslationBlocks.isEmpty else {
-                return sourceLanguage
-            }
-            return imageTranslationContentSourceLanguage ?? sourceLanguage
-        }
+        imageTranslationContentSourceLanguage ?? sourceLanguage
     }
 
     var imageTranslationSelectedSourceLanguage: SupportedLanguage {
@@ -1965,6 +1949,7 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func selectImageTargetLanguage(_ language: SupportedLanguage) {
+        let displayedLanguage = imageTranslationDisplayedTargetLanguage
         if language != targetLanguage {
             selectTargetLanguage(language)
         }
@@ -1984,13 +1969,14 @@ final class TranslationSessionStore: ObservableObject {
             retryImageTranslation()
         case .idle, .failed:
             guard canRetryImageTranslation else { return }
-            imageTranslationRetryTargetLanguage = language
+            imageTranslationRetryTargetLanguage = language == displayedLanguage ? nil : language
         case .loading, .recognizing, .translating:
             return
         }
     }
 
     func selectImageSourceLanguage(_ language: SupportedLanguage) {
+        let displayedLanguage = imageTranslationDisplayedSourceLanguage
         if language != sourceLanguage {
             sourceLanguage = language
         }
@@ -2010,7 +1996,7 @@ final class TranslationSessionStore: ObservableObject {
             retryImageTranslation()
         case .idle, .failed:
             guard canRetryImageTranslation else { return }
-            imageTranslationRetrySourceLanguage = language
+            imageTranslationRetrySourceLanguage = language == displayedLanguage ? nil : language
         case .loading, .recognizing, .translating:
             return
         }
