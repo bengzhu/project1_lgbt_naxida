@@ -83,6 +83,7 @@ struct ImageTranslationPanel: View {
     @State private var sharePresentationID = UUID()
     @State private var reviewFilter: ImageOCRReviewFilter = .all
     @State private var selectedImageTranslationBlockID: UUID?
+    @State private var reviewedImageTranslationBlockIDs: Set<UUID> = []
     let revealPreview: () -> Void
 
     var body: some View {
@@ -116,6 +117,7 @@ struct ImageTranslationPanel: View {
         }
         .onChange(of: store.imageTranslationRevision) { _, _ in
             selectedImageTranslationBlockID = nil
+            reviewedImageTranslationBlockIDs.removeAll()
         }
         .onChange(of: reviewFilter) { _, _ in
             clearHiddenReviewSelection()
@@ -137,10 +139,12 @@ struct ImageTranslationPanel: View {
                 positionText: selectedBlockPositionText,
                 canSelectPrevious: canSelectPreviousBlock,
                 canSelectNext: canSelectNextBlock,
+                reviewedBlockIDs: reviewedImageTranslationBlockIDs,
                 selectBlock: selectBlockFromPreview,
                 clearSelection: { selectedImageTranslationBlockID = nil },
                 selectPrevious: { selectAdjacentBlock(offset: -1) },
-                selectNext: { selectAdjacentBlock(offset: 1) }
+                selectNext: { selectAdjacentBlock(offset: 1) },
+                toggleReviewCompletion: toggleReviewCompletion
             )
         }
     }
@@ -186,6 +190,13 @@ struct ImageTranslationPanel: View {
                         action: beginReviewQueue
                     )
                     .accessibilityHint("显示待复查结果并定位当前或第一个文字块")
+                } else if reviewCompletedBlockCount > 0 {
+                    AppSecondaryButton(
+                        title: "重新复查 \(reviewCompletedBlockCount)",
+                        systemImage: "arrow.counterclockwise",
+                        action: restartReviewQueue
+                    )
+                    .accessibilityHint("清除本次复查进度并定位第一个待复查文字块")
                 }
             }
 
@@ -210,17 +221,26 @@ struct ImageTranslationPanel: View {
                     systemImage: "photo.badge.plus"
                 )
             } else if visibleImageTranslationBlocks.isEmpty {
-                AppEmptyState(
-                    title: "无需复查",
-                    detail: "当前结果没有低置信或方向待定文字块。",
-                    systemImage: "checkmark.circle"
-                )
+                if reviewCompletedBlockCount > 0 {
+                    AppEmptyState(
+                        title: "本次复查完成",
+                        detail: "所有风险块都已标记为已复查，可随时重新开始。",
+                        systemImage: "checkmark.circle.fill"
+                    )
+                } else {
+                    AppEmptyState(
+                        title: "无需复查",
+                        detail: "当前结果没有低置信或方向待定文字块。",
+                        systemImage: "checkmark.circle"
+                    )
+                }
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(visibleImageTranslationBlocks) { block in
                         ImageTranslationBlockRow(
                             block: block,
                             isSelected: selectedImageTranslationBlockID == block.id,
+                            isReviewCompleted: reviewedImageTranslationBlockIDs.contains(block.id),
                             select: { toggleSelection(of: block.id) }
                         )
                     }
@@ -238,11 +258,22 @@ struct ImageTranslationPanel: View {
     }
 
     private var visibleImageTranslationBlocks: [ImageTranslationBlock] {
-        reviewFilter.blocks(from: store.imageTranslationBlocks)
+        let filteredBlocks = reviewFilter.blocks(from: store.imageTranslationBlocks)
+        guard reviewFilter == .needsReview else { return filteredBlocks }
+        return filteredBlocks.filter { !reviewedImageTranslationBlockIDs.contains($0.id) }
     }
 
     private var reviewRequiredBlocks: [ImageTranslationBlock] {
         ImageOCRReviewFilter.needsReview.blocks(from: store.imageTranslationBlocks)
+            .filter { !reviewedImageTranslationBlockIDs.contains($0.id) }
+    }
+
+    private var allReviewRequiredBlocks: [ImageTranslationBlock] {
+        ImageOCRReviewFilter.needsReview.blocks(from: store.imageTranslationBlocks)
+    }
+
+    private var reviewCompletedBlockCount: Int {
+        allReviewRequiredBlocks.count(where: { reviewedImageTranslationBlockIDs.contains($0.id) })
     }
 
     private func filterTitle(_ filter: ImageOCRReviewFilter) -> String {
@@ -250,7 +281,7 @@ struct ImageTranslationPanel: View {
         case .all:
             "全部 \(store.imageTranslationBlocks.count)"
         case .needsReview:
-            "待复查 \(ImageOCRResultSummary(blocks: store.imageTranslationBlocks).reviewRequiredBlockCount)"
+            "待复查 \(reviewRequiredBlocks.count)"
         }
     }
 
@@ -281,6 +312,31 @@ struct ImageTranslationPanel: View {
         }
         reviewFilter = .needsReview
         selectedImageTranslationBlockID = retainedBlockID ?? firstBlockID
+        revealPreview()
+    }
+
+    private func toggleReviewCompletion(_ blockID: UUID) {
+        guard allReviewRequiredBlocks.contains(where: { $0.id == blockID }) else { return }
+        if reviewedImageTranslationBlockIDs.remove(blockID) != nil {
+            reviewFilter = .needsReview
+            selectedImageTranslationBlockID = blockID
+            return
+        }
+
+        let pendingBlocks = reviewRequiredBlocks
+        guard let currentIndex = pendingBlocks.firstIndex(where: { $0.id == blockID }) else { return }
+        let nextBlockID = pendingBlocks.dropFirst(currentIndex + 1).first?.id
+            ?? pendingBlocks[..<currentIndex].last?.id
+        reviewedImageTranslationBlockIDs.insert(blockID)
+        reviewFilter = .needsReview
+        selectedImageTranslationBlockID = nextBlockID
+    }
+
+    private func restartReviewQueue() {
+        guard let firstBlockID = allReviewRequiredBlocks.first?.id else { return }
+        reviewedImageTranslationBlockIDs.removeAll()
+        reviewFilter = .needsReview
+        selectedImageTranslationBlockID = firstBlockID
         revealPreview()
     }
 
@@ -694,10 +750,12 @@ private struct ImageTranslationPreview: View {
     let positionText: String
     let canSelectPrevious: Bool
     let canSelectNext: Bool
+    let reviewedBlockIDs: Set<UUID>
     let selectBlock: (UUID) -> Void
     let clearSelection: () -> Void
     let selectPrevious: () -> Void
     let selectNext: () -> Void
+    let toggleReviewCompletion: (UUID) -> Void
     @State private var previewImage: UIImage?
     @State private var previewRevision: Int?
     @State private var previewAttempt = 0
@@ -739,9 +797,12 @@ private struct ImageTranslationPreview: View {
                                 positionText: positionText,
                                 canSelectPrevious: canSelectPrevious,
                                 canSelectNext: canSelectNext,
+                                isReviewRequired: ImageOCRResultSummary.requiresReview(selectedBlock),
+                                isReviewCompleted: reviewedBlockIDs.contains(selectedBlock.id),
                                 close: clearSelection,
                                 selectPrevious: selectPrevious,
-                                selectNext: selectNext
+                                selectNext: selectNext,
+                                toggleReviewCompletion: { toggleReviewCompletion(selectedBlock.id) }
                             )
                             .frame(
                                 width: max(180, min(320, geometry.size.width - AppTheme.Spacing.control * 2)),
@@ -871,9 +932,12 @@ private struct ImageTranslationFocusPreview: View {
     let positionText: String
     let canSelectPrevious: Bool
     let canSelectNext: Bool
+    let isReviewRequired: Bool
+    let isReviewCompleted: Bool
     let close: () -> Void
     let selectPrevious: () -> Void
     let selectNext: () -> Void
+    let toggleReviewCompletion: () -> Void
 
     var body: some View {
         Group {
@@ -947,6 +1011,17 @@ private struct ImageTranslationFocusPreview: View {
         }
         .overlay(alignment: .bottomTrailing) {
             HStack(spacing: AppTheme.Spacing.compact) {
+                if isReviewRequired {
+                    Button(
+                        isReviewCompleted ? "重新加入待复查" : "完成当前复查",
+                        systemImage: isReviewCompleted ? "arrow.uturn.backward" : "checkmark",
+                        action: toggleReviewCompletion
+                    )
+                    .labelStyle(.iconOnly)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .background(Color.black.opacity(0.82), in: Circle())
+                    .accessibilityHint(isReviewCompleted ? "把当前文字块放回待复查队列" : "标记完成并定位下一个待复查文字块")
+                }
                 Button("上一个文字块", systemImage: "chevron.left", action: selectPrevious)
                     .labelStyle(.iconOnly)
                     .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
@@ -1144,6 +1219,7 @@ private struct ImageTranslationOverlayBlock: View {
 private struct ImageTranslationBlockRow: View {
     let block: ImageTranslationBlock
     let isSelected: Bool
+    let isReviewCompleted: Bool
     let select: () -> Void
 
     var body: some View {
@@ -1164,13 +1240,18 @@ private struct ImageTranslationBlockRow: View {
                         HStack(spacing: AppTheme.Spacing.control) {
                             if ImageOCRResultSummary.hasLowConfidence(block) {
                                 Label("低置信", systemImage: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(Color.appWarning)
                             }
                             if ImageOCRResultSummary.hasUnknownDirection(block) {
                                 Label("方向待定", systemImage: "questionmark.diamond.fill")
+                                    .foregroundStyle(Color.appWarning)
+                            }
+                            if isReviewCompleted {
+                                Label("本次已复查", systemImage: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.appSuccess)
                             }
                         }
                         .font(.caption)
-                        .foregroundStyle(Color.appWarning)
                     }
                 }
                 Spacer(minLength: 0)

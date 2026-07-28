@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.17：图片待复查进度与自动出队
+日期：2026-07-28
+
+状态：Agent X 已完成候选实现和本地轻量回归，工程候选版本为 `MARKETING_VERSION=3.17`；待 exact-SHA 云端 full、PR 和 merge 收口。候选分支为 `codeb/v3.17-image-review-progress`，未触碰 `main`。
+
+核心变更：
+
+- 图片页用 View 私有 block ID 集合记录当前图片 revision 的本次复查进度；风险集合仍先由 `ImageOCRReviewFilter.needsReview` 统一判定，再排除已复查项，图片 revision 变化时进度和选择一起清零。
+- 局部放大新增 44pt 命名完成/撤销命令。完成当前块后优先定位队列中其后的未复查块；没有后项时回到前一个，最后一块完成后关闭局部放大并显示“本次复查完成”。
+- “待复查”计数与一键入口改为剩余数量；“全部”列表用文字和图标显示本次已复查项。全部完成后可一键清除进度、重新进入首个风险块；从“全部”选择已复查风险块时也可撤销并放回队列。
+- 进度只属于当前界面会话，不写 Store 或持久化，不改变完整 blocks、OCR、翻译、renderer、导出或漫画探针。新增 v3.17 源码合同并接入图片/UI fail-fast 路由；本版不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
+
+验证与遗留：
+
+- v3.17 新合同 7/7、25 个图片/UI 合同脚本共 157/157 通过；Swift parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析（`v3.17`）、工程 plist、3 份 JSON 基线和 `git diff --check` 均通过。
+- 未跑本机 build / 探针，按规则交给云端验证。局部放大底部三按钮在极窄宽度、Dynamic Type、VoiceOver 完成/撤销后的焦点转移和真实多块操作仍需后续人工运行态检查；云端结果将在候选提交后补录。
+
 ## v3.16：一键进入图片待复查队列
 日期：2026-07-28
 
