@@ -32,7 +32,7 @@ class ImageReviewQueueEntryContractTests(unittest.TestCase):
 
     def test_review_command_only_appears_for_a_nonempty_queue(self) -> None:
         self.assertIn("if !reviewRequiredBlocks.isEmpty", self.view)
-        self.assertIn('title: "定位待复查 \\(reviewRequiredBlocks.count)"', self.view)
+        self.assertIn("title: reviewQueueActionTitle", self.view)
         self.assertIn('systemImage: "checklist"', self.view)
         self.assertIn("tone: .warning", self.view)
         self.assertIn("action: beginReviewQueue", self.view)

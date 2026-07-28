@@ -203,7 +203,7 @@ struct ImageTranslationPanel: View {
 
                 if !reviewRequiredBlocks.isEmpty {
                     AppSecondaryButton(
-                        title: "定位待复查 \(reviewRequiredBlocks.count)",
+                        title: reviewQueueActionTitle,
                         systemImage: "checklist",
                         tone: .warning,
                         action: beginReviewQueue
@@ -260,7 +260,8 @@ struct ImageTranslationPanel: View {
                             block: block,
                             isSelected: selectedImageTranslationBlockID == block.id,
                             isReviewCompleted: reviewedImageTranslationBlockIDs.contains(block.id),
-                            select: { toggleSelection(of: block.id) }
+                            select: { toggleSelection(of: block.id) },
+                            toggleReviewCompletion: { toggleReviewCompletion(block.id) }
                         )
                     }
                 }
@@ -293,6 +294,11 @@ struct ImageTranslationPanel: View {
 
     private var reviewCompletedBlockCount: Int {
         allReviewRequiredBlocks.count(where: { reviewedImageTranslationBlockIDs.contains($0.id) })
+    }
+
+    private var reviewQueueActionTitle: String {
+        let action = reviewCompletedBlockCount == 0 ? "开始复查" : "继续复查"
+        return "\(action) \(reviewRequiredBlocks.count)"
     }
 
     private func filterTitle(_ filter: ImageOCRReviewFilter) -> String {
@@ -1032,7 +1038,7 @@ private struct ImageTranslationFocusPreview: View {
             HStack(spacing: AppTheme.Spacing.compact) {
                 if isReviewRequired {
                     Button(
-                        isReviewCompleted ? "重新加入待复查" : "完成当前复查",
+                        isReviewCompleted ? "重新加入待复查" : "完成并继续复查",
                         systemImage: isReviewCompleted ? "arrow.uturn.backward" : "checkmark",
                         action: toggleReviewCompletion
                     )
@@ -1240,56 +1246,76 @@ private struct ImageTranslationBlockRow: View {
     let isSelected: Bool
     let isReviewCompleted: Bool
     let select: () -> Void
+    let toggleReviewCompletion: () -> Void
 
     var body: some View {
-        Button(action: select) {
-            HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
-                Text(block.confidence, format: .percent.precision(.fractionLength(0)))
-                    .font(.caption.monospacedDigit().bold())
-                    .foregroundStyle(Color.appAccent)
-                    .frame(width: 46, alignment: .leading)
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
-                    Text(block.translation.isEmpty ? "等待翻译" : block.translation)
-                        .font(.subheadline.bold())
-                        .foregroundStyle(Color.appTextPrimary)
-                    Text(block.original)
-                        .font(.caption)
-                        .foregroundStyle(Color.appTextSecondary)
-                    if ImageOCRResultSummary.requiresReview(block) {
-                        HStack(spacing: AppTheme.Spacing.control) {
-                            if ImageOCRResultSummary.hasLowConfidence(block) {
-                                Label("低置信", systemImage: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(Color.appWarning)
+        HStack(alignment: .center, spacing: AppTheme.Spacing.compact) {
+            Button(action: select) {
+                HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
+                    Text(block.confidence, format: .percent.precision(.fractionLength(0)))
+                        .font(.caption.monospacedDigit().bold())
+                        .foregroundStyle(Color.appAccent)
+                        .frame(width: 46, alignment: .leading)
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
+                        Text(block.translation.isEmpty ? "等待翻译" : block.translation)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(Color.appTextPrimary)
+                        Text(block.original)
+                            .font(.caption)
+                            .foregroundStyle(Color.appTextSecondary)
+                        if ImageOCRResultSummary.requiresReview(block) {
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
+                                if ImageOCRResultSummary.hasLowConfidence(block) {
+                                    Label("低置信", systemImage: "exclamationmark.triangle.fill")
+                                        .foregroundStyle(Color.appWarning)
+                                }
+                                if ImageOCRResultSummary.hasUnknownDirection(block) {
+                                    Label("方向待定", systemImage: "questionmark.diamond.fill")
+                                        .foregroundStyle(Color.appWarning)
+                                }
+                                if isReviewCompleted {
+                                    Label("本次已复查", systemImage: "checkmark.circle.fill")
+                                        .foregroundStyle(Color.appSuccess)
+                                }
                             }
-                            if ImageOCRResultSummary.hasUnknownDirection(block) {
-                                Label("方向待定", systemImage: "questionmark.diamond.fill")
-                                    .foregroundStyle(Color.appWarning)
-                            }
-                            if isReviewCompleted {
-                                Label("本次已复查", systemImage: "checkmark.circle.fill")
-                                    .foregroundStyle(Color.appSuccess)
-                            }
+                            .font(.caption)
                         }
-                        .font(.caption)
+                    }
+                    Spacer(minLength: 0)
+                    if isSelected {
+                        Image(systemName: "viewfinder.circle.fill")
+                            .foregroundStyle(Color.appAccent)
+                            .accessibilityHidden(true)
                     }
                 }
-                Spacer(minLength: 0)
-                if isSelected {
-                    Image(systemName: "viewfinder.circle.fill")
-                        .foregroundStyle(Color.appAccent)
-                        .accessibilityHidden(true)
-                }
+                .padding(.vertical, AppTheme.Spacing.control)
+                .contentShape(.rect)
             }
-            .padding(.horizontal, AppTheme.Spacing.compact)
-            .padding(.vertical, AppTheme.Spacing.control)
-            .contentShape(.rect)
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            .accessibilityValue(isSelected ? "已在图片中定位" : "未定位")
+            .accessibilityHint("在图片预览中定位此文字块")
+
+            if ImageOCRResultSummary.requiresReview(block) {
+                Button(
+                    isReviewCompleted ? "撤销本次复查" : "完成并继续复查",
+                    systemImage: isReviewCompleted ? "arrow.uturn.backward" : "checkmark.circle",
+                    action: toggleReviewCompletion
+                )
+                .labelStyle(.iconOnly)
+                .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                .foregroundStyle(isReviewCompleted ? Color.appSuccess : Color.appWarning)
+                .accessibilityHint(
+                    isReviewCompleted
+                        ? "把此文字块放回待复查队列并定位"
+                        : "标记完成并定位下一个待复查文字块"
+                )
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, AppTheme.Spacing.compact)
         .background(isSelected ? Color.appAccent.opacity(0.12) : Color.clear)
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
-        .accessibilityElement(children: .combine)
-        .accessibilityValue(isSelected ? "已在图片中定位" : "未定位")
-        .accessibilityHint("在图片预览中定位此文字块")
     }
 }
 
