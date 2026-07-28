@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-候选版本：`3.7`（图片输入语言选择先通过 Pro 授权，再更新全局与 task-scoped 凭据；拒绝时显示 Alert 且不产生跨页副作用。v3.6-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`3.7`（图片输入语言选择先通过 Pro 授权，再更新全局与 task-scoped 凭据；拒绝时显示 Alert 且不产生跨页副作用。v3.6-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
