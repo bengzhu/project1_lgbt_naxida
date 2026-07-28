@@ -607,7 +607,19 @@ private struct ImageTranslationPreview: View {
             }
         }
         .task(id: store.imageTranslationRevision) {
-            previewImage = store.imageTranslationData.flatMap(UIImage.init(data:))
+            let revision = store.imageTranslationRevision
+            guard let data = store.imageTranslationData else {
+                previewImage = nil
+                return
+            }
+
+            previewImage = nil
+            guard let preview = await ImagePreviewService.makePreview(from: data),
+                  !Task.isCancelled,
+                  revision == store.imageTranslationRevision else {
+                return
+            }
+            previewImage = UIImage(cgImage: preview.cgImage)
         }
     }
 

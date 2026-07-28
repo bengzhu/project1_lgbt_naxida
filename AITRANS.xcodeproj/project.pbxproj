@@ -20,6 +20,7 @@
 		0A00000100000000000000C0 /* ImageOCRResultSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000C1 /* ImageOCRResultSummary.swift */; };
 		0A00000100000000000000C2 /* ImageOCRReviewFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000C3 /* ImageOCRReviewFilter.swift */; };
 		0A00000100000000000000C4 /* KoharuMaskPayloadEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000C5 /* KoharuMaskPayloadEvaluator.swift */; };
+		0A00000100000000000000C6 /* ImagePreviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000C7 /* ImagePreviewService.swift */; };
 		0A000001000000000000000B /* ProFeatureViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001D /* ProFeatureViews.swift */; };
 		0A000001000000000000000C /* LlamaRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001E /* LlamaRuntime.swift */; };
 		0A000001000000000000000D /* build-apple/llama.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001F /* build-apple/llama.xcframework */; };
@@ -78,6 +79,7 @@
 		0A00000100000000000000C1 /* ImageOCRResultSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRResultSummary.swift; sourceTree = "<group>"; };
 		0A00000100000000000000C3 /* ImageOCRReviewFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRReviewFilter.swift; sourceTree = "<group>"; };
 		0A00000100000000000000C5 /* KoharuMaskPayloadEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoharuMaskPayloadEvaluator.swift; sourceTree = "<group>"; };
+		0A00000100000000000000C7 /* ImagePreviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePreviewService.swift; sourceTree = "<group>"; };
 		0A000001000000000000001D /* ProFeatureViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFeatureViews.swift; sourceTree = "<group>"; };
 		0A000001000000000000001E /* LlamaRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LlamaRuntime.swift; sourceTree = "<group>"; };
 		0A000001000000000000001F /* build-apple/llama.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = "build-apple/llama.xcframework"; sourceTree = SOURCE_ROOT; };
@@ -171,6 +173,7 @@
 			isa = PBXGroup;
 			children = (
 				0A0000010000000000000014 /* TranslationSessionStore.swift */,
+				0A00000100000000000000C7 /* ImagePreviewService.swift */,
 				0A00000100000000000000BF /* ImageOCRLayoutEngine.swift */,
 				0A000001000000000000001C /* VisionOCRService.swift */,
 				0A0000010000000000000015 /* MockGemmaService.swift */,
@@ -310,6 +313,7 @@
 				0A00000100000000000000C0 /* ImageOCRResultSummary.swift in Sources */,
 				0A00000100000000000000C2 /* ImageOCRReviewFilter.swift in Sources */,
 				0A00000100000000000000C4 /* KoharuMaskPayloadEvaluator.swift in Sources */,
+				0A00000100000000000000C6 /* ImagePreviewService.swift in Sources */,
 				0A000001000000000000000A /* VisionOCRService.swift in Sources */,
 				0A000001000000000000000B /* ProFeatureViews.swift in Sources */,
 				0A000001000000000000000C /* LlamaRuntime.swift in Sources */,
@@ -465,7 +469,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.9;
+				MARKETING_VERSION = 3.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -492,7 +496,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.9;
+				MARKETING_VERSION = 3.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
