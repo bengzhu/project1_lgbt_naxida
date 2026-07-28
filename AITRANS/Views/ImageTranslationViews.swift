@@ -137,6 +137,7 @@ struct ImageTranslationPanel: View {
                 positionText: selectedBlockPositionText,
                 canSelectPrevious: canSelectPreviousBlock,
                 canSelectNext: canSelectNextBlock,
+                selectBlock: selectBlockFromPreview,
                 clearSelection: { selectedImageTranslationBlockID = nil },
                 selectPrevious: { selectAdjacentBlock(offset: -1) },
                 selectNext: { selectAdjacentBlock(offset: 1) }
@@ -246,6 +247,17 @@ struct ImageTranslationPanel: View {
             selectedImageTranslationBlockID = blockID
             revealPreview()
         }
+    }
+
+    private func selectBlockFromPreview(_ blockID: UUID) {
+        if selectedImageTranslationBlockID == blockID {
+            selectedImageTranslationBlockID = nil
+            return
+        }
+        if !visibleImageTranslationBlocks.contains(where: { $0.id == blockID }) {
+            reviewFilter = .all
+        }
+        selectedImageTranslationBlockID = blockID
     }
 
     private var selectedVisibleBlockIndex: Int? {
@@ -658,6 +670,7 @@ private struct ImageTranslationPreview: View {
     let positionText: String
     let canSelectPrevious: Bool
     let canSelectNext: Bool
+    let selectBlock: (UUID) -> Void
     let clearSelection: () -> Void
     let selectPrevious: () -> Void
     let selectNext: () -> Void
@@ -689,7 +702,8 @@ private struct ImageTranslationPreview: View {
                                 mode: store.imageOverlayMode,
                                 imageOrigin: origin,
                                 imageSize: fittedSize,
-                                isSelected: selectedBlockID == block.id
+                                isSelected: selectedBlockID == block.id,
+                                select: { selectBlock(block.id) }
                             )
                         }
                     }
@@ -1014,37 +1028,52 @@ private struct ImageTranslationOverlayBlock: View {
     let imageOrigin: CGPoint
     let imageSize: CGSize
     let isSelected: Bool
+    let select: () -> Void
 
     var body: some View {
         let rect = displayRect
         Group {
             switch mode {
             case .adjacent:
-                VStack(alignment: .leading, spacing: 2) {
+                Button(action: select) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(block.translation.isEmpty ? block.original : block.translation)
+                            .font(.caption.bold())
+                            .lineLimit(4)
+                        Text(block.original)
+                            .font(.caption2)
+                            .lineLimit(2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(5)
+                    .frame(width: bubbleWidth, alignment: .leading)
+                    .background(Color.black.opacity(0.88), in: .rect(cornerRadius: 4))
+                    .overlay(alignment: .leading) { Rectangle().fill(Color.appAccent).frame(width: 3) }
+                    .overlay { selectionBorder }
+                }
+                .buttonStyle(.plain)
+                .frame(minWidth: AppTheme.Layout.minimumTarget, minHeight: AppTheme.Layout.minimumTarget)
+                .position(x: adjacentCenterX(for: rect), y: rect.midY)
+                .accessibilityLabel("文字块 \(block.original)")
+                .accessibilityValue(accessibilityValue)
+                .accessibilityHint(accessibilityHint)
+            case .replace:
+                Button(action: select) {
                     Text(block.translation.isEmpty ? block.original : block.translation)
                         .font(.caption.bold())
                         .lineLimit(4)
-                    Text(block.original)
-                        .font(.caption2)
-                        .lineLimit(2)
-                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(3)
+                        .frame(width: max(rect.width, 44), height: max(rect.height, 24))
+                        .background(Color.appAccentStrong.opacity(0.94), in: .rect(cornerRadius: 4))
+                        .overlay { selectionBorder }
                 }
-                .padding(5)
-                .frame(width: bubbleWidth, alignment: .leading)
-                .background(Color.black.opacity(0.88), in: .rect(cornerRadius: 4))
-                .overlay(alignment: .leading) { Rectangle().fill(Color.appAccent).frame(width: 3) }
-                .overlay { selectionBorder }
-                .position(x: adjacentCenterX(for: rect), y: rect.midY)
-            case .replace:
-                Text(block.translation.isEmpty ? block.original : block.translation)
-                    .font(.caption.bold())
-                    .lineLimit(4)
-                    .multilineTextAlignment(.center)
-                    .padding(3)
-                    .frame(width: max(rect.width, 44), height: max(rect.height, 24))
-                    .background(Color.appAccentStrong.opacity(0.94), in: .rect(cornerRadius: 4))
-                    .overlay { selectionBorder }
-                    .position(x: rect.midX, y: rect.midY)
+                .buttonStyle(.plain)
+                .frame(minWidth: AppTheme.Layout.minimumTarget, minHeight: AppTheme.Layout.minimumTarget)
+                .position(x: rect.midX, y: rect.midY)
+                .accessibilityLabel("文字块 \(block.original)")
+                .accessibilityValue(accessibilityValue)
+                .accessibilityHint(accessibilityHint)
             }
         }
         .foregroundStyle(.white)
@@ -1069,6 +1098,15 @@ private struct ImageTranslationOverlayBlock: View {
 
     private var bubbleWidth: CGFloat {
         min(max(displayRect.width * 1.45, 78), max(imageSize.width * 0.46, 92))
+    }
+
+    private var accessibilityValue: String {
+        let translation = block.translation.isEmpty ? "等待翻译" : block.translation
+        return isSelected ? "已定位，\(translation)" : "未定位，\(translation)"
+    }
+
+    private var accessibilityHint: String {
+        isSelected ? "取消图片中的定位" : "在图片中定位并打开局部放大"
     }
 
     private func adjacentCenterX(for rect: CGRect) -> CGFloat {
