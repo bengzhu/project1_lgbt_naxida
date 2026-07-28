@@ -124,6 +124,8 @@ final class TranslationSessionStore: ObservableObject {
     @Published private(set) var imageTranslationExportRenderState: ImageTranslationExportRenderState = .idle
     @Published private(set) var imageTranslationContentSourceLanguage: SupportedLanguage?
     @Published private(set) var imageTranslationContentTargetLanguage: SupportedLanguage?
+    @Published private(set) var imageTranslationRetrySourceLanguage: SupportedLanguage?
+    @Published private(set) var imageTranslationRetryTargetLanguage: SupportedLanguage?
     @Published private(set) var speechRecognitionCapabilities: [SpeechRecognitionCapability] = []
 
     let localModelDirectory: URL
@@ -347,6 +349,24 @@ final class TranslationSessionStore: ObservableObject {
             }
             return imageTranslationContentSourceLanguage ?? sourceLanguage
         }
+    }
+
+    var imageTranslationSelectedSourceLanguage: SupportedLanguage {
+        guard canRetryImageTranslation else { return imageTranslationDisplayedSourceLanguage }
+        return imageTranslationRetrySourceLanguage ?? imageTranslationDisplayedSourceLanguage
+    }
+
+    var imageTranslationSelectedTargetLanguage: SupportedLanguage {
+        guard canRetryImageTranslation else { return imageTranslationDisplayedTargetLanguage }
+        return imageTranslationRetryTargetLanguage ?? imageTranslationDisplayedTargetLanguage
+    }
+
+    var imageTranslationRetryLanguageSummary: String? {
+        guard canRetryImageTranslation,
+              imageTranslationRetrySourceLanguage != nil || imageTranslationRetryTargetLanguage != nil else {
+            return nil
+        }
+        return "识别 \(imageTranslationSelectedSourceLanguage.rawValue) · 译为 \(imageTranslationSelectedTargetLanguage.rawValue)"
     }
 
     var canRetryImageTranslation: Bool {
@@ -1113,6 +1133,8 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationTaskID = taskID
         imageTranslationContentSourceLanguage = sourceLanguage
         imageTranslationContentTargetLanguage = targetLanguage
+        imageTranslationRetrySourceLanguage = nil
+        imageTranslationRetryTargetLanguage = nil
         imageTranslationState = .loading
         imageTranslationMessage = "正在载入图片"
         imageTranslationBlocks = []
@@ -1484,6 +1506,8 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationSourceURL = nil
         imageTranslationContentSourceLanguage = nil
         imageTranslationContentTargetLanguage = nil
+        imageTranslationRetrySourceLanguage = nil
+        imageTranslationRetryTargetLanguage = nil
         imageTranslationRevision += 1
         isProcessing = false
     }
@@ -1669,8 +1693,12 @@ final class TranslationSessionStore: ObservableObject {
         let sourceFilename = imageTranslationFilename.isEmpty
             ? Self.sanitizedImageFilename(from: url)
             : imageTranslationFilename
-        let selectedSourceLanguage = imageTranslationContentSourceLanguage ?? sourceLanguage
-        let selectedTargetLanguage = imageTranslationContentTargetLanguage ?? targetLanguage
+        let selectedSourceLanguage = imageTranslationRetrySourceLanguage
+            ?? imageTranslationContentSourceLanguage
+            ?? sourceLanguage
+        let selectedTargetLanguage = imageTranslationRetryTargetLanguage
+            ?? imageTranslationContentTargetLanguage
+            ?? targetLanguage
         let taskID = beginImageTranslationTask(
             filename: sourceFilename,
             sourceLanguage: selectedSourceLanguage,
@@ -1941,7 +1969,7 @@ final class TranslationSessionStore: ObservableObject {
             selectTargetLanguage(language)
         }
         guard targetLanguage == language,
-              imageTranslationContentTargetLanguage != language else {
+              imageTranslationSelectedTargetLanguage != language else {
             return
         }
 
@@ -1952,10 +1980,11 @@ final class TranslationSessionStore: ObservableObject {
                 return
             }
             imageTranslationContentTargetLanguage = language
+            imageTranslationRetryTargetLanguage = nil
             retryImageTranslation()
         case .idle, .failed:
             guard canRetryImageTranslation else { return }
-            imageTranslationContentTargetLanguage = language
+            imageTranslationRetryTargetLanguage = language
         case .loading, .recognizing, .translating:
             return
         }
@@ -1966,7 +1995,7 @@ final class TranslationSessionStore: ObservableObject {
             sourceLanguage = language
         }
         guard isProUnlocked,
-              imageTranslationContentSourceLanguage != language else {
+              imageTranslationSelectedSourceLanguage != language else {
             return
         }
 
@@ -1977,10 +2006,11 @@ final class TranslationSessionStore: ObservableObject {
                 return
             }
             imageTranslationContentSourceLanguage = language
+            imageTranslationRetrySourceLanguage = nil
             retryImageTranslation()
         case .idle, .failed:
             guard canRetryImageTranslation else { return }
-            imageTranslationContentSourceLanguage = language
+            imageTranslationRetrySourceLanguage = language
         case .loading, .recognizing, .translating:
             return
         }

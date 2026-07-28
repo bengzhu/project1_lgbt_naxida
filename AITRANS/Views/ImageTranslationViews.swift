@@ -121,6 +121,14 @@ struct ImageTranslationPanel: View {
             ImageSourceLanguageControl()
             ImageTargetLanguageControl()
 
+            if let retryLanguageSummary = store.imageTranslationRetryLanguageSummary {
+                AppStatusRow(
+                    title: "重试语言已更新",
+                    detail: retryLanguageSummary,
+                    tone: .warning
+                )
+            }
+
             AppSectionHeader(
                 title: "识别结果",
                 subtitle: store.imageTranslationSummary,
@@ -295,7 +303,7 @@ private struct ImageSourceLanguageControl: View {
                 } label: {
                     Label(
                         language.rawValue,
-                        systemImage: store.imageTranslationDisplayedSourceLanguage == language
+                        systemImage: store.imageTranslationSelectedSourceLanguage == language
                             ? "checkmark.circle.fill"
                             : "circle"
                     )
@@ -306,7 +314,7 @@ private struct ImageSourceLanguageControl: View {
                 Label("输入语言", systemImage: "text.viewfinder")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 0)
-                Text(store.imageTranslationDisplayedSourceLanguage.rawValue)
+                Text(store.imageTranslationSelectedSourceLanguage.rawValue)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                 Image(systemName: "chevron.up.chevron.down")
@@ -324,7 +332,7 @@ private struct ImageSourceLanguageControl: View {
         }
         .disabled(isRunning)
         .accessibilityLabel("输入语言")
-        .accessibilityValue(store.imageTranslationDisplayedSourceLanguage.rawValue)
+        .accessibilityValue(store.imageTranslationSelectedSourceLanguage.rawValue)
         .accessibilityHint("选择图片 OCR 的输入语言；已完成的图片会重新识别和翻译")
     }
 
@@ -357,7 +365,7 @@ private struct ImageTargetLanguageControl: View {
                 Label("目标语言", systemImage: "character.bubble")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 0)
-                Text(store.imageTranslationDisplayedTargetLanguage.rawValue)
+                Text(store.imageTranslationSelectedTargetLanguage.rawValue)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                 Image(systemName: "chevron.up.chevron.down")
@@ -375,7 +383,7 @@ private struct ImageTargetLanguageControl: View {
         }
         .disabled(isRunning)
         .accessibilityLabel("目标语言")
-        .accessibilityValue(store.imageTranslationDisplayedTargetLanguage.rawValue)
+        .accessibilityValue(store.imageTranslationSelectedTargetLanguage.rawValue)
         .accessibilityHint("选择图片翻译的目标语言；已完成的图片会重新翻译，失败或取消的图片会在重试时使用新语言")
         .alert("Pro 语言", isPresented: $showLockedLanguage) {
             Button("知道了", role: .cancel) {}
@@ -392,7 +400,7 @@ private struct ImageTargetLanguageControl: View {
     }
 
     private func menuSymbol(for language: SupportedLanguage) -> String {
-        if store.imageTranslationDisplayedTargetLanguage == language {
+        if store.imageTranslationSelectedTargetLanguage == language {
             return "checkmark.circle.fill"
         }
         return store.canUseLanguage(language) ? "circle" : "lock.fill"

@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-正式版本：`3.4`（图片失败或取消后的目标语言选择会更新 Store-owned Retry 凭据，完成态即时重译，运行态冻结；v3.3 的 Koharu mask 拓扑 gate 与 v3.2-v2.2 能力仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`3.5`（图片实际内容语言与 pending Retry 语言分账，菜单选择不再误标失败/取消后保留的部分结果；v3.4-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
@@ -167,7 +167,7 @@
 - 识别结果摘要由 `ImageOCRResultSummary` 从当前 blocks 计算：显示已翻译/总块数、夹取到 `0...1` 后的平均 Vision 置信度、低于 `50%` 的块数，以及竖排与 unknown 方向计数。空结果不虚构平均值。成功图片在 Store-owned 原图仍存在时提供“重新识别”，复用当前内容的输入/目标语言凭据并走既有 task ID、render/share 失效和源文件保留链路；View 不读文件或直接启动 OCR。
 - 检查列表可在“全部 / 待复查”间切换。待复查是低于 `50%` 或方向为 nil / unknown 的并集，重叠块只计一次且保留原始顺序；行内以图标和文字展示具体原因。筛选仅是 View 私有展示状态，图片预览、覆盖、翻译、导出、分享与持久化继续使用完整 `imageTranslationBlocks`。
 - 旁贴或覆盖预览与同模式 PNG 导出；Vision OCR bbox、SwiftUI 预览和导出 renderer 统一使用图片顶左原点坐标。后台 render 只写 render ID 独占 staging PNG，已完成图片切换模式会使旧导出失效并按 render ID / 图片 task ID / mode 验明身份后发布 `aitrans-export-<render UUID>-<base>-translated.png` 稳定文件，旧 detached render 不得覆盖新任务。覆盖模式重渲染公开 `idle / rendering / failed` 状态；rendering 时 Store 与 Picker 双重拒绝重复切换，当前失败显示 danger 并提供同模式重试，无 staging URL 也必须进入可重试失败。新任务、清空或其他内容失效会取消 render Task、更新 render ID 并复位状态。启动时会扫描 `Application Support/ImageTranslations` 直属文件，分账接管带 Store marker 的稳定导出、`<task UUID>-<name>` 输入副本和 `.<base>-translated-<render UUID>.staging.png`，清理上次异常退出残留；普通后缀文件、wrong-kind、目录外、嵌套、escape、symlink 和 dangling symlink 一律拒绝。新任务、清空或模式重渲染会撤销公开 export URL 并删除当前 Store-owned 稳定导出；正常 input/staging 清理同样必须携带可信 workspace 与对应文件类型，删除失败也登记 orphan ownership。所有删除失败项都在后续生命周期继续重试。分享前由 Store 在 `ImageTranslationShares/<share UUID>/` 创建人类可读 `<base>-translated.png` 硬链接或副本，并公开 request-scoped `idle / preparing / failed` 状态；准备中禁用重复导出，当前请求失败覆盖翻译成功色调。Store request ID 与 View presentation ID 共同拒绝晚到结果和旧 Task 的 `nil` 回写，dismiss / export 失效 / View 离开与启动恢复统一清理分享目录并复位反馈，删除失败保留 ownership。
-- 任务启动时固定输入/目标语言，并单独记录当前图片内容实际使用的两份语言凭据；从 `.loading` 起即使图片数据和 blocks 尚为空，UI 也使用任务语言。失败或取消且 Store-owned source 仍可重试时，修改输入或目标语言只更新下次 Retry 凭据，不立即启动流水线；无可重试 source 时不得重标旧内容。已完成图片选择不同输入语言会从沙盒原图重新 OCR + 翻译，选择不同目标语言会重新翻译；运行中菜单禁用且 Store 拒绝改写本次凭据。
+- 任务启动时固定输入/目标语言，并分别记录 actual-content 与 pending-Retry 凭据；从 `.loading` 起即使图片数据和 blocks 尚为空，结果标题也使用任务实际语言。失败或取消且 Store-owned source 仍可重试时，菜单写入独立 pending 字段并显示“重试语言已更新”，不会改写或误标屏幕上保留的 OCR/译文；Retry 优先消费 pending，再回退 actual-content，任务开始即清空 pending。clear 同时清空两组凭据，cancel 保留 actual-content。已完成图片选择不同输入语言会从沙盒原图重新 OCR + 翻译，选择不同目标语言会重新翻译；运行中菜单禁用且 Store 拒绝改写本次凭据。
 - 普通图片 OCR 对每个 observation 记录 `horizontal / vertical / unknown` 方向证据。只有日语/中文 prior、bbox 高宽比至少 `1.6`、高度至少 `0.035`，并且包含至少两个 CJK 字符或具有同列邻居且没有近同行邻居时，才进入竖排路径；孤立单字高框、同行 CJK 碎片及非 CJK 高框继续走横排/unknown fallback。横排按上到下、行内左到右聚类；竖排按列从右到左、列内上到下聚类，两种方向不会互相合并。方向、置信度与 reason 随 `ImageTranslationBlock` 保留，不改变漫画探针链路。
 
 关键文件：
