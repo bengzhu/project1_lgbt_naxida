@@ -11,7 +11,7 @@
 ## v3.15：图片预览文字块直接点选
 日期：2026-07-28
 
-状态：Agent X 已完成候选实现与本地轻量回归，工程候选版本为 `MARKETING_VERSION=3.15`；等待 exact-SHA 云端 full、PR 和 merge 收口。候选分支为 `codeb/v3.15-image-preview-direct-selection`，未触碰 `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.15`。PR #79 已合入 `smalldata_test`，merge SHA `595fa31dcf62c77880a7ef819511c827b876aca3`；远端 `codeb/v3.15-image-preview-direct-selection` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,8 +22,10 @@
 
 验证与遗留：
 
-- v3.15 新合同 5/5，v1.87 与 v2.2-v3.15 全部图片/UI 合同合计 145 项通过；完整 Xcode toolchain Swift parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.15`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。云端结果将在候选提交后补录。
-- 未跑本机 build / 探针，按规则交给云端验证。小 bbox 的实机点击容错、覆盖块重叠时的目标选择、Dynamic Type 和 VoiceOver 顺序仍需后续人工运行态检查。
+- v3.15 新合同 5/5，v1.87 与 v2.2-v3.15 全部图片/UI 合同合计 145 项通过；完整 Xcode toolchain Swift parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.15`、工程 plist、三份基线 JSON 和 `git diff --check` 均通过。
+- 候选 exact SHA `b15a9dd3a03b7b6346f3b4d448397337c29f71ad` 的云端 full run `30338387675` attempt 1 成功；artifact `aitrans-ci-v3.15-codeb-v3.15-image-preview-direct-selection--b15a9dd3a03b-run30338387675-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI 145 项、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded、0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- PR #79 exact HEAD fast run `30338949455` 成功后合并；merge follow-up run `30339006117` 成功，artifact 与 merge HEAD `595fa31dcf62c77880a7ef819511c827b876aca3` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `b15a9dd3a03b7b6346f3b4d448397337c29f71ad` 的成功 full 收据，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit 10/10。
+- 未跑本机 build / 探针，按规则交给云端验证。本版未运行 UI evidence；小 bbox 的实机点击容错、覆盖块重叠时的目标选择、Dynamic Type 和 VoiceOver 顺序仍需后续人工运行态检查。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
 
 ## v3.14：图片复查定位与连续导航
 日期：2026-07-28
