@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-候选版本：`3.10`（图片预览改用后台 ImageIO 有界下采样并按 revision 拒收旧结果；Store 原始图片仍供 OCR 与导出使用。v3.9-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`3.10`（图片预览改用后台 ImageIO 有界下采样并按 revision 拒收旧结果；Store 原始图片仍供 OCR 与导出使用。v3.9-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 

@@ -11,7 +11,7 @@
 ## v3.10：图片预览有界后台下采样
 日期：2026-07-28
 
-状态：Agent X 候选实现中；分支 `codeb/v3.10-image-preview-downsample`，工程候选版本为 `MARKETING_VERSION=3.10`。尚未 push、创建 PR 或触碰 `smalldata_test` / `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.10`。PR #74 已合入 `smalldata_test`，merge SHA `a4a60a7edafe046c6047f6e7e27b05fcbffd652e`；远端 `codeb/v3.10-image-preview-downsample` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,8 +22,10 @@
 
 验证与遗留：
 
-- v3.10 新合同 5/5，v1.87 与 v2.2-v3.10 全部图片/UI 合同合计 117 项通过；ImageIO evaluator 验证横图 100x50、EXIF 旋转图 50x100、非法输入与非正上限拒绝。两个改动 Swift 文件以完整 Xcode toolchain parse 通过，两个 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.10`、plist/project、三份基线 JSON 和 `git diff --check` 均通过。云端 exact-SHA full 待运行。
-- 未跑本机 build / 探针，按规则交给云端验证。真实超大 HEIC/JPEG 设备内存峰值仍需 Instruments 人工量测。
+- v3.10 新合同 5/5，v1.87 与 v2.2-v3.10 全部图片/UI 合同合计 117 项通过；ImageIO evaluator 验证横图 100x50、EXIF 旋转图 50x100、非法输入与非正上限拒绝。两个改动 Swift 文件以完整 Xcode toolchain parse 通过，两个 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.10`、plist/project、三份基线 JSON 和 `git diff --check` 均通过。
+- 候选 exact SHA `273a7ff32f63217477fe97744b0b38cd08dc3c1a` 的云端 full run `30332278786` attempt 1 成功；artifact `aitrans-ci-v3.10-codeb-v3.10-image-preview-downsample--273a7ff32f63-run30332278786-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded、0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- PR #74 exact HEAD fast run `30332666081` 成功后合并；merge follow-up run `30332762927` 成功，artifact 与 merge HEAD `a4a60a7edafe046c6047f6e7e27b05fcbffd652e` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `273a7ff32f63217477fe97744b0b38cd08dc3c1a` 的成功 full 收据，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit 10/10。
+- 未跑本机 build / 探针，按规则交给云端验证。本版不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。真实超大 HEIC/JPEG 设备内存峰值仍需 Instruments 人工量测。
 
 ## v3.9：图片清空破坏性确认
 日期：2026-07-28
