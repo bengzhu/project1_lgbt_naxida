@@ -37,7 +37,7 @@ flowchart TD
   G --> H["LlamaRuntime<br/>llama.cpp C API 封装"]
 
   %% 图片 OCR 分支：普通图片翻译
-  IMG_LANGUAGE["图片输入 / 目标语言菜单<br/>actual content 与 pending Retry 分账<br/>选回 actual 清除 pending<br/>运行态冻结 / 完成态重跑"] --> C
+  IMG_LANGUAGE["图片输入 / 目标语言菜单<br/>输入先验 Pro / 拒绝无跨页副作用<br/>actual content 与 pending Retry 分账<br/>选回 actual 清除 pending<br/>运行态冻结 / 完成态重跑"] --> C
   C --> IT["Store-owned 图片 transfer<br/>task ID + 文件 selection UUID<br/>运行中可更换来源"]
   IT --> IG{"transfer / sandbox await 后<br/>task ID 仍匹配?"}
   IG -->|否| IDROP["丢弃旧回调并清理未采用输入<br/>不恢复旧 retry source"]
