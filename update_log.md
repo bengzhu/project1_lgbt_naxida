@@ -11,7 +11,7 @@
 ## v3.16：一键进入图片待复查队列
 日期：2026-07-28
 
-状态：Agent X 已完成候选实现和本地轻量回归，工程候选版本为 `MARKETING_VERSION=3.16`；待 exact-SHA 云端 full、PR 和 merge 收口。候选分支为 `codeb/v3.16-image-review-queue-entry`，未触碰 `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.16`。PR #80 已合入 `smalldata_test`，merge SHA `336e367c1a05bcd86843b28c03ec8eb191990f18`；远端 `codeb/v3.16-image-review-queue-entry` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -23,7 +23,9 @@
 验证与遗留：
 
 - v3.16 新合同 5/5、24 个图片/UI 合同脚本共 150/150 通过；Swift parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析（`v3.16`）、工程 plist、3 份 JSON 基线和 `git diff --check` 均通过。
-- 未跑本机 build / 探针，按规则交给云端验证。紧凑宽度按钮文字、Dynamic Type、VoiceOver 进入队列后的顺序与真实多块操作仍需后续人工运行态检查；云端结果将在候选提交后补录。
+- 候选 exact SHA `11a46beedcc2c4f5562a000b08931e36cdee1946` 的云端 full run `30339824675` attempt 1 成功；artifact `aitrans-ci-v3.16-codeb-v3.16-image-review-queue-entry--11a46beedcc2-run30339824675-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI 150 项、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded、0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- PR #80 exact HEAD fast run `30340452255` 成功后合并；merge follow-up run `30340570024` 成功，artifact 与 merge HEAD `336e367c1a05bcd86843b28c03ec8eb191990f18` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `11a46beedcc2c4f5562a000b08931e36cdee1946` 的成功 full 收据，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit 10/10。
+- 未跑本机 build / 探针，按规则交给云端验证。本版未运行 UI evidence；紧凑宽度按钮文字、Dynamic Type、VoiceOver 进入队列后的顺序与真实多块操作仍需后续人工运行态检查。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
 
 ## v3.15：图片预览文字块直接点选
 日期：2026-07-28

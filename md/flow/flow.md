@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前候选版本：`3.16`（图片页有风险块时提供一键待复查队列入口，切换筛选后保留仍有效的当前选择，否则定位首个风险块，并复用现有局部放大与前后导航。v3.15-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+当前正式版本：`3.16`（图片页有风险块时提供一键待复查队列入口，切换筛选后保留仍有效的当前选择，否则定位首个风险块，并复用现有局部放大与前后导航。v3.15-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
