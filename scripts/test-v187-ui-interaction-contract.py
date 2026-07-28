@@ -183,17 +183,18 @@ class V187UIInteractionContractTests(unittest.TestCase):
         self.assertGreaterEqual(image.count("store.imageTranslationDisplayedTargetLanguage"), 4)
         self.assertIn("已完成的图片会重新翻译", image)
 
-        selector = re.search(
-            r"func selectImageTargetLanguage\(_ language: SupportedLanguage\) \{(?P<body>.*?)\n    \}",
+        selector = function_body(
             store,
-            re.DOTALL,
+            "func selectImageTargetLanguage(_ language: SupportedLanguage)",
         )
-        self.assertIsNotNone(selector, "image target language selector is missing")
-        self.assertIn("selectTargetLanguage(language)", selector.group("body"))
-        self.assertIn("imageTranslationState == .translated", selector.group("body"))
-        self.assertIn("imageTranslationContentTargetLanguage != language", selector.group("body"))
-        self.assertNotIn("guard language != targetLanguage else", selector.group("body"))
-        self.assertIn("retryImageTranslation()", selector.group("body"))
+        self.assertIn("selectTargetLanguage(language)", selector)
+        self.assertIn("switch imageTranslationState", selector)
+        self.assertIn("case .translated:", selector)
+        self.assertIn("case .idle, .failed:", selector)
+        self.assertIn("case .loading, .recognizing, .translating:", selector)
+        self.assertIn("imageTranslationContentTargetLanguage != language", selector)
+        self.assertNotIn("guard language != targetLanguage else", selector)
+        self.assertEqual(selector.count("retryImageTranslation()"), 1)
 
         self.assertIn(
             "imageTranslationContentTargetLanguage = targetLanguage",

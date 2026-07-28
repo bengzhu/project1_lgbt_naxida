@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-正式版本：`3.3`。
+正式版本：`3.4`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -37,7 +37,7 @@ flowchart TD
   G --> H["LlamaRuntime<br/>llama.cpp C API 封装"]
 
   %% 图片 OCR 分支：普通图片翻译
-  IMG_LANGUAGE["图片输入 / 目标语言菜单<br/>任务凭据冻结 / 完成后按需重跑"] --> C
+  IMG_LANGUAGE["图片输入 / 目标语言菜单<br/>运行态冻结 / 完成态重跑<br/>失败或取消更新 Retry 凭据"] --> C
   C --> IT["Store-owned 图片 transfer<br/>task ID + 文件 selection UUID<br/>运行中可更换来源"]
   IT --> IG{"transfer / sandbox await 后<br/>task ID 仍匹配?"}
   IG -->|否| IDROP["丢弃旧回调并清理未采用输入<br/>不恢复旧 retry source"]

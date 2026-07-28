@@ -376,7 +376,7 @@ private struct ImageTargetLanguageControl: View {
         .disabled(isRunning)
         .accessibilityLabel("目标语言")
         .accessibilityValue(store.imageTranslationDisplayedTargetLanguage.rawValue)
-        .accessibilityHint("选择图片翻译的目标语言；已完成的图片会重新翻译")
+        .accessibilityHint("选择图片翻译的目标语言；已完成的图片会重新翻译，失败或取消的图片会在重试时使用新语言")
         .alert("Pro 语言", isPresented: $showLockedLanguage) {
             Button("知道了", role: .cancel) {}
         } message: {

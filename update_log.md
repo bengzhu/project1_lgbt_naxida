@@ -8,6 +8,22 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.4：图片 Retry 目标语言凭据
+日期：2026-07-28
+
+状态：Agent X 已建立候选分支 `codeb/v3.4-image-retry-language`，完成核心实现与本地轻量验证，等待 exact-SHA 云端 full、PR 和合并收口；未触碰 `main`。
+
+核心变更：
+
+- `selectImageTargetLanguage` 改为与输入语言一致的 Store-owned 状态机：完成态先确认 source 文件存在，再更新内容目标并即时重译；失败或取消保留态只在 `canRetryImageTranslation` 时更新下次 Retry 凭据；运行态拒绝改写。
+- 移除图片目标语言路径多余的 `isProUnlocked` 硬门槛。Pro 可用性仍由 `selectTargetLanguage` / `canUseLanguage` 统一判定，英语、中文等免费目标不会再被图片完成态额外阻断。
+- 新增 v3.4 contract，锁定 source ownership、Retry/clear/cancel 凭据边界、辅助说明与 CI 路由；不修改 Vision OCR、布局、翻译实现、renderer、漫画探针或 Koharu 报告。
+
+验证与遗留：
+
+- v3.4 新契约 5/5、v1.87 与 v2.2-v3.1 既有图片/UI 契约合计 89 项全部通过；两个改动 Swift 文件以完整 Xcode 工具链 parse 通过，workflow YAML、pbxproj、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.4` 和 `git diff --check` 均通过。
+- 未跑本机 build / 探针，按规则交给云端验证。本版是图片操作一致性修复，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
+
 ## v3.3：Koharu mask 拓扑与稳定 assignment
 日期：2026-07-28
 
