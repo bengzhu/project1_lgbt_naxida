@@ -425,6 +425,7 @@ private struct ImageCommandBar: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @Binding var selectedPhotoItem: PhotosPickerItem?
     @State private var showLockedImageTranslation = false
+    @State private var showClearConfirmation = false
     let openImporter: () -> Void
     let shareResult: () -> Void
 
@@ -437,6 +438,16 @@ private struct ImageCommandBar: View {
             Button("知道了", role: .cancel) {}
         } message: {
             Text(store.dataTransferMessage)
+        }
+        .confirmationDialog(
+            "清空图片翻译？",
+            isPresented: $showClearConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("清空图片与翻译结果", role: .destructive, action: store.clearImageTranslation)
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("这会删除当前图片、识别结果、译文和导出文件。")
         }
     }
 
@@ -495,7 +506,12 @@ private struct ImageCommandBar: View {
         }
 
         if store.imageTranslationData != nil {
-            AppIconButton(title: "清空图片翻译", systemImage: "trash", tone: .danger, action: store.clearImageTranslation)
+            AppIconButton(
+                title: "清空图片翻译",
+                systemImage: "trash",
+                tone: .danger,
+                action: requestClearImageTranslation
+            )
         }
     }
 
@@ -519,6 +535,10 @@ private struct ImageCommandBar: View {
 
     private func requestImageTranslationAccess() {
         showLockedImageTranslation = !store.requestImageTranslationAccess()
+    }
+
+    private func requestClearImageTranslation() {
+        showClearConfirmation = true
     }
 }
 
