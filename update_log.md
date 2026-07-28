@@ -11,7 +11,7 @@
 ## v3.4：图片 Retry 目标语言凭据
 日期：2026-07-28
 
-状态：Agent X 已建立候选分支 `codeb/v3.4-image-retry-language`，完成核心实现与本地轻量验证，等待 exact-SHA 云端 full、PR 和合并收口；未触碰 `main`。
+状态：Agent X 已完成核心实现、本地轻量验证、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.4`。PR #68 已合入 `smalldata_test`，merge SHA `8f71922b39a1bd2b6d3947bc79fbecd8d1f7385d`；远端 `codeb/v3.4-image-retry-language` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,6 +22,8 @@
 验证与遗留：
 
 - v3.4 新契约 5/5、v1.87 与 v2.2-v3.1 既有图片/UI 契约合计 89 项全部通过；两个改动 Swift 文件以完整 Xcode 工具链 parse 通过，workflow YAML、pbxproj、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.4` 和 `git diff --check` 均通过。
+- 候选 exact SHA `8fa0b203fc5090f042b2c99499a7f8e26d6fc236` 的云端 full run `30327280611` attempt 1 成功；artifact `aitrans-ci-v3.4-codeb-v3.4-image-retry-language--8fa0b203fc50-run30327280611-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` 可用，commit status `AITRANS CI/full-validation=success`。
+- PR #68 exact HEAD fast run `30327602710` 成功后合并；merge follow-up run `30327633420` 成功，artifact 与 merge HEAD `8f71922b39a1bd2b6d3947bc79fbecd8d1f7385d` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `8fa0b203fc5090f042b2c99499a7f8e26d6fc236` 的成功 full 收据，JUnit 10/10。
 - 未跑本机 build / 探针，按规则交给云端验证。本版是图片操作一致性修复，不刷新 `output/` 或 `metrics/version_history.csv`，不声称 OCR、翻译或识别质量提升。
 
 ## v3.3：Koharu mask 拓扑与稳定 assignment
