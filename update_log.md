@@ -11,7 +11,7 @@
 ## v3.8：图片来源选择前置 Pro 门控
 日期：2026-07-28
 
-状态：Agent X 候选实现中；分支 `codeb/v3.8-image-entry-pro-gate`，工程候选版本为 `MARKETING_VERSION=3.8`。尚未 push、创建 PR 或触碰 `smalldata_test` / `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.8`。PR #72 已合入 `smalldata_test`，merge SHA `140dbab256033348e9984f1b3e4a516cd14ff69a`；远端 `codeb/v3.8-image-entry-pro-gate` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,7 +22,9 @@
 
 验证与遗留：
 
-- v3.8 新合同 5/5，v1.87 与 v2.2-v3.8 全部图片/UI 合同合计 108 项通过；两个改动 Swift 文件以完整 Xcode toolchain parse 通过，两个 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.8`、plist/project、三份基线 JSON 和 `git diff --check` 均通过。云端 exact-SHA full 待运行。
+- v3.8 新合同 5/5，v1.87 与 v2.2-v3.8 全部图片/UI 合同合计 108 项通过；两个改动 Swift 文件以完整 Xcode toolchain parse 通过，两个 workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析 `v3.8`、plist/project、三份基线 JSON 和 `git diff --check` 均通过。
+- 候选 exact SHA `93852703c141d617a09e5c753faccb6b6bc6bd64` 的云端 full run `30330438412` attempt 1 成功；artifact `aitrans-ci-v3.8-codeb-v3.8-image-entry-pro-gate--93852703c141-run30330438412-attempt1` 与 version / branch / SHA / run / profile 完全一致，图片/UI、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` succeeded、0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。
+- PR #72 exact HEAD fast run `30330808106` 成功后合并；merge follow-up run `30330859847` 成功，artifact 与 merge HEAD `140dbab256033348e9984f1b3e4a516cd14ff69a` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `93852703c141d617a09e5c753faccb6b6bc6bd64` 的成功 full 收据，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`。
 - 未跑本机 build / 探针，按规则交给云端验证。仓库仍无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus。
 
 ## v3.7：图片输入语言 Pro 拒绝无副作用

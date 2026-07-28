@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-候选版本：`3.8`（免费模式的照片和图片文件入口先通过 Store-owned Pro 授权，拒绝时显示 Alert，不打开系统选择器；底层翻译 guard 保留。v3.7-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+正式版本：`3.8`（免费模式的照片和图片文件入口先通过 Store-owned Pro 授权，拒绝时显示 Alert，不打开系统选择器；底层翻译 guard 保留。v3.7-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
