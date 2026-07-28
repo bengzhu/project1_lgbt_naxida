@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-正式版本：`3.8`。
+候选版本：`3.9`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -47,6 +47,9 @@ flowchart TD
   ICANCEL["取消图片任务"] --> IRETRY{"sandbox source 已发布且仍存在?"}
   IRETRY -->|是| IR["idle + 显示重试"]
   IRETRY -->|否| IDROP
+  ICLEAR["点击清空图片翻译"] --> ICONFIRM{"确认删除图片与结果?"}
+  ICONFIRM -->|取消| IRETAIN["保留当前图片与结果"]
+  ICONFIRM -->|确认| ICLEARED["Store 清理 task / source / export / share"]
   I --> ILAYOUT{"CJK + 明确高宽几何证据?"}
   ILAYOUT -->|是| IV["竖排列右到左<br/>列内上到下"]
   ILAYOUT -->|否| IH["横排 / unknown fallback<br/>上到下、行内左到右"]
