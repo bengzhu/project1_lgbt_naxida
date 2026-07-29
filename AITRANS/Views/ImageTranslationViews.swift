@@ -74,6 +74,7 @@ struct ImageTranslationView: View {
 
 struct ImageTranslationPanel: View {
     static let previewScrollID = "imageTranslationPreview"
+    private static let reviewCompletionAccessibilityFocusID = "image-review-complete"
 
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var showImageImporter = false
@@ -84,6 +85,7 @@ struct ImageTranslationPanel: View {
     @State private var reviewFilter: ImageOCRReviewFilter = .all
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var reviewedImageTranslationBlockIDs: Set<UUID> = []
+    @AccessibilityFocusState private var reviewAccessibilityFocusID: String?
     let revealPreview: () -> Void
 
     var body: some View {
@@ -118,6 +120,7 @@ struct ImageTranslationPanel: View {
         .onChange(of: store.imageTranslationRevision) { _, _ in
             selectedImageTranslationBlockID = nil
             reviewedImageTranslationBlockIDs.removeAll()
+            reviewAccessibilityFocusID = nil
         }
         .onChange(of: reviewFilter) { _, _ in
             clearHiddenReviewSelection()
@@ -140,11 +143,14 @@ struct ImageTranslationPanel: View {
                 canSelectPrevious: canSelectPreviousBlock,
                 canSelectNext: canSelectNextBlock,
                 reviewedBlockIDs: reviewedImageTranslationBlockIDs,
+                accessibilityFocus: $reviewAccessibilityFocusID,
                 selectBlock: selectBlockFromPreview,
                 clearSelection: { selectedImageTranslationBlockID = nil },
                 selectPrevious: { selectAdjacentBlock(offset: -1) },
                 selectNext: { selectAdjacentBlock(offset: 1) },
-                toggleReviewCompletion: toggleReviewCompletion
+                toggleReviewCompletion: { blockID in
+                    toggleReviewCompletion(blockID, focusInPreview: true)
+                }
             )
         }
     }
@@ -246,6 +252,10 @@ struct ImageTranslationPanel: View {
                         detail: "所有风险块都已标记为已复查，可随时重新开始。",
                         systemImage: "checkmark.circle.fill"
                     )
+                    .accessibilityFocused(
+                        $reviewAccessibilityFocusID,
+                        equals: Self.reviewCompletionAccessibilityFocusID
+                    )
                 } else {
                     AppEmptyState(
                         title: "无需复查",
@@ -260,8 +270,11 @@ struct ImageTranslationPanel: View {
                             block: block,
                             isSelected: selectedImageTranslationBlockID == block.id,
                             isReviewCompleted: reviewedImageTranslationBlockIDs.contains(block.id),
+                            accessibilityFocus: $reviewAccessibilityFocusID,
                             select: { toggleSelection(of: block.id) },
-                            toggleReviewCompletion: { toggleReviewCompletion(block.id) }
+                            toggleReviewCompletion: {
+                                toggleReviewCompletion(block.id, focusInPreview: false)
+                            }
                         )
                     }
                 }
@@ -336,15 +349,22 @@ struct ImageTranslationPanel: View {
             reviewRequiredBlocks.contains(where: { $0.id == selectedBlockID }) ? selectedBlockID : nil
         }
         reviewFilter = .needsReview
-        selectedImageTranslationBlockID = retainedBlockID ?? firstBlockID
+        let targetBlockID = retainedBlockID ?? firstBlockID
+        selectedImageTranslationBlockID = targetBlockID
         revealPreview()
+        moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(targetBlockID))
     }
 
-    private func toggleReviewCompletion(_ blockID: UUID) {
+    private func toggleReviewCompletion(_ blockID: UUID, focusInPreview: Bool) {
         guard allReviewRequiredBlocks.contains(where: { $0.id == blockID }) else { return }
         if reviewedImageTranslationBlockIDs.remove(blockID) != nil {
             reviewFilter = .needsReview
             selectedImageTranslationBlockID = blockID
+            moveReviewAccessibilityFocus(
+                to: focusInPreview
+                    ? reviewPreviewAccessibilityFocusID(blockID)
+                    : reviewRowAccessibilityFocusID(blockID)
+            )
             return
         }
 
@@ -355,6 +375,12 @@ struct ImageTranslationPanel: View {
         reviewedImageTranslationBlockIDs.insert(blockID)
         reviewFilter = .needsReview
         selectedImageTranslationBlockID = nextBlockID
+        let nextFocusID = nextBlockID.map {
+            focusInPreview
+                ? reviewPreviewAccessibilityFocusID($0)
+                : reviewRowAccessibilityFocusID($0)
+        } ?? Self.reviewCompletionAccessibilityFocusID
+        moveReviewAccessibilityFocus(to: nextFocusID)
     }
 
     private func restartReviewQueue() {
@@ -363,6 +389,24 @@ struct ImageTranslationPanel: View {
         reviewFilter = .needsReview
         selectedImageTranslationBlockID = firstBlockID
         revealPreview()
+        moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(firstBlockID))
+    }
+
+    private func reviewRowAccessibilityFocusID(_ blockID: UUID) -> String {
+        "image-review-row-\(blockID.uuidString)"
+    }
+
+    private func reviewPreviewAccessibilityFocusID(_ blockID: UUID) -> String {
+        "image-review-preview-\(blockID.uuidString)"
+    }
+
+    private func moveReviewAccessibilityFocus(to focusID: String?) {
+        let revision = store.imageTranslationRevision
+        Task { @MainActor in
+            await Task.yield()
+            guard revision == store.imageTranslationRevision else { return }
+            reviewAccessibilityFocusID = focusID
+        }
     }
 
     private var selectedVisibleBlockIndex: Int? {
@@ -776,6 +820,7 @@ private struct ImageTranslationPreview: View {
     let canSelectPrevious: Bool
     let canSelectNext: Bool
     let reviewedBlockIDs: Set<UUID>
+    let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let selectBlock: (UUID) -> Void
     let clearSelection: () -> Void
     let selectPrevious: () -> Void
@@ -824,6 +869,7 @@ private struct ImageTranslationPreview: View {
                                 canSelectNext: canSelectNext,
                                 isReviewRequired: ImageOCRResultSummary.requiresReview(selectedBlock),
                                 isReviewCompleted: reviewedBlockIDs.contains(selectedBlock.id),
+                                accessibilityFocus: accessibilityFocus,
                                 close: clearSelection,
                                 selectPrevious: selectPrevious,
                                 selectNext: selectNext,
@@ -959,6 +1005,7 @@ private struct ImageTranslationFocusPreview: View {
     let canSelectNext: Bool
     let isReviewRequired: Bool
     let isReviewCompleted: Bool
+    let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let close: () -> Void
     let selectPrevious: () -> Void
     let selectNext: () -> Void
@@ -1065,6 +1112,10 @@ private struct ImageTranslationFocusPreview: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("已定位文字块局部放大")
         .accessibilityValue("\(positionText)，\(block.original)")
+        .accessibilityFocused(
+            accessibilityFocus,
+            equals: "image-review-preview-\(block.id.uuidString)"
+        )
     }
 
     private var focusCrop: (image: CGImage, normalizedRect: CGRect)? {
@@ -1245,6 +1296,7 @@ private struct ImageTranslationBlockRow: View {
     let block: ImageTranslationBlock
     let isSelected: Bool
     let isReviewCompleted: Bool
+    let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let select: () -> Void
     let toggleReviewCompletion: () -> Void
 
@@ -1296,6 +1348,10 @@ private struct ImageTranslationBlockRow: View {
             .accessibilityElement(children: .combine)
             .accessibilityValue(isSelected ? "已在图片中定位" : "未定位")
             .accessibilityHint("在图片预览中定位此文字块")
+            .accessibilityFocused(
+                accessibilityFocus,
+                equals: "image-review-row-\(block.id.uuidString)"
+            )
 
             if ImageOCRResultSummary.requiresReview(block) {
                 Button(

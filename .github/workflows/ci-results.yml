@@ -365,6 +365,9 @@ jobs:
           if grep -Fx 'scripts/test-v319-image-review-quick-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
+          if grep -Fx 'scripts/test-v320-image-review-voiceover-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
 
           validation_profile="${{ steps.meta.outputs.requested_validation_profile }}"
           validation_reason="manual_${validation_profile}"
@@ -938,6 +941,7 @@ jobs:
             python3 -B scripts/test-v317-image-review-progress-contract.py
             python3 -B scripts/test-v318-image-review-progress-evidence-contract.py
             python3 -B scripts/test-v319-image-review-quick-action-contract.py
+            python3 -B scripts/test-v320-image-review-voiceover-focus-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract

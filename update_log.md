@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.20：图片连续复查 VoiceOver 焦点
+日期：2026-07-29
+
+状态：Agent X 正在 `codeb/v3.20-image-review-voiceover-focus` 实现并等待 exact-SHA 云端 full 验收；未触碰 `main`。
+
+核心变更：
+
+- 图片复查新增 View 私有 `AccessibilityFocusState<String?>`，用不同 focus ID 区分结果行、局部放大和“本次复查完成”，避免风险行出队后 VoiceOver 失去上下文。
+- 开始或重启队列后聚焦当前局部放大；结果行快速完成/撤销后聚焦下一行或当前行；局部放大完成/撤销后聚焦下一块或当前块放大窗；最后一块完成后聚焦完成态。
+- 焦点发布先让出一次主线程更新，并核对捕获的图片 revision；新图片会同步清除选择、复查进度与无障碍焦点，旧任务不得抢回焦点。
+- 新增 v3.20 源码合同并接入图片/UI fail-fast 路由。本版不写 Store 或持久化，不改变 OCR、翻译、renderer、导出或漫画探针，也不刷新 `output/` 或 `metrics/version_history.csv`。
+
+验证与遗留：
+
+- v3.20 新合同 7/7、28 个图片/UI 合同脚本共 177/177 通过；Swift 全量 parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析（`v3.20`）、工程 plist、3 份 JSON 基线和 `git diff --check` 均通过。exact-SHA 云端 full 尚未运行；真实 VoiceOver 左右扫动、Rotor 和快速连续点击仍需人工在模拟器或真机回放，源码合同只验证接线和 revision isolation。
+- 未跑本机 build / 探针，按规则交给云端验证。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不声称 OCR、翻译或识别质量提升。
+
 ## v3.19：图片结果行快速复查
 日期：2026-07-28
 
