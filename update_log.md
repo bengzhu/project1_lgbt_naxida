@@ -11,7 +11,7 @@
 ## v3.20：图片连续复查 VoiceOver 焦点
 日期：2026-07-29
 
-状态：Agent X 正在 `codeb/v3.20-image-review-voiceover-focus` 实现并等待 exact-SHA 云端 full 验收；未触碰 `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full 和 PR 收口；工程正式版本为 `MARKETING_VERSION=3.20`。PR #84 已合入 `smalldata_test`，merge SHA `ef1816b4770f51d92341c71a010b57a6a2fc2707`；远端 `codeb/v3.20-image-review-voiceover-focus` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,7 +22,10 @@
 
 验证与遗留：
 
-- v3.20 新合同 7/7、28 个图片/UI 合同脚本共 177/177 通过；Swift 全量 parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析（`v3.20`）、工程 plist、3 份 JSON 基线和 `git diff --check` 均通过。exact-SHA 云端 full 尚未运行；真实 VoiceOver 左右扫动、Rotor 和快速连续点击仍需人工在模拟器或真机回放，源码合同只验证接线和 revision isolation。
+- v3.20 新合同 7/7、28 个图片/UI 合同脚本共 177/177 通过；Swift 全量 parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析（`v3.20`）、工程 plist、3 份 JSON 基线和 `git diff --check` 均通过。
+- 候选 exact SHA `03a008e0a882cb69127894fd14b493708db185fd` 的云端 full run `30425666348` attempt 1 成功；artifact `aitrans-ci-v3.20-codeb-v3.20-image-review-voiceover-focus--03a008e0a882-run30425666348-attempt1` 与 version / branch / SHA / run / attempt / profile 完全一致，图片/UI 177 项、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` 存在，commit status `AITRANS CI/full-validation=success`。UI evidence 按 `not_requested` 跳过，因为静态截图不能证明 VoiceOver 焦点迁移。
+- PR #84 exact HEAD fast run `30426160146` 成功后合并；merge follow-up run `30426221026` 成功，artifact 与 merge HEAD `ef1816b4770f51d92341c71a010b57a6a2fc2707` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `03a008e0a882cb69127894fd14b493708db185fd` 的成功 full 收据，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit 10/10。
+- 真实 VoiceOver 左右扫动、Rotor 和快速连续点击仍需人工在模拟器或真机回放，源码合同只验证接线和 revision isolation。
 - 未跑本机 build / 探针，按规则交给云端验证。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不声称 OCR、翻译或识别质量提升。
 
 ## v3.19：图片结果行快速复查
