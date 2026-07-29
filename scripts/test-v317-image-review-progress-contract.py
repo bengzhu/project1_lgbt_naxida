@@ -63,7 +63,10 @@ class ImageReviewProgressContractTests(unittest.TestCase):
         self.assertIn("guard reviewFilter == .needsReview else", visible)
 
     def test_completion_advances_within_pending_order_and_supports_undo(self) -> None:
-        toggle = braced_body(self.view, "private func toggleReviewCompletion(_ blockID: UUID)")
+        toggle = braced_body(
+            self.view,
+            "private func toggleReviewCompletion(_ blockID: UUID, focusInPreview: Bool)",
+        )
         self.assertIn("reviewedImageTranslationBlockIDs.remove(blockID)", toggle)
         self.assertIn("selectedImageTranslationBlockID = blockID", toggle)
         self.assertIn("let pendingBlocks = reviewRequiredBlocks", toggle)

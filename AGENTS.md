@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 当前正式版本号 `3.19`：图片风险结果行提供独立 44pt 完成并继续/撤销复查按钮，主行点击仍只负责定位；复查入口按完成数区分开始与继续，风险标签纵向布局以适配窄 inspector 和 Dynamic Type。v3.18-v2.2 的进度、队列、预览、交互、Retry、Koharu gate 与图片生命周期能力仍保留。复查状态不写 Store 或持久化，不改变 OCR、翻译、renderer 或导出。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
+- 当前正式版本号 `3.20`：图片连续复查用 View 私有 `AccessibilityFocusState` 按动作来源迁移 VoiceOver 焦点，开始/重启进入局部放大，行级或放大动作完成后聚焦对应下一目标，队列结束聚焦完成态，图片 revision 变化拒收旧焦点。v3.19-v2.2 的快速动作、进度、队列、预览、交互、Retry、Koharu gate 与图片生命周期能力仍保留。复查与焦点状态不写 Store 或持久化，不改变 OCR、翻译、renderer 或导出。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 

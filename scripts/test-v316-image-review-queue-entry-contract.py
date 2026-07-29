@@ -57,14 +57,12 @@ class ImageReviewQueueEntryContractTests(unittest.TestCase):
         self.assertIn("selectedImageTranslationBlockID.flatMap", begin)
         self.assertIn("reviewRequiredBlocks.contains", begin)
         self.assertIn("reviewFilter = .needsReview", begin)
-        self.assertIn(
-            "selectedImageTranslationBlockID = retainedBlockID ?? firstBlockID",
-            begin,
-        )
+        self.assertIn("let targetBlockID = retainedBlockID ?? firstBlockID", begin)
+        self.assertIn("selectedImageTranslationBlockID = targetBlockID", begin)
         self.assertEqual(begin.count("revealPreview()"), 1)
         self.assertLess(
             begin.index("reviewFilter = .needsReview"),
-            begin.index("selectedImageTranslationBlockID = retainedBlockID ?? firstBlockID"),
+            begin.index("selectedImageTranslationBlockID = targetBlockID"),
         )
 
     def test_review_entry_remains_view_private_and_uses_a_44pt_component(self) -> None:

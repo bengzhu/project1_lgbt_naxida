@@ -55,8 +55,11 @@ class ImageReviewQuickActionContractTests(unittest.TestCase):
 
     def test_row_reuses_the_existing_queue_transition(self) -> None:
         call = braced_body(self.view, "ForEach(visibleImageTranslationBlocks)")
-        self.assertIn("toggleReviewCompletion: { toggleReviewCompletion(block.id) }", call)
-        transition = braced_body(self.view, "private func toggleReviewCompletion(_ blockID: UUID)")
+        self.assertIn("toggleReviewCompletion(block.id, focusInPreview: false)", call)
+        transition = braced_body(
+            self.view,
+            "private func toggleReviewCompletion(_ blockID: UUID, focusInPreview: Bool)",
+        )
         self.assertIn("reviewedImageTranslationBlockIDs.remove(blockID)", transition)
         self.assertIn("reviewedImageTranslationBlockIDs.insert(blockID)", transition)
         self.assertIn("selectedImageTranslationBlockID = nextBlockID", transition)
