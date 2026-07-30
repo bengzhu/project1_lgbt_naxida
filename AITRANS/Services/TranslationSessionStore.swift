@@ -126,6 +126,9 @@ final class TranslationSessionStore: ObservableObject {
     @Published private(set) var imageTranslationContentTargetLanguage: SupportedLanguage?
     @Published private(set) var imageTranslationRetrySourceLanguage: SupportedLanguage?
     @Published private(set) var imageTranslationRetryTargetLanguage: SupportedLanguage?
+    @Published private(set) var imageTranslationCorrectionBlockID: UUID?
+    @Published private(set) var imageTranslationCorrectionMessage: String?
+    @Published private(set) var imageTranslationCorrectedBlockIDs: Set<UUID> = []
     @Published private(set) var speechRecognitionCapabilities: [SpeechRecognitionCapability] = []
 
     let localModelDirectory: URL
@@ -143,6 +146,8 @@ final class TranslationSessionStore: ObservableObject {
     private var modelDownloadTask: Task<Void, Never>?
     private var imageTranslationTask: Task<Void, Never>?
     private var imageTranslationTaskID = UUID()
+    private var imageTranslationCorrectionID = UUID()
+    private var imageTranslationTranscriptLineID: UUID?
     private var imageTranslationFileSelectionID: UUID?
     private var imageTranslationOwnedExportURLs: Set<URL> = []
     private var imageTranslationOwnedOrphanURLs: Set<URL> = []
@@ -1104,6 +1109,7 @@ final class TranslationSessionStore: ObservableObject {
         preservingSourceURL: URL? = nil
     ) -> UUID {
         imageTranslationTask?.cancel()
+        invalidateImageTranslationCorrection()
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
         if imageTranslationSourceURL != preservingSourceURL {
@@ -1122,6 +1128,8 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationState = .loading
         imageTranslationMessage = "正在载入图片"
         imageTranslationBlocks = []
+        imageTranslationCorrectedBlockIDs = []
+        imageTranslationTranscriptLineID = nil
         imageTranslationData = nil
         imageTranslationSourceURL = nil
         imageTranslationRevision += 1
@@ -1483,6 +1491,7 @@ final class TranslationSessionStore: ObservableObject {
     func clearImageTranslation() {
         imageTranslationTask?.cancel()
         imageTranslationTask = nil
+        invalidateImageTranslationCorrection()
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
         removeImageTranslationInputFile(
@@ -1494,6 +1503,8 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationState = .idle
         imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
         imageTranslationBlocks = []
+        imageTranslationCorrectedBlockIDs = []
+        imageTranslationTranscriptLineID = nil
         imageTranslationData = nil
         imageTranslationFilename = ""
         imageTranslationSourceURL = nil
@@ -1577,6 +1588,7 @@ final class TranslationSessionStore: ObservableObject {
     func cancelImageTranslation() {
         imageTranslationTask?.cancel()
         imageTranslationTask = nil
+        invalidateImageTranslationCorrection()
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
         imageTranslationTaskID = UUID()
@@ -1584,6 +1596,83 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationMessage = "图片翻译已取消"
         dataTransferMessage = imageTranslationMessage
         isProcessing = false
+    }
+
+    func correctImageTranslationBlock(_ blockID: UUID, original correctedOriginal: String) async -> Bool {
+        let correctedOriginal = correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !correctedOriginal.isEmpty else {
+            imageTranslationCorrectionMessage = "修正文字不能为空"
+            return false
+        }
+        guard imageTranslationCorrectionBlockID == nil,
+              imageTranslationState == .translated,
+              let sourceLanguage = imageTranslationContentSourceLanguage,
+              let targetLanguage = imageTranslationContentTargetLanguage,
+              let blockIndex = imageTranslationBlocks.firstIndex(where: { $0.id == blockID }) else {
+            imageTranslationCorrectionMessage = "当前文字块不可编辑，请等待图片翻译完成"
+            return false
+        }
+
+        let currentBlock = imageTranslationBlocks[blockIndex]
+        guard correctedOriginal != currentBlock.original else {
+            imageTranslationCorrectionMessage = nil
+            return true
+        }
+
+        let correctionID = UUID()
+        let contentTaskID = imageTranslationTaskID
+        imageTranslationCorrectionID = correctionID
+        imageTranslationCorrectionBlockID = blockID
+        imageTranslationCorrectionMessage = nil
+        imageTranslationState = .translating
+        imageTranslationMessage = "正在重新翻译修正后的文字"
+
+        do {
+            let correctedTranslation = try await translate(
+                correctedOriginal,
+                sourceLanguage: sourceLanguage,
+                targetLanguage: targetLanguage
+            )
+            guard imageTranslationCorrectionID == correctionID,
+                  imageTranslationTaskID == contentTaskID,
+                  let currentIndex = imageTranslationBlocks.firstIndex(where: { $0.id == blockID }),
+                  imageTranslationBlocks[currentIndex].original == currentBlock.original else {
+                return false
+            }
+
+            var correctedBlock = imageTranslationBlocks[currentIndex]
+            correctedBlock.original = correctedOriginal
+            correctedBlock.translation = correctedTranslation
+            imageTranslationBlocks[currentIndex] = correctedBlock
+            imageTranslationCorrectedBlockIDs.insert(blockID)
+            imageTranslationCorrectionBlockID = nil
+            imageTranslationCorrectionMessage = nil
+            imageTranslationState = .translated
+            imageTranslationMessage = "文字已修正，正在更新导出图"
+            updateImageTranslationTranscript(blocks: imageTranslationBlocks)
+            invalidateImageOverlayRender()
+            discardImageTranslationExport()
+            rerenderImageTranslationExport()
+            return true
+        } catch {
+            guard imageTranslationCorrectionID == correctionID,
+                  imageTranslationTaskID == contentTaskID else {
+                return false
+            }
+            let message = "修正文字翻译失败：\(error.localizedDescription)"
+            imageTranslationCorrectionBlockID = nil
+            imageTranslationCorrectionMessage = message
+            imageTranslationState = .translated
+            imageTranslationMessage = message
+            dataTransferMessage = message
+            return false
+        }
+    }
+
+    private func invalidateImageTranslationCorrection() {
+        imageTranslationCorrectionID = UUID()
+        imageTranslationCorrectionBlockID = nil
+        imageTranslationCorrectionMessage = nil
     }
 
     private func invalidateImageOverlayRender() {
@@ -25137,16 +25226,25 @@ final class TranslationSessionStore: ObservableObject {
         let translations = blocks.map(\.translation).joined(separator: "\n")
         guard !originals.isEmpty, !translations.isEmpty else { return }
 
-        transcript.insert(
-            TranscriptLine(
-                speaker: imageTranslationFilename.isEmpty ? "Image OCR" : imageTranslationFilename,
-                original: originals,
-                translation: translations,
-                time: Self.timeFormatter.string(from: Date()),
-                isFinal: true
-            ),
-            at: 0
+        let line = TranscriptLine(
+            speaker: imageTranslationFilename.isEmpty ? "Image OCR" : imageTranslationFilename,
+            original: originals,
+            translation: translations,
+            time: Self.timeFormatter.string(from: Date()),
+            isFinal: true
         )
+        imageTranslationTranscriptLineID = line.id
+        transcript.insert(line, at: 0)
+    }
+
+    private func updateImageTranslationTranscript(blocks: [ImageTranslationBlock]) {
+        guard let lineID = imageTranslationTranscriptLineID,
+              let lineIndex = transcript.firstIndex(where: { $0.id == lineID }) else {
+            return
+        }
+        transcript[lineIndex].original = blocks.map(\.original).joined(separator: "\n")
+        transcript[lineIndex].translation = blocks.map(\.translation).joined(separator: "\n")
+        transcript[lineIndex].time = Self.timeFormatter.string(from: Date())
     }
 
     private func generateWithSelectedEngine(_ request: ModelGenerationRequest) async throws -> ModelGenerationResult {
