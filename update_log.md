@@ -11,7 +11,7 @@
 ## v3.22：恢复图片 Vision OCR 基线
 日期：2026-07-30
 
-状态：Agent X 已完成核心实现与本地轻量回归，候选分支为 `codeb/v3.22-image-ocr-correction-restore`；exact-SHA 云端 full、PR 和合并尚待执行，未触碰 `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full、PR 和合并收口；工程正式版本为 `MARKETING_VERSION=3.22`。PR #86 已合入 `smalldata_test`，merge SHA `301b7b52a8bf2744d627f830eff519e5748c494a`；远端 `codeb/v3.22-image-ocr-correction-restore` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,8 +22,9 @@
 
 验证与遗留：
 
-- v3.22 新合同 6/6、v3.21 回归合同 8/8、Swift 变更文件 parse、workflow YAML 和 `git diff --check` 均通过。
-- exact-SHA 云端 full、Xcode build、artifact identity 与 PR follow-up 尚待执行；按规则未跑本机 build / 探针。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+- 本机轻量回归：30 个图片/UI 合同脚本通过（含 v3.21 8/8、v3.22 6/6），Swift 变更文件与全量 App parse、CI 分层 9/9、版本身份 5/5、YAML/JSON 解析和 `git diff --check` 均通过；未跑本机 build / 探针，按规则交给云端验证。
+- exact-SHA full `30513465295` 对候选 `48332ceee1cf9be2ef46f5890a05fb11aab895c4` 成功：未加密 artifact 的 version/branch/commitSha/runId/runAttempt 均匹配，`validationProfile=full`、`xcodeBuildRequired=true`；`.xcresult` 为 succeeded、0 errors/0 warnings，JUnit 10/10、0 failures/errors，图片/UI 合同通过。PR fast `30513908959` 与 merge fast `30513965865` 均成功；fast 仅作 follow-up，不作为编译证据。
+- 云端漫画探针在这次默认 push full 中仍为 `probe_mode=skip`，未生成新的 OCR/翻译质量数字或 `output/` 基线；真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
 
 ## v3.21：普通图片 OCR 单块人工修正
 日期：2026-07-30

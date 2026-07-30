@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前候选版本：`3.22`（人工修正过的普通图片 OCR block 可恢复到本图片的 Vision OCR 原文与初始译文；恢复不调用模型，更新当前图片 transcript 并重绘导出。v3.21-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+当前正式版本：`3.22`（人工修正过的普通图片 OCR block 可恢复到本图片的 Vision OCR 原文与初始译文；恢复不调用模型，更新当前图片 transcript 并重绘导出。v3.21-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
