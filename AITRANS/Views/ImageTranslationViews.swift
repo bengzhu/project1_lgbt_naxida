@@ -419,6 +419,9 @@ struct ImageTranslationPanel: View {
 
     private func beginCorrection(of block: ImageTranslationBlock) {
         selectedImageTranslationBlockID = block.id
+        moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
+            to: reviewRowAccessibilityFocusID(block.id)
+        )
         editingImageTranslationBlock = block
     }
 
