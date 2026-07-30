@@ -114,10 +114,14 @@ struct ImageTranslationPanel: View {
         .sheet(item: $editingImageTranslationBlock) { block in
             ImageOCRCorrectionSheet(
                 block: block,
-                imageData: store.imageTranslationData
-            ) {
-                completeReviewAfterCorrection(block.id)
-            }
+                imageData: store.imageTranslationData,
+                didSave: {
+                    completeReviewAfterCorrection(block.id)
+                },
+                requestIgnore: {
+                    ignoreImageTranslationBlock(block)
+                }
+            )
             .environmentObject(store)
         }
         .confirmationDialog(
@@ -264,11 +268,25 @@ struct ImageTranslationPanel: View {
             )
 
             if store.imageTranslationBlocks.isEmpty {
-                AppEmptyState(
-                    title: "等待图片",
-                    detail: "选择照片或图片文件后，本机 OCR 结果会显示在这里。",
-                    systemImage: "photo.badge.plus"
-                )
+                if store.imageTranslationData == nil {
+                    AppEmptyState(
+                        title: "等待图片",
+                        detail: "选择照片或图片文件后，本机 OCR 结果会显示在这里。",
+                        systemImage: "photo.badge.plus"
+                    )
+                } else if !store.imageTranslationIgnoredBlocks.isEmpty {
+                    AppEmptyState(
+                        title: "当前没有保留文字块",
+                        detail: "已忽略 \(store.imageTranslationIgnoredBlocks.count) 个 OCR 文字块；图片会以原图导出，可在下方恢复。",
+                        systemImage: "eye.slash"
+                    )
+                } else {
+                    AppEmptyState(
+                        title: "正在准备识别结果",
+                        detail: store.imageTranslationMessage,
+                        systemImage: "viewfinder"
+                    )
+                }
             } else if visibleImageTranslationBlocks.isEmpty {
                 if reviewCompletedBlockCount > 0 {
                     AppEmptyState(
@@ -303,6 +321,25 @@ struct ImageTranslationPanel: View {
                             toggleReviewCompletion: {
                                 toggleReviewCompletion(block.id, focusInPreview: false)
                             }
+                        )
+                    }
+                }
+            }
+
+            if !store.imageTranslationIgnoredBlocks.isEmpty {
+                AppSectionHeader(
+                    title: "已忽略的文字块",
+                    subtitle: "\(store.imageTranslationIgnoredBlocks.count) 个不会出现在预览、导出或当前转录中",
+                    systemImage: "eye.slash"
+                )
+
+                LazyVStack(spacing: 0) {
+                    ForEach(store.imageTranslationIgnoredBlocks) { block in
+                        ImageTranslationIgnoredBlockRow(
+                            block: block,
+                            canRestore: !isRunning && !isRenderingExport,
+                            accessibilityFocus: $reviewAccessibilityFocusID,
+                            restore: { restoreIgnoredImageTranslationBlock(block) }
                         )
                     }
                 }
@@ -395,6 +432,53 @@ struct ImageTranslationPanel: View {
         moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))
     }
 
+    @discardableResult
+    private func ignoreImageTranslationBlock(_ block: ImageTranslationBlock) -> Bool {
+        let activeBlocks = store.imageTranslationBlocks
+        guard let activeIndex = activeBlocks.firstIndex(where: { $0.id == block.id }) else {
+            return false
+        }
+
+        let nextActiveBlockID = activeBlocks.dropFirst(activeIndex + 1).first?.id
+            ?? activeBlocks[..<activeIndex].last?.id
+        let pendingBlocks = reviewRequiredBlocks
+        let nextReviewBlockID = pendingBlocks.firstIndex(where: { $0.id == block.id }).flatMap { index in
+            pendingBlocks.dropFirst(index + 1).first?.id
+                ?? pendingBlocks[..<index].last?.id
+        }
+
+        guard store.ignoreImageTranslationBlock(block.id) else { return false }
+
+        if reviewFilter == .needsReview {
+            let nextBlockID = nextReviewBlockID.flatMap { candidate in
+                reviewRequiredBlocks.contains(where: { $0.id == candidate }) ? candidate : nil
+            } ?? reviewRequiredBlocks.first?.id
+            selectedImageTranslationBlockID = nextBlockID
+            moveReviewAccessibilityFocus(
+                to: nextBlockID.map(reviewRowAccessibilityFocusID)
+                    ?? ignoredRowAccessibilityFocusID(block.id)
+            )
+        } else {
+            let nextBlockID = nextActiveBlockID.flatMap { candidate in
+                store.imageTranslationBlocks.contains(where: { $0.id == candidate }) ? candidate : nil
+            }
+            selectedImageTranslationBlockID = nextBlockID
+            moveReviewAccessibilityFocus(
+                to: nextBlockID.map(reviewRowAccessibilityFocusID)
+                    ?? ignoredRowAccessibilityFocusID(block.id)
+            )
+        }
+        return true
+    }
+
+    private func restoreIgnoredImageTranslationBlock(_ block: ImageTranslationBlock) {
+        guard store.restoreIgnoredImageTranslationBlock(block.id) else { return }
+        reviewFilter = ImageOCRResultSummary.requiresReview(block) ? .needsReview : .all
+        selectedImageTranslationBlockID = block.id
+        revealPreview()
+        moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(block.id))
+    }
+
     private func completeReviewAfterCorrection(_ blockID: UUID) {
         guard allReviewRequiredBlocks.contains(where: { $0.id == blockID }),
               store.imageTranslationReviewedBlockIDs.contains(blockID) else { return }
@@ -474,6 +558,10 @@ struct ImageTranslationPanel: View {
 
     private func reviewPreviewAccessibilityFocusID(_ blockID: UUID) -> String {
         "image-review-preview-\(blockID.uuidString)"
+    }
+
+    private func ignoredRowAccessibilityFocusID(_ blockID: UUID) -> String {
+        "image-ignored-row-\(blockID.uuidString)"
     }
 
     private func moveReviewAccessibilityFocus(to focusID: String?) {
@@ -1637,6 +1725,49 @@ private struct ImageTranslationBlockRow: View {
     }
 }
 
+private struct ImageTranslationIgnoredBlockRow: View {
+    let block: ImageTranslationBlock
+    let canRestore: Bool
+    let accessibilityFocus: AccessibilityFocusState<String?>.Binding
+    let restore: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: AppTheme.Spacing.control) {
+            Image(systemName: "eye.slash")
+                .foregroundStyle(Color.appTextSecondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
+                Text(block.original)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Color.appTextPrimary)
+                    .lineLimit(2)
+                if !block.translation.isEmpty {
+                    Text(block.translation)
+                        .font(.caption)
+                        .foregroundStyle(Color.appTextSecondary)
+                        .lineLimit(2)
+                }
+                Text("已从本次图片结果中忽略")
+                    .font(.caption)
+                    .foregroundStyle(Color.appTextSecondary)
+            }
+            Spacer(minLength: 0)
+            Button("恢复", systemImage: "arrow.uturn.backward", action: restore)
+                .font(.subheadline.bold())
+                .frame(minHeight: AppTheme.Layout.minimumTarget)
+                .disabled(!canRestore)
+                .accessibilityHint("恢复到图片预览、导出和当前转录；需要复查的文字块会重新回到待复查队列")
+                .accessibilityFocused(
+                    accessibilityFocus,
+                    equals: "image-ignored-row-\(block.id.uuidString)"
+                )
+        }
+        .padding(.horizontal, AppTheme.Spacing.compact)
+        .padding(.vertical, AppTheme.Spacing.control)
+        .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
+    }
+}
+
 private struct ImageOCRCorrectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: TranslationSessionStore
@@ -1644,19 +1775,23 @@ private struct ImageOCRCorrectionSheet: View {
     let block: ImageTranslationBlock
     let imageData: Data?
     let didSave: () -> Void
+    let requestIgnore: () -> Bool
 
     @State private var correctedOriginal: String
     @State private var errorMessage: String?
     @State private var showDiscardCorrectionConfirmation = false
+    @State private var showIgnoreBlockConfirmation = false
 
     init(
         block: ImageTranslationBlock,
         imageData: Data?,
-        didSave: @escaping () -> Void
+        didSave: @escaping () -> Void,
+        requestIgnore: @escaping () -> Bool
     ) {
         self.block = block
         self.imageData = imageData
         self.didSave = didSave
+        self.requestIgnore = requestIgnore
         _correctedOriginal = State(initialValue: block.original)
     }
 
@@ -1709,6 +1844,19 @@ private struct ImageOCRCorrectionSheet: View {
                         .foregroundStyle(Color.appTextSecondary)
                 }
 
+                Section("识别有误？") {
+                    Button(role: .destructive) {
+                        showIgnoreBlockConfirmation = true
+                    } label: {
+                        Label("忽略此文字块", systemImage: "eye.slash")
+                    }
+                    .disabled(isSaving)
+                    .accessibilityHint("从本次图片的预览、导出和当前转录中移除此 OCR 文字块；稍后可在图片检查区恢复")
+                    Text("仅忽略本次图片会话中的这个文字块，不会重新识别或翻译整张图片。")
+                        .font(.caption)
+                        .foregroundStyle(Color.appTextSecondary)
+                }
+
                 if let errorMessage {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
@@ -1753,6 +1901,16 @@ private struct ImageOCRCorrectionSheet: View {
             }
         }
         .interactiveDismissDisabled(isSaving || hasUnsavedChanges)
+        .confirmationDialog(
+            "忽略此文字块？",
+            isPresented: $showIgnoreBlockConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("忽略文字块", role: .destructive, action: ignoreCurrentBlock)
+            Button("继续编辑", role: .cancel) {}
+        } message: {
+            Text("这会从本次图片的预览、导出和当前转录中移除此 OCR 文字块。未保存的修正不会保存；可在图片检查区恢复。")
+        }
         .presentationDetents([.medium, .large])
     }
 
@@ -1793,6 +1951,16 @@ private struct ImageOCRCorrectionSheet: View {
             return
         }
         showDiscardCorrectionConfirmation = true
+    }
+
+    private func ignoreCurrentBlock() {
+        guard !isSaving else { return }
+        errorMessage = nil
+        guard requestIgnore() else {
+            errorMessage = store.imageTranslationCorrectionMessage ?? "当前文字块无法忽略，请重试"
+            return
+        }
+        dismiss()
     }
 
     private func save() {
