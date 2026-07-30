@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前正式版本：`3.29`（普通图片 OCR 修正 sheet 新增“忽略此文字块”的明确确认：误识别块会暂时退出当前图片的预览、导出和转录，并在检查区提供恢复入口。`TranslationSessionStore` 仅在当前图片会话内保存原始顺序、人工修正标记和 Vision OCR 基线；恢复后按原顺序插回，风险块重新进入待复查。若全部块都被忽略，导出图安全回退为原图；新图和清空会丢弃这些临时快照，绝不写入持久化）。v3.28 的复查进度仍由 Store 内存持有，面板重建后可继续；v3.27 的局部图继续复用既有本地 2048px 预览，不会重新 OCR。云端 receipt 传播规则（v3.26）仍会把成功候选 full receipt 传播到 merge SHA；其后的 `smalldata_test` 纯文档/元数据提交只有在父 receipt 为 success 时才走 fast，缺失或失败时强制当前头部 Xcode build，并在 artifact 中记录父 SHA、state 和元数据判定。本版不调用 Vision OCR 或模型翻译来忽略/恢复块，也不改变漫画探针或质量基线；仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。日常开发合入 `smalldata_test`，不合并到 `main`。
+当前候选版本：`3.30`（普通图片 OCR 修正 sheet 的成功“确认无误／保存并重译”与“忽略此文字块”如需推进既有复查焦点，不再在 sheet 遮罩仍存在时发布。`ImageTranslationPanel` 只在 View 私有状态保存原有目标焦点与当前图片 revision，并在 sheet `onDismiss` 后核对 revision 再交给既有焦点发布器；新图会清掉待交接值，避免旧会话抢焦点。v3.29 的可恢复误识别块忽略、v3.28 的会话复查进度与 v3.27 的局部图仍保留）。本候选不改 Store、Vision OCR、模型翻译、renderer/export、漫画探针或质量基线；仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。云端 receipt 传播规则（v3.26）仍适用；日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 

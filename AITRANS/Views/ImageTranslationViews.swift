@@ -86,6 +86,8 @@ struct ImageTranslationPanel: View {
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
     @State private var restoreConfirmationBlock: ImageTranslationBlock?
+    @State private var pendingCorrectionSheetDismissalFocusID: String?
+    @State private var pendingCorrectionSheetDismissalRevision: Int?
     @AccessibilityFocusState private var reviewAccessibilityFocusID: String?
     let revealPreview: () -> Void
 
@@ -111,7 +113,10 @@ struct ImageTranslationPanel: View {
         .sheet(item: $shareURL, onDismiss: finishSharing) { url in
             ShareSheet(activityItems: [url])
         }
-        .sheet(item: $editingImageTranslationBlock) { block in
+        .sheet(
+            item: $editingImageTranslationBlock,
+            onDismiss: applyPendingCorrectionSheetDismissalFocus
+        ) { block in
             ImageOCRCorrectionSheet(
                 block: block,
                 imageData: store.imageTranslationData,
@@ -148,6 +153,7 @@ struct ImageTranslationPanel: View {
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
             restoreConfirmationBlock = nil
+            clearPendingCorrectionSheetDismissalFocus()
             reviewAccessibilityFocusID = nil
         }
         .onChange(of: reviewFilter) { _, _ in
@@ -454,7 +460,7 @@ struct ImageTranslationPanel: View {
                 reviewRequiredBlocks.contains(where: { $0.id == candidate }) ? candidate : nil
             } ?? reviewRequiredBlocks.first?.id
             selectedImageTranslationBlockID = nextBlockID
-            moveReviewAccessibilityFocus(
+            moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
                 to: nextBlockID.map(reviewRowAccessibilityFocusID)
                     ?? ignoredRowAccessibilityFocusID(block.id)
             )
@@ -463,7 +469,7 @@ struct ImageTranslationPanel: View {
                 store.imageTranslationBlocks.contains(where: { $0.id == candidate }) ? candidate : nil
             }
             selectedImageTranslationBlockID = nextBlockID
-            moveReviewAccessibilityFocus(
+            moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
                 to: nextBlockID.map(reviewRowAccessibilityFocusID)
                     ?? ignoredRowAccessibilityFocusID(block.id)
             )
@@ -485,7 +491,7 @@ struct ImageTranslationPanel: View {
         if reviewFilter == .needsReview {
             let nextBlockID = reviewRequiredBlocks.first?.id
             selectedImageTranslationBlockID = nextBlockID
-            moveReviewAccessibilityFocus(
+            moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
                 to: nextBlockID.map(reviewRowAccessibilityFocusID)
                     ?? Self.reviewCompletionAccessibilityFocusID
             )
@@ -562,6 +568,26 @@ struct ImageTranslationPanel: View {
 
     private func ignoredRowAccessibilityFocusID(_ blockID: UUID) -> String {
         "image-ignored-row-\(blockID.uuidString)"
+    }
+
+    private func moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(to focusID: String?) {
+        pendingCorrectionSheetDismissalFocusID = focusID
+        pendingCorrectionSheetDismissalRevision = store.imageTranslationRevision
+    }
+
+    private func applyPendingCorrectionSheetDismissalFocus() {
+        guard let focusID = pendingCorrectionSheetDismissalFocusID,
+              pendingCorrectionSheetDismissalRevision == store.imageTranslationRevision else {
+            clearPendingCorrectionSheetDismissalFocus()
+            return
+        }
+        clearPendingCorrectionSheetDismissalFocus()
+        moveReviewAccessibilityFocus(to: focusID)
+    }
+
+    private func clearPendingCorrectionSheetDismissalFocus() {
+        pendingCorrectionSheetDismissalFocusID = nil
+        pendingCorrectionSheetDismissalRevision = nil
     }
 
     private func moveReviewAccessibilityFocus(to focusID: String?) {

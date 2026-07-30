@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.30：OCR 修正 sheet 关闭后的确定性焦点交接
+日期：2026-07-30
+
+状态：Agent X 已完成候选实现，等待 `codeb/v3.30-image-ocr-focus-handoff` 的云端 full 验证；工程候选版本为 `MARKETING_VERSION=3.30`。尚未创建 PR、未合并、未触碰 `main`。
+
+核心变更：
+
+- `ImageTranslationPanel` 在 OCR 修正 sheet 的成功忽略时保留既有“下一活动／待复查行，否则已忽略行”焦点目标；待复查队列中的成功修正保留既有“下一行／完成态”目标。两者不再在 sheet 遮罩仍存在时直接发布 VoiceOver 焦点。
+- pending handoff 仅是 View 私有 `@State`：同时保存目标 focus ID 和 `imageTranslationRevision`；sheet `onDismiss` 后只有 revision 仍一致才清空 pending 并复用已有 `moveReviewAccessibilityFocus`。图片切换会清空 sheet、pending 与当前已发布焦点，旧图片不能抢回焦点。
+- 新增 v3.30 源码合同并接入图片/UI fail-fast CI 路由，锁定 View 私有边界、onDismiss 接线、原有焦点目的地、revision 校验和新图清理。本版不改 Store、持久化、Vision OCR、模型翻译、renderer/export、漫画探针、Koharu、ground truth、metrics 或 `output/`，不能声称 OCR、翻译或识别质量提升。
+
+候选本地检查：
+
+- 已通过 v3.30 合同 6/6，以及 v3.20 VoiceOver 焦点、v3.21 OCR 修正、v3.29 误识别忽略回归合同；已通过 `git diff --check`。
+- 未跑本机 build / 探针，按规则交给云端验证。此次是普通图片 UI／交互改动，候选 push 使用默认 `probe_mode=skip`，不产生新漫画指标或 `metrics/version_history.csv` 行。
+- 真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本候选没有改变这些受限路径。
+
 ## v3.29：可恢复的 OCR 误识别文字块忽略
 日期：2026-07-30
 
