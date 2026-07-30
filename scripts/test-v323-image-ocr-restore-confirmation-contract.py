@@ -72,12 +72,12 @@ class ImageOCRRestoreConfirmationContractTests(unittest.TestCase):
             self.view,
             "private func confirmVisionOCRRestore(_ block: ImageTranslationBlock)",
         )
-        self.assertIn("restoreConfirmationBlock = nil", confirmation)
-        self.assertIn("restoreVisionOCR(for: block.id)", confirmation)
-        self.assertLess(
-            confirmation.index("restoreConfirmationBlock = nil"),
-            confirmation.index("restoreVisionOCR(for: block.id)"),
+        self.assertIn(
+            "guard restoreConfirmationBlock?.id == block.id,\n"
+            "              restoreVisionOCR(for: block.id) else { return }",
+            confirmation,
         )
+        self.assertNotIn("restoreConfirmationBlock = nil", confirmation)
         self.assertIn('Button("恢复 Vision OCR", role: .destructive)', self.view)
         self.assertIn("guard let block = restoreConfirmationBlock else { return }", self.view)
         self.assertIn("confirmVisionOCRRestore(block)", self.view)

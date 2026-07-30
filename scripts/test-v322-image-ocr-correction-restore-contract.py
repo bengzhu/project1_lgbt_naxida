@@ -92,7 +92,16 @@ class ImageOCRCorrectionRestoreContractTests(unittest.TestCase):
         action = braced_body(self.view, "private func restoreVisionOCR(for blockID: UUID)")
         self.assertIn("store.restoreImageTranslationBlockToVisionOCR(blockID)", action)
         self.assertIn("selectedImageTranslationBlockID = blockID", action)
-        self.assertIn("moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))", action)
+        self.assertNotIn("moveReviewAccessibilityFocus(to:", action)
+        confirmation = braced_body(
+            self.view,
+            "private func confirmVisionOCRRestore(_ block: ImageTranslationBlock)",
+        )
+        self.assertIn(
+            "moveReviewAccessibilityFocusAfterRestoreConfirmationDismissal(\n"
+            "            to: reviewRowAccessibilityFocusID(block.id)",
+            confirmation,
+        )
         restore = braced_body(
             self.store,
             "func restoreImageTranslationBlockToVisionOCR(_ blockID: UUID) -> Bool",
