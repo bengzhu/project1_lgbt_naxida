@@ -11,7 +11,7 @@
 ## v3.26：合并后 CI receipt 传播
 日期：2026-07-30
 
-状态：Agent X 正在实现候选分支 `codeb/v3.26-ci-merge-receipt-propagation`；exact-SHA 云端 full、PR 和合并尚待执行，未触碰 `main`。
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.26`。PR #90 已合入 `smalldata_test`，merge SHA `9047f276c3a63099e58de1dfedb8d07ff452d1fe`；远端 `codeb/v3.26-ci-merge-receipt-propagation` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -21,7 +21,9 @@
 
 验证与遗留：
 
-- 本地轻量回归、exact-SHA 云端 full、artifact 审查、PR 和合并尚待执行；按规则未跑本机 build / 探针。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+- 候选 SHA `6e9b1ab4c79c9af3c297976bd54de712872e1677` 的 full run `30519929953` 成功，`AITRANS CI/full-validation` status 为 success，Xcode build 成功、JUnit `10/10`、0 failures；未加密 artifact 为 `aitrans-ci-v3.26-codeb-v3.26-ci-merge-receipt-propagation--6e9b1ab4c79c-run30519929953-attempt1`。artifact 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 与候选一致，`.xcresult` 已上传；静态、Speech、UI、首页、粘贴和 Koharu 合同均成功。
+- PR #90 的 fast follow-up `30520387081` 成功，明确 `xcodeBuildRequired=false`，并记录 `reusedFullValidationSha=6e9b1ab4c79c9af3c297976bd54de712872e1677`、`reusedFullValidationState=success`。合并后的 fast follow-up `30520484320` 成功，复用同一候选 full，并以 `receiptPropagationAllowed=true` 将 `AITRANS CI/full-validation=success` 传播到 merge SHA `9047f276c3a63099e58de1dfedb8d07ff452d1fe`；其 status 描述为 `Reused successful parent full validation`。两者均只作路由跟踪，不作为新的 Swift/Xcode 编译证据。
+- 按规则未跑本机 build / 探针；候选 full 使用 `probe_mode=skip`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失；full artifact 明确报告 `manifestMissing` / `stopUntilArtifactsProvided`，不得据此声称 OCR、翻译或识别质量提升。
 
 ## v3.25：OCR 原文确认动作语义
 日期：2026-07-30
