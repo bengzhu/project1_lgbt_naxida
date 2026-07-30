@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前候选版本：`3.31`。普通图片 OCR 修正 sheet 成功后，只有“待复查”筛选且当前 block 已标为已复查时才前进到既有下一行／完成态；其他成功确认或单块重译会在 sheet `onDismiss` 后回到已更新的结果行。`ImageTranslationPanel` 继续只在 View 私有状态记录目标焦点和当前图片 revision，并先确认 block 仍活动；新图会清掉待交接状态。v3.30 的 sheet 关闭交接、v3.29 的可恢复误识别忽略、v3.28 当前图片会话复查进度和 v3.27 既有 2048px 局部对照仍保留。v3.26 CI receipt 传播规则不变。本版不变更 Store、Vision OCR、模型翻译、renderer/export、漫画探针、Koharu 主路径或质量基线；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
+当前正式版本：`3.31`。普通图片 OCR 修正 sheet 成功后，只有“待复查”筛选且当前 block 已标为已复查时才前进到既有下一行／完成态；其他成功确认或单块重译会在 sheet `onDismiss` 后回到已更新的结果行。`ImageTranslationPanel` 继续只在 View 私有状态记录目标焦点和当前图片 revision，并先确认 block 仍活动；新图会清掉待交接状态。v3.30 的 sheet 关闭交接、v3.29 的可恢复误识别忽略、v3.28 当前图片会话复查进度和 v3.27 既有 2048px 局部对照仍保留。v3.26 CI receipt 传播规则不变。本版不变更 Store、Vision OCR、模型翻译、renderer/export、漫画探针、Koharu 主路径或质量基线；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
 
 当前布局：
 
