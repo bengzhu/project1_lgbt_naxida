@@ -86,6 +86,7 @@ struct ImageTranslationPanel: View {
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var reviewedImageTranslationBlockIDs: Set<UUID> = []
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
+    @State private var restoreConfirmationBlock: ImageTranslationBlock?
     @AccessibilityFocusState private var reviewAccessibilityFocusID: String?
     let revealPreview: () -> Void
 
@@ -117,6 +118,18 @@ struct ImageTranslationPanel: View {
             }
             .environmentObject(store)
         }
+        .confirmationDialog(
+            "恢复 Vision OCR？",
+            item: $restoreConfirmationBlock,
+            titleVisibility: .visible
+        ) { block in
+            Button("恢复 Vision OCR", role: .destructive) {
+                confirmVisionOCRRestore(block)
+            }
+            Button("取消", role: .cancel) {}
+        } message: { _ in
+            Text("这会移除本次人工修正，并恢复识别时的原文和初始译文。")
+        }
         .onChange(of: store.imageTranslationExportURL) { _, exportURL in
             guard exportURL == nil else { return }
             finishSharing()
@@ -128,6 +141,7 @@ struct ImageTranslationPanel: View {
             selectedImageTranslationBlockID = nil
             reviewedImageTranslationBlockIDs.removeAll()
             editingImageTranslationBlock = nil
+            restoreConfirmationBlock = nil
             reviewAccessibilityFocusID = nil
         }
         .onChange(of: reviewFilter) { _, _ in
@@ -283,7 +297,7 @@ struct ImageTranslationPanel: View {
                             accessibilityFocus: $reviewAccessibilityFocusID,
                             select: { toggleSelection(of: block.id) },
                             edit: { beginCorrection(of: block) },
-                            restoreVisionOCR: { restoreVisionOCR(for: block.id) },
+                            restoreVisionOCR: { requestVisionOCRRestore(for: block) },
                             toggleReviewCompletion: {
                                 toggleReviewCompletion(block.id, focusInPreview: false)
                             }
@@ -347,6 +361,20 @@ struct ImageTranslationPanel: View {
     private func beginCorrection(of block: ImageTranslationBlock) {
         selectedImageTranslationBlockID = block.id
         editingImageTranslationBlock = block
+    }
+
+    private func requestVisionOCRRestore(for block: ImageTranslationBlock) {
+        guard store.imageTranslationCorrectedBlockIDs.contains(block.id),
+              !isRunning,
+              !isRenderingExport else {
+            return
+        }
+        restoreConfirmationBlock = block
+    }
+
+    private func confirmVisionOCRRestore(_ block: ImageTranslationBlock) {
+        restoreConfirmationBlock = nil
+        restoreVisionOCR(for: block.id)
     }
 
     private func restoreVisionOCR(for blockID: UUID) {

@@ -8,6 +8,22 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.23：恢复人工修正前确认
+日期：2026-07-30
+
+状态：Agent X 正在实现候选分支 `codeb/v3.23-image-ocr-restore-confirmation`；exact-SHA 云端 full、PR 和合并尚待执行，未触碰 `main`。
+
+核心变更：
+
+- 恢复人工修正过的图片 OCR block 前，View 私有 confirmation dialog 先明确说明会移除本次人工修正；取消保持当前 block、图片 transcript、导出、渲染、选择和复查状态不变。
+- 只有 destructive 确认动作会清除待确认 block 并调用 v3.22 既有 Store 恢复路径；Store 继续无模型恢复 Vision OCR 基线、同步 transcript、撤销旧 export/share 并重绘。
+- 图片 revision 变化会清空待确认 block，防止旧 dialog 对新图片操作；新增 v3.23 源码合同并接入图片/UI fail-fast 路由。
+- 本版不改 Vision OCR、方向/layout、漫画探针、Koharu artifact 契约、ground truth、metrics 或 output，不声称 OCR/翻译质量提升。
+
+验证与遗留：
+
+- 候选实现尚待本地轻量回归、exact-SHA 云端 full、artifact 审查、PR 和合并；按规则未跑本机 build / 探针。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+
 ## v3.22：恢复图片 Vision OCR 基线
 日期：2026-07-30
 
