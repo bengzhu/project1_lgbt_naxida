@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 当前候选版本号 `3.24`：普通图片 OCR 修正 sheet 会在本地比较输入与当前 block 原文；有未保存改动时，取消先经 View 私有 destructive confirmation，交互式关闭被阻止，选择继续编辑保留输入，保存成功仍直接关闭并只走既有目标 block 重译。该保护不触及 `TranslationSessionStore` 的 correction ID、图片 task ID、旧原文快照、transcript/export/render 生命周期或 v3.23 恢复确认。v3.23-v2.2 的单块重译、快速复查、进度、预览、Retry、Koharu gate 与图片生命周期能力仍保留。本版不改变 Vision OCR、漫画探针或质量基线。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
+- 当前正式版本号 `3.24`：普通图片 OCR 修正 sheet 会在本地比较输入与当前 block 原文；有未保存改动时，取消先经 View 私有 destructive confirmation，交互式关闭被阻止，选择继续编辑保留输入，保存成功仍直接关闭并只走既有目标 block 重译。该保护不触及 `TranslationSessionStore` 的 correction ID、图片 task ID、旧原文快照、transcript/export/render 生命周期或 v3.23 恢复确认。v3.23-v2.2 的单块重译、快速复查、进度、预览、Retry、Koharu gate 与图片生命周期能力仍保留。本版不改变 Vision OCR、漫画探针或质量基线。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 

@@ -11,7 +11,7 @@
 ## v3.24：保护未保存 OCR 修正
 日期：2026-07-30
 
-状态：Agent X 正在实现候选分支 `codeb/v3.24-image-ocr-correction-discard-confirmation`；exact-SHA 云端 full、PR 和合并尚待执行，未触碰 `main`。
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.24`。PR #88 已合入 `smalldata_test`，merge SHA `3a001ec7cbc8e9906963294071d9fa53e8d3f053`；远端 `codeb/v3.24-image-ocr-correction-discard-confirmation` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,7 +22,10 @@
 
 验证与遗留：
 
-- 候选实现尚待本地轻量回归、exact-SHA 云端 full、artifact 审查、PR 和合并；按规则未跑本机 build / 探针。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+- 候选 SHA `5f4db4a203730750bf94e1c0adaa541142a62787` 的 full run `30516085420` 成功，`AITRANS CI/full-validation` status 为 success，Xcode build 成功、JUnit `10/10`、0 failures，未加密 artifact 为 `aitrans-ci-v3.24-codeb-v3.24-image-ocr-correction-discard-confirmation--5f4db4a20373-run30516085420-attempt1`。artifact 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 与候选一致；`.xcresult` 的 Build 为 `succeeded` 且 root issues 为空。
+- PR #88 的 fast follow-up `30516579680` 成功，明确 `xcodeBuildRequired=false`、`fast_followup_reuses_candidate_full_validation`，仅作路由跟踪。合并后的 fast follow-up `30516689572` 成功，manifest 复用第二父 `5f4db4a203730750bf94e1c0adaa541142a62787` 的 full receipt，`reusedFullValidationState=success`；两者均不作为新的 Swift/Xcode 编译证据。
+- 本地运行 `git diff --check`、32 个图片/UI 合同、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、v1.94 CI 分层合同、v1.97 版本身份合同、plist/YAML/JSON smoke 均通过。按规则未跑本机 build / 探针；本次 push `probe_mode=skip`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。
+- 真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失；full artifact 明确报告 `manifestMissing` / `stopUntilArtifactsProvided`，不得据此声称 OCR、翻译或识别质量提升。
 
 ## v3.23：恢复人工修正前确认
 日期：2026-07-30
