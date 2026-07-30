@@ -8,6 +8,22 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.27：OCR 修正局部对照与复查上下文
+日期：2026-07-30
+
+状态：Agent X 已完成候选实现和本地轻量回归，等待候选 SHA 的云端 full 验证；当前分支为 `codeb/v3.27-image-ocr-correction-context`，尚未创建 PR 或合并，未触碰 `main`。
+
+核心变更：
+
+- 普通图片 OCR 修正 sheet 现在接收当前图片 data，并通过既有 `ImagePreviewService` 生成最大边 2048px 的临时本地预览。它复用原有 16:9 局部裁切和黄色 bbox 几何，让用户在编辑 OCR 原文时能直接对照当前文字块；loading 或不可用时给出可读反馈，仍允许继续编辑。
+- 低于 50% 置信度或方向待定的 block 会在 sheet 内复用 `ImageOCRResultSummary` 显示复查原因，明确“保存只会重新翻译当前文字块，不会重新识别整张图片”。该上下文不新增 Store / 持久化状态，不调用 Vision OCR，不改变单块 correction、transcript、export、renderer、漫画探针或 Koharu artifact 路径。
+- 新增 v3.27 源码合同并接入图片/UI fail-fast 路由；共享局部裁切 helper 同时保留既有局部放大的 16:9、边界夹取和 bbox 再标记行为。
+
+验证与遗留：
+
+- 本地已通过 v3.27 合同、v3.13 focus、v3.17/v3.20 review、v3.21-v3.25 correction 合同、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、YAML smoke 和版本解析；仍需在推送后核验 exact-SHA 云端 full 的 Xcode build、JUnit、artifact manifest、`.xcresult` 与 failure summary。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 push 默认 `probe_mode=skip`，不应新增漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不能据本次 UI 上下文改进声称 OCR、翻译或识别质量提升。
+
 ## v3.26：合并后 CI receipt 传播
 日期：2026-07-30
 
@@ -23,6 +39,7 @@
 
 - 候选 SHA `6e9b1ab4c79c9af3c297976bd54de712872e1677` 的 full run `30519929953` 成功，`AITRANS CI/full-validation` status 为 success，Xcode build 成功、JUnit `10/10`、0 failures；未加密 artifact 为 `aitrans-ci-v3.26-codeb-v3.26-ci-merge-receipt-propagation--6e9b1ab4c79c-run30519929953-attempt1`。artifact 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 与候选一致，`.xcresult` 已上传；静态、Speech、UI、首页、粘贴和 Koharu 合同均成功。
 - PR #90 的 fast follow-up `30520387081` 成功，明确 `xcodeBuildRequired=false`，并记录 `reusedFullValidationSha=6e9b1ab4c79c9af3c297976bd54de712872e1677`、`reusedFullValidationState=success`。合并后的 fast follow-up `30520484320` 成功，复用同一候选 full，并以 `receiptPropagationAllowed=true` 将 `AITRANS CI/full-validation=success` 传播到 merge SHA `9047f276c3a63099e58de1dfedb8d07ff452d1fe`；其 status 描述为 `Reused successful parent full validation`。两者均只作路由跟踪，不作为新的 Swift/Xcode 编译证据。
+- v3.26 正式文档提交 `f8653809ca7c6e2e3f0e022abb293798136ac47a` 的 direct follow-up `30524346995` 成功，artifact 精确匹配 `v3.26 / smalldata_test / f8653809...`，并记录 `validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`、父 SHA `9047f276... / success`、`smalldataIncrementalMetadataOnly=true`、`receiptPropagationAllowed=true`。该 SHA 同样获得 `Reused successful parent full validation` status；JUnit `10/10`、0 failures，但 Xcode 明确 skipped，因此它只证明传播和路由，不替代候选 full 编译证据。
 - 按规则未跑本机 build / 探针；候选 full 使用 `probe_mode=skip`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失；full artifact 明确报告 `manifestMissing` / `stopUntilArtifactsProvided`，不得据此声称 OCR、翻译或识别质量提升。
 
 ## v3.25：OCR 原文确认动作语义
