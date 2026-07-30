@@ -153,6 +153,7 @@ v1.90 已用静态契约锁定 run-id 隔离与摘要字段。下列人工矩阵
 - PR fast 必须查询当前候选 head 的 `AITRANS CI/full-validation` status，并把 exact SHA 与 state 写入 manifest；只有 state 为 `success` 才能使用 `fast_followup_reuses_candidate_full_validation`，否则必须写明缺少成功收据，供验收拒绝而不是伪造复用。
 - `smalldata_test` merge 读取第二父 SHA 的 full-validation status；`success` 才可 fast，missing / failure / lookup failure 必须回退 full。
 - full 成功后的纯 `README.md`、`AGENTS.md`、`update_log.md`、`md/`、`metrics/` follow-up 可复用并传播父收据；父收据失败或缺失时必须扩展到整条候选 diff，不能只测最后一个文档 commit。
+- v3.26 候选要求成功候选 receipt 在 merge fast 时传播到 merge SHA。其后的 `smalldata_test` 纯元数据提交只有当前父 SHA 的 propagated receipt 为 `success` 时才可 `fast`，并必须记录 `smalldataParentSha`、`smalldataParentFullValidationState`、`smalldataIncrementalMetadataOnly`、`smalldataMetadataRequiresFullValidation` 与 `receiptPropagationAllowed`；非元数据变更、workflow 变更或 missing / failure / lookup failure 一律不得复用，纯元数据但父 receipt 不可信时必须强制当前头部 Xcode build。该快验只能证明路由与静态检查，不是新的 Swift/Xcode 编译证据。
 - Speech full 跑 Speech 契约与必要 Xcode，不自动截图；UI evidence 默认 skip，只能由非 PR 候选 commit 的 `[ui evidence]` 或手动 `ui_evidence_mode=full` 启用。
 - `AITRANS - Build IPA` 不监听 push，只允许手动 `workflow_dispatch`。日常 merge 不做 Release archive/fakesign/package。
 - manifest / failure summary 必须记录 `validationProfile`、reason、复用 SHA/status、领域 required flags、UI evidence reason 和 Xcode skip reason。fast artifact 仍可审计，但 Agent C 必须同时核对候选 full artifact/status。

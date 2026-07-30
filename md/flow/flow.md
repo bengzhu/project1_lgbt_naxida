@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前正式版本：`3.25`（普通图片 OCR 修正 sheet 以 Store 一致的规范化输入比较决定“确认无误”或“保存并重译”；前者不调用模型、后者继续沿用 v3.21 的目标 block 重译。v3.24-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+当前候选版本：`3.26`（云端 CI 把成功候选 full receipt 传播到 merge SHA，随后 `smalldata_test` 的纯元数据提交只在父 receipt 为 success 时 fast follow-up；receipt 缺失或失败时强制当前头部 Xcode build。结果包保留父 receipt 审计字段，传播快验不构成新的 Xcode 编译证据）。v3.25-v2.2 的 OCR 修正确认与既有能力、v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
 
 当前布局：
 
@@ -514,7 +514,8 @@ CI artifact version 优先从带 `vX.Y` 的候选 ref 解析；`smalldata_test` 
   -> Agent C 通过 PR 和结果包核对 diff、日志、manifest 和 artifact
       -> 失败：C 输出退回清单，B 修复 push 并重新跑对应 full
       -> 通过：C 经 PR merge 合并回 smalldata_test
-  -> merge workflow 核验第二父 full status：success 走 fast，缺失/失败回退 full
+  -> merge workflow 核验第二父 full status：success 走 fast 并把 receipt 传播到 merge SHA，缺失/失败回退 full
+  -> 后续 smalldata_test 纯元数据提交：父 propagated receipt=success 才 fast；缺失/失败强制当前头部 Xcode build
       -> C 删除远端 codeb/... 候选分支
 ```
 
@@ -534,6 +535,7 @@ CI artifact version 优先从带 `vX.Y` 的候选 ref 解析；`smalldata_test` 
 - 云端失败时，workflow 必须保留日志和失败摘要，Agent C 按结果包指出应交回 Agent B 修复的失败阶段和日志位置。
 - 手动探针 workflow 会从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载 `gemma-3-270m-it-qat-Q4_0.gguf`，校验 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6`，并缓存到 `.ci-models/`。
 - 候选核心 push 默认 `validationProfile=full`、`probe_mode=skip`；PR fast 与有成功候选收据的 merge fast 只跑基础静态/路由契约。fast 不下载 GGUF、不创建模拟器、不安装 App、不跑 Xcode、不跑领域大契约。
+- merge fast 会把已验证候选的 full receipt 传播到 merge SHA。后续 `smalldata_test` 纯 README / AGENTS / update log / `md/` / metrics 提交只有该父 receipt 为 success 时才允许 fast；artifact 记录 `smalldataParentSha`、`smalldataParentFullValidationState`、`smalldataIncrementalMetadataOnly`、`smalldataMetadataRequiresFullValidation` 和 `receiptPropagationAllowed`。父 receipt 缺失或失败时，当前头部必须执行 Xcode build；任何传播 fast 都不是新的编译证据。
 - full 按 changed files 路由 Speech、UI、文本首页和 Koharu 契约。Speech 领域同时运行 run-id contract、质量算法 contract、纯 Swift evaluator 和 corpus validator；当前缺 corpus 时只记录 `manifestMissing`。UI evidence 仅由候选 commit `[ui evidence]` 或手动 `ui_evidence_mode=full` 启用；Speech 默认不截图。漫画/翻译结果图只来自手动 `ci-fast/full` 的探针 `output/`。
 - 手动 `workflow_dispatch` 选择 `ci-fast` 或 `full` 时，云端 CI 单次 Debug simulator build 同时产出 `.xcresult` 和可安装 App；探针步骤只定位并复用该 App，不重复完整 `xcodebuild build`。
 - 云端漫画探针会创建并启动 iPhone 模拟器，从构建 App 的 `Info.plist` 读取实际 bundle ID，安装 App，把缓存 GGUF 复制到 App sandbox `Application Support/Models/Gemma-1.5B/model.gguf`，用 `AITRANS_RUN_MANGA_PROBE=1` 和 `AITRANS_MANGA_PROBE_MODE` 启动 App，等待并导出本轮 `output/`。

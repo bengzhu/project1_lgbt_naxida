@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-当前正式版本：`3.25`。
+当前候选版本：`3.26`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -340,13 +340,18 @@ flowchart TD
   CFail -- "通过" --> C2["更新核心文档<br/>flow.md / flowchart.md / update_log.md"]
   C2 --> C3["PR merge 到 smalldata_test<br/>禁止合并到 main"]
   C3 --> MR{"第二父 SHA<br/>full status = success?"}
-  MR -- "是" --> MF["merge fast follow-up<br/>不重复 Xcode / 大契约 / 截图"]
+  MR -- "是" --> MF["merge fast follow-up<br/>不重复 Xcode / 大契约 / 截图<br/>传播 full receipt 到 merge SHA"]
   MR -- "否" --> MFULL["自动回退 task-scoped full"]
   MF --> C4
   MFULL --> C4
   C4["删除远端 codeb/...<br/>避免候选分支堆积"]
+  C4 -. "后续 smalldata_test 纯元数据 push" .-> DM{"父 propagated receipt<br/>是否为 success?"}
+  DM -- "是" --> DFAST["fast follow-up<br/>记录父 receipt / 非新编译证据"]
+  DM -- "否" --> DFULL["full + 当前 HEAD Xcode build"]
 
   %% 回到人工
   C4 --> H2["人工复核<br/>确认后进入下一轮"]
+  DFAST --> H2
+  DFULL --> H2
   H2 --> H
 ```
