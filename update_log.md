@@ -8,6 +8,24 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.32：恢复 Vision OCR 确认后的焦点交接
+日期：2026-07-30
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.32`。PR #96 已合入 `smalldata_test`，merge SHA `c306e7796159b799dd86e5123fd8df0ddbaf4ca0`；远端 `codeb/v3.32-image-ocr-restore-focus-handoff` 已删除，未触碰 `main`。
+
+核心变更：
+
+- 审查发现已人工修正 block 的“恢复 Vision OCR”确认动作会在 `confirmationDialog` 仍处于关闭动画时直接安排结果行 VoiceOver 焦点，和 v3.30 的 sheet 关闭交接相比缺少确定的呈现生命周期边界。
+- 恢复成功后，`ImageTranslationPanel` 现在只在 View 私有 state 暂存结果行 focus ID 与当前 `imageTranslationRevision`；确认 target 保留到 `isPresented` binding 收到关闭回写。binding 先清理 target，只有 revision 仍一致才复用既有 yield 后焦点发布器；取消无 pending 目标，新图清空 confirmation/pending/已发布焦点。既有 Store 恢复、基线、transcript、export/share 与 render 生命周期保持不变。
+- 新增 v3.32 合同，更新 v3.22/v3.23 合同以锁定恢复所有权、destructive confirmation 和关闭后交接的共同边界，并接入图片/UI fail-fast CI 路由。本版不改 Vision OCR、模型翻译、renderer/export、漫画探针、Koharu、ground truth、metrics 或 `output/`，不能声称 OCR、翻译或识别质量提升。
+
+验证与遗留：
+
+- 候选 SHA `9d257c114cf425f40288189e04985afc2c824f2a` 的 full run `30551770338` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.32-codeb-v3.32-image-ocr-restore-focus-handoff--9d257c114cf4-run30551770338-attempt1` 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full` 和 `validationReason=candidate_development_push` 均精确匹配。`.xcresult` Build 为 succeeded、0 errors、0 warnings；JUnit `10/10`、0 failures，静态、Speech、图片/UI（含 v3.32）、首页、粘贴与 Koharu contract 均通过。
+- PR #96 fast `30552790644` 成功，明确 `xcodeBuildRequired=false`，精确记录 `reusedFullValidationSha=9d257c114cf425f40288189e04985afc2c824f2a` 和 `reusedFullValidationState=success`。合并后 fast `30552912602` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，并以 `receiptPropagationAllowed=true` 将同一 successful receipt 传播到 merge SHA；两者均只作路由跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 本地通过 39 个与 CI 同组的图片/UI 合同（含 v3.32 6/6 与 v3.22/v3.23 回归）、v1.94 CI 分层合同、v1.97 版本身份合同、`git diff --check`、`xcrun swiftc -parse`、YAML / plist / ground truth 与既有 output JSON smoke，以及版本解析 `v3.32`。未跑本机 build / 探针，按规则交给云端验证；候选 full 使用 `probe_mode=skip`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。
+- 真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；full artifact 的 active Koharu gate 为 `manifestMissing / stopUntilArtifactsProvided`。源码合同不能替代真实 VoiceOver 关闭动画、连续扫动或快速确认的设备／模拟器回放。
+
 ## v3.31：OCR 修正成功后的结果行返回焦点
 日期：2026-07-30
 
