@@ -147,6 +147,7 @@ final class TranslationSessionStore: ObservableObject {
     private var imageTranslationTask: Task<Void, Never>?
     private var imageTranslationTaskID = UUID()
     private var imageTranslationCorrectionID = UUID()
+    private var imageTranslationVisionOriginalBlocks: [UUID: ImageTranslationBlock] = [:]
     private var imageTranslationTranscriptLineID: UUID?
     private var imageTranslationFileSelectionID: UUID?
     private var imageTranslationOwnedExportURLs: Set<URL> = []
@@ -1129,6 +1130,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationMessage = "正在载入图片"
         imageTranslationBlocks = []
         imageTranslationCorrectedBlockIDs = []
+        imageTranslationVisionOriginalBlocks = [:]
         imageTranslationTranscriptLineID = nil
         imageTranslationData = nil
         imageTranslationSourceURL = nil
@@ -1504,6 +1506,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
         imageTranslationBlocks = []
         imageTranslationCorrectedBlockIDs = []
+        imageTranslationVisionOriginalBlocks = [:]
         imageTranslationTranscriptLineID = nil
         imageTranslationData = nil
         imageTranslationFilename = ""
@@ -1641,6 +1644,9 @@ final class TranslationSessionStore: ObservableObject {
             }
 
             var correctedBlock = imageTranslationBlocks[currentIndex]
+            if imageTranslationVisionOriginalBlocks[blockID] == nil {
+                imageTranslationVisionOriginalBlocks[blockID] = currentBlock
+            }
             correctedBlock.original = correctedOriginal
             correctedBlock.translation = correctedTranslation
             imageTranslationBlocks[currentIndex] = correctedBlock
@@ -1667,6 +1673,27 @@ final class TranslationSessionStore: ObservableObject {
             dataTransferMessage = message
             return false
         }
+    }
+
+    func restoreImageTranslationBlockToVisionOCR(_ blockID: UUID) -> Bool {
+        guard imageTranslationCorrectionBlockID == nil,
+              imageTranslationState == .translated,
+              let originalBlock = imageTranslationVisionOriginalBlocks[blockID],
+              let blockIndex = imageTranslationBlocks.firstIndex(where: { $0.id == blockID }) else {
+            imageTranslationCorrectionMessage = "当前文字块无法恢复 Vision OCR 结果"
+            return false
+        }
+
+        imageTranslationBlocks[blockIndex] = originalBlock
+        imageTranslationVisionOriginalBlocks.removeValue(forKey: blockID)
+        imageTranslationCorrectedBlockIDs.remove(blockID)
+        imageTranslationCorrectionMessage = nil
+        imageTranslationMessage = "已恢复 Vision OCR 结果，正在更新导出图"
+        updateImageTranslationTranscript(blocks: imageTranslationBlocks)
+        invalidateImageOverlayRender()
+        discardImageTranslationExport()
+        rerenderImageTranslationExport()
+        return true
     }
 
     private func invalidateImageTranslationCorrection() {

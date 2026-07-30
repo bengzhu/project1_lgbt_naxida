@@ -283,6 +283,7 @@ struct ImageTranslationPanel: View {
                             accessibilityFocus: $reviewAccessibilityFocusID,
                             select: { toggleSelection(of: block.id) },
                             edit: { beginCorrection(of: block) },
+                            restoreVisionOCR: { restoreVisionOCR(for: block.id) },
                             toggleReviewCompletion: {
                                 toggleReviewCompletion(block.id, focusInPreview: false)
                             }
@@ -346,6 +347,13 @@ struct ImageTranslationPanel: View {
     private func beginCorrection(of block: ImageTranslationBlock) {
         selectedImageTranslationBlockID = block.id
         editingImageTranslationBlock = block
+    }
+
+    private func restoreVisionOCR(for blockID: UUID) {
+        guard store.restoreImageTranslationBlockToVisionOCR(blockID) else { return }
+        reviewedImageTranslationBlockIDs.remove(blockID)
+        selectedImageTranslationBlockID = blockID
+        moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))
     }
 
     private func completeReviewAfterCorrection(_ blockID: UUID) {
@@ -1330,6 +1338,7 @@ private struct ImageTranslationBlockRow: View {
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let select: () -> Void
     let edit: () -> Void
+    let restoreVisionOCR: () -> Void
     let toggleReviewCompletion: () -> Void
 
     var body: some View {
@@ -1390,27 +1399,38 @@ private struct ImageTranslationBlockRow: View {
                 equals: "image-review-row-\(block.id.uuidString)"
             )
 
-            Button("修正识别文字", systemImage: "pencil", action: edit)
-                .labelStyle(.iconOnly)
-                .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
-                .foregroundStyle(Color.appAccent)
-                .disabled(!canEdit)
-                .accessibilityHint("编辑 OCR 原文并只重新翻译此文字块")
+            VStack(spacing: AppTheme.Spacing.compact) {
+                Button("修正识别文字", systemImage: "pencil", action: edit)
+                    .labelStyle(.iconOnly)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .foregroundStyle(Color.appAccent)
+                    .disabled(!canEdit)
+                    .accessibilityHint("编辑 OCR 原文并只重新翻译此文字块")
 
-            if ImageOCRResultSummary.requiresReview(block) {
-                Button(
-                    isReviewCompleted ? "撤销本次复查" : "完成并继续复查",
-                    systemImage: isReviewCompleted ? "arrow.uturn.backward" : "checkmark.circle",
-                    action: toggleReviewCompletion
-                )
-                .labelStyle(.iconOnly)
-                .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
-                .foregroundStyle(isReviewCompleted ? Color.appSuccess : Color.appWarning)
-                .accessibilityHint(
-                    isReviewCompleted
-                        ? "把此文字块放回待复查队列并定位"
-                        : "标记完成并定位下一个待复查文字块"
-                )
+                if isManuallyCorrected {
+                    Button("恢复 Vision OCR", systemImage: "arrow.counterclockwise", action: restoreVisionOCR)
+                        .labelStyle(.iconOnly)
+                        .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                        .foregroundStyle(Color.appTextSecondary)
+                        .disabled(!canEdit)
+                        .accessibilityHint("恢复此文字块的 Vision OCR 原文与初始译文")
+                }
+
+                if ImageOCRResultSummary.requiresReview(block) {
+                    Button(
+                        isReviewCompleted ? "撤销本次复查" : "完成并继续复查",
+                        systemImage: isReviewCompleted ? "arrow.uturn.backward" : "checkmark.circle",
+                        action: toggleReviewCompletion
+                    )
+                    .labelStyle(.iconOnly)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .foregroundStyle(isReviewCompleted ? Color.appSuccess : Color.appWarning)
+                    .accessibilityHint(
+                        isReviewCompleted
+                            ? "把此文字块放回待复查队列并定位"
+                            : "标记完成并定位下一个待复查文字块"
+                    )
+                }
             }
         }
         .padding(.horizontal, AppTheme.Spacing.compact)
