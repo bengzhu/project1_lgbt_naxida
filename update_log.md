@@ -11,7 +11,7 @@
 ## v3.30：OCR 修正 sheet 关闭后的确定性焦点交接
 日期：2026-07-30
 
-状态：Agent X 已完成候选实现，等待 `codeb/v3.30-image-ocr-focus-handoff` 的云端 full 验证；工程候选版本为 `MARKETING_VERSION=3.30`。尚未创建 PR、未合并、未触碰 `main`。
+状态：Agent X 已完成实现、云端验收与合并收口；工程正式版本为 `MARKETING_VERSION=3.30`。PR #94 已合入 `smalldata_test`，merge SHA `408d45b3300ae469a1fc4a2ebdc33da24cba62e1`；远端 `codeb/v3.30-image-ocr-focus-handoff` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -19,10 +19,12 @@
 - pending handoff 仅是 View 私有 `@State`：同时保存目标 focus ID 和 `imageTranslationRevision`；sheet `onDismiss` 后只有 revision 仍一致才清空 pending 并复用已有 `moveReviewAccessibilityFocus`。图片切换会清空 sheet、pending 与当前已发布焦点，旧图片不能抢回焦点。
 - 新增 v3.30 源码合同并接入图片/UI fail-fast CI 路由，锁定 View 私有边界、onDismiss 接线、原有焦点目的地、revision 校验和新图清理。本版不改 Store、持久化、Vision OCR、模型翻译、renderer/export、漫画探针、Koharu、ground truth、metrics 或 `output/`，不能声称 OCR、翻译或识别质量提升。
 
-候选本地检查：
+验证与遗留：
 
-- 已通过 v3.30 合同 6/6，以及 v3.20 VoiceOver 焦点、v3.21 OCR 修正、v3.29 误识别忽略回归合同；已通过 `git diff --check`。
-- 未跑本机 build / 探针，按规则交给云端验证。此次是普通图片 UI／交互改动，候选 push 使用默认 `probe_mode=skip`，不产生新漫画指标或 `metrics/version_history.csv` 行。
+- 本地已通过 37 个与 CI 同组的图片/UI 合同（含新 v3.30 合同 6/6 与 v3.20/v3.21/v3.29 回归）、v1.94 CI 分层合同、v1.97 版本身份合同、`git diff --check`、`xcrun swiftc -parse`、YAML / 工程实际 plist / ground truth 与既有 output JSON smoke，以及版本解析。
+- 候选 SHA `b73b1383f3942548caf0e0ad3e167abe9552ac6c` 的 full run `30547927321` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.30-codeb-v3.30-image-ocr-focus-handoff--b73b1383f394-run30547927321-attempt1` 精确匹配 version、branch、commitSha、runId、runAttempt 和 workflowName，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`。`.xcresult` Build 为 succeeded，0 errors、0 warnings；JUnit `10/10`、0 failures/errors；静态、Speech、图片/UI（含 v3.30）、首页、粘贴和 Koharu contract 均成功。
+- PR #94 fast `30548623007` 与 merge fast `30548739625` 均成功；后者精确匹配 merge SHA、`validationReason=merge_reuses_successful_candidate_full_validation`、`reusedFullValidationSha=b73b1383... / success`，并以 `receiptPropagationAllowed=true` 将 `AITRANS CI/full-validation=success` 传播到 `408d45b3...`。两者均只作路由追踪，不能替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。
 - 真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本候选没有改变这些受限路径。
 
 ## v3.29：可恢复的 OCR 误识别文字块忽略
