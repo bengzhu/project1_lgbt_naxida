@@ -30,16 +30,25 @@ class ImageOCRRestoreConfirmationContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.view = read("AITRANS/Views/ImageTranslationViews.swift")
 
-    def test_restore_uses_a_view_private_identifiable_confirmation_target(self) -> None:
+    def test_restore_uses_a_view_private_optional_confirmation_target(self) -> None:
         self.assertIn(
             "@State private var restoreConfirmationBlock: ImageTranslationBlock?",
             self.view,
         )
         self.assertIn(
-            '"恢复 Vision OCR？",\n            item: $restoreConfirmationBlock,',
+            '"恢复 Vision OCR？",\n            isPresented: isRestoreConfirmationPresented,',
             self.view,
         )
         self.assertIn("titleVisibility: .visible", self.view)
+        self.assertNotIn("item: $restoreConfirmationBlock", self.view)
+
+        presentation = braced_body(
+            self.view,
+            "private var isRestoreConfirmationPresented: Binding<Bool>",
+        )
+        self.assertIn("restoreConfirmationBlock != nil", presentation)
+        self.assertIn("guard !isPresented else { return }", presentation)
+        self.assertIn("restoreConfirmationBlock = nil", presentation)
 
     def test_row_requests_confirmation_instead_of_directly_restoring(self) -> None:
         inspector = braced_body(self.view, "private var inspector: some View")
@@ -70,6 +79,7 @@ class ImageOCRRestoreConfirmationContractTests(unittest.TestCase):
             confirmation.index("restoreVisionOCR(for: block.id)"),
         )
         self.assertIn('Button("恢复 Vision OCR", role: .destructive)', self.view)
+        self.assertIn("guard let block = restoreConfirmationBlock else { return }", self.view)
         self.assertIn("confirmVisionOCRRestore(block)", self.view)
         self.assertIn('Button("取消", role: .cancel) {}', self.view)
         self.assertIn("这会移除本次人工修正，并恢复识别时的原文和初始译文。", self.view)

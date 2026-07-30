@@ -120,14 +120,15 @@ struct ImageTranslationPanel: View {
         }
         .confirmationDialog(
             "恢复 Vision OCR？",
-            item: $restoreConfirmationBlock,
+            isPresented: isRestoreConfirmationPresented,
             titleVisibility: .visible
-        ) { block in
+        ) {
             Button("恢复 Vision OCR", role: .destructive) {
+                guard let block = restoreConfirmationBlock else { return }
                 confirmVisionOCRRestore(block)
             }
             Button("取消", role: .cancel) {}
-        } message: { _ in
+        } message: {
             Text("这会移除本次人工修正，并恢复识别时的原文和初始译文。")
         }
         .onChange(of: store.imageTranslationExportURL) { _, exportURL in
@@ -313,6 +314,16 @@ struct ImageTranslationPanel: View {
         Binding(
             get: { store.imageOverlayMode },
             set: { store.setImageOverlayMode($0) }
+        )
+    }
+
+    private var isRestoreConfirmationPresented: Binding<Bool> {
+        Binding(
+            get: { restoreConfirmationBlock != nil },
+            set: { isPresented in
+                guard !isPresented else { return }
+                restoreConfirmationBlock = nil
+            }
         )
     }
 
