@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-当前正式版本：`3.20`。
+当前候选版本：`3.21`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -58,6 +58,11 @@ flowchart TD
   J --> IQUALITY["OCR 结果摘要<br/>平均/低置信 + 竖排/方向待定<br/>全部 / 待复查筛选 + 行级快速复查<br/>Store-owned 重新识别"]
   IQUALITY --> ISELECT["View 私有 block 选择<br/>结果行取景框 + 预览覆盖高亮<br/>revision / 隐藏筛选清除"]
   IQUALITY --> IA11Y["VoiceOver 连续复查焦点<br/>行 / 局部放大 / 完成态分流<br/>revision 拒收旧焦点"]
+  IQUALITY --> ICORRECT["44pt 人工修正<br/>非空校验 + 保存中锁定"]
+  ICORRECT --> ICORRECTGATE{"correction ID + 图片 task ID<br/>block ID + 旧原文快照仍匹配?"}
+  ICORRECTGATE -->|"否 / 翻译失败"| ICORRECTKEEP["保留旧 block / transcript / export"]
+  ICORRECTGATE -->|"是"| ICORRECTCOMMIT["只重译目标 block<br/>更新当前图片 transcript<br/>撤销旧 export/share"]
+  ICORRECTCOMMIT --> IRENDER
   ISELECT --> IFOCUS["已下采样预览局部裁切<br/>保留上下文 + bbox 再标记<br/>44pt 关闭命令"]
   ISELECT --> ISCROLL["唯一 workspace anchor<br/>新选择滚回图片工作区<br/>Reduce Motion 立即定位"]
   IFOCUS --> INAV["当前筛选序列前后导航<br/>位置显示 + 首尾禁用<br/>44pt 命名按钮"]

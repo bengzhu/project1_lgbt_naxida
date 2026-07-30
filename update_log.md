@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.21：普通图片 OCR 单块人工修正
+日期：2026-07-30
+
+状态：Agent X 已完成核心实现与本地轻量回归，候选分支为 `codeb/v3.21-image-ocr-correction`；exact-SHA 云端 full、PR 和合并尚待执行，未触碰 `main`。
+
+核心变更：
+
+- 普通图片每个 OCR 结果行新增独立 44pt 编辑动作和人工修正 sheet；空文本不可保存，重译期间锁定重复提交、取消和交互式关闭，并提供明确进度与失败反馈。
+- `TranslationSessionStore` 只重新翻译目标 block，回写前核对 correction ID、图片 task ID、block ID 和旧原文快照。新图片、清空或取消会使旧 correction 失效，晚到结果不得覆盖新内容。
+- 修正失败保留旧 block、当前图片 transcript 与旧导出；成功后原子更新原文/译文与当前图片 transcript，撤销旧 export/share，再复用既有 render ID 生命周期按当前覆盖模式重绘。成功修正风险块后，本次复查队列继续前进。
+- 新增 v3.21 源码合同并接入图片/UI fail-fast 路由。本版不改 Vision OCR、方向/layout、漫画探针、Koharu 报告或 ground truth，不刷新 `output/` 与 `metrics/version_history.csv`，不声称识别或翻译质量提升。
+
+验证与遗留：
+
+- v3.21 新合同 8/8、29 个图片/UI 合同脚本均通过；Swift 变更文件 parse、workflow YAML 和 `git diff --check` 通过。
+- exact-SHA 云端 full、Xcode build、artifact identity 与 PR follow-up 尚待执行；按规则未跑本机 build / 探针。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+
 ## v3.20：图片连续复查 VoiceOver 焦点
 日期：2026-07-29
 

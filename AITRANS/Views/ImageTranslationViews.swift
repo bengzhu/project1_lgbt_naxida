@@ -85,6 +85,7 @@ struct ImageTranslationPanel: View {
     @State private var reviewFilter: ImageOCRReviewFilter = .all
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var reviewedImageTranslationBlockIDs: Set<UUID> = []
+    @State private var editingImageTranslationBlock: ImageTranslationBlock?
     @AccessibilityFocusState private var reviewAccessibilityFocusID: String?
     let revealPreview: () -> Void
 
@@ -110,6 +111,12 @@ struct ImageTranslationPanel: View {
         .sheet(item: $shareURL, onDismiss: finishSharing) { url in
             ShareSheet(activityItems: [url])
         }
+        .sheet(item: $editingImageTranslationBlock) { block in
+            ImageOCRCorrectionSheet(block: block) {
+                completeReviewAfterCorrection(block.id)
+            }
+            .environmentObject(store)
+        }
         .onChange(of: store.imageTranslationExportURL) { _, exportURL in
             guard exportURL == nil else { return }
             finishSharing()
@@ -120,6 +127,7 @@ struct ImageTranslationPanel: View {
         .onChange(of: store.imageTranslationRevision) { _, _ in
             selectedImageTranslationBlockID = nil
             reviewedImageTranslationBlockIDs.removeAll()
+            editingImageTranslationBlock = nil
             reviewAccessibilityFocusID = nil
         }
         .onChange(of: reviewFilter) { _, _ in
@@ -270,8 +278,11 @@ struct ImageTranslationPanel: View {
                             block: block,
                             isSelected: selectedImageTranslationBlockID == block.id,
                             isReviewCompleted: reviewedImageTranslationBlockIDs.contains(block.id),
+                            isManuallyCorrected: store.imageTranslationCorrectedBlockIDs.contains(block.id),
+                            canEdit: !isRunning && !isRenderingExport,
                             accessibilityFocus: $reviewAccessibilityFocusID,
                             select: { toggleSelection(of: block.id) },
+                            edit: { beginCorrection(of: block) },
                             toggleReviewCompletion: {
                                 toggleReviewCompletion(block.id, focusInPreview: false)
                             }
@@ -329,6 +340,24 @@ struct ImageTranslationPanel: View {
         } else {
             selectedImageTranslationBlockID = blockID
             revealPreview()
+        }
+    }
+
+    private func beginCorrection(of block: ImageTranslationBlock) {
+        selectedImageTranslationBlockID = block.id
+        editingImageTranslationBlock = block
+    }
+
+    private func completeReviewAfterCorrection(_ blockID: UUID) {
+        guard allReviewRequiredBlocks.contains(where: { $0.id == blockID }) else { return }
+        reviewedImageTranslationBlockIDs.insert(blockID)
+        if reviewFilter == .needsReview {
+            let nextBlockID = reviewRequiredBlocks.first?.id
+            selectedImageTranslationBlockID = nextBlockID
+            moveReviewAccessibilityFocus(
+                to: nextBlockID.map(reviewRowAccessibilityFocusID)
+                    ?? Self.reviewCompletionAccessibilityFocusID
+            )
         }
     }
 
@@ -1296,8 +1325,11 @@ private struct ImageTranslationBlockRow: View {
     let block: ImageTranslationBlock
     let isSelected: Bool
     let isReviewCompleted: Bool
+    let isManuallyCorrected: Bool
+    let canEdit: Bool
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let select: () -> Void
+    let edit: () -> Void
     let toggleReviewCompletion: () -> Void
 
     var body: some View {
@@ -1315,6 +1347,11 @@ private struct ImageTranslationBlockRow: View {
                         Text(block.original)
                             .font(.caption)
                             .foregroundStyle(Color.appTextSecondary)
+                        if isManuallyCorrected {
+                            Label("已人工修正", systemImage: "pencil.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(Color.appSuccess)
+                        }
                         if ImageOCRResultSummary.requiresReview(block) {
                             VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
                                 if ImageOCRResultSummary.hasLowConfidence(block) {
@@ -1353,6 +1390,13 @@ private struct ImageTranslationBlockRow: View {
                 equals: "image-review-row-\(block.id.uuidString)"
             )
 
+            Button("修正识别文字", systemImage: "pencil", action: edit)
+                .labelStyle(.iconOnly)
+                .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                .foregroundStyle(Color.appAccent)
+                .disabled(!canEdit)
+                .accessibilityHint("编辑 OCR 原文并只重新翻译此文字块")
+
             if ImageOCRResultSummary.requiresReview(block) {
                 Button(
                     isReviewCompleted ? "撤销本次复查" : "完成并继续复查",
@@ -1372,6 +1416,89 @@ private struct ImageTranslationBlockRow: View {
         .padding(.horizontal, AppTheme.Spacing.compact)
         .background(isSelected ? Color.appAccent.opacity(0.12) : Color.clear)
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
+    }
+}
+
+private struct ImageOCRCorrectionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: TranslationSessionStore
+
+    let block: ImageTranslationBlock
+    let didSave: () -> Void
+
+    @State private var correctedOriginal: String
+    @State private var errorMessage: String?
+
+    init(block: ImageTranslationBlock, didSave: @escaping () -> Void) {
+        self.block = block
+        self.didSave = didSave
+        _correctedOriginal = State(initialValue: block.original)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("识别文字") {
+                    TextField("修正后的文字", text: $correctedOriginal, axis: .vertical)
+                        .lineLimit(4...10)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+
+                Section("当前翻译") {
+                    Text(block.translation.isEmpty ? "等待翻译" : block.translation)
+                        .foregroundStyle(Color.appTextSecondary)
+                }
+
+                if let errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Color.appDanger)
+                    }
+                }
+            }
+            .navigationTitle("修正识别文字")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消", action: dismiss.callAsFunction)
+                        .disabled(isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存并重译", action: save)
+                        .disabled(!canSave || isSaving)
+                }
+            }
+            .overlay {
+                if isSaving {
+                    ProgressView("正在重新翻译")
+                        .padding(AppTheme.Spacing.section)
+                        .background(.regularMaterial, in: .rect(cornerRadius: 8))
+                }
+            }
+        }
+        .interactiveDismissDisabled(isSaving)
+        .presentationDetents([.medium, .large])
+    }
+
+    private var isSaving: Bool {
+        store.imageTranslationCorrectionBlockID == block.id
+    }
+
+    private var canSave: Bool {
+        !correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func save() {
+        errorMessage = nil
+        Task {
+            if await store.correctImageTranslationBlock(block.id, original: correctedOriginal) {
+                didSave()
+                dismiss()
+            } else {
+                errorMessage = store.imageTranslationCorrectionMessage ?? "文字修正未完成，请重试"
+            }
+        }
     }
 }
 
