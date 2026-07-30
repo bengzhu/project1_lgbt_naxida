@@ -117,9 +117,11 @@ class ImageOCRCorrectionContractTests(unittest.TestCase):
             "private func completeReviewAfterCorrection(_ blockID: UUID)",
         )
         self.assertIn("allReviewRequiredBlocks.contains", completion)
-        self.assertIn("reviewedImageTranslationBlockIDs.insert(blockID)", completion)
+        self.assertIn("store.imageTranslationReviewedBlockIDs.contains(blockID)", completion)
         self.assertIn("let nextBlockID = reviewRequiredBlocks.first?.id", completion)
         self.assertIn("Self.reviewCompletionAccessibilityFocusID", completion)
+        correction = braced_body(self.store, "func correctImageTranslationBlock(")
+        self.assertGreaterEqual(correction.count("markImageTranslationBlockReviewed(blockID)"), 2)
 
     def test_ci_runs_v321_after_v320(self) -> None:
         workflow = read(".github/workflows/ci-results.yml")

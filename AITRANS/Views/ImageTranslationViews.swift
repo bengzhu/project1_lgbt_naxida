@@ -84,7 +84,6 @@ struct ImageTranslationPanel: View {
     @State private var sharePresentationID = UUID()
     @State private var reviewFilter: ImageOCRReviewFilter = .all
     @State private var selectedImageTranslationBlockID: UUID?
-    @State private var reviewedImageTranslationBlockIDs: Set<UUID> = []
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
     @State private var restoreConfirmationBlock: ImageTranslationBlock?
     @AccessibilityFocusState private var reviewAccessibilityFocusID: String?
@@ -143,7 +142,6 @@ struct ImageTranslationPanel: View {
         }
         .onChange(of: store.imageTranslationRevision) { _, _ in
             selectedImageTranslationBlockID = nil
-            reviewedImageTranslationBlockIDs.removeAll()
             editingImageTranslationBlock = nil
             restoreConfirmationBlock = nil
             reviewAccessibilityFocusID = nil
@@ -168,7 +166,7 @@ struct ImageTranslationPanel: View {
                 positionText: selectedBlockPositionText,
                 canSelectPrevious: canSelectPreviousBlock,
                 canSelectNext: canSelectNextBlock,
-                reviewedBlockIDs: reviewedImageTranslationBlockIDs,
+                reviewedBlockIDs: store.imageTranslationReviewedBlockIDs,
                 accessibilityFocus: $reviewAccessibilityFocusID,
                 selectBlock: selectBlockFromPreview,
                 clearSelection: { selectedImageTranslationBlockID = nil },
@@ -295,7 +293,7 @@ struct ImageTranslationPanel: View {
                         ImageTranslationBlockRow(
                             block: block,
                             isSelected: selectedImageTranslationBlockID == block.id,
-                            isReviewCompleted: reviewedImageTranslationBlockIDs.contains(block.id),
+                            isReviewCompleted: store.imageTranslationReviewedBlockIDs.contains(block.id),
                             isManuallyCorrected: store.imageTranslationCorrectedBlockIDs.contains(block.id),
                             canEdit: !isRunning && !isRenderingExport,
                             accessibilityFocus: $reviewAccessibilityFocusID,
@@ -333,12 +331,12 @@ struct ImageTranslationPanel: View {
     private var visibleImageTranslationBlocks: [ImageTranslationBlock] {
         let filteredBlocks = reviewFilter.blocks(from: store.imageTranslationBlocks)
         guard reviewFilter == .needsReview else { return filteredBlocks }
-        return filteredBlocks.filter { !reviewedImageTranslationBlockIDs.contains($0.id) }
+        return filteredBlocks.filter { !store.imageTranslationReviewedBlockIDs.contains($0.id) }
     }
 
     private var reviewRequiredBlocks: [ImageTranslationBlock] {
         ImageOCRReviewFilter.needsReview.blocks(from: store.imageTranslationBlocks)
-            .filter { !reviewedImageTranslationBlockIDs.contains($0.id) }
+            .filter { !store.imageTranslationReviewedBlockIDs.contains($0.id) }
     }
 
     private var allReviewRequiredBlocks: [ImageTranslationBlock] {
@@ -346,7 +344,7 @@ struct ImageTranslationPanel: View {
     }
 
     private var reviewCompletedBlockCount: Int {
-        allReviewRequiredBlocks.count(where: { reviewedImageTranslationBlockIDs.contains($0.id) })
+        allReviewRequiredBlocks.count(where: { store.imageTranslationReviewedBlockIDs.contains($0.id) })
     }
 
     private var reviewQueueActionTitle: String {
@@ -393,14 +391,13 @@ struct ImageTranslationPanel: View {
 
     private func restoreVisionOCR(for blockID: UUID) {
         guard store.restoreImageTranslationBlockToVisionOCR(blockID) else { return }
-        reviewedImageTranslationBlockIDs.remove(blockID)
         selectedImageTranslationBlockID = blockID
         moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))
     }
 
     private func completeReviewAfterCorrection(_ blockID: UUID) {
-        guard allReviewRequiredBlocks.contains(where: { $0.id == blockID }) else { return }
-        reviewedImageTranslationBlockIDs.insert(blockID)
+        guard allReviewRequiredBlocks.contains(where: { $0.id == blockID }),
+              store.imageTranslationReviewedBlockIDs.contains(blockID) else { return }
         if reviewFilter == .needsReview {
             let nextBlockID = reviewRequiredBlocks.first?.id
             selectedImageTranslationBlockID = nextBlockID
@@ -436,7 +433,7 @@ struct ImageTranslationPanel: View {
 
     private func toggleReviewCompletion(_ blockID: UUID, focusInPreview: Bool) {
         guard allReviewRequiredBlocks.contains(where: { $0.id == blockID }) else { return }
-        if reviewedImageTranslationBlockIDs.remove(blockID) != nil {
+        if store.reopenImageTranslationBlockReview(blockID) {
             reviewFilter = .needsReview
             selectedImageTranslationBlockID = blockID
             moveReviewAccessibilityFocus(
@@ -451,7 +448,7 @@ struct ImageTranslationPanel: View {
         guard let currentIndex = pendingBlocks.firstIndex(where: { $0.id == blockID }) else { return }
         let nextBlockID = pendingBlocks.dropFirst(currentIndex + 1).first?.id
             ?? pendingBlocks[..<currentIndex].last?.id
-        reviewedImageTranslationBlockIDs.insert(blockID)
+        guard store.markImageTranslationBlockReviewed(blockID) else { return }
         reviewFilter = .needsReview
         selectedImageTranslationBlockID = nextBlockID
         let nextFocusID = nextBlockID.map {
@@ -464,7 +461,7 @@ struct ImageTranslationPanel: View {
 
     private func restartReviewQueue() {
         guard let firstBlockID = allReviewRequiredBlocks.first?.id else { return }
-        reviewedImageTranslationBlockIDs.removeAll()
+        store.resetImageTranslationReviewProgress()
         reviewFilter = .needsReview
         selectedImageTranslationBlockID = firstBlockID
         revealPreview()

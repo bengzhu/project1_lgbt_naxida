@@ -88,12 +88,16 @@ class ImageOCRCorrectionRestoreContractTests(unittest.TestCase):
         self.assertIn("恢复此文字块的 Vision OCR 原文与初始译文", row)
         self.assertIn(".disabled(!canEdit)", row)
 
-    def test_restore_reopens_local_review_and_returns_voiceover_to_the_row(self) -> None:
+    def test_restore_reopens_session_review_and_returns_voiceover_to_the_row(self) -> None:
         action = braced_body(self.view, "private func restoreVisionOCR(for blockID: UUID)")
         self.assertIn("store.restoreImageTranslationBlockToVisionOCR(blockID)", action)
-        self.assertIn("reviewedImageTranslationBlockIDs.remove(blockID)", action)
         self.assertIn("selectedImageTranslationBlockID = blockID", action)
         self.assertIn("moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))", action)
+        restore = braced_body(
+            self.store,
+            "func restoreImageTranslationBlockToVisionOCR(_ blockID: UUID) -> Bool",
+        )
+        self.assertIn("imageTranslationReviewedBlockIDs.remove(blockID)", restore)
 
     def test_ci_runs_v322_after_v321(self) -> None:
         workflow = read(".github/workflows/ci-results.yml")

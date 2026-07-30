@@ -406,6 +406,9 @@ jobs:
           if grep -Fx 'scripts/test-v327-image-ocr-correction-reference-context-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
+          if grep -Fx 'scripts/test-v328-image-review-session-continuity-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
 
           validation_profile="${{ steps.meta.outputs.requested_validation_profile }}"
           validation_reason="manual_${validation_profile}"
@@ -1007,6 +1010,7 @@ jobs:
             python3 -B scripts/test-v324-image-ocr-correction-discard-confirmation-contract.py
             python3 -B scripts/test-v325-image-ocr-correction-confirmation-action-contract.py
             python3 -B scripts/test-v327-image-ocr-correction-reference-context-contract.py
+            python3 -B scripts/test-v328-image-review-session-continuity-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract
