@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前候选版本：`3.28`（普通图片的已复查 block ID 由 `TranslationSessionStore` 只在当前图片会话内持有，面板重建后可继续复查；新图、取消和清空会重置而不落盘）。v3.27 的 OCR 修正 sheet 继续使用既有 2048px 本地预览裁切当前文字块周边、再次标记黄色 bbox，并在低置信/方向待定时展示复查提示；局部预览不可用不阻止手工修正，也不会重跑 OCR。v3.26 CI 流程把成功候选 full receipt 传播到 merge SHA，随后 `smalldata_test` 的纯元数据提交只在父 receipt 为 success 时 fast follow-up；receipt 缺失或失败时强制当前头部 Xcode build。结果包保留父 receipt 审计字段，传播快验不构成新的 Xcode 编译证据。v3.25-v2.2 的 OCR 修正确认与既有能力、v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
+当前正式版本：`3.28`（普通图片的已复查 block ID 由 `TranslationSessionStore` 只在当前图片会话内持有，面板重建后可继续复查；新图、取消和清空会重置而不落盘）。v3.27 的 OCR 修正 sheet 继续使用既有 2048px 本地预览裁切当前文字块周边、再次标记黄色 bbox，并在低置信/方向待定时展示复查提示；局部预览不可用不阻止手工修正，也不会重跑 OCR。v3.26 CI 流程把成功候选 full receipt 传播到 merge SHA，随后 `smalldata_test` 的纯元数据提交只在父 receipt 为 success 时 fast follow-up；receipt 缺失或失败时强制当前头部 Xcode build。结果包保留父 receipt 审计字段，传播快验不构成新的 Xcode 编译证据。v3.25-v2.2 的 OCR 修正确认与既有能力、v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
 
 当前布局：
 

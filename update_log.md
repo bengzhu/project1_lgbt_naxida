@@ -11,7 +11,7 @@
 ## v3.28：图片复查会话连续性
 日期：2026-07-30
 
-状态：Agent X 候选实现已完成，等待 `codeb/v3.28-image-review-session-continuity` 的云端 full 验收；工程候选版本为 `MARKETING_VERSION=3.28`，尚未合并到 `smalldata_test`，不会触碰 `main`。
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.28`。PR #92 已合入 `smalldata_test`，merge SHA `a7ae8dbc49642179e3f6b21e77846704f127a157`；远端 `codeb/v3.28-image-review-session-continuity` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,8 +22,10 @@
 
 验证与遗留：
 
-- 本地已通过 v3.17、v3.19、v3.21、v3.22、v3.27 与新 v3.28 图片合同，`xcrun swiftc -parse` 两个修改 Swift 文件和 `git diff --check` 均成功；完整图片/UI 合同与 Xcode build 仍交给候选云端 full。
-- 未跑本机 build / 探针，按规则交给云端验证。候选 full 预计使用 `probe_mode=skip`，因此不新增漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不得据本次会话连续性改进声称 OCR、翻译或识别质量提升。
+- 本地已通过 35 个图片/UI 合同（含 v3.17、v3.19、v3.21、v3.22、v3.27 与新 v3.28）、`xcrun swiftc -parse` 两个修改 Swift 文件、CI 路由/版本合同、YAML / plist / JSON smoke 和 `git diff --check`。
+- 候选 SHA `59e4fb6519f722943866bb576932ff6036c80e54` 的 full run `30526775311` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.28-codeb-v3.28-image-review-session-continuity--59e4fb6519f7-run30526775311-attempt1` 精确匹配 version、branch、commitSha、runId、runAttempt 和 workflowName，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`。`.xcresult` Build 为 succeeded，0 errors、0 warnings；JUnit `10/10`、0 failures/errors；静态、Speech、UI、首页、粘贴与 Koharu 合同均成功。
+- PR #92 fast `30544627423` 与 merge fast `30544698475` 均成功；后者精确匹配 merge SHA、`validationReason=merge_reuses_successful_candidate_full_validation`、`reusedFullValidationSha=59e4fb65... / success`，并以 `receiptPropagationAllowed=true` 将 `AITRANS CI/full-validation=success` 传播到 `a7ae8dbc...`。两者均只作路由追踪，不能替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不能据本次会话连续性改进声称 OCR、翻译或识别质量提升。
 
 ## v3.27：OCR 修正局部对照与复查上下文
 日期：2026-07-30
