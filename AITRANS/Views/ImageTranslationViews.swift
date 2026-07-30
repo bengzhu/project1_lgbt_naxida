@@ -86,6 +86,8 @@ struct ImageTranslationPanel: View {
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
     @State private var restoreConfirmationBlock: ImageTranslationBlock?
+    @State private var pendingRestoreConfirmationDismissalFocusID: String?
+    @State private var pendingRestoreConfirmationDismissalRevision: Int?
     @State private var pendingCorrectionSheetDismissalFocusID: String?
     @State private var pendingCorrectionSheetDismissalRevision: Int?
     @AccessibilityFocusState private var reviewAccessibilityFocusID: String?
@@ -153,6 +155,7 @@ struct ImageTranslationPanel: View {
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
             restoreConfirmationBlock = nil
+            clearPendingRestoreConfirmationDismissalFocus()
             clearPendingCorrectionSheetDismissalFocus()
             reviewAccessibilityFocusID = nil
         }
@@ -367,6 +370,7 @@ struct ImageTranslationPanel: View {
             set: { isPresented in
                 guard !isPresented else { return }
                 restoreConfirmationBlock = nil
+                applyPendingRestoreConfirmationDismissalFocus()
             }
         )
     }
@@ -428,14 +432,18 @@ struct ImageTranslationPanel: View {
     }
 
     private func confirmVisionOCRRestore(_ block: ImageTranslationBlock) {
-        restoreConfirmationBlock = nil
-        restoreVisionOCR(for: block.id)
+        guard restoreConfirmationBlock?.id == block.id,
+              restoreVisionOCR(for: block.id) else { return }
+        moveReviewAccessibilityFocusAfterRestoreConfirmationDismissal(
+            to: reviewRowAccessibilityFocusID(block.id)
+        )
     }
 
-    private func restoreVisionOCR(for blockID: UUID) {
-        guard store.restoreImageTranslationBlockToVisionOCR(blockID) else { return }
+    @discardableResult
+    private func restoreVisionOCR(for blockID: UUID) -> Bool {
+        guard store.restoreImageTranslationBlockToVisionOCR(blockID) else { return false }
         selectedImageTranslationBlockID = blockID
-        moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))
+        return true
     }
 
     @discardableResult
@@ -575,6 +583,26 @@ struct ImageTranslationPanel: View {
 
     private func ignoredRowAccessibilityFocusID(_ blockID: UUID) -> String {
         "image-ignored-row-\(blockID.uuidString)"
+    }
+
+    private func moveReviewAccessibilityFocusAfterRestoreConfirmationDismissal(to focusID: String?) {
+        pendingRestoreConfirmationDismissalFocusID = focusID
+        pendingRestoreConfirmationDismissalRevision = store.imageTranslationRevision
+    }
+
+    private func applyPendingRestoreConfirmationDismissalFocus() {
+        guard let focusID = pendingRestoreConfirmationDismissalFocusID,
+              pendingRestoreConfirmationDismissalRevision == store.imageTranslationRevision else {
+            clearPendingRestoreConfirmationDismissalFocus()
+            return
+        }
+        clearPendingRestoreConfirmationDismissalFocus()
+        moveReviewAccessibilityFocus(to: focusID)
+    }
+
+    private func clearPendingRestoreConfirmationDismissalFocus() {
+        pendingRestoreConfirmationDismissalFocusID = nil
+        pendingRestoreConfirmationDismissalRevision = nil
     }
 
     private func moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(to focusID: String?) {
