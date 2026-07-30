@@ -1487,6 +1487,7 @@ private struct ImageOCRCorrectionSheet: View {
 
     @State private var correctedOriginal: String
     @State private var errorMessage: String?
+    @State private var showDiscardCorrectionConfirmation = false
 
     init(block: ImageTranslationBlock, didSave: @escaping () -> Void) {
         self.block = block
@@ -1520,8 +1521,23 @@ private struct ImageOCRCorrectionSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消", action: dismiss.callAsFunction)
+                    Button("取消", action: requestDismiss)
                         .disabled(isSaving)
+                        .accessibilityHint(
+                            hasUnsavedChanges
+                                ? "有未保存的修正，取消前会要求确认"
+                                : "关闭修正页面"
+                        )
+                        .confirmationDialog(
+                            "放弃未保存的修正？",
+                            isPresented: $showDiscardCorrectionConfirmation,
+                            titleVisibility: .visible
+                        ) {
+                            Button("放弃修正", role: .destructive, action: dismiss.callAsFunction)
+                            Button("继续编辑", role: .cancel) {}
+                        } message: {
+                            Text("这会关闭修正页面，未保存的 OCR 原文不会用于重新翻译。")
+                        }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存并重译", action: save)
@@ -1536,7 +1552,7 @@ private struct ImageOCRCorrectionSheet: View {
                 }
             }
         }
-        .interactiveDismissDisabled(isSaving)
+        .interactiveDismissDisabled(isSaving || hasUnsavedChanges)
         .presentationDetents([.medium, .large])
     }
 
@@ -1546,6 +1562,19 @@ private struct ImageOCRCorrectionSheet: View {
 
     private var canSave: Bool {
         !correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var hasUnsavedChanges: Bool {
+        correctedOriginal != block.original
+    }
+
+    private func requestDismiss() {
+        guard !isSaving else { return }
+        guard hasUnsavedChanges else {
+            dismiss()
+            return
+        }
+        showDiscardCorrectionConfirmation = true
     }
 
     private func save() {

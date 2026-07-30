@@ -8,6 +8,22 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.24：保护未保存 OCR 修正
+日期：2026-07-30
+
+状态：Agent X 正在实现候选分支 `codeb/v3.24-image-ocr-correction-discard-confirmation`；exact-SHA 云端 full、PR 和合并尚待执行，未触碰 `main`。
+
+核心变更：
+
+- 普通图片 OCR 修正 sheet 在本地比较编辑文本与当前 block 原文；无改动取消直接关闭，有改动取消先显示 destructive “放弃修正”确认，继续编辑保留输入。
+- 交互式关闭在保存中或存在未保存改动时均被阻止；成功保存沿用 v3.21 的 `didSave()` 后直接关闭，不经过放弃确认。
+- 新增 v3.24 源码合同并接入图片/UI fail-fast 路由；该状态不进入 `TranslationSessionStore`、transcript、export、渲染、图片 revision 或持久化。
+- 本版不改 Vision OCR、方向/layout、漫画探针、Koharu artifact 契约、ground truth、metrics 或 output，不声称 OCR/翻译质量提升。
+
+验证与遗留：
+
+- 候选实现尚待本地轻量回归、exact-SHA 云端 full、artifact 审查、PR 和合并；按规则未跑本机 build / 探针。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+
 ## v3.23：恢复人工修正前确认
 日期：2026-07-30
 

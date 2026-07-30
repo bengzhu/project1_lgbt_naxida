@@ -108,7 +108,7 @@ class ImageOCRCorrectionContractTests(unittest.TestCase):
         self.assertIn('TextField("修正后的文字"', editor)
         self.assertIn('Button("保存并重译", action: save)', editor)
         self.assertIn(".disabled(!canSave || isSaving)", editor)
-        self.assertIn(".interactiveDismissDisabled(isSaving)", editor)
+        self.assertIn(".interactiveDismissDisabled(isSaving", editor)
         self.assertIn('ProgressView("正在重新翻译")', editor)
 
     def test_successful_risk_correction_advances_the_review_queue(self) -> None:
