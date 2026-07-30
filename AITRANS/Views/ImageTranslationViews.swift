@@ -486,16 +486,23 @@ struct ImageTranslationPanel: View {
     }
 
     private func completeReviewAfterCorrection(_ blockID: UUID) {
-        guard allReviewRequiredBlocks.contains(where: { $0.id == blockID }),
-              store.imageTranslationReviewedBlockIDs.contains(blockID) else { return }
-        if reviewFilter == .needsReview {
-            let nextBlockID = reviewRequiredBlocks.first?.id
-            selectedImageTranslationBlockID = nextBlockID
+        guard store.imageTranslationBlocks.contains(where: { $0.id == blockID }) else { return }
+        let shouldAdvanceReviewQueue = reviewFilter == .needsReview
+            && allReviewRequiredBlocks.contains(where: { $0.id == blockID })
+            && store.imageTranslationReviewedBlockIDs.contains(blockID)
+        guard shouldAdvanceReviewQueue else {
             moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
-                to: nextBlockID.map(reviewRowAccessibilityFocusID)
-                    ?? Self.reviewCompletionAccessibilityFocusID
+                to: reviewRowAccessibilityFocusID(blockID)
             )
+            return
         }
+
+        let nextBlockID = reviewRequiredBlocks.first?.id
+        selectedImageTranslationBlockID = nextBlockID
+        moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
+            to: nextBlockID.map(reviewRowAccessibilityFocusID)
+                ?? Self.reviewCompletionAccessibilityFocusID
+        )
     }
 
     private func selectBlockFromPreview(_ blockID: UUID) {

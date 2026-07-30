@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前正式版本：`3.30`（普通图片 OCR 修正 sheet 的成功“确认无误／保存并重译”与“忽略此文字块”如需推进既有复查焦点，不再在 sheet 遮罩仍存在时发布。`ImageTranslationPanel` 只在 View 私有状态保存原有目标焦点与当前图片 revision，并在 sheet `onDismiss` 后核对 revision 再交给既有焦点发布器；新图会清掉待交接值，避免旧会话抢焦点。v3.29 的可恢复误识别块忽略、v3.28 的会话复查进度与 v3.27 的局部图仍保留）。本版不改 Store、Vision OCR、模型翻译、renderer/export、漫画探针或质量基线；仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。云端 receipt 传播规则（v3.26）仍适用；日常开发合入 `smalldata_test`，不合并到 `main`。
+当前候选版本：`3.31`（普通图片 OCR 修正 sheet 成功后，若“待复查”队列确实前进则保留下一行／完成态；其余成功“确认无误／保存并重译”会在 sheet `onDismiss` 后回到已更新结果行。`ImageTranslationPanel` 继续只在 View 私有状态保存目标焦点与当前图片 revision，并在关闭后核对 revision 再交给既有焦点发布器；新图或失效 block 不会抢焦点。v3.30 的 sheet 关闭交接、v3.29 的可恢复误识别块忽略、v3.28 的会话复查进度与 v3.27 的局部图仍保留）。本版不改 Store、Vision OCR、模型翻译、renderer/export、漫画探针或质量基线；仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。云端 receipt 传播规则（v3.26）仍适用；日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 
