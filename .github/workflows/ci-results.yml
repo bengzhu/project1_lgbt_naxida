@@ -279,15 +279,23 @@ jobs:
           candidate_parent_sha=""
           candidate_parent_full_validation_state="not_applicable"
           candidate_incremental_metadata_only=false
+          smalldata_parent_sha=""
+          smalldata_parent_full_validation_state="not_applicable"
+          smalldata_incremental_metadata_only=false
+          smalldata_metadata_requires_full_validation=false
           receipt_propagation_allowed=false
+          full_validation_state_for() {
+            local full_validation_sha="$1"
+            gh api \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/${GITHUB_REPOSITORY}/commits/${full_validation_sha}/status" \
+              --jq '[.statuses[] | select(.context == "AITRANS CI/full-validation")][0].state // "missing"' \
+              2>/dev/null || echo lookup_failed
+          }
           if [[ "${{ steps.meta.outputs.branch }}" == codeb/* ]]; then
             candidate_parent_sha="$(git rev-parse HEAD^ 2>/dev/null || true)"
             if [ -n "$candidate_parent_sha" ]; then
-              candidate_parent_full_validation_state="$(gh api \
-                -H 'Accept: application/vnd.github+json' \
-                "repos/${GITHUB_REPOSITORY}/commits/${candidate_parent_sha}/status" \
-                --jq '[.statuses[] | select(.context == "AITRANS CI/full-validation")][0].state // "missing"' \
-                2>/dev/null || echo lookup_failed)"
+              candidate_parent_full_validation_state="$(full_validation_state_for "$candidate_parent_sha")"
             fi
             if ! grep -Ev '^(AGENTS\.md|README\.md|update_log\.md|md/|metrics/)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
               candidate_incremental_metadata_only=true
@@ -308,6 +316,18 @@ jobs:
                 scope_diff_method="candidate_full_repo_fallback"
                 scope_diff_fallback_used=true
               fi
+            fi
+          fi
+          if [ "${{ steps.meta.outputs.branch }}" = "smalldata_test" ]; then
+            smalldata_parent_sha="$(git rev-parse HEAD^ 2>/dev/null || true)"
+            if [ -n "$smalldata_parent_sha" ]; then
+              smalldata_parent_full_validation_state="$(full_validation_state_for "$smalldata_parent_sha")"
+            fi
+            if ! grep -Ev '^(AGENTS\.md|README\.md|update_log\.md|md/|metrics/)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+              smalldata_incremental_metadata_only=true
+            fi
+            if [ "$smalldata_incremental_metadata_only" = "true" ] && [ "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d '[:space:]')" -le 2 ] && [ "$smalldata_parent_full_validation_state" != "success" ]; then
+              smalldata_metadata_requires_full_validation=true
             fi
           fi
 
@@ -425,10 +445,17 @@ jobs:
               if [ "$reused_full_validation_state" = "success" ]; then
                 validation_profile="fast"
                 validation_reason="merge_reuses_successful_candidate_full_validation"
+                receipt_propagation_allowed=true
               else
                 validation_profile="full"
                 validation_reason="merge_missing_successful_candidate_full_validation"
               fi
+            elif [ "${{ steps.meta.outputs.branch }}" = "smalldata_test" ] && [ "$smalldata_incremental_metadata_only" = "true" ] && [ "$smalldata_parent_full_validation_state" = "success" ]; then
+              validation_profile="fast"
+              validation_reason="smalldata_metadata_followup_reuses_parent_full_validation"
+              reused_full_validation_sha="$smalldata_parent_sha"
+              reused_full_validation_state="$smalldata_parent_full_validation_state"
+              receipt_propagation_allowed=true
             else
               validation_profile="full"
               validation_reason="direct_or_unclassified_push"
@@ -473,7 +500,7 @@ jobs:
             else
               xcode_build_skip_reason="fast_followup_missing_successful_full_validation"
             fi
-          elif [ "$app_build_changed" = "true" ] || [ "$ui_evidence_required" = "true" ]; then
+          elif [ "$app_build_changed" = "true" ] || [ "$ui_evidence_required" = "true" ] || [ "$smalldata_metadata_requires_full_validation" = "true" ]; then
             xcode_build_required=true
             xcode_build_skip_reason=""
           fi
@@ -493,6 +520,10 @@ jobs:
             echo "candidate_parent_sha=$candidate_parent_sha"
             echo "candidate_parent_full_validation_state=$candidate_parent_full_validation_state"
             echo "candidate_incremental_metadata_only=$candidate_incremental_metadata_only"
+            echo "smalldata_parent_sha=$smalldata_parent_sha"
+            echo "smalldata_parent_full_validation_state=$smalldata_parent_full_validation_state"
+            echo "smalldata_incremental_metadata_only=$smalldata_incremental_metadata_only"
+            echo "smalldata_metadata_requires_full_validation=$smalldata_metadata_requires_full_validation"
             echo "receipt_propagation_allowed=$receipt_propagation_allowed"
             echo "speech_contract_required=$speech_contract_required"
             echo "ui_interaction_contract_required=$ui_interaction_contract_required"
@@ -1631,6 +1662,10 @@ jobs:
           MANIFEST_REUSED_FULL_VALIDATION_STATE: ${{ steps.ci_scope.outputs.reused_full_validation_state }}
           MANIFEST_CANDIDATE_PARENT_SHA: ${{ steps.ci_scope.outputs.candidate_parent_sha }}
           MANIFEST_CANDIDATE_PARENT_FULL_VALIDATION_STATE: ${{ steps.ci_scope.outputs.candidate_parent_full_validation_state }}
+          MANIFEST_SMALLDATA_PARENT_SHA: ${{ steps.ci_scope.outputs.smalldata_parent_sha }}
+          MANIFEST_SMALLDATA_PARENT_FULL_VALIDATION_STATE: ${{ steps.ci_scope.outputs.smalldata_parent_full_validation_state }}
+          MANIFEST_SMALLDATA_INCREMENTAL_METADATA_ONLY: ${{ steps.ci_scope.outputs.smalldata_incremental_metadata_only }}
+          MANIFEST_SMALLDATA_METADATA_REQUIRES_FULL_VALIDATION: ${{ steps.ci_scope.outputs.smalldata_metadata_requires_full_validation }}
           MANIFEST_RECEIPT_PROPAGATION_ALLOWED: ${{ steps.ci_scope.outputs.receipt_propagation_allowed }}
           MANIFEST_UI_EVIDENCE_REASON: ${{ steps.ci_scope.outputs.ui_evidence_reason }}
           MANIFEST_UI_INTERACTION_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.ui_interaction_contract_required }}
@@ -1821,6 +1856,10 @@ jobs:
               "reusedFullValidationState": os.environ["MANIFEST_REUSED_FULL_VALIDATION_STATE"],
               "candidateParentSha": os.environ.get("MANIFEST_CANDIDATE_PARENT_SHA") or None,
               "candidateParentFullValidationState": os.environ["MANIFEST_CANDIDATE_PARENT_FULL_VALIDATION_STATE"],
+              "smalldataParentSha": os.environ.get("MANIFEST_SMALLDATA_PARENT_SHA") or None,
+              "smalldataParentFullValidationState": os.environ["MANIFEST_SMALLDATA_PARENT_FULL_VALIDATION_STATE"],
+              "smalldataIncrementalMetadataOnly": os.environ["MANIFEST_SMALLDATA_INCREMENTAL_METADATA_ONLY"] == "true",
+              "smalldataMetadataRequiresFullValidation": os.environ["MANIFEST_SMALLDATA_METADATA_REQUIRES_FULL_VALIDATION"] == "true",
               "receiptPropagationAllowed": os.environ["MANIFEST_RECEIPT_PROPAGATION_ALLOWED"] == "true",
               "xcodeBuildRequired": "$MANIFEST_XCODE_BUILD_REQUIRED" == "true",
               "xcodeBuildSkippedReason": "$MANIFEST_XCODE_BUILD_SKIPPED_REASON",
@@ -2304,6 +2343,10 @@ jobs:
             echo "- reused full validation state: ${{ steps.ci_scope.outputs.reused_full_validation_state }}"
             echo "- candidate parent SHA: ${{ steps.ci_scope.outputs.candidate_parent_sha }}"
             echo "- candidate parent full-validation state: ${{ steps.ci_scope.outputs.candidate_parent_full_validation_state }}"
+            echo "- smalldata parent SHA: ${{ steps.ci_scope.outputs.smalldata_parent_sha }}"
+            echo "- smalldata parent full-validation state: ${{ steps.ci_scope.outputs.smalldata_parent_full_validation_state }}"
+            echo "- smalldata incremental metadata only: ${{ steps.ci_scope.outputs.smalldata_incremental_metadata_only }}"
+            echo "- smalldata metadata requires full validation: ${{ steps.ci_scope.outputs.smalldata_metadata_requires_full_validation }}"
             echo "- receipt propagation allowed: ${{ steps.ci_scope.outputs.receipt_propagation_allowed }}"
             echo "- Speech contract required: ${{ steps.ci_scope.outputs.speech_contract_required }}"
             echo "- UI interaction contract required: ${{ steps.ci_scope.outputs.ui_interaction_contract_required }}"

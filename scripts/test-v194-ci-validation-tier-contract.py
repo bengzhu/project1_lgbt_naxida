@@ -70,6 +70,38 @@ class CIValidationTierContractTests(unittest.TestCase):
         )
         self.assertIn("expanding scope to the full candidate diff", self.workflow)
 
+    def test_smalldata_metadata_followup_requires_a_propagated_parent_receipt(self) -> None:
+        self.assertIn("smalldata_parent_full_validation_state", self.workflow)
+        self.assertIn("smalldata_incremental_metadata_only", self.workflow)
+        self.assertIn("smalldata_metadata_requires_full_validation", self.workflow)
+        self.assertIn(
+            'validation_reason="smalldata_metadata_followup_reuses_parent_full_validation"',
+            self.workflow,
+        )
+        self.assertIn(
+            '[ "$smalldata_incremental_metadata_only" = "true" ] && '
+            '[ "$smalldata_parent_full_validation_state" = "success" ]',
+            self.workflow,
+        )
+        merge_branch = self.workflow.split(
+            'elif [ "${{ steps.meta.outputs.branch }}" = "smalldata_test" ] && '
+            '[ "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d \'[:space:]\')" -gt 2 ]; then',
+            1,
+        )[1].split("            else", 1)[0]
+        self.assertIn('receipt_propagation_allowed=true', merge_branch)
+        self.assertIn(
+            '[ "$smalldata_metadata_requires_full_validation" = "true" ]',
+            self.workflow,
+        )
+        xcode_routing = self.workflow.split(
+            'elif [ "$validation_profile" = "fast" ]; then',
+            1,
+        )[1].split("\n\n          koharu_validator_extended_required=false", 1)[0]
+        self.assertIn(
+            '[ "$smalldata_metadata_requires_full_validation" = "true" ]',
+            xcode_routing,
+        )
+
     def test_fast_followup_skips_expensive_task_suites(self) -> None:
         fast_block = re.search(
             r'if \[ "\$validation_profile" = "fast" \]; then(?P<body>.*?)\n\s*fi',
@@ -125,6 +157,10 @@ class CIValidationTierContractTests(unittest.TestCase):
             '"reusedFullValidationSha"',
             '"reusedFullValidationState"',
             '"candidateParentFullValidationState"',
+            '"smalldataParentSha"',
+            '"smalldataParentFullValidationState"',
+            '"smalldataIncrementalMetadataOnly"',
+            '"smalldataMetadataRequiresFullValidation"',
             '"receiptPropagationAllowed"',
             '"speechRecognitionContractRequired"',
             '"uiEvidenceRequired"',

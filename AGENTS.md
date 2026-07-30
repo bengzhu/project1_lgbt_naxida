@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 当前正式版本号 `3.25`：普通图片 OCR 修正 sheet 以与 Store 相同的 trim 后文本比较决定动作语义；规范化文本未变时命名为“确认无误”并走既有无模型成功路径，实际变化时才命名为“保存并重译”。该显示与无障碍提示不改变 `TranslationSessionStore` 的 correction ID、图片 task ID、旧原文快照、transcript/export/render 生命周期、v3.24 未保存保护或 v3.23 恢复确认。v3.24-v2.2 的单块重译、快速复查、进度、预览、Retry、Koharu gate 与图片生命周期能力仍保留。本版不改变 Vision OCR、漫画探针或质量基线。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
+- 当前候选版本号 `3.26`：云端 CI 会把成功候选 full receipt 传播到 merge SHA；其后的 `smalldata_test` 纯 README / AGENTS / update log / `md/` / metrics 提交只有父 receipt 为 success 时才走 fast，父 receipt 缺失或失败则强制当前头部 Xcode build。artifact 必须记录 `smalldataParentSha`、`smalldataParentFullValidationState`、`smalldataIncrementalMetadataOnly`、`smalldataMetadataRequiresFullValidation` 和 `receiptPropagationAllowed`；传播路径不是新的 Swift/Xcode 编译证据。v3.25-v2.2 的 OCR 修正确认、单块重译、快速复查、进度、预览、Retry、Koharu gate 与图片生命周期能力仍保留。本版不改变 Vision OCR、漫画探针或质量基线。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
@@ -106,8 +106,8 @@ test/1.png
 - 本地仍可做 `git diff --check`、JSON 解析、YAML smoke 等轻量检查；这些不算重负载本机测试。
 - Agent B 完成版本核心代码后 push `codeb/...`：`validationProfile=full`，只运行本任务涉及的领域契约；App 构建相关变更再跑一次 Xcode build。成功后 workflow 为该 SHA 写 `AITRANS CI/full-validation` status，并上传未加密结果包。
 - PR 只在 opened / reopened / ready-for-review 时运行 `validationProfile=fast`；不监听 synchronize，避免修复 push 同时触发 full + PR fast。fast 只跑基础静态/路由契约并记录 skip reason，不重复 Xcode、Speech/UI/Koharu 大契约或截图。
-- 合并到 `smalldata_test` 后，workflow 读取 merge 第二父 SHA 的 full-validation status；只有 `success` 才走 fast follow-up，否则自动回退 full。C 退回后新的核心修复 push 必须重新产生 full 收据。
-- 已通过 full 后的纯 README / AGENTS / update log / `md/` / metrics 提交可复用父提交收据并走 fast；若父提交收据缺失或失败，workflow 会把 diff 扩展到整条候选分支，不能用文档提交掩盖失败。
+- 合并到 `smalldata_test` 后，workflow 读取 merge 第二父 SHA 的 full-validation status；只有 `success` 才走 fast follow-up，并把该 receipt 传播到 merge SHA，否则自动回退 full。C 退回后新的核心修复 push 必须重新产生 full 收据。
+- 其后的纯 README / AGENTS / update log / `md/` / metrics `smalldata_test` 提交只有父 receipt 为 success 时可走 fast；父 receipt 缺失或失败时必须强制当前头部 Xcode build，不能用文档提交掩盖未验证代码。结果包必须保留 smalldata 父 SHA、state、元数据判定和强制 full 判定。
 - Speech 功能默认只跑 Xcode build、Speech run-id/取消/翻译链路契约、质量算法契约和 corpus validator，不采 UI 截图；缺少 `test/speech_corpus/manifest.json` 时 validator 必须写 `manifestMissing`、`qualityExecuted=false`，不能伪造质量结果。漫画/翻译改动需要结果图时手动跑 `ci-fast/full`，只验收探针输出 PNG，不等同 UI evidence。
 - UI evidence 默认跳过；只有重大 UI 任务在候选核心 commit 使用 `[ui evidence]`，或手动 `workflow_dispatch ui_evidence_mode=full` 才运行。普通 UI 小改、Speech、PR 和 merge 不截图。
 - Koharu artifact validator 的完整 invalid fixture 矩阵只在 Koharu validator、artifact contract 或 CI workflow 相关 full 任务中运行；其他任务不加载该领域套件。
