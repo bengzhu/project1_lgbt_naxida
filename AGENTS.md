@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 当前正式版本号 `3.30`：普通图片 OCR 修正 sheet 的成功修正／忽略若有既有后继焦点，`ImageTranslationPanel` 只在 View 私有状态保存目标焦点与当前图片 revision，等 sheet `onDismiss` 后确认 revision 仍匹配才调用既有焦点发布器；新图会清掉待交接值，避免 VoiceOver 停在关闭中的 sheet 或被旧图片抢焦点。v3.29 的误识别 block 忽略／恢复仍只在当前图片会话快照中保存原始顺序、人工修正状态与 Vision OCR 基线；v3.28 已复查 block ID 和 v3.27 局部对照能力仍保留。v3.26 CI receipt 传播规则不变，artifact 继续记录父 SHA、state 和元数据判定；传播路径不是新的 Swift/Xcode 编译证据。本版不改变 Store、Vision OCR、模型翻译、renderer/export、漫画探针或质量基线。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
+- 当前候选版本号 `3.31`：普通图片 OCR 修正 sheet 成功后，只有“待复查”筛选且当前 block 已进入已复查集合时才保留既有下一行／完成态；其他成功确认或单块重译会在 sheet `onDismiss` 后回到已更新结果行。`ImageTranslationPanel` 继续仅在 View 私有状态保存目标焦点和图片 revision，先确认 block 仍活动，关闭后才发布，避免 VoiceOver 停在关闭中的 sheet 或旧图片／失效 block 抢焦点。v3.30 的 sheet 关闭交接、v3.29 的误识别 block 忽略／恢复、v3.28 已复查 block ID 和 v3.27 局部对照能力仍保留。v3.26 CI receipt 传播规则不变，artifact 继续记录父 SHA、state 和元数据判定；传播路径不是新的 Swift/Xcode 编译证据。本版不改变 Store、Vision OCR、模型翻译、renderer/export、漫画探针或质量基线。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 

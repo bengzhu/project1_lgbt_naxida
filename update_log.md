@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.31：OCR 修正成功后的结果行返回焦点（候选）
+日期：2026-07-30
+
+状态：Agent X 正在 `codeb/v3.31-image-ocr-correction-return-focus` 候选分支实现；尚未 push、创建 PR 或触碰远端，`main` 未触碰。工程候选版本为 `MARKETING_VERSION=3.31`。
+
+核心变更：
+
+- 审查发现 v3.30 只为“待复查”筛选内的成功修正安排关闭后的下一行／完成态；非风险 block 与“全部”筛选下的风险 block 成功“确认无误／保存并重译”后没有明确的 VoiceOver 返回目的地。
+- `completeReviewAfterCorrection` 现在先确认目标 block 仍在当前活动集合。只有筛选仍为“待复查”、block 仍属风险集合且 Store 已标为已复查时才前进既有队列；所有其他成功修正保持当前选择，并通过既有 View 私有、revision-checked 的 sheet `onDismiss` handoff 回到已更新结果行。
+- 新增 v3.31 源码合同并接入图片/UI fail-fast CI 路由，锁定分流、失效 block 拒收、复用 v3.30 handoff 与 Store 边界。本版不改 Store、持久化、Vision OCR、模型翻译、renderer/export、漫画探针、Koharu、ground truth、metrics 或 `output/`，不能声称 OCR、翻译或识别质量提升。
+
+验证计划与遗留：
+
+- 候选提交前运行目标源码合同、既有图片/UI 回归、CI 分层／版本身份合同、Swift parse、YAML / plist / JSON smoke 与 `git diff --check`；随后只向 `codeb/v3.31-image-ocr-correction-return-focus` push，让 GitHub Actions 进行 task-scoped full。
+- 未跑本机 build / 探针，按规则交给云端验证；云端默认 `probe_mode=skip` 时不更新漫画指标或 `metrics/version_history.csv`。
+- 真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失；本候选不改变这些受限路径。
+
 ## v3.30：OCR 修正 sheet 关闭后的确定性焦点交接
 日期：2026-07-30
 
