@@ -11,7 +11,7 @@
 ## v3.23：恢复人工修正前确认
 日期：2026-07-30
 
-状态：Agent X 正在实现候选分支 `codeb/v3.23-image-ocr-restore-confirmation`；exact-SHA 云端 full、PR 和合并尚待执行，未触碰 `main`。
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.23`。PR #87 已合入 `smalldata_test`，merge SHA `7be0691368ccc0be8df39468c8c96cf316715b53`；远端 `codeb/v3.23-image-ocr-restore-confirmation` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,7 +22,9 @@
 
 验证与遗留：
 
-- 候选实现尚待本地轻量回归、exact-SHA 云端 full、artifact 审查、PR 和合并；按规则未跑本机 build / 探针。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+- 首个候选 SHA `9faffd3c9fe97c95f2769175d5a6b864f2662f8f` 的 full run `30514540746` 由 Xcode 捕获不支持的 `confirmationDialog(item:)` 调用而失败；该 SHA 未创建 PR。随后以 `isPresented` 绑定修复并补强合同，最终候选 SHA `de5948d29383b038a06c48c994f752ba1fdff40d` 的 full run `30514876023` 成功，`AITRANS CI/full-validation` status 为 success，Xcode build 成功、JUnit `10/10`、0 failures，未加密 artifact 为 `aitrans-ci-v3.23-codeb-v3.23-image-ocr-restore-confirmation--de5948d29383-run30514876023-attempt1`。
+- PR #87 的 fast follow-up `30515313637` 与合并后的 fast follow-up `30515376757` 均成功；前者明确 `xcodeBuildRequired=false`、`fast_followup_reuses_candidate_full_validation`，不作为 Swift/Xcode 编译证据。按规则未跑本机 build / 探针；本次 push `probe_mode=skip`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。
+- 本地运行 `git diff --check`、31 个图片/UI 合同、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、v1.94 CI 分层合同、v1.97 版本身份合同、plist/YAML/JSON smoke 均通过。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失；artifact 明确报告 `manifestMissing` / `stopUntilArtifactsProvided`，不得据此声称 OCR、翻译或识别质量提升。
 
 ## v3.22：恢复图片 Vision OCR 基线
 日期：2026-07-30
