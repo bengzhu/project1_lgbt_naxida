@@ -18,6 +18,7 @@
 - `TranslationSessionStore` 既有的 trim 后同文短路会在调用模型前返回成功；修正 sheet 现在以同一判断决定动作名称，避免把无重译确认错误标成“保存并重译”。
 - 规范化文本未变化时显示“确认无误”并通过无障碍提示说明不会重新翻译；实际变化时仍显示“保存并重译”，继续只走既有目标 block correction 和成功后的复查完成路径。
 - 新增 v3.25 源码合同并接入图片/UI fail-fast 路由；本版不新增 Store 或持久化状态，不改变 Vision OCR、翻译、导出、渲染、漫画探针或 Koharu artifact 路径。
+- 候选初次 PR fast 结果包暴露 `reusedFullValidationSha/state` 未记录的工作流元数据缺口；同一候选补写当前 PR head 的 full-validation receipt，缺失成功收据时不再声称复用，随后以新 SHA 重新 full 验证。
 
 验证与遗留：
 

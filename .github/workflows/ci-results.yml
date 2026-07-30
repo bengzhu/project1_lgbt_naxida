@@ -395,6 +395,12 @@ jobs:
             elif [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
               validation_profile="fast"
               validation_reason="pull_request_followup_no_synchronize"
+              reused_full_validation_sha="$CI_COMMIT_SHA"
+              reused_full_validation_state="$(gh api \
+                -H 'Accept: application/vnd.github+json' \
+                "repos/${GITHUB_REPOSITORY}/commits/${reused_full_validation_sha}/status" \
+                --jq '[.statuses[] | select(.context == "AITRANS CI/full-validation")][0].state // "missing"' \
+                2>/dev/null || echo lookup_failed)"
             elif [[ "${{ steps.meta.outputs.branch }}" == codeb/* ]]; then
               if [ "$candidate_incremental_metadata_only" = "true" ] && [ "$candidate_parent_full_validation_state" = "success" ]; then
                 validation_profile="fast"
@@ -462,7 +468,11 @@ jobs:
             xcode_build_required=true
             xcode_build_skip_reason=""
           elif [ "$validation_profile" = "fast" ]; then
-            xcode_build_skip_reason="fast_followup_reuses_candidate_full_validation"
+            if [ "$reused_full_validation_state" = "success" ] && [ -n "$reused_full_validation_sha" ]; then
+              xcode_build_skip_reason="fast_followup_reuses_candidate_full_validation"
+            else
+              xcode_build_skip_reason="fast_followup_missing_successful_full_validation"
+            fi
           elif [ "$app_build_changed" = "true" ] || [ "$ui_evidence_required" = "true" ]; then
             xcode_build_required=true
             xcode_build_skip_reason=""

@@ -150,6 +150,7 @@ v1.90 已用静态契约锁定 run-id 隔离与摘要字段。下列人工矩阵
 
 - `codeb/**` 核心 push 自动选择 `validationProfile=full`，只跑 changed-files 命中的领域契约；App 相关 full 执行 Xcode build，成功后为精确 SHA 写 `AITRANS CI/full-validation` status。
 - PR 只监听 opened / reopened / ready-for-review，不监听 synchronize。PR fast 只做基础静态与路由检查，不能冒充候选 full/Xcode 证据。
+- PR fast 必须查询当前候选 head 的 `AITRANS CI/full-validation` status，并把 exact SHA 与 state 写入 manifest；只有 state 为 `success` 才能使用 `fast_followup_reuses_candidate_full_validation`，否则必须写明缺少成功收据，供验收拒绝而不是伪造复用。
 - `smalldata_test` merge 读取第二父 SHA 的 full-validation status；`success` 才可 fast，missing / failure / lookup failure 必须回退 full。
 - full 成功后的纯 `README.md`、`AGENTS.md`、`update_log.md`、`md/`、`metrics/` follow-up 可复用并传播父收据；父收据失败或缺失时必须扩展到整条候选 diff，不能只测最后一个文档 commit。
 - Speech full 跑 Speech 契约与必要 Xcode，不自动截图；UI evidence 默认 skip，只能由非 PR 候选 commit 的 `[ui evidence]` 或手动 `ui_evidence_mode=full` 启用。
