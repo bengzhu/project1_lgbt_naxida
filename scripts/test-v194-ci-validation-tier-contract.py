@@ -29,6 +29,16 @@ class CIValidationTierContractTests(unittest.TestCase):
         self.assertIn("      - ready_for_review\n", trigger)
         self.assertNotIn("synchronize", trigger)
         self.assertIn('validation_reason="pull_request_followup_no_synchronize"', self.workflow)
+        pr_branch = self.workflow.split(
+            'elif [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then',
+            1,
+        )[1].split('elif [[ "${{ steps.meta.outputs.branch }}" == codeb/* ]]; then', 1)[0]
+        self.assertIn('reused_full_validation_sha="$CI_COMMIT_SHA"', pr_branch)
+        self.assertIn(
+            'repos/${GITHUB_REPOSITORY}/commits/${reused_full_validation_sha}/status',
+            pr_branch,
+        )
+        self.assertIn('"AITRANS CI/full-validation"', pr_branch)
 
     def test_candidate_push_is_full_and_merge_requires_receipt(self) -> None:
         self.assertIn('validation_reason="candidate_development_push"', self.workflow)
@@ -77,6 +87,14 @@ class CIValidationTierContractTests(unittest.TestCase):
         ):
             self.assertIn(output, body)
         self.assertIn('xcode_build_skip_reason="fast_followup_reuses_candidate_full_validation"', self.workflow)
+        self.assertIn(
+            'if [ "$reused_full_validation_state" = "success" ] && [ -n "$reused_full_validation_sha" ]; then',
+            self.workflow,
+        )
+        self.assertIn(
+            'xcode_build_skip_reason="fast_followup_missing_successful_full_validation"',
+            self.workflow,
+        )
 
     def test_domain_contracts_are_task_scoped(self) -> None:
         expected_conditions = (
