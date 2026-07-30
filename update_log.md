@@ -11,7 +11,7 @@
 ## v3.25：OCR 原文确认动作语义
 日期：2026-07-30
 
-状态：Agent X 正在实现候选分支 `codeb/v3.25-image-ocr-correction-confirmation-action`；exact-SHA 云端 full、PR 和合并尚待执行，未触碰 `main`。
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.25`。PR #89 已合入 `smalldata_test`，merge SHA `f812dc35e69c8122d1d963f2b57cf83c0cc6f7fd`；远端 `codeb/v3.25-image-ocr-correction-confirmation-action` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,7 +22,9 @@
 
 验证与遗留：
 
-- 候选实现尚待本地轻量回归、exact-SHA 云端 full、artifact 审查、PR 和合并；按规则未跑本机 build / 探针。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+- 候选 SHA `6b6ec0fcea42bd6569c1d0fd33ee7f3ef80928de` 的 full run `30518414492` 成功，`AITRANS CI/full-validation` status 为 success，Xcode build 成功、JUnit `10/10`、0 failures；未加密 artifact 为 `aitrans-ci-v3.25-codeb-v3.25-image-ocr-correction-confirmation-action--6b6ec0fcea42-run30518414492-attempt1`。artifact 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 与候选一致；`.xcresult` 已随结果包上传，failure summary 记录静态检查、图片/UI 合同和 Xcode build 均成功。
+- PR #89 的 fast follow-up `30518851872` 成功，明确 `xcodeBuildRequired=false`，并记录 `reusedFullValidationSha=6b6ec0fcea42bd6569c1d0fd33ee7f3ef80928de`、`reusedFullValidationState=success`。合并后的 fast follow-up `30518938777` 成功，以同一 receipt 和 `validationReason=merge_reuses_successful_candidate_full_validation` 复用候选 full；两者均只作路由跟踪，不作为新的 Swift/Xcode 编译证据。
+- 按规则未跑本机 build / 探针；候选 full 使用 `probe_mode=skip`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失；full artifact 明确报告 `manifestMissing` / `stopUntilArtifactsProvided`，不得据此声称 OCR、翻译或识别质量提升。
 
 ## v3.24：保护未保存 OCR 修正
 日期：2026-07-30

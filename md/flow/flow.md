@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前候选版本：`3.25`（普通图片 OCR 修正 sheet 以 Store 一致的规范化输入比较决定“确认无误”或“保存并重译”；前者不调用模型、后者继续沿用 v3.21 的目标 block 重译。v3.24-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+当前正式版本：`3.25`（普通图片 OCR 修正 sheet 以 Store 一致的规范化输入比较决定“确认无误”或“保存并重译”；前者不调用模型、后者继续沿用 v3.21 的目标 block 重译。v3.24-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
