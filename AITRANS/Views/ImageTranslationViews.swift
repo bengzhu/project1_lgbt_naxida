@@ -113,7 +113,10 @@ struct ImageTranslationPanel: View {
             ShareSheet(activityItems: [url])
         }
         .sheet(item: $editingImageTranslationBlock) { block in
-            ImageOCRCorrectionSheet(block: block) {
+            ImageOCRCorrectionSheet(
+                block: block,
+                imageData: store.imageTranslationData
+            ) {
                 completeReviewAfterCorrection(block.id)
             }
             .environmentObject(store)
@@ -1073,6 +1076,226 @@ private struct ImageTranslationPreview: View {
     }
 }
 
+private struct ImageTranslationBlockFocusCrop {
+    let image: CGImage
+    let normalizedRect: CGRect
+
+    static func make(
+        from sourceImage: CGImage,
+        block: ImageTranslationBlock
+    ) -> Self? {
+        let normalizedRect = normalizedFocusRect(for: block)
+        let sourceBounds = CGRect(
+            x: 0,
+            y: 0,
+            width: CGFloat(sourceImage.width),
+            height: CGFloat(sourceImage.height)
+        )
+        let pixelRect = CGRect(
+            x: normalizedRect.minX * sourceBounds.width,
+            y: normalizedRect.minY * sourceBounds.height,
+            width: normalizedRect.width * sourceBounds.width,
+            height: normalizedRect.height * sourceBounds.height
+        )
+        .integral
+        .intersection(sourceBounds)
+        guard !pixelRect.isEmpty,
+              let croppedImage = sourceImage.cropping(to: pixelRect) else {
+            return nil
+        }
+        let effectiveRect = CGRect(
+            x: pixelRect.minX / sourceBounds.width,
+            y: pixelRect.minY / sourceBounds.height,
+            width: pixelRect.width / sourceBounds.width,
+            height: pixelRect.height / sourceBounds.height
+        )
+        return Self(image: croppedImage, normalizedRect: effectiveRect)
+    }
+
+    static func normalizedFocusRect(for block: ImageTranslationBlock) -> CGRect {
+        let box = block.boundingBox
+        let sourceRect = CGRect(
+            x: CGFloat(box.x),
+            y: CGFloat(box.y),
+            width: CGFloat(box.width),
+            height: CGFloat(box.height)
+        )
+            .standardized
+            .intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
+        guard !sourceRect.isEmpty else {
+            return CGRect(x: 0, y: 0, width: 1, height: 1)
+        }
+        let targetAspectRatio: CGFloat = 16.0 / 9.0
+        var width = min(1, max(sourceRect.width * 1.8, 0.16))
+        var height = min(1, max(sourceRect.height * 1.8, 0.10))
+        if width / height < targetAspectRatio {
+            width = min(1, height * targetAspectRatio)
+        } else {
+            height = min(1, width / targetAspectRatio)
+        }
+        return CGRect(
+            x: min(max(sourceRect.midX - width / 2, 0), 1 - width),
+            y: min(max(sourceRect.midY - height / 2, 0), 1 - height),
+            width: width,
+            height: height
+        )
+    }
+
+    static func relativeBlockRect(
+        for block: ImageTranslationBlock,
+        in cropRect: CGRect
+    ) -> CGRect {
+        let box = block.boundingBox
+        let rect = CGRect(
+            x: (CGFloat(box.x) - cropRect.minX) / cropRect.width,
+            y: (CGFloat(box.y) - cropRect.minY) / cropRect.height,
+            width: CGFloat(box.width) / cropRect.width,
+            height: CGFloat(box.height) / cropRect.height
+        )
+        return rect.standardized.intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
+    }
+}
+
+private struct ImageOCRCorrectionReferenceRequestID: Hashable {
+    let blockID: UUID
+    let imageByteCount: Int
+}
+
+private enum ImageOCRCorrectionReferencePhase: Equatable {
+    case loading
+    case ready
+    case unavailable
+}
+
+private struct ImageOCRCorrectionReferencePreview: View {
+    let imageData: Data?
+    let block: ImageTranslationBlock
+
+    @State private var referenceImage: UIImage?
+    @State private var referencePhase: ImageOCRCorrectionReferencePhase = .loading
+
+    var body: some View {
+        Group {
+            if let crop = referenceCrop {
+                cropPreview(crop)
+            } else if referencePhase == .loading {
+                loadingState
+            } else {
+                unavailableState
+            }
+        }
+        .task(
+            id: ImageOCRCorrectionReferenceRequestID(
+                blockID: block.id,
+                imageByteCount: imageData?.count ?? 0
+            )
+        ) {
+            referenceImage = nil
+            guard let imageData, !imageData.isEmpty else {
+                referencePhase = .unavailable
+                return
+            }
+            referencePhase = .loading
+            guard let preview = await ImagePreviewService.makePreview(from: imageData) else {
+                guard !Task.isCancelled else { return }
+                referencePhase = .unavailable
+                return
+            }
+            guard !Task.isCancelled else { return }
+            referenceImage = UIImage(cgImage: preview.cgImage)
+            referencePhase = .ready
+        }
+    }
+
+    private var referenceCrop: ImageTranslationBlockFocusCrop? {
+        guard let sourceImage = referenceImage?.cgImage else { return nil }
+        return ImageTranslationBlockFocusCrop.make(from: sourceImage, block: block)
+    }
+
+    private func cropPreview(_ crop: ImageTranslationBlockFocusCrop) -> some View {
+        GeometryReader { geometry in
+            let fittedSize = fittedImageSize(
+                imageSize: CGSize(width: CGFloat(crop.image.width), height: CGFloat(crop.image.height)),
+                containerSize: geometry.size
+            )
+            let relativeRect = ImageTranslationBlockFocusCrop.relativeBlockRect(
+                for: block,
+                in: crop.normalizedRect
+            )
+            let origin = CGPoint(
+                x: (geometry.size.width - fittedSize.width) / 2,
+                y: (geometry.size.height - fittedSize.height) / 2
+            )
+
+            ZStack(alignment: .topLeading) {
+                Image(decorative: crop.image, scale: 1, orientation: .up)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .accessibilityHidden(true)
+
+                RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(Color.appWarning, lineWidth: 4)
+                    .frame(
+                        width: max(fittedSize.width * relativeRect.width, 24),
+                        height: max(fittedSize.height * relativeRect.height, 24)
+                    )
+                    .position(
+                        x: origin.x + fittedSize.width * relativeRect.midX,
+                        y: origin.y + fittedSize.height * relativeRect.midY
+                    )
+                    .accessibilityHidden(true)
+            }
+        }
+        .frame(height: 180)
+        .background(Color.black)
+        .clipShape(.rect(cornerRadius: AppTheme.Radius.control))
+        .overlay {
+            RoundedRectangle(cornerRadius: AppTheme.Radius.control)
+                .stroke(Color.appBorder, lineWidth: 1)
+        }
+        .overlay(alignment: .topLeading) {
+            Label("当前文字块", systemImage: "viewfinder")
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .padding(.horizontal, AppTheme.Spacing.control)
+                .frame(minHeight: AppTheme.Layout.minimumTarget)
+                .background(Color.black.opacity(0.82), in: .rect(cornerRadius: AppTheme.Radius.control))
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("当前文字块图片局部")
+        .accessibilityValue("黄色边框为 OCR 文字区域，当前识别为 \(block.original)")
+        .accessibilityHint("请对照图片局部确认 OCR 原文")
+    }
+
+    private var loadingState: some View {
+        HStack(spacing: AppTheme.Spacing.control) {
+            ProgressView()
+            Text("正在准备图片局部")
+                .foregroundStyle(Color.appTextSecondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 100)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("正在准备当前文字块图片局部")
+    }
+
+    private var unavailableState: some View {
+        Label("图片局部预览不可用，仍可编辑 OCR 原文", systemImage: "exclamationmark.triangle.fill")
+            .foregroundStyle(Color.appWarning)
+            .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
+            .accessibilityLabel("图片局部预览不可用，仍可编辑 OCR 原文")
+    }
+
+    private func fittedImageSize(imageSize: CGSize, containerSize: CGSize) -> CGSize {
+        guard imageSize.width > 0, imageSize.height > 0, containerSize.width > 0, containerSize.height > 0 else {
+            return .zero
+        }
+        let scale = min(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
+        return CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+    }
+}
+
 private struct ImageTranslationFocusPreview: View {
     let previewImage: UIImage
     let block: ImageTranslationBlock
@@ -1194,74 +1417,13 @@ private struct ImageTranslationFocusPreview: View {
         )
     }
 
-    private var focusCrop: (image: CGImage, normalizedRect: CGRect)? {
+    private var focusCrop: ImageTranslationBlockFocusCrop? {
         guard let sourceImage = previewImage.cgImage else { return nil }
-        let normalizedRect = normalizedFocusRect
-        let sourceBounds = CGRect(
-            x: 0,
-            y: 0,
-            width: CGFloat(sourceImage.width),
-            height: CGFloat(sourceImage.height)
-        )
-        let pixelRect = CGRect(
-            x: normalizedRect.minX * sourceBounds.width,
-            y: normalizedRect.minY * sourceBounds.height,
-            width: normalizedRect.width * sourceBounds.width,
-            height: normalizedRect.height * sourceBounds.height
-        )
-        .integral
-        .intersection(sourceBounds)
-        guard !pixelRect.isEmpty,
-              let croppedImage = sourceImage.cropping(to: pixelRect) else {
-            return nil
-        }
-        let effectiveRect = CGRect(
-            x: pixelRect.minX / sourceBounds.width,
-            y: pixelRect.minY / sourceBounds.height,
-            width: pixelRect.width / sourceBounds.width,
-            height: pixelRect.height / sourceBounds.height
-        )
-        return (croppedImage, effectiveRect)
-    }
-
-    private var normalizedFocusRect: CGRect {
-        let box = block.boundingBox
-        let sourceRect = CGRect(
-            x: CGFloat(box.x),
-            y: CGFloat(box.y),
-            width: CGFloat(box.width),
-            height: CGFloat(box.height)
-        )
-            .standardized
-            .intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
-        guard !sourceRect.isEmpty else {
-            return CGRect(x: 0, y: 0, width: 1, height: 1)
-        }
-        let targetAspectRatio: CGFloat = 16.0 / 9.0
-        var width = min(1, max(sourceRect.width * 1.8, 0.16))
-        var height = min(1, max(sourceRect.height * 1.8, 0.10))
-        if width / height < targetAspectRatio {
-            width = min(1, height * targetAspectRatio)
-        } else {
-            height = min(1, width / targetAspectRatio)
-        }
-        return CGRect(
-            x: min(max(sourceRect.midX - width / 2, 0), 1 - width),
-            y: min(max(sourceRect.midY - height / 2, 0), 1 - height),
-            width: width,
-            height: height
-        )
+        return ImageTranslationBlockFocusCrop.make(from: sourceImage, block: block)
     }
 
     private func relativeBlockRect(in cropRect: CGRect) -> CGRect {
-        let box = block.boundingBox
-        let rect = CGRect(
-            x: (CGFloat(box.x) - cropRect.minX) / cropRect.width,
-            y: (CGFloat(box.y) - cropRect.minY) / cropRect.height,
-            width: CGFloat(box.width) / cropRect.width,
-            height: CGFloat(box.height) / cropRect.height
-        )
-        return rect.standardized.intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
+        ImageTranslationBlockFocusCrop.relativeBlockRect(for: block, in: cropRect)
     }
 
     private func fittedImageSize(imageSize: CGSize, containerSize: CGSize) -> CGSize {
@@ -1483,14 +1645,20 @@ private struct ImageOCRCorrectionSheet: View {
     @EnvironmentObject private var store: TranslationSessionStore
 
     let block: ImageTranslationBlock
+    let imageData: Data?
     let didSave: () -> Void
 
     @State private var correctedOriginal: String
     @State private var errorMessage: String?
     @State private var showDiscardCorrectionConfirmation = false
 
-    init(block: ImageTranslationBlock, didSave: @escaping () -> Void) {
+    init(
+        block: ImageTranslationBlock,
+        imageData: Data?,
+        didSave: @escaping () -> Void
+    ) {
         self.block = block
+        self.imageData = imageData
         self.didSave = didSave
         _correctedOriginal = State(initialValue: block.original)
     }
@@ -1498,6 +1666,40 @@ private struct ImageOCRCorrectionSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("图片对照") {
+                    ImageOCRCorrectionReferencePreview(imageData: imageData, block: block)
+                    Text("黄色边框标出当前 OCR 文字区域；局部图只使用既有本地预览，不会重新识别图片。")
+                        .font(.caption)
+                        .foregroundStyle(Color.appTextSecondary)
+                }
+
+                if needsReview {
+                    Section("复查提示") {
+                        if ImageOCRResultSummary.hasLowConfidence(block) {
+                            HStack {
+                                Label("OCR 置信度", systemImage: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(Color.appWarning)
+                                Spacer()
+                                Text(block.confidence, format: .percent.precision(.fractionLength(0)))
+                                    .foregroundStyle(Color.appTextSecondary)
+                            }
+                            Text("置信度低于 50%，请以局部原图为准确认文字。")
+                                .font(.caption)
+                                .foregroundStyle(Color.appTextSecondary)
+                        }
+                        if ImageOCRResultSummary.hasUnknownDirection(block) {
+                            Label("文字方向待定", systemImage: "questionmark.diamond.fill")
+                                .foregroundStyle(Color.appWarning)
+                            Text("布局无法稳定判断横排或竖排，请按图片原文确认顺序。")
+                                .font(.caption)
+                                .foregroundStyle(Color.appTextSecondary)
+                        }
+                        Text("保存只会重新翻译当前文字块，不会重新识别整张图片。")
+                            .font(.caption)
+                            .foregroundStyle(Color.appTextSecondary)
+                    }
+                }
+
                 Section("识别文字") {
                     TextField("修正后的文字", text: $correctedOriginal, axis: .vertical)
                         .lineLimit(4...10)
@@ -1567,6 +1769,10 @@ private struct ImageOCRCorrectionSheet: View {
 
     private var hasUnsavedChanges: Bool {
         correctedOriginal != block.original
+    }
+
+    private var needsReview: Bool {
+        ImageOCRResultSummary.requiresReview(block)
     }
 
     private var requiresRetranslation: Bool {

@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前正式版本：`3.26`（云端 CI 把成功候选 full receipt 传播到 merge SHA，随后 `smalldata_test` 的纯元数据提交只在父 receipt 为 success 时 fast follow-up；receipt 缺失或失败时强制当前头部 Xcode build。结果包保留父 receipt 审计字段，传播快验不构成新的 Xcode 编译证据）。v3.25-v2.2 的 OCR 修正确认与既有能力、v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
+当前候选版本：`3.27`（普通图片 OCR 修正 sheet 使用既有 2048px 本地预览裁切当前文字块周边、再次标记黄色 bbox，并在低置信/方向待定时展示复查提示；局部预览不可用不阻止手工修正，也不会重跑 OCR）。最新正式 CI 流程版本 `3.26` 把成功候选 full receipt 传播到 merge SHA，随后 `smalldata_test` 的纯元数据提交只在父 receipt 为 success 时 fast follow-up；receipt 缺失或失败时强制当前头部 Xcode build。结果包保留父 receipt 审计字段，传播快验不构成新的 Xcode 编译证据。v3.25-v2.2 的 OCR 修正确认与既有能力、v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
 
 当前布局：
 
@@ -170,6 +170,7 @@
 - 风险结果行把定位与复查拆成两个同级 Button：主区域只切换定位，独立 44pt 图标动作直接完成并沿现有队列定位下一块，或撤销后把该块放回队列。入口在尚未完成任何块时显示“开始复查”，有进度时显示“继续复查”；风险原因与已复查状态纵向排列，避免窄 inspector 和 Dynamic Type 横向挤压。两条入口复用同一 View 私有 `toggleReviewCompletion`，不新增 Store 状态。
 - 连续复查使用 View 私有 `AccessibilityFocusState<String?>`，并为结果行、局部放大和完成态分配不同 focus ID。开始/重启队列后焦点进入当前局部放大；行级快速动作保持在下一结果行，局部放大动作保持在下一块放大窗，撤销回到同来源当前块，最后一块完成则聚焦“本次复查完成”。焦点发布先 yield 一次并核对图片 revision，旧图片任务不得抢回焦点；该状态不进入 Store 或持久化。
 - 每个 OCR 结果行提供独立 44pt 人工修正按钮。编辑 sheet 对空白输入前置禁用，保存时阻止重复提交和交互式关闭；View 只把 block ID 与修正文本交给 Store。Store 只调用一次目标块 sampled 翻译，并在回写前同时核对 correction ID、图片 task ID、block ID 和旧原文快照。失败时不改 block、transcript 或当前导出；成功时原子替换原文与译文、标记当前图片的人工修正状态、同步对应 transcript，随后撤销旧 export/share 并复用 render ID 生命周期按当前覆盖模式重绘。新图片、清空和取消都会使旧 correction 失效；人工修正不写回 Vision OCR，也不进入漫画探针或 ground truth 路径。
+- OCR 修正 sheet 会把当前图片的既有 `imageTranslationData` 交给 `ImagePreviewService` 生成最大边 2048px 的临时本地预览，再复用局部放大的 16:9 裁切和 bbox 几何显示当前文字块周边；黄色框、可读标签与 VoiceOver value 明确识别区域。预览 loading / unavailable 只影响这张对照图，不能阻止编辑、确认无误或现有的单块重译。低于 50% 置信度或方向 nil / unknown 时，sheet 复用 `ImageOCRResultSummary` 显示相应复查原因和“仅重译当前块”边界；该展示不新增 Store 状态、不调用 Vision OCR、不读取 Koharu artifact、不改 renderer / export / transcript / ground truth。
 - 首次成功人工修正时，Store 只在当前图片内按 block ID 保存一份私有 Vision OCR 基线（原文、初始译文与几何/方向证据）；后续修正不覆盖该基线。已人工修正的结果行出现独立 44pt “恢复 Vision OCR”动作，恢复不调用模型，要求当前图片处于完成态且没有 correction in flight。成功后恢复完整基线 block、移除人工修正标记、同步当前图片 transcript、撤销旧 export/share 并重绘；新图片和清空会丢弃基线。恢复风险块还会清除 View 私有的本次已复查标记并把 VoiceOver 焦点回到结果行，避免把旧复查结论带回原 OCR。
 - 点击“恢复 Vision OCR”先仅把当前 block 写入 `ImageTranslationPanel` 的 View 私有待确认状态；dialog 清楚说明会移除本次人工修正，取消不调用 Store、不改变任何图片状态。确认时先清空待确认值，再调用既有恢复方法；图片 revision 变化会一并清空选择、编辑、复查和待确认状态，旧 dialog 不得指向新图片。
 - 选中 block 时，预览从当前最大边 2048px 的缩略图裁切 16:9 局部放大窗；裁切范围至少覆盖 bbox 宽高的 1.8 倍，并以归一化宽 16%、高 10% 为下限，再夹取在顶左原点图片范围内。放大窗以至少 24pt 的警示色框再次标出原 bbox，提供命名明确的 44pt 关闭命令；关闭只清除 View 私有选择。该路径不重新解码 Store 原图、不调用 OCR / 翻译、不进入 renderer、导出或持久化。

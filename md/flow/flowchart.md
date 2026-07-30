@@ -59,7 +59,8 @@ flowchart TD
   IQUALITY --> ISELECT["View 私有 block 选择<br/>结果行取景框 + 预览覆盖高亮<br/>revision / 隐藏筛选清除"]
   IQUALITY --> IA11Y["VoiceOver 连续复查焦点<br/>行 / 局部放大 / 完成态分流<br/>revision 拒收旧焦点"]
   IQUALITY --> ICORRECT["44pt 人工修正<br/>非空校验 + 保存中锁定"]
-  ICORRECT --> ICORRECTGATE{"correction ID + 图片 task ID<br/>block ID + 旧原文快照仍匹配?"}
+  ICORRECT --> ICORRECTCONTEXT["修正 sheet 局部对照<br/>既有 2048px 预览裁切 + 黄色 bbox<br/>低置信 / 方向待定提示；失败不阻止编辑"]
+  ICORRECTCONTEXT --> ICORRECTGATE{"correction ID + 图片 task ID<br/>block ID + 旧原文快照仍匹配?"}
   ICORRECTGATE -->|"否 / 翻译失败"| ICORRECTKEEP["保留旧 block / transcript / export"]
   ICORRECTGATE -->|"是"| ICORRECTCOMMIT["只重译目标 block<br/>更新当前图片 transcript<br/>撤销旧 export/share"]
   ICORRECTCOMMIT --> IRENDER
