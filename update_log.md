@@ -11,7 +11,7 @@
 ## v3.27：OCR 修正局部对照与复查上下文
 日期：2026-07-30
 
-状态：Agent X 已完成候选实现和本地轻量回归，等待候选 SHA 的云端 full 验证；当前分支为 `codeb/v3.27-image-ocr-correction-context`，尚未创建 PR 或合并，未触碰 `main`。
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.27`。PR #91 已合入 `smalldata_test`，merge SHA `a9111769917157f5f391565e68779230e6d6dbf4`；远端 `codeb/v3.27-image-ocr-correction-context` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -21,8 +21,10 @@
 
 验证与遗留：
 
-- 本地已通过 v3.27 合同、v3.13 focus、v3.17/v3.20 review、v3.21-v3.25 correction 合同、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、YAML smoke 和版本解析；仍需在推送后核验 exact-SHA 云端 full 的 Xcode build、JUnit、artifact manifest、`.xcresult` 与 failure summary。
-- 未跑本机 build / 探针，按规则交给云端验证。候选 push 默认 `probe_mode=skip`，不应新增漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不能据本次 UI 上下文改进声称 OCR、翻译或识别质量提升。
+- 本地已通过 34 个图片/UI 源码合同（含 v3.27 6/6）、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、YAML / plist / JSON smoke、v1.94 路由合同和 v1.97 版本身份合同。
+- 候选 SHA `e70c8dc67b42a27d02ee4e48cbb9e9da19b0eeff` 的 full run `30525239987` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.27-codeb-v3.27-image-ocr-correction-context--e70c8dc67b42-run30525239987-attempt1` 精确匹配 version、branch、commitSha、runId、runAttempt 和 workflowName，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`。`.xcresult` Build 为 succeeded，0 errors、0 warnings；JUnit `10/10`、0 failures/errors；静态、Speech、UI、首页、粘贴和 Koharu 合同均成功。
+- PR #91 fast `30525729028` 与 merge fast `30525808471` 均成功，后者精确匹配 merge SHA、`validationReason=merge_reuses_successful_candidate_full_validation`、`reusedFullValidationSha=e70c8dc... / success`，并以 `receiptPropagationAllowed=true` 将 `AITRANS CI/full-validation=success` 传播到 `a9111769...`；两者均只作路由追踪，不能替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不能据本次 UI 上下文改进声称 OCR、翻译或识别质量提升。
 
 ## v3.26：合并后 CI receipt 传播
 日期：2026-07-30

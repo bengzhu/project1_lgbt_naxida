@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前候选版本：`3.27`（普通图片 OCR 修正 sheet 会显示带黄色 bbox 的当前文字块局部图，并把低置信/方向待定原因带入编辑上下文；局部图只复用既有本地 2048px 预览，不会重新 OCR）。最新正式 CI 流程版本仍为 `3.26`：云端 CI 会把成功候选 full receipt 传播到 merge SHA；其后的 `smalldata_test` 纯文档/元数据提交只有在父 receipt 为 success 时才走 fast，缺失或失败时强制当前头部 Xcode build，并在 artifact 中记录父 SHA、state 和元数据判定。v3.25-v2.2 的 OCR 修正确认、未保存保护、恢复、单块重译、VoiceOver 焦点、快速复查、进度、预览、Retry、Koharu gate 与图片生命周期能力仍保留。本版不改变 Vision OCR、漫画探针或质量基线；仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。日常开发合入 `smalldata_test`，不合并到 `main`。
+当前正式版本：`3.27`（普通图片 OCR 修正 sheet 会显示带黄色 bbox 的当前文字块局部图，并把低置信/方向待定原因带入编辑上下文；局部图只复用既有本地 2048px 预览，不会重新 OCR）。云端 receipt 传播规则（v3.26）仍会把成功候选 full receipt 传播到 merge SHA；其后的 `smalldata_test` 纯文档/元数据提交只有在父 receipt 为 success 时才走 fast，缺失或失败时强制当前头部 Xcode build，并在 artifact 中记录父 SHA、state 和元数据判定。v3.25-v2.2 的 OCR 修正确认、未保存保护、恢复、单块重译、VoiceOver 焦点、快速复查、进度、预览、Retry、Koharu gate 与图片生命周期能力仍保留。本版不改变 Vision OCR、漫画探针或质量基线；仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 
