@@ -11,7 +11,7 @@
 ## v3.29：可恢复的 OCR 误识别文字块忽略
 日期：2026-07-30
 
-状态：候选实现已完成，等待 `codeb/v3.29-image-ocr-false-positive-dismissal` 的 GitHub Actions full 验证；尚未创建 PR、未合并、未触碰 `main`。工程候选版本为 `MARKETING_VERSION=3.29`。
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.29`。PR #93 已合入 `smalldata_test`，merge SHA `e1c84fd8649e121d7f146012cce0f83db574d4c0`；远端 `codeb/v3.29-image-ocr-false-positive-dismissal` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -20,10 +20,12 @@
 - 若用户忽略全部活动 block，既有 renderer 仍从当前图片安全发布原图 export，当前图片 transcript 行移除，避免保留失效导出或空白转录。新图和清空会丢弃忽略快照；它不进入持久化、Vision OCR、模型翻译、漫画探针或 Koharu artifact 路径。
 - 新增 v3.29 源码合同并接入图片/UI fail-fast CI 路由，锁定状态门控、快照、原始排序恢复、transcript/export 同步、原图导出、确认文案、恢复入口与无障碍焦点。本版不改 OCR 算法、方向/layout、翻译采样、漫画探针、ground truth、metrics 或 `output/`，不能声称 OCR、翻译或识别质量提升。
 
-候选验证与遗留：
+验证与遗留：
 
 - 本地已通过 36 个与 CI 同组的图片/UI 合同（含新 v3.29 合同 8/8 和既有 v3.21/v3.24/v3.25/v3.27/v3.28 回归）、v1.94 CI 分层合同、v1.97 版本身份合同、`git diff --check`、两个修改 Swift 文件的 `xcrun swiftc -parse`、YAML / 工程实际 plist / ground truth 与既有 output JSON smoke，以及版本解析。
-- 未跑本机 build / 探针，按规则交给云端验证。候选 full 将使用 `probe_mode=skip`，不会新增漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失；不得把本次操作体验改进描述为质量提升。
+- 候选 SHA `55cfbcf1cc5d616aab9cb22b240118d6db77c0ed` 的 full run `30546261144` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.29-codeb-v3.29-image-ocr-false-positive-dismissal--55cfbcf1cc5d-run30546261144-attempt1` 精确匹配 version、branch、commitSha、runId、runAttempt 和 workflowName，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`。`.xcresult` Build 为 succeeded，0 errors、0 warnings；JUnit `10/10`、0 failures/errors；静态、Speech、图片/UI、首页、粘贴和 Koharu 合同均成功。
+- PR #93 fast `30546759442` 与 merge fast `30546839144` 均成功；后者精确匹配 merge SHA、`validationReason=merge_reuses_successful_candidate_full_validation`、`reusedFullValidationSha=55cfbcf1... / success`，并以 `receiptPropagationAllowed=true` 将 `AITRANS CI/full-validation=success` 传播到 `e1c84fd8...`。两者均只作路由追踪，不能替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失；不得把本次操作体验改进描述为质量提升。
 
 ## v3.28：图片复查会话连续性
 日期：2026-07-30

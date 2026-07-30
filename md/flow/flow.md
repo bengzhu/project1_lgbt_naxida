@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前候选版本：`3.29`（普通图片 OCR 修正 sheet 以明确确认提供“忽略此文字块”：Store 从当前活动 block、预览、导出和当前转录中移除误识别块，并只在当前图片会话的私有快照中保留初始顺序、人工修正状态与 Vision OCR 基线。检查区的恢复入口按初始顺序插回 block，风险 block 会重新进入待复查；全部忽略时 renderer 产出原图。新图和清空丢弃快照且不落盘，忽略/恢复不重新 OCR 或调用模型）。v3.28 的已复查 block ID 仍由 Store 当前图片会话持有；v3.27 的局部对照仍复用既有 2048px 本地预览。v3.26 CI 流程把成功候选 full receipt 传播到 merge SHA，随后 `smalldata_test` 的纯元数据提交只在父 receipt 为 success 时 fast follow-up；receipt 缺失或失败时强制当前头部 Xcode build。结果包保留父 receipt 审计字段，传播快验不构成新的 Xcode 编译证据。本版不变更 Vision OCR、漫画探针、Koharu 主路径或质量基线；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
+当前正式版本：`3.29`（普通图片 OCR 修正 sheet 以明确确认提供“忽略此文字块”：Store 从当前活动 block、预览、导出和当前转录中移除误识别块，并只在当前图片会话的私有快照中保留初始顺序、人工修正状态与 Vision OCR 基线。检查区的恢复入口按初始顺序插回 block，风险 block 会重新进入待复查；全部忽略时 renderer 产出原图。新图和清空丢弃快照且不落盘，忽略/恢复不重新 OCR 或调用模型）。v3.28 的已复查 block ID 仍由 Store 当前图片会话持有；v3.27 的局部对照仍复用既有 2048px 本地预览。v3.26 CI 流程把成功候选 full receipt 传播到 merge SHA，随后 `smalldata_test` 的纯元数据提交只在父 receipt 为 success 时 fast follow-up；receipt 缺失或失败时强制当前头部 Xcode build。结果包保留父 receipt 审计字段，传播快验不构成新的 Xcode 编译证据。本版不变更 Vision OCR、漫画探针、Koharu 主路径或质量基线；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
 
 当前布局：
 
