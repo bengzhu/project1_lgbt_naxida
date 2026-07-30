@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.29：可恢复的 OCR 误识别文字块忽略
+日期：2026-07-30
+
+状态：候选实现已完成，等待 `codeb/v3.29-image-ocr-false-positive-dismissal` 的 GitHub Actions full 验证；尚未创建 PR、未合并、未触碰 `main`。工程候选版本为 `MARKETING_VERSION=3.29`。
+
+核心变更：
+
+- 图片 OCR 修正 sheet 新增“识别有误？”区段和明确 destructive confirmation。确认后只忽略当前 block：未保存的修正不会保存，用户可以从检查区“已忽略的文字块”列表恢复。该入口不会重新识别图片或调用模型翻译。
+- `TranslationSessionStore` 现在为当前图片会话保存被忽略 block 的完整值、初始 OCR 顺序、人工修正状态和私有 Vision OCR 基线；忽略会从当前活动 blocks、预览、导出、当前图片 transcript、人工修正/复查集合及基线映射移除，恢复则按初始顺序插回并恢复修正基线。风险 block 恢复后不沿用旧“已复查”结论，重新进入待复查队列；View 只负责筛选、选择和 VoiceOver 焦点。
+- 若用户忽略全部活动 block，既有 renderer 仍从当前图片安全发布原图 export，当前图片 transcript 行移除，避免保留失效导出或空白转录。新图和清空会丢弃忽略快照；它不进入持久化、Vision OCR、模型翻译、漫画探针或 Koharu artifact 路径。
+- 新增 v3.29 源码合同并接入图片/UI fail-fast CI 路由，锁定状态门控、快照、原始排序恢复、transcript/export 同步、原图导出、确认文案、恢复入口与无障碍焦点。本版不改 OCR 算法、方向/layout、翻译采样、漫画探针、ground truth、metrics 或 `output/`，不能声称 OCR、翻译或识别质量提升。
+
+候选验证与遗留：
+
+- 本地已通过 36 个与 CI 同组的图片/UI 合同（含新 v3.29 合同 8/8 和既有 v3.21/v3.24/v3.25/v3.27/v3.28 回归）、v1.94 CI 分层合同、v1.97 版本身份合同、`git diff --check`、两个修改 Swift 文件的 `xcrun swiftc -parse`、YAML / 工程实际 plist / ground truth 与既有 output JSON smoke，以及版本解析。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 将使用 `probe_mode=skip`，不会新增漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失；不得把本次操作体验改进描述为质量提升。
+
 ## v3.28：图片复查会话连续性
 日期：2026-07-30
 
