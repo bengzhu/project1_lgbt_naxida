@@ -11,7 +11,7 @@
 ## v3.21：普通图片 OCR 单块人工修正
 日期：2026-07-30
 
-状态：Agent X 已完成核心实现与本地轻量回归，候选分支为 `codeb/v3.21-image-ocr-correction`；exact-SHA 云端 full、PR 和合并尚待执行，未触碰 `main`。
+状态：Agent X 已完成核心实现、本地轻量回归、exact-SHA 云端 full、PR 和合并收口；工程正式版本为 `MARKETING_VERSION=3.21`。PR #85 已合入 `smalldata_test`，merge SHA `620290ec5a56c2d9fa5be97a7eec494c946f1f68`；远端 `codeb/v3.21-image-ocr-correction` 已删除，未触碰 `main`。
 
 核心变更：
 
@@ -22,8 +22,10 @@
 
 验证与遗留：
 
-- v3.21 新合同 8/8、29 个图片/UI 合同脚本均通过；Swift 变更文件 parse、workflow YAML 和 `git diff --check` 通过。
-- exact-SHA 云端 full、Xcode build、artifact identity 与 PR follow-up 尚待执行；按规则未跑本机 build / 探针。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失。
+- v3.21 新合同 8/8、29 个图片/UI 合同脚本共 185/185 通过；Swift 全量 parse、workflow YAML、CI 分层 9/9、版本身份 5/5、工程版本解析（`v3.21`）、3 份 JSON 基线和 `git diff --check` 均通过。
+- 候选 exact SHA `a7ad2684341c145e86c290166736723f2b7c5782` 的云端 full run `30512490423` attempt 1 成功；artifact `aitrans-ci-v3.21-codeb-v3.21-image-ocr-correction--a7ad2684341c-run30512490423-attempt1` 与 version / branch / SHA / run / attempt / profile 完全一致，图片/UI 185/185、Speech/home/paste、extended Koharu validator matrix 和 Xcode build 均通过，JUnit 10/10，`.xcresult` 为 succeeded、0 error / 0 warning，commit status `AITRANS CI/full-validation=success`。UI evidence 按 `not_requested` 跳过；静态截图不能验证异步翻译回调隔离或真实文本输入体验。
+- PR #85 exact HEAD fast run `30512770595` 成功后合并；merge follow-up run `30512808423` 成功，artifact 与 merge HEAD `620290ec5a56c2d9fa5be97a7eec494c946f1f68` 一致，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，精确复用候选 SHA `a7ad2684341c145e86c290166736723f2b7c5782` 的成功 full 收据，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`。
+- 未跑本机 build / 探针，按规则交给云端验证。本版未改变漫画探针，push 默认 `probe_mode=skip`；真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不声称 OCR 或翻译质量提升。真实设备上的长文本输入法、VoiceOver sheet 操作和连续快速修正仍需人工回放。
 
 ## v3.20：图片连续复查 VoiceOver 焦点
 日期：2026-07-29

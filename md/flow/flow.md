@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前候选版本：`3.21`（普通图片 OCR block 可由用户人工修正；Store 只重译目标块，以 correction ID、图片 task ID 和旧原文快照隔离过期回调，成功后同步当前图片 transcript 并重绘导出。v3.20-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+当前正式版本：`3.21`（普通图片 OCR block 可由用户人工修正；Store 只重译目标块，以 correction ID、图片 task ID 和旧原文快照隔离过期回调，成功后同步当前图片 transcript 并重绘导出。v3.20-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
