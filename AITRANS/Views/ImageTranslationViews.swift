@@ -180,11 +180,13 @@ struct ImageTranslationPanel: View {
                 canSelectPrevious: canSelectPreviousBlock,
                 canSelectNext: canSelectNextBlock,
                 reviewedBlockIDs: store.imageTranslationReviewedBlockIDs,
+                canEdit: !isRunning && !isRenderingExport,
                 accessibilityFocus: $reviewAccessibilityFocusID,
                 selectBlock: selectBlockFromPreview,
                 clearSelection: { selectedImageTranslationBlockID = nil },
                 selectPrevious: { selectAdjacentBlock(offset: -1) },
                 selectNext: { selectAdjacentBlock(offset: 1) },
+                editBlock: { beginCorrection(of: $0) },
                 toggleReviewCompletion: { blockID in
                     toggleReviewCompletion(blockID, focusInPreview: true)
                 }
@@ -418,6 +420,11 @@ struct ImageTranslationPanel: View {
     }
 
     private func beginCorrection(of block: ImageTranslationBlock) {
+        guard !isRunning,
+              !isRenderingExport,
+              store.imageTranslationBlocks.contains(where: { $0.id == block.id }) else {
+            return
+        }
         selectedImageTranslationBlockID = block.id
         moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
             to: reviewRowAccessibilityFocusID(block.id)
@@ -1048,11 +1055,13 @@ private struct ImageTranslationPreview: View {
     let canSelectPrevious: Bool
     let canSelectNext: Bool
     let reviewedBlockIDs: Set<UUID>
+    let canEdit: Bool
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let selectBlock: (UUID) -> Void
     let clearSelection: () -> Void
     let selectPrevious: () -> Void
     let selectNext: () -> Void
+    let editBlock: (ImageTranslationBlock) -> Void
     let toggleReviewCompletion: (UUID) -> Void
     @State private var previewImage: UIImage?
     @State private var previewRevision: Int?
@@ -1097,10 +1106,12 @@ private struct ImageTranslationPreview: View {
                                 canSelectNext: canSelectNext,
                                 isReviewRequired: ImageOCRResultSummary.requiresReview(selectedBlock),
                                 isReviewCompleted: reviewedBlockIDs.contains(selectedBlock.id),
+                                canEdit: canEdit,
                                 accessibilityFocus: accessibilityFocus,
                                 close: clearSelection,
                                 selectPrevious: selectPrevious,
                                 selectNext: selectNext,
+                                edit: { editBlock(selectedBlock) },
                                 toggleReviewCompletion: { toggleReviewCompletion(selectedBlock.id) }
                             )
                             .frame(
@@ -1453,10 +1464,12 @@ private struct ImageTranslationFocusPreview: View {
     let canSelectNext: Bool
     let isReviewRequired: Bool
     let isReviewCompleted: Bool
+    let canEdit: Bool
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let close: () -> Void
     let selectPrevious: () -> Void
     let selectNext: () -> Void
+    let edit: () -> Void
     let toggleReviewCompletion: () -> Void
 
     var body: some View {
@@ -1514,11 +1527,21 @@ private struct ImageTranslationFocusPreview: View {
                 .background(Color.black.opacity(0.82), in: .rect(cornerRadius: AppTheme.Radius.control))
         }
         .overlay(alignment: .topTrailing) {
-            Button("关闭局部放大", systemImage: "xmark", action: close)
-                .labelStyle(.iconOnly)
-                .foregroundStyle(.white)
-                .frame(minWidth: 44, minHeight: 44)
-                .background(Color.black.opacity(0.82), in: Circle())
+            VStack(spacing: AppTheme.Spacing.compact) {
+                Button("关闭局部放大", systemImage: "xmark", action: close)
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.white)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .background(Color.black.opacity(0.82), in: Circle())
+                Button("修正识别文字", systemImage: "pencil", action: edit)
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.white)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .background(Color.black.opacity(0.82), in: Circle())
+                    .disabled(!canEdit)
+                    .opacity(canEdit ? 1 : 0.35)
+                    .accessibilityHint("打开当前文字块的 OCR 修正页面")
+            }
         }
         .overlay(alignment: .bottomLeading) {
             Text(positionText)
