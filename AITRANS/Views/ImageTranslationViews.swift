@@ -1540,8 +1540,9 @@ private struct ImageOCRCorrectionSheet: View {
                         }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存并重译", action: save)
+                    Button(saveActionTitle, action: save)
                         .disabled(!canSave || isSaving)
+                        .accessibilityHint(saveActionAccessibilityHint)
                 }
             }
             .overlay {
@@ -1566,6 +1567,20 @@ private struct ImageOCRCorrectionSheet: View {
 
     private var hasUnsavedChanges: Bool {
         correctedOriginal != block.original
+    }
+
+    private var requiresRetranslation: Bool {
+        correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines) != block.original
+    }
+
+    private var saveActionTitle: String {
+        requiresRetranslation ? "保存并重译" : "确认无误"
+    }
+
+    private var saveActionAccessibilityHint: String {
+        requiresRetranslation
+            ? "保存修正后的 OCR 原文，并只重新翻译此文字块"
+            : "确认当前 OCR 原文无误；不会重新翻译"
     }
 
     private func requestDismiss() {

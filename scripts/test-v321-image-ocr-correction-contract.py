@@ -106,7 +106,7 @@ class ImageOCRCorrectionContractTests(unittest.TestCase):
         self.assertIn("AppTheme.Layout.minimumTarget", row)
         self.assertIn("编辑 OCR 原文并只重新翻译此文字块", row)
         self.assertIn('TextField("修正后的文字"', editor)
-        self.assertIn('Button("保存并重译", action: save)', editor)
+        self.assertIn("Button(saveActionTitle, action: save)", editor)
         self.assertIn(".disabled(!canSave || isSaving)", editor)
         self.assertIn(".interactiveDismissDisabled(isSaving", editor)
         self.assertIn('ProgressView("正在重新翻译")', editor)
