@@ -60,8 +60,8 @@ class ImageReviewQuickActionContractTests(unittest.TestCase):
             self.view,
             "private func toggleReviewCompletion(_ blockID: UUID, focusInPreview: Bool)",
         )
-        self.assertIn("reviewedImageTranslationBlockIDs.remove(blockID)", transition)
-        self.assertIn("reviewedImageTranslationBlockIDs.insert(blockID)", transition)
+        self.assertIn("store.reopenImageTranslationBlockReview(blockID)", transition)
+        self.assertIn("store.markImageTranslationBlockReviewed(blockID)", transition)
         self.assertIn("selectedImageTranslationBlockID = nextBlockID", transition)
 
     def test_risk_labels_stack_for_narrow_and_dynamic_type_layouts(self) -> None:

@@ -8,6 +8,23 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.28：图片复查会话连续性
+日期：2026-07-30
+
+状态：Agent X 候选实现已完成，等待 `codeb/v3.28-image-review-session-continuity` 的云端 full 验收；工程候选版本为 `MARKETING_VERSION=3.28`，尚未合并到 `smalldata_test`，不会触碰 `main`。
+
+核心变更：
+
+- 原先只附着在 `ImageTranslationPanel` 的本次复查 ID 集合改由 `TranslationSessionStore` 的 `imageTranslationReviewedBlockIDs` 在内存中统一持有。这样当图片面板被 SwiftUI 重建时，已完成的风险块仍能继续复查；该集合不进入持久化，也不改变完整 OCR blocks。
+- 新图 task、清空和取消会安全清空当前图片会话的复查集合。完成/撤销/重新开始复查均通过 Store 的风险范围 API；View 保留筛选、自动前进顺序、选择和 VoiceOver 焦点，不再直接改业务状态。
+- 成功人工修正（包括原文未变的“确认无误”）会自动把风险 block 记为已复查；恢复 Vision OCR 会由 Store 移除该标记，避免把针对人工修正的复查结论错误带回原始 OCR。
+- 新增 v3.28 源码合同，并更新 v3.17、v3.19、v3.21、v3.22 回归合同与图片/UI CI 路由。本版不改 Vision OCR、方向/layout、翻译采样、renderer、export、漫画探针或 Koharu artifact 路径。
+
+验证与遗留：
+
+- 本地已通过 v3.17、v3.19、v3.21、v3.22、v3.27 与新 v3.28 图片合同，`xcrun swiftc -parse` 两个修改 Swift 文件和 `git diff --check` 均成功；完整图片/UI 合同与 Xcode build 仍交给候选云端 full。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 预计使用 `probe_mode=skip`，因此不新增漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 和真实竖排图片 corpus 仍缺失，不得据本次会话连续性改进声称 OCR、翻译或识别质量提升。
+
 ## v3.27：OCR 修正局部对照与复查上下文
 日期：2026-07-30
 

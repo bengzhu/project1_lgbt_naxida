@@ -129,6 +129,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published private(set) var imageTranslationCorrectionBlockID: UUID?
     @Published private(set) var imageTranslationCorrectionMessage: String?
     @Published private(set) var imageTranslationCorrectedBlockIDs: Set<UUID> = []
+    @Published private(set) var imageTranslationReviewedBlockIDs: Set<UUID> = []
     @Published private(set) var speechRecognitionCapabilities: [SpeechRecognitionCapability] = []
 
     let localModelDirectory: URL
@@ -1130,6 +1131,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationMessage = "正在载入图片"
         imageTranslationBlocks = []
         imageTranslationCorrectedBlockIDs = []
+        imageTranslationReviewedBlockIDs = []
         imageTranslationVisionOriginalBlocks = [:]
         imageTranslationTranscriptLineID = nil
         imageTranslationData = nil
@@ -1506,6 +1508,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
         imageTranslationBlocks = []
         imageTranslationCorrectedBlockIDs = []
+        imageTranslationReviewedBlockIDs = []
         imageTranslationVisionOriginalBlocks = [:]
         imageTranslationTranscriptLineID = nil
         imageTranslationData = nil
@@ -1594,11 +1597,36 @@ final class TranslationSessionStore: ObservableObject {
         invalidateImageTranslationCorrection()
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
+        imageTranslationReviewedBlockIDs = []
         imageTranslationTaskID = UUID()
         imageTranslationState = .idle
         imageTranslationMessage = "图片翻译已取消"
         dataTransferMessage = imageTranslationMessage
         isProcessing = false
+    }
+
+    @discardableResult
+    func markImageTranslationBlockReviewed(_ blockID: UUID) -> Bool {
+        guard let block = imageTranslationBlocks.first(where: { $0.id == blockID }),
+              ImageOCRResultSummary.requiresReview(block) else {
+            return false
+        }
+        imageTranslationReviewedBlockIDs.insert(blockID)
+        return true
+    }
+
+    @discardableResult
+    func reopenImageTranslationBlockReview(_ blockID: UUID) -> Bool {
+        guard let block = imageTranslationBlocks.first(where: { $0.id == blockID }),
+              ImageOCRResultSummary.requiresReview(block),
+              imageTranslationReviewedBlockIDs.remove(blockID) != nil else {
+            return false
+        }
+        return true
+    }
+
+    func resetImageTranslationReviewProgress() {
+        imageTranslationReviewedBlockIDs = []
     }
 
     func correctImageTranslationBlock(_ blockID: UUID, original correctedOriginal: String) async -> Bool {
@@ -1619,6 +1647,7 @@ final class TranslationSessionStore: ObservableObject {
         let currentBlock = imageTranslationBlocks[blockIndex]
         guard correctedOriginal != currentBlock.original else {
             imageTranslationCorrectionMessage = nil
+            markImageTranslationBlockReviewed(blockID)
             return true
         }
 
@@ -1651,6 +1680,7 @@ final class TranslationSessionStore: ObservableObject {
             correctedBlock.translation = correctedTranslation
             imageTranslationBlocks[currentIndex] = correctedBlock
             imageTranslationCorrectedBlockIDs.insert(blockID)
+            markImageTranslationBlockReviewed(blockID)
             imageTranslationCorrectionBlockID = nil
             imageTranslationCorrectionMessage = nil
             imageTranslationState = .translated
@@ -1687,6 +1717,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationBlocks[blockIndex] = originalBlock
         imageTranslationVisionOriginalBlocks.removeValue(forKey: blockID)
         imageTranslationCorrectedBlockIDs.remove(blockID)
+        imageTranslationReviewedBlockIDs.remove(blockID)
         imageTranslationCorrectionMessage = nil
         imageTranslationMessage = "已恢复 Vision OCR 结果，正在更新导出图"
         updateImageTranslationTranscript(blocks: imageTranslationBlocks)

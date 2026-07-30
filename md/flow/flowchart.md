@@ -55,17 +55,17 @@ flowchart TD
   ILAYOUT -->|否| IH["横排 / unknown fallback<br/>上到下、行内左到右"]
   IV --> J["ImageTranslationBlock<br/>bbox + OCR + 方向证据 + 译文"]
   IH --> J
-  J --> IQUALITY["OCR 结果摘要<br/>平均/低置信 + 竖排/方向待定<br/>全部 / 待复查筛选 + 行级快速复查<br/>Store-owned 重新识别"]
+  J --> IQUALITY["OCR 结果摘要<br/>平均/低置信 + 竖排/方向待定<br/>全部 / 待复查筛选 + 行级快速复查<br/>当前图片会话复查进度由 Store 内存持有<br/>新图 / 取消 / 清空重置、不落盘<br/>Store-owned 重新识别"]
   IQUALITY --> ISELECT["View 私有 block 选择<br/>结果行取景框 + 预览覆盖高亮<br/>revision / 隐藏筛选清除"]
   IQUALITY --> IA11Y["VoiceOver 连续复查焦点<br/>行 / 局部放大 / 完成态分流<br/>revision 拒收旧焦点"]
   IQUALITY --> ICORRECT["44pt 人工修正<br/>非空校验 + 保存中锁定"]
   ICORRECT --> ICORRECTCONTEXT["修正 sheet 局部对照<br/>既有 2048px 预览裁切 + 黄色 bbox<br/>低置信 / 方向待定提示；失败不阻止编辑"]
   ICORRECTCONTEXT --> ICORRECTGATE{"correction ID + 图片 task ID<br/>block ID + 旧原文快照仍匹配?"}
   ICORRECTGATE -->|"否 / 翻译失败"| ICORRECTKEEP["保留旧 block / transcript / export"]
-  ICORRECTGATE -->|"是"| ICORRECTCOMMIT["只重译目标 block<br/>更新当前图片 transcript<br/>撤销旧 export/share"]
+  ICORRECTGATE -->|"是"| ICORRECTCOMMIT["只重译目标 block<br/>成功确认风险块加入当前会话复查进度<br/>更新当前图片 transcript<br/>撤销旧 export/share"]
   ICORRECTCOMMIT --> IRENDER
   ICORRECTCOMMIT --> IRESTORECONFIRM["已修正 block 的 44pt 恢复动作<br/>先确认移除本次人工修正"]
-  IRESTORECONFIRM -->|"确认"| IRESTORE["恢复 Vision OCR 原文 + 初始译文<br/>不调用模型，重新打开风险复查"]
+  IRESTORECONFIRM -->|"确认"| IRESTORE["恢复 Vision OCR 原文 + 初始译文<br/>移除当前会话复查标记<br/>不调用模型，重新打开风险复查"]
   IRESTORECONFIRM -->|"取消 / 图片 revision 已变化"| IRESTOREKEEP["保留当前人工修正"]
   IRESTORE --> IRENDER
   ISELECT --> IFOCUS["已下采样预览局部裁切<br/>保留上下文 + bbox 再标记<br/>44pt 关闭命令"]

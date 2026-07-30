@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contracts for v3.17 revision-scoped image review progress."""
+"""Regression contracts for v3.17 image review progression and v3.28 session ownership."""
 
 from pathlib import Path
 import unittest
@@ -29,21 +29,29 @@ def braced_body(source: str, marker: str) -> str:
 class ImageReviewProgressContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.view = read("AITRANS/Views/ImageTranslationViews.swift")
+        self.store = read("AITRANS/Services/TranslationSessionStore.swift")
 
-    def test_progress_is_view_private_and_resets_with_image_revision(self) -> None:
-        store = read("AITRANS/Services/TranslationSessionStore.swift")
+    def test_progress_is_current_image_session_owned_and_resets_on_lifecycle_changes(self) -> None:
         self.assertIn(
-            "@State private var reviewedImageTranslationBlockIDs: Set<UUID> = []",
-            self.view,
+            "@Published private(set) var imageTranslationReviewedBlockIDs: Set<UUID> = []",
+            self.store,
         )
+        self.assertNotIn("@State private var reviewedImageTranslationBlockIDs", self.view)
+        for marker in [
+            "private func beginImageTranslationTask(",
+            "func clearImageTranslation()",
+            "func cancelImageTranslation()",
+        ]:
+            self.assertIn(
+                "imageTranslationReviewedBlockIDs = []",
+                braced_body(self.store, marker),
+            )
         revision_change = braced_body(
             self.view,
             ".onChange(of: store.imageTranslationRevision)",
         )
         self.assertIn("selectedImageTranslationBlockID = nil", revision_change)
-        self.assertIn("reviewedImageTranslationBlockIDs.removeAll()", revision_change)
-        self.assertNotIn("reviewedImageTranslationBlockIDs", store)
-        self.assertNotIn("reviewCompletedBlockCount", store)
+        self.assertNotIn("imageTranslationReviewedBlockIDs", revision_change)
 
     def test_pending_queue_reuses_product_risk_definition(self) -> None:
         pending = braced_body(
@@ -54,7 +62,7 @@ class ImageReviewProgressContractTests(unittest.TestCase):
             "ImageOCRReviewFilter.needsReview.blocks(from: store.imageTranslationBlocks)",
             pending,
         )
-        self.assertIn("!reviewedImageTranslationBlockIDs.contains($0.id)", pending)
+        self.assertIn("!store.imageTranslationReviewedBlockIDs.contains($0.id)", pending)
         visible = braced_body(
             self.view,
             "private var visibleImageTranslationBlocks: [ImageTranslationBlock]",
@@ -67,12 +75,12 @@ class ImageReviewProgressContractTests(unittest.TestCase):
             self.view,
             "private func toggleReviewCompletion(_ blockID: UUID, focusInPreview: Bool)",
         )
-        self.assertIn("reviewedImageTranslationBlockIDs.remove(blockID)", toggle)
+        self.assertIn("store.reopenImageTranslationBlockReview(blockID)", toggle)
         self.assertIn("selectedImageTranslationBlockID = blockID", toggle)
         self.assertIn("let pendingBlocks = reviewRequiredBlocks", toggle)
         self.assertIn("pendingBlocks.dropFirst(currentIndex + 1).first?.id", toggle)
         self.assertIn("pendingBlocks[..<currentIndex].last?.id", toggle)
-        self.assertIn("reviewedImageTranslationBlockIDs.insert(blockID)", toggle)
+        self.assertIn("store.markImageTranslationBlockReviewed(blockID)", toggle)
         self.assertIn("reviewFilter = .needsReview", toggle)
         self.assertIn("selectedImageTranslationBlockID = nextBlockID", toggle)
 
@@ -81,7 +89,7 @@ class ImageReviewProgressContractTests(unittest.TestCase):
         self.assertIn('title: "重新复查 \\(reviewCompletedBlockCount)"', self.view)
         self.assertIn('systemImage: "arrow.counterclockwise"', self.view)
         restart = braced_body(self.view, "private func restartReviewQueue()")
-        self.assertIn("reviewedImageTranslationBlockIDs.removeAll()", restart)
+        self.assertIn("store.resetImageTranslationReviewProgress()", restart)
         self.assertIn("reviewFilter = .needsReview", restart)
         self.assertIn("selectedImageTranslationBlockID = firstBlockID", restart)
         self.assertEqual(restart.count("revealPreview()"), 1)
@@ -105,7 +113,7 @@ class ImageReviewProgressContractTests(unittest.TestCase):
         self.assertIn("let isReviewCompleted: Bool", row)
         self.assertIn('Label("本次已复查", systemImage: "checkmark.circle.fill")', row)
         self.assertIn(
-            "isReviewCompleted: reviewedImageTranslationBlockIDs.contains(block.id)",
+            "isReviewCompleted: store.imageTranslationReviewedBlockIDs.contains(block.id)",
             self.view,
         )
 
