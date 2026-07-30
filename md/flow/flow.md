@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前正式版本：`3.21`（普通图片 OCR block 可由用户人工修正；Store 只重译目标块，以 correction ID、图片 task ID 和旧原文快照隔离过期回调，成功后同步当前图片 transcript 并重绘导出。v3.20-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
+当前候选版本：`3.22`（人工修正过的普通图片 OCR block 可恢复到本图片的 Vision OCR 原文与初始译文；恢复不调用模型，更新当前图片 transcript 并重绘导出。v3.21-v2.2 能力与 v3.3 Koharu mask 拓扑 gate 仍保留；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供）。
 
 当前布局：
 
@@ -170,6 +170,7 @@
 - 风险结果行把定位与复查拆成两个同级 Button：主区域只切换定位，独立 44pt 图标动作直接完成并沿现有队列定位下一块，或撤销后把该块放回队列。入口在尚未完成任何块时显示“开始复查”，有进度时显示“继续复查”；风险原因与已复查状态纵向排列，避免窄 inspector 和 Dynamic Type 横向挤压。两条入口复用同一 View 私有 `toggleReviewCompletion`，不新增 Store 状态。
 - 连续复查使用 View 私有 `AccessibilityFocusState<String?>`，并为结果行、局部放大和完成态分配不同 focus ID。开始/重启队列后焦点进入当前局部放大；行级快速动作保持在下一结果行，局部放大动作保持在下一块放大窗，撤销回到同来源当前块，最后一块完成则聚焦“本次复查完成”。焦点发布先 yield 一次并核对图片 revision，旧图片任务不得抢回焦点；该状态不进入 Store 或持久化。
 - 每个 OCR 结果行提供独立 44pt 人工修正按钮。编辑 sheet 对空白输入前置禁用，保存时阻止重复提交和交互式关闭；View 只把 block ID 与修正文本交给 Store。Store 只调用一次目标块 sampled 翻译，并在回写前同时核对 correction ID、图片 task ID、block ID 和旧原文快照。失败时不改 block、transcript 或当前导出；成功时原子替换原文与译文、标记当前图片的人工修正状态、同步对应 transcript，随后撤销旧 export/share 并复用 render ID 生命周期按当前覆盖模式重绘。新图片、清空和取消都会使旧 correction 失效；人工修正不写回 Vision OCR，也不进入漫画探针或 ground truth 路径。
+- 首次成功人工修正时，Store 只在当前图片内按 block ID 保存一份私有 Vision OCR 基线（原文、初始译文与几何/方向证据）；后续修正不覆盖该基线。已人工修正的结果行出现独立 44pt “恢复 Vision OCR”动作，恢复不调用模型，要求当前图片处于完成态且没有 correction in flight。成功后恢复完整基线 block、移除人工修正标记、同步当前图片 transcript、撤销旧 export/share 并重绘；新图片和清空会丢弃基线。恢复风险块还会清除 View 私有的本次已复查标记并把 VoiceOver 焦点回到结果行，避免把旧复查结论带回原 OCR。
 - 选中 block 时，预览从当前最大边 2048px 的缩略图裁切 16:9 局部放大窗；裁切范围至少覆盖 bbox 宽高的 1.8 倍，并以归一化宽 16%、高 10% 为下限，再夹取在顶左原点图片范围内。放大窗以至少 24pt 的警示色框再次标出原 bbox，提供命名明确的 44pt 关闭命令；关闭只清除 View 私有选择。该路径不重新解码 Store 原图、不调用 OCR / 翻译、不进入 renderer、导出或持久化。
 - 外层图片页使用单一 `ScrollViewReader`，`ImageTranslationPanel` 根部提供唯一 workspace anchor。结果行从未选中切到新 block 后才滚动到该 anchor；点击同一行取消选择不滚动。系统 Reduce Motion 开启时直接定位，否则只使用 `AppTheme.Motion.standard`。局部放大窗显示当前 block 在“全部/待复查”可见序列中的位置，并提供命名明确的 44pt 上一个/下一个按钮；导航按该序列移动，首尾按钮同时禁用和降调，不越界、不绕回、不改筛选或完整 blocks。
 - 旁贴或覆盖预览与同模式 PNG 导出；Vision OCR bbox、SwiftUI 预览和导出 renderer 统一使用图片顶左原点坐标。后台 render 只写 render ID 独占 staging PNG，已完成图片切换模式会使旧导出失效并按 render ID / 图片 task ID / mode 验明身份后发布 `aitrans-export-<render UUID>-<base>-translated.png` 稳定文件，旧 detached render 不得覆盖新任务。覆盖模式重渲染公开 `idle / rendering / failed` 状态；rendering 时 Store 与 Picker 双重拒绝重复切换，当前失败显示 danger 并提供同模式重试，无 staging URL 也必须进入可重试失败。新任务、清空或其他内容失效会取消 render Task、更新 render ID 并复位状态。启动时会扫描 `Application Support/ImageTranslations` 直属文件，分账接管带 Store marker 的稳定导出、`<task UUID>-<name>` 输入副本和 `.<base>-translated-<render UUID>.staging.png`，清理上次异常退出残留；普通后缀文件、wrong-kind、目录外、嵌套、escape、symlink 和 dangling symlink 一律拒绝。新任务、清空或模式重渲染会撤销公开 export URL 并删除当前 Store-owned 稳定导出；正常 input/staging 清理同样必须携带可信 workspace 与对应文件类型，删除失败也登记 orphan ownership。所有删除失败项都在后续生命周期继续重试。分享前由 Store 在 `ImageTranslationShares/<share UUID>/` 创建人类可读 `<base>-translated.png` 硬链接或副本，并公开 request-scoped `idle / preparing / failed` 状态；准备中禁用重复导出，当前请求失败覆盖翻译成功色调。Store request ID 与 View presentation ID 共同拒绝晚到结果和旧 Task 的 `nil` 回写，dismiss / export 失效 / View 离开与启动恢复统一清理分享目录并复位反馈，删除失败保留 ownership。
@@ -431,6 +432,7 @@ CI artifact version 优先从带 `vX.Y` 的候选 ref 解析；`smalldata_test` 
   -> ImageTranslationBlock
   -> 用户可在结果行修正单块 OCR 原文
   -> Store 以 correction ID + 图片 task ID + 旧原文快照隔离，只重译目标块
+  -> 首次修正私有保留 Vision OCR 基线；可无模型恢复基线并重新打开该风险块复查
   -> 成功后更新当前图片 transcript 并触发同模式导出重绘；失败保留旧 block 与导出
   -> 旁贴或覆盖 UI
   -> 同模式顶左坐标 PNG 导出

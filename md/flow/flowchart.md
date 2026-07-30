@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-当前正式版本：`3.21`。
+当前候选版本：`3.22`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -63,6 +63,8 @@ flowchart TD
   ICORRECTGATE -->|"否 / 翻译失败"| ICORRECTKEEP["保留旧 block / transcript / export"]
   ICORRECTGATE -->|"是"| ICORRECTCOMMIT["只重译目标 block<br/>更新当前图片 transcript<br/>撤销旧 export/share"]
   ICORRECTCOMMIT --> IRENDER
+  ICORRECTCOMMIT --> IRESTORE["已修正 block 的 44pt 恢复动作<br/>恢复 Vision OCR 原文 + 初始译文<br/>不调用模型，重新打开风险复查"]
+  IRESTORE --> IRENDER
   ISELECT --> IFOCUS["已下采样预览局部裁切<br/>保留上下文 + bbox 再标记<br/>44pt 关闭命令"]
   ISELECT --> ISCROLL["唯一 workspace anchor<br/>新选择滚回图片工作区<br/>Reduce Motion 立即定位"]
   IFOCUS --> INAV["当前筛选序列前后导航<br/>位置显示 + 首尾禁用<br/>44pt 命名按钮"]
