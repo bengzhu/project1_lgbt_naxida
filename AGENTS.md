@@ -20,7 +20,7 @@ AITRANS 是 SwiftUI iOS 本地 AI 翻译原型。当前重点是漫画截图 OCR
 - 当前内置最小模型是 `Gemma 3 270M IT QAT Q4_0`，适合验证下载、加载、接口和闪退风险，不适合作为翻译质量基准。
 - 更强小模型对比可以考虑 `Qwen2.5-0.5B-Instruct-GGUF q4_k_m`，但不要在没有任务要求时擅自更换模型。
 - GGUF 不进仓库。云端手动探针从 Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载并缓存 `gemma-3-270m-it-qat-Q4_0.gguf`，按 SHA256 校验后导入模拟器 App 沙盒。
-- 当前正式版本号 `3.33`：打开普通图片 OCR 的修正 sheet 时，`ImageTranslationPanel` 只在 View 私有、revision-scoped state 暂存发起结果行的关闭回退；取消、放弃未保存修正和无修改时交互式关闭均在 `onDismiss` 后才发布。成功修正／忽略会覆盖为既有下一块、完成态或忽略行目标；新图清空 pending，旧 sheet 不能抢焦点。v3.32 的恢复 Vision OCR confirmation 关闭后交接、v3.31 的成功修正返回、v3.30 的 sheet 关闭交接、v3.29 的误识别 block 忽略／恢复、v3.28 已复查 block ID 和 v3.27 局部对照能力仍保留。v3.26 CI receipt 传播规则不变，artifact 继续记录父 SHA、state 和元数据判定；传播路径不是新的 Swift/Xcode 编译证据。本版不改变 Store、Vision OCR、模型翻译、renderer/export、漫画探针或质量基线。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
+- 当前正式版本号 `3.34`：选中普通图片 OCR block 的 16:9 局部放大窗在关闭按钮下新增 44pt、可访问的“修正识别文字”铅笔入口；它只复用既有 View 修正 sheet，不触及 Store。入口沿用图片运行／导出禁用条件，`beginCorrection` 在登记 v3.33 的 View 私有、revision-scoped 结果行关闭回退并呈现 sheet 前，再确认 block 仍在当前活动集合。取消、放弃未保存修正和无修改时交互式关闭仍在 `onDismiss` 后回到结果行；成功修正／忽略继续覆盖为既有下一块、完成态或忽略行目标；新图清空 pending，旧 sheet 不能抢焦点。v3.32 的恢复 Vision OCR confirmation 关闭后交接、v3.31 的成功修正返回、v3.30 的 sheet 关闭交接、v3.29 的误识别 block 忽略／恢复、v3.28 已复查 block ID 和 v3.27 局部对照能力仍保留。v3.26 CI receipt 传播规则不变，artifact 继续记录父 SHA、state 和元数据判定；传播路径不是新的 Swift/Xcode 编译证据。本版不改变 Vision OCR、模型翻译、renderer/export、漫画探针或质量基线。仓库尚无真实 Koharu 四件套、Speech 音频或真实竖排图片 corpus，不声称 OCR、翻译或识别质量提升。
 - 当前 App bundle ID 是 `com.local.aitransform114`；云端探针必须从构建产物 `Info.plist` 动态读取，禁止在 workflow 再硬编码。
 - 当前可信基线以 `update_log.md`、`metrics/version_history.csv`、最新 `output/probe_report.json` 和 `output/clean_text_diagnostic.json` 为准，不在本入口长篇复制指标。
 
