@@ -227,6 +227,9 @@ private struct MangaProbeSection: View {
                     title: "probe_report summary",
                     text: "source=\(report.sourceImage)\nengine=\(report.engineUsed)\nblocks=\(report.totalBlocksDetected)\noverallPassed=\(report.overallPassed)\ndebug=\(report.outputFiles.debugBoxesImage)\noverlay=\(report.outputFiles.overlayImage)\nwarnings=\(report.warnings.joined(separator: " | "))"
                 )
+                if let readiness = report.externalArtifactReadinessReport {
+                    MangaKoharuArtifactReadinessSummary(readiness: readiness)
+                }
             }
 
             LazyVStack(spacing: 0) {
@@ -257,6 +260,66 @@ private struct MangaProbeSection: View {
         case .completed: .success
         case .failed: .danger
         }
+    }
+}
+
+private struct MangaKoharuArtifactReadinessSummary: View {
+    let readiness: MangaOverlayExternalArtifactReadinessReport
+
+    var body: some View {
+        AppStatusRow(title: statusTitle, detail: statusDetail, tone: statusTone)
+        DeveloperCodeBlock(title: "Koharu artifact readiness", text: summary)
+    }
+
+    private var statusTitle: String {
+        switch readiness.readinessVerdict {
+        case "readyForShadowOCR" where readiness.externalTextBoxesShadowOCRAllowed:
+            "真实 Koharu 工件已就绪（仅 shadow OCR）"
+        case "manifestMissing", "artifactFilesMissing":
+            "等待真实 Koharu 四件套"
+        default:
+            "Koharu 工件需要修正"
+        }
+    }
+
+    private var statusDetail: String {
+        let missing = readiness.missingArtifacts.isEmpty
+            ? "四件套已齐。"
+            : "缺少：\(readiness.missingArtifacts.joined(separator: "、"))。"
+        return "\(missing)\(nextActionDetail) 本摘要只读，仅影响探针 shadow OCR，不改变普通图片 OCR、翻译或覆盖图。"
+    }
+
+    private var statusTone: AppStatusTone {
+        switch readiness.readinessVerdict {
+        case "readyForShadowOCR" where readiness.externalTextBoxesShadowOCRAllowed:
+            .success
+        case "manifestMissing", "artifactFilesMissing":
+            .warning
+        default:
+            .danger
+        }
+    }
+
+    private var nextActionDetail: String {
+        switch readiness.nextAction {
+        case "stopUntilArtifactsProvided":
+            "请先提供真实 manifest、TextBoxes、BubbleMask 与 SegmentMask。"
+        case "stopUntilArtifactContractFixed":
+            "请先修正四件套契约、坐标或来源身份。"
+        case "stopUntilRealDetectorSourceDeclared":
+            "请先声明真实 detector / segmenter 来源；fixture 和 proxy 不能作为 active artifact。"
+        case "continueWithExternalTextBoxesShadowOCR":
+            "下一次探针可执行 external TextBoxes shadow OCR，结果仍只写入诊断输出。"
+        default:
+            "下一步：\(readiness.nextAction)。"
+        }
+    }
+
+    private var summary: String {
+        let missing = readiness.missingArtifacts.isEmpty ? "none" : readiness.missingArtifacts.joined(separator: ",")
+        let parseErrors = readiness.parseErrors.isEmpty ? "none" : readiness.parseErrors.joined(separator: " | ")
+        let notes = readiness.notes.isEmpty ? "none" : readiness.notes.joined(separator: " | ")
+        return "source=\(readiness.sourceImage)\nverdict=\(readiness.readinessVerdict)\nnextAction=\(readiness.nextAction)\nactiveArtifactsDirectory=\(readiness.activeArtifactsDirectory)\ncontractExampleOnly=\(readiness.contractExampleOnly)\nexternalTextBoxesShadowOCRAllowed=\(readiness.externalTextBoxesShadowOCRAllowed)\nmanifestFound=\(readiness.manifestFound)\ntextBoxesFound=\(readiness.textBoxesFound)\nbubbleMaskFound=\(readiness.bubbleMaskFound)\nsegmentMaskFound=\(readiness.segmentMaskFound)\nmissingArtifacts=\(missing)\nparseErrors=\(parseErrors)\ngeneratedBy=\(readiness.generatedBy ?? "n/a")\ntextBoxCount=\(readiness.textBoxCount)\nbubbleInstanceCount=\(readiness.bubbleInstanceCount)\nsegmentGlyphPixelCount=\(readiness.segmentGlyphPixelCount.map(String.init) ?? "n/a")\nnotes=\(notes)\nshadowOnly=true\nmainFlowChanged=false"
     }
 }
 
