@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.39：OCR 修正输入的滚动收起键盘
+日期：2026-07-31
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.39`。PR #103 已合入 `smalldata_test`，merge SHA `718dad537a3a1c989e58d0de663d235018768982`；远端 `codeb/v3.39-image-correction-scroll-dismiss` 已删除，未触碰 `main`。
+
+核心变更：
+
+- 审查 v3.38 的键盘控制后发现，虽然用户可用键盘工具栏“完成”或操作按钮收起键盘，但在较长的 OCR 修正内容中，向下滚动仍没有同文本页一致的交互式收起行为，可能遮挡下方保存／忽略操作。
+- `ImageOCRCorrectionSheet` 的既有 `Form` 新增 `.scrollDismissesKeyboard(.interactively)`；用户开始滚动时可渐进收起软件键盘。v3.38 的明确“完成”动作，以及取消、打开忽略确认、保存前的 `dismissKeyboard()` 均保留，形成互补而非替换。
+- 该改动仅作用于 View 键盘可见性：v3.37 的 `normalizedCorrectedOriginal`、v3.24 的语义修改弃改保护、v3.25 的“确认无误／保存并重译”分流、既有 Store correction 参数、图片 task／revision、v3.30–v3.35 的关闭后焦点交接和忽略／恢复路径均未改变。没有新增 Store、持久化、Vision OCR、模型、renderer/export、漫画探针、Koharu、ground truth、metrics 或 `output/` 行为。
+- 新增 `scripts/test-v339-image-ocr-correction-scroll-dismiss-contract.py`（4 项）并接入图片/UI fail-fast，锁定 `Form` 的滚动收起顺序、v3.38 既有显式收起入口、View-only 边界和 CI 路由。
+
+验证与遗留：
+
+- 本地轻量检查通过：v3.39 合同 `4/4`，v3.38 `4/4`、v3.37 `5/5`、v3.24 `6/6`、v3.25 `5/5`、v3.30／v3.33／v3.35 焦点回归合同、v1.87 UI 合同 `12/12`、v1.94 CI 分层 `10/10`、v1.97 版本身份 `5/5`、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、workflow YAML、版本解析 `v3.39` 与 `git diff --check`。源码合同不能替代真实滚动手势、第三方输入法、VoiceOver 或紧凑布局回放。
+- 候选 SHA `2bc3a0addd1293e88f0142b6657ef0490c99a769` 的 full run `30599440729` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.39-codeb-v3.39-image-correction-scroll-dismiss--2bc3a0addd12-run30599440729-attempt1` 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 均精确匹配。`xcodeBuildRequired=true`，`.xcresult` Build 为 succeeded、0 errors、0 warnings；JUnit `10/10`、0 failures；图片/UI、Speech、首页、粘贴与扩展 Koharu validator fixture 矩阵均通过，新 v3.39 合同 `4/4`。
+- PR #103 fast `30599720090` 成功，精确记录 `reusedFullValidationSha=2bc3a0addd1293e88f0142b6657ef0490c99a769` 与 `reusedFullValidationState=success`，并写明 `xcodeBuildRequired=false`、`fast_followup_reuses_candidate_full_validation`。合并后 fast `30599823729` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用同一候选 full receipt；两者均只作路由跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针数字、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。真实滚动、第三方输入法和 VoiceOver 行为仍需在设备／模拟器手工回放。
+
 ## v3.38：OCR 修正输入的键盘收起操作
 日期：2026-07-31
 
