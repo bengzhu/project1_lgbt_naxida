@@ -62,8 +62,7 @@ class ImageOCRRestoreConfirmationContractTests(unittest.TestCase):
             "private func requestVisionOCRRestore(for block: ImageTranslationBlock)",
         )
         self.assertIn("imageTranslationCorrectedBlockIDs.contains(block.id)", request)
-        self.assertIn("!isRunning", request)
-        self.assertIn("!isRenderingExport", request)
+        self.assertIn("canModifyImageTranslation", request)
         self.assertIn("restoreConfirmationBlock = block", request)
         self.assertNotIn("restoreImageTranslationBlockToVisionOCR", request)
 

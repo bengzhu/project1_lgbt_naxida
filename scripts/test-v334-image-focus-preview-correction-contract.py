@@ -43,7 +43,7 @@ class ImageFocusPreviewCorrectionContractTests(unittest.TestCase):
 
     def test_workspace_forwards_the_existing_correction_entry_and_same_availability_gate(self) -> None:
         workspace = braced_body(self.panel, "private var imageWorkspace: some View")
-        self.assertIn("canEdit: !isRunning && !isRenderingExport", workspace)
+        self.assertIn("canEdit: canModifyImageTranslation", workspace)
         self.assertIn(
             "editBlock: { beginCorrectionFromFocusPreview(of: $0) }",
             workspace,
@@ -83,8 +83,7 @@ class ImageFocusPreviewCorrectionContractTests(unittest.TestCase):
             "private func beginCorrection(of block: ImageTranslationBlock)",
         )
         for marker in [
-            "guard !isRunning",
-            "!isRenderingExport",
+            "guard canModifyImageTranslation",
             "store.imageTranslationBlocks.contains(where: { $0.id == block.id })",
             "moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(",
             "editingImageTranslationBlock = block",

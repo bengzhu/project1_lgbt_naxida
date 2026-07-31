@@ -84,7 +84,10 @@ class ImageRenderFeedbackContractTests(unittest.TestCase):
 
     def test_view_prioritizes_render_feedback_and_disables_picker(self) -> None:
         view = read("AITRANS/Views/ImageTranslationViews.swift")
-        self.assertIn("isRunning || isRenderingExport", view)
+        can_modify = function_body(view, "private var canModifyImageTranslation: Bool")
+        self.assertIn("store.imageTranslationState == .translated", can_modify)
+        self.assertIn("!isRenderingExport", can_modify)
+        self.assertIn(".disabled(!canModifyImageTranslation)", view)
         self.assertIn('case .rendering: return "正在更新导出图"', view)
         self.assertIn('case .failed: return "导出图生成失败"', view)
         self.assertIn("case .failed(let message): return message", view)

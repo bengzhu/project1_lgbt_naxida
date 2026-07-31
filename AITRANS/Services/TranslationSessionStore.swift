@@ -1628,7 +1628,8 @@ final class TranslationSessionStore: ObservableObject {
 
     @discardableResult
     func markImageTranslationBlockReviewed(_ blockID: UUID) -> Bool {
-        guard let block = imageTranslationBlocks.first(where: { $0.id == blockID }),
+        guard imageTranslationState == .translated,
+              let block = imageTranslationBlocks.first(where: { $0.id == blockID }),
               ImageOCRResultSummary.requiresReview(block) else {
             return false
         }
@@ -1638,7 +1639,8 @@ final class TranslationSessionStore: ObservableObject {
 
     @discardableResult
     func reopenImageTranslationBlockReview(_ blockID: UUID) -> Bool {
-        guard let block = imageTranslationBlocks.first(where: { $0.id == blockID }),
+        guard imageTranslationState == .translated,
+              let block = imageTranslationBlocks.first(where: { $0.id == blockID }),
               ImageOCRResultSummary.requiresReview(block),
               imageTranslationReviewedBlockIDs.remove(blockID) != nil else {
             return false
@@ -1647,6 +1649,7 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func resetImageTranslationReviewProgress() {
+        guard imageTranslationState == .translated else { return }
         imageTranslationReviewedBlockIDs = []
     }
 
@@ -1762,10 +1765,10 @@ final class TranslationSessionStore: ObservableObject {
             correctedBlock.translation = correctedTranslation
             imageTranslationBlocks[currentIndex] = correctedBlock
             imageTranslationCorrectedBlockIDs.insert(blockID)
-            markImageTranslationBlockReviewed(blockID)
             imageTranslationCorrectionBlockID = nil
             imageTranslationCorrectionMessage = nil
             imageTranslationState = .translated
+            markImageTranslationBlockReviewed(blockID)
             imageTranslationMessage = "文字已修正，正在更新导出图"
             updateImageTranslationTranscript(blocks: imageTranslationBlocks)
             invalidateImageOverlayRender()
