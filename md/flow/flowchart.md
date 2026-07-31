@@ -59,7 +59,7 @@ flowchart TD
   IQUALITY --> ISELECT["View 私有 block 选择<br/>结果行取景框 + 预览覆盖高亮<br/>revision / 隐藏筛选清除"]
   IQUALITY --> IA11Y["VoiceOver 连续复查焦点<br/>行 / 局部放大 / 完成态分流<br/>revision 拒收旧焦点"]
   IQUALITY --> ICORRECT["44pt 人工修正<br/>非空校验 + 保存中锁定"]
-  ICORRECT -. "打开修正页：先登记结果行关闭回退" .-> IA11YHANDOFF
+  ICORRECT -. "打开修正页：结果行入口登记结果行回退；局部预览入口登记同一局部预览回退" .-> IA11YHANDOFF
   ICORRECT --> ICORRECTCONTEXT["修正 sheet 局部对照<br/>既有 2048px 预览裁切 + 黄色 bbox<br/>低置信 / 方向待定提示；失败不阻止编辑"]
   ICORRECTCONTEXT -. "取消 / 放弃修正 / 无修改下滑关闭" .-> IA11YHANDOFF
   ICORRECTCONTEXT --> IIGNORECONFIRM["识别有误？<br/>忽略文字块的明确确认<br/>未保存修正不会保存"]
@@ -82,7 +82,7 @@ flowchart TD
   IRESTORE --> IRESTOREA11Y["View 私有确认框关闭后焦点交接<br/>isPresented 关闭 + revision 核对后才发布"]
   IRESTOREA11Y -. "复用既有 revision/yield 焦点发布" .-> IA11Y
   ISELECT --> IFOCUS["已下采样预览局部裁切<br/>保留上下文 + bbox 再标记<br/>44pt 关闭 + 修正命令"]
-  IFOCUS -->|"44pt 直接修正；忙碌 / stale 时拒绝"| ICORRECT
+  IFOCUS -->|"44pt 直接修正；忙碌 / stale 时拒绝<br/>非成功 onDismiss 回到同一局部预览"| ICORRECT
   ISELECT --> ISCROLL["唯一 workspace anchor<br/>新选择滚回图片工作区<br/>Reduce Motion 立即定位"]
   IFOCUS --> INAV["当前筛选序列前后导航<br/>位置显示 + 首尾禁用<br/>44pt 命名按钮"]
   IFOCUS -. "只联动展示；完整 blocks 不变" .-> IPREVIEW

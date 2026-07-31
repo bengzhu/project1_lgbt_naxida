@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.35：局部 OCR 修正后的原位焦点返回
+日期：2026-07-31
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.35`。PR #99 已合入 `smalldata_test`，merge SHA `f85edddd2582f4de70767da9838155721211a9a4`；远端 `codeb/v3.35-image-focus-preview-return` 已删除，未触碰 `main`。
+
+核心变更：
+
+- 审查 v3.34 的局部 OCR 修正入口后发现，取消、放弃未保存修正或无修改关闭虽然安全地等待 sheet 完整关闭，却统一把焦点带回结果行，丢失了用户从局部预览发起编辑的上下文。
+- `ImageTranslationPanel` 新增 View 私有 `beginCorrectionFromFocusPreview(of:)`。它与结果行 `beginCorrection(of:)` 共享 `!isRunning`、`!isRenderingExport` 和当前活动 block guard，却在呈现既有 sheet 前登记 `reviewPreviewAccessibilityFocusID(block.id)`；结果行入口保持登记 `reviewRowAccessibilityFocusID(block.id)`。
+- 非成功关闭仍只通过既有 revision-checked `sheet(item:onDismiss:)` 发布 fallback；成功修正、确认无误或忽略继续在 sheet 关闭前覆盖为既有下一块、完成态或忽略行目标，图片 revision 改变继续清空 sheet、pending 与已发布焦点。本版不改 Store、Vision OCR、模型翻译、renderer/export、漫画探针、Koharu 主路径、ground truth、metrics 或 `output/`。
+- 新增 v3.35 图片/UI 源码合同并接入 CI 路由；v3.34 合同同步改为只锁定局部入口、共享 guard 与 View 私有转交，不再把已过时的结果行 fallback 当作局部入口行为。源码合同验证所有权与静态路径，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+验证与遗留：
+
+- 本地轻量检查通过：v3.30-v3.35 图片/UI 合同分别为 6/6、5/5、6/6、6/6、6/6、6/6（共 35 项），v1.94 CI 分层合同 10/10、v1.97 版本身份合同 5/5、`git diff --check`、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、workflow YAML 与 ground truth / 既有 output JSON smoke。
+- 候选 SHA `f9bd49206fbe9f97f6f5b988c6abdaf8d8fcf34f` 的 full run `30595866325` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.35-codeb-v3.35-image-focus-preview-return--f9bd49206fbe-run30595866325-attempt1` 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full` 和 `validationReason=candidate_development_push` 均精确匹配。`.xcresult` Build 为 succeeded、0 errors、0 warnings；JUnit `10/10`、0 failures；图片/UI 合同（含 v3.35）与所需静态、Speech、首页、粘贴和 Koharu contract 均通过。
+- PR #99 fast `30596172257` 成功，精确记录 `reusedFullValidationSha=f9bd49206fbe9f97f6f5b988c6abdaf8d8fcf34f` 与 `reusedFullValidationState=success`；合并后 fast `30596224218` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，以 `receiptPropagationAllowed=true` 传播候选 successful receipt。两者均只作路由跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针指标或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；full artifact 的 active Koharu gate 为 `manifestMissing / stopUntilArtifactsProvided`。源码合同不能替代真机／模拟器的实际 VoiceOver、局部窗紧凑布局或连续手势回放。
+
 ## v3.34：局部 OCR 放大窗直接修正
 日期：2026-07-31
 
