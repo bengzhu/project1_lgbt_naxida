@@ -1939,6 +1939,7 @@ private struct ImageOCRCorrectionSheet: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .focused($correctedOriginalFocused)
+                        .disabled(isSaving)
                 }
 
                 Section("当前翻译") {
