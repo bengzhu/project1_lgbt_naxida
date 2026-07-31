@@ -89,10 +89,7 @@ class ImageCommandAccessibilityContractTests(unittest.TestCase):
     def test_ci_runs_v347_after_v346(self) -> None:
         old = "python3 -B scripts/test-v346-image-preview-status-accessibility-contract.py"
         new = "python3 -B scripts/test-v347-image-command-accessibility-contract.py"
-        route = (
-            "if grep -Fx 'scripts/test-v347-image-command-accessibility-contract.py' "
-            '"$RESULT_ROOT/changed-files.txt" >/dev/null; then'
-        )
+        route = "grep -E '^scripts/test-v3(47|48)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))

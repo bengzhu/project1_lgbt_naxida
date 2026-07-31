@@ -71,10 +71,7 @@ class ImagePreviewContextAccessibilityContractTests(unittest.TestCase):
         self.assertNotIn("MARKETING_VERSION = 3.47;", self.project)
         old = "python3 -B scripts/test-v347-image-command-accessibility-contract.py"
         new = "python3 -B scripts/test-v348-image-preview-context-accessibility-contract.py"
-        route = (
-            "if grep -Fx 'scripts/test-v348-image-preview-context-accessibility-contract.py' "
-            '"$RESULT_ROOT/changed-files.txt" >/dev/null; then'
-        )
+        route = "grep -E '^scripts/test-v3(47|48)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
