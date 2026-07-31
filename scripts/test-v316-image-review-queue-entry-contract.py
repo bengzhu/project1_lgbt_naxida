@@ -38,7 +38,7 @@ class ImageReviewQueueEntryContractTests(unittest.TestCase):
         self.assertIn("action: beginReviewQueue", self.view)
         self.assertIn(".disabled(!canReviewImageTranslation)", self.view)
         self.assertIn('"显示待复查结果并定位当前或第一个文字块"', self.view)
-        self.assertIn('"图片翻译完成后可开始复查"', self.view)
+        self.assertIn(": imageReviewUnavailableDetail", self.view)
 
     def test_review_queue_uses_the_shared_product_review_filter(self) -> None:
         review_blocks = braced_body(

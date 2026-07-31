@@ -58,25 +58,28 @@ class ImageReviewFinalStateLockContractTests(unittest.TestCase):
 
         inspector = braced_body(self.panel, "private var inspector: some View")
         self.assertGreaterEqual(inspector.count(".disabled(!canReviewImageTranslation)"), 2)
-        self.assertIn("图片翻译完成后可开始复查", inspector)
-        self.assertIn("图片翻译完成后可重新开始复查", inspector)
+        self.assertGreaterEqual(inspector.count(": imageReviewUnavailableDetail"), 2)
         self.assertIn("canEdit: canModifyImageTranslation", inspector)
         self.assertIn("canReview: canReviewImageTranslation", inspector)
         self.assertIn("canRestore: canModifyImageTranslation", inspector)
 
         preview = braced_body(self.view, "private struct ImageTranslationPreview: View")
         self.assertIn("let canReview: Bool", preview)
+        self.assertIn("let reviewUnavailableHint: String", preview)
         self.assertIn("canReview: canReview", preview)
+        self.assertIn("reviewUnavailableHint: reviewUnavailableHint", preview)
 
         focus = braced_body(self.view, "private struct ImageTranslationFocusPreview: View")
         self.assertIn("let canReview: Bool", focus)
+        self.assertIn("let reviewUnavailableHint: String", focus)
         self.assertIn(".disabled(!canReview)", focus)
-        self.assertIn("图片翻译完成后可更新复查进度", focus)
+        self.assertIn(": reviewUnavailableHint", focus)
 
         row = braced_body(self.view, "private struct ImageTranslationBlockRow: View")
         self.assertIn("let canReview: Bool", row)
+        self.assertIn("let reviewUnavailableHint: String", row)
         self.assertIn(".disabled(!canReview)", row)
-        self.assertIn("图片翻译完成后可更新复查进度", row)
+        self.assertIn(": reviewUnavailableHint", row)
 
     def test_panel_and_store_reject_premature_review_progress_mutation(self) -> None:
         for marker in [
