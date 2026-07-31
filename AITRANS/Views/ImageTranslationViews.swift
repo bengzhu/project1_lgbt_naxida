@@ -1706,6 +1706,7 @@ private struct ImageTranslationFocusPreview: View {
                     .background(Color.black.opacity(0.82), in: Circle())
                     .disabled(!canSelectPrevious)
                     .opacity(canSelectPrevious ? 1 : 0.35)
+                    .accessibilityValue(navigationPositionAccessibilityValue)
                     .accessibilityHint(
                         canSelectPrevious
                             ? "定位上一个文字块"
@@ -1717,6 +1718,7 @@ private struct ImageTranslationFocusPreview: View {
                     .background(Color.black.opacity(0.82), in: Circle())
                     .disabled(!canSelectNext)
                     .opacity(canSelectNext ? 1 : 0.35)
+                    .accessibilityValue(navigationPositionAccessibilityValue)
                     .accessibilityHint(
                         canSelectNext
                             ? "定位下一个文字块"
@@ -1732,6 +1734,10 @@ private struct ImageTranslationFocusPreview: View {
             accessibilityFocus,
             equals: "image-review-preview-\(block.id.uuidString)"
         )
+    }
+
+    private var navigationPositionAccessibilityValue: String {
+        positionText.isEmpty ? "未显示筛选位置" : "当前位置 \(positionText)"
     }
 
     private var focusCrop: ImageTranslationBlockFocusCrop? {
