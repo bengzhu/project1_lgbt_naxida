@@ -1049,27 +1049,33 @@ private struct ImageCommandBar: View {
         if store.isProUnlocked {
             PhotoPickerCommand(
                 title: store.imageTranslationData == nil ? "选择照片" : "更换照片",
+                accessibilityHint: imageSelectionAccessibilityHint,
                 selection: $selectedPhotoItem
             )
 
             AppSecondaryButton(title: "图片文件", systemImage: "folder", action: openImporter)
+                .accessibilityHint("从文件选择图片并开始本机 OCR 与翻译")
         } else {
             AppSecondaryButton(
                 title: store.imageTranslationData == nil ? "选择照片" : "更换照片",
                 systemImage: "lock.fill",
                 action: requestImageTranslationAccess
             )
+            .accessibilityHint("图片翻译需要 Pro；不会修改当前图片或文本页语言")
             AppSecondaryButton(
                 title: "图片文件",
                 systemImage: "lock.fill",
                 action: requestImageTranslationAccess
             )
+            .accessibilityHint("图片翻译需要 Pro；不会修改当前图片或文本页语言")
         }
 
         if isRunning {
             AppSecondaryButton(title: "取消", systemImage: "xmark.circle.fill", tone: .danger, action: store.cancelImageTranslation)
+                .accessibilityHint("取消当前图片读取、OCR 或翻译；保留已载入图片以便重试")
         } else if store.canRetryImageTranslation {
             AppSecondaryButton(title: "重试", systemImage: "arrow.clockwise", tone: .warning, action: store.retryImageTranslation)
+                .accessibilityHint("使用当前重试语言重新识别并翻译这张图片")
         }
 
         if store.canRerunImageRecognition {
@@ -1078,6 +1084,7 @@ private struct ImageCommandBar: View {
                 systemImage: "text.viewfinder",
                 action: store.rerunImageRecognition
             )
+            .accessibilityHint("使用当前图片语言重新运行 Vision OCR，并重新翻译识别到的文字")
         }
 
         if hasRenderFailure {
@@ -1087,6 +1094,7 @@ private struct ImageCommandBar: View {
                 tone: .warning,
                 action: store.retryImageTranslationExportRender
             )
+            .accessibilityHint("重新生成旁贴或覆盖导出图；不会重新识别或翻译图片")
         }
 
         if store.imageTranslationExportURL != nil {
@@ -1097,6 +1105,11 @@ private struct ImageCommandBar: View {
                 action: shareResult
             )
             .disabled(isPreparingShare)
+            .accessibilityHint(
+                isPreparingShare
+                    ? "导出图正在准备分享"
+                    : "准备当前图片导出图并打开分享"
+            )
         }
 
         if store.imageTranslationData != nil {
@@ -1106,7 +1119,14 @@ private struct ImageCommandBar: View {
                 tone: .danger,
                 action: requestClearImageTranslation
             )
+            .accessibilityHint("请求确认后删除当前图片、识别结果、译文和导出文件")
         }
+    }
+
+    private var imageSelectionAccessibilityHint: String {
+        store.imageTranslationData == nil
+            ? "从照片图库选择图片并开始本机 OCR 与翻译"
+            : "更换当前图片并开始新的本机 OCR 与翻译"
     }
 
     private var isRunning: Bool {
@@ -1138,6 +1158,7 @@ private struct ImageCommandBar: View {
 
 private struct PhotoPickerCommand: View {
     let title: String
+    let accessibilityHint: String
     @Binding var selection: PhotosPickerItem?
 
     var body: some View {
@@ -1149,6 +1170,7 @@ private struct PhotoPickerCommand: View {
                 .foregroundStyle(Color.appCanvas)
                 .background(Color.appAccent, in: .rect(cornerRadius: AppTheme.Radius.control))
         }
+        .accessibilityHint(accessibilityHint)
     }
 }
 

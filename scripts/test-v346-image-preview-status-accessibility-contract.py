@@ -53,8 +53,8 @@ class ImagePreviewStatusAccessibilityContractTests(unittest.TestCase):
         self.assertIn("previewAttempt += 1", preview)
 
     def test_version_is_bumped_consistently(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.46;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.45;", self.project)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.46;", self.project)
 
     def test_ci_runs_v346_after_v345(self) -> None:
         old = "python3 -B scripts/test-v345-image-overlay-accessibility-contract.py"
