@@ -68,16 +68,19 @@ class ImageActionLockFeedbackContractTests(unittest.TestCase):
         inspector = braced_body(self.panel, "private var inspector: some View")
         self.assertIn("? \"选择译文以旁贴或覆盖方式呈现\"", inspector)
         self.assertIn(": imageModificationUnavailableDetail", inspector)
+        self.assertIn("modificationUnavailableHint: imageModificationUnavailableDetail", inspector)
+        self.assertIn("reviewUnavailableHint: imageReviewUnavailableDetail", inspector)
 
         focus = braced_body(self.view, "private struct ImageTranslationFocusPreview: View")
-        self.assertIn("图片翻译完成且导出图更新结束后可修正当前文字块", focus)
+        self.assertIn(": modificationUnavailableHint", focus)
+        self.assertIn(": reviewUnavailableHint", focus)
 
         row = braced_body(self.view, "private struct ImageTranslationBlockRow: View")
-        self.assertIn("图片翻译完成且导出图更新结束后可修正当前文字块", row)
-        self.assertIn("图片翻译完成且导出图更新结束后可恢复此文字块的 OCR 结果", row)
+        self.assertGreaterEqual(row.count(": modificationUnavailableHint"), 2)
+        self.assertIn(": reviewUnavailableHint", row)
 
         ignored = braced_body(self.view, "private struct ImageTranslationIgnoredBlockRow: View")
-        self.assertIn("图片翻译完成且导出图更新结束后可恢复此文字块", ignored)
+        self.assertIn(": modificationUnavailableHint", ignored)
 
     def test_version_is_bumped_consistently(self) -> None:
         self.assertEqual(self.project.count("MARKETING_VERSION = 3.42;"), 2)

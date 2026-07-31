@@ -182,6 +182,8 @@ struct ImageTranslationPanel: View {
                 reviewedBlockIDs: store.imageTranslationReviewedBlockIDs,
                 canEdit: canModifyImageTranslation,
                 canReview: canReviewImageTranslation,
+                modificationUnavailableHint: imageModificationUnavailableDetail,
+                reviewUnavailableHint: imageReviewUnavailableDetail,
                 accessibilityFocus: $reviewAccessibilityFocusID,
                 selectBlock: selectBlockFromPreview,
                 clearSelection: { selectedImageTranslationBlockID = nil },
@@ -352,6 +354,8 @@ struct ImageTranslationPanel: View {
                             isManuallyCorrected: store.imageTranslationCorrectedBlockIDs.contains(block.id),
                             canEdit: canModifyImageTranslation,
                             canReview: canReviewImageTranslation,
+                            modificationUnavailableHint: imageModificationUnavailableDetail,
+                            reviewUnavailableHint: imageReviewUnavailableDetail,
                             accessibilityFocus: $reviewAccessibilityFocusID,
                             select: { toggleSelection(of: block.id) },
                             edit: { beginCorrection(of: block) },
@@ -376,6 +380,7 @@ struct ImageTranslationPanel: View {
                         ImageTranslationIgnoredBlockRow(
                             block: block,
                             canRestore: canModifyImageTranslation,
+                            modificationUnavailableHint: imageModificationUnavailableDetail,
                             accessibilityFocus: $reviewAccessibilityFocusID,
                             restore: { restoreIgnoredImageTranslationBlock(block) }
                         )
@@ -1168,6 +1173,8 @@ private struct ImageTranslationPreview: View {
     let reviewedBlockIDs: Set<UUID>
     let canEdit: Bool
     let canReview: Bool
+    let modificationUnavailableHint: String
+    let reviewUnavailableHint: String
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let selectBlock: (UUID) -> Void
     let clearSelection: () -> Void
@@ -1220,6 +1227,8 @@ private struct ImageTranslationPreview: View {
                                 isReviewCompleted: reviewedBlockIDs.contains(selectedBlock.id),
                                 canEdit: canEdit,
                                 canReview: canReview,
+                                modificationUnavailableHint: modificationUnavailableHint,
+                                reviewUnavailableHint: reviewUnavailableHint,
                                 accessibilityFocus: accessibilityFocus,
                                 close: clearSelection,
                                 selectPrevious: selectPrevious,
@@ -1579,6 +1588,8 @@ private struct ImageTranslationFocusPreview: View {
     let isReviewCompleted: Bool
     let canEdit: Bool
     let canReview: Bool
+    let modificationUnavailableHint: String
+    let reviewUnavailableHint: String
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let close: () -> Void
     let selectPrevious: () -> Void
@@ -1657,7 +1668,7 @@ private struct ImageTranslationFocusPreview: View {
                     .accessibilityHint(
                         canEdit
                             ? "打开当前文字块的 OCR 修正页面"
-                            : "图片翻译完成且导出图更新结束后可修正当前文字块"
+                            : modificationUnavailableHint
                     )
             }
         }
@@ -1686,7 +1697,7 @@ private struct ImageTranslationFocusPreview: View {
                     .accessibilityHint(
                         canReview
                             ? (isReviewCompleted ? "把当前文字块放回待复查队列" : "标记完成并定位下一个待复查文字块")
-                            : "图片翻译完成后可更新复查进度"
+                            : reviewUnavailableHint
                     )
                 }
                 Button("上一个文字块", systemImage: "chevron.left", action: selectPrevious)
@@ -1833,6 +1844,8 @@ private struct ImageTranslationBlockRow: View {
     let isManuallyCorrected: Bool
     let canEdit: Bool
     let canReview: Bool
+    let modificationUnavailableHint: String
+    let reviewUnavailableHint: String
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let select: () -> Void
     let edit: () -> Void
@@ -1906,7 +1919,7 @@ private struct ImageTranslationBlockRow: View {
                     .accessibilityHint(
                         canEdit
                             ? "编辑 OCR 原文并只重新翻译此文字块"
-                            : "图片翻译完成且导出图更新结束后可修正当前文字块"
+                            : modificationUnavailableHint
                     )
 
                 if isManuallyCorrected {
@@ -1918,7 +1931,7 @@ private struct ImageTranslationBlockRow: View {
                         .accessibilityHint(
                             canEdit
                                 ? "恢复此文字块的 Vision OCR 原文与初始译文"
-                                : "图片翻译完成且导出图更新结束后可恢复此文字块的 OCR 结果"
+                                : modificationUnavailableHint
                         )
                 }
 
@@ -1937,7 +1950,7 @@ private struct ImageTranslationBlockRow: View {
                             ? (isReviewCompleted
                                 ? "把此文字块放回待复查队列并定位"
                                 : "标记完成并定位下一个待复查文字块")
-                            : "图片翻译完成后可更新复查进度"
+                            : reviewUnavailableHint
                     )
                 }
             }
@@ -1951,6 +1964,7 @@ private struct ImageTranslationBlockRow: View {
 private struct ImageTranslationIgnoredBlockRow: View {
     let block: ImageTranslationBlock
     let canRestore: Bool
+    let modificationUnavailableHint: String
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let restore: () -> Void
 
@@ -1982,7 +1996,7 @@ private struct ImageTranslationIgnoredBlockRow: View {
                 .accessibilityHint(
                     canRestore
                         ? "恢复到图片预览、导出和当前转录；需要复查的文字块会重新回到待复查队列"
-                        : "图片翻译完成且导出图更新结束后可恢复此文字块"
+                        : modificationUnavailableHint
                 )
                 .accessibilityFocused(
                     accessibilityFocus,
