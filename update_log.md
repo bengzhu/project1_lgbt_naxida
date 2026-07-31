@@ -8,6 +8,24 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.44：图片导航当前位置的 VoiceOver 上下文
+日期：2026-07-31
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.44`。PR #108 已合入 `smalldata_test`，merge SHA `eaa48e6258e3185136e16d0aebb378c370d41098`；远端 `codeb/v3.44-image-navigation-position-a11y` 已删除，未触碰 `main`。
+
+核心变更：
+
+- v3.43 已让图片局部预览的前后按钮在筛选首尾读出边界原因，但用户仍只能听到“上一个／下一个”及首尾提示，不一定知道当前位于筛选序列的第几个 block。
+- `ImageTranslationFocusPreview` 新增 View 私有 `navigationPositionAccessibilityValue`，由既有 `positionText` 生成“当前位置 1 / 3”一类 accessibility value；没有位置时明确读出“未显示筛选位置”。前后两个导航按钮共享该 value，同时保留 v3.43 的 disabled 边界与动态 hint。该 value 不创建 Store／持久化／选择状态，也不改变导航 action、OCR、翻译、renderer/export 或焦点交接。
+- 新增 `scripts/test-v344-image-navigation-position-accessibility-contract.py`（4 项）并接入 UI interaction fail-fast；历史 v3.43 版本合同改为拒绝旧版本 literal、允许后续 `3.x` 版本继续回归。
+
+验证与遗留：
+
+- 本地轻量检查通过：v3.41 `5/5`、v3.42 `4/4`、v3.43 `4/4`、v3.44 `4/4`、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、版本解析 `v3.44`、workflow YAML 与 `git diff --check`。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、焦点边界或连续手势回放。
+- 候选 SHA `fef1f344c47fd5e2cbd3d3cfa3f9fd863ea4cdb6` 的 full run `30637695406` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full` 与 `validationReason=candidate_development_push` 均精确匹配。`xcodeBuildRequired=true`、Xcode build 成功，`.xcresult` 已附带；JUnit `10/10`、0 failures，UI interaction contract 成功，新 v3.44 合同 `4/4`。
+- PR #108 fast `30638258336` 成功，精确记录 `reusedFullValidationSha=fef1f344c47fd5e2cbd3d3cfa3f9fd863ea4cdb6`、`reusedFullValidationState=success` 与 `xcodeBuildSkippedReason=fast_followup_reuses_candidate_full_validation`。合并后 fast `30638309096` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true` 并复用同一候选 full receipt；两者均是 fast 路由／静态跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针数字、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.43：图片导航边界与定位状态的 VoiceOver 反馈
 日期：2026-07-31
 
