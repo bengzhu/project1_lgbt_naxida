@@ -186,7 +186,7 @@ struct ImageTranslationPanel: View {
                 clearSelection: { selectedImageTranslationBlockID = nil },
                 selectPrevious: { selectAdjacentBlock(offset: -1) },
                 selectNext: { selectAdjacentBlock(offset: 1) },
-                editBlock: { beginCorrection(of: $0) },
+                editBlock: { beginCorrectionFromFocusPreview(of: $0) },
                 toggleReviewCompletion: { blockID in
                     toggleReviewCompletion(blockID, focusInPreview: true)
                 }
@@ -428,6 +428,19 @@ struct ImageTranslationPanel: View {
         selectedImageTranslationBlockID = block.id
         moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
             to: reviewRowAccessibilityFocusID(block.id)
+        )
+        editingImageTranslationBlock = block
+    }
+
+    private func beginCorrectionFromFocusPreview(of block: ImageTranslationBlock) {
+        guard !isRunning,
+              !isRenderingExport,
+              store.imageTranslationBlocks.contains(where: { $0.id == block.id }) else {
+            return
+        }
+        selectedImageTranslationBlockID = block.id
+        moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
+            to: reviewPreviewAccessibilityFocusID(block.id)
         )
         editingImageTranslationBlock = block
     }
