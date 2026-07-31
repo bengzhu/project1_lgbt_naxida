@@ -34,16 +34,24 @@ class ImageOCRCorrectionDiscardConfirmationContractTests(unittest.TestCase):
             "private struct ImageOCRCorrectionSheet: View",
         )
 
-    def test_editor_tracks_unsaved_original_text_locally(self) -> None:
+    def test_editor_tracks_normalized_unsaved_text_locally(self) -> None:
         self.assertIn(
             "@State private var showDiscardCorrectionConfirmation = false",
             self.editor,
+        )
+        normalized = braced_body(
+            self.editor,
+            "private var normalizedCorrectedOriginal: String",
+        )
+        self.assertIn(
+            "correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines)",
+            normalized,
         )
         unsaved_changes = braced_body(
             self.editor,
             "private var hasUnsavedChanges: Bool",
         )
-        self.assertIn("correctedOriginal != block.original", unsaved_changes)
+        self.assertIn("normalizedCorrectedOriginal != block.original", unsaved_changes)
 
     def test_cancel_requests_confirmation_only_for_unsaved_changes(self) -> None:
         self.assertIn('Button("取消", action: requestDismiss)', self.editor)

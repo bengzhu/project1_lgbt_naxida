@@ -49,12 +49,20 @@ class ImageOCRCorrectionConfirmationActionContractTests(unittest.TestCase):
         self.assertNotIn("translate(", unchanged_body)
 
     def test_editor_uses_store_equivalent_normalized_retranslation_decision(self) -> None:
+        normalized = braced_body(
+            self.editor,
+            "private var normalizedCorrectedOriginal: String",
+        )
+        self.assertIn(
+            "correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines)",
+            normalized,
+        )
         decision = braced_body(
             self.editor,
             "private var requiresRetranslation: Bool",
         )
         self.assertIn(
-            "correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines) != block.original",
+            "normalizedCorrectedOriginal != block.original",
             decision,
         )
 
@@ -72,7 +80,10 @@ class ImageOCRCorrectionConfirmationActionContractTests(unittest.TestCase):
 
     def test_save_path_still_completes_the_existing_sheet_flow(self) -> None:
         save = braced_body(self.editor, "private func save()")
-        self.assertIn("store.correctImageTranslationBlock(block.id, original: correctedOriginal)", save)
+        self.assertIn(
+            "store.correctImageTranslationBlock(block.id, original: normalizedCorrectedOriginal)",
+            save,
+        )
         self.assertIn("didSave()", save)
         self.assertIn("dismiss()", save)
         self.assertLess(save.index("didSave()"), save.index("dismiss()"))
