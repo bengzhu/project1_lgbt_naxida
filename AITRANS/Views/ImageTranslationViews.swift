@@ -1964,6 +1964,7 @@ private struct ImageOCRCorrectionSheet: View {
                     }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("修正识别文字")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
