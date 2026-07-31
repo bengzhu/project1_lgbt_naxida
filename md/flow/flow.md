@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前正式版本：`3.37`。普通图片的 `ImageOCRCorrectionSheet` 先将编辑文本收敛为 View 私有 `normalizedCorrectedOriginal`；可保存性、dirty 判断、是否需要重译和传给既有 Store correction 的参数均使用它，与 Store 的 trim-before-no-op 分支完全一致。`trim` 后仍等于当前原文时，sheet 因此保持“确认无误”、不锁定交互式关闭、不显示放弃确认，也不调用模型；真正语义改动仍走 v3.24 弃改保护、只重译目标 block 和 v3.30–v3.35 revision-scoped `onDismiss` 焦点交接。该改动不创建 Store／持久化状态，不改 Vision OCR、模型、renderer/export、漫画探针、Koharu 主路径或质量基线。v3.36 的 `MangaKoharuArtifactReadinessSummary` 仍只读既有 report，ready 仍只代表下次探针可尝试 shadow OCR，不是 App-side coverage、真机 UI 或质量证据。v3.26 CI receipt 传播规则不变；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
+当前正式版本：`3.38`。普通图片的 `ImageOCRCorrectionSheet` 先将编辑文本收敛为 View 私有 `normalizedCorrectedOriginal`；可保存性、dirty 判断、是否需要重译和传给既有 Store correction 的参数均使用它，与 Store 的 trim-before-no-op 分支完全一致。`trim` 后仍等于当前原文时，sheet 保持“确认无误”、不锁定交互式关闭、不显示放弃确认，也不调用模型；真正语义改动仍走 v3.24 弃改保护、只重译目标 block 和 v3.30–v3.35 revision-scoped `onDismiss` 焦点交接。v3.38 的同一 sheet 还用 View 私有 `@FocusState correctedOriginalFocused` 管理多行输入；键盘“完成”及取消、打开忽略确认、保存前都只清除该焦点，避免键盘遮挡操作，不改变 dirty／Store／关闭后焦点语义。该改动不创建 Store／持久化状态，不改 Vision OCR、模型、renderer/export、漫画探针、Koharu 主路径或质量基线。v3.36 的 `MangaKoharuArtifactReadinessSummary` 仍只读既有 report，ready 仍只代表下次探针可尝试 shadow OCR，不是 App-side coverage、真机 UI 或质量证据。v3.26 CI receipt 传播规则不变；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
 
 当前布局：
 
@@ -82,7 +82,7 @@
 - `AppTheme` 提供语义颜色、间距、圆角、动效、触控和宽度 token；`AppComponents` 提供页头、区段、状态、按钮、空状态、指标和页面宽度原语。
 - 日间/夜间颜色来自 `Assets.xcassets` 的 luminosity variants；`AppAppearance` 通过 `AppStorage` 选择跟随系统、日间或夜间，不进入业务 `state.json`。
 - 所有业务按钮只调用 store 公开方法；UI 不直接操作 `state.json`、模型 runtime、Speech task、Vision OCR 或漫画探针服务。
-- OCR 修正 sheet 的首尾空白归一化仅存在于 View 私有 `normalizedCorrectedOriginal`：它把 clean dismissal、discard protection、确认无误／重译文案和 Store 输入对齐；不把 UI dirty state 写入 Store，也不把无语义变化送进模型。
+- OCR 修正 sheet 的首尾空白归一化仅存在于 View 私有 `normalizedCorrectedOriginal`：它把 clean dismissal、discard protection、确认无误／重译文案和 Store 输入对齐；同一 sheet 的 `correctedOriginalFocused` 也仅在 View 内控制多行输入与键盘“完成”，取消、忽略确认、保存前会清焦点。两者都不把 UI dirty／键盘 state 写入 Store，也不把无语义变化送进模型。
 - 漫画探针报告生成后，开发控制台的 Koharu readiness 摘要只读取 `report.externalArtifactReadinessReport`：ready / missing / invalid 状态和可复制缺件／nextAction 用于协调真实四件套，不直接访问 artifact 目录、不触发新 probe；它始终标为 shadow-only，不改变主 OCR、翻译、覆盖图、`blockPassed`、`currentBlockSource`、metrics 或 `output/`。
 - 实时录音保留触控按住手势，同时提供默认 accessibility action；VoiceOver / Voice Control 激活会在 `beginProLiveSpeechCapture` 与 `endProLiveSpeechCapture` 之间切换。
 - 设置页持有显式 `NavigationPath`；`isDeveloperModeEnabled` 关闭时清空 path，开发控制台不能在权限关闭后继续停留或操作。
