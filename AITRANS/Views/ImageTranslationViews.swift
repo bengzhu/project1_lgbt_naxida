@@ -2018,12 +2018,16 @@ private struct ImageOCRCorrectionSheet: View {
         store.imageTranslationCorrectionBlockID == block.id
     }
 
+    private var normalizedCorrectedOriginal: String {
+        correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var canSave: Bool {
-        !correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !normalizedCorrectedOriginal.isEmpty
     }
 
     private var hasUnsavedChanges: Bool {
-        correctedOriginal != block.original
+        normalizedCorrectedOriginal != block.original
     }
 
     private var needsReview: Bool {
@@ -2031,7 +2035,7 @@ private struct ImageOCRCorrectionSheet: View {
     }
 
     private var requiresRetranslation: Bool {
-        correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines) != block.original
+        normalizedCorrectedOriginal != block.original
     }
 
     private var saveActionTitle: String {
@@ -2066,7 +2070,7 @@ private struct ImageOCRCorrectionSheet: View {
     private func save() {
         errorMessage = nil
         Task {
-            if await store.correctImageTranslationBlock(block.id, original: correctedOriginal) {
+            if await store.correctImageTranslationBlock(block.id, original: normalizedCorrectedOriginal) {
                 didSave()
                 dismiss()
             } else {
