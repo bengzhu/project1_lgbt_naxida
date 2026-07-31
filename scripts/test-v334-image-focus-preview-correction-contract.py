@@ -44,7 +44,10 @@ class ImageFocusPreviewCorrectionContractTests(unittest.TestCase):
     def test_workspace_forwards_the_existing_correction_entry_and_same_availability_gate(self) -> None:
         workspace = braced_body(self.panel, "private var imageWorkspace: some View")
         self.assertIn("canEdit: !isRunning && !isRenderingExport", workspace)
-        self.assertIn("editBlock: { beginCorrection(of: $0) }", workspace)
+        self.assertIn(
+            "editBlock: { beginCorrectionFromFocusPreview(of: $0) }",
+            workspace,
+        )
         self.assertIn("ImageTranslationPreview(", workspace)
 
     def test_selected_focus_preview_receives_the_current_block_and_existing_edit_callback(self) -> None:
