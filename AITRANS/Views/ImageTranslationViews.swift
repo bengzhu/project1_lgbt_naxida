@@ -1706,12 +1706,22 @@ private struct ImageTranslationFocusPreview: View {
                     .background(Color.black.opacity(0.82), in: Circle())
                     .disabled(!canSelectPrevious)
                     .opacity(canSelectPrevious ? 1 : 0.35)
+                    .accessibilityHint(
+                        canSelectPrevious
+                            ? "定位上一个文字块"
+                            : "当前已是筛选结果中的第一个文字块"
+                    )
                 Button("下一个文字块", systemImage: "chevron.right", action: selectNext)
                     .labelStyle(.iconOnly)
                     .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
                     .background(Color.black.opacity(0.82), in: Circle())
                     .disabled(!canSelectNext)
                     .opacity(canSelectNext ? 1 : 0.35)
+                    .accessibilityHint(
+                        canSelectNext
+                            ? "定位下一个文字块"
+                            : "当前已是筛选结果中的最后一个文字块"
+                    )
             }
             .foregroundStyle(.white)
         }
@@ -1904,7 +1914,11 @@ private struct ImageTranslationBlockRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
             .accessibilityValue(isSelected ? "已在图片中定位" : "未定位")
-            .accessibilityHint("在图片预览中定位此文字块")
+            .accessibilityHint(
+                isSelected
+                    ? "取消此文字块在图片中的定位"
+                    : "在图片预览中定位此文字块"
+            )
             .accessibilityFocused(
                 accessibilityFocus,
                 equals: "image-review-row-\(block.id.uuidString)"
