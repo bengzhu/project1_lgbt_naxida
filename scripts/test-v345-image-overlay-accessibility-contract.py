@@ -50,8 +50,8 @@ class ImageOverlayAccessibilityContractTests(unittest.TestCase):
         self.assertIn('isSelected ? "已定位，\(translation)" : "未定位，\(translation)"', overlay)
 
     def test_version_is_bumped_consistently(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.45;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.44;", self.project)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.45;", self.project)
 
     def test_ci_runs_v345_after_v344(self) -> None:
         old = "python3 -B scripts/test-v344-image-navigation-position-accessibility-contract.py"

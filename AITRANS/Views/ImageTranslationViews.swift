@@ -1317,6 +1317,7 @@ private struct ImageTranslationPreview: View {
                     action: retryPreview
                 )
                 .frame(maxWidth: 220)
+                .accessibilityHint("重新生成屏幕预览；不会重新识别或翻译图片")
             } else {
                 ProgressView()
                     .controlSize(.large)
@@ -1338,10 +1339,22 @@ private struct ImageTranslationPreview: View {
                 .stroke(Color.appBorder, lineWidth: 1)
         }
         .accessibilityElement(children: .contain)
+        .accessibilityLabel(previewStatusAccessibilityLabel)
+        .accessibilityValue(previewStatusAccessibilityValue)
     }
 
     private var previewFailedForCurrentRevision: Bool {
         previewPhase == .failed(revision: store.imageTranslationRevision)
+    }
+
+    private var previewStatusAccessibilityLabel: String {
+        previewFailedForCurrentRevision ? "图片预览生成失败" : "正在准备图片预览"
+    }
+
+    private var previewStatusAccessibilityValue: String {
+        previewFailedForCurrentRevision
+            ? "原图仍保留用于 OCR 与导出；可以重试屏幕预览"
+            : "图片已载入，正在后台生成屏幕预览"
     }
 
     private func retryPreview() {
