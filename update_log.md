@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.37：规范化无语义 OCR 修正的关闭体验
+日期：2026-07-31
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.37`。PR #101 已合入 `smalldata_test`，merge SHA `7bf0fc3fe9a83df7c8bd3c7981e2600ddc3b91d8`；远端 `codeb/v3.37-image-correction-normalized-dismissal` 已删除，未触碰 `main`。
+
+核心变更：
+
+- 审查图片 OCR 修正 sheet 时发现 UI 的三个语义并不一致：Store 已先 `trim` 再判定“无需重译”，`requiresRetranslation` 也做了 trim，但 `hasUnsavedChanges` 用原始字符串比较。因此只增加首尾空白时，保存动作显示“确认无误”，却仍会禁用下滑关闭并要求 destructive “放弃修正”。
+- `ImageOCRCorrectionSheet` 新增 View 私有 `normalizedCorrectedOriginal`，并让 `canSave`、`hasUnsavedChanges`、`requiresRetranslation` 和交给既有 `correctImageTranslationBlock` 的参数全部复用它。trim 后仍等于当前原文的输入现在是 clean：可以直接取消／交互式关闭，确认无误走 Store 既有 no-op 分支，不启动模型翻译。
+- 真正改变文字的路径不变：空文本仍不能保存；未保存的语义修改仍显示 v3.24 放弃确认并阻止交互式关闭；保存只重译目标 block；v3.25 的“保存并重译／确认无误”文案、v3.30–v3.35 的 revision-scoped 关闭后焦点交接、成功／忽略的既有目标仍保留。
+- 更新 v3.24 / v3.25 合同以锁定同一规范化来源，新增 `scripts/test-v337-image-ocr-correction-normalized-dismissal-contract.py`（5 项）并接入图片/UI fail-fast。没有新增 Store、持久化、Vision OCR、模型、renderer/export、漫画探针、Koharu、ground truth、metrics 或 `output/` 状态。
+
+验证与遗留：
+
+- 本地轻量检查通过：v3.37 合同 `5/5`，v3.24 `6/6`、v3.25 `5/5`、v3.30–v3.36 回归合同，v1.87 UI 合同 `12/12`、v3.00 / v3.10 图片合同、v1.94 CI 分层 `10/10`、v1.97 版本身份 `5/5`、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、workflow YAML、版本解析 `v3.37`、ground truth / 既有 output JSON smoke 与 `git diff --check`。源码合同不能替代真实键盘、VoiceOver、输入法、sheet 下滑或连续手势回放。
+- 候选 SHA `7c6c538cb7e831a5a97602a1de1576c16eeb4b8e` 的 full run `30597966890` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.37-codeb-v3.37-image-correction-normalized-dismissal--7c6c538cb7e8-run30597966890-attempt1` 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 均精确匹配。`xcodeBuildRequired=true`，`.xcresult` Build 为 succeeded、0 errors、0 warnings；JUnit `10/10`、0 failures；新 v3.37 合同 `5/5` 和全套图片/UI、Speech、首页、粘贴与扩展 Koharu validator fixture 矩阵均通过。
+- PR #101 fast `30598319928` 成功，精确记录 `reusedFullValidationSha=7c6c538cb7e831a5a97602a1de1576c16eeb4b8e` 与 `reusedFullValidationState=success`，并写明 `xcodeBuildRequired=false`、`fast_followup_reuses_candidate_full_validation`。合并后 fast `30598383448` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用同一候选 full receipt；两者均只作路由跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针数字、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.36：开发控制台 Koharu 工件就绪摘要
 日期：2026-07-31
 
