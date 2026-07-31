@@ -83,7 +83,8 @@ class ImageActionLockFeedbackContractTests(unittest.TestCase):
         self.assertIn(": modificationUnavailableHint", ignored)
 
     def test_version_is_bumped_consistently(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.42;"), 2)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.42;", self.project)
 
     def test_ci_runs_v342_after_v341(self) -> None:
         old = "python3 -B scripts/test-v341-image-review-final-state-lock-contract.py"
