@@ -8,6 +8,24 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.47：图片命令栏操作范围的 VoiceOver 提示
+日期：2026-07-31
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.47`。PR #111 已合入 `smalldata_test`，merge SHA `66f9857b9784ffef956d3a6bf74c1e86643c6fbf`；远端 `codeb/v3.47-image-command-a11y` 已删除，未触碰 `main`。
+
+核心变更：
+
+- 审查图片页的高频命令时发现，“重试”和“重新识别”虽有不同按钮名，但 VoiceOver 不知道它们分别会重跑整张图片还是只生成导出图；照片选择、取消、导出和清空也没有声明是否影响当前图片、OCR／翻译或导出文件。
+- v3.47 为 `ImageCommandBar` 的照片／文件、取消、重试、重新识别、重试导出、导出／分享和清空命令补充作用域明确的 accessibility hint；免费入口继续说明需要 Pro。`PhotoPickerCommand` 接收动态选择提示：无当前图片时为首次选择，已有图片时为替换当前图片。所有提示仅是 View 语义，不新增 Store／持久化状态，不改变图片 task、Vision OCR、模型翻译、renderer/export 或命令行为。
+- 新增 `scripts/test-v347-image-command-accessibility-contract.py`（4 项），接入 UI interaction fail-fast，并让 v3.46 版本合同继续允许后续 `3.x` 回归。
+
+验证与遗留：
+
+- 本地轻量检查通过：v3.44–v3.47 图片 VoiceOver 合同、v3.15 图片预览选择回归、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、版本解析 `v3.47`、workflow YAML 与 `git diff --check`。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、分享面板、取消手势或导出失败回放。
+- 候选 SHA `35fd6d36a97d4c95906ec9c6ff9c3a454082a479` 的 full run `30641925259` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.47-codeb-v3.47-image-command-a11y--35fd6d36a97d-run30641925259-attempt1` 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 均精确匹配。`xcodeBuildRequired=true`、云端 Xcode build 成功，`.xcresult` 已附带；JUnit `10/10`、0 failures；静态、Speech、图片/UI（含 v3.47）、首页、粘贴和扩展 Koharu validator fixture 矩阵均通过。
+- PR #111 fast run `30642581419` 成功，精确记录 `reusedFullValidationSha=35fd6d36a97d4c95906ec9c6ff9c3a454082a479`、`reusedFullValidationState=success`、`xcodeBuildRequired=false` 和 `fast_followup_reuses_candidate_full_validation`。合并后 fast run `30642651520` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用同一候选 full receipt；两者均是 fast 路由／静态跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针数字、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.46：图片预览加载与失败状态的 VoiceOver 反馈
 日期：2026-07-31
 
