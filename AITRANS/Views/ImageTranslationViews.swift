@@ -258,7 +258,7 @@ struct ImageTranslationPanel: View {
                     .accessibilityHint(
                         canReviewImageTranslation
                             ? "显示待复查结果并定位当前或第一个文字块"
-                            : "图片翻译完成后可开始复查"
+                            : imageReviewUnavailableDetail
                     )
                 } else if reviewCompletedBlockCount > 0 {
                     AppSecondaryButton(
@@ -270,7 +270,7 @@ struct ImageTranslationPanel: View {
                     .accessibilityHint(
                         canReviewImageTranslation
                             ? "清除本次复查进度并定位第一个待复查文字块"
-                            : "图片翻译完成后可重新开始复查"
+                            : imageReviewUnavailableDetail
                     )
                 }
             }
@@ -282,12 +282,27 @@ struct ImageTranslationPanel: View {
             }
             .pickerStyle(.segmented)
             .disabled(!canModifyImageTranslation)
+            .accessibilityHint(
+                canModifyImageTranslation
+                    ? "选择译文以旁贴或覆盖方式呈现"
+                    : imageModificationUnavailableDetail
+            )
 
             AppStatusRow(
                 title: statusTitle,
                 detail: statusDetail,
                 tone: statusTone
             )
+
+            if let imageActionLockDetail {
+                AppStatusRow(
+                    title: imageActionLockTitle,
+                    detail: imageActionLockDetail,
+                    tone: .warning
+                )
+                .accessibilityLabel(imageActionLockTitle)
+                .accessibilityValue(imageActionLockDetail)
+            }
 
             if store.imageTranslationBlocks.isEmpty {
                 if store.imageTranslationData == nil {
@@ -767,6 +782,68 @@ struct ImageTranslationPanel: View {
 
     private var canReviewImageTranslation: Bool {
         store.imageTranslationState == .translated
+    }
+
+    private var imageModificationUnavailableDetail: String {
+        if isRenderingExport {
+            return "正在按当前覆盖方式更新导出图；完成后可修正文字、恢复 OCR 结果或切换覆盖方式。"
+        }
+        switch store.imageTranslationState {
+        case .idle:
+            return "请先完成图片翻译，再修正文字、恢复 OCR 结果或切换覆盖方式。"
+        case .loading, .recognizing:
+            return "正在准备图片识别；翻译完成后可修正文字、恢复 OCR 结果或切换覆盖方式。"
+        case .translating:
+            return "正在逐块翻译；可继续查看和定位文字块，全部完成后才能修改图片结果。"
+        case .translated:
+            return "导出图更新完成后可修正文字、恢复 OCR 结果或切换覆盖方式。"
+        case .failed:
+            return "图片翻译尚未完整完成；请重试成功后再修改图片结果。"
+        }
+    }
+
+    private var imageReviewUnavailableDetail: String {
+        switch store.imageTranslationState {
+        case .idle:
+            return "请先完成图片翻译，再开始、重启或更新复查进度。"
+        case .loading, .recognizing:
+            return "正在准备图片识别；翻译完成后可开始、重启或更新复查进度。"
+        case .translating:
+            return "正在逐块翻译；可继续查看和定位文字块，全部完成后才能更新复查进度。"
+        case .translated:
+            return "图片翻译完成后可更新复查进度。"
+        case .failed:
+            return "图片翻译尚未完整完成；请重试成功后再更新复查进度。"
+        }
+    }
+
+    private var imageActionLockTitle: String {
+        isRenderingExport ? "图片编辑暂时锁定" : "图片操作暂时锁定"
+    }
+
+    private var imageActionLockDetail: String? {
+        guard !store.imageTranslationBlocks.isEmpty else { return nil }
+        if !canModifyImageTranslation && !canReviewImageTranslation {
+            switch store.imageTranslationState {
+            case .idle:
+                return "请先完成图片翻译，再修改图片结果或更新复查进度。"
+            case .loading, .recognizing:
+                return "正在准备图片识别；翻译完成后可修改图片结果或更新复查进度。"
+            case .translating:
+                return "正在逐块翻译；可继续查看和定位文字块，全部完成后才能修改图片结果或更新复查进度。"
+            case .translated:
+                break
+            case .failed:
+                return "图片翻译尚未完整完成；请重试成功后再修改图片结果或更新复查进度。"
+            }
+        }
+        if !canModifyImageTranslation {
+            return imageModificationUnavailableDetail
+        }
+        if !canReviewImageTranslation {
+            return imageReviewUnavailableDetail
+        }
+        return nil
     }
 
     private func handleImport(_ result: Result<URL, Error>) {
@@ -1577,7 +1654,11 @@ private struct ImageTranslationFocusPreview: View {
                     .background(Color.black.opacity(0.82), in: Circle())
                     .disabled(!canEdit)
                     .opacity(canEdit ? 1 : 0.35)
-                    .accessibilityHint("打开当前文字块的 OCR 修正页面")
+                    .accessibilityHint(
+                        canEdit
+                            ? "打开当前文字块的 OCR 修正页面"
+                            : "图片翻译完成且导出图更新结束后可修正当前文字块"
+                    )
             }
         }
         .overlay(alignment: .bottomLeading) {
@@ -1822,7 +1903,11 @@ private struct ImageTranslationBlockRow: View {
                     .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
                     .foregroundStyle(Color.appAccent)
                     .disabled(!canEdit)
-                    .accessibilityHint("编辑 OCR 原文并只重新翻译此文字块")
+                    .accessibilityHint(
+                        canEdit
+                            ? "编辑 OCR 原文并只重新翻译此文字块"
+                            : "图片翻译完成且导出图更新结束后可修正当前文字块"
+                    )
 
                 if isManuallyCorrected {
                     Button("恢复 Vision OCR", systemImage: "arrow.counterclockwise", action: restoreVisionOCR)
@@ -1830,7 +1915,11 @@ private struct ImageTranslationBlockRow: View {
                         .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
                         .foregroundStyle(Color.appTextSecondary)
                         .disabled(!canEdit)
-                        .accessibilityHint("恢复此文字块的 Vision OCR 原文与初始译文")
+                        .accessibilityHint(
+                            canEdit
+                                ? "恢复此文字块的 Vision OCR 原文与初始译文"
+                                : "图片翻译完成且导出图更新结束后可恢复此文字块的 OCR 结果"
+                        )
                 }
 
                 if ImageOCRResultSummary.requiresReview(block) {
@@ -1890,7 +1979,11 @@ private struct ImageTranslationIgnoredBlockRow: View {
                 .font(.subheadline.bold())
                 .frame(minHeight: AppTheme.Layout.minimumTarget)
                 .disabled(!canRestore)
-                .accessibilityHint("恢复到图片预览、导出和当前转录；需要复查的文字块会重新回到待复查队列")
+                .accessibilityHint(
+                    canRestore
+                        ? "恢复到图片预览、导出和当前转录；需要复查的文字块会重新回到待复查队列"
+                        : "图片翻译完成且导出图更新结束后可恢复此文字块"
+                )
                 .accessibilityFocused(
                     accessibilityFocus,
                     equals: "image-ignored-row-\(block.id.uuidString)"

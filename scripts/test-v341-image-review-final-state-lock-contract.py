@@ -58,8 +58,7 @@ class ImageReviewFinalStateLockContractTests(unittest.TestCase):
 
         inspector = braced_body(self.panel, "private var inspector: some View")
         self.assertGreaterEqual(inspector.count(".disabled(!canReviewImageTranslation)"), 2)
-        self.assertIn("图片翻译完成后可开始复查", inspector)
-        self.assertIn("图片翻译完成后可重新开始复查", inspector)
+        self.assertGreaterEqual(inspector.count(": imageReviewUnavailableDetail"), 2)
         self.assertIn("canEdit: canModifyImageTranslation", inspector)
         self.assertIn("canReview: canReviewImageTranslation", inspector)
         self.assertIn("canRestore: canModifyImageTranslation", inspector)
