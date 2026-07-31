@@ -1,7 +1,7 @@
 # 项目流程图
 本文用 Mermaid 图展示 `md/flow/flow.md` 的当前核心逻辑。读图时先看左到右的主链路，再看向下分叉的诊断和输出产物。
 
-当前正式版本：`3.42`。
+当前正式版本：`3.43`。
 
 ## 1. 项目核心逻辑图
 这张图描述 App 从用户入口到状态调度、OCR/模型服务、持久化和探针输出的关系。
@@ -88,7 +88,7 @@ flowchart TD
   ISELECT --> IFOCUS["已下采样预览局部裁切<br/>保留上下文 + bbox 再标记<br/>44pt 关闭 + 修正命令"]
   IFOCUS -->|"44pt 直接修正；仅 translated + 非导出重绘<br/>忙碌 / stale 时拒绝；非成功 onDismiss 回到同一局部预览"| ICORRECT
   ISELECT --> ISCROLL["唯一 workspace anchor<br/>新选择滚回图片工作区<br/>Reduce Motion 立即定位"]
-  IFOCUS --> INAV["当前筛选序列前后导航<br/>位置显示 + 首尾禁用<br/>44pt 命名按钮"]
+  IFOCUS --> INAV["当前筛选序列前后导航<br/>位置显示 + 首尾禁用<br/>可用/首尾分别说明定位与边界<br/>44pt 命名按钮"]
   IFOCUS -. "只联动展示；完整 blocks 不变" .-> IPREVIEW
   INAV -. "只更新 View 私有选择" .-> IPREVIEW
   IA11Y -. "只更新 View 私有焦点" .-> IPREVIEW
