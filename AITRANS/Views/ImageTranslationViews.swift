@@ -1842,7 +1842,7 @@ private struct ImageTranslationOverlayBlock: View {
     }
 
     private var accessibilityHint: String {
-        isSelected ? "取消图片中的定位" : "在图片中定位并打开局部放大"
+        isSelected ? "取消此文字块在图片中的定位" : "在图片预览中定位此文字块"
     }
 
     private func adjacentCenterX(for rect: CGRect) -> CGFloat {

@@ -49,7 +49,8 @@ class ImageNavigationPositionAccessibilityContractTests(unittest.TestCase):
         self.assertIn('? "定位下一个文字块"', focus)
 
     def test_version_is_bumped_consistently(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.44;"), 2)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.44;", self.project)
 
     def test_ci_runs_v344_after_v343(self) -> None:
         old = "python3 -B scripts/test-v343-image-navigation-accessibility-contract.py"

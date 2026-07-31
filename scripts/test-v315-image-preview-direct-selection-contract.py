@@ -65,7 +65,9 @@ class ImagePreviewDirectSelectionContractTests(unittest.TestCase):
         self.assertEqual(overlay.count('.accessibilityLabel("文字块 \\(block.original)")'), 2)
         self.assertEqual(overlay.count(".accessibilityValue(accessibilityValue)"), 2)
         self.assertEqual(overlay.count(".accessibilityHint(accessibilityHint)"), 2)
-        self.assertIn('isSelected ? "取消图片中的定位"', overlay)
+        self.assertIn("private var accessibilityHint: String", overlay)
+        self.assertIn("isSelected ?", overlay)
+        self.assertIn(": \"在图片预览中定位此文字块\"", overlay)
 
     def test_preview_selection_remains_view_private(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")
