@@ -929,7 +929,7 @@ private struct ImageSourceLanguageControl: View {
         .disabled(isRunning)
         .accessibilityLabel("输入语言")
         .accessibilityValue(store.imageTranslationSelectedSourceLanguage.rawValue)
-        .accessibilityHint("图片输入语言设置需要 Pro；已完成的图片会重新识别和翻译；失败或取消后选回当前内容语言会撤销待重试更改")
+        .accessibilityHint(imageSourceLanguageAccessibilityHint)
         .alert("Pro 功能", isPresented: $showLockedLanguage) {
             Button("知道了", role: .cancel) {}
         } message: {
@@ -941,6 +941,26 @@ private struct ImageSourceLanguageControl: View {
         switch store.imageTranslationState {
         case .loading, .recognizing, .translating: true
         case .idle, .translated, .failed: false
+        }
+    }
+
+    private var imageSourceLanguageAccessibilityHint: String {
+        if isRunning {
+            return "图片正在读取、识别或翻译；完成或取消后才能更改输入语言"
+        }
+        if !store.isProUnlocked {
+            return "图片输入语言设置需要 Pro；不会修改当前图片或文本页语言"
+        }
+        if store.imageTranslationData == nil {
+            return "输入语言设置已解锁；选择图片后可设置图片 OCR 输入语言"
+        }
+        switch store.imageTranslationState {
+        case .translated:
+            return "输入语言设置已解锁；更改后会重新识别并翻译当前图片；选回当前内容语言会撤销待重试更改"
+        case .idle, .failed:
+            return "输入语言设置已解锁；失败或取消后会在重试时使用新语言；选回当前内容语言会撤销待重试更改"
+        case .loading, .recognizing, .translating:
+            return "图片正在读取、识别或翻译；完成或取消后才能更改输入语言"
         }
     }
 
@@ -992,7 +1012,7 @@ private struct ImageTargetLanguageControl: View {
         .disabled(isRunning)
         .accessibilityLabel("目标语言")
         .accessibilityValue(store.imageTranslationSelectedTargetLanguage.rawValue)
-        .accessibilityHint("选择图片翻译的目标语言；已完成的图片会重新翻译，失败或取消的图片会在重试时使用新语言；选回当前内容语言会撤销待重试更改")
+        .accessibilityHint(imageTargetLanguageAccessibilityHint)
         .alert("Pro 语言", isPresented: $showLockedLanguage) {
             Button("知道了", role: .cancel) {}
         } message: {
@@ -1004,6 +1024,23 @@ private struct ImageTargetLanguageControl: View {
         switch store.imageTranslationState {
         case .loading, .recognizing, .translating: true
         case .idle, .translated, .failed: false
+        }
+    }
+
+    private var imageTargetLanguageAccessibilityHint: String {
+        if isRunning {
+            return "图片正在读取、识别或翻译；完成或取消后才能更改目标语言"
+        }
+        if store.imageTranslationData == nil {
+            return "选择图片后可设置图片翻译目标语言"
+        }
+        switch store.imageTranslationState {
+        case .translated:
+            return "更改后会重新翻译当前图片；选回当前内容语言会撤销待重试更改"
+        case .idle, .failed:
+            return "失败或取消后会在重试时使用新目标语言；选回当前内容语言会撤销待重试更改"
+        case .loading, .recognizing, .translating:
+            return "图片正在读取、识别或翻译；完成或取消后才能更改目标语言"
         }
     }
 
