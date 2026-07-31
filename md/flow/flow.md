@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前正式版本：`3.35`。选中普通图片 OCR block 的 16:9 局部放大窗 44pt “修正识别文字”命令仍只转交既有 `ImageTranslationPanel` 修正 sheet；v3.35 的 `beginCorrectionFromFocusPreview` 与结果行共享 `!isRunning && !isRenderingExport` 和 active-block guard，却在呈现 sheet 前把 v3.33 View 私有、revision-scoped fallback 指向同一局部预览。取消、放弃未保存修正或无修改时的交互式关闭只在 `onDismiss` 后回到该局部窗；结果行 `beginCorrection` 继续回到结果行。成功修正／忽略会在关闭前以既有下一块、完成态或忽略行目的地覆盖回退，新图片 revision 会清空 sheet、pending 与已发布焦点。v3.34 的直接入口、v3.32 的恢复 Vision OCR confirmation 关闭后交接、v3.31 的成功修正返回、v3.30 的 sheet 关闭交接、v3.29 的可恢复误识别忽略、v3.28 当前图片会话复查进度和 v3.27 既有 2048px 局部对照仍保留。v3.26 CI receipt 传播规则不变。本版不变更 Store、Vision OCR、模型翻译、renderer/export、漫画探针、Koharu 主路径或质量基线；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
+当前正式版本：`3.36`。漫画探针已有 `MangaOverlayProbeReport.externalArtifactReadinessReport` 后，`DeveloperConsoleView` 的 View 私有 `MangaKoharuArtifactReadinessSummary` 只消费该报告：它用 status 区分可用于诊断的 `readyForShadowOCR && externalTextBoxesShadowOCRAllowed`、缺件 `manifestMissing` / `artifactFilesMissing` 和其他无效状态，并用既有可复制 `DeveloperCodeBlock` 展示 source、verdict、nextAction、四件套 presence / missing、parse errors、来源及数量。这个摘要不创建 Store 状态、不再调用 `runMangaOverlayProbe`、不读取或写入 `test/koharu_artifacts/`，也不改变 Vision OCR、模型翻译、renderer/export、普通图片路径、漫画主流程或质量基线；ready 仍只代表下次探针可尝试 shadow OCR，不是已完成 App-side coverage、真机 UI 或质量证据。v3.35 的局部预览修正入口继续与结果行共享 busy / active-block guard；取消、放弃或无修改关闭只在 `onDismiss` 后回到各自发起位置，成功／忽略仍使用既有更具体目标。v3.26 CI receipt 传播规则不变；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
 
 当前布局：
 
@@ -82,6 +82,7 @@
 - `AppTheme` 提供语义颜色、间距、圆角、动效、触控和宽度 token；`AppComponents` 提供页头、区段、状态、按钮、空状态、指标和页面宽度原语。
 - 日间/夜间颜色来自 `Assets.xcassets` 的 luminosity variants；`AppAppearance` 通过 `AppStorage` 选择跟随系统、日间或夜间，不进入业务 `state.json`。
 - 所有业务按钮只调用 store 公开方法；UI 不直接操作 `state.json`、模型 runtime、Speech task、Vision OCR 或漫画探针服务。
+- 漫画探针报告生成后，开发控制台的 Koharu readiness 摘要只读取 `report.externalArtifactReadinessReport`：ready / missing / invalid 状态和可复制缺件／nextAction 用于协调真实四件套，不直接访问 artifact 目录、不触发新 probe；它始终标为 shadow-only，不改变主 OCR、翻译、覆盖图、`blockPassed`、`currentBlockSource`、metrics 或 `output/`。
 - 实时录音保留触控按住手势，同时提供默认 accessibility action；VoiceOver / Voice Control 激活会在 `beginProLiveSpeechCapture` 与 `endProLiveSpeechCapture` 之间切换。
 - 设置页持有显式 `NavigationPath`；`isDeveloperModeEnabled` 关闭时清空 path，开发控制台不能在权限关闭后继续停留或操作。
 - `AppPreviewScenario` 通过临时 URL 和 `performsStartupWork=false` 隔离预览，不恢复或持久化生产数据。DEBUG CI 可用 `AITRANS_UI_EVIDENCE_SCENARIO` 复现 14 张运行态证据，其中两个 wide iPad 场景分别覆盖文本空态和图片成功/风险复查态；`audioRecognizing` 设置 capturing 状态覆盖 Reduce Motion，`audioTranslating` 设置非空 transcript + translating 状态覆盖取消翻译入口，生产启动不读取这些场景。

@@ -8,6 +8,26 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.36：开发控制台 Koharu 工件就绪摘要
+日期：2026-07-31
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.36`。PR #100 已合入 `smalldata_test`，merge SHA `b2e93fd9d22dfbc1f93cbab1372e75dac8eb433a`；远端 `codeb/v3.36-koharu-readiness-summary` 已删除，未触碰 `main`。
+
+核心变更：
+
+- 审查发现开发控制台原先只汇总漫画探针的 block、engine 与 warnings；尽管报告已计算真实 Koharu artifact 的 readiness、缺件和 `nextAction`，开发者仍要导出 JSON 才能判断该给工件提供方什么信息。
+- `MangaProbeSection` 在既有 `mangaOverlayProbeReport` 存在且其中带有 `externalArtifactReadinessReport` 时，新增 View 私有 `MangaKoharuArtifactReadinessSummary`。它只消费报告，不创建 Store／probe state、不运行新 probe、不读取或写入 `test/koharu_artifacts/`，也不改变普通图片 OCR、模型翻译、renderer/export、覆盖图、`blockPassed`、`currentBlockSource`、ground truth、metrics 或 `output/`。
+- 摘要以可访问 `AppStatusRow` 明确区分 `readyForShadowOCR && externalTextBoxesShadowOCRAllowed` 的“真实 Koharu 工件已就绪（仅 shadow OCR）”、`manifestMissing` / `artifactFilesMissing` 的“等待真实 Koharu 四件套”，以及其他无效状态的“需要修正”；中文 next step 覆盖提供四件套、修正契约／坐标／身份、声明真实 detector / segmenter 来源，或继续 external TextBoxes shadow OCR 诊断。
+- 既有可复制／分享的 `DeveloperCodeBlock` 展示 source、verdict、nextAction、active directory、fixture 标记、shadow gate、四件套 presence、missing artifacts、parse errors、generatedBy、TextBox / Bubble / glyph 计数、notes 与显式 `shadowOnly=true` / `mainFlowChanged=false`。它使真实 artifact 协作更直接，但 readiness 本身不是 shadow OCR coverage、App 主路径消费、真机 UI 或 OCR/翻译质量证据。
+- 新增 `scripts/test-v336-koharu-readiness-developer-summary-contract.py`（6 项）并接到图片/UI fail-fast 路由；Koharu workflow 变更仍在候选 full 中跑扩展 validator fixture 矩阵。
+
+验证与遗留：
+
+- 本地轻量检查通过：v3.36 合同 `6/6`、v3.35 合同 `6/6`、v1.94 CI 分层合同 `10/10`、v1.97 版本身份合同 `5/5`、`xcrun swiftc -parse AITRANS/Views/DeveloperConsoleView.swift`、workflow YAML、版本解析 `v3.36` 与 `git diff --check`。这些源码／静态检查不替代实际 artifact、shadow OCR coverage 或真机渲染。
+- 候选 SHA `646f5b9d6c8094c598bdcc37f3b4cd8f6dcc05e5` 的 full run `30596936426` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.36-codeb-v3.36-koharu-readiness-summary--646f5b9d6c80-run30596936426-attempt1` 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 均精确匹配。`xcodeBuildRequired=true`，`.xcresult` Build 为 succeeded、0 errors、0 warnings；JUnit `10/10`、0 failures；v3.36 UI 合同、相关静态合同和 Koharu 扩展 validator fixture 矩阵均通过。active Koharu validator 按当前真实状态报告 `manifestMissing`、四件套均缺、`externalTextBoxesShadowOCRAllowed=false`、`nextAction=stopUntilArtifactsProvided`。
+- PR #100 fast `30597239074` 成功，精确记录 `reusedFullValidationSha=646f5b9d6c8094c598bdcc37f3b4cd8f6dcc05e5` 与 `reusedFullValidationState=success`，并写明 `xcodeBuildRequired=false`、`fast_followup_reuses_candidate_full_validation`。合并后 fast `30597283805` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用同一候选 full receipt；两者均只作路由跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针数字、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版不声称 OCR、翻译、识别或 Koharu 质量提升，真实 artifact 注入后仍须手动 `ci-fast` / `full` 验收 identity、shadow OCR coverage、orientation 与 mask topology gates。
+
 ## v3.35：局部 OCR 修正后的原位焦点返回
 日期：2026-07-31
 

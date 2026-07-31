@@ -2,7 +2,7 @@
 
 这是一个基于 SwiftUI 的 iOS 本地 AI 翻译原型。默认使用 `MockGemmaService` 做界面和数据流冒烟；切换到 `Local` 并导入 GGUF 后，App 会通过 `llama.cpp` 加载本地模型生成翻译或总结。
 
-当前正式版本：`3.35`（v3.34 的普通图片 OCR 局部放大窗 44pt “修正识别文字”铅笔入口，现按发起位置保留非成功关闭后的上下文：局部窗入口以相同的运行／导出和 active-block guard 呈现既有修正 sheet，取消、放弃未保存修正或无修改时的交互式关闭会在 sheet 完全关闭后回到同一局部预览；结果行入口继续回到结果行。成功修正或忽略仍覆盖为既有下一块、完成态或忽略行目标。v3.33 的 revision-scoped、View 私有 onDismiss handoff，v3.32 的恢复 Vision OCR confirmation 关闭后交接、v3.31 的成功修正返回焦点、v3.30 的 sheet 关闭交接、v3.29 的可恢复误识别块忽略、v3.28 的会话复查进度与 v3.27 的局部图仍保留）。本版不改 Store、Vision OCR、模型翻译、renderer/export、漫画探针或质量基线；仓库尚无真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。云端 receipt 传播规则（v3.26）仍适用；日常开发合入 `smalldata_test`，不合并到 `main`。
+当前正式版本：`3.36`（开发控制台在漫画探针已经生成 `MangaOverlayProbeReport` 后，只读取既有 `externalArtifactReadinessReport`，以可访问状态区分“真实 Koharu 工件已就绪（仅 shadow OCR）”“等待真实 Koharu 四件套”和“需要修正”，并以可复制摘要展示 source、verdict、nextAction、四文件存在性、缺件／解析错误、来源及计数；它不触发新探针、不读写 artifact，也不改变普通图片 OCR、翻译、覆盖图或质量基线。v3.35 的局部 OCR 修正 sheet 仍按发起位置保留非成功关闭后的上下文：局部窗入口回到同一局部预览，结果行入口回到结果行；成功修正或忽略仍使用更具体的既有目标）。仓库仍没有真实 Koharu 四件套、Speech corpus 或真实竖排图片 corpus，因此不声称 OCR、翻译或识别质量提升。云端 receipt 传播规则（v3.26）仍适用；日常开发合入 `smalldata_test`，不合并到 `main`。
 
 ## 运行
 
@@ -61,7 +61,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - `音频`：实时长按识别与音频文件识别分区展示，保留取消入口和 locale、离线要求、耗时、词数、片段、置信度与失败原因。
 - `历史`：搜索、恢复、删除、归档、导入、导出和清空使用一致命令层级；空历史和无搜索结果使用系统空状态。
 - `设置`：集中管理 Pro、提示词、模型、本地数据和受保护的开发者入口。提示词支持方向、新建、复制、编辑、删除和内置锁定；模型页支持 Mock/Local、GGUF 下载/导入/移除、自检和生成参数。
-- `开发`：仅在开发者模式开启后显示。raw prompt/output、批量 raw probe、固定素材测试和漫画探针报告采用高密度、可选择的等宽文本布局，不改变任何探针字段或执行语义。
+- `开发`：仅在开发者模式开启后显示。raw prompt/output、批量 raw probe、固定素材测试和漫画探针报告采用高密度、可选择的等宽文本布局；漫画报告存在时会额外只读展示 Koharu 四件套 readiness、缺件和 nextAction，便于复制给工件提供方，不触发新 probe、不改变任何探针字段或执行语义。
 - 音频识别页会显示本次运行的输入名、locale、本机识别要求、耗时、词数、分段数、平均置信度、文本或失败原因；识别和翻译状态分开，检查中、识别中或翻译中均可取消。取消会先失效当前 run，再取消识别与模型翻译 Task；旧授权、识别、翻译或摘要回调不会覆盖立即重试后的新状态。
 
 ## Pro / 内购占位
