@@ -1225,6 +1225,7 @@ private struct ImageTranslationPreview: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: geometry.size.width, height: geometry.size.height)
+                            .accessibilityHidden(true)
 
                         ForEach(store.imageTranslationBlocks) { block in
                             ImageTranslationOverlayBlock(
@@ -1265,6 +1266,10 @@ private struct ImageTranslationPreview: View {
                             .padding(AppTheme.Spacing.control)
                         }
                     }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("图片翻译预览")
+                    .accessibilityValue(previewAccessibilityValue)
+                    .accessibilityHint(previewAccessibilityHint)
                 }
                 .frame(minHeight: 360, idealHeight: 560, maxHeight: 720)
                 .background(Color.black)
@@ -1377,6 +1382,49 @@ private struct ImageTranslationPreview: View {
         previewFailedForCurrentRevision
             ? "原图仍保留用于 OCR 与导出；可以重试屏幕预览"
             : "图片已载入，正在后台生成屏幕预览"
+    }
+
+    private var previewAccessibilityValue: String {
+        let blocks = store.imageTranslationBlocks
+        guard !blocks.isEmpty else {
+            return "当前没有识别到文字块"
+        }
+
+        let reviewTotal = blocks.count(where: { ImageOCRResultSummary.requiresReview($0) })
+        let reviewCompleted = blocks.count {
+            ImageOCRResultSummary.requiresReview($0) && reviewedBlockIDs.contains($0.id)
+        }
+        var parts = ["识别到 \(blocks.count) 个文字块"]
+        if reviewTotal > 0 {
+            parts.append("待复查 \(max(0, reviewTotal - reviewCompleted)) 个")
+        } else {
+            parts.append("没有低置信或方向待定文字块")
+        }
+
+        if selectedBlockID != nil {
+            parts.append(positionText.isEmpty ? "当前已定位文字块" : "当前定位 \(positionText)")
+        } else {
+            parts.append("尚未定位文字块")
+        }
+        return parts.joined(separator: "；")
+    }
+
+    private var previewAccessibilityHint: String {
+        guard !store.imageTranslationBlocks.isEmpty else {
+            return "当前没有可定位的 OCR 文字块"
+        }
+        let operationHint = "点按文字块可定位并打开局部放大"
+        var unavailableDetails: [String] = []
+        if !canEdit {
+            unavailableDetails.append(modificationUnavailableHint)
+        }
+        if !canReview {
+            unavailableDetails.append(reviewUnavailableHint)
+        }
+        guard !unavailableDetails.isEmpty else {
+            return "\(operationHint)；当前图片已完成翻译，可修正文字或更新复查进度"
+        }
+        return "\(operationHint)；\(unavailableDetails.joined(separator: " "))"
     }
 
     private func retryPreview() {

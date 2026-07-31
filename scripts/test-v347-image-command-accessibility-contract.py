@@ -83,16 +83,13 @@ class ImageCommandAccessibilityContractTests(unittest.TestCase):
         )
 
     def test_version_is_bumped_consistently(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.47;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.46;", self.project)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.47;", self.project)
 
     def test_ci_runs_v347_after_v346(self) -> None:
         old = "python3 -B scripts/test-v346-image-preview-status-accessibility-contract.py"
         new = "python3 -B scripts/test-v347-image-command-accessibility-contract.py"
-        route = (
-            "if grep -Fx 'scripts/test-v347-image-command-accessibility-contract.py' "
-            '"$RESULT_ROOT/changed-files.txt" >/dev/null; then'
-        )
+        route = "grep -E '^scripts/test-v3(47|48)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
