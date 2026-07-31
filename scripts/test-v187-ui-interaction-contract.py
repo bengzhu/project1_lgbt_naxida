@@ -355,10 +355,10 @@ class V187UIInteractionContractTests(unittest.TestCase):
             r"stagedExportURL,\s*directory:\s*imageTranslationDirectory\s*\)\s*\}",
             "failed initial publication must not leave a staging PNG",
         )
-        self.assertIn(
-            ".disabled(store.imageTranslationData == nil || isRunning || isRenderingExport)",
-            image,
-        )
+        can_modify = function_body(image, "private var canModifyImageTranslation: Bool")
+        self.assertIn("store.imageTranslationState == .translated", can_modify)
+        self.assertIn("!isRenderingExport", can_modify)
+        self.assertIn(".disabled(!canModifyImageTranslation)", image)
 
 
 if __name__ == "__main__":

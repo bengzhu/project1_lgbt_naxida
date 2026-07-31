@@ -53,8 +53,7 @@ class ImageFocusPreviewReturnFocusContractTests(unittest.TestCase):
             "        )"
         )
         for marker in [
-            "guard !isRunning",
-            "!isRenderingExport",
+            "guard canModifyImageTranslation",
             "store.imageTranslationBlocks.contains(where: { $0.id == block.id })",
             "selectedImageTranslationBlockID = block.id",
             schedule,

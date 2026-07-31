@@ -180,7 +180,8 @@ struct ImageTranslationPanel: View {
                 canSelectPrevious: canSelectPreviousBlock,
                 canSelectNext: canSelectNextBlock,
                 reviewedBlockIDs: store.imageTranslationReviewedBlockIDs,
-                canEdit: !isRunning && !isRenderingExport,
+                canEdit: canModifyImageTranslation,
+                canReview: canReviewImageTranslation,
                 accessibilityFocus: $reviewAccessibilityFocusID,
                 selectBlock: selectBlockFromPreview,
                 clearSelection: { selectedImageTranslationBlockID = nil },
@@ -253,14 +254,24 @@ struct ImageTranslationPanel: View {
                         tone: .warning,
                         action: beginReviewQueue
                     )
-                    .accessibilityHint("显示待复查结果并定位当前或第一个文字块")
+                    .disabled(!canReviewImageTranslation)
+                    .accessibilityHint(
+                        canReviewImageTranslation
+                            ? "显示待复查结果并定位当前或第一个文字块"
+                            : "图片翻译完成后可开始复查"
+                    )
                 } else if reviewCompletedBlockCount > 0 {
                     AppSecondaryButton(
                         title: "重新复查 \(reviewCompletedBlockCount)",
                         systemImage: "arrow.counterclockwise",
                         action: restartReviewQueue
                     )
-                    .accessibilityHint("清除本次复查进度并定位第一个待复查文字块")
+                    .disabled(!canReviewImageTranslation)
+                    .accessibilityHint(
+                        canReviewImageTranslation
+                            ? "清除本次复查进度并定位第一个待复查文字块"
+                            : "图片翻译完成后可重新开始复查"
+                    )
                 }
             }
 
@@ -270,7 +281,7 @@ struct ImageTranslationPanel: View {
                 }
             }
             .pickerStyle(.segmented)
-            .disabled(store.imageTranslationData == nil || isRunning || isRenderingExport)
+            .disabled(!canModifyImageTranslation)
 
             AppStatusRow(
                 title: statusTitle,
@@ -324,7 +335,8 @@ struct ImageTranslationPanel: View {
                             isSelected: selectedImageTranslationBlockID == block.id,
                             isReviewCompleted: store.imageTranslationReviewedBlockIDs.contains(block.id),
                             isManuallyCorrected: store.imageTranslationCorrectedBlockIDs.contains(block.id),
-                            canEdit: !isRunning && !isRenderingExport,
+                            canEdit: canModifyImageTranslation,
+                            canReview: canReviewImageTranslation,
                             accessibilityFocus: $reviewAccessibilityFocusID,
                             select: { toggleSelection(of: block.id) },
                             edit: { beginCorrection(of: block) },
@@ -348,7 +360,7 @@ struct ImageTranslationPanel: View {
                     ForEach(store.imageTranslationIgnoredBlocks) { block in
                         ImageTranslationIgnoredBlockRow(
                             block: block,
-                            canRestore: !isRunning && !isRenderingExport,
+                            canRestore: canModifyImageTranslation,
                             accessibilityFocus: $reviewAccessibilityFocusID,
                             restore: { restoreIgnoredImageTranslationBlock(block) }
                         )
@@ -420,8 +432,7 @@ struct ImageTranslationPanel: View {
     }
 
     private func beginCorrection(of block: ImageTranslationBlock) {
-        guard !isRunning,
-              !isRenderingExport,
+        guard canModifyImageTranslation,
               store.imageTranslationBlocks.contains(where: { $0.id == block.id }) else {
             return
         }
@@ -433,8 +444,7 @@ struct ImageTranslationPanel: View {
     }
 
     private func beginCorrectionFromFocusPreview(of block: ImageTranslationBlock) {
-        guard !isRunning,
-              !isRenderingExport,
+        guard canModifyImageTranslation,
               store.imageTranslationBlocks.contains(where: { $0.id == block.id }) else {
             return
         }
@@ -447,8 +457,7 @@ struct ImageTranslationPanel: View {
 
     private func requestVisionOCRRestore(for block: ImageTranslationBlock) {
         guard store.imageTranslationCorrectedBlockIDs.contains(block.id),
-              !isRunning,
-              !isRenderingExport else {
+              canModifyImageTranslation else {
             return
         }
         restoreConfirmationBlock = block
@@ -509,7 +518,8 @@ struct ImageTranslationPanel: View {
     }
 
     private func restoreIgnoredImageTranslationBlock(_ block: ImageTranslationBlock) {
-        guard store.restoreIgnoredImageTranslationBlock(block.id) else { return }
+        guard canModifyImageTranslation,
+              store.restoreIgnoredImageTranslationBlock(block.id) else { return }
         reviewFilter = ImageOCRResultSummary.requiresReview(block) ? .needsReview : .all
         selectedImageTranslationBlockID = block.id
         revealPreview()
@@ -548,7 +558,8 @@ struct ImageTranslationPanel: View {
     }
 
     private func beginReviewQueue() {
-        guard let firstBlockID = reviewRequiredBlocks.first?.id else { return }
+        guard canReviewImageTranslation,
+              let firstBlockID = reviewRequiredBlocks.first?.id else { return }
         let retainedBlockID = selectedImageTranslationBlockID.flatMap { selectedBlockID in
             reviewRequiredBlocks.contains(where: { $0.id == selectedBlockID }) ? selectedBlockID : nil
         }
@@ -560,7 +571,8 @@ struct ImageTranslationPanel: View {
     }
 
     private func toggleReviewCompletion(_ blockID: UUID, focusInPreview: Bool) {
-        guard allReviewRequiredBlocks.contains(where: { $0.id == blockID }) else { return }
+        guard canReviewImageTranslation,
+              allReviewRequiredBlocks.contains(where: { $0.id == blockID }) else { return }
         if store.reopenImageTranslationBlockReview(blockID) {
             reviewFilter = .needsReview
             selectedImageTranslationBlockID = blockID
@@ -588,7 +600,8 @@ struct ImageTranslationPanel: View {
     }
 
     private func restartReviewQueue() {
-        guard let firstBlockID = allReviewRequiredBlocks.first?.id else { return }
+        guard canReviewImageTranslation,
+              let firstBlockID = allReviewRequiredBlocks.first?.id else { return }
         store.resetImageTranslationReviewProgress()
         reviewFilter = .needsReview
         selectedImageTranslationBlockID = firstBlockID
@@ -746,6 +759,14 @@ struct ImageTranslationPanel: View {
 
     private var isRenderingExport: Bool {
         store.imageTranslationExportRenderState == .rendering
+    }
+
+    private var canModifyImageTranslation: Bool {
+        store.imageTranslationState == .translated && !isRenderingExport
+    }
+
+    private var canReviewImageTranslation: Bool {
+        store.imageTranslationState == .translated
     }
 
     private func handleImport(_ result: Result<URL, Error>) {
@@ -1069,6 +1090,7 @@ private struct ImageTranslationPreview: View {
     let canSelectNext: Bool
     let reviewedBlockIDs: Set<UUID>
     let canEdit: Bool
+    let canReview: Bool
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let selectBlock: (UUID) -> Void
     let clearSelection: () -> Void
@@ -1120,6 +1142,7 @@ private struct ImageTranslationPreview: View {
                                 isReviewRequired: ImageOCRResultSummary.requiresReview(selectedBlock),
                                 isReviewCompleted: reviewedBlockIDs.contains(selectedBlock.id),
                                 canEdit: canEdit,
+                                canReview: canReview,
                                 accessibilityFocus: accessibilityFocus,
                                 close: clearSelection,
                                 selectPrevious: selectPrevious,
@@ -1478,6 +1501,7 @@ private struct ImageTranslationFocusPreview: View {
     let isReviewRequired: Bool
     let isReviewCompleted: Bool
     let canEdit: Bool
+    let canReview: Bool
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let close: () -> Void
     let selectPrevious: () -> Void
@@ -1576,7 +1600,13 @@ private struct ImageTranslationFocusPreview: View {
                     .labelStyle(.iconOnly)
                     .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
                     .background(Color.black.opacity(0.82), in: Circle())
-                    .accessibilityHint(isReviewCompleted ? "把当前文字块放回待复查队列" : "标记完成并定位下一个待复查文字块")
+                    .disabled(!canReview)
+                    .opacity(canReview ? 1 : 0.35)
+                    .accessibilityHint(
+                        canReview
+                            ? (isReviewCompleted ? "把当前文字块放回待复查队列" : "标记完成并定位下一个待复查文字块")
+                            : "图片翻译完成后可更新复查进度"
+                    )
                 }
                 Button("上一个文字块", systemImage: "chevron.left", action: selectPrevious)
                     .labelStyle(.iconOnly)
@@ -1721,6 +1751,7 @@ private struct ImageTranslationBlockRow: View {
     let isReviewCompleted: Bool
     let isManuallyCorrected: Bool
     let canEdit: Bool
+    let canReview: Bool
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let select: () -> Void
     let edit: () -> Void
@@ -1811,10 +1842,13 @@ private struct ImageTranslationBlockRow: View {
                     .labelStyle(.iconOnly)
                     .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
                     .foregroundStyle(isReviewCompleted ? Color.appSuccess : Color.appWarning)
+                    .disabled(!canReview)
                     .accessibilityHint(
-                        isReviewCompleted
-                            ? "把此文字块放回待复查队列并定位"
-                            : "标记完成并定位下一个待复查文字块"
+                        canReview
+                            ? (isReviewCompleted
+                                ? "把此文字块放回待复查队列并定位"
+                                : "标记完成并定位下一个待复查文字块")
+                            : "图片翻译完成后可更新复查进度"
                     )
                 }
             }

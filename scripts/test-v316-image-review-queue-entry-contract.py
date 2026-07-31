@@ -36,10 +36,9 @@ class ImageReviewQueueEntryContractTests(unittest.TestCase):
         self.assertIn('systemImage: "checklist"', self.view)
         self.assertIn("tone: .warning", self.view)
         self.assertIn("action: beginReviewQueue", self.view)
-        self.assertIn(
-            '.accessibilityHint("显示待复查结果并定位当前或第一个文字块")',
-            self.view,
-        )
+        self.assertIn(".disabled(!canReviewImageTranslation)", self.view)
+        self.assertIn('"显示待复查结果并定位当前或第一个文字块"', self.view)
+        self.assertIn('"图片翻译完成后可开始复查"', self.view)
 
     def test_review_queue_uses_the_shared_product_review_filter(self) -> None:
         review_blocks = braced_body(
@@ -53,7 +52,8 @@ class ImageReviewQueueEntryContractTests(unittest.TestCase):
 
     def test_review_entry_retains_a_visible_selection_or_uses_first(self) -> None:
         begin = braced_body(self.view, "private func beginReviewQueue()")
-        self.assertIn("guard let firstBlockID = reviewRequiredBlocks.first?.id", begin)
+        self.assertIn("canReviewImageTranslation", begin)
+        self.assertIn("let firstBlockID = reviewRequiredBlocks.first?.id", begin)
         self.assertIn("selectedImageTranslationBlockID.flatMap", begin)
         self.assertIn("reviewRequiredBlocks.contains", begin)
         self.assertIn("reviewFilter = .needsReview", begin)
