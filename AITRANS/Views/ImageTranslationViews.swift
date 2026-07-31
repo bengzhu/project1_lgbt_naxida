@@ -1881,6 +1881,7 @@ private struct ImageOCRCorrectionSheet: View {
     @State private var errorMessage: String?
     @State private var showDiscardCorrectionConfirmation = false
     @State private var showIgnoreBlockConfirmation = false
+    @FocusState private var correctedOriginalFocused: Bool
 
     init(
         block: ImageTranslationBlock,
@@ -1937,6 +1938,7 @@ private struct ImageOCRCorrectionSheet: View {
                         .lineLimit(4...10)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .focused($correctedOriginalFocused)
                 }
 
                 Section("当前翻译") {
@@ -1945,9 +1947,7 @@ private struct ImageOCRCorrectionSheet: View {
                 }
 
                 Section("识别有误？") {
-                    Button(role: .destructive) {
-                        showIgnoreBlockConfirmation = true
-                    } label: {
+                    Button(role: .destructive, action: requestIgnoreConfirmation) {
                         Label("忽略此文字块", systemImage: "eye.slash")
                     }
                     .disabled(isSaving)
@@ -1967,6 +1967,12 @@ private struct ImageOCRCorrectionSheet: View {
             .navigationTitle("修正识别文字")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成", action: dismissKeyboard)
+                        .bold()
+                        .accessibilityLabel("完成 OCR 原文输入并收起键盘")
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消", action: requestDismiss)
                         .disabled(isSaving)
@@ -2050,11 +2056,18 @@ private struct ImageOCRCorrectionSheet: View {
 
     private func requestDismiss() {
         guard !isSaving else { return }
+        dismissKeyboard()
         guard hasUnsavedChanges else {
             dismiss()
             return
         }
         showDiscardCorrectionConfirmation = true
+    }
+
+    private func requestIgnoreConfirmation() {
+        guard !isSaving else { return }
+        dismissKeyboard()
+        showIgnoreBlockConfirmation = true
     }
 
     private func ignoreCurrentBlock() {
@@ -2069,6 +2082,7 @@ private struct ImageOCRCorrectionSheet: View {
 
     private func save() {
         errorMessage = nil
+        dismissKeyboard()
         Task {
             if await store.correctImageTranslationBlock(block.id, original: normalizedCorrectedOriginal) {
                 didSave()
@@ -2077,6 +2091,10 @@ private struct ImageOCRCorrectionSheet: View {
                 errorMessage = store.imageTranslationCorrectionMessage ?? "文字修正未完成，请重试"
             }
         }
+    }
+
+    private func dismissKeyboard() {
+        correctedOriginalFocused = false
     }
 }
 
