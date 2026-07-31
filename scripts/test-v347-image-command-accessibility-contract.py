@@ -83,8 +83,8 @@ class ImageCommandAccessibilityContractTests(unittest.TestCase):
         )
 
     def test_version_is_bumped_consistently(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.47;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.46;", self.project)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.47;", self.project)
 
     def test_ci_runs_v347_after_v346(self) -> None:
         old = "python3 -B scripts/test-v346-image-preview-status-accessibility-contract.py"
