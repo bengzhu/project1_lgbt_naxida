@@ -8,6 +8,24 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.45：图片覆盖入口与结果行的 VoiceOver 操作语义统一
+日期：2026-07-31
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.45`。PR #109 已合入 `smalldata_test`，merge SHA `cb18b04a2a9e5eaf0726116f83e715fd047b6eef`；远端 `codeb/v3.45-image-overlay-a11y` 已删除，未触碰 `main`。
+
+核心变更：
+
+- 审查图片翻译页时发现，结果行主定位动作已经按 `isSelected` 提示“取消此文字块在图片中的定位”或“在图片预览中定位此文字块”，但完整图片预览中的 `ImageTranslationOverlayBlock` 仍使用旧的“取消图片中的定位／在图片中定位并打开局部放大”。同一文字块从图片入口和列表入口进入时，VoiceOver 会听到不一致的动作语义。
+- v3.45 让两种覆盖模式的图片按钮复用与结果行一致的 View 私有 `accessibilityHint`：已定位时读出“取消此文字块在图片中的定位”，未定位时读出“在图片预览中定位此文字块”。既有 `accessibilityLabel`、翻译／定位 `accessibilityValue`、44pt 点击区、选择回调、局部预览和 Store 边界均不变。
+- 新增 `scripts/test-v345-image-overlay-accessibility-contract.py`（4 项）并接入 UI interaction fail-fast。云端首次 full 发现历史 `scripts/test-v315-image-preview-direct-selection-contract.py` 仍硬编码已废弃的旧文案；该合同现改为验证 hint 接线、状态分流和可访问结构，不再阻断后续合法文案迭代。没有新增 Store、持久化、Vision OCR、模型、renderer/export、漫画探针、Koharu、ground truth、metrics 或 `output/` 行为。
+
+验证与遗留：
+
+- 本地轻量检查通过：v3.42、v3.43、v3.44、v3.45 合同，v3.15 覆盖选择回归合同（修复后），`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、版本解析 `v3.45`、workflow YAML 与 `git diff --check`。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、覆盖按钮命中区域或连续手势回放。
+- 候选首个 SHA `34d00a7d0ada90b30acdab03a76e29e16b3ab7f5` 的 full run `30638887106` 仅因 v3.15 历史合同硬编码旧 hint 而失败，Xcode build 与其余契约均成功；该 run 不作最终验收证据。修复后的候选 SHA `cdb2fbc201d5aa8affb7f43578895ce5ce404195` 的 full run `30639454988` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.45-codeb-v3.45-image-overlay-a11y--cdb2fbc201d5-run30639454988-attempt1` 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 均精确匹配。`xcodeBuildRequired=true`、Xcode build 成功、xcodebuild log 无 error/warning；`.xcresult` 已附带；JUnit `10/10`、0 failures；UI interaction、Speech、首页、粘贴和扩展 Koharu validator fixture 矩阵均通过。
+- PR #109 fast run `30640000286` 成功，精确记录 `reusedFullValidationSha=cdb2fbc201d5aa8affb7f43578895ce5ce404195`、`reusedFullValidationState=success`、`xcodeBuildRequired=false` 和 `fast_followup_reuses_candidate_full_validation`。合并后 fast run `30640078255` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用同一候选 full receipt；两者均是 fast 路由／静态跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针数字、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。真实 VoiceOver、动态字体和覆盖按钮在设备上的体验仍需人工回放。
+
 ## v3.44：图片导航当前位置的 VoiceOver 上下文
 日期：2026-07-31
 
