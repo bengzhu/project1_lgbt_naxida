@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.40：OCR 修正保存期间的输入锁定
+日期：2026-07-31
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.40`。PR #104 已合入 `smalldata_test`，merge SHA `9373a6065274a38d88d50995e1a5bd6cb46f6a8a`；远端 `codeb/v3.40-image-correction-save-lock` 已删除，未触碰 `main`。
+
+核心变更：
+
+- 审查 OCR 修正的异步保存链路发现，保存、取消和忽略按钮虽已在 `isSaving` 时锁定，`TextField` 本身仍可重新获取焦点并修改。若旧请求随后成功，sheet 会关闭，用户保存后新增的输入可能没有被采用也没有保留。
+- `ImageOCRCorrectionSheet` 现在把既有多行 OCR `TextField` 也绑定 `.disabled(isSaving)`。保存开始时 v3.38 继续先收起键盘，输入在当前 block 的 `imageTranslationCorrectionBlockID` 非空期间锁定；成功或失败清除既有 Store state 后自动恢复既有可编辑状态。
+- 没有扩展 Store、持久化或请求状态：仍只调用既有 `correctImageTranslationBlock(block.id, original: normalizedCorrectedOriginal)`，保持 v3.37 规范化、v3.24 弃改保护、v3.25 “确认无误／保存并重译”、v3.38 明确键盘收起、v3.39 滚动收起以及 v3.30–v3.35 revision-scoped 关闭后焦点交接。Vision OCR、模型请求、renderer/export、漫画探针、Koharu、ground truth、metrics 与 `output/` 均未改变。
+- 新增 `scripts/test-v340-image-ocr-correction-save-lock-contract.py`（4 项）并接入图片/UI fail-fast，锁定文本框保存期禁用、block-scoped 既有 Store 状态、既有键盘／mutation guard 和 CI 路由。
+
+验证与遗留：
+
+- 本地轻量检查通过：v3.40 合同 `4/4`，v3.39 `4/4`、v3.38 `4/4`、v3.37 `5/5`、v3.24 `6/6`、v3.25 `5/5`、v3.30／v3.33／v3.35 焦点回归合同、v1.87 UI 合同 `12/12`、v1.94 CI 分层 `10/10`、v1.97 版本身份 `5/5`、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、workflow YAML、版本解析 `v3.40` 与 `git diff --check`。源码合同不能替代真实异步翻译、第三方输入法、VoiceOver 或紧凑布局回放。
+- 候选 SHA `6e655d69076653a21086d303ee75b7248f8ab0bf` 的 full run `30600277215` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.40-codeb-v3.40-image-correction-save-lock--6e655d690766-run30600277215-attempt1` 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 均精确匹配。`xcodeBuildRequired=true`，`.xcresult` Build 为 succeeded、0 errors、0 warnings；JUnit `10/10`、0 failures；图片/UI、Speech、首页、粘贴与扩展 Koharu validator fixture 矩阵均通过，新 v3.40 合同 `4/4`。
+- PR #104 fast `30600543676` 成功，精确记录 `reusedFullValidationSha=6e655d69076653a21086d303ee75b7248f8ab0bf` 与 `reusedFullValidationState=success`，并写明 `xcodeBuildRequired=false`、`fast_followup_reuses_candidate_full_validation`。合并后 fast `30600589242` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用同一候选 full receipt；两者均只作路由跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针数字、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。真实异步翻译、第三方输入法和 VoiceOver 行为仍需在设备／模拟器手工回放。
+
 ## v3.39：OCR 修正输入的滚动收起键盘
 日期：2026-07-31
 

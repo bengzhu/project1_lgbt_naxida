@@ -67,7 +67,7 @@
 - `AITRANS/Views/ProFeatureViews.swift`
 - `AITRANS/Views/AppPreviewSupport.swift`
 
-当前正式版本：`3.39`。普通图片的 `ImageOCRCorrectionSheet` 先将编辑文本收敛为 View 私有 `normalizedCorrectedOriginal`；可保存性、dirty 判断、是否需要重译和传给既有 Store correction 的参数均使用它，与 Store 的 trim-before-no-op 分支完全一致。`trim` 后仍等于当前原文时，sheet 保持“确认无误”、不锁定交互式关闭、不显示放弃确认，也不调用模型；真正语义改动仍走 v3.24 弃改保护、只重译目标 block 和 v3.30–v3.35 revision-scoped `onDismiss` 焦点交接。v3.38 的同一 sheet 用 View 私有 `@FocusState correctedOriginalFocused` 管理多行输入；键盘“完成”及取消、打开忽略确认、保存前都只清除该焦点。v3.39 再对该 `Form` 设置 `.scrollDismissesKeyboard(.interactively)`：滚动过程也只改变键盘可见性，保留 v3.38 的明确收起入口，不改变 dirty／Store／关闭后焦点语义。该改动不创建 Store／持久化状态，不改 Vision OCR、模型、renderer/export、漫画探针、Koharu 主路径或质量基线。v3.36 的 `MangaKoharuArtifactReadinessSummary` 仍只读既有 report，ready 仍只代表下次探针可尝试 shadow OCR，不是 App-side coverage、真机 UI 或质量证据。v3.26 CI receipt 传播规则不变；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
+当前正式版本：`3.40`。普通图片的 `ImageOCRCorrectionSheet` 先将编辑文本收敛为 View 私有 `normalizedCorrectedOriginal`；可保存性、dirty 判断、是否需要重译和传给既有 Store correction 的参数均使用它，与 Store 的 trim-before-no-op 分支完全一致。`trim` 后仍等于当前原文时，sheet 保持“确认无误”、不锁定交互式关闭、不显示放弃确认，也不调用模型；真正语义改动仍走 v3.24 弃改保护、只重译目标 block 和 v3.30–v3.35 revision-scoped `onDismiss` 焦点交接。v3.38 的同一 sheet 用 View 私有 `@FocusState correctedOriginalFocused` 管理多行输入；键盘“完成”及取消、打开忽略确认、保存前都只清除该焦点，v3.39 的 `Form` 滚动也会交互式收起键盘。v3.40 复用已有 `imageTranslationCorrectionBlockID == block.id` 的保存中判断禁用该 `TextField`：开始异步重译后不能再次编辑，直到成功或失败恢复，以免成功关闭 sheet 时丢失后续输入；这不改变 dirty／Store／关闭后焦点语义。该改动不创建 Store／持久化状态，不改 Vision OCR、模型、renderer/export、漫画探针、Koharu 主路径或质量基线。v3.36 的 `MangaKoharuArtifactReadinessSummary` 仍只读既有 report，ready 仍只代表下次探针可尝试 shadow OCR，不是 App-side coverage、真机 UI 或质量证据。v3.26 CI receipt 传播规则不变；真实竖排图片 corpus、Speech corpus 与 Koharu 真实四件套运行态仍待提供。
 
 当前布局：
 
