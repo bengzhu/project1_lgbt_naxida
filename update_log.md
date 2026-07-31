@@ -8,6 +8,25 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.42：图片操作锁定的状态化反馈
+日期：2026-07-31
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.42`。PR #106 已合入 `smalldata_test`，merge SHA `6b5c0ab8e74a7b1605dad05b43ad6986213a582b`；远端 `codeb/v3.42-image-action-lock-feedback` 已删除，未触碰 `main`。
+
+核心变更：
+
+- v3.41 让仍在逐块翻译的 OCR blocks 可查看／定位，同时锁住会改变图片结果或复查进度的入口；审查发现这些入口中的一部分虽已禁用，却只给出泛化提示，用户和 VoiceOver 无法区分“正在逐块翻译”“翻译失败需重试”与“正在更新导出图”。
+- `ImageTranslationPanel` 新增 View 私有 `imageModificationUnavailableDetail`、`imageReviewUnavailableDetail`、`imageActionLockTitle` 与 `imageActionLockDetail`。当前 blocks 非空且任一操作被锁定时显示警示状态行；覆盖方式、开始／继续／重启复查、局部预览、结果行的修正／Vision OCR 恢复／完成复查、以及已忽略 block 恢复，都复用相同的状态化 VoiceOver 禁用原因。逐块翻译明确仍可查看和定位，失败明确引导重试，导出重绘仅锁住图片编辑而保留已完成翻译后的复查。
+- 后续审查补齐局部预览、结果行和忽略列表的同一提示传递，避免局部入口回退为旧泛化文案。没有改变 `canModifyImageTranslation`／`canReviewImageTranslation`、`TranslationSessionStore` finalized-state guard、Vision OCR、模型翻译、renderer/export、持久化、漫画探针、Koharu、ground truth、metrics 或 `output/`；不能把此体验改进描述为 OCR、翻译、识别或 Koharu 质量提升。
+- 关键文件为 `AITRANS/Views/ImageTranslationViews.swift`、`AITRANS.xcodeproj/project.pbxproj`、`.github/workflows/ci-results.yml`、`scripts/test-v316-image-review-queue-entry-contract.py`、`scripts/test-v341-image-review-final-state-lock-contract.py` 与新增 `scripts/test-v342-image-action-lock-feedback-contract.py`。
+
+验证与遗留：
+
+- 本地轻量检查通过：v3.16 `5/5`、v3.41 `5/5`、v3.42 `4/4`、v1.87 `12/12`、v1.94 `10/10`、v1.97 `5/5`、图片 import／share 回归合同、`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、版本解析 `v3.42`、workflow YAML 与 `git diff --check`。这些源码／静态检查不能替代真实逐块翻译、失败后重试、VoiceOver、Dynamic Type 或连续手势回放。
+- 初始候选 SHA `65ab4cf2447b929112c7546bc2c135d20eec3ef3` 的 full `30634260280` 只因 v3.16 静态合同仍期待已删除的旧泛化 literal 而失败；该合同已随状态化实现更新，不能作为最终验收证据。最终候选 SHA `98e9667db7d3364a9c54c5dda666945a1077e40e` 的 full run `30635545111` 成功，`AITRANS CI/full-validation` 为 success；未加密 artifact `aitrans-ci-v3.42-codeb-v3.42-image-action-lock-feedback--98e9667db7d3-run30635545111-attempt1` 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full` 与 `validationReason=candidate_development_push` 均精确匹配。`xcodeBuildRequired=true`、`xcodeBuildOutcome=success`，`.xcresult` 已附带；JUnit `10/10`、0 failures，UI interaction contract 成功，v3.42 合同 `4/4`。这是本版 Swift/Xcode 编译证据。
+- PR #106 fast `30635953184` 成功，精确记录 `reusedFullValidationSha=98e9667db7d3364a9c54c5dda666945a1077e40e`、`reusedFullValidationState=success` 与 `xcodeBuildSkippedReason=fast_followup_reuses_candidate_full_validation`。合并后 fast `30636021103` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true` 并复用同一 full receipt；两者均是 fast 路由／静态跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针数字、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`。真实设备／模拟器仍需人工回放逐块翻译、失败后重试、VoiceOver 与紧凑布局。
+
 ## v3.41：图片复查仅在最终翻译结果开放
 日期：2026-07-31
 
