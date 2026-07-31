@@ -8,6 +8,24 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.46：图片预览加载与失败状态的 VoiceOver 反馈
+日期：2026-07-31
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.46`。PR #110 已合入 `smalldata_test`，merge SHA `1ed986098c47ec4b732fe2b894273f0bdc63057e`；远端 `codeb/v3.46-image-preview-status-a11y` 已删除，未触碰 `main`。
+
+核心变更：
+
+- 审查图片页的异步预览状态时发现，视觉上虽然显示“正在准备预览／预览生成失败”，但 VoiceOver 没有稳定的状态 label/value；失败后的“重试预览”也没有明确说明它不会重新 OCR 或翻译，用户容易误判操作成本和影响范围。
+- v3.46 为 `ImageTranslationPreview` 的 loading／failure 卡片增加 View 私有的状态 accessibility label/value：加载时说明图片已载入、正在后台生成屏幕预览；失败时说明原图仍保留用于 OCR 与导出。失败按钮增加“重新生成屏幕预览；不会重新识别或翻译图片”的 hint，仍只递增既有 `previewAttempt`，不改变 revision、`ImagePreviewService`、OCR、翻译、renderer/export 或 Store。
+- 新增 `scripts/test-v346-image-preview-status-accessibility-contract.py`（4 项），并让 v3.45 合同继续兼容后续 `3.x` 版本。没有新增 Store、持久化、漫画探针、Koharu、ground truth、metrics 或 `output/` 行为。
+
+验证与遗留：
+
+- 本地轻量检查通过：v3.15 回归、v3.43–v3.46 图片 VoiceOver 合同，`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、版本解析 `v3.46`、workflow YAML 与 `git diff --check`。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、预览失败恢复或连续手势回放。
+- 候选 SHA `dd0ac6d96723fcc9531bd85cd35da226f05ae3d9` 的 full run `30640658564` 成功，`AITRANS CI/full-validation` status 为 success；未加密 artifact `aitrans-ci-v3.46-codeb-v3.46-image-preview-status-a11y--dd0ac6d96723-run30640658564-attempt1` 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 均精确匹配。`xcodeBuildRequired=true`、Xcode build 成功、xcodebuild log 无 error/warning；`.xcresult` 已附带；JUnit `10/10`、0 failures；UI interaction、Speech、首页、粘贴和扩展 Koharu validator fixture 矩阵均通过。
+- PR #110 fast run `30641294092` 成功，精确记录 `reusedFullValidationSha=dd0ac6d96723fcc9531bd85cd35da226f05ae3d9`、`reusedFullValidationState=success`、`xcodeBuildRequired=false` 和 `fast_followup_reuses_candidate_full_validation`。合并后 fast run `30641380308` 成功，精确匹配 merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用同一候选 full receipt；两者均是 fast 路由／静态跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针数字、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.45：图片覆盖入口与结果行的 VoiceOver 操作语义统一
 日期：2026-07-31
 
