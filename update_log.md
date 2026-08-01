@@ -8,6 +8,41 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.60：完整图片预览覆盖块的复查上下文
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.60`。候选分支 `codeb/v3.60-image-overlay-review-context` 的核心实现 commit 为 `dfe72bed23dee1998eeeaef062f9a80bb6ce7824`，历史合同兼容修复 commit 为 `17f6dec888f6daf56e42b474f66e8eb0b2aa48f7`；PR #124 已合入 `smalldata_test`，merge SHA 为 `7b729d05ab8eb3bf1dbff0569e112ca9ba833ff2`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- 完整图片预览的 adjacent 与 replace 覆盖块现在向 VoiceOver value 提供与复查结果行一致的上下文：OCR 置信度（clamp 到 0–100%）、人工修正、低置信／方向待定、待复查／本次已复查和等待翻译／译文。
+- 复查完成集合与人工修正集合只由父 View 读取既有状态并传入覆盖 View；覆盖仍只执行定位选择，稳定 label、定位 hint、选中状态和现有视觉／渲染行为保持不变。该改动不新增 Store／持久化状态，不改变选择、Vision OCR、模型翻译、renderer/export、漫画探针、Koharu 主路径或质量基线。
+- 首次 full run `30689000319` 只因历史 v3.45 合同仍锁定旧 overlay value 而失败；随后扩展该回归合同并以 `17f6dec8` 重跑，未放宽产品行为边界。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `scripts/test-v345-image-overlay-accessibility-contract.py`
+- `scripts/test-v359-image-overlay-block-context-accessibility-contract.py`
+- `scripts/test-v360-image-overlay-review-context-accessibility-contract.py`
+- `.github/workflows/ci-results.yml`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `README.md`、`AGENTS.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`
+
+验证：
+
+- 本地轻量检查：v3.15 + v3.47–v3.60 图片/UI 合同通过，ImageTranslationViews Swift parse、CI YAML/JSON smoke、版本解析（`v3.60`）和 `git diff --check` 通过。
+- 候选最终 full run `30689206966` / job `91340813801`：manifest exact 匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build 成功，`.xcresult` 为 `succeeded`、0 errors、0 warnings，JUnit `10/10`，静态、Speech、UI、home/paste 契约均通过；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #124 fast run `30689436322`：exact candidate SHA，`validationProfile=fast`，`reusedFullValidationSha=17f6dec888f6daf56e42b474f66e8eb0b2aa48f7`、state `success`，Xcode skip；JUnit `10/10`。该 fast 包不是新的编译证据。
+- merge fast run `30689464537`：merge SHA exact，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full SHA，父 SHA `4b662377179a58ad6ead1749462ee70f4c94ebad` 的 receipt 为 success，`receiptPropagationAllowed=true`，Xcode skip；JUnit `10/10`。
+
+边界与遗留：
+
+- 未跑本机 build / 探针，按规则交给云端验证。候选、PR 与 merge 均为 `probe_mode=skip`，没有新漫画 `output/` 报告、PNG 或 `metrics/version_history.csv` 指标行；仓库既有 output 仍是历史基线。
+- 云端 active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实四件套、Speech corpus 和真实竖排图片 corpus 均未提供；本版不能作为 OCR、翻译、识别或 Koharu 质量提升证据。
+- 真实设备／模拟器仍需人工回放相邻与替换覆盖模式、低置信／方向待定、人工修正、待复查／已复查、等待翻译、长 OCR、空 OCR 和 VoiceOver 连续定位；源码合同和云端 build 不能替代该回放。
+
+
 ## v3.59：完整图片预览覆盖块的语音身份对齐
 日期：2026-08-01
 
