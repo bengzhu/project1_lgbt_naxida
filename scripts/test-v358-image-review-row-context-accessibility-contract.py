@@ -57,11 +57,11 @@ class ImageReviewRowContextAccessibilityContractTests(unittest.TestCase):
         self.assertNotIn("saveImage", self.row)
 
     def test_version_and_ci_route_follow_v357(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.58;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.57;", self.project)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.58;", self.project)
         old = "python3 -B scripts/test-v357-manga-probe-block-accessibility-contract.py"
         new = "python3 -B scripts/test-v358-image-review-row-context-accessibility-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))

@@ -1968,7 +1968,7 @@ private struct ImageTranslationOverlayBlock: View {
                 .buttonStyle(.plain)
                 .frame(minWidth: AppTheme.Layout.minimumTarget, minHeight: AppTheme.Layout.minimumTarget)
                 .position(x: adjacentCenterX(for: rect), y: rect.midY)
-                .accessibilityLabel("文字块 \(block.original)")
+                .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
                 .accessibilityValue(accessibilityValue)
                 .accessibilityHint(accessibilityHint)
             case .replace:
@@ -1985,7 +1985,7 @@ private struct ImageTranslationOverlayBlock: View {
                 .buttonStyle(.plain)
                 .frame(minWidth: AppTheme.Layout.minimumTarget, minHeight: AppTheme.Layout.minimumTarget)
                 .position(x: rect.midX, y: rect.midY)
-                .accessibilityLabel("文字块 \(block.original)")
+                .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
                 .accessibilityValue(accessibilityValue)
                 .accessibilityHint(accessibilityHint)
             }
@@ -2017,6 +2017,10 @@ private struct ImageTranslationOverlayBlock: View {
     private var accessibilityValue: String {
         let translation = block.translation.isEmpty ? "等待翻译" : block.translation
         return isSelected ? "已定位，\(translation)" : "未定位，\(translation)"
+    }
+
+    private var accessibilityOriginalText: String {
+        block.original.isEmpty ? "空" : block.original
     }
 
     private var accessibilityHint: String {
