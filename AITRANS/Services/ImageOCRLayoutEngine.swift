@@ -41,8 +41,13 @@ enum ImageOCRLayoutEngine {
         _ observations: [ImageOCRLayoutObservation],
         allowsVerticalText: Bool
     ) -> [ImageOCRLayoutBlock] {
-        let resolved = observations.map {
-            resolveDirection(for: $0, among: observations, allowsVerticalText: allowsVerticalText)
+        let safeObservations = observations.map { observation in
+            var safeObservation = observation
+            safeObservation.confidence = normalizedConfidence(observation.confidence)
+            return safeObservation
+        }
+        let resolved = safeObservations.map {
+            resolveDirection(for: $0, among: safeObservations, allowsVerticalText: allowsVerticalText)
         }
         let horizontal = orderedHorizontalBands(resolved.filter { $0.direction != .vertical })
         let vertical = orderedVerticalBands(resolved.filter { $0.direction == .vertical })
@@ -255,6 +260,11 @@ enum ImageOCRLayoutEngine {
             default: false
             }
         }
+    }
+
+    private static func normalizedConfidence(_ rawConfidence: Float) -> Float {
+        guard rawConfidence.isFinite else { return 0 }
+        return min(max(rawConfidence, 0), 1)
     }
 }
 

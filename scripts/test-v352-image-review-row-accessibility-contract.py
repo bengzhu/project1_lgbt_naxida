@@ -51,7 +51,10 @@ class ImageReviewRowAccessibilityContractTests(unittest.TestCase):
     def test_confidence_is_clamped_before_percent_formatting(self) -> None:
         row = braced_body(self.view, "private struct ImageTranslationBlockRow: View")
         confidence = braced_body(row, "private var accessibilityConfidencePercent: Int")
-        self.assertIn("min(max(Double(block.confidence), 0), 1)", confidence)
+        self.assertTrue(
+            "min(max(Double(block.confidence), 0), 1)" in confidence
+            or "ImageOCRResultSummary.normalizedConfidence(block.confidence)" in confidence
+        )
         self.assertIn("rounded()", confidence)
 
     def test_version_and_ci_route_follow_v351(self) -> None:
@@ -59,7 +62,7 @@ class ImageReviewRowAccessibilityContractTests(unittest.TestCase):
         self.assertNotIn("MARKETING_VERSION = 3.52;", self.project)
         old = "python3 -B scripts/test-v351-image-status-accessibility-contract.py"
         new = "python3 -B scripts/test-v352-image-review-row-accessibility-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
