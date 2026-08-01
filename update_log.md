@@ -8,6 +8,37 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.61：图片复查方向上下文与置信度边界
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.61`。候选分支 `codeb/v3.61-image-direction-review-context` 的实现 commit 为 `ca6031416ea4c69d7a3c523c69d8c23b51e25fff`；PR #125 已合入 `smalldata_test`，merge SHA 为 `5be4efb76de2303cbdd4d240dade930cc5e9fea5`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationBlockRow` 在已有 Vision OCR 方向证据为横排／竖排时显示方向标签，并把方向与有限、clamp 到 0–100% 的方向置信度加入 View 私有 VoiceOver value；未知方向继续由既有“方向待定／待复查”路径表达。
+- `ImageTranslationOverlayBlock` 的 adjacent 与 replace 两种完整图片预览覆盖模式复用同一方向上下文；结果行的 OCR 置信度显示对非有限或越界值安全回退／夹紧到 0–100%。不新增 Store／持久化状态，不改变 Vision OCR、模型翻译、选择、renderer/export、漫画探针、Koharu 主路径或质量基线。
+- 新增 `scripts/test-v361-image-direction-review-context-contract.py`，并让历史 v3.47–v3.60 图片 UI 合同接受后续正式 `3.x` 版本，避免版本推进造成回归误报。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v361-image-direction-review-context-contract.py` 及 v3.47–v3.60 历史 UI 合同
+- `README.md`、`AGENTS.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`
+
+验证：
+
+- 本地轻量检查：UI interaction 合同 68 个全部通过，v3.00 evaluator、v3.61 合同、ImageOCRResultSummary/ImageTranslationViews Swift parse、CI YAML/JSON smoke、版本解析（`v3.61`）和 `git diff --check` 通过。
+- 候选 full run `30689857010` / job `91342531205`：manifest exact 匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build 成功，xcresult 已上传，JUnit `10/10`、0 failures，静态、Speech、UI、home/paste 契约均通过。
+- PR #125 fast run `30690056870`：exact candidate SHA，`validationProfile=fast`，`reusedFullValidationSha=ca6031416ea4c69d7a3c523c69d8c23b51e25fff`、state `success`，Xcode skip；JUnit `10/10`。该 fast 包不是新的编译证据。
+
+边界与遗留：
+
+- 未跑本机 build / 探针，按规则交给云端验证。候选和 PR 均为 `probe_mode=skip`，没有新漫画 `output/` 报告、PNG 或 `metrics/version_history.csv` 指标行；仓库既有 output 仍是历史基线。
+- 云端 active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实四件套、Speech corpus 和真实竖排图片 corpus 均未提供；本版不能作为 OCR、翻译、识别或 Koharu 质量提升证据。
+- 真实设备／模拟器仍需人工回放横排／竖排／未知方向、异常置信度、长 OCR、VoiceOver 连续定位和 Dynamic Type；源码合同与云端 build 不能替代该回放。
+
 ## v3.60：完整图片预览覆盖块的复查上下文
 日期：2026-08-01
 
