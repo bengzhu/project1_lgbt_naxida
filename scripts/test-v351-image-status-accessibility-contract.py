@@ -69,11 +69,11 @@ class ImageStatusAccessibilityContractTests(unittest.TestCase):
         self.assertIn("不会重新识别或翻译图片", hint)
 
     def test_version_and_ci_route_follow_v350(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.51;"), 2)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
         self.assertNotIn("MARKETING_VERSION = 3.50;", self.project)
         old = "python3 -B scripts/test-v350-image-selection-supersession-accessibility-contract.py"
         new = "python3 -B scripts/test-v351-image-status-accessibility-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))

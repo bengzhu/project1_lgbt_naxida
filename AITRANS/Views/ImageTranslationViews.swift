@@ -2097,7 +2097,7 @@ private struct ImageTranslationBlockRow: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
-            .accessibilityValue(isSelected ? "已在图片中定位" : "未定位")
+            .accessibilityValue(accessibilityValue)
             .accessibilityHint(
                 isSelected
                     ? "取消此文字块在图片中的定位"
@@ -2156,6 +2156,38 @@ private struct ImageTranslationBlockRow: View {
         .padding(.horizontal, AppTheme.Spacing.compact)
         .background(isSelected ? Color.appAccent.opacity(0.12) : Color.clear)
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
+    }
+
+    private var accessibilityValue: String {
+        var parts = [
+            isSelected ? "已在图片中定位" : "未定位",
+            "OCR 置信度 \(accessibilityConfidencePercent)%"
+        ]
+
+        if isManuallyCorrected {
+            parts.append("已人工修正")
+        }
+
+        if ImageOCRResultSummary.requiresReview(block) {
+            if ImageOCRResultSummary.hasLowConfidence(block) {
+                parts.append("低置信")
+            }
+            if ImageOCRResultSummary.hasUnknownDirection(block) {
+                parts.append("方向待定")
+            }
+            parts.append(isReviewCompleted ? "本次已复查" : "待复查")
+        }
+
+        if block.translation.isEmpty {
+            parts.append("等待翻译")
+        }
+
+        return parts.joined(separator: "；")
+    }
+
+    private var accessibilityConfidencePercent: Int {
+        let confidence = min(max(Double(block.confidence), 0), 1)
+        return Int((confidence * 100).rounded())
     }
 }
 
