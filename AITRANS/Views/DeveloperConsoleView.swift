@@ -364,7 +364,16 @@ private struct MangaKoharuArtifactReadinessSummary: View {
         return readiness.coordinateValidation.bboxValidationPassed ? "通过" : "待修正"
     }
 
+    private var isLegacySummaryOnlyArtifact: Bool {
+        readiness.coordinateValidation.schemaVersion == "aitrans.koharu_artifact_contract.v1"
+            && readiness.bubbleMaskPayloadVerdict == "legacySummaryOnly"
+            && readiness.segmentMaskPayloadVerdict == "legacySummaryOnly"
+    }
+
     private var maskPayloadGateStatus: String {
+        if isLegacySummaryOnlyArtifact {
+            return "未要求（v1 summary-only）"
+        }
         guard let gateReady = readiness.maskPayloadGateReady else { return "未评估" }
         if gateReady { return "通过" }
         let verdicts = [
@@ -378,6 +387,9 @@ private struct MangaKoharuArtifactReadinessSummary: View {
     }
 
     private var maskTopologyGateStatus: String {
+        if isLegacySummaryOnlyArtifact {
+            return "未要求（v2 拓扑）"
+        }
         if readiness.maskTopologyGateReady == true { return "完整" }
         guard let report = readiness.maskTopologyReport else { return "未评估" }
         let verdict = report.topologyVerdict.isEmpty ? "待复核" : report.topologyVerdict
@@ -411,11 +423,15 @@ private struct MangaKoharuArtifactReadinessSummary: View {
 
     private var readinessGateAccessibilityHint: String {
         var details: [String] = []
-        if readiness.maskPayloadGateReady == false {
-            details.append("mask payload 尚未通过")
-        }
-        if readiness.maskTopologyGateReady == false, readiness.maskTopologyReport != nil {
-            details.append("mask 拓扑仍需稳定一对一分配和像素分区复核")
+        if isLegacySummaryOnlyArtifact {
+            details.append("当前为 v1 summary-only；v2 mask payload 和 topology 尚未要求")
+        } else {
+            if readiness.maskPayloadGateReady == false {
+                details.append("mask payload 尚未通过")
+            }
+            if readiness.maskTopologyGateReady == false, readiness.maskTopologyReport != nil {
+                details.append("mask 拓扑仍需稳定一对一分配和像素分区复核")
+            }
         }
         if let receipt = readiness.artifactIdentityReceipt,
            receipt.identityVerdict != "activeArtifactIdentityRecorded" {
@@ -438,7 +454,7 @@ private struct MangaKoharuArtifactReadinessSummary: View {
         let topologyBlockers = topology?.blockers.isEmpty == false
             ? topology?.blockers.joined(separator: " | ") ?? "none"
             : "none"
-        return "source=\(readiness.sourceImage)\nartifactRoot=test/koharu_artifacts\nverdict=\(readiness.readinessVerdict)\nnextAction=\(readiness.nextAction)\nactiveArtifactsDirectory=\(readiness.activeArtifactsDirectory)\ncontractExampleOnly=\(readiness.contractExampleOnly)\nexternalTextBoxesShadowOCRAllowed=\(readiness.externalTextBoxesShadowOCRAllowed)\nmanifestFound=\(readiness.manifestFound)\ntextBoxesFound=\(readiness.textBoxesFound)\nbubbleMaskFound=\(readiness.bubbleMaskFound)\nsegmentMaskFound=\(readiness.segmentMaskFound)\nmissingArtifacts=\(missing)\nparseErrors=\(parseErrors)\ngeneratedBy=\(readiness.generatedBy ?? "n/a")\ntextBoxCount=\(readiness.textBoxCount)\nbubbleInstanceCount=\(readiness.bubbleInstanceCount)\nsegmentGlyphPixelCount=\(readiness.segmentGlyphPixelCount.map(String.init) ?? "n/a")\ncoordinateSchemaVersion=\(coordinate.schemaVersion ?? "n/a")\ncoordinateSpace=\(coordinate.coordinateSpace ?? "n/a")\ncoordinateBboxValidationPassed=\(coordinate.bboxValidationPassed)\nbubbleMaskPayloadVerdict=\(readiness.bubbleMaskPayloadVerdict ?? "n/a")\nsegmentMaskPayloadVerdict=\(readiness.segmentMaskPayloadVerdict ?? "n/a")\nmaskPayloadGateReady=\(optionalBool(readiness.maskPayloadGateReady))\nmaskTopologyGateReady=\(optionalBool(readiness.maskTopologyGateReady))\nmaskTopologyEvaluated=\(optionalBool(topology?.evaluated))\nmaskTopologyVerdict=\(topology?.topologyVerdict ?? "n/a")\nmaskTopologyBlockers=\(topologyBlockers)\nartifactIdentityVerdict=\(receipt?.identityVerdict ?? "n/a")\nartifactIdentityAllRequiredFilesPresent=\(optionalBool(receipt?.allRequiredFilesPresent))\nartifactIdentityAllRequiredFilesHaveSHA256=\(optionalBool(receipt?.allRequiredFilesHaveSHA256))\nsourceImageSHA256Matches=\(optionalBool(receipt?.sourceImageSHA256Matches))\nnotes=\(notes)\nshadowOnly=true\nmainFlowChanged=false"
+        return "source=\(readiness.sourceImage)\nartifactRoot=test/koharu_artifacts\nverdict=\(readiness.readinessVerdict)\nnextAction=\(readiness.nextAction)\nactiveArtifactsDirectory=\(readiness.activeArtifactsDirectory)\ncontractExampleOnly=\(readiness.contractExampleOnly)\nexternalTextBoxesShadowOCRAllowed=\(readiness.externalTextBoxesShadowOCRAllowed)\nmanifestFound=\(readiness.manifestFound)\ntextBoxesFound=\(readiness.textBoxesFound)\nbubbleMaskFound=\(readiness.bubbleMaskFound)\nsegmentMaskFound=\(readiness.segmentMaskFound)\nmissingArtifacts=\(missing)\nparseErrors=\(parseErrors)\ngeneratedBy=\(readiness.generatedBy ?? "n/a")\ntextBoxCount=\(readiness.textBoxCount)\nbubbleInstanceCount=\(readiness.bubbleInstanceCount)\nsegmentGlyphPixelCount=\(readiness.segmentGlyphPixelCount.map(String.init) ?? "n/a")\ncoordinateSchemaVersion=\(coordinate.schemaVersion ?? "n/a")\ncoordinateSpace=\(coordinate.coordinateSpace ?? "n/a")\ncoordinateBboxValidationPassed=\(coordinate.bboxValidationPassed)\nbubbleMaskPayloadVerdict=\(readiness.bubbleMaskPayloadVerdict ?? "n/a")\nsegmentMaskPayloadVerdict=\(readiness.segmentMaskPayloadVerdict ?? "n/a")\nmaskPayloadGateReady=\(optionalBool(readiness.maskPayloadGateReady))\nmaskPayloadGateStatus=\(maskPayloadGateStatus)\nmaskTopologyGateReady=\(optionalBool(readiness.maskTopologyGateReady))\nmaskTopologyGateStatus=\(maskTopologyGateStatus)\nmaskTopologyEvaluated=\(optionalBool(topology?.evaluated))\nmaskTopologyVerdict=\(topology?.topologyVerdict ?? "n/a")\nmaskTopologyBlockers=\(topologyBlockers)\nartifactIdentityVerdict=\(receipt?.identityVerdict ?? "n/a")\nartifactIdentityAllRequiredFilesPresent=\(optionalBool(receipt?.allRequiredFilesPresent))\nartifactIdentityAllRequiredFilesHaveSHA256=\(optionalBool(receipt?.allRequiredFilesHaveSHA256))\nsourceImageSHA256Matches=\(optionalBool(receipt?.sourceImageSHA256Matches))\nnotes=\(notes)\nshadowOnly=true\nmainFlowChanged=false"
     }
 }
 
