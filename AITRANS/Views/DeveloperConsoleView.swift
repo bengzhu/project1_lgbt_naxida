@@ -268,6 +268,10 @@ private struct MangaKoharuArtifactReadinessSummary: View {
 
     var body: some View {
         AppStatusRow(title: statusTitle, detail: statusDetail, tone: statusTone)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Koharu 工件就绪状态")
+            .accessibilityValue(readinessAccessibilityValue)
+            .accessibilityHint(readinessAccessibilityHint)
         DeveloperCodeBlock(title: "Koharu artifact readiness", text: summary)
     }
 
@@ -303,7 +307,7 @@ private struct MangaKoharuArtifactReadinessSummary: View {
     private var nextActionDetail: String {
         switch readiness.nextAction {
         case "stopUntilArtifactsProvided":
-            "请先提供真实 manifest、TextBoxes、BubbleMask 与 SegmentMask。"
+            "请将真实四件套放入 test/koharu_artifacts/：1.manifest.json、1.textboxes.json、1.bubbles.json、1.segment_mask.json。"
         case "stopUntilArtifactContractFixed":
             "请先修正四件套契约、坐标或来源身份。"
         case "stopUntilRealDetectorSourceDeclared":
@@ -315,11 +319,30 @@ private struct MangaKoharuArtifactReadinessSummary: View {
         }
     }
 
+    private var readinessAccessibilityValue: String {
+        "\(statusTitle)：\(statusDetail)"
+    }
+
+    private var readinessAccessibilityHint: String {
+        switch readiness.nextAction {
+        case "stopUntilArtifactsProvided":
+            "请提供真实 Koharu 四件套后再运行漫画探针；该状态只影响 shadow OCR，不影响普通图片 OCR、翻译或覆盖图"
+        case "stopUntilArtifactContractFixed":
+            "请先修正四件套契约、坐标或来源身份；当前不会进入 shadow OCR"
+        case "stopUntilRealDetectorSourceDeclared":
+            "请声明真实 detector 或 segmenter 来源；fixture 和 proxy 不能作为 active artifact"
+        case "continueWithExternalTextBoxesShadowOCR":
+            "下一次漫画探针可执行 external TextBoxes shadow OCR；结果只写入诊断输出"
+        default:
+            "Koharu readiness 只用于漫画探针诊断，不会修改普通图片 OCR、翻译或覆盖图"
+        }
+    }
+
     private var summary: String {
         let missing = readiness.missingArtifacts.isEmpty ? "none" : readiness.missingArtifacts.joined(separator: ",")
         let parseErrors = readiness.parseErrors.isEmpty ? "none" : readiness.parseErrors.joined(separator: " | ")
         let notes = readiness.notes.isEmpty ? "none" : readiness.notes.joined(separator: " | ")
-        return "source=\(readiness.sourceImage)\nverdict=\(readiness.readinessVerdict)\nnextAction=\(readiness.nextAction)\nactiveArtifactsDirectory=\(readiness.activeArtifactsDirectory)\ncontractExampleOnly=\(readiness.contractExampleOnly)\nexternalTextBoxesShadowOCRAllowed=\(readiness.externalTextBoxesShadowOCRAllowed)\nmanifestFound=\(readiness.manifestFound)\ntextBoxesFound=\(readiness.textBoxesFound)\nbubbleMaskFound=\(readiness.bubbleMaskFound)\nsegmentMaskFound=\(readiness.segmentMaskFound)\nmissingArtifacts=\(missing)\nparseErrors=\(parseErrors)\ngeneratedBy=\(readiness.generatedBy ?? "n/a")\ntextBoxCount=\(readiness.textBoxCount)\nbubbleInstanceCount=\(readiness.bubbleInstanceCount)\nsegmentGlyphPixelCount=\(readiness.segmentGlyphPixelCount.map(String.init) ?? "n/a")\nnotes=\(notes)\nshadowOnly=true\nmainFlowChanged=false"
+        return "source=\(readiness.sourceImage)\nartifactRoot=test/koharu_artifacts\nverdict=\(readiness.readinessVerdict)\nnextAction=\(readiness.nextAction)\nactiveArtifactsDirectory=\(readiness.activeArtifactsDirectory)\ncontractExampleOnly=\(readiness.contractExampleOnly)\nexternalTextBoxesShadowOCRAllowed=\(readiness.externalTextBoxesShadowOCRAllowed)\nmanifestFound=\(readiness.manifestFound)\ntextBoxesFound=\(readiness.textBoxesFound)\nbubbleMaskFound=\(readiness.bubbleMaskFound)\nsegmentMaskFound=\(readiness.segmentMaskFound)\nmissingArtifacts=\(missing)\nparseErrors=\(parseErrors)\ngeneratedBy=\(readiness.generatedBy ?? "n/a")\ntextBoxCount=\(readiness.textBoxCount)\nbubbleInstanceCount=\(readiness.bubbleInstanceCount)\nsegmentGlyphPixelCount=\(readiness.segmentGlyphPixelCount.map(String.init) ?? "n/a")\nnotes=\(notes)\nshadowOnly=true\nmainFlowChanged=false"
     }
 }
 
