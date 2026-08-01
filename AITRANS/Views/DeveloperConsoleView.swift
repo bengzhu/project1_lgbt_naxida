@@ -214,6 +214,10 @@ private struct MangaProbeSection: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
             AppSectionHeader(title: "漫画覆盖翻译探针", subtitle: "test/1.png -> Output", systemImage: "rectangle.3.group.bubble.left.fill")
             AppStatusRow(title: probeStatusTitle, detail: store.mangaOverlayProbeMessage, tone: probeTone)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("漫画覆盖翻译探针状态")
+                .accessibilityValue(probeStatusAccessibilityValue)
+                .accessibilityHint(probeStatusAccessibilityHint)
             AppPrimaryButton(
                 title: store.isRunningMangaOverlayProbe ? "探针运行中" : "运行漫画覆盖翻译探针",
                 systemImage: "photo.badge.checkmark",
@@ -221,6 +225,7 @@ private struct MangaProbeSection: View {
                 action: store.runMangaOverlayProbe
             )
             .disabled(store.isRunningMangaOverlayProbe)
+            .accessibilityHint(mangaProbeActionAccessibilityHint)
 
             if let report = store.mangaOverlayProbeReport {
                 DeveloperCodeBlock(
@@ -260,6 +265,37 @@ private struct MangaProbeSection: View {
         case .completed: .success
         case .failed: .danger
         }
+    }
+
+    private var probeStatusAccessibilityValue: String {
+        let detail = store.mangaOverlayProbeMessage.isEmpty ? "暂无附加详情" : store.mangaOverlayProbeMessage
+        return "\(probeStatusTitle)：\(detail)"
+    }
+
+    private var probeStatusAccessibilityHint: String {
+        switch store.mangaOverlayProbeState {
+        case .idle:
+            "运行后读取 bundle 的 test/1.png，生成漫画探针诊断输出；不会改变普通图片 OCR、翻译或覆盖图"
+        case .loading:
+            "正在读取 bundle 的 test/1.png；当前结果只属于漫画探针诊断"
+        case .recognizing:
+            "正在执行 Vision OCR 诊断；识别块会保留在探针报告中供复查"
+        case .translating:
+            "正在执行漫画探针翻译；失败 block 仍会保留原文和失败详情"
+        case .rendering:
+            "正在生成覆盖图、JSON 和 TXT 输出；不会改变普通图片翻译结果"
+        case .completed:
+            "可查看 probe_report、覆盖图和逐块结果；再次运行仍只更新漫画探针诊断输出"
+        case .failed:
+            "探针失败；请查看状态详情和输出后重试，不会影响普通图片 OCR 或翻译"
+        }
+    }
+
+    private var mangaProbeActionAccessibilityHint: String {
+        if store.isRunningMangaOverlayProbe {
+            return "漫画覆盖翻译探针正在运行；完成后可查看诊断报告和覆盖图"
+        }
+        return "读取 bundle 的 test/1.png，运行 Vision OCR、确定性翻译和覆盖绘制，并生成 Output 诊断文件；不会改变普通图片 OCR、翻译或覆盖图"
     }
 }
 
