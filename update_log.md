@@ -8,6 +8,38 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.54：修复图片状态 VoiceOver value 的动态播报回归
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.54`。候选分支 `codeb/v3.54-image-status-value-fix` 的核心 commit 为 `fa2920bedf4aa9ba9661f48471d929b880480466`；PR #118 已合入 `smalldata_test`，merge SHA 为 `cfd6214c1325a46f4e544cebf5d514b8f467b2e6`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- 修复 `ImageTranslationPanel.imageStatusAccessibilityValue` 的实际实现回归：源码此前返回字面量 `(statusTitle)：(statusDetail)`，现在使用 \(statusTitle)：\(statusDetail) 的 Swift 字符串插值，VoiceOver 会随状态实际读出阶段、逐块进度、失败、导出重绘和完成详情。
+- 新增 `scripts/test-v354-image-status-value-contract.py`，并强化 v3.51 合同以拒绝字面量实现；v3.47–v3.53 合同的后续版本路由同步允许 v3.54。该版本不新增 Store／持久化状态，不改变 OCR、翻译、renderer/export、漫画探针、Koharu、ground truth、metrics 或 output。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v347-image-command-accessibility-contract.py` 至 `scripts/test-v354-image-status-value-contract.py`
+- `README.md`、`AGENTS.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`
+
+验证：
+
+- 本地轻量检查：v3.47–v3.54 图片/UI 合同全部通过（31 项）、Swift parse、CI YAML 解析、`python3 scripts/resolve-project-version.py`（`v3.54`）和 `git diff --check` 均通过。
+- 候选 full run `30685471079` / job `91330239345`：manifest exact 匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build 成功，`.xcresult` 为 `succeeded`、0 errors、0 warnings，JUnit `10/10`，UI interaction、Speech、home/paste 与静态检查通过；`AITRANS CI/full-validation=success`。
+- PR #118 fast run `30685682394`：exact candidate SHA，`validationProfile=fast`，`reusedFullValidationSha=fa2920be...`、state `success`，Xcode skip reason 为复用候选 full；JUnit `10/10`。该 fast 包不是新的编译证据。
+- merge fast run `30685708141`：merge SHA exact，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full SHA，父 SHA `f77778d7435b752a85097bbe88326ac34c4f56df` 的 receipt 为 success，`receiptPropagationAllowed=true`，Xcode skip reason 为复用候选 full；JUnit `10/10`。
+
+边界与遗留：
+
+- 未跑本机 build / 探针，按规则交给云端验证。候选、PR 与 merge 均为 `probe_mode=skip`，没有新漫画 `output/` 报告、PNG 或 `metrics/version_history.csv` 指标行；仓库既有 output 仍是历史基线。
+- 云端 active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，四件套、Speech corpus 和真实竖排图片 corpus 均未提供；本版不能作为 OCR、翻译、识别或 Koharu 质量提升证据。
+- 真实设备／模拟器仍需人工回放图片状态在各生命周期变化时的 VoiceOver 动态朗读；源码合同和云端 build 不能替代该回放。
+
+
 ## v3.53：已忽略 OCR 文字块恢复行的 VoiceOver 上下文
 日期：2026-08-01
 
