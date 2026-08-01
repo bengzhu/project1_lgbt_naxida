@@ -511,9 +511,11 @@ struct ImageTranslationPanel: View {
     private func toggleSelection(of blockID: UUID) {
         if selectedImageTranslationBlockID == blockID {
             selectedImageTranslationBlockID = nil
+            moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))
         } else {
             selectedImageTranslationBlockID = blockID
             revealPreview()
+            moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(blockID))
         }
     }
 
@@ -635,12 +637,14 @@ struct ImageTranslationPanel: View {
     private func selectBlockFromPreview(_ blockID: UUID) {
         if selectedImageTranslationBlockID == blockID {
             selectedImageTranslationBlockID = nil
+            moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))
             return
         }
         if !visibleImageTranslationBlocks.contains(where: { $0.id == blockID }) {
             reviewFilter = .all
         }
         selectedImageTranslationBlockID = blockID
+        moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(blockID))
     }
 
     private func closeImageTranslationFocusPreview() {
