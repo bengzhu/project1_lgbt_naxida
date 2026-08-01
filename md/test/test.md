@@ -81,6 +81,7 @@
 
 - v3.49 正式要求图片输入语言与目标语言控制的 VoiceOver hint 按运行中、Pro 锁定、无图片、已完成、失败／取消重试分流；两套菜单继续保留 `.disabled(isRunning)`，已完成输入语言提示说明会重新识别和翻译，目标语言提示说明会重新翻译当前图片，选回当前内容语言撤销 pending retry 差异。该改动只改善 View 私有语义，不新增 Store／持久化状态，不改变图片 task、OCR、翻译、renderer/export、探针、Koharu、metrics 或 output。`scripts/test-v349-image-language-accessibility-contract.py` 必须在 v3.48 后接入 UI interaction fail-fast；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type 或语言切换回放。
 - v3.50 正式要求照片与文件导入按钮在读取、OCR 或翻译进行中提供明确的 VoiceOver supersession 提示：选择新图片会取消当前图片读取、OCR 或翻译并开始新的本机 OCR 与翻译；空态／非运行态继续说明首次选择、替换当前图片或文件导入，Pro 锁定入口不变，且两个导入入口保持可用，不得擅自新增 `.disabled(isRunning)`。该改动只改善 View 私有语义，不新增 Store／持久化状态，不改变已有 `TranslationSessionStore` task-id 隔离、OCR、翻译、renderer/export、探针、Koharu、metrics 或 output。`scripts/test-v350-image-selection-supersession-accessibility-contract.py` 必须在 v3.49 后接入同一图片/UI fail-fast；v3.47–v3.49 合同须允许后续正式 `3.x` 版本回归；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、PhotosPicker／fileImporter 取消与替换手势回放。
+- v3.51 正式要求图片状态行成为单一、稳定的 VoiceOver 状态元素：label 固定为“图片翻译状态”，value 同时包含既有 `statusTitle` 与 `statusDetail`（包括逐块进度），hint 必须按载入、Vision OCR、逐块翻译、导出重绘、分享准备、失败、取消／待重试和完成状态说明可取消、换图、重试、修正、复查、覆盖或导出边界。该改动只改善 View 私有语义，不新增 Store／持久化状态，不改变 `TranslationSessionStore`、OCR、翻译、renderer/export、探针、Koharu、metrics 或 output。`scripts/test-v351-image-status-accessibility-contract.py` 必须在 v3.50 后接入同一图片/UI fail-fast；v3.47–v3.50 合同须允许后续正式 `3.x` 版本回归；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、状态更新朗读和连续操作回放。
 
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
