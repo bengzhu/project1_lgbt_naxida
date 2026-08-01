@@ -99,6 +99,7 @@
 
 - v3.65 正式要求图片 OCR 修正 sheet 的低置信度提示复用 ImageOCRResultSummary.normalizedConfidence，非有限／越界值在百分比格式化前安全归一化；合同必须保持 View-only，不新增 Store／持久化、不重跑 OCR／翻译或改变 renderer/export、漫画探针、Koharu、metrics 或 output。scripts/test-v365-image-confidence-display-contract.py 必须在 v3.64 后接入同一 UI fail-fast，历史 v3.47–v3.64 合同须接受后续正式版本；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、真实图片 corpus 或完整探针。
 - v3.66 正式要求 Vision OCR bounding box 在进入布局前通过统一的 finite／positive-area／unit-space 整矩形边界；布局引擎必须过滤 NaN/∞、零面积与完全越界 observation，并保持有效矩形与已有阅读顺序不变。scripts/test-v366-image-ocr-geometry-safety-contract.py 及纯 Swift evaluator 必须在 v3.65 后接入同一 UI fail-fast，历史 v3.47–v3.65 合同须接受后续正式版本；该安全边界不得被描述为 OCR 字符质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或完整探针。
+- v3.67 正式要求 Codable `NormalizedImageRect` 在图片覆盖、局部定位和导出 renderer 前复用 finite／positive-area／unit-space 整矩形边界；无效恢复框必须跳过 View/绘制，不能把异常几何写回持久化或冒充 OCR 质量提升。`scripts/test-v367-image-block-geometry-safety-contract.py` 及纯 Swift evaluator 必须在 v3.66 后接入同一 UI fail-fast，历史 v3.47–v3.66 合同须接受后续正式版本；源码合同不能替代真实图片 corpus、设备 VoiceOver 或完整探针。
 
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
