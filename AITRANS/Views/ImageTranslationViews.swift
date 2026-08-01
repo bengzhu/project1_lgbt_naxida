@@ -2102,7 +2102,7 @@ private struct ImageTranslationOverlayBlock: View {
     }
 
     private var accessibilityConfidencePercent: Int {
-        let confidence = min(max(Double(block.confidence), 0), 1)
+        let confidence = Double(ImageOCRResultSummary.normalizedConfidence(block.confidence))
         return Int((confidence * 100).rounded())
     }
 
@@ -2288,14 +2288,12 @@ private struct ImageTranslationBlockRow: View {
     }
 
     private var accessibilityConfidencePercent: Int {
-        let confidence = min(max(Double(block.confidence), 0), 1)
+        let confidence = Double(ImageOCRResultSummary.normalizedConfidence(block.confidence))
         return Int((confidence * 100).rounded())
     }
 
     private var displayConfidence: Double {
-        let rawConfidence = Double(block.confidence)
-        guard rawConfidence.isFinite else { return 0 }
-        return min(max(rawConfidence, 0), 1)
+        Double(ImageOCRResultSummary.normalizedConfidence(block.confidence))
     }
 }
 

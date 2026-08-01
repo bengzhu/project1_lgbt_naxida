@@ -1,0 +1,45 @@
+import Foundation
+
+enum ImageTextDirection {
+    case horizontal
+    case vertical
+    case unknown
+}
+
+struct ImageTranslationBlock {
+    var translation: String
+    var confidence: Float
+    var sourceDirection: ImageTextDirection?
+}
+
+private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
+    precondition(condition(), message)
+}
+
+private func block(_ confidence: Float) -> ImageTranslationBlock {
+    ImageTranslationBlock(translation: "", confidence: confidence, sourceDirection: .horizontal)
+}
+
+private func testNonFiniteConfidenceFallsBackToReviewableZero() {
+    let summary = ImageOCRResultSummary(blocks: [
+        block(.nan),
+        block(.infinity),
+        block(-.infinity),
+        block(-0.2),
+        block(1.4)
+    ])
+
+    require(summary.averageConfidence?.isFinite == true, "average confidence must remain finite")
+    require(abs((summary.averageConfidence ?? -1) - 0.2) < 0.000_001, "non-finite confidence must normalize to zero")
+    require(summary.lowConfidenceBlockCount == 4, "non-finite confidence must remain reviewable")
+    require(ImageOCRResultSummary.normalizedConfidence(.nan) == 0, "NaN must normalize to zero")
+    require(ImageOCRResultSummary.normalizedConfidence(.infinity) == 0, "infinity must normalize to zero")
+}
+
+@main
+private struct ImageConfidenceSafetyEvaluator {
+    static func main() {
+        testNonFiniteConfidenceFallsBackToReviewableZero()
+        print("v3.64 image confidence safety evaluator passed")
+    }
+}

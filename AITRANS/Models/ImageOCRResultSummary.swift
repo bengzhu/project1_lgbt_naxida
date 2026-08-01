@@ -16,7 +16,7 @@ struct ImageOCRResultSummary: Equatable, Sendable {
         blocks: [ImageTranslationBlock],
         lowConfidenceThreshold: Float = Self.lowConfidenceThreshold
     ) {
-        let confidences = blocks.map { min(max(Double($0.confidence), 0), 1) }
+        let confidences = blocks.map { Double(Self.normalizedConfidence($0.confidence)) }
 
         totalBlockCount = blocks.count
         translatedBlockCount = blocks.count(where: { !$0.translation.isEmpty })
@@ -47,9 +47,14 @@ struct ImageOCRResultSummary: Equatable, Sendable {
         _ block: ImageTranslationBlock,
         lowConfidenceThreshold: Float = Self.lowConfidenceThreshold
     ) -> Bool {
-        let threshold = min(max(lowConfidenceThreshold, 0), 1)
-        let confidence = min(max(block.confidence, 0), 1)
+        let threshold = normalizedConfidence(lowConfidenceThreshold)
+        let confidence = normalizedConfidence(block.confidence)
         return confidence < threshold
+    }
+
+    static func normalizedConfidence(_ rawConfidence: Float) -> Float {
+        guard rawConfidence.isFinite else { return 0 }
+        return min(max(rawConfidence, 0), 1)
     }
 
     static func hasUnknownDirection(_ block: ImageTranslationBlock) -> Bool {
