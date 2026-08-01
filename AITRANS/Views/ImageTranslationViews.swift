@@ -956,7 +956,7 @@ private struct ImageSourceLanguageControl: View {
         }
         switch store.imageTranslationState {
         case .translated:
-            return "输入语言设置已解锁；更改后会重新识别并翻译当前图片；选回当前内容语言会撤销待重试更改"
+            return "输入语言设置已解锁；已完成的图片会重新识别和翻译当前图片；选回当前内容语言会撤销待重试更改"
         case .idle, .failed:
             return "输入语言设置已解锁；失败或取消后会在重试时使用新语言；选回当前内容语言会撤销待重试更改"
         case .loading, .recognizing, .translating:
