@@ -1036,7 +1036,7 @@ private struct ImageTargetLanguageControl: View {
         }
         switch store.imageTranslationState {
         case .translated:
-            return "更改后会重新翻译当前图片；选回当前内容语言会撤销待重试更改"
+            return "已完成的图片会重新翻译当前图片；选回当前内容语言会撤销待重试更改"
         case .idle, .failed:
             return "失败或取消后会在重试时使用新目标语言；选回当前内容语言会撤销待重试更改"
         case .loading, .recognizing, .translating:
