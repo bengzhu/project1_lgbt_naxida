@@ -2065,10 +2065,10 @@ private struct ImageTranslationOverlayBlock: View {
         case .adjacent:
             Button(action: select) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(block.translation.isEmpty ? block.original : block.translation)
+                    Text(block.translation.isEmpty ? displayOCRText : block.translation)
                         .font(.caption.bold())
                         .lineLimit(4)
-                    Text(block.original)
+                    Text(displayOCRText)
                         .font(.caption2)
                         .lineLimit(2)
                         .foregroundStyle(.secondary)
@@ -2090,7 +2090,7 @@ private struct ImageTranslationOverlayBlock: View {
             .accessibilityHint(accessibilityHint)
         case .replace:
             Button(action: select) {
-                Text(block.translation.isEmpty ? block.original : block.translation)
+                Text(block.translation.isEmpty ? displayOCRText : block.translation)
                     .font(.caption.bold())
                     .lineLimit(4)
                     .multilineTextAlignment(.center)
@@ -2165,6 +2165,10 @@ private struct ImageTranslationOverlayBlock: View {
         block.original.isEmpty ? "空" : block.original
     }
 
+    private var displayOCRText: String {
+        block.original.isEmpty ? "空 OCR 原文" : block.original
+    }
+
     private var accessibilityConfidencePercent: Int {
         let confidence = Double(ImageOCRResultSummary.normalizedConfidence(block.confidence))
         return Int((confidence * 100).rounded())
@@ -2209,7 +2213,7 @@ private struct ImageTranslationBlockRow: View {
                         Text(block.translation.isEmpty ? "等待翻译" : block.translation)
                             .font(.subheadline.bold())
                             .foregroundStyle(Color.appTextPrimary)
-                        Text(block.original)
+                        Text(displayOriginalText)
                             .font(.caption)
                             .foregroundStyle(Color.appTextSecondary)
                         if !ImageOCRGeometryPresentation.isLocatable(for: block) {
@@ -2354,6 +2358,10 @@ private struct ImageTranslationBlockRow: View {
 
     private var accessibilityOriginalText: String {
         block.original.isEmpty ? "空" : block.original
+    }
+
+    private var displayOriginalText: String {
+        block.original.isEmpty ? "空 OCR 原文" : block.original
     }
 
     private var accessibilityConfidencePercent: Int {
