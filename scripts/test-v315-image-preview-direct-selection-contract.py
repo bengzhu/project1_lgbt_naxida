@@ -62,7 +62,7 @@ class ImagePreviewDirectSelectionContractTests(unittest.TestCase):
             ),
             2,
         )
-        self.assertEqual(overlay.count('.accessibilityLabel("文字块 \\(block.original)")'), 2)
+        self.assertEqual(overlay.count('.accessibilityLabel("图片文字块 \\(accessibilityOriginalText)")'), 2)
         self.assertEqual(overlay.count(".accessibilityValue(accessibilityValue)"), 2)
         self.assertEqual(overlay.count(".accessibilityHint(accessibilityHint)"), 2)
         self.assertIn("private var accessibilityHint: String", overlay)
