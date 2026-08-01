@@ -47,8 +47,9 @@ class ImagePreviewInvalidGeometryContractTests(unittest.TestCase):
         self.assertIn("unavailableFocusState", preview)
         self.assertIn("当前文字块局部预览不可用", preview)
         self.assertIn("仍可关闭、编辑 OCR 原文或切换文字块", preview)
-        self.assertIn(".accessibilityValue(focusPreviewAccessibilityValue)", preview)
-        self.assertIn("parts.append(\"局部预览不可用\")", preview)
+        self.assertIn(".accessibilityValue(\"\\(positionText)，\\(block.original)\")", preview)
+        self.assertIn(".accessibilityHint(focusPreviewAccessibilityHint)", preview)
+        self.assertIn("return \"局部预览不可用；仍可关闭、编辑 OCR 原文或切换文字块\"", preview)
         self.assertIn("Button(\"关闭局部放大\"", preview)
         self.assertIn("Button(\"修正识别文字\"", preview)
 

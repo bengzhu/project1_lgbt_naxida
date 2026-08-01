@@ -1968,7 +1968,8 @@ private struct ImageTranslationFocusPreview: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("已定位文字块局部放大")
-        .accessibilityValue(focusPreviewAccessibilityValue)
+        .accessibilityValue("\(positionText)，\(block.original)")
+        .accessibilityHint(focusPreviewAccessibilityHint)
         .accessibilityFocused(
             accessibilityFocus,
             equals: "image-review-preview-\(block.id.uuidString)"
@@ -1999,12 +2000,11 @@ private struct ImageTranslationFocusPreview: View {
         .accessibilityValue("仍可关闭、编辑 OCR 原文或切换文字块")
     }
 
-    private var focusPreviewAccessibilityValue: String {
-        var parts = [positionText, block.original]
+    private var focusPreviewAccessibilityHint: String {
         if focusCrop == nil {
-            parts.append("局部预览不可用")
+            return "局部预览不可用；仍可关闭、编辑 OCR 原文或切换文字块"
         }
-        return parts.joined(separator: "，")
+        return "可关闭局部放大、编辑 OCR 原文或切换文字块"
     }
 
     private func relativeBlockRect(in cropRect: CGRect) -> CGRect {
