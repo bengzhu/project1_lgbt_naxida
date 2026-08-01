@@ -225,7 +225,7 @@ struct ImageTranslationPanel: View {
                 reviewUnavailableHint: imageReviewUnavailableDetail,
                 accessibilityFocus: $reviewAccessibilityFocusID,
                 selectBlock: selectBlockFromPreview,
-                clearSelection: { selectedImageTranslationBlockID = nil },
+                clearSelection: closeImageTranslationFocusPreview,
                 selectPrevious: { selectAdjacentBlock(offset: -1) },
                 selectNext: { selectAdjacentBlock(offset: 1) },
                 editBlock: { beginCorrectionFromFocusPreview(of: $0) },
@@ -636,6 +636,12 @@ struct ImageTranslationPanel: View {
             reviewFilter = .all
         }
         selectedImageTranslationBlockID = blockID
+    }
+
+    private func closeImageTranslationFocusPreview() {
+        guard let selectedImageTranslationBlockID else { return }
+        self.selectedImageTranslationBlockID = nil
+        moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(selectedImageTranslationBlockID))
     }
 
     private func beginReviewQueue() {
