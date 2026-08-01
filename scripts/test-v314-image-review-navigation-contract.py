@@ -79,7 +79,8 @@ class ImageReviewNavigationContractTests(unittest.TestCase):
     def test_position_is_visible_and_in_the_accessibility_value(self) -> None:
         self.assertIn('return "\\(selectedVisibleBlockIndex + 1) / \\(visibleImageTranslationBlocks.count)"', self.view)
         self.assertIn("Text(positionText)", self.view)
-        self.assertIn('.accessibilityValue("\\(positionText)，\\(block.original)")', self.view)
+        self.assertIn('.accessibilityValue("\\(positionText)，\\(accessibilityOriginalText)")', self.view)
+        self.assertIn('block.original.isEmpty ? "空" : block.original', self.view)
 
     def test_navigation_remains_view_private(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")
