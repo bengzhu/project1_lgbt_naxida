@@ -1091,7 +1091,7 @@ private struct ImageCommandBar: View {
             )
 
             AppSecondaryButton(title: "图片文件", systemImage: "folder", action: openImporter)
-                .accessibilityHint("从文件选择图片并开始本机 OCR 与翻译")
+                .accessibilityHint(fileSelectionAccessibilityHint)
         } else {
             AppSecondaryButton(
                 title: store.imageTranslationData == nil ? "选择照片" : "更换照片",
@@ -1161,9 +1161,19 @@ private struct ImageCommandBar: View {
     }
 
     private var imageSelectionAccessibilityHint: String {
-        store.imageTranslationData == nil
+        if isRunning {
+            return "选择新图片会取消当前图片读取、OCR 或翻译，并开始新的本机 OCR 与翻译"
+        }
+        return store.imageTranslationData == nil
             ? "从照片图库选择图片并开始本机 OCR 与翻译"
             : "更换当前图片并开始新的本机 OCR 与翻译"
+    }
+
+    private var fileSelectionAccessibilityHint: String {
+        if isRunning {
+            return "从文件选择新图片会取消当前图片读取、OCR 或翻译，并开始新的本机 OCR 与翻译"
+        }
+        return "从文件选择图片并开始本机 OCR 与翻译"
     }
 
     private var isRunning: Bool {

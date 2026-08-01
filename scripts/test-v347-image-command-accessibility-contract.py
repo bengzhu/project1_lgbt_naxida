@@ -36,10 +36,7 @@ class ImageCommandAccessibilityContractTests(unittest.TestCase):
         command_bar = braced_body(self.view, "private struct ImageCommandBar: View")
         commands = braced_body(command_bar, "@ViewBuilder private var commands: some View")
         self.assertIn("accessibilityHint: imageSelectionAccessibilityHint", commands)
-        self.assertIn(
-            '.accessibilityHint("从文件选择图片并开始本机 OCR 与翻译")',
-            commands,
-        )
+        self.assertIn(".accessibilityHint(fileSelectionAccessibilityHint)", commands)
         self.assertIn(
             '.accessibilityHint("图片翻译需要 Pro；不会修改当前图片或文本页语言")',
             commands,
@@ -73,6 +70,7 @@ class ImageCommandAccessibilityContractTests(unittest.TestCase):
         self.assertIn(".accessibilityHint(accessibilityHint)", picker)
         command_bar = braced_body(self.view, "private struct ImageCommandBar: View")
         self.assertIn("private var imageSelectionAccessibilityHint: String", command_bar)
+        self.assertIn("private var fileSelectionAccessibilityHint: String", command_bar)
         self.assertIn(
             '? "从照片图库选择图片并开始本机 OCR 与翻译"',
             command_bar,
@@ -89,7 +87,7 @@ class ImageCommandAccessibilityContractTests(unittest.TestCase):
     def test_ci_runs_v347_after_v346(self) -> None:
         old = "python3 -B scripts/test-v346-image-preview-status-accessibility-contract.py"
         new = "python3 -B scripts/test-v347-image-command-accessibility-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
