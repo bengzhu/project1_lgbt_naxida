@@ -80,6 +80,7 @@
 - 探针模式等待期间 `ci-fast` 每 30 秒打印 `output/manga_probe_progress.json` 和输出目录快照，1800 秒总超时、启动后 180 秒未创建 progress 提前失败、进度 300 秒不更新提前失败；`full` 为 3600 秒总超时、300 秒 no-progress 阈值、600 秒停滞阈值。失败时仍复制已有 `output/`，并在结果包保留 `manga-probe.log`、`app-console.log`、manifest 和失败摘要。
 
 - v3.49 正式要求图片输入语言与目标语言控制的 VoiceOver hint 按运行中、Pro 锁定、无图片、已完成、失败／取消重试分流；两套菜单继续保留 `.disabled(isRunning)`，已完成输入语言提示说明会重新识别和翻译，目标语言提示说明会重新翻译当前图片，选回当前内容语言撤销 pending retry 差异。该改动只改善 View 私有语义，不新增 Store／持久化状态，不改变图片 task、OCR、翻译、renderer/export、探针、Koharu、metrics 或 output。`scripts/test-v349-image-language-accessibility-contract.py` 必须在 v3.48 后接入 UI interaction fail-fast；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type 或语言切换回放。
+- v3.50 正式要求照片与文件导入按钮在读取、OCR 或翻译进行中提供明确的 VoiceOver supersession 提示：选择新图片会取消当前图片读取、OCR 或翻译并开始新的本机 OCR 与翻译；空态／非运行态继续说明首次选择、替换当前图片或文件导入，Pro 锁定入口不变，且两个导入入口保持可用，不得擅自新增 `.disabled(isRunning)`。该改动只改善 View 私有语义，不新增 Store／持久化状态，不改变已有 `TranslationSessionStore` task-id 隔离、OCR、翻译、renderer/export、探针、Koharu、metrics 或 output。`scripts/test-v350-image-selection-supersession-accessibility-contract.py` 必须在 v3.49 后接入同一图片/UI fail-fast；v3.47–v3.49 合同须允许后续正式 `3.x` 版本回归；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、PhotosPicker／fileImporter 取消与替换手势回放。
 
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
