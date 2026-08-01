@@ -461,6 +461,9 @@ final class TranslationSessionStore: ObservableObject {
         if summary.lowConfidenceBlockCount > 0 {
             parts.append("低置信 \(summary.lowConfidenceBlockCount)")
         }
+        if summary.horizontalBlockCount > 0 {
+            parts.append("横排 \(summary.horizontalBlockCount)")
+        }
         if summary.verticalBlockCount > 0 {
             parts.append("竖排 \(summary.verticalBlockCount)")
         }
