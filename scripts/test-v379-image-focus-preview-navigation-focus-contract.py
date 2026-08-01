@@ -70,7 +70,7 @@ class ImageFocusPreviewNavigationFocusContractTests(unittest.TestCase):
         self.assertNotIn("MARKETING_VERSION = 3.78;", self.project)
         old = "python3 -B scripts/test-v378-image-focus-preview-close-focus-contract.py"
         new = "python3 -B scripts/test-v379-image-focus-preview-navigation-focus-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
