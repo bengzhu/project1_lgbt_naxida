@@ -34,6 +34,7 @@
 - 候选 full run `30688366529` / job `91338491005`：manifest exact 匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build 成功，`.xcresult` 为 `succeeded`、0 errors、0 warnings，JUnit `10/10`，静态、Speech、UI、home/paste 契约均通过；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`。
 - PR #123 fast run `30688596306`：exact candidate SHA，`validationProfile=fast`，`reusedFullValidationSha=ecfe01a10f6666527d9c20cd49c97734bb5b37ac`、state `success`，Xcode skip；JUnit `10/10`。该 fast 包不是新的编译证据。
 - merge fast run `30688623155`：merge SHA exact，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full SHA，父 SHA `5e30830eb39771fbfb6fa10dc408b5df6672af71` 的 receipt 为 success，`receiptPropagationAllowed=true`，Xcode skip；JUnit `10/10`。
+- 文档提交 `39e9e0de8bedf18a271cdd15173d89c9d10efd68` 的 metadata follow-up run `30688815074`：exact docs SHA，`validationProfile=fast`，`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用 merge full `de2ffbbbb295c3abd120f8d9da634bca12d122c4`，`smalldataIncrementalMetadataOnly=true`、`smalldataMetadataRequiresFullValidation=false`、`receiptPropagationAllowed=true`，Xcode skip；JUnit `10/10`。该包是文档收据，不是新的编译证据。
 
 边界与遗留：
 
