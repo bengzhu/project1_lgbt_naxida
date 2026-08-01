@@ -51,7 +51,10 @@ class ImageReviewRowAccessibilityContractTests(unittest.TestCase):
     def test_confidence_is_clamped_before_percent_formatting(self) -> None:
         row = braced_body(self.view, "private struct ImageTranslationBlockRow: View")
         confidence = braced_body(row, "private var accessibilityConfidencePercent: Int")
-        self.assertIn("min(max(Double(block.confidence), 0), 1)", confidence)
+        self.assertTrue(
+            "min(max(Double(block.confidence), 0), 1)" in confidence
+            or "ImageOCRResultSummary.normalizedConfidence(block.confidence)" in confidence
+        )
         self.assertIn("rounded()", confidence)
 
     def test_version_and_ci_route_follow_v351(self) -> None:

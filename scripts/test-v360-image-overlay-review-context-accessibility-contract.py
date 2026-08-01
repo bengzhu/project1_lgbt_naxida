@@ -53,7 +53,10 @@ class ImageOverlayReviewContextAccessibilityContractTests(unittest.TestCase):
         self.assertIn('block.translation.isEmpty ? "等待翻译" : "译文：\\(block.translation)"', value)
 
         confidence = braced_body(self.overlay, "private var accessibilityConfidencePercent: Int")
-        self.assertIn("min(max(Double(block.confidence), 0), 1)", confidence)
+        self.assertTrue(
+            "min(max(Double(block.confidence), 0), 1)" in confidence
+            or "ImageOCRResultSummary.normalizedConfidence(block.confidence)" in confidence
+        )
         self.assertIn("rounded()", confidence)
 
     def test_overlay_remains_view_only_and_keeps_stable_identity_and_location_hint(self) -> None:
