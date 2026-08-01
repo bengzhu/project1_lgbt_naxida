@@ -45,8 +45,8 @@ class ImageStatusAccessibilityContractTests(unittest.TestCase):
         panel = braced_body(self.view, "struct ImageTranslationPanel: View")
         value = braced_body(panel, "private var imageStatusAccessibilityValue: String")
 
-        self.assertIn("statusTitle", value)
-        self.assertIn("statusDetail", value)
+        self.assertIn('"\\(statusTitle)：\\(statusDetail)"', value)
+        self.assertNotIn('"(statusTitle)：(statusDetail)"', value)
 
     def test_status_hint_distinguishes_image_lifecycle_and_export_states(self) -> None:
         panel = braced_body(self.view, "struct ImageTranslationPanel: View")
@@ -73,7 +73,7 @@ class ImageStatusAccessibilityContractTests(unittest.TestCase):
         self.assertNotIn("MARKETING_VERSION = 3.50;", self.project)
         old = "python3 -B scripts/test-v350-image-selection-supersession-accessibility-contract.py"
         new = "python3 -B scripts/test-v351-image-status-accessibility-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))

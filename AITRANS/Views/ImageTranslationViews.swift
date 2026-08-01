@@ -775,7 +775,7 @@ struct ImageTranslationPanel: View {
     }
 
     private var imageStatusAccessibilityValue: String {
-        "(statusTitle)：(statusDetail)"
+        "\(statusTitle)：\(statusDetail)"
     }
 
     private var imageStatusAccessibilityHint: String {
