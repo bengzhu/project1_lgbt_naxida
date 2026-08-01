@@ -46,8 +46,14 @@ class ImageOverlayAccessibilityContractTests(unittest.TestCase):
     def test_overlay_value_still_explains_translation_and_selection(self) -> None:
         overlay = braced_body(self.view, "private struct ImageTranslationOverlayBlock: View")
         self.assertEqual(overlay.count(".accessibilityValue(accessibilityValue)"), 2)
-        self.assertIn('let translation = block.translation.isEmpty ? "等待翻译" : block.translation', overlay)
-        self.assertIn('isSelected ? "已定位，\(translation)" : "未定位，\(translation)"', overlay)
+        self.assertTrue(
+            'let translation = block.translation.isEmpty ? "等待翻译" : block.translation' in overlay
+            or 'parts.append(block.translation.isEmpty ? "等待翻译" : "译文：\(block.translation)")' in overlay
+        )
+        self.assertTrue(
+            'isSelected ? "已定位，\(translation)" : "未定位，\(translation)"' in overlay
+            or 'isSelected ? "已在图片中定位" : "未定位"' in overlay
+        )
 
     def test_version_is_bumped_consistently(self) -> None:
         self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)

@@ -1329,6 +1329,8 @@ private struct ImageTranslationPreview: View {
                                 imageOrigin: origin,
                                 imageSize: fittedSize,
                                 isSelected: selectedBlockID == block.id,
+                                isReviewCompleted: reviewedBlockIDs.contains(block.id),
+                                isManuallyCorrected: store.imageTranslationCorrectedBlockIDs.contains(block.id),
                                 select: { selectBlock(block.id) }
                             )
                         }
@@ -1942,6 +1944,8 @@ private struct ImageTranslationOverlayBlock: View {
     let imageOrigin: CGPoint
     let imageSize: CGSize
     let isSelected: Bool
+    let isReviewCompleted: Bool
+    let isManuallyCorrected: Bool
     let select: () -> Void
 
     var body: some View {
@@ -2015,12 +2019,36 @@ private struct ImageTranslationOverlayBlock: View {
     }
 
     private var accessibilityValue: String {
-        let translation = block.translation.isEmpty ? "等待翻译" : block.translation
-        return isSelected ? "已定位，\(translation)" : "未定位，\(translation)"
+        var parts = [
+            isSelected ? "已在图片中定位" : "未定位",
+            "OCR 置信度 \(accessibilityConfidencePercent)%"
+        ]
+
+        if isManuallyCorrected {
+            parts.append("已人工修正")
+        }
+
+        if ImageOCRResultSummary.requiresReview(block) {
+            if ImageOCRResultSummary.hasLowConfidence(block) {
+                parts.append("低置信")
+            }
+            if ImageOCRResultSummary.hasUnknownDirection(block) {
+                parts.append("方向待定")
+            }
+            parts.append(isReviewCompleted ? "本次已复查" : "待复查")
+        }
+
+        parts.append(block.translation.isEmpty ? "等待翻译" : "译文：\(block.translation)")
+        return parts.joined(separator: "；")
     }
 
     private var accessibilityOriginalText: String {
         block.original.isEmpty ? "空" : block.original
+    }
+
+    private var accessibilityConfidencePercent: Int {
+        let confidence = min(max(Double(block.confidence), 0), 1)
+        return Int((confidence * 100).rounded())
     }
 
     private var accessibilityHint: String {
