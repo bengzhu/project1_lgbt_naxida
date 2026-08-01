@@ -395,7 +395,7 @@ private struct MangaKoharuArtifactReadinessSummary: View {
 
     private var readinessAccessibilityHint: String {
         let gateHint = readinessGateAccessibilityHint
-        switch readiness.nextAction {
+        return switch readiness.nextAction {
         case "stopUntilArtifactsProvided":
             "请提供真实 Koharu 四件套后再运行漫画探针；\(gateHint)；该状态只影响 shadow OCR，不影响普通图片 OCR、翻译或覆盖图"
         case "stopUntilArtifactContractFixed":
