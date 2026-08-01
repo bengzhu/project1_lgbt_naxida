@@ -1597,7 +1597,9 @@ private struct ImageTranslationBlockFocusCrop {
         from sourceImage: CGImage,
         block: ImageTranslationBlock
     ) -> Self? {
-        let normalizedRect = normalizedFocusRect(for: block)
+        guard let normalizedRect = normalizedFocusRect(for: block) else {
+            return nil
+        }
         let sourceBounds = CGRect(
             x: 0,
             y: 0,
@@ -1625,9 +1627,9 @@ private struct ImageTranslationBlockFocusCrop {
         return Self(image: croppedImage, normalizedRect: effectiveRect)
     }
 
-    static func normalizedFocusRect(for block: ImageTranslationBlock) -> CGRect {
+    static func normalizedFocusRect(for block: ImageTranslationBlock) -> CGRect? {
         guard let box = block.boundingBox.normalizedToUnit() else {
-            return CGRect(x: 0, y: 0, width: 1, height: 1)
+            return nil
         }
         let sourceRect = CGRect(
             x: CGFloat(box.x),
@@ -1638,7 +1640,7 @@ private struct ImageTranslationBlockFocusCrop {
             .standardized
             .intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
         guard !sourceRect.isEmpty else {
-            return CGRect(x: 0, y: 0, width: 1, height: 1)
+            return nil
         }
         let targetAspectRatio: CGFloat = 16.0 / 9.0
         var width = min(1, max(sourceRect.width * 1.8, 0.16))
@@ -1869,7 +1871,7 @@ private struct ImageTranslationFocusPreview: View {
                     }
                 }
             } else {
-                Color.black
+                unavailableFocusState
             }
         }
         .background(Color.black)
@@ -1967,6 +1969,7 @@ private struct ImageTranslationFocusPreview: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("已定位文字块局部放大")
         .accessibilityValue("\(positionText)，\(block.original)")
+        .accessibilityHint(focusPreviewAccessibilityHint)
         .accessibilityFocused(
             accessibilityFocus,
             equals: "image-review-preview-\(block.id.uuidString)"
@@ -1980,6 +1983,28 @@ private struct ImageTranslationFocusPreview: View {
     private var focusCrop: ImageTranslationBlockFocusCrop? {
         guard let sourceImage = previewImage.cgImage else { return nil }
         return ImageTranslationBlockFocusCrop.make(from: sourceImage, block: block)
+    }
+
+    private var unavailableFocusState: some View {
+        Label(
+            "当前文字块局部预览不可用",
+            systemImage: "exclamationmark.triangle.fill"
+        )
+        .font(.subheadline.bold())
+        .foregroundStyle(Color.appWarning)
+        .multilineTextAlignment(.center)
+        .padding(AppTheme.Spacing.control)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("当前文字块局部预览不可用")
+        .accessibilityValue("仍可关闭、编辑 OCR 原文或切换文字块")
+    }
+
+    private var focusPreviewAccessibilityHint: String {
+        if focusCrop == nil {
+            return "局部预览不可用；仍可关闭、编辑 OCR 原文或切换文字块"
+        }
+        return "可关闭局部放大、编辑 OCR 原文或切换文字块"
     }
 
     private func relativeBlockRect(in cropRect: CGRect) -> CGRect {
