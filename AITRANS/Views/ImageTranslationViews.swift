@@ -2097,6 +2097,7 @@ private struct ImageTranslationBlockRow: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
+            .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
             .accessibilityValue(accessibilityValue)
             .accessibilityHint(
                 isSelected
@@ -2178,11 +2179,13 @@ private struct ImageTranslationBlockRow: View {
             parts.append(isReviewCompleted ? "本次已复查" : "待复查")
         }
 
-        if block.translation.isEmpty {
-            parts.append("等待翻译")
-        }
+        parts.append(block.translation.isEmpty ? "等待翻译" : "译文：\(block.translation)")
 
         return parts.joined(separator: "；")
+    }
+
+    private var accessibilityOriginalText: String {
+        block.original.isEmpty ? "空" : block.original
     }
 
     private var accessibilityConfidencePercent: Int {
