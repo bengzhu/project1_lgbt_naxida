@@ -73,7 +73,7 @@ class ImageStatusAccessibilityContractTests(unittest.TestCase):
         self.assertNotIn("MARKETING_VERSION = 3.50;", self.project)
         old = "python3 -B scripts/test-v350-image-selection-supersession-accessibility-contract.py"
         new = "python3 -B scripts/test-v351-image-status-accessibility-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))

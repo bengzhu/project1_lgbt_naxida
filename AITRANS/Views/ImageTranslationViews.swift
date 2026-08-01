@@ -2027,6 +2027,7 @@ private struct ImageTranslationFocusPreview: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("当前文字块局部预览不可用")
         .accessibilityValue("仍可关闭、编辑 OCR 原文或切换文字块")
+        .accessibilityHidden(true)
     }
 
     private var focusPreviewAccessibilityHint: String {
