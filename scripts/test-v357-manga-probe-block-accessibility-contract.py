@@ -64,11 +64,11 @@ class MangaProbeBlockAccessibilityContractTests(unittest.TestCase):
         self.assertNotIn("runMangaOverlayProbe", self.row)
 
     def test_version_and_ci_route_follow_v356(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.57;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.56;", self.project)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.57;", self.project)
         old = "python3 -B scripts/test-v356-manga-probe-status-accessibility-contract.py"
         new = "python3 -B scripts/test-v357-manga-probe-block-accessibility-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
