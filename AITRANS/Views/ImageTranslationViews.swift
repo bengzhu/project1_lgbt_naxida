@@ -2393,7 +2393,7 @@ private struct ImageTranslationIgnoredBlockRow: View {
                 .foregroundStyle(Color.appTextSecondary)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
-                Text(block.original)
+                Text(displayOriginalText)
                     .font(.subheadline.bold())
                     .foregroundStyle(Color.appTextPrimary)
                     .lineLimit(2)
@@ -2426,8 +2426,16 @@ private struct ImageTranslationIgnoredBlockRow: View {
         .padding(.vertical, AppTheme.Spacing.control)
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("已忽略 OCR 文字块 \(block.original)")
+        .accessibilityLabel("已忽略 OCR 文字块 \(accessibilityOriginalText)")
         .accessibilityValue(accessibilityValue)
+    }
+
+    private var displayOriginalText: String {
+        block.original.isEmpty ? "空 OCR 原文" : block.original
+    }
+
+    private var accessibilityOriginalText: String {
+        block.original.isEmpty ? "空" : block.original
     }
 
     private var accessibilityValue: String {
