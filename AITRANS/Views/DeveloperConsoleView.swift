@@ -409,8 +409,45 @@ private struct MangaProbeBlockRow: View {
                 AppStatusLabel(text: block.blockPassed ? "PASS" : "FAIL", tone: block.blockPassed ? .success : .danger)
             }
             .padding(.vertical, AppTheme.Spacing.control)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("漫画探针文字块 \(block.index)")
+            .accessibilityValue(blockAccessibilityValue)
+            .accessibilityHint(blockAccessibilityHint)
         }
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
+    }
+
+    private var blockAccessibilityValue: String {
+        let ocrText = block.ocrText.isEmpty ? "空" : block.ocrText
+        var parts = [
+            block.blockPassed ? "通过" : "失败",
+            "OCR 原文：\(ocrText)",
+            "旋转 \(block.rotationAngleUsed) 度"
+        ]
+        if let confidence = block.ocrConfidence {
+            let percent = Int((Double(min(max(confidence, 0), 1)) * 100).rounded())
+            parts.append("OCR 置信度 \(percent)%")
+        }
+        if let qualityLabel = block.ocrQualityLabel, !qualityLabel.isEmpty {
+            parts.append("OCR 质量：\(qualityLabel)")
+        }
+        if !block.translatedText.isEmpty {
+            parts.append("译文：\(block.translatedText)")
+        }
+        if !block.failureReasons.isEmpty {
+            parts.append("失败原因：\(block.failureReasons.joined(separator: "、"))")
+        }
+        if let translationFailureDetail = block.translationFailureDetail,
+           !translationFailureDetail.isEmpty {
+            parts.append("翻译失败详情：\(translationFailureDetail)")
+        }
+        return parts.joined(separator: "；")
+    }
+
+    private var blockAccessibilityHint: String {
+        block.blockPassed
+            ? "展开查看 OCR 原文、译文和诊断输出；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
+            : "展开查看 OCR 原文、翻译失败原因和诊断输出；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
     }
 }
 
