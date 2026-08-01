@@ -463,7 +463,7 @@ jobs:
           if grep -Fx 'scripts/test-v346-image-preview-status-accessibility-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
-          if grep -E '^scripts/test-v3(47|48)-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          if grep -E '^scripts/test-v3(47|48|49)-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
 
@@ -1088,6 +1088,7 @@ jobs:
             python3 -B scripts/test-v346-image-preview-status-accessibility-contract.py
             python3 -B scripts/test-v347-image-command-accessibility-contract.py
             python3 -B scripts/test-v348-image-preview-context-accessibility-contract.py
+            python3 -B scripts/test-v349-image-language-accessibility-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract

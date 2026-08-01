@@ -95,7 +95,10 @@ class ImageRetryLanguageContractTests(unittest.TestCase):
         workflow = read(".github/workflows/ci-results.yml")
 
         self.assertIn("store.selectImageTargetLanguage(language)", view)
-        self.assertIn("失败或取消的图片会在重试时使用新语言", view)
+        self.assertTrue(
+            "失败或取消的图片会在重试时使用新语言" in view
+            or "失败或取消后会在重试时使用新语言" in view
+        )
         self.assertIn("34-image-retry-language", workflow)
         self.assertLess(
             workflow.index("scripts/test-v310-image-ocr-review-filter-contract.py"),
