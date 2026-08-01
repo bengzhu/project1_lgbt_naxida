@@ -8,6 +8,36 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.66：图片 OCR 几何边界安全
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.66`。候选分支 `codeb/v3.66-image-ocr-geometry-safety` 的最终候选 HEAD 为 `6ebfaec853b5a02fd5f8db49e7748fadafac61d9`，PR #130 已合入 `smalldata_test`，merge SHA 为 `00839ee4bcfd9b36caf90520fe01b403d70a0028`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageOCRLayoutRect.normalizedToUnit()` 统一拒绝非有限／非正面积几何，并把部分可见矩形按整矩形裁到 `[0,1]`；布局引擎在方向判定和聚类前过滤无效 observation，保证覆盖、局部定位和阅读排序不接收 NaN/∞ 或越界矩形。
+- `VisionOCRService` 在 Vision observation 进入布局前使用同一整矩形边界；异常 bounding box 被丢弃，不再只逐字段 clamp 后生成可能超出图片的 block。
+- 新增 `scripts/test-v366-image-ocr-geometry-safety-contract.py` 与纯 Swift evaluator；历史 v3.47–v3.65 图片合同和 CI 路由同步接受后续正式版本。该版本不改变 OCR 候选、翻译、renderer/export、漫画探针、Koharu 主路径、ground truth、metrics 或 output。
+
+关键文件：
+
+- `AITRANS/Services/ImageOCRLayoutEngine.swift`
+- `AITRANS/Services/VisionOCRService.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v366-image-ocr-geometry-safety-contract.py`
+- `scripts/test-v366-image-ocr-geometry-safety-evaluator.swift`
+- v3.47–v3.65 图片合同与 `README.md`、`AGENTS.md`、flow/test 文档
+
+验证：
+
+- 本地轻量检查：v3.47–v3.66 图片合同套件、v2.7 OCR direction evaluator、v3.64/v3.65 兼容合同、v3.66 geometry evaluator、Swift parse、JSON/YAML smoke、版本解析和 `git diff --check` 通过。
+- 候选 full run `30693549176` / job `91352415895`：manifest exact 匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build 成功（Xcode 26.6），xcresult 与 `xcodebuild.log` 已上传，JUnit `10/10`、0 failures，static、Speech、UI、home/paste 合同均通过。未加密结果包保存在 `/private/tmp/aitrans-c-review-30693549176`。
+- PR #130 fast run `30693771312`：exact candidate SHA，`validationProfile=fast`，复用候选 full SHA `6ebfaec853b5a02fd5f8db49e7748fadafac61d9` 且 state `success`，Xcode skipped；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30693771312`。
+- merge fast run `30693800748`：exact merge SHA `00839ee4bcfd9b36caf90520fe01b403d70a0028`，`validationReason=merge_reuses_successful_candidate_full_validation`，`reusedFullValidationState=success`、`receiptPropagationAllowed=true`，Xcode skipped；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30693800748`。
+
+未跑本机 build / 探针，按规则交给云端验证。候选、PR 和 merge 均使用 `probe_mode=skip`，未生成新的漫画探针指标、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；full artifact 的 active Koharu gate 为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type 和真实图片 corpus。
+
 ## v3.65：图片 OCR 修正 sheet 置信度显示安全
 日期：2026-08-01
 
