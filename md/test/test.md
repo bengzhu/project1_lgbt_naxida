@@ -79,6 +79,8 @@
 - 需要探针验收时，手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。`ci-fast` 仍跑真实模拟器、Local GGUF、真实 `test/1.png`、deterministic 解码、主 OCR / bubble-first 融合 / 逐块翻译 / 失败块覆盖 / clean text / external artifact gate，以及 v1.18+ 必需的 report-only / detector-lite 受限 shadow 报告；只跳过明确列出的高成本对照和诊断 PNG。`ci-fast` 必须保留 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt`、`1_debug_boxes.png`、`1_translated_overlay.png`、`manga_probe_progress.json`。`full` 额外要求 contact sheet 等完整关键 PNG。
 - 探针模式等待期间 `ci-fast` 每 30 秒打印 `output/manga_probe_progress.json` 和输出目录快照，1800 秒总超时、启动后 180 秒未创建 progress 提前失败、进度 300 秒不更新提前失败；`full` 为 3600 秒总超时、300 秒 no-progress 阈值、600 秒停滞阈值。失败时仍复制已有 `output/`，并在结果包保留 `manga-probe.log`、`app-console.log`、manifest 和失败摘要。
 
+- v3.49 正式要求图片输入语言与目标语言控制的 VoiceOver hint 按运行中、Pro 锁定、无图片、已完成、失败／取消重试分流；两套菜单继续保留 `.disabled(isRunning)`，已完成输入语言提示说明会重新识别和翻译，目标语言提示说明会重新翻译当前图片，选回当前内容语言撤销 pending retry 差异。该改动只改善 View 私有语义，不新增 Store／持久化状态，不改变图片 task、OCR、翻译、renderer/export、探针、Koharu、metrics 或 output。`scripts/test-v349-image-language-accessibility-contract.py` 必须在 v3.48 后接入 UI interaction fail-fast；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type 或语言切换回放。
+
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。

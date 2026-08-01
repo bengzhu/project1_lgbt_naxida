@@ -8,6 +8,34 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.49：图片语言菜单的状态化 VoiceOver 提示
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.49`。PR #113 已合入 `smalldata_test`，merge SHA `bbcf68edccb9009440e0738c5f92a94ec3eefee4`；远端 `codeb/v3.49-image-language-a11y` 已删除，未触碰 `main`。
+
+核心变更：
+
+- 审查图片翻译设置时发现，输入／目标语言菜单虽然已有 Pro 和运行态限制，但 VoiceOver 提示没有说明“什么时候可改、会影响什么、失败或取消后会怎样”，且静态 Pro 文案在已解锁时仍会误导用户。
+- v3.49 为 `ImageSourceLanguageControl` 与 `ImageTargetLanguageControl` 增加 View 私有的状态化 accessibility hint：运行中明确要先完成或取消；输入语言区分 Pro 锁定、无图片、已完成重新识别／翻译和失败／取消后的下次重试；目标语言区分无图片、已完成重新翻译和失败／取消后的下次重试。两者继续保留 `.disabled(isRunning)`，选回当前内容语言的撤销语义也在提示中说明。
+- 该版本只改善 VoiceOver 文案与用户操作预期，不新增 Store／持久化状态，不改变图片 task、Vision OCR、模型翻译、renderer/export、漫画探针、Koharu、ground truth、metrics 或 `output`。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v349-image-language-accessibility-contract.py`
+- `scripts/test-v34-image-retry-language-contract.py`
+- `scripts/test-v347-image-command-accessibility-contract.py`
+- `scripts/test-v348-image-preview-context-accessibility-contract.py`
+
+验证与遗留：
+
+- 本地轻量检查通过：v2.07 OCR direction 9/9、v1.87 UI interaction 12/12、v3.4 5/5、v3.5 5/5、v3.6 5/5、v3.7 4/4、v3.46 4/4、v3.47 4/4、v3.48 4/4、v3.49 4/4，`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、版本解析、JSON/YAML smoke 与 `git diff --check` 均通过。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type 或语言切换回放。
+- 候选 SHA `46d8eb9d3a04aa07ff5e34d0daa001bb77c8343b` 的 full run `30645171049` 因 v1.87 历史合同要求保留“已完成的图片会重新翻译”而失败；修复后的 `43c75563ee59801fbddcbe872bc5fd7d8927d019` 的 run `30682569934` 又因 v2.07 历史合同要求“已完成的图片会重新识别和翻译”而失败；两次均不作最终收据。最终候选 SHA `aac788e371e918820efb3d3875039ae871ece5e0` 的 full run `30682755735` 成功并写入 `AITRANS CI/full-validation=success`。未加密 artifact 的 version、branch、commitSha、runId、runAttempt、workflowName、`validationProfile=full`、`validationReason=candidate_development_push` 均精确匹配；`xcodeBuildRequired=true`，`xcresult` build summary 为 `status=succeeded`、0 errors、0 warnings；JUnit `10/10`、0 failures；UI interaction（含 v3.49 4/4）、Speech、首页、粘贴和扩展 Koharu fixture matrix 均通过。
+- PR #113 fast run `30682982193` 成功，精确记录 `reusedFullValidationSha=aac788e371e918820efb3d3875039ae871ece5e0`、`reusedFullValidationState=success`、`xcodeBuildRequired=false` 与 `fast_followup_reuses_candidate_full_validation`。合并后 fast run `30683016098` 成功，精确匹配 merge SHA `bbcf68edccb9009440e0738c5f92a94ec3eefee4`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`、`smalldataParentFullValidationState=success`，复用同一候选 full receipt；两者均是 fast 路由／静态跟踪，不替代候选 full 的 Swift/Xcode 编译证据。
+- 未跑本机 build / 探针，按规则交给云端验证。候选 full 使用 `probe_mode=skip`，UI evidence 为 `not_requested`，未生成新的漫画探针数字、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.48：图片预览识别上下文的 VoiceOver 汇总
 日期：2026-07-31
 
