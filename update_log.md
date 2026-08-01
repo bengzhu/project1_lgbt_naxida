@@ -8,6 +8,38 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.56：漫画探针状态的开发者操作反馈
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.56`。候选分支 `codeb/v3.56-manga-probe-status-a11y` 的核心 commit 为 `2198686a523da9d5fdc4e39f63967fb970947a3f`；PR #120 已合入 `smalldata_test`，merge SHA 为 `dc48b59457cfd00773af61b373d438e6e6a9d2aa`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeSection` 的既有探针状态行现在是稳定的 VoiceOver 上下文：固定 label 为“漫画覆盖翻译探针状态”，value 组合阶段标题与实时探针详情，hint 按等待、载入、Vision OCR、翻译、绘制、完成和失败分流。
+- 运行漫画覆盖翻译探针按钮明确说明会读取 bundle `test/1.png`、生成 Output 诊断文件，并且不会改变普通图片 OCR、翻译或覆盖图。该版本只消费既有 `TranslationSessionStore` 探针状态，不新增 Store／持久化状态、不调用第二次探针，不改变漫画探针失败 block 保留、renderer/export、Koharu 主路径、ground truth、metrics 或 output。
+
+关键文件：
+
+- `AITRANS/Views/DeveloperConsoleView.swift`
+- `scripts/test-v356-manga-probe-status-accessibility-contract.py`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v347-image-command-accessibility-contract.py` 至 `scripts/test-v356-manga-probe-status-accessibility-contract.py`
+
+验证：
+
+- 本地轻量检查：v3.47–v3.56 图片/UI 合同 38 项通过、DeveloperConsoleView Swift parse、CI YAML 解析、版本解析（`v3.56`）和 `git diff --check` 均通过。
+- 候选 full run `30686574508` / job `91333484523`：manifest exact 匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build 成功，`.xcresult` 为 `succeeded`、0 errors、0 warnings，JUnit `10/10`，静态、Speech、UI、home/paste 和扩展 Koharu validator 通过；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #120 fast run `30686820522`：exact candidate SHA，`validationProfile=fast`，`reusedFullValidationSha=2198686a...`、state `success`，Xcode skip reason 为复用候选 full；JUnit `10/10`。该 fast 包不是新的编译证据。
+- merge fast run `30686846333`：merge SHA exact，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full SHA，父 SHA `8aab00750c75bf599abcda170b352f033cd3e5af` 的 receipt 为 success，`receiptPropagationAllowed=true`，Xcode skip reason 为复用候选 full；JUnit `10/10`。
+
+边界与遗留：
+
+- 未跑本机 build / 探针，按规则交给云端验证。候选、PR 与 merge 均为 `probe_mode=skip`，没有新漫画 `output/` 报告、PNG 或 `metrics/version_history.csv` 指标行；仓库既有 output 仍是历史基线。
+- 云端 active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实四件套、Speech corpus 和真实竖排图片 corpus 均未提供；本版不能作为 OCR、翻译、识别或 Koharu 质量提升证据。
+- 真实设备／模拟器仍需人工回放漫画探针状态的 label/value/hint、运行按钮边界和失败重试状态变化；源码合同和云端 build 不能替代该回放。
+
+
 ## v3.55：Koharu readiness 开发者操作反馈
 日期：2026-08-01
 
