@@ -1573,7 +1573,15 @@ private struct ImageTranslationPreview: View {
         guard !store.imageTranslationBlocks.isEmpty else {
             return "当前没有可定位的 OCR 文字块"
         }
-        let operationHint = "点按文字块可定位并打开局部放大"
+        let geometryUnavailableCount = store.imageTranslationBlocks.count {
+            !ImageOCRGeometryPresentation.isLocatable(for: $0)
+        }
+        let operationHint: String
+        if geometryUnavailableCount > 0 {
+            operationHint = "点按文字块可定位；有效文字块可打开局部放大，另有 \(geometryUnavailableCount) 个文字块局部预览不可用"
+        } else {
+            operationHint = "点按文字块可定位并打开局部放大"
+        }
         var unavailableDetails: [String] = []
         if !canEdit {
             unavailableDetails.append(modificationUnavailableHint)
