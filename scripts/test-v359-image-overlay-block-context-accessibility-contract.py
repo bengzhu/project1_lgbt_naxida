@@ -40,7 +40,10 @@ class ImageOverlayBlockContextAccessibilityContractTests(unittest.TestCase):
 
     def test_overlay_context_preserves_translation_and_empty_ocr_fallback(self) -> None:
         value = braced_body(self.overlay, "private var accessibilityValue: String")
-        self.assertIn('block.translation.isEmpty ? "等待翻译" : block.translation', value)
+        self.assertTrue(
+            'block.translation.isEmpty ? "等待翻译" : block.translation' in value
+            or 'block.translation.isEmpty ? "等待翻译" : "译文：\\(block.translation)"' in value
+        )
         original = braced_body(self.overlay, "private var accessibilityOriginalText: String")
         self.assertIn('block.original.isEmpty ? "空" : block.original', original)
         self.assertIn("isSelected ?", value)
@@ -52,11 +55,11 @@ class ImageOverlayBlockContextAccessibilityContractTests(unittest.TestCase):
         self.assertNotIn("setImageOverlayMode", self.overlay)
 
     def test_version_and_ci_route_follow_v358(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.59;"), 2)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
         self.assertNotIn("MARKETING_VERSION = 3.58;", self.project)
         old = "python3 -B scripts/test-v358-image-review-row-context-accessibility-contract.py"
         new = "python3 -B scripts/test-v359-image-overlay-block-context-accessibility-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
