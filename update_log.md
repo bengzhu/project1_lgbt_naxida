@@ -8,6 +8,38 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.55：Koharu readiness 开发者操作反馈
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.55`。候选分支 `codeb/v3.55-koharu-readiness-a11y` 的核心 commit 为 `f29e7a1d830b93ededec51fddb45bf22695f0795`；PR #119 已合入 `smalldata_test`，merge SHA 为 `e24a7a4223b1f16113cecf5e8189788107c7befa`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaKoharuArtifactReadinessSummary` 的既有状态行现在提供稳定 VoiceOver label/value/hint：读出 readiness verdict、缺失四件套、下一步和 shadow-only 诊断边界。
+- `stopUntilArtifactsProvided` 明确提示真实工件目录 `test/koharu_artifacts/` 以及 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`；可复制的 readiness summary 也记录 `artifactRoot`。该版本只消费既有 report，不调用第二次探针、不写 Store、不改变 active artifact gate、普通图片 OCR、翻译、renderer/export、Koharu 主路径、ground truth、metrics 或 output。
+
+关键文件：
+
+- `AITRANS/Views/DeveloperConsoleView.swift`
+- `scripts/test-v355-koharu-readiness-accessibility-contract.py`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v347-image-command-accessibility-contract.py` 至 `scripts/test-v355-koharu-readiness-accessibility-contract.py`
+
+验证：
+
+- 本地轻量检查：v3.47–v3.55 图片/UI 合同 35 项通过、DeveloperConsoleView Swift parse、CI YAML 解析、版本解析（`v3.55`）和 `git diff --check` 均通过。
+- 候选 full run `30686038492` / job `91331890483`：manifest exact 匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build 成功，`.xcresult` 为 `succeeded`、0 errors、0 warnings，JUnit `10/10`，UI interaction、Speech、home/paste 与静态检查通过；active Koharu validator 为 `manifestMissing`。
+- PR #119 fast run `30686296231`：exact candidate SHA，`validationProfile=fast`，`reusedFullValidationSha=f29e7a1d...`、state `success`，Xcode skip reason 为复用候选 full；JUnit `10/10`。该 fast 包不是新的编译证据。
+- merge fast run `30686324425`：merge SHA exact，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full SHA，父 SHA `5c38648899ea30ad19f4f34a7270cc98ee302fd3` 的 receipt 为 success，`receiptPropagationAllowed=true`，Xcode skip reason 为复用候选 full；JUnit `10/10`。
+
+边界与遗留：
+
+- 未跑本机 build / 探针，按规则交给云端验证。候选、PR 与 merge 均为 `probe_mode=skip`，没有新漫画 `output/` 报告、PNG 或 `metrics/version_history.csv` 指标行；仓库既有 output 仍是历史基线。
+- 云端 active Koharu validator 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实四件套、Speech corpus 和真实竖排图片 corpus 均未提供；本版不能作为 OCR、翻译、识别或 Koharu 质量提升证据。
+- 真实设备／模拟器仍需人工回放开发控制台 readiness 的 label/value/hint，以及提供真实工件后的 ready/invalid/blocked 状态变化；源码合同和云端 build 不能替代该回放。
+
+
 ## v3.54：修复图片状态 VoiceOver value 的动态播报回归
 日期：2026-08-01
 
