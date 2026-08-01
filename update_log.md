@@ -8,6 +8,34 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.74：普通结果行与图片覆盖的空 OCR 回退一致性
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.74`。候选分支 `codeb/v3.74-image-empty-ocr-consistency` 的最终候选 HEAD 为 `62f41ffe2efddfcae6f0d501ab1b259ffcf37c05`，PR #138 已合入 `smalldata_test`，merge SHA 为 `b7d874a9470cb6bc8977d2f5b1177a3a12520d9b`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- 普通 `ImageTranslationBlockRow` 在 `block.original` 为空时显示“空 OCR 原文”，避免 OCR 原文与译文同时为空时留下无上下文空白。
+- `ImageTranslationOverlayBlock` 的旁贴与覆盖两种模式共用空 OCR 回退；译文非空时仍保持译文优先，只有译文也为空时显示“空 OCR 原文”。选择、定位、复查、Store ownership、renderer/export 和既有无障碍边界不变。
+- 新增 `scripts/test-v374-image-empty-ocr-consistency-contract.py`，并将 v3.47–v3.73 历史图片合同及 CI 路由推进到 v3.74。该版本只改善 View 语义，不新增 Store／持久化状态，不改变 Vision OCR、模型翻译、漫画探针、Koharu 主路径或质量基线。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v374-image-empty-ocr-consistency-contract.py`、v3.73 合同及 v3.47–v3.72 图片合同路由
+- `README.md`、`AGENTS.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`
+
+验证：
+
+- 本地轻量检查：v3.58、v3.59、v3.60、v3.73、v3.74 定向合同通过；`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、版本解析 `v3.74` 和 `git diff --check` 通过。
+- 候选 full run `30699495962` / job `91367853529`：manifest 精确匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode `buildResult.status=succeeded`，`.xcresult` 无 issue，JUnit `10/10`、0 failures，v3.74 合同 4/4。结果包保存在 `/private/tmp/aitrans-c-review-30699495962`。
+- PR #138 fast run `30699776161` / job `91368630418`：精确候选 SHA，`validationProfile=fast`，复用 full SHA `62f41ffe2efddfcae6f0d501ab1b259ffcf37c05` 且 state `success`，Xcode skipped reason 为 `fast_followup_reuses_candidate_full_validation`；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30699776161`。
+- merge fast run `30699876976` / job `91368898157`：精确 merge SHA `b7d874a9470cb6bc8977d2f5b1177a3a12520d9b`，second parent 为候选 SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full 成功收据且 `receiptPropagationAllowed=true`，Xcode skipped；JUnit `10/10`。该 run 以同一 merge SHA 的 `workflow_dispatch validation_profile=auto` 触发，结果包保存在 `/private/tmp/aitrans-c-review-30699876976`。
+
+未跑本机 build / 探针，按规则交给云端验证。full、PR fast 和 merge fast 均使用 `probe_mode=skip`，未生成新的漫画探针指标、`output/` 报告或 `metrics/version_history.csv` 行。full artifact 的 Koharu gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，Speech corpus 为 `manifestMissing` 且 `qualityExecuted=false`；真实 Koharu 四件套、Speech 音频和真实竖排图片 corpus 仍缺失，本版不声称 OCR、翻译、识别或 Koharu 质量提升。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、真实四件套或探针。
+
 ## v3.73：空 OCR ignored row 的可见与无障碍回退
 日期：2026-08-01
 
