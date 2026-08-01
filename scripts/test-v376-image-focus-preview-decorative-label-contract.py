@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract for stable empty OCR context in image focus previews."""
+"""Contract for hiding the decorative focus-preview badge from VoiceOver."""
 
 from pathlib import Path
 import unittest
@@ -26,7 +26,7 @@ def braced_body(source: str, marker: str) -> str:
     raise AssertionError(f"unclosed body for {marker}")
 
 
-class ImageFocusEmptyOCRContextContractTests(unittest.TestCase):
+class FocusPreviewDecorativeLabelContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.view = read("AITRANS/Views/ImageTranslationViews.swift")
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
@@ -40,42 +40,36 @@ class ImageFocusEmptyOCRContextContractTests(unittest.TestCase):
             "private struct ImageTranslationFocusPreview: View",
         )
 
-    def test_reference_preview_has_stable_empty_ocr_value(self) -> None:
-        self.assertIn(
-            '.accessibilityValue("黄色边框为 OCR 文字区域，当前识别为 \\(accessibilityOriginalText)")',
-            self.reference,
-        )
-        self.assertIn('block.original.isEmpty ? "空" : block.original', self.reference)
-        self.assertNotIn(
-            '.accessibilityValue("黄色边框为 OCR 文字区域，当前识别为 \\(block.original)")',
-            self.reference,
-        )
+    def test_focus_badge_is_decorative_but_parent_context_remains(self) -> None:
+        badge = self.focus[
+            self.focus.index('Label("局部放大", systemImage: "magnifyingglass")'):
+        ]
+        badge = badge[:badge.index("        .overlay(alignment: .topTrailing)")]
+        self.assertIn('Label("局部放大", systemImage: "magnifyingglass")', badge)
+        self.assertIn(".accessibilityHidden(true)", badge)
+        self.assertIn('.accessibilityLabel("已定位文字块局部放大")', self.focus)
+        self.assertIn(".accessibilityValue(\"\\(positionText)，\\(accessibilityOriginalText)\")", self.focus)
 
-    def test_focus_preview_has_stable_empty_ocr_value(self) -> None:
-        self.assertIn(
-            '.accessibilityValue("\\(positionText)，\\(accessibilityOriginalText)")',
-            self.focus,
-        )
-        self.assertIn('block.original.isEmpty ? "空" : block.original', self.focus)
-        self.assertNotIn(
-            '.accessibilityValue("\\(positionText)，\\(block.original)")',
-            self.focus,
-        )
+    def test_reference_badge_already_remains_decorative(self) -> None:
+        badge = self.reference[
+            self.reference.index('Label("当前文字块", systemImage: "viewfinder")'):
+        ]
+        badge = badge[:badge.index("        .accessibilityHidden(true)") + len("        .accessibilityHidden(true)")]
+        self.assertIn(".accessibilityHidden(true)", badge)
 
-    def test_focus_previews_remain_view_only(self) -> None:
+    def test_change_is_view_only(self) -> None:
         for body in (self.reference, self.focus):
-            self.assertIn("ImageTranslationBlock", body)
             self.assertNotIn("TranslationSessionStore", body)
             self.assertNotIn("VisionOCRService", body)
             self.assertNotIn("FileManager", body)
             self.assertNotIn("runMangaOverlayProbe", body)
             self.assertNotIn("store.", body)
 
-    def test_version_and_ci_route_follow_v374(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+    def test_version_and_ci_route_follow_v375(self) -> None:
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3.76;"), 2)
         self.assertNotIn("MARKETING_VERSION = 3.75;", self.project)
-        old = "python3 -B scripts/test-v374-image-empty-ocr-consistency-contract.py"
-        new = "python3 -B scripts/test-v375-image-focus-empty-ocr-context-contract.py"
+        old = "python3 -B scripts/test-v375-image-focus-empty-ocr-context-contract.py"
+        new = "python3 -B scripts/test-v376-image-focus-preview-decorative-label-contract.py"
         route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)

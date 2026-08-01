@@ -1913,6 +1913,7 @@ private struct ImageTranslationFocusPreview: View {
                 .padding(.horizontal, AppTheme.Spacing.control)
                 .frame(minHeight: 44)
                 .background(Color.black.opacity(0.82), in: .rect(cornerRadius: AppTheme.Radius.control))
+                .accessibilityHidden(true)
         }
         .overlay(alignment: .topTrailing) {
             VStack(spacing: AppTheme.Spacing.compact) {
