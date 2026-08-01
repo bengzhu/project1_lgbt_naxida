@@ -8,6 +8,33 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.78：关闭局部预览后的 VoiceOver 焦点回交
+日期：2026-08-01
+
+状态：Agent X 已完成实现、历史合同兼容修正、云端 full/PR fast 验收和 PR 合并；工程正式版本为 `MARKETING_VERSION=3.78`。候选分支 `codeb/v3.78-focus-preview-close-focus` 的最终候选 HEAD 为 `e79269ca9e74650f98d99f9f4c535548292ba6f3`，PR #142 已合入 `smalldata_test`，merge SHA 为 `83b6b31df5ae9224a55c9381f87cb018f908024c`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPanel` 关闭 `ImageTranslationFocusPreview` 时改用 `closeImageTranslationFocusPreview`：先清除 View 私有的 `selectedImageTranslationBlockID`，再通过既有 `reviewRowAccessibilityFocusID` 将 VoiceOver 焦点交回对应 OCR 结果行，避免局部预览容器消失后焦点丢失。
+- 新增 `scripts/test-v378-image-focus-preview-close-focus-contract.py`，锁定关闭入口、焦点 handoff、View-only 边界、版本解析和 CI 路由；同步让历史 v3.13 闭包断言及 v3.47–v3.77 图片合同接受当前 v3.78。该版本不新增 Store／持久化状态，不改变 Vision OCR、模型翻译、renderer/export、图片复查、漫画探针或 Koharu 主路径。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v378-image-focus-preview-close-focus-contract.py`、`scripts/test-v313-image-block-focus-contract.py`、v3.47–v3.77 图片合同路由兼容修正
+- `README.md`、`AGENTS.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`
+
+验证：
+
+- 本地轻量检查：v3.47–v3.66、v3.68–v3.78 图片合同通过；v3.67 的 Swift evaluator 在当前本机环境未能返回结果，未将其本地结果作为证据；`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、项目版本解析 `v3.78`、ground truth/probe/clean-text JSON、CI YAML smoke 和 `git diff --check` 通过。v3.13 与 v3.78 定向合同在历史断言兼容修正后通过。
+- 首次候选 full `30702773157` 因 v3.13 历史合同仍要求旧 `clearSelection` 闭包而失败，Xcode 本身成功；修正历史合同后 push `e79269ca`，不把该旧包作为最终验收证据。
+- 最终候选 full `30703023530` / job `91377230913`：manifest 精确匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode `buildResult.status=succeeded`，`.xcresult` build/root issues 为空，JUnit `10/10`、0 failures，UI/Speech/home/paste contracts 全部成功。结果包保存在 `/private/tmp/aitrans-c-review-30703023530`。
+- PR #142 fast `30703289667` / job `91377936382`：精确候选 SHA，`validationProfile=fast`，`xcodeBuildRequired=false`，复用 full SHA `e79269ca9e74650f98d99f9f4c535548292ba6f3` 且 state `success`，skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30703289667`。
+
+未跑本机 build / 探针，按规则交给云端验证。候选 full、PR fast 均使用 `probe_mode=skip`，未生成新的漫画探针指标、`output/` 报告或 `metrics/version_history.csv` 行。full artifact 的 Koharu active gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，缺少真实 manifest、TextBoxes、BubbleMask、SegmentMask；Speech corpus 为 `manifestMissing` 且 `qualityExecuted=false`。真实 Koharu 四件套、Speech 音频和真实竖排图片 corpus 仍缺失，本版只改善 VoiceOver 焦点交接，不声称 OCR、翻译、识别或 Koharu 质量提升。源码合同与云端 Xcode build 不能替代真实设备 VoiceOver、Dynamic Type、真实四件套或漫画探针。
+
 ## v3.77：无效局部预览状态的 VoiceOver 去重
 日期：2026-08-01
 
