@@ -2236,6 +2236,16 @@ private struct ImageTranslationIgnoredBlockRow: View {
         .padding(.horizontal, AppTheme.Spacing.compact)
         .padding(.vertical, AppTheme.Spacing.control)
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("已忽略 OCR 文字块 \(block.original)")
+        .accessibilityValue(accessibilityValue)
+    }
+
+    private var accessibilityValue: String {
+        var parts = ["已从当前图片预览、导出和转录中移除"]
+        parts.append(block.translation.isEmpty ? "没有现有译文" : "保留已有译文")
+        parts.append(canRestore ? "可以恢复" : "当前不可恢复")
+        return parts.joined(separator: "；")
     }
 }
 
