@@ -295,6 +295,10 @@ struct ImageTranslationPanel: View {
                 detail: statusDetail,
                 tone: statusTone
             )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("图片翻译状态")
+            .accessibilityValue(imageStatusAccessibilityValue)
+            .accessibilityHint(imageStatusAccessibilityHint)
 
             if let imageActionLockDetail {
                 AppStatusRow(
@@ -767,6 +771,50 @@ struct ImageTranslationPanel: View {
         case .rendering: return "正在按所选覆盖方式重新生成图片"
         case .failed(let message): return message
         case .idle: return store.imageTranslationMessage
+        }
+    }
+
+    private var imageStatusAccessibilityValue: String {
+        "(statusTitle)：(statusDetail)"
+    }
+
+    private var imageStatusAccessibilityHint: String {
+        switch store.imageTranslationShareState {
+        case .preparing:
+            return "正在准备分享；完成后会打开系统分享"
+        case .failed:
+            return "分享准备失败；可以关闭分享并重新导出"
+        case .idle:
+            break
+        }
+
+        switch store.imageTranslationExportRenderState {
+        case .rendering:
+            return "正在按所选覆盖方式更新导出图；完成后可继续修改或分享"
+        case .failed:
+            return "导出图生成失败；可以重试导出，不会重新识别或翻译图片"
+        case .idle:
+            break
+        }
+
+        switch store.imageTranslationState {
+        case .idle:
+            if store.imageTranslationData == nil {
+                return "选择照片或图片文件后开始本机 OCR 与翻译"
+            }
+            return store.canRetryImageTranslation
+                ? "当前图片尚未完成本次处理；可以重试当前图片或选择新图片"
+                : "当前图片处理已停止；可以选择新图片"
+        case .loading:
+            return "正在读取图片；可以取消或选择新图片"
+        case .recognizing:
+            return "正在使用 Vision 本机 OCR；可以取消或选择新图片"
+        case .translating:
+            return "正在逐块翻译；仍可查看和定位，完成后可修正文字或更新复查"
+        case .translated:
+            return "图片翻译完成；可以修正文字、更新复查、切换覆盖方式或导出"
+        case .failed:
+            return "图片翻译失败；可以重试当前图片或重新识别"
         }
     }
 
