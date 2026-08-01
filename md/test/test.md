@@ -93,6 +93,8 @@
 - v3.60 正式要求完整图片预览覆盖块的相邻与替换模式复用复查结果行的 VoiceOver value：包含 clamp 到 0–100% 的 OCR 置信度、人工修正、低置信／方向待定、待复查／本次已复查及等待翻译／译文；不得读取或修改 Store 业务状态、重新运行 Vision OCR/翻译或改变 renderer/export、漫画探针、Koharu、metrics 或 output；`scripts/test-v360-image-overlay-review-context-accessibility-contract.py` 必须在 v3.59 后接入同一 UI fail-fast；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、长文本、空 OCR、等待翻译和连续复查回放。
 - v3.61 正式要求图片复查结果行和完整图片预览消费既有 `sourceDirection`／`directionConfidence`：已判定的横排／竖排进入 VoiceOver value，有限方向置信度 clamp 到 0–100%，结果行显示已知方向，OCR 置信度显示对非有限值和越界值安全回退；不得读取或修改 Store 业务状态、重新运行 Vision OCR/翻译或改变 renderer/export、漫画探针、Koharu、metrics 或 output；`scripts/test-v361-image-direction-review-context-contract.py` 必须在 v3.60 后接入同一 UI fail-fast；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、未知／竖排方向、异常置信度和连续复查回放。
 
+- v3.62 正式要求图片识别结果摘要展示已有 `ImageOCRResultSummary` 的横排与竖排 block 计数，并保留平均置信度、低置信与方向待定信息；合同必须只读摘要字段，不调用 Vision OCR／翻译、不写 Store／持久化、不改变 renderer/export、漫画探针、Koharu、metrics 或 output。`scripts/test-v362-image-summary-direction-breakdown-contract.py` 必须在 v3.61 后接入同一 UI fail-fast，并允许后续正式 `3.x` 版本；源码合同不能替代真实设备／模拟器上的长文本、VoiceOver、Dynamic Type 和完整图片复查回放。
+
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。

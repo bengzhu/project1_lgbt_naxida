@@ -8,6 +8,32 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.62：图片识别摘要方向分布
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.62`。候选分支 `codeb/v3.62-image-summary-direction-breakdown` 的实现 commit 为 `e2c417fc53ddeda972a172fca432d0482a2434e7`；PR #126 已合入 `smalldata_test`，merge SHA 为 `dde6fe1da9c9470d409ed614adb7f2c2a362bc30`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `TranslationSessionStore.imageTranslationSummary` 在既有摘要字段基础上显示横排与竖排 block 数，让用户在图片复查入口快速了解方向分布；不新增 Store／持久化状态，不重跑 Vision OCR／翻译，不改变 renderer/export、漫画探针、Koharu 主路径或质量基线。
+- 新增 `scripts/test-v362-image-summary-direction-breakdown-contract.py`，并把 CI changed-files UI 路由推进到 v3.62；历史 v3.47–v3.61 合同保持后续正式版本兼容。
+
+关键文件：
+
+- `AITRANS/Services/TranslationSessionStore.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v362-image-summary-direction-breakdown-contract.py` 及历史图片 UI 合同
+- `README.md`、`AGENTS.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`
+
+验证：
+
+- 本地轻量检查：v3.00、v3.61、v3.62 合同，UI interaction contracts（69 个），JSON/YAML smoke、`xcrun swiftc -parse`、版本解析和 `git diff --check` 通过。
+- 候选 full run `30690298616` / job `91343695477`：manifest exact 匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build 成功，xcresult 已上传，JUnit `10/10`、0 failures，静态、Speech、UI、home/paste 契约均通过。
+- PR #126 fast run `30690585838`：exact candidate SHA，`validationProfile=fast`，复用 full SHA `e2c417fc53ddeda972a172fca432d0482a2434e7` 且 state `success`，Xcode skipped；JUnit `10/10`。merge fast run `30690628008`：exact merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full 成功收据，`receiptPropagationAllowed=true`，Xcode skipped；JUnit `10/10`。
+
+未跑本机 build / 探针，按规则交给云端验证。候选与 merge 均使用 `probe_mode=skip`，未生成新的漫画探针指标、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；full artifact 的 active Koharu gate 为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type 和完整图片复查回放。
+
 ## v3.61：图片复查方向上下文与置信度边界
 日期：2026-08-01
 
