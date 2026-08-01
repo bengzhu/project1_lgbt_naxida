@@ -112,6 +112,7 @@
 - v3.77 正式要求 `ImageTranslationFocusPreview` 的 `unavailableFocusState` 在 `contain` 容器内使用 `.accessibilityHidden(true)`，父容器的 `focusPreviewAccessibilityHint` 必须继续读出局部预览不可用及关闭、OCR 编辑、切换文字块替代操作；关闭、OCR 修正、复查和前后定位按钮保持可访问。`scripts/test-v377-image-focus-preview-unavailable-voiceover-contract.py` 必须在 v3.76 后接入同一 UI fail-fast，并允许历史 v3.47–v3.76 合同继续接受后续正式版本；该 View-only 改动不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或探针。
 - v3.78 正式要求关闭 `ImageTranslationFocusPreview` 后将 VoiceOver 焦点交回对应 OCR 结果行，使用既有 `reviewRowAccessibilityFocusID`，不得把焦点状态写入 Store 或产品 pipeline。`scripts/test-v378-image-focus-preview-close-focus-contract.py` 必须在 v3.77 后接入同一 UI fail-fast，并允许历史图片合同继续接受后续正式版本；该 View-only 改动不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或探针。
 - v3.79 正式要求 `selectAdjacentBlock(offset:)` 在当前筛选顺序中选中目标 block 后，调用 `moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(targetBlockID))`，让 VoiceOver 焦点跟随新的局部预览容器；前后按钮的 position value、首尾 disabled 边界和 View-only ownership 必须保持。`scripts/test-v379-image-focus-preview-navigation-focus-contract.py` 必须在 v3.78 后接入同一 UI fail-fast；同步的 v3.14 历史合同可接受直接赋值或等价的局部 target ID 写法。该 View-only 改动不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或探针。
+- v3.80 正式要求筛选器隐藏当前选中 block 时，`clearHiddenReviewSelection()` 清除旧选择并将 VoiceOver 焦点交给首个可见结果行；若没有可见行，必须交给复查完成状态或筛选器本身。`scripts/test-v380-image-review-filter-focus-contract.py` 必须在 v3.79 后接入同一 UI fail-fast，并允许历史图片合同继续接受后续正式版本；该 View-only 改动不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或探针。
 
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
