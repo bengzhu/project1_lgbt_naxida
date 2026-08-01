@@ -8,6 +8,34 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.70：图片预览几何 hint 分流
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.70`。候选分支 `codeb/v3.70-image-preview-geometry-hint` 的候选 HEAD 为 `502e6c763e537cacc84300915c0a841ce1d130e7`，PR #134 已合入 `smalldata_test`，merge SHA 为 `294b74259cb934b731db981ad8f9245c36081555`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPreview.previewAccessibilityHint` 根据既有 block 的几何可用性动态分流：全部有效时保留“点按文字块可定位并打开局部放大”，存在无效或过期框时说明有效文字块可打开局部放大、异常文字块局部预览不可用。
+- 继续保留 v3.69 的定位不可用摘要、结果行图标、OCR 修正和切换文字块入口；该版本只消费 `NormalizedImageRect.normalizedToUnit()`，不新增 Store／持久化状态，不改变 Vision OCR、模型翻译、renderer/export、漫画探针、Koharu 主路径、ground truth、metrics 或 output。
+- 新增 `scripts/test-v370-image-preview-geometry-hint-contract.py`；历史 v3.47–v3.69 图片合同的版本路由同步接受 v3.70。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v370-image-preview-geometry-hint-contract.py` 及 v3.47–v3.69 图片合同
+- `README.md`、`AGENTS.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`
+
+验证：
+
+- 本地轻量检查：v3.47–v3.70 图片合同、v3.13 focus 回归、v3.10 预览/筛选回归、v1.94/v1.97 CI 合同、Swift parse、JSON smoke、版本解析和 `git diff --check` 通过。
+- 候选 full run `30696508365` / job `91360218281`：manifest 精确匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build succeeded，`.xcresult` build status 为 `succeeded`、issues 为空，JUnit `10/10`、0 failures，static、Speech、UI、home/paste 合同均通过。结果包保存在 `/private/tmp/aitrans-c-review-30696508365`。
+- PR #134 fast run `30696739339`：精确候选 SHA，`validationProfile=fast`，复用 full SHA `502e6c763e537cacc84300915c0a841ce1d130e7` 且 state `success`，Xcode skipped；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30696739339`。
+- merge fast run `30696776714`：精确 merge SHA `294b74259cb934b731db981ad8f9245c36081555`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full 成功收据，`receiptPropagationAllowed=true`，Xcode skipped；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30696776714`。
+
+未跑本机 build / 探针，按规则交给云端验证。候选 full、PR fast 和 merge fast 均使用 `probe_mode=skip`，未生成新的漫画探针指标、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；full artifact 的 active Koharu gate 为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type 和真实图片 corpus。
+
 ## v3.69：图片几何定位可用性提前反馈
 日期：2026-08-01
 
