@@ -8,6 +8,35 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.72：区分 Koharu v1 summary-only 与 v2 门控失败
+日期：2026-08-01
+
+状态：Agent X 已完成实现、警告修复、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.72`。候选分支 `codeb/v3.72-koharu-v1-readiness-clarity` 的最终候选 HEAD 为 `a70daa379959dc9772b8bd5776036c24419964c8`，PR #136 已合入 `smalldata_test`，merge SHA 为 `02e5b8bc2c1894bf866dd3a64f7f6f6b867cc99d`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaKoharuArtifactReadinessSummary` 识别 schema v1、bubble/segment payload verdict 均为 `legacySummaryOnly` 的旧工件；这类工件的 payload 状态显示为“未要求（v1 summary-only）”，topology 状态显示为“未要求（v2 拓扑）”，不再把尚未要求的 v2 门控朗读成失败。
+- VoiceOver hint 与可复制 summary 共享解释后的门控状态，同时保留非 legacy v2 工件的真实 payload/topology 失败、blocker 和 CI 对账信息。变更仅为 View/report-only，不创建或修改 active `test/koharu_artifacts`，不放宽 readiness gate，不改变普通图片 OCR、模型翻译、renderer/export、漫画探针或 Koharu 主路径。
+- 新增 `scripts/test-v372-koharu-v1-readiness-clarity-contract.py`；历史 v3.47–v3.71 UI 合同与 `.github/workflows/ci-results.yml` 路由同步接受 v3.72。
+
+关键文件：
+
+- `AITRANS/Views/DeveloperConsoleView.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v372-koharu-v1-readiness-clarity-contract.py`、`scripts/test-v371-koharu-readiness-gate-detail-contract.py` 及 v3.47–v3.71 图片合同
+- `README.md`、`AGENTS.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`
+
+验证：
+
+- 本地轻量检查：v3.71 合同 6/6、v3.72 合同 5/5，通过 `xcrun swiftc -parse AITRANS/Views/DeveloperConsoleView.swift`、版本解析 `v3.72` 和 `git diff --check`。候选 full 前的 v3.47–v3.72 合同循环无失败输出。
+- 初始实现 full run `30698079526` / job `91364232077` 的 Xcode build 虽成功，但 `.xcresult` 记录 `DeveloperConsoleView.swift` 不可达重复 `return` 警告；该结果包保存在 `/private/tmp/aitrans-c-review-30698079526`，不作为最终候选证据。修复 commit 为 `a70daa379959dc9772b8bd5776036c24419964c8`。
+- 最终候选 full run `30698413436` / job `91365079616`：manifest 精确匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode `buildResult.status=succeeded`，`.xcresult` 0 warnings/0 errors，JUnit `10/10`、0 failures，v3.72 UI 合同通过。结果包保存在 `/private/tmp/aitrans-c-review-30698413436`。
+- PR #136 fast run `30698654858` / job `91365691955`：精确候选 SHA，`validationProfile=fast`，复用 full SHA `a70daa379959dc9772b8bd5776036c24419964c8` 且 state `success`，Xcode skipped reason 为 `fast_followup_reuses_candidate_full_validation`；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30698654858`。
+- merge fast run `30698685445` / job `91365768370`：精确 merge SHA `02e5b8bc2c1894bf866dd3a64f7f6f6b867cc99d`，second parent 为候选 SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full 成功收据且 `receiptPropagationAllowed=true`，Xcode skipped；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30698685445`。
+
+未跑本机 build / 探针，按规则交给云端验证。full、PR fast 和 merge fast 均使用 `probe_mode=skip`，未生成新的漫画探针指标、`output/` 报告或 `metrics/version_history.csv` 行。最终 full artifact 未要求 Koharu extended validator（变更后的提交只修正可达性），但初始核心 full 已通过 v3.72 合同与 Koharu validator 路由；当前 Koharu active gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，Speech corpus 为 `manifestMissing` 且 `qualityExecuted=false`。真实 Koharu 四件套、Speech 音频和真实竖排图片 corpus 仍缺失，本版不声称 OCR、翻译、识别或 Koharu 质量提升。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、真实四件套或探针。
+
 ## v3.71：Koharu readiness 下游门控摘要
 日期：2026-08-01
 
