@@ -8,6 +8,34 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.64：图片 OCR 置信度安全边界
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.64`。候选分支 `codeb/v3.64-image-confidence-safety` 的最终候选 HEAD 为 `58ec8912c340a89ff397b9f2be806a342202002c`，PR #128 已合入 `smalldata_test`，merge SHA 为 `122d753de9c3e6cd9ad868b805c4a7b8c012932a`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageOCRResultSummary.normalizedConfidence` 统一将 NaN/∞ 归一化为 0、有限值夹到 `0...1`；平均置信度、低置信复查判定与方向统计不再被非有限输入污染，无效值仍进入可解释的低置信风险。
+- `ImageOCRLayoutEngine` 在布局前清理 observation confidence，结果行和完整图片预览覆盖层复用同一产品归一化边界，避免 VoiceOver 百分比的 `Int` 转换崩溃。
+- 新增 `scripts/test-v364-image-confidence-safety-contract.py` 与 `scripts/test-v364-image-confidence-safety-evaluator.swift`；历史 v3.52/v3.60/v3.61 合同同步允许共享归一化实现。
+
+关键文件：
+
+- `AITRANS/Models/ImageOCRResultSummary.swift`
+- `AITRANS/Services/ImageOCRLayoutEngine.swift`
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS.xcodeproj/project.pbxproj`、`.github/workflows/ci-results.yml`
+- v3.47–v3.64 图片 UI/置信度合同与 evaluator
+
+验证：
+
+- 本地轻量检查：全量 Python v* 合同、v3.64 纯 Swift evaluator、JSON/YAML smoke、`xcrun swiftc -parse`、版本解析和 `git diff --check` 通过。
+- 早期候选 runs `30691484588`、`30691701474` 的 Xcode build 均成功，但历史 v3.52/v3.61 合同仍锁定旧的内联 clamp/finite 写法，均不作为验收证据；随后修复合同并以最终 HEAD 重跑。
+- 最终候选 full run `30691931925` / job `91348073467`：manifest exact 匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build 成功，xcresult 已上传，JUnit `10/10`、0 failures，static、Speech、UI、home/paste 契约均通过。
+- PR #128 fast run `30692134870`：exact candidate SHA，`validationProfile=fast`，复用 full SHA `58ec8912c340a89ff397b9f2be806a342202002c` 且 state `success`，Xcode skipped；JUnit `10/10`。merge fast run `30692173820`：exact merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full 成功收据，`receiptPropagationAllowed=true`，Xcode skipped；JUnit `10/10`。
+
+未跑本机 build / 探针，按规则交给云端验证。候选与 merge 均使用 `probe_mode=skip`，未生成新的漫画探针指标、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；full artifact 的 active Koharu gate 为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type 和真实图片 corpus。
+
 ## v3.63：图片识别摘要无障碍上下文
 日期：2026-08-01
 
