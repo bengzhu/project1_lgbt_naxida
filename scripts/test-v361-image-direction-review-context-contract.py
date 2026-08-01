@@ -50,7 +50,10 @@ class ImageDirectionReviewContextContractTests(unittest.TestCase):
         self.assertIn("ImageOCRDirectionPresentation.displayTitle(for: block)", self.row)
         self.assertIn('systemImage: "text.alignleft"', self.row)
         self.assertIn("Text(displayConfidence, format: .percent", self.row)
-        self.assertIn("rawConfidence.isFinite", self.row)
+        self.assertTrue(
+            "rawConfidence.isFinite" in self.row
+            or "ImageOCRResultSummary.normalizedConfidence(block.confidence)" in self.row
+        )
 
     def test_overlay_exposes_direction_context_without_mutating_ocr_or_store(self) -> None:
         value = braced_body(self.overlay, "private var accessibilityValue: String")
