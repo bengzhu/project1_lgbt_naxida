@@ -54,7 +54,15 @@ class ImageReviewNavigationContractTests(unittest.TestCase):
     def test_navigation_uses_current_visible_filter_order_and_bounds(self) -> None:
         self.assertIn("visibleImageTranslationBlocks.firstIndex", self.view)
         self.assertIn("visibleImageTranslationBlocks.indices.contains(targetIndex)", self.view)
-        self.assertIn("selectedImageTranslationBlockID = visibleImageTranslationBlocks[targetIndex].id", self.view)
+        navigation = braced_body(self.view, "private func selectAdjacentBlock(offset: Int)")
+        self.assertTrue(
+            "selectedImageTranslationBlockID = visibleImageTranslationBlocks[targetIndex].id" in navigation
+            or (
+                "let targetBlockID = visibleImageTranslationBlocks[targetIndex].id" in navigation
+                and "selectedImageTranslationBlockID = targetBlockID" in navigation
+            ),
+            "adjacent navigation must assign the visible target block, directly or through a local target ID",
+        )
         self.assertIn("selectAdjacentBlock(offset: -1)", self.view)
         self.assertIn("selectAdjacentBlock(offset: 1)", self.view)
 
