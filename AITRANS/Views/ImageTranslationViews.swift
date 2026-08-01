@@ -114,6 +114,7 @@ struct ImageTranslationView: View {
 struct ImageTranslationPanel: View {
     static let previewScrollID = "imageTranslationPreview"
     private static let reviewCompletionAccessibilityFocusID = "image-review-complete"
+    private static let reviewFilterAccessibilityFocusID = "image-review-filter"
 
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var showImageImporter = false
@@ -273,6 +274,10 @@ struct ImageTranslationPanel: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .accessibilityFocused(
+                    $reviewAccessibilityFocusID,
+                    equals: Self.reviewFilterAccessibilityFocusID
+                )
 
                 if !allReviewRequiredBlocks.isEmpty {
                     ProgressView(
@@ -792,6 +797,12 @@ struct ImageTranslationPanel: View {
             return
         }
         self.selectedImageTranslationBlockID = nil
+        let nextFocusID = visibleImageTranslationBlocks.first.map {
+            reviewRowAccessibilityFocusID($0.id)
+        } ?? (reviewCompletedBlockCount > 0
+            ? Self.reviewCompletionAccessibilityFocusID
+            : Self.reviewFilterAccessibilityFocusID)
+        moveReviewAccessibilityFocus(to: nextFocusID)
     }
 
     private var statusTone: AppStatusTone {

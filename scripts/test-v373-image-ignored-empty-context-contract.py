@@ -69,7 +69,7 @@ class IgnoredImageEmptyContextContractTests(unittest.TestCase):
         self.assertNotIn("MARKETING_VERSION = 3.73;", self.project)
         old = "python3 -B scripts/test-v372-koharu-v1-readiness-clarity-contract.py"
         new = "python3 -B scripts/test-v373-image-ignored-empty-context-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
