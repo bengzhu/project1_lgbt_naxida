@@ -35,7 +35,7 @@ class IgnoredImageRowAccessibilityContractTests(unittest.TestCase):
     def test_ignored_row_keeps_children_and_adds_stable_context(self) -> None:
         row = braced_body(self.view, "private struct ImageTranslationIgnoredBlockRow: View")
         self.assertIn(".accessibilityElement(children: .contain)", row)
-        self.assertIn('.accessibilityLabel("已忽略 OCR 文字块 \\(block.original)")', row)
+        self.assertIn('.accessibilityLabel("已忽略 OCR 文字块 \\(accessibilityOriginalText)")', row)
         self.assertIn(".accessibilityValue(accessibilityValue)", row)
         self.assertIn('Button("恢复", systemImage: "arrow.uturn.backward", action: restore)', row)
 
@@ -58,7 +58,7 @@ class IgnoredImageRowAccessibilityContractTests(unittest.TestCase):
         self.assertNotIn("MARKETING_VERSION = 3.53;", self.project)
         old = "python3 -B scripts/test-v352-image-review-row-accessibility-contract.py"
         new = "python3 -B scripts/test-v353-image-ignored-row-accessibility-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
