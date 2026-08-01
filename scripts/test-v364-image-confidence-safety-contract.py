@@ -46,7 +46,10 @@ class ImageConfidenceSafetyContractTests(unittest.TestCase):
         self.assertIn("let confidence = normalizedConfidence(block.confidence)", self.summary)
 
     def test_layout_and_views_share_finite_confidence_boundary(self) -> None:
-        self.assertIn("let safeObservations = observations.map", self.layout)
+        self.assertTrue(
+            "let safeObservations = observations.map" in self.layout
+            or "let safeObservations = observations.compactMap" in self.layout
+        )
         self.assertIn("safeObservation.confidence = normalizedConfidence(observation.confidence)", self.layout)
         self.assertIn("among: safeObservations", self.layout)
         self.assertGreaterEqual(
@@ -82,7 +85,7 @@ class ImageConfidenceSafetyContractTests(unittest.TestCase):
         self.assertNotIn("MARKETING_VERSION = 3.63;", self.project)
         old = "python3 -B scripts/test-v363-image-summary-accessibility-context-contract.py"
         new = "python3 -B scripts/test-v364-image-confidence-safety-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
