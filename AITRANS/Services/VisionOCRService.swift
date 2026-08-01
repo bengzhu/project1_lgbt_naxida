@@ -38,13 +38,9 @@ struct VisionOCRService: Sendable {
                 let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else { return nil }
 
-                let rawBox = observation.boundingBox
-                let rect = ImageOCRLayoutRect(
-                    x: Self.clampNormalized(Double(rawBox.origin.x)),
-                    y: Self.clampNormalized(Double(1 - rawBox.origin.y - rawBox.height)),
-                    width: Self.clampNormalized(Double(rawBox.width)),
-                    height: Self.clampNormalized(Double(rawBox.height))
-                )
+                guard let rect = Self.normalizedRect(from: observation.boundingBox) else {
+                    return nil
+                }
                 return ImageOCRLayoutObservation(
                     text: text,
                     confidence: candidate.confidence,
@@ -94,7 +90,22 @@ struct VisionOCRService: Sendable {
         return image
     }
 
-    private static func clampNormalized(_ value: Double) -> Double {
-        min(max(value, 0), 1)
+    private static func normalizedRect(from rawBox: CGRect) -> ImageOCRLayoutRect? {
+        guard rawBox.origin.x.isFinite,
+              rawBox.origin.y.isFinite,
+              rawBox.width.isFinite,
+              rawBox.height.isFinite,
+              rawBox.width > 0,
+              rawBox.height > 0 else {
+            return nil
+        }
+
+        let rect = ImageOCRLayoutRect(
+            x: Double(rawBox.origin.x),
+            y: Double(1 - rawBox.origin.y - rawBox.height),
+            width: Double(rawBox.width),
+            height: Double(rawBox.height)
+        )
+        return rect.normalizedToUnit()
     }
 }

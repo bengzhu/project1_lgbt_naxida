@@ -12,6 +12,36 @@ struct ImageOCRLayoutRect: Equatable, Sendable {
     var maxY: Double { y + height }
     var midX: Double { x + width / 2 }
 
+    /// Returns a finite, positive-area rectangle clipped to normalized image space.
+    ///
+    /// Vision normally provides valid normalized boxes, but keeping this boundary in
+    /// the layout engine also protects callers that restore or synthesize OCR
+    /// observations. Invalid geometry is rejected instead of leaking NaN/∞ values
+    /// into sorting, union, focus crops, or overlay placement.
+    func normalizedToUnit() -> Self? {
+        guard x.isFinite, y.isFinite, width.isFinite, height.isFinite,
+              width > 0, height > 0 else {
+            return nil
+        }
+
+        let right = x + width
+        let bottom = y + height
+        guard right.isFinite, bottom.isFinite else { return nil }
+
+        let left = min(max(x, 0), 1)
+        let clippedRight = min(max(right, 0), 1)
+        let top = min(max(y, 0), 1)
+        let clippedBottom = min(max(bottom, 0), 1)
+        guard clippedRight > left, clippedBottom > top else { return nil }
+
+        return Self(
+            x: left,
+            y: top,
+            width: clippedRight - left,
+            height: clippedBottom - top
+        )
+    }
+
     func union(_ other: Self) -> Self {
         let left = min(x, other.x)
         let top = min(y, other.y)
@@ -41,8 +71,10 @@ enum ImageOCRLayoutEngine {
         _ observations: [ImageOCRLayoutObservation],
         allowsVerticalText: Bool
     ) -> [ImageOCRLayoutBlock] {
-        let safeObservations = observations.map { observation in
+        let safeObservations = observations.compactMap { observation -> ImageOCRLayoutObservation? in
+            guard let rect = observation.rect.normalizedToUnit() else { return nil }
             var safeObservation = observation
+            safeObservation.rect = rect
             safeObservation.confidence = normalizedConfidence(observation.confidence)
             return safeObservation
         }
