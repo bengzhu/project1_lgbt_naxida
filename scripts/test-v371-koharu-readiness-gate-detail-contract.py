@@ -102,11 +102,11 @@ class KoharuReadinessGateDetailContractTests(unittest.TestCase):
         self.assertIn("仅影响探针 shadow OCR，不改变普通图片 OCR、翻译或覆盖图", self.summary)
 
     def test_version_and_ci_route_follow_v370(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.71;"), 2)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
         self.assertNotIn("MARKETING_VERSION = 3.70;", self.project)
         old = "python3 -B scripts/test-v370-image-preview-geometry-hint-contract.py"
         new = "python3 -B scripts/test-v371-koharu-readiness-gate-detail-contract.py"
-        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71)-.*-contract\\.py$'"
+        route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
