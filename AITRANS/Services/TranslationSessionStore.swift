@@ -26379,7 +26379,8 @@ final class TranslationSessionStore: ObservableObject {
         _ box: NormalizedImageRect,
         canvas: CGRect
     ) -> CGRect {
-        CGRect(
+        guard let box = box.normalizedToUnit() else { return .zero }
+        return CGRect(
             x: canvas.width * box.x,
             y: canvas.height * box.y,
             width: canvas.width * box.width,

@@ -1626,7 +1626,9 @@ private struct ImageTranslationBlockFocusCrop {
     }
 
     static func normalizedFocusRect(for block: ImageTranslationBlock) -> CGRect {
-        let box = block.boundingBox
+        guard let box = block.boundingBox.normalizedToUnit() else {
+            return CGRect(x: 0, y: 0, width: 1, height: 1)
+        }
         let sourceRect = CGRect(
             x: CGFloat(box.x),
             y: CGFloat(box.y),
@@ -1658,7 +1660,11 @@ private struct ImageTranslationBlockFocusCrop {
         for block: ImageTranslationBlock,
         in cropRect: CGRect
     ) -> CGRect {
-        let box = block.boundingBox
+        guard let box = block.boundingBox.normalizedToUnit(),
+              cropRect.width > 0,
+              cropRect.height > 0 else {
+            return .zero
+        }
         let rect = CGRect(
             x: (CGFloat(box.x) - cropRect.minX) / cropRect.width,
             y: (CGFloat(box.y) - cropRect.minY) / cropRect.height,
@@ -2000,52 +2006,61 @@ private struct ImageTranslationOverlayBlock: View {
     let select: () -> Void
 
     var body: some View {
-        let rect = displayRect
         Group {
-            switch mode {
-            case .adjacent:
-                Button(action: select) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(block.translation.isEmpty ? block.original : block.translation)
-                            .font(.caption.bold())
-                            .lineLimit(4)
-                        Text(block.original)
-                            .font(.caption2)
-                            .lineLimit(2)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(5)
-                    .frame(width: bubbleWidth, alignment: .leading)
-                    .background(Color.black.opacity(0.88), in: .rect(cornerRadius: 4))
-                    .overlay(alignment: .leading) { Rectangle().fill(Color.appAccent).frame(width: 3) }
-                    .overlay { selectionBorder }
-                }
-                .buttonStyle(.plain)
-                .frame(minWidth: AppTheme.Layout.minimumTarget, minHeight: AppTheme.Layout.minimumTarget)
-                .position(x: adjacentCenterX(for: rect), y: rect.midY)
-                .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
-                .accessibilityValue(accessibilityValue)
-                .accessibilityHint(accessibilityHint)
-            case .replace:
-                Button(action: select) {
-                    Text(block.translation.isEmpty ? block.original : block.translation)
-                        .font(.caption.bold())
-                        .lineLimit(4)
-                        .multilineTextAlignment(.center)
-                        .padding(3)
-                        .frame(width: max(rect.width, 44), height: max(rect.height, 24))
-                        .background(Color.appAccentStrong.opacity(0.94), in: .rect(cornerRadius: 4))
-                        .overlay { selectionBorder }
-                }
-                .buttonStyle(.plain)
-                .frame(minWidth: AppTheme.Layout.minimumTarget, minHeight: AppTheme.Layout.minimumTarget)
-                .position(x: rect.midX, y: rect.midY)
-                .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
-                .accessibilityValue(accessibilityValue)
-                .accessibilityHint(accessibilityHint)
+            if let rect = displayRect {
+                overlayContent(for: rect)
             }
         }
         .foregroundStyle(.white)
+    }
+
+    @ViewBuilder
+    private func overlayContent(for rect: CGRect) -> some View {
+        switch mode {
+        case .adjacent:
+            Button(action: select) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(block.translation.isEmpty ? block.original : block.translation)
+                        .font(.caption.bold())
+                        .lineLimit(4)
+                    Text(block.original)
+                        .font(.caption2)
+                        .lineLimit(2)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(5)
+                .frame(width: bubbleWidth(for: rect), alignment: .leading)
+                .background(Color.black.opacity(0.88), in: .rect(cornerRadius: 4))
+                .overlay(alignment: .leading) { Rectangle().fill(Color.appAccent).frame(width: 3) }
+                .overlay { selectionBorder }
+            }
+            .buttonStyle(.plain)
+            .frame(minWidth: AppTheme.Layout.minimumTarget, minHeight: AppTheme.Layout.minimumTarget)
+            .position(
+                x: adjacentCenterX(for: rect, bubbleWidth: bubbleWidth(for: rect)),
+                y: rect.midY
+            )
+            .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
+            .accessibilityValue(accessibilityValue)
+            .accessibilityHint(accessibilityHint)
+        case .replace:
+            Button(action: select) {
+                Text(block.translation.isEmpty ? block.original : block.translation)
+                    .font(.caption.bold())
+                    .lineLimit(4)
+                    .multilineTextAlignment(.center)
+                    .padding(3)
+                    .frame(width: max(rect.width, 44), height: max(rect.height, 24))
+                    .background(Color.appAccentStrong.opacity(0.94), in: .rect(cornerRadius: 4))
+                    .overlay { selectionBorder }
+            }
+            .buttonStyle(.plain)
+            .frame(minWidth: AppTheme.Layout.minimumTarget, minHeight: AppTheme.Layout.minimumTarget)
+            .position(x: rect.midX, y: rect.midY)
+            .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
+            .accessibilityValue(accessibilityValue)
+            .accessibilityHint(accessibilityHint)
+        }
     }
 
     @ViewBuilder private var selectionBorder: some View {
@@ -2055,18 +2070,22 @@ private struct ImageTranslationOverlayBlock: View {
         }
     }
 
-    private var displayRect: CGRect {
-        let box = block.boundingBox
+    private var displayRect: CGRect? {
+        guard let box = block.boundingBox.normalizedToUnit(),
+              imageSize.width > 0,
+              imageSize.height > 0 else {
+            return nil
+        }
         return CGRect(
             x: imageOrigin.x + imageSize.width * box.x,
             y: imageOrigin.y + imageSize.height * box.y,
             width: imageSize.width * box.width,
             height: imageSize.height * box.height
-        )
+        ).intersection(CGRect(origin: imageOrigin, size: imageSize))
     }
 
-    private var bubbleWidth: CGFloat {
-        min(max(displayRect.width * 1.45, 78), max(imageSize.width * 0.46, 92))
+    private func bubbleWidth(for rect: CGRect) -> CGFloat {
+        min(max(rect.width * 1.45, 78), max(imageSize.width * 0.46, 92))
     }
 
     private var accessibilityValue: String {
@@ -2110,7 +2129,7 @@ private struct ImageTranslationOverlayBlock: View {
         isSelected ? "取消此文字块在图片中的定位" : "在图片预览中定位此文字块"
     }
 
-    private func adjacentCenterX(for rect: CGRect) -> CGFloat {
+    private func adjacentCenterX(for rect: CGRect, bubbleWidth: CGFloat) -> CGFloat {
         let rightCenter = rect.maxX + 6 + bubbleWidth / 2
         let rightLimit = imageOrigin.x + imageSize.width - bubbleWidth / 2
         if rightCenter <= rightLimit { return rightCenter }

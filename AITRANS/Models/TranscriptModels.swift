@@ -6388,6 +6388,36 @@ struct NormalizedImageRect: Equatable, Codable, Sendable {
     var y: Double
     var width: Double
     var height: Double
+
+    /// Returns a finite, positive-area rectangle clipped to normalized image space.
+    ///
+    /// OCR-generated blocks are normalized before they reach this model, but image
+    /// sessions are Codable and may outlive older producers. Consumers can use this
+    /// boundary to keep restored or externally decoded geometry out of the preview
+    /// and export paths without mutating the persisted block.
+    func normalizedToUnit() -> Self? {
+        guard x.isFinite, y.isFinite, width.isFinite, height.isFinite,
+              width > 0, height > 0 else {
+            return nil
+        }
+
+        let right = x + width
+        let bottom = y + height
+        guard right.isFinite, bottom.isFinite else { return nil }
+
+        let left = min(max(x, 0), 1)
+        let clippedRight = min(max(right, 0), 1)
+        let top = min(max(y, 0), 1)
+        let clippedBottom = min(max(bottom, 0), 1)
+        guard clippedRight > left, clippedBottom > top else { return nil }
+
+        return Self(
+            x: left,
+            y: top,
+            width: clippedRight - left,
+            height: clippedBottom - top
+        )
+    }
 }
 
 struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
