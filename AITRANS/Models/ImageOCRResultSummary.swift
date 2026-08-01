@@ -55,4 +55,5 @@ struct ImageOCRResultSummary: Equatable, Sendable {
     static func hasUnknownDirection(_ block: ImageTranslationBlock) -> Bool {
         block.sourceDirection == nil || block.sourceDirection == .unknown
     }
+
 }

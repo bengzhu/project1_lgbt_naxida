@@ -2,6 +2,39 @@ import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
+private enum ImageOCRDirectionPresentation {
+    static func displayTitle(for block: ImageTranslationBlock) -> String {
+        switch block.sourceDirection {
+        case .horizontal:
+            "横排"
+        case .vertical:
+            "竖排"
+        case .unknown, .none:
+            "方向待定"
+        }
+    }
+
+    static func accessibilityContext(for block: ImageTranslationBlock) -> String? {
+        let title: String
+        switch block.sourceDirection {
+        case .horizontal:
+            title = "横排"
+        case .vertical:
+            title = "竖排"
+        case .unknown, .none:
+            return nil
+        }
+
+        guard let rawConfidence = block.directionConfidence,
+              rawConfidence.isFinite else {
+            return title
+        }
+        let confidence = min(max(rawConfidence, 0), 1)
+        let percent = Int((confidence * 100).rounded())
+        return "\(title)，方向置信度 \(percent)%"
+    }
+}
+
 struct ImageTranslationView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var store: TranslationSessionStore
@@ -2024,6 +2057,10 @@ private struct ImageTranslationOverlayBlock: View {
             "OCR 置信度 \(accessibilityConfidencePercent)%"
         ]
 
+        if let directionContext = ImageOCRDirectionPresentation.accessibilityContext(for: block) {
+            parts.append(directionContext)
+        }
+
         if isManuallyCorrected {
             parts.append("已人工修正")
         }
@@ -2082,7 +2119,7 @@ private struct ImageTranslationBlockRow: View {
         HStack(alignment: .center, spacing: AppTheme.Spacing.compact) {
             Button(action: select) {
                 HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
-                    Text(block.confidence, format: .percent.precision(.fractionLength(0)))
+                    Text(displayConfidence, format: .percent.precision(.fractionLength(0)))
                         .font(.caption.monospacedDigit().bold())
                         .foregroundStyle(Color.appAccent)
                         .frame(width: 46, alignment: .leading)
@@ -2093,6 +2130,14 @@ private struct ImageTranslationBlockRow: View {
                         Text(block.original)
                             .font(.caption)
                             .foregroundStyle(Color.appTextSecondary)
+                        if !ImageOCRResultSummary.hasUnknownDirection(block) {
+                            Label(
+                                ImageOCRDirectionPresentation.displayTitle(for: block),
+                                systemImage: "text.alignleft"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(Color.appTextSecondary)
+                        }
                         if isManuallyCorrected {
                             Label("已人工修正", systemImage: "pencil.circle.fill")
                                 .font(.caption)
@@ -2197,6 +2242,10 @@ private struct ImageTranslationBlockRow: View {
             "OCR 置信度 \(accessibilityConfidencePercent)%"
         ]
 
+        if let directionContext = ImageOCRDirectionPresentation.accessibilityContext(for: block) {
+            parts.append(directionContext)
+        }
+
         if isManuallyCorrected {
             parts.append("已人工修正")
         }
@@ -2223,6 +2272,12 @@ private struct ImageTranslationBlockRow: View {
     private var accessibilityConfidencePercent: Int {
         let confidence = min(max(Double(block.confidence), 0), 1)
         return Int((confidence * 100).rounded())
+    }
+
+    private var displayConfidence: Double {
+        let rawConfidence = Double(block.confidence)
+        guard rawConfidence.isFinite else { return 0 }
+        return min(max(rawConfidence, 0), 1)
     }
 }
 
