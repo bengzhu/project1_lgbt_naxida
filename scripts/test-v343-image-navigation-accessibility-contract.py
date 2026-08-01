@@ -43,7 +43,8 @@ class ImageNavigationAccessibilityContractTests(unittest.TestCase):
 
     def test_result_row_selection_hint_matches_current_state(self) -> None:
         row = braced_body(self.view, "private struct ImageTranslationBlockRow: View")
-        self.assertIn(".accessibilityValue(isSelected ? \"已在图片中定位\" : \"未定位\")", row)
+        self.assertIn(".accessibilityValue(accessibilityValue)", row)
+        self.assertIn("isSelected ? \"已在图片中定位\" : \"未定位\"", row)
         self.assertIn("? \"取消此文字块在图片中的定位\"", row)
         self.assertIn(": \"在图片预览中定位此文字块\"", row)
 

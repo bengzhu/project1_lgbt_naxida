@@ -26,7 +26,8 @@ class ImageBlockSelectionContractTests(unittest.TestCase):
         self.assertIn("select: { toggleSelection(of: block.id) }", self.view)
         self.assertIn("Button(action: select)", self.view)
         self.assertIn('Image(systemName: "viewfinder.circle.fill")', self.view)
-        self.assertIn('accessibilityValue(isSelected ? "已在图片中定位" : "未定位")', self.view)
+        self.assertIn(".accessibilityValue(accessibilityValue)", self.view)
+        self.assertIn('isSelected ? "已在图片中定位" : "未定位"', self.view)
         self.assertIn("selectedImageTranslationBlockID == blockID", self.view)
 
     def test_preview_highlights_only_the_matching_full_product_block(self) -> None:
