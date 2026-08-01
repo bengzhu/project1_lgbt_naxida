@@ -8,6 +8,34 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.73：空 OCR ignored row 的可见与无障碍回退
+日期：2026-08-01
+
+状态：Agent X 已完成实现、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.73`。候选分支 `codeb/v3.73-ignored-ocr-empty-context` 的最终候选 HEAD 为 `c771572f7cf9cb31da67f05660d8682fefe7485d`，PR #137 已合入 `smalldata_test`，merge SHA 为 `fb7b3acd8b2f76a7cb92ac29fbdfc154a8481505`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationIgnoredBlockRow` 对空 `block.original` 显示“空 OCR 原文”，并让稳定 VoiceOver label 使用“空”回退；非空原文仍原样显示。
+- 恢复按钮、disabled 原因、焦点 identity、译文保留说明和恢复到图片预览／导出／转录的范围保持不变。该改动仅改善 View/无障碍语义，不新增 Store／持久化状态，不改变 Vision OCR、模型翻译、renderer/export、漫画探针或 Koharu 主路径。
+- 新增 `scripts/test-v373-image-ignored-empty-context-contract.py`；历史 v3.47–v3.72 UI 合同与 `.github/workflows/ci-results.yml` 路由同步接受 v3.73，v3.53 合同更新为共享稳定 label。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v373-image-ignored-empty-context-contract.py`、v3.53 合同及 v3.47–v3.72 图片合同路由
+- `README.md`、`AGENTS.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`
+
+验证：
+
+- 本地轻量检查：v3.47–v3.73 合同循环无失败；v3.53、v3.72、v3.73 定向合同通过，v3.73 为 5/5；`xcrun swiftc -parse AITRANS/Views/ImageTranslationViews.swift`、版本解析 `v3.73` 和 `git diff --check` 通过。
+- 候选 full run `30699003755` / job `91366582157`：manifest 精确匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode `buildResult.status=succeeded`，`.xcresult` 0 warnings/0 errors，JUnit `10/10`、0 failures，v3.73 UI 合同通过。结果包保存在 `/private/tmp/aitrans-c-review-30699003755`。
+- PR #137 fast run `30699290015` / job `91367300396`：精确候选 SHA，`validationProfile=fast`，复用 full SHA `c771572f7cf9cb31da67f05660d8682fefe7485d` 且 state `success`，Xcode skipped reason 为 `fast_followup_reuses_candidate_full_validation`；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30699290015`。
+- merge fast run `30699316600` / job `91367364868`：精确 merge SHA `fb7b3acd8b2f76a7cb92ac29fbdfc154a8481505`，second parent 为候选 SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full 成功收据且 `receiptPropagationAllowed=true`，Xcode skipped；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30699316600`。
+
+未跑本机 build / 探针，按规则交给云端验证。full、PR fast 和 merge fast 均使用 `probe_mode=skip`，未生成新的漫画探针指标、`output/` 报告或 `metrics/version_history.csv` 行。full artifact 的 Koharu gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，Speech corpus 为 `manifestMissing` 且 `qualityExecuted=false`；真实 Koharu 四件套、Speech 音频和真实竖排图片 corpus 仍缺失，本版不声称 OCR、翻译、识别或 Koharu 质量提升。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、真实四件套或探针。
+
 ## v3.72：区分 Koharu v1 summary-only 与 v2 门控失败
 日期：2026-08-01
 
