@@ -11,7 +11,7 @@
 ## v3.80：筛选隐藏选中 block 后的 VoiceOver 焦点回交
 日期：2026-08-01
 
-状态：Agent X 已完成实现、历史合同路由兼容、云端 full/PR fast/merge fast 验收和 PR 合并；当前文档正在 `smalldata_test` 做正式版本收口，工程正式版本为 `MARKETING_VERSION=3.80`。候选分支 `codeb/v3.80-image-review-filter-focus` 的最终候选 HEAD 为 `1e5b301516fcdf7acca3bcfbd7f2a7d2f8535720`，PR #144 已合入 `smalldata_test`，merge SHA 为 `4f72fc4960983fd3431b2aec236d9c06d90cfdae`，远端候选分支已删除，`main` 未触碰。
+状态：Agent X 已完成实现、历史合同路由兼容、云端 full/PR fast/merge fast 验收和 PR 合并；文档已在 `smalldata_test` 完成正式版本收口，工程正式版本为 `MARKETING_VERSION=3.80`。候选分支 `codeb/v3.80-image-review-filter-focus` 的最终候选 HEAD 为 `1e5b301516fcdf7acca3bcfbd7f2a7d2f8535720`，PR #144 已合入 `smalldata_test`，merge SHA 为 `4f72fc4960983fd3431b2aec236d9c06d90cfdae`，远端候选分支已删除，`main` 未触碰。
 
 核心变更：
 
