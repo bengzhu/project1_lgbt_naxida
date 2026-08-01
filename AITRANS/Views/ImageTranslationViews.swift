@@ -254,6 +254,11 @@ struct ImageTranslationPanel: View {
                 subtitle: store.imageTranslationSummary,
                 systemImage: "viewfinder"
             )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("识别结果")
+            .accessibilityValue(store.imageTranslationSummary)
+            .accessibilityHint(imageSummaryAccessibilityHint)
+            .accessibilityAddTraits(.isHeader)
 
             if !store.imageTranslationBlocks.isEmpty {
                 Picker("识别结果筛选", selection: $reviewFilter) {
@@ -468,6 +473,19 @@ struct ImageTranslationPanel: View {
     private var reviewQueueActionTitle: String {
         let action = reviewCompletedBlockCount == 0 ? "开始复查" : "继续复查"
         return "\(action) \(reviewRequiredBlocks.count)"
+    }
+
+    private var imageSummaryAccessibilityHint: String {
+        guard !store.imageTranslationBlocks.isEmpty else {
+            return "选择照片或图片文件后，本机 OCR 文字块摘要会显示在这里。"
+        }
+        guard canReviewImageTranslation else {
+            return "下方可继续查看和定位文字块；\(imageReviewUnavailableDetail)"
+        }
+        if allReviewRequiredBlocks.isEmpty {
+            return "下方可筛选和定位文字块；当前没有需要复查的文字块。"
+        }
+        return "下方可筛选、定位、修正或更新文字块复查进度。"
     }
 
     private func filterTitle(_ filter: ImageOCRReviewFilter) -> String {
