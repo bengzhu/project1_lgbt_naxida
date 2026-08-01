@@ -97,6 +97,8 @@
 - v3.63 正式要求图片“识别结果”摘要合并为单一 VoiceOver header：label 必须为“识别结果”，value 必须复用 `store.imageTranslationSummary`，hint 按无图片、翻译未完成、无待复查块和可复查状态分流；合同不得读取或修改 Store 业务状态、重新运行 OCR／翻译或改变 renderer/export、漫画探针、Koharu、metrics 或 output。`scripts/test-v363-image-summary-accessibility-context-contract.py` 必须在 v3.62 后接入同一 UI fail-fast，并允许后续正式 `3.x` 版本；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type 和完整图片复查回放。
 - v3.64 正式要求图片 OCR 置信度在布局、摘要、低置信复查、结果行和覆盖层使用同一安全边界：非有限值回退为 0，有限值夹到 `0...1`，无效值仍可进入低置信复查；不得出现 NaN 平均值或百分比 `Int` 转换崩溃。`scripts/test-v364-image-confidence-safety-contract.py` 与纯 Swift evaluator 必须在 v3.63 后接入同一 UI fail-fast；不得借此声称 OCR 字符质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或完整探针。
 
+- v3.65 正式要求图片 OCR 修正 sheet 的低置信度提示复用 ImageOCRResultSummary.normalizedConfidence，非有限／越界值在百分比格式化前安全归一化；合同必须保持 View-only，不新增 Store／持久化、不重跑 OCR／翻译或改变 renderer/export、漫画探针、Koharu、metrics 或 output。scripts/test-v365-image-confidence-display-contract.py 必须在 v3.64 后接入同一 UI fail-fast，历史 v3.47–v3.64 合同须接受后续正式版本；源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type、真实图片 corpus 或完整探针。
+
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。
