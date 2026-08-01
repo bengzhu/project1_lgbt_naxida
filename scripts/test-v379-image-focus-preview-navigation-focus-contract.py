@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract for returning VoiceOver focus to the source row after closing focus preview."""
+"""Contract for VoiceOver focus handoff after adjacent focus-preview navigation."""
 
 from pathlib import Path
 import unittest
@@ -26,13 +26,14 @@ def braced_body(source: str, marker: str) -> str:
     raise AssertionError(f"unclosed body for {marker}")
 
 
-class ImageFocusPreviewCloseFocusContractTests(unittest.TestCase):
+class ImageFocusPreviewNavigationFocusContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.view = read("AITRANS/Views/ImageTranslationViews.swift")
         self.store = read("AITRANS/Services/TranslationSessionStore.swift")
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
         self.panel = braced_body(self.view, "struct ImageTranslationPanel: View")
+        self.workspace = braced_body(self.panel, "private var imageWorkspace: some View")
         self.preview = braced_body(
             self.view,
             "private struct ImageTranslationPreview: View",
@@ -42,36 +43,33 @@ class ImageFocusPreviewCloseFocusContractTests(unittest.TestCase):
             "private struct ImageTranslationFocusPreview: View",
         )
 
-    def test_focus_close_uses_panel_focus_handoff_instead_of_dropping_focus(self) -> None:
-        workspace = braced_body(self.panel, "private var imageWorkspace: some View")
-        self.assertIn("clearSelection: closeImageTranslationFocusPreview", workspace)
-        close = braced_body(
-            self.panel,
-            "private func closeImageTranslationFocusPreview()",
-        )
-        self.assertIn("guard let selectedImageTranslationBlockID else { return }", close)
-        self.assertIn("self.selectedImageTranslationBlockID = nil", close)
+    def test_adjacent_navigation_moves_focus_to_the_new_preview_container(self) -> None:
+        navigation = braced_body(self.panel, "private func selectAdjacentBlock(offset: Int)")
+        self.assertIn("let targetBlockID = visibleImageTranslationBlocks[targetIndex].id", navigation)
+        self.assertIn("selectedImageTranslationBlockID = targetBlockID", navigation)
         self.assertIn(
-            "moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(selectedImageTranslationBlockID))",
-            close,
+            "moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(targetBlockID))",
+            navigation,
         )
+        self.assertIn("selectPrevious: { selectAdjacentBlock(offset: -1) }", self.workspace)
+        self.assertIn("selectNext: { selectAdjacentBlock(offset: 1) }", self.workspace)
 
-    def test_focus_preview_close_remains_named_and_view_only(self) -> None:
-        self.assertIn(
-            'Button("关闭局部放大", systemImage: "xmark", action: close)',
-            self.focus,
-        )
-        self.assertIn(".accessibilityFocused(", self.focus)
-        self.assertIn("reviewRowAccessibilityFocusID", self.panel)
+    def test_navigation_controls_keep_position_and_boundary_context(self) -> None:
+        self.assertEqual(self.focus.count(".accessibilityValue(navigationPositionAccessibilityValue)"), 2)
+        self.assertIn("当前已是筛选结果中的第一个文字块", self.focus)
+        self.assertIn("当前已是筛选结果中的最后一个文字块", self.focus)
+        self.assertIn("reviewPreviewAccessibilityFocusID", self.panel)
+
+    def test_navigation_focus_remains_view_only(self) -> None:
         self.assertNotIn("ImageTranslationFocusPreview", self.store)
         self.assertNotIn("VisionOCRService", self.preview)
         self.assertNotIn("VisionOCRService", self.focus)
 
-    def test_version_and_ci_route_follow_v377(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.77;", self.project)
-        old = "python3 -B scripts/test-v377-image-focus-preview-unavailable-voiceover-contract.py"
-        new = "python3 -B scripts/test-v378-image-focus-preview-close-focus-contract.py"
+    def test_version_and_ci_route_follow_v378(self) -> None:
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3.79;"), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.78;", self.project)
+        old = "python3 -B scripts/test-v378-image-focus-preview-close-focus-contract.py"
+        new = "python3 -B scripts/test-v379-image-focus-preview-navigation-focus-contract.py"
         route = "grep -E '^scripts/test-v3(47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79)-.*-contract\\.py$'"
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)

@@ -781,7 +781,9 @@ struct ImageTranslationPanel: View {
         guard let selectedVisibleBlockIndex else { return }
         let targetIndex = selectedVisibleBlockIndex + offset
         guard visibleImageTranslationBlocks.indices.contains(targetIndex) else { return }
-        selectedImageTranslationBlockID = visibleImageTranslationBlocks[targetIndex].id
+        let targetBlockID = visibleImageTranslationBlocks[targetIndex].id
+        selectedImageTranslationBlockID = targetBlockID
+        moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(targetBlockID))
     }
 
     private func clearHiddenReviewSelection() {
