@@ -2400,7 +2400,7 @@ private struct ImageOCRCorrectionSheet: View {
                                 Label("OCR 置信度", systemImage: "exclamationmark.triangle.fill")
                                     .foregroundStyle(Color.appWarning)
                                 Spacer()
-                                Text(block.confidence, format: .percent.precision(.fractionLength(0)))
+                                Text(displayConfidence, format: .percent.precision(.fractionLength(0)))
                                     .foregroundStyle(Color.appTextSecondary)
                             }
                             Text("置信度低于 50%，请以局部原图为准确认文字。")
@@ -2527,6 +2527,10 @@ private struct ImageOCRCorrectionSheet: View {
 
     private var needsReview: Bool {
         ImageOCRResultSummary.requiresReview(block)
+    }
+
+    private var displayConfidence: Double {
+        Double(ImageOCRResultSummary.normalizedConfidence(block.confidence))
     }
 
     private var requiresRetranslation: Bool {
