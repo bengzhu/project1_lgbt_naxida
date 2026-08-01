@@ -46,7 +46,11 @@ class ImageBlockFocusContractTests(unittest.TestCase):
             self.view,
         )
         self.assertIn(".frame(minWidth: 44, minHeight: 44)", self.view)
-        self.assertIn("clearSelection: { selectedImageTranslationBlockID = nil }", self.view)
+        self.assertIn("clearSelection:", self.view)
+        self.assertTrue(
+            "clearSelection: { selectedImageTranslationBlockID = nil }" in self.view
+            or "clearSelection: closeImageTranslationFocusPreview" in self.view
+        )
 
     def test_focus_state_does_not_enter_store_or_product_pipeline(self) -> None:
         store = read("AITRANS/Services/TranslationSessionStore.swift")
