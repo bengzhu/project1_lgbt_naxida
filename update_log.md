@@ -8,6 +8,36 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.68：无效图片局部预览明确反馈
+日期：2026-08-01
+
+状态：Agent X 已完成实现、失败修复、云端验收和合并收口；工程正式版本为 `MARKETING_VERSION=3.68`。候选分支 `codeb/v3.68-image-preview-invalid-geometry` 的最终候选 HEAD 为 `1f6a778b6f51a34f96358baa5a32af384f947d34`，PR #132 已合入 `smalldata_test`，merge SHA 为 `5bf5731f479d1a768988f2ff23a4fde4480342e8`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationBlockFocusCrop.normalizedFocusRect(for:)` 现在返回可选矩形；无效或过期 `NormalizedImageRect` 不再回退为整图，crop 构造直接返回 `nil`。
+- `ImageTranslationFocusPreview` 在 crop 不可用时显示“当前文字块局部预览不可用”，保留关闭、编辑 OCR 原文和切换文字块入口，并以 VoiceOver hint 说明仍可执行的替代操作；已有 accessibility value 保持不变，避免回归历史 UI 合同。
+- OCR 修正 sheet 的局部对照仍复用同一 crop 边界，异常框只显示“图片局部预览不可用，仍可编辑 OCR 原文”；新增 `scripts/test-v368-image-preview-invalid-geometry-contract.py`，历史 v3.47–v3.67 图片合同路由同步接受 v3.68。
+- 该版本只改善异常恢复数据下的 View 反馈，不新增 Store／持久化状态，不改变 Vision OCR 候选、翻译、renderer/export、漫画探针、Koharu 主路径、ground truth、metrics 或 output。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v368-image-preview-invalid-geometry-contract.py`
+- v3.47–v3.67 图片合同与 `README.md`、`AGENTS.md`、flow/test 文档
+
+验证：
+
+- 本地轻量检查：v3.47–v3.68 图片合同套件（含 v3.67 model evaluator）、v3.13 focus 回归合同、JSON smoke、版本解析、Swift parse 和 `git diff --check` 通过；未跑本机完整 Xcode build / 漫画探针。
+- 早期候选 full run `30695061047` / job `91356406477`（SHA `c6a2cc7e65e88d8d1c56fde3133fd4233566a825`）的 Xcode build 成功，但历史 v1.87 focus 合同因 accessibility value 被替换而失败；该 run 不作为验收证据，结果包保存在 `/private/tmp/aitrans-c-review-30695061047`。
+- 修复后最终候选 full run `30695264077` / job `91356938808`：manifest 精确匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build success，`.xcresult` 与 `xcodebuild.log` 已上传，JUnit `10/10`、0 failures，static、Speech、UI、home/paste 合同均通过。结果包保存在 `/private/tmp/aitrans-c-review-30695264077`。
+- PR #132 fast run `30695564579`：精确候选 SHA，`validationProfile=fast`，复用 full SHA `1f6a778b6f51a34f96358baa5a32af384f947d34` 且 state `success`，Xcode skipped；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30695564579`。
+- merge fast run `30695598256`：精确 merge SHA `5bf5731f479d1a768988f2ff23a4fde4480342e8`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full 成功收据、`receiptPropagationAllowed=true`，Xcode skipped；JUnit `10/10`。结果包保存在 `/private/tmp/aitrans-c-review-30695598256`。
+
+未跑本机 build / 探针，按规则交给云端验证。候选 full、PR fast 和 merge fast 均使用 `probe_mode=skip`，未生成新的漫画探针指标、`output/` 报告或 `metrics/version_history.csv` 行。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；full artifact 的 active Koharu gate 为 `manifestMissing / stopUntilArtifactsProvided`，本版不声称 OCR、翻译、识别或 Koharu 质量提升。源码合同不能替代真实设备／模拟器 VoiceOver、Dynamic Type 和真实图片 corpus。
+
 ## v3.67：恢复图片 block 几何安全
 日期：2026-08-01
 
