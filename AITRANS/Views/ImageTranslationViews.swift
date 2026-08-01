@@ -35,6 +35,12 @@ private enum ImageOCRDirectionPresentation {
     }
 }
 
+private enum ImageOCRGeometryPresentation {
+    static func isLocatable(for block: ImageTranslationBlock) -> Bool {
+        block.boundingBox.normalizedToUnit() != nil
+    }
+}
+
 struct ImageTranslationView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var store: TranslationSessionStore
@@ -1543,6 +1549,12 @@ private struct ImageTranslationPreview: View {
             ImageOCRResultSummary.requiresReview($0) && reviewedBlockIDs.contains($0.id)
         }
         var parts = ["识别到 \(blocks.count) 个文字块"]
+        let geometryUnavailableCount = blocks.count {
+            !ImageOCRGeometryPresentation.isLocatable(for: $0)
+        }
+        if geometryUnavailableCount > 0 {
+            parts.append("定位不可用 \(geometryUnavailableCount) 个")
+        }
         if reviewTotal > 0 {
             parts.append("待复查 \(max(0, reviewTotal - reviewCompleted)) 个")
         } else {
@@ -2192,6 +2204,11 @@ private struct ImageTranslationBlockRow: View {
                         Text(block.original)
                             .font(.caption)
                             .foregroundStyle(Color.appTextSecondary)
+                        if !ImageOCRGeometryPresentation.isLocatable(for: block) {
+                            Label("图片定位不可用", systemImage: "location.slash")
+                                .font(.caption)
+                                .foregroundStyle(Color.appWarning)
+                        }
                         if !ImageOCRResultSummary.hasUnknownDirection(block) {
                             Label(
                                 ImageOCRDirectionPresentation.displayTitle(for: block),
@@ -2238,11 +2255,7 @@ private struct ImageTranslationBlockRow: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
             .accessibilityValue(accessibilityValue)
-            .accessibilityHint(
-                isSelected
-                    ? "取消此文字块在图片中的定位"
-                    : "在图片预览中定位此文字块"
-            )
+            .accessibilityHint(accessibilityHint)
             .accessibilityFocused(
                 accessibilityFocus,
                 equals: "image-review-row-\(block.id.uuidString)"
@@ -2312,6 +2325,10 @@ private struct ImageTranslationBlockRow: View {
             parts.append("已人工修正")
         }
 
+        if !ImageOCRGeometryPresentation.isLocatable(for: block) {
+            parts.append("图片定位不可用")
+        }
+
         if ImageOCRResultSummary.requiresReview(block) {
             if ImageOCRResultSummary.hasLowConfidence(block) {
                 parts.append("低置信")
@@ -2334,6 +2351,20 @@ private struct ImageTranslationBlockRow: View {
     private var accessibilityConfidencePercent: Int {
         let confidence = Double(ImageOCRResultSummary.normalizedConfidence(block.confidence))
         return Int((confidence * 100).rounded())
+    }
+
+    private var accessibilityHint: String {
+        guard ImageOCRGeometryPresentation.isLocatable(for: block) else {
+            var parts = ["图片局部预览不可用"]
+            if canEdit {
+                parts.append("仍可修正 OCR 原文")
+            }
+            parts.append("可切换文字块")
+            return parts.joined(separator: "；")
+        }
+        return isSelected
+            ? "取消此文字块在图片中的定位"
+            : "在图片预览中定位此文字块"
     }
 
     private var displayConfidence: Double {
