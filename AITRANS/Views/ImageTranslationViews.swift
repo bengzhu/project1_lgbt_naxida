@@ -1806,7 +1806,7 @@ private struct ImageOCRCorrectionReferencePreview: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("当前文字块图片局部")
-        .accessibilityValue("黄色边框为 OCR 文字区域，当前识别为 \(block.original)")
+        .accessibilityValue("黄色边框为 OCR 文字区域，当前识别为 \(accessibilityOriginalText)")
         .accessibilityHint("请对照图片局部确认 OCR 原文")
     }
 
@@ -1826,6 +1826,10 @@ private struct ImageOCRCorrectionReferencePreview: View {
             .foregroundStyle(Color.appWarning)
             .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
             .accessibilityLabel("图片局部预览不可用，仍可编辑 OCR 原文")
+    }
+
+    private var accessibilityOriginalText: String {
+        block.original.isEmpty ? "空" : block.original
     }
 
     private func fittedImageSize(imageSize: CGSize, containerSize: CGSize) -> CGSize {
@@ -1988,7 +1992,7 @@ private struct ImageTranslationFocusPreview: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("已定位文字块局部放大")
-        .accessibilityValue("\(positionText)，\(block.original)")
+        .accessibilityValue("\(positionText)，\(accessibilityOriginalText)")
         .accessibilityHint(focusPreviewAccessibilityHint)
         .accessibilityFocused(
             accessibilityFocus,
@@ -1998,6 +2002,10 @@ private struct ImageTranslationFocusPreview: View {
 
     private var navigationPositionAccessibilityValue: String {
         positionText.isEmpty ? "未显示筛选位置" : "当前位置 \(positionText)"
+    }
+
+    private var accessibilityOriginalText: String {
+        block.original.isEmpty ? "空" : block.original
     }
 
     private var focusCrop: ImageTranslationBlockFocusCrop? {
