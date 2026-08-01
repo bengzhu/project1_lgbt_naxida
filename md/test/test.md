@@ -103,6 +103,7 @@
 - v3.68 正式要求局部放大对无效或过期 OCR 框返回不可用状态，禁止整图回退造成误导；关闭、编辑和切换文字块入口必须保留，VoiceOver hint 必须说明“局部预览不可用”及可执行的替代操作，图片 OCR 修正对照仍可编辑。`scripts/test-v368-image-preview-invalid-geometry-contract.py` 必须在 v3.67 后接入同一 UI fail-fast；该 View-only 边界不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或完整探针。
 - v3.69 正式要求结果行与完整图片预览的 VoiceOver 摘要复用 `NormalizedImageRect.normalizedToUnit()` 的定位可用性边界：无效或过期框必须读出“定位不可用”数量，结果行显示位置不可用图标并保留 OCR 修正和切换文字块入口。`scripts/test-v369-image-geometry-availability-contract.py` 必须在 v3.68 后接入同一 UI fail-fast，历史 v3.47–v3.68 图片合同须接受后续正式版本；该 View-only 反馈不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或完整探针。
 - v3.70 正式要求完整图片预览的 VoiceOver hint 根据定位不可用数量分流：有效文字块可打开局部放大，异常文字块必须明确局部预览不可用；既有 OCR 修正、切换文字块与状态门保持不变。`scripts/test-v370-image-preview-geometry-hint-contract.py` 必须在 v3.69 后接入同一 UI fail-fast，历史 v3.47–v3.69 图片合同须接受后续正式版本；该 View-only 反馈不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或完整探针。
+- v3.71 正式要求 `MangaKoharuArtifactReadinessSummary` 继续只读既有 readiness report，并在 status detail、VoiceOver hint 与可复制 summary 中显示坐标验证、mask payload verdict/gate、mask topology verdict/blockers 和 artifact identity receipt；阻塞时必须说明稳定一对一/像素分区复核或 CI 哈希对账要求，且不得创建/修改 active artifacts、放宽 shadow OCR gate 或声称 OCR/Koharu 质量提升。`scripts/test-v371-koharu-readiness-gate-detail-contract.py` 必须在 v3.70 后接入同一 UI fail-fast；历史 v3.47–v3.70 图片合同须接受后续正式版本，源码合同不能替代真实设备 VoiceOver、Koharu 四件套或探针。
 
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
