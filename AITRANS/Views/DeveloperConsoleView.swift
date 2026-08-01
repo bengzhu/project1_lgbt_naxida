@@ -326,7 +326,7 @@ private struct MangaKoharuArtifactReadinessSummary: View {
         let missing = readiness.missingArtifacts.isEmpty
             ? "四件套已齐。"
             : "缺少：\(readiness.missingArtifacts.joined(separator: "、"))。"
-        return "\(missing)\(nextActionDetail) 本摘要只读，仅影响探针 shadow OCR，不改变普通图片 OCR、翻译或覆盖图。"
+        return "\(missing)\(nextActionDetail)\(readinessGateDetail) 本摘要只读，仅影响探针 shadow OCR，不改变普通图片 OCR、翻译或覆盖图。"
     }
 
     private var statusTone: AppStatusTone {
@@ -355,30 +355,90 @@ private struct MangaKoharuArtifactReadinessSummary: View {
         }
     }
 
+    private var readinessGateDetail: String {
+        " 门控摘要：坐标\(coordinateGateStatus)、mask payload \(maskPayloadGateStatus)、mask 拓扑 \(maskTopologyGateStatus)、工件身份 \(artifactIdentityGateStatus)。"
+    }
+
+    private var coordinateGateStatus: String {
+        guard readiness.manifestFound else { return "未评估" }
+        return readiness.coordinateValidation.bboxValidationPassed ? "通过" : "待修正"
+    }
+
+    private var maskPayloadGateStatus: String {
+        guard let gateReady = readiness.maskPayloadGateReady else { return "未评估" }
+        if gateReady { return "通过" }
+        let verdicts = [
+            readiness.bubbleMaskPayloadVerdict,
+            readiness.segmentMaskPayloadVerdict
+        ]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty }
+        if verdicts.isEmpty { return "未通过" }
+        return "未通过（\(verdicts.joined(separator: "/"))）"
+    }
+
+    private var maskTopologyGateStatus: String {
+        if readiness.maskTopologyGateReady == true { return "完整" }
+        guard let report = readiness.maskTopologyReport else { return "未评估" }
+        let verdict = report.topologyVerdict.isEmpty ? "待复核" : report.topologyVerdict
+        if report.blockers.isEmpty { return verdict }
+        return "\(verdict)，\(report.blockers.count) 个阻塞"
+    }
+
+    private var artifactIdentityGateStatus: String {
+        readiness.artifactIdentityReceipt?.identityVerdict ?? "未记录"
+    }
+
     private var readinessAccessibilityValue: String {
         "\(statusTitle)：\(statusDetail)"
     }
 
     private var readinessAccessibilityHint: String {
-        switch readiness.nextAction {
+        let gateHint = readinessGateAccessibilityHint
+        return switch readiness.nextAction {
         case "stopUntilArtifactsProvided":
-            "请提供真实 Koharu 四件套后再运行漫画探针；该状态只影响 shadow OCR，不影响普通图片 OCR、翻译或覆盖图"
+            "请提供真实 Koharu 四件套后再运行漫画探针；\(gateHint)；该状态只影响 shadow OCR，不影响普通图片 OCR、翻译或覆盖图"
         case "stopUntilArtifactContractFixed":
-            "请先修正四件套契约、坐标或来源身份；当前不会进入 shadow OCR"
+            "请先修正四件套契约、坐标或来源身份；\(gateHint)；当前不会进入 shadow OCR"
         case "stopUntilRealDetectorSourceDeclared":
-            "请声明真实 detector 或 segmenter 来源；fixture 和 proxy 不能作为 active artifact"
+            "请声明真实 detector 或 segmenter 来源；\(gateHint)；fixture 和 proxy 不能作为 active artifact"
         case "continueWithExternalTextBoxesShadowOCR":
-            "下一次漫画探针可执行 external TextBoxes shadow OCR；结果只写入诊断输出"
+            "下一次漫画探针可执行 external TextBoxes shadow OCR；\(gateHint)；结果只写入诊断输出"
         default:
-            "Koharu readiness 只用于漫画探针诊断，不会修改普通图片 OCR、翻译或覆盖图"
+            "Koharu readiness 只用于漫画探针诊断；\(gateHint)；不会修改普通图片 OCR、翻译或覆盖图"
         }
+    }
+
+    private var readinessGateAccessibilityHint: String {
+        var details: [String] = []
+        if readiness.maskPayloadGateReady == false {
+            details.append("mask payload 尚未通过")
+        }
+        if readiness.maskTopologyGateReady == false, readiness.maskTopologyReport != nil {
+            details.append("mask 拓扑仍需稳定一对一分配和像素分区复核")
+        }
+        if let receipt = readiness.artifactIdentityReceipt,
+           receipt.identityVerdict != "activeArtifactIdentityRecorded" {
+            details.append("工件身份为 \(receipt.identityVerdict)，需保留文件哈希并完成 CI 对账")
+        }
+        if details.isEmpty {
+            return "摘要同时显示坐标、mask payload、mask 拓扑和工件身份门控"
+        }
+        return details.joined(separator: "；") + "。不要把 proxy 或 contract example 当作真实 Koharu 工件"
     }
 
     private var summary: String {
         let missing = readiness.missingArtifacts.isEmpty ? "none" : readiness.missingArtifacts.joined(separator: ",")
         let parseErrors = readiness.parseErrors.isEmpty ? "none" : readiness.parseErrors.joined(separator: " | ")
         let notes = readiness.notes.isEmpty ? "none" : readiness.notes.joined(separator: " | ")
-        return "source=\(readiness.sourceImage)\nartifactRoot=test/koharu_artifacts\nverdict=\(readiness.readinessVerdict)\nnextAction=\(readiness.nextAction)\nactiveArtifactsDirectory=\(readiness.activeArtifactsDirectory)\ncontractExampleOnly=\(readiness.contractExampleOnly)\nexternalTextBoxesShadowOCRAllowed=\(readiness.externalTextBoxesShadowOCRAllowed)\nmanifestFound=\(readiness.manifestFound)\ntextBoxesFound=\(readiness.textBoxesFound)\nbubbleMaskFound=\(readiness.bubbleMaskFound)\nsegmentMaskFound=\(readiness.segmentMaskFound)\nmissingArtifacts=\(missing)\nparseErrors=\(parseErrors)\ngeneratedBy=\(readiness.generatedBy ?? "n/a")\ntextBoxCount=\(readiness.textBoxCount)\nbubbleInstanceCount=\(readiness.bubbleInstanceCount)\nsegmentGlyphPixelCount=\(readiness.segmentGlyphPixelCount.map(String.init) ?? "n/a")\nnotes=\(notes)\nshadowOnly=true\nmainFlowChanged=false"
+        let coordinate = readiness.coordinateValidation
+        let topology = readiness.maskTopologyReport
+        let receipt = readiness.artifactIdentityReceipt
+        let optionalBool: (Bool?) -> String = { $0.map(String.init) ?? "n/a" }
+        let topologyBlockers = topology?.blockers.isEmpty == false
+            ? topology?.blockers.joined(separator: " | ") ?? "none"
+            : "none"
+        return "source=\(readiness.sourceImage)\nartifactRoot=test/koharu_artifacts\nverdict=\(readiness.readinessVerdict)\nnextAction=\(readiness.nextAction)\nactiveArtifactsDirectory=\(readiness.activeArtifactsDirectory)\ncontractExampleOnly=\(readiness.contractExampleOnly)\nexternalTextBoxesShadowOCRAllowed=\(readiness.externalTextBoxesShadowOCRAllowed)\nmanifestFound=\(readiness.manifestFound)\ntextBoxesFound=\(readiness.textBoxesFound)\nbubbleMaskFound=\(readiness.bubbleMaskFound)\nsegmentMaskFound=\(readiness.segmentMaskFound)\nmissingArtifacts=\(missing)\nparseErrors=\(parseErrors)\ngeneratedBy=\(readiness.generatedBy ?? "n/a")\ntextBoxCount=\(readiness.textBoxCount)\nbubbleInstanceCount=\(readiness.bubbleInstanceCount)\nsegmentGlyphPixelCount=\(readiness.segmentGlyphPixelCount.map(String.init) ?? "n/a")\ncoordinateSchemaVersion=\(coordinate.schemaVersion ?? "n/a")\ncoordinateSpace=\(coordinate.coordinateSpace ?? "n/a")\ncoordinateBboxValidationPassed=\(coordinate.bboxValidationPassed)\nbubbleMaskPayloadVerdict=\(readiness.bubbleMaskPayloadVerdict ?? "n/a")\nsegmentMaskPayloadVerdict=\(readiness.segmentMaskPayloadVerdict ?? "n/a")\nmaskPayloadGateReady=\(optionalBool(readiness.maskPayloadGateReady))\nmaskTopologyGateReady=\(optionalBool(readiness.maskTopologyGateReady))\nmaskTopologyEvaluated=\(optionalBool(topology?.evaluated))\nmaskTopologyVerdict=\(topology?.topologyVerdict ?? "n/a")\nmaskTopologyBlockers=\(topologyBlockers)\nartifactIdentityVerdict=\(receipt?.identityVerdict ?? "n/a")\nartifactIdentityAllRequiredFilesPresent=\(optionalBool(receipt?.allRequiredFilesPresent))\nartifactIdentityAllRequiredFilesHaveSHA256=\(optionalBool(receipt?.allRequiredFilesHaveSHA256))\nsourceImageSHA256Matches=\(optionalBool(receipt?.sourceImageSHA256Matches))\nnotes=\(notes)\nshadowOnly=true\nmainFlowChanged=false"
     }
 }
 
