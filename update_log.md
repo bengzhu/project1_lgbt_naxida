@@ -8,6 +8,37 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.81：直接选择图片文字块后的 VoiceOver 焦点回交
+日期：2026-08-04
+
+状态：Agent X 已完成实现、修复 GitHub Actions 表达式长度问题、云端 full/PR fast/merge fast 验收和 PR 合并；文档在 `smalldata_test` 完成正式版本收口，工程正式版本为 `MARKETING_VERSION=3.81`。候选分支 `codeb/v3.81-image-selection-focus` 的最终候选 HEAD 为 `95003c0a902994e474abaa18415f3ce08e713de0`，PR [#145](https://github.com/bengzhu/project1_lgbt_naxida/pull/145) 已合入 `smalldata_test`，merge SHA 为 `491ef5f3`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPanel.toggleSelection(of:)` 在结果行选中 OCR block 后立即把 VoiceOver 焦点交给对应局部预览；取消定位时回到对应结果行。
+- `selectBlockFromPreview(_:)` 在完整图片覆盖块入口复用同一套局部预览／结果行焦点 handoff，保持图片入口与列表入口的定位上下文连续。
+- 新增 `scripts/test-v381-image-selection-focus-contract.py`，锁定两条入口、取消定位、View-only ownership、版本解析和 CI 路由；v3.47–v3.80 历史图片合同统一接受后续版本。同步压缩历史图片合同路由正则，避免 GitHub Actions 表达式超过 21000 字符上限。
+- 该改动只使用 View 私有 `AccessibilityFocusState`，不新增 Store／持久化状态，不改变 Vision OCR、模型翻译、renderer/export、复查、漫画探针、Koharu 主路径或质量基线。
+
+关键文件：
+
+- `AITRANS/Views/ImageTranslationViews.swift`
+- `AITRANS.xcodeproj/project.pbxproj`
+- `.github/workflows/ci-results.yml`
+- `scripts/test-v381-image-selection-focus-contract.py` 及 v3.47–v3.80 历史合同路由兼容修正
+- `README.md`、`AGENTS.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`
+
+验证：
+
+- 候选首次 full `30706399843` 在任何 job 启动前因 workflow 表达式超过 GitHub Actions 21000 字符上限失败；`95003c0a` 将路由压缩为等价正则后重新验证，不把该解析失败包作为代码验收证据。
+- 最终候选 full `30706561881` / job `91386592004`：artifact manifest 精确匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`；Xcode build success，`.xcresult` `status=succeeded`、`errorCount=0`、`warningCount=0`，JUnit `10/10`、0 failures，UI/Speech/home/paste 合同全部通过。结果包保存在 `/private/tmp/aitrans-c-review-30706561881`。
+- PR #145 fast `30706829461` / job `91387285759`：exact head `95003c0a`，`validationProfile=fast`，复用 full SHA `95003c0a902994e474abaa18415f3ce08e713de0` 且 state `success`，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30706829461`。
+- merge fast `30706860840`：exact merge SHA `491ef5f3`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full 成功收据，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30706860840`。
+
+限制与遗留：
+
+候选、PR fast 和 merge fast 均使用 `probe_mode=skip`，未生成新的漫画探针指标、`output/` 报告或 `metrics/version_history.csv` 行。full artifact 的 Koharu active gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，缺少真实 `test/koharu_artifacts/` 四件套（manifest、TextBoxes、BubbleMask、SegmentMask）；Speech corpus 仍为 `manifestMissing` 且 `qualityExecuted=false`，真实竖排图片 corpus 也仍缺失。本版只改善图片 View-only 焦点连续性，不声称 OCR、翻译、识别或 Koharu 质量提升；源码合同和云端 Xcode build 不能替代真实设备 VoiceOver、Dynamic Type、真实四件套或漫画探针。
+
 ## v3.80：筛选隐藏选中 block 后的 VoiceOver 焦点回交
 日期：2026-08-01
 

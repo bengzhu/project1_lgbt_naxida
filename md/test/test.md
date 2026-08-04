@@ -114,6 +114,7 @@
 - v3.79 正式要求 `selectAdjacentBlock(offset:)` 在当前筛选顺序中选中目标 block 后，调用 `moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(targetBlockID))`，让 VoiceOver 焦点跟随新的局部预览容器；前后按钮的 position value、首尾 disabled 边界和 View-only ownership 必须保持。`scripts/test-v379-image-focus-preview-navigation-focus-contract.py` 必须在 v3.78 后接入同一 UI fail-fast；同步的 v3.14 历史合同可接受直接赋值或等价的局部 target ID 写法。该 View-only 改动不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或探针。
 - v3.80 正式要求筛选器隐藏当前选中 block 时，`clearHiddenReviewSelection()` 清除旧选择并将 VoiceOver 焦点交给首个可见结果行；若没有可见行，必须交给复查完成状态或筛选器本身。`scripts/test-v380-image-review-filter-focus-contract.py` 必须在 v3.79 后接入同一 UI fail-fast，并允许历史图片合同继续接受后续正式版本；该 View-only 改动不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或探针。
 
+- v3.81 正式要求结果行与完整图片覆盖块选中 OCR block 后，将 VoiceOver 焦点交给对应局部预览；取消定位时回到对应结果行。scripts/test-v381-image-selection-focus-contract.py 必须在 v3.80 后接入同一 UI fail-fast，历史 v3.47–v3.80 合同须接受后续正式版本；该 View-only 改动不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或探针。
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。
