@@ -27,6 +27,8 @@
 - PR #146 fast run [30869682081](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30869682081)：精确 head `996cb3fc`，`validationProfile=fast`，复用候选 full receipt `996cb3fc` / `success`，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30869682081`。
 - merge fast run [30869756072](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30869756072)：精确 merge SHA `8ff61226`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full receipt，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30869756072`。
 
+- 文档 follow-up run [30870035192](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30870035192) / job 91869972036：精确文档 SHA `d6fbdd93`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用 merge SHA `8ff61226` / `success`，`smalldataIncrementalMetadataOnly=true`、`receiptPropagationAllowed=true`，Xcode skipped，静态检查和 JUnit `10/10` 通过；该包只传播既有 full receipt，不是新的 Swift/Xcode 编译证据。结果包保存在 `/private/tmp/aitrans-c-review-30870035192`。
+
 限制与遗留：
 
 候选 push 与 PR/merge fast 默认 `probe_mode=skip`；只有手动 ci-fast 生成了本轮探针图和报告，未更新 `metrics/version_history.csv` 或仓库 `output/`。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，缺少真实 `test/koharu_artifacts/` 四件套；Speech corpus 与真实竖排图片 corpus 仍缺失。未跑本机 build / 探针，按规则交给云端验证；本版只改善失败覆盖布局测量与可观测性，不声称 OCR、翻译、识别或 Koharu 质量提升。
