@@ -1,3 +1,25 @@
+## v3.92：图片 OCR 风险筛选与漫画诊断筛选
+日期：2026-08-04
+
+状态：Agent X 已完成图片复查风险分层与漫画探针只读诊断筛选，完成候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.92`。候选分支 `codeb/v3.92-image-risk-triage` 的最终 SHA `83a3e30d25483cb67d788babd4998f05afb42c08` 已通过 PR [#156](https://github.com/bengzhu/project1_lgbt_naxida/pull/156) 合入，merge SHA 为 `118c8c039d752a24a6c992e8f942ec34cb43e009`；远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageOCRReviewFilter` 增加 `lowConfidence` 与 `unknownDirection`，复用 `ImageOCRResultSummary.hasLowConfidence`／`hasUnknownDirection`；`needsReview` 仍是两类风险的并集。筛选、具体 VoiceOver hint、无结果空态和忽略文字块后的当前筛选定位属于 View/本地复查展示，不新增 Store／持久化，不改变 `ImageTranslationBlock`、图片预览、导出、Vision OCR 或翻译链路。
+- Developer Console 增加 `MangaProbeDiagnosticFilter` 与窄屏 Menu fallback，按全部／失败／OCR／翻译／布局筛选逐块探针结果；只读消费既有 `MangaOverlayProbeReport` 的 diagnostics、failureCategory 与 render flags，探针进入载入阶段时重置筛选，不修改报告、OCR 候选、翻译 prompt／model、renderer/export、metrics 或 output。
+- 新增 `scripts/test-v392-image-review-risk-filter-contract.py` 和 `scripts/test-v392-image-review-risk-filter-evaluator.swift`，接入 UI interaction/full 路由。
+
+验证：
+
+- 本地轻量检查：v3.92 evaluator/contract、v3.91、v3.10、v3.80、v1.87 合同，`git diff --check`、ground-truth JSON 和 workflow YAML 通过；未跑本机完整 Xcode build 或漫画探针。
+- 候选 full run [30889811326](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30889811326)：manifest 精确匹配 v3.92、候选 branch、SHA、run/attempt/workflow，`validationProfile=full`、`xcodeBuildRequired=true`、Xcode success、JUnit `10/10`、全量 UI 合同通过，并发布 `AITRANS CI/full-validation=success`；push `probeMode=skip`，结果包保存在 `/private/tmp/aitrans-c-review-30889811326`。
+- PR #156 fast run [30890241624](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30890241624)：精确 head SHA，`validationProfile=fast`、`xcodeBuildRequired=false`，复用 full receipt `83a3e30d / success`，JUnit `10/10`；该 fast 包不是新的编译证据，结果包保存在 `/private/tmp/aitrans-c-review-30890241624`。
+- merge fast run [30890322575](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30890322575)：精确 merge SHA `118c8c03`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full receipt `83a3e30d / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30890322575`。
+
+限制与遗留：
+
+本轮未更新 `metrics/version_history.csv` 或仓库 `output/`；push 与 fast 均按默认跳过漫画探针。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 # 项目版本更新记录
 本文记录 AITRANS 的正式版本、重要维护事项、关键决策和遗留问题。README 不再写更新记录；细节证据优先看本日志、`metrics/version_history.csv`、最新 `output/` 和 git 提交。
 
