@@ -2532,13 +2532,48 @@ final class TranslationSessionStore: ObservableObject {
             writeMangaProbeProgress(stage: "already-running", runOptions: runOptions)
             return
         }
+
+        // A failed lookup is still a new probe attempt. Clear the previous
+        // report/blocks before checking the bundle so a missing test image
+        // cannot leave stale diagnostics visible in the Developer Console.
+        mangaOverlayProbeState = .loading
+        mangaOverlayProbeMessage = "正在准备读取 test/1.png"
+        mangaOverlayProbeReport = nil
+        mangaOverlayProbeBlocks = []
+        dataTransferMessage = mangaOverlayProbeMessage
+
         guard let url = bundledTestFile(named: "1.png") else {
             let message = "test/1.png 未找到，请确认已放入项目根 test/ 并重新构建。"
+
+            let cleanupResult: (removedItemCount: Int, cleaned: Bool, error: String?)
+            do {
+                let removedItemCount = try MangaOverlayProbeService.recreateDirectory(mangaOverlayOutputDirectory)
+                cleanupResult = (removedItemCount, true, nil)
+                writeMangaProbeProgress(
+                    stage: "output-cleaned",
+                    runOptions: runOptions,
+                    message: "已清理 \(removedItemCount) 个旧 Output 条目"
+                )
+            } catch {
+                cleanupResult = (0, false, "Output 清理失败：\(type(of: error)): \(error.localizedDescription)")
+                writeMangaProbeProgress(
+                    stage: "output-cleanup-failed",
+                    runOptions: runOptions,
+                    message: cleanupResult.error
+                )
+            }
+
             writeMangaProbeProgress(stage: "missing-test-image", runOptions: runOptions, message: message)
             mangaOverlayProbeState = .failed
-            mangaOverlayProbeMessage = message
+            let failureMessage = [message, cleanupResult.error].compactMap { $0 }.joined(separator: " ")
+            mangaOverlayProbeMessage = failureMessage
             dataTransferMessage = mangaOverlayProbeMessage
-            writeMangaProbeFailureReport(message, runOptions: runOptions)
+            writeMangaProbeFailureReport(
+                failureMessage,
+                runOptions: runOptions,
+                outputCleanupRemovedItemCount: cleanupResult.removedItemCount,
+                outputDirectoryCleaned: cleanupResult.cleaned
+            )
             return
         }
 
@@ -2553,10 +2588,13 @@ final class TranslationSessionStore: ObservableObject {
         Task { @MainActor in
             defer { self.isRunningMangaOverlayProbe = false }
 
+            var outputCleanupRemovedItemCount = 0
+            var outputDirectoryCleaned = false
             do {
                 let startedAt = Date.now
                 self.writeMangaProbeProgress(stage: "probe-task-start", startedAt: startedAt, runOptions: runOptions)
-                let outputCleanupRemovedItemCount = try MangaOverlayProbeService.recreateDirectory(self.mangaOverlayOutputDirectory)
+                outputCleanupRemovedItemCount = try MangaOverlayProbeService.recreateDirectory(self.mangaOverlayOutputDirectory)
+                outputDirectoryCleaned = true
                 self.writeMangaProbeProgress(stage: "output-cleaned", startedAt: startedAt, runOptions: runOptions)
                 let data = try Data(contentsOf: url)
                 self.mangaOverlayProbeState = .recognizing
@@ -3655,7 +3693,12 @@ final class TranslationSessionStore: ObservableObject {
                 self.dataTransferMessage = self.mangaOverlayProbeMessage
             } catch {
                 self.writeMangaProbeProgress(stage: "error", runOptions: runOptions, message: "\(type(of: error)): \(error.localizedDescription)")
-                self.writeMangaProbeFailureReport("运行错误：\(type(of: error)): \(error.localizedDescription)", runOptions: runOptions)
+                self.writeMangaProbeFailureReport(
+                    "运行错误：\(type(of: error)): \(error.localizedDescription)",
+                    runOptions: runOptions,
+                    outputCleanupRemovedItemCount: outputCleanupRemovedItemCount,
+                    outputDirectoryCleaned: outputDirectoryCleaned
+                )
                 self.mangaOverlayProbeState = .failed
                 self.mangaOverlayProbeMessage = "漫画探针失败：\(error.localizedDescription)"
                 self.dataTransferMessage = self.mangaOverlayProbeMessage
@@ -3666,7 +3709,9 @@ final class TranslationSessionStore: ObservableObject {
     @discardableResult
     private func writeMangaProbeFailureReport(
         _ warning: String,
-        runOptions: MangaOverlayProbeRunOptions = .full
+        runOptions: MangaOverlayProbeRunOptions = .full,
+        outputCleanupRemovedItemCount: Int = 0,
+        outputDirectoryCleaned: Bool = true
     ) -> MangaOverlayProbeReport {
         let outputFiles = MangaOverlayProbeOutputFiles(debugBoxesImage: "", overlayImage: "")
         var configuration = MangaOverlayProbeConfiguration.defaultValue
@@ -3678,6 +3723,8 @@ final class TranslationSessionStore: ObservableObject {
             outputFiles: outputFiles,
             configuration: configuration,
             bubbleGeometry: nil,
+            outputCleanupRemovedItemCount: outputCleanupRemovedItemCount,
+            outputDirectoryCleaned: outputDirectoryCleaned,
             extraWarnings: [warning]
         )
         let reportURL = mangaOverlayOutputDirectory.appendingPathComponent("probe_report.json")
@@ -9287,6 +9334,7 @@ final class TranslationSessionStore: ObservableObject {
         batchTranslationComparison: MangaBatchTranslationComparison? = nil,
         deterministicDecodingCheck: MangaDeterministicDecodingCheck? = nil,
         outputCleanupRemovedItemCount: Int = 0,
+        outputDirectoryCleaned: Bool = true,
         extraWarnings: [String] = []
     ) -> MangaOverlayProbeReport {
         var warnings = extraWarnings
@@ -9565,11 +9613,13 @@ final class TranslationSessionStore: ObservableObject {
             cropFallbackSelfTest: cropFallbackSelfTest,
             overallPassed: allBlocksPassed && filesPresent,
             outputFiles: outputFiles,
-            outputDirectoryCleaned: true,
+            outputDirectoryCleaned: outputDirectoryCleaned,
             outputCleanupRemovedItemCount: outputCleanupRemovedItemCount,
             outputFileCountAfterCleanup: retainedFiles.count,
             retainedOutputFiles: retainedFiles,
-            outputCleanupPolicy: "探针开始重建 App 沙盒 Output；renderOutputs 只写入本轮文件；export-probe-output.sh 重建项目根 output；只保留本轮 probe_report.json 和本轮 PNG/TXT/JSON。",
+            outputCleanupPolicy: outputDirectoryCleaned
+                ? "探针开始重建 App 沙盒 Output；renderOutputs 只写入本轮文件；export-probe-output.sh 重建项目根 output；只保留本轮 probe_report.json 和本轮 PNG/TXT/JSON。"
+                : "探针开始重建 App 沙盒 Output 失败；当前报告只代表失败入口，旧输出可能残留，不能作为本轮输出。",
             warnings: warnings
         )
     }
