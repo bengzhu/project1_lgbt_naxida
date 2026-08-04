@@ -121,6 +121,8 @@
 
 - v3.85 正式要求 `MangaKoharuRenderRegressionLockReport` 从既有 block/render lock 传播 `renderMinFontSizeReached` 到逐 block decision trace、顶层 `renderMinFontSizeReachedBlocks`、`G-render-min-font-evidence` report-only gate 与 Developer Console 摘要；`scripts/test-v385-koharu-render-lock-min-font-contract.py` 必须在 v3.84 后接入 Koharu changed-file/full 静态路由，并允许 v3.82–v3.84 历史合同接受后续正式版本。该诊断性改动不改变 OCR、翻译、ground truth、生产 renderer/export、Koharu active artifact gate、普通图片 OCR、metrics 或 output；云端 ci-fast 报告可证明最小字号压力与实际截断，但不能替代质量证据。
 
+- v3.86 正式要求 render-lock 输出文件检查识别最终报告与最终 OCR 文本重写的 planned-final-write 时序：`probe_report.json` 和 `1_ocr_probe_text.txt` 在报告组装前尚未落盘时不得被记为 `presentButEmptyOrUnchecked`，成功探针必须让 `coreOutputFilesNonEmpty=true`、`G-render-core-png-retained=passed`，并保留真实 `G-render-no-text-truncation` 阻塞。新增 `scripts/test-v386-koharu-render-output-ledger-contract.py`，接入 Koharu changed-file/full 静态路由并让 v3.82–v3.85 历史合同接受后续正式版本；失败写入仍不能生成成功报告。该 report-only 修复不改变 OCR、翻译、ground truth、renderer/export、Koharu active artifact gate、普通图片 OCR、metrics 或 output，源码合同不能代替真实探针/PNG/设备证据或真实 Koharu 四件套。
+
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。
