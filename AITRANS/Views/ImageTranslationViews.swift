@@ -274,6 +274,7 @@ struct ImageTranslationPanel: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .accessibilityHint(reviewFilterAccessibilityHint)
                 .accessibilityFocused(
                     $reviewAccessibilityFocusID,
                     equals: Self.reviewFilterAccessibilityFocusID
@@ -380,7 +381,7 @@ struct ImageTranslationPanel: View {
                     )
                 }
             } else if visibleImageTranslationBlocks.isEmpty {
-                if reviewCompletedBlockCount > 0 {
+                if reviewFilter == .needsReview, reviewCompletedBlockCount > 0 {
                     AppEmptyState(
                         title: "本次复查完成",
                         detail: "所有风险块都已标记为已复查，可随时重新开始。",
@@ -389,6 +390,12 @@ struct ImageTranslationPanel: View {
                     .accessibilityFocused(
                         $reviewAccessibilityFocusID,
                         equals: Self.reviewCompletionAccessibilityFocusID
+                    )
+                } else if reviewFilter != .all {
+                    AppEmptyState(
+                        title: "当前筛选没有结果",
+                        detail: filterEmptyStateDetail,
+                        systemImage: "line.3.horizontal.decrease.circle"
                     )
                 } else {
                     AppEmptyState(
@@ -499,12 +506,42 @@ struct ImageTranslationPanel: View {
         return "下方可筛选、定位、修正或更新文字块复查进度。"
     }
 
+    private var reviewFilterAccessibilityHint: String {
+        switch reviewFilter {
+        case .all:
+            return "显示全部 OCR 文字块；可以切换到待复查、低置信或方向待定"
+        case .needsReview:
+            return "显示尚未完成复查的低置信或方向待定文字块"
+        case .lowConfidence:
+            return "只显示 OCR 置信度低于 50% 的文字块；已复查的风险块仍会保留"
+        case .unknownDirection:
+            return "只显示方向待定的文字块；已复查的风险块仍会保留"
+        }
+    }
+
+    private var filterEmptyStateDetail: String {
+        switch reviewFilter {
+        case .all:
+            return "切换到待复查、低置信或方向待定可查看风险块。"
+        case .needsReview:
+            return "当前没有尚未完成复查的风险块；可以切换到全部查看已复查结果。"
+        case .lowConfidence:
+            return "当前没有低于 50% 置信度的文字块；可切换到全部或方向待定。"
+        case .unknownDirection:
+            return "当前没有方向待定的文字块；可切换到全部或低置信。"
+        }
+    }
+
     private func filterTitle(_ filter: ImageOCRReviewFilter) -> String {
         switch filter {
         case .all:
             "全部 \(store.imageTranslationBlocks.count)"
         case .needsReview:
             "待复查 \(reviewRequiredBlocks.count)"
+        case .lowConfidence:
+            "低置信 \(ImageOCRReviewFilter.lowConfidence.blocks(from: store.imageTranslationBlocks).count)"
+        case .unknownDirection:
+            "方向待定 \(ImageOCRReviewFilter.unknownDirection.blocks(from: store.imageTranslationBlocks).count)"
         }
     }
 
@@ -573,6 +610,12 @@ struct ImageTranslationPanel: View {
             return false
         }
 
+        let filteredBlocksBeforeMutation = visibleImageTranslationBlocks
+        let nextFilteredBlockID = filteredBlocksBeforeMutation.firstIndex(where: { $0.id == block.id }).flatMap { index in
+            filteredBlocksBeforeMutation.dropFirst(index + 1).first?.id
+                ?? filteredBlocksBeforeMutation[..<index].last?.id
+        }
+
         let nextActiveBlockID = activeBlocks.dropFirst(activeIndex + 1).first?.id
             ?? activeBlocks[..<activeIndex].last?.id
         let pendingBlocks = reviewRequiredBlocks
@@ -593,9 +636,14 @@ struct ImageTranslationPanel: View {
                     ?? ignoredRowAccessibilityFocusID(block.id)
             )
         } else {
-            let nextBlockID = nextActiveBlockID.flatMap { candidate in
-                store.imageTranslationBlocks.contains(where: { $0.id == candidate }) ? candidate : nil
-            }
+            let fallbackActiveBlockID = reviewFilter == .all
+                ? nextActiveBlockID.flatMap { candidate in
+                    store.imageTranslationBlocks.contains(where: { $0.id == candidate }) ? candidate : nil
+                }
+                : nil
+            let nextBlockID = nextFilteredBlockID.flatMap { candidate in
+                visibleImageTranslationBlocks.contains(where: { $0.id == candidate }) ? candidate : nil
+            } ?? fallbackActiveBlockID
             selectedImageTranslationBlockID = nextBlockID
             moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
                 to: nextBlockID.map(reviewRowAccessibilityFocusID)

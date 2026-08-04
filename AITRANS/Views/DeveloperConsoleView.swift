@@ -207,8 +207,98 @@ private struct DeveloperRawOutputSection: View {
     }
 }
 
+private enum MangaProbeDiagnosticFilter: String, CaseIterable, Identifiable, Hashable {
+    case all = "全部"
+    case failures = "失败"
+    case ocr = "OCR"
+    case translation = "翻译"
+    case render = "布局"
+
+    var id: String { rawValue }
+
+    var systemImage: String {
+        switch self {
+        case .all: "square.grid.2x2"
+        case .failures: "xmark.octagon"
+        case .ocr: "text.viewfinder"
+        case .translation: "character.bubble"
+        case .render: "rectangle.3.group"
+        }
+    }
+
+    func matches(_ block: MangaOverlayProbeBlock, report: MangaOverlayProbeReport) -> Bool {
+        switch self {
+        case .all:
+            true
+        case .failures:
+            !block.blockPassed
+        case .ocr:
+            Set(
+                (report.translationModelFloorComparisonReport?.noisyOCRSuspectBlocks ?? [])
+                    + report.diagnostics.likelyOCRIssueBlocks
+            ).contains(block.index)
+                || block.failureCategory == "ocrInputSuspect"
+        case .translation:
+            Set(
+                (report.translationModelFloorComparisonReport?.noisyModelFloorBlocks ?? [])
+                    + (report.translationModelFloorComparisonReport?.noisyTranslationLanguageQualityBlocks ?? [])
+            ).contains(block.index)
+                || block.failureCategory == "modelOutputFailure"
+                || block.failureCategory == "translationLanguageQualityFailure"
+        case .render:
+            Set(
+                report.diagnostics.renderCollisionUnresolvedBlocks
+                    + report.diagnostics.renderMinFontSizeReachedBlocks
+                    + report.diagnostics.renderTextTruncatedBlocks
+            ).contains(block.index)
+                || block.renderTextTruncated
+                || block.renderMinFontSizeReached
+                || (block.renderCollisionChecked && !block.renderCollisionResolved)
+        }
+    }
+}
+
+private struct MangaProbeDiagnosticFilterControl: View {
+    let report: MangaOverlayProbeReport
+    let blocks: [MangaOverlayProbeBlock]
+    @Binding var selection: MangaProbeDiagnosticFilter
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            Picker("漫画探针诊断筛选", selection: $selection) {
+                ForEach(MangaProbeDiagnosticFilter.allCases) { filter in
+                    Text(filterTitle(filter)).tag(filter)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Menu {
+                ForEach(MangaProbeDiagnosticFilter.allCases) { filter in
+                    Button {
+                        selection = filter
+                    } label: {
+                        Label(filterTitle(filter), systemImage: filter.systemImage)
+                    }
+                }
+            } label: {
+                Label("诊断筛选：\(selection.rawValue)", systemImage: selection.systemImage)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minHeight: AppTheme.Layout.minimumTarget)
+            }
+        }
+        .accessibilityLabel("漫画探针诊断筛选")
+        .accessibilityValue("当前：\(selection.rawValue)")
+        .accessibilityHint("只筛选下方逐块诊断结果，不修改 probe_report、普通图片 OCR、翻译或覆盖图")
+    }
+
+    private func filterTitle(_ filter: MangaProbeDiagnosticFilter) -> String {
+        "\(filter.rawValue) \(blocks.count(where: { filter.matches($0, report: report) }))"
+    }
+}
+
 private struct MangaProbeSection: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @State private var diagnosticFilter: MangaProbeDiagnosticFilter = .all
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
@@ -236,15 +326,50 @@ private struct MangaProbeSection: View {
                     MangaKoharuArtifactReadinessSummary(readiness: readiness)
                 }
                 MangaProbeDiagnosticTriageSummary(report: report)
+
+                MangaProbeDiagnosticFilterControl(
+                    report: report,
+                    blocks: store.mangaOverlayProbeBlocks,
+                    selection: $diagnosticFilter
+                )
+
+                AppStatusRow(
+                    title: "逐块诊断结果：\(diagnosticFilter.rawValue)",
+                    detail: "显示 \(filteredProbeBlocks.count) / \(store.mangaOverlayProbeBlocks.count) 个文字块",
+                    tone: filteredProbeBlocks.isEmpty ? .warning : .neutral
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("漫画探针逐块诊断结果")
+                .accessibilityValue("筛选为 \(diagnosticFilter.rawValue)，显示 \(filteredProbeBlocks.count) 个，共 \(store.mangaOverlayProbeBlocks.count) 个文字块")
+                .accessibilityHint("切换上方诊断筛选可聚焦 OCR、翻译、布局或失败 block")
             }
 
-            LazyVStack(spacing: 0) {
-                ForEach(store.mangaOverlayProbeBlocks) { block in
-                    MangaProbeBlockRow(block: block)
+            if store.mangaOverlayProbeReport != nil, filteredProbeBlocks.isEmpty {
+                AppEmptyState(
+                    title: "当前诊断筛选没有结果",
+                    detail: "切换到全部或其他诊断类别查看逐块报告。",
+                    systemImage: "line.3.horizontal.decrease.circle"
+                )
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(filteredProbeBlocks) { block in
+                        MangaProbeBlockRow(block: block)
+                    }
                 }
             }
         }
         .appSurface()
+        .onChange(of: store.mangaOverlayProbeState) { _, state in
+            guard state == .loading else { return }
+            diagnosticFilter = .all
+        }
+    }
+
+    private var filteredProbeBlocks: [MangaOverlayProbeBlock] {
+        guard let report = store.mangaOverlayProbeReport else {
+            return store.mangaOverlayProbeBlocks
+        }
+        return store.mangaOverlayProbeBlocks.filter { diagnosticFilter.matches($0, report: report) }
     }
 
     private var probeStatusTitle: String {
