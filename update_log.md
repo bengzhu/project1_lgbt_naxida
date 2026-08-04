@@ -8,6 +8,29 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.91：开发控制台漫画探针诊断分流
+日期：2026-08-04
+
+状态：Agent X 已完成 report-only 诊断 UX、云端 full/ci-fast/PR fast/merge fast 验收、PR 合并和 `smalldata_test` 文档收口；工程正式版本为 `MARKETING_VERSION=3.91`。候选分支 `codeb/v3.91-koharu-diagnostic-triage` 的最终 SHA `bbb73b14a90a10438d4cacf46344881d21d6206e` 已通过 PR [#155](https://github.com/bengzhu/project1_lgbt_naxida/pull/155) 合入 `smalldata_test`，merge SHA 为 `1ab18c3e9f2d04fbd51680b5b1b606113d86d032`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- Developer Console 新增 `MangaProbeDiagnosticTriageSummary`，只读消费既有 `MangaOverlayProbeReport`：按 OCR 疑似、翻译模型／语言质量、覆盖布局异常和 Koharu 工件 readiness 汇总状态与下一步，并复制 baseline／variant pass rate、floor verdict、`diagnosticOnly` 与 `wouldChangeMainFlow` 边界。
+- `MangaProbeBlockRow` 在失败行显示既有 `failureCategory` 的“模型输出失败／译文质量失败／OCR 疑似损坏”标签，并让 VoiceOver 读出相同诊断分流；不新增 Store／持久化，不调用第二次探针，不改变 OCR 候选、翻译 prompt／model、renderer/export、metrics 或 output。
+- 新增 `scripts/test-v391-koharu-diagnostic-triage-contract.py`，并接入 Koharu changed-file/full 静态路由；v3.88/v3.89 历史版本合同同步接受 3.91 及后续版本。
+
+验证：
+
+- 本地轻量检查：v3.82–v3.91 渲染/探针合同、既有 DeveloperConsole 无障碍合同、`git diff --check`、JSON/YAML smoke 通过；未跑本机 build / 探针，按规则交给云端。
+- 候选 full run [30886955217](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30886955217)：manifest 精确匹配 v3.91、候选 branch、SHA、run/attempt/workflow，`validationProfile=full`、`xcodeBuildRequired=true`；Xcode success，JUnit `10/10`、0 failures，`AITRANS CI/full-validation=success`；结果包保存在 `/private/tmp/aitrans-c-review-30886955217`。
+- 同 SHA ci-fast 探针 run [30887582600](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30887582600)：`probeMode=ci-fast`、GGUF SHA 校验、模拟器 build、漫画探针与 Output 导出成功，JUnit `10/10`；报告保持 13 blocks／12 failures、`renderLockVerdict=renderStableWithProxyBoundaries`、render issue/truncation/min-font 列表为空，model floor 为 `promptVariantRegresses`（baseline `0.4545`、variant `0`），`1_translated_overlay.png` 非空；结果包保存在 `/private/tmp/aitrans-c-review-30887582600`。
+- PR #155 fast run [30888608909](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30888608909)：精确 head SHA，`validationProfile=fast`、`xcodeBuildRequired=false`，复用 full receipt `bbb73b14 / success`，JUnit `10/10`；该 fast 包不是新的编译证据，结果包保存在 `/private/tmp/aitrans-c-review-30888608909`。
+- merge fast run [30888676363](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30888676363)：精确 merge SHA `1ab18c3e`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full receipt `bbb73b14 / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30888676363`。
+
+限制与遗留：
+
+本轮未更新 `metrics/version_history.csv` 或仓库 `output/`；ci-fast 报告与 PNG 只用于验证探针输出和诊断摘要消费。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.90：压缩失败覆盖的 OCR fallback 换行
 日期：2026-08-04
 
