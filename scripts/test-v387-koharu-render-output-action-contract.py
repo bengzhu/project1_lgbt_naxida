@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Contract for the deferred OCR-text/output ledger in the render-lock report."""
+"""Contract for report-only actions on deferred Koharu output writes."""
 
 from pathlib import Path
-import re
 import unittest
 
 
@@ -27,21 +26,18 @@ def braced_body(source: str, marker: str) -> str:
     raise AssertionError(f"unclosed body for {marker}")
 
 
-class KoharuRenderOutputLedgerContractTests(unittest.TestCase):
+class KoharuRenderOutputActionContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.store = read("AITRANS/Services/TranslationSessionStore.swift")
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
-        self.report = braced_body(
+        report = braced_body(
             self.store,
             "private static func makeKoharuRenderRegressionLockReport(",
         )
-        self.output_check = braced_body(
-            self.report,
-            "func outputCheck(",
-        )
+        self.output_check = braced_body(report, "func outputCheck(")
 
-    def test_deferred_probe_outputs_are_accounted_for_without_false_empty_state(self) -> None:
+    def test_planned_final_writes_keep_report_only_action(self) -> None:
         self.assertIn(
             'let plannedFinalWrite = fileName == "probe_report.json"',
             self.output_check,
@@ -51,23 +47,21 @@ class KoharuRenderOutputLedgerContractTests(unittest.TestCase):
             self.output_check,
         )
         self.assertIn(
-            "let nonEmpty = fileIsNonEmpty(path: path) || plannedFinalWrite",
+            'let recommendedAction = status == "presentNonEmpty" || plannedFinalWrite',
             self.output_check,
         )
-        self.assertIn(
-            '"plannedFinalOCRTextRewrite"',
-            self.output_check,
-        )
-        self.assertIn("A failed final write aborts the probe before", self.output_check)
-        self.assertIn("this report can be persisted", self.output_check)
+        self.assertIn('"plannedFinalReportWrite"', self.output_check)
+        self.assertIn('"plannedFinalOCRTextRewrite"', self.output_check)
+        self.assertIn('"keepReportOnly"', self.output_check)
+        self.assertIn('"inspectRenderOutputExport"', self.output_check)
+        self.assertIn("recommendedAction: recommendedAction", self.output_check)
+        self.assertIn("only missing or unchecked", self.output_check)
 
-    def test_version_and_ci_route_follow_v385(self) -> None:
-        versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(len(versions), 2)
-        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 86) for version in versions))
-        self.assertNotIn("MARKETING_VERSION = 3.85;", self.project)
-        old = "python3 -B scripts/test-v385-koharu-render-lock-min-font-contract.py"
-        new = "python3 -B scripts/test-v386-koharu-render-output-ledger-contract.py"
+    def test_version_and_ci_route_follow_v386(self) -> None:
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3.87;"), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.86;", self.project)
+        old = "python3 -B scripts/test-v386-koharu-render-output-ledger-contract.py"
+        new = "python3 -B scripts/test-v387-koharu-render-output-action-contract.py"
         route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger|7-koharu-render-output-action)-contract\\.py"
         self.assertIn(old, self.workflow)
         self.assertIn(new, self.workflow)

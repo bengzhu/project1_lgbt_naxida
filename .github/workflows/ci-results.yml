@@ -354,7 +354,7 @@ jobs:
             home_ui_contract_required=true
             paste_matrix_contract_required=true
           fi
-          if grep -E '^(AITRANS/Services/(MangaOverlayProbeService|TranslationSessionStore)\.swift|AITRANS/Models/(TranscriptModels|KoharuMaskPayloadEvaluator)\.swift|test/1\.|scripts/validate-koharu-artifacts\.py|scripts/test-v(192-koharu-line-polygon-warp|199-koharu-line-polygon-containment|200-koharu-shadow-coverage|201-koharu-geometry-coverage|32-koharu-mask-payload|33-koharu-mask-topology)-contract\.py|scripts/test-v3(2-koharu-mask-payload|3-koharu-mask-topology)-evaluator\.swift|scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger)-contract\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+          if grep -E '^(AITRANS/Services/(MangaOverlayProbeService|TranslationSessionStore)\.swift|AITRANS/Models/(TranscriptModels|KoharuMaskPayloadEvaluator)\.swift|test/1\.|scripts/validate-koharu-artifacts\.py|scripts/test-v(192-koharu-line-polygon-warp|199-koharu-line-polygon-containment|200-koharu-shadow-coverage|201-koharu-geometry-coverage|32-koharu-mask-payload|33-koharu-mask-topology)-contract\.py|scripts/test-v3(2-koharu-mask-payload|3-koharu-mask-topology)-evaluator\.swift|scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger|7-koharu-render-output-action)-contract\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             koharu_contract_required=true
           fi
 
@@ -727,6 +727,7 @@ jobs:
               python3 -B scripts/test-v384-koharu-render-min-font-contract.py
               python3 -B scripts/test-v385-koharu-render-lock-min-font-contract.py
               python3 -B scripts/test-v386-koharu-render-output-ledger-contract.py
+              python3 -B scripts/test-v387-koharu-render-output-action-contract.py
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_v2_mask_payload > "$RESULT_ROOT/koharu-valid-v2-mask-payload-validation.json"
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_v2_mask_topology > "$RESULT_ROOT/koharu-valid-v2-mask-topology-validation.json"

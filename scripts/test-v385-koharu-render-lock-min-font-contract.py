@@ -73,7 +73,7 @@ class KoharuRenderLockMinFontContractTests(unittest.TestCase):
         self.assertNotIn("MARKETING_VERSION = 3.84;", self.project)
         old = "python3 -B scripts/test-v384-koharu-render-min-font-contract.py"
         new = "python3 -B scripts/test-v385-koharu-render-lock-min-font-contract.py"
-        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger)-contract\\.py"
+        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger|7-koharu-render-output-action)-contract\\.py"
         self.assertIn(old, self.workflow)
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)

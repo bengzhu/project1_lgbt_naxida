@@ -19442,6 +19442,13 @@ final class TranslationSessionStore: ObservableObject {
             } else {
                 status = "missing"
             }
+            // Planned final writes are the expected post-assembly state for
+            // the probe report and OCR text ledger. Keep their action aligned
+            // with present, non-empty artifacts; only missing or unchecked
+            // output should ask for render/export inspection.
+            let recommendedAction = status == "presentNonEmpty" || plannedFinalWrite
+                ? "keepReportOnly"
+                : "inspectRenderOutputExport"
             return MangaKoharuRenderOutputFileCheck(
                 fileName: fileName,
                 requiredInCIFast: requiredInCIFast,
@@ -19451,7 +19458,7 @@ final class TranslationSessionStore: ObservableObject {
                 source: source,
                 status: status,
                 failureMeans: "CI artifact or App sandbox output is missing \(fileName)",
-                recommendedAction: status == "presentNonEmpty" ? "keepReportOnly" : "inspectRenderOutputExport"
+                recommendedAction: recommendedAction
             )
         }
 
