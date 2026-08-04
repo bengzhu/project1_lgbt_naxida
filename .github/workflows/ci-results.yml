@@ -361,23 +361,27 @@ jobs:
           if grep -E '^scripts/test-v3(1[1-9]|[2-7][0-9]|8[01])-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
-          if grep -Fx 'scripts/test-v325-image-ocr-correction-confirmation-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v327-image-ocr-correction-reference-context-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v329-image-ocr-false-positive-dismissal-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v333-image-ocr-correction-cancel-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v334-image-focus-preview-correction-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v335-image-focus-preview-return-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v336-koharu-readiness-developer-summary-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v337-image-ocr-correction-normalized-dismissal-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v338-image-ocr-correction-keyboard-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v339-image-ocr-correction-scroll-dismiss-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v340-image-ocr-correction-save-lock-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v341-image-review-final-state-lock-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v342-image-action-lock-feedback-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v343-image-navigation-accessibility-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v344-image-navigation-position-accessibility-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v345-image-overlay-accessibility-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
-          if grep -Fx 'scripts/test-v346-image-preview-status-accessibility-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then ui_interaction_contract_required=true; fi
+          # Historical contracts keep these route markers; the range regex above is executable.
+          # if grep -Fx 'scripts/test-v325-image-ocr-correction-confirmation-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v327-image-ocr-correction-reference-context-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v329-image-ocr-false-positive-dismissal-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v330-image-ocr-correction-sheet-focus-handoff-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v331-image-ocr-correction-return-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v332-image-ocr-restore-focus-handoff-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v333-image-ocr-correction-cancel-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v334-image-focus-preview-correction-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v335-image-focus-preview-return-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v336-koharu-readiness-developer-summary-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v337-image-ocr-correction-normalized-dismissal-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v338-image-ocr-correction-keyboard-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v339-image-ocr-correction-scroll-dismiss-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v340-image-ocr-correction-save-lock-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v341-image-review-final-state-lock-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v342-image-action-lock-feedback-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v343-image-navigation-accessibility-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v344-image-navigation-position-accessibility-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v345-image-overlay-accessibility-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          # if grep -Fx 'scripts/test-v346-image-preview-status-accessibility-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
           validation_profile="${{ steps.meta.outputs.requested_validation_profile }}"
           validation_reason="manual_${validation_profile}"
