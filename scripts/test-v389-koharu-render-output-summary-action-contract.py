@@ -38,11 +38,11 @@ class KoharuRenderOutputSummaryActionContractTests(unittest.TestCase):
         self.assertIn("missing=\\(renderOutputMissing.isEmpty ? \"none\" : renderOutputMissing)", self.service)
 
     def test_version_and_ci_route_follow_v388(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.89;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.88;", self.project)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3.90;"), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.89;", self.project)
         old = "python3 -B scripts/test-v388-koharu-render-core-output-gate-action-contract.py"
         new = "python3 -B scripts/test-v389-koharu-render-output-summary-action-contract.py"
-        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger|7-koharu-render-output-action|8-koharu-render-core-output-gate-action|9-koharu-render-output-summary-action)-contract\\.py"
+        route = "scripts/test-v(38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger|7-koharu-render-output-action|8-koharu-render-core-output-gate-action|9-koharu-render-output-summary-action)|390-koharu-render-failure-overlay-compaction)-contract\\.py"
         self.assertIn(old, self.workflow)
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
