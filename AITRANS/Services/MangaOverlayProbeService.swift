@@ -9321,20 +9321,29 @@ struct MangaOverlayProbeService: Sendable {
 
     private static func wrappedLines(_ text: String, fontSize: CGFloat, maxWidth: CGFloat) -> [String] {
         var lines: [String] = []
-        var current = ""
-        for character in text {
-            let candidate = current.isEmpty ? String(character) : current + String(character)
-            if estimatedTextWidth(candidate, fontSize: fontSize) <= maxWidth || current.isEmpty {
-                current = candidate
-            } else {
+        for paragraph in text.components(separatedBy: .newlines) {
+            if paragraph.isEmpty {
+                // Preserve explicit blank lines so the fit plan and CoreText draw
+                // consume the same vertical budget for diagnostic/failure text.
+                lines.append("")
+                continue
+            }
+
+            var current = ""
+            for character in paragraph {
+                let candidate = current.isEmpty ? String(character) : current + String(character)
+                if estimatedTextWidth(candidate, fontSize: fontSize) <= maxWidth || current.isEmpty {
+                    current = candidate
+                } else {
+                    lines.append(current)
+                    current = String(character)
+                }
+            }
+            if !current.isEmpty {
                 lines.append(current)
-                current = String(character)
             }
         }
-        if !current.isEmpty {
-            lines.append(current)
-        }
-        return lines
+        return lines.isEmpty ? [""] : lines
     }
 
     private static func estimatedTextWidth(_ text: String, fontSize: CGFloat) -> CGFloat {
