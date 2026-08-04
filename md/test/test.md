@@ -125,6 +125,8 @@
 
 - v3.87 正式要求 render-lock 输出检查把 planned final write 的推荐动作与状态一致化：`plannedFinalReportWrite` 与 `plannedFinalOCRTextRewrite` 在 `nonEmpty=true` 时必须为 `recommendedAction=keepReportOnly`，只有缺失或未检查输出才允许 `inspectRenderOutputExport`。新增 `scripts/test-v387-koharu-render-output-action-contract.py`，接入 Koharu changed-file/full 静态路由，并让 v3.82–v3.86 历史合同接受后续正式版本；失败写入仍不能生成成功报告。该 report-only 修复不改变 OCR、翻译、ground truth、renderer/export、Koharu active artifact gate、普通图片 OCR、metrics 或 output，源码合同不能代替真实探针/PNG/设备证据或真实 Koharu 四件套。
 
+- v3.88 正式要求 `G-render-core-png-retained` 的推荐动作与 required output 状态一致：`coreOutputFilesNonEmpty=true` 时必须为 `keepReportOnly`，否则为 `inspectRenderOutputExport`；新增 `scripts/test-v388-koharu-render-core-output-gate-action-contract.py` 并接入 Koharu changed-file/full 静态路由，历史 v3.82–v3.87 合同须接受后续正式版本。该 report-only 修复不改变 OCR、翻译、ground truth、renderer/export、Koharu active artifact gate、普通图片 OCR、metrics 或 output，源码合同不能代替真实探针/PNG/设备证据或真实 Koharu 四件套。
+
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。

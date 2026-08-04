@@ -8,6 +8,28 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.88：对齐 Koharu 核心输出 gate 的推荐动作
+日期：2026-08-04
+
+状态：Agent X 已完成 report-only 诊断对齐、云端 full/ci-fast/PR fast/merge fast 验收、PR 合并和 `smalldata_test` 文档收口；工程正式版本为 `MARKETING_VERSION=3.88`。候选分支 `codeb/v3.88-render-core-gate-action` 的候选 HEAD 为 `6a6e637cbe3e4a0d688e0e7f9f5b3a3142c14567`，PR [#152](https://github.com/bengzhu/project1_lgbt_naxida/pull/152) 已合入 `smalldata_test`，merge SHA 为 `5f6872cac575421d21ecd5670df97cb920423f95`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `makeKoharuRenderRegressionLockReport` 新增 `coreOutputRecommendedAction`：required ci-fast 输出全部 retained 且 non-empty 时，`G-render-core-png-retained` 使用 `keepReportOnly`；只有缺失/空 required 输出才使用 `inspectRenderOutputExport`。这使 gate 与 v3.87 已修正的 `outputFileChecks` 动作一致，不放宽输出存在性、失败写入或成功报告门槛。
+- 新增 `scripts/test-v388-koharu-render-core-output-gate-action-contract.py`，并把 v3.82–v3.87 历史合同、Koharu changed-file 路由和 full 静态检查同步到 v3.88。该 report-only 修复不触碰 OCR 候选、翻译模型／prompt、ground truth、生产 renderer/export、普通图片 OCR、Koharu active artifact gate、`metrics/version_history.csv` 或仓库 `output/`。
+
+验证：
+
+- 本地轻量检查：v3.82/v3.83/v3.84/v3.85/v3.86/v3.87/v3.88 合同、`git diff --check`、Swift `-parse`、项目版本解析、ground-truth JSON 与 CI YAML smoke 通过；未跑本机 build / 探针，按规则交给云端。
+- 候选 full run [30880132762](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30880132762)：manifest 精确匹配 v3.88、候选 branch、SHA `6a6e637c`、run/attempt/workflow，`validationProfile=full`、`xcodeBuildRequired=true`；Xcode build success，JUnit `10/10`、0 failures，`.xcresult`、静态、Speech、UI、home、paste 与 Koharu 合同通过；结果包保存在 `/private/tmp/aitrans-c-review-30880132762`。
+- 同 SHA ci-fast 探针 run [30880751340](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30880751340)：manifest 精确匹配同一 SHA，模拟器 build、Local GGUF 漫画探针与 Output 导出成功；`G-render-core-png-retained` 为 `passed / keepReportOnly`，6 个 output checks 均为 `keepReportOnly`。报告为 13 blocks、`renderLockVerdict=openRenderIssueDetected`，block 5 仍在 `renderTextTruncatedBlocks` 与 `G-render-no-text-truncation=blocked` 中；结果包保存在 `/private/tmp/aitrans-c-review-30880751340`。这是诊断证据，不是 OCR/翻译/Koharu 质量基线。
+- PR #152 fast run [30881554748](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30881554748)：精确 head `6a6e637c`，`validationProfile=fast`、`xcodeBuildRequired=false`，复用候选 full receipt `6a6e637c / success`，JUnit `10/10`；该 fast 包不是新的编译证据，结果包保存在 `/private/tmp/aitrans-c-review-30881554748`。
+- merge fast run [30881613654](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30881613654)：精确 merge SHA `5f6872ca`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full receipt `6a6e637c / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30881613654`。
+
+限制与遗留：
+
+候选 push 默认 `probe_mode=skip`，本轮另有同 SHA ci-fast 生成报告与 PNG，未更新 `metrics/version_history.csv` 或仓库 `output/`。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，缺少真实 `test/koharu_artifacts/` 四件套；Speech corpus 与真实竖排图片 corpus 仍缺失。推荐动作对齐和 block 5 截断诊断不能被描述为 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.87：修正 planned render 输出的推荐动作误报
 日期：2026-08-04
 
