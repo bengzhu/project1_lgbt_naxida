@@ -62,11 +62,15 @@ class MangaRenderNewlineContractTests(unittest.TestCase):
         self.assertIn("G-render-failure-overlay-contract", self.store)
 
     def test_version_and_koharu_route_follow_v381(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.82;"), 2)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.82;", self.project)
         self.assertNotIn("MARKETING_VERSION = 3.81;", self.project)
         new = "python3 -B scripts/test-v382-manga-render-newline-contract.py"
         self.assertIn(new, self.workflow)
-        self.assertIn("scripts/test-v382-manga-render-newline-contract\\.py", self.workflow)
+        self.assertIn(
+            "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget)-contract\\.py",
+            self.workflow,
+        )
         old = "python3 -B scripts/test-v33-koharu-mask-topology-contract.py"
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
 
