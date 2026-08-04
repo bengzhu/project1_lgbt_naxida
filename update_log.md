@@ -11,7 +11,7 @@
 ## v3.85：汇总 Koharu render-lock 最小字号证据
 日期：2026-08-04
 
-状态：Agent X 已完成 report-only 诊断增强、云端 full/ci-fast/PR fast/merge fast 验收和 PR 合并；文档待本轮 `smalldata_test` follow-up 收口，工程正式版本为 `MARKETING_VERSION=3.85`。候选分支 `codeb/v3.85-koharu-render-lock-min-font-summary` 的最终候选 HEAD 为 `f227dd64438900744dc05aa9102e693edbc6fda5`，PR [#149](https://github.com/bengzhu/project1_lgbt_naxida/pull/149) 已合入 `smalldata_test`，merge SHA 为 `bfefffd6ce2fd670300920af17551e19baa9131a`，远端候选分支已删除，`main` 未触碰。
+状态：Agent X 已完成 report-only 诊断增强、云端 full/ci-fast/PR fast/merge fast 验收、PR 合并和 `smalldata_test` 文档 follow-up；工程正式版本为 `MARKETING_VERSION=3.85`。候选分支 `codeb/v3.85-koharu-render-lock-min-font-summary` 的最终候选 HEAD 为 `f227dd64438900744dc05aa9102e693edbc6fda5`，PR [#149](https://github.com/bengzhu/project1_lgbt_naxida/pull/149) 已合入 `smalldata_test`，merge SHA 为 `bfefffd6ce2fd670300920af17551e19baa9131a`，远端候选分支已删除，`main` 未触碰。
 
 核心变更：
 
