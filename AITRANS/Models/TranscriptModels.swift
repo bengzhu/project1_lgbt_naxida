@@ -6156,6 +6156,7 @@ struct MangaKoharuRenderRegressionLockReport: Equatable, Codable, Sendable {
     var renderMaskCollisionCheckedBlocks: [Int]
     var renderMaskCollisionResolvedBlocks: [Int]
     var renderMaskOverflowBlocks: [Int]
+    var renderMinFontSizeReachedBlocks: [Int]
     var renderTextTruncatedBlocks: [Int]
     var renderIssueBlocks: [Int]
     var failureOverlayRequiredBlocks: [Int]

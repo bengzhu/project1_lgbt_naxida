@@ -68,7 +68,7 @@ class MangaRenderNewlineContractTests(unittest.TestCase):
         new = "python3 -B scripts/test-v382-manga-render-newline-contract.py"
         self.assertIn(new, self.workflow)
         self.assertIn(
-            "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font)-contract\\.py",
+            "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font)-contract\\.py",
             self.workflow,
         )
         old = "python3 -B scripts/test-v33-koharu-mask-topology-contract.py"

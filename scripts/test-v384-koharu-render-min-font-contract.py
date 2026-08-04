@@ -75,11 +75,15 @@ class KoharuRenderMinFontContractTests(unittest.TestCase):
         self.assertIn("diagnosticOnly: true", self.report)
 
     def test_version_and_ci_route_follow_v383(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.84;"), 2)
+        import re
+
+        versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 84) for version in versions))
         self.assertNotIn("MARKETING_VERSION = 3.83;", self.project)
         old = "python3 -B scripts/test-v383-koharu-fit-budget-contract.py"
         new = "python3 -B scripts/test-v384-koharu-render-min-font-contract.py"
-        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font)-contract\\.py"
+        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font)-contract\\.py"
         self.assertIn(old, self.workflow)
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
