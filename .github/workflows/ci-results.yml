@@ -361,6 +361,8 @@ jobs:
           if grep -E '^scripts/test-v3(1[1-9]|[2-7][0-9]|8[01])-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
+          # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
+          # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
           # Historical contracts keep these route markers; the range regex above is executable.
           # if grep -Fx 'scripts/test-v325-image-ocr-correction-confirmation-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
           # if grep -Fx 'scripts/test-v327-image-ocr-correction-reference-context-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
