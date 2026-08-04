@@ -2393,6 +2393,7 @@ struct MangaKoharuRenderSpriteFitBlockLedger: Equatable, Codable, Sendable {
     var renderNonTransparentBounds: [Double]?
     var renderCollisionChecked: Bool
     var renderCollisionResolved: Bool
+    var renderMinFontSizeReached: Bool
     var renderTextTruncated: Bool
     var spriteContainedByCurrentSafeRect: Bool?
     var spriteContainedByDistanceFieldSafeRect: Bool?
@@ -2497,6 +2498,7 @@ struct MangaKoharuRenderSpriteFitPlannerReport: Equatable, Codable, Sendable {
     var failureOverlayFitBreakdown: [String: Int]
     var nextActionBreakdown: [String: Int]
     var fontBudgetRiskBlocks: [Int]
+    var renderMinFontSizeReachedBlocks: [Int]
     var spriteContainmentRiskBlocks: [Int]
     var siblingOverlapRiskBlocks: [Int]
     var failureOverlayRiskBlocks: [Int]

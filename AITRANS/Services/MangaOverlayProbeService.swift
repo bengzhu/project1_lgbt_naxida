@@ -4679,6 +4679,7 @@ struct MangaOverlayProbeService: Sendable {
                 let relatedSeams = seamByBlock[block.index]?.relatedSeamCandidateIDs ?? []
                 let renderVerdict = renderLock?.renderStatus ?? (block.renderCollisionChecked ? "renderDiagnosticsAvailable" : "renderDiagnosticsMissing")
                 let failureRequired = renderLock?.failureOverlayRequired ?? !block.blockPassed
+                let renderMinFontSizeReached = block.renderMinFontSizeReached || (renderLock?.renderMinFontSizeReached ?? false)
                 let renderTextTruncated = block.renderTextTruncated || (renderLock?.renderTextTruncated ?? false)
                 let failureFit: String
                 if !failureRequired {
@@ -4749,6 +4750,7 @@ struct MangaOverlayProbeService: Sendable {
                     renderNonTransparentBounds: spriteBounds,
                     renderCollisionChecked: block.renderCollisionChecked || (renderLock?.renderCollisionChecked ?? false),
                     renderCollisionResolved: block.renderCollisionResolved || (renderLock?.renderCollisionResolved ?? false),
+                    renderMinFontSizeReached: renderMinFontSizeReached,
                     renderTextTruncated: renderTextTruncated,
                     spriteContainedByCurrentSafeRect: spriteCurrent,
                     spriteContainedByDistanceFieldSafeRect: spriteDistance,
@@ -4767,6 +4769,7 @@ struct MangaOverlayProbeService: Sendable {
                     decisionSignals: [
                         signal("selectedReportOnlyFitRectSource", selectedSource, source: "koharuRenderSpriteFitPlannerReport"),
                         signal("fontBudgetVerdict", budget.verdict, source: "blocks.renderFontSize,safeLayoutRect"),
+                        signal("renderMinFontSizeReached", String(renderMinFontSizeReached), source: "blocks.renderMinFontSizeReached,renderLock.renderMinFontSizeReached"),
                         signal("fitVerdict", fitVerdict, source: "koharuRenderSpriteFitPlannerReport")
                     ],
                     evaluationSignals: [
@@ -4941,6 +4944,7 @@ struct MangaOverlayProbeService: Sendable {
             let fontRiskBlocks = uniqueSorted(blockLedgers.filter {
                 $0.fontBudgetVerdict == "fontBudgetTight" || $0.fontBudgetVerdict == "fontBudgetOverflowRisk"
             }.map(\.blockIndex))
+            let renderMinFontSizeReachedBlocks = uniqueSorted(blockLedgers.filter(\.renderMinFontSizeReached).map(\.blockIndex))
             let spriteRiskBlocks = uniqueSorted(blockLedgers.filter {
                 $0.spriteContainedByCurrentSafeRect == false || $0.spriteContainedByDistanceFieldSafeRect == false
             }.map(\.blockIndex))
@@ -4987,6 +4991,7 @@ struct MangaOverlayProbeService: Sendable {
                 gate("G-render-sprite-fit-distance-field-linked", "DistanceField linked", "BubbleIndex", koharuDistanceFieldSafeAreaReport == nil ? "warning" : "passed", "koharuDistanceFieldSafeAreaReport available", allBlocks, "fit planner cannot compare distance-field candidate rects", "restoreDistanceFieldSafeAreaReport", [signal("distanceFieldAvailable", String(koharuDistanceFieldSafeAreaReport != nil), source: "koharuDistanceFieldSafeAreaReport")]),
                 gate("G-render-sprite-fit-bubble-index-linked", "BubbleIndex linked", "BubbleIndex", koharuBubbleIndexShadowLedgerReport == nil ? "warning" : "passed", "koharuBubbleIndexShadowLedgerReport available", allBlocks, "fit planner cannot compare BubbleIndex shadow safe rects", "restoreBubbleIndexShadowLedgerReport", [signal("bubbleIndexAvailable", String(koharuBubbleIndexShadowLedgerReport != nil), source: "koharuBubbleIndexShadowLedgerReport")]),
                 gate("G-render-sprite-fit-seam-linked", "Seam linked", "BubbleMask", koharuBubbleAdjacencySeamReport == nil ? "warning" : "passed", "koharuBubbleAdjacencySeamReport available", seamBlocks, "fit planner hides seam-constrained layout risk", "restoreBubbleAdjacencySeamReport", [signal("seamReportAvailable", String(koharuBubbleAdjacencySeamReport != nil), source: "koharuBubbleAdjacencySeamReport")]),
+                gate("G-render-sprite-fit-min-font-evidence", "Minimum font evidence", "RenderedSprites", "passed", "renderMinFontSizeReached is propagated per block", renderMinFontSizeReachedBlocks, "render diagnostics report minimum-font pressure but fit ledger drops it", "restoreRenderMinFontEvidence", [signal("renderMinFontSizeReachedBlocks", joined(renderMinFontSizeReachedBlocks), source: "koharuRenderSpriteFitPlannerReport")]),
                 gate("G-render-sprite-fit-failure-overlay-accounted", "Failure overlay accounted", "RenderedSprites", failureRiskBlocks.isEmpty ? "passed" : "warning", "failure fallback text fit risk is explicit", failureRiskBlocks, "failed blocks are silently skipped or their fallback text budget is hidden", "reviewFailureFallbackFit", [signal("failureOverlayRiskBlocks", joined(failureRiskBlocks), source: "koharuRenderSpriteFitPlannerReport")]),
                 gate("G-render-sprite-fit-no-renderer-mutation", "No renderer mutation", "FinalRender", "passed", "overlay renderer and PNG behavior unchanged", [], "fit planner writes back safeLayoutRect, glyph mask, background fill, or overlay PNG", "revertRendererMutation", [signal("proxyNotRealKoharuRenderer", "true", source: "koharuRenderSpriteFitPlannerReport")]),
                 gate("G-render-sprite-fit-ci-fast-ready", "CI fast ready", "ci-fast", "passed", "uses existing reports only", allBlocks, "fit planner adds OCR/LLM/full-only dependency", "keepCIFastReportOnly", [signal("inputReports", "blocks,koharuRenderRegressionLockReport,koharuBubbleIndexShadowLedgerReport,koharuDistanceFieldSafeAreaReport,koharuBubbleAdjacencySeamReport", source: "koharuRenderSpriteFitPlannerReport")])
@@ -5040,6 +5045,7 @@ struct MangaOverlayProbeService: Sendable {
                 failureOverlayFitBreakdown: countBy(blockLedgers.map(\.failureOverlayFitVerdict)),
                 nextActionBreakdown: countBy(blockLedgers.map(\.nextAction)),
                 fontBudgetRiskBlocks: fontRiskBlocks,
+                renderMinFontSizeReachedBlocks: renderMinFontSizeReachedBlocks,
                 spriteContainmentRiskBlocks: spriteRiskBlocks,
                 siblingOverlapRiskBlocks: siblingRiskBlocks,
                 failureOverlayRiskBlocks: failureRiskBlocks,
@@ -5054,6 +5060,7 @@ struct MangaOverlayProbeService: Sendable {
                 notes: [
                     "koharuRenderSpriteFitPlannerReport is a report-only Koharu RenderedSprites fit planner ledger.",
                     "It estimates font budget, line pressure, layout candidates, sibling overlap, seam constraints, sprite containment, and failure fallback fit from existing render diagnostics and Koharu shadow reports only.",
+                    "It propagates the existing minimum-font-size evidence into each block ledger and the summary without treating that evidence as a renderer promotion decision.",
                     "Ground truth appears only in evaluationSignals; fit verdicts, layout candidate status, sibling fit, gates, and nextAction use ground-truth-free render and geometry signals.",
                     "The report does not add OCR or LLM calls and does not change OCR, translation input, safeLayoutRect, DistanceField safe rect, glyphMaskFillRects, background fill, overlay rendering, blockPassed, failureCategory, active artifacts, currentBlockSource, or PNG output behavior."
                 ]

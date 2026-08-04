@@ -2,6 +2,7 @@
 """Contract for keeping Koharu fit diagnostics aligned with the render plan."""
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -64,11 +65,13 @@ class KoharuFitBudgetContractTests(unittest.TestCase):
         self.assertIn("groundTruthUsedForDecision: false", self.report)
 
     def test_version_and_ci_route_follow_v382(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.83;"), 2)
+        versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 83) for version in versions))
         self.assertNotIn("MARKETING_VERSION = 3.82;", self.project)
         old = "python3 -B scripts/test-v382-manga-render-newline-contract.py"
         new = "python3 -B scripts/test-v383-koharu-fit-budget-contract.py"
-        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget)-contract\\.py"
+        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font)-contract\\.py"
         self.assertIn(old, self.workflow)
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
