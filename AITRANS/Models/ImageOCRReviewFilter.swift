@@ -3,6 +3,8 @@ import Foundation
 enum ImageOCRReviewFilter: String, CaseIterable, Identifiable, Sendable {
     case all = "全部"
     case needsReview = "待复查"
+    case lowConfidence = "低置信"
+    case unknownDirection = "方向待定"
 
     var id: String { rawValue }
 
@@ -12,6 +14,10 @@ enum ImageOCRReviewFilter: String, CaseIterable, Identifiable, Sendable {
             blocks
         case .needsReview:
             blocks.filter { ImageOCRResultSummary.requiresReview($0) }
+        case .lowConfidence:
+            blocks.filter { ImageOCRResultSummary.hasLowConfidence($0) }
+        case .unknownDirection:
+            blocks.filter { ImageOCRResultSummary.hasUnknownDirection($0) }
         }
     }
 }
