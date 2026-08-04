@@ -192,6 +192,7 @@ struct ImageTranslationPanel: View {
             finishSharing()
         }
         .onChange(of: store.imageTranslationRevision) { _, _ in
+            reviewFilter = .all
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
             restoreConfirmationBlock = nil

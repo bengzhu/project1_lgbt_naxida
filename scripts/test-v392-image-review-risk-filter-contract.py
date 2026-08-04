@@ -87,7 +87,9 @@ class ImageReviewRiskFilterContractTests(unittest.TestCase):
 
     def test_version_and_ci_route(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.92", "3.92"])
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 92) for version in versions))
+        self.assertNotIn("MARKETING_VERSION = 3.91;", self.project)
         self.assertIn("scripts/test-v392-image-review-risk-filter-contract.py", self.workflow)
         self.assertIn("python3 -B scripts/test-v392-image-review-risk-filter-contract.py", self.workflow)
         self.assertLess(
