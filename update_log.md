@@ -8,6 +8,30 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.85：汇总 Koharu render-lock 最小字号证据
+日期：2026-08-04
+
+状态：Agent X 已完成 report-only 诊断增强、云端 full/ci-fast/PR fast/merge fast 验收和 PR 合并；文档待本轮 `smalldata_test` follow-up 收口，工程正式版本为 `MARKETING_VERSION=3.85`。候选分支 `codeb/v3.85-koharu-render-lock-min-font-summary` 的最终候选 HEAD 为 `f227dd64438900744dc05aa9102e693edbc6fda5`，PR [#149](https://github.com/bengzhu/project1_lgbt_naxida/pull/149) 已合入 `smalldata_test`，merge SHA 为 `bfefffd6ce2fd670300920af17551e19baa9131a`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaKoharuRenderRegressionLockReport` 新增 `renderMinFontSizeReachedBlocks` 顶层汇总；每个 `MangaKoharuRenderBlockLock` 的 decision trace 同步显式记录 `renderMinFontSizeReached`。
+- 新增 `G-render-min-font-evidence` report-only gate，并让 `MangaOverlayProbeService` 的开发者诊断摘要输出 `minFont=`，使 render lock、fit planner 与摘要消费同一既有证据。
+- 新增 `scripts/test-v385-koharu-render-lock-min-font-contract.py`，接入 Koharu changed-file/full 静态路由；v3.82–v3.84 历史合同同步接受后续正式版本。`MARKETING_VERSION` 推进到 3.85。
+- 该改动只补齐报告传播，不改变 OCR 候选、翻译模型／prompt、ground truth 决策、生产 renderer/export、Koharu active artifact gate、普通图片 OCR 主路径、`metrics/version_history.csv` 或仓库 `output/`。
+
+验证：
+
+- 本地轻量检查：v3.82/v3.83/v3.84/v3.85 合同、`git diff --check`、Swift `-parse`、项目版本解析和 CI YAML smoke 通过；未跑本机 build / 探针，按规则交给云端。
+- 候选 full run [30875436621](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30875436621)：manifest 精确匹配 v3.85、候选 branch、SHA `f227dd64`、run/attempt/workflow，`validationProfile=full`、`xcodeBuildRequired=true`；Xcode 26.6 build success，JUnit `10/10`、0 failures，UI/Speech/home/paste/Koharu 合同通过；结果包保存在 `/private/tmp/aitrans-c-review-30875436621`。
+- 同 SHA ci-fast 探针 run [30875716372](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30875716372)：Xcode、模拟器构建、Local GGUF 漫画探针与 Output 导出成功，`mangaProbeOutcome=success`；`probe_report.json` 的 `koharuRenderRegressionLockReport.renderMinFontSizeReachedBlocks=[5]`，block 5 同时为 `renderMinFontSizeReached=true`、`renderTextTruncated=true`、`renderStatus=textTruncated`，新 gate 为 passed/report-only，`wouldChangeMainFlow=false`；结果包保存在 `/private/tmp/aitrans-c-review-30875716372`。该报告是诊断证据，不是 OCR/翻译/Koharu 质量基线。
+- PR #149 fast run [30876264990](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30876264990)：精确 head `f227dd64`，`validationProfile=fast`，复用候选 full receipt `f227dd64 / success`，`xcodeBuildRequired=false`、skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit `10/10`；该 fast 包不是新的编译证据，结果包保存在 `/private/tmp/aitrans-c-review-30876264990`。
+- merge fast run [30876301079](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30876301079)：精确 merge SHA `bfefffd6`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full receipt `f227dd64 / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30876301079`。
+
+限制与遗留：
+
+候选、PR fast 和 merge fast 的探针默认路径为 skip；本轮 ci-fast 只提供诊断报告与 PNG，未更新 `metrics/version_history.csv` 或仓库 `output/`。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，缺少真实 `test/koharu_artifacts/` 四件套；Speech corpus 与真实竖排图片 corpus 仍缺失。最小字号压力与实际截断仍只是诊断证据，不是 OCR、翻译、识别或 Koharu 质量提升结论。
+
 ## v3.84：保留 Koharu 最小字号渲染证据
 日期：2026-08-04
 

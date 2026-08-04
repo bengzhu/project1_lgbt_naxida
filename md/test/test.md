@@ -119,6 +119,8 @@
 - v3.83 正式要求 Koharu fit planner 与实际 `wrappedLines` 共享显式换行／空行预算，并将 `renderTextTruncated` 纳入失败 fallback 风险；新增 `scripts/test-v383-koharu-fit-budget-contract.py`，接入 full 静态检查与 Manga service changed-file 路由。该 report-only 修复只改善诊断一致性，不改变 OCR、翻译、ground truth、renderer/export、Koharu、普通图片主路径、metrics 或 output；云端 probe 报告仍必须保留真实截断，源码合同不能冒充质量提升。
 - v3.84 正式要求 Koharu fit planner 将既有 `renderMinFontSizeReached` 从 block/render lock 传播到逐 block ledger、decision signal、汇总 `renderMinFontSizeReachedBlocks` 和 `G-render-sprite-fit-min-font-evidence` report-only gate；`scripts/test-v384-koharu-render-min-font-contract.py` 必须在 v3.83 后接入 Koharu changed-file/full 静态路由，并允许 v3.82/v3.83 历史合同接受后续正式版本。该诊断性改动不改变 OCR、翻译、ground truth、生产 renderer/export、Koharu active artifact gate、普通图片 OCR、metrics 或 output；云端 ci-fast 报告可证明最小字号压力与实际截断，但不能替代质量证据。
 
+- v3.85 正式要求 `MangaKoharuRenderRegressionLockReport` 从既有 block/render lock 传播 `renderMinFontSizeReached` 到逐 block decision trace、顶层 `renderMinFontSizeReachedBlocks`、`G-render-min-font-evidence` report-only gate 与 Developer Console 摘要；`scripts/test-v385-koharu-render-lock-min-font-contract.py` 必须在 v3.84 后接入 Koharu changed-file/full 静态路由，并允许 v3.82–v3.84 历史合同接受后续正式版本。该诊断性改动不改变 OCR、翻译、ground truth、生产 renderer/export、Koharu active artifact gate、普通图片 OCR、metrics 或 output；云端 ci-fast 报告可证明最小字号压力与实际截断，但不能替代质量证据。
+
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。
