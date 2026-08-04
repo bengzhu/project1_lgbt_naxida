@@ -6712,6 +6712,14 @@ struct MangaOverlayProbeService: Sendable {
             .filter { $0.requiredInCIFast && !$0.nonEmpty }
             .map(\.fileName)
             .joined(separator: ",")
+        let renderOutputActionBreakdown = Dictionary(
+            grouping: (koharuRenderRegressionLockReport?.outputFileChecks ?? [])
+                .filter(\.requiredInCIFast),
+            by: \.recommendedAction
+        )
+        .map { "\($0.key)=\($0.value.count)" }
+        .sorted()
+        .joined(separator: ",")
         let renderWorkItem = koharuArtifactConvergenceReport?.workItemLedger.first {
             $0.workItemID == "WI-render-regression-lock"
         }
@@ -7021,7 +7029,7 @@ struct MangaOverlayProbeService: Sendable {
         resolverBlockedByMissingRealArtifact=\(koharuPipelineResolverReport?.blockedByMissingRealArtifactBlocks.map(String.init).joined(separator: ",") ?? "nil") stoplistedLocalTuning=\(koharuPipelineResolverReport?.stoplistedLocalTuningBlocks.map(String.init).joined(separator: ",") ?? "nil") modelFloorLimited=\(koharuPipelineResolverReport?.modelFloorLimitedBlocks.map(String.init).joined(separator: ",") ?? "nil") renderLocked=\(koharuPipelineResolverReport?.renderLockedBlocks.map(String.init).joined(separator: ",") ?? "nil")
         koharuRenderRegressionLockReport: enabled=\(koharuRenderRegressionLockReport.map { String($0.enabled) } ?? "nil") blocks=\(koharuRenderRegressionLockReport.map { String($0.evaluatedBlockCount) } ?? "nil") verdict=\(koharuRenderRegressionLockReport?.renderLockVerdict ?? "nil") renderedSpritesStage=\(koharuRenderRegressionLockReport?.renderedSpritesStageStatus ?? "nil") finalRenderStage=\(koharuRenderRegressionLockReport?.finalRenderStageStatus ?? "nil")
         renderIssues: overflow=\(koharuRenderRegressionLockReport?.renderCollisionUnresolvedBlocks.map(String.init).joined(separator: ",") ?? "nil") minFont=\(koharuRenderRegressionLockReport?.renderMinFontSizeReachedBlocks.map(String.init).joined(separator: ",") ?? "nil") truncated=\(koharuRenderRegressionLockReport?.renderTextTruncatedBlocks.map(String.init).joined(separator: ",") ?? "nil") maskOverflow=\(koharuRenderRegressionLockReport?.renderMaskOverflowBlocks.map(String.init).joined(separator: ",") ?? "nil") missingSafeLayout=\(koharuRenderRegressionLockReport?.blockLocks.filter { $0.safeLayoutRect == nil }.map { String($0.blockIndex) }.joined(separator: ",") ?? "nil")
-        outputFiles: corePresent=\(koharuRenderRegressionLockReport.map { String($0.coreOutputFilesPresent) } ?? "nil") coreNonEmpty=\(koharuRenderRegressionLockReport.map { String($0.coreOutputFilesNonEmpty) } ?? "nil") missing=\(renderOutputMissing.isEmpty ? "none" : renderOutputMissing)
+        outputFiles: corePresent=\(koharuRenderRegressionLockReport.map { String($0.coreOutputFilesPresent) } ?? "nil") coreNonEmpty=\(koharuRenderRegressionLockReport.map { String($0.coreOutputFilesNonEmpty) } ?? "nil") actionBreakdown=\(renderOutputActionBreakdown.isEmpty ? "none" : renderOutputActionBreakdown) missing=\(renderOutputMissing.isEmpty ? "none" : renderOutputMissing)
         renderRegressionLockWorkItem: status=\(renderWorkItem?.status ?? "nil") closedByVersion=\(renderWorkItem?.closedByVersion ?? "nil") blockers=\(renderWorkItem?.remainingBlockers.joined(separator: ",") ?? "nil")
         translationModelFloorComparisonReport: enabled=\(translationModelFloorComparisonReport.map { String($0.enabled) } ?? "nil") cleanCases=\(translationModelFloorComparisonReport.map { String($0.evaluatedCleanCaseCount) } ?? "nil") noisyBlocks=\(translationModelFloorComparisonReport.map { String($0.evaluatedNoisyBlockCount) } ?? "nil") baselinePassRate=\(translationModelFloorComparisonReport.map { $0.baselinePassRate.formatted(.number.precision(.fractionLength(4))) } ?? "nil") variantPassRate=\(translationModelFloorComparisonReport.map { $0.variantPassRate.formatted(.number.precision(.fractionLength(4))) } ?? "nil") delta=\(translationModelFloorComparisonReport.map { $0.passRateDelta.formatted(.number.precision(.fractionLength(4))) } ?? "nil") floorVerdict=\(translationModelFloorComparisonReport?.floorVerdict ?? "nil")
         promptVariantOutcome=\(translationFloorPromptOutcomes)
