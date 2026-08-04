@@ -1,3 +1,24 @@
+## v3.93：重置跨图片残留的 OCR 复查筛选
+日期：2026-08-04
+
+状态：Agent X 已完成普通图片复查筛选的 revision-scoped UX 修复，完成候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.93`。候选分支 `codeb/v3.93-image-filter-reset` 的最终 SHA `a3cea5a202f1de8a9b13aa4809db583b55480dcd` 已通过 PR [#157](https://github.com/bengzhu/project1_lgbt_naxida/pull/157) 合入，merge SHA 为 `3f6565f65cc8ff965ba909f5d6e27ad0a508436c`；远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPanel` 在既有 Store `imageTranslationRevision` 变化时将 View 私有 `reviewFilter` 恢复为 `.all`，同时沿用已有 revision handler 清除旧 selected block、编辑/恢复状态和 VoiceOver focus。新图片、重试、重新识别和清空不会继承上一张图片的低置信／方向待定筛选，避免新结果误显示为空。
+- 该修复不把筛选写入 Store／持久化，不改变 `imageTranslationBlocks`、Vision OCR、模型翻译、预览、renderer/export、漫画探针、Koharu readiness、metrics 或 output；新增 `scripts/test-v393-image-review-filter-reset-contract.py`，并将 v3.92 合同版本门升级为接受后续正式版本。
+
+验证：
+
+- 本地轻量检查：v3.93/v3.92/v3.10/v3.80/v1.87 合同、`git diff --check`、项目版本解析和 workflow YAML smoke 通过；未跑本机完整 Xcode build 或漫画探针。
+- 候选 full run [30890823578](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30890823578)：manifest 精确匹配 v3.93、候选 branch、SHA、run/attempt/workflow，`validationProfile=full`、`xcodeBuildRequired=true`、Xcode success、UI/Speech/home/paste/Koharu 合同通过，JUnit `10/10`、0 failures，并发布 `AITRANS CI/full-validation=success`；`probeMode=skip`，结果包保存在 `/private/tmp/aitrans-c-review-30890823578`。
+- PR #157 fast run [30891431628](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30891431628)：精确 head SHA，`validationProfile=fast`、`xcodeBuildRequired=false`，复用候选 full receipt `a3cea5a2 / success`，JUnit `10/10`；该 fast 包不是新的编译证据，结果包保存在 `/private/tmp/aitrans-c-review-30891431628`。
+- merge fast run [30891485989](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30891485989)：精确 merge SHA `3f6565f6`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full receipt `a3cea5a2 / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30891485989`。
+
+限制与遗留：
+
+本轮未更新 `metrics/version_history.csv` 或仓库 `output/`；push 与 fast 均按默认跳过漫画探针。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.92：图片 OCR 风险筛选与漫画诊断筛选
 日期：2026-08-04
 
