@@ -4613,8 +4613,13 @@ struct MangaOverlayProbeService: Sendable {
                 let width = max(1, Self.rect(from: rect).width)
                 let height = max(1, Self.rect(from: rect).height)
                 let font = max(8, fontSize ?? min(18, Double(height) * 0.35))
-                let charsPerLine = max(1, Int((Double(width) / (font * 0.62)).rounded(.down)))
-                let lineCount = max(1, Int(ceil(Double(max(text.count, 1)) / Double(charsPerLine))))
+                let lines = Self.wrappedLines(
+                    text,
+                    fontSize: CGFloat(font),
+                    maxWidth: CGFloat(width)
+                )
+                let lineCount = max(1, lines.count)
+                let charsPerLine = max(1, lines.map(\.count).max() ?? 1)
                 let maxLines = max(1, Int((Double(height) / (font * 1.18)).rounded(.down)))
                 let verdict: String
                 if lineCount > maxLines + 1 {
@@ -4674,10 +4679,11 @@ struct MangaOverlayProbeService: Sendable {
                 let relatedSeams = seamByBlock[block.index]?.relatedSeamCandidateIDs ?? []
                 let renderVerdict = renderLock?.renderStatus ?? (block.renderCollisionChecked ? "renderDiagnosticsAvailable" : "renderDiagnosticsMissing")
                 let failureRequired = renderLock?.failureOverlayRequired ?? !block.blockPassed
+                let renderTextTruncated = block.renderTextTruncated || (renderLock?.renderTextTruncated ?? false)
                 let failureFit: String
                 if !failureRequired {
                     failureFit = "notRequired"
-                } else if budget.verdict == "fontBudgetOverflowRisk" {
+                } else if renderTextTruncated || budget.verdict == "fontBudgetOverflowRisk" {
                     failureFit = "failureFallbackLongTextRisk"
                 } else if spriteCurrent == false {
                     failureFit = "failureFallbackSpriteContainmentRisk"
@@ -4743,7 +4749,7 @@ struct MangaOverlayProbeService: Sendable {
                     renderNonTransparentBounds: spriteBounds,
                     renderCollisionChecked: block.renderCollisionChecked || (renderLock?.renderCollisionChecked ?? false),
                     renderCollisionResolved: block.renderCollisionResolved || (renderLock?.renderCollisionResolved ?? false),
-                    renderTextTruncated: block.renderTextTruncated || (renderLock?.renderTextTruncated ?? false),
+                    renderTextTruncated: renderTextTruncated,
                     spriteContainedByCurrentSafeRect: spriteCurrent,
                     spriteContainedByDistanceFieldSafeRect: spriteDistance,
                     estimatedLineCount: budget.lineCount,
