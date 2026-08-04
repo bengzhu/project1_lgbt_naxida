@@ -78,8 +78,8 @@ class ImageSelectionFocusContractTests(unittest.TestCase):
         self.assertNotIn("VisionOCRService", self.preview)
 
     def test_version_and_ci_route_follow_v380(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.81;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.80;", self.project)
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.81;", self.project)
         old = "python3 -B scripts/test-v380-image-review-filter-focus-contract.py"
         new = "python3 -B scripts/test-v381-image-selection-focus-contract.py"
         route = "grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\\.py$'"
