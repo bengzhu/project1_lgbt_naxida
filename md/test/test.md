@@ -129,6 +129,8 @@
 
 - v3.89 正式要求 Developer Console 的 `outputFiles` 摘要显示 required 输出的 `recommendedAction` breakdown，并与 `G-render-core-png-retained`／`outputFileChecks` 共用既有 report-only 状态；新增 `scripts/test-v389-koharu-render-output-summary-action-contract.py`，接入 Koharu changed-file/full 静态路由，历史 v3.82–v3.88 合同须接受后续正式版本。ci-fast 应能在输出文本看到类似 `actionBreakdown=keepReportOnly=5`；该 UX 不改变 OCR、翻译、ground truth、renderer/export、Koharu active artifact gate、普通图片 OCR、metrics 或 output，源码合同不能代替真实探针/PNG/设备证据或真实 Koharu 四件套。
 
+- v3.90 正式要求漫画探针失败覆盖保留完整 OCR fallback 和首行 `翻译失败` 标记，同时仅在显示层把 OCR continuation 的显式换行压缩为空格；安全布局诊断、Koharu fit planner 与实际覆盖绘制必须共用该变换，不能修改 OCR 候选、翻译输入、Store、普通图片 renderer/export 或 active artifact gate。新增 `scripts/test-v390-koharu-render-failure-overlay-compaction-contract.py`，接入 Koharu changed-file/full 静态路由，并让 v3.82–v3.89 历史合同接受后续正式版本。full/ci-fast/PR fast/merge fast 必须核对 exact SHA、manifest、JUnit、Xcode 结果和探针输出；ci-fast 应能证明 `renderTextTruncatedBlocks=[]`、block 5 无截断/最小字号锁且覆盖 PNG 非空，但这只是渲染诊断证据，不是 OCR、翻译或 Koharu 质量证据。缺少真实 `test/koharu_artifacts/` 四件套时 readiness 仍必须为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。

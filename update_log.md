@@ -8,6 +8,29 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.90：压缩失败覆盖的 OCR fallback 换行
+日期：2026-08-04
+
+状态：Agent X 已完成 probe-render 显示修复、云端 full/ci-fast/PR fast/merge fast 验收、PR 合并和 `smalldata_test` 文档收口；工程正式版本为 `MARKETING_VERSION=3.90`。候选分支 `codeb/v3.90-koharu-failure-overlay-compaction` 的 commit `3344a8cd192684bf66e6cdff3397314c3fd8da05` 已通过 PR [#154](https://github.com/bengzhu/project1_lgbt_naxida/pull/154) 合入 `smalldata_test`，merge SHA 为 `ee6046d491f327d6c71744876e0a4b4b6aab3947`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- 漫画探针失败块仍保留完整 `翻译失败\nOCR 原文` fallback；新增 `failureOverlayDisplayText` 仅把 OCR continuation 的显式换行压缩为空格，保留失败标记与所有 OCR 内容。
+- safe-layout diagnostics、`makeKoharuRenderSpriteFitPlannerReport` 和 `drawCollisionCheckedText` 共用该显示变换，使 fit plan 与实际覆盖绘制一致；不修改 OCR block、翻译输入、Store、普通图片 renderer/export 或 Koharu active artifact gate。
+- 新增 `scripts/test-v390-koharu-render-failure-overlay-compaction-contract.py`，并同步 v3.82–v3.89 合同的版本兼容与 Koharu changed-file/full 路由。
+
+验证：
+
+- 本地轻量检查：v3.82–v3.90 合同、`git diff --check`、Swift `-parse`、项目版本解析、ground-truth JSON 与 CI YAML smoke 通过；未跑本机 build / 探针，按规则交给云端。
+- 候选 full run [30884104150](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30884104150)：manifest 精确匹配 v3.90、候选 branch、commit、run/attempt/workflow，`validationProfile=full`、`xcodeBuildRequired=true`；Xcode build success，JUnit `10/10`、0 failures，静态、Speech、UI、home、paste 与 Koharu 合同通过；结果包保存在 `/private/tmp/aitrans-c-review-30884104150`。
+- 同 SHA ci-fast 探针 run [30884547044](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30884547044)：manifest 精确匹配同一 SHA，`probeMode=ci-fast`、模拟器 build、Local GGUF 漫画探针与 Output 导出成功，JUnit `10/10`；`renderLockVerdict=renderStableWithProxyBoundaries`、`renderTextTruncatedBlocks=[]`，block 5 为 `renderTextTruncated=false`、`renderMinFontSizeReached=false`、`failureOverlayFitVerdict=failureFallbackAccounted`，`1_translated_overlay.png` 非空；结果包保存在 `/private/tmp/aitrans-c-review-30884547044`。
+- PR #154 fast run [30885582974](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30885582974)：精确 head SHA，`validationProfile=fast`、`xcodeBuildRequired=false`，复用候选 full receipt `3344a8cd / success`，JUnit `10/10`；该 fast 包不是新的编译证据，结果包保存在 `/private/tmp/aitrans-c-review-30885582974`。
+- merge fast run [30885667505](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30885667505)：精确 merge SHA `ee6046d4`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full receipt `3344a8cd / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30885667505`。
+
+限制与遗留：
+
+本轮未更新 `metrics/version_history.csv` 或仓库 `output/`；ci-fast 报告和 PNG 仅用于 probe-render 诊断。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；无论 block 5 的渲染锁改善如何，均不能据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.89：暴露 render-lock 输出动作摘要
 日期：2026-08-04
 
