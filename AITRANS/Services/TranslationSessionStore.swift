@@ -19418,12 +19418,21 @@ final class TranslationSessionStore: ObservableObject {
             source: String
         ) -> MangaKoharuRenderOutputFileCheck {
             let path = outputPath(for: fileName)
-            let plannedFinalReport = fileName == "probe_report.json"
-            let retained = retainedSet.contains(fileName) || plannedFinalReport
-            let nonEmpty = fileIsNonEmpty(path: path) || plannedFinalReport
+            // The final probe report and OCR text ledger are written after this
+            // report is assembled. Treat both as planned writes here so the
+            // lock does not snapshot the short pre-rewrite window as an empty
+            // required artifact. A failed final write aborts the probe before
+            // this report can be persisted, so this remains an output contract
+            // rather than a claim that an absent file is usable.
+            let plannedFinalWrite = fileName == "probe_report.json"
+                || fileName == "1_ocr_probe_text.txt"
+            let retained = retainedSet.contains(fileName) || plannedFinalWrite
+            let nonEmpty = fileIsNonEmpty(path: path) || plannedFinalWrite
             let status: String
-            if plannedFinalReport && !fileIsNonEmpty(path: path) {
-                status = "plannedFinalReportWrite"
+            if plannedFinalWrite && !fileIsNonEmpty(path: path) {
+                status = fileName == "probe_report.json"
+                    ? "plannedFinalReportWrite"
+                    : "plannedFinalOCRTextRewrite"
             } else if retained && nonEmpty {
                 status = "presentNonEmpty"
             } else if retained {

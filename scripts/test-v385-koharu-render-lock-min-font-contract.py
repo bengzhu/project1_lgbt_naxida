@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import unittest
+import re
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -66,11 +67,13 @@ class KoharuRenderLockMinFontContractTests(unittest.TestCase):
         self.assertIn("minFont=", self.probe)
 
     def test_version_and_ci_route_follow_v384(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.85;"), 2)
+        versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 85) for version in versions))
         self.assertNotIn("MARKETING_VERSION = 3.84;", self.project)
         old = "python3 -B scripts/test-v384-koharu-render-min-font-contract.py"
         new = "python3 -B scripts/test-v385-koharu-render-lock-min-font-contract.py"
-        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font)-contract\\.py"
+        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger)-contract\\.py"
         self.assertIn(old, self.workflow)
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)

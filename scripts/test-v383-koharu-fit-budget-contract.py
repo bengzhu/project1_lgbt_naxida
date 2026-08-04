@@ -71,7 +71,7 @@ class KoharuFitBudgetContractTests(unittest.TestCase):
         self.assertNotIn("MARKETING_VERSION = 3.82;", self.project)
         old = "python3 -B scripts/test-v382-manga-render-newline-contract.py"
         new = "python3 -B scripts/test-v383-koharu-fit-budget-contract.py"
-        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font)-contract\\.py"
+        route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger)-contract\\.py"
         self.assertIn(old, self.workflow)
         self.assertIn(new, self.workflow)
         self.assertIn(route, self.workflow)
