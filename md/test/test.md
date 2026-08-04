@@ -116,6 +116,7 @@
 
 - v3.81 正式要求结果行与完整图片覆盖块选中 OCR block 后，将 VoiceOver 焦点交给对应局部预览；取消定位时回到对应结果行。scripts/test-v381-image-selection-focus-contract.py 必须在 v3.80 后接入同一 UI fail-fast，历史 v3.47–v3.80 合同须接受后续正式版本；该 View-only 改动不代表 OCR、翻译或 Koharu 质量提升，源码合同不能替代真实图片 corpus、设备 VoiceOver 或探针。
 - v3.82 正式要求漫画覆盖探针失败 fallback 的显式换行必须进入统一的 `wrappedLines` fit plan：按段落保留换行与空行，禁止旧的逐字符整串测量；`makeRenderTextPlan`、碰撞检测和实际绘制必须共享该结果。新增 `scripts/test-v382-manga-render-newline-contract.py`，接入 full 静态检查与 Manga service changed-file 路由。该修复只改善诊断覆盖的布局可观测性，不改变 OCR、翻译、ground truth、Koharu、普通图片主路径、metrics 或 output；云端 probe 报告中的真实截断仍必须保留，源码合同不能冒充质量提升。
+- v3.83 正式要求 Koharu fit planner 与实际 `wrappedLines` 共享显式换行／空行预算，并将 `renderTextTruncated` 纳入失败 fallback 风险；新增 `scripts/test-v383-koharu-fit-budget-contract.py`，接入 full 静态检查与 Manga service changed-file 路由。该 report-only 修复只改善诊断一致性，不改变 OCR、翻译、ground truth、renderer/export、Koharu、普通图片主路径、metrics 或 output；云端 probe 报告仍必须保留真实截断，源码合同不能冒充质量提升。
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。

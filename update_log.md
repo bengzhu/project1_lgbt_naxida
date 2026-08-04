@@ -8,6 +8,30 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.83：Koharu fit planner 与实际渲染预算对齐
+日期：2026-08-04
+
+状态：Agent X 已完成 report-only 诊断修复、云端 full/ci-fast/PR fast/merge fast 验收和 PR 合并；文档在 `smalldata_test` 完成正式版本收口，工程正式版本为 `MARKETING_VERSION=3.83`。候选分支 `codeb/v3.83-koharu-fit-budget` 的最终候选 HEAD 为 `54eafc65b202f92d5e4dc44e2bc46ff14e6f44c5`，PR [#147](https://github.com/bengzhu/project1_lgbt_naxida/pull/147) 已合入 `smalldata_test`，merge SHA 为 `02c36903824cef14c9ec7935954c3813e4dda2e4`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `makeKoharuRenderSpriteFitPlannerReport` 的 `estimateTextBudget` 复用 `Self.wrappedLines`，保留显式换行与空行，并按实际 wrapped lines 计算 line count/max chars，避免用 `text.count` 低估失败 fallback 的垂直预算。
+- 失败覆盖诊断把 `block.renderTextTruncated` 与 `renderLock.renderTextTruncated` 合并为 report-only 信号；实际截断时 `failureOverlayFitVerdict` 与 `fitVerdict` 会报告 `failureFallbackLongTextRisk`，并保留 `wouldChangeMainFlow=false`、`groundTruthUsedForDecision=false`。
+- 新增 `scripts/test-v383-koharu-fit-budget-contract.py`，接入 Koharu changed-file 路由与 full 静态检查；v3.82 历史合同改为接受后续正式版本。`MARKETING_VERSION` 推进到 3.83。
+- 该修复只校正 Koharu fit 诊断与实际渲染证据的一致性，不改变 OCR 候选、翻译模型／prompt、ground truth 决策、生产 renderer/export、Koharu active artifact gate、普通图片 OCR 主路径、`metrics/version_history.csv` 或仓库 `output/`。
+
+验证：
+
+- 本地轻量检查：v3.81/v3.82/v3.83 合同、`git diff --check`、`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swiftc -parse AITRANS/Services/MangaOverlayProbeService.swift`、项目版本解析、ground-truth JSON 解析和 CI YAML 行长 smoke 通过；未跑本机 build / 探针，按规则交给云端验证。
+- 候选 full run [30870546266](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30870546266) / job 91871484041：manifest 精确匹配 v3.83、branch、commit、run、attempt、workflow，`validationProfile=full`、`xcodeBuildRequired=true`，Xcode 26.6 build success，JUnit `10/10`、0 failures，静态、Speech、UI、home、paste 与 Koharu 合同通过；结果包保存在 `/private/tmp/aitrans-c-review-30870546266`。
+- 同一 SHA 的 ci-fast 探针 run [30870974176](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30870974176) / job 91872741483：Xcode、模拟器构建、Local GGUF 漫画探针与 Output 导出成功，`probe_report.json` 为 13 blocks、`overallPassed=false`，`renderTextTruncatedBlocks=[5]`；block 5 从 v3.82 报告的 `estimatedLineCount=2 / fontBudgetComfortable / currentSpriteFits` 变为 `12 / fontBudgetOverflowRisk / failureFallbackLongTextRisk`，实际截断继续如实保留。结果包保存在 `/private/tmp/aitrans-c-review-30870974176`；该报告与覆盖 PNG 仍是诊断证据，不是 OCR、翻译或 Koharu 质量基线。
+- PR #147 fast run [30871715717](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30871715717)：精确 head `54eafc65`，`validationProfile=fast`，复用候选 full receipt `54eafc65 / success`，`xcodeBuildRequired=false`、skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit `10/10`；该 fast 包不是新的编译证据。结果包保存在 `/private/tmp/aitrans-c-review-30871715717`。
+- merge fast run [30871766042](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30871766042)：精确 merge SHA `02c36903`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full receipt `54eafc65 / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30871766042`。
+
+限制与遗留：
+
+候选 push 与 PR/merge fast 默认 `probe_mode=skip`；本轮另有同 SHA ci-fast 生成报告与 PNG，但未更新 `metrics/version_history.csv` 或仓库 `output/`。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，缺少真实 `test/koharu_artifacts/` 四件套；Speech corpus 与真实竖排图片 corpus 仍缺失。现有覆盖图仍能看到既有重叠/失败覆盖问题；本版只让诊断如实暴露 block 5 的超长截断，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.82：漫画失败覆盖显式换行布局安全
 日期：2026-08-04
 
