@@ -235,6 +235,7 @@ private struct MangaProbeSection: View {
                 if let readiness = report.externalArtifactReadinessReport {
                     MangaKoharuArtifactReadinessSummary(readiness: readiness)
                 }
+                MangaProbeDiagnosticTriageSummary(report: report)
             }
 
             LazyVStack(spacing: 0) {
@@ -296,6 +297,110 @@ private struct MangaProbeSection: View {
             return "漫画覆盖翻译探针正在运行；完成后可查看诊断报告和覆盖图"
         }
         return "读取 bundle 的 test/1.png，运行 Vision OCR、确定性翻译和覆盖绘制，并生成 Output 诊断文件；不会改变普通图片 OCR、翻译或覆盖图"
+    }
+}
+
+private struct MangaProbeDiagnosticTriageSummary: View {
+    let report: MangaOverlayProbeReport
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.control) {
+            AppStatusRow(title: statusTitle, detail: statusDetail, tone: statusTone)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("漫画探针诊断分流")
+                .accessibilityValue(accessibilityValue)
+                .accessibilityHint("这是只读的漫画探针诊断分流；可展开下方摘要查看 OCR、翻译模型、覆盖布局和真实 Koharu 工件的下一步，不会修改普通图片 OCR、翻译 prompt、模型或覆盖图")
+            DeveloperCodeBlock(title: "diagnostic triage", text: summary)
+        }
+        .padding(.top, AppTheme.Spacing.control)
+    }
+
+    private var modelFloor: MangaTranslationModelFloorComparisonReport? {
+        report.translationModelFloorComparisonReport
+    }
+
+    private var ocrBlocks: Set<Int> {
+        Set(modelFloor?.noisyOCRSuspectBlocks ?? report.diagnostics.likelyOCRIssueBlocks)
+    }
+
+    private var translationBlocks: Set<Int> {
+        Set((modelFloor?.noisyModelFloorBlocks ?? []) + (modelFloor?.noisyTranslationLanguageQualityBlocks ?? []))
+    }
+
+    private var renderBlocks: Set<Int> {
+        Set(
+            report.diagnostics.renderCollisionUnresolvedBlocks
+                + report.diagnostics.renderMinFontSizeReachedBlocks
+                + report.diagnostics.renderTextTruncatedBlocks
+        )
+    }
+
+    private var artifactBlocked: Bool {
+        guard let readiness = report.externalArtifactReadinessReport else { return false }
+        return readiness.nextAction == "stopUntilArtifactsProvided"
+            || readiness.nextAction == "stopUntilArtifactContractFixed"
+            || readiness.nextAction == "stopUntilRealDetectorSourceDeclared"
+    }
+
+    private var statusTitle: String {
+        if artifactBlocked { return "等待真实 Koharu 工件" }
+        if !translationBlocks.isEmpty { return "翻译模型待比较" }
+        if !ocrBlocks.isEmpty { return "OCR 待复核" }
+        if !renderBlocks.isEmpty { return "覆盖布局待复核" }
+        return report.overallPassed ? "诊断通过" : "诊断已分流"
+    }
+
+    private var statusTone: AppStatusTone {
+        if report.overallPassed { return .success }
+        return .warning
+    }
+
+    private var nextAction: String {
+        if artifactBlocked { return "提供真实 Koharu 四件套并完成 CI 身份对账" }
+        if !translationBlocks.isEmpty { return "保持模型底线与 OCR 分流，未来再比较更强模型" }
+        if !ocrBlocks.isEmpty { return "人工复核 OCR 原文，等待真实 TextBoxes/BubbleMask/SegmentMask" }
+        if !renderBlocks.isEmpty { return "保留覆盖布局锁定报告并复核异常块" }
+        return report.overallPassed ? "继续观察云端探针" : "打开逐块结果查看失败详情"
+    }
+
+    private var statusDetail: String {
+        "失败 \(report.diagnostics.failedBlocks) 块；OCR 疑似 \(ocrBlocks.count)；翻译模型/语言 \(translationBlocks.count)；覆盖布局 \(renderBlocks.count)。下一步：\(nextAction)。"
+    }
+
+    private var accessibilityValue: String {
+        "\(statusTitle)：\(statusDetail) 诊断只读，主流程不变。"
+    }
+
+    private func rate(_ value: Double?) -> String {
+        value.map { $0.formatted(.number.precision(.fractionLength(4))) } ?? "n/a"
+    }
+
+    private var summary: String {
+        let readiness = report.externalArtifactReadinessReport
+        let model = modelFloor
+        let ocr = ocrBlocks.sorted().map(String.init).joined(separator: ",")
+        let translation = translationBlocks.sorted().map(String.init).joined(separator: ",")
+        let render = renderBlocks.sorted().map(String.init).joined(separator: ",")
+        return [
+            "failedBlocks=\(report.diagnostics.failedBlocks)",
+            "ocrSuspectBlocks=\(ocr.isEmpty ? "none" : ocr)",
+            "translationModelOrLanguageBlocks=\(translation.isEmpty ? "none" : translation)",
+            "renderIssueBlocks=\(render.isEmpty ? "none" : render)",
+            "floorVerdict=\(model?.floorVerdict ?? "notExecuted")",
+            "baselinePassRate=\(rate(model?.baselinePassRate))",
+            "variantPromptID=\(model?.variantPromptID ?? "n/a")",
+            "variantPassRate=\(rate(model?.variantPassRate))",
+            "passRateDelta=\(rate(model?.passRateDelta))",
+            "variantFixedCases=\(model?.variantFixedCases.map(String.init).joined(separator: ",") ?? "none")",
+            "variantRegressedCases=\(model?.variantRegressedCases.map(String.init).joined(separator: ",") ?? "none")",
+            "readiness=\(readiness?.readinessVerdict ?? "notAvailable")",
+            "nextAction=\(nextAction)",
+            "groundTruthUsedForDecision=\(model?.groundTruthUsedForDecision.map(String.init) ?? "n/a")",
+            "groundTruthUsedForEvaluationOnly=\(model?.groundTruthUsedForEvaluationOnly.map(String.init) ?? "n/a")",
+            "diagnosticOnly=\(model?.diagnosticOnly.map(String.init) ?? "n/a")",
+            "wouldChangeMainFlow=\(model?.wouldChangeMainFlow.map(String.init) ?? "false")",
+            "mainFlowChanged=false"
+        ].joined(separator: "\n")
     }
 }
 
@@ -482,7 +587,14 @@ private struct MangaProbeBlockRow: View {
                     Text(block.ocrText).font(.caption).foregroundStyle(Color.appTextSecondary).lineLimit(2)
                 }
                 Spacer()
-                AppStatusLabel(text: block.blockPassed ? "PASS" : "FAIL", tone: block.blockPassed ? .success : .danger)
+                VStack(alignment: .trailing, spacing: 4) {
+                    AppStatusLabel(text: block.blockPassed ? "PASS" : "FAIL", tone: block.blockPassed ? .success : .danger)
+                    if !block.blockPassed {
+                        Text(diagnosticRouteLabel)
+                            .font(.caption2.bold())
+                            .foregroundStyle(Color.appTextSecondary)
+                    }
+                }
             }
             .padding(.vertical, AppTheme.Spacing.control)
             .accessibilityElement(children: .ignore)
@@ -513,6 +625,9 @@ private struct MangaProbeBlockRow: View {
         if !block.failureReasons.isEmpty {
             parts.append("失败原因：\(block.failureReasons.joined(separator: "、"))")
         }
+        if !block.blockPassed {
+            parts.append("诊断分流：\(diagnosticRouteLabel)")
+        }
         if let translationFailureDetail = block.translationFailureDetail,
            !translationFailureDetail.isEmpty {
             parts.append("翻译失败详情：\(translationFailureDetail)")
@@ -523,7 +638,17 @@ private struct MangaProbeBlockRow: View {
     private var blockAccessibilityHint: String {
         block.blockPassed
             ? "展开查看 OCR 原文、译文和诊断输出；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
-            : "展开查看 OCR 原文、翻译失败原因和诊断输出；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
+            : "展开查看 OCR 原文、翻译失败原因和诊断输出；当前分流为 \(diagnosticRouteLabel)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
+    }
+
+    private var diagnosticRouteLabel: String {
+        switch block.failureCategory {
+        case "ocrInputSuspect": "OCR 疑似损坏"
+        case "modelOutputFailure": "模型输出失败"
+        case "translationLanguageQualityFailure": "译文质量失败"
+        case "": "待复核"
+        default: block.failureCategory
+        }
     }
 }
 

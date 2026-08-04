@@ -2,6 +2,7 @@
 """Contract for aligning the retained-core-output gate with its output actions."""
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -60,8 +61,10 @@ class KoharuRenderCoreOutputGateActionContractTests(unittest.TestCase):
         self.assertNotIn('action: "inspectRenderOutputExport"', gate_line)
 
     def test_version_and_ci_route_follow_v387(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.90;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.89;", self.project)
+        versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 91) for version in versions))
+        self.assertNotIn("MARKETING_VERSION = 3.90;", self.project)
         old = "python3 -B scripts/test-v387-koharu-render-output-action-contract.py"
         new = "python3 -B scripts/test-v388-koharu-render-core-output-gate-action-contract.py"
         route = "scripts/test-v(38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger|7-koharu-render-output-action|8-koharu-render-core-output-gate-action|9-koharu-render-output-summary-action)|390-koharu-render-failure-overlay-compaction)-contract\\.py"
