@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Contract for report-only actions on deferred Koharu output writes."""
+"""Contract for aligning the retained-core-output gate with its output actions."""
 
 from pathlib import Path
-import re
 import unittest
 
 
@@ -27,44 +26,44 @@ def braced_body(source: str, marker: str) -> str:
     raise AssertionError(f"unclosed body for {marker}")
 
 
-class KoharuRenderOutputActionContractTests(unittest.TestCase):
+class KoharuRenderCoreOutputGateActionContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.store = read("AITRANS/Services/TranslationSessionStore.swift")
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
-        report = braced_body(
+        self.report = braced_body(
             self.store,
             "private static func makeKoharuRenderRegressionLockReport(",
         )
-        self.output_check = braced_body(report, "func outputCheck(")
 
-    def test_planned_final_writes_keep_report_only_action(self) -> None:
+    def test_core_output_gate_action_matches_retained_output_state(self) -> None:
         self.assertIn(
-            'let plannedFinalWrite = fileName == "probe_report.json"',
-            self.output_check,
+            "let coreOutputRecommendedAction = coreOutputFilesNonEmpty",
+            self.report,
+        )
+        self.assertIn('? "keepReportOnly"', self.report)
+        self.assertIn('? "keepReportOnly"\n            : "inspectRenderOutputExport"', self.report)
+        self.assertIn(
+            'gate("G-render-core-png-retained", name: "Core PNG retained"',
+            self.report,
+        )
+        gate_line = next(
+            line
+            for line in self.report.splitlines()
+            if 'gate("G-render-core-png-retained"' in line
         )
         self.assertIn(
-            '|| fileName == "1_ocr_probe_text.txt"',
-            self.output_check,
+            'status: coreOutputFilesNonEmpty ? "passed" : "blocked"',
+            gate_line,
         )
-        self.assertIn(
-            'let recommendedAction = status == "presentNonEmpty" || plannedFinalWrite',
-            self.output_check,
-        )
-        self.assertIn('"plannedFinalReportWrite"', self.output_check)
-        self.assertIn('"plannedFinalOCRTextRewrite"', self.output_check)
-        self.assertIn('"keepReportOnly"', self.output_check)
-        self.assertIn('"inspectRenderOutputExport"', self.output_check)
-        self.assertIn("recommendedAction: recommendedAction", self.output_check)
-        self.assertIn("only missing or unchecked", self.output_check)
+        self.assertIn("action: coreOutputRecommendedAction", gate_line)
+        self.assertNotIn('action: "inspectRenderOutputExport"', gate_line)
 
-    def test_version_and_ci_route_follow_v386(self) -> None:
-        versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(len(versions), 2)
-        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 87) for version in versions))
-        self.assertNotIn("MARKETING_VERSION = 3.86;", self.project)
-        old = "python3 -B scripts/test-v386-koharu-render-output-ledger-contract.py"
-        new = "python3 -B scripts/test-v387-koharu-render-output-action-contract.py"
+    def test_version_and_ci_route_follow_v387(self) -> None:
+        self.assertEqual(self.project.count("MARKETING_VERSION = 3.88;"), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.87;", self.project)
+        old = "python3 -B scripts/test-v387-koharu-render-output-action-contract.py"
+        new = "python3 -B scripts/test-v388-koharu-render-core-output-gate-action-contract.py"
         route = "scripts/test-v38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger|7-koharu-render-output-action|8-koharu-render-core-output-gate-action)-contract\\.py"
         self.assertIn(old, self.workflow)
         self.assertIn(new, self.workflow)
