@@ -370,6 +370,9 @@ jobs:
           if grep -Fx 'scripts/test-v393-image-review-filter-reset-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
+          if grep -Fx 'scripts/test-v394-manga-probe-failure-cleanup-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            koharu_contract_required=true
+          fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
           # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
           # Historical contracts keep these route markers; the range regex above is executable.
@@ -741,6 +744,7 @@ jobs:
               python3 -B scripts/test-v389-koharu-render-output-summary-action-contract.py
               python3 -B scripts/test-v390-koharu-render-failure-overlay-compaction-contract.py
               python3 -B scripts/test-v391-koharu-diagnostic-triage-contract.py
+              python3 -B scripts/test-v394-manga-probe-failure-cleanup-contract.py
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_v2_mask_payload > "$RESULT_ROOT/koharu-valid-v2-mask-payload-validation.json"
               python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_v2_mask_topology > "$RESULT_ROOT/koharu-valid-v2-mask-topology-validation.json"
