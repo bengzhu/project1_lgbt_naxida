@@ -8,6 +8,29 @@
 - 若核心逻辑、测试规范或项目行为变化，必须同步更新本日志、`md/flow/flow.md`、`md/flow/flowchart.md` 或 `md/test/test.md`。
 - 涉及漫画探针或翻译链路的可量化版本时，`metrics/version_history.csv` 必须 append-only 更新；README 不再追加近期记录。
 
+## v3.82：漫画失败覆盖显式换行布局安全
+日期：2026-08-04
+
+状态：Agent X 已完成探针布局修复、云端 full/ci-fast/PR fast/merge fast 验收和 PR 合并；文档在 `smalldata_test` 完成正式版本收口，工程正式版本为 `MARKETING_VERSION=3.82`。候选分支 `codeb/v3.82-render-newline-safety` 的最终候选 HEAD 为 `996cb3fcceadd25b778d079dbec04d7b72accac5`，PR [#146](https://github.com/bengzhu/project1_lgbt_naxida/pull/146) 已合入 `smalldata_test`，merge SHA 为 `8ff612269bb9c57691284179ad09ce281dd20a7c`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaOverlayProbeService.wrappedLines` 现在按显式换行拆分段落并保留空行，再在段内按宽度换行；失败 fallback 的 fit plan、碰撞检查和 CoreText 绘制因此共享同一垂直行预算，不再把换行符当成普通字符吞掉。
+- 新增 `scripts/test-v382-manga-render-newline-contract.py`，接入 full 静态检查和 Manga service changed-file 路由；同步把 `MARKETING_VERSION` 推进到 3.82，并让 v3.81 历史合同接受后续正式版本。
+- 该修复只改善漫画探针失败覆盖的布局测量与诊断可观测性，不改变 OCR 候选、翻译模型／prompt、ground truth 决策、Koharu active artifact gate、普通图片 OCR、renderer/export 主路径、`metrics/version_history.csv` 或仓库 `output/` 质量基线。
+
+验证：
+
+- 本地轻量检查：v3.82/v3.81 合同、v3.192/v3.199/v3.200/v3.201/v3.32/v3.33/v3.194、v3.197 handoff/version identity 等定向 Koharu/图片合同通过；`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swiftc -parse AITRANS/Services/MangaOverlayProbeService.swift`、`git diff --check`、项目版本解析和 YAML 行长 smoke 通过。
+- 候选 full run [30868588679](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30868588679) / job 91865639512：精确匹配 version/branch/commit/run/attempt/workflow，`validationProfile=full`、`xcodeBuildRequired=true`，Xcode build success，JUnit `10/10`、0 failures，静态、Speech、UI、home、paste 与 Koharu 合同通过；结果包保存在 `/private/tmp/aitrans-c-review-30868588679`。
+- 同一 SHA 的 ci-fast 探针 run [30868948454](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30868948454) / job 91866714984：Xcode、模拟器构建、Local GGUF 漫画探针和 Output 导出成功；`probe_report.json` 保留 13 blocks、12 failed/1 passed、`renderCollisionUnresolvedBlocks=[]`，只有超长失败 block 5 诚实记录 `renderTextTruncated=true`。报告仍为诊断证据，不是 OCR/翻译质量基线；结果包保存在 `/private/tmp/aitrans-c-review-30868948454`。
+- PR #146 fast run [30869682081](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30869682081)：精确 head `996cb3fc`，`validationProfile=fast`，复用候选 full receipt `996cb3fc` / `success`，Xcode skip reason 为 `fast_followup_reuses_candidate_full_validation`，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30869682081`。
+- merge fast run [30869756072](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30869756072)：精确 merge SHA `8ff61226`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full receipt，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30869756072`。
+
+限制与遗留：
+
+候选 push 与 PR/merge fast 默认 `probe_mode=skip`；只有手动 ci-fast 生成了本轮探针图和报告，未更新 `metrics/version_history.csv` 或仓库 `output/`。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，缺少真实 `test/koharu_artifacts/` 四件套；Speech corpus 与真实竖排图片 corpus 仍缺失。未跑本机 build / 探针，按规则交给云端验证；本版只改善失败覆盖布局测量与可观测性，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.81：直接选择图片文字块后的 VoiceOver 焦点回交
 日期：2026-08-04
 
