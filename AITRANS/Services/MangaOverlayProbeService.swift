@@ -1365,7 +1365,7 @@ struct MangaOverlayProbeService: Sendable {
                             : "maskSafeRect"
                     }
                 }
-                let text = block.translatedText.trimmingCharacters(in: .whitespacesAndNewlines)
+                let text = Self.failureOverlayDisplayText(block.translatedText)
                 updated.safeLayoutRect = Self.bboxArray(from: safeRect)
                 updated.safeLayoutSourceBeforeMask = safeEntry.source
                 updated.safeLayoutSource = safeSource
@@ -4599,10 +4599,10 @@ struct MangaOverlayProbeService: Sendable {
                     return ("translationCandidate", block.translationCandidate)
                 }
                 if let fallback = lock?.fallbackTextForRender, !fallback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    return ("failureFallback", fallback)
+                    return ("failureFallback", Self.failureOverlayDisplayText(fallback))
                 }
                 if !block.finalTextUsedForTranslation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    return ("failureFallback", "翻译失败\n\(block.finalTextUsedForTranslation)")
+                    return ("failureFallback", Self.failureOverlayDisplayText("翻译失败\n\(block.finalTextUsedForTranslation)"))
                 }
                 return ("emptyCandidateFallback", "翻译失败")
             }
@@ -9150,10 +9150,31 @@ struct MangaOverlayProbeService: Sendable {
     }
 
     private static func drawCollisionCheckedText(_ text: String, in rect: CGRect, context: CGContext) {
-        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanText = failureOverlayDisplayText(text)
         guard !cleanText.isEmpty else { return }
         let plan = makeRenderTextPlan(cleanText, in: rect, minFontSize: minimumOverlayFontSize)
         drawLines(plan.lines, in: rect, fontSize: plan.fontSize, lineHeight: plan.lineHeight, context: context)
+    }
+
+    /// Failure overlays must retain the complete OCR fallback, but line breaks
+    /// from Vision OCR can consume the entire vertical budget of a narrow
+    /// bubble. Keep the explicit failure marker on its own line and compact
+    /// only the OCR continuation into spaces before measuring and drawing.
+    /// This is a probe-render display transformation; it does not alter the
+    /// OCR text stored in the block, translation input, or production renderer.
+    private static func failureOverlayDisplayText(_ text: String) -> String {
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleanText.hasPrefix("翻译失败\n") else { return cleanText }
+        let marker = "翻译失败"
+        let remainder = String(cleanText.dropFirst(marker.count))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !remainder.isEmpty else { return marker }
+        let compactOCR = remainder
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        return compactOCR.isEmpty ? marker : "\(marker)\n\(compactOCR)"
     }
 
     private static func drawFittingText(_ text: String, in rect: CGRect, context: CGContext) {
