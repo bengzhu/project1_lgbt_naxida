@@ -373,6 +373,9 @@ jobs:
           if grep -Fx 'scripts/test-v394-manga-probe-failure-cleanup-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             koharu_contract_required=true
           fi
+          if grep -Fx 'scripts/test-v395-manga-probe-empty-state-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
           # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
           # Historical contracts keep these route markers; the range regex above is executable.
@@ -1064,6 +1067,7 @@ jobs:
             python3 -B scripts/test-v381-image-selection-focus-contract.py
             python3 -B scripts/test-v392-image-review-risk-filter-contract.py
             python3 -B scripts/test-v393-image-review-filter-reset-contract.py
+            python3 -B scripts/test-v395-manga-probe-empty-state-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract
