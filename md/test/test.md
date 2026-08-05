@@ -142,6 +142,13 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.98 Koharu OCR/翻译诊断风险并集合合同
+
+- `MangaProbeDiagnosticFilter.ocr` 与 `MangaProbeDiagnosticTriageSummary.ocrBlocks` 必须共享 `mangaProbeOCRRiskBlockSet`，并集既有 `diagnostics.likelyOCRIssueBlocks`、`translationUsableButOCRSuspectBlocks`、model-floor 的 `noisyOCRSuspectBlocks` 和 `ocrInputSuspect` block category。
+- `MangaProbeDiagnosticFilter.translation` 与 `MangaProbeDiagnosticTriageSummary.translationBlocks` 必须共享 `mangaProbeTranslationRiskBlockSet`，并集既有 `diagnostics.translationLanguageQualityFailedBlocks`、model-floor 的 `noisyModelFloorBlocks`/`noisyTranslationLanguageQualityBlocks` 和 `modelOutputFailure`/`translationLanguageQualityFailure` category。
+- 两个集合只能只读消费 `MangaOverlayProbeReport`，不得新增 Store／持久化、调用探针、读取 ground truth、修改 OCR 候选、翻译 prompt/model、生产 renderer/export 或 active Koharu gate；新增 `scripts/test-v398-koharu-diagnostic-risk-union-contract.py` 并接入 UI/full fail-fast。
+- 候选 full/PR fast/merge fast 必须核对 exact SHA、manifest、JUnit 与 Xcode receipt；本版默认 `probe_mode=skip`，真实四件套仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.97 Koharu 布局风险分流合同
 
 - 漫画探针 `MangaProbeDiagnosticFilter.render` 与 `MangaProbeDiagnosticTriageSummary.renderBlocks` 必须共享一个只读 risk set，至少合并既有顶层 diagnostics、fit planner 的 `fontBudgetRiskBlocks`、`renderMinFontSizeReachedBlocks`、`spriteContainmentRiskBlocks`、`siblingOverlapRiskBlocks`、`failureOverlayRiskBlocks`，以及 render-lock 的 `renderIssueBlocks`、min-font 和 truncation blocks。

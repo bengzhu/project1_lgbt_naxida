@@ -1,3 +1,26 @@
+## v3.98：统一漫画探针 OCR/翻译诊断风险集合
+
+日期：2026-08-05
+
+状态：Agent X 已完成 v3.98 Developer Console 漫画探针 OCR/翻译筛选与 triage 摘要对齐、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.98`。候选 commit `7a352a5050c8846765ad4b139e7a6a125dfb4712` 已通过 PR [#162](https://github.com/bengzhu/project1_lgbt_naxida/pull/162) 合入，merge SHA `3b953b83d12a092df1995c974cb33522dc02331a`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeDiagnosticFilter.ocr` 与 `MangaProbeDiagnosticTriageSummary.ocrBlocks` 共享 `mangaProbeOCRRiskBlockSet`，并集既有 diagnostics 的 OCR 疑似/可用译文但 OCR 疑似、model-floor OCR 疑似和 `ocrInputSuspect` category，避免 floor 报告存在时使用 `??` 丢掉 diagnostics。
+- `MangaProbeDiagnosticFilter.translation` 与 `MangaProbeDiagnosticTriageSummary.translationBlocks` 共享 `mangaProbeTranslationRiskBlockSet`，并集既有 diagnostics translation-language failures、model-floor model/language blocks 与 `modelOutputFailure`/`translationLanguageQualityFailure` category；筛选与摘要现在消费同一口径。
+- 新增 `scripts/test-v398-koharu-diagnostic-risk-union-contract.py`，接入 CI UI/full 路由；改动只读 `MangaOverlayProbeReport`，不新增 Store／持久化、不运行探针、不改变 OCR 候选、翻译 prompt/model、renderer/export、普通图片 OCR、Koharu active gate、metrics 或仓库 `output`。
+
+验证：
+
+- 本地轻量检查：v3.98 合同、v3.97–v3.92 相关合同、Swift `-parse`、项目版本解析、workflow/ground-truth JSON smoke、CI tier/version contracts 与 `git diff --check` 通过；未跑本机完整 build 或漫画探针。
+- 候选 full [30988262491](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30988262491)：exact candidate SHA，`validationProfile=full`、`validationReason=candidate_development_push`、Xcode build success；静态/Speech/UI/home/paste 合同 success，JUnit `10/10`、0 failures；`probeMode=skip`。
+- PR #162 fast [30988802078](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30988802078)：exact head SHA，`validationProfile=fast`、Xcode skipped，`reusedFullValidationSha=7a352a50`、state `success`，JUnit `10/10`；该包不是新的编译证据。
+- merge fast [30988876405](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30988876405)：exact merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `7a352a50`/`success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`。
+
+限制与遗留：
+
+本轮未更新 `metrics/version_history.csv` 或仓库 `output/`；候选/PR/merge fast 默认跳过漫画探针，没有新的 OCR/翻译指标。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版只改善 report-only 分流一致性，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.97：补齐漫画探针布局风险分流
 
 日期：2026-08-05
