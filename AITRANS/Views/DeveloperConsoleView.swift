@@ -906,6 +906,78 @@ private func mangaProbeConvergenceContext(
     )
 }
 
+private struct MangaProbeConvergenceOverview {
+    let summary: String
+    let nextAction: String?
+    let isBlocked: Bool
+    let isReportOnly: Bool
+}
+
+private func mangaProbeConvergenceOverview(
+    _ report: MangaOverlayProbeReport
+) -> MangaProbeConvergenceOverview? {
+    guard let convergence = report.koharuArtifactConvergenceReport else { return nil }
+
+    let openWorkItems = Array(Set(convergence.openWorkItems)).filter { !$0.isEmpty }.sorted()
+    let closedWorkItems = Array(Set(convergence.closedWorkItems)).filter { !$0.isEmpty }.sorted()
+    let stopWorkItems = Array(Set(convergence.stopWorkItems)).filter { !$0.isEmpty }.sorted()
+    let statusBreakdown = convergence.workItemStatusBreakdown
+        .filter { !$0.key.isEmpty && $0.value > 0 }
+        .sorted { $0.key < $1.key }
+        .map { "\($0.key)=\($0.value)" }
+        .joined(separator: ",")
+    var parts: [String] = []
+    func append(_ value: String) {
+        guard !value.isEmpty, !parts.contains(value) else { return }
+        parts.append(value)
+    }
+
+    append("工单：开放 \(openWorkItems.count) / 已闭环 \(closedWorkItems.count)")
+    if !stopWorkItems.isEmpty {
+        append("要求停止 \(stopWorkItems.count)")
+    }
+    if convergence.blockPathCount > 0 {
+        append("block path \(convergence.blockPathCount)")
+    }
+    if convergence.workItemLedgerCount > 0 {
+        append("工单 ledger \(convergence.workItemLedgerCount)")
+    }
+    if convergence.externalArtifactsRequiredForThisReport {
+        append("需要真实外部工件")
+    }
+    if !statusBreakdown.isEmpty {
+        append("状态：" + statusBreakdown)
+    }
+    if !openWorkItems.isEmpty {
+        let visibleIDs = openWorkItems.prefix(3).joined(separator: "、")
+        let suffix = openWorkItems.count > 3 ? " 等 \(openWorkItems.count) 个" : ""
+        append("开放：" + visibleIDs + suffix)
+    }
+
+    let nextAction = convergence.workItemLedger
+        .first { openWorkItems.contains($0.workItemID) && !$0.nextAction.isEmpty }
+        .map { mangaProbeActionLabel($0.nextAction) }
+    let activeWorkItems = convergence.workItemLedger.filter {
+        openWorkItems.contains($0.workItemID)
+            || !mangaProbeConvergenceWorkItemIsClosed($0.status)
+    }
+    let hasBlocker = !convergence.needsRealArtifactBlocks.isEmpty
+        || !stopWorkItems.isEmpty
+        || convergence.wouldChangeMainFlow
+        || activeWorkItems.contains {
+            !$0.remainingBlockers.isEmpty
+                || $0.requiresExternalArtifact
+                || $0.status == "blocked"
+                || $0.status == "stop"
+        }
+    return MangaProbeConvergenceOverview(
+        summary: parts.joined(separator: "；"),
+        nextAction: nextAction,
+        isBlocked: hasBlocker,
+        isReportOnly: convergence.diagnosticOnly || !convergence.wouldChangeMainFlow || !openWorkItems.isEmpty
+    )
+}
+
 private struct MangaProbeDiagnosticFilterControl: View {
     let report: MangaOverlayProbeReport
     let blocks: [MangaOverlayProbeBlock]
@@ -1133,6 +1205,10 @@ private struct MangaProbeDiagnosticTriageSummary: View {
         mangaProbePromotionBoundary(report)
     }
 
+    private var convergenceOverview: MangaProbeConvergenceOverview? {
+        mangaProbeConvergenceOverview(report)
+    }
+
     private var artifactBlocked: Bool {
         guard let readiness = report.externalArtifactReadinessReport else { return false }
         return readiness.nextAction == "stopUntilArtifactsProvided"
@@ -1142,8 +1218,11 @@ private struct MangaProbeDiagnosticTriageSummary: View {
 
     private var statusTitle: String {
         if artifactBlocked { return "等待真实 Koharu 工件" }
+        if convergenceOverview?.isBlocked == true { return "Koharu 收敛待闭环" }
         if promotionBoundary?.isBlocked == true { return "Koharu 晋级待修正" }
-        if promotionBoundary?.isReportOnly == true { return "Koharu 仅报告/预览" }
+        if convergenceOverview?.isReportOnly == true || promotionBoundary?.isReportOnly == true {
+            return "Koharu 仅报告/预览"
+        }
         if !translationBlocks.isEmpty { return "翻译模型待比较" }
         if !ocrBlocks.isEmpty { return "OCR 待复核" }
         if !renderBlocks.isEmpty { return "覆盖布局待复核" }
@@ -1152,7 +1231,10 @@ private struct MangaProbeDiagnosticTriageSummary: View {
 
     private var statusTone: AppStatusTone {
         if artifactBlocked { return .warning }
-        if promotionBoundary?.isBlocked == true || promotionBoundary?.isReportOnly == true { return .warning }
+        if convergenceOverview?.isBlocked == true
+            || convergenceOverview?.isReportOnly == true
+            || promotionBoundary?.isBlocked == true
+            || promotionBoundary?.isReportOnly == true { return .warning }
         if report.overallPassed { return .success }
         return .warning
     }
@@ -1160,6 +1242,9 @@ private struct MangaProbeDiagnosticTriageSummary: View {
     private var nextAction: String {
         if artifactBlocked { return "提供真实 Koharu 四件套并完成 CI 身份对账" }
         if let promotionBoundary { return promotionBoundary.nextAction }
+        if let convergenceAction = convergenceOverview?.nextAction, !convergenceAction.isEmpty {
+            return convergenceAction
+        }
         if !translationBlocks.isEmpty { return "保持模型底线与 OCR 分流，未来再比较更强模型" }
         if !ocrBlocks.isEmpty { return "人工复核 OCR 原文，等待真实 TextBoxes/BubbleMask/SegmentMask" }
         if !renderBlocks.isEmpty { return "保留覆盖布局锁定报告并复核异常块" }
@@ -1168,7 +1253,8 @@ private struct MangaProbeDiagnosticTriageSummary: View {
 
     private var statusDetail: String {
         let boundary = promotionBoundary.map { "晋级边界：\($0.summary)。" } ?? "晋级边界：未提供。"
-        return "失败 \(report.diagnostics.failedBlocks) 块；OCR 疑似 \(ocrBlocks.count)；翻译模型/语言 \(translationBlocks.count)；覆盖布局 \(renderBlocks.count)。\(boundary) 下一步：\(nextAction)。"
+        let convergence = convergenceOverview.map { "收敛：\($0.summary)。" } ?? "收敛：未提供。"
+        return "失败 \(report.diagnostics.failedBlocks) 块；OCR 疑似 \(ocrBlocks.count)；翻译模型/语言 \(translationBlocks.count)；覆盖布局 \(renderBlocks.count)。\(convergence)\(boundary) 下一步：\(nextAction)。"
     }
 
     private var accessibilityValue: String {
@@ -1202,6 +1288,8 @@ private struct MangaProbeDiagnosticTriageSummary: View {
             "ocrSuspectBlocks=\(ocr.isEmpty ? "none" : ocr)",
             "translationModelOrLanguageBlocks=\(translation.isEmpty ? "none" : translation)",
             "renderIssueBlocks=\(render.isEmpty ? "none" : render)",
+            "convergence=\(convergenceOverview?.summary ?? "notAvailable")",
+            "convergenceNextAction=\(convergenceOverview?.nextAction ?? "notAvailable")",
             "promotionBoundary=\(promotionBoundary?.summary ?? "notAvailable")",
             "promotionNextAction=\(promotionBoundary?.nextAction ?? "notAvailable")",
             "floorVerdict=\(floorVerdict)",
