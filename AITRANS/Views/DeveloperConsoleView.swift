@@ -594,6 +594,156 @@ private func mangaProbeActionLabel(_ action: String) -> String {
     }
 }
 
+private struct MangaProbePromotionBoundaryContext {
+    let summary: String
+    let nextAction: String
+    let isBlocked: Bool
+    let isReportOnly: Bool
+}
+
+private func mangaProbePromotionBoundaryLabel(_ value: String) -> String {
+    return switch value {
+    case "blockedByMissingActiveArtifacts": "缺少 active 工件"
+    case "blockedByMissingAppSideArtifactIdentity": "缺少 App 侧身份回执"
+    case "dryRunPreviewsBlockedByContract": "dry-run 预览未满足契约"
+    case "activeArtifactsReadyForShadowOCR": "active 工件可进入 shadow OCR"
+    case "blockedByMissingRealArtifact": "缺少真实 Koharu 工件"
+    case "blockedByProxyEvidence": "仅有 proxy 证据"
+    case "blockedByModelFloor": "模型底线阻断"
+    case "blockedByRenderLock": "覆盖布局锁定"
+    case "shadowReviewEligible": "可 shadow 复核"
+    case "reportOnlyStable": "report-only 稳定"
+    case "manifestMissing": "manifest 缺失"
+    case "artifactFilesMissing": "四件套文件缺失"
+    default: value
+    }
+}
+
+private func mangaProbePromotionBoundary(
+    _ report: MangaOverlayProbeReport
+) -> MangaProbePromotionBoundaryContext? {
+    let promotion = report.koharuNativePromotionGateLiteReport
+    let contract = report.koharuNativeArtifactContractDryRunReport
+    let identity = report.koharuArtifactIdentityReconciliationReport
+    let convergence = report.koharuArtifactConvergenceReport
+    guard promotion != nil || contract != nil || identity != nil || convergence != nil else {
+        return nil
+    }
+
+    var parts: [String] = []
+    var blocked = false
+    var reportOnly = false
+    var nextAction: String?
+
+    func append(_ value: String) {
+        guard !value.isEmpty, !parts.contains(value) else { return }
+        parts.append(value)
+    }
+
+    if let promotion {
+        if !promotion.promotionVerdict.isEmpty {
+            append("native 晋级：\(mangaProbePromotionBoundaryLabel(promotion.promotionVerdict))")
+        }
+        reportOnly = promotion.nativePromotionPreviewOnly || promotion.diagnosticOnly
+        if promotion.nativePromotionPreviewOnly {
+            append("仅候选预览")
+        }
+        if !promotion.diagnosticOnly || promotion.wouldChangeMainFlow {
+            blocked = true
+            append("报告边界异常")
+        }
+        let realArtifactBlocks = Set(
+            promotion.needsRealTextBoxesBlocks
+                + promotion.needsRealBubbleMaskBlocks
+                + promotion.needsRealSegmentMaskBlocks
+        )
+        if !realArtifactBlocks.isEmpty {
+            blocked = true
+            append("需真实工件 \(realArtifactBlocks.count) 块")
+            nextAction = "提供真实 Koharu 四件套，再进行 CI 身份对账"
+        }
+        if !promotion.stopLocalTuningBlocks.isEmpty {
+            append("停止本地调参 \(promotion.stopLocalTuningBlocks.count) 块")
+            nextAction = nextAction ?? "停止本地几何调参，先处理模型底线或覆盖布局门"
+        }
+        if let action = promotion.gateLedger.first(where: { $0.status != "passed" })?.recommendedAction,
+           !action.isEmpty {
+            append("门控下一步：\(mangaProbePromotionBoundaryLabel(action))")
+            nextAction = nextAction ?? action
+        }
+        if promotion.promotionVerdict.hasPrefix("blocked") {
+            blocked = true
+        }
+    }
+
+    if let contract {
+        if !contract.contractDryRunVerdict.isEmpty {
+            append("契约 dry-run：\(mangaProbePromotionBoundaryLabel(contract.contractDryRunVerdict))")
+        }
+        if contract.dryRunOnly || !contract.activeExportAllowed {
+            reportOnly = true
+            append("禁止 active export")
+        }
+        if !contract.diagnosticOnly || contract.wouldChangeMainFlow {
+            blocked = true
+            append("契约报告边界异常")
+        }
+        if !contract.blockedPreviewIDs.isEmpty {
+            blocked = true
+            append("契约阻塞预览 \(contract.blockedPreviewIDs.count) 个")
+            nextAction = nextAction ?? "先补齐预览必需字段并保留 dry-run"
+        }
+        if contract.readinessVerdict != "readyForShadowOCR" {
+            blocked = true
+            append("shadow OCR 就绪：\(mangaProbePromotionBoundaryLabel(contract.readinessVerdict))")
+            nextAction = nextAction ?? "提供并校验真实四件套后再进入 shadow OCR"
+        }
+    }
+
+    if let identity {
+        if !identity.identityReconciliationVerdict.isEmpty {
+            append("身份对账：\(mangaProbePromotionBoundaryLabel(identity.identityReconciliationVerdict))")
+        }
+        if identity.dryRunOnly || !identity.activeExportAllowed {
+            reportOnly = true
+            append("身份仅 dry-run")
+        }
+        if !identity.readyForCIManifestComparison || identity.manualCIComparisonRequired {
+            blocked = true
+            append("需 CI manifest 身份对账")
+            nextAction = nextAction ?? "比较 App receipt 与 CI manifest 的文件大小和 SHA256"
+        }
+        if !identity.hashMissingFileKinds.isEmpty {
+            blocked = true
+            append("缺少 SHA256：\(identity.hashMissingFileKinds.joined(separator: "、"))")
+        }
+    }
+
+    if let convergence {
+        if !convergence.openWorkItems.isEmpty {
+            append("未闭环工单 \(convergence.openWorkItems.count) 个")
+        }
+        if !convergence.stopWorkItems.isEmpty {
+            blocked = true
+            append("停止工单 \(convergence.stopWorkItems.count) 个")
+            nextAction = nextAction ?? "按 convergence work item 停止被禁止的本地调参"
+        }
+        if !convergence.needsRealArtifactBlocks.isEmpty {
+            blocked = true
+            append("convergence 等待真实工件 \(convergence.needsRealArtifactBlocks.count) 块")
+            nextAction = nextAction ?? "完成真实工件交付并重新生成只读报告"
+        }
+    }
+
+    let action = nextAction ?? "保持 report-only；等待真实工件与 CI 身份对账"
+    return MangaProbePromotionBoundaryContext(
+        summary: parts.isEmpty ? "未提供晋级边界详情" : parts.joined(separator: "；"),
+        nextAction: action,
+        isBlocked: blocked,
+        isReportOnly: reportOnly
+    )
+}
+
 private struct MangaProbeDiagnosticFilterControl: View {
     let report: MangaOverlayProbeReport
     let blocks: [MangaOverlayProbeBlock]
@@ -795,7 +945,7 @@ private struct MangaProbeDiagnosticTriageSummary: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("漫画探针诊断分流")
                 .accessibilityValue(accessibilityValue)
-                .accessibilityHint("这是只读的漫画探针诊断分流；可展开下方摘要查看 OCR、翻译模型、覆盖布局和真实 Koharu 工件的下一步，不会修改普通图片 OCR、翻译 prompt、模型或覆盖图")
+                .accessibilityHint("这是只读的漫画探针诊断分流；可展开下方摘要查看 OCR、翻译模型、覆盖布局、晋级边界和真实 Koharu 工件的下一步，不会修改普通图片 OCR、翻译 prompt、模型或覆盖图")
             DeveloperCodeBlock(title: "diagnostic triage", text: summary)
         }
         .padding(.top, AppTheme.Spacing.control)
@@ -817,6 +967,10 @@ private struct MangaProbeDiagnosticTriageSummary: View {
         mangaProbeRenderRiskBlockSet(report)
     }
 
+    private var promotionBoundary: MangaProbePromotionBoundaryContext? {
+        mangaProbePromotionBoundary(report)
+    }
+
     private var artifactBlocked: Bool {
         guard let readiness = report.externalArtifactReadinessReport else { return false }
         return readiness.nextAction == "stopUntilArtifactsProvided"
@@ -826,6 +980,8 @@ private struct MangaProbeDiagnosticTriageSummary: View {
 
     private var statusTitle: String {
         if artifactBlocked { return "等待真实 Koharu 工件" }
+        if promotionBoundary?.isBlocked == true { return "Koharu 晋级待修正" }
+        if promotionBoundary?.isReportOnly == true { return "Koharu 仅报告/预览" }
         if !translationBlocks.isEmpty { return "翻译模型待比较" }
         if !ocrBlocks.isEmpty { return "OCR 待复核" }
         if !renderBlocks.isEmpty { return "覆盖布局待复核" }
@@ -834,12 +990,14 @@ private struct MangaProbeDiagnosticTriageSummary: View {
 
     private var statusTone: AppStatusTone {
         if artifactBlocked { return .warning }
+        if promotionBoundary?.isBlocked == true || promotionBoundary?.isReportOnly == true { return .warning }
         if report.overallPassed { return .success }
         return .warning
     }
 
     private var nextAction: String {
         if artifactBlocked { return "提供真实 Koharu 四件套并完成 CI 身份对账" }
+        if let promotionBoundary { return promotionBoundary.nextAction }
         if !translationBlocks.isEmpty { return "保持模型底线与 OCR 分流，未来再比较更强模型" }
         if !ocrBlocks.isEmpty { return "人工复核 OCR 原文，等待真实 TextBoxes/BubbleMask/SegmentMask" }
         if !renderBlocks.isEmpty { return "保留覆盖布局锁定报告并复核异常块" }
@@ -847,7 +1005,8 @@ private struct MangaProbeDiagnosticTriageSummary: View {
     }
 
     private var statusDetail: String {
-        "失败 \(report.diagnostics.failedBlocks) 块；OCR 疑似 \(ocrBlocks.count)；翻译模型/语言 \(translationBlocks.count)；覆盖布局 \(renderBlocks.count)。下一步：\(nextAction)。"
+        let boundary = promotionBoundary.map { "晋级边界：\($0.summary)。" } ?? "晋级边界：未提供。"
+        return "失败 \(report.diagnostics.failedBlocks) 块；OCR 疑似 \(ocrBlocks.count)；翻译模型/语言 \(translationBlocks.count)；覆盖布局 \(renderBlocks.count)。\(boundary) 下一步：\(nextAction)。"
     }
 
     private var accessibilityValue: String {
@@ -881,6 +1040,8 @@ private struct MangaProbeDiagnosticTriageSummary: View {
             "ocrSuspectBlocks=\(ocr.isEmpty ? "none" : ocr)",
             "translationModelOrLanguageBlocks=\(translation.isEmpty ? "none" : translation)",
             "renderIssueBlocks=\(render.isEmpty ? "none" : render)",
+            "promotionBoundary=\(promotionBoundary?.summary ?? "notAvailable")",
+            "promotionNextAction=\(promotionBoundary?.nextAction ?? "notAvailable")",
             "floorVerdict=\(floorVerdict)",
             "baselinePassRate=\(baselinePassRate)",
             "variantPromptID=\(variantPromptID)",

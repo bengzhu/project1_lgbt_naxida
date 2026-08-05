@@ -397,6 +397,9 @@ jobs:
           if grep -Fx 'scripts/test-v3102-koharu-block-execution-boundary-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
+          if grep -Fx 'scripts/test-v3103-koharu-promotion-boundary-context-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
           # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
           # Historical contracts keep these route markers; the range regex above is executable.
@@ -1096,6 +1099,7 @@ jobs:
             python3 -B scripts/test-v3100-koharu-block-next-action-context-contract.py
             python3 -B scripts/test-v3101-koharu-block-diagnostic-evidence-context-contract.py
             python3 -B scripts/test-v3102-koharu-block-execution-boundary-contract.py
+            python3 -B scripts/test-v3103-koharu-promotion-boundary-context-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract
