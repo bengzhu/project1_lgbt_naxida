@@ -142,6 +142,13 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.96 Koharu readiness 分流状态色合同
+
+- `MangaProbeDiagnosticTriageSummary` 必须先判断既有 `artifactBlocked`：阻断时固定使用 warning；只有 readiness 不阻断且 `report.overallPassed` 时才使用 success，避免缺少真实 Koharu 四件套时把 shadow OCR 门控显示为成功。
+- 该合同只检查 View 私有、只读的状态色优先级，不得新增 Store／持久化、调用漫画探针、读取 ground truth 或改变 OCR、翻译、renderer/export、active artifact gate。
+- 新增 `scripts/test-v396-koharu-triage-tone-contract.py`，接入 UI interaction/full fail-fast，并允许后续正式 `3.x` 版本；v3.95 空 blocks 合同继续保留。
+- 候选 full/PR fast/merge fast 必须核对 exact SHA、manifest、Xcode receipt 和 JUnit；本版默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.95 漫画探针空 blocks 状态合同
 
 - 当 Developer Console 已有漫画探针报告但 `mangaOverlayProbeBlocks` 为空时，必须显示明确的“本次探针未生成文字块”空态与 warning 状态行；不得显示“当前诊断筛选没有结果”或无意义的诊断筛选器。

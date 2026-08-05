@@ -1,3 +1,25 @@
+## v3.96：对齐 Koharu readiness 分流状态色
+
+日期：2026-08-05
+
+状态：Agent X 已完成 v3.96 Developer Console Koharu readiness 状态色修复、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.96`。候选 commit `ab4d0ae59fbf2e0d6c6747fce331060ecfcc57ee` 已通过 PR [#160](https://github.com/bengzhu/project1_lgbt_naxida/pull/160) 合入，merge SHA 为 `12140ca11d3e888e74a974dffcfda41a0ca8357d`；远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeDiagnosticTriageSummary.statusTone` 先判断既有 `artifactBlocked`，阻断时固定使用 warning；只有 readiness 不阻断且既有 `report.overallPassed` 时才显示 success，避免缺少真实 Koharu 四件套时把“等待真实 Koharu 工件”误显示成成功色。
+- 新增 `scripts/test-v396-koharu-triage-tone-contract.py`，验证 warning 优先级、View-only/report-only 边界和 CI/version 路由；不新增 Store／持久化、不调用探针、不读取 ground truth，不改变 OCR、翻译 prompt/model、renderer/export、普通图片 OCR 或 active artifact gate。
+
+验证：
+
+- 本地轻量检查：v3.96 合同（3 tests）、v3.95/v3.94/v3.91 相关合同、版本解析、workflow/ground-truth JSON smoke、`git diff --check` 通过；未跑本机完整 Xcode build 或漫画探针。
+- 候选 full [30985776084](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30985776084)：exact candidate SHA，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`，Xcode build success；static/UI/Speech/home/paste/Koharu 合同通过，JUnit `10/10`、0 failures；`probeMode=skip`，结果包保存在 `/private/tmp/aitrans-c-review-30985776084`。
+- PR #160 fast [30986258687](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30986258687)：exact head SHA，`validationProfile=fast`、`xcodeBuildRequired=false`，复用候选 full receipt `ab4d0ae5 / success`，JUnit `10/10`；该 fast 包不是新的编译证据，结果包保存在 `/private/tmp/aitrans-c-review-30986258687`。
+- merge fast [30986307343](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30986307343)：exact merge SHA `12140ca1`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `ab4d0ae5 / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30986307343`。
+
+限制与遗留：
+
+本轮未更新 `metrics/version_history.csv` 或仓库 `output/`；候选、PR/merge fast 默认 `probe_mode=skip`，没有新的 OCR/翻译指标。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版只修正诊断状态色语义，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.95：明确漫画探针无 blocks 的诊断空态
 
 日期：2026-08-05
