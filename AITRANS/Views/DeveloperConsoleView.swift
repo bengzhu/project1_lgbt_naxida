@@ -501,6 +501,7 @@ private struct MangaProbeDiagnosticTriageSummary: View {
     }
 
     private var statusTone: AppStatusTone {
+        if artifactBlocked { return .warning }
         if report.overallPassed { return .success }
         return .warning
     }
