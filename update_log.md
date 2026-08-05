@@ -2,7 +2,7 @@
 
 日期：2026-08-05
 
-状态：已实现 View-only 筛选器上下文，云端候选与后续 fast receipt 待补充；工程版本已提升为 `MARKETING_VERSION=3.106`，目标分支为 `smalldata_test`。
+状态：Agent X 已完成 v3.106 View-only 筛选器上下文、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.106`。候选 commit `fd0eef26e5df6fd346b0f98612a87446aa951c25` 已通过 PR [#170](https://github.com/bengzhu/project1_lgbt_naxida/pull/170) 合入，merge SHA `a181c52e0d1500775885cec90c03269b51009acc`，候选远端分支已删除，`main` 未触碰。
 
 核心变更：
 
@@ -11,6 +11,12 @@
 - 新增 `scripts/test-v3106-filter-accessibility-context-contract.py` 并接入 UI interaction/full fail-fast。改动不新增 Store／持久化、不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或仓库 `output`。
 
 限制：候选默认 `probe_mode=skip`，不产生新的 OCR／翻译指标；真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 full [31017118790](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31017118790)：exact SHA `fd0eef26...`，`validationProfile=full`、Xcode build success、静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #170 fast [31017809552](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31017809552)：exact head SHA，`validationProfile=fast`，`reusedFullValidationSha=fd0eef26...`、`reusedFullValidationState=success`，Xcode/领域大套件按 fast 规则跳过，JUnit `10/10`；不是新的编译证据。
+- merge fast [31017909329](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31017909329)：merge SHA `a181c52e...`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `fd0eef26.../success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
 
 ## v3.105：暴露漫画探针收敛总览快照
 

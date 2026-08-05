@@ -147,7 +147,7 @@
 - 普通图片 OCR 的 `识别结果筛选` Picker 必须用 View 私有 `reviewFilterAccessibilityValue` 读出当前类别、当前显示数量／总数量；存在风险块时还要读出本次复查已完成与剩余数量。该值必须复用现有 `visibleImageTranslationBlocks`、`reviewCompletedBlockCount` 和 `reviewRequiredBlocks`，不得新增 Store 状态或重新运行 OCR／翻译。
 - Developer Console 的漫画探针筛选器必须用同一只读上下文读出当前类别、筛选结果数和总文字块数；继续保持只筛选逐块诊断结果、不修改 `probe_report`、普通图片 OCR、翻译或覆盖图。
 - 新增 `scripts/test-v3106-filter-accessibility-context-contract.py`，接入 UI interaction/full fail-fast；历史 v3.92–v3.105 合同须继续接受后续正式 `3.x` 版本。该 View-only 改动不改变 renderer/export、Koharu active gate、metrics 或仓库 `output`。
-- 候选 full、PR fast、merge fast 必须核对 exact SHA、Xcode/JUnit receipt 和合同结果；默认 `probe_mode=skip`，真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+- 候选 full `31017118790`（exact SHA `fd0eef26...`）、PR #170 fast `31017809552`、merge fast `31017909329` 均已通过；候选 full 提供 Xcode/JUnit `10/10`，PR/merge fast 复用成功 full receipt，默认 `probe_mode=skip`。真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不得声称 OCR、翻译、识别或 Koharu 质量提升。
 
 ### v3.105 Koharu 收敛总览快照合同
 

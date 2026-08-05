@@ -13,7 +13,7 @@
 - Agent X 最终回复第一行必须写：`我是 Agent X。`
 
 ## 1. 项目核心事实
-v3.106 让普通图片 OCR 与 Developer Console 漫画探针筛选器的 VoiceOver value 统一读出当前筛选类别、显示数量和总数量；图片筛选在有风险块时额外读出已复查／剩余数量。该 View-only 改动不新增 Store／持久化、不改变 OCR、翻译、renderer/export、探针报告或 Koharu active gate；真实四件套仍缺失，不声称质量提升。
+v3.106 让普通图片 OCR 与 Developer Console 漫画探针筛选器的 VoiceOver value 统一读出当前筛选类别、显示数量和总数量；图片筛选在有风险块时额外读出已复查／剩余数量。该 View-only 改动不新增 Store／持久化、不改变 OCR、翻译、renderer/export、探针报告或 Koharu active gate。候选 full `31017118790`、PR #170 fast `31017809552`、merge fast `31017909329` 均通过；候选 full Xcode/JUnit `10/10` 成功，PR/merge fast 复用 full receipt，探针默认 skip，真实四件套仍缺失，不声称质量提升。
 
 v3.105 让 Developer Console 漫画探针诊断总览只读消费既有收敛报告的闭环快照：汇总开放／已闭环／要求停止工单、block path 与 work-item ledger 规模、状态 breakdown 及真实外部工件边界，并把同一快照用于状态 tone、可复制 summary 和 VoiceOver。存在开放或阻断收敛项时保持 warning/仅报告，不新增 Store／持久化、不运行第二次探针、不读取 ground truth，不改变 OCR、翻译、renderer/export、普通图片 OCR、Koharu active gate、metrics 或 `output`。候选 full `31015086472`、PR fast `31015765732`、merge fast `31015838087` 均通过；候选 full Xcode build 成功且 JUnit `10/10`，PR/merge fast 复用 full receipt，探针默认 skip，真实四件套仍缺失，不声称质量提升。
 

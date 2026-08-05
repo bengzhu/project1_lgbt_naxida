@@ -2,7 +2,7 @@
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
 ## 0. 一句话总览
-v3.106 的普通图片 OCR 与漫画探针筛选器共用动态 VoiceOver 筛选上下文：当前类别、显示数／总数和图片复查已完成／剩余数只在 View 计算，不进入 Store，也不改变 OCR、翻译、renderer/export、探针报告或 Koharu active gate。
+v3.106 的普通图片 OCR 与漫画探针筛选器共用动态 VoiceOver 筛选上下文：当前类别、显示数／总数和图片复查已完成／剩余数只在 View 计算，不进入 Store，也不改变 OCR、翻译、renderer/export、探针报告或 Koharu active gate。候选 full `31017118790`、PR fast `31017809552`、merge fast `31017909329` 均通过。
 
 v3.105 的 Developer Console 漫画探针诊断总览只读消费既有收敛报告的闭环快照，汇总开放／已闭环／要求停止工单、block path/work-item ledger 规模、状态 breakdown 和真实外部工件边界；快照同时用于状态 tone、可复制 summary 与 VoiceOver，不进入 Store、OCR、翻译、renderer/export 或 Koharu active gate。
 

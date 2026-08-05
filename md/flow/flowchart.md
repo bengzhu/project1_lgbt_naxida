@@ -1,5 +1,5 @@
 # 项目流程图
-v3.106 普通图片 OCR 与漫画探针筛选器的 VoiceOver value 显示当前类别、显示数／总数，图片筛选再显示复查已完成／剩余数；仅改善 View 语义，不新增 Store 状态，不改变 OCR、翻译、renderer/export 或主流程，真实 Koharu 四件套仍缺失。
+v3.106 普通图片 OCR 与漫画探针筛选器的 VoiceOver value 显示当前类别、显示数／总数，图片筛选再显示复查已完成／剩余数；仅改善 View 语义，不新增 Store 状态，不改变 OCR、翻译、renderer/export 或主流程。候选 full `31017118790`、PR fast `31017809552`、merge fast `31017909329` 均通过，真实 Koharu 四件套仍缺失。
 
 v3.105 诊断总览把既有收敛报告的开放／已闭环／要求停止工单、block path/work-item ledger 规模、状态 breakdown 和真实外部工件边界显示在状态、可复制摘要和 VoiceOver 中；不新增 Store 状态，不改变 OCR、翻译、renderer/export 或主流程。候选 full `31015086472`、PR fast `31015765732`、merge fast `31015838087` 均通过。
 
