@@ -300,6 +300,7 @@ private struct MangaProbeBlockReportAction {
     let diagnosis: String?
     let executionBoundary: String?
     let gateAction: String?
+    let convergenceContext: MangaProbeConvergenceContext?
 
     var summary: String {
         var parts = [localizedAction, "来源：\(source)"]
@@ -311,6 +312,14 @@ private struct MangaProbeBlockReportAction {
         }
         if let gateAction, !gateAction.isEmpty {
             parts.append("Koharu 工件门：\(gateAction)")
+        }
+        if let convergenceContext, !convergenceContext.summary.isEmpty {
+            parts.append("Koharu 收敛：\(convergenceContext.summary)")
+            if convergenceContext.isBlocked {
+                parts.append("收敛状态：阻断")
+            } else if convergenceContext.isReportOnly {
+                parts.append("收敛状态：仅报告")
+            }
         }
         return parts.joined(separator: "；")
     }
@@ -396,14 +405,18 @@ private func mangaProbeBlockReportAction(
         .filter { !$0.isEmpty }
         .joined(separator: "；")
     let executionBoundary = mangaProbeBlockExecutionBoundary(report, blockIndex: blockIndex)
+    let convergenceContext = mangaProbeConvergenceContext(report, blockIndex: blockIndex)
     guard let primary, primary.action != "noActionPassed" else {
-        guard (gateAction?.isEmpty == false) || executionBoundary != nil else { return nil }
+        guard (gateAction?.isEmpty == false) || executionBoundary != nil || convergenceContext != nil else {
+            return nil
+        }
         return MangaProbeBlockReportAction(
-            localizedAction: "暂无块级改动",
-            source: "报告汇总",
+            localizedAction: convergenceContext?.nextAction ?? "暂无块级改动",
+            source: convergenceContext == nil ? "报告汇总" : "Koharu 收敛",
             diagnosis: diagnosis.isEmpty ? nil : diagnosis,
             executionBoundary: executionBoundary,
-            gateAction: gateAction
+            gateAction: gateAction,
+            convergenceContext: convergenceContext
         )
     }
     return MangaProbeBlockReportAction(
@@ -411,7 +424,8 @@ private func mangaProbeBlockReportAction(
         source: primary.source,
         diagnosis: diagnosis.isEmpty ? nil : diagnosis,
         executionBoundary: executionBoundary,
-        gateAction: gateAction
+        gateAction: gateAction,
+        convergenceContext: convergenceContext
     )
 }
 
@@ -587,6 +601,11 @@ private func mangaProbeActionLabel(_ action: String) -> String {
     case "classifyCurrentModelFloorBeforeOCRTuning": "先确认模型底线，再调 OCR"
     case "keepOCRInputSuspectSeparateFromModelFloor": "保持 OCR 疑似与模型底线分开"
     case "keepRenderSpriteFitPlannerReportOnly": "保留覆盖布局报告（仅诊断）"
+    case "routeToRenderRegressionLock": "转入覆盖回归锁（仅诊断）"
+    case "routeToTranslationModelFloorComparison": "转入翻译模型底线对照（仅诊断）"
+    case "collectRealKoharuArtifact": "收集真实 Koharu 工件"
+    case "stopLocalCropLineDeskewTuning": "停止本地裁剪、逐行和去倾斜调参"
+    case "keepReportOnly": "保留 report-only"
     case "manualReviewOnly": "人工复核当前块"
     case "provideRealKoharuArtifact": "提供真实 Koharu 工件"
     case "noActionPassed": "无需块级改动"
@@ -720,8 +739,22 @@ private func mangaProbePromotionBoundary(
     }
 
     if let convergence {
+        if convergence.diagnosticOnly || !convergence.wouldChangeMainFlow {
+            reportOnly = true
+            append("收敛报告仅诊断")
+        }
         if !convergence.openWorkItems.isEmpty {
-            append("未闭环工单 \(convergence.openWorkItems.count) 个")
+            reportOnly = true
+            let visibleWorkItems = convergence.openWorkItems.prefix(3).joined(separator: "、")
+            let suffix = convergence.openWorkItems.count > 3
+                ? " 等 \(convergence.openWorkItems.count) 个"
+                : ""
+            append("未闭环工单：\(visibleWorkItems)\(suffix)")
+            if let workItem = convergence.workItemLedger.first(where: {
+                convergence.openWorkItems.contains($0.workItemID) && !$0.nextAction.isEmpty
+            }) {
+                nextAction = nextAction ?? mangaProbeActionLabel(workItem.nextAction)
+            }
         }
         if !convergence.stopWorkItems.isEmpty {
             blocked = true
@@ -741,6 +774,135 @@ private func mangaProbePromotionBoundary(
         nextAction: action,
         isBlocked: blocked,
         isReportOnly: reportOnly
+    )
+}
+
+private struct MangaProbeConvergenceContext {
+    let summary: String
+    let nextAction: String?
+    let isBlocked: Bool
+    let isReportOnly: Bool
+}
+
+private func mangaProbeConvergenceArtifactLabel(_ value: String) -> String {
+    switch value {
+    case "TextBoxes": "TextBoxes"
+    case "BubbleMask": "BubbleMask"
+    case "SegmentMask": "SegmentMask"
+    case "OcrText": "OCR 文本"
+    case "Translations": "翻译"
+    case "FinalRender": "最终覆盖"
+    case "RenderedSprites": "覆盖 sprite"
+    case "ExternalArtifacts": "真实外部工件"
+    case "none": "无首阻断"
+    default: value
+    }
+}
+
+private func mangaProbeConvergenceStatusLabel(_ value: String) -> String {
+    switch value {
+    case "open": "未闭环"
+    case "blocked": "已阻断"
+    case "stop": "要求停止本地调参"
+    case "closed", "passed": "已闭环"
+    case "closedReportOnly": "仅报告已闭环"
+    default: value
+    }
+}
+
+private func mangaProbeConvergenceWorkItemIsClosed(_ status: String) -> Bool {
+    status == "passed" || status.hasPrefix("closed")
+}
+
+private func mangaProbeConvergenceContext(
+    _ report: MangaOverlayProbeReport,
+    blockIndex: Int
+) -> MangaProbeConvergenceContext? {
+    guard let convergence = report.koharuArtifactConvergenceReport else { return nil }
+
+    let path = convergence.blockPaths.first { $0.blockIndex == blockIndex }
+    let workItems = convergence.workItemLedger.filter { $0.targetBlocks.contains(blockIndex) }
+    guard path != nil || !workItems.isEmpty else { return nil }
+
+    var parts: [String] = []
+    var nextAction: String?
+    func append(_ value: String) {
+        guard !value.isEmpty, !parts.contains(value) else { return }
+        parts.append(value)
+    }
+
+    if let path {
+        if !path.firstBlockingArtifact.isEmpty,
+           path.firstBlockingArtifact != "none" {
+            append("首阻断：" + mangaProbeConvergenceArtifactLabel(path.firstBlockingArtifact))
+        }
+        if !path.primaryStructuralBottleneck.isEmpty,
+           path.primaryStructuralBottleneck != "none" {
+            append("结构瓶颈：" + mangaProbeDiagnosisLabel(path.primaryStructuralBottleneck))
+        }
+        if path.needsRealArtifact {
+            append("等待真实工件")
+        }
+        if !path.primaryNextAction.isEmpty {
+            let action = mangaProbeActionLabel(path.primaryNextAction)
+            append("收敛动作：" + action)
+            nextAction = action
+        }
+    }
+
+    let openWorkItemIDs = {
+        var ids = path?.openWorkItems ?? []
+        ids.append(contentsOf: workItems.filter {
+            !mangaProbeConvergenceWorkItemIsClosed($0.status)
+        }.map(\.workItemID))
+        var seen = Set<String>()
+        return ids.filter { !$0.isEmpty && seen.insert($0).inserted }
+    }()
+    if !openWorkItemIDs.isEmpty {
+        let visibleIDs = openWorkItemIDs.prefix(3).joined(separator: "、")
+        let suffix = openWorkItemIDs.count > 3 ? " 等 " + String(openWorkItemIDs.count) + " 个" : ""
+        append("开放工单：" + visibleIDs + suffix)
+    }
+
+    let activeWorkItems = workItems.filter { openWorkItemIDs.contains($0.workItemID) }
+    for item in activeWorkItems.prefix(2) {
+        append("工单 " + item.workItemID + "：" + mangaProbeConvergenceStatusLabel(item.status))
+    }
+
+    if activeWorkItems.contains(where: { $0.requiresExternalArtifact }) {
+        append("执行边界：等待真实外部工件")
+    } else if activeWorkItems.contains(where: { $0.requiresFullProbe }) {
+        append("执行边界：需 full probe")
+    } else if activeWorkItems.contains(where: { $0.canRunInCIFast }) {
+        append("执行边界：可 CI-fast")
+    } else if !activeWorkItems.isEmpty {
+        append("执行边界：当前不可执行")
+    }
+
+    if nextAction == nil,
+       let item = activeWorkItems.first(where: { !$0.nextAction.isEmpty }) {
+        nextAction = mangaProbeActionLabel(item.nextAction)
+    }
+
+    let wouldChangeMainFlow = path?.wouldChangeMainFlow ?? convergence.wouldChangeMainFlow
+    if wouldChangeMainFlow {
+        append("报告边界异常")
+    }
+    let isBlocked = wouldChangeMainFlow
+        || path?.needsRealArtifact == true
+        || path.map { !$0.firstBlockingArtifact.isEmpty && $0.firstBlockingArtifact != "none" } == true
+        || activeWorkItems.contains {
+            !$0.remainingBlockers.isEmpty
+                || $0.requiresExternalArtifact
+                || $0.status == "blocked"
+                || $0.status == "stop"
+        }
+    let isReportOnly = convergence.diagnosticOnly || path?.diagnosticOnly == true
+    return MangaProbeConvergenceContext(
+        summary: parts.isEmpty ? "无额外收敛详情" : parts.joined(separator: "；"),
+        nextAction: nextAction,
+        isBlocked: isBlocked,
+        isReportOnly: isReportOnly
     )
 }
 
@@ -1276,6 +1438,14 @@ private struct MangaProbeBlockRow: View {
                                 .foregroundStyle(Color.appTextSecondary)
                                 .multilineTextAlignment(.trailing)
                                 .lineLimit(3)
+                        }
+                        if let convergenceContext = reportAction.convergenceContext,
+                           !convergenceContext.summary.isEmpty {
+                            Text("收敛：\(convergenceContext.summary)")
+                                .font(.caption2)
+                                .foregroundStyle(Color.appTextSecondary)
+                                .multilineTextAlignment(.trailing)
+                                .lineLimit(4)
                         }
                     }
                 }
