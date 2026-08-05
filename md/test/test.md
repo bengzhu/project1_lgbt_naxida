@@ -142,6 +142,13 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.97 Koharu 布局风险分流合同
+
+- 漫画探针 `MangaProbeDiagnosticFilter.render` 与 `MangaProbeDiagnosticTriageSummary.renderBlocks` 必须共享一个只读 risk set，至少合并既有顶层 diagnostics、fit planner 的 `fontBudgetRiskBlocks`、`renderMinFontSizeReachedBlocks`、`spriteContainmentRiskBlocks`、`siblingOverlapRiskBlocks`、`failureOverlayRiskBlocks`，以及 render-lock 的 `renderIssueBlocks`、min-font 和 truncation blocks。
+- 该集合只消费 `MangaOverlayProbeReport` 已有 report-only 字段；不得新增 Store／持久化、调用漫画探针、读取 ground truth、修改 OCR 候选、翻译 prompt/model、生产 renderer/export 或 active Koharu gate。
+- 新增 `scripts/test-v397-koharu-layout-triage-contract.py`，接入 UI interaction/full fail-fast，并允许后续正式 `3.x` 版本；v3.95 空 blocks 和 v3.96 readiness tone 合同继续保留。
+- ci-fast 观察到 10 个 font-budget tight、7 个 sprite-containment、6 个 sibling-overlap 风险；候选 full/PR fast/merge fast 必须核对 exact SHA、manifest、Xcode receipt 和 JUnit，默认 probe skip，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.96 Koharu readiness 分流状态色合同
 
 - `MangaProbeDiagnosticTriageSummary` 必须先判断既有 `artifactBlocked`：阻断时固定使用 warning；只有 readiness 不阻断且 `report.overallPassed` 时才使用 success，避免缺少真实 Koharu 四件套时把 shadow OCR 门控显示为成功。
