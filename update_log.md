@@ -1,3 +1,23 @@
+## v3.103：暴露漫画探针晋级边界上下文
+
+日期：2026-08-05
+
+状态：Agent X 已完成 v3.103 Developer Console 漫画探针诊断总览的 report-only 晋级边界上下文、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.103`。候选 commit `4705641bd23e447e9c4b438bbc6d37c5036a1155` 已通过 PR [#167](https://github.com/bengzhu/project1_lgbt_naxida/pull/167) 合入，merge SHA `3975dfa1353a9c9d812cc5c9b3f662128aa709a8`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeDiagnosticTriageSummary` 只读消费既有 `koharuNativePromotionGateLiteReport`、`koharuNativeArtifactContractDryRunReport`、`koharuArtifactIdentityReconciliationReport` 与 `koharuArtifactConvergenceReport`，汇总 native promotion verdict、候选预览/active export 边界、真实工件与 CI manifest 身份对账、停止本地调参与未闭环工单。
+- 同一晋级边界进入状态标题/详情、`diagnostic triage` 可复制摘要和 VoiceOver value/hint；缺少报告安全回退，proxy、preview 和 dry-run 不会显示为 active 晋级。该 View-only 改动不新增 Store／持久化、不运行第二次探针、不读取 ground truth，不改变 OCR、翻译 prompt/model、renderer/export、普通图片 OCR、Koharu active gate、metrics 或 `output`。
+- 新增 `scripts/test-v3103-koharu-promotion-boundary-context-contract.py`，接入 UI interaction/full fail-fast；项目 marketing version 与 CI 路由同步到 3.103。首次候选 full `31010607288` 暴露 v3.96 历史合同的精确 warning 分支锚点，已恢复兼容并以 exact SHA 重跑。
+
+云端证据：
+
+- 候选 full [31011231211](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31011231211)：exact candidate SHA `4705641b...`，`validationProfile=full`、Xcode build success，静态/Speech/UI 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`。
+- PR #167 fast [31011777761](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31011777761)：exact head SHA，`validationProfile=fast`，复用候选 full `4705641b.../success`，Xcode 与领域大套件按 fast 规则跳过，JUnit `10/10`；不作为新的编译证据。
+- merge fast [31011846424](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31011846424)：merge SHA `3975dfa1...`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用 `4705641b.../success`，`receiptPropagationAllowed=true`，Xcode 跳过，JUnit `10/10` 且 0 failures。
+
+本轮没有更新 `metrics/version_history.csv` 或仓库 `output/`；候选、PR/merge 默认跳过漫画探针，没有新的 OCR/翻译指标。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版只改善诊断可理解性，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.102：暴露漫画探针逐块执行边界
 
 日期：2026-08-05
