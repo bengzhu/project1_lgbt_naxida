@@ -115,6 +115,7 @@ struct ImageTranslationPanel: View {
     static let previewScrollID = "imageTranslationPreview"
     private static let reviewCompletionAccessibilityFocusID = "image-review-complete"
     private static let reviewFilterAccessibilityFocusID = "image-review-filter"
+    private static let reviewFilterEmptyAccessibilityFocusID = "image-review-filter-empty"
 
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var showImageImporter = false
@@ -202,6 +203,7 @@ struct ImageTranslationPanel: View {
         }
         .onChange(of: reviewFilter) { _, _ in
             clearHiddenReviewSelection()
+            focusEmptyReviewStateIfNeeded()
         }
     }
 
@@ -398,6 +400,14 @@ struct ImageTranslationPanel: View {
                         title: "当前筛选没有结果",
                         detail: filterEmptyStateDetail,
                         systemImage: "line.3.horizontal.decrease.circle"
+                    )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("当前图片筛选没有结果")
+                    .accessibilityValue(reviewFilterEmptyStateAccessibilityValue)
+                    .accessibilityHint("切换上方识别结果筛选，或回到全部查看当前图片的文字块")
+                    .accessibilityFocused(
+                        $reviewAccessibilityFocusID,
+                        equals: Self.reviewFilterEmptyAccessibilityFocusID
                     )
                 } else {
                     AppEmptyState(
@@ -870,6 +880,20 @@ struct ImageTranslationPanel: View {
             ? Self.reviewCompletionAccessibilityFocusID
             : Self.reviewFilterAccessibilityFocusID)
         moveReviewAccessibilityFocus(to: nextFocusID)
+    }
+
+    private func focusEmptyReviewStateIfNeeded() {
+        guard !store.imageTranslationBlocks.isEmpty,
+              visibleImageTranslationBlocks.isEmpty,
+              reviewFilter != .all else { return }
+        let focusID = reviewFilter == .needsReview && reviewCompletedBlockCount > 0
+            ? Self.reviewCompletionAccessibilityFocusID
+            : Self.reviewFilterEmptyAccessibilityFocusID
+        moveReviewAccessibilityFocus(to: focusID)
+    }
+
+    private var reviewFilterEmptyStateAccessibilityValue: String {
+        "筛选为 \(reviewFilter.rawValue)，显示 0 个，共 \(store.imageTranslationBlocks.count) 个文字块；\(filterEmptyStateDetail)"
     }
 
     private var statusTone: AppStatusTone {
