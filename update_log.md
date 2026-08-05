@@ -1,3 +1,17 @@
+## v3.106：统一筛选器 VoiceOver 数量上下文
+
+日期：2026-08-05
+
+状态：已实现 View-only 筛选器上下文，云端候选与后续 fast receipt 待补充；工程版本已提升为 `MARKETING_VERSION=3.106`，目标分支为 `smalldata_test`。
+
+核心变更：
+
+- 普通图片 OCR 的 `识别结果筛选` Picker 现在通过 `reviewFilterAccessibilityValue` 读出当前筛选类别、显示数量／总数量；存在低置信或方向待定风险块时，同时读出已完成与剩余复查数量。
+- Developer Console 漫画探针筛选器现在读出当前诊断类别、筛选结果数和总文字块数；视觉筛选范围仍只属于逐块诊断展示。
+- 新增 `scripts/test-v3106-filter-accessibility-context-contract.py` 并接入 UI interaction/full fail-fast。改动不新增 Store／持久化、不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或仓库 `output`。
+
+限制：候选默认 `probe_mode=skip`，不产生新的 OCR／翻译指标；真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.105：暴露漫画探针收敛总览快照
 
 日期：2026-08-05

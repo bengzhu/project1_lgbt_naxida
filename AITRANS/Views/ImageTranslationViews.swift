@@ -275,6 +275,7 @@ struct ImageTranslationPanel: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .accessibilityValue(reviewFilterAccessibilityValue)
                 .accessibilityHint(reviewFilterAccessibilityHint)
                 .accessibilityFocused(
                     $reviewAccessibilityFocusID,
@@ -518,6 +519,19 @@ struct ImageTranslationPanel: View {
         case .unknownDirection:
             return "只显示方向待定的文字块；已复查的风险块仍会保留"
         }
+    }
+
+    private var reviewFilterAccessibilityValue: String {
+        var parts = [
+            "当前：\(reviewFilter.rawValue)",
+            "显示 \(visibleImageTranslationBlocks.count) 个，共 \(store.imageTranslationBlocks.count) 个文字块"
+        ]
+        if !allReviewRequiredBlocks.isEmpty {
+            parts.append(
+                "复查已完成 \(reviewCompletedBlockCount) 个，剩余 \(reviewRequiredBlocks.count) 个"
+            )
+        }
+        return parts.joined(separator: "；")
     }
 
     private var filterEmptyStateDetail: String {
