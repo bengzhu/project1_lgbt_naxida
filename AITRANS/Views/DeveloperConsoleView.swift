@@ -294,6 +294,84 @@ private func mangaProbeRenderRiskBlockSet(_ report: MangaOverlayProbeReport) -> 
     return blockIDs
 }
 
+private struct MangaProbeBlockReportAction {
+    let localizedAction: String
+    let source: String
+    let gateAction: String?
+
+    var summary: String {
+        var parts = [localizedAction, "来源：\(source)"]
+        if let gateAction, !gateAction.isEmpty {
+            parts.append("Koharu 工件门：\(gateAction)")
+        }
+        return parts.joined(separator: "；")
+    }
+}
+
+private func mangaProbeBlockReportAction(
+    _ report: MangaOverlayProbeReport,
+    blockIndex: Int
+) -> MangaProbeBlockReportAction? {
+    let internalSummary = report.internalStructureBottleneckReport?.blockSummaries.first {
+        $0.blockIndex == blockIndex
+    }
+    let floorSummary = report.translationModelFloorComparisonReport?.noisyBlockSummaries.first {
+        $0.blockIndex == blockIndex
+    }
+    let renderLedger = report.koharuRenderSpriteFitPlannerReport?.blockLedgers.first {
+        $0.blockIndex == blockIndex
+    }
+    let artifactTrace = report.koharuArtifactDAGReport?.blockTraces.first {
+        $0.blockIndex == blockIndex
+    }
+
+    let primary: (action: String, source: String)? = {
+        if let action = internalSummary?.recommendedNextAction, !action.isEmpty, action != "noActionPassed" {
+            return (action, "内部结构瓶颈")
+        }
+        if let action = floorSummary?.recommendedNextAction, !action.isEmpty, action != "noActionPassed" {
+            return (action, "模型底线对照")
+        }
+        if let action = renderLedger?.nextAction, !action.isEmpty, action != "manualReviewOnly" {
+            return (action, "覆盖布局规划")
+        }
+        if let action = artifactTrace?.recommendedNextAction, !action.isEmpty {
+            return (action, "Koharu 工件 DAG")
+        }
+        return nil
+    }()
+
+    let gateAction = artifactTrace.map { mangaProbeActionLabel($0.recommendedNextAction) }
+    guard let primary, primary.action != "noActionPassed" else {
+        guard let gateAction, !gateAction.isEmpty else { return nil }
+        return MangaProbeBlockReportAction(
+            localizedAction: "暂无块级改动",
+            source: "报告汇总",
+            gateAction: gateAction
+        )
+    }
+    return MangaProbeBlockReportAction(
+        localizedAction: mangaProbeActionLabel(primary.action),
+        source: primary.source,
+        gateAction: gateAction
+    )
+}
+
+private func mangaProbeActionLabel(_ action: String) -> String {
+    return switch action {
+    case "tryPromptOrModelComparison": "比较提示词或模型（仅诊断）"
+    case "improveTextBoxOrSegmentEvidence": "优先补充文本框或 segment 证据"
+    case "improveBubbleSplitOrAssignment": "优先复核气泡拆分或归属"
+    case "classifyCurrentModelFloorBeforeOCRTuning": "先确认模型底线，再调 OCR"
+    case "keepOCRInputSuspectSeparateFromModelFloor": "保持 OCR 疑似与模型底线分开"
+    case "keepRenderSpriteFitPlannerReportOnly": "保留覆盖布局报告（仅诊断）"
+    case "manualReviewOnly": "人工复核当前块"
+    case "provideRealKoharuArtifact": "提供真实 Koharu 工件"
+    case "noActionPassed": "无需块级改动"
+    default: action
+    }
+}
+
 private struct MangaProbeDiagnosticFilterControl: View {
     let report: MangaOverlayProbeReport
     let blocks: [MangaOverlayProbeBlock]
@@ -796,6 +874,13 @@ private struct MangaProbeBlockRow: View {
                             .foregroundStyle(Color.appTextSecondary)
                             .multilineTextAlignment(.trailing)
                     }
+                    if let reportAction {
+                        Text("建议：\(reportAction.localizedAction)")
+                            .font(.caption2.bold())
+                            .foregroundStyle(Color.appTextSecondary)
+                            .multilineTextAlignment(.trailing)
+                            .lineLimit(2)
+                    }
                 }
             }
             .padding(.vertical, AppTheme.Spacing.control)
@@ -835,6 +920,9 @@ private struct MangaProbeBlockRow: View {
             parts.append("翻译失败详情：\(translationFailureDetail)")
         }
         parts.append("报告风险：\(reportRiskSummary)")
+        if let reportAction {
+            parts.append("报告下一步：\(reportAction.summary)")
+        }
         return parts.joined(separator: "；")
     }
 
@@ -842,9 +930,10 @@ private struct MangaProbeBlockRow: View {
         let riskHint = reportRiskLabels.isEmpty
             ? "报告没有额外风险标签"
             : "报告风险标签：\(reportRiskSummary)"
+        let actionHint = reportAction.map { "报告下一步：\($0.summary)" } ?? "报告没有块级下一步"
         return block.blockPassed
-            ? "展开查看 OCR 原文、译文和诊断输出；\(riskHint)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
-            : "展开查看 OCR 原文、翻译失败原因和诊断输出；当前分流为 \(diagnosticRouteLabel)；\(riskHint)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
+            ? "展开查看 OCR 原文、译文和诊断输出；\(riskHint)；\(actionHint)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
+            : "展开查看 OCR 原文、翻译失败原因和诊断输出；当前分流为 \(diagnosticRouteLabel)；\(riskHint)；\(actionHint)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
     }
 
     private var reportRiskLabels: [String] {
@@ -864,6 +953,11 @@ private struct MangaProbeBlockRow: View {
 
     private var reportRiskSummary: String {
         reportRiskLabels.isEmpty ? "无额外风险" : reportRiskLabels.joined(separator: "、")
+    }
+
+    private var reportAction: MangaProbeBlockReportAction? {
+        guard let report else { return nil }
+        return mangaProbeBlockReportAction(report, blockIndex: block.index)
     }
 
     private var diagnosticRouteLabel: String {
