@@ -298,12 +298,16 @@ private struct MangaProbeBlockReportAction {
     let localizedAction: String
     let source: String
     let diagnosis: String?
+    let executionBoundary: String?
     let gateAction: String?
 
     var summary: String {
         var parts = [localizedAction, "来源：\(source)"]
         if let diagnosis, !diagnosis.isEmpty {
             parts.append("依据：\(diagnosis)")
+        }
+        if let executionBoundary, !executionBoundary.isEmpty {
+            parts.append("执行边界：\(executionBoundary)")
         }
         if let gateAction, !gateAction.isEmpty {
             parts.append("Koharu 工件门：\(gateAction)")
@@ -391,12 +395,14 @@ private func mangaProbeBlockReportAction(
         .compactMap { $0 }
         .filter { !$0.isEmpty }
         .joined(separator: "；")
+    let executionBoundary = mangaProbeBlockExecutionBoundary(report, blockIndex: blockIndex)
     guard let primary, primary.action != "noActionPassed" else {
-        guard let gateAction, !gateAction.isEmpty else { return nil }
+        guard (gateAction?.isEmpty == false) || executionBoundary != nil else { return nil }
         return MangaProbeBlockReportAction(
             localizedAction: "暂无块级改动",
             source: "报告汇总",
             diagnosis: diagnosis.isEmpty ? nil : diagnosis,
+            executionBoundary: executionBoundary,
             gateAction: gateAction
         )
     }
@@ -404,8 +410,138 @@ private func mangaProbeBlockReportAction(
         localizedAction: mangaProbeActionLabel(primary.action),
         source: primary.source,
         diagnosis: diagnosis.isEmpty ? nil : diagnosis,
+        executionBoundary: executionBoundary,
         gateAction: gateAction
     )
+}
+
+private func mangaProbeBlockExecutionBoundary(
+    _ report: MangaOverlayProbeReport,
+    blockIndex: Int
+) -> String? {
+    let resolverTrace = report.koharuPipelineResolverReport?.blockTraces.first {
+        $0.blockIndex == blockIndex
+    }
+    let workOrderRoute = report.koharuWorkOrderRouterReport?.blockRoutes.first {
+        $0.blockIndex == blockIndex
+    }
+    let artifactRequest = report.koharuExternalArtifactRequestPacketReport?.blockRequests.first {
+        $0.blockIndex == blockIndex
+    }
+    let nativeReplayRoute = report.koharuNativeAlgorithmReplayMatrixReport?.blockRoutes.first {
+        $0.blockIndex == blockIndex
+    }
+
+    var parts: [String] = []
+    func append(_ value: String) {
+        guard !value.isEmpty, !parts.contains(value) else { return }
+        parts.append(value)
+    }
+    func runBoundary(
+        canRunInCIFast: Bool,
+        requiresFullProbe: Bool,
+        requiresExternalArtifact: Bool
+    ) -> String {
+        if requiresExternalArtifact { return "等待真实外部工件" }
+        if requiresFullProbe { return "需 full probe" }
+        if canRunInCIFast { return "可 CI-fast" }
+        return "当前不可执行"
+    }
+
+    if let trace = resolverTrace {
+        if !trace.recommendedExecutionItemID.isEmpty {
+            append("执行项 \(trace.recommendedExecutionItemID)")
+            if let item = report.koharuPipelineResolverReport?.executionQueue.first(where: {
+                $0.executionItemID == trace.recommendedExecutionItemID
+            }) {
+                if !item.title.isEmpty { append("目标 \(item.title)") }
+                if !item.status.isEmpty { append("状态 \(item.status)") }
+            }
+        }
+        if !trace.firstBlockedStage.isEmpty {
+            append("首阻断阶段 \(mangaProbeDiagnosisLabel(trace.firstBlockedStage))")
+        }
+        if !trace.firstBlockedReason.isEmpty {
+            append("阻断原因 \(mangaProbeDiagnosisLabel(trace.firstBlockedReason))")
+        }
+        append(runBoundary(
+            canRunInCIFast: trace.canRunInCIFast,
+            requiresFullProbe: trace.requiresFullProbe,
+            requiresExternalArtifact: trace.requiresExternalArtifact
+        ))
+    }
+
+    if let route = workOrderRoute {
+        if !route.primaryWorkOrderID.isEmpty {
+            append("工单 \(route.primaryWorkOrderID)")
+            if let workOrder = report.koharuWorkOrderRouterReport?.workOrders.first(where: {
+                $0.workOrderID == route.primaryWorkOrderID
+            }) {
+                if !workOrder.title.isEmpty { append("工单目标 \(workOrder.title)") }
+                if !workOrder.targetStage.isEmpty { append("目标阶段 \(workOrder.targetStage)") }
+                if !workOrder.targetKoharuArtifact.isEmpty { append("目标工件 \(workOrder.targetKoharuArtifact)") }
+                if !workOrder.budgetClass.isEmpty { append("预算 \(workOrder.budgetClass)") }
+                if !workOrder.remainingBlockers.isEmpty {
+                    append("剩余阻塞 \(workOrder.remainingBlockers.joined(separator: "、"))")
+                }
+                if !workOrder.allowedInThisVersion {
+                    append("本版本禁止升级")
+                }
+            }
+        }
+        if !route.primaryBottleneck.isEmpty {
+            append("工单瓶颈 \(mangaProbeDiagnosisLabel(route.primaryBottleneck))")
+        }
+        append(runBoundary(
+            canRunInCIFast: route.canRunInCIFast,
+            requiresFullProbe: route.requiresFullProbe,
+            requiresExternalArtifact: route.requiresExternalArtifact
+        ))
+        if !route.mustNotPromoteReasons.isEmpty {
+            append("禁止晋级：\(route.mustNotPromoteReasons.joined(separator: "、"))")
+        }
+    }
+
+    if let request = artifactRequest {
+        let requiredArtifacts = [
+            request.needsTextBoxes ? "TextBoxes" : nil,
+            request.needsBubbleMask ? "BubbleMask" : nil,
+            request.needsSegmentMask ? "SegmentMask" : nil
+        ].compactMap { $0 }
+        if !requiredArtifacts.isEmpty {
+            append("需要真实 \(requiredArtifacts.joined(separator: "/"))")
+        }
+        if !request.externalArtifactReadinessVerdict.isEmpty {
+            append("工件就绪 \(mangaProbeDiagnosisLabel(request.externalArtifactReadinessVerdict))")
+        }
+        if !request.missingRealArtifactReasons.isEmpty {
+            append("工件阻塞：\(request.missingRealArtifactReasons.joined(separator: "、"))")
+        }
+        if !request.forbiddenLocalActions.isEmpty {
+            append("禁止本地调参：\(request.forbiddenLocalActions.joined(separator: "、"))")
+        }
+    }
+
+    if let replay = nativeReplayRoute {
+        if !replay.primaryKoharuStage.isEmpty {
+            append("回放阶段 \(replay.primaryKoharuStage)")
+        }
+        if !replay.primaryReplayCandidateID.isEmpty {
+            append("回放候选 \(replay.primaryReplayCandidateID)")
+        }
+        if replay.nativeReplayAllowed {
+            append("可本地回放")
+        } else if replay.shadowOnlyAllowed {
+            append("仅 shadow 回放")
+        } else {
+            append("回放不可执行")
+        }
+        if replay.requiresExternalArtifact {
+            append("回放等待外部工件")
+        }
+    }
+
+    return parts.isEmpty ? nil : parts.joined(separator: "；")
 }
 
 private func mangaProbeDiagnosisSummary(_ rawLabels: [String]) -> String? {
@@ -972,6 +1108,13 @@ private struct MangaProbeBlockRow: View {
                                 .foregroundStyle(Color.appTextSecondary)
                                 .multilineTextAlignment(.trailing)
                                 .lineLimit(2)
+                        }
+                        if let executionBoundary = reportAction.executionBoundary, !executionBoundary.isEmpty {
+                            Text("边界：\(executionBoundary)")
+                                .font(.caption2)
+                                .foregroundStyle(Color.appTextSecondary)
+                                .multilineTextAlignment(.trailing)
+                                .lineLimit(3)
                         }
                     }
                 }
