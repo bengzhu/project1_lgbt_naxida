@@ -407,7 +407,7 @@ private struct MangaProbeSection: View {
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(filteredProbeBlocks) { block in
-                        MangaProbeBlockRow(block: block)
+                        MangaProbeBlockRow(block: block, report: store.mangaOverlayProbeReport)
                     }
                 }
             }
@@ -760,6 +760,7 @@ private struct MangaKoharuArtifactReadinessSummary: View {
 
 private struct MangaProbeBlockRow: View {
     let block: MangaOverlayProbeBlock
+    let report: MangaOverlayProbeReport?
 
     var body: some View {
         DisclosureGroup {
@@ -788,6 +789,12 @@ private struct MangaProbeBlockRow: View {
                         Text(diagnosticRouteLabel)
                             .font(.caption2.bold())
                             .foregroundStyle(Color.appTextSecondary)
+                    }
+                    if !reportRiskLabels.isEmpty {
+                        Text("风险：\(reportRiskSummary)")
+                            .font(.caption2.bold())
+                            .foregroundStyle(Color.appTextSecondary)
+                            .multilineTextAlignment(.trailing)
                     }
                 }
             }
@@ -827,13 +834,36 @@ private struct MangaProbeBlockRow: View {
            !translationFailureDetail.isEmpty {
             parts.append("翻译失败详情：\(translationFailureDetail)")
         }
+        parts.append("报告风险：\(reportRiskSummary)")
         return parts.joined(separator: "；")
     }
 
     private var blockAccessibilityHint: String {
-        block.blockPassed
-            ? "展开查看 OCR 原文、译文和诊断输出；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
-            : "展开查看 OCR 原文、翻译失败原因和诊断输出；当前分流为 \(diagnosticRouteLabel)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
+        let riskHint = reportRiskLabels.isEmpty
+            ? "报告没有额外风险标签"
+            : "报告风险标签：\(reportRiskSummary)"
+        return block.blockPassed
+            ? "展开查看 OCR 原文、译文和诊断输出；\(riskHint)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
+            : "展开查看 OCR 原文、翻译失败原因和诊断输出；当前分流为 \(diagnosticRouteLabel)；\(riskHint)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
+    }
+
+    private var reportRiskLabels: [String] {
+        guard let report else { return [] }
+        var labels: [String] = []
+        if mangaProbeOCRRiskBlockSet(report).contains(block.index) {
+            labels.append("OCR")
+        }
+        if mangaProbeTranslationRiskBlockSet(report).contains(block.index) {
+            labels.append("翻译")
+        }
+        if mangaProbeRenderRiskBlockSet(report).contains(block.index) {
+            labels.append("布局")
+        }
+        return labels
+    }
+
+    private var reportRiskSummary: String {
+        reportRiskLabels.isEmpty ? "无额外风险" : reportRiskLabels.joined(separator: "、")
     }
 
     private var diagnosticRouteLabel: String {
