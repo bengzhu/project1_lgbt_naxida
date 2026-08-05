@@ -327,24 +327,42 @@ private struct MangaProbeSection: View {
                 }
                 MangaProbeDiagnosticTriageSummary(report: report)
 
-                MangaProbeDiagnosticFilterControl(
-                    report: report,
-                    blocks: store.mangaOverlayProbeBlocks,
-                    selection: $diagnosticFilter
-                )
+                if store.mangaOverlayProbeBlocks.isEmpty {
+                    AppStatusRow(
+                        title: "未生成逐块诊断",
+                        detail: emptyProbeBlocksDetail,
+                        tone: .warning
+                    )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("漫画探针未生成逐块诊断")
+                    .accessibilityValue(emptyProbeBlocksDetail)
+                    .accessibilityHint("请查看上方探针状态和 warnings，确认 test/1.png 与 Output 状态后重试")
+                } else {
+                    MangaProbeDiagnosticFilterControl(
+                        report: report,
+                        blocks: store.mangaOverlayProbeBlocks,
+                        selection: $diagnosticFilter
+                    )
 
-                AppStatusRow(
-                    title: "逐块诊断结果：\(diagnosticFilter.rawValue)",
-                    detail: "显示 \(filteredProbeBlocks.count) / \(store.mangaOverlayProbeBlocks.count) 个文字块",
-                    tone: filteredProbeBlocks.isEmpty ? .warning : .neutral
-                )
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("漫画探针逐块诊断结果")
-                .accessibilityValue("筛选为 \(diagnosticFilter.rawValue)，显示 \(filteredProbeBlocks.count) 个，共 \(store.mangaOverlayProbeBlocks.count) 个文字块")
-                .accessibilityHint("切换上方诊断筛选可聚焦 OCR、翻译、布局或失败 block")
+                    AppStatusRow(
+                        title: "逐块诊断结果：\(diagnosticFilter.rawValue)",
+                        detail: "显示 \(filteredProbeBlocks.count) / \(store.mangaOverlayProbeBlocks.count) 个文字块",
+                        tone: filteredProbeBlocks.isEmpty ? .warning : .neutral
+                    )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("漫画探针逐块诊断结果")
+                    .accessibilityValue("筛选为 \(diagnosticFilter.rawValue)，显示 \(filteredProbeBlocks.count) 个，共 \(store.mangaOverlayProbeBlocks.count) 个文字块")
+                    .accessibilityHint("切换上方诊断筛选可聚焦 OCR、翻译、布局或失败 block")
+                }
             }
 
-            if store.mangaOverlayProbeReport != nil, filteredProbeBlocks.isEmpty {
+            if store.mangaOverlayProbeReport != nil, store.mangaOverlayProbeBlocks.isEmpty {
+                AppEmptyState(
+                    title: "本次探针未生成文字块",
+                    detail: emptyProbeBlocksDetail,
+                    systemImage: "exclamationmark.triangle"
+                )
+            } else if store.mangaOverlayProbeReport != nil, filteredProbeBlocks.isEmpty {
                 AppEmptyState(
                     title: "当前诊断筛选没有结果",
                     detail: "切换到全部或其他诊断类别查看逐块报告。",
@@ -370,6 +388,13 @@ private struct MangaProbeSection: View {
             return store.mangaOverlayProbeBlocks
         }
         return store.mangaOverlayProbeBlocks.filter { diagnosticFilter.matches($0, report: report) }
+    }
+
+    private var emptyProbeBlocksDetail: String {
+        let message = store.mangaOverlayProbeMessage.isEmpty
+            ? "探针没有生成可展示的 OCR 文字块。"
+            : store.mangaOverlayProbeMessage
+        return "\(message) 请确认 bundle 的 test/1.png 和 Output 清理状态后重试。"
     }
 
     private var probeStatusTitle: String {
