@@ -142,6 +142,13 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.104 Koharu 收敛 block 上下文合同
+
+- `MangaProbeBlockRow` 必须只读消费既有 `MangaKoharuArtifactConvergenceReport.blockPaths` 与 `workItemLedger`，显示 block 首阻断工件、结构瓶颈、真实工件等待、开放工单、状态和 CI-fast/full/外部工件执行边界；不得重跑探针、重新推导 OCR/翻译候选或修改报告。
+- 同一收敛上下文必须进入 action summary、结果行可见文本和 VoiceOver；`diagnosticOnly`、`wouldChangeMainFlow` 或开放工单必须保持 warning/仅报告，不得显示为成功晋级。该 View/report-only 改动不新增 Store／持久化、不读取 ground truth，不改变 OCR、翻译、renderer/export、普通图片 OCR、Koharu active gate、metrics 或 output。
+- 新增 `scripts/test-v3104-koharu-convergence-context-contract.py`，接入 UI interaction/full fail-fast，并要求 v3.103 及更早合同继续接受后续正式 `3.x` 版本。
+- 候选 full `31013385953` 必须提供 exact SHA `1fc00152...`、Xcode receipt、JUnit `10/10` 与合同结果；PR #168 fast `31014071238` 可复用候选 full 且不作为新的编译证据；merge fast `31014141913` 必须记录 `reusedFullValidationSha=1fc00152...`、`reusedFullValidationState=success` 和 `receiptPropagationAllowed=true`。本版默认 `probe_mode=skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`；真实四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.103 Koharu 晋级边界上下文合同
 
 - `MangaProbeDiagnosticTriageSummary` 必须只读消费既有 `koharuNativePromotionGateLiteReport`、`koharuNativeArtifactContractDryRunReport`、`koharuArtifactIdentityReconciliationReport` 与 `koharuArtifactConvergenceReport`，显示晋级 verdict、候选预览/active export 边界、真实工件与 CI manifest 身份对账、停止本地调参与未闭环工单；不得运行第二次探针、修改 Store、OCR、翻译、renderer/export 或 active 工件。

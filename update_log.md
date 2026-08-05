@@ -1,3 +1,23 @@
+## v3.104：暴露漫画探针收敛 block 上下文
+
+日期：2026-08-05
+
+状态：Agent X 已完成 v3.104 Developer Console 漫画探针逐块 report-only 收敛上下文、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.104`。候选 commit `1fc0015275091e50433262d0cdd3215e6d6d41a8` 已通过 PR [#168](https://github.com/bengzhu/project1_lgbt_naxida/pull/168) 合入，merge SHA `c1156bf707a97538daf062c5c8afd81cec674794`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeBlockRow` 只读消费既有 `MangaKoharuArtifactConvergenceReport.blockPaths` 与 `workItemLedger`，按 block 显示首阻断工件、结构瓶颈、真实工件等待、开放工单、工单状态和 CI-fast/full/外部工件执行边界。
+- 同一收敛上下文进入 action summary、结果行可见文本和 VoiceOver；`diagnosticOnly`、`wouldChangeMainFlow` 或开放工单会保持 warning/仅报告，避免把尚未闭环的 report-only 路径误读为成功晋级。改动不新增 Store／持久化、不运行第二次探针、不读取 ground truth，不改变 OCR、翻译 prompt/model、renderer/export、普通图片 OCR、Koharu active gate、metrics 或 `output`。
+- 新增 `scripts/test-v3104-koharu-convergence-context-contract.py`，接入 UI interaction/full fail-fast；项目 marketing version 与 CI 路由同步到 3.104。
+
+云端证据：
+
+- 候选 full [31013385953](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31013385953)：exact candidate SHA `1fc00152...`，`validationProfile=full`、`validationReason=candidate_development_push`、Xcode build success；静态/Speech/UI/home/paste 合同 success，JUnit `10/10`、0 failures，`probe_mode=skip`。
+- PR #168 fast [31014071238](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31014071238)：exact head SHA，`validationProfile=fast`、Xcode skipped，`reusedFullValidationSha=1fc00152...`、`reusedFullValidationState=success`，JUnit `10/10`；该包不是新的编译证据。
+- merge fast [31014141913](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31014141913)：merge SHA `c1156bf7...`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `1fc00152.../success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+
+本轮没有更新 `metrics/version_history.csv` 或仓库 `output/`；候选/PR/merge 默认跳过漫画探针，没有新的 OCR/翻译指标。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版只改善 report-only 收敛诊断与用户体验，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.103：暴露漫画探针晋级边界上下文
 
 日期：2026-08-05
