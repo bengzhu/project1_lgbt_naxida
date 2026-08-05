@@ -142,6 +142,13 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.99 Koharu 逐块风险上下文合同
+
+- `MangaProbeSection` 将当前 `MangaOverlayProbeReport` 传给每个 `MangaProbeBlockRow`；逐块行只读复用 `mangaProbeOCRRiskBlockSet`、`mangaProbeTranslationRiskBlockSet` 和 `mangaProbeRenderRiskBlockSet`，显示 OCR／翻译／布局风险标签。
+- 视觉标签、VoiceOver value/hint 必须消费同一 `reportRiskSummary`，且没有报告时安全回退为“无额外风险”；该上下文不新增 Store／持久化、不运行探针、不读取 ground truth、不改变 OCR 候选、翻译 prompt/model、renderer/export 或 active Koharu gate。
+- 新增 `scripts/test-v399-koharu-block-risk-context-contract.py`，接入 UI interaction/full fail-fast；候选 full/PR fast/merge fast 必须核对 exact SHA、manifest、JUnit 与 Xcode receipt，PR/merge fast 不作为新的编译证据。
+- v3.99 默认 `probe_mode=skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`；真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.98 Koharu OCR/翻译诊断风险并集合合同
 
 - `MangaProbeDiagnosticFilter.ocr` 与 `MangaProbeDiagnosticTriageSummary.ocrBlocks` 必须共享 `mangaProbeOCRRiskBlockSet`，并集既有 `diagnostics.likelyOCRIssueBlocks`、`translationUsableButOCRSuspectBlocks`、model-floor 的 `noisyOCRSuspectBlocks` 和 `ocrInputSuspect` block category。

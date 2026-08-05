@@ -1,3 +1,26 @@
+## v3.99：暴露漫画探针逐块风险上下文
+
+日期：2026-08-05
+
+状态：Agent X 已完成 v3.99 Developer Console 漫画探针逐块 OCR／翻译／布局风险上下文、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.99`。候选 commit `02ec1de4520208a6d83d69ea782a4dc15fadc1c3` 已通过 PR [#163](https://github.com/bengzhu/project1_lgbt_naxida/pull/163) 合入，merge SHA `330716f3cde30cd03f4f4ab1c0281bfcad00648b`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeSection` 将当前只读 `MangaOverlayProbeReport` 传给逐块 `MangaProbeBlockRow`；行复用 `mangaProbeOCRRiskBlockSet`、`mangaProbeTranslationRiskBlockSet` 与 `mangaProbeRenderRiskBlockSet`，在失败行旁显示“风险：OCR／翻译／布局”标签。
+- 同一 `reportRiskSummary` 进入逐块 VoiceOver value/hint；无报告时回退为“无额外风险”，避免筛选结果缺少解释。所有上下文仅消费 report，不写 Store／持久化，不运行第二次探针，不读取 ground truth，不改变 OCR 候选、翻译 prompt/model、renderer/export、普通图片 OCR、Koharu active gate、metrics 或 `output`。
+- 新增 `scripts/test-v399-koharu-block-risk-context-contract.py`，接入 UI interaction/full fail-fast；项目 marketing version 与 CI 路由同步到 3.99。
+
+验证：
+
+- 本地轻量检查：v3.99 合同、v3.98–v3.91 相关合同、Swift `-parse`、版本解析、workflow/ground-truth JSON smoke 与 `git diff --check` 通过；第一次云端 full 暴露并修复缺少显式 `return` 的 Swift 类型检查问题。
+- 候选 full [30991030339](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30991030339)：exact candidate SHA，`validationProfile=full`、`validationReason=candidate_development_push`、Xcode build success；静态/Speech/UI/home/paste 合同 success，JUnit `10/10`、0 failures；`probeMode=skip`。
+- PR #163 fast [30991418709](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30991418709)：exact head SHA，`validationProfile=fast`、Xcode skipped，`reusedFullValidationSha=02ec1de4`、state `success`，JUnit `10/10`；该包不是新的编译证据。
+- merge fast [30991478674](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30991478674)：exact merge SHA，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `02ec1de4`/`success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`。
+
+限制与遗留：
+
+本轮未更新 `metrics/version_history.csv` 或仓库 `output/`；候选/PR/merge 默认跳过漫画探针，没有新的 OCR/翻译指标。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版只改善 report-only 诊断可理解性，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.98：统一漫画探针 OCR/翻译诊断风险集合
 
 日期：2026-08-05
