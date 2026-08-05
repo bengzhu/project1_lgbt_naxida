@@ -297,10 +297,14 @@ private func mangaProbeRenderRiskBlockSet(_ report: MangaOverlayProbeReport) -> 
 private struct MangaProbeBlockReportAction {
     let localizedAction: String
     let source: String
+    let diagnosis: String?
     let gateAction: String?
 
     var summary: String {
         var parts = [localizedAction, "来源：\(source)"]
+        if let diagnosis, !diagnosis.isEmpty {
+            parts.append("依据：\(diagnosis)")
+        }
         if let gateAction, !gateAction.isEmpty {
             parts.append("Koharu 工件门：\(gateAction)")
         }
@@ -342,19 +346,101 @@ private func mangaProbeBlockReportAction(
     }()
 
     let gateAction = artifactTrace.map { mangaProbeActionLabel($0.recommendedNextAction) }
+    let gateDiagnosis: String? = artifactTrace.flatMap { trace in
+        guard !trace.firstBlockingStage.isEmpty || !trace.firstBlockingReason.isEmpty else {
+            return nil
+        }
+        let stage = mangaProbeDiagnosisLabel(trace.firstBlockingStage)
+        let reason = mangaProbeDiagnosisLabel(trace.firstBlockingReason)
+        if stage.isEmpty { return reason.isEmpty ? nil : reason }
+        if reason.isEmpty { return stage }
+        return "\(stage)：\(reason)"
+    }
+    let primaryDiagnosis: String? = {
+        if let internalSummary {
+            return mangaProbeDiagnosisSummary(
+                [internalSummary.primaryBottleneck] + internalSummary.secondaryBottlenecks
+            )
+        }
+        if let floorSummary {
+            var labels: [String] = []
+            if let primary = floorSummary.primaryBottleneckFromConvergence {
+                labels.append(primary)
+            }
+            if floorSummary.modelFloorLimited {
+                labels.append("modelFloorLimited")
+            }
+            if floorSummary.ocrInputSuspect {
+                labels.append("ocrInputSuspect")
+            }
+            if floorSummary.translationLanguageQualityFailure {
+                labels.append("translationLanguageQualityFailure")
+            }
+            return mangaProbeDiagnosisSummary(labels)
+        }
+        if let renderLedger {
+            return mangaProbeDiagnosisSummary([
+                renderLedger.primaryRenderBottleneck,
+                renderLedger.fitVerdict,
+                renderLedger.fontBudgetVerdict
+            ])
+        }
+        return nil
+    }()
+    let diagnosis = [primaryDiagnosis, gateDiagnosis]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty }
+        .joined(separator: "；")
     guard let primary, primary.action != "noActionPassed" else {
         guard let gateAction, !gateAction.isEmpty else { return nil }
         return MangaProbeBlockReportAction(
             localizedAction: "暂无块级改动",
             source: "报告汇总",
+            diagnosis: diagnosis.isEmpty ? nil : diagnosis,
             gateAction: gateAction
         )
     }
     return MangaProbeBlockReportAction(
         localizedAction: mangaProbeActionLabel(primary.action),
         source: primary.source,
+        diagnosis: diagnosis.isEmpty ? nil : diagnosis,
         gateAction: gateAction
     )
+}
+
+private func mangaProbeDiagnosisSummary(_ rawLabels: [String]) -> String? {
+    var seen = Set<String>()
+    let labels = rawLabels
+        .filter { !$0.isEmpty }
+        .map(mangaProbeDiagnosisLabel)
+        .filter { seen.insert($0).inserted }
+    return labels.isEmpty ? nil : labels.joined(separator: "、")
+}
+
+private func mangaProbeDiagnosisLabel(_ label: String) -> String {
+    return switch label {
+    case "modelTranslationQuality": "模型翻译质量"
+    case "ocrCharacterDamage": "OCR 字符损伤"
+    case "bubbleAssignmentOrSplit": "气泡拆分或归属"
+    case "externalArtifactOptionalMissing": "可选外部工件缺失"
+    case "bubbleMask": "气泡 mask"
+    case "currentSpriteFits": "当前覆盖 sprite 已适配"
+    case "fontBudgetTight": "字号预算紧张"
+    case "renderOnly": "仅覆盖布局"
+    case "seamConstrainedSafeArea": "气泡边界限制"
+    case "noneRenderLocked": "当前无渲染锁"
+    case "passed": "已通过"
+    case "modelFloorLimited": "模型底线受限"
+    case "ocrInputSuspect": "OCR 输入疑似"
+    case "translationLanguageQualityFailure": "翻译语言质量风险"
+    case "textBoxes": "文本框阶段"
+    case "manifestMissing": "manifest 缺失"
+    case "bubbleMaskMissing": "BubbleMask 缺失"
+    case "segmentMaskMissing": "SegmentMask 缺失"
+    case "bubbleMaskNotReady": "BubbleMask 未就绪"
+    case "segmentMaskNotReady": "SegmentMask 未就绪"
+    default: label
+    }
 }
 
 private func mangaProbeActionLabel(_ action: String) -> String {
@@ -880,6 +966,13 @@ private struct MangaProbeBlockRow: View {
                             .foregroundStyle(Color.appTextSecondary)
                             .multilineTextAlignment(.trailing)
                             .lineLimit(2)
+                        if let diagnosis = reportAction.diagnosis, !diagnosis.isEmpty {
+                            Text("依据：\(diagnosis)")
+                                .font(.caption2)
+                                .foregroundStyle(Color.appTextSecondary)
+                                .multilineTextAlignment(.trailing)
+                                .lineLimit(2)
+                        }
                     }
                 }
             }
