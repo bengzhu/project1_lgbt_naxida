@@ -233,22 +233,44 @@ private enum MangaProbeDiagnosticFilter: String, CaseIterable, Identifiable, Has
         case .failures:
             !block.blockPassed
         case .ocr:
-            Set(
-                (report.translationModelFloorComparisonReport?.noisyOCRSuspectBlocks ?? [])
-                    + report.diagnostics.likelyOCRIssueBlocks
-            ).contains(block.index)
-                || block.failureCategory == "ocrInputSuspect"
+            mangaProbeOCRRiskBlockSet(report).contains(block.index)
         case .translation:
-            Set(
-                (report.translationModelFloorComparisonReport?.noisyModelFloorBlocks ?? [])
-                    + (report.translationModelFloorComparisonReport?.noisyTranslationLanguageQualityBlocks ?? [])
-            ).contains(block.index)
-                || block.failureCategory == "modelOutputFailure"
-                || block.failureCategory == "translationLanguageQualityFailure"
+            mangaProbeTranslationRiskBlockSet(report).contains(block.index)
         case .render:
             mangaProbeRenderRiskBlockSet(report).contains(block.index)
         }
     }
+}
+
+// These sets are report-only views of existing probe evidence. They deliberately
+// do not select OCR candidates, rerun translation, or mutate the report/store.
+private func mangaProbeOCRRiskBlockSet(_ report: MangaOverlayProbeReport) -> Set<Int> {
+    var blockIDs = Set(report.diagnostics.likelyOCRIssueBlocks)
+    blockIDs.formUnion(report.diagnostics.translationUsableButOCRSuspectBlocks)
+    blockIDs.formUnion(report.translationModelFloorComparisonReport?.noisyOCRSuspectBlocks ?? [])
+    blockIDs.formUnion(
+        report.blocks
+            .filter { block in block.failureCategory == "ocrInputSuspect" }
+            .map(\.index)
+    )
+    return blockIDs
+}
+
+private func mangaProbeTranslationRiskBlockSet(_ report: MangaOverlayProbeReport) -> Set<Int> {
+    var blockIDs = Set(report.diagnostics.translationLanguageQualityFailedBlocks)
+    if let modelFloor = report.translationModelFloorComparisonReport {
+        blockIDs.formUnion(modelFloor.noisyModelFloorBlocks)
+        blockIDs.formUnion(modelFloor.noisyTranslationLanguageQualityBlocks)
+    }
+    blockIDs.formUnion(
+        report.blocks
+            .filter { block in
+                block.failureCategory == "modelOutputFailure"
+                    || block.failureCategory == "translationLanguageQualityFailure"
+            }
+            .map(\.index)
+    )
+    return blockIDs
 }
 
 private func mangaProbeRenderRiskBlockSet(_ report: MangaOverlayProbeReport) -> Set<Int> {
@@ -484,11 +506,11 @@ private struct MangaProbeDiagnosticTriageSummary: View {
     }
 
     private var ocrBlocks: Set<Int> {
-        Set(modelFloor?.noisyOCRSuspectBlocks ?? report.diagnostics.likelyOCRIssueBlocks)
+        mangaProbeOCRRiskBlockSet(report)
     }
 
     private var translationBlocks: Set<Int> {
-        Set((modelFloor?.noisyModelFloorBlocks ?? []) + (modelFloor?.noisyTranslationLanguageQualityBlocks ?? []))
+        mangaProbeTranslationRiskBlockSet(report)
     }
 
     private var renderBlocks: Set<Int> {
