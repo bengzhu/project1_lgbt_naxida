@@ -246,16 +246,30 @@ private enum MangaProbeDiagnosticFilter: String, CaseIterable, Identifiable, Has
                 || block.failureCategory == "modelOutputFailure"
                 || block.failureCategory == "translationLanguageQualityFailure"
         case .render:
-            Set(
-                report.diagnostics.renderCollisionUnresolvedBlocks
-                    + report.diagnostics.renderMinFontSizeReachedBlocks
-                    + report.diagnostics.renderTextTruncatedBlocks
-            ).contains(block.index)
-                || block.renderTextTruncated
-                || block.renderMinFontSizeReached
-                || (block.renderCollisionChecked && !block.renderCollisionResolved)
+            mangaProbeRenderRiskBlockSet(report).contains(block.index)
         }
     }
+}
+
+private func mangaProbeRenderRiskBlockSet(_ report: MangaOverlayProbeReport) -> Set<Int> {
+    var blockIDs = Set(
+        report.diagnostics.renderCollisionUnresolvedBlocks
+            + report.diagnostics.renderMinFontSizeReachedBlocks
+            + report.diagnostics.renderTextTruncatedBlocks
+    )
+    if let fitPlanner = report.koharuRenderSpriteFitPlannerReport {
+        blockIDs.formUnion(fitPlanner.fontBudgetRiskBlocks)
+        blockIDs.formUnion(fitPlanner.renderMinFontSizeReachedBlocks)
+        blockIDs.formUnion(fitPlanner.spriteContainmentRiskBlocks)
+        blockIDs.formUnion(fitPlanner.siblingOverlapRiskBlocks)
+        blockIDs.formUnion(fitPlanner.failureOverlayRiskBlocks)
+    }
+    if let renderLock = report.koharuRenderRegressionLockReport {
+        blockIDs.formUnion(renderLock.renderIssueBlocks)
+        blockIDs.formUnion(renderLock.renderMinFontSizeReachedBlocks)
+        blockIDs.formUnion(renderLock.renderTextTruncatedBlocks)
+    }
+    return blockIDs
 }
 
 private struct MangaProbeDiagnosticFilterControl: View {
@@ -478,11 +492,7 @@ private struct MangaProbeDiagnosticTriageSummary: View {
     }
 
     private var renderBlocks: Set<Int> {
-        Set(
-            report.diagnostics.renderCollisionUnresolvedBlocks
-                + report.diagnostics.renderMinFontSizeReachedBlocks
-                + report.diagnostics.renderTextTruncatedBlocks
-        )
+        mangaProbeRenderRiskBlockSet(report)
     }
 
     private var artifactBlocked: Bool {
