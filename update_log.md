@@ -1,3 +1,26 @@
+## v3.95：明确漫画探针无 blocks 的诊断空态
+
+日期：2026-08-05
+
+状态：Agent X 已完成 v3.95 漫画探针空 blocks 诊断 UX、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.95`。候选 commit `802103e413261cc1632d1129362695728af45215` 已通过 PR [#159](https://github.com/bengzhu/project1_lgbt_naxida/pull/159) 合入，merge SHA 为 `a57e65b2c8220de39b59177ec873a394a3398781`；远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeSection` 在已有探针报告但 `mangaOverlayProbeBlocks` 为空时显示明确的“本次探针未生成文字块”状态和空态，不再把结果误报为“当前诊断筛选没有结果”，并隐藏不适用的全部／失败／OCR／翻译／布局筛选器；存在 blocks 时保留既有只读筛选与逐块诊断。
+- 空 blocks 状态通过 View 私有详情复用现有 `mangaOverlayProbeMessage`，并以 VoiceOver label/value/hint 说明没有可展示的逐块 OCR 结果和重试范围（bundle `test/1.png`、App 沙盒 `Output`）；不新增 Store／持久化，不运行第二次探针，不读取 ground truth。
+- 新增 `scripts/test-v395-manga-probe-empty-state-contract.py`，接入 UI interaction/full fail-fast；项目 marketing version 与 CI changed-file route 同步到 3.95。
+
+验证：
+
+- 本地轻量检查：v3.95 合同（3 tests）、v3.94/v3.93/v3.92 相关合同、版本解析、workflow/ground-truth JSON smoke、`git diff --check` 通过；未跑本机完整 Xcode build 或漫画探针。
+- 候选 full [30984932342](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30984932342)：exact candidate SHA，`validationProfile=full`、`validationReason=candidate_development_push`、`xcodeBuildRequired=true`，Xcode build success；static/UI/Speech/home/paste/Koharu 合同通过，JUnit `10/10`、0 failures；`probeMode=skip`，结果包保存在 `/private/tmp/aitrans-c-review-30984932342`。
+- PR #159 fast [30985360673](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30985360673)：exact head SHA，`validationProfile=fast`、`xcodeBuildRequired=false`，复用候选 full receipt `802103e4 / success`，JUnit `10/10`；该 fast 包不是新的编译证据，结果包保存在 `/private/tmp/aitrans-c-review-30985360673`。
+- merge fast [30985413482](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30985413482)：exact merge SHA `a57e65b2`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `802103e4 / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30985413482`。
+
+限制与遗留：
+
+本轮未更新 `metrics/version_history.csv` 或仓库 `output/`；候选、PR/merge fast 默认 `probe_mode=skip`，没有新的 OCR/翻译指标。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版只改善无 blocks 时的诊断可理解性，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.94：隔离漫画探针失败入口的旧状态与旧输出
 
 日期：2026-08-05
