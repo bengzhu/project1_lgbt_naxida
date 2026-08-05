@@ -1,3 +1,23 @@
+## v3.101：暴露漫画探针逐块诊断依据上下文
+
+日期：2026-08-05
+
+状态：Agent X 已完成 v3.101 Developer Console 漫画探针逐块 report-only 诊断依据上下文、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.101`。候选 commit `69de7d9617413aa90be506d2cc8baa1ba4c31a2d` 已通过 PR [#165](https://github.com/bengzhu/project1_lgbt_naxida/pull/165) 合入，merge SHA `e088e4396d232c99a7fb013b02e95eec6d87dbf7`，远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeBlockRow` 只读消费 `MangaOverlayInternalStructureBottleneckBlock`、`MangaTranslationModelFloorNoisyBlockSummary`、`MangaKoharuRenderSpriteFitBlockLedger` 和 `MangaKoharuArtifactBlockTrace` 的既有字段，将 OCR 字符损伤、气泡拆分/归属、模型底线、字号预算与首阻断阶段归纳为“依据”。
+- 诊断依据、v3.100 推荐下一步和真实 Koharu 工件门控共用视觉与 VoiceOver summary；未知值安全回退，空阶段不伪造依据。改动不新增 Store／持久化、不运行第二次探针、不读取 ground truth，不改变 OCR 候选、翻译 prompt/model、renderer/export、普通图片 OCR、Koharu active gate、metrics 或 `output`。
+- 新增 `scripts/test-v3101-koharu-block-diagnostic-evidence-context-contract.py` 并接入 UI interaction/full fail-fast。
+
+云端证据：
+
+- 候选 full [30993659770](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30993659770)：exact candidate SHA，`validationProfile=full`，Xcode build success，static/Speech/UI/home/paste contracts success，JUnit `10/10` 且 0 failures，`probe_mode=skip`。
+- PR fast [30994207268](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30994207268)：exact head SHA，`validationProfile=fast`，复用候选 full `69de7d96.../success`，Xcode 与领域合同按 fast 规则跳过，JUnit `10/10` 且 0 failures；不作为新的编译证据。
+- merge fast [30994272480](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30994272480)：merge SHA `e088e439...`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用 `69de7d96.../success`，`receiptPropagationAllowed=true`，Xcode 跳过，JUnit `10/10` 且 0 failures，`probe_mode=skip`。
+
+本版没有新的漫画探针指标或仓库 `output` 更新；真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍不能作为 OCR、翻译、识别或 Koharu 质量提升证据。
+
 ## v3.100：暴露漫画探针逐块推荐下一步上下文
 
 日期：2026-08-05
