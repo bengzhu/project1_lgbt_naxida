@@ -135,6 +135,13 @@
 
 - v3.93 正式要求 `imageTranslationRevision` 变化时，图片复查 View 将 `reviewFilter` 恢复为 `.all`，并清除旧选择、编辑/恢复状态与 VoiceOver 焦点；该筛选仍为 View 私有状态，不得写 Store／持久化或改变 `imageTranslationBlocks`、OCR、翻译、预览、导出。新增 `scripts/test-v393-image-review-filter-reset-contract.py`，接入 UI/full 路由；历史 v3.92 合同须接受后续版本。full/PR fast/merge fast 必须核对 exact SHA、manifest、JUnit 和 Xcode receipt；push 默认 probe skip，缺少真实 Koharu 四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.94 漫画探针失败入口清理合同
+
+- 每次漫画探针尝试必须在查找 bundle `test/1.png` 前清空上一轮 `mangaOverlayProbeReport` 与 `mangaOverlayProbeBlocks`，避免失败入口继续展示旧诊断。
+- 缺失 `test/1.png` 的失败入口必须重建 App 沙盒 `Output`，记录 `outputCleanupRemovedItemCount` 和 `outputDirectoryCleaned`；若清理失败，`outputCleanupPolicy` 必须明确旧输出可能残留，不得冒充本轮输出。
+- 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
+- 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ### 0.1 v1.87 UI 视觉与交互矩阵
 
 v1.87 原始验收曾在候选 push 的 Xcode build 后运行 `scripts/capture-ui-evidence.sh`。v1.94 起不再按版本分支名自动截图；只有重大 UI 核心 commit 标记 `[ui evidence]`，或手动 `ui_evidence_mode=full` 才运行。该步骤复用当前 Debug app，不下载 GGUF、不运行漫画探针；输出 `ci-results/ui-evidence/`、manifest 和日志。

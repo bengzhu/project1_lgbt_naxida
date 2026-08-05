@@ -1,3 +1,26 @@
+## v3.94：隔离漫画探针失败入口的旧状态与旧输出
+
+日期：2026-08-05
+
+状态：Agent X 已完成 v3.94 漫画探针失败入口修复、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.94`。候选 commit `31c61bf0a682d8a0e28376a123285f037272a60e` 已通过 PR [#158](https://github.com/bengzhu/project1_lgbt_naxida/pull/158) 合入，merge SHA 为 `ea6be1ddacaa34953b0c7f3389c342dc6e9ff4e3`；远端候选分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `runMangaOverlayProbe()` 把每次调用视为新尝试：在查找 bundle 内 `test/1.png` 前清空上一轮 `mangaOverlayProbeReport` 与 `mangaOverlayProbeBlocks`，让缺失图片、读取错误或新运行不会继续展示旧 blocks。
+- 缺失 `test/1.png` 时先重建 App 沙盒 `Output`，失败报告传播 `outputCleanupRemovedItemCount` 与 `outputDirectoryCleaned`；清理失败时 `outputCleanupPolicy` 明确旧输出可能残留，不能被当成本轮 PNG/JSON。正常异步失败也传播同一清理状态。
+- 新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，并接入 Koharu changed-file/full 路由；不新增 OCR/LLM 调用，不改变 OCR 候选、翻译 prompt/model、ground truth、生产 renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。
+
+验证：
+
+- 本地轻量检查：v3.94 新合同、v3.92/v3.93 风险与筛选合同、v3.82–v3.91 相关 Koharu 合同、`git diff --check`、项目版本解析、ground-truth JSON 和 workflow YAML smoke 通过；未跑本机完整 Xcode build 或漫画探针。
+- 候选 full [30893309273](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30893309273)：exact candidate SHA，`validationProfile=full`、`xcodeBuildRequired=true`、Xcode success，静态/UI/Speech/home/paste/Koharu 合同通过，JUnit `10/10`、0 failures；`probeMode=skip`，结果包保存在 `/private/tmp/aitrans-c-review-30893309273`。
+- PR #158 fast [30893920011](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30893920011)：exact head SHA，`validationProfile=fast`、`xcodeBuildRequired=false`，复用 full receipt `31c61bf0 / success`，JUnit `10/10`；该 fast 包不是新的编译证据，结果包保存在 `/private/tmp/aitrans-c-review-30893920011`。
+- merge fast [30893993759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/30893993759)：exact merge SHA `ea6be1dd`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `31c61bf0 / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；结果包保存在 `/private/tmp/aitrans-c-review-30893993759`。
+
+限制与遗留：
+
+本轮未更新 `metrics/version_history.csv` 或仓库 `output/`；候选、PR/merge fast 默认 `probe_mode=skip`。Koharu active artifact gate 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失；本版只改善失败入口的状态/输出隔离，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.93：重置跨图片残留的 OCR 复查筛选
 日期：2026-08-04
 
