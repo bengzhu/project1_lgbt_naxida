@@ -1007,8 +1007,14 @@ private struct MangaProbeDiagnosticFilterControl: View {
             }
         }
         .accessibilityLabel("漫画探针诊断筛选")
-        .accessibilityValue("当前：\(selection.rawValue)")
+        .accessibilityValue(
+            "当前：\(selection.rawValue)，显示 \(selectedBlockCount) 个，共 \(blocks.count) 个文字块"
+        )
         .accessibilityHint("只筛选下方逐块诊断结果，不修改 probe_report、普通图片 OCR、翻译或覆盖图")
+    }
+
+    private var selectedBlockCount: Int {
+        blocks.count(where: { selection.matches($0, report: report) })
     }
 
     private func filterTitle(_ filter: MangaProbeDiagnosticFilter) -> String {

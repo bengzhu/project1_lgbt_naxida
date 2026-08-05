@@ -142,6 +142,13 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.106 筛选器 VoiceOver 数量上下文合同
+
+- 普通图片 OCR 的 `识别结果筛选` Picker 必须用 View 私有 `reviewFilterAccessibilityValue` 读出当前类别、当前显示数量／总数量；存在风险块时还要读出本次复查已完成与剩余数量。该值必须复用现有 `visibleImageTranslationBlocks`、`reviewCompletedBlockCount` 和 `reviewRequiredBlocks`，不得新增 Store 状态或重新运行 OCR／翻译。
+- Developer Console 的漫画探针筛选器必须用同一只读上下文读出当前类别、筛选结果数和总文字块数；继续保持只筛选逐块诊断结果、不修改 `probe_report`、普通图片 OCR、翻译或覆盖图。
+- 新增 `scripts/test-v3106-filter-accessibility-context-contract.py`，接入 UI interaction/full fail-fast；历史 v3.92–v3.105 合同须继续接受后续正式 `3.x` 版本。该 View-only 改动不改变 renderer/export、Koharu active gate、metrics 或仓库 `output`。
+- 候选 full、PR fast、merge fast 必须核对 exact SHA、Xcode/JUnit receipt 和合同结果；默认 `probe_mode=skip`，真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.105 Koharu 收敛总览快照合同
 
 - `MangaProbeDiagnosticTriageSummary` 必须只读消费既有 `MangaKoharuArtifactConvergenceReport` 的开放／已闭环／要求停止工单、`workItemStatusBreakdown`、`blockPathCount`、`workItemLedgerCount`、`needsRealArtifactBlocks` 和真实外部工件边界；不得重跑探针、重新推导 OCR/翻译候选或修改报告。
