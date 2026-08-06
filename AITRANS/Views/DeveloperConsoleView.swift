@@ -1026,6 +1026,7 @@ private struct MangaProbeSection: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var diagnosticFilter: MangaProbeDiagnosticFilter = .all
     @State private var diagnosticExpansionResetID = 0
+    @State private var diagnosticAccessibilityFocusRequestID = 0
     @AccessibilityFocusState private var diagnosticAccessibilityFocusID: String?
     private static let diagnosticProbeEmptyAccessibilityFocusID = "manga-diagnostic-probe-empty"
     private static let diagnosticFilterEmptyAccessibilityFocusID = "manga-diagnostic-filter-empty"
@@ -1118,7 +1119,10 @@ private struct MangaProbeSection: View {
                         MangaProbeBlockRow(block: block, report: store.mangaOverlayProbeReport,
                             accessibilityFocus: $diagnosticAccessibilityFocusID,
                             accessibilityFocusID: diagnosticBlockAccessibilityFocusID(block.index),
-                            expansionResetID: diagnosticExpansionResetID
+                            expansionResetID: diagnosticExpansionResetID,
+                            requestAccessibilityFocus: { focusID in
+                                moveDiagnosticAccessibilityFocus(to: focusID)
+                            }
                         )
                     }
                 }
@@ -1129,6 +1133,7 @@ private struct MangaProbeSection: View {
             guard state == .loading else { return }
             diagnosticFilter = .all
             diagnosticExpansionResetID += 1
+            diagnosticAccessibilityFocusRequestID &+= 1
             diagnosticAccessibilityFocusID = nil
         }
         .onChange(of: diagnosticFilter) { _, _ in
@@ -1151,13 +1156,7 @@ private struct MangaProbeSection: View {
         guard store.mangaOverlayProbeReport != nil,
               !store.mangaOverlayProbeBlocks.isEmpty,
               filteredProbeBlocks.isEmpty else { return }
-        Task { @MainActor in
-            await Task.yield()
-            guard store.mangaOverlayProbeReport != nil,
-                  !store.mangaOverlayProbeBlocks.isEmpty,
-                  filteredProbeBlocks.isEmpty else { return }
-            diagnosticAccessibilityFocusID = Self.diagnosticFilterEmptyAccessibilityFocusID
-        }
+        moveDiagnosticAccessibilityFocus(to: Self.diagnosticFilterEmptyAccessibilityFocusID)
     }
 
     private func focusDiagnosticFilterResultIfNeeded() {
@@ -1167,25 +1166,28 @@ private struct MangaProbeSection: View {
             return
         }
         let focusID = diagnosticBlockAccessibilityFocusID(filteredProbeBlocks[0].index)
-        Task { @MainActor in
-            await Task.yield()
-            guard store.mangaOverlayProbeReport != nil,
-                  !filteredProbeBlocks.isEmpty else { return }
-            diagnosticAccessibilityFocusID = focusID
-        }
+        moveDiagnosticAccessibilityFocus(to: focusID)
     }
 
     private func focusDiagnosticProbeResultIfNeeded() {
+        let focusID: String
+        if store.mangaOverlayProbeBlocks.isEmpty {
+            focusID = Self.diagnosticProbeEmptyAccessibilityFocusID
+        } else if let firstBlock = filteredProbeBlocks.first {
+            focusID = diagnosticBlockAccessibilityFocusID(firstBlock.index)
+        } else {
+            focusID = Self.diagnosticFilterEmptyAccessibilityFocusID
+        }
+        moveDiagnosticAccessibilityFocus(to: focusID)
+    }
+
+    private func moveDiagnosticAccessibilityFocus(to focusID: String?) {
+        diagnosticAccessibilityFocusRequestID &+= 1
+        let requestID = diagnosticAccessibilityFocusRequestID
         Task { @MainActor in
             await Task.yield()
-            guard store.mangaOverlayProbeReport != nil else { return }
-            if store.mangaOverlayProbeBlocks.isEmpty {
-                diagnosticAccessibilityFocusID = Self.diagnosticProbeEmptyAccessibilityFocusID
-            } else if let firstBlock = filteredProbeBlocks.first {
-                diagnosticAccessibilityFocusID = diagnosticBlockAccessibilityFocusID(firstBlock.index)
-            } else {
-                diagnosticAccessibilityFocusID = Self.diagnosticFilterEmptyAccessibilityFocusID
-            }
+            guard requestID == diagnosticAccessibilityFocusRequestID else { return }
+            diagnosticAccessibilityFocusID = focusID
         }
     }
 
@@ -1558,6 +1560,7 @@ private struct MangaProbeBlockRow: View {
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let accessibilityFocusID: String
     let expansionResetID: Int
+    let requestAccessibilityFocus: (String) -> Void
     @State private var isExpanded = false
     @State private var suppressNextExpansionFocusHandoff = false
 
@@ -1658,12 +1661,11 @@ private struct MangaProbeBlockRow: View {
     }
 
     private func focusExpandedDiagnosticDetail(_ expanded: Bool) {
-        Task { @MainActor in
-            await Task.yield()
-            accessibilityFocus.wrappedValue = expanded
+        requestAccessibilityFocus(
+            expanded
                 ? detailAccessibilityFocusID
                 : accessibilityFocusID
-        }
+        )
     }
 
     private var blockAccessibilityValue: String {

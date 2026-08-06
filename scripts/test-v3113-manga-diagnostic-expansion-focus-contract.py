@@ -47,12 +47,30 @@ class MangaDiagnosticExpansionFocusContractTests(unittest.TestCase):
             ".onChange(of: isExpanded)",
             "focusExpandedDiagnosticDetail(expanded)",
             "private func focusExpandedDiagnosticDetail(_ expanded: Bool)",
-            "await Task.yield()",
-            "accessibilityFocus.wrappedValue = expanded",
-            "? detailAccessibilityFocusID",
-            ": accessibilityFocusID",
         ]:
             self.assertIn(marker, self.row)
+        legacy_handoff = all(
+            marker in self.row
+            for marker in [
+                "await Task.yield()",
+                "accessibilityFocus.wrappedValue = expanded",
+                "? detailAccessibilityFocusID",
+                ": accessibilityFocusID",
+            ]
+        )
+        generation_handoff = all(
+            marker in self.row
+            for marker in [
+                "let requestAccessibilityFocus: (String) -> Void",
+                "requestAccessibilityFocus(",
+                "? detailAccessibilityFocusID",
+                ": accessibilityFocusID",
+            ]
+        )
+        self.assertTrue(
+            legacy_handoff or generation_handoff,
+            "expansion focus must use the historical handoff or the shared generation requester",
+        )
 
     def test_detail_keeps_report_context_and_view_only_boundary(self) -> None:
         self.assertIn(".accessibilityElement(children: .contain)", self.row)
