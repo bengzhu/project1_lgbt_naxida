@@ -17,6 +17,7 @@
 - 候选 push full [31072107788](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31072107788)：exact SHA `4bda6f5a0ea20e7d8223546d0b380758d839c253`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.117`。
 - PR #181 fast [31072405558](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31072405558)：exact head SHA，`validationProfile=fast`，`reusedFullValidationSha=4bda6f5a0ea20e7d8223546d0b380758d839c253`、`reusedFullValidationState=success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 - merge fast [31072447592](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31072447592)：merge SHA `b209880723b3d82c7df3d78240ad8d05a16d48e3`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `4bda6f5a0ea20e7d8223546d0b380758d839c253` / `success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+- 文档 metadata follow-up [31072550177](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31072550177)：commit `a7015cd14d58c0c29dd57359c1a0df086e91b801`，`smalldataIncrementalMetadataOnly=true`，复用父 merge full receipt `b209880723b3d82c7df3d78240ad8d05a16d48e3 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 
 ## v3.116：漫画探针诊断焦点请求 generation 仲裁
 
