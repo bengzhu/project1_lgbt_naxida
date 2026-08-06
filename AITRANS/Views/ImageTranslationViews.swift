@@ -117,6 +117,7 @@ struct ImageTranslationPanel: View {
     private static let reviewFilterAccessibilityFocusID = "image-review-filter"
     private static let reviewFilterEmptyAccessibilityFocusID = "image-review-filter-empty"
     private static let imageTranslationStatusAccessibilityFocusID = "image-translation-status"
+    private static let imageRetryLanguageStatusAccessibilityFocusID = "image-retry-language-status"
 
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var showImageImporter = false
@@ -218,6 +219,10 @@ struct ImageTranslationPanel: View {
             pendingImageTranslationTerminalFocusRevision = nil
             focusImageTranslationTerminalStateIfNeeded()
         }
+        .onChange(of: store.imageTranslationRetryLanguageSummary) { oldSummary, newSummary in
+            guard newSummary != nil, newSummary != oldSummary else { return }
+            moveReviewAccessibilityFocus(to: Self.imageRetryLanguageStatusAccessibilityFocusID)
+        }
         .onChange(of: reviewFilter) { _, _ in
             let explicitFocusID = pendingReviewFilterFocusID
             let suppressResultFocus = suppressNextReviewFilterResultFocus
@@ -282,6 +287,14 @@ struct ImageTranslationPanel: View {
                     title: "重试语言已更新",
                     detail: retryLanguageSummary,
                     tone: .warning
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("重试语言已更新")
+                .accessibilityValue(retryLanguageSummary)
+                .accessibilityHint("当前图片失败或取消后，下一次重试会使用这组语言；按重试开始重新识别和翻译")
+                .accessibilityFocused(
+                    $reviewAccessibilityFocusID,
+                    equals: Self.imageRetryLanguageStatusAccessibilityFocusID
                 )
             }
 
