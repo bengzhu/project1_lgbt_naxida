@@ -1,3 +1,23 @@
+## v3.116：漫画探针诊断焦点请求 generation 仲裁
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.116 Developer Console 漫画探针诊断焦点的 View-only 改进、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.116`。候选 commit `4788bb213eeff010775a35798dc6fb28aabb7c0c` 已通过 PR [#180](https://github.com/bengzhu/project1_lgbt_naxida/pull/180) 合入，merge SHA `b9607e246b070222e4ef4cc4dbd78b8ee925b8ea`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeSection` 新增 View 私有 `diagnosticAccessibilityFocusRequestID`，筛选结果、报告终态和逐块展开／收起的焦点 handoff 共用 `moveDiagnosticAccessibilityFocus(to:)`；每次请求递增 generation，异步 `Task.yield()` 后只有仍为最新请求才写入 `@AccessibilityFocusState`。
+- 新探针进入 loading 时递增 generation、清除旧焦点；`MangaProbeBlockRow` 通过父级 requester 交接展开详情与收起回结果行，避免逐块行直接写焦点而抢回筛选或重跑后的最新目的地。该状态继续只存在 View，不新增 Store／持久化。
+- 新增 `scripts/test-v3116-manga-diagnostic-focus-generation-contract.py` 并接入 UI/full fail-fast；v3.113 历史合同同步接受等价的共享 requester。
+
+边界：本版只改善 Developer Console 漫画探针诊断的 VoiceOver 操作确定性，不重跑探针、不读取 ground truth、不改变 OCR 候选、翻译 prompt/model、普通图片 OCR、renderer/export、`probe_report`、Koharu active artifact gate、metrics 或仓库 `output/`。候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31071423891](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31071423891)：exact SHA `4788bb213eeff010775a35798dc6fb28aabb7c0c`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.116`。
+- PR #180 fast [31071714254](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31071714254)：exact head SHA，`validationProfile=fast`，`reusedFullValidationSha=4788bb213eeff010775a35798dc6fb28aabb7c0c`、`reusedFullValidationState=success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31071752236](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31071752236)：merge SHA `b9607e246b070222e4ef4cc4dbd78b8ee925b8ea`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `4788bb213eeff010775a35798dc6fb28aabb7c0c` / `success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+
 ## v3.115：图片 OCR 焦点请求 generation 仲裁
 
 日期：2026-08-06

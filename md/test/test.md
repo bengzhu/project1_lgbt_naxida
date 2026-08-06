@@ -142,6 +142,12 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.116 漫画探针诊断焦点请求 generation 合同
+
+- `scripts/test-v3116-manga-diagnostic-focus-generation-contract.py` 必须验证 `MangaProbeSection` 的筛选、报告终态和 `MangaProbeBlockRow` 展开／收起都通过同一个 View 私有 request generation；异步 `Task.yield()` 后只允许最新请求写入 `@AccessibilityFocusState`。
+- 新探针进入 loading 时必须递增 generation 并清除旧焦点；逐块行不得直接绕过共享 requester 写焦点。generation、焦点 identity 和展开状态不得进入 Store／持久化、探针运行、ground truth 或 OCR／翻译／renderer/export；既有 v3.111–v3.115 合同继续通过。
+- 合同接在 v3.115 后进入 UI/full fail-fast。候选 full `31071423891`（exact SHA `4788bb213eeff010775a35798dc6fb28aabb7c0c`）Xcode/JUnit `10/10` 成功；PR #180 fast `31071714254`、merge fast `31071752236` 均复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，真实 Koharu 四件套仍缺失，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.115 图片 OCR 焦点请求 generation 合同
 
 - `scripts/test-v3115-image-focus-request-generation-contract.py` 必须验证普通图片 OCR 的 `moveReviewAccessibilityFocus` 为每次 handoff 递增 View 私有 request generation，并在异步 `Task.yield()` 后同时检查 generation 与 `imageTranslationRevision`；旧请求不得覆盖同 revision 内更新的筛选、定位、复查或关闭预览动作。
