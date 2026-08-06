@@ -2,6 +2,7 @@
 """Contracts for v3.15 direct selection from image preview overlays."""
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -47,9 +48,13 @@ class ImagePreviewDirectSelectionContractTests(unittest.TestCase):
         self.assertIn("selectedImageTranslationBlockID = nil", selection)
         self.assertIn("return", selection)
         self.assertIn("!visibleImageTranslationBlocks.contains", selection)
-        self.assertIn("reviewFilter = .all", selection)
+        filter_reset = re.search(
+            r"reviewFilter = \.all|prepareReviewFilterChange\(\s*to: \.all",
+            selection,
+        )
+        self.assertIsNotNone(filter_reset)
         self.assertLess(
-            selection.index("reviewFilter = .all"),
+            filter_reset.start(),
             selection.rindex("selectedImageTranslationBlockID = blockID"),
         )
         self.assertNotIn("revealPreview()", selection)
