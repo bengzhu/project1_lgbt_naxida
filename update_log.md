@@ -17,6 +17,7 @@
 - 候选 push full [31074379707](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31074379707)：exact SHA `5248bd705fc6c0d963146060917e2a6a94a6c421`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.119`，readiness validator 诚实记录 `manifestMissing / stopUntilArtifactsProvided`。
 - PR #183 fast [31074819588](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31074819588)：exact head SHA，`validationProfile=fast`，复用候选 full `5248bd705fc6c0d963146060917e2a6a94a6c421 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 - merge fast [31074863470](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31074863470)：merge SHA `de5ccebdeda7294a491183c53676e65caaaefb6a`，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用候选 full / `success`，Xcode skipped，JUnit `10/10`。
+- 文档 metadata follow-up [31075058218](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31075058218)：commit `ff3e8fcae44b51e6724ab53cb770cbacf18d5a8c`，`smalldataIncrementalMetadataOnly=true`，复用父 merge full `de5ccebdeda7294a491183c53676e65caaaefb6a / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 
 ## v3.118：漫画探针阻断 Koharu readiness 焦点
 
