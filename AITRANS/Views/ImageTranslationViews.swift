@@ -507,7 +507,7 @@ struct ImageTranslationPanel: View {
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel("当前图片筛选没有结果")
                         .accessibilityValue(reviewFilterEmptyStateAccessibilityValue)
-                        .accessibilityHint("可在此执行“显示全部结果”，或切换上方识别结果筛选")
+                        .accessibilityHint("切换上方识别结果筛选，或回到全部查看当前图片的文字块；也可在此执行“显示全部结果”")
                         .accessibilityAction(named: "显示全部结果") {
                             showAllReviewResults()
                         }
