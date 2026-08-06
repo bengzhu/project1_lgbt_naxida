@@ -1,3 +1,23 @@
+## v3.107：筛选空态 VoiceOver 焦点交接
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.107 图片 OCR／漫画诊断筛选空态的 View-only 改进、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.107`。候选 commit `f513bcd71f48ec34c2820941b86da7093bc86761` 已通过 PR [#171](https://github.com/bengzhu/project1_lgbt_naxida/pull/171) 合入，merge SHA `0e7e692543aa34f8fb368cea766fb82391295929`；`main` 未触碰。
+
+核心变更：
+
+- 普通图片 OCR 筛选无结果时显示稳定空态 VoiceOver label/value/hint，读出当前筛选、`0 / 总数` 和切换筛选路径；筛选切换会清除隐藏选择，并将焦点交给空筛选态或已有复查完成态。
+- Developer Console 漫画诊断筛选无结果时提供同样的只读空态上下文和焦点 identity；探针加载／新运行时清除旧诊断焦点，避免焦点停留在已卸载的结果行。
+- 新增 `scripts/test-v3107-filter-empty-state-focus-contract.py`，接在 v3.106 后进入 UI/full fail-fast；workflow 历史路由锚点移到 YAML 顶层注释，保持可执行路由并避开 GitHub Actions run block 的 21k 表达式上限。
+
+边界：本版只改善 VoiceOver 与空态操作语义，不新增 Store／持久化、不运行第二次探针、不改变 OCR、翻译、renderer/export、Koharu active gate、metrics 或仓库 `output`。候选默认 `probe_mode=skip`；真实 Koharu 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 full [31020576411](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31020576411)：exact SHA `f513bcd7...`，`validationProfile=full`、Xcode build success、静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；Koharu readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #171 fast [31062338507](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31062338507)：`validationProfile=fast`，复用候选 full `f513bcd7.../success`，Xcode 与领域大套件按 fast 规则跳过，JUnit `10/10`；不是新的编译证据。
+- merge fast [31062372361](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31062372361)：merge SHA `0e7e6925...`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `f513bcd7.../success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+
 ## v3.106：统一筛选器 VoiceOver 数量上下文
 
 日期：2026-08-05
