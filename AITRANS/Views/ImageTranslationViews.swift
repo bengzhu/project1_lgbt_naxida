@@ -482,6 +482,17 @@ struct ImageTranslationPanel: View {
                         detail: "所有风险块都已标记为已复查，可随时重新开始。",
                         systemImage: "checkmark.circle.fill"
                     )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("本次复查完成")
+                    .accessibilityValue(reviewCompletionAccessibilityValue)
+                    .accessibilityHint(
+                        canReviewImageTranslation
+                            ? "所有风险块都已完成本次复查；可在此状态上执行“重新复查”"
+                            : imageReviewUnavailableDetail
+                    )
+                    .accessibilityAction(named: "重新复查") {
+                        restartReviewQueue()
+                    }
                     .accessibilityFocused(
                         $reviewAccessibilityFocusID,
                         equals: Self.reviewCompletionAccessibilityFocusID
@@ -594,6 +605,10 @@ struct ImageTranslationPanel: View {
     private var reviewQueueActionTitle: String {
         let action = reviewCompletedBlockCount == 0 ? "开始复查" : "继续复查"
         return "\(action) \(reviewRequiredBlocks.count)"
+    }
+
+    private var reviewCompletionAccessibilityValue: String {
+        "已完成 \(reviewCompletedBlockCount) 个风险块，共 \(allReviewRequiredBlocks.count) 个；当前筛选为 \(reviewFilter.rawValue)"
     }
 
     private var imageSummaryAccessibilityHint: String {
