@@ -116,6 +116,7 @@ struct ImageTranslationPanel: View {
     private static let reviewCompletionAccessibilityFocusID = "image-review-complete"
     private static let reviewFilterAccessibilityFocusID = "image-review-filter"
     private static let reviewFilterEmptyAccessibilityFocusID = "image-review-filter-empty"
+    private static let imageTranslationStatusAccessibilityFocusID = "image-translation-status"
 
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var showImageImporter = false
@@ -126,6 +127,7 @@ struct ImageTranslationPanel: View {
     @State private var reviewFilter: ImageOCRReviewFilter = .all
     @State private var pendingReviewFilterFocusID: String?
     @State private var suppressNextReviewFilterResultFocus = false
+    @State private var pendingImageTranslationTerminalFocusRevision: Int?
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
     @State private var restoreConfirmationBlock: ImageTranslationBlock?
@@ -200,12 +202,19 @@ struct ImageTranslationPanel: View {
                 focusID: nil,
                 suppressResultFocus: true
             )
+            pendingImageTranslationTerminalFocusRevision = store.imageTranslationRevision
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
             restoreConfirmationBlock = nil
             clearPendingRestoreConfirmationDismissalFocus()
             clearPendingCorrectionSheetDismissalFocus()
             reviewAccessibilityFocusID = nil
+        }
+        .onChange(of: store.imageTranslationState) { _, state in
+            guard state == .translated || state == .failed else { return }
+            guard pendingImageTranslationTerminalFocusRevision == store.imageTranslationRevision else { return }
+            pendingImageTranslationTerminalFocusRevision = nil
+            focusImageTranslationTerminalStateIfNeeded()
         }
         .onChange(of: reviewFilter) { _, _ in
             let explicitFocusID = pendingReviewFilterFocusID
@@ -368,6 +377,10 @@ struct ImageTranslationPanel: View {
             .accessibilityLabel("图片翻译状态")
             .accessibilityValue(imageStatusAccessibilityValue)
             .accessibilityHint(imageStatusAccessibilityHint)
+            .accessibilityFocused(
+                $reviewAccessibilityFocusID,
+                equals: Self.imageTranslationStatusAccessibilityFocusID
+            )
 
             if let imageActionLockDetail {
                 AppStatusRow(
@@ -928,6 +941,19 @@ struct ImageTranslationPanel: View {
         }
         let focusID = reviewRowAccessibilityFocusID(firstVisibleBlock.id)
         moveReviewAccessibilityFocus(to: focusID)
+    }
+
+    private func focusImageTranslationTerminalStateIfNeeded() {
+        let revision = store.imageTranslationRevision
+        Task { @MainActor in
+            await Task.yield()
+            guard revision == store.imageTranslationRevision else { return }
+            if store.imageTranslationBlocks.isEmpty {
+                moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+            } else {
+                focusReviewFilterResultIfNeeded()
+            }
+        }
     }
 
     private func prepareReviewFilterChange(
