@@ -1,3 +1,23 @@
+## v3.125：图片直接失败后的状态焦点
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.125 普通图片导入／Pro 门控等直接失败状态的 VoiceOver 焦点修复、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.125`。候选 commit `1c068d538728a1195fdd08197f16f7e82d06dd4b` 已通过 PR [#189](https://github.com/bengzhu/project1_lgbt_naxida/pull/189) 合入，merge SHA `9bd54490d09573d351c1e09da148393c3036a20`；候选远端分支按合入流程清理，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPanel` 的图片状态监听保留 revision-scoped 终态请求；当状态进入 `.failed` 但没有当前 `imageTranslationRevision` 对应的 pending 终态焦点时，清除 stale pending revision，并通过既有 `moveReviewAccessibilityFocus` 聚焦稳定的“图片翻译状态”行。
+- 文件选择失败、Pro／目标语言门控等直接失败路径可以不创建新 revision，VoiceOver 现在会立即读出失败详情与“重试当前图片／选择新图片”边界；正常读取／Vision OCR／逐块翻译 revision 失败仍沿用 `focusImageTranslationTerminalStateIfNeeded()`，不会被 fallback 重复抢焦点。
+- 新增 `scripts/test-v3125-image-direct-failure-focus-contract.py` 并接入 UI/full fail-fast。该 View-only 改动不新增 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31081494834](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31081494834)：exact SHA `1c068d538728a1195fdd08197f16f7e82d06dd4b`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures、0 errors/warnings，`probe_mode=skip`；manifest 为 v3.125，active Koharu validator 记录 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #189 fast [31081976028](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31081976028)：exact head SHA，`validationProfile=fast`，复用候选 full `1c068d538728a1195fdd08197f16f7e82d06dd4b / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31082019649](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31082019649)：merge SHA `9bd54490d09573d351c1e09da148393c3036a20`，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用候选 full / `success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.124：图片清空后的空态焦点
 
 日期：2026-08-06
