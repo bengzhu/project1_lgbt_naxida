@@ -2,6 +2,7 @@
 """Static contracts for v3.29 reversible image OCR false-positive dismissal."""
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -164,7 +165,11 @@ class ImageOCRFalsePositiveDismissalContractTests(unittest.TestCase):
             "private func restoreIgnoredImageTranslationBlock(_ block: ImageTranslationBlock)",
         )
         self.assertIn("store.restoreIgnoredImageTranslationBlock(block.id)", restore)
-        self.assertIn("reviewFilter = ImageOCRResultSummary.requiresReview(block) ? .needsReview : .all", restore)
+        self.assertIn("ImageOCRResultSummary.requiresReview(block)", restore)
+        self.assertRegex(
+            restore,
+            r"prepareReviewFilterChange\(\s*to: nextFilter",
+        )
         self.assertIn("revealPreview()", restore)
         self.assertIn("moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(block.id))", restore)
 
