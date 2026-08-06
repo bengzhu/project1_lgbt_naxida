@@ -1,3 +1,24 @@
+## v3.127：图片失败状态直接 retry action
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.127 普通图片失败状态行直接 VoiceOver retry action、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.127`。候选 commit `a7ef8ce984234bf4631f206186f70bbec3ff2b64` 已通过 PR [#191](https://github.com/bengzhu/project1_lgbt_naxida/pull/191) 合入，merge SHA `03d5b82b97c102043a0c262775061401cc38ac8a`；候选远端分支已清理，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPanel` 的图片状态行按现有显示优先级提供 direct action：分享准备 `.failed` 时提供“重试分享”，导出重绘 `.failed` 时提供“重试导出”，两者都没有失败时才提供既有“重试当前图片”。这样 VoiceOver 用户无需回到命令栏即可从当前失败上下文恢复操作。
+- 分享 action 复用既有 `shareResult()`；导出 action 复用 `store.retryImageTranslationExportRender()`。状态 helper、优先级和 hint 均为 View 私有，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告或 Koharu active gate。
+- 新增 `scripts/test-v3127-image-failure-status-actions-contract.py`；v3.127 合同接入 UI/full fail-fast，CI 路由保持在 GitHub Actions 表达式长度限制内。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31084259880](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31084259880)：提交 SHA `a7ef8ce984234bf4631f206186f70bbec3ff2b64`，`validationProfile=full`、Xcode build success，静态／Speech／UI／home／paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`。
+- 候选 exact-SHA full [31084281958](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31084281958)：`validationProfile=full`、`validationReason=manual_full`，exact SHA 与候选一致，Xcode build success，静态／Speech／UI／home／paste 合同 success，JUnit `10/10`，probe skip；active Koharu validator 明确为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #191 fast [31084713250](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31084713250)：exact head SHA，`validationProfile=fast`，复用候选 full `a7ef8ce984234bf4631f206186f70bbec3ff2b64 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31084803922](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31084803922)：merge SHA `03d5b82b97c102043a0c262775061401cc38ac8a`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full / `success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.126：图片导出／分享失败后的状态焦点
 
 日期：2026-08-06
