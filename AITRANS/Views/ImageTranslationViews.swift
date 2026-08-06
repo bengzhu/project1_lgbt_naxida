@@ -1062,7 +1062,17 @@ struct ImageTranslationPanel: View {
 
     @ViewBuilder
     private func imageStatusAccessibilityRow<Content: View>(_ content: Content) -> some View {
-        if canRetryFromImageStatus {
+        if hasImageShareFailure {
+            content
+                .accessibilityAction(named: "重试分享") {
+                    shareResult()
+                }
+        } else if hasImageExportRenderFailure {
+            content
+                .accessibilityAction(named: "重试导出") {
+                    store.retryImageTranslationExportRender()
+                }
+        } else if canRetryFromImageStatus {
             content
                 .accessibilityAction(named: "重试当前图片") {
                     guard store.canRetryImageTranslation else { return }
@@ -1071,6 +1081,20 @@ struct ImageTranslationPanel: View {
         } else {
             content
         }
+    }
+
+    private var hasImageShareFailure: Bool {
+        if case .failed = store.imageTranslationShareState {
+            return true
+        }
+        return false
+    }
+
+    private var hasImageExportRenderFailure: Bool {
+        if case .failed = store.imageTranslationExportRenderState {
+            return true
+        }
+        return false
     }
 
     private var canRetryFromImageStatus: Bool {
@@ -1112,7 +1136,7 @@ struct ImageTranslationPanel: View {
         case .preparing:
             return "正在准备分享；完成后会打开系统分享"
         case .failed:
-            return "分享准备失败；可以关闭分享并重新导出"
+            return "分享准备失败；可在此状态上执行“重试分享”，也可以关闭分享并重新导出"
         case .idle:
             break
         }
@@ -1121,7 +1145,7 @@ struct ImageTranslationPanel: View {
         case .rendering:
             return "正在按所选覆盖方式更新导出图；完成后可继续修改或分享"
         case .failed:
-            return "导出图生成失败；可以重试导出，不会重新识别或翻译图片"
+            return "导出图生成失败；可在此状态上执行“重试导出”，不会重新识别或翻译图片"
         case .idle:
             break
         }
