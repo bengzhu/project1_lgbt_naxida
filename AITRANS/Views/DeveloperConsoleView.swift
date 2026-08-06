@@ -1554,9 +1554,10 @@ private struct MangaProbeBlockRow: View {
     let report: MangaOverlayProbeReport?
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let accessibilityFocusID: String
+    @State private var isExpanded = false
 
     var body: some View {
-        DisclosureGroup {
+        DisclosureGroup(isExpanded: $isExpanded) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.control) {
                 DeveloperCodeBlock(title: "ocr", text: block.ocrText)
                 if !block.translatedText.isEmpty { DeveloperCodeBlock(title: "translation", text: block.translatedText) }
@@ -1569,6 +1570,11 @@ private struct MangaProbeBlockRow: View {
                 }
             }
             .padding(.vertical, AppTheme.Spacing.control)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("漫画探针文字块 \(block.index) 详细诊断")
+            .accessibilityValue(blockAccessibilityValue)
+            .accessibilityHint("已展开 OCR、译文和诊断输出；收起后回到结果行")
+            .accessibilityFocused(accessibilityFocus, equals: detailAccessibilityFocusID)
         } label: {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -1628,6 +1634,22 @@ private struct MangaProbeBlockRow: View {
             .accessibilityFocused(accessibilityFocus, equals: accessibilityFocusID)
         }
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
+        .onChange(of: isExpanded) { _, expanded in
+            focusExpandedDiagnosticDetail(expanded)
+        }
+    }
+
+    private var detailAccessibilityFocusID: String {
+        "manga-diagnostic-detail-\(block.index)"
+    }
+
+    private func focusExpandedDiagnosticDetail(_ expanded: Bool) {
+        Task { @MainActor in
+            await Task.yield()
+            accessibilityFocus.wrappedValue = expanded
+                ? detailAccessibilityFocusID
+                : accessibilityFocusID
+        }
     }
 
     private var blockAccessibilityValue: String {
