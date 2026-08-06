@@ -1,3 +1,23 @@
+## v3.108：漫画诊断筛选结果焦点交接
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.108 Developer Console 漫画诊断筛选结果焦点的 View-only 改进、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.108`。候选 commit `c6bee294a7a5e59b51e39aa3b27cc09c5a913616` 已通过 PR [#172](https://github.com/bengzhu/project1_lgbt_naxida/pull/172) 合入，merge SHA `859bac7b6e47f31ab3b14220737fe3d9c4048a07`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- Developer Console 漫画诊断筛选从空结果或其他类别切换到有结果时，在一次主线程让渡后把 VoiceOver 焦点交给 `filteredProbeBlocks[0]` 对应的结果行；结果行使用稳定的 block accessibility identity，保持筛选结果可继续操作。
+- 空筛选继续复用 v3.107 的可操作空态焦点；焦点状态只存在于 `MangaProbeSection` 的 `AccessibilityFocusState`，`MangaProbeBlockRow` 只接收既有 report 和 View-only binding/id，不新增 Store／持久化、不运行第二次探针、不改变 OCR、翻译、renderer/export、Koharu active gate、metrics 或 `output`。
+- 新增 `scripts/test-v3108-manga-filter-result-focus-contract.py`，并让 v3.399 历史报告交接合同接受额外的 View-only 行上下文而不绑定旧初始化器排版；CI 路由接在 v3.107 后进入 UI/full fail-fast。
+
+边界：本版只改善漫画诊断筛选后的 VoiceOver 焦点与源码合同鲁棒性；候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译指标或 `metrics/version_history.csv`、仓库 `output/` 变更。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 full [31063355633](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31063355633)：exact SHA `c6bee294...`，`validationProfile=full`、`validationReason=candidate_development_push`、Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；Koharu readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #172 fast [31063761078](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31063761078)：exact head SHA，`validationProfile=fast`，复用候选 full `c6bee294.../success`，Xcode 与领域大套件按 fast 规则跳过，JUnit `10/10`；不是新的编译证据。
+- merge fast [31063805810](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31063805810)：merge SHA `859bac7b...`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `c6bee294.../success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+
 ## v3.107：筛选空态 VoiceOver 焦点交接
 
 日期：2026-08-06

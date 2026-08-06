@@ -142,6 +142,12 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.108 漫画诊断筛选结果焦点合同
+
+- `scripts/test-v3108-manga-filter-result-focus-contract.py` 必须验证 Developer Console 漫画诊断筛选从空结果或其他筛选切换到有结果时，在主线程让渡后将 `AccessibilityFocusState` 交给 `filteredProbeBlocks[0]` 对应的结果行；结果行必须接收 View-only focus binding/id 并使用稳定 block identity。筛选无结果时仍必须复用 v3.107 的可操作空态焦点，焦点不得进入 Store／持久化、探针运行、OCR、翻译、renderer/export 或报告写入。
+- 历史 v3.399 报告交接合同必须只约束当前 `MangaOverlayProbeReport` 已传入结果行，不得因新增 View-only 行上下文而绑定旧初始化器排版；本版新增合同接在 v3.107 后进入 UI/full fail-fast，并允许 v3.107 及更早合同继续接受后续正式 `3.x` 版本。
+- 候选 full `31063355633`（exact SHA `c6bee294...`）、PR #172 fast `31063761078`、merge fast `31063805810` 均已通过；候选 full 提供 Xcode/JUnit `10/10`，PR fast 复用候选 full，merge fast 必须记录 `reusedFullValidationSha=c6bee294...`、`reusedFullValidationState=success` 和 `receiptPropagationAllowed=true`。本版默认 `probe_mode=skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`；Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.107 筛选空态 VoiceOver 焦点合同
 
 - `scripts/test-v3107-filter-empty-state-focus-contract.py` 必须验证普通图片 OCR 与漫画诊断筛选无结果时的 accessibility focus identity、label/value/hint、`0 / 总数` 上下文和切换筛选恢复路径；图片筛选切换后必须清除隐藏选择并优先交接空态或复查完成态，漫画探针新运行／加载时必须清除旧诊断焦点。合同只允许 View 私有状态，不得新增 Store／持久化或改变 OCR、翻译、renderer/export、探针报告、Koharu gate、metrics 与 output；必须接在 v3.106 后进入 UI/full fail-fast。云端候选 full `31020576411`、PR fast `31062338507`、merge fast `31062372361` 均通过，探针默认 skip，真实 Koharu 四件套仍缺失。
