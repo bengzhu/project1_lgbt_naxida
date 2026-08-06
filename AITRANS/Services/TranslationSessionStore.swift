@@ -1717,6 +1717,47 @@ final class TranslationSessionStore: ObservableObject {
         return true
     }
 
+    @discardableResult
+    func restoreAllIgnoredImageTranslationBlocks() -> [UUID] {
+        guard imageTranslationCorrectionBlockID == nil,
+              imageTranslationState == .translated else {
+            imageTranslationCorrectionMessage = "当前文字块无法恢复，请等待图片翻译完成"
+            return []
+        }
+
+        let snapshots = imageTranslationIgnoredBlockSnapshots.values.sorted { lhs, rhs in
+            if lhs.originalOrder == rhs.originalOrder {
+                return lhs.block.id.uuidString < rhs.block.id.uuidString
+            }
+            return lhs.originalOrder < rhs.originalOrder
+        }
+        guard !snapshots.isEmpty else { return [] }
+
+        for snapshot in snapshots {
+            let insertionIndex = imageTranslationBlocks.firstIndex { block in
+                (imageTranslationOriginalBlockOrder[block.id] ?? Int.max) > snapshot.originalOrder
+            } ?? imageTranslationBlocks.endIndex
+            imageTranslationBlocks.insert(snapshot.block, at: insertionIndex)
+            if snapshot.wasManuallyCorrected {
+                imageTranslationCorrectedBlockIDs.insert(snapshot.block.id)
+            }
+            if let visionOriginalBlock = snapshot.visionOriginalBlock {
+                imageTranslationVisionOriginalBlocks[snapshot.block.id] = visionOriginalBlock
+            }
+            imageTranslationReviewedBlockIDs.remove(snapshot.block.id)
+        }
+
+        imageTranslationIgnoredBlockSnapshots.removeAll(keepingCapacity: true)
+        refreshImageTranslationIgnoredBlocks()
+        imageTranslationCorrectionMessage = nil
+        imageTranslationMessage = "已恢复 \(snapshots.count) 个 OCR 文字块，正在更新导出图"
+        synchronizeImageTranslationTranscript(blocks: imageTranslationBlocks)
+        invalidateImageOverlayRender()
+        discardImageTranslationExport()
+        rerenderImageTranslationExport()
+        return snapshots.map(\.block.id)
+    }
+
     func correctImageTranslationBlock(_ blockID: UUID, original correctedOriginal: String) async -> Bool {
         let correctedOriginal = correctedOriginal.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !correctedOriginal.isEmpty else {

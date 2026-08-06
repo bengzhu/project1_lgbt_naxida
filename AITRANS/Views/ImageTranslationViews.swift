@@ -135,6 +135,7 @@ struct ImageTranslationPanel: View {
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
     @State private var restoreConfirmationBlock: ImageTranslationBlock?
+    @State private var showRestoreAllIgnoredConfirmation = false
     @State private var pendingRestoreConfirmationDismissalFocusID: String?
     @State private var pendingRestoreConfirmationDismissalRevision: Int?
     @State private var pendingCorrectionSheetDismissalFocusID: String?
@@ -193,6 +194,18 @@ struct ImageTranslationPanel: View {
         } message: {
             Text("这会移除本次人工修正，并恢复识别时的原文和初始译文。")
         }
+        .confirmationDialog(
+            "恢复全部已忽略文字块？",
+            isPresented: $showRestoreAllIgnoredConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("恢复全部文字块") {
+                restoreAllIgnoredImageTranslationBlocks()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("这会把 \(store.imageTranslationIgnoredBlocks.count) 个文字块恢复到图片预览、导出和当前转录；需要复查的文字块会重新回到待复查队列。")
+        }
         .onChange(of: store.imageTranslationExportURL) { _, exportURL in
             guard exportURL == nil else { return }
             finishSharing()
@@ -219,6 +232,7 @@ struct ImageTranslationPanel: View {
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
             restoreConfirmationBlock = nil
+            showRestoreAllIgnoredConfirmation = false
             clearPendingRestoreConfirmationDismissalFocus()
             clearPendingCorrectionSheetDismissalFocus()
             reviewAccessibilityFocusID = nil
@@ -561,6 +575,18 @@ struct ImageTranslationPanel: View {
                     systemImage: "eye.slash"
                 )
 
+                AppSecondaryButton(
+                    title: "恢复全部 \(store.imageTranslationIgnoredBlocks.count)",
+                    systemImage: "arrow.uturn.backward",
+                    action: requestRestoreAllIgnoredImageTranslationBlocks
+                )
+                .disabled(!canModifyImageTranslation)
+                .accessibilityHint(
+                    canModifyImageTranslation
+                        ? "恢复全部已忽略文字块到图片预览、导出和当前转录；需要复查的文字块会重新回到待复查队列"
+                        : imageModificationUnavailableDetail
+                )
+
                 LazyVStack(spacing: 0) {
                     ForEach(store.imageTranslationIgnoredBlocks) { block in
                         ImageTranslationIgnoredBlockRow(
@@ -812,6 +838,22 @@ struct ImageTranslationPanel: View {
         selectedImageTranslationBlockID = block.id
         revealPreview()
         moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(block.id))
+    }
+
+    private func requestRestoreAllIgnoredImageTranslationBlocks() {
+        guard canModifyImageTranslation,
+              !store.imageTranslationIgnoredBlocks.isEmpty else { return }
+        showRestoreAllIgnoredConfirmation = true
+    }
+
+    private func restoreAllIgnoredImageTranslationBlocks() {
+        guard canModifyImageTranslation else { return }
+        let restoredBlockIDs = store.restoreAllIgnoredImageTranslationBlocks()
+        guard let firstRestoredBlockID = restoredBlockIDs.first else { return }
+        let focusID = reviewRowAccessibilityFocusID(firstRestoredBlockID)
+        selectedImageTranslationBlockID = firstRestoredBlockID
+        prepareReviewFilterChange(to: .all, focusID: focusID)
+        moveReviewAccessibilityFocus(to: focusID)
     }
 
     private func completeReviewAfterCorrection(_ blockID: UUID) {
