@@ -1,3 +1,23 @@
+## v3.112：图片 OCR 终态 VoiceOver 焦点交接
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.112 普通图片 OCR 新图／重试终态焦点的 View-only 改进、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.112`。候选 commit `a150982ab83dac47000bb6bce34caa9aa74ecf26` 已通过 PR [#176](https://github.com/bengzhu/project1_lgbt_naxida/pull/176) 合入，merge SHA `f467a72a3de9d5ab6e876a51e228e19e037f4174`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- 普通图片 OCR 的新 `imageTranslationRevision` 进入 `.translated` 或 `.failed` 后恢复 VoiceOver 焦点：有 blocks 时交给当前筛选的首个 OCR 结果行，无 blocks 时交给动态“图片翻译状态”行，状态行继续读出实时阶段、详情和下一步边界。
+- revision 变化时保留既有筛选意图清理、选中 block 清除、修正／恢复 sheet 关闭和旧 accessibility focus 清空；pending terminal revision 只存在于 `ImageTranslationPanel` 的 View `@State`，终态 Task 用 revision guard 防止旧图片任务抢焦点。
+- 非新 revision 的人工修正、复查、导出重绘和分享状态变化不会触发终态焦点交接；新增 `scripts/test-v3112-image-translation-terminal-focus-contract.py` 并接入 UI/full fail-fast。
+
+边界：本版只改善普通图片 OCR 完成／失败后的 VoiceOver 操作连续性，不改变 Vision OCR 候选、翻译 prompt/model、Store／持久化、renderer/export、漫画探针、probe_report、Koharu active artifact gate、metrics 或仓库 `output`。候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译指标。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 full [31067968394](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31067968394)：exact SHA `a150982ab83dac47000bb6bce34caa9aa74ecf26`，`validationProfile=full`、`validationReason=manual_full`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.112`，readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #176 fast [31068324104](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31068324104)：exact head SHA，`validationProfile=fast`，`reusedFullValidationSha=a150982ab83dac47000bb6bce34caa9aa74ecf26`、`reusedFullValidationState=success`，Xcode 与领域大套件按 fast 规则跳过，JUnit `10/10`；不是新的编译证据。
+- merge fast [31068365757](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31068365757)：merge SHA `f467a72a3de9d5ab6e876a51e228e19e037f4174`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `a150982ab83dac47000bb6bce34caa9aa74ecf26` / `success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+
 ## v3.111：漫画探针报告终态 VoiceOver 焦点交接
 
 日期：2026-08-06
