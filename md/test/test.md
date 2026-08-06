@@ -160,6 +160,12 @@
 - `.preparing`／`.rendering` 等运行中状态不得抢焦点；焦点与失败分流必须保持 View 私有，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
 - 合同接在 v3.125 后进入 UI/full fail-fast，并沿用表达式长度安全的既有 UI 路由。候选 full `31082994159`（exact SHA `244f97435d340207c7684c3a2ab553b552b3b780`）Xcode/JUnit `10/10` 成功；PR #190 fast `31083400009`、merge fast `31083557316` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.128 图片复查完成态 VoiceOver action 合同
+
+- `scripts/test-v3128-image-review-completion-action-contract.py` 必须验证 `reviewFilter == .needsReview` 且 `reviewCompletedBlockCount > 0` 的完成空态成为单一 VoiceOver element，label 为“本次复查完成”，value 读出完成／总风险块数量与当前筛选，并保留稳定 `reviewCompletionAccessibilityFocusID`。
+- 完成空态必须提供命名为“重新复查”的 VoiceOver action，直接复用既有 `restartReviewQueue()`；action 受 `canReviewImageTranslation` 与 Store 的 translated 状态门保护。该 View-only 合同不得新增 Store／持久化、OCR、翻译、renderer/export、probe_report 或 Koharu active gate 路径。
+- 合同接在 v3.127 后进入 UI/full fail-fast。候选 exact-SHA full `31085406753`（`d31745f8461ec6eeee0e8ce75e5965874a10b7b7`）Xcode/JUnit `10/10` 成功；PR #192 fast `31085987796`、merge fast `31086053876` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.127 图片失败状态直接 retry action 合同
 
 - `scripts/test-v3127-image-failure-status-actions-contract.py` 必须验证图片状态行按现有状态显示优先级提供直接 VoiceOver action：`imageTranslationShareState == .failed` 时提供“重试分享”并复用 `shareResult()`；否则 `imageTranslationExportRenderState == .failed` 时提供“重试导出”并复用 `store.retryImageTranslationExportRender()`；只有两者都没有失败时才保留“重试当前图片”。
