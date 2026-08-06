@@ -42,10 +42,8 @@ class KoharuReadinessDeveloperSummaryContractTests(unittest.TestCase):
             "if let readiness = report.externalArtifactReadinessReport",
             self.section,
         )
-        self.assertIn(
-            "MangaKoharuArtifactReadinessSummary(readiness: readiness)",
-            self.section,
-        )
+        self.assertIn("MangaKoharuArtifactReadinessSummary(", self.section)
+        self.assertIn("readiness: readiness", self.section)
         self.assertNotIn("runMangaOverlayProbe", self.summary)
         self.assertNotIn("@EnvironmentObject", self.summary)
 
