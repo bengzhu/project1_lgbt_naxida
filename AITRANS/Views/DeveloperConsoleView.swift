@@ -1137,6 +1137,7 @@ private struct MangaProbeSection: View {
             diagnosticAccessibilityFocusID = nil
         }
         .onChange(of: diagnosticFilter) { _, _ in
+            diagnosticExpansionResetID += 1
             focusDiagnosticFilterResultIfNeeded()
         }
         .onChange(of: store.mangaOverlayProbeReport) { _, report in
