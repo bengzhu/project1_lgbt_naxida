@@ -142,6 +142,12 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.120 图片 OCR 待重试语言可操作焦点合同
+
+- `scripts/test-v3120-image-retry-language-accessibility-action-contract.py` 必须验证 v3.119 聚焦的“重试语言已更新”状态提供命名为“重试当前图片”的 VoiceOver action；action 必须先检查 `store.canRetryImageTranslation`，再调用既有 `store.retryImageTranslation()`，不得创建新的 Store 状态或绕过 retry 生命周期。
+- 状态行的 hint/value 必须继续说明待重试语言与重新识别／翻译边界；不可重试时 action 安全无效。合同接在 v3.119 后进入 UI/full fail-fast，不改变 Vision OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
+- 候选 full `31075361390`（exact SHA `25855f7e6b757c2ae901c794c56990215399cb68`）Xcode/JUnit `10/10` 成功；PR #184 fast `31075697828`、merge fast `31075745893` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.119 图片 OCR 待重试语言焦点合同
 
 - `scripts/test-v3119-image-retry-language-focus-contract.py` 必须验证输入／目标语言实际改变并生成 `imageTranslationRetryLanguageSummary` 后，`ImageTranslationPanel` 将 VoiceOver 焦点交给稳定的“重试语言已更新”状态行；label/value/hint 必须说明下一次重试语言和重新识别／翻译边界，summary 未变化时不得抢焦点或调用重试。

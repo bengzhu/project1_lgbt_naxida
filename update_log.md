@@ -1,3 +1,23 @@
+## v3.120：图片 OCR 待重试语言可操作焦点
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.120 普通图片 OCR 待重试语言状态的 VoiceOver 可操作 action、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.120`。候选 commit `25855f7e6b757c2ae901c794c56990215399cb68` 已通过 PR [#184](https://github.com/bengzhu/project1_lgbt_naxida/pull/184) 合入，merge SHA `205e78e0f7dd39c51a9c8dbf93748c1a5ef0a090`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- v3.119 已将焦点交给“重试语言已更新”状态；本版让该状态提供命名为“重试当前图片”的 VoiceOver custom action，先检查既有 `store.canRetryImageTranslation`，再调用 `store.retryImageTranslation()`，VoiceOver 用户无需再次导航到命令栏即可重试。
+- action 复用现有 Store retry 生命周期和 v3.119 的 summary/focus 语义；不可重试时安全无效，不新增 Store／持久化，不改变 Vision OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
+- 新增 `scripts/test-v3120-image-retry-language-accessibility-action-contract.py`，接入 UI/full fail-fast，锁定 action 名称、retry guard、既有 Store 调用和版本/CI 路由。
+
+边界：本版只缩短失败／取消图片在待重试语言已更新后的 VoiceOver 操作链，不重新运行 OCR／翻译，不改变 OCR 候选、翻译模型、renderer/export、探针报告、metrics 或仓库 `output/`。候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31075361390](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31075361390)：exact SHA `25855f7e6b757c2ae901c794c56990215399cb68`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.120`，readiness validator 记录 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #184 fast [31075697828](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31075697828)：exact head SHA，`validationProfile=fast`，复用候选 full `25855f7e6b757c2ae901c794c56990215399cb68 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31075745893](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31075745893)：merge SHA `205e78e0f7dd39c51a9c8dbf93748c1a5ef0a090`，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用候选 full / `success`，Xcode skipped，JUnit `10/10`。
+
 ## v3.119：图片 OCR 待重试语言焦点
 
 日期：2026-08-06
