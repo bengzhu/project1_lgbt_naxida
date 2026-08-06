@@ -1,3 +1,23 @@
+## v3.111：漫画探针报告终态 VoiceOver 焦点交接
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.111 Developer Console 漫画探针报告终态焦点的 View-only 改进、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.111`。候选 commit `70222e95035c7cd5a71799735e11539f755b5d08` 已通过 PR [#175](https://github.com/bengzhu/project1_lgbt_naxida/pull/175) 合入，merge SHA `9a28692cebf3360ca00b5e0b7f77463f103bdaa2`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- Developer Console 的漫画探针在既有 `MangaOverlayProbeReport` 写入后恢复 VoiceOver 焦点：报告存在 blocks 时交给当前诊断筛选的首个结果行，报告没有 blocks 时交给“未生成逐块诊断”状态；空报告状态继续说明 `test/1.png`、Output 清理和重试范围。
+- 探针进入 loading 时仍先重置 `diagnosticFilter` 并清除旧焦点，避免上一轮结果或筛选残留；终态焦点只保存在 `MangaProbeSection` 的 `@AccessibilityFocusState`，不进入 Store／持久化，不触发第二次探针。
+- 新增 `scripts/test-v3111-manga-probe-terminal-focus-contract.py` 并接入 UI/full fail-fast；该合同验证 blocks、空报告、筛选空态、loading 清理和 View-only 边界。
+
+边界：本版只改善漫画探针重跑后的 VoiceOver 操作连续性及失败重试可发现性，不改变普通图片 OCR、Vision OCR、翻译 prompt/model、renderer/export、probe_report、Koharu active artifact gate、metrics 或仓库 `output`。候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译指标。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 full [31067283530](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31067283530)：exact SHA `70222e95035c7cd5a71799735e11539f755b5d08`，`validationProfile=full`、`validationReason=manual_full`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.111`，readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #175 fast [31067583454](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31067583454)：exact head SHA，`validationProfile=fast`，`reusedFullValidationSha=70222e95035c7cd5a71799735e11539f755b5d08`、`reusedFullValidationState=success`，Xcode 与领域大套件按 fast 规则跳过，JUnit `10/10`；不是新的编译证据。
+- merge fast [31067629934](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31067629934)：merge SHA `9a28692cebf3360ca00b5e0b7f77463f103bdaa2`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `70222e95035c7cd5a71799735e11539f755b5d08` / `success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+
 ## v3.110：图片 OCR 筛选焦点意图仲裁
 
 日期：2026-08-06
