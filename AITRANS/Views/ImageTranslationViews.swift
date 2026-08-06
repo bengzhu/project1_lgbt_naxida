@@ -118,6 +118,7 @@ struct ImageTranslationPanel: View {
     private static let reviewFilterEmptyAccessibilityFocusID = "image-review-filter-empty"
     private static let imageTranslationStatusAccessibilityFocusID = "image-translation-status"
     private static let imagePreviewStatusAccessibilityFocusID = "image-preview-status"
+    private static let imageEmptyAccessibilityFocusID = "image-empty-state"
     private static let imageRetryLanguageStatusAccessibilityFocusID = "image-retry-language-status"
 
     @EnvironmentObject private var store: TranslationSessionStore
@@ -213,6 +214,10 @@ struct ImageTranslationPanel: View {
             clearPendingRestoreConfirmationDismissalFocus()
             clearPendingCorrectionSheetDismissalFocus()
             reviewAccessibilityFocusID = nil
+            if store.imageTranslationData == nil,
+               store.imageTranslationState == .idle {
+                moveReviewAccessibilityFocus(to: Self.imageEmptyAccessibilityFocusID)
+            }
         }
         .onChange(of: store.imageTranslationState) { oldState, state in
             if state == .idle {
@@ -434,6 +439,14 @@ struct ImageTranslationPanel: View {
                         title: "等待图片",
                         detail: "选择照片或图片文件后，本机 OCR 结果会显示在这里。",
                         systemImage: "photo.badge.plus"
+                    )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("等待图片")
+                    .accessibilityValue("当前没有图片")
+                    .accessibilityHint("从上方照片或文件按钮选择图片，并开始本机 OCR 与翻译")
+                    .accessibilityFocused(
+                        $reviewAccessibilityFocusID,
+                        equals: Self.imageEmptyAccessibilityFocusID
                     )
                 } else if !store.imageTranslationIgnoredBlocks.isEmpty {
                     AppEmptyState(
