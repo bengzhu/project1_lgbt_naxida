@@ -124,6 +124,8 @@ struct ImageTranslationPanel: View {
     @State private var shareURL: URL?
     @State private var sharePresentationID = UUID()
     @State private var reviewFilter: ImageOCRReviewFilter = .all
+    @State private var pendingReviewFilterFocusID: String?
+    @State private var suppressNextReviewFilterResultFocus = false
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
     @State private var restoreConfirmationBlock: ImageTranslationBlock?
@@ -193,7 +195,11 @@ struct ImageTranslationPanel: View {
             finishSharing()
         }
         .onChange(of: store.imageTranslationRevision) { _, _ in
-            reviewFilter = .all
+            prepareReviewFilterChange(
+                to: .all,
+                focusID: nil,
+                suppressResultFocus: true
+            )
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
             restoreConfirmationBlock = nil
@@ -202,8 +208,16 @@ struct ImageTranslationPanel: View {
             reviewAccessibilityFocusID = nil
         }
         .onChange(of: reviewFilter) { _, _ in
+            let explicitFocusID = pendingReviewFilterFocusID
+            let suppressResultFocus = suppressNextReviewFilterResultFocus
+            pendingReviewFilterFocusID = nil
+            suppressNextReviewFilterResultFocus = false
             clearHiddenReviewSelection()
-            focusReviewFilterResultIfNeeded()
+            if let explicitFocusID {
+                moveReviewAccessibilityFocus(to: explicitFocusID)
+            } else if !suppressResultFocus {
+                focusReviewFilterResultIfNeeded()
+            }
             focusEmptyReviewStateIfNeeded()
         }
     }
@@ -682,7 +696,11 @@ struct ImageTranslationPanel: View {
     private func restoreIgnoredImageTranslationBlock(_ block: ImageTranslationBlock) {
         guard canModifyImageTranslation,
               store.restoreIgnoredImageTranslationBlock(block.id) else { return }
-        reviewFilter = ImageOCRResultSummary.requiresReview(block) ? .needsReview : .all
+        let nextFilter = ImageOCRResultSummary.requiresReview(block) ? ImageOCRReviewFilter.needsReview : .all
+        prepareReviewFilterChange(
+            to: nextFilter,
+            focusID: reviewRowAccessibilityFocusID(block.id)
+        )
         selectedImageTranslationBlockID = block.id
         revealPreview()
         moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(block.id))
@@ -715,7 +733,10 @@ struct ImageTranslationPanel: View {
             return
         }
         if !visibleImageTranslationBlocks.contains(where: { $0.id == blockID }) {
-            reviewFilter = .all
+            prepareReviewFilterChange(
+                to: .all,
+                focusID: reviewPreviewAccessibilityFocusID(blockID)
+            )
         }
         selectedImageTranslationBlockID = blockID
         moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(blockID))
@@ -733,8 +754,11 @@ struct ImageTranslationPanel: View {
         let retainedBlockID = selectedImageTranslationBlockID.flatMap { selectedBlockID in
             reviewRequiredBlocks.contains(where: { $0.id == selectedBlockID }) ? selectedBlockID : nil
         }
-        reviewFilter = .needsReview
         let targetBlockID = retainedBlockID ?? firstBlockID
+        prepareReviewFilterChange(
+            to: .needsReview,
+            focusID: reviewPreviewAccessibilityFocusID(targetBlockID)
+        )
         selectedImageTranslationBlockID = targetBlockID
         revealPreview()
         moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(targetBlockID))
@@ -744,12 +768,13 @@ struct ImageTranslationPanel: View {
         guard canReviewImageTranslation,
               allReviewRequiredBlocks.contains(where: { $0.id == blockID }) else { return }
         if store.reopenImageTranslationBlockReview(blockID) {
-            reviewFilter = .needsReview
+            let focusID = focusInPreview
+                ? reviewPreviewAccessibilityFocusID(blockID)
+                : reviewRowAccessibilityFocusID(blockID)
+            prepareReviewFilterChange(to: .needsReview, focusID: focusID)
             selectedImageTranslationBlockID = blockID
             moveReviewAccessibilityFocus(
-                to: focusInPreview
-                    ? reviewPreviewAccessibilityFocusID(blockID)
-                    : reviewRowAccessibilityFocusID(blockID)
+                to: focusID
             )
             return
         }
@@ -759,13 +784,13 @@ struct ImageTranslationPanel: View {
         let nextBlockID = pendingBlocks.dropFirst(currentIndex + 1).first?.id
             ?? pendingBlocks[..<currentIndex].last?.id
         guard store.markImageTranslationBlockReviewed(blockID) else { return }
-        reviewFilter = .needsReview
-        selectedImageTranslationBlockID = nextBlockID
         let nextFocusID = nextBlockID.map {
             focusInPreview
                 ? reviewPreviewAccessibilityFocusID($0)
                 : reviewRowAccessibilityFocusID($0)
         } ?? Self.reviewCompletionAccessibilityFocusID
+        prepareReviewFilterChange(to: .needsReview, focusID: nextFocusID)
+        selectedImageTranslationBlockID = nextBlockID
         moveReviewAccessibilityFocus(to: nextFocusID)
     }
 
@@ -773,7 +798,10 @@ struct ImageTranslationPanel: View {
         guard canReviewImageTranslation,
               let firstBlockID = allReviewRequiredBlocks.first?.id else { return }
         store.resetImageTranslationReviewProgress()
-        reviewFilter = .needsReview
+        prepareReviewFilterChange(
+            to: .needsReview,
+            focusID: reviewPreviewAccessibilityFocusID(firstBlockID)
+        )
         selectedImageTranslationBlockID = firstBlockID
         revealPreview()
         moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(firstBlockID))
@@ -900,6 +928,21 @@ struct ImageTranslationPanel: View {
         }
         let focusID = reviewRowAccessibilityFocusID(firstVisibleBlock.id)
         moveReviewAccessibilityFocus(to: focusID)
+    }
+
+    private func prepareReviewFilterChange(
+        to nextFilter: ImageOCRReviewFilter,
+        focusID: String?,
+        suppressResultFocus: Bool = false
+    ) {
+        guard reviewFilter != nextFilter else {
+            pendingReviewFilterFocusID = nil
+            suppressNextReviewFilterResultFocus = false
+            return
+        }
+        pendingReviewFilterFocusID = focusID
+        suppressNextReviewFilterResultFocus = suppressResultFocus
+        reviewFilter = nextFilter
     }
 
     private var reviewFilterEmptyStateAccessibilityValue: String {
