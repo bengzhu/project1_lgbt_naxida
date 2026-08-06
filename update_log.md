@@ -1,3 +1,23 @@
+## v3.124：图片清空后的空态焦点
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.124 普通图片清空后的 VoiceOver 空态焦点修复、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.124`。候选 commit `e02b7a6d2c0f41098eb2cf82e6aa97f9b40c1ff9` 已通过 PR [#188](https://github.com/bengzhu/project1_lgbt_naxida/pull/188) 合入，merge SHA `738f82384e027058ae0e53cad5f7842ce92a010f`；候选远端分支已清理，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPanel` 在 `imageTranslationRevision` 变化时保留既有筛选／选择／焦点清理；仅当新状态确认为 `imageTranslationData == nil` 且 `imageTranslationState == .idle`（清空路径）时，才通过既有 `moveReviewAccessibilityFocus` 聚焦稳定的 `imageEmptyAccessibilityFocusID = "image-empty-state"`。
+- “等待图片”空态成为单一 VoiceOver 上下文，读出“当前没有图片”，并提示从上方照片或文件按钮开始本机 OCR 与翻译。新图片进入 loading、recognizing 或 translating 时不触发该空态焦点，避免清空与换图操作竞态。
+- 新增 `scripts/test-v3124-image-clear-empty-focus-contract.py` 并接入 UI/full fail-fast。该 View-only 改动不新增 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31080208334](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31080208334)：exact SHA `e02b7a6d2c0f41098eb2cf82e6aa97f9b40c1ff9`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 为 v3.124，active Koharu validator 记录 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #188 fast [31080768687](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31080768687)：exact head SHA，`validationProfile=fast`，复用候选 full `e02b7a6d2c0f41098eb2cf82e6aa97f9b40c1ff9 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31080830286](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31080830286)：merge SHA `738f82384e027058ae0e53cad5f7842ce92a010f`，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用候选 full / `success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.123：图片屏幕预览失败／重试后的状态焦点
 
 日期：2026-08-06
