@@ -1025,6 +1025,8 @@ private struct MangaProbeDiagnosticFilterControl: View {
 private struct MangaProbeSection: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var diagnosticFilter: MangaProbeDiagnosticFilter = .all
+    @AccessibilityFocusState private var diagnosticAccessibilityFocusID: String?
+    private static let diagnosticFilterEmptyAccessibilityFocusID = "manga-diagnostic-filter-empty"
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
@@ -1094,6 +1096,16 @@ private struct MangaProbeSection: View {
                     detail: "切换到全部或其他诊断类别查看逐块报告。",
                     systemImage: "line.3.horizontal.decrease.circle"
                 )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("当前漫画诊断筛选没有结果")
+                .accessibilityValue(
+                    "筛选为 \(diagnosticFilter.rawValue)，显示 0 个，共 \(store.mangaOverlayProbeBlocks.count) 个文字块；切换到全部或其他诊断类别查看逐块报告"
+                )
+                .accessibilityHint("使用上方漫画探针诊断筛选恢复逐块结果")
+                .accessibilityFocused(
+                    $diagnosticAccessibilityFocusID,
+                    equals: Self.diagnosticFilterEmptyAccessibilityFocusID
+                )
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(filteredProbeBlocks) { block in
@@ -1106,6 +1118,10 @@ private struct MangaProbeSection: View {
         .onChange(of: store.mangaOverlayProbeState) { _, state in
             guard state == .loading else { return }
             diagnosticFilter = .all
+            diagnosticAccessibilityFocusID = nil
+        }
+        .onChange(of: diagnosticFilter) { _, _ in
+            focusEmptyDiagnosticStateIfNeeded()
         }
     }
 
@@ -1114,6 +1130,19 @@ private struct MangaProbeSection: View {
             return store.mangaOverlayProbeBlocks
         }
         return store.mangaOverlayProbeBlocks.filter { diagnosticFilter.matches($0, report: report) }
+    }
+
+    private func focusEmptyDiagnosticStateIfNeeded() {
+        guard store.mangaOverlayProbeReport != nil,
+              !store.mangaOverlayProbeBlocks.isEmpty,
+              filteredProbeBlocks.isEmpty else { return }
+        Task { @MainActor in
+            await Task.yield()
+            guard store.mangaOverlayProbeReport != nil,
+                  !store.mangaOverlayProbeBlocks.isEmpty,
+                  filteredProbeBlocks.isEmpty else { return }
+            diagnosticAccessibilityFocusID = Self.diagnosticFilterEmptyAccessibilityFocusID
+        }
     }
 
     private var emptyProbeBlocksDetail: String {
