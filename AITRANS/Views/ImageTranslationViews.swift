@@ -127,6 +127,7 @@ struct ImageTranslationPanel: View {
     @State private var reviewFilter: ImageOCRReviewFilter = .all
     @State private var pendingReviewFilterFocusID: String?
     @State private var suppressNextReviewFilterResultFocus = false
+    @State private var reviewAccessibilityFocusRequestID = 0
     @State private var pendingImageTranslationTerminalFocusRevision: Int?
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
@@ -203,6 +204,7 @@ struct ImageTranslationPanel: View {
                 suppressResultFocus: true
             )
             pendingImageTranslationTerminalFocusRevision = store.imageTranslationRevision
+            reviewAccessibilityFocusRequestID &+= 1
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
             restoreConfirmationBlock = nil
@@ -874,9 +876,12 @@ struct ImageTranslationPanel: View {
 
     private func moveReviewAccessibilityFocus(to focusID: String?) {
         let revision = store.imageTranslationRevision
+        reviewAccessibilityFocusRequestID &+= 1
+        let requestID = reviewAccessibilityFocusRequestID
         Task { @MainActor in
             await Task.yield()
-            guard revision == store.imageTranslationRevision else { return }
+            guard revision == store.imageTranslationRevision,
+                  requestID == reviewAccessibilityFocusRequestID else { return }
             reviewAccessibilityFocusID = focusID
         }
     }
