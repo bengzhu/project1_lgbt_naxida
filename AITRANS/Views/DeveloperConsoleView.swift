@@ -1103,21 +1103,33 @@ private struct MangaProbeSection: View {
                     systemImage: "exclamationmark.triangle"
                 )
             } else if store.mangaOverlayProbeReport != nil, filteredProbeBlocks.isEmpty {
-                AppEmptyState(
-                    title: "当前诊断筛选没有结果",
-                    detail: "切换到全部或其他诊断类别查看逐块报告。",
-                    systemImage: "line.3.horizontal.decrease.circle"
-                )
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("当前漫画诊断筛选没有结果")
-                .accessibilityValue(
-                    "筛选为 \(diagnosticFilter.rawValue)，显示 0 个，共 \(store.mangaOverlayProbeBlocks.count) 个文字块；切换到全部或其他诊断类别查看逐块报告"
-                )
-                .accessibilityHint("使用上方漫画探针诊断筛选恢复逐块结果")
-                .accessibilityFocused(
-                    $diagnosticAccessibilityFocusID,
-                    equals: Self.diagnosticFilterEmptyAccessibilityFocusID
-                )
+                VStack(spacing: AppTheme.Spacing.control) {
+                    AppEmptyState(
+                        title: "当前诊断筛选没有结果",
+                        detail: "切换到全部或其他诊断类别查看逐块报告。",
+                        systemImage: "line.3.horizontal.decrease.circle"
+                    )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("当前漫画诊断筛选没有结果")
+                    .accessibilityValue(
+                        "筛选为 \(diagnosticFilter.rawValue)，显示 0 个，共 \(store.mangaOverlayProbeBlocks.count) 个文字块；切换到全部或其他诊断类别查看逐块报告"
+                    )
+                    .accessibilityHint("使用上方漫画探针诊断筛选恢复逐块结果；也可在此执行“显示全部诊断”")
+                    .accessibilityAction(named: "显示全部诊断") {
+                        showAllDiagnosticResults()
+                    }
+                    .accessibilityFocused(
+                        $diagnosticAccessibilityFocusID,
+                        equals: Self.diagnosticFilterEmptyAccessibilityFocusID
+                    )
+
+                    AppSecondaryButton(
+                        title: "显示全部诊断",
+                        systemImage: "list.bullet",
+                        action: showAllDiagnosticResults
+                    )
+                    .accessibilityHint("切换到全部诊断，查看本次探针的所有文字块")
+                }
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(filteredProbeBlocks) { block in
@@ -1156,6 +1168,11 @@ private struct MangaProbeSection: View {
             return store.mangaOverlayProbeBlocks
         }
         return store.mangaOverlayProbeBlocks.filter { diagnosticFilter.matches($0, report: report) }
+    }
+
+    private func showAllDiagnosticResults() {
+        guard diagnosticFilter != .all else { return }
+        diagnosticFilter = .all
     }
 
     private func focusEmptyDiagnosticStateIfNeeded() {
