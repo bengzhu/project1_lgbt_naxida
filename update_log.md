@@ -1,3 +1,23 @@
+## v3.122：图片 OCR 取消后的状态焦点
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.122 普通图片读取／Vision OCR／逐块翻译取消后的 VoiceOver 焦点修复、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.122`。候选 commit `9c0ed87838d7eb621fb762c67230df74321f5ab6` 已通过 PR [#186](https://github.com/bengzhu/project1_lgbt_naxida/pull/186) 合入，merge SHA `61401075429df063b7726037b81b91aade9178d3`；候选远端分支已清理，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPanel` 的状态监听现在接收 `oldState`；仅当 `.loading`、`.recognizing` 或 `.translating` 转为 `.idle` 时，清除尚未完成的终态焦点 revision，并通过既有 `moveReviewAccessibilityFocus` 将 VoiceOver 焦点交给单一“图片翻译状态”行。用户取消图片读取／OCR／翻译后会立即听到“图片翻译已取消”及可重试边界。
+- 初始 `.idle`、清空导致的非运行中 `.idle`、`.translated` 与 `.failed` 不抢焦点；原有 revision-scoped 终态 focus、待重试语言 focus 和状态 action 保持不变。焦点、generation 和 pending revision 仍是 View 私有状态。
+- 新增 `scripts/test-v3122-image-cancel-status-focus-contract.py` 并接入 changed-file UI/full fail-fast。该 View-only 改动不新增 Store／持久化，不改变 Vision OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31077891466](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31077891466)：exact SHA `9c0ed87838d7eb621fb762c67230df74321f5ab6`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 为 v3.122，active Koharu validator 记录 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #186 fast [31078311141](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31078311141)：exact head SHA，`validationProfile=fast`，复用候选 full `9c0ed87838d7eb621fb762c67230df74321f5ab6 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31078359581](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31078359581)：merge SHA `61401075429df063b7726037b81b91aade9178d3`，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用候选 full / `success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.121：图片 OCR 状态行失败／取消重试 action
 
 日期：2026-08-06
