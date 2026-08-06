@@ -1,3 +1,23 @@
+## v3.109：图片 OCR 筛选结果焦点交接
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.109 普通图片 OCR 识别结果筛选焦点的 View-only 改进、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.109`。候选 commit `b3a58afda5cbc0ffddfd337d1787a306a8ba2f36` 已通过 PR [#173](https://github.com/bengzhu/project1_lgbt_naxida/pull/173) 合入，merge SHA `1a422b2cd90f955895acea644e435fe86899a328`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- 普通图片 OCR 的 `reviewFilter` 切换到有结果的类别后，在保留隐藏选中项清理的前提下，将 VoiceOver 焦点交给 `visibleImageTranslationBlocks.first` 对应的 OCR 结果行；用户切换“全部／待复查／低置信／方向待定”后可以直接继续阅读和操作首个结果。
+- 无结果时仍由 v3.107 的复查完成态或筛选空态接管焦点；焦点只使用既有 revision-scoped `moveReviewAccessibilityFocus`，不进入 Store／持久化，不改变选择、复查进度、Vision OCR、翻译、renderer/export、漫画探针、Koharu active gate、metrics 或 `output`。
+- 新增 `scripts/test-v3109-image-filter-result-focus-contract.py`，接入 UI/full fail-fast；历史 v3.106–v3.108 与 v3.399 合同继续保留。
+
+边界：本版只改善普通图片 OCR 筛选后的 VoiceOver 操作连续性；候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译指标或 `metrics/version_history.csv`、仓库 `output/` 变更。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 full [31064198524](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31064198524)：exact SHA `b3a58afd...`，`validationProfile=full`、`validationReason=candidate_development_push`、Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；Koharu readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #173 fast [31064487760](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31064487760)：exact head SHA，`validationProfile=fast`，复用候选 full `b3a58afd.../success`，Xcode 与领域大套件按 fast 规则跳过，JUnit `10/10`；不是新的编译证据。
+- merge fast [31064532453](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31064532453)：merge SHA `1a422b2c...`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `b3a58afd.../success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+
 ## v3.108：漫画诊断筛选结果焦点交接
 
 日期：2026-08-06
