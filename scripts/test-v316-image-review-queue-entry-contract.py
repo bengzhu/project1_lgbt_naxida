@@ -2,6 +2,7 @@
 """Contracts for v3.16 one-tap image review queue entry."""
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -56,12 +57,16 @@ class ImageReviewQueueEntryContractTests(unittest.TestCase):
         self.assertIn("let firstBlockID = reviewRequiredBlocks.first?.id", begin)
         self.assertIn("selectedImageTranslationBlockID.flatMap", begin)
         self.assertIn("reviewRequiredBlocks.contains", begin)
-        self.assertIn("reviewFilter = .needsReview", begin)
+        filter_change = re.search(
+            r"reviewFilter = \.needsReview|prepareReviewFilterChange\(\s*to: \.needsReview",
+            begin,
+        )
+        self.assertIsNotNone(filter_change)
         self.assertIn("let targetBlockID = retainedBlockID ?? firstBlockID", begin)
         self.assertIn("selectedImageTranslationBlockID = targetBlockID", begin)
         self.assertEqual(begin.count("revealPreview()"), 1)
         self.assertLess(
-            begin.index("reviewFilter = .needsReview"),
+            filter_change.start(),
             begin.index("selectedImageTranslationBlockID = targetBlockID"),
         )
 

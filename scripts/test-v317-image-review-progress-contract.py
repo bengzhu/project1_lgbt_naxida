@@ -2,6 +2,7 @@
 """Regression contracts for v3.17 image review progression and v3.28 session ownership."""
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -81,7 +82,12 @@ class ImageReviewProgressContractTests(unittest.TestCase):
         self.assertIn("pendingBlocks.dropFirst(currentIndex + 1).first?.id", toggle)
         self.assertIn("pendingBlocks[..<currentIndex].last?.id", toggle)
         self.assertIn("store.markImageTranslationBlockReviewed(blockID)", toggle)
-        self.assertIn("reviewFilter = .needsReview", toggle)
+        self.assertIsNotNone(
+            re.search(
+                r"reviewFilter = \.needsReview|prepareReviewFilterChange\(\s*to: \.needsReview",
+                toggle,
+            )
+        )
         self.assertIn("selectedImageTranslationBlockID = nextBlockID", toggle)
 
     def test_completed_queue_has_clear_state_and_restart_command(self) -> None:
@@ -90,7 +96,12 @@ class ImageReviewProgressContractTests(unittest.TestCase):
         self.assertIn('systemImage: "arrow.counterclockwise"', self.view)
         restart = braced_body(self.view, "private func restartReviewQueue()")
         self.assertIn("store.resetImageTranslationReviewProgress()", restart)
-        self.assertIn("reviewFilter = .needsReview", restart)
+        self.assertIsNotNone(
+            re.search(
+                r"reviewFilter = \.needsReview|prepareReviewFilterChange\(\s*to: \.needsReview",
+                restart,
+            )
+        )
         self.assertIn("selectedImageTranslationBlockID = firstBlockID", restart)
         self.assertEqual(restart.count("revealPreview()"), 1)
 
