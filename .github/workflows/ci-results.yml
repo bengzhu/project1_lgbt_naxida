@@ -445,6 +445,9 @@ jobs:
           if grep -Fx 'scripts/test-v3110-image-filter-focus-intent-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
+          if grep -Fx 'scripts/test-v3111-manga-probe-terminal-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
           # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
 
@@ -1131,6 +1134,7 @@ jobs:
             python3 -B scripts/test-v3108-manga-filter-result-focus-contract.py
             python3 -B scripts/test-v3109-image-filter-result-focus-contract.py
             python3 -B scripts/test-v3110-image-filter-focus-intent-contract.py
+            python3 -B scripts/test-v3111-manga-probe-terminal-focus-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract

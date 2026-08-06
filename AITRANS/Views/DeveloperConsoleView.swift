@@ -1026,6 +1026,7 @@ private struct MangaProbeSection: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var diagnosticFilter: MangaProbeDiagnosticFilter = .all
     @AccessibilityFocusState private var diagnosticAccessibilityFocusID: String?
+    private static let diagnosticProbeEmptyAccessibilityFocusID = "manga-diagnostic-probe-empty"
     private static let diagnosticFilterEmptyAccessibilityFocusID = "manga-diagnostic-filter-empty"
 
     var body: some View {
@@ -1065,6 +1066,10 @@ private struct MangaProbeSection: View {
                     .accessibilityLabel("漫画探针未生成逐块诊断")
                     .accessibilityValue(emptyProbeBlocksDetail)
                     .accessibilityHint("请查看上方探针状态和 warnings，确认 test/1.png 与 Output 状态后重试")
+                    .accessibilityFocused(
+                        $diagnosticAccessibilityFocusID,
+                        equals: Self.diagnosticProbeEmptyAccessibilityFocusID
+                    )
                 } else {
                     MangaProbeDiagnosticFilterControl(
                         report: report,
@@ -1126,6 +1131,10 @@ private struct MangaProbeSection: View {
         .onChange(of: diagnosticFilter) { _, _ in
             focusDiagnosticFilterResultIfNeeded()
         }
+        .onChange(of: store.mangaOverlayProbeReport) { _, report in
+            guard report != nil else { return }
+            focusDiagnosticProbeResultIfNeeded()
+        }
     }
 
     private var filteredProbeBlocks: [MangaOverlayProbeBlock] {
@@ -1160,6 +1169,20 @@ private struct MangaProbeSection: View {
             guard store.mangaOverlayProbeReport != nil,
                   !filteredProbeBlocks.isEmpty else { return }
             diagnosticAccessibilityFocusID = focusID
+        }
+    }
+
+    private func focusDiagnosticProbeResultIfNeeded() {
+        Task { @MainActor in
+            await Task.yield()
+            guard store.mangaOverlayProbeReport != nil else { return }
+            if store.mangaOverlayProbeBlocks.isEmpty {
+                diagnosticAccessibilityFocusID = Self.diagnosticProbeEmptyAccessibilityFocusID
+            } else if let firstBlock = filteredProbeBlocks.first {
+                diagnosticAccessibilityFocusID = diagnosticBlockAccessibilityFocusID(firstBlock.index)
+            } else {
+                diagnosticAccessibilityFocusID = Self.diagnosticFilterEmptyAccessibilityFocusID
+            }
         }
     }
 
