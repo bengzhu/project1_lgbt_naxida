@@ -17,6 +17,7 @@
 - 候选 push full [31075361390](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31075361390)：exact SHA `25855f7e6b757c2ae901c794c56990215399cb68`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.120`，readiness validator 记录 `manifestMissing / stopUntilArtifactsProvided`。
 - PR #184 fast [31075697828](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31075697828)：exact head SHA，`validationProfile=fast`，复用候选 full `25855f7e6b757c2ae901c794c56990215399cb68 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 - merge fast [31075745893](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31075745893)：merge SHA `205e78e0f7dd39c51a9c8dbf93748c1a5ef0a090`，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用候选 full / `success`，Xcode skipped，JUnit `10/10`。
+- 文档 metadata follow-up [31075866659](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31075866659)：commit `30bf304cad741ab2cd7a21278a61b41ee9464157`，`smalldataIncrementalMetadataOnly=true`，复用父 merge full `205e78e0f7dd39c51a9c8dbf93748c1a5ef0a090 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 
 ## v3.119：图片 OCR 待重试语言焦点
 
