@@ -1109,9 +1109,7 @@ private struct MangaProbeSection: View {
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(filteredProbeBlocks) { block in
-                        MangaProbeBlockRow(
-                            block: block,
-                            report: store.mangaOverlayProbeReport,
+                        MangaProbeBlockRow(block: block, report: store.mangaOverlayProbeReport,
                             accessibilityFocus: $diagnosticAccessibilityFocusID,
                             accessibilityFocusID: diagnosticBlockAccessibilityFocusID(block.index)
                         )

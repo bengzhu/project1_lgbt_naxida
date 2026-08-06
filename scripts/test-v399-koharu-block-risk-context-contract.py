@@ -35,7 +35,13 @@ class KoharuBlockRiskContextContractTests(unittest.TestCase):
         self.workflow = read(".github/workflows/ci-results.yml")
 
     def test_rows_receive_the_current_report_without_store_ownership(self) -> None:
-        self.assertIn("MangaProbeBlockRow(block: block, report: store.mangaOverlayProbeReport)", self.view)
+        # The row may receive additional view-only context after the report
+        # argument. Keep the historical contract focused on the shared report
+        # handoff instead of one exact initializer formatting.
+        self.assertRegex(
+            self.view,
+            r"MangaProbeBlockRow\(block: block, report: store\.mangaOverlayProbeReport(?:\)|,)",
+        )
         self.assertIn("let report: MangaOverlayProbeReport?", self.row)
         self.assertNotIn("TranslationSessionStore", self.row)
         self.assertNotIn("runMangaOverlayProbe", self.row)
