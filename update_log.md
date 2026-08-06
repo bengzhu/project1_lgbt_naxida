@@ -1,3 +1,23 @@
+## v3.113：漫画探针诊断展开 VoiceOver 焦点交接
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.113 Developer Console 漫画探针逐块诊断展开／收起焦点的 View-only 改进、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.113`。候选 commit `fd2cf8d32b9576dc2620ce3c281403421aa1ca02` 已通过 PR [#177](https://github.com/bengzhu/project1_lgbt_naxida/pull/177) 合入，merge SHA `1f3612f54410aef39ea8c5a34195f9d9f9296573`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeBlockRow` 将 DisclosureGroup 改为绑定 View 私有 `isExpanded`；展开后在主线程让渡一次，将 VoiceOver 焦点交给稳定的 `manga-diagnostic-detail-\(block.index)` 详细诊断容器，收起后回到原 `manga-diagnostic-block-\(block.index)` 结果行。
+- 详细诊断容器继续复用 `blockAccessibilityValue` 与既有 OCR／翻译／布局风险、报告下一步和执行边界上下文，并以 `.accessibilityElement(children: .contain)` 保留可复制的诊断字段；焦点 identity、展开状态和 handoff 均留在 View。
+- 新增 `scripts/test-v3113-manga-diagnostic-expansion-focus-contract.py`，锁定展开／收起焦点、report-only 边界、版本和 CI 路由；未新增 Store／持久化，不运行第二次探针，不读取 ground truth。
+
+边界：本版只改善 Developer Console 漫画探针逐块诊断的 VoiceOver 操作连续性，不改变 OCR 候选、翻译 prompt/model、普通图片 OCR、renderer/export、probe_report、Koharu active artifact gate、metrics 或仓库 `output/`。候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译指标。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31068769954](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31068769954)：exact SHA `fd2cf8d32b9576dc2620ce3c281403421aa1ca02`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.113`，readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- 手动候选 full [31068778764](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31068778764)：同 exact SHA，`validationProfile=full`、`validationReason=manual_full`，Xcode build success，JUnit `10/10` 且 0 failures；该 run 与 push full 互相交叉确认，均不产生探针指标。
+- PR #177 fast [31069311041](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31069311041)：exact head SHA，`validationProfile=fast`，`reusedFullValidationSha=fd2cf8d32b9576dc2620ce3c281403421aa1ca02`、`reusedFullValidationState=success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31069349841](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31069349841)：merge SHA `1f3612f54410aef39ea8c5a34195f9d9f9296573`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `fd2cf8d32b9576dc2620ce3c281403421aa1ca02` / `success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
 ## v3.112：图片 OCR 终态 VoiceOver 焦点交接
 
 日期：2026-08-06
