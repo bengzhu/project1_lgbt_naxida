@@ -1109,7 +1109,10 @@ private struct MangaProbeSection: View {
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(filteredProbeBlocks) { block in
-                        MangaProbeBlockRow(block: block, report: store.mangaOverlayProbeReport)
+                        MangaProbeBlockRow(block: block, report: store.mangaOverlayProbeReport,
+                            accessibilityFocus: $diagnosticAccessibilityFocusID,
+                            accessibilityFocusID: diagnosticBlockAccessibilityFocusID(block.index)
+                        )
                     }
                 }
             }
@@ -1121,7 +1124,7 @@ private struct MangaProbeSection: View {
             diagnosticAccessibilityFocusID = nil
         }
         .onChange(of: diagnosticFilter) { _, _ in
-            focusEmptyDiagnosticStateIfNeeded()
+            focusDiagnosticFilterResultIfNeeded()
         }
     }
 
@@ -1143,6 +1146,25 @@ private struct MangaProbeSection: View {
                   filteredProbeBlocks.isEmpty else { return }
             diagnosticAccessibilityFocusID = Self.diagnosticFilterEmptyAccessibilityFocusID
         }
+    }
+
+    private func focusDiagnosticFilterResultIfNeeded() {
+        guard store.mangaOverlayProbeReport != nil,
+              !filteredProbeBlocks.isEmpty else {
+            focusEmptyDiagnosticStateIfNeeded()
+            return
+        }
+        let focusID = diagnosticBlockAccessibilityFocusID(filteredProbeBlocks[0].index)
+        Task { @MainActor in
+            await Task.yield()
+            guard store.mangaOverlayProbeReport != nil,
+                  !filteredProbeBlocks.isEmpty else { return }
+            diagnosticAccessibilityFocusID = focusID
+        }
+    }
+
+    private func diagnosticBlockAccessibilityFocusID(_ blockIndex: Int) -> String {
+        "manga-diagnostic-block-\(blockIndex)"
     }
 
     private var emptyProbeBlocksDetail: String {
@@ -1507,6 +1529,8 @@ private struct MangaKoharuArtifactReadinessSummary: View {
 private struct MangaProbeBlockRow: View {
     let block: MangaOverlayProbeBlock
     let report: MangaOverlayProbeReport?
+    let accessibilityFocus: AccessibilityFocusState<String?>.Binding
+    let accessibilityFocusID: String
 
     var body: some View {
         DisclosureGroup {
@@ -1578,6 +1602,7 @@ private struct MangaProbeBlockRow: View {
             .accessibilityLabel("漫画探针文字块 \(block.index)")
             .accessibilityValue(blockAccessibilityValue)
             .accessibilityHint(blockAccessibilityHint)
+            .accessibilityFocused(accessibilityFocus, equals: accessibilityFocusID)
         }
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
     }
