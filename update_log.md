@@ -1,3 +1,23 @@
+## v3.118：漫画探针阻断 Koharu readiness 焦点
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.118 Developer Console 漫画探针报告到达后的 readiness VoiceOver 焦点优先级修复、历史合同兼容、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.118`。候选最终 commit `067077bcb146e2e0c8bb2e066350cac2466b7460` 已通过 PR [#182](https://github.com/bengzhu/project1_lgbt_naxida/pull/182) 合入，merge SHA `036bada7aebd70da50d6d31cc4e4da2cce4b8dda`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeSection` 在报告终态发现既有 `externalArtifactReadinessReport` 的 `nextAction` 为 `stopUntilArtifactsProvided`、`stopUntilArtifactContractFixed` 或 `stopUntilRealDetectorSourceDeclared` 时，优先把同一 generation requester 的焦点交给稳定 `diagnosticKoharuReadinessAccessibilityFocusID`；非阻断 readiness 仍按当前筛选首 block、筛选空态或未生成逐块状态处理。
+- `MangaKoharuArtifactReadinessSummary` 只接收父级现有 `@AccessibilityFocusState` binding 和 View identity，并在状态行上复用既有 readiness label/value/hint；筛选变化仍回到逐块结果，loading 仍使旧请求失效。
+- 新增 `scripts/test-v3118-manga-koharu-readiness-focus-contract.py` 并接入 UI/full fail-fast；v3.336 历史合同放宽为验证同一 initializer 与 `readiness: readiness` 参数的等价多行写法。
+
+边界：本版只改善阻断 readiness 的开发者 VoiceOver 操作顺序，仍只读既有漫画探针报告，不新增 Store／持久化、不重跑探针、不读取 ground truth，不改变 OCR 候选、翻译 prompt/model、普通图片 OCR、renderer/export、`probe_report`、Koharu active artifact gate、metrics 或仓库 `output/`。候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31073337578](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31073337578)：exact SHA `067077bcb146e2e0c8bb2e066350cac2466b7460`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.118`。readiness validator 诚实记录 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #182 fast [31073688262](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31073688262)：exact head SHA，`validationProfile=fast`，复用候选 full `067077bcb146e2e0c8bb2e066350cac2466b7460` / `success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31073828173](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31073828173)：merge SHA `036bada7aebd70da50d6d31cc4e4da2cce4b8dda`，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用候选 full / `success`，Xcode skipped，JUnit `10/10`。
+
 ## v3.117：漫画探针筛选展开状态 reset
 
 日期：2026-08-06
