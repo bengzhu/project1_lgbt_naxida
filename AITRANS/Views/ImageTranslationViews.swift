@@ -203,6 +203,7 @@ struct ImageTranslationPanel: View {
         }
         .onChange(of: reviewFilter) { _, _ in
             clearHiddenReviewSelection()
+            focusReviewFilterResultIfNeeded()
             focusEmptyReviewStateIfNeeded()
         }
     }
@@ -889,6 +890,15 @@ struct ImageTranslationPanel: View {
         let focusID = reviewFilter == .needsReview && reviewCompletedBlockCount > 0
             ? Self.reviewCompletionAccessibilityFocusID
             : Self.reviewFilterEmptyAccessibilityFocusID
+        moveReviewAccessibilityFocus(to: focusID)
+    }
+
+    private func focusReviewFilterResultIfNeeded() {
+        guard !store.imageTranslationBlocks.isEmpty,
+              let firstVisibleBlock = visibleImageTranslationBlocks.first else {
+            return
+        }
+        let focusID = reviewRowAccessibilityFocusID(firstVisibleBlock.id)
         moveReviewAccessibilityFocus(to: focusID)
     }
 
