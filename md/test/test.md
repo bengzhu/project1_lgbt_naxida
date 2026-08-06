@@ -142,6 +142,12 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.110 图片 OCR 筛选焦点意图仲裁合同
+
+- `scripts/test-v3110-image-filter-focus-intent-contract.py` 必须验证用户驱动的 `reviewFilter` 变化仍在有结果时聚焦 `visibleImageTranslationBlocks.first`，而程序化筛选变化通过 View 私有 `prepareReviewFilterChange(to:focusID:suppressResultFocus:)` 声明行／局部预览／完成态焦点；`clearHiddenReviewSelection()` 与空筛选／复查完成态回退必须继续执行。
+- revision 重置必须清除待处理焦点意图和抑制标记；意图状态只能存在于 `ImageTranslationPanel` 的 `@State`，不得进入 Store／持久化、OCR、翻译、renderer/export、探针报告或 Koharu active gate。v3.15/v3.16/v3.17/v3.29/v3.81/v3.93 历史合同须接受该 helper 的等价语义。
+- 候选 full `31066203170`（exact SHA `43e75f22be1f1acc55045942f9c617bb0e4675e9`）、PR #174 fast `31066589776`、merge fast `31066628727` 均通过；候选 full 提供 Xcode/JUnit `10/10`，PR fast 复用候选 full 且不作为新的编译证据，merge fast 记录 `reusedFullValidationSha=43e75f22be1f1acc55045942f9c617bb0e4675e9`、`reusedFullValidationState=success` 和 `receiptPropagationAllowed=true`。本版默认 `probe_mode=skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`；Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.109 图片 OCR 筛选结果焦点合同
 
 - `scripts/test-v3109-image-filter-result-focus-contract.py` 必须验证普通图片 OCR 的 `reviewFilter` 变化在存在可见结果时将 VoiceOver 焦点交给 `visibleImageTranslationBlocks.first` 对应的结果行，并复用既有 `reviewRowAccessibilityFocusID` 与 revision-scoped `moveReviewAccessibilityFocus`；该焦点只属于 View，不改变图片选择、复查进度、Vision OCR、翻译、renderer/export、Store 或持久化。

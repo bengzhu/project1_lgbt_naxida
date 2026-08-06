@@ -1,3 +1,23 @@
+## v3.110：图片 OCR 筛选焦点意图仲裁
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.110 普通图片 OCR 筛选焦点意图仲裁的 View-only 改进、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.110`。候选 commit `43e75f22be1f1acc55045942f9c617bb0e4675e9` 已通过 PR [#174](https://github.com/bengzhu/project1_lgbt_naxida/pull/174) 合入，merge SHA `08577f31c3dcd3da09ef64c6d9aa050e8d639794`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- 用户切换普通图片 OCR 的 `reviewFilter` 时，继续把 VoiceOver 焦点交给第一个可见结果行；开始／重启复查、恢复忽略 block、预览直接选中和完成／撤销复查等程序化筛选变化通过 `prepareReviewFilterChange(to:focusID:suppressResultFocus:)` 声明显式的结果行、局部预览或复查完成态焦点，避免自动首结果焦点覆盖用户当前操作意图。
+- 图片 revision 重置会清除 pending focus 与 suppression 标记，再由既有隐藏选中清理、空筛选／复查完成态回退和 revision-scoped `moveReviewAccessibilityFocus` 处理焦点；意图状态只存在于 `ImageTranslationPanel` 的 View `@State`，不进入 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告或 Koharu active gate。
+- 新增 `scripts/test-v3110-image-filter-focus-intent-contract.py` 并接入 UI/full fail-fast；同步让 v3.15、v3.16、v3.17、v3.29、v3.81、v3.93 历史合同接受该 helper 的等价语义，防止合法 View-only 重构被旧直接赋值字符串误报。
+
+边界：本版只改善图片筛选与复查操作的 VoiceOver 焦点连续性及源码合同鲁棒性；候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译指标或 `metrics/version_history.csv`、仓库 `output/` 变更。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 full [31066203170](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31066203170)：exact SHA `43e75f22be1f1acc55045942f9c617bb0e4675e9`，`validationProfile=full`、`validationReason=manual_full`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；候选 parent 的历史失败只影响 scope fallback，不影响本次 full receipt，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #174 fast [31066589776](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31066589776)：exact head SHA，`validationProfile=fast`，`reusedFullValidationSha=43e75f22be1f1acc55045942f9c617bb0e4675e9`、`reusedFullValidationState=success`，Xcode 与领域大套件按 fast 规则跳过，JUnit `10/10`；不是新的编译证据。
+- merge fast [31066628727](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31066628727)：merge SHA `08577f31c3dcd3da09ef64c6d9aa050e8d639794`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `43e75f22be1f1acc55045942f9c617bb0e4675e9` / `success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+
 ## v3.109：图片 OCR 筛选结果焦点交接
 
 日期：2026-08-06
