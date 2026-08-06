@@ -41,7 +41,10 @@ class ImageReviewFilterResetContractTests(unittest.TestCase):
             self.view,
             ".onChange(of: store.imageTranslationRevision) { _, _ in",
         )
-        self.assertIn("reviewFilter = .all", revision_handler)
+        self.assertRegex(
+            revision_handler,
+            r"reviewFilter = \.all|prepareReviewFilterChange\(\s*to: \.all",
+        )
         self.assertIn("selectedImageTranslationBlockID = nil", revision_handler)
         self.assertIn("editingImageTranslationBlock = nil", revision_handler)
         self.assertIn("reviewAccessibilityFocusID = nil", revision_handler)

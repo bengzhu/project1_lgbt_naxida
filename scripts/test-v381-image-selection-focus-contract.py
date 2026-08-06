@@ -2,6 +2,7 @@
 """Contract for VoiceOver focus handoff after direct image-block selection."""
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -60,7 +61,12 @@ class ImageSelectionFocusContractTests(unittest.TestCase):
             selection,
         )
         self.assertIn("!visibleImageTranslationBlocks.contains", selection)
-        self.assertIn("reviewFilter = .all", selection)
+        self.assertIsNotNone(
+            re.search(
+                r"reviewFilter = \.all|prepareReviewFilterChange\(\s*to: \.all",
+                selection,
+            )
+        )
         self.assertIn(
             "moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(blockID))",
             selection,
