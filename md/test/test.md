@@ -160,6 +160,12 @@
 - `.preparing`／`.rendering` 等运行中状态不得抢焦点；焦点与失败分流必须保持 View 私有，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
 - 合同接在 v3.125 后进入 UI/full fail-fast，并沿用表达式长度安全的既有 UI 路由。候选 full `31082994159`（exact SHA `244f97435d340207c7684c3a2ab553b552b3b780`）Xcode/JUnit `10/10` 成功；PR #190 fast `31083400009`、merge fast `31083557316` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.129 图片复查筛选空态恢复 action 合同
+
+- `scripts/test-v3129-image-review-filter-empty-action-contract.py` 必须验证低置信／方向待定／待复查筛选为空时，空态同时提供可见 `AppSecondaryButton(title: "显示全部结果")` 与同名 VoiceOver action，并保留 `reviewFilterEmptyAccessibilityFocusID`、当前筛选 value 与恢复提示。
+- “显示全部结果”必须复用 View 私有 `showAllReviewResults()`，只调用既有 `prepareReviewFilterChange(to: .all, focusID: nil)`；不得写 Store／持久化、重新运行 OCR／翻译、调用探针或改变 renderer/export/Koharu active gate。已完成待复查块继续显示 v3.128 的“重新复查”上下文。
+- 合同接入 UI/full fail-fast。候选 exact-SHA full `31087461275`（`b4617eacf4ff4ef0c7ccce847fe3742ff7002861`）Xcode/JUnit `10/10` 成功；PR #193 fast `31088057693`、merge fast `31088114103` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.128 图片复查完成态 VoiceOver action 合同
 
 - `scripts/test-v3128-image-review-completion-action-contract.py` 必须验证 `reviewFilter == .needsReview` 且 `reviewCompletedBlockCount > 0` 的完成空态成为单一 VoiceOver element，label 为“本次复查完成”，value 读出完成／总风险块数量与当前筛选，并保留稳定 `reviewCompletionAccessibilityFocusID`。
