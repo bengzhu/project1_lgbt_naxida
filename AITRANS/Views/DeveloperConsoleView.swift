@@ -1025,6 +1025,7 @@ private struct MangaProbeDiagnosticFilterControl: View {
 private struct MangaProbeSection: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @State private var diagnosticFilter: MangaProbeDiagnosticFilter = .all
+    @State private var diagnosticExpansionResetID = 0
     @AccessibilityFocusState private var diagnosticAccessibilityFocusID: String?
     private static let diagnosticProbeEmptyAccessibilityFocusID = "manga-diagnostic-probe-empty"
     private static let diagnosticFilterEmptyAccessibilityFocusID = "manga-diagnostic-filter-empty"
@@ -1116,7 +1117,8 @@ private struct MangaProbeSection: View {
                     ForEach(filteredProbeBlocks) { block in
                         MangaProbeBlockRow(block: block, report: store.mangaOverlayProbeReport,
                             accessibilityFocus: $diagnosticAccessibilityFocusID,
-                            accessibilityFocusID: diagnosticBlockAccessibilityFocusID(block.index)
+                            accessibilityFocusID: diagnosticBlockAccessibilityFocusID(block.index),
+                            expansionResetID: diagnosticExpansionResetID
                         )
                     }
                 }
@@ -1126,6 +1128,7 @@ private struct MangaProbeSection: View {
         .onChange(of: store.mangaOverlayProbeState) { _, state in
             guard state == .loading else { return }
             diagnosticFilter = .all
+            diagnosticExpansionResetID += 1
             diagnosticAccessibilityFocusID = nil
         }
         .onChange(of: diagnosticFilter) { _, _ in
@@ -1554,7 +1557,9 @@ private struct MangaProbeBlockRow: View {
     let report: MangaOverlayProbeReport?
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let accessibilityFocusID: String
+    let expansionResetID: Int
     @State private var isExpanded = false
+    @State private var suppressNextExpansionFocusHandoff = false
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
@@ -1635,7 +1640,16 @@ private struct MangaProbeBlockRow: View {
         }
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
         .onChange(of: isExpanded) { _, expanded in
+            guard !suppressNextExpansionFocusHandoff else {
+                suppressNextExpansionFocusHandoff = false
+                return
+            }
             focusExpandedDiagnosticDetail(expanded)
+        }
+        .onChange(of: expansionResetID) { _, _ in
+            guard isExpanded else { return }
+            suppressNextExpansionFocusHandoff = true
+            isExpanded = false
         }
     }
 
@@ -1683,6 +1697,7 @@ private struct MangaProbeBlockRow: View {
         if let reportAction {
             parts.append("报告下一步：\(reportAction.summary)")
         }
+        parts.append(isExpanded ? "详细诊断已展开" : "详细诊断已收起")
         return parts.joined(separator: "；")
     }
 
@@ -1691,9 +1706,12 @@ private struct MangaProbeBlockRow: View {
             ? "报告没有额外风险标签"
             : "报告风险标签：\(reportRiskSummary)"
         let actionHint = reportAction.map { "报告下一步：\($0.summary)" } ?? "报告没有块级下一步"
+        let expansionHint = isExpanded
+            ? "收起详细诊断并回到文字块结果行"
+            : "展开查看 OCR 原文、译文和诊断输出"
         return block.blockPassed
-            ? "展开查看 OCR 原文、译文和诊断输出；\(riskHint)；\(actionHint)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
-            : "展开查看 OCR 原文、翻译失败原因和诊断输出；当前分流为 \(diagnosticRouteLabel)；\(riskHint)；\(actionHint)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
+            ? "\(expansionHint)；\(riskHint)；\(actionHint)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
+            : "\(expansionHint)；当前分流为 \(diagnosticRouteLabel)；\(riskHint)；\(actionHint)；此结果只属于漫画探针诊断，不会改变普通图片 OCR、翻译或覆盖图"
     }
 
     private var reportRiskLabels: [String] {
