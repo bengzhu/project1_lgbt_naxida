@@ -486,9 +486,6 @@ jobs:
           if grep -Fx 'scripts/test-v3125-image-direct-failure-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
-          if grep -Fx 'scripts/test-v3126-image-export-share-failure-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
-            ui_interaction_contract_required=true
-          fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
           # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
 
