@@ -230,6 +230,12 @@ struct ImageTranslationPanel: View {
                 }
                 return
             }
+            if state == .failed,
+               pendingImageTranslationTerminalFocusRevision != store.imageTranslationRevision {
+                pendingImageTranslationTerminalFocusRevision = nil
+                moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+                return
+            }
             guard state == .translated || state == .failed else { return }
             guard pendingImageTranslationTerminalFocusRevision == store.imageTranslationRevision else { return }
             pendingImageTranslationTerminalFocusRevision = nil
