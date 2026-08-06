@@ -17,6 +17,7 @@
 - 候选 push full [31071423891](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31071423891)：exact SHA `4788bb213eeff010775a35798dc6fb28aabb7c0c`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.116`。
 - PR #180 fast [31071714254](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31071714254)：exact head SHA，`validationProfile=fast`，`reusedFullValidationSha=4788bb213eeff010775a35798dc6fb28aabb7c0c`、`reusedFullValidationState=success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 - merge fast [31071752236](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31071752236)：merge SHA `b9607e246b070222e4ef4cc4dbd78b8ee925b8ea`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `4788bb213eeff010775a35798dc6fb28aabb7c0c` / `success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+- 文档 metadata follow-up [31071915701](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31071915701)：commit `de1b70b64cec9faa46b5b2904079a508b6816e15`，`smalldataIncrementalMetadataOnly=true`，复用父 merge full receipt `b9607e246b070222e4ef4cc4dbd78b8ee925b8ea / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 
 ## v3.115：图片 OCR 焦点请求 generation 仲裁
 
