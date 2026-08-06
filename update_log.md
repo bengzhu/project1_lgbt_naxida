@@ -18,6 +18,7 @@
 - 候选 exact-SHA full [31088767018](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31088767018)：`validationReason=manual_full`、exact SHA 一致，Xcode build success，静态／Speech／UI／home／paste 合同 success，JUnit `10/10` 且 0 failures；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`。
 - PR #194 fast [31089351045](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31089351045)：`validationProfile=fast`，复用候选 full `f3965b43c38b7682decec9aaf46d046cafc3f16f / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 - merge fast [31089424245](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31089424245)：merge SHA `ed719558db8edca6aff02124517fb0035bc3c458`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- 文档 metadata follow-up [31089635112](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31089635112)：commit `ce1e27db4072a5e95a7305fbc131f5192f1a38d9`，`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用父 merge `ed719558db8edca6aff02124517fb0035bc3c458 / success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 
 ## v3.129：图片复查筛选空态恢复 action
 
