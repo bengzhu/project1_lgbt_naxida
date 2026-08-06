@@ -478,6 +478,9 @@ jobs:
           if grep -Fx 'scripts/test-v3121-image-status-retry-accessibility-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
+          if grep -Fx 'scripts/test-v3122-image-cancel-status-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
           # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
 
@@ -1175,6 +1178,7 @@ jobs:
             python3 -B scripts/test-v3119-image-retry-language-focus-contract.py
             python3 -B scripts/test-v3120-image-retry-language-accessibility-action-contract.py
             python3 -B scripts/test-v3121-image-status-retry-accessibility-contract.py
+            python3 -B scripts/test-v3122-image-cancel-status-focus-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract

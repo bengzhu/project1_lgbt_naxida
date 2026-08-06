@@ -213,7 +213,17 @@ struct ImageTranslationPanel: View {
             clearPendingCorrectionSheetDismissalFocus()
             reviewAccessibilityFocusID = nil
         }
-        .onChange(of: store.imageTranslationState) { _, state in
+        .onChange(of: store.imageTranslationState) { oldState, state in
+            if state == .idle {
+                switch oldState {
+                case .loading, .recognizing, .translating:
+                    pendingImageTranslationTerminalFocusRevision = nil
+                    moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+                case .idle, .translated, .failed:
+                    break
+                }
+                return
+            }
             guard state == .translated || state == .failed else { return }
             guard pendingImageTranslationTerminalFocusRevision == store.imageTranslationRevision else { return }
             pendingImageTranslationTerminalFocusRevision = nil
