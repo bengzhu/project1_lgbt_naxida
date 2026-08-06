@@ -197,6 +197,14 @@ struct ImageTranslationPanel: View {
             guard exportURL == nil else { return }
             finishSharing()
         }
+        .onChange(of: store.imageTranslationShareState) { oldState, state in
+            guard case .failed = state, state != oldState else { return }
+            moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+        }
+        .onChange(of: store.imageTranslationExportRenderState) { oldState, state in
+            guard case .failed = state, state != oldState else { return }
+            moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+        }
         .onDisappear {
             finishSharing()
         }
