@@ -117,6 +117,7 @@ struct ImageTranslationPanel: View {
     private static let reviewFilterAccessibilityFocusID = "image-review-filter"
     private static let reviewFilterEmptyAccessibilityFocusID = "image-review-filter-empty"
     private static let imageTranslationStatusAccessibilityFocusID = "image-translation-status"
+    private static let imagePreviewStatusAccessibilityFocusID = "image-preview-status"
     private static let imageRetryLanguageStatusAccessibilityFocusID = "image-retry-language-status"
 
     @EnvironmentObject private var store: TranslationSessionStore
@@ -269,6 +270,10 @@ struct ImageTranslationPanel: View {
                 modificationUnavailableHint: imageModificationUnavailableDetail,
                 reviewUnavailableHint: imageReviewUnavailableDetail,
                 accessibilityFocus: $reviewAccessibilityFocusID,
+                previewStatusAccessibilityFocusID: Self.imagePreviewStatusAccessibilityFocusID,
+                focusPreviewStatus: {
+                    moveReviewAccessibilityFocus(to: Self.imagePreviewStatusAccessibilityFocusID)
+                },
                 selectBlock: selectBlockFromPreview,
                 clearSelection: closeImageTranslationFocusPreview,
                 selectPrevious: { selectAdjacentBlock(offset: -1) },
@@ -1592,6 +1597,8 @@ private struct ImageTranslationPreview: View {
     let modificationUnavailableHint: String
     let reviewUnavailableHint: String
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
+    let previewStatusAccessibilityFocusID: String
+    let focusPreviewStatus: () -> Void
     let selectBlock: (UUID) -> Void
     let clearSelection: () -> Void
     let selectPrevious: () -> Void
@@ -1708,6 +1715,7 @@ private struct ImageTranslationPreview: View {
                 guard !Task.isCancelled,
                       revision == store.imageTranslationRevision else { return }
                 previewPhase = .failed(revision: revision)
+                focusPreviewStatus()
                 return
             }
             guard !Task.isCancelled,
@@ -1764,6 +1772,10 @@ private struct ImageTranslationPreview: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(previewStatusAccessibilityLabel)
         .accessibilityValue(previewStatusAccessibilityValue)
+        .accessibilityFocused(
+            accessibilityFocus,
+            equals: previewStatusAccessibilityFocusID
+        )
     }
 
     private var previewFailedForCurrentRevision: Bool {
@@ -1840,6 +1852,7 @@ private struct ImageTranslationPreview: View {
     private func retryPreview() {
         previewPhase = .loading(revision: store.imageTranslationRevision)
         previewAttempt += 1
+        focusPreviewStatus()
     }
 
     private func fittedImageSize(imageSize: CGSize, containerSize: CGSize) -> CGSize {
