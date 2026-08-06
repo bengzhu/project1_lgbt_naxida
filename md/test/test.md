@@ -160,6 +160,12 @@
 - `.preparing`／`.rendering` 等运行中状态不得抢焦点；焦点与失败分流必须保持 View 私有，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
 - 合同接在 v3.125 后进入 UI/full fail-fast，并沿用表达式长度安全的既有 UI 路由。候选 full `31082994159`（exact SHA `244f97435d340207c7684c3a2ab553b552b3b780`）Xcode/JUnit `10/10` 成功；PR #190 fast `31083400009`、merge fast `31083557316` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.130 漫画诊断筛选空态恢复 action 合同
+
+- `scripts/test-v3130-manga-diagnostic-filter-empty-action-contract.py` 必须验证已有 `mangaOverlayProbeReport` 与非空 blocks 在当前 `filteredProbeBlocks` 为空时，空态同时提供可见 `AppSecondaryButton(title: "显示全部诊断")` 与同名 VoiceOver action，保留 `diagnosticFilterEmptyAccessibilityFocusID` 和历史“切换到全部或其他诊断类别查看逐块报告”上下文。
+- “显示全部诊断”必须只调用 View 私有 `showAllDiagnosticResults()`，将本地 `diagnosticFilter` 恢复为 `.all`，复用既有 `.onChange(of: diagnosticFilter)` 的展开重置和焦点路径；不得写 Store／持久化、重新运行探针、读取 ground truth 或改变 OCR、翻译、renderer/export、Koharu active gate。`mangaOverlayProbeBlocks.isEmpty` 的“本次探针未生成文字块”空态必须保持独立。
+- 合同接在 v3.129 后进入 UI/full fail-fast。候选 exact-SHA full `31088767018`（`f3965b43c38b7682decec9aaf46d046cafc3f16f`）Xcode/JUnit `10/10` 成功；PR #194 fast `31089351045`、merge fast `31089424245` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.129 图片复查筛选空态恢复 action 合同
 
 - `scripts/test-v3129-image-review-filter-empty-action-contract.py` 必须验证低置信／方向待定／待复查筛选为空时，空态同时提供可见 `AppSecondaryButton(title: "显示全部结果")` 与同名 VoiceOver action，并保留 `reviewFilterEmptyAccessibilityFocusID`、当前筛选 value 与恢复提示。
