@@ -1,3 +1,23 @@
+## v3.119：图片 OCR 待重试语言焦点
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.119 普通图片 OCR 失败／取消后的待重试语言 VoiceOver 焦点修复、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.119`。候选 commit `5248bd705fc6c0d963146060917e2a6a94a6c421` 已通过 PR [#183](https://github.com/bengzhu/project1_lgbt_naxida/pull/183) 合入，merge SHA `de5ccebdeda7294a491183c53676e65caaaefb6a`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPanel` 在既有 `imageTranslationRetryLanguageSummary` 真实变化后，将 VoiceOver 焦点交给稳定的“重试语言已更新”状态行；label/value/hint 说明当前待重试语言、下一次会重新识别／翻译的范围，未发生真实变化时不抢焦点，也不调用重试。
+- 焦点 handoff 复用既有 `moveReviewAccessibilityFocus` 的 request generation 与 `imageTranslationRevision` guard；状态、焦点 identity 和 generation 继续只属于 View，不新增 Store／持久化，不改变 Vision OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
+- 新增 `scripts/test-v3119-image-retry-language-focus-contract.py`，接入 UI/full fail-fast，锁定 summary change guard、稳定 accessibility label/value/hint、revision-scoped generation 与 View-only 边界。
+
+边界：本版改善失败／取消后的图片语言选择操作连续性，使用户选语言后立刻知道下一次重试会使用什么语言；不重新运行 OCR／翻译，不改变 OCR 候选、翻译模型、renderer/export、探针报告、metrics 或仓库 `output/`。候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31074379707](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31074379707)：exact SHA `5248bd705fc6c0d963146060917e2a6a94a6c421`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.119`，readiness validator 诚实记录 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #183 fast [31074819588](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31074819588)：exact head SHA，`validationProfile=fast`，复用候选 full `5248bd705fc6c0d963146060917e2a6a94a6c421 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31074863470](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31074863470)：merge SHA `de5ccebdeda7294a491183c53676e65caaaefb6a`，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用候选 full / `success`，Xcode skipped，JUnit `10/10`。
+
 ## v3.118：漫画探针阻断 Koharu readiness 焦点
 
 日期：2026-08-06

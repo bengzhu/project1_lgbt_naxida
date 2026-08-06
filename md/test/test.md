@@ -142,6 +142,12 @@
 - 正常异步失败也必须传播清理计数和清理状态；新增 `scripts/test-v394-manga-probe-failure-cleanup-contract.py`，接入 Koharu changed-file/full 静态路由。
 - 该合同只验证状态/输出隔离，不改变 OCR 候选、翻译 prompt/model、ground truth、renderer/export、普通图片 OCR、Koharu active artifact gate、metrics 或仓库 `output`。full/PR fast/merge fast 需要核对 exact SHA、manifest、JUnit 与 Xcode receipt；push 默认 `probe_mode=skip`，缺少真实四件套时 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
+### v3.119 图片 OCR 待重试语言焦点合同
+
+- `scripts/test-v3119-image-retry-language-focus-contract.py` 必须验证输入／目标语言实际改变并生成 `imageTranslationRetryLanguageSummary` 后，`ImageTranslationPanel` 将 VoiceOver 焦点交给稳定的“重试语言已更新”状态行；label/value/hint 必须说明下一次重试语言和重新识别／翻译边界，summary 未变化时不得抢焦点或调用重试。
+- 焦点必须复用既有 `moveReviewAccessibilityFocus` 的 request generation 与 `imageTranslationRevision` guard，不新增 Store／持久化、不改变 Vision OCR、翻译、renderer/export、probe_report 或 Koharu active gate；合同接在 v3.118 后进入 UI/full fail-fast。
+- 候选 full `31074379707`（exact SHA `5248bd705fc6c0d963146060917e2a6a94a6c421`）Xcode/JUnit `10/10` 成功；PR #183 fast `31074819588`、merge fast `31074863470` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.118 漫画探针阻断 readiness 焦点合同
 
 - `scripts/test-v3118-manga-koharu-readiness-focus-contract.py` 必须验证漫画探针报告到达时，`stopUntilArtifactsProvided`、`stopUntilArtifactContractFixed` 或 `stopUntilRealDetectorSourceDeclared` 会优先把共享 generation focus 交给 `MangaKoharuArtifactReadinessSummary` 的稳定状态行；非阻断 readiness、筛选切换、空筛选和逐块展开继续沿用既有焦点路径。
