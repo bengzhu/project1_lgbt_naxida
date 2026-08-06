@@ -291,7 +291,11 @@ struct ImageTranslationPanel: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("重试语言已更新")
                 .accessibilityValue(retryLanguageSummary)
-                .accessibilityHint("当前图片失败或取消后，下一次重试会使用这组语言；按重试开始重新识别和翻译")
+                .accessibilityHint("当前图片失败或取消后，下一次重试会使用这组语言；可在此状态上执行“重试当前图片”，开始重新识别和翻译")
+                .accessibilityAction(named: "重试当前图片") {
+                    guard store.canRetryImageTranslation else { return }
+                    store.retryImageTranslation()
+                }
                 .accessibilityFocused(
                     $reviewAccessibilityFocusID,
                     equals: Self.imageRetryLanguageStatusAccessibilityFocusID
