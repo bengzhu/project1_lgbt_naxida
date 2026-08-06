@@ -1,3 +1,23 @@
+## v3.117：漫画探针筛选展开状态 reset
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.117 Developer Console 漫画探针筛选切换后的展开状态隔离、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.117`。候选 commit `4bda6f5a0ea20e7d8223546d0b380758d839c253` 已通过 PR [#181](https://github.com/bengzhu/project1_lgbt_naxida/pull/181) 合入，merge SHA `b209880723b3d82c7df3d78240ad8d05a16d48e3`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeSection` 在 `diagnosticFilter` 变化时先递增既有 `diagnosticExpansionResetID`，让所有仍在视图中的 `MangaProbeBlockRow` 收起 stale 详情，再调用 v3.116 的 generation requester 聚焦新筛选首个结果或空态。
+- 逐块行继续用 `suppressNextExpansionFocusHandoff` 抑制 reset 引发的旧焦点回抢；筛选 reset、展开状态、焦点 identity 与 generation 都留在 View/report-only，不新增 Store／持久化。
+- 新增 `scripts/test-v3117-manga-diagnostic-filter-expansion-reset-contract.py` 并接入 UI/full fail-fast；不重跑探针、不读取 ground truth、不改变 OCR、翻译、renderer/export、`probe_report` 或 Koharu active gate。
+
+边界：本版只改善漫画探针诊断筛选切换的视觉与 VoiceOver 操作连续性。候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31072107788](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31072107788)：exact SHA `4bda6f5a0ea20e7d8223546d0b380758d839c253`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.117`。
+- PR #181 fast [31072405558](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31072405558)：exact head SHA，`validationProfile=fast`，`reusedFullValidationSha=4bda6f5a0ea20e7d8223546d0b380758d839c253`、`reusedFullValidationState=success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31072447592](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31072447592)：merge SHA `b209880723b3d82c7df3d78240ad8d05a16d48e3`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `4bda6f5a0ea20e7d8223546d0b380758d839c253` / `success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+
 ## v3.116：漫画探针诊断焦点请求 generation 仲裁
 
 日期：2026-08-06
