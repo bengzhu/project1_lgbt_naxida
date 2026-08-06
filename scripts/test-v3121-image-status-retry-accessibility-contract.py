@@ -36,12 +36,12 @@ class ImageStatusRetryAccessibilityContractTests(unittest.TestCase):
         self.panel = braced_body(self.view, "struct ImageTranslationPanel: View")
 
     def test_retryable_status_row_exposes_only_a_view_scoped_action(self) -> None:
-        row = braced_body(self.panel, "private var imageStatusAccessibilityRow")
+        row = braced_body(self.panel, "private func imageStatusAccessibilityRow")
         self.assertIn("if canRetryFromImageStatus", row)
         self.assertIn('.accessibilityAction(named: "重试当前图片")', row)
         self.assertIn("guard store.canRetryImageTranslation else { return }", row)
         self.assertIn("store.retryImageTranslation()", row)
-        self.assertIn("imageStatusRow", row)
+        self.assertIn("content", row)
 
     def test_pending_language_summary_avoids_duplicate_status_action(self) -> None:
         gate = braced_body(self.panel, "private var canRetryFromImageStatus")
@@ -55,7 +55,7 @@ class ImageStatusRetryAccessibilityContractTests(unittest.TestCase):
         self.assertIn("guard store.canRetryImageTranslation else { return }", summary)
 
     def test_status_row_keeps_existing_context_and_dynamic_retry_hint(self) -> None:
-        row = braced_body(self.panel, "private var imageStatusRow")
+        row = braced_body(self.panel, "private var inspector: some View")
         for marker in [
             'accessibilityLabel("图片翻译状态")',
             ".accessibilityValue(imageStatusAccessibilityValue)",
@@ -64,7 +64,8 @@ class ImageStatusRetryAccessibilityContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, row)
         hint = braced_body(self.panel, "private var imageStatusAccessibilityHint")
-        self.assertIn("canRetryFromImageStatus", hint)
+        self.assertIn("store.canRetryImageTranslation", hint)
+        self.assertIn("store.imageTranslationRetryLanguageSummary == nil", hint)
         self.assertIn("可以在此状态上执行“重试当前图片”", hint)
         self.assertIn("当前图片文件不可重试，请选择新图片", hint)
 

@@ -387,7 +387,21 @@ struct ImageTranslationPanel: View {
                     : imageModificationUnavailableDetail
             )
 
-            imageStatusAccessibilityRow
+            imageStatusAccessibilityRow(
+                AppStatusRow(
+                    title: statusTitle,
+                    detail: statusDetail,
+                    tone: statusTone
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("图片翻译状态")
+                .accessibilityValue(imageStatusAccessibilityValue)
+                .accessibilityHint(imageStatusAccessibilityHint)
+                .accessibilityFocused(
+                    $reviewAccessibilityFocusID,
+                    equals: Self.imageTranslationStatusAccessibilityFocusID
+                )
+            )
 
             if let imageActionLockDetail {
                 AppStatusRow(
@@ -1005,32 +1019,16 @@ struct ImageTranslationPanel: View {
     }
 
     @ViewBuilder
-    private var imageStatusAccessibilityRow: some View {
+    private func imageStatusAccessibilityRow<Content: View>(_ content: Content) -> some View {
         if canRetryFromImageStatus {
-            imageStatusRow
+            content
                 .accessibilityAction(named: "重试当前图片") {
                     guard store.canRetryImageTranslation else { return }
                     store.retryImageTranslation()
                 }
         } else {
-            imageStatusRow
+            content
         }
-    }
-
-    private var imageStatusRow: some View {
-        AppStatusRow(
-            title: statusTitle,
-            detail: statusDetail,
-            tone: statusTone
-        )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("图片翻译状态")
-        .accessibilityValue(imageStatusAccessibilityValue)
-        .accessibilityHint(imageStatusAccessibilityHint)
-        .accessibilityFocused(
-            $reviewAccessibilityFocusID,
-            equals: Self.imageTranslationStatusAccessibilityFocusID
-        )
     }
 
     private var canRetryFromImageStatus: Bool {
@@ -1091,7 +1089,7 @@ struct ImageTranslationPanel: View {
             if store.imageTranslationData == nil {
                 return "选择照片或图片文件后开始本机 OCR 与翻译"
             }
-            return canRetryFromImageStatus
+            return store.canRetryImageTranslation && store.imageTranslationRetryLanguageSummary == nil
                 ? "当前图片尚未完成本次处理；可以在此状态上执行“重试当前图片”，也可以选择新图片"
                 : "当前图片处理已停止；可以选择新图片"
         case .loading:
@@ -1103,7 +1101,7 @@ struct ImageTranslationPanel: View {
         case .translated:
             return "图片翻译完成；可以修正文字、更新复查、切换覆盖方式或导出"
         case .failed:
-            return canRetryFromImageStatus
+            return store.canRetryImageTranslation && store.imageTranslationRetryLanguageSummary == nil
                 ? "图片翻译失败；可以在此状态上执行“重试当前图片”，也可以选择新图片"
                 : "图片翻译失败；当前图片文件不可重试，请选择新图片"
         }
