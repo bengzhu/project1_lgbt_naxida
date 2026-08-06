@@ -1,3 +1,23 @@
+## v3.123：图片屏幕预览失败／重试后的状态焦点
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.123 普通图片屏幕预览失败／重试后的 VoiceOver 焦点连续性修复、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.123`。候选最终 commit `92e68b60e74dd61fb471584bba9cf00bf1696868` 已通过 PR [#187](https://github.com/bengzhu/project1_lgbt_naxida/pull/187) 合入，merge SHA `6309370bc47974964a2aa181075469fb29e928e7`；候选远端分支已清理，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPanel` 为屏幕预览状态提供稳定的 `imagePreviewStatusAccessibilityFocusID`，将既有 `moveReviewAccessibilityFocus` 封装为 View 私有 `focusPreviewStatus` closure 传给 `ImageTranslationPreview`；状态容器使用 `.accessibilityFocused`，保持预览状态 label/value/hint 的单一上下文。
+- 预览生成失败时，在 revision 与 Task cancellation guard 通过后立即调用 `focusPreviewStatus()`；点击“重试预览”进入 loading 并递增 attempt 后同样回到状态行，VoiceOver 用户会连续听到失败详情、重试加载和“只重建屏幕预览”的边界。该 handoff 不新增 Store／持久化，不改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
+- 新增 `scripts/test-v3123-image-preview-status-focus-contract.py` 并接入 UI/full fail-fast；CI 路由将 v3.122/v3.123 纳入既有正则，并保留顶层兼容标记以避开 GitHub Actions 表达式长度上限。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31079060685](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31079060685)：exact SHA `92e68b60e74dd61fb471584bba9cf00bf1696868`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 为 v3.123，active Koharu validator 记录 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #187 fast [31079520917](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31079520917)：exact head SHA，`validationProfile=fast`，复用候选 full `92e68b60e74dd61fb471584bba9cf00bf1696868 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31079590205](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31079590205)：merge SHA `6309370bc47974964a2aa181075469fb29e928e7`，`validationReason=merge_reuses_successful_candidate_full_validation`，`receiptPropagationAllowed=true`，复用候选 full / `success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.122：图片 OCR 取消后的状态焦点
 
 日期：2026-08-06

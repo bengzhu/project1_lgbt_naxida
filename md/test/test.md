@@ -148,6 +148,12 @@
 - 状态行必须继续在 inspector 内提供单一 label/value/hint 和稳定 focus identity；hint 必须区分源图片可重试与文件不可用。已有“重试语言已更新”状态保留唯一 action，避免重复入口。该 View-only 合同不得新增 Store／持久化、OCR、翻译、renderer/export、probe_report 或 Koharu active gate 路径。
 - 合同接在 v3.120 后进入 UI/full fail-fast。候选 full `31076710802`（exact SHA `9551c0c53bae0b8816d490a3da03c9472995e859`）Xcode/JUnit `10/10` 成功；PR #185 fast `31077094866`、merge fast `31077152440` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.123 图片屏幕预览失败／重试状态焦点合同
+
+- `scripts/test-v3123-image-preview-status-focus-contract.py` 必须验证 `ImageTranslationPanel` 为预览状态提供稳定 `imagePreviewStatusAccessibilityFocusID`，并把既有 `moveReviewAccessibilityFocus` 封装为 View 私有 `focusPreviewStatus` handoff 传入 `ImageTranslationPreview`。
+- `ImageTranslationPreview` 的状态容器必须使用 `.accessibilityFocused`；预览生成失败时和 `retryPreview()` 开始 loading 时都必须调用 `focusPreviewStatus()`，让 VoiceOver 焦点连续落在失败／重试详情上。该状态、焦点 identity 和 closure 不得进入 Store／持久化，不得调用探针或改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
+- 合同接在 v3.122 后进入 UI/full fail-fast；CI 路由将 v3.122/v3.123 纳入现有正则并保留顶层兼容标记。候选 full `31079060685`（exact SHA `92e68b60e74dd61fb471584bba9cf00bf1696868`）Xcode/JUnit `10/10` 成功；PR #187 fast `31079520917`、merge fast `31079590205` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.122 图片 OCR 取消后状态焦点合同
 
 - `scripts/test-v3122-image-cancel-status-focus-contract.py` 必须验证 `ImageTranslationPanel` 的状态监听接收 `oldState`，仅当 `.loading`、`.recognizing` 或 `.translating` 转为 `.idle` 时清除待终态焦点 revision，并通过既有 `moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)` 将焦点交给图片翻译状态行。
