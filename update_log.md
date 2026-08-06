@@ -1,3 +1,24 @@
+## v3.114：漫画探针诊断展开状态隔离
+
+日期：2026-08-06
+
+状态：Agent X 已完成 v3.114 Developer Console 漫画探针逐块诊断展开状态隔离、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.114`。候选 commit `e62a168e57e2f2cbc6cb47b5a8c8dde571d73f42` 已通过 PR [#178](https://github.com/bengzhu/project1_lgbt_naxida/pull/178) 合入，merge SHA `118afee6e096f73e6ab97d71c23af189d997f6ca`；候选远端分支已删除，`main` 未触碰。
+
+核心变更：
+
+- `MangaProbeSection` 在探针进入 loading 时递增 View 私有 `diagnosticExpansionResetID` 并传给每个 `MangaProbeBlockRow`；逐块行在 token 变化且详情已展开时收起旧内容。
+- reset 收起通过 `suppressNextExpansionFocusHandoff` 抑制一次 `isExpanded` 的旧焦点回调，避免清理上一轮报告时把 VoiceOver 焦点抢回旧结果；正常用户展开／收起仍交给详细诊断容器或原结果行。
+- `blockAccessibilityValue` 与 `blockAccessibilityHint` 读出“详细诊断已展开／已收起”及收起／展开动作；新增 `scripts/test-v3114-manga-diagnostic-expansion-state-contract.py`，未新增 Store／持久化，不重跑探针，不读取 ground truth。
+
+边界：本版只改善 Developer Console 漫画探针逐块诊断的新报告状态隔离与 VoiceOver 可理解性，不改变 OCR 候选、翻译 prompt/model、普通图片 OCR、renderer/export、probe_report、Koharu active artifact gate、metrics 或仓库 `output/`。候选、PR、merge 默认 `probe_mode=skip`，没有新的 OCR／翻译指标。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 push full [31069913494](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31069913494)：exact SHA `e62a168e57e2f2cbc6cb47b5a8c8dde571d73f42`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build success，静态/Speech/UI/home/paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；manifest 版本 `v3.114`，readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- 手动候选 full [31069918901](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31069918901)：同 exact SHA，`validationProfile=full`、`validationReason=manual_full`，Xcode build success，JUnit `10/10` 且 0 failures；与 push full 交叉确认，不产生探针指标。
+- PR #178 fast [31070264175](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31070264175)：exact head SHA，`validationProfile=fast`，`reusedFullValidationSha=e62a168e57e2f2cbc6cb47b5a8c8dde571d73f42`、`reusedFullValidationState=success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31070323190](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31070323190)：merge SHA `118afee6e096f73e6ab97d71c23af189d997f6ca`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `e62a168e57e2f2cbc6cb47b5a8c8dde571d73f42` / `success`，`receiptPropagationAllowed=true`，Xcode skipped，JUnit `10/10` 且 0 failures。
+
 ## v3.113：漫画探针诊断展开 VoiceOver 焦点交接
 
 日期：2026-08-06
