@@ -1030,6 +1030,7 @@ private struct MangaProbeSection: View {
     @AccessibilityFocusState private var diagnosticAccessibilityFocusID: String?
     private static let diagnosticProbeEmptyAccessibilityFocusID = "manga-diagnostic-probe-empty"
     private static let diagnosticFilterEmptyAccessibilityFocusID = "manga-diagnostic-filter-empty"
+    private static let diagnosticKoharuReadinessAccessibilityFocusID = "manga-diagnostic-koharu-readiness"
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
@@ -1054,7 +1055,11 @@ private struct MangaProbeSection: View {
                     text: "source=\(report.sourceImage)\nengine=\(report.engineUsed)\nblocks=\(report.totalBlocksDetected)\noverallPassed=\(report.overallPassed)\ndebug=\(report.outputFiles.debugBoxesImage)\noverlay=\(report.outputFiles.overlayImage)\nwarnings=\(report.warnings.joined(separator: " | "))"
                 )
                 if let readiness = report.externalArtifactReadinessReport {
-                    MangaKoharuArtifactReadinessSummary(readiness: readiness)
+                    MangaKoharuArtifactReadinessSummary(
+                        readiness: readiness,
+                        accessibilityFocus: $diagnosticAccessibilityFocusID,
+                        accessibilityFocusID: Self.diagnosticKoharuReadinessAccessibilityFocusID
+                    )
                 }
                 MangaProbeDiagnosticTriageSummary(report: report)
 
@@ -1172,7 +1177,10 @@ private struct MangaProbeSection: View {
 
     private func focusDiagnosticProbeResultIfNeeded() {
         let focusID: String
-        if store.mangaOverlayProbeBlocks.isEmpty {
+        if let readiness = store.mangaOverlayProbeReport?.externalArtifactReadinessReport,
+           diagnosticReadinessIsBlocking(readiness) {
+            focusID = Self.diagnosticKoharuReadinessAccessibilityFocusID
+        } else if store.mangaOverlayProbeBlocks.isEmpty {
             focusID = Self.diagnosticProbeEmptyAccessibilityFocusID
         } else if let firstBlock = filteredProbeBlocks.first {
             focusID = diagnosticBlockAccessibilityFocusID(firstBlock.index)
@@ -1180,6 +1188,19 @@ private struct MangaProbeSection: View {
             focusID = Self.diagnosticFilterEmptyAccessibilityFocusID
         }
         moveDiagnosticAccessibilityFocus(to: focusID)
+    }
+
+    private func diagnosticReadinessIsBlocking(
+        _ readiness: MangaOverlayExternalArtifactReadinessReport
+    ) -> Bool {
+        switch readiness.nextAction {
+        case "stopUntilArtifactsProvided",
+             "stopUntilArtifactContractFixed",
+             "stopUntilRealDetectorSourceDeclared":
+            true
+        default:
+            false
+        }
     }
 
     private func moveDiagnosticAccessibilityFocus(to focusID: String?) {
@@ -1398,6 +1419,8 @@ private struct MangaProbeDiagnosticTriageSummary: View {
 
 private struct MangaKoharuArtifactReadinessSummary: View {
     let readiness: MangaOverlayExternalArtifactReadinessReport
+    let accessibilityFocus: AccessibilityFocusState<String?>.Binding
+    let accessibilityFocusID: String
 
     var body: some View {
         AppStatusRow(title: statusTitle, detail: statusDetail, tone: statusTone)
@@ -1405,6 +1428,7 @@ private struct MangaKoharuArtifactReadinessSummary: View {
             .accessibilityLabel("Koharu 工件就绪状态")
             .accessibilityValue(readinessAccessibilityValue)
             .accessibilityHint(readinessAccessibilityHint)
+            .accessibilityFocused(accessibilityFocus, equals: accessibilityFocusID)
         DeveloperCodeBlock(title: "Koharu artifact readiness", text: summary)
     }
 
