@@ -498,19 +498,31 @@ struct ImageTranslationPanel: View {
                         equals: Self.reviewCompletionAccessibilityFocusID
                     )
                 } else if reviewFilter != .all {
-                    AppEmptyState(
-                        title: "当前筛选没有结果",
-                        detail: filterEmptyStateDetail,
-                        systemImage: "line.3.horizontal.decrease.circle"
-                    )
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("当前图片筛选没有结果")
-                    .accessibilityValue(reviewFilterEmptyStateAccessibilityValue)
-                    .accessibilityHint("切换上方识别结果筛选，或回到全部查看当前图片的文字块")
-                    .accessibilityFocused(
-                        $reviewAccessibilityFocusID,
-                        equals: Self.reviewFilterEmptyAccessibilityFocusID
-                    )
+                    VStack(spacing: AppTheme.Spacing.control) {
+                        AppEmptyState(
+                            title: "当前筛选没有结果",
+                            detail: filterEmptyStateDetail,
+                            systemImage: "line.3.horizontal.decrease.circle"
+                        )
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("当前图片筛选没有结果")
+                        .accessibilityValue(reviewFilterEmptyStateAccessibilityValue)
+                        .accessibilityHint("可在此执行“显示全部结果”，或切换上方识别结果筛选")
+                        .accessibilityAction(named: "显示全部结果") {
+                            showAllReviewResults()
+                        }
+                        .accessibilityFocused(
+                            $reviewAccessibilityFocusID,
+                            equals: Self.reviewFilterEmptyAccessibilityFocusID
+                        )
+
+                        AppSecondaryButton(
+                            title: "显示全部结果",
+                            systemImage: "list.bullet",
+                            action: showAllReviewResults
+                        )
+                        .accessibilityHint("切换到全部筛选，查看当前图片的所有文字块")
+                    }
                 } else {
                     AppEmptyState(
                         title: "无需复查",
@@ -609,6 +621,11 @@ struct ImageTranslationPanel: View {
 
     private var reviewCompletionAccessibilityValue: String {
         "已完成 \(reviewCompletedBlockCount) 个风险块，共 \(allReviewRequiredBlocks.count) 个；当前筛选为 \(reviewFilter.rawValue)"
+    }
+
+    private func showAllReviewResults() {
+        guard reviewFilter != .all else { return }
+        prepareReviewFilterChange(to: .all, focusID: nil)
     }
 
     private var imageSummaryAccessibilityHint: String {
