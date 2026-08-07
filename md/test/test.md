@@ -7,6 +7,13 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.155 普通图片空结果就地重试 action 合同
+
+- 普通图片 `imageTranslationBlocks` 为空、保留当前图片且 Store 允许当前图片重试时，结果空态必须提供可见“重试当前图片”按钮；仅在 `canRetryFromImageStatus` 为真时显示，该 View helper 必须同时要求 `store.canRetryImageTranslation` 且 `store.imageTranslationRetryLanguageSummary == nil`，避免与“重试语言已更新”状态行重复入口。
+- 可见按钮与空态 VoiceOver 必须暴露同名“重试当前图片” action，直接复用 `store.retryImageTranslation`，hint 明确使用当前图片语言重新识别并翻译；源图片不可用、处理进行中或待重试语言已变更时不得暴露这条局部 action，保留既有状态行或选择新图片的恢复边界。
+- 新增 `scripts/test-v3155-image-empty-result-retry-action-contract.py` 并接入 UI/full fail-fast；helper 只能消费既有 View／Store gate，不得新增 Store、持久化、Vision OCR、翻译、renderer/export、探针或 metrics/output 行为。
+- 候选 exact-SHA full [31173412868](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31173412868)（`a6283b1be84ec4e6b227b6d5fbf74961a4fd108f`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #219 fast [31173840102](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31173840102) 复用候选 full，merge fast [31173897707](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31173897707) 复用候选 full（merge SHA `2c26886ee6676c549b88ad48b0447e595c636a40`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.154 普通图片空结果状态文案合同
 
 - 普通图片 `imageTranslationBlocks` 为空且保留当前结果空态时，`AppEmptyState` 的可见标题与说明必须通过 View 私有 `imageResultEmptyStateTitle`／`imageResultEmptyStateDetail` 按 `.idle`、读取／OCR／翻译进行中、`.translated`、`.failed` 分流；translated 必须说明没有可显示 OCR 文字块及当前是否可重新识别，处理中保留 Store 的阶段消息，失败保留失败原因。

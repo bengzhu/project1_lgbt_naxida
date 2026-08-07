@@ -1,3 +1,23 @@
+## v3.155：普通图片空结果就地重试 action
+
+日期：2026-08-07
+
+状态：Agent X 已完成普通图片无可显示 OCR 文字块时的就地重试入口、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.155`。候选 commit `a6283b1be84ec4e6b227b6d5fbf74961a4fd108f` 已通过 PR [#219](https://github.com/bengzhu/project1_lgbt_naxida/pull/219) 合入，merge SHA `2c26886ee6676c549b88ad48b0447e595c636a40`；`main` 未触碰。
+
+核心变更：
+
+- 当普通图片 `imageTranslationBlocks` 为空、当前图片源文件仍可用、状态允许重试，且没有待重试语言变更时，结果空态新增可见“重试当前图片”按钮；按钮直接复用 `store.retryImageTranslation`，让用户不必离开结果区寻找上方状态入口。
+- 结果空态的 VoiceOver 同样提供“重试当前图片” action，并由 `canRetryFromImageStatus` 同时检查 `store.canRetryImageTranslation` 与 `store.imageTranslationRetryLanguageSummary == nil`；重试语言已更新时保留既有上方状态行 action，避免重复入口，锁定／处理中／源图片不可用时不暴露无效 action。
+- 按钮 hint 与空态 label/value 说明使用当前图片语言重新识别并翻译；新增 `scripts/test-v3155-image-empty-result-retry-action-contract.py` 并接入 UI/full fail-fast。改动只属于 View，未新增 Store、持久化、Vision OCR、翻译、renderer/export、探针或 metrics/output 管线。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`；不得据此声称 OCR、翻译、识别或 Koharu 质量提升。PR/merge fast 与后续文档 follow-up 只属于 receipt 复用或 metadata 传播，不是新的编译证据。
+
+云端证据：
+
+- 候选 exact-SHA full [31173412868](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31173412868)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `a6283b1be84ec4e6b227b6d5fbf74961a4fd108f`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu active artifact validator 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #219 fast [31173840102](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31173840102)：`validationProfile=fast`，复用候选 full `a6283b1be84ec4e6b227b6d5fbf74961a4fd108f / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31173897707](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31173897707)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `2c26886ee6676c549b88ad48b0447e595c636a40` 复用候选 full `a6283b1be84ec4e6b227b6d5fbf74961a4fd108f / success`，`receiptPropagationAllowed=true`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.154：普通图片空结果状态文案动态化
 
 日期：2026-08-07
