@@ -8506,3 +8506,22 @@ Agent C 最终验收：
 遗留事项：
 
 - 后续每轮由 Agent A 按 `md/prompt/README.md` 的命名规则写入具体实现提示词。
+## v3.173：日语 observation 语言专用融合
+
+日期：2026-08-08
+
+状态：Agent X 继续按 Koharu 的“语言识别后再做候选融合”边界收紧普通图片日语 OCR。Vision 的 90°／270°、文字块、line 与 perspective reread 结果会进入日语专用 `deduplicateJapaneseObservations`：保留原有文本长度、置信度、CJK 与旋转分数，只额外加入上限为 `1.1` 的 `japaneseScriptDensity`／标点 evidence，并对无日语证据候选施加 `-0.65` 轻微 tie-breaker。日语竖排 block/line 候选排序、合成 line 的代表 observation 和弱方向 fallback 统一使用该 helper；普通语言仍走原 `deduplicateObservations`，不新增硬语言 gate。
+
+核心变更：
+
+- `recognizeTextBlocks` 在日语与非日语最终布局前分流去重；`recognizeJapaneseVerticalCrops`、`recognizeJapaneseVerticalLineCrops`、碎片合成与 orientation fallback 使用日语专用排序。
+- 新增 `japanesePunctuationDensity` 与有界 `japaneseObservationEvidence`；保留 v3.172 合成 line 的几何、24 条预算、预处理、映射和 perspective 边界。
+- 新增 `scripts/test-v3173-image-japanese-observation-fusion-contract.py`；v3.172 历史合同接受 `deduplicateJapaneseObservations` 的等价共享 helper。
+
+边界：该改动只影响普通图片日语 OCR 的重复 observation 选择，不加载 Manga OCR/PaddleOCR 权重，不改变翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`。`test/jap.jpg` 继续只作合同 fixture；真实竖排图片质量 corpus、Speech corpus 与 Koharu 四件套仍缺失，不能据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31206796785](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31206796785)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `d86f875d1040d69259b62b52754c73be3ccb59dd`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #237 fast [31207387731](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31207387731)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=d86f875d1040d69259b62b52754c73be3ccb59dd`、state `success`；Xcode skipped，不是新的编译证据。
+- merge fast [31207465845](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31207465845)：merge SHA `3fe6e719e064fe261f97530a7f16ff3b39ea4903`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，不是新的编译证据。

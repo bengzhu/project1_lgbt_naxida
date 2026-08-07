@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.173 日语 observation 融合合同
+
+- 日语最终布局、竖排 block/line 候选和弱方向 fallback 必须调用 `deduplicateJapaneseObservations`／`isBetterJapaneseObservation`；该 helper 在原 observation score 上只增加有界 `japaneseScriptDensity`／标点 evidence，并对无日语证据候选施加轻微 tie-breaker。普通语言必须保留 `deduplicateObservations(observations)` 原路径。
+- 新增 `scripts/test-v3173-image-japanese-observation-fusion-contract.py` 并接入显式 UI/full fail-fast；v3.172 合同改为接受共享日语去重 helper。该改动只作用于普通图片日语 OCR 候选融合，不改变翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`；没有真实竖排质量 corpus，不得声称质量提升。
+- 候选 exact-SHA full [31206796785](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31206796785)（`d86f875d1040d69259b62b52754c73be3ccb59dd`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #237 fast [31207387731](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31207387731) 复用候选 full，merge fast [31207465845](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31207465845) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `3fe6e719e064fe261f97530a7f16ff3b39ea4903`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ### v3.172 日语竖排碎片 line-region 合同
 
 - `recognizeJapaneseVerticalLineCrops` 必须保留原始最多 24 条 quad 候选给 `recognizeJapanesePerspectiveLineCrop`，并可从同一 vertical block 内满足短日语文本（最多 2 个 scalar、脚本密度至少 `0.5`）、列中心接近、垂直间隙受限的近方形片段合成 line-region；合成 path 只替换被覆盖的轴对齐 reread，最终仍受 `.prefix(24)`、既有预处理、方向 fallback、坐标映射与去重门控。

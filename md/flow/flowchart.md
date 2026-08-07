@@ -1,4 +1,6 @@
 # 项目流程图
+v3.173 日语路径：Vision 多方向／crop 结果 → 日语专用 observation 去重与排序（脚本／标点有界 evidence）→ 既有竖排与漫画 RTL 布局；普通语言仍走原评分。候选 full `31206796785`、PR fast `31207387731`、merge fast `31207465845` 均通过；真实 Koharu 工件仍缺失，不声称 OCR 质量提升。
+
 v3.172 日语竖排碎片：近方形短日语 observation → 列中心／垂直间隙／脚本密度门控 → 合成最多 24 条 line crop → 既有灰度化／有界放大／轴对齐 reread；原始 quad 保留 perspective reread → 方向 fallback → 去重／布局 → 翻译／渲染；门控失败回到原路径。候选 full `31204989011`、PR fast `31205608084`、merge fast `31205688629` 均通过，候选 SHA `c2e7edd13818c9c46b65d1aa318e4c91c3479c09` Xcode/JUnit `10/10`，merge SHA `fab5ddb6d9ebdaa3d4a9dd34bfcdf6c0f676c84c` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.171 日语竖排 line crop：line-region → 灰度化 → 4M 像素内优先 2× 放大 → 轴对齐／透视 reread；轴对齐保留 `cropScale` 回映射，透视按放大后像素计入每页 16M 预算 → 弱方向 fallback → 去重／布局 → 翻译／渲染；预处理失败回退，其他语言不变。候选 full `31203452238`、PR fast `31204110506`、merge fast `31204194868` 均通过，候选 SHA `9968f3083f9b19e9401dd9b48d9e35a480c99e9b` Xcode/JUnit `10/10`，merge SHA `df0145f9a2cb5dc5ea4ffdd515042f84cb8de108` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
