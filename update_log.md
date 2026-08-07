@@ -17,6 +17,7 @@
 - 候选 exact-SHA full [31190984866](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31190984866)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `7e584045f12fefa995866b7479db4cd440d52a03`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
 - PR #228 fast [31191645282](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31191645282)：`validationProfile=fast`，`reusedFullValidationSha=7e584045f12fefa995866b7479db4cd440d52a03`、state `success`，Xcode/UI/Speech 跳过，不是新的编译证据。
 - merge fast [31191716497](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31191716497)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `3943843d61f331630f7c6764f5639273aea4bd90` 复用候选 full，`receiptPropagationAllowed=true`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- 文档提交后的 metadata follow-up [31192018448](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31192018448)：`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用 merge SHA `3943843d61f331630f7c6764f5639273aea4bd90` 的成功 full receipt，`receiptPropagationAllowed=true`，JUnit `10/10`；不作为新的编译证据。
 
 ## v3.163：日语竖排 Recursive XY-Cut reading order
 
