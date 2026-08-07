@@ -17,6 +17,7 @@
 - 候选 exact-SHA full [31170387940](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31170387940)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `6c838ef220470753cb6abf4867babc48a6ea795c`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu active artifact validator 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 - PR #217 fast [31170963538](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31170963538)：`validationProfile=fast`，复用候选 full `6c838ef220470753cb6abf4867babc48a6ea795c / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
 - merge fast [31171022668](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31171022668)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `a938b8b73803e0570e0ec9bb8e6ec354e3cf85b0` 复用候选 full `6c838ef220470753cb6abf4867babc48a6ea795c / success`，`receiptPropagationAllowed=true`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- 文档 metadata follow-up [31171243756](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31171243756)：`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用 merge SHA `a938b8b73803e0570e0ec9bb8e6ec354e3cf85b0 / success`，`receiptPropagationAllowed=true`，`smalldataIncrementalMetadataOnly=true`，仅 6 个文档文件变化，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 
 ## v3.152：普通图片空结果可见重新识别
 
