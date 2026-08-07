@@ -3160,6 +3160,13 @@ private struct ImageTranslationIgnoredBlockRow: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("已忽略 OCR 文字块 \(accessibilityOriginalText)")
         .accessibilityValue(accessibilityValue)
+        .accessibilityHint(accessibilityHint)
+        .modifier(
+            ImageIgnoredBlockRestoreAccessibilityModifier(
+                canRestore: canRestore,
+                restore: restore
+            )
+        )
     }
 
     private var displayOriginalText: String {
@@ -3175,6 +3182,29 @@ private struct ImageTranslationIgnoredBlockRow: View {
         parts.append(block.translation.isEmpty ? "没有现有译文" : "保留已有译文")
         parts.append(canRestore ? "可以恢复" : "当前不可恢复")
         return parts.joined(separator: "；")
+    }
+
+    private var accessibilityHint: String {
+        canRestore
+            ? "可执行“恢复”，把此文字块恢复到图片预览、导出和当前转录；需要复查时会重新回到待复查队列"
+            : modificationUnavailableHint
+    }
+}
+
+private struct ImageIgnoredBlockRestoreAccessibilityModifier: ViewModifier {
+    let canRestore: Bool
+    let restore: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if canRestore {
+            content
+                .accessibilityAction(named: "恢复") {
+                    restore()
+                }
+        } else {
+            content
+        }
     }
 }
 
