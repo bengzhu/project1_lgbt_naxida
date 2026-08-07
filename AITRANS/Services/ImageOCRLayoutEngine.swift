@@ -111,6 +111,32 @@ enum ImageOCRLayoutEngine {
                 reason: "wideBox"
             )
         }
+        let peers = all.filter { $0 != observation }
+        let hasColumnNeighbor = peers.contains { isColumnNeighbor(observation.rect, $0.rect) }
+        let hasRowNeighbor = peers.contains { isCloseRowNeighbor(observation.rect, $0.rect) }
+        let cjkCount = cjkCharacterCount(in: observation.text)
+        let isShortCJKObservation = cjkCount > 0 && observation.text.count <= 2
+
+        // Vision can return one near-square observation per glyph for a narrow
+        // Japanese vertical column. Treat that shape as vertical only when
+        // neighboring geometry confirms a column and does not also describe a
+        // horizontal row; this keeps isolated icons and horizontal fragments out
+        // of the vertical crop path while giving Koharu-style TextBox → crop OCR
+        // a usable candidate even before line polygons are available.
+        if allowsVerticalText,
+           isShortCJKObservation,
+           verticalRatio >= 1.05,
+           height >= 0.015,
+           hasColumnNeighbor,
+           !hasRowNeighbor {
+            return ResolvedObservation(
+                observation: observation,
+                direction: .vertical,
+                confidence: min(max((verticalRatio - 1) / 1.5, 0.15), 0.65),
+                reason: "cjkGlyphColumnNeighbors"
+            )
+        }
+
         guard allowsVerticalText, verticalRatio >= 1.6, height >= 0.035 else {
             return ResolvedObservation(
                 observation: observation,
@@ -120,10 +146,7 @@ enum ImageOCRLayoutEngine {
             )
         }
 
-        let peers = all.filter { $0 != observation }
-        let hasColumnNeighbor = peers.contains { isColumnNeighbor(observation.rect, $0.rect) }
-        let hasRowNeighbor = peers.contains { isCloseRowNeighbor(observation.rect, $0.rect) }
-        let containsTextRun = cjkCharacterCount(in: observation.text) >= 2
+        let containsTextRun = cjkCount >= 2
         guard containsTextRun || (hasColumnNeighbor && !hasRowNeighbor) else {
             return ResolvedObservation(
                 observation: observation,
