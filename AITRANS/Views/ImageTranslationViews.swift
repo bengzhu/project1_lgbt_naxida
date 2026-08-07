@@ -1746,7 +1746,10 @@ private struct ImageCommandBar: View {
         if isRunning {
             return "从文件选择新图片会取消当前图片读取、OCR 或翻译，并开始新的本机 OCR 与翻译"
         }
-        return "从文件选择图片并开始本机 OCR 与翻译"
+        if store.imageTranslationData == nil {
+            return "从文件选择图片并开始本机 OCR 与翻译"
+        }
+        return "更换当前图片并开始新的本机 OCR 与翻译"
     }
 
     private var isRunning: Bool {
