@@ -1,3 +1,5 @@
+- 文档 metadata follow-up [31190328506](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31190328506)：`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，仅 v3.163 文档增量，复用 merge SHA `e93f3844c359214c0cdfe09cd609fb11c51b924d / success`，`receiptPropagationAllowed=true`、`smalldataIncrementalMetadataOnly=true`，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.162：日语竖排 line-region perspective OCR
 
 日期：2026-08-07
