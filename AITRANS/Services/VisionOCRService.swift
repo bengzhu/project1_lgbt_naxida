@@ -747,12 +747,10 @@ struct VisionOCRService: Sendable {
             return nil
         }
 
-        let ordered = observations.sorted {
-            if abs($0.rect.y - $1.rect.y) > 0.02 {
-                return $0.rect.y < $1.rect.y
-            }
-            return $0.rect.x < $1.rect.x
-        }
+        let ordered = orderedJapanesePerspectiveLineObservations(
+            observations,
+            angle: angle
+        )
         let text = ordered
             .map(\.text)
             .joined()
@@ -769,6 +767,36 @@ struct VisionOCRService: Sendable {
             lineRegionQuad: candidate.lineRegionQuad,
             rotationApplied: angle
         )
+    }
+
+    /// Assemble observations from one warped vertical line in the same reading
+    /// direction as Koharu's `rotate270` vertical line crop. After the source
+    /// column is rotated, its original top-to-bottom order lies on the x axis:
+    /// the 90-degree pass reads left-to-right, while the 270-degree pass reads
+    /// right-to-left. Keep y as a bounded tie-breaker for a Vision result that
+    /// contains more than one row, rather than letting that noise reverse the
+    /// primary line order.
+    private static func orderedJapanesePerspectiveLineObservations(
+        _ observations: [VisionOCRObservation],
+        angle: Int
+    ) -> [VisionOCRObservation] {
+        guard observations.count > 1 else { return observations }
+        let xTolerance = 0.02
+        let readsRightToLeft = angle == 270
+        return observations.sorted { lhs, rhs in
+            let xDelta = abs(lhs.rect.midX - rhs.rect.midX)
+            if xDelta > xTolerance {
+                return readsRightToLeft
+                    ? lhs.rect.midX > rhs.rect.midX
+                    : lhs.rect.midX < rhs.rect.midX
+            }
+
+            let yDelta = abs(lhs.rect.midY - rhs.rect.midY)
+            if yDelta > xTolerance {
+                return lhs.rect.midY < rhs.rect.midY
+            }
+            return isBetterJapaneseObservation(lhs, rhs)
+        }
     }
 
     private static func perspectiveCorrectedLineImage(
