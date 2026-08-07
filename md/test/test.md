@@ -7,6 +7,13 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.148 普通图片全部忽略空态 action 门控合同
+
+- 全部 OCR 文字块被忽略时，空态父级仅在 `canModifyImageTranslation` 为真时提供 VoiceOver“恢复全部” action；翻译未完成或导出重绘期间不得暴露一个只会被 guard 拒绝的无效 action。
+- 锁定状态继续保留“当前没有保留文字块”的 label/value、`imageModificationUnavailableDetail` hint、可见批量恢复按钮及 `.disabled(!canModifyImageTranslation)`；恢复仍经既有确认对话框和 View 回调进入 Store。
+- 新增 `scripts/test-v3148-image-ignored-empty-state-action-gate-contract.py`，并同步 v3.132 历史合同与 UI/full fail-fast 路由。候选 exact-SHA full `31160052402`（`01231917a86696cfc3a864d9a6382119b8c13455`）Xcode/JUnit `10/10` 成功；PR #212 fast `31160532637`、merge fast `31160619661` 复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+
 ### v3.147 普通图片 OCR 修正输入无障碍上下文合同
 
 - `ImageOCRCorrectionSheet` 的“修正后的文字”输入必须提供明确 label、当前 value 和基于空文本／实际修改／确认无误／保存中的动态 hint；保存／重译进行中，输入与“忽略此文字块”均不可用，忽略 hint 继续说明当前图片会话范围和图片检查区恢复路径。
