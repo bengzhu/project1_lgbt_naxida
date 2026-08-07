@@ -1,4 +1,6 @@
 # 项目流程图
+v3.177 日语紧凑竖排：manga-order 偏好 → 多字 CJK／紧凑高框且同列无同行的方向门控 → Koharu 风格 crop／line reread → 后处理／去重／布局 → 翻译／渲染；其他语言与旧门控不变，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31213076831`、PR fast `31213569259`、merge fast `31213642909` 均通过。
+
 v3.176 日语竖排：四点 line warp → 90° x 正序／270° x 逆序拼接 → y／日语评分 tie-breaker → OCR 后处理／去重／布局 → 翻译／渲染；单 observation 与失败路径安全回退，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31211585649`、PR fast `31212154910`、merge fast `31212217877` 均通过。
 
 v3.175 日语竖排：Vision block/line → 源像素字体大小 → Koharu padding（8% base／18% 横／12% 纵，最小 2px）→ 归一化 crop → 既有 OCR reread／方向 fallback → 去重／布局 → 翻译／渲染；缺尺寸安全回退，其他语言不变。候选 full `31210073265`、PR fast `31210705708`、merge fast `31210782269` 均通过；真实 Koharu 工件仍缺失，不声称 OCR 质量提升。

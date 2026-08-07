@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.177 日语紧凑竖排方向合同
+
+- `ImageOCRLayoutEngine.layout` 必须把 `prefersMangaReadingOrder` 传入 `resolveDirection`；紧凑门控只在该日语偏好、`cjkCount >= 2`、`verticalRatio >= 1.35`、`height >= 0.022`、存在 `hasColumnNeighbor` 且不存在 `hasRowNeighbor` 时标记 `cjkCompactColumnTextRun`，使小尺寸多字列能进入既有 Koharu 风格 block／line crop reread；宽框横排、单字列、孤立高框、同行碎片、简中和非日语边界保持不变。
+- 新增 `scripts/test-v3177-image-japanese-compact-vertical-direction-contract.py` 并接入显式 UI/full fail-fast；v3.176 及更早合同继续回归。该 layout-only 改动不读取探针报告、ground truth 或 `test/koharu_artifacts`，不改变 Vision OCR、翻译、renderer/export、Store、Koharu active gate、metrics 或 `output`，不得把方向门控描述为已测得 OCR 质量提升。
+- 候选 exact-SHA full [31213076831](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31213076831)（`9777d167cca71deb753f5d0f721f6c2f9f2af48f`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #241 fast [31213569259](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31213569259) 复用候选 full，merge fast [31213642909](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31213642909) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `f2c8a33ba66666a69a941d24fb5d8d78284b1695`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.176 日语竖排 perspective line reading order 合同
 
 - `recognizeJapanesePerspectiveLineCrop` 必须把同一四点 warp 后的 Vision observations 交给共享 `orderedJapanesePerspectiveLineObservations`；90° pass 按旋转图 x 轴正序，270° pass 按 x 轴逆序，x 位置接近时才使用 y 与 `isBetterJapaneseObservation` 稳定 tie-breaker，避免一条竖排 line 被拆分后文字顺序反转。
