@@ -3,6 +3,8 @@
 
 ## 0. 一句话总览
 
+v3.181 日语竖排 line reread：四点 perspective line → 成功且无需方向 fallback 的结果登记为已覆盖 → 与其重叠比 `>= 0.72` 的轴对齐 line 跳过重复 OCR；弱／失败 perspective 保留轴对齐与方向 fallback → 映射、去重、布局、翻译与渲染。最多 24 line／16M warp 像素预算与其他路径不变。候选 full `31218314967`、PR fast `31218876431`、merge fast `31218932836` 均通过，候选 SHA `e24ce08b798b1f205a4d812e626d27ba801db1de` Xcode/JUnit `10/10`，merge SHA `1107998858e3879750cba8dc8a27248ad1497589` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.180 日语 perspective line warp：四点 line polygon → 按 bbox 裁剪源图 → 四点平移到局部坐标 → `CIPerspectiveCorrection` → 灰度／放大、90°／270° reread、映射与去重 → 布局、翻译与渲染；保留 24 line／16M 像素预算，其他语言与轴对齐路径不变。候选 full `31217320435`、PR fast `31217749775`、merge fast `31217813652` 均通过，候选 SHA `eb522b28c1e9649278342f227aaef03995d67a41` Xcode/JUnit `10/10`，merge SHA `54b4cf750615efe54962f4247c72003d6d04f761` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.179 日语 OCR 后处理：Vision／crop／line reread → 去空白、统一省略号、压缩 `.`／`・` → 再将 ASCII 标点映射为全角 → 日语候选融合、布局、翻译与渲染；普通语言与识别几何不变。候选 full `31216151856`、PR fast `31216723888`、merge fast `31216783591` 均通过，候选 SHA `c16e5593ef63113e2d3ba5ef1b72d7a09ee2396a` Xcode/JUnit `10/10`，merge SHA `5f3c0aa1f45d9cee9774db4d0020370666b69273` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
