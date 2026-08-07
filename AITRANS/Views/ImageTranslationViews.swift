@@ -540,6 +540,14 @@ struct ImageTranslationPanel: View {
                                 action: store.rerunImageRecognition
                             )
                             .accessibilityHint("使用当前图片语言重新运行 Vision OCR，并重新翻译识别到的文字")
+                        } else if canRetryFromImageStatus {
+                            AppSecondaryButton(
+                                title: "重试当前图片",
+                                systemImage: "arrow.clockwise",
+                                tone: .warning,
+                                action: store.retryImageTranslation
+                            )
+                            .accessibilityHint(imageResultEmptyStateRetryHint)
                         }
                     }
                 }
@@ -769,7 +777,13 @@ struct ImageTranslationPanel: View {
             if store.imageTranslationData == nil {
                 return "从上方照片或文件按钮选择图片，并开始本机 OCR 与翻译"
             }
-            return "当前图片尚未完成处理；可在上方状态或重试按钮重新识别和翻译"
+            if canRetryFromImageStatus {
+                return "当前图片尚未完成处理；可在此或上方状态执行“重试当前图片”，重新识别和翻译"
+            }
+            if store.canRetryImageTranslation {
+                return "重试语言已更新；可在上方状态执行“重试当前图片”，使用当前选择的语言重新识别和翻译"
+            }
+            return "当前图片尚未完成处理；可选择新图片重新识别和翻译"
         case .loading, .recognizing, .translating:
             return "图片正在读取、识别或翻译；可在上方状态取消或选择新图片"
         case .translated:
@@ -777,10 +791,18 @@ struct ImageTranslationPanel: View {
                 ? "当前没有可显示的 OCR 文字块；可在此执行“重新识别”，只重跑当前图片的 Vision OCR 与翻译，也可选择新图片"
                 : "当前没有可显示的 OCR 文字块；可选择新图片重新识别"
         case .failed:
-            return store.canRetryImageTranslation
-                ? "图片识别失败；可在上方状态或重试按钮重新识别当前图片，也可选择新图片"
-                : "图片识别失败；请从上方照片或文件按钮选择新图片"
+            if canRetryFromImageStatus {
+                return "图片识别失败；可在此或上方状态执行“重试当前图片”，也可选择新图片"
+            }
+            if store.canRetryImageTranslation {
+                return "图片识别失败且重试语言已更新；可在上方状态执行“重试当前图片”，也可选择新图片"
+            }
+            return "图片识别失败；请从上方照片或文件按钮选择新图片"
         }
+    }
+
+    private var imageResultEmptyStateRetryHint: String {
+        "使用当前图片语言重新识别并翻译这张图片"
     }
 
     @ViewBuilder
@@ -789,6 +811,12 @@ struct ImageTranslationPanel: View {
             content
                 .accessibilityAction(named: "重新识别") {
                     store.rerunImageRecognition()
+                }
+        } else if canRetryFromImageStatus {
+            content
+                .accessibilityAction(named: "重试当前图片") {
+                    guard store.canRetryImageTranslation else { return }
+                    store.retryImageTranslation()
                 }
         } else {
             content
