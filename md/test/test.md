@@ -7,6 +7,13 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.152 普通图片空结果可见重新识别合同
+
+- 普通图片翻译已完成但 `imageTranslationBlocks` 为空且仍保留源图片时，结果空态必须提供可见“重新识别”按钮；按钮仅在既有 `store.canRerunImageRecognition` 为真时显示，复用 `store.rerunImageRecognition`，不得新增 OCR、翻译、Store 或持久化管线。
+- VoiceOver 继续由 v3.144 helper 提供同名“重新识别” action；可见按钮 hint 必须明确使用当前图片语言重新运行 Vision OCR 并重新翻译识别到的文字，源图片不可重跑时不显示按钮或 action。
+- 新增 `scripts/test-v3152-image-empty-result-rerun-button-contract.py` 并接入 UI/full fail-fast；历史 v3.144/v3.313 空结果上下文合同继续通过。
+- 候选 exact-SHA full [31167004721](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31167004721)（`0c08bfda4548b996a2e3bad86d2adde950276378`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #216 fast [31170006883](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31170006883) 复用候选 full，merge fast [31170055419](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31170055419) 复用候选 full，后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.151 漫画探针无逐块结果就地重试合同
 
 - Developer Console 的漫画探针报告存在但没有逐块文字块时，空态必须同时提供可见“重新运行漫画覆盖翻译探针”按钮和同名 VoiceOver action；两者复用既有 `store.runMangaOverlayProbe`，不创建第二条探针、OCR、翻译或 Store 管线。

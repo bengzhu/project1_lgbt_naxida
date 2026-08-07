@@ -1,3 +1,23 @@
+## v3.152：普通图片空结果可见重新识别
+
+日期：2026-08-07
+
+状态：Agent X 已完成普通图片翻译完成但没有可显示 OCR 文字块时的可见重新识别入口、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.152`。候选 commit `0c08bfda4548b996a2e3bad86d2adde950276378` 已通过 PR [#216](https://github.com/bengzhu/project1_lgbt_naxida/pull/216) 合入，merge SHA `29b42e3d839b5d9f225658fb24e4f88e4ec4d69d`；`main` 未触碰。
+
+核心变更：
+
+- 普通图片翻译已完成但没有可显示 OCR 文字块时，结果空态新增可见“重新识别”按钮；只有 `store.canRerunImageRecognition` 为真（当前图片仍有可用源文件）才显示，避免在源图片已失效时留下无效入口。
+- 按钮直接复用 `store.rerunImageRecognition`，由 Store 既有 guard 进入当前图片的 Vision OCR 与翻译重跑；v3.144 的 VoiceOver action、label/value/hint 和源文件门控继续保持，不新增 Store／持久化／OCR／翻译管线。
+- 新增 `scripts/test-v3152-image-empty-result-rerun-button-contract.py` 并接入 UI/full fail-fast，历史 v3.144/v3.313 空结果上下文合同继续通过；改动只属于 View、静态合同和 CI 路由。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`；不得据此声称 OCR、翻译、识别或 Koharu 质量提升。后续云端文档跟进只属于元数据传播，不是新的编译证据。
+
+云端证据：
+
+- 候选 exact-SHA full [31167004721](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31167004721)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `0c08bfda4548b996a2e3bad86d2adde950276378`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu active artifact validator 仍报告 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #216 fast [31170006883](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31170006883)：`validationProfile=fast`，复用候选 full `0c08bfda4548b996a2e3bad86d2adde950276378 / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31170055419](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31170055419)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `0c08bfda4548b996a2e3bad86d2adde950276378 / success`，`receiptPropagationAllowed=true`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.151：漫画探针无逐块结果就地重试 action
 
 日期：2026-08-07
