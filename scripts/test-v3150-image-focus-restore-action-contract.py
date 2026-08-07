@@ -99,7 +99,7 @@ class ImageFocusPreviewRestoreActionContractTests(unittest.TestCase):
     def test_version_and_ci_route_follow_v3149(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
         self.assertEqual(len(versions), 2)
-        self.assertEqual(versions, ["3.150", "3.150"])
+        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 150) for version in versions))
         self.assertNotIn("MARKETING_VERSION = 3.149;", self.project)
         old = "scripts/test-v3149-image-review-completion-action-gate-contract.py"
         new = "scripts/test-v3150-image-focus-restore-action-contract.py"

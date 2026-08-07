@@ -1097,11 +1097,27 @@ private struct MangaProbeSection: View {
             }
 
             if store.mangaOverlayProbeReport != nil, store.mangaOverlayProbeBlocks.isEmpty {
-                AppEmptyState(
-                    title: "本次探针未生成文字块",
-                    detail: emptyProbeBlocksDetail,
-                    systemImage: "exclamationmark.triangle"
-                )
+                VStack(spacing: AppTheme.Spacing.control) {
+                    AppEmptyState(
+                        title: "本次探针未生成文字块",
+                        detail: emptyProbeBlocksDetail,
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .modifier(
+                        MangaProbeEmptyStateRetryAccessibilityModifier(
+                            canRetry: canRetryEmptyMangaProbe,
+                            retry: rerunMangaProbeAction
+                        )
+                    )
+
+                    AppSecondaryButton(
+                        title: "重新运行漫画覆盖翻译探针",
+                        systemImage: "arrow.clockwise",
+                        action: rerunMangaProbeAction
+                    )
+                    .disabled(!canRetryEmptyMangaProbe)
+                    .accessibilityHint(emptyProbeRetryAccessibilityHint)
+                }
             } else if store.mangaOverlayProbeReport != nil, filteredProbeBlocks.isEmpty {
                 VStack(spacing: AppTheme.Spacing.control) {
                     AppEmptyState(
@@ -1291,6 +1307,38 @@ private struct MangaProbeSection: View {
             return "漫画覆盖翻译探针正在运行；完成后可查看诊断报告和覆盖图"
         }
         return "读取 bundle 的 test/1.png，运行 Vision OCR、确定性翻译和覆盖绘制，并生成 Output 诊断文件；不会改变普通图片 OCR、翻译或覆盖图"
+    }
+
+    private var canRetryEmptyMangaProbe: Bool {
+        !store.isRunningMangaOverlayProbe
+    }
+
+    private var rerunMangaProbeAction: () -> Void {
+        store.runMangaOverlayProbe
+    }
+
+    private var emptyProbeRetryAccessibilityHint: String {
+        if canRetryEmptyMangaProbe {
+            return "重新读取 bundle 的 test/1.png、清理 Output 并生成新的漫画探针报告；不会影响普通图片 OCR、翻译或覆盖图"
+        }
+        return "漫画覆盖翻译探针正在运行；当前按钮不可用，完成后再重试"
+    }
+}
+
+private struct MangaProbeEmptyStateRetryAccessibilityModifier: ViewModifier {
+    let canRetry: Bool
+    let retry: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if canRetry {
+            content
+                .accessibilityAction(named: "重新运行漫画覆盖翻译探针") {
+                    retry()
+                }
+        } else {
+            content
+        }
     }
 }
 
