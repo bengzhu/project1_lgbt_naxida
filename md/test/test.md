@@ -7,6 +7,13 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.151 漫画探针无逐块结果就地重试合同
+
+- Developer Console 的漫画探针报告存在但没有逐块文字块时，空态必须同时提供可见“重新运行漫画覆盖翻译探针”按钮和同名 VoiceOver action；两者复用既有 `store.runMangaOverlayProbe`，不创建第二条探针、OCR、翻译或 Store 管线。
+- `canRetryEmptyMangaProbe` 只在 `!store.isRunningMangaOverlayProbe` 时为真；探针运行中按钮保持 `.disabled(true)`，不向 VoiceOver 暴露只会被 Store guard 拒绝的 action。hint 必须说明会重新读取 `test/1.png`、清理 Output、只更新漫画探针诊断，不改变普通图片 OCR、翻译或覆盖图。
+- 新增 `scripts/test-v3151-manga-probe-empty-retry-action-contract.py` 并接入 UI/full fail-fast；v3.56 历史状态合同接受这条受门控的第二入口，同时继续锁定 report-only 和单一 Store 入口边界。
+- 候选 exact-SHA full [31165387991](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31165387991)（`8579bdabc8f0dbbeafe19b4804cfedcea9dfbe04`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #215 fast [31165964091](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31165964091) 复用候选 full，merge fast [31166051842](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31166051842) 复用候选 full，后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.150 普通图片局部放大恢复 Vision OCR action 合同
 
 - 人工修正后的图片文字块在局部放大预览中提供可见“恢复 Vision OCR”按钮与同名 VoiceOver action；只有 `isManuallyCorrected && canEdit` 时暴露，锁定时保留 `modificationUnavailableHint` 和禁用按钮，不虚构恢复入口。

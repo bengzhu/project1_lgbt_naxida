@@ -1,3 +1,23 @@
+## v3.151：漫画探针无逐块结果就地重试 action
+
+日期：2026-08-07
+
+状态：Agent X 已完成 Developer Console 漫画探针无逐块结果空态的就地重试入口、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.151`。候选 commit `8579bdabc8f0dbbeafe19b4804cfedcea9dfbe04` 已通过 PR [#215](https://github.com/bengzhu/project1_lgbt_naxida/pull/215) 合入，merge SHA `79f92aad2a12e682eba609a1f49814025e9920a7`；`main` 未触碰。
+
+核心变更：
+
+- 当漫画探针已有报告但没有逐块文字块时，空态同时提供可见“重新运行漫画覆盖翻译探针”按钮与同名 VoiceOver action；只在 `!store.isRunningMangaOverlayProbe` 时暴露，运行中保留 disabled 边界，不暴露只会被 Store guard 拒绝的无效 action。
+- 可见按钮与 VoiceOver action 均复用既有 `store.runMangaOverlayProbe`，hint 明确会重新读取 bundle 内 `test/1.png`、清理 Output 并只更新漫画探针诊断，不改变普通图片 OCR、翻译或覆盖图；不新增 Store／持久化／OCR／翻译管线。
+- 新增 `scripts/test-v3151-manga-probe-empty-retry-action-contract.py` 并接入 UI/full fail-fast；同步让 v3.56 历史状态合同接受这条受门控的第二入口，继续锁定 report-only 和单一 Store 入口边界。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`；不得据此声称 OCR、翻译、识别或 Koharu 质量提升。后续云端文档跟进只属于元数据传播，不是新的编译证据。
+
+云端证据：
+
+- 候选 exact-SHA full [31165387991](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31165387991)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `8579bdabc8f0dbbeafe19b4804cfedcea9dfbe04`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；manifest 的 Koharu active artifact validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #215 fast [31165964091](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31165964091)：`validationProfile=fast`，复用候选 full `8579bdabc8f0dbbeafe19b4804cfedcea9dfbe04 / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31166051842](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31166051842)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `8579bdabc8f0dbbeafe19b4804cfedcea9dfbe04 / success`，`receiptPropagationAllowed=true`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.150：普通图片局部放大恢复 Vision OCR action
 
 日期：2026-08-07
