@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.180 日语 line warp bbox 合同
+
+- `perspectiveCorrectedLineImage` 必须先用四点 line polygon 的 bbox 与源图边界求交，裁出 `croppedImage`，再将四点平移为 `localPoints` 并交给 `CIPerspectiveCorrection`；不能把整张源图作为小日语 line 的透视输入。
+- `recognizeJapaneseVerticalLineCrops` 继续最多选 24 个 perspective 候选，保留 `prepareJapaneseCropForVision`、每页 16M warp 像素预算、90°／270° reread、坐标映射和安全失败回退；仅作用于普通图片日语 perspective line，不改变轴对齐 crop、普通语言、布局、翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`，不得把局部裁剪描述为已测得质量提升。
+- 新增 `scripts/test-v3180-image-japanese-line-warp-bbox-contract.py` 并接入显式 UI/full fail-fast；v3.179 及更早合同继续回归。候选 exact-SHA full [31217320435](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31217320435)（`eb522b28c1e9649278342f227aaef03995d67a41`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #244 fast [31217749775](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31217749775) 复用候选 full，merge fast [31217813652](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31217813652) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `54b4cf750615efe54962f4247c72003d6d04f761`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.179 日语 Koharu 后处理顺序合同
 
 - `postProcessJapaneseOCRText` 必须先移除空白、把 `…` 统一为 `...` 并压缩连续 `.`／`・` 到中间字符串，再遍历该压缩结果执行 ASCII 到全角映射；压缩后的点号不能直接写入最终输出，否则会偏离 Koharu `post_process`。

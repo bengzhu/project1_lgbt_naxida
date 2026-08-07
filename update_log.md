@@ -8649,3 +8649,22 @@ Agent C 最终验收：
 - PR #243 fast [31216723888](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31216723888)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=c16e5593ef63113e2d3ba5ef1b72d7a09ee2396a`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
 - merge fast [31216783591](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31216783591)：merge SHA `5f3c0aa1f45d9cee9774db4d0020370666b69273`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31216962165](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31216962165)：commit `3d345da6c3559f4964258c6088679d4b297c3af3`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用父 merge `5f3c0aa1f45d9cee9774db4d0020370666b69273 / success`，`receiptPropagationAllowed=true`，仅上述 6 个文档文件变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
+
+## v3.180：日语 perspective line warp 局部 bbox
+
+日期：2026-08-08
+
+状态：Agent X 继续迁移 Koharu `TextRegion.line_polygons → warp_line_region → OCR` 的几何边界，修正普通图片日语竖排 perspective line reread 直接对整张源图执行 `CIPerspectiveCorrection` 的缺口。AITRANS 现在先按四点 line polygon 求与源图相交的 bbox，裁出局部源图，再把四点平移到局部坐标进行透视校正；保留最多 24 个 line 候选、每页 16M warp 像素预算、既有灰度／放大、方向 fallback、原图映射与去重。候选 commit `eb522b28c1e9649278342f227aaef03995d67a41` 已通过 PR [#244](https://github.com/bengzhu/project1_lgbt_naxida/pull/244) 合入，merge SHA `54b4cf750615efe54962f4247c72003d6d04f761`；工程正式版本为 `MARKETING_VERSION=3.180`，`main` 未触碰。
+
+核心变更：
+
+- `perspectiveCorrectedLineImage` 保留四点凸性、尺寸和失败 guard，新增 `imageBounds`／`cropBounds`／`croppedImage`，所有 `inputTop*`／`inputBottom*` 点改用相对局部图的 `localPoints`，让透视输入与 Koharu `warp_line_region` 先 crop 再 warp 的边界一致。
+- perspective line 仍只作为日语 line-region reread 候选，轴对齐 line、block crop、普通语言、布局、翻译、renderer/export、Store 与探针路径不变；新增 `scripts/test-v3180-image-japanese-line-warp-bbox-contract.py` 并接入显式 UI/full fail-fast。
+
+边界：该改动只缩小普通图片日语 perspective line 的输入像素范围，不加载 Manga OCR/PaddleOCR 权重，不读取探针报告、ground truth 或真实 Koharu 工件，不改变 OCR 模型、识别语言、翻译、renderer/export、Koharu active gate、metrics 或 `output`。`test/jap.jpg` 仍只作合同 fixture；真实竖排图片质量 corpus、Speech corpus 与 Koharu 四件套仍缺失，readiness 必须保持 `manifestMissing / stopUntilArtifactsProvided`，不能据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31217320435](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31217320435)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `eb522b28c1e9649278342f227aaef03995d67a41`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #244 fast [31217749775](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31217749775)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=eb522b28c1e9649278342f227aaef03995d67a41`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31217813652](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31217813652)：merge SHA `54b4cf750615efe54962f4247c72003d6d04f761`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，不是新的编译证据。
