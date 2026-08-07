@@ -160,6 +160,12 @@
 - `.preparing`／`.rendering` 等运行中状态不得抢焦点；焦点与失败分流必须保持 View 私有，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
 - 合同接在 v3.125 后进入 UI/full fail-fast，并沿用表达式长度安全的既有 UI 路由。候选 full `31082994159`（exact SHA `244f97435d340207c7684c3a2ab553b552b3b780`）Xcode/JUnit `10/10` 成功；PR #190 fast `31083400009`、merge fast `31083557316` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.140 普通图片 OCR 结果行 VoiceOver edit action 合同
+
+- `scripts/test-v3140-image-review-row-edit-action-contract.py` 必须验证 `ImageTranslationBlockRow` 在 `canEdit` 为真时通过 View-only modifier 暴露同名“修正识别文字” VoiceOver action，并直接复用既有 `edit()`；`canEdit` 为假时不得暴露 action。
+- 结果行原有定位 label/value/hint、稳定 `image-review-row-*` focus identity、可见修正按钮及其 `modificationUnavailableHint` 必须保持；改动不得新增 Store／持久化或改变 OCR、翻译、renderer/export、探针、Koharu、metrics、`output`。
+- 合同接在 v3.139 后进入 UI/full fail-fast。候选 exact-SHA full `31150859808`（`9571f142b35193cc86151b4e2971ccd6becfafbc`）Xcode/JUnit `10/10` 成功；PR #204 fast `31151298078`、merge fast `31151339355` 复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.139 图片局部放大 VoiceOver navigation action 合同
 
 - `scripts/test-v3139-image-focus-navigation-action-contract.py` 必须验证 `ImageTranslationFocusPreview` 在 `canSelectPrevious`／`canSelectNext` 对应为真时通过 View-only modifier 暴露同名“上一个文字块”／“下一个文字块” VoiceOver action，并直接复用既有 `selectPrevious()`／`selectNext()`；对应邻居不存在时不得暴露该 action。
