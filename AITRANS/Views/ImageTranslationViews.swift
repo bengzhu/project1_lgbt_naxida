@@ -120,6 +120,7 @@ struct ImageTranslationPanel: View {
     private static let imageTranslationStatusAccessibilityFocusID = "image-translation-status"
     private static let imagePreviewStatusAccessibilityFocusID = "image-preview-status"
     private static let imageEmptyAccessibilityFocusID = "image-empty-state"
+    private static let imageResultEmptyAccessibilityFocusID = "image-result-empty-state"
     private static let imageRetryLanguageStatusAccessibilityFocusID = "image-retry-language-status"
 
     @EnvironmentObject private var store: TranslationSessionStore
@@ -526,6 +527,10 @@ struct ImageTranslationPanel: View {
                             .accessibilityLabel(imageResultEmptyStateAccessibilityLabel)
                             .accessibilityValue(store.imageTranslationMessage)
                             .accessibilityHint(imageResultEmptyStateAccessibilityHint)
+                        )
+                        .accessibilityFocused(
+                            $reviewAccessibilityFocusID,
+                            equals: Self.imageResultEmptyAccessibilityFocusID
                         )
 
                         if store.canRerunImageRecognition {
@@ -1217,6 +1222,9 @@ struct ImageTranslationPanel: View {
                    store.imageTranslationData != nil,
                    !store.imageTranslationIgnoredBlocks.isEmpty {
                     moveReviewAccessibilityFocus(to: Self.imageIgnoredBlocksEmptyAccessibilityFocusID)
+                } else if store.imageTranslationState == .translated,
+                          store.imageTranslationData != nil {
+                    moveReviewAccessibilityFocus(to: Self.imageResultEmptyAccessibilityFocusID)
                 } else {
                     moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
                 }
