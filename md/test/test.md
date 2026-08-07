@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.164 日语混合版面横排 RTL reading-order 合同
+
+- `ImageOCRLayoutEngine.layout` 的 `prefersMangaReadingOrder` 必须默认 false；只有日语 Vision 主 OCR 与日语 crop layout 显式传 true，非日语调用保持原有左到右横排行为。
+- 横排 helper 在 true 时保留 y 行分组和上到下行序，只把同一行的 x 主键变为负值以右到左排序；不读取探针报告、ground truth 或 `test/koharu_artifacts`，不改变翻译、renderer/export、Store、metrics 或 `output`。
+- 新增 `scripts/test-v3164-image-japanese-horizontal-reading-order-contract.py`，并接入 UI/full fail-fast；v3.163 及更早合同继续回归。候选 exact-SHA full [31190984866](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31190984866)（`7e584045f12fefa995866b7479db4cd440d52a03`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #228 fast [31191645282](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31191645282) 复用候选 full，merge fast [31191716497](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31191716497) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `3943843d61f331630f7c6764f5639273aea4bd90`），后两者跳过 Xcode/UI/Speech，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得把横排 RTL 迁移描述为日语 OCR、翻译或识别质量提升。
+
 ### v3.163 日语竖排 Recursive XY-Cut reading-order 合同
 
 - `ImageOCRLayoutEngine` 的日语竖排路径必须按文字块中位宽／高中位数计算动态空白阈值，并递归选择横向／纵向最大间隙；横向切分右侧组先读，纵向切分顶部组先读，无法切分时使用稳定右到左／上到下回退。

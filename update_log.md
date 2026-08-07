@@ -1,3 +1,23 @@
+## v3.164：日语混合版面横排 RTL reading order
+
+日期：2026-08-07
+
+状态：Agent X 继续把 Koharu 漫画阅读方向迁入普通图片日语混合版面：`ImageOCRLayoutEngine.layout` 新增默认关闭的 `prefersMangaReadingOrder`，仅日语 Vision 主路径与受限 crop layout 开启横排行内右到左排序，并完成候选 full、PR fast、merge fast 云端验收合入 `smalldata_test`。工程正式版本为 `MARKETING_VERSION=3.164`。候选 commit `7e584045f12fefa995866b7479db4cd440d52a03` 已通过 PR [#228](https://github.com/bengzhu/project1_lgbt_naxida/pull/228) 合入，merge SHA `3943843d61f331630f7c6764f5639273aea4bd90`；`main` 未触碰。
+
+核心变更：
+
+- 横排 helper 保留 y 行分组与上到下行序；日语 manga flag 为 true 时只把同一行的 x 主键取负，实现右到左列序；默认 false 的普通语言路径不变。
+- Vision OCR 主路径按 `sourceLanguage == .japanese` 开启该 flag，日语垂直 crop layout 同样显式开启；不新增 OCR 模型、翻译、探针／工件读取，不改变 renderer/export、Store、持久化、metrics 或 `output`。
+- 新增 `scripts/test-v3164-image-japanese-horizontal-reading-order-contract.py`，并接入 UI/full fail-fast；v3.163 及更早合同继续回归。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31190984866](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31190984866)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `7e584045f12fefa995866b7479db4cd440d52a03`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #228 fast [31191645282](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31191645282)：`validationProfile=fast`，`reusedFullValidationSha=7e584045f12fefa995866b7479db4cd440d52a03`、state `success`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31191716497](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31191716497)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `3943843d61f331630f7c6764f5639273aea4bd90` 复用候选 full，`receiptPropagationAllowed=true`，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.163：日语竖排 Recursive XY-Cut reading order
 
 日期：2026-08-07
