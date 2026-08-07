@@ -2886,6 +2886,12 @@ private struct ImageTranslationBlockRow: View {
                 accessibilityFocus,
                 equals: "image-review-row-\(block.id.uuidString)"
             )
+            .modifier(
+                ImageReviewRowEditAccessibilityModifier(
+                    canEdit: canEdit,
+                    edit: edit
+                )
+            )
 
             VStack(spacing: AppTheme.Spacing.compact) {
                 Button("修正识别文字", systemImage: "pencil", action: edit)
@@ -2999,6 +3005,23 @@ private struct ImageTranslationBlockRow: View {
 
     private var displayConfidence: Double {
         Double(ImageOCRResultSummary.normalizedConfidence(block.confidence))
+    }
+}
+
+private struct ImageReviewRowEditAccessibilityModifier: ViewModifier {
+    let canEdit: Bool
+    let edit: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if canEdit {
+            content
+                .accessibilityAction(named: "修正识别文字") {
+                    edit()
+                }
+        } else {
+            content
+        }
     }
 }
 
