@@ -107,7 +107,7 @@ class ImageFocusPreviewReturnFocusContractTests(unittest.TestCase):
             self.panel,
             "private func ignoreImageTranslationBlock(_ block: ImageTranslationBlock) -> Bool",
         )
-        self.assertEqual(
+        self.assertGreaterEqual(
             ignore.count("moveReviewAccessibilityFocusAfterCorrectionSheetDismissal("),
             2,
         )

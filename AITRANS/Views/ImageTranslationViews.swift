@@ -116,6 +116,7 @@ struct ImageTranslationPanel: View {
     private static let reviewCompletionAccessibilityFocusID = "image-review-complete"
     private static let reviewFilterAccessibilityFocusID = "image-review-filter"
     private static let reviewFilterEmptyAccessibilityFocusID = "image-review-filter-empty"
+    private static let imageIgnoredBlocksEmptyAccessibilityFocusID = "image-ignored-blocks-empty"
     private static let imageTranslationStatusAccessibilityFocusID = "image-translation-status"
     private static let imagePreviewStatusAccessibilityFocusID = "image-preview-status"
     private static let imageEmptyAccessibilityFocusID = "image-empty-state"
@@ -477,11 +478,42 @@ struct ImageTranslationPanel: View {
                         equals: Self.imageEmptyAccessibilityFocusID
                     )
                 } else if !store.imageTranslationIgnoredBlocks.isEmpty {
-                    AppEmptyState(
-                        title: "当前没有保留文字块",
-                        detail: "已忽略 \(store.imageTranslationIgnoredBlocks.count) 个 OCR 文字块；图片会以原图导出，可在下方恢复。",
-                        systemImage: "eye.slash"
-                    )
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.control) {
+                        AppEmptyState(
+                            title: "当前没有保留文字块",
+                            detail: "已忽略 \(store.imageTranslationIgnoredBlocks.count) 个 OCR 文字块；图片会以原图导出，可在此恢复全部。",
+                            systemImage: "eye.slash"
+                        )
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("当前没有保留文字块")
+                        .accessibilityValue(
+                            "已忽略 \(store.imageTranslationIgnoredBlocks.count) 个 OCR 文字块；图片会以原图导出"
+                        )
+                        .accessibilityHint(
+                            canModifyImageTranslation
+                                ? "可在此执行“恢复全部”，把文字块恢复到图片预览、导出和当前转录"
+                                : imageModificationUnavailableDetail
+                        )
+                        .accessibilityAction(named: "恢复全部") {
+                            requestRestoreAllIgnoredImageTranslationBlocks()
+                        }
+                        .accessibilityFocused(
+                            $reviewAccessibilityFocusID,
+                            equals: Self.imageIgnoredBlocksEmptyAccessibilityFocusID
+                        )
+
+                        AppSecondaryButton(
+                            title: "恢复全部 \(store.imageTranslationIgnoredBlocks.count)",
+                            systemImage: "arrow.uturn.backward",
+                            action: requestRestoreAllIgnoredImageTranslationBlocks
+                        )
+                        .disabled(!canModifyImageTranslation)
+                        .accessibilityHint(
+                            canModifyImageTranslation
+                                ? "恢复全部已忽略文字块到图片预览、导出和当前转录；需要复查的文字块会重新回到待复查队列"
+                                : imageModificationUnavailableDetail
+                        )
+                    }
                 } else {
                     AppEmptyState(
                         title: "正在准备识别结果",
@@ -575,17 +607,19 @@ struct ImageTranslationPanel: View {
                     systemImage: "eye.slash"
                 )
 
-                AppSecondaryButton(
-                    title: "恢复全部 \(store.imageTranslationIgnoredBlocks.count)",
-                    systemImage: "arrow.uturn.backward",
-                    action: requestRestoreAllIgnoredImageTranslationBlocks
-                )
-                .disabled(!canModifyImageTranslation)
-                .accessibilityHint(
-                    canModifyImageTranslation
-                        ? "恢复全部已忽略文字块到图片预览、导出和当前转录；需要复查的文字块会重新回到待复查队列"
-                        : imageModificationUnavailableDetail
-                )
+                if !store.imageTranslationBlocks.isEmpty {
+                    AppSecondaryButton(
+                        title: "恢复全部 \(store.imageTranslationIgnoredBlocks.count)",
+                        systemImage: "arrow.uturn.backward",
+                        action: requestRestoreAllIgnoredImageTranslationBlocks
+                    )
+                    .disabled(!canModifyImageTranslation)
+                    .accessibilityHint(
+                        canModifyImageTranslation
+                            ? "恢复全部已忽略文字块到图片预览、导出和当前转录；需要复查的文字块会重新回到待复查队列"
+                            : imageModificationUnavailableDetail
+                    )
+                }
 
                 LazyVStack(spacing: 0) {
                     ForEach(store.imageTranslationIgnoredBlocks) { block in
@@ -800,7 +834,12 @@ struct ImageTranslationPanel: View {
 
         guard store.ignoreImageTranslationBlock(block.id) else { return false }
 
-        if reviewFilter == .needsReview {
+        if store.imageTranslationBlocks.isEmpty {
+            selectedImageTranslationBlockID = nil
+            moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
+                to: Self.imageIgnoredBlocksEmptyAccessibilityFocusID
+            )
+        } else if reviewFilter == .needsReview {
             let nextBlockID = nextReviewBlockID.flatMap { candidate in
                 reviewRequiredBlocks.contains(where: { $0.id == candidate }) ? candidate : nil
             } ?? reviewRequiredBlocks.first?.id
@@ -1089,7 +1128,13 @@ struct ImageTranslationPanel: View {
             await Task.yield()
             guard revision == store.imageTranslationRevision else { return }
             if store.imageTranslationBlocks.isEmpty {
-                moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+                if store.imageTranslationState == .translated,
+                   store.imageTranslationData != nil,
+                   !store.imageTranslationIgnoredBlocks.isEmpty {
+                    moveReviewAccessibilityFocus(to: Self.imageIgnoredBlocksEmptyAccessibilityFocusID)
+                } else {
+                    moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+                }
             } else {
                 focusReviewFilterResultIfNeeded()
             }
