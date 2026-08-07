@@ -1,3 +1,24 @@
+## v3.132：图片已忽略文字块空态 action
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.132 普通图片 OCR 全部文字块被忽略时的可操作空态、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.132`。候选 commit `012f25ffd7edc4009b33c600bb57d0d6d65005c2` 已通过 PR [#196](https://github.com/bengzhu/project1_lgbt_naxida/pull/196) 合入，merge SHA `df3f7ecbf59319a0c59d13164bb6b0f9cd8ab553`；候选远端分支已清理，`main` 未触碰。
+
+核心变更：
+
+- 当普通图片的所有 OCR 文字块都被忽略时，空态成为稳定 VoiceOver 上下文，读出忽略数量、原始导出与恢复边界，并提供同名“恢复全部”action。
+- 同一全忽略状态只显示一个可见 `恢复全部 N` 按钮，继续受 `canModifyImageTranslation` 与导出重绘门控；部分忽略状态保留下方批量恢复入口，避免重复按钮。
+- 最后一个 block 被忽略后，sheet 收起后的 View 私有焦点交给空态；translated 终态、有效图片数据与 ignored snapshots 同样把焦点保留在空态；不新增 Store／持久化字段，不改变 OCR、翻译、renderer/export、探针、metrics 或 `output`。
+- 新增 `scripts/test-v3132-image-ignored-empty-state-action-contract.py`；历史 v3.330/v3.333/v3.335 合同放宽为至少两个合法焦点目的地，同时继续锁定原有 row/completion handoff。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31139110055](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31139110055)：commit `012f25ffd7edc4009b33c600bb57d0d6d65005c2`，`validationReason=manual_full`，Xcode build success，UI／Speech 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #196 fast [31139576598](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31139576598)：`validationProfile=fast`，复用候选 full `012f25ffd7edc4009b33c600bb57d0d6d65005c2 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31139633331](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31139633331)：merge SHA `df3f7ecbf59319a0c59d13164bb6b0f9cd8ab553`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.131：图片已忽略文字块批量恢复
 
 日期：2026-08-07
