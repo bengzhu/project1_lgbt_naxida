@@ -1,6 +1,13 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.185 日语竖排 tile reconnaissance 合同
+
+- `recognizeJapaneseVerticalCrops` 必须在既有竖排 block 形成后调用 `recognizeJapaneseVerticalTileFallback`，且在后续 block crop 前完成；该 helper 只属于日语分支，用于 Vision 未产出整列 TextBox 时的 bounded detector fallback。
+- tile fallback 最多 6 个全高 tile，tile 宽约为图片宽度四分之一、相邻 tile 保留 18% overlap，并强制覆盖右边缘；若既有竖排 block 对 tile 的水平覆盖至少 `0.45` 且垂直覆盖至少 `0.30`，必须跳过该 tile。每个未覆盖 tile 复用 `cropImage`、`prepareJapaneseCropForVision` 与原图坐标映射。
+- 每个 tile 先走 90° `recognizeJapaneseCropPass`，弱／空结果按页级最多 4 次再走 270° fallback，`minimumTextHeight=0.003` 且传递 `cropScale`，最后使用 `deduplicateJapaneseObservations`；不得加载 Manga OCR/PaddleOCR 权重、读取探针／ground truth／真实工件或改变普通语言、翻译、renderer/export、Store、Koharu active gate、metrics 与 `output`。
+- 新增 `scripts/test-v3185-image-japanese-vertical-tile-fallback-contract.py` 并接入显式 UI/full fail-fast；v3.184 及更早合同继续回归。候选 exact-SHA full [31224644168](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31224644168)（`0c0585a850f4a0a7a4fc4a5735c791439713c4c2`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #249 fast [31225019712](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31225019712) 复用候选 full，merge fast [31225064534](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31225064534) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `ccd46c169ae7447d4f0485e4d982277f8ba33e46`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，`test/jap.jpg` 只作 fixture，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.184 日语 line-region 几何去重合同
 
 - 日语 `isDuplicateObservation` 必须只在 `prefersJapanese` 且双方都有 `lineRegionRect` 时使用紧 character-range geometry；缺少任一 hint 时回退 `lhs.rect`／`rhs.rect`，继续使用原 overlap、文本相似度和空文本边界。
