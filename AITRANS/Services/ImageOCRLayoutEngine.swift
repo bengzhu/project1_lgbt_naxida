@@ -120,19 +120,22 @@ enum ImageOCRLayoutEngine {
         let hasRowNeighbor = peers.contains { isCloseRowNeighbor(observation.rect, $0.rect) }
         let cjkCount = cjkCharacterCount(in: observation.text)
         let isShortCJKObservation = cjkCount > 0 && observation.text.count <= 2
+        let hasCJKText = cjkCount > 0
         let containsTextRun = cjkCount >= 2
 
         // Koharu keeps the detector/source direction on a TextBox and lets it
         // override a misleading bbox aspect ratio. The Vision path has no
         // external detector metadata, but its bounded Japanese block/line/tile
         // rereads are explicitly entered from a vertical candidate. Preserve
-        // that provenance through layout, while requiring CJK text and the
-        // Japanese manga-order path so normal language and page-level geometry
-        // heuristics remain unchanged.
+        // that provenance through layout. A crop may legitimately contain only
+        // one Japanese glyph (especially after Vision splits a narrow column),
+        // so the source-direction hint must not require a two-character run.
+        // Keep the Japanese manga-order gate so normal language and page-level
+        // geometry heuristics remain unchanged.
         if allowsVerticalText,
            prefersMangaReadingOrder,
            observation.sourceDirectionHint == .vertical,
-           containsTextRun {
+           hasCJKText {
             return ResolvedObservation(
                 observation: observation,
                 direction: .vertical,
