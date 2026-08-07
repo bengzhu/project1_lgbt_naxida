@@ -106,7 +106,9 @@ class ImageIgnoredEmptyStateActionContractTests(unittest.TestCase):
         self.assertIn(f"python3 -B {script}", self.workflow)
         old = "scripts/test-v3131-image-ignored-blocks-bulk-restore-contract.py"
         self.assertLess(self.workflow.index(old), self.workflow.index(f"python3 -B {script}"))
-        self.assertIn("13[0-2]", self.workflow)
+        self.assertTrue(
+            "13[0-2]" in self.workflow or "13[0-3]" in self.workflow
+        )
 
 
 if __name__ == "__main__":

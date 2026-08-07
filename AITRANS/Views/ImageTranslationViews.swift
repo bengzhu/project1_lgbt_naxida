@@ -520,6 +520,10 @@ struct ImageTranslationPanel: View {
                         detail: store.imageTranslationMessage,
                         systemImage: "viewfinder"
                     )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(imageResultEmptyStateAccessibilityLabel)
+                    .accessibilityValue(store.imageTranslationMessage)
+                    .accessibilityHint(imageResultEmptyStateAccessibilityHint)
                 }
             } else if visibleImageTranslationBlocks.isEmpty {
                 if reviewFilter == .needsReview, reviewCompletedBlockCount > 0 {
@@ -699,6 +703,37 @@ struct ImageTranslationPanel: View {
             return "下方可筛选和定位文字块；当前没有需要复查的文字块。"
         }
         return "下方可筛选、定位、修正或更新文字块复查进度。"
+    }
+
+    private var imageResultEmptyStateAccessibilityLabel: String {
+        switch store.imageTranslationState {
+        case .idle:
+            store.imageTranslationData == nil ? "等待识别结果" : "等待重新识别"
+        case .loading, .recognizing, .translating:
+            "正在准备识别结果"
+        case .translated:
+            "没有可显示的识别结果"
+        case .failed:
+            "图片识别结果失败"
+        }
+    }
+
+    private var imageResultEmptyStateAccessibilityHint: String {
+        switch store.imageTranslationState {
+        case .idle:
+            if store.imageTranslationData == nil {
+                return "从上方照片或文件按钮选择图片，并开始本机 OCR 与翻译"
+            }
+            return "当前图片尚未完成处理；可在上方状态或重试按钮重新识别和翻译"
+        case .loading, .recognizing, .translating:
+            return "图片正在读取、识别或翻译；可在上方状态取消或选择新图片"
+        case .translated:
+            return "当前没有可显示的 OCR 文字块；可选择新图片重新识别"
+        case .failed:
+            return store.canRetryImageTranslation
+                ? "图片识别失败；可在上方状态或重试按钮重新识别当前图片，也可选择新图片"
+                : "图片识别失败；请从上方照片或文件按钮选择新图片"
+        }
     }
 
     private var reviewFilterAccessibilityHint: String {
@@ -1862,6 +1897,10 @@ private struct ImageTranslationPreview: View {
                 .frame(minHeight: 360)
                 .background(Color.appSurface)
                 .clipShape(.rect(cornerRadius: AppTheme.Radius.surface))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("图片翻译预览")
+                .accessibilityValue("当前没有图片")
+                .accessibilityHint("从上方照片或图片文件按钮选择图片；图片会在本机执行 OCR、翻译和屏幕预览")
             }
         }
         .task(
