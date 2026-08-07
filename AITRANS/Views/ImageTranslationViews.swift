@@ -3011,11 +3011,27 @@ private struct ImageTranslationBlockRow: View {
                 parts.append("仍可修正 OCR 原文")
             }
             parts.append("可切换文字块")
-            return parts.joined(separator: "；")
+            return rowAccessibilityHint(appendingTo: parts.joined(separator: "；"))
         }
-        return isSelected
+        let locationHint = isSelected
             ? "取消此文字块在图片中的定位"
             : "在图片预览中定位此文字块"
+        return rowAccessibilityHint(appendingTo: locationHint)
+    }
+
+    private func rowAccessibilityHint(appendingTo base: String) -> String {
+        var actions: [String] = []
+        if canEdit {
+            actions.append("修正识别文字")
+        }
+        if isManuallyCorrected && canEdit {
+            actions.append("恢复 Vision OCR")
+        }
+        if ImageOCRResultSummary.requiresReview(block) && canReview {
+            actions.append(isReviewCompleted ? "撤销本次复查" : "完成并继续复查")
+        }
+        guard !actions.isEmpty else { return base }
+        return "\(base)；VoiceOver 可执行：\(actions.joined(separator: "、"))"
     }
 
     private var displayConfidence: Double {
