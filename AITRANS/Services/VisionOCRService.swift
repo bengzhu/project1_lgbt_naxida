@@ -321,9 +321,22 @@ struct VisionOCRService: Sendable {
         )
         .filter { block in
             let aspectRatio = block.rect.height / max(block.rect.width, 0.001)
-            return block.direction == .vertical
-                && aspectRatio >= 1.45
+            let isStandardVerticalCandidate = aspectRatio >= 1.45
                 && block.rect.height >= 0.04
+            // Koharu sends every detector TextRegion through
+            // crop_text_block_bbox. A v3.177 compact direction result is a
+            // similarly explicit Japanese block, even when its normalized
+            // dimensions are below the old tall-block crop threshold. Keep
+            // the relaxed path tied to that reason and retain a bounded shape
+            // and height gate so short noise does not trigger extra rereads.
+            let hasCompactDirectionReason = block.directionReason
+                .split(separator: ",")
+                .contains { String($0) == "cjkCompactColumnTextRun" }
+            let isCompactVerticalCandidate = hasCompactDirectionReason
+                && aspectRatio >= 1.20
+                && block.rect.height >= 0.022
+            return block.direction == .vertical
+                && (isStandardVerticalCandidate || isCompactVerticalCandidate)
         }
         .sorted { lhs, rhs in
             if lhs.confidence != rhs.confidence {
