@@ -58,6 +58,7 @@ class JapaneseVerticalFragmentLineContractTests(unittest.TestCase):
             "deduplicateObservations(uniqueCandidates + synthesizedCandidates)" in self.lines
             or "deduplicateJapaneseObservations(uniqueCandidates + synthesizedCandidates)"
             in self.lines
+            or "deduplicateJapaneseObservations(axisSeeds)" in self.lines
         )
 
     def test_synthesis_requires_short_japanese_same_column_fragments(self) -> None:
