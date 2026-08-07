@@ -17,6 +17,7 @@
 - 候选 exact-SHA full [31171837188](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31171837188)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `11028f3de4886aad18e911dd8dc3f60e6593ba9f`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu active artifact validator 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 - PR #218 fast [31172320096](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31172320096)：`validationProfile=fast`，复用候选 full `11028f3de4886aad18e911dd8dc3f60e6593ba9f / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
 - merge fast [31172393014](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31172393014)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `b51ab8a880f3a1998a5a4e249e6c7113e0a3c451` 复用候选 full `11028f3de4886aad18e911dd8dc3f60e6593ba9f / success`，`receiptPropagationAllowed=true`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- 文档 metadata follow-up [31172809735](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31172809735)：`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用 merge SHA `b51ab8a880f3a1998a5a4e249e6c7113e0a3c451 / success`，`receiptPropagationAllowed=true`，`smalldataIncrementalMetadataOnly=true`，仅 6 个文档文件变化，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 
 ## v3.153：普通图片空结果 VoiceOver 焦点稳定化
 
