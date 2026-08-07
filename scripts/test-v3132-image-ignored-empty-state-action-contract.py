@@ -109,7 +109,7 @@ class ImageIgnoredEmptyStateActionContractTests(unittest.TestCase):
         self.assertTrue(
             "13[0-2]" in self.workflow
             or "13[0-3]" in self.workflow
-            or "13[0-6]" in self.workflow
+            or "13[0-7]" in self.workflow
         )
 
 
