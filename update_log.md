@@ -1,3 +1,23 @@
+## v3.145：普通图片文件导入替换提示
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.145 普通图片文件导入 VoiceOver 替换语义的 View-only UX 优化、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.145`。候选 commit `92f495212a40910be1540c06f28cf4402c0b956f` 已通过 PR [#209](https://github.com/bengzhu/project1_lgbt_naxida/pull/209) 合入，merge SHA `f66f6e2fa7877a212e057648ec18663ae8ba9c83`；`main` 未触碰。
+
+核心变更：
+
+- 文件导入入口现在与照片入口共享首次／替换语义：无图片时 VoiceOver 说明从文件选择并开始本机 OCR 与翻译，已有图片时说明更换当前图片并开始新的本机 OCR 与翻译。
+- 图片读取、Vision OCR 或逐块翻译进行中继续保留 supersession 提示，明确从文件选择新图片会取消当前任务并开始新任务；文件入口仍保持可用，不新增 `.disabled(isRunning)`。
+- 新增 `scripts/test-v3145-image-file-selection-replacement-hint-contract.py` 并接入 UI/full fail-fast；只读取既有 Store 状态并改善 View 文案，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31155971109](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31155971109)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `92f495212a40910be1540c06f28cf4402c0b956f`，Xcode build success，静态、UI、Speech、home、paste 合同 success，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu active 工件目录缺失。
+- PR #209 fast [31156530851](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31156530851)：`validationProfile=fast`，复用候选 full `92f495212a40910be1540c06f28cf4402c0b956f / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31156622662](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31156622662)：merge SHA `f66f6e2fa7877a212e057648ec18663ae8ba9c83`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.144：普通图片 OCR 空结果直接重新识别 VoiceOver action
 
 日期：2026-08-07

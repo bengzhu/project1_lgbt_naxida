@@ -160,6 +160,12 @@
 - `.preparing`／`.rendering` 等运行中状态不得抢焦点；焦点与失败分流必须保持 View 私有，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
 - 合同接在 v3.125 后进入 UI/full fail-fast，并沿用表达式长度安全的既有 UI 路由。候选 full `31082994159`（exact SHA `244f97435d340207c7684c3a2ab553b552b3b780`）Xcode/JUnit `10/10` 成功；PR #190 fast `31083400009`、merge fast `31083557316` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.145 普通图片文件导入替换提示合同
+
+- `scripts/test-v3145-image-file-selection-replacement-hint-contract.py` 必须验证文件导入入口的 VoiceOver hint 在无图片时说明首次选择、已有图片时说明更换当前图片并开始新的本机 OCR 与翻译；读取／Vision OCR／翻译运行中继续说明新选择会取消当前任务并开始新任务，且文件入口不得被 `.disabled(isRunning)` 锁住。
+- 合同只允许读取既有 `TranslationSessionStore` 状态并接线到现有 `openImporter`，不得新增 Store／持久化、OCR、翻译、renderer/export、探针、Koharu、metrics 或 `output` 行为。历史 v3.347、v3.350 入口合同须允许后续正式版本，保留照片入口与文件入口的首次／替换／运行中 supersession 语义。
+- 合同接在 v3.144 后进入 UI/full fail-fast。候选 exact-SHA full `31155971109`（`92f495212a40910be1540c06f28cf4402c0b956f`）Xcode/JUnit `10/10` 成功；PR #209 fast `31156530851`、merge fast `31156622662` 复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.144 普通图片 OCR 空结果 VoiceOver 重新识别 action 合同
 
 - `scripts/test-v3144-image-empty-result-rerun-action-contract.py` 必须验证已完成且没有可显示 OCR 文字块的结果空态，在源图片仍可重跑时通过 View-only helper 暴露同名“重新识别” VoiceOver action，并直接复用 Store `rerunImageRecognition()`；`canRerunImageRecognition` 为假时不得暴露 action。
