@@ -160,6 +160,12 @@
 - `.preparing`／`.rendering` 等运行中状态不得抢焦点；焦点与失败分流必须保持 View 私有，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
 - 合同接在 v3.125 后进入 UI/full fail-fast，并沿用表达式长度安全的既有 UI 路由。候选 full `31082994159`（exact SHA `244f97435d340207c7684c3a2ab553b552b3b780`）Xcode/JUnit `10/10` 成功；PR #190 fast `31083400009`、merge fast `31083557316` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.131 图片已忽略文字块批量恢复合同
+
+- `scripts/test-v3131-image-ignored-blocks-bulk-restore-contract.py` 必须验证已忽略 OCR 文字块区域提供带确认的可见 `AppSecondaryButton(title: "恢复全部 \(store.imageTranslationIgnoredBlocks.count)")`，并在恢复期间受 `canModifyImageTranslation` 锁定、读出具体禁用原因；revision 变化会关闭 stale confirmation。
+- Store 的 `restoreAllIgnoredImageTranslationBlocks()` 必须只在 `.translated` 且无 correction 进行时恢复，按 `originalOrder` 还原快照，保留人工修正／Vision OCR 元数据，清除恢复块的复查完成状态，并一次性同步转录、作废旧导出后重新绘制；不得重新 OCR／翻译、读取 Koharu 或增加持久化字段。确认后 View 将筛选恢复为 `.all` 并把 VoiceOver 焦点交给首个恢复行。
+- 合同接在 v3.130 后进入 UI/full fail-fast。候选 exact-SHA full `31090186819`（`26fc6bba61c277747673f9fb29e4a6e1eb849aaf`）Xcode/JUnit `10/10` 成功；PR #195 fast `31137606603`、merge fast `31137651196` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.130 漫画诊断筛选空态恢复 action 合同
 
 - `scripts/test-v3130-manga-diagnostic-filter-empty-action-contract.py` 必须验证已有 `mangaOverlayProbeReport` 与非空 blocks 在当前 `filteredProbeBlocks` 为空时，空态同时提供可见 `AppSecondaryButton(title: "显示全部诊断")` 与同名 VoiceOver action，保留 `diagnosticFilterEmptyAccessibilityFocusID` 和历史“切换到全部或其他诊断类别查看逐块报告”上下文。

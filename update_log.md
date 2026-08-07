@@ -1,3 +1,24 @@
+## v3.131：图片已忽略文字块批量恢复
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.131 普通图片已忽略文字块批量恢复入口、候选 full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.131`。候选 commit `26fc6bba61c277747673f9fb29e4a6e1eb849aaf` 已通过 PR [#195](https://github.com/bengzhu/project1_lgbt_naxida/pull/195) 合入，merge SHA `8514924340486fd86344298f3b9493540fe9ab4c`；候选远端分支已清理，`main` 未触碰。
+
+核心变更：
+
+- 普通图片 OCR 的“已忽略文字块”区域提供带确认的可见“恢复全部 N”操作，用户不必逐行恢复。
+- Store 按 `originalOrder` 一次性恢复忽略快照，保留人工修正与 Vision OCR 元数据，清除恢复块的复查完成状态，只同步一次转录并作废／重建导出；View 受 `.translated` 与导出重绘门控，revision 变化会关闭 stale confirmation，确认后把 VoiceOver 焦点交给首个恢复结果行。
+- 新增 `scripts/test-v3131-image-ignored-blocks-bulk-restore-contract.py` 并接入 UI/full fail-fast；不新增持久化字段，不重新运行 OCR／翻译，不读取探针或 ground truth。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选自动 full [31090174114](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31090174114)：候选 SHA `26fc6bba61c277747673f9fb29e4a6e1eb849aaf`，`validationProfile=full`，Xcode build success，相关静态／Speech／UI 合同与 JUnit `10/10` 通过，`probe_mode=skip`。
+- 候选 exact-SHA full [31090186819](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31090186819)：`validationReason=manual_full`、exact SHA 一致，Xcode build success，UI／Speech 合同 success，JUnit `10/10` 且 0 failures；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #195 fast [31137606603](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31137606603)：`validationProfile=fast`，复用候选 full `26fc6bba61c277747673f9fb29e4a6e1eb849aaf / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31137651196](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31137651196)：merge SHA `8514924340486fd86344298f3b9493540fe9ab4c`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.130：漫画诊断筛选空态恢复 action
 
 日期：2026-08-06
