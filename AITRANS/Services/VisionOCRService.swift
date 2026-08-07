@@ -338,6 +338,7 @@ struct VisionOCRService: Sendable {
 
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(verticalBlocks.count * 2)
+        let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         var orientationFallbacksRemaining = 8
         for block in verticalBlocks {
             let angle = safeObservations
@@ -346,7 +347,10 @@ struct VisionOCRService: Sendable {
                 .first
                 .map { $0.rotationApplied == 270 ? 270 : 90 }
                 ?? 90
-            guard let crop = cropImage(image, normalizedRect: expandedVerticalCropRect(block.rect)),
+            guard let crop = cropImage(
+                image,
+                normalizedRect: expandedVerticalCropRect(block.rect, imageSize: imageSize)
+            ),
                   crop.image.width >= 2,
                   crop.image.height >= 2 else {
                 continue
@@ -445,6 +449,7 @@ struct VisionOCRService: Sendable {
 
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity((perspectiveCandidates.count + axisCandidates.count) * 2)
+        let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         var perspectiveWarpPixels: CGFloat = 0
         for candidate in perspectiveCandidates {
             let angle = candidate.rotationApplied == 270 ? 270 : 90
@@ -462,7 +467,7 @@ struct VisionOCRService: Sendable {
         var orientationFallbacksRemaining = 12
         for candidate in axisCandidates {
             let angle = candidate.rotationApplied == 270 ? 270 : 90
-            let cropRect = expandedVerticalLineCropRect(for: candidate)
+            let cropRect = expandedVerticalLineCropRect(for: candidate, imageSize: imageSize)
             guard let crop = cropImage(image, normalizedRect: cropRect) else {
                 continue
             }
@@ -827,11 +832,45 @@ struct VisionOCRService: Sendable {
             && rect.height >= 0.018
     }
 
-    private static func expandedVerticalLineCropRect(_ rect: ImageOCRLayoutRect) -> ImageOCRLayoutRect {
-        // Mirrors Koharu's vertical TextRegion padding: give the reading axis
-        // enough context without swallowing a neighboring Japanese column.
-        let horizontalPadding = min(max(rect.width * 0.18, 0.008), 0.06)
-        let verticalPadding = min(max(rect.height * 0.12, 0.006), 0.06)
+    private static func koharuVerticalCropPadding(
+        _ rect: ImageOCRLayoutRect,
+        imageSize: CGSize
+    ) -> (horizontal: Double, vertical: Double)? {
+        let imageWidth = Double(imageSize.width)
+        let imageHeight = Double(imageSize.height)
+        guard imageWidth.isFinite, imageWidth > 0,
+              imageHeight.isFinite, imageHeight > 0 else {
+            return nil
+        }
+
+        // Koharu estimates font size from the smaller text-node dimension and
+        // applies direction-aware pixel padding before cropping. Keep that
+        // calculation in pixel space, then map the padding back to normalized
+        // Vision coordinates so a 576px-wide fixture and a retina image use
+        // the same model-independent crop boundary.
+        let widthPixels = max(rect.width * imageWidth, 1)
+        let heightPixels = max(rect.height * imageHeight, 1)
+        let fontSizePixels = max(min(widthPixels, heightPixels), 1)
+        let basePaddingPixels = max(fontSizePixels * 0.08, 2)
+        let horizontalPaddingPixels = max(fontSizePixels * 0.18, basePaddingPixels)
+        let verticalPaddingPixels = max(fontSizePixels * 0.12, basePaddingPixels)
+        return (
+            min(horizontalPaddingPixels / imageWidth, 0.08),
+            min(verticalPaddingPixels / imageHeight, 0.08)
+        )
+    }
+
+    private static func expandedVerticalLineCropRect(
+        _ rect: ImageOCRLayoutRect,
+        imageSize: CGSize? = nil
+    ) -> ImageOCRLayoutRect {
+        // Keep the old normalized fallback for callers without source pixels;
+        // the OCR path always supplies imageSize and uses Koharu's font estimate.
+        let padding = imageSize.flatMap { koharuVerticalCropPadding(rect, imageSize: $0) }
+        let horizontalPadding = padding?.horizontal
+            ?? min(max(rect.width * 0.18, 0.008), 0.06)
+        let verticalPadding = padding?.vertical
+            ?? min(max(rect.height * 0.12, 0.006), 0.06)
         return ImageOCRLayoutRect(
             x: rect.x - horizontalPadding,
             y: rect.y - verticalPadding,
@@ -841,15 +880,22 @@ struct VisionOCRService: Sendable {
     }
 
     private static func expandedVerticalLineCropRect(
-        for observation: VisionOCRObservation
+        for observation: VisionOCRObservation,
+        imageSize: CGSize? = nil
     ) -> ImageOCRLayoutRect {
         let region = observation.lineRegionRect ?? observation.rect
-        return expandedVerticalLineCropRect(region)
+        return expandedVerticalLineCropRect(region, imageSize: imageSize)
     }
 
-    private static func expandedVerticalCropRect(_ rect: ImageOCRLayoutRect) -> ImageOCRLayoutRect {
-        let horizontalPadding = min(max(rect.width * 0.18, 0.01), 0.08)
-        let verticalPadding = min(max(rect.height * 0.12, 0.01), 0.08)
+    private static func expandedVerticalCropRect(
+        _ rect: ImageOCRLayoutRect,
+        imageSize: CGSize? = nil
+    ) -> ImageOCRLayoutRect {
+        let padding = imageSize.flatMap { koharuVerticalCropPadding(rect, imageSize: $0) }
+        let horizontalPadding = padding?.horizontal
+            ?? min(max(rect.width * 0.18, 0.01), 0.08)
+        let verticalPadding = padding?.vertical
+            ?? min(max(rect.height * 0.12, 0.01), 0.08)
         return ImageOCRLayoutRect(
             x: rect.x - horizontalPadding,
             y: rect.y - verticalPadding,

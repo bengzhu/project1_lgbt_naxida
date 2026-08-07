@@ -109,7 +109,10 @@ class JapaneseLinePerspectiveOCRContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, self.warp)
         self.assertIn("guard let quad = candidate.lineRegionQuad", self.perspective)
-        self.assertIn("let cropRect = expandedVerticalLineCropRect(for: candidate)", self.lines)
+        self.assertTrue(
+            "let cropRect = expandedVerticalLineCropRect(for: candidate)" in self.lines
+            or "let cropRect = expandedVerticalLineCropRect(for: candidate, imageSize:" in self.lines
+        )
 
     def test_quad_geometry_survives_both_rotation_mapping_paths(self) -> None:
         for body in (self.crop_map, self.full_map):
