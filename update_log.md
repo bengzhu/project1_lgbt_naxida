@@ -1,3 +1,23 @@
+## v3.168：日语 OCR Koharu 风格后处理与候选融合
+
+日期：2026-08-08
+
+状态：Agent X 继续参考 `reference/koharu-main` 的识别后处理边界，将 `manga_ocr.rs` 的 `post_process` 语义迁入普通图片日语 Vision OCR：删除空白、统一 `…` 与点号／中点串、把 ASCII 可打印字符转为全角；在最佳置信度 0.14 窗口内读取最多 5 个 Vision 候选，以日语脚本／标点密度做保守融合。非日语保持既有 top-1，日语整页 90°／270°、文字块 crop、line 与 perspective reread 共用 helper。工程正式版本为 `MARKETING_VERSION=3.168`。候选 commit `9438e3d40ffb133073921fc4f4a0e1de36cc042d` 已通过 PR [#232](https://github.com/bengzhu/project1_lgbt_naxida/pull/232) 合入，merge SHA `033d66b5c62434e5685b1e8d7d1feebdfa90c15e`；`main` 未触碰。
+
+核心变更：
+
+- `VisionOCRService` 新增日语文本后处理与候选选择 helper；空白／省略号／点号串／ASCII 全角化与 Koharu `post_process` 边界对齐，但不声称已加载 Manga OCR/PaddleOCR 模型。
+- 日语只在置信度窗口内扩大到 top-5 并按脚本／标点证据择优，非日语维持 top-1；不改变 TranslationSessionStore、翻译、renderer/export、漫画探针、Koharu active gate、metrics 或 `output`。
+- 新增 `scripts/test-v3168-image-japanese-ocr-postprocess-contract.py`、`test/jap.jpg` fixture 继续只作合同输入，并接入显式 CI 路由；v3.167 及更早合同均回归通过。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31197172635](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31197172635)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `9438e3d40ffb133073921fc4f4a0e1de36cc042d`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #232 fast [31197811891](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31197811891)：`validationProfile=fast`，`reusedFullValidationSha=9438e3d40ffb133073921fc4f4a0e1de36cc042d`、state `success`，`validationReason=pull_request_followup_no_synchronize`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31197884476](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31197884476)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `033d66b5c62434e5685b1e8d7d1feebdfa90c15e` 复用候选 full，`receiptPropagationAllowed=true`，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.167：日语／横排 OCR 横向行动态容差
 
 日期：2026-08-08

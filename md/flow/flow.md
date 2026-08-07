@@ -3,6 +3,8 @@
 
 ## 0. 一句话总览
 
+v3.168 日语识别：Vision 候选 → 置信度窗口内最多 5 个候选 → Koharu `post_process` 等价的空白／省略号／点号串／ASCII 全角化 → 日语脚本与标点密度融合 → 既有方向布局、翻译与渲染；非日语仍为 top-1。候选 full `31197172635`、PR fast `31197811891`、merge fast `31197884476` 均通过，候选 SHA `9438e3d40ffb133073921fc4f4a0e1de36cc042d` Xcode/JUnit `10/10`，merge SHA `033d66b5c62434e5685b1e8d7d1feebdfa90c15e` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
+
 v3.167 日语／横排 OCR 的横向行分组改用 scale-aware 容差：以当前 observation 的中位文字框高度乘 `0.55`，再限制在 `0.012...0.04`，让不同缩放／字体下的同一行稳定聚合并避免相邻面板塌缩；RTL/LTR 排序和 OCR、翻译、导出路径不变。候选 full `31195627325`、PR fast `31196179149`、merge fast `31196269343` 均通过，候选 SHA `6c63dd0a5170a0fb230046d7d2129b26fd8dbb4d` Xcode/JUnit `10/10`，merge SHA `a0f1e72ea36be0932dae75fe774af1186ed29b1c` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.166 日语竖排方向计数纳入 CJK 标点／半角片假名：单独 observation 仍需列邻居与无横排行邻居门控，随后进入既有竖排聚类和 crop reread。候选 full `31193812409`、PR fast `31194473761`、merge fast `31194535297` 均通过，候选 SHA `8c6dfe278a9644dd0dc37ffa5381a968dc7748c7` Xcode/JUnit `10/10`，merge SHA `0acfd7f62c9ecbe048c7630d0358c85dce325edb` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
