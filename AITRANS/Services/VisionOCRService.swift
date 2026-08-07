@@ -465,8 +465,18 @@ struct VisionOCRService: Sendable {
             observations: safeObservations,
             blocks: blocks
         )
+        // A synthesized line is the bounded TextRegion proxy for the column,
+        // so do not reread an original axis candidate that it geometrically
+        // covers. Keep the original candidate in `perspectiveCandidates` so
+        // its quad can still receive the Koharu-style warp path; this filter
+        // only removes the duplicate axis-aligned bbox request.
+        let axisSeeds = synthesizedCandidates + uniqueCandidates.filter { candidate in
+            !synthesizedCandidates.contains(where: {
+                isSameJapaneseLineRegion(candidate, as: $0)
+            })
+        }
         let axisCandidates = Array(
-            deduplicateJapaneseObservations(uniqueCandidates + synthesizedCandidates)
+            deduplicateJapaneseObservations(axisSeeds)
                 .prefix(24)
         )
 

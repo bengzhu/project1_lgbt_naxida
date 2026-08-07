@@ -76,10 +76,13 @@ class JapaneseObservationFusionContractTests(unittest.TestCase):
         for marker in [
             "deduplicateJapaneseObservations(observations)",
             "isBetterJapaneseObservation($0, $1)",
-            "deduplicateJapaneseObservations(uniqueCandidates + synthesizedCandidates)",
             "max(by: { isBetterJapaneseObservation($0, $1) })",
         ]:
             self.assertIn(marker, self.vision)
+        self.assertTrue(
+            "deduplicateJapaneseObservations(uniqueCandidates + synthesizedCandidates)" in self.vision
+            or "deduplicateJapaneseObservations(axisSeeds)" in self.vision
+        )
 
     def test_non_japanese_layout_keeps_original_dedupe_path(self) -> None:
         self.assertIn(

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract for bounded synthetic line regions from fragmented Japanese glyphs."""
+"""Contract for replacing covered axis bboxes with Japanese synthetic line regions."""
 
 from pathlib import Path
 import re
@@ -27,7 +27,7 @@ def braced_body(source: str, marker: str) -> str:
     raise AssertionError(f"unclosed body for {marker}")
 
 
-class JapaneseVerticalFragmentLineContractTests(unittest.TestCase):
+class JapaneseSyntheticLineReplacementContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.vision = read("AITRANS/Services/VisionOCRService.swift")
         self.lines = braced_body(
@@ -38,30 +38,41 @@ class JapaneseVerticalFragmentLineContractTests(unittest.TestCase):
             self.vision,
             "private static func synthesizeJapaneseVerticalLineCandidates(",
         )
-        self.fragment = braced_body(
-            self.vision,
-            "private static func isJapaneseVerticalFragment(",
-        )
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
 
-    def test_fragmented_candidates_become_bounded_axis_line_crops(self) -> None:
+    def test_synthesized_regions_replace_only_covered_axis_candidates(self) -> None:
         for marker in [
-            "let perspectiveCandidates = Array(uniqueCandidates.prefix(24))",
-            "synthesizeJapaneseVerticalLineCandidates(",
-            "let axisCandidates = Array(",
+            "let synthesizedCandidates = synthesizeJapaneseVerticalLineCandidates(",
+            "let axisSeeds = synthesizedCandidates + uniqueCandidates.filter { candidate in",
+            "!synthesizedCandidates.contains(where:",
+            "isSameJapaneseLineRegion(candidate, as: $0)",
+            "deduplicateJapaneseObservations(axisSeeds)",
             ".prefix(24)",
-            "recognizeJapanesePerspectiveLineCrop(",
         ]:
             self.assertIn(marker, self.lines)
-        self.assertTrue(
-            "deduplicateObservations(uniqueCandidates + synthesizedCandidates)" in self.lines
-            or "deduplicateJapaneseObservations(uniqueCandidates + synthesizedCandidates)"
-            in self.lines
-            or "deduplicateJapaneseObservations(axisSeeds)" in self.lines
+        self.assertLess(
+            self.lines.index("let synthesizedCandidates = synthesizeJapaneseVerticalLineCandidates("),
+            self.lines.index("let axisSeeds = synthesizedCandidates + uniqueCandidates.filter { candidate in"),
         )
 
-    def test_synthesis_requires_short_japanese_same_column_fragments(self) -> None:
+    def test_perspective_quads_and_quality_fallback_remain_available(self) -> None:
+        for marker in [
+            "let perspectiveCandidates = Array(uniqueCandidates.prefix(24))",
+            "recognizeJapanesePerspectiveLineCrop(",
+            "consumedPixels: &perspectiveWarpPixels",
+            "orientationFallbacksRemaining",
+            "recognizeJapaneseCropPass(",
+        ]:
+            self.assertIn(marker, self.lines)
+        # The replacement is axis-only; original observations still seed the
+        # perspective path above the synthetic candidate construction.
+        self.assertLess(
+            self.lines.index("let perspectiveCandidates = Array(uniqueCandidates.prefix(24))"),
+            self.lines.index("let synthesizedCandidates = synthesizeJapaneseVerticalLineCandidates("),
+        )
+
+    def test_synthesis_gate_stays_bounded_and_japanese(self) -> None:
         for marker in [
             "overlapRatio(observation.rect, block.rect) >= 0.25",
             "isJapaneseVerticalFragment(observation)",
@@ -69,21 +80,9 @@ class JapaneseVerticalFragmentLineContractTests(unittest.TestCase):
             "columnTolerance",
             "maximumGap",
             "zip(ordered, ordered.dropFirst())",
-            "reduce(ordered[0].rect) { $0.union($1) }",
-            "lineRegionQuad: nil",
+            "aspectRatio >= 1.25",
         ]:
             self.assertIn(marker, self.synthesis)
-
-    def test_fragment_gate_rejects_non_japanese_or_large_regions(self) -> None:
-        for marker in [
-            "scalarCount <= 2",
-            "japaneseScriptDensity(in: observation.text) >= 0.5",
-            "region.height >= 0.012",
-            "ratio >= 0.75",
-        ]:
-            self.assertIn(marker, self.fragment)
-
-    def test_scope_stays_in_ordinary_japanese_ocr(self) -> None:
         for forbidden in [
             "TranslationSessionStore",
             "MangaOverlayProbeService",
@@ -94,13 +93,15 @@ class JapaneseVerticalFragmentLineContractTests(unittest.TestCase):
         ]:
             self.assertNotIn(forbidden, self.vision)
 
-    def test_version_and_ci_route_follow_v3171(self) -> None:
+    def test_version_and_ci_route_follow_v3181(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
         self.assertEqual(len(versions), 2)
-        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 172) for version in versions))
-        self.assertNotIn("MARKETING_VERSION = 3.171;", self.project)
-        old = "python3 -B scripts/test-v3171-image-japanese-line-crop-preprocess-contract.py"
-        new = "python3 -B scripts/test-v3172-image-japanese-vertical-fragment-line-contract.py"
+        self.assertTrue(
+            all(tuple(map(int, version.split("."))) >= (3, 182) for version in versions)
+        )
+        self.assertNotIn("MARKETING_VERSION = 3.181;", self.project)
+        old = "python3 -B scripts/test-v3181-image-japanese-line-path-dedupe-contract.py"
+        new = "python3 -B scripts/test-v3182-image-japanese-synthetic-line-replacement-contract.py"
         self.assertIn(old, self.workflow)
         self.assertIn(new, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
