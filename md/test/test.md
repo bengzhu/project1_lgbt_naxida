@@ -7,6 +7,13 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.150 普通图片局部放大恢复 Vision OCR action 合同
+
+- 人工修正后的图片文字块在局部放大预览中提供可见“恢复 Vision OCR”按钮与同名 VoiceOver action；只有 `isManuallyCorrected && canEdit` 时暴露，锁定时保留 `modificationUnavailableHint` 和禁用按钮，不虚构恢复入口。
+- 局部预览通过面板现有 `requestVisionOCRRestore` 确认入口恢复原始 OCR 原文与初始译文；不在 focus View 中新增 Store、Vision OCR 或翻译管线，恢复后的既有焦点交接保持不变。
+- 新增 `scripts/test-v3150-image-focus-restore-action-contract.py`，并同步 UI/full fail-fast 路由。候选 exact-SHA full `31163470178`（`04cef3c01b802627366587dc1a3c76eddc534e3f`）Xcode/JUnit `10/10` 成功；PR #214 fast `31164127307`、merge fast `31164207376` 复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+
 ### v3.149 普通图片复查完成空态 action 门控合同
 
 - 普通图片筛选到 `.needsReview` 且所有风险块已完成时，完成空态只在 `canReviewImageTranslation` 为真时提供 VoiceOver“重新复查” action，并复用既有 `restartReviewQueue()`；翻译未完成或导出重绘期间不得暴露一个只会被 guard 拒绝的无效 action。

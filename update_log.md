@@ -1,3 +1,23 @@
+## v3.150：普通图片局部放大恢复 Vision OCR action
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.150 普通图片局部放大预览恢复 Vision OCR 的可见按钮与 VoiceOver action、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.150`。候选 commit `04cef3c01b802627366587dc1a3c76eddc534e3f` 已通过 PR [#214](https://github.com/bengzhu/project1_lgbt_naxida/pull/214) 合入，merge SHA `b52dabc245f0d140115074b37c34975ce0b743c9`；`main` 未触碰。
+
+核心变更：
+
+- 普通图片人工修正后的文字块在局部放大预览中新增可见“恢复 Vision OCR”按钮与同名 VoiceOver action，且仅在 `isManuallyCorrected && canEdit` 时提供；未修正或锁定状态不暴露父级 action，保留 `modificationUnavailableHint` 和禁用按钮边界。
+- 局部放大预览通过 `ImageTranslationPanel` 注入的 closure 进入既有 `requestVisionOCRRestore` 确认对话框，恢复流程仍由 Store 的现有 Vision OCR 恢复入口完成；不新增 OCR、翻译、Store 或 Koharu 管线。
+- 新增 `scripts/test-v3150-image-focus-restore-action-contract.py`，并扩展 UI/full fail-fast 路由。改动只属于 View、静态合同和 CI 路由，不改变 Vision OCR、模型翻译、renderer/export、漫画探针、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31163470178](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31163470178)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `04cef3c01b802627366587dc1a3c76eddc534e3f`，Xcode build success，静态、UI、Speech、home、paste 合同 success，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #214 fast [31164127307](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31164127307)：`validationProfile=fast`，复用候选 full `04cef3c01b802627366587dc1a3c76eddc534e3f / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31164207376](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31164207376)：`validationProfile=fast`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `04cef3c01b802627366587dc1a3c76eddc534e3f / success`，`receiptPropagationAllowed=true`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.149：普通图片复查完成空态 VoiceOver action 门控
 
 日期：2026-08-07
