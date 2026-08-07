@@ -65,10 +65,12 @@ class JapaneseLineGeometryContractTests(unittest.TestCase):
     def test_line_crops_prefer_geometry_without_replacing_layout_box(self) -> None:
         for marker in [
             "let region = observation.lineRegionRect ?? observation.rect",
-            "expandedVerticalLineCropRect(for: candidate)",
-            "let cropRect = expandedVerticalLineCropRect(for: candidate)",
         ]:
             self.assertIn(marker, self.vision)
+        self.assertTrue(
+            "let cropRect = expandedVerticalLineCropRect(for: candidate)" in self.vision
+            or "let cropRect = expandedVerticalLineCropRect(for: candidate, imageSize:" in self.vision
+        )
         self.assertIn("rect: originalRect", self.crop_map)
         self.assertIn("lineRegionRect: originalLineRegionRect", self.crop_map)
 

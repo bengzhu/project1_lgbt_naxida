@@ -65,11 +65,20 @@ class JapaneseLineRegionOCRContractTests(unittest.TestCase):
             self.assertIn(marker, self.line)
 
     def test_line_regions_use_direction_padding_upscale_and_lower_height_gate(self) -> None:
-        for marker in [
+        legacy_markers = [
             "horizontalPadding = min(max(rect.width * 0.18, 0.008), 0.06)",
             "verticalPadding = min(max(rect.height * 0.12, 0.006), 0.06)",
-        ]:
-            self.assertIn(marker, self.padding)
+        ]
+        adaptive_markers = [
+            "private static func koharuVerticalCropPadding(",
+            "let fontSizePixels = max(min(widthPixels, heightPixels), 1)",
+            "let horizontalPaddingPixels = max(fontSizePixels * 0.18, basePaddingPixels)",
+            "let verticalPaddingPixels = max(fontSizePixels * 0.12, basePaddingPixels)",
+        ]
+        self.assertTrue(
+            all(marker in self.padding for marker in legacy_markers)
+            or all(marker in self.vision for marker in adaptive_markers)
+        )
         line_scope = self.line + self.vision
         self.assertTrue(
             "resizedImage(crop.image, scale: 2)" in line_scope
