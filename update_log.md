@@ -1,3 +1,23 @@
+## v3.135：图片预览状态 VoiceOver hint
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.135 图片预览加载／失败状态的动态 VoiceOver hint、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.135`。候选 commit `728b96a06491f41f5a8809fc2649486bdae81444` 已通过 PR [#199](https://github.com/bengzhu/project1_lgbt_naxida/pull/199) 合入，merge SHA `b45bd83b24a7d021e3f414990ad85be60b494312`；候选远端分支已清理，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPreview` 预览状态容器新增动态 `previewStatusAccessibilityHint`：失败当前 revision 时明确可执行“重试预览”，只重建屏幕预览，不重新识别或翻译图片。
+- loading 状态说明屏幕预览生成中、完成后可定位文字块及失败恢复边界；v3.134 的 retry action、可见按钮、label/value 和稳定 focus 保持不变。
+- 新增 `scripts/test-v3135-image-preview-status-hint-contract.py` 并接入 UI/full fail-fast；改动只属于 View，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31143646549](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31143646549)：`validationReason=candidate_development_push`，commit `728b96a06491f41f5a8809fc2649486bdae81444`，Xcode build success，UI／Speech／home／paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #199 fast [31144019839](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31144019839)：`validationProfile=fast`，复用候选 full `728b96a06491f41f5a8809fc2649486bdae81444 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31144057333](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31144057333)：merge SHA `b45bd83b24a7d021e3f414990ad85be60b494312`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.134：图片预览失败状态 VoiceOver retry action
 
 日期：2026-08-07
