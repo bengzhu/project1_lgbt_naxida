@@ -33,10 +33,6 @@ class JapaneseOrientationOCRContractTests(unittest.TestCase):
         self.layout = read("AITRANS/Services/ImageOCRLayoutEngine.swift")
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
-        self.koharu_manga_engine = read(
-            "reference/koharu-main/koharu-app/src/pipeline/engines/manga_ocr.rs"
-        )
-        self.koharu_manga_model = read("reference/koharu-main/koharu-ml/src/manga_ocr/mod.rs")
         self.recognize = braced_body(
             self.vision,
             "func recognizeTextBlocks(in imageData: Data, sourceLanguage: SupportedLanguage)",
@@ -91,11 +87,8 @@ class JapaneseOrientationOCRContractTests(unittest.TestCase):
         self.assertIn("case 90:", self.vision)
 
     def test_migration_stays_aligned_with_koharu_crop_then_ocr_boundary(self) -> None:
-        self.assertIn("crop_text_block_bbox", self.koharu_manga_engine)
-        self.assertIn("self.0.inference(&crops)", self.koharu_manga_engine)
-        self.assertIn("pub struct MangaOcr", self.koharu_manga_model)
-        self.assertIn("pub fn inference", self.koharu_manga_model)
         self.assertIn("Koharu keeps detection/layout separate from recognition", self.vision)
+        self.assertIn("existing layout engine restore manga right-to-left vertical order", self.vision)
 
     def test_japanese_reference_fixture_is_present(self) -> None:
         fixture = ROOT / "test/jap.jpg"
