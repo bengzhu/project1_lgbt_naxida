@@ -81,7 +81,7 @@ class ImageIgnoredRowRestoreActionContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3145(self) -> None:
         self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.146;"), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.146;", self.project)
         old = "python3 -B scripts/test-v3145-image-file-selection-replacement-hint-contract.py"
         new = "python3 -B scripts/test-v3146-image-ignored-row-restore-action-contract.py"
         self.assertIn(old, self.workflow)

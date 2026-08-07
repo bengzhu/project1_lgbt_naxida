@@ -3280,6 +3280,9 @@ private struct ImageOCRCorrectionSheet: View {
                         .autocorrectionDisabled()
                         .focused($correctedOriginalFocused)
                         .disabled(isSaving)
+                        .accessibilityLabel("修正后的 OCR 原文")
+                        .accessibilityValue(correctedOriginal.isEmpty ? "空" : correctedOriginal)
+                        .accessibilityHint(correctedOriginalAccessibilityHint)
                 }
 
                 Section("当前翻译") {
@@ -3292,7 +3295,7 @@ private struct ImageOCRCorrectionSheet: View {
                         Label("忽略此文字块", systemImage: "eye.slash")
                     }
                     .disabled(isSaving)
-                    .accessibilityHint("从本次图片的预览、导出和当前转录中移除此 OCR 文字块；稍后可在图片检查区恢复")
+                    .accessibilityHint(ignoreActionAccessibilityHint)
                     Text("仅忽略本次图片会话中的这个文字块，不会重新识别或翻译整张图片。")
                         .font(.caption)
                         .foregroundStyle(Color.appTextSecondary)
@@ -3398,6 +3401,25 @@ private struct ImageOCRCorrectionSheet: View {
         requiresRetranslation
             ? "保存修正后的 OCR 原文，并只重新翻译此文字块"
             : "确认当前 OCR 原文无误；不会重新翻译"
+    }
+
+    private var correctedOriginalAccessibilityHint: String {
+        if isSaving {
+            return "正在重新翻译当前文字块；暂不能编辑或忽略"
+        }
+        if !canSave {
+            return "请输入非空 OCR 原文；保存后只会重新翻译当前文字块，不会重新识别整张图片"
+        }
+        if requiresRetranslation {
+            return "保存会只重新翻译当前文字块，不会重新识别整张图片"
+        }
+        return "当前文字与 OCR 原文相同；保存会确认无误，不会重新翻译"
+    }
+
+    private var ignoreActionAccessibilityHint: String {
+        isSaving
+            ? "正在重新翻译当前文字块；完成前不能忽略"
+            : "从本次图片的预览、导出和当前转录中移除此 OCR 文字块；稍后可在图片检查区恢复"
     }
 
     private func requestDismiss() {
