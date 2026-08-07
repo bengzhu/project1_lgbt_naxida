@@ -361,6 +361,11 @@ struct VisionOCRService: Sendable {
 
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(verticalBlocks.count * 2)
+        refined.append(contentsOf: Self.recognizeJapaneseVerticalTileFallback(
+            in: image,
+            verticalBlocks: Array(verticalBlocks),
+            recognitionLanguages: recognitionLanguages
+        ))
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         var orientationFallbacksRemaining = 8
         for block in verticalBlocks {
@@ -428,6 +433,113 @@ struct VisionOCRService: Sendable {
             recognitionLanguages: recognitionLanguages
         ))
         return refined
+    }
+
+    /// Recover Japanese vertical columns that the page-level Vision passes did
+    /// not expose as observations. Koharu's detector creates TextBoxes before
+    /// crop/OCR; when Vision misses an entire column there is no candidate to
+    /// crop, so use a bounded, overlapping reconnaissance pass as a detector
+    /// fallback. Existing vertical blocks suppress covered tiles, while the
+    /// hard six-tile and four-opposite-orientation budgets keep dense pages
+    /// from turning into an unbounded second full-page OCR run.
+    private static func recognizeJapaneseVerticalTileFallback(
+        in image: CGImage,
+        verticalBlocks: [ImageOCRLayoutBlock],
+        recognitionLanguages: [String]
+    ) -> [VisionOCRObservation] {
+        let imageWidth = image.width
+        let imageHeight = image.height
+        guard imageWidth >= 8, imageHeight >= 8 else { return [] }
+
+        let maximumTiles = 6
+        let tileWidth = max(Int((Double(imageWidth) / 4).rounded()), 2)
+        let overlapPixels = max(Int((Double(tileWidth) * 0.18).rounded()), 1)
+        let step = max(tileWidth - overlapPixels, 1)
+        var starts: [Int] = []
+        var nextStart = 0
+        while nextStart < imageWidth,
+              starts.count < maximumTiles {
+            starts.append(nextStart)
+            guard nextStart + tileWidth < imageWidth else { break }
+            nextStart += step
+        }
+
+        let lastStart = max(imageWidth - tileWidth, 0)
+        if !starts.contains(lastStart) {
+            if starts.count == maximumTiles {
+                starts[starts.count - 1] = lastStart
+            } else {
+                starts.append(lastStart)
+            }
+        }
+
+        var refined: [VisionOCRObservation] = []
+        refined.reserveCapacity(starts.count * 2)
+        var orientationFallbacksRemaining = 4
+
+        for start in starts {
+            let pixelWidth = min(tileWidth, imageWidth - start)
+            guard pixelWidth >= 2 else { continue }
+            let tileRect = ImageOCRLayoutRect(
+                x: Double(start) / Double(imageWidth),
+                y: 0,
+                width: Double(pixelWidth) / Double(imageWidth),
+                height: 1
+            )
+            guard !verticalBlocks.contains(where: {
+                verticalTileIsCovered($0.rect, by: tileRect)
+            }),
+                  let crop = cropImage(image, normalizedRect: tileRect),
+                  crop.image.width >= 2,
+                  crop.image.height >= 2 else {
+                continue
+            }
+
+            let preparedCrop = prepareJapaneseCropForVision(crop.image)
+            let primary = recognizeJapaneseCropPass(
+                crop: preparedCrop.image,
+                cropRect: crop.rect,
+                originalImage: image,
+                angle: 90,
+                recognitionLanguages: recognitionLanguages,
+                minimumTextHeight: 0.003,
+                cropScale: preparedCrop.scale
+            )
+            refined.append(contentsOf: primary)
+
+            if orientationFallbacksRemaining > 0,
+               needsJapaneseOrientationFallback(primary) {
+                orientationFallbacksRemaining -= 1
+                refined.append(contentsOf: recognizeJapaneseCropPass(
+                    crop: preparedCrop.image,
+                    cropRect: crop.rect,
+                    originalImage: image,
+                    angle: 270,
+                    recognitionLanguages: recognitionLanguages,
+                    minimumTextHeight: 0.003,
+                    cropScale: preparedCrop.scale
+                ))
+            }
+        }
+        return deduplicateJapaneseObservations(refined)
+    }
+
+    private static func verticalTileIsCovered(
+        _ block: ImageOCRLayoutRect,
+        by tile: ImageOCRLayoutRect
+    ) -> Bool {
+        let horizontalIntersection = max(
+            0,
+            min(block.maxX, tile.maxX) - max(block.x, tile.x)
+        )
+        let horizontalCoverage = horizontalIntersection
+            / max(min(block.width, tile.width), 0.001)
+        let verticalIntersection = max(
+            0,
+            min(block.maxY, tile.maxY) - max(block.y, tile.y)
+        )
+        let verticalCoverage = verticalIntersection / max(tile.height, 0.001)
+        return horizontalCoverage >= 0.45 && verticalCoverage >= 0.30
     }
 
     private static func recognizeJapaneseVerticalLineCrops(
