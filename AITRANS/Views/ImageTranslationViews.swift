@@ -1982,6 +1982,7 @@ private struct ImageTranslationPreview: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel(previewStatusAccessibilityLabel)
             .accessibilityValue(previewStatusAccessibilityValue)
+            .accessibilityHint(previewStatusAccessibilityHint)
             .accessibilityFocused(
                 accessibilityFocus,
                 equals: previewStatusAccessibilityFocusID
@@ -2013,6 +2014,12 @@ private struct ImageTranslationPreview: View {
         previewFailedForCurrentRevision
             ? "原图仍保留用于 OCR 与导出；可以重试屏幕预览"
             : "图片已载入，正在后台生成屏幕预览"
+    }
+
+    private var previewStatusAccessibilityHint: String {
+        previewFailedForCurrentRevision
+            ? "可执行“重试预览”重新生成屏幕预览；不会重新识别或翻译图片"
+            : "屏幕预览生成中；完成后可定位文字块，若生成失败可执行“重试预览”"
     }
 
     private var previewAccessibilityValue: String {
