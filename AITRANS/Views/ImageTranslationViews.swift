@@ -1938,53 +1938,67 @@ private struct ImageTranslationPreview: View {
     }
 
     @ViewBuilder private var previewStatus: some View {
-        VStack(spacing: AppTheme.Spacing.control) {
-            if previewFailedForCurrentRevision {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.largeTitle)
-                    .foregroundStyle(Color.appWarning)
-                Text("预览生成失败")
-                    .font(.headline)
-                    .foregroundStyle(Color.appTextPrimary)
-                Text("原图仍保留用于 OCR 与导出，可单独重试屏幕预览。")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.appTextSecondary)
-                    .multilineTextAlignment(.center)
-                AppSecondaryButton(
-                    title: "重试预览",
-                    systemImage: "arrow.clockwise",
-                    tone: .warning,
-                    action: retryPreview
-                )
-                .frame(maxWidth: 220)
-                .accessibilityHint("重新生成屏幕预览；不会重新识别或翻译图片")
-            } else {
-                ProgressView()
-                    .controlSize(.large)
-                Text("正在准备预览")
-                    .font(.headline)
-                    .foregroundStyle(Color.appTextPrimary)
-                Text("图片已载入，正在后台生成屏幕预览。")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.appTextSecondary)
-                    .multilineTextAlignment(.center)
+        previewStatusAccessibilityActions(
+            VStack(spacing: AppTheme.Spacing.control) {
+                if previewFailedForCurrentRevision {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.largeTitle)
+                        .foregroundStyle(Color.appWarning)
+                    Text("预览生成失败")
+                        .font(.headline)
+                        .foregroundStyle(Color.appTextPrimary)
+                    Text("原图仍保留用于 OCR 与导出，可单独重试屏幕预览。")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.appTextSecondary)
+                        .multilineTextAlignment(.center)
+                    AppSecondaryButton(
+                        title: "重试预览",
+                        systemImage: "arrow.clockwise",
+                        tone: .warning,
+                        action: retryPreview
+                    )
+                    .frame(maxWidth: 220)
+                    .accessibilityHint("重新生成屏幕预览；不会重新识别或翻译图片")
+                } else {
+                    ProgressView()
+                        .controlSize(.large)
+                    Text("正在准备预览")
+                        .font(.headline)
+                        .foregroundStyle(Color.appTextPrimary)
+                    Text("图片已载入，正在后台生成屏幕预览。")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.appTextSecondary)
+                        .multilineTextAlignment(.center)
+                }
             }
-        }
-        .padding(AppTheme.Spacing.section)
-        .frame(maxWidth: .infinity, minHeight: 360)
-        .background(Color.appSurface)
-        .clipShape(.rect(cornerRadius: AppTheme.Radius.surface))
-        .overlay {
-            RoundedRectangle(cornerRadius: AppTheme.Radius.surface)
-                .stroke(Color.appBorder, lineWidth: 1)
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(previewStatusAccessibilityLabel)
-        .accessibilityValue(previewStatusAccessibilityValue)
-        .accessibilityFocused(
-            accessibilityFocus,
-            equals: previewStatusAccessibilityFocusID
+            .padding(AppTheme.Spacing.section)
+            .frame(maxWidth: .infinity, minHeight: 360)
+            .background(Color.appSurface)
+            .clipShape(.rect(cornerRadius: AppTheme.Radius.surface))
+            .overlay {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.surface)
+                    .stroke(Color.appBorder, lineWidth: 1)
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(previewStatusAccessibilityLabel)
+            .accessibilityValue(previewStatusAccessibilityValue)
+            .accessibilityFocused(
+                accessibilityFocus,
+                equals: previewStatusAccessibilityFocusID
+            )
         )
+    }
+
+    @ViewBuilder
+    private func previewStatusAccessibilityActions<Content: View>(_ content: Content) -> some View {
+        if previewFailedForCurrentRevision {
+            content
+                .accessibilityAction(named: "重试预览") {
+                    retryPreview()
+                }
+        } else {
+            content
+        }
     }
 
     private var previewFailedForCurrentRevision: Bool {
