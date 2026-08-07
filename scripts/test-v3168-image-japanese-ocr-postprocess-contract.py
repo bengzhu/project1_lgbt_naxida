@@ -77,10 +77,8 @@ class JapaneseOCRPostprocessContractTests(unittest.TestCase):
             "postProcessJapaneseText: sourceLanguage == .japanese",
             self.vision,
         )
-        self.assertGreaterEqual(
-            self.vision.count("postProcessJapaneseText: true"),
-            4,
-        )
+        self.assertGreaterEqual(self.vision.count("postProcessJapaneseText: true"), 3)
+        self.assertIn("recognizeJapaneseCropPass(", self.vision)
         self.assertIn(
             "let text = postProcessJapaneseText",
             self.recognize,
