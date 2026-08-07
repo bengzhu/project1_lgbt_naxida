@@ -1,4 +1,5 @@
 import CoreGraphics
+import CoreImage
 import Foundation
 import ImageIO
 import Vision
@@ -129,35 +130,71 @@ struct VisionOCRService: Sendable {
             guard let rect = Self.normalizedRect(from: observation.boundingBox) else { return nil }
             let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return nil }
+            let geometry = Self.recognizedTextGeometry(
+                for: candidate,
+                fallback: rect
+            )
             return VisionOCRObservation(
                 text: text,
                 confidence: candidate.confidence,
                 rect: rect,
-                lineRegionRect: Self.recognizedTextRegionRect(
-                    for: candidate,
-                    fallback: rect
-                ),
+                lineRegionRect: geometry.rect,
+                lineRegionQuad: geometry.quad,
                 rotationApplied: rotationApplied
             )
         }
     }
 
-    private static func recognizedTextRegionRect(
+    private static func recognizedTextGeometry(
         for candidate: VNRecognizedText,
         fallback: ImageOCRLayoutRect
-    ) -> ImageOCRLayoutRect {
+    ) -> (rect: ImageOCRLayoutRect, quad: ImageOCRLayoutQuad?) {
         let range = candidate.string.startIndex..<candidate.string.endIndex
         do {
             if let rangeObservation = try candidate.boundingBox(for: range),
                let rangeRect = normalizedRect(from: rangeObservation.boundingBox),
                isUsableTextRegion(rangeRect, relativeTo: fallback) {
-                return rangeRect
+                return (
+                    rect: rangeRect,
+                    quad: normalizedQuad(from: rangeObservation)
+                )
             }
         } catch {
             // Vision may not provide character-range geometry for every revision;
             // the request-level observation remains the safe Koharu line proxy.
         }
-        return fallback
+        return (rect: fallback, quad: nil)
+    }
+
+    private static func normalizedQuad(
+        from observation: VNRectangleObservation
+    ) -> ImageOCRLayoutQuad? {
+        let rawPoints = [
+            observation.topLeft,
+            observation.topRight,
+            observation.bottomRight,
+            observation.bottomLeft
+        ]
+        let points = rawPoints.map {
+            ImageOCRLayoutPoint(
+                x: Double($0.x),
+                y: Double(1 - $0.y)
+            )
+        }
+        guard points.allSatisfy({
+            $0.x.isFinite && $0.y.isFinite
+                && $0.x >= 0 && $0.x <= 1
+                && $0.y >= 0 && $0.y <= 1
+        }) else {
+            return nil
+        }
+        let quad = ImageOCRLayoutQuad(points: points)
+        guard quad.boundingRect.normalizedToUnit() != nil,
+              quad.minimumEdgeLength >= 0.002,
+              quad.isConvex else {
+            return nil
+        }
+        return quad
     }
 
     private static func isUsableTextRegion(
@@ -279,7 +316,19 @@ struct VisionOCRService: Sendable {
 
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(min(uniqueCandidates.count, 24) * 2)
+        var perspectiveWarpPixels: CGFloat = 0
         for candidate in uniqueCandidates.prefix(24) {
+            let angle = candidate.rotationApplied == 270 ? 270 : 90
+            if let perspective = recognizeJapanesePerspectiveLineCrop(
+                candidate: candidate,
+                in: image,
+                angle: angle,
+                recognitionLanguages: recognitionLanguages,
+                consumedPixels: &perspectiveWarpPixels
+            ) {
+                refined.append(perspective)
+            }
+
             let cropRect = expandedVerticalLineCropRect(for: candidate)
             guard let crop = cropImage(image, normalizedRect: cropRect) else {
                 continue
@@ -295,7 +344,6 @@ struct VisionOCRService: Sendable {
                 cropScale = 1
             }
 
-            let angle = candidate.rotationApplied == 270 ? 270 : 90
             guard let rotatedCrop = try? rotatedImage(scaledCrop, angle: angle),
                   let cropObservations = try? recognizeObservations(
                       in: rotatedCrop,
@@ -319,6 +367,124 @@ struct VisionOCRService: Sendable {
             })
         }
         return refined
+    }
+
+    private static func recognizeJapanesePerspectiveLineCrop(
+        candidate: VisionOCRObservation,
+        in image: CGImage,
+        angle: Int,
+        recognitionLanguages: [String],
+        consumedPixels: inout CGFloat
+    ) -> VisionOCRObservation? {
+        guard let quad = candidate.lineRegionQuad,
+              let warped = perspectiveCorrectedLineImage(in: image, quad: quad) else {
+            return nil
+        }
+
+        let pixels = CGFloat(warped.width) * CGFloat(warped.height)
+        guard pixels.isFinite,
+              pixels >= 4,
+              pixels <= 4_000_000,
+              consumedPixels + pixels <= 16_000_000 else {
+            return nil
+        }
+        consumedPixels += pixels
+
+        let scaled: CGImage
+        if let resized = resizedImage(warped, scale: 2) {
+            scaled = resized
+        } else {
+            scaled = warped
+        }
+        guard let rotated = try? rotatedImage(scaled, angle: angle),
+              let observations = try? recognizeObservations(
+                  in: rotated,
+                  recognitionLanguages: recognitionLanguages,
+                  minimumTextHeight: 0.002,
+                  automaticallyDetectsLanguage: false,
+                  rotationApplied: angle
+              ) else {
+            return nil
+        }
+
+        let ordered = observations.sorted {
+            if abs($0.rect.y - $1.rect.y) > 0.02 {
+                return $0.rect.y < $1.rect.y
+            }
+            return $0.rect.x < $1.rect.x
+        }
+        let text = ordered
+            .map(\.text)
+            .joined()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return nil }
+
+        let confidence = ordered.reduce(Float(0)) { $0 + $1.confidence }
+            / Float(ordered.count)
+        return VisionOCRObservation(
+            text: text,
+            confidence: confidence,
+            rect: candidate.rect,
+            lineRegionRect: candidate.lineRegionRect,
+            lineRegionQuad: candidate.lineRegionQuad,
+            rotationApplied: angle
+        )
+    }
+
+    private static func perspectiveCorrectedLineImage(
+        in image: CGImage,
+        quad: ImageOCRLayoutQuad
+    ) -> CGImage? {
+        let width = CGFloat(image.width)
+        let height = CGFloat(image.height)
+        let points = quad.points.map {
+            CGPoint(x: $0.x * width, y: $0.y * height)
+        }
+        guard points.count == 4,
+              points.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
+              quad.isConvex else {
+            return nil
+        }
+
+        let bounds = points.reduce(CGRect.null) { partial, point in
+            partial.union(CGRect(origin: point, size: .zero))
+        }.integral
+        guard bounds.width >= 2,
+              bounds.height >= 2,
+              bounds.width <= 4096,
+              bounds.height <= 4096 else {
+            return nil
+        }
+
+        let ciImage = CIImage(cgImage: image)
+        let filter = CIFilter(name: "CIPerspectiveCorrection")
+        filter?.setValue(ciImage, forKey: kCIInputImageKey)
+        filter?.setValue(
+            CIVector(cgPoint: CGPoint(x: points[0].x, y: height - points[0].y)),
+            forKey: "inputTopLeft"
+        )
+        filter?.setValue(
+            CIVector(cgPoint: CGPoint(x: points[1].x, y: height - points[1].y)),
+            forKey: "inputTopRight"
+        )
+        filter?.setValue(
+            CIVector(cgPoint: CGPoint(x: points[2].x, y: height - points[2].y)),
+            forKey: "inputBottomRight"
+        )
+        filter?.setValue(
+            CIVector(cgPoint: CGPoint(x: points[3].x, y: height - points[3].y)),
+            forKey: "inputBottomLeft"
+        )
+        guard let output = filter?.outputImage else { return nil }
+        let outputExtent = output.extent.integral
+        guard outputExtent.width >= 2,
+              outputExtent.height >= 2,
+              outputExtent.width <= 4096,
+              outputExtent.height <= 4096 else {
+            return nil
+        }
+        let context = CIContext(options: [.cacheIntermediates: false])
+        return context.createCGImage(output, from: outputExtent)
     }
 
     private static func isVerticalLineCandidate(_ rect: ImageOCRLayoutRect) -> Bool {
@@ -463,11 +629,22 @@ struct VisionOCRService: Sendable {
                 cropScale: cropScale
             )
         }
+        let originalLineRegionQuad = observation.lineRegionQuad.map {
+            mapRotatedCropRegionQuad(
+                $0,
+                rotatedImage: rotatedImage,
+                cropRect: cropRect,
+                originalImage: originalImage,
+                angle: angle,
+                cropScale: cropScale
+            )
+        }
         return VisionOCRObservation(
             text: observation.text,
             confidence: observation.confidence,
             rect: originalRect,
             lineRegionRect: originalLineRegionRect,
+            lineRegionQuad: originalLineRegionQuad,
             rotationApplied: observation.rotationApplied
         )
     }
@@ -520,6 +697,45 @@ struct VisionOCRService: Sendable {
             width: (maxX - minX) / originalSize.width,
             height: (maxY - minY) / originalSize.height
         ).normalizedToUnit() ?? region
+    }
+
+    private static func mapRotatedCropRegionQuad(
+        _ quad: ImageOCRLayoutQuad,
+        rotatedImage: CGImage,
+        cropRect: CGRect,
+        originalImage: CGImage,
+        angle: Int,
+        cropScale: CGFloat
+    ) -> ImageOCRLayoutQuad {
+        let rotatedSize = CGSize(width: CGFloat(rotatedImage.width), height: CGFloat(rotatedImage.height))
+        let cropSize = CGSize(width: cropRect.width, height: cropRect.height)
+        let originalSize = CGSize(width: CGFloat(originalImage.width), height: CGFloat(originalImage.height))
+        let unscaledRotatedSize = angle == 90 || angle == 270
+            ? CGSize(width: cropSize.height, height: cropSize.width)
+            : cropSize
+        let scaleX = rotatedSize.width / max(unscaledRotatedSize.width, 1)
+        let scaleY = rotatedSize.height / max(unscaledRotatedSize.height, 1)
+        let safeScale = cropScale.isFinite && cropScale > 0 ? cropScale : 1
+        let points = quad.points.map { point in
+            let scaledPoint = CGPoint(
+                x: point.x * rotatedSize.width,
+                y: point.y * rotatedSize.height
+            )
+            let unscaledPoint = CGPoint(
+                x: scaledPoint.x / max(scaleX, safeScale),
+                y: scaledPoint.y / max(scaleY, safeScale)
+            )
+            let local = Self.mapPointToOriginal(
+                unscaledPoint,
+                angle: angle,
+                originalSize: cropSize
+            )
+            return ImageOCRLayoutPoint(
+                x: (cropRect.minX + local.x) / originalSize.width,
+                y: (cropRect.minY + local.y) / originalSize.height
+            )
+        }
+        return ImageOCRLayoutQuad(points: points).normalized() ?? quad
     }
 
     private static func deduplicateObservations(_ observations: [VisionOCRObservation]) -> [VisionOCRObservation] {
@@ -666,11 +882,20 @@ struct VisionOCRService: Sendable {
                 angle: angle
             )
         }
+        let originalLineRegionQuad = observation.lineRegionQuad.map {
+            mapRotatedRegionQuad(
+                $0,
+                rotatedImage: rotatedImage,
+                originalImage: originalImage,
+                angle: angle
+            )
+        }
         return VisionOCRObservation(
             text: observation.text,
             confidence: observation.confidence,
             rect: originalRect,
             lineRegionRect: originalLineRegionRect,
+            lineRegionQuad: originalLineRegionQuad,
             rotationApplied: observation.rotationApplied
         )
     }
@@ -709,6 +934,31 @@ struct VisionOCRService: Sendable {
             width: (maxX - minX) / originalSize.width,
             height: (maxY - minY) / originalSize.height
         ).normalizedToUnit() ?? region
+    }
+
+    private static func mapRotatedRegionQuad(
+        _ quad: ImageOCRLayoutQuad,
+        rotatedImage: CGImage,
+        originalImage: CGImage,
+        angle: Int
+    ) -> ImageOCRLayoutQuad {
+        let rotatedSize = CGSize(width: CGFloat(rotatedImage.width), height: CGFloat(rotatedImage.height))
+        let originalSize = CGSize(width: CGFloat(originalImage.width), height: CGFloat(originalImage.height))
+        let points = quad.points.map { point in
+            let mapped = Self.mapPointToOriginal(
+                CGPoint(
+                    x: point.x * rotatedSize.width,
+                    y: point.y * rotatedSize.height
+                ),
+                angle: angle,
+                originalSize: originalSize
+            )
+            return ImageOCRLayoutPoint(
+                x: mapped.x / originalSize.width,
+                y: mapped.y / originalSize.height
+            )
+        }
+        return ImageOCRLayoutQuad(points: points).normalized() ?? quad
     }
 
     private static func mapPointToOriginal(
@@ -816,5 +1066,68 @@ private struct VisionOCRObservation: Equatable, Sendable {
     /// Character-range geometry is a tighter, Vision-provided line-region hint;
     /// `rect` remains the stable request-level box used by layout and dedupe.
     var lineRegionRect: ImageOCRLayoutRect?
+    /// The corresponding Vision quadrilateral enables a bounded Koharu-style
+    /// perspective correction for Japanese vertical line crops. It is only a
+    /// recognition hint; request-level `rect` remains the stable layout geometry.
+    var lineRegionQuad: ImageOCRLayoutQuad?
     var rotationApplied: Int
+}
+
+private struct ImageOCRLayoutPoint: Equatable, Sendable {
+    var x: Double
+    var y: Double
+}
+
+private struct ImageOCRLayoutQuad: Equatable, Sendable {
+    var points: [ImageOCRLayoutPoint]
+
+    var boundingRect: ImageOCRLayoutRect {
+        let minX = points.map(\.x).min() ?? 0
+        let maxX = points.map(\.x).max() ?? 0
+        let minY = points.map(\.y).min() ?? 0
+        let maxY = points.map(\.y).max() ?? 0
+        return ImageOCRLayoutRect(
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        )
+    }
+
+    var minimumEdgeLength: Double {
+        guard points.count == 4 else { return 0 }
+        return points.indices.map { index in
+            let next = points[(index + 1) % points.count]
+            let point = points[index]
+            return hypot(next.x - point.x, next.y - point.y)
+        }.min() ?? 0
+    }
+
+    var isConvex: Bool {
+        guard points.count == 4 else { return false }
+        let crosses = points.indices.map { index -> Double in
+            let current = points[index]
+            let next = points[(index + 1) % points.count]
+            let following = points[(index + 2) % points.count]
+            return (next.x - current.x) * (following.y - next.y)
+                - (next.y - current.y) * (following.x - next.x)
+        }
+        return crosses.allSatisfy { $0 > 0.000001 }
+            || crosses.allSatisfy { $0 < -0.000001 }
+    }
+
+    func normalized() -> Self? {
+        guard points.count == 4,
+              points.allSatisfy({
+                  $0.x.isFinite && $0.y.isFinite
+                      && $0.x >= 0 && $0.x <= 1
+                      && $0.y >= 0 && $0.y <= 1
+              }),
+              boundingRect.normalizedToUnit() != nil,
+              minimumEdgeLength >= 0.002,
+              isConvex else {
+            return nil
+        }
+        return self
+    }
 }

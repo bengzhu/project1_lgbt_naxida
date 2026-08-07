@@ -33,26 +33,34 @@ class JapaneseLineGeometryContractTests(unittest.TestCase):
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
         self.recognize = braced_body(self.vision, "private static func recognizeObservations(")
-        self.region = braced_body(self.vision, "private static func recognizedTextRegionRect(")
+        region_marker = (
+            "private static func recognizedTextGeometry("
+            if "private static func recognizedTextGeometry(" in self.vision
+            else "private static func recognizedTextRegionRect("
+        )
+        self.region = braced_body(self.vision, region_marker)
         self.usability = braced_body(self.vision, "private static func isUsableTextRegion(")
         self.line = braced_body(self.vision, "private static func recognizeJapaneseVerticalLineCrops(")
         self.crop_map = braced_body(self.vision, "private static func mapRotatedCropObservation(")
         self.full_map = braced_body(self.vision, "private static func mapRotatedObservation(")
 
     def test_recognition_captures_vision_character_range_geometry(self) -> None:
-        for marker in [
-            "candidate.string.startIndex..<candidate.string.endIndex",
-            "recognizedTextRegionRect(",
-            "lineRegionRect:",
-        ]:
-            self.assertIn(marker, self.recognize + self.region)
+        self.assertIn("candidate.string.startIndex..<candidate.string.endIndex", self.recognize + self.region)
+        self.assertTrue(
+            "recognizedTextRegionRect(" in self.recognize + self.region
+            or "recognizedTextGeometry(" in self.recognize + self.region
+        )
+        self.assertIn("lineRegionRect:", self.recognize + self.region)
         for marker in [
             "try candidate.boundingBox(for: range)",
             "rangeObservation.boundingBox",
             "isUsableTextRegion(rangeRect, relativeTo: fallback)",
-            "return fallback",
         ]:
             self.assertIn(marker, self.region)
+        self.assertTrue(
+            "return fallback" in self.region
+            or "return (rect: fallback" in self.region
+        )
 
     def test_line_crops_prefer_geometry_without_replacing_layout_box(self) -> None:
         for marker in [
