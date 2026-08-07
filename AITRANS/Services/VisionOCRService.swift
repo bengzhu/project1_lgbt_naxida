@@ -203,7 +203,106 @@ struct VisionOCRService: Sendable {
                 )
             })
         }
+
+        // Koharu's extract_text_block_regions prefers detector line polygons when
+        // available. Vision does not expose those polygons, so use the mapped,
+        // deduplicated vertical observations as conservative line-region proxies.
+        // Each proxy gets its own direction-aware crop and a small upscale before
+        // OCR, keeping narrow Japanese glyph columns out of a larger block crop.
+        refined.append(contentsOf: Self.recognizeJapaneseVerticalLineCrops(
+            in: image,
+            observations: safeObservations,
+            blocks: Array(verticalBlocks),
+            recognitionLanguages: recognitionLanguages
+        ))
         return refined
+    }
+
+    private static func recognizeJapaneseVerticalLineCrops(
+        in image: CGImage,
+        observations: [VisionOCRObservation],
+        blocks: [ImageOCRLayoutBlock],
+        recognitionLanguages: [String]
+    ) -> [VisionOCRObservation] {
+        let safeObservations = deduplicateObservations(observations)
+        var candidates: [VisionOCRObservation] = []
+        for block in blocks {
+            candidates.append(contentsOf: safeObservations.filter { observation in
+                overlapRatio(observation.rect, block.rect) >= 0.25
+                    && isVerticalLineCandidate(observation.rect)
+            })
+        }
+
+        var uniqueCandidates: [VisionOCRObservation] = []
+        for candidate in candidates.sorted(by: { isBetterObservation($0, $1) }) {
+            guard !uniqueCandidates.contains(where: {
+                isDuplicateObservation(candidate, of: $0)
+            }) else {
+                continue
+            }
+            uniqueCandidates.append(candidate)
+        }
+
+        var refined: [VisionOCRObservation] = []
+        refined.reserveCapacity(min(uniqueCandidates.count, 24) * 2)
+        for candidate in uniqueCandidates.prefix(24) {
+            let cropRect = expandedVerticalLineCropRect(candidate.rect)
+            guard let crop = cropImage(image, normalizedRect: cropRect) else {
+                continue
+            }
+
+            let cropScale: CGFloat
+            let scaledCrop: CGImage
+            if let resized = resizedImage(crop.image, scale: 2) {
+                scaledCrop = resized
+                cropScale = 2
+            } else {
+                scaledCrop = crop.image
+                cropScale = 1
+            }
+
+            let angle = candidate.rotationApplied == 270 ? 270 : 90
+            guard let rotatedCrop = try? rotatedImage(scaledCrop, angle: angle),
+                  let cropObservations = try? recognizeObservations(
+                      in: rotatedCrop,
+                      recognitionLanguages: recognitionLanguages,
+                      minimumTextHeight: 0.002,
+                      automaticallyDetectsLanguage: false,
+                      rotationApplied: angle
+                  ) else {
+                continue
+            }
+
+            refined.append(contentsOf: cropObservations.map {
+                mapRotatedCropObservation(
+                    $0,
+                    rotatedImage: rotatedCrop,
+                    cropRect: crop.rect,
+                    originalImage: image,
+                    angle: angle,
+                    cropScale: cropScale
+                )
+            })
+        }
+        return refined
+    }
+
+    private static func isVerticalLineCandidate(_ rect: ImageOCRLayoutRect) -> Bool {
+        rect.height / max(rect.width, 0.001) >= 1.25
+            && rect.height >= 0.018
+    }
+
+    private static func expandedVerticalLineCropRect(_ rect: ImageOCRLayoutRect) -> ImageOCRLayoutRect {
+        // Mirrors Koharu's vertical TextRegion padding: give the reading axis
+        // enough context without swallowing a neighboring Japanese column.
+        let horizontalPadding = min(max(rect.width * 0.18, 0.008), 0.06)
+        let verticalPadding = min(max(rect.height * 0.12, 0.006), 0.06)
+        return ImageOCRLayoutRect(
+            x: rect.x - horizontalPadding,
+            y: rect.y - verticalPadding,
+            width: rect.width + horizontalPadding * 2,
+            height: rect.height + verticalPadding * 2
+        ).normalizedToUnit() ?? rect
     }
 
     private static func expandedVerticalCropRect(_ rect: ImageOCRLayoutRect) -> ImageOCRLayoutRect {
@@ -242,16 +341,46 @@ struct VisionOCRService: Sendable {
         return (cropped, pixelRect)
     }
 
+    private static func resizedImage(_ image: CGImage, scale: CGFloat) -> CGImage? {
+        guard scale.isFinite, scale > 0 else { return nil }
+        let width = max(Int((CGFloat(image.width) * scale).rounded()), 1)
+        let height = max(Int((CGFloat(image.height) * scale).rounded()), 1)
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+        context.interpolationQuality = .high
+        context.draw(
+            image,
+            in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height))
+        )
+        return context.makeImage()
+    }
+
     private static func mapRotatedCropObservation(
         _ observation: VisionOCRObservation,
         rotatedImage: CGImage,
         cropRect: CGRect,
         originalImage: CGImage,
-        angle: Int
+        angle: Int,
+        cropScale: CGFloat = 1
     ) -> VisionOCRObservation {
         let rotatedSize = CGSize(width: CGFloat(rotatedImage.width), height: CGFloat(rotatedImage.height))
         let cropSize = CGSize(width: cropRect.width, height: cropRect.height)
         let originalSize = CGSize(width: CGFloat(originalImage.width), height: CGFloat(originalImage.height))
+        let unscaledRotatedSize = angle == 90 || angle == 270
+            ? CGSize(width: cropSize.height, height: cropSize.width)
+            : cropSize
+        let scaleX = rotatedSize.width / max(unscaledRotatedSize.width, 1)
+        let scaleY = rotatedSize.height / max(unscaledRotatedSize.height, 1)
+        let safeScale = cropScale.isFinite && cropScale > 0 ? cropScale : 1
         let pixelRect = CGRect(
             x: observation.rect.x * rotatedSize.width,
             y: observation.rect.y * rotatedSize.height,
@@ -264,7 +393,11 @@ struct VisionOCRService: Sendable {
             CGPoint(x: pixelRect.minX, y: pixelRect.maxY),
             CGPoint(x: pixelRect.maxX, y: pixelRect.maxY)
         ].map {
-            let local = Self.mapPointToOriginal($0, angle: angle, originalSize: cropSize)
+            let unscaledPoint = CGPoint(
+                x: $0.x / max(scaleX, safeScale),
+                y: $0.y / max(scaleY, safeScale)
+            )
+            let local = Self.mapPointToOriginal(unscaledPoint, angle: angle, originalSize: cropSize)
             return CGPoint(x: cropRect.minX + local.x, y: cropRect.minY + local.y)
         }
         let xs = points.map(\.x)
