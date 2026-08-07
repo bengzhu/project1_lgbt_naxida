@@ -444,7 +444,7 @@ enum ImageOCRLayoutEngine {
     private static func cjkCharacterCount(in text: String) -> Int {
         text.unicodeScalars.count { scalar in
             switch scalar.value {
-            case 0x3040...0x30FF, 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF: true
+            case 0x3000...0x303F, 0x3040...0x30FF, 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF, 0xFF61...0xFF9F: true
             default: false
             }
         }
