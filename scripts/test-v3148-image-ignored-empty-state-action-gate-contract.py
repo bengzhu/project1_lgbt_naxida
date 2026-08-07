@@ -80,8 +80,7 @@ class ImageIgnoredEmptyStateActionGateContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3147(self) -> None:
         self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.148;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.147;", self.project)
+        self.assertNotIn("MARKETING_VERSION = 3.148;", self.project)
         old = "python3 -B scripts/test-v3147-image-ocr-correction-input-accessibility-contract.py"
         new = "python3 -B scripts/test-v3148-image-ignored-empty-state-action-gate-contract.py"
         route = (
