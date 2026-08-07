@@ -1,3 +1,23 @@
+## v3.134：图片预览失败状态 VoiceOver retry action
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.134 图片预览失败状态的可执行 VoiceOver 上下文、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.134`。候选 commit `94e26b435226a966a3c866fa222da92e7eff69c3` 已通过 PR [#198](https://github.com/bengzhu/project1_lgbt_naxida/pull/198) 合入，merge SHA `730312af21e2bc081d8d414f3d6b28acd0e3277b`；候选远端分支已清理，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPreview` 的预览状态在当前 `imageTranslationRevision` 失败时成为可执行 VoiceOver 上下文，提供同名“重试预览” action；loading 状态不暴露 action。
+- action、可见“重试预览”按钮与状态 label/value/hint 共用既有 `retryPreview()`，只重建屏幕预览，不重新 OCR 或翻译；稳定 preview status focus 与 revision guard 保持不变。
+- 新增 `scripts/test-v3134-image-preview-status-retry-action-contract.py` 并接入 UI/full fail-fast；改动只属于 View，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31142629553](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31142629553)：`validationReason=manual_full`，commit `94e26b435226a966a3c866fa222da92e7eff69c3`，Xcode build success，UI／Speech／home／paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #198 fast [31142975439](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31142975439)：`validationProfile=fast`，复用候选 full `94e26b435226a966a3c866fa222da92e7eff69c3 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31143030561](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31143030561)：merge SHA `730312af21e2bc081d8d414f3d6b28acd0e3277b`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.133：图片空预览与识别结果空态 VoiceOver 上下文
 
 日期：2026-08-07
