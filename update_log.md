@@ -1,3 +1,23 @@
+## v3.146：普通图片已忽略 OCR 行直接恢复 action
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.146 普通图片已忽略 OCR 文字块行的 VoiceOver 直接恢复 UX 优化、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.146`。候选 commit `21768ac2c9a9cd5efdb87aebae62def5f1e20071` 已通过 PR [#210](https://github.com/bengzhu/project1_lgbt_naxida/pull/210) 合入，merge SHA `f850351e67734fb28d1f5672cd55bfd4de28e87f`；`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationIgnoredBlockRow` 的父级 VoiceOver 容器在 `canRestore` 为真时提供同名“恢复” action，直接调用传入的既有 `restore` 回调，让 VoiceOver 用户无需先下钻到行内按钮即可恢复该 OCR 文字块。
+- 父级 hint 明确恢复会回到图片预览、导出和当前转录，需要复查的文字块会重新进入待复查队列；锁定时不暴露父级 action，并继续显示 `modificationUnavailableHint`。
+- 现有 44pt 子按钮、disabled 原因、`image-ignored-row-<UUID>` 焦点 identity、行 label/value 与恢复后的既有焦点交接保持不变；新增 `scripts/test-v3146-image-ignored-row-restore-action-contract.py` 并接入 UI/full fail-fast。该 View-only 改动不新增 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31157259172](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31157259172)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `21768ac2c9a9cd5efdb87aebae62def5f1e20071`，Xcode build success，静态、UI、Speech、home、paste 合同 success，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu active 工件目录缺失。
+- PR #210 fast [31157792746](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31157792746)：`validationProfile=fast`，复用候选 full `21768ac2c9a9cd5efdb87aebae62def5f1e20071 / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31157872257](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31157872257)：merge SHA `f850351e67734fb28d1f5672cd55bfd4de28e87f`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.145：普通图片文件导入替换提示
 
 日期：2026-08-07

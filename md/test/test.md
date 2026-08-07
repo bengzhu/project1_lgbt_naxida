@@ -160,6 +160,12 @@
 - `.preparing`／`.rendering` 等运行中状态不得抢焦点；焦点与失败分流必须保持 View 私有，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
 - 合同接在 v3.125 后进入 UI/full fail-fast，并沿用表达式长度安全的既有 UI 路由。候选 full `31082994159`（exact SHA `244f97435d340207c7684c3a2ab553b552b3b780`）Xcode/JUnit `10/10` 成功；PR #190 fast `31083400009`、merge fast `31083557316` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.146 普通图片已忽略 OCR 行直接恢复 action 合同
+
+- `scripts/test-v3146-image-ignored-row-restore-action-contract.py` 必须验证 `ImageTranslationIgnoredBlockRow` 在 `canRestore` 为真时通过父级 VoiceOver 容器提供同名“恢复” action，并复用传入的既有 `restore` 回调；父级 hint 必须说明恢复到图片预览、导出和当前转录，以及需要复查时重新回到待复查队列。`canRestore` 为假时不得暴露父级 action，必须保留 `modificationUnavailableHint`。
+- 现有“恢复”子按钮、44pt 点击区、`.disabled(!canRestore)`、`image-ignored-row-<UUID>` focus identity、子按钮 hint 和行的 label/value 必须保持；改动只属于 View，不新增 Store／持久化、OCR、翻译、renderer/export、探针、Koharu、metrics 或 `output`。
+- 合同接在 v3.145 后进入 UI/full fail-fast。候选 exact-SHA full `31157259172`（`21768ac2c9a9cd5efdb87aebae62def5f1e20071`）Xcode/JUnit `10/10` 成功；PR #210 fast `31157792746`、merge fast `31157872257` 复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.145 普通图片文件导入替换提示合同
 
 - `scripts/test-v3145-image-file-selection-replacement-hint-contract.py` 必须验证文件导入入口的 VoiceOver hint 在无图片时说明首次选择、已有图片时说明更换当前图片并开始新的本机 OCR 与翻译；读取／Vision OCR／翻译运行中继续说明新选择会取消当前任务并开始新任务，且文件入口不得被 `.disabled(isRunning)` 锁住。
