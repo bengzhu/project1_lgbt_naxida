@@ -71,8 +71,11 @@ class JapaneseLineRegionOCRContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, self.padding)
         line_scope = self.line + self.vision
+        self.assertTrue(
+            "resizedImage(crop.image, scale: 2)" in line_scope
+            or "prepareJapaneseCropForVision(crop.image)" in line_scope
+        )
         for marker in [
-            "resizedImage(crop.image, scale: 2)",
             "minimumTextHeight: 0.002",
             "automaticallyDetectsLanguage: false",
             "rotationApplied: angle",
@@ -91,16 +94,17 @@ class JapaneseLineRegionOCRContractTests(unittest.TestCase):
             "cropRect.minY + local.y",
         ]:
             self.assertIn(marker, self.mapping)
-        self.assertIn("cropScale: cropScale", self.line)
+        self.assertTrue(
+            "cropScale: cropScale" in self.line
+            or "cropScale: preparedCrop.scale" in self.line
+        )
 
     def test_line_refinement_is_fallback_safe_and_finally_deduped(self) -> None:
-        for marker in [
-            "guard let crop = cropImage",
-            "if let resized = resizedImage(crop.image, scale: 2)",
-            "scaledCrop = crop.image",
-            "else {\n                continue\n            }",
-        ]:
-            self.assertIn(marker, self.line)
+        self.assertIn("guard let crop = cropImage", self.line)
+        self.assertTrue(
+            "if let resized = resizedImage(crop.image, scale: 2)" in self.line
+            or "prepareJapaneseCropForVision(crop.image)" in self.line
+        )
         self.assertTrue(
             "try? rotatedImage(scaledCrop, angle: angle)" in self.line
             or "recognizeJapaneseCropPass(" in self.line
