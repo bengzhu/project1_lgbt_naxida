@@ -589,7 +589,16 @@ private struct Cluster {
         }
         let text: String
         if direction == .vertical {
-            text = observations.map(\.text).joined()
+            // Crop/tile rereads can return the same column in different arrival
+            // orders. Koharu's reading order is explicit: top-to-bottom within
+            // each right-to-left column. Do not let the merge traversal decide
+            // the text sequence; sort the already-formed same-column cluster and
+            // use the rightmost x coordinate only as a deterministic tie-breaker.
+            let orderedObservations = observations.sorted {
+                stableKey($0, $0.rect.y, -$0.rect.midX)
+                    < stableKey($1, $1.rect.y, -$1.rect.midX)
+            }
+            text = orderedObservations.map(\.text).joined()
         } else {
             text = observations.enumerated().reduce(into: "") { output, entry in
                 let (index, observation) = entry
