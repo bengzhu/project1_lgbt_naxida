@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.178 日语紧凑竖排 block crop 合同
+
+- `recognizeJapaneseVerticalCrops` 必须保留原标准候选门控（`aspectRatio >= 1.45` 且 `height >= 0.04`），并且只对 `directionReason` 含 `cjkCompactColumnTextRun` 的日语竖排块受限放宽到 `aspectRatio >= 1.20`、`height >= 0.022`；最终仍要求 `.vertical`、最多 `.prefix(16)`，不得把一般矮框或其他方向原因带入 crop reread。
+- 紧凑与标准候选继续沿用 `expandedVerticalCropRect`、`prepareJapaneseCropForVision`、90°／270° 方向 fallback、原图坐标映射和既有去重；Swift 入口与 Koharu `crop_text_block_bbox` 语义对齐，但不加载真实 Manga OCR/PaddleOCR 权重、不读取探针或 ground truth，不改变普通语言、整页 OCR、翻译、renderer/export、Store、Koharu active gate、metrics 或 `output`，不得把受限候选放宽描述为已测得质量提升。
+- 新增 `scripts/test-v3178-image-japanese-compact-block-crop-contract.py` 并接入显式 UI/full fail-fast；v3.177 及更早合同继续回归。候选 exact-SHA full [31214729647](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31214729647)（`ec80c63d1b0d25903f0d462a020dec6bca768f94`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #242 fast [31215410769](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31215410769) 复用候选 full，merge fast [31215485897](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31215485897) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `4f6aeca133c9684c6800ec795a9f0fac4f24fdca`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.177 日语紧凑竖排方向合同
 
 - `ImageOCRLayoutEngine.layout` 必须把 `prefersMangaReadingOrder` 传入 `resolveDirection`；紧凑门控只在该日语偏好、`cjkCount >= 2`、`verticalRatio >= 1.35`、`height >= 0.022`、存在 `hasColumnNeighbor` 且不存在 `hasRowNeighbor` 时标记 `cjkCompactColumnTextRun`，使小尺寸多字列能进入既有 Koharu 风格 block／line crop reread；宽框横排、单字列、孤立高框、同行碎片、简中和非日语边界保持不变。

@@ -1,4 +1,6 @@
 # 项目流程图
+v3.178 日语紧凑竖排 block crop：compact direction reason → 标准高竖框或受限 compact 尺寸门控 → 最多 16 个 block 的 `crop_text_block_bbox` 对齐 crop／预处理／方向 fallback → 映射／去重／布局 → 翻译／渲染；其他语言与标准候选不变，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31214729647`、PR fast `31215410769`、merge fast `31215485897` 均通过。
+
 v3.177 日语紧凑竖排：manga-order 偏好 → 多字 CJK／紧凑高框且同列无同行的方向门控 → Koharu 风格 crop／line reread → 后处理／去重／布局 → 翻译／渲染；其他语言与旧门控不变，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31213076831`、PR fast `31213569259`、merge fast `31213642909` 均通过。
 
 v3.176 日语竖排：四点 line warp → 90° x 正序／270° x 逆序拼接 → y／日语评分 tie-breaker → OCR 后处理／去重／布局 → 翻译／渲染；单 observation 与失败路径安全回退，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31211585649`、PR fast `31212154910`、merge fast `31212217877` 均通过。
