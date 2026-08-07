@@ -1,14 +1,18 @@
+import CoreGraphics
 import Foundation
 import ImageIO
 import Vision
 
 enum VisionOCRServiceError: LocalizedError {
     case imageDecodeFailed
+    case imageRenderFailed
 
     var errorDescription: String? {
         switch self {
         case .imageDecodeFailed:
             "无法解码图片，请选择 PNG、JPEG 或系统支持的图片格式"
+        case .imageRenderFailed:
+            "无法准备日语竖排 OCR 方向图片，请重试或选择其他图片"
         }
     }
 }
@@ -17,34 +21,45 @@ struct VisionOCRService: Sendable {
     func recognizeTextBlocks(in imageData: Data, sourceLanguage: SupportedLanguage) async throws -> [ImageTranslationBlock] {
         let task = Task.detached(priority: .userInitiated) {
             let ocrImage = try Self.makeOCRImage(from: imageData)
-            let request = VNRecognizeTextRequest()
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
-            request.automaticallyDetectsLanguage = true
-            request.minimumTextHeight = 0.012
+            let preferredLanguages = sourceLanguage.visionRecognitionLanguageIdentifiers
+            var observations = try Self.recognizeObservations(
+                in: ocrImage,
+                recognitionLanguages: preferredLanguages,
+                minimumTextHeight: 0.012,
+                automaticallyDetectsLanguage: true,
+                rotationApplied: 0
+            )
 
-            let supportedLanguages = (try? request.supportedRecognitionLanguages()) ?? []
-            let preferredLanguages = sourceLanguage.visionRecognitionLanguageIdentifiers.filter { supportedLanguages.contains($0) }
-            if !preferredLanguages.isEmpty {
-                request.recognitionLanguages = preferredLanguages
+            if sourceLanguage == .japanese {
+                // Koharu keeps detection/layout separate from recognition and gives Japanese
+                // candidates a bounded orientation comparison before its cropped OCR engines.
+                // Vision is the on-device engine here, so use the same first migration step:
+                // re-read the page in the rotated orientation, map boxes back, then let the
+                // existing layout engine restore manga right-to-left vertical order.
+                let rotatedOCRImage = try Self.rotatedImage(ocrImage, angle: 90)
+                let japaneseOrientationLanguages = ["ja-JP", "ja", "en-US", "en"]
+                let rotatedObservations = try Self.recognizeObservations(
+                    in: rotatedOCRImage,
+                    recognitionLanguages: japaneseOrientationLanguages,
+                    minimumTextHeight: 0.006,
+                    automaticallyDetectsLanguage: false,
+                    rotationApplied: 90
+                ).map {
+                    Self.mapRotatedObservation(
+                        $0,
+                        rotatedImage: rotatedOCRImage,
+                        originalImage: ocrImage,
+                        angle: 90
+                    )
+                }
+                observations.append(contentsOf: rotatedObservations)
             }
 
-            let handler = VNImageRequestHandler(cgImage: ocrImage, options: [:])
-            try handler.perform([request])
-
-            let observations = request.results ?? []
-            let layoutObservations = observations.compactMap { observation -> ImageOCRLayoutObservation? in
-                guard let candidate = observation.topCandidates(1).first else { return nil }
-                let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !text.isEmpty else { return nil }
-
-                guard let rect = Self.normalizedRect(from: observation.boundingBox) else {
-                    return nil
-                }
-                return ImageOCRLayoutObservation(
-                    text: text,
-                    confidence: candidate.confidence,
-                    rect: rect
+            let layoutObservations = Self.deduplicateObservations(observations).map {
+                ImageOCRLayoutObservation(
+                    text: $0.text,
+                    confidence: $0.confidence,
+                    rect: $0.rect
                 )
             }
             let allowsVerticalText = sourceLanguage == .japanese || sourceLanguage == .simplifiedChinese
@@ -69,6 +84,241 @@ struct VisionOCRService: Sendable {
         }
 
         return try await task.value
+    }
+
+    private static func recognizeObservations(
+        in image: CGImage,
+        recognitionLanguages: [String],
+        minimumTextHeight: Float,
+        automaticallyDetectsLanguage: Bool,
+        rotationApplied: Int
+    ) throws -> [VisionOCRObservation] {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+        request.automaticallyDetectsLanguage = automaticallyDetectsLanguage
+        request.minimumTextHeight = minimumTextHeight
+
+        let supportedLanguages = (try? request.supportedRecognitionLanguages()) ?? []
+        let availableLanguages = recognitionLanguages.filter { supportedLanguages.contains($0) }
+        if !availableLanguages.isEmpty {
+            request.recognitionLanguages = availableLanguages
+        }
+
+        let handler = VNImageRequestHandler(cgImage: image, options: [:])
+        try handler.perform([request])
+
+        return (request.results ?? []).compactMap { observation in
+            guard let candidate = observation.topCandidates(1).first else { return nil }
+            let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty,
+                  let rect = Self.normalizedRect(from: observation.boundingBox) else {
+                return nil
+            }
+            return VisionOCRObservation(
+                text: text,
+                confidence: candidate.confidence,
+                rect: rect,
+                rotationApplied: rotationApplied
+            )
+        }
+    }
+
+    private static func deduplicateObservations(_ observations: [VisionOCRObservation]) -> [VisionOCRObservation] {
+        var output: [VisionOCRObservation] = []
+        for observation in observations.sorted(by: isBetterObservation) {
+            guard let duplicateIndex = output.firstIndex(where: {
+                isDuplicateObservation(observation, of: $0)
+            }) else {
+                output.append(observation)
+                continue
+            }
+            if isBetterObservation(observation, than: output[duplicateIndex]) {
+                output[duplicateIndex] = observation
+            }
+        }
+        return output
+    }
+
+    private static func isBetterObservation(_ lhs: VisionOCRObservation, _ rhs: VisionOCRObservation) -> Bool {
+        let lhsScore = observationScore(lhs)
+        let rhsScore = observationScore(rhs)
+        if lhsScore != rhsScore {
+            return lhsScore > rhsScore
+        }
+        if lhs.rotationApplied != rhs.rotationApplied {
+            return lhs.rotationApplied == 90
+        }
+        return lhs.text < rhs.text
+    }
+
+    private static func isBetterObservation(_ lhs: VisionOCRObservation, than rhs: VisionOCRObservation) -> Bool {
+        isBetterObservation(lhs, rhs)
+    }
+
+    private static func observationScore(_ observation: VisionOCRObservation) -> Double {
+        let cjkCount = observation.text.unicodeScalars.count { scalar in
+            switch scalar.value {
+            case 0x3040...0x30FF, 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF: true
+            default: false
+            }
+        }
+        return Double(observation.text.unicodeScalars.count)
+            + Double(observation.confidence) * 8
+            + Double(cjkCount) * 0.25
+            + (observation.rotationApplied == 90 ? 0.15 : 0)
+    }
+
+    private static func isDuplicateObservation(
+        _ lhs: VisionOCRObservation,
+        of rhs: VisionOCRObservation
+    ) -> Bool {
+        let intersection = intersectionArea(lhs.rect, rhs.rect)
+        let minimumArea = max(min(lhs.rect.width * lhs.rect.height, rhs.rect.width * rhs.rect.height), 0.0001)
+        let overlap = intersection / minimumArea
+        guard overlap >= 0.45 else { return false }
+
+        let leftText = normalizedOCRText(lhs.text)
+        let rightText = normalizedOCRText(rhs.text)
+        guard !leftText.isEmpty, !rightText.isEmpty else { return overlap >= 0.72 }
+        if leftText == rightText || leftText.contains(rightText) || rightText.contains(leftText) {
+            return true
+        }
+        return overlap >= 0.72 && textSimilarity(leftText, rightText) >= 0.62
+    }
+
+    private static func intersectionArea(_ lhs: ImageOCRLayoutRect, _ rhs: ImageOCRLayoutRect) -> Double {
+        let width = max(0, min(lhs.maxX, rhs.maxX) - max(lhs.x, rhs.x))
+        let height = max(0, min(lhs.maxY, rhs.maxY) - max(lhs.y, rhs.y))
+        return width * height
+    }
+
+    private static func normalizedOCRText(_ text: String) -> String {
+        text.lowercased().filter { $0.isLetter || $0.isNumber }
+    }
+
+    private static func textSimilarity(_ lhs: String, _ rhs: String) -> Double {
+        guard !lhs.isEmpty, !rhs.isEmpty else { return 0 }
+        let lhsBigrams = bigrams(lhs)
+        let rhsBigrams = bigrams(rhs)
+        guard !lhsBigrams.isEmpty, !rhsBigrams.isEmpty else {
+            return lhs == rhs ? 1 : 0
+        }
+        let commonCount = lhsBigrams.intersection(rhsBigrams).count
+        return Double(commonCount * 2) / Double(lhsBigrams.count + rhsBigrams.count)
+    }
+
+    private static func bigrams(_ text: String) -> Set<String> {
+        let characters = Array(text)
+        guard characters.count > 1 else { return Set(characters.map(String.init)) }
+        return Set(characters.indices.dropLast().map { index in
+            String(characters[index]) + String(characters[characters.index(after: index)])
+        })
+    }
+
+    private static func mapRotatedObservation(
+        _ observation: VisionOCRObservation,
+        rotatedImage: CGImage,
+        originalImage: CGImage,
+        angle: Int
+    ) -> VisionOCRObservation {
+        let rotatedSize = CGSize(width: CGFloat(rotatedImage.width), height: CGFloat(rotatedImage.height))
+        let originalSize = CGSize(width: CGFloat(originalImage.width), height: CGFloat(originalImage.height))
+        let pixelRect = CGRect(
+            x: observation.rect.x * rotatedSize.width,
+            y: observation.rect.y * rotatedSize.height,
+            width: observation.rect.width * rotatedSize.width,
+            height: observation.rect.height * rotatedSize.height
+        )
+        let points = [
+            pixelRect.origin,
+            CGPoint(x: pixelRect.maxX, y: pixelRect.minY),
+            CGPoint(x: pixelRect.minX, y: pixelRect.maxY),
+            CGPoint(x: pixelRect.maxX, y: pixelRect.maxY)
+        ].map {
+            Self.mapPointToOriginal(
+                $0,
+                angle: angle,
+                originalSize: originalSize
+            )
+        }
+        let xs = points.map(\.x)
+        let ys = points.map(\.y)
+        let minX = xs.min() ?? 0
+        let maxX = xs.max() ?? 0
+        let minY = ys.min() ?? 0
+        let maxY = ys.max() ?? 0
+        let originalRect = ImageOCRLayoutRect(
+            x: minX / originalSize.width,
+            y: minY / originalSize.height,
+            width: (maxX - minX) / originalSize.width,
+            height: (maxY - minY) / originalSize.height
+        ).normalizedToUnit() ?? observation.rect
+        return VisionOCRObservation(
+            text: observation.text,
+            confidence: observation.confidence,
+            rect: originalRect,
+            rotationApplied: observation.rotationApplied
+        )
+    }
+
+    private static func mapPointToOriginal(
+        _ point: CGPoint,
+        angle: Int,
+        originalSize: CGSize
+    ) -> CGPoint {
+        switch angle {
+        case 90:
+            CGPoint(x: originalSize.width - point.y, y: point.x)
+        case 180:
+            CGPoint(x: originalSize.width - point.x, y: originalSize.height - point.y)
+        case 270:
+            CGPoint(x: point.y, y: originalSize.height - point.x)
+        default:
+            point
+        }
+    }
+
+    private static func rotatedImage(_ image: CGImage, angle: Int) throws -> CGImage {
+        guard angle != 0 else { return image }
+
+        let width = image.width
+        let height = image.height
+        let outputSize = angle == 180
+            ? CGSize(width: CGFloat(width), height: CGFloat(height))
+            : CGSize(width: CGFloat(height), height: CGFloat(width))
+
+        guard let context = CGContext(
+            data: nil,
+            width: Int(outputSize.width),
+            height: Int(outputSize.height),
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw VisionOCRServiceError.imageRenderFailed
+        }
+
+        switch angle {
+        case 90:
+            context.translateBy(x: outputSize.width, y: 0)
+            context.rotate(by: .pi / 2)
+        case 180:
+            context.translateBy(x: outputSize.width, y: outputSize.height)
+            context.rotate(by: .pi)
+        case 270:
+            context.translateBy(x: 0, y: outputSize.height)
+            context.rotate(by: -.pi / 2)
+        default:
+            break
+        }
+
+        context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+        guard let rotated = context.makeImage() else {
+            throw VisionOCRServiceError.imageRenderFailed
+        }
+        return rotated
     }
 
     private static func makeOCRImage(from imageData: Data) throws -> CGImage {
@@ -108,4 +358,11 @@ struct VisionOCRService: Sendable {
         )
         return rect.normalizedToUnit()
     }
+}
+
+private struct VisionOCRObservation: Equatable, Sendable {
+    var text: String
+    var confidence: Float
+    var rect: ImageOCRLayoutRect
+    var rotationApplied: Int
 }
