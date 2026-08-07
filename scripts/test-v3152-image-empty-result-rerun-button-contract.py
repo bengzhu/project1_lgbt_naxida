@@ -42,7 +42,8 @@ class ImageEmptyResultRerunButtonContractTests(unittest.TestCase):
 
     def test_translated_empty_result_has_visible_rerun_button(self) -> None:
         for marker in [
-            'title: "正在准备识别结果"',
+            "title: imageResultEmptyStateTitle",
+            "detail: imageResultEmptyStateDetail",
             'title: "重新识别"',
             'systemImage: "text.viewfinder"',
             "action: store.rerunImageRecognition",

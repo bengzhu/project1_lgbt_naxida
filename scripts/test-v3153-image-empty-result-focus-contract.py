@@ -39,7 +39,8 @@ class ImageEmptyResultFocusContractTests(unittest.TestCase):
     def test_empty_result_has_stable_focus_identity(self) -> None:
         for marker in [
             'imageResultEmptyAccessibilityFocusID = "image-result-empty-state"',
-            'title: "正在准备识别结果"',
+            "title: imageResultEmptyStateTitle",
+            "detail: imageResultEmptyStateDetail",
             ".accessibilityFocused(",
             "Self.imageResultEmptyAccessibilityFocusID",
             "imageResultEmptyStateAccessibilityHint",
