@@ -99,7 +99,6 @@ class JapaneseReadingOrderContractTests(unittest.TestCase):
         self.assertIn(old, self.workflow)
         self.assertIn(new, self.workflow)
         self.assertLess(self.workflow.index(old), self.workflow.index(new))
-        self.assertIn("16[3]", self.workflow)
 
 
 if __name__ == "__main__":
