@@ -6,6 +6,13 @@
 - Swift / Xcode / 漫画探针相关任务完成后，默认集中 push 到 `codeb/vX.Y-短标题`，由 GitHub Actions 对核心 commit 执行一次 task-scoped full；需要探针重验证时手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
+
+### v3.147 普通图片 OCR 修正输入无障碍上下文合同
+
+- `ImageOCRCorrectionSheet` 的“修正后的文字”输入必须提供明确 label、当前 value 和基于空文本／实际修改／确认无误／保存中的动态 hint；保存／重译进行中，输入与“忽略此文字块”均不可用，忽略 hint 继续说明当前图片会话范围和图片检查区恢复路径。
+- helper 只能消费既有 View 状态，不得新增 Store／持久化／OCR／翻译／renderer/export／探针或 metrics/output 行为；既有规范化保存、当前文字块单独重译、取消保护与忽略确认必须保持。
+- 新增 `scripts/test-v3147-image-ocr-correction-input-accessibility-contract.py` 并接入 UI/full fail-fast。候选 exact-SHA full `31158590713`（`3a60ad6b431acfc11f2296ec59ec86609d107546`）Xcode/JUnit `10/10` 成功；PR #211 fast `31159215608`、merge fast `31159309690` 复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
 - 如果云端验证失败，Agent C 按 `ci-failure-summary.md`、`xcodebuild.log`、`junit.xml`、`.xcresult` 和 manifest 输出退回清单，Agent B 修复后继续 push。
 - 如果云端环境缺少模拟器、GGUF、App 容器权限或外部 artifact，必须说明哪个测试未运行、缺什么依赖、是否影响验收、需要人工提供什么。
 - GGUF 云端模型只在手动 `ci-fast` / `full` 探针中通过 GitHub Release `model-gemma-3-270m-it-qat-q4_0-v1` 下载，并用 SHA256 `3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6` 校验后缓存到 `.ci-models/`；本规范不要求提交 GGUF。
