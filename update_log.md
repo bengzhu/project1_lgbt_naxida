@@ -8794,3 +8794,23 @@ Agent C 最终验收：
 - PR #250 fast [31225981653](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31225981653)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=86cf3fd289b4d42c18658d48d5c93308e4f5f91c`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
 - merge fast [31226027759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226027759)：merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31226162752](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226162752)：commit `f3d4081227d0bfbf681009b517c611f03c0e8c79`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `5bb34b44d0c93ab93d816a848266f65c95ad9d6c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
+
+## v3.187：日语 crop direction provenance
+
+日期：2026-08-08
+
+状态：Agent X 继续按 Koharu 的 `TextBox.source_direction` 分层边界收敛普通图片日语竖排 OCR。Koharu 会把 detector 的 source direction 与 TextBox 一起传给 crop/OCR 和后续 renderer；AITRANS 之前在日语 block／line／tile crop 复读映射回原图后只留下几何框，宽而异常的竖排 crop 可能再次被 `wideBox` heuristic 判成横排。v3.187 为明确从日语竖排候选进入的 crop／合成结果保留受限 `sourceDirectionHint=.vertical`，布局只在日语 manga-order 且文本含 CJK 时先尊重该 hint，再回退宽框判断；页级 90°／270° observation 不自动获得 hint，普通语言和非日语路径保持原几何启发式。工程正式版本为 `MARKETING_VERSION=3.187`。候选 commit `881d2b4fe49d8adde181d8e33d210a38515fcdd8` 已通过 PR [#251](https://github.com/bengzhu/project1_lgbt_naxida/pull/251) 合入，merge SHA `c1bb36ba956e5a48b583ff1e2a2214e3dcee916c`；`main` 未触碰。
+
+核心变更：
+
+- `ImageOCRLayoutObservation` 新增可选 `sourceDirectionHint`；`resolveDirection` 在 `allowsVerticalText`、`prefersMangaReadingOrder`、hint 为 `.vertical` 且 CJK scalar 至少两个时以 `koharuVerticalCropHint` 提前返回竖排，避免来自可信竖排 crop 的宽框误判。日语页级 observation 不设置 hint，保留原方向／邻居／宽框逻辑。
+- `VisionOCRObservation` 将 hint 只写入 `mapRotatedCropObservation`、`recognizeJapanesePerspectiveLineCrop` 和 `synthesizeJapaneseVerticalLineCandidates` 等明确的竖排 reread／合成结果；`mapRotatedObservation` 的整页方向 pass 不写入。最终布局映射继续消费该 provenance，但不新增模型、持久化、Store、翻译或渲染管线。
+- 新增 `scripts/test-v3187-image-japanese-crop-direction-hint-contract.py` 并接入显式 UI/full fail-fast；v3.156–v3.186 合同继续回归。该迁移只改善来源方向的保留边界，不加载 Manga OCR/PaddleOCR 权重，不读取探针、ground truth 或真实 Koharu 四件套，不更新 `metrics/version_history.csv` 或仓库 `output/`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。`test/jap.jpg` 只作合同 fixture，没有新的 OCR／翻译／Koharu 指标，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31226671116](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226671116)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `881d2b4fe49d8adde181d8e33d210a38515fcdd8`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #251 fast [31226855629](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226855629)：重跑后 `validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=881d2b4fe49d8adde181d8e33d210a38515fcdd8`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31227082382](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31227082382)：merge SHA `c1bb36ba956e5a48b583ff1e2a2214e3dcee916c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，`reusedFullValidationSha=881d2b4fe49d8adde181d8e33d210a38515fcdd8`、state `success`、`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。

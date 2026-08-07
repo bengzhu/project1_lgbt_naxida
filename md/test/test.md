@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.187 日语 crop direction provenance 合同
+
+- `ImageOCRLayoutObservation` 必须提供可选 `sourceDirectionHint`；`resolveDirection` 仅在允许竖排、日语 manga-order、hint 为 `.vertical` 且文本含至少两个 CJK scalar 时，以 `koharuVerticalCropHint` 先于 `wideBox` 回退标记竖排。页级 observation 未设置 hint，普通语言与非日语路径继续使用原几何启发式。
+- 只有日语竖排 block／line／tile crop reread 的映射／合成结果设置 `.vertical` hint；整页 `mapRotatedObservation` 不设置，避免把任意页级 90°／270° observation 当成可信 detector source direction。hint 只影响布局方向，不读取模型、探针、ground truth 或真实 Koharu 工件，不改变 OCR、翻译、renderer/export、Store、Koharu gate、metrics 或 `output`。
+- 新增 `scripts/test-v3187-image-japanese-crop-direction-hint-contract.py` 并接入显式 UI/full fail-fast；v3.156–v3.186 合同继续回归。候选 exact-SHA full [31226671116](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226671116)（`881d2b4fe49d8adde181d8e33d210a38515fcdd8`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #251 fast [31226855629](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226855629) 重跑后复用候选 full，merge fast [31227082382](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31227082382) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `c1bb36ba956e5a48b583ff1e2a2214e3dcee916c`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，`test/jap.jpg` 只作 fixture，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.186 日语竖排 tile 结果过滤合同
 
 - `recognizeJapaneseVerticalTileFallback` 必须先对 90° tile pass 的结果调用 `filterJapaneseVerticalTileObservations`，再以过滤后的结果决定 `needsJapaneseOrientationFallback`；270° pass 结果也必须经过同一过滤，避免全高 tile 把横排日语噪声并入最终观察。
