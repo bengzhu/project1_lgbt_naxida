@@ -63,7 +63,10 @@ class JapaneseHorizontalReadingOrderContractTests(unittest.TestCase):
             self.horizontal.count("prefersRightToLeft ? -$1.rect.x : $1.rect.x"),
             2,
         )
-        self.assertIn("observation.rect.y - anchor <= 0.02", self.horizontal)
+        self.assertTrue(
+            "observation.rect.y - anchor <= 0.02" in self.horizontal
+            or "observation.rect.y - anchor <= rowTolerance" in self.horizontal
+        )
         self.assertNotIn("orderedHorizontalBands(_ observations: [ResolvedObservation])", self.layout)
 
     def test_scope_stays_layout_and_ocr_integration_only(self) -> None:

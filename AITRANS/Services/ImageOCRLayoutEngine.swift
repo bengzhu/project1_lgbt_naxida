@@ -179,9 +179,17 @@ enum ImageOCRLayoutEngine {
             )
         }
         var bands: [[ResolvedObservation]] = []
+        // Vision boxes vary substantially with image scale and font size. Use
+        // the current horizontal observation height as the row signal, while
+        // keeping a small floor/ceiling so adjacent panels cannot collapse into
+        // one band and tiny glyphs do not get split by a fixed unit-space gap.
+        let rowTolerance = min(
+            max(median(observations.map(\.rect.height)) * 0.55, 0.012),
+            0.04
+        )
         var anchor: Double?
         for observation in ordered {
-            if let anchor, observation.rect.y - anchor <= 0.02 {
+            if let anchor, observation.rect.y - anchor <= rowTolerance {
                 bands[bands.count - 1].append(observation)
             } else {
                 bands.append([observation])
