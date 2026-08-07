@@ -81,10 +81,13 @@ class JapaneseVerticalTileFallbackContractTests(unittest.TestCase):
             "minimumTextHeight: 0.003",
             "cropScale: preparedCrop.scale",
             "var orientationFallbacksRemaining = 4",
-            "needsJapaneseOrientationFallback(primary)",
             "return deduplicateJapaneseObservations(refined)",
         ]:
             self.assertIn(marker, self.tiles)
+        self.assertTrue(
+            "needsJapaneseOrientationFallback(primary)" in self.tiles
+            or "needsJapaneseOrientationFallback(verticalPrimary)" in self.tiles
+        )
 
     def test_coverage_gate_is_directional_and_bounded(self) -> None:
         for marker in [
