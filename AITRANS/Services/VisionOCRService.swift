@@ -133,9 +133,43 @@ struct VisionOCRService: Sendable {
                 text: text,
                 confidence: candidate.confidence,
                 rect: rect,
+                lineRegionRect: Self.recognizedTextRegionRect(
+                    for: candidate,
+                    fallback: rect
+                ),
                 rotationApplied: rotationApplied
             )
         }
+    }
+
+    private static func recognizedTextRegionRect(
+        for candidate: VNRecognizedText,
+        fallback: ImageOCRLayoutRect
+    ) -> ImageOCRLayoutRect {
+        let range = candidate.string.startIndex..<candidate.string.endIndex
+        do {
+            if let rangeObservation = try candidate.boundingBox(for: range),
+               let rangeRect = normalizedRect(from: rangeObservation.boundingBox),
+               isUsableTextRegion(rangeRect, relativeTo: fallback) {
+                return rangeRect
+            }
+        } catch {
+            // Vision may not provide character-range geometry for every revision;
+            // the request-level observation remains the safe Koharu line proxy.
+        }
+        return fallback
+    }
+
+    private static func isUsableTextRegion(
+        _ candidate: ImageOCRLayoutRect,
+        relativeTo fallback: ImageOCRLayoutRect
+    ) -> Bool {
+        let candidateArea = candidate.width * candidate.height
+        let fallbackArea = max(fallback.width * fallback.height, 0.0001)
+        let areaRatio = candidateArea / fallbackArea
+        return overlapRatio(candidate, fallback) >= 0.45
+            && areaRatio >= 0.25
+            && areaRatio <= 1.25
     }
 
     private static func recognizeJapaneseVerticalCrops(
@@ -246,7 +280,7 @@ struct VisionOCRService: Sendable {
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(min(uniqueCandidates.count, 24) * 2)
         for candidate in uniqueCandidates.prefix(24) {
-            let cropRect = expandedVerticalLineCropRect(candidate.rect)
+            let cropRect = expandedVerticalLineCropRect(for: candidate)
             guard let crop = cropImage(image, normalizedRect: cropRect) else {
                 continue
             }
@@ -303,6 +337,13 @@ struct VisionOCRService: Sendable {
             width: rect.width + horizontalPadding * 2,
             height: rect.height + verticalPadding * 2
         ).normalizedToUnit() ?? rect
+    }
+
+    private static func expandedVerticalLineCropRect(
+        for observation: VisionOCRObservation
+    ) -> ImageOCRLayoutRect {
+        let region = observation.lineRegionRect ?? observation.rect
+        return expandedVerticalLineCropRect(region)
     }
 
     private static func expandedVerticalCropRect(_ rect: ImageOCRLayoutRect) -> ImageOCRLayoutRect {
@@ -412,12 +453,73 @@ struct VisionOCRService: Sendable {
             width: (maxX - minX) / originalSize.width,
             height: (maxY - minY) / originalSize.height
         ).normalizedToUnit() ?? observation.rect
+        let originalLineRegionRect = observation.lineRegionRect.map {
+            mapRotatedCropRegionRect(
+                $0,
+                rotatedImage: rotatedImage,
+                cropRect: cropRect,
+                originalImage: originalImage,
+                angle: angle,
+                cropScale: cropScale
+            )
+        }
         return VisionOCRObservation(
             text: observation.text,
             confidence: observation.confidence,
             rect: originalRect,
+            lineRegionRect: originalLineRegionRect,
             rotationApplied: observation.rotationApplied
         )
+    }
+
+    private static func mapRotatedCropRegionRect(
+        _ region: ImageOCRLayoutRect,
+        rotatedImage: CGImage,
+        cropRect: CGRect,
+        originalImage: CGImage,
+        angle: Int,
+        cropScale: CGFloat
+    ) -> ImageOCRLayoutRect {
+        let rotatedSize = CGSize(width: CGFloat(rotatedImage.width), height: CGFloat(rotatedImage.height))
+        let cropSize = CGSize(width: cropRect.width, height: cropRect.height)
+        let originalSize = CGSize(width: CGFloat(originalImage.width), height: CGFloat(originalImage.height))
+        let unscaledRotatedSize = angle == 90 || angle == 270
+            ? CGSize(width: cropSize.height, height: cropSize.width)
+            : cropSize
+        let scaleX = rotatedSize.width / max(unscaledRotatedSize.width, 1)
+        let scaleY = rotatedSize.height / max(unscaledRotatedSize.height, 1)
+        let safeScale = cropScale.isFinite && cropScale > 0 ? cropScale : 1
+        let pixelRect = CGRect(
+            x: region.x * rotatedSize.width,
+            y: region.y * rotatedSize.height,
+            width: region.width * rotatedSize.width,
+            height: region.height * rotatedSize.height
+        )
+        let points = [
+            pixelRect.origin,
+            CGPoint(x: pixelRect.maxX, y: pixelRect.minY),
+            CGPoint(x: pixelRect.minX, y: pixelRect.maxY),
+            CGPoint(x: pixelRect.maxX, y: pixelRect.maxY)
+        ].map {
+            let unscaledPoint = CGPoint(
+                x: $0.x / max(scaleX, safeScale),
+                y: $0.y / max(scaleY, safeScale)
+            )
+            let local = Self.mapPointToOriginal(unscaledPoint, angle: angle, originalSize: cropSize)
+            return CGPoint(x: cropRect.minX + local.x, y: cropRect.minY + local.y)
+        }
+        let xs = points.map(\.x)
+        let ys = points.map(\.y)
+        let minX = xs.min() ?? cropRect.minX
+        let maxX = xs.max() ?? cropRect.maxX
+        let minY = ys.min() ?? cropRect.minY
+        let maxY = ys.max() ?? cropRect.maxY
+        return ImageOCRLayoutRect(
+            x: minX / originalSize.width,
+            y: minY / originalSize.height,
+            width: (maxX - minX) / originalSize.width,
+            height: (maxY - minY) / originalSize.height
+        ).normalizedToUnit() ?? region
     }
 
     private static func deduplicateObservations(_ observations: [VisionOCRObservation]) -> [VisionOCRObservation] {
@@ -556,12 +658,57 @@ struct VisionOCRService: Sendable {
             width: (maxX - minX) / originalSize.width,
             height: (maxY - minY) / originalSize.height
         ).normalizedToUnit() ?? observation.rect
+        let originalLineRegionRect = observation.lineRegionRect.map {
+            mapRotatedRegionRect(
+                $0,
+                rotatedImage: rotatedImage,
+                originalImage: originalImage,
+                angle: angle
+            )
+        }
         return VisionOCRObservation(
             text: observation.text,
             confidence: observation.confidence,
             rect: originalRect,
+            lineRegionRect: originalLineRegionRect,
             rotationApplied: observation.rotationApplied
         )
+    }
+
+    private static func mapRotatedRegionRect(
+        _ region: ImageOCRLayoutRect,
+        rotatedImage: CGImage,
+        originalImage: CGImage,
+        angle: Int
+    ) -> ImageOCRLayoutRect {
+        let rotatedSize = CGSize(width: CGFloat(rotatedImage.width), height: CGFloat(rotatedImage.height))
+        let originalSize = CGSize(width: CGFloat(originalImage.width), height: CGFloat(originalImage.height))
+        let pixelRect = CGRect(
+            x: region.x * rotatedSize.width,
+            y: region.y * rotatedSize.height,
+            width: region.width * rotatedSize.width,
+            height: region.height * rotatedSize.height
+        )
+        let points = [
+            pixelRect.origin,
+            CGPoint(x: pixelRect.maxX, y: pixelRect.minY),
+            CGPoint(x: pixelRect.minX, y: pixelRect.maxY),
+            CGPoint(x: pixelRect.maxX, y: pixelRect.maxY)
+        ].map {
+            Self.mapPointToOriginal($0, angle: angle, originalSize: originalSize)
+        }
+        let xs = points.map(\.x)
+        let ys = points.map(\.y)
+        let minX = xs.min() ?? 0
+        let maxX = xs.max() ?? 0
+        let minY = ys.min() ?? 0
+        let maxY = ys.max() ?? 0
+        return ImageOCRLayoutRect(
+            x: minX / originalSize.width,
+            y: minY / originalSize.height,
+            width: (maxX - minX) / originalSize.width,
+            height: (maxY - minY) / originalSize.height
+        ).normalizedToUnit() ?? region
     }
 
     private static func mapPointToOriginal(
@@ -666,5 +813,8 @@ private struct VisionOCRObservation: Equatable, Sendable {
     var text: String
     var confidence: Float
     var rect: ImageOCRLayoutRect
+    /// Character-range geometry is a tighter, Vision-provided line-region hint;
+    /// `rect` remains the stable request-level box used by layout and dedupe.
+    var lineRegionRect: ImageOCRLayoutRect?
     var rotationApplied: Int
 }

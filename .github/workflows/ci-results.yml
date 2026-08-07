@@ -137,6 +137,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3158-image-japanese-crop-ocr-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3159-image-japanese-ocr-status-context-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3160-image-japanese-line-region-ocr-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3161-image-japanese-line-geometry-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -421,7 +422,7 @@ jobs:
             koharu_contract_required=true
           fi
 
-          if grep -E '^scripts/test-v3(1[1-9]|[2-7][0-9]|8[01]|12[2-9]|13[0-9]|14[0]|14[1]|14[2]|14[3]|14[4]|14[5]|14[6]|14[7]|14[8]|14[9]|15[0]|15[1]|15[2]|15[3]|15[4]|15[5]|15[6]|15[7]|15[8]|15[9]|16[0])-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          if grep -E '^scripts/test-v3(1[1-9]|[2-7][0-9]|8[01]|12[2-9]|13[0-9]|14[0]|14[1]|14[2]|14[3]|14[4]|14[5]|14[6]|14[7]|14[8]|14[9]|15[0]|15[1]|15[2]|15[3]|15[4]|15[5]|15[6]|15[7]|15[8]|15[9]|16[0]|16[1])-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v391-koharu-diagnostic-triage-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
@@ -1256,6 +1257,7 @@ jobs:
             python3 -B scripts/test-v3158-image-japanese-crop-ocr-contract.py
             python3 -B scripts/test-v3159-image-japanese-ocr-status-context-contract.py
             python3 -B scripts/test-v3160-image-japanese-line-region-ocr-contract.py
+            python3 -B scripts/test-v3161-image-japanese-line-geometry-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract
