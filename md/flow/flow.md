@@ -3,6 +3,7 @@
 
 ## 0. 一句话总览
 
+v3.143 普通图片 OCR 结果行的 VoiceOver hint 动态列出当前真正暴露的修正、恢复和复查 action；锁定或不适用时不虚构 action，保留定位与几何不可用上下文。只属于 View，不改变 OCR、翻译、renderer/export、探针、Koharu active gate、metrics 或 `output`。候选 exact-SHA full `31153705887`、PR #207 fast `31154097383`、merge fast `31154147898` 均通过。
 v3.142 普通图片风险 OCR 结果行在 `isReviewRequired && canReview` 时提供同名 VoiceOver“完成并继续复查／撤销本次复查”action，直接复用既有 `toggleReviewCompletion()`；非风险或锁定时隐藏 action，保留可见复查按钮与禁用原因。只属于 View，不改变 OCR、翻译、renderer/export、探针、Koharu active gate、metrics 或 `output`。候选 exact-SHA full `31152734900`、PR #206 fast `31153171846`、merge fast `31153229469` 均通过。
 v3.141 已人工修正的普通图片 OCR 结果行在 `isManuallyCorrected && canEdit` 时提供同名 VoiceOver“恢复 Vision OCR”action，直接复用既有 `restoreVisionOCR()`；未修正或锁定时隐藏 action，保留可见恢复按钮与禁用原因。只属于 View，不改变 OCR、翻译、renderer/export、探针、Koharu active gate、metrics 或 `output`。候选 exact-SHA full `31151758844`、PR #205 fast `31152271664`、merge fast `31152319773` 均通过。
 v3.140 普通图片 OCR 结果行在 `canEdit` 时提供同名 VoiceOver“修正识别文字”action，直接复用既有 `edit()`；锁定时隐藏 action，保留可见修正按钮、定位／焦点语义和 `modificationUnavailableHint`。只属于 View，不改变 OCR、翻译、renderer/export、探针、Koharu active gate、metrics 或 `output`。候选 exact-SHA full `31150859808`、PR #204 fast `31151298078`、merge fast `31151339355` 均通过。

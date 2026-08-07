@@ -1,4 +1,5 @@
 # 项目流程图
+v3.143 普通图片 OCR 结果行的 VoiceOver hint 只列出当前真正可用的修正、恢复和复查 action，并保留定位/几何上下文；只属于 View。候选 exact-SHA full `31153705887`、PR #207 fast `31154097383`、merge fast `31154147898` 均通过。
 v3.142 普通图片风险 OCR 结果行在 `isReviewRequired && canReview` 时提供同名 VoiceOver“完成并继续复查／撤销本次复查”action，非风险或锁定时隐藏 action；只属于 View，复用既有复查入口。候选 exact-SHA full `31152734900`、PR #206 fast `31153171846`、merge fast `31153229469` 均通过。
 v3.141 已人工修正的普通图片 OCR 结果行在 `isManuallyCorrected && canEdit` 时提供同名 VoiceOver“恢复 Vision OCR”action，未修正或锁定时隐藏 action；只属于 View，复用既有 OCR 恢复入口。候选 exact-SHA full `31151758844`、PR #205 fast `31152271664`、merge fast `31152319773` 均通过。
 v3.140 普通图片 OCR 结果行在 `canEdit` 时提供同名 VoiceOver“修正识别文字”action，锁定时隐藏 action；只属于 View，复用既有 OCR 修正入口。候选 exact-SHA full `31150859808`、PR #204 fast `31151298078`、merge fast `31151339355` 均通过。
