@@ -1,4 +1,6 @@
 # 项目流程图
+v3.169 日语竖排 crop：当前方向文字块／line reread → 弱／空结果按页级 8／12 次预算触发 opposite-orientation reread → 统一后处理与坐标回映射 → 去重／布局 → 翻译／渲染；非弱结果不额外重跑。候选 full `31200276655`、PR fast `31200973375`、merge fast `31201060977` 均通过，候选 SHA `bbe47bd89e4413580482b07e52799867c844ec64` Xcode/JUnit `10/10`，merge SHA `a2ad829bf519a2f5cec02d82cc6d7b40168c2d62` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
+
 v3.168 日语识别：Vision top-5 置信度窗口 → Koharu 风格文本后处理（空白／省略号／点号串／ASCII 全角）→ 日语脚本／标点密度候选融合 → 既有布局 → 翻译／渲染；非日语保持 top-1。候选 full `31197172635`、PR fast `31197811891`、merge fast `31197884476` 均通过，候选 SHA `9438e3d40ffb133073921fc4f4a0e1de36cc042d` Xcode/JUnit `10/10`，merge SHA `033d66b5c62434e5685b1e8d7d1feebdfa90c15e` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.167 横向文字行：Vision observation → 计算中位文字框高度 → `0.55 × median(height)` 并限制 `0.012...0.04` → y 行分组 → 保留既有 RTL/LTR 排序 → OCR／翻译；仅布局容差变化，不改变相邻语言路径。候选 full `31195627325`、PR fast `31196179149`、merge fast `31196269343` 均通过，候选 SHA `6c63dd0a5170a0fb230046d7d2129b26fd8dbb4d` Xcode/JUnit `10/10`，merge SHA `a0f1e72ea36be0932dae75fe774af1186ed29b1c` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。

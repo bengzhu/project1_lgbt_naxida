@@ -1,3 +1,23 @@
+## v3.169：日语竖排 crop 反方向复读
+
+日期：2026-08-08
+
+状态：Agent X 继续参考 `reference/koharu-main` 的 TextBox→crop 边界，补齐 Vision 日语竖排局部 crop 的方向容错：文字块与 line crop 先按已有 90°／270° 方向复读，只有结果为空、日语脚本密度低或最佳置信度偏弱时，才在有限预算内改用反方向复读。文字块页级最多 8 次、line 页级最多 12 次；所有 crop pass 共用同一 helper，保持日语后处理、rotation metadata、坐标回映射、cropScale 和既有去重边界。工程正式版本为 `MARKETING_VERSION=3.169`。候选 commit `bbe47bd89e4413580482b07e52799867c844ec64` 已通过 PR [#233](https://github.com/bengzhu/project1_lgbt_naxida/pull/233) 合入，merge SHA `a2ad829bf519a2f5cec02d82cc6d7b40168c2d62`；`main` 未触碰。
+
+核心变更：
+
+- `recognizeJapaneseVerticalCrops` 对弱／空文字块 crop 受 8 次页级预算保护地尝试 `oppositeJapaneseOrientation`；主方向和反方向都经 `recognizeJapaneseCropPass` 完成旋转、Vision 识别、Koharu 风格后处理与原图坐标映射。
+- `recognizeJapaneseVerticalLineCrops` 对弱／空 line crop 受 12 次页级预算保护地复读 opposite orientation，保留 `minimumTextHeight=0.002` 与 line crop 的 `cropScale`；文字块路径保持 `0.004` 最低文字高度。既有 perspective／整页方向、翻译、renderer/export 与非日语路径不变。
+- 新增 `scripts/test-v3169-image-japanese-crop-orientation-fallback-contract.py`，并让 v3.158、v3.160、v3.168 历史合同接受共享 helper 的等价实现；不新增 OCR 模型、Store、持久化、探针输入、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31200276655](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31200276655)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `bbe47bd89e4413580482b07e52799867c844ec64`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #233 fast [31200973375](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31200973375)：`validationProfile=fast`，`reusedFullValidationSha=bbe47bd89e4413580482b07e52799867c844ec64`、state `success`，`validationReason=pull_request_followup_no_synchronize`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31201060977](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31201060977)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `a2ad829bf519a2f5cec02d82cc6d7b40168c2d62` 复用候选 full，`receiptPropagationAllowed=true`，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.168：日语 OCR Koharu 风格后处理与候选融合
 
 日期：2026-08-08

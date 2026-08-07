@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.169 日语竖排 crop 反方向复读合同
+
+- `recognizeJapaneseVerticalCrops` 与 `recognizeJapaneseVerticalLineCrops` 必须先用当前 90°／270° 方向通过共享 `recognizeJapaneseCropPass` 完成 crop、后处理与坐标回映射；结果为空、日语脚本密度低或最佳置信度弱时，才在页级预算内调用 `oppositeJapaneseOrientation`。文字块最多 8 次 fallback，最低文字高度 `0.004`；line 最多 12 次 fallback，最低文字高度 `0.002`，并保留 line crop 的 `cropScale` 映射与既有去重／布局。
+- 共享 helper 必须继续使用 `automaticallyDetectsLanguage: false`、当前日语语言列表、`rotationApplied` 与 `postProcessJapaneseText: true`；反方向只服务弱／空 crop，不改变整页 OCR、普通翻译、renderer/export、TranslationSessionStore、探针、Koharu active gate、metrics 或 `output`。`test/jap.jpg` 仍只作合同 fixture，不生成质量指标。
+- 新增 `scripts/test-v3169-image-japanese-crop-orientation-fallback-contract.py` 并接入显式 UI/full fail-fast；v3.168 及更早合同继续回归。候选 exact-SHA full [31200276655](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31200276655)（`bbe47bd89e4413580482b07e52799867c844ec64`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #233 fast [31200973375](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31200973375) 复用候选 full，merge fast [31201060977](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31201060977) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `a2ad829bf519a2f5cec02d82cc6d7b40168c2d62`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得把方向 fallback 描述为日语 OCR、翻译或识别质量提升。
+
 ### v3.168 日语 OCR Koharu 后处理与候选融合合同
 
 - 日语 `VisionOCRService` 必须在既有旋转、文字块 crop、line 与 perspective reread 结果上使用 `postProcessJapaneseOCRText`：去除空白、将 `…` 变为 `...`、把连续 `.`／`・` 折叠为同长度点号，并将 ASCII 可打印字符映射为全角；非日语继续走原有 trim/top-1 路径。
