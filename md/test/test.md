@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.166 日语竖排 CJK 标点方向合同
+
+- `cjkCharacterCount` 必须同时覆盖 `U+3000–U+303F` CJK 标点和 `U+FF61–U+FF9F` 半角片假名；短 observation 仍必须通过 `verticalRatio >= 1.05`、`height >= 0.015`、列邻居存在且横排行邻居不存在的门控，不能仅凭标点字符改变方向。
+- 该改动只增强已有竖排方向证据，让「、。」等单独 Vision observation 能进入既有竖排 block／crop reread；不新增 OCR 模型，不读取探针报告、ground truth 或 `test/koharu_artifacts`，不改变翻译、renderer/export、Store、metrics 或 `output`。
+- 新增 `scripts/test-v3166-image-japanese-punctuation-column-contract.py` 并接入 UI/full fail-fast；v3.165 及更早合同继续回归。候选 exact-SHA full [31193812409](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31193812409)（`8c6dfe278a9644dd0dc37ffa5381a968dc7748c7`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #230 fast [31194473761](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31194473761) 复用候选 full，merge fast [31194535297](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31194535297) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `0acfd7f62c9ecbe048c7630d0358c85dce325edb`），后两者跳过 Xcode/UI/Speech，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得把标点方向证据描述为日语 OCR、翻译或识别质量提升。
+
 ### v3.165 日语单字列竖排方向合同
 
 - `resolveDirection` 保留原有宽框横排与高框竖排门控；额外的短 CJK observation 只有在 `verticalRatio >= 1.05`、`height >= 0.015`、存在 `isColumnNeighbor` 且不存在 `isCloseRowNeighbor` 时标为 `cjkGlyphColumnNeighbors`，避免把横排行碎片或孤立图形送入竖排 crop。

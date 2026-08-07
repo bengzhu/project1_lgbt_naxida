@@ -1,4 +1,6 @@
 # 项目流程图
+v3.166 日语竖排：Vision observation → CJK 标点／半角片假名计数 → 短 observation 列邻居门控 → 竖排聚类 → crop／line reread → OCR／翻译；宽框横排与非竖排语言保持原路径。候选 full `31193812409`、PR fast `31194473761`、merge fast `31194535297` 均通过，候选 SHA `8c6dfe278a9644dd0dc37ffa5381a968dc7748c7` Xcode/JUnit `10/10`，merge SHA `0acfd7f62c9ecbe048c7630d0358c85dce325edb` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
+
 v3.165 允许竖排 CJK：短单字 observation → 列邻居且无横排行邻居门控 → 竖排 block 聚类 → 既有局部 crop／line reread → OCR／翻译；宽框、孤立框和非竖排语言保持旧路径。候选 full `31192480905`、PR fast `31193220150`、merge fast `31193292477` 均通过，候选 SHA `5f24c4b7d2de47a095ee15b19994087ebde4dff7` Xcode/JUnit `10/10`，merge SHA `631c4d25acacb6b0497e8c95dab41f9a22e6c266` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.164 日语混合版面：Vision OCR → `sourceLanguage == .japanese` 开启 `prefersMangaReadingOrder` → 横排按行 y↓、行内 x↓（右到左）→ 既有 vertical Recursive XY-Cut → 翻译／渲染；默认 false 不改变其他语言。候选 full `31190984866`、PR fast `31191645282`、merge fast `31191716497` 均通过，候选 SHA `7e584045f12fefa995866b7479db4cd440d52a03` Xcode/JUnit `10/10`，merge SHA `3943843d61f331630f7c6764f5639273aea4bd90` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。

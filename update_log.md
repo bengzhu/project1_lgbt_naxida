@@ -1,3 +1,23 @@
+## v3.166：日语竖排 CJK 标点列证据
+
+日期：2026-08-07
+
+状态：Agent X 继续贴近 Koharu 的 TextBox 方向证据边界：`ImageOCRLayoutEngine.cjkCharacterCount` 现在把日语竖排常见 CJK 标点（`U+3000–U+303F`）与半角片假名（`U+FF61–U+FF9F`）计入短 observation 的 CJK 证据，使「、。」等单独 Vision 结果在存在列邻居、没有横排行邻居时可进入既有竖排聚类和 crop／line reread。工程正式版本为 `MARKETING_VERSION=3.166`。候选 commit `8c6dfe278a9644dd0dc37ffa5381a968dc7748c7` 已通过 PR [#230](https://github.com/bengzhu/project1_lgbt_naxida/pull/230) 合入，merge SHA `0acfd7f62c9ecbe048c7630d0358c85dce325edb`；`main` 未触碰。
+
+核心变更：
+
+- `cjkCharacterCount` 新增 `0x3000...0x303F` 与 `0xFF61...0xFF9F`，但方向改变仍受短文本、列邻居、无横排行邻居和原有尺寸比率门控，不会把孤立标点自动当成竖排。
+- 该层只改布局方向证据，让现有日语／简体中文竖排 block、方向感知 crop、line crop 与透视 fallback 保留标点列；不新增 OCR 模型、翻译、探针／工件读取，不改变 renderer/export、Store、持久化、metrics 或 `output`。
+- 新增 `scripts/test-v3166-image-japanese-punctuation-column-contract.py`，并接入 UI/full fail-fast；v3.165 及更早合同继续回归。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31193812409](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31193812409)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `8c6dfe278a9644dd0dc37ffa5381a968dc7748c7`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #230 fast [31194473761](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31194473761)：`validationProfile=fast`，`reusedFullValidationSha=8c6dfe278a9644dd0dc37ffa5381a968dc7748c7`、state `success`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31194535297](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31194535297)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `0acfd7f62c9ecbe048c7630d0358c85dce325edb` 复用候选 full，`receiptPropagationAllowed=true`，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.165：日语单字列竖排方向门控
 
 日期：2026-08-07
