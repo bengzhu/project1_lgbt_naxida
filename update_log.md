@@ -17,6 +17,7 @@
 - 候选 exact-SHA full [31195627325](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31195627325)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `6c63dd0a5170a0fb230046d7d2129b26fd8dbb4d`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
 - PR #231 fast [31196179149](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31196179149)：`validationProfile=fast`，`reusedFullValidationSha=6c63dd0a5170a0fb230046d7d2129b26fd8dbb4d`、state `success`，`validationReason=pull_request_followup_no_synchronize`，Xcode/UI/Speech 跳过，不是新的编译证据。
 - merge fast [31196269343](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31196269343)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `a0f1e72ea36be0932dae75fe774af1186ed29b1c` 复用候选 full，`receiptPropagationAllowed=true`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- 文档提交后的 metadata follow-up [31196544294](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31196544294)：`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用 merge SHA `a0f1e72ea36be0932dae75fe774af1186ed29b1c / success` 的 full receipt，`receiptPropagationAllowed=true`，JUnit `10/10`；不作为新的编译证据。
 
 ## v3.166：日语竖排 CJK 标点列证据
 
