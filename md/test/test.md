@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.174 日语竖排聚类间距合同
+
+- `ImageOCRLayoutEngine.shouldMergeVertically` 必须保留同列／水平重叠门控与原有 `widthLimit`，并以两框平均高度产生有界 `heightLimit`；最终 `verticalGapLimit` 取不超过 `0.08` 的宽度／高度信号，避免高而窄的同列 Vision line box 在日语 line-region reread 前被过早拆开。
+- 该修正只作用于竖直 block 聚类，横向合并、普通语言、整页 OCR、翻译、renderer/export、Store、探针、Koharu active gate、metrics 与 `output` 边界保持不变；日语 crop／line 入口仍由既有 `ImageOCRLayoutEngine.layout` 与 `recognizeJapaneseVerticalCrops`／`recognizeJapaneseVerticalLineCrops` 消费，不伪装成已加载 Manga OCR/PaddleOCR 模型，也不声称质量提升。
+- 新增 `scripts/test-v3174-image-japanese-vertical-cluster-gap-contract.py` 并接入显式 UI/full fail-fast；v3.173 及更早合同继续回归。候选 exact-SHA full [31208462786](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31208462786)（`49b987b3765e0df0c0511e30f955aa6aa7f487bf`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #238 fast [31209161098](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31209161098) 复用候选 full，merge fast [31209248983](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31209248983) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `5efc690d0f8c3b41282518a8bc76d12559efa114`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.173 日语 observation 融合合同
 
 - 日语最终布局、竖排 block/line 候选和弱方向 fallback 必须调用 `deduplicateJapaneseObservations`／`isBetterJapaneseObservation`；该 helper 在原 observation score 上只增加有界 `japaneseScriptDensity`／标点 evidence，并对无日语证据候选施加轻微 tie-breaker。普通语言必须保留 `deduplicateObservations(observations)` 原路径。

@@ -3,6 +3,8 @@
 
 ## 0. 一句话总览
 
+v3.174 日语竖排聚类：Vision 高而窄的 line box → 保留同列／重叠门控并加入有界平均高度 gap 信号 → 形成更完整的文字块 → 既有 Koharu 风格 crop／line reread → 去重、布局、翻译与渲染；横排、非日语与整页 OCR 路径不变。候选 full `31208462786`、PR fast `31209161098`、merge fast `31209248983` 均通过，候选 SHA `49b987b3765e0df0c0511e30f955aa6aa7f487bf` Xcode/JUnit `10/10`，merge SHA `5efc690d0f8c3b41282518a8bc76d12559efa114` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.173 普通图片日语 OCR 在最终布局去重、竖排 block/line 候选和弱方向选择中使用独立的 `deduplicateJapaneseObservations` 评分：在既有置信度、长度、CJK 与旋转分数上加入有界脚本／标点 evidence；普通语言继续调用原 `deduplicateObservations`。候选 full `31206796785`、PR fast `31207387731`、merge fast `31207465845` 均通过，候选 SHA `d86f875d1040d69259b62b52754c73be3ccb59dd` Xcode/JUnit `10/10`，merge SHA `3fe6e719e064fe261f97530a7f16ff3b39ea4903` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.172 日语竖排碎片 line crop：Vision 近方形短日语片段 → vertical block 内按列中心／垂直连续间隙合成最多 24 条 line-region → 既有灰度化／有界放大 → 轴对齐 reread；原始四点 geometry 仍单独进入 perspective reread → 方向 fallback → 去重／布局 → 翻译／渲染；门控失败回退，普通语言与整页路径不变。候选 full `31204989011`、PR fast `31205608084`、merge fast `31205688629` 均通过，候选 SHA `c2e7edd13818c9c46b65d1aa318e4c91c3479c09` Xcode/JUnit `10/10`，merge SHA `fab5ddb6d9ebdaa3d4a9dd34bfcdf6c0f676c84c` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。

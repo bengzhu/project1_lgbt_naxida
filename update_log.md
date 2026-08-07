@@ -8526,3 +8526,24 @@ Agent C 最终验收：
 - PR #237 fast [31207387731](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31207387731)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=d86f875d1040d69259b62b52754c73be3ccb59dd`、state `success`；Xcode skipped，不是新的编译证据。
 - merge fast [31207465845](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31207465845)：merge SHA `3fe6e719e064fe261f97530a7f16ff3b39ea4903`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，不是新的编译证据。
 - 文档 metadata follow-up [31207769023](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31207769023)：commit `395a162db4c0db3b5245f0487b2ecffa8025fb9a`，`smaldataIncrementalMetadataOnly=true`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用父 merge `3fe6e719e064fe261f97530a7f16ff3b39ea4903 / success`，`receiptPropagationAllowed=true`，仅 6 个文档文件变化，Xcode/UI/Speech 与漫画探针跳过，不是新的编译证据。
+- receipt follow-up [31207848694](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31207848694)：commit `9de21ce1b10c01163c811b2df65edf8a022a7cf8`，`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用父文档 SHA `395a162db4c0db3b5245f0487b2ecffa8025fb9a / success`，`receiptPropagationAllowed=true`，仅 `update_log.md` 变化，Xcode/UI/Speech 与漫画探针跳过，不是新的编译证据。
+
+## v3.174：日语竖排聚类间距收敛
+
+日期：2026-08-08
+
+状态：Agent X 延续 Koharu 的“先形成文字块再交给 crop/OCR”边界，修正 Vision 对日语竖排高而窄 line box 的聚类间距：`ImageOCRLayoutEngine.shouldMergeVertically` 保留原宽度信号与同列／重叠门控，增加两框平均高度的有界 gap 信号并设置上限，避免在既有 Japanese line-region reread 之前过早拆开同一列。候选 full、PR fast、merge fast 已完成云端验收并合入 `smalldata_test`。工程正式版本为 `MARKETING_VERSION=3.174`。候选 commit `49b987b3765e0df0c0511e30f955aa6aa7f487bf` 已通过 PR [#238](https://github.com/bengzhu/project1_lgbt_naxida/pull/238) 合入，merge SHA `5efc690d0f8c3b41282518a8bc76d12559efa114`；`main` 未触碰。
+
+核心变更：
+
+- 竖直 block 合并继续要求同列／水平重叠且 gap 不为负；宽度阈值保留原行为，新增平均高度 `heightLimit`，并把 `verticalGapLimit` 限制在 `0.08` 以内，降低高而窄 Vision line box 被提前拆列的机会。
+- 横向合并、普通语言、整页 OCR、日语 crop／line reread、翻译与 renderer/export 入口保持既有边界；新增 `scripts/test-v3174-image-japanese-vertical-cluster-gap-contract.py` 并接入显式 CI 路由。
+- 合同同时检查布局引擎与 Vision 的 block→crop 调用边界，禁止引入探针、Store、ground truth、active artifacts、metrics 或 `output` 依赖。
+
+边界：该改动只调整普通图片日语竖排候选的 block 聚类间距，不加载 Manga OCR/PaddleOCR 权重，不读取真实 Koharu 工件或探针结果，不更新 `metrics/version_history.csv` 或仓库 `output/`。真实竖排图片质量 corpus、Speech corpus 与 Koharu 四件套仍缺失，不能据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31208462786](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31208462786)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `49b987b3765e0df0c0511e30f955aa6aa7f487bf`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #238 fast [31209161098](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31209161098)：`validationProfile=fast`、`reusedFullValidationSha=49b987b3765e0df0c0511e30f955aa6aa7f487bf`、state `success`；Xcode skipped，不是新的编译证据。
+- merge fast [31209248983](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31209248983)：merge SHA `5efc690d0f8c3b41282518a8bc76d12559efa114`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，不是新的编译证据。
