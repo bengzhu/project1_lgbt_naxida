@@ -1,3 +1,23 @@
+## v3.172：日语竖排碎片 line-region 合成
+
+日期：2026-08-08
+
+状态：Agent X 继续参考 Koharu `extract_text_block_regions` 的“检测文字块后按 line-region crop 再 OCR”边界，补齐 Vision 把竖排日语拆成近方形单字时的缺口。对既有 vertical block 内满足短日语文本、脚本密度、列中心接近与垂直 gap 门控的片段按列合成 line crop，最多 24 条；合成候选只替换被覆盖的轴对齐碎片 reread，原始四点 quad 仍保留给 perspective path。工程正式版本为 `MARKETING_VERSION=3.172`。候选 commit `c2e7edd13818c9c46b65d1aa318e4c91c3479c09` 已通过 PR [#236](https://github.com/bengzhu/project1_lgbt_naxida/pull/236) 合入，merge SHA `fab5ddb6d9ebdaa3d4a9dd34bfcdf6c0f676c84c`；`main` 未触碰。
+
+核心变更：
+
+- `recognizeJapaneseVerticalLineCrops` 保留原始 `perspectiveCandidates`，新增 `synthesizeJapaneseVerticalLineCandidates`：只接收最多两个 scalar、日语脚本密度至少 `0.5`、高度至少 `0.012` 且近方形的片段；在每个 vertical block 内按动态列中心容差分组，按 y 排列并检查最大垂直 gap。
+- 合成 rect 要求最小高度与 `1.25` 高宽比，文本按列内 y 顺序拼接，confidence 取片段平均，`lineRegionQuad=nil`；与原候选统一去重并受 24 条轴对齐 line 上限，仍复用 v3.171 的灰度化／有界放大、v3.169 opposite-orientation fallback 与既有坐标映射。
+- 新增 `scripts/test-v3172-image-japanese-vertical-fragment-line-contract.py` 并接入显式 CI 路由。该迁移不加载 Manga OCR/PaddleOCR 权重、不伪造 detector quad，不改变普通语言、整页 OCR、翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31204989011](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31204989011)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `c2e7edd13818c9c46b65d1aa318e4c91c3479c09`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #236 fast [31205608084](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31205608084)：`validationProfile=fast`，`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=c2e7edd13818c9c46b65d1aa318e4c91c3479c09`、state `success`；Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31205688629](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31205688629)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `fab5ddb6d9ebdaa3d4a9dd34bfcdf6c0f676c84c` 复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.171：日语竖排 line crop 统一 Koharu 风格预处理
 
 日期：2026-08-08

@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.172 日语竖排碎片 line-region 合同
+
+- `recognizeJapaneseVerticalLineCrops` 必须保留原始最多 24 条 quad 候选给 `recognizeJapanesePerspectiveLineCrop`，并可从同一 vertical block 内满足短日语文本（最多 2 个 scalar、脚本密度至少 `0.5`）、列中心接近、垂直间隙受限的近方形片段合成 line-region；合成 path 只替换被覆盖的轴对齐 reread，最终仍受 `.prefix(24)`、既有预处理、方向 fallback、坐标映射与去重门控。
+- 合成 line 需按列中心分组、检查相邻垂直 gap、保持最小高宽比；`lineRegionQuad` 置空，避免伪造透视几何。该迁移只作用于普通图片日语 OCR，不改变整页/非日语、翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`；没有真实竖排质量 corpus，不得声称质量提升。
+- 新增 `scripts/test-v3172-image-japanese-vertical-fragment-line-contract.py` 并接入显式 UI/full fail-fast；v3.171 及更早合同继续回归。候选 exact-SHA full [31204989011](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31204989011)（`c2e7edd13818c9c46b65d1aa318e4c91c3479c09`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #236 fast [31205608084](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31205608084) 复用候选 full，merge fast [31205688629](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31205688629) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `fab5ddb6d9ebdaa3d4a9dd34bfcdf6c0f676c84c`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ### v3.171 日语竖排 line crop 预处理合同
 
 - 日语 `recognizeJapaneseVerticalLineCrops` 的轴对齐 line crop 与 `recognizeJapanesePerspectiveLineCrop` 的透视 line crop 都必须先调用 `prepareJapaneseCropForVision`：安全灰度化，在 `maximumPixels=4_000_000` 内优先 `preferredScale=2`；轴对齐主／反方向 pass 继续传实际 `preparedCrop.scale` 做原图映射，透视 path 按放大后 `preparedPixels` 计入每页 `16_000_000` 上限。
