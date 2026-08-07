@@ -70,7 +70,8 @@ struct ImageOCRLayoutBlock: Equatable, Sendable {
 enum ImageOCRLayoutEngine {
     static func layout(
         _ observations: [ImageOCRLayoutObservation],
-        allowsVerticalText: Bool
+        allowsVerticalText: Bool,
+        prefersMangaReadingOrder: Bool = false
     ) -> [ImageOCRLayoutBlock] {
         let safeObservations = observations.compactMap { observation -> ImageOCRLayoutObservation? in
             guard let rect = observation.rect.normalizedToUnit() else { return nil }
@@ -82,7 +83,10 @@ enum ImageOCRLayoutEngine {
         let resolved = safeObservations.map {
             resolveDirection(for: $0, among: safeObservations, allowsVerticalText: allowsVerticalText)
         }
-        let horizontal = orderedHorizontalBands(resolved.filter { $0.direction != .vertical })
+        let horizontal = orderedHorizontalBands(
+            resolved.filter { $0.direction != .vertical },
+            prefersRightToLeft: prefersMangaReadingOrder
+        )
         let vertical = orderedVerticalBands(resolved.filter { $0.direction == .vertical })
         return mergeReadingOrder(
             horizontal: cluster(horizontal, direction: .horizontal),
@@ -136,8 +140,21 @@ enum ImageOCRLayoutEngine {
         )
     }
 
-    private static func orderedHorizontalBands(_ observations: [ResolvedObservation]) -> [ResolvedObservation] {
-        let ordered = observations.sorted { stableKey($0, $0.rect.y, $0.rect.x) < stableKey($1, $1.rect.y, $1.rect.x) }
+    private static func orderedHorizontalBands(
+        _ observations: [ResolvedObservation],
+        prefersRightToLeft: Bool
+    ) -> [ResolvedObservation] {
+        let ordered = observations.sorted {
+            stableKey(
+                $0,
+                $0.rect.y,
+                prefersRightToLeft ? -$0.rect.x : $0.rect.x
+            ) < stableKey(
+                $1,
+                $1.rect.y,
+                prefersRightToLeft ? -$1.rect.x : $1.rect.x
+            )
+        }
         var bands: [[ResolvedObservation]] = []
         var anchor: Double?
         for observation in ordered {
@@ -149,7 +166,17 @@ enum ImageOCRLayoutEngine {
             }
         }
         return bands.flatMap { band in
-            band.sorted { stableKey($0, $0.rect.x, $0.rect.y) < stableKey($1, $1.rect.x, $1.rect.y) }
+            band.sorted {
+                stableKey(
+                    $0,
+                    prefersRightToLeft ? -$0.rect.x : $0.rect.x,
+                    $0.rect.y
+                ) < stableKey(
+                    $1,
+                    prefersRightToLeft ? -$1.rect.x : $1.rect.x,
+                    $1.rect.y
+                )
+            }
         }
     }
 

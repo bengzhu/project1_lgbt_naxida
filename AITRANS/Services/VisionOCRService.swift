@@ -82,7 +82,8 @@ struct VisionOCRService: Sendable {
             let allowsVerticalText = sourceLanguage == .japanese || sourceLanguage == .simplifiedChinese
             return ImageOCRLayoutEngine.layout(
                 layoutObservations,
-                allowsVerticalText: allowsVerticalText
+                allowsVerticalText: allowsVerticalText,
+                prefersMangaReadingOrder: sourceLanguage == .japanese
             ).map { block in
                 ImageTranslationBlock(
                     original: block.text,
@@ -224,7 +225,8 @@ struct VisionOCRService: Sendable {
         }
         let verticalBlocks = ImageOCRLayoutEngine.layout(
             layoutObservations,
-            allowsVerticalText: true
+            allowsVerticalText: true,
+            prefersMangaReadingOrder: true
         )
         .filter { block in
             let aspectRatio = block.rect.height / max(block.rect.width, 0.001)

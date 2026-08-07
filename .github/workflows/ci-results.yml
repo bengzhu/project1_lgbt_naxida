@@ -1261,6 +1261,7 @@ jobs:
             python3 -B scripts/test-v3161-image-japanese-line-geometry-contract.py
             python3 -B scripts/test-v3162-image-japanese-line-perspective-ocr-contract.py
             python3 -B scripts/test-v3163-image-japanese-reading-order-contract.py
+            python3 -B scripts/test-v3164-image-japanese-horizontal-reading-order-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract
