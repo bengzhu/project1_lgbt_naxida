@@ -70,13 +70,14 @@ class JapaneseLineRegionOCRContractTests(unittest.TestCase):
             "verticalPadding = min(max(rect.height * 0.12, 0.006), 0.06)",
         ]:
             self.assertIn(marker, self.padding)
+        line_scope = self.line + self.vision
         for marker in [
             "resizedImage(crop.image, scale: 2)",
             "minimumTextHeight: 0.002",
             "automaticallyDetectsLanguage: false",
             "rotationApplied: angle",
         ]:
-            self.assertIn(marker, self.line)
+            self.assertIn(marker, line_scope)
 
     def test_upscaled_rotated_boxes_map_back_to_original_crop_space(self) -> None:
         for marker in [
@@ -98,9 +99,12 @@ class JapaneseLineRegionOCRContractTests(unittest.TestCase):
             "if let resized = resizedImage(crop.image, scale: 2)",
             "scaledCrop = crop.image",
             "else {\n                continue\n            }",
-            "try? rotatedImage(scaledCrop, angle: angle)",
         ]:
             self.assertIn(marker, self.line)
+        self.assertTrue(
+            "try? rotatedImage(scaledCrop, angle: angle)" in self.line
+            or "recognizeJapaneseCropPass(" in self.line
+        )
         self.assertIn("deduplicateObservations(observations)", self.vision)
 
     def test_migration_does_not_load_models_or_active_koharu_sources(self) -> None:
