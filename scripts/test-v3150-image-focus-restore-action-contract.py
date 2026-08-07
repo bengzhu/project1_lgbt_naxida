@@ -33,6 +33,11 @@ class ImageFocusPreviewRestoreActionContractTests(unittest.TestCase):
         self.store = read("AITRANS/Services/TranslationSessionStore.swift")
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
+        self.panel = braced_body(
+            self.view,
+            "struct ImageTranslationPanel: View",
+        )
+        self.workspace = braced_body(self.panel, "private var imageWorkspace")
         self.preview = braced_body(
             self.view,
             "private struct ImageTranslationPreview: View",
@@ -76,8 +81,8 @@ class ImageFocusPreviewRestoreActionContractTests(unittest.TestCase):
             self.preview,
         )
         self.assertIn(
-            "restoreVisionOCR: { requestVisionOCRRestore(for: selectedBlock) }",
-            self.preview,
+            "restoreVisionOCR: { requestVisionOCRRestore(for: $0) }",
+            self.workspace,
         )
         self.assertIn('.accessibilityLabel("已定位文字块局部放大")', self.focus)
         self.assertIn('.accessibilityValue("\\(positionText)，\\(accessibilityOriginalText)")', self.focus)

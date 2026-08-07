@@ -313,6 +313,7 @@ struct ImageTranslationPanel: View {
                 selectPrevious: { selectAdjacentBlock(offset: -1) },
                 selectNext: { selectAdjacentBlock(offset: 1) },
                 editBlock: { beginCorrectionFromFocusPreview(of: $0) },
+                restoreVisionOCR: { requestVisionOCRRestore(for: $0) },
                 toggleReviewCompletion: { blockID in
                     toggleReviewCompletion(blockID, focusInPreview: true)
                 }
@@ -1850,6 +1851,7 @@ private struct ImageTranslationPreview: View {
     let selectPrevious: () -> Void
     let selectNext: () -> Void
     let editBlock: (ImageTranslationBlock) -> Void
+    let restoreVisionOCR: (ImageTranslationBlock) -> Void
     let toggleReviewCompletion: (UUID) -> Void
     @State private var previewImage: UIImage?
     @State private var previewRevision: Int?
@@ -1907,7 +1909,7 @@ private struct ImageTranslationPreview: View {
                                 selectPrevious: selectPrevious,
                                 selectNext: selectNext,
                                 edit: { editBlock(selectedBlock) },
-                                restoreVisionOCR: { requestVisionOCRRestore(for: selectedBlock) },
+                                restoreVisionOCR: { restoreVisionOCR(selectedBlock) },
                                 toggleReviewCompletion: { toggleReviewCompletion(selectedBlock.id) }
                             )
                             .frame(
@@ -2611,7 +2613,12 @@ private struct ImageTranslationFocusPreview: View {
         if focusCrop == nil {
             if canEdit {
                 if !isReviewRequired {
-                    return focusPreviewModificationHint(appendingTo: "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块")
+                    guard isManuallyCorrected else {
+                        return "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+                    }
+                    return focusPreviewModificationHint(
+                        appendingTo: "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+                    )
                 }
                 let base = focusPreviewModificationHint(
                     appendingTo: "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
