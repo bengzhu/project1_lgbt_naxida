@@ -11,6 +11,7 @@ struct ImageOCRLayoutRect: Equatable, Sendable {
     var maxX: Double { x + width }
     var maxY: Double { y + height }
     var midX: Double { x + width / 2 }
+    var midY: Double { y + height / 2 }
 
     /// Returns a finite, positive-area rectangle clipped to normalized image space.
     ///
@@ -153,20 +154,125 @@ enum ImageOCRLayoutEngine {
     }
 
     private static func orderedVerticalBands(_ observations: [ResolvedObservation]) -> [ResolvedObservation] {
-        let ordered = observations.sorted { stableKey($0, -$0.rect.x, $0.rect.y) < stableKey($1, -$1.rect.x, $1.rect.y) }
-        var bands: [[ResolvedObservation]] = []
-        var anchor: Double?
-        for observation in ordered {
-            if let anchor, anchor - observation.rect.x <= 0.02 {
-                bands[bands.count - 1].append(observation)
-            } else {
-                bands.append([observation])
-                anchor = observation.rect.x
+        guard observations.count > 1 else { return observations }
+
+        // Koharu recursively cuts the page at the largest whitespace gap before
+        // applying right-to-left reading order. Vision gives normalized geometry,
+        // so scale the same median-size thresholds into unit coordinates rather
+        // than using one global x-band anchor that can interleave panels.
+        let medianWidth = median(observations.map(\.rect.width))
+        let medianHeight = median(observations.map(\.rect.height))
+        let minimumGapX = max(medianWidth * 0.15, 0.01)
+        let minimumGapY = max(medianHeight * 0.10, 0.008)
+        return recursiveMangaReadingOrder(
+            observations,
+            minimumGapX: minimumGapX,
+            minimumGapY: minimumGapY
+        )
+    }
+
+    private static func recursiveMangaReadingOrder(
+        _ observations: [ResolvedObservation],
+        minimumGapX: Double,
+        minimumGapY: Double
+    ) -> [ResolvedObservation] {
+        guard observations.count > 1,
+              let cut = bestMangaReadingCut(
+                  observations,
+                  minimumGapX: minimumGapX,
+                  minimumGapY: minimumGapY
+              ) else {
+            return observations.sorted {
+                stableKey($0, -$0.rect.midX, $0.rect.y)
+                    < stableKey($1, -$1.rect.midX, $1.rect.y)
             }
         }
-        return bands.flatMap { band in
-            band.sorted { stableKey($0, $0.rect.y, -$0.rect.x) < stableKey($1, $1.rect.y, -$1.rect.x) }
+
+        let first: [ResolvedObservation]
+        let second: [ResolvedObservation]
+        switch cut.axis {
+        case .x:
+            // Manga pages read right-to-left across separated vertical columns.
+            first = observations.filter { $0.rect.midX >= cut.coordinate }
+            second = observations.filter { $0.rect.midX < cut.coordinate }
+        case .y:
+            // A horizontal whitespace cut separates panels/rows; read the upper
+            // region before the lower one, then recurse within each region.
+            first = observations.filter { $0.rect.midY <= cut.coordinate }
+            second = observations.filter { $0.rect.midY > cut.coordinate }
         }
+
+        guard !first.isEmpty, !second.isEmpty else {
+            return observations.sorted {
+                stableKey($0, -$0.rect.midX, $0.rect.y)
+                    < stableKey($1, -$1.rect.midX, $1.rect.y)
+            }
+        }
+        return recursiveMangaReadingOrder(
+            first,
+            minimumGapX: minimumGapX,
+            minimumGapY: minimumGapY
+        ) + recursiveMangaReadingOrder(
+            second,
+            minimumGapX: minimumGapX,
+            minimumGapY: minimumGapY
+        )
+    }
+
+    private static func bestMangaReadingCut(
+        _ observations: [ResolvedObservation],
+        minimumGapX: Double,
+        minimumGapY: Double
+    ) -> MangaReadingCut? {
+        let xIntervals = observations
+            .map { ($0.rect.x, $0.rect.maxX) }
+        let yIntervals = observations
+            .map { ($0.rect.y, $0.rect.maxY) }
+        let gapX = largestMangaGap(xIntervals, minimum: minimumGapX)
+        let gapY = largestMangaGap(yIntervals, minimum: minimumGapY)
+
+        switch (gapX, gapY) {
+        case let (x?, y?):
+            let widthX = x.1 - x.0
+            let widthY = y.1 - y.0
+            // Koharu favors a meaningful row cut; normalized coordinates use a
+            // small unit-space equivalent of its absolute pixel threshold.
+            if widthY > max(0.01, widthX * 0.4) {
+                return MangaReadingCut(axis: .y, coordinate: (y.0 + y.1) / 2)
+            }
+            return MangaReadingCut(axis: .x, coordinate: (x.0 + x.1) / 2)
+        case let (x?, nil):
+            return MangaReadingCut(axis: .x, coordinate: (x.0 + x.1) / 2)
+        case let (nil, y?):
+            return MangaReadingCut(axis: .y, coordinate: (y.0 + y.1) / 2)
+        case (nil, nil):
+            return nil
+        }
+    }
+
+    private static func largestMangaGap(
+        _ intervals: [(Double, Double)],
+        minimum: Double
+    ) -> (Double, Double)? {
+        guard let first = intervals.min(by: { $0.0 < $1.0 }) else { return nil }
+        let sorted = intervals.sorted { $0.0 < $1.0 }
+        var currentMaxEnd = first.1
+        var largest: (Double, Double)?
+        for interval in sorted.dropFirst() {
+            let gap = interval.0 - currentMaxEnd
+            if gap >= minimum,
+               largest.map({ gap > $0.1 - $0.0 }) ?? true {
+                largest = (currentMaxEnd, interval.0)
+            }
+            currentMaxEnd = max(currentMaxEnd, interval.1)
+        }
+        return largest
+    }
+
+    private static func median(_ values: [Double]) -> Double {
+        guard !values.isEmpty else { return 0 }
+        let sorted = values.sorted()
+        return sorted[sorted.count / 2]
     }
 
     private static func stableKey(_ value: ResolvedObservation, _ primary: Double, _ secondary: Double) -> StableKey {
@@ -325,6 +431,16 @@ private struct StableKey: Comparable {
         if lhs.text != rhs.text { return lhs.text < rhs.text }
         return lhs.confidence < rhs.confidence
     }
+}
+
+private enum MangaReadingCutAxis {
+    case x
+    case y
+}
+
+private struct MangaReadingCut {
+    var axis: MangaReadingCutAxis
+    var coordinate: Double
 }
 
 private struct Cluster {
