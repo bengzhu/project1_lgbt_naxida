@@ -2892,6 +2892,13 @@ private struct ImageTranslationBlockRow: View {
                     edit: edit
                 )
             )
+            .modifier(
+                ImageReviewRowRestoreAccessibilityModifier(
+                    isManuallyCorrected: isManuallyCorrected,
+                    canEdit: canEdit,
+                    restoreVisionOCR: restoreVisionOCR
+                )
+            )
 
             VStack(spacing: AppTheme.Spacing.compact) {
                 Button("修正识别文字", systemImage: "pencil", action: edit)
@@ -3018,6 +3025,24 @@ private struct ImageReviewRowEditAccessibilityModifier: ViewModifier {
             content
                 .accessibilityAction(named: "修正识别文字") {
                     edit()
+                }
+        } else {
+            content
+        }
+    }
+}
+
+private struct ImageReviewRowRestoreAccessibilityModifier: ViewModifier {
+    let isManuallyCorrected: Bool
+    let canEdit: Bool
+    let restoreVisionOCR: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isManuallyCorrected && canEdit {
+            content
+                .accessibilityAction(named: "恢复 Vision OCR") {
+                    restoreVisionOCR()
                 }
         } else {
             content
