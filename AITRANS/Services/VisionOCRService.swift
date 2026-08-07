@@ -74,7 +74,10 @@ struct VisionOCRService: Sendable {
                 observations.append(contentsOf: cropRefinedObservations)
             }
 
-            let layoutObservations = Self.deduplicateObservations(observations).map {
+            let finalObservations = sourceLanguage == .japanese
+                ? Self.deduplicateJapaneseObservations(observations)
+                : Self.deduplicateObservations(observations)
+            let layoutObservations = finalObservations.map {
                 ImageOCRLayoutObservation(
                     text: $0.text,
                     confidence: $0.confidence,
@@ -303,7 +306,7 @@ struct VisionOCRService: Sendable {
         observations: [VisionOCRObservation],
         recognitionLanguages: [String]
     ) -> [VisionOCRObservation] {
-        let safeObservations = deduplicateObservations(observations)
+        let safeObservations = deduplicateJapaneseObservations(observations)
         let layoutObservations = safeObservations.map {
             ImageOCRLayoutObservation(
                 text: $0.text,
@@ -339,7 +342,7 @@ struct VisionOCRService: Sendable {
         for block in verticalBlocks {
             let angle = safeObservations
                 .filter { overlapRatio($0.rect, block.rect) >= 0.25 }
-                .sorted { isBetterObservation($0, $1) }
+                .sorted { isBetterJapaneseObservation($0, $1) }
                 .first
                 .map { $0.rotationApplied == 270 ? 270 : 90 }
                 ?? 90
@@ -406,7 +409,7 @@ struct VisionOCRService: Sendable {
         blocks: [ImageOCRLayoutBlock],
         recognitionLanguages: [String]
     ) -> [VisionOCRObservation] {
-        let safeObservations = deduplicateObservations(observations)
+        let safeObservations = deduplicateJapaneseObservations(observations)
         var candidates: [VisionOCRObservation] = []
         for block in blocks {
             candidates.append(contentsOf: safeObservations.filter { observation in
@@ -416,7 +419,7 @@ struct VisionOCRService: Sendable {
         }
 
         var uniqueCandidates: [VisionOCRObservation] = []
-        for candidate in candidates.sorted(by: { isBetterObservation($0, $1) }) {
+        for candidate in candidates.sorted(by: { isBetterJapaneseObservation($0, $1) }) {
             guard !uniqueCandidates.contains(where: {
                 isDuplicateObservation(candidate, of: $0)
             }) else {
@@ -436,7 +439,7 @@ struct VisionOCRService: Sendable {
             blocks: blocks
         )
         let axisCandidates = Array(
-            deduplicateObservations(uniqueCandidates + synthesizedCandidates)
+            deduplicateJapaneseObservations(uniqueCandidates + synthesizedCandidates)
                 .prefix(24)
         )
 
@@ -562,7 +565,7 @@ struct VisionOCRService: Sendable {
 
                 let best = ordered
                     .map(\.observation)
-                    .max(by: { isBetterObservation($0, $1) }) ?? ordered[0].observation
+                    .max(by: { isBetterJapaneseObservation($0, $1) }) ?? ordered[0].observation
                 let confidence = ordered
                     .map { $0.observation.confidence }
                     .reduce(Float(0), +) / Float(ordered.count)
@@ -579,7 +582,7 @@ struct VisionOCRService: Sendable {
             }
         }
 
-        return deduplicateObservations(synthesized)
+        return deduplicateJapaneseObservations(synthesized)
     }
 
     private static func isJapaneseVerticalFragment(_ observation: VisionOCRObservation) -> Bool {
@@ -641,7 +644,7 @@ struct VisionOCRService: Sendable {
     private static func needsJapaneseOrientationFallback(
         _ observations: [VisionOCRObservation]
     ) -> Bool {
-        guard let best = observations.max(by: { isBetterObservation($0, $1) }) else {
+        guard let best = observations.max(by: { isBetterJapaneseObservation($0, $1) }) else {
             return true
         }
         let textLength = best.text.unicodeScalars.count
@@ -663,6 +666,35 @@ struct VisionOCRService: Sendable {
             }
         }
         return Double(japaneseCount) / Double(scalars.count)
+    }
+
+    private static func japanesePunctuationDensity(in text: String) -> Double {
+        let scalars = Array(text.unicodeScalars)
+        guard !scalars.isEmpty else { return 0 }
+        let punctuationCount = scalars.count { scalar in
+            switch scalar.value {
+            case 0x3000...0x303F, 0xFF61...0xFF65:
+                true
+            default:
+                false
+            }
+        }
+        return Double(punctuationCount) / Double(scalars.count)
+    }
+
+    private static func japaneseObservationEvidence(in text: String) -> Double {
+        let scriptDensity = japaneseScriptDensity(in: text)
+        guard scriptDensity > 0 else {
+            // Keep the preference a tie-breaker rather than rejecting a crop:
+            // Vision can legitimately return a Latin symbol or a mixed label.
+            return -0.65
+        }
+        let punctuationDensity = japanesePunctuationDensity(in: text)
+        let boundedEvidence = min(
+            scriptDensity * 0.9 + punctuationDensity * 0.2,
+            1.1
+        )
+        return boundedEvidence
     }
 
     private static func recognizeJapanesePerspectiveLineCrop(
@@ -1082,25 +1114,51 @@ struct VisionOCRService: Sendable {
         return ImageOCRLayoutQuad(points: points).normalized() ?? quad
     }
 
-    private static func deduplicateObservations(_ observations: [VisionOCRObservation]) -> [VisionOCRObservation] {
+    private static func deduplicateJapaneseObservations(
+        _ observations: [VisionOCRObservation]
+    ) -> [VisionOCRObservation] {
+        deduplicateObservations(observations, prefersJapanese: true)
+    }
+
+    private static func deduplicateObservations(
+        _ observations: [VisionOCRObservation],
+        prefersJapanese: Bool = false
+    ) -> [VisionOCRObservation] {
         var output: [VisionOCRObservation] = []
-        for observation in observations.sorted(by: { isBetterObservation($0, $1) }) {
+        for observation in observations.sorted(by: {
+            isBetterObservation($0, $1, prefersJapanese: prefersJapanese)
+        }) {
             guard let duplicateIndex = output.firstIndex(where: {
                 isDuplicateObservation(observation, of: $0)
             }) else {
                 output.append(observation)
                 continue
             }
-            if isBetterObservation(observation, than: output[duplicateIndex]) {
+            if isBetterObservation(
+                observation,
+                than: output[duplicateIndex],
+                prefersJapanese: prefersJapanese
+            ) {
                 output[duplicateIndex] = observation
             }
         }
         return output
     }
 
-    private static func isBetterObservation(_ lhs: VisionOCRObservation, _ rhs: VisionOCRObservation) -> Bool {
-        let lhsScore = observationScore(lhs)
-        let rhsScore = observationScore(rhs)
+    private static func isBetterJapaneseObservation(
+        _ lhs: VisionOCRObservation,
+        _ rhs: VisionOCRObservation
+    ) -> Bool {
+        isBetterObservation(lhs, rhs, prefersJapanese: true)
+    }
+
+    private static func isBetterObservation(
+        _ lhs: VisionOCRObservation,
+        _ rhs: VisionOCRObservation,
+        prefersJapanese: Bool = false
+    ) -> Bool {
+        let lhsScore = observationScore(lhs, prefersJapanese: prefersJapanese)
+        let rhsScore = observationScore(rhs, prefersJapanese: prefersJapanese)
         if lhsScore != rhsScore {
             return lhsScore > rhsScore
         }
@@ -1110,21 +1168,37 @@ struct VisionOCRService: Sendable {
         return lhs.text < rhs.text
     }
 
-    private static func isBetterObservation(_ lhs: VisionOCRObservation, than rhs: VisionOCRObservation) -> Bool {
-        isBetterObservation(lhs, rhs)
+    private static func isBetterObservation(
+        _ lhs: VisionOCRObservation,
+        than rhs: VisionOCRObservation,
+        prefersJapanese: Bool = false
+    ) -> Bool {
+        isBetterObservation(lhs, rhs, prefersJapanese: prefersJapanese)
     }
 
-    private static func observationScore(_ observation: VisionOCRObservation) -> Double {
+    private static func observationScore(
+        _ observation: VisionOCRObservation,
+        prefersJapanese: Bool = false
+    ) -> Double {
         let cjkCount = observation.text.unicodeScalars.count { scalar in
             switch scalar.value {
             case 0x3040...0x30FF, 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF: true
             default: false
             }
         }
-        return Double(observation.text.unicodeScalars.count)
+        let baseScore = Double(observation.text.unicodeScalars.count)
             + Double(observation.confidence) * 8
             + Double(cjkCount) * 0.25
             + (observation.rotationApplied == 90 ? 0.15 : 0)
+        guard prefersJapanese else { return baseScore }
+
+        // A crop can produce a long, high-confidence Latin-looking fallback
+        // even when the source page is Japanese. Keep the normal score intact
+        // for every other language, but give Japanese-script candidates a
+        // bounded tie-breaker during Japanese fusion and penalize a candidate
+        // with no Japanese evidence slightly. This mirrors Koharu's language-
+        // specific recognition boundary without making Japanese a hard gate.
+        return baseScore + japaneseObservationEvidence(in: observation.text)
     }
 
     private static func isDuplicateObservation(
