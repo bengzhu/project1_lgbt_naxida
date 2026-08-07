@@ -1,4 +1,6 @@
 # 项目流程图
+v3.184 日语 OCR 融合：整页／crop／line observations → 双方有 `lineRegionRect` 时按紧 line-region geometry 去重，否则回退 request-level `rect` → 日语竖排布局 → 翻译／渲染；普通语言不切换几何，缺失 hint 安全回退，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31223348790`、PR fast `31223808151`、merge fast `31223883384` 均通过。
+
 v3.183 日语 perspective line → quad 长短轴目标画布 → Core Image warp 后有界重采样 → 灰度／放大／方向 reread → 映射／去重／布局 → 翻译／渲染；保留 4096 边长、4M 单条与 16M 每页预算，几何异常安全回退，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31221970026`、PR fast `31222386728`、merge fast `31222451794` 均通过。
 
 v3.182 日语合成 line → 几何覆盖的 axis reread 替代 → 原始 quad perspective／弱结果 fallback → 映射／去重／布局 → 翻译／渲染；保留 24 line／16M warp 像素预算，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31220601488`、PR fast `31221025113`、merge fast `31221074919` 均通过。

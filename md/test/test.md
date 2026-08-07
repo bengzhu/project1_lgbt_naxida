@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.184 日语 line-region 几何去重合同
+
+- 日语 `isDuplicateObservation` 必须只在 `prefersJapanese` 且双方都有 `lineRegionRect` 时使用紧 character-range geometry；缺少任一 hint 时回退 `lhs.rect`／`rhs.rect`，继续使用原 overlap、文本相似度和空文本边界。
+- `deduplicateObservations` 与日语竖排 line candidate 去重必须显式传递 `prefersJapanese`；普通语言最终路径继续调用 `Self.deduplicateObservations(observations)`，不改变普通图片非日语 OCR、布局、翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`。
+- 新增 `scripts/test-v3184-image-japanese-line-geometry-dedupe-contract.py` 并接入显式 UI/full fail-fast；v3.183 及更早合同继续回归。候选 exact-SHA full [31223348790](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31223348790)（`1bc212b0cf5c8190a9aa9746fb44c0f03ae638dd`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #248 fast [31223808151](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31223808151) 复用候选 full，merge fast [31223883384](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31223883384) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `211dab273bf9b0830b411f0586938ba77c93b46d`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，`test/jap.jpg` 只作 fixture，无新 metrics/output，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.183 日语 perspective line 目标几何合同
 
 - `perspectiveCorrectedLineImage` 必须按四点 quad 的中点轴长计算 Koharu vertical `textHeight` 与 `ratio`，并将自然透视结果有界重采样到 `(textHeight, textHeight × ratio)`；目标边长不超过 `4096`、面积不超过 `4_000_000`，非法或失败时保留自然 warp 安全回退。

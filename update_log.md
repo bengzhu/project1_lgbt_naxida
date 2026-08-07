@@ -8731,3 +8731,23 @@ Agent C 最终验收：
 - PR #247 fast [31222386728](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31222386728)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=6c6c040b095aadff18eea5f9f518ce50551fa8f7`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
 - merge fast [31222451794](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31222451794)：merge SHA `b6410f032d36e5f9205e15327107ca8069589c20`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31222779283](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31222779283)：commit `2ad1ce7c0d44e62f40c5d42a1e2d0c82272d142a`，`validationProfile=fast`、`validationReason=smaldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `b6410f032d36e5f9205e15327107ca8069589c20 / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
+
+## v3.184：日语 line-region 几何去重
+
+日期：2026-08-08
+
+状态：Agent X 继续迁移 Koharu 的“每个 line region 独立交给 OCR”边界，修正普通图片日语融合仍只用宽松 request-level `rect` 去重的缺口。Vision 字符范围提供的 `lineRegionRect` 现在在双方都存在且处于日语路径时用于 overlap 计算；缺少任一 hint 时回退原始 request box，保留空文本、文本相似度、置信度、旋转评分和非日语路径。这样相邻竖排行不会因为较宽的外框重叠而被过早合并，竖排 line candidate 的预筛选也使用同一日语几何偏好。工程正式版本为 `MARKETING_VERSION=3.184`。候选 commit `1bc212b0cf5c8190a9aa9746fb44c0f03ae638dd` 已通过 PR [#248](https://github.com/bengzhu/project1_lgbt_naxida/pull/248) 合入，merge SHA `211dab273bf9b0830b411f0586938ba77c93b46d`；`main` 未触碰。
+
+核心变更：
+
+- `isDuplicateObservation` 新增 `prefersJapanese` 几何边界：双方都有 `lineRegionRect` 时使用紧 character-range region，否则分别使用 `lhs.rect`／`rhs.rect`；普通语言继续使用 request-level box。
+- `deduplicateObservations` 将日语偏好传入 duplicate matcher，`recognizeJapaneseVerticalLineCrops` 的候选去重也显式传入 `prefersJapanese: true`；不改变最终布局 box、文字相似度阈值或失败回退。
+- 新增 `scripts/test-v3184-image-japanese-line-geometry-dedupe-contract.py` 并接入显式 UI/full fail-fast；v3.156–v3.183 日语合同继续回归。该步不加载 Manga OCR/PaddleOCR 权重，不读取探针、ground truth 或真实 Koharu 工件，不更新 `metrics/version_history.csv` 或仓库 `output/`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。`test/jap.jpg` 只作合同 fixture，没有新的 OCR／翻译／Koharu 指标，不能据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31223348790](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31223348790)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `1bc212b0cf5c8190a9aa9746fb44c0f03ae638dd`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #248 fast [31223808151](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31223808151)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=1bc212b0cf5c8190a9aa9746fb44c0f03ae638dd`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31223883384](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31223883384)：merge SHA `211dab273bf9b0830b411f0586938ba77c93b46d`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
