@@ -448,7 +448,7 @@ struct VisionOCRService: Sendable {
         var uniqueCandidates: [VisionOCRObservation] = []
         for candidate in candidates.sorted(by: { isBetterJapaneseObservation($0, $1) }) {
             guard !uniqueCandidates.contains(where: {
-                isDuplicateObservation(candidate, of: $0)
+                isDuplicateObservation(candidate, of: $0, prefersJapanese: true)
             }) else {
                 continue
             }
@@ -1393,7 +1393,11 @@ struct VisionOCRService: Sendable {
             isBetterObservation($0, $1, prefersJapanese: prefersJapanese)
         }) {
             guard let duplicateIndex = output.firstIndex(where: {
-                isDuplicateObservation(observation, of: $0)
+                isDuplicateObservation(
+                    observation,
+                    of: $0,
+                    prefersJapanese: prefersJapanese
+                )
             }) else {
                 output.append(observation)
                 continue
@@ -1467,10 +1471,36 @@ struct VisionOCRService: Sendable {
 
     private static func isDuplicateObservation(
         _ lhs: VisionOCRObservation,
-        of rhs: VisionOCRObservation
+        of rhs: VisionOCRObservation,
+        prefersJapanese: Bool = false
     ) -> Bool {
-        let intersection = intersectionArea(lhs.rect, rhs.rect)
-        let minimumArea = max(min(lhs.rect.width * lhs.rect.height, rhs.rect.width * rhs.rect.height), 0.0001)
+        // Koharu's OCR is handed one detector line region at a time. Vision's
+        // request-level boxes can be wider than that region, especially after
+        // a rotated crop is mapped back to the page; using those boxes for all
+        // Japanese fusion can therefore merge neighboring vertical lines. Use
+        // the tighter character-range geometry only when both candidates have
+        // it, and retain the request box as a safe fallback for incomplete
+        // observations and every non-Japanese path.
+        let lhsGeometry: ImageOCRLayoutRect
+        let rhsGeometry: ImageOCRLayoutRect
+        if prefersJapanese,
+           let lhsLineRegion = lhs.lineRegionRect,
+           let rhsLineRegion = rhs.lineRegionRect {
+            lhsGeometry = lhsLineRegion
+            rhsGeometry = rhsLineRegion
+        } else {
+            lhsGeometry = lhs.rect
+            rhsGeometry = rhs.rect
+        }
+
+        let intersection = intersectionArea(lhsGeometry, rhsGeometry)
+        let minimumArea = max(
+            min(
+                lhsGeometry.width * lhsGeometry.height,
+                rhsGeometry.width * rhsGeometry.height
+            ),
+            0.0001
+        )
         let overlap = intersection / minimumArea
         guard overlap >= 0.45 else { return false }
 
@@ -1746,7 +1776,8 @@ private struct VisionOCRObservation: Equatable, Sendable {
     var confidence: Float
     var rect: ImageOCRLayoutRect
     /// Character-range geometry is a tighter, Vision-provided line-region hint;
-    /// `rect` remains the stable request-level box used by layout and dedupe.
+    /// `rect` remains the stable request-level box used by layout and fallback
+    /// dedupe. Japanese fusion prefers this hint when both candidates provide it.
     var lineRegionRect: ImageOCRLayoutRect?
     /// The corresponding Vision quadrilateral enables a bounded Koharu-style
     /// perspective correction for Japanese vertical line crops. It is only a
