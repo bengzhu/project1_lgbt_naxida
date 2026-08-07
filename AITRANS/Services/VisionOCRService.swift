@@ -425,11 +425,25 @@ struct VisionOCRService: Sendable {
             uniqueCandidates.append(candidate)
         }
 
+        let perspectiveCandidates = Array(uniqueCandidates.prefix(24))
+        // Vision may split a narrow vertical Japanese column into near-square
+        // one- or two-glyph observations. Koharu's detector emits one line
+        // region before OCR, so replace those fragmented axis-aligned rereads
+        // with bounded synthetic column crops while keeping the original
+        // quadrilateral candidates available for perspective correction.
+        let synthesizedCandidates = synthesizeJapaneseVerticalLineCandidates(
+            observations: safeObservations,
+            blocks: blocks
+        )
+        let axisCandidates = Array(
+            deduplicateObservations(uniqueCandidates + synthesizedCandidates)
+                .prefix(24)
+        )
+
         var refined: [VisionOCRObservation] = []
-        refined.reserveCapacity(min(uniqueCandidates.count, 24) * 2)
+        refined.reserveCapacity((perspectiveCandidates.count + axisCandidates.count) * 2)
         var perspectiveWarpPixels: CGFloat = 0
-        var orientationFallbacksRemaining = 12
-        for candidate in uniqueCandidates.prefix(24) {
+        for candidate in perspectiveCandidates {
             let angle = candidate.rotationApplied == 270 ? 270 : 90
             if let perspective = recognizeJapanesePerspectiveLineCrop(
                 candidate: candidate,
@@ -440,7 +454,11 @@ struct VisionOCRService: Sendable {
             ) {
                 refined.append(perspective)
             }
+        }
 
+        var orientationFallbacksRemaining = 12
+        for candidate in axisCandidates {
+            let angle = candidate.rotationApplied == 270 ? 270 : 90
             let cropRect = expandedVerticalLineCropRect(for: candidate)
             guard let crop = cropImage(image, normalizedRect: cropRect) else {
                 continue
@@ -477,6 +495,108 @@ struct VisionOCRService: Sendable {
             }
         }
         return refined
+    }
+
+    /// Build a conservative Koharu-style line-region proxy for fragmented
+    /// Japanese vertical glyph observations. This is intentionally narrower
+    /// than the regular line candidate gate: only short Japanese fragments
+    /// that share a column and have bounded vertical gaps are eligible.
+    private static func synthesizeJapaneseVerticalLineCandidates(
+        observations: [VisionOCRObservation],
+        blocks: [ImageOCRLayoutBlock]
+    ) -> [VisionOCRObservation] {
+        var synthesized: [VisionOCRObservation] = []
+
+        for block in blocks {
+            let fragments = observations
+                .filter { observation in
+                    overlapRatio(observation.rect, block.rect) >= 0.25
+                        && isJapaneseVerticalFragment(observation)
+                }
+                .map {
+                    JapaneseVerticalCropFragment(
+                        observation: $0,
+                        rect: $0.lineRegionRect ?? $0.rect
+                    )
+                }
+            guard fragments.count >= 2 else { continue }
+
+            let medianWidth = median(fragments.map { $0.rect.width })
+            let columnTolerance = min(max(medianWidth * 2.0, 0.018), 0.08)
+            var columns: [[JapaneseVerticalCropFragment]] = []
+            for fragment in fragments.sorted(by: { $0.rect.midX < $1.rect.midX }) {
+                guard let lastIndex = columns.indices.last else {
+                    columns.append([fragment])
+                    continue
+                }
+                let anchor = columns[lastIndex]
+                    .map { $0.rect.midX }
+                    .reduce(0, +) / Double(columns[lastIndex].count)
+                if abs(fragment.rect.midX - anchor) <= columnTolerance {
+                    columns[lastIndex].append(fragment)
+                } else {
+                    columns.append([fragment])
+                }
+            }
+
+            for column in columns where column.count >= 2 {
+                let ordered = column.sorted { $0.rect.y < $1.rect.y }
+                let medianHeight = median(ordered.map { $0.rect.height })
+                let maximumGap = min(max(medianHeight * 3.0, 0.04), 0.16)
+                guard zip(ordered, ordered.dropFirst()).allSatisfy({ pair in
+                    let gap = pair.1.rect.y - pair.0.rect.maxY
+                    return gap <= maximumGap
+                }) else {
+                    continue
+                }
+
+                let rect = ordered
+                    .map(\.rect)
+                    .dropFirst()
+                    .reduce(ordered[0].rect) { $0.union($1) }
+                let aspectRatio = rect.height / max(rect.width, 0.001)
+                guard rect.height >= max(block.rect.height * 0.18, 0.035),
+                      aspectRatio >= 1.25 else {
+                    continue
+                }
+
+                let best = ordered
+                    .map(\.observation)
+                    .max(by: { isBetterObservation($0, $1) }) ?? ordered[0].observation
+                let confidence = ordered
+                    .map { $0.observation.confidence }
+                    .reduce(Float(0), +) / Float(ordered.count)
+                synthesized.append(
+                    VisionOCRObservation(
+                        text: ordered.map { $0.observation.text }.joined(),
+                        confidence: confidence,
+                        rect: rect,
+                        lineRegionRect: rect,
+                        lineRegionQuad: nil,
+                        rotationApplied: best.rotationApplied
+                    )
+                )
+            }
+        }
+
+        return deduplicateObservations(synthesized)
+    }
+
+    private static func isJapaneseVerticalFragment(_ observation: VisionOCRObservation) -> Bool {
+        let region = observation.lineRegionRect ?? observation.rect
+        let scalarCount = observation.text.unicodeScalars.count
+        let ratio = region.height / max(region.width, 0.001)
+        return scalarCount > 0
+            && scalarCount <= 2
+            && japaneseScriptDensity(in: observation.text) >= 0.5
+            && region.height >= 0.012
+            && ratio >= 0.75
+    }
+
+    private static func median(_ values: [Double]) -> Double {
+        guard !values.isEmpty else { return 0 }
+        let sorted = values.sorted()
+        return sorted[sorted.count / 2]
     }
 
     /// Run one bounded crop reread and map its geometry back to the source page.
@@ -1295,6 +1415,11 @@ private struct VisionOCRObservation: Equatable, Sendable {
     /// recognition hint; request-level `rect` remains the stable layout geometry.
     var lineRegionQuad: ImageOCRLayoutQuad?
     var rotationApplied: Int
+}
+
+private struct JapaneseVerticalCropFragment: Sendable {
+    var observation: VisionOCRObservation
+    var rect: ImageOCRLayoutRect
 }
 
 private struct ImageOCRLayoutPoint: Equatable, Sendable {
