@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.170 日语竖排 crop 预处理合同
+
+- 日语 `recognizeJapaneseVerticalCrops` 的文字块 crop 必须先通过 `prepareJapaneseCropForVision` 灰度化；在 `maximumPixels=4_000_000` 内优先 `preferredScale=2`，放大失败或超出预算时返回原尺寸安全输入，并把实际 `cropScale` 同时传给主方向与 opposite-orientation `recognizeJapaneseCropPass`。
+- 该预处理只迁移 Koharu `MangaOcr::preprocess_single_image` 的模型无关边界，不伪造 Manga OCR 权重或 Tensor normalization；普通语言整页路径、日语 line／perspective reread、翻译、renderer/export、TranslationSessionStore、探针、Koharu active gate、metrics 与 `output` 不变。`test/jap.jpg` 只作合同 fixture，不生成质量指标。
+- 新增 `scripts/test-v3170-image-japanese-crop-preprocess-contract.py` 并接入显式 UI/full fail-fast；v3.169 及更早合同继续回归。候选 exact-SHA full [31201978062](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31201978062)（`0b2f011398457e410b366d1c10d80a902eecd173`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #234 fast [31202618966](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31202618966) 复用候选 full，merge fast [31202690968](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31202690968) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `536b21f83670220ea5364b70badfe375a0df355c`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得把灰度化／放大描述为日语 OCR、翻译或识别质量提升。
+
 ### v3.169 日语竖排 crop 反方向复读合同
 
 - `recognizeJapaneseVerticalCrops` 与 `recognizeJapaneseVerticalLineCrops` 必须先用当前 90°／270° 方向通过共享 `recognizeJapaneseCropPass` 完成 crop、后处理与坐标回映射；结果为空、日语脚本密度低或最佳置信度弱时，才在页级预算内调用 `oppositeJapaneseOrientation`。文字块最多 8 次 fallback，最低文字高度 `0.004`；line 最多 12 次 fallback，最低文字高度 `0.002`，并保留 line crop 的 `cropScale` 映射与既有去重／布局。

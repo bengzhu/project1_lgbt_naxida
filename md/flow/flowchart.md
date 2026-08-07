@@ -1,4 +1,6 @@
 # 项目流程图
+v3.170 日语竖排 block crop：文字块 → 灰度化 → 4M 像素上限内优先 2× 放大 → 旋转 reread／坐标回映射 → 弱结果方向 fallback → 去重／布局 → 翻译／渲染；预处理失败回退原 crop，其他语言不变。候选 full `31201978062`、PR fast `31202618966`、merge fast `31202690968` 均通过，候选 SHA `0b2f011398457e410b366d1c10d80a902eecd173` Xcode/JUnit `10/10`，merge SHA `536b21f83670220ea5364b70badfe375a0df355c` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
+
 v3.169 日语竖排 crop：当前方向文字块／line reread → 弱／空结果按页级 8／12 次预算触发 opposite-orientation reread → 统一后处理与坐标回映射 → 去重／布局 → 翻译／渲染；非弱结果不额外重跑。候选 full `31200276655`、PR fast `31200973375`、merge fast `31201060977` 均通过，候选 SHA `bbe47bd89e4413580482b07e52799867c844ec64` Xcode/JUnit `10/10`，merge SHA `a2ad829bf519a2f5cec02d82cc6d7b40168c2d62` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.168 日语识别：Vision top-5 置信度窗口 → Koharu 风格文本后处理（空白／省略号／点号串／ASCII 全角）→ 日语脚本／标点密度候选融合 → 既有布局 → 翻译／渲染；非日语保持 top-1。候选 full `31197172635`、PR fast `31197811891`、merge fast `31197884476` 均通过，候选 SHA `9438e3d40ffb133073921fc4f4a0e1de36cc042d` Xcode/JUnit `10/10`，merge SHA `033d66b5c62434e5685b1e8d7d1feebdfa90c15e` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。

@@ -3,6 +3,8 @@
 
 ## 0. 一句话总览
 
+v3.170 日语竖排 block crop：Vision 文字块候选 → Koharu 风格灰度化 → 在最多 4M 像素内优先 2× crop → 90°／270° reread 与 `cropScale` 坐标回映射 → 弱结果的既有 opposite-orientation fallback → 去重、布局、翻译与渲染；失败安全回退，普通语言与整页路径不变。候选 full `31201978062`、PR fast `31202618966`、merge fast `31202690968` 均通过，候选 SHA `0b2f011398457e410b366d1c10d80a902eecd173` Xcode/JUnit `10/10`，merge SHA `536b21f83670220ea5364b70badfe375a0df355c` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
+
 v3.169 日语竖排 crop：按当前 90°／270° 方向做文字块／line reread → 对空、低脚本密度或低置信度结果，在文字块 8 次、line 12 次页级预算内用反方向 reread → 统一后处理与坐标回映射 → 既有去重、阅读顺序、翻译与渲染；非弱结果与非日语不增加额外 pass。候选 full `31200276655`、PR fast `31200973375`、merge fast `31201060977` 均通过，候选 SHA `bbe47bd89e4413580482b07e52799867c844ec64` Xcode/JUnit `10/10`，merge SHA `a2ad829bf519a2f5cec02d82cc6d7b40168c2d62` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.168 日语识别：Vision 候选 → 置信度窗口内最多 5 个候选 → Koharu `post_process` 等价的空白／省略号／点号串／ASCII 全角化 → 日语脚本与标点密度融合 → 既有方向布局、翻译与渲染；非日语仍为 top-1。候选 full `31197172635`、PR fast `31197811891`、merge fast `31197884476` 均通过，候选 SHA `9438e3d40ffb133073921fc4f4a0e1de36cc042d` Xcode/JUnit `10/10`，merge SHA `033d66b5c62434e5685b1e8d7d1feebdfa90c15e` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
