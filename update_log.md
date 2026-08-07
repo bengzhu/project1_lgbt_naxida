@@ -8710,3 +8710,23 @@ Agent C 最终验收：
 - PR #246 fast [31221025113](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31221025113)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=42ad3abf8deba67d11b4fd3a93b16a1f09756657`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
 - merge fast [31221074919](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31221074919)：merge SHA `fb97ce105e5ae2d8fdda3d2acae631c86513be02`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31221262235](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31221262235)：commit `c3acf5b57bd8b3a6306b8fc69b92e1490cb0bcc1`，`validationProfile=fast`、`validationReason=smaldata_metadata_followup_reuses_parent_full_validation`，复用父 merge `fb97ce105e5ae2d8fdda3d2acae631c86513be02 / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化（`AGENTS.md`、`README.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`、`update_log.md`），Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
+
+## v3.183：日语竖排 perspective line 目标画布几何
+
+日期：2026-08-08
+
+状态：Agent X 继续迁移 Koharu `warp_line_region` 的几何边界，补齐 Core Image perspective correction 只返回自然 extent、没有按四点轴长确定目标画布的缺口。AITRANS 现在对普通图片日语竖排 perspective line warp 计算 quad 的长短轴，将 vertical line 的 `textHeight` 与 `ratio` 转为有界 `(textHeight, textHeight × ratio)` 目标尺寸，再对自然透视结果执行受限重采样；几何缺失、非法尺寸或重采样失败安全回退自然 warp。候选 commit `6c6c040b095aadff18eea5f9f518ce50551fa8f7` 已通过 PR [#247](https://github.com/bengzhu/project1_lgbt_naxida/pull/247) 合入，merge SHA `b6410f032d36e5f9205e15327107ca8069589c20`；工程正式版本为 `MARKETING_VERSION=3.183`，`main` 未触碰。
+
+核心变更：
+
+- 新增 `koharuVerticalLineWarpTargetSize`，按 Koharu `quad_axis_lengths` 的中点轴长计算 vertical line 的 `textHeight`、纵横比与目标 width/height；目标边长限制为 4096、面积限制为 4M，避免异常 Vision quad 产生过大中间图。
+- `perspectiveCorrectedLineImage` 在局部 bbox crop 与 `CIPerspectiveCorrection` 后，将自然结果有界重采样到目标画布；目标不可用时保留自然 warp，既有灰度／放大、90°／270° reread、坐标映射、强 perspective 覆盖与 axis fallback 不变。新增 `resizedImage(pixelWidth:pixelHeight:)` 供目标画布与既有缩放共享安全渲染边界。
+- 新增 `scripts/test-v3183-image-japanese-line-warp-target-contract.py` 并接入显式 UI/full fail-fast。该步只作用于普通图片日语 perspective line reread，不加载 Manga OCR/PaddleOCR 权重，不读取探针报告、ground truth 或真实 Koharu 工件，不改变普通语言、block crop、整页 OCR、布局、翻译、renderer/export、Store、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`；`test/jap.jpg` 仍只作合同 fixture，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31221970026](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31221970026)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `6c6c040b095aadff18eea5f9f518ce50551fa8f7`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #247 fast [31222386728](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31222386728)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=6c6c040b095aadff18eea5f9f518ce50551fa8f7`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31222451794](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31222451794)：merge SHA `b6410f032d36e5f9205e15327107ca8069589c20`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。

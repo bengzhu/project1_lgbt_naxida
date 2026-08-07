@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.183 日语 perspective line：四点 quad → Koharu 长短轴目标画布 `(textHeight, textHeight × ratio)` → Core Image warp 后有界重采样（4096 边长／4M 像素）→ 灰度／放大、90°／270° reread、映射／去重 → 布局、翻译与渲染；几何异常回退自然 warp，24 line／16M warp 预算与其他语言路径不变。候选 full `31221970026`、PR fast `31222386728`、merge fast `31222451794` 均通过，候选 SHA `6c6c040b095aadff18eea5f9f518ce50551fa8f7` Xcode/JUnit `10/10`，merge SHA `b6410f032d36e5f9205e15327107ca8069589c20` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 ## 0. 一句话总览
 
 v3.182 日语竖排合成 line：短日语片段 → 同列／gap 门控形成 bounded line proxy → 该 proxy 替代被其覆盖的 axis bbox reread；原始 quad 仍进入 perspective path → 方向 fallback、映射／去重、布局、翻译与渲染。最多 24 line／16M warp 像素预算与其他路径不变。候选 full `31220601488`、PR fast `31221025113`、merge fast `31221074919` 均通过，候选 SHA `42ad3abf8deba67d11b4fd3a93b16a1f09756657` Xcode/JUnit `10/10`，merge SHA `fb97ce105e5ae2d8fdda3d2acae631c86513be02` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。

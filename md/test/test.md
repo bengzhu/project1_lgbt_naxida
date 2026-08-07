@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.183 日语 perspective line 目标几何合同
+
+- `perspectiveCorrectedLineImage` 必须按四点 quad 的中点轴长计算 Koharu vertical `textHeight` 与 `ratio`，并将自然透视结果有界重采样到 `(textHeight, textHeight × ratio)`；目标边长不超过 `4096`、面积不超过 `4_000_000`，非法或失败时保留自然 warp 安全回退。
+- 该目标画布只作用于普通图片日语 perspective line reread；既有局部 bbox、最多 24 条 line、每页 16M warp 像素预算、灰度／放大、90°／270° fallback、坐标映射与去重保持不变，不加载 Manga OCR/PaddleOCR 权重，不改变普通语言、翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`。`test/jap.jpg` 只作合同 fixture，不生成质量指标。
+- 新增 `scripts/test-v3183-image-japanese-line-warp-target-contract.py` 并接入显式 UI/full fail-fast；v3.182 及更早合同继续回归。候选 exact-SHA full [31221970026](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31221970026)（`6c6c040b095aadff18eea5f9f518ce50551fa8f7`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #247 fast [31222386728](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31222386728) 复用候选 full，merge fast [31222451794](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31222451794) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `b6410f032d36e5f9205e15327107ca8069589c20`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ## 0. 默认验证策略
 - Agent B 默认本地只跑 `git diff --check`、JSON 解析、YAML smoke 等轻量检查。
 - Swift / Xcode / 漫画探针相关任务完成后，默认集中 push 到 `codeb/vX.Y-短标题`，由 GitHub Actions 对核心 commit 执行一次 task-scoped full；需要探针重验证时手动 `workflow_dispatch` 选择 `ci-fast` 或 `full`。
