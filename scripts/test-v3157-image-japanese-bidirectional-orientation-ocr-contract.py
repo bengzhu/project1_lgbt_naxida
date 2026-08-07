@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract for the bounded Japanese vertical-orientation OCR path."""
+"""Contract for the bounded bidirectional Japanese orientation OCR pass."""
 
 from pathlib import Path
 import re
@@ -27,10 +27,9 @@ def braced_body(source: str, marker: str) -> str:
     raise AssertionError(f"unclosed body for {marker}")
 
 
-class JapaneseOrientationOCRContractTests(unittest.TestCase):
+class JapaneseBidirectionalOrientationOCRContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.vision = read("AITRANS/Services/VisionOCRService.swift")
-        self.layout = read("AITRANS/Services/ImageOCRLayoutEngine.swift")
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
         self.recognize = braced_body(
@@ -38,23 +37,26 @@ class JapaneseOrientationOCRContractTests(unittest.TestCase):
             "func recognizeTextBlocks(in imageData: Data, sourceLanguage: SupportedLanguage)",
         )
 
-    def test_japanese_uses_a_bounded_koharu_style_orientation_pass(self) -> None:
+    def test_japanese_runs_only_the_two_bounded_rotated_directions(self) -> None:
         for marker in [
             "if sourceLanguage == .japanese",
             "for angle in [90, 270]",
             "Self.rotatedImage(ocrImage, angle: angle)",
-            '["ja-JP", "ja", "en-US", "en"]',
+            "rotationApplied: angle",
+            "angle: angle",
+            'let japaneseOrientationLanguages = ["ja-JP", "ja", "en-US", "en"]',
             "minimumTextHeight: 0.006",
             "automaticallyDetectsLanguage: false",
-            "rotationApplied: angle",
         ]:
             self.assertIn(marker, self.recognize)
 
-    def test_rotated_boxes_are_mapped_back_and_fused_before_layout(self) -> None:
+    def test_both_direction_results_are_mapped_before_dedupe_and_layout(self) -> None:
         for marker in [
+            "observations.append(contentsOf: rotatedObservations)",
             "Self.mapRotatedObservation(",
             "mapPointToOriginal",
-            "originalSize.width - point.y",
+            "case 270:",
+            "CGPoint(x: point.y, y: originalSize.height - point.x)",
             "deduplicateObservations(observations)",
             "ImageOCRLayoutEngine.layout(",
         ]:
@@ -64,18 +66,16 @@ class JapaneseOrientationOCRContractTests(unittest.TestCase):
             self.vision.index("ImageOCRLayoutEngine.layout("),
         )
 
-    def test_existing_direction_layout_and_normal_path_remain(self) -> None:
+    def test_existing_normal_and_vertical_layout_paths_remain(self) -> None:
         for marker in [
-            "recognitionLevel = .accurate",
-            "usesLanguageCorrection = true",
             "minimumTextHeight: 0.012",
             "sourceLanguage == .japanese || sourceLanguage == .simplifiedChinese",
             "verticalRatio >= 1.6",
             "orderedVerticalBands",
         ]:
-            self.assertIn(marker, self.vision if "Ratio" not in marker and "Bands" not in marker else self.layout)
+            self.assertIn(marker, self.vision if "Ratio" not in marker and "Bands" not in marker else read("AITRANS/Services/ImageOCRLayoutEngine.swift"))
 
-    def test_orientation_path_is_bounded_and_does_not_read_koharu_artifacts(self) -> None:
+    def test_orientation_path_does_not_cross_probe_or_active_artifact_boundaries(self) -> None:
         for forbidden in [
             "MangaOverlayProbeService",
             "groundTruth",
@@ -84,31 +84,25 @@ class JapaneseOrientationOCRContractTests(unittest.TestCase):
             "TranslationSessionStore",
         ]:
             self.assertNotIn(forbidden, self.vision)
-        self.assertIn("private static func rotatedImage", self.vision)
-        self.assertIn("case 90:", self.vision)
 
-    def test_migration_stays_aligned_with_koharu_crop_then_ocr_boundary(self) -> None:
-        self.assertIn("Koharu keeps detection/layout separate from recognition", self.vision)
-        self.assertIn("existing layout engine restore manga right-to-left vertical order", self.vision)
-
-    def test_japanese_reference_fixture_is_present(self) -> None:
+    def test_reference_fixture_is_present(self) -> None:
         fixture = ROOT / "test/jap.jpg"
         self.assertTrue(fixture.is_file())
         payload = fixture.read_bytes()
         self.assertGreater(len(payload), 100_000)
         self.assertTrue(payload.startswith(b"\xff\xd8"))
 
-    def test_version_and_ci_route_follow_v3155(self) -> None:
+    def test_version_and_ci_route_follow_v3156(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
         self.assertEqual(len(versions), 2)
-        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 156) for version in versions))
-        self.assertNotIn("MARKETING_VERSION = 3.155;", self.project)
-        old = "python3 -B scripts/test-v3155-image-empty-result-retry-action-contract.py"
-        new = "python3 -B scripts/test-v3156-image-japanese-orientation-ocr-contract.py"
-        self.assertIn(old, self.workflow)
-        self.assertIn(new, self.workflow)
-        self.assertLess(self.workflow.index(old), self.workflow.index(new))
-        self.assertIn("15[6]", self.workflow)
+        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 157) for version in versions))
+        self.assertNotIn("MARKETING_VERSION = 3.156;", self.project)
+        previous = "python3 -B scripts/test-v3156-image-japanese-orientation-ocr-contract.py"
+        current = "python3 -B scripts/test-v3157-image-japanese-bidirectional-orientation-ocr-contract.py"
+        self.assertIn(previous, self.workflow)
+        self.assertIn(current, self.workflow)
+        self.assertLess(self.workflow.index(previous), self.workflow.index(current))
+        self.assertIn("15[7]", self.workflow)
 
 
 if __name__ == "__main__":
