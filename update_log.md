@@ -1,3 +1,23 @@
+## v3.160：日语竖排 line-region OCR 过渡层
+
+日期：2026-08-07
+
+状态：Agent X 继续按 Koharu `extract_text_block_regions` 的检测／布局与识别分层改进普通图片日语竖排 OCR，并已完成候选 full、PR fast、merge fast 云端验收合入 `smalldata_test`。工程正式版本为 `MARKETING_VERSION=3.160`。候选 commit `68c1c1b8eb1390b808204c3c16b7b1dbc72a28b9` 已通过 PR [#224](https://github.com/bengzhu/project1_lgbt_naxida/pull/224) 合入，merge SHA `19b018101a4937474e2f3b030a1e24dc58807704`；`main` 未触碰。
+
+核心变更：
+
+- 在既有日语竖排 block 中按 observation 与 block 的重叠和纵向比例筛选最多 24 个 line-region proxy，按方向感知规则扩边，使用 2× crop 复读 Vision OCR（`minimumTextHeight=0.002`、关闭自动语言检测）。
+- 局部 OCR 结果按缩放比例映射回原图，再与既有观察去重后进入现有布局；crop、resize、rotate 或局部 OCR 失败均安全跳过，不使整张图片 OCR 失败。
+- 当前 Vision observations 没有 Koharu 的真实 line polygons，因此这是保守的 line-region 过渡层，不是 Manga OCR/PaddleOCR 模型替换；不读取探针报告、ground truth 或 Koharu active artifacts，不改变翻译、renderer/export、Store、持久化、metrics 或 `output`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31182335743](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31182335743)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `68c1c1b8eb1390b808204c3c16b7b1dbc72a28b9`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #224 fast [31183007517](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31183007517)：`validationProfile=fast`，`reusedFullValidationSha=68c1c1b8eb1390b808204c3c16b7b1dbc72a28b9`、state `success`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31183084173](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31183084173)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `19b018101a4937474e2f3b030a1e24dc58807704` 复用候选 full，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.159：日语图片 OCR 进度上下文
 
 日期：2026-08-07
