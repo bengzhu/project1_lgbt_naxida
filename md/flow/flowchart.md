@@ -1,4 +1,6 @@
 # 项目流程图
+v3.188 日语竖排 Cluster → 同列内显式 y↑、同 y 右侧优先与稳定 tie-breaker → 自上而下拼接 → 去重／翻译／渲染；横排换行与同列合并门控不变，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31227754288`、PR fast `31228156354`、merge fast `31228206021` 均通过。
+
 v3.187 日语 crop provenance：竖排 block／line／tile crop → 原图映射时保留 `sourceDirectionHint=.vertical` → 日语 manga-order layout 优先使用 Koharu-style source direction → 去重／翻译／渲染；普通语言和页级 observation 保持原几何路径，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31226671116`、PR fast `31226855629`、merge fast `31227082382` 均通过。
 
 v3.186 日语 tile 过滤：tile crop OCR → 日语脚本密度／竖排几何过滤 → 过滤后弱结果才触发 270° fallback → 原图映射／去重 → block/line reread、布局、翻译／渲染；真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31225584307`、PR fast `31225981653`、merge fast `31226027759` 均通过。
