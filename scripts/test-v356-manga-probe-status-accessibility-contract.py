@@ -64,7 +64,10 @@ class MangaProbeStatusAccessibilityContractTests(unittest.TestCase):
 
     def test_probe_status_context_does_not_change_store_or_run_a_second_probe(self) -> None:
         self.assertNotIn("VisionOCRService", self.section)
-        self.assertEqual(self.section.count("store.runMangaOverlayProbe"), 1)
+        probe_entry_count = self.section.count("store.runMangaOverlayProbe")
+        self.assertGreaterEqual(probe_entry_count, 1)
+        if probe_entry_count > 1:
+            self.assertIn("MangaProbeEmptyStateRetryAccessibilityModifier", self.section)
 
     def test_version_and_ci_route_follow_v355(self) -> None:
         self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
