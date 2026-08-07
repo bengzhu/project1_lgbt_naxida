@@ -1,5 +1,7 @@
 # AGENTS.md
 
+v3.158 继续按 Koharu 的 `TextBoxes → crop_text_block_bbox → OCR` 分层，在普通图片日语竖排候选上增加最多 16 个文字块的 Vision 裁剪复读：按 90°／270° 方向读取、映射回原图、再去重并交给既有布局；新增 `scripts/test-v3158-image-japanese-crop-ocr-contract.py`。候选 exact-SHA full `31178774530`、PR #222 fast `31179342519`、merge fast `31179390133`；候选 SHA `ee21c07d5175b38b41161822043b7ce1bbeea3ff` Xcode/JUnit `10/10`，merge SHA `c940815a43e300685667d8b01888e53af910ec9c` 复用候选 full receipt，readiness `manifestMissing / stopUntilArtifactsProvided`，探针默认 skip，不声称日语 OCR、翻译或识别质量提升。
+
 v3.157 在 v3.156 的日语方向复查上补齐受限 90°／270° 双向比较：两次 Vision 结果都映射回原图、统一去重，再交给既有日语竖排／右到左布局，新增 `scripts/test-v3157-image-japanese-bidirectional-orientation-ocr-contract.py`；候选 exact-SHA full `31177442783`、PR #221 fast `31177914749`、merge fast `31177971252`；候选 SHA `894c7063e18a6dc40ea047dca015e7cf73af8e65` Xcode/JUnit `10/10`，merge SHA `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 复用候选 full receipt，readiness `manifestMissing / stopUntilArtifactsProvided`，探针默认 skip，不声称日语 OCR、翻译或识别质量提升。
 
 v3.156 参考 `reference/koharu-main` 的检测／布局与识别分层，在普通图片日语 OCR 中加入受限的 90° 方向复查：使用 `ja-JP/ja/en-US/en` profile、较低文字高度门槛，映射旋转框回原图后去重并交给既有日语竖排／右到左布局；新增 `scripts/test-v3156-image-japanese-orientation-ocr-contract.py` 与 `test/jap.jpg` fixture。候选 exact-SHA full `31176163879`、PR #220 fast `31176662793`、merge fast `31176739499` 均通过；候选 SHA `99a333a8297faf193c8058d7f919626bb17daf80` Xcode/JUnit `10/10`，merge SHA `7750c7e62b82cb952ab302b9afd206ecf15068dd` 复用候选 full receipt，readiness `manifestMissing / stopUntilArtifactsProvided`，探针默认 skip，不声称日语 OCR、翻译或识别质量提升。

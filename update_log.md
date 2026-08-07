@@ -1,3 +1,23 @@
+## v3.158：日语竖排文字块裁剪复读 OCR
+
+日期：2026-08-07
+
+状态：Agent X 继续按 Koharu 的 `TextBoxes → crop_text_block_bbox → OCR` 分层，在 v3.157 双向方向复查后，从既有竖排布局候选中最多选择 16 个文字块做 Vision 裁剪复读；候选 full、PR fast、merge fast 已完成云端验收并合入 `smalldata_test`。工程正式版本为 `MARKETING_VERSION=3.158`。候选 commit `ee21c07d5175b38b41161822043b7ce1bbeea3ff` 已通过 PR [#222](https://github.com/bengzhu/project1_lgbt_naxida/pull/222) 合入，merge SHA `c940815a43e300685667d8b01888e53af910ec9c`；`main` 未触碰。
+
+核心变更：
+
+- 日语源语言保留整页 Vision OCR 与 90°／270° 方向复查，先用既有 `ImageOCRLayoutEngine` 得到竖排 block，再对最多 16 个候选按 Koharu 风格扩展裁剪边界，使用候选方向重新 OCR。
+- 裁剪结果的 bounding box 通过局部裁剪坐标、旋转坐标映射回原图，与原始／整页方向观察一起去重后才进入最终布局；局部裁剪、旋转或 OCR 失败均安全跳过，不使整张图片 OCR 失败。
+- 新增 `scripts/test-v3158-image-japanese-crop-ocr-contract.py` 并扩展 CI 路由。该步只迁移 crop-before-OCR 的检测／裁剪／识别边界，不调用 Manga OCR、PaddleOCR-VL 或第二套模型，不读取探针报告、ground truth、Koharu active artifacts，不改变翻译、renderer/export、Store、持久化、metrics 或 `output`。
+
+边界：仓库仍缺少真实 `test/koharu_artifacts/` 四件套、Speech corpus 与可用于质量评估的真实竖排图片 corpus；候选、PR、merge 均为 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`。Vision 裁剪复读是模型工件到位前的过渡层，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31178774530](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31178774530)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `ee21c07d5175b38b41161822043b7ce1bbeea3ff`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures/errors；Koharu active artifact validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #222 fast [31179342519](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31179342519)：`validationProfile=fast`，复用候选 full `ee21c07d5175b38b41161822043b7ce1bbeea3ff / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31179390133](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31179390133)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `c940815a43e300685667d8b01888e53af910ec9c` 复用候选 full `ee21c07d5175b38b41161822043b7ce1bbeea3ff / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.157：日语竖排双向方向 OCR 复查
 
 日期：2026-08-07
