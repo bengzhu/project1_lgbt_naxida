@@ -335,6 +335,7 @@ struct VisionOCRService: Sendable {
 
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(verticalBlocks.count * 2)
+        var orientationFallbacksRemaining = 8
         for block in verticalBlocks {
             let angle = safeObservations
                 .filter { overlapRatio($0.rect, block.rect) >= 0.25 }
@@ -343,27 +344,36 @@ struct VisionOCRService: Sendable {
                 .map { $0.rotationApplied == 270 ? 270 : 90 }
                 ?? 90
             guard let crop = cropImage(image, normalizedRect: expandedVerticalCropRect(block.rect)),
-                  let rotatedCrop = try? rotatedImage(crop.image, angle: angle),
-                  let cropObservations = try? recognizeObservations(
-                      in: rotatedCrop,
-                      recognitionLanguages: recognitionLanguages,
-                      minimumTextHeight: 0.004,
-                      automaticallyDetectsLanguage: false,
-                      rotationApplied: angle,
-                      postProcessJapaneseText: true
-                  ) else {
+                  crop.image.width >= 2,
+                  crop.image.height >= 2 else {
                 continue
             }
 
-            refined.append(contentsOf: cropObservations.map {
-                mapRotatedCropObservation(
-                    $0,
-                    rotatedImage: rotatedCrop,
+            let primary = recognizeJapaneseCropPass(
+                crop: crop.image,
+                cropRect: crop.rect,
+                originalImage: image,
+                angle: angle,
+                recognitionLanguages: recognitionLanguages,
+                minimumTextHeight: 0.004
+            )
+            refined.append(contentsOf: primary)
+
+            // A block can be laid out correctly while its first crop orientation
+            // is still reversed. Retry only weak/empty crops and keep a strict
+            // page-level budget so dense manga pages do not double their OCR cost.
+            if orientationFallbacksRemaining > 0,
+               needsJapaneseOrientationFallback(primary) {
+                orientationFallbacksRemaining -= 1
+                refined.append(contentsOf: recognizeJapaneseCropPass(
+                    crop: crop.image,
                     cropRect: crop.rect,
                     originalImage: image,
-                    angle: angle
-                )
-            })
+                    angle: oppositeJapaneseOrientation(angle),
+                    recognitionLanguages: recognitionLanguages,
+                    minimumTextHeight: 0.004
+                ))
+            }
         }
 
         // Koharu's extract_text_block_regions prefers detector line polygons when
@@ -408,6 +418,7 @@ struct VisionOCRService: Sendable {
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(min(uniqueCandidates.count, 24) * 2)
         var perspectiveWarpPixels: CGFloat = 0
+        var orientationFallbacksRemaining = 12
         for candidate in uniqueCandidates.prefix(24) {
             let angle = candidate.rotationApplied == 270 ? 270 : 90
             if let perspective = recognizeJapanesePerspectiveLineCrop(
@@ -435,30 +446,97 @@ struct VisionOCRService: Sendable {
                 cropScale = 1
             }
 
-            guard let rotatedCrop = try? rotatedImage(scaledCrop, angle: angle),
-                  let cropObservations = try? recognizeObservations(
-                      in: rotatedCrop,
-                      recognitionLanguages: recognitionLanguages,
-                      minimumTextHeight: 0.002,
-                      automaticallyDetectsLanguage: false,
-                      rotationApplied: angle,
-                      postProcessJapaneseText: true
-                  ) else {
-                continue
-            }
-
-            refined.append(contentsOf: cropObservations.map {
-                mapRotatedCropObservation(
-                    $0,
-                    rotatedImage: rotatedCrop,
+            let primary = recognizeJapaneseCropPass(
+                crop: scaledCrop,
+                cropRect: crop.rect,
+                originalImage: image,
+                angle: angle,
+                recognitionLanguages: recognitionLanguages,
+                minimumTextHeight: 0.002,
+                cropScale: cropScale
+            )
+            refined.append(contentsOf: primary)
+            if orientationFallbacksRemaining > 0,
+               needsJapaneseOrientationFallback(primary) {
+                orientationFallbacksRemaining -= 1
+                refined.append(contentsOf: recognizeJapaneseCropPass(
+                    crop: scaledCrop,
                     cropRect: crop.rect,
                     originalImage: image,
-                    angle: angle,
+                    angle: oppositeJapaneseOrientation(angle),
+                    recognitionLanguages: recognitionLanguages,
+                    minimumTextHeight: 0.002,
                     cropScale: cropScale
-                )
-            })
+                ))
+            }
         }
         return refined
+    }
+
+    /// Run one bounded crop reread and map its geometry back to the source page.
+    /// Keeping this as one helper makes the primary and opposite orientation pass
+    /// use identical language, scaling, post-processing, and coordinate rules.
+    private static func recognizeJapaneseCropPass(
+        crop: CGImage,
+        cropRect: CGRect,
+        originalImage: CGImage,
+        angle: Int,
+        recognitionLanguages: [String],
+        minimumTextHeight: Float,
+        cropScale: CGFloat = 1
+    ) -> [VisionOCRObservation] {
+        guard let rotatedCrop = try? rotatedImage(crop, angle: angle),
+              let cropObservations = try? recognizeObservations(
+                  in: rotatedCrop,
+                  recognitionLanguages: recognitionLanguages,
+                  minimumTextHeight: minimumTextHeight,
+                  automaticallyDetectsLanguage: false,
+                  rotationApplied: angle,
+                  postProcessJapaneseText: true
+              ) else {
+            return []
+        }
+        return cropObservations.map {
+            mapRotatedCropObservation(
+                $0,
+                rotatedImage: rotatedCrop,
+                cropRect: cropRect,
+                originalImage: originalImage,
+                angle: angle,
+                cropScale: cropScale
+            )
+        }
+    }
+
+    private static func oppositeJapaneseOrientation(_ angle: Int) -> Int {
+        angle == 270 ? 90 : 270
+    }
+
+    private static func needsJapaneseOrientationFallback(
+        _ observations: [VisionOCRObservation]
+    ) -> Bool {
+        guard let best = observations.max(by: { isBetterObservation($0, $1) }) else {
+            return true
+        }
+        let textLength = best.text.unicodeScalars.count
+        return best.confidence < 0.48
+            || japaneseScriptDensity(in: best.text) < 0.5
+            || textLength <= 1
+    }
+
+    private static func japaneseScriptDensity(in text: String) -> Double {
+        let scalars = Array(text.unicodeScalars)
+        guard !scalars.isEmpty else { return 0 }
+        let japaneseCount = scalars.count { scalar in
+            switch scalar.value {
+            case 0x3000...0x303F, 0x3040...0x30FF, 0x3400...0x4DBF,
+                 0x4E00...0x9FFF, 0xF900...0xFAFF, 0xFF61...0xFF9F:
+                true
+            default:
+                false
+            }
+        }
+        return Double(japaneseCount) / Double(scalars.count)
     }
 
     private static func recognizeJapanesePerspectiveLineCrop(
