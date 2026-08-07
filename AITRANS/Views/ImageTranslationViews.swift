@@ -2899,6 +2899,14 @@ private struct ImageTranslationBlockRow: View {
                     restoreVisionOCR: restoreVisionOCR
                 )
             )
+            .modifier(
+                ImageReviewRowReviewAccessibilityModifier(
+                    isReviewRequired: ImageOCRResultSummary.requiresReview(block),
+                    isReviewCompleted: isReviewCompleted,
+                    canReview: canReview,
+                    toggleReviewCompletion: toggleReviewCompletion
+                )
+            )
 
             VStack(spacing: AppTheme.Spacing.compact) {
                 Button("修正识别文字", systemImage: "pencil", action: edit)
@@ -3043,6 +3051,25 @@ private struct ImageReviewRowRestoreAccessibilityModifier: ViewModifier {
             content
                 .accessibilityAction(named: "恢复 Vision OCR") {
                     restoreVisionOCR()
+                }
+        } else {
+            content
+        }
+    }
+}
+
+private struct ImageReviewRowReviewAccessibilityModifier: ViewModifier {
+    let isReviewRequired: Bool
+    let isReviewCompleted: Bool
+    let canReview: Bool
+    let toggleReviewCompletion: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isReviewRequired && canReview {
+            content
+                .accessibilityAction(named: isReviewCompleted ? "撤销本次复查" : "完成并继续复查") {
+                    toggleReviewCompletion()
                 }
         } else {
             content
