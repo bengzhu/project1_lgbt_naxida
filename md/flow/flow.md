@@ -3,6 +3,8 @@
 
 ## 0. 一句话总览
 
+v3.165 允许竖排 CJK 的短单字 observation 只有在列邻居、无横排行邻居且尺寸达标时才进入竖排布局与局部 crop reread，保留 Vision 单字列的 Koharu TextBox→crop 证据；其他方向边界不变。候选 full `31192480905`、PR fast `31193220150`、merge fast `31193292477` 均通过，候选 SHA `5f24c4b7d2de47a095ee15b19994087ebde4dff7` Xcode/JUnit `10/10`，merge SHA `631c4d25acacb6b0497e8c95dab41f9a22e6c266` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
+
 v3.164 日语源图片的混合版面横排 OCR 通过 `prefersMangaReadingOrder` 开启漫画 RTL：行仍按 y 自上而下，同一横排行内按 x 右到左；默认 false 保留非日语左到右行为。候选 full `31190984866`、PR fast `31191645282`、merge fast `31191716497` 均通过，候选 SHA `7e584045f12fefa995866b7479db4cd440d52a03` Xcode/JUnit `10/10`，merge SHA `3943843d61f331630f7c6764f5639273aea4bd90` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.163 普通图片日语竖排布局继续迁移 Koharu `sort_manga_reading_order` 的 Recursive XY-Cut：以文字块中位宽／高中位数估计动态空白阈值，递归按最大横／纵间隙切分，右侧面板优先、竖排列自上而下，并在无法切分时稳定回退；只作用于 `ImageOCRLayoutEngine` reading order。候选 full `31189049773`、PR fast `31189799793`、merge fast `31189875449` 均通过，候选 SHA `c37808634df8d87cfb9f24c22acadc472f71d3c0` Xcode/JUnit `10/10`，merge SHA `e93f3844c359214c0cdfe09cd609fb11c51b924d` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。

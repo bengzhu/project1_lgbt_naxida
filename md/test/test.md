@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.165 日语单字列竖排方向合同
+
+- `resolveDirection` 保留原有宽框横排与高框竖排门控；额外的短 CJK observation 只有在 `verticalRatio >= 1.05`、`height >= 0.015`、存在 `isColumnNeighbor` 且不存在 `isCloseRowNeighbor` 时标为 `cjkGlyphColumnNeighbors`，避免把横排行碎片或孤立图形送入竖排 crop。
+- 该门控只消费 Vision observation 的文字与几何，直接让既有竖排 block 聚类、Koharu 风格局部 crop／line reread 看到单字列；不新增 OCR 模型，不读取探针报告、ground truth 或 `test/koharu_artifacts`，不改变翻译、renderer/export、Store、metrics 或 `output`。
+- 新增 `scripts/test-v3165-image-japanese-glyph-column-contract.py` 并接入 UI/full fail-fast；v3.164 及更早合同继续回归。候选 exact-SHA full [31192480905](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31192480905)（`5f24c4b7d2de47a095ee15b19994087ebde4dff7`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #229 fast [31193220150](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31193220150) 复用候选 full，merge fast [31193292477](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31193292477) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `631c4d25acacb6b0497e8c95dab41f9a22e6c266`），后两者跳过 Xcode/UI/Speech，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得把该方向门控描述为日语 OCR、翻译或识别质量提升。
+
 ### v3.164 日语混合版面横排 RTL reading-order 合同
 
 - `ImageOCRLayoutEngine.layout` 的 `prefersMangaReadingOrder` 必须默认 false；只有日语 Vision 主 OCR 与日语 crop layout 显式传 true，非日语调用保持原有左到右横排行为。

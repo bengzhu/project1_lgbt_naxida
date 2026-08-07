@@ -1,3 +1,23 @@
+## v3.165：日语单字列竖排方向门控
+
+日期：2026-08-07
+
+状态：Agent X 继续把 Koharu `TextBox → crop → OCR` 的方向证据边界迁入普通图片：当允许竖排的 CJK Vision observation 是短单字、接近方形、存在列邻居且没有横排行邻居时，`ImageOCRLayoutEngine.resolveDirection` 将其标为 `cjkGlyphColumnNeighbors`，使既有竖排聚类与局部 crop／line reread 不会因单字拆分而完全丢掉列。工程正式版本为 `MARKETING_VERSION=3.165`。候选 commit `5f24c4b7d2de47a095ee15b19994087ebde4dff7` 已通过 PR [#229](https://github.com/bengzhu/project1_lgbt_naxida/pull/229) 合入，merge SHA `631c4d25acacb6b0497e8c95dab41f9a22e6c266`；`main` 未触碰。
+
+核心变更：
+
+- 新增短 CJK 列邻居门控：`cjkCount > 0`、最多两个字符、`verticalRatio >= 1.05`、`height >= 0.015`、列邻居存在且横排行邻居不存在；宽框横排、孤立高框、横排碎片继续走原有边界。
+- 该层只改布局方向判定，让已有日语／简体中文竖排 block 聚类、方向感知 crop、line crop 与透视 fallback 有机会消费单字列；不新增 OCR 模型、翻译、探针／工件读取，不改变 renderer/export、Store、持久化、metrics 或 `output`。
+- 新增 `scripts/test-v3165-image-japanese-glyph-column-contract.py`，并接入 UI/full fail-fast；v3.164 及更早合同继续回归。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31192480905](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31192480905)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `5f24c4b7d2de47a095ee15b19994087ebde4dff7`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #229 fast [31193220150](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31193220150)：`validationProfile=fast`，`reusedFullValidationSha=5f24c4b7d2de47a095ee15b19994087ebde4dff7`、state `success`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31193292477](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31193292477)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `631c4d25acacb6b0497e8c95dab41f9a22e6c266` 复用候选 full，`receiptPropagationAllowed=true`，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.164：日语混合版面横排 RTL reading order
 
 日期：2026-08-07
