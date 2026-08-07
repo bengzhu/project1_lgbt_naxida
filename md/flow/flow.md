@@ -3,6 +3,8 @@
 
 ## 0. 一句话总览
 
+v3.167 日语／横排 OCR 的横向行分组改用 scale-aware 容差：以当前 observation 的中位文字框高度乘 `0.55`，再限制在 `0.012...0.04`，让不同缩放／字体下的同一行稳定聚合并避免相邻面板塌缩；RTL/LTR 排序和 OCR、翻译、导出路径不变。候选 full `31195627325`、PR fast `31196179149`、merge fast `31196269343` 均通过，候选 SHA `6c63dd0a5170a0fb230046d7d2129b26fd8dbb4d` Xcode/JUnit `10/10`，merge SHA `a0f1e72ea36be0932dae75fe774af1186ed29b1c` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
+
 v3.166 日语竖排方向计数纳入 CJK 标点／半角片假名：单独 observation 仍需列邻居与无横排行邻居门控，随后进入既有竖排聚类和 crop reread。候选 full `31193812409`、PR fast `31194473761`、merge fast `31194535297` 均通过，候选 SHA `8c6dfe278a9644dd0dc37ffa5381a968dc7748c7` Xcode/JUnit `10/10`，merge SHA `0acfd7f62c9ecbe048c7630d0358c85dce325edb` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.165 允许竖排 CJK 的短单字 observation 只有在列邻居、无横排行邻居且尺寸达标时才进入竖排布局与局部 crop reread，保留 Vision 单字列的 Koharu TextBox→crop 证据；其他方向边界不变。候选 full `31192480905`、PR fast `31193220150`、merge fast `31193292477` 均通过，候选 SHA `5f24c4b7d2de47a095ee15b19994087ebde4dff7` Xcode/JUnit `10/10`，merge SHA `631c4d25acacb6b0497e8c95dab41f9a22e6c266` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。

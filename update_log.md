@@ -1,3 +1,23 @@
+## v3.167：日语／横排 OCR 横向行动态容差
+
+日期：2026-08-08
+
+状态：Agent X 将 `ImageOCRLayoutEngine.orderedHorizontalBands` 的固定 `0.02` 行分组容差替换为 scale-aware 计算：`median(observation.rect.height) * 0.55`，并限制在 `0.012...0.04`。这样同一行在不同图片缩放／字体下仍能聚合，同时避免相邻面板因容差过大被合并；RTL/LTR 排序和后续 OCR、翻译、renderer/export 路径不变。工程正式版本为 `MARKETING_VERSION=3.167`。候选 commit `6c63dd0a5170a0fb230046d7d2129b26fd8dbb4d` 已通过 PR [#231](https://github.com/bengzhu/project1_lgbt_naxida/pull/231) 合入，merge SHA `a0f1e72ea36be0932dae75fe774af1186ed29b1c`；`main` 未触碰。
+
+核心变更：
+
+- `orderedHorizontalBands` 先求当前 observations 的高度中位数，再用 `min(max(median * 0.55, 0.012), 0.04)` 作为同一横排行的 y 轴容差；上下限用于避免小字被拆行或相邻 panel 被吞并。
+- 该层只改 `ImageOCRLayoutEngine` 的布局分组，保留既有日语右到左、其他语言左到右排序和后续 OCR／翻译／渲染流程；不新增 OCR 模型、Store、持久化、探针工件读取、metrics 或 `output`。
+- 新增 `scripts/test-v3167-image-horizontal-band-dynamic-tolerance-contract.py` 并接入显式 UI/full fail-fast；同时让 v3.164 历史合同接受动态容差 marker。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31195627325](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31195627325)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `6c63dd0a5170a0fb230046d7d2129b26fd8dbb4d`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #231 fast [31196179149](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31196179149)：`validationProfile=fast`，`reusedFullValidationSha=6c63dd0a5170a0fb230046d7d2129b26fd8dbb4d`、state `success`，`validationReason=pull_request_followup_no_synchronize`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31196269343](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31196269343)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `a0f1e72ea36be0932dae75fe774af1186ed29b1c` 复用候选 full，`receiptPropagationAllowed=true`，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.166：日语竖排 CJK 标点列证据
 
 日期：2026-08-07

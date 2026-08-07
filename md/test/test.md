@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.167 日语／横排 OCR 横向行动态容差合同
+
+- `ImageOCRLayoutEngine.orderedHorizontalBands` 必须从当前 observations 的 `rect.height` 中位数计算 `rowTolerance = min(max(median * 0.55, 0.012), 0.04)`，再用于 y 轴行分组；不得回到固定 `0.02`，也不得改变既有 RTL/LTR 横排排序、竖排布局、OCR、翻译或导出路径。
+- 该改动只属于 layout-only；不读取探针报告、ground truth 或 `test/koharu_artifacts`，不新增 Store、持久化、OCR 模型、翻译、renderer/export、metrics 或 `output` 行为。`test/jap.jpg` 仍只作合同 fixture，不生成质量指标。
+- 新增 `scripts/test-v3167-image-horizontal-band-dynamic-tolerance-contract.py` 并接入显式 UI/full CI 路由；v3.166 及更早合同继续回归。候选 exact-SHA full [31195627325](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31195627325)（`6c63dd0a5170a0fb230046d7d2129b26fd8dbb4d`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #231 fast [31196179149](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31196179149) 复用候选 full，merge fast [31196269343](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31196269343) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `a0f1e72ea36be0932dae75fe774af1186ed29b1c`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得把动态行容差描述为日语 OCR、翻译或识别质量提升。
+
 ### v3.166 日语竖排 CJK 标点方向合同
 
 - `cjkCharacterCount` 必须同时覆盖 `U+3000–U+303F` CJK 标点和 `U+FF61–U+FF9F` 半角片假名；短 observation 仍必须通过 `verticalRatio >= 1.05`、`height >= 0.015`、列邻居存在且横排行邻居不存在的门控，不能仅凭标点字符改变方向。
