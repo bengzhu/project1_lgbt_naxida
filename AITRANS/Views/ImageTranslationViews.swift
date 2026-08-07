@@ -313,6 +313,7 @@ struct ImageTranslationPanel: View {
                 selectPrevious: { selectAdjacentBlock(offset: -1) },
                 selectNext: { selectAdjacentBlock(offset: 1) },
                 editBlock: { beginCorrectionFromFocusPreview(of: $0) },
+                restoreVisionOCR: { requestVisionOCRRestore(for: $0) },
                 toggleReviewCompletion: { blockID in
                     toggleReviewCompletion(blockID, focusInPreview: true)
                 }
@@ -1850,6 +1851,7 @@ private struct ImageTranslationPreview: View {
     let selectPrevious: () -> Void
     let selectNext: () -> Void
     let editBlock: (ImageTranslationBlock) -> Void
+    let restoreVisionOCR: (ImageTranslationBlock) -> Void
     let toggleReviewCompletion: (UUID) -> Void
     @State private var previewImage: UIImage?
     @State private var previewRevision: Int?
@@ -1897,6 +1899,7 @@ private struct ImageTranslationPreview: View {
                                 canSelectNext: canSelectNext,
                                 isReviewRequired: ImageOCRResultSummary.requiresReview(selectedBlock),
                                 isReviewCompleted: reviewedBlockIDs.contains(selectedBlock.id),
+                                isManuallyCorrected: store.imageTranslationCorrectedBlockIDs.contains(selectedBlock.id),
                                 canEdit: canEdit,
                                 canReview: canReview,
                                 modificationUnavailableHint: modificationUnavailableHint,
@@ -1906,6 +1909,7 @@ private struct ImageTranslationPreview: View {
                                 selectPrevious: selectPrevious,
                                 selectNext: selectNext,
                                 edit: { editBlock(selectedBlock) },
+                                restoreVisionOCR: { restoreVisionOCR(selectedBlock) },
                                 toggleReviewCompletion: { toggleReviewCompletion(selectedBlock.id) }
                             )
                             .frame(
@@ -2375,6 +2379,7 @@ private struct ImageTranslationFocusPreview: View {
     let canSelectNext: Bool
     let isReviewRequired: Bool
     let isReviewCompleted: Bool
+    let isManuallyCorrected: Bool
     let canEdit: Bool
     let canReview: Bool
     let modificationUnavailableHint: String
@@ -2384,6 +2389,7 @@ private struct ImageTranslationFocusPreview: View {
     let selectPrevious: () -> Void
     let selectNext: () -> Void
     let edit: () -> Void
+    let restoreVisionOCR: () -> Void
     let toggleReviewCompletion: () -> Void
 
     var body: some View {
@@ -2461,6 +2467,20 @@ private struct ImageTranslationFocusPreview: View {
                             ? "打开当前文字块的 OCR 修正页面"
                             : modificationUnavailableHint
                     )
+                if isManuallyCorrected {
+                    Button("恢复 Vision OCR", systemImage: "arrow.counterclockwise", action: restoreVisionOCR)
+                        .labelStyle(.iconOnly)
+                        .foregroundStyle(.white)
+                        .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                        .background(Color.black.opacity(0.82), in: Circle())
+                        .disabled(!canEdit)
+                        .opacity(canEdit ? 1 : 0.35)
+                        .accessibilityHint(
+                            canEdit
+                                ? "恢复当前文字块的 Vision OCR 原文与初始译文"
+                                : modificationUnavailableHint
+                        )
+                }
             }
         }
         .overlay(alignment: .bottomLeading) {
@@ -2532,6 +2552,13 @@ private struct ImageTranslationFocusPreview: View {
             )
         )
         .modifier(
+            ImageFocusPreviewRestoreAccessibilityModifier(
+                isManuallyCorrected: isManuallyCorrected,
+                canEdit: canEdit,
+                restoreVisionOCR: restoreVisionOCR
+            )
+        )
+        .modifier(
             ImageFocusPreviewReviewAccessibilityModifier(
                 isReviewRequired: isReviewRequired,
                 canReview: canReview,
@@ -2586,20 +2613,32 @@ private struct ImageTranslationFocusPreview: View {
         if focusCrop == nil {
             if canEdit {
                 if !isReviewRequired {
-                    return "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+                    guard isManuallyCorrected else {
+                        return "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+                    }
+                    return focusPreviewModificationHint(
+                        appendingTo: "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+                    )
                 }
-                let base = "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+                let base = focusPreviewModificationHint(
+                    appendingTo: "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+                )
                 return reviewAccessibilityHint(appendingTo: base)
             }
             let base = "局部预览不可用；仍可关闭或切换文字块；\(modificationUnavailableHint)"
             return reviewAccessibilityHint(appendingTo: base)
         }
         if canEdit {
-            let base = "可执行“关闭局部放大”或“修正识别文字”，也可切换文字块"
+            let base = focusPreviewModificationHint(appendingTo: "可执行“关闭局部放大”或“修正识别文字”，也可切换文字块")
             return reviewAccessibilityHint(appendingTo: base)
         }
         let base = "可关闭局部放大或切换文字块；\(modificationUnavailableHint)"
         return reviewAccessibilityHint(appendingTo: base)
+    }
+
+    private func focusPreviewModificationHint(appendingTo base: String) -> String {
+        guard isManuallyCorrected else { return base }
+        return "\(base)；也可执行“恢复 Vision OCR”"
     }
 
     private func reviewAccessibilityHint(appendingTo base: String) -> String {
@@ -2637,6 +2676,24 @@ private struct ImageFocusPreviewEditAccessibilityModifier: ViewModifier {
             content
                 .accessibilityAction(named: "修正识别文字") {
                     edit()
+                }
+        } else {
+            content
+        }
+    }
+}
+
+private struct ImageFocusPreviewRestoreAccessibilityModifier: ViewModifier {
+    let isManuallyCorrected: Bool
+    let canEdit: Bool
+    let restoreVisionOCR: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isManuallyCorrected && canEdit {
+            content
+                .accessibilityAction(named: "恢复 Vision OCR") {
+                    restoreVisionOCR()
                 }
         } else {
             content
