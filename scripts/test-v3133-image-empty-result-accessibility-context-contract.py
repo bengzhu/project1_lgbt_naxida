@@ -53,7 +53,8 @@ class ImageEmptyResultAccessibilityContextContractTests(unittest.TestCase):
 
     def test_result_empty_state_reads_dynamic_pipeline_context(self) -> None:
         for marker in [
-            'title: "正在准备识别结果"',
+            "title: imageResultEmptyStateTitle",
+            "detail: imageResultEmptyStateDetail",
             ".accessibilityLabel(imageResultEmptyStateAccessibilityLabel)",
             ".accessibilityValue(store.imageTranslationMessage)",
             ".accessibilityHint(imageResultEmptyStateAccessibilityHint)",

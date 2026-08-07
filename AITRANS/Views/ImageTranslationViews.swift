@@ -519,8 +519,8 @@ struct ImageTranslationPanel: View {
                     VStack(spacing: AppTheme.Spacing.control) {
                         imageResultEmptyStateAccessibility(
                             AppEmptyState(
-                                title: "正在准备识别结果",
-                                detail: store.imageTranslationMessage,
+                                title: imageResultEmptyStateTitle,
+                                detail: imageResultEmptyStateDetail,
                                 systemImage: "viewfinder"
                             )
                             .accessibilityElement(children: .ignore)
@@ -732,6 +732,34 @@ struct ImageTranslationPanel: View {
             "没有可显示的识别结果"
         case .failed:
             "图片识别结果失败"
+        }
+    }
+
+    private var imageResultEmptyStateTitle: String {
+        switch store.imageTranslationState {
+        case .idle:
+            "等待重新识别"
+        case .loading, .recognizing, .translating:
+            "正在准备识别结果"
+        case .translated:
+            "没有可显示的识别结果"
+        case .failed:
+            "识别结果不可用"
+        }
+    }
+
+    private var imageResultEmptyStateDetail: String {
+        switch store.imageTranslationState {
+        case .idle:
+            "当前图片尚未完成处理；可在上方状态或重试按钮重新识别和翻译，也可选择新图片。"
+        case .loading, .recognizing, .translating:
+            store.imageTranslationMessage
+        case .translated:
+            store.canRerunImageRecognition
+                ? "当前图片已完成处理，但没有可显示的 OCR 文字块；可重新识别当前图片。"
+                : "当前图片已完成处理，但没有可显示的 OCR 文字块；可选择新图片重新识别。"
+        case .failed:
+            store.imageTranslationMessage
         }
     }
 
