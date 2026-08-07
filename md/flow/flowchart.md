@@ -1,4 +1,6 @@
 # 项目流程图
+v3.182 日语合成 line → 几何覆盖的 axis reread 替代 → 原始 quad perspective／弱结果 fallback → 映射／去重／布局 → 翻译／渲染；保留 24 line／16M warp 像素预算，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31220601488`、PR fast `31221025113`、merge fast `31221074919` 均通过。
+
 v3.181 日语 line 去重：四点 perspective line → 成功且无需 fallback 时标记覆盖 → 重叠比 `>= 0.72` 的轴对齐 line 跳过 → 弱／失败时保留 axis＋orientation fallback → 映射／去重／布局 → 翻译／渲染；保留 24 line／16M warp 像素预算，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31218314967`、PR fast `31218876431`、merge fast `31218932836` 均通过。
 
 v3.180 日语 perspective line warp：四点 line polygon → 局部 bbox crop → 局部坐标透视校正 → 灰度／放大／方向 reread → 映射／去重／布局 → 翻译／渲染；保留 24 line／16M 像素预算，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31217320435`、PR fast `31217749775`、merge fast `31217813652` 均通过。

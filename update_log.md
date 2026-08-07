@@ -8690,3 +8690,22 @@ Agent C 最终验收：
 - PR #245 fast [31218876431](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31218876431)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=e24ce08b798b1f205a4d812e626d27ba801db1de`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
 - merge fast [31218932836](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31218932836)：merge SHA `1107998858e3879750cba8dc8a27248ad1497589`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31219219340](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31219219340)：commit `dd050bb20debf514898f129db8eeccb61cbe3c2d`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用父 merge `1107998858e3879750cba8dc8a27248ad1497589 / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化（`AGENTS.md`、`README.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`、`update_log.md`），Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
+
+## v3.182：日语竖排合成 line 替代 axis reread
+
+日期：2026-08-08
+
+状态：Agent X 继续按 Koharu `TextRegion → extract_text_block_regions → OCR` 分层，修正 v3.172 合成日语竖排 line proxy 仍与原始 axis candidate 并行读取的缺口。AITRANS 现在先形成满足短日语片段、同列、bounded gap 与竖排形状门控的 `synthesizedCandidates`，再建立 `axisSeeds`：若原始候选与合成 line 的 `lineRegionRect`／`rect` 重叠比达到 `0.72`，只从 axis bbox reread 中移除它；原始 `uniqueCandidates.prefix(24)` 仍保留在 perspective quad path，弱／失败 perspective 的方向 fallback、每页 16M warp 像素预算、灰度／放大、坐标映射与最终去重保持不变。候选 commit `42ad3abf8deba67d11b4fd3a93b16a1f09756657` 已通过 PR [#246](https://github.com/bengzhu/project1_lgbt_naxida/pull/246) 合入，merge SHA `fb97ce105e5ae2d8fdda3d2acae631c86513be02`；工程正式版本为 `MARKETING_VERSION=3.182`，`main` 未触碰。
+
+核心变更：
+
+- `recognizeJapaneseVerticalLineCrops` 保留 `perspectiveCandidates = uniqueCandidates.prefix(24)`，合成候选之后使用几何覆盖过滤构成 `axisSeeds`，再以最多 24 条 axis line 进入方向感知 crop／OCR；这使合成 line 真正承担 Koharu line-region 的 bbox reread，同时不丢失原始四点 geometry。
+- v3.172 与 v3.173 历史合同改为接受 `axisSeeds` 的等价共享 helper，避免把实现重构误判为缺失日语候选融合；新增 `scripts/test-v3182-image-japanese-synthetic-line-replacement-contract.py` 并接入显式 UI/full fail-fast。
+
+边界：该改动只影响普通图片日语竖排 line reread 的 axis candidate 选择，不加载 Manga OCR/PaddleOCR 权重，不读取探针报告、ground truth 或真实 Koharu 工件，不改变普通语言、block crop、整页 OCR、布局、翻译、renderer/export、Store、Koharu active gate、metrics 或 `output`。`test/jap.jpg` 仍只作合同 fixture；真实竖排图片质量 corpus、Speech corpus 与 Koharu 四件套仍缺失，readiness 必须保持 `manifestMissing / stopUntilArtifactsProvided`，不能据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31220601488](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31220601488)：最终验收 commit `42ad3abf8deba67d11b4fd3a93b16a1f09756657`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。此前 `31219636547`、`31220164501` 仅因历史合同未接受 `axisSeeds` 而失败，不作为验收证据。
+- PR #246 fast [31221025113](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31221025113)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=42ad3abf8deba67d11b4fd3a93b16a1f09756657`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31221074919](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31221074919)：merge SHA `fb97ce105e5ae2d8fdda3d2acae631c86513be02`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，不是新的编译证据。

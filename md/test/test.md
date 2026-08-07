@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.182 日语合成 line 替代合同
+
+- `synthesizeJapaneseVerticalLineCandidates` 形成的 bounded line proxy 必须先进入 `axisSeeds`，再从 `uniqueCandidates` 中过滤被其 `lineRegionRect`／`rect` 重叠比 `>= 0.72` 覆盖的原始 axis 候选；原始 `uniqueCandidates.prefix(24)` 仍必须保留给 perspective quad path，不能因为 axis 替代而丢失透视几何。
+- 合成仍只允许短日语片段、同列、有限 gap、日语脚本密度和竖排形状门控；最多 24 个 axis line、最多 24 个 perspective line、16M warp 像素预算、方向 fallback、坐标映射与最终去重保持边界。只改普通图片日语 line reread，不改变普通语言、block crop、布局、翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`，不得把路径去重描述为已测得质量提升。
+- 新增 `scripts/test-v3182-image-japanese-synthetic-line-replacement-contract.py` 并接入显式 UI/full fail-fast；同步让 v3.172/v3.173 历史合同接受等价 `axisSeeds` helper。候选 exact-SHA full [31220601488](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31220601488)（`42ad3abf8deba67d11b4fd3a93b16a1f09756657`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #246 fast [31221025113](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31221025113) 复用候选 full，merge fast [31221074919](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31221074919) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `fb97ce105e5ae2d8fdda3d2acae631c86513be02`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.181 日语 line path 去重合同
 
 - `recognizeJapaneseVerticalLineCrops` 必须只在 perspective line 结果成功且 `needsJapaneseOrientationFallback([perspective])` 为假时记录 `perspectiveCoveredCandidates`；轴对齐候选若与已覆盖 line 的 `lineRegionRect`／`rect` 重叠比达到 `0.72` 必须跳过，弱或失败 perspective 必须保留轴对齐与方向 fallback，避免重复 OCR 又不丢失恢复路径。
