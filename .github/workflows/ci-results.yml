@@ -1267,6 +1267,7 @@ jobs:
             python3 -B scripts/test-v3167-image-horizontal-band-dynamic-tolerance-contract.py
             python3 -B scripts/test-v3168-image-japanese-ocr-postprocess-contract.py
             python3 -B scripts/test-v3169-image-japanese-crop-orientation-fallback-contract.py
+            python3 -B scripts/test-v3170-image-japanese-crop-preprocess-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract

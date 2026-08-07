@@ -349,13 +349,22 @@ struct VisionOCRService: Sendable {
                 continue
             }
 
+            // Koharu's Manga OCR preprocessor turns every text-node crop into a
+            // grayscale, bounded model input before inference. Vision owns its own
+            // tensor normalization, so mirror the model-independent part here:
+            // remove page color noise and give small vertical glyphs a bounded
+            // resolution boost. The returned scale is carried through the existing
+            // crop mapper so geometry remains in source-image coordinates.
+            let preparedCrop = prepareJapaneseCropForVision(crop.image)
+
             let primary = recognizeJapaneseCropPass(
-                crop: crop.image,
+                crop: preparedCrop.image,
                 cropRect: crop.rect,
                 originalImage: image,
                 angle: angle,
                 recognitionLanguages: recognitionLanguages,
-                minimumTextHeight: 0.004
+                minimumTextHeight: 0.004,
+                cropScale: preparedCrop.scale
             )
             refined.append(contentsOf: primary)
 
@@ -366,12 +375,13 @@ struct VisionOCRService: Sendable {
                needsJapaneseOrientationFallback(primary) {
                 orientationFallbacksRemaining -= 1
                 refined.append(contentsOf: recognizeJapaneseCropPass(
-                    crop: crop.image,
+                    crop: preparedCrop.image,
                     cropRect: crop.rect,
                     originalImage: image,
                     angle: oppositeJapaneseOrientation(angle),
                     recognitionLanguages: recognitionLanguages,
-                    minimumTextHeight: 0.004
+                    minimumTextHeight: 0.004,
+                    cropScale: preparedCrop.scale
                 ))
             }
         }
@@ -740,6 +750,47 @@ struct VisionOCRService: Sendable {
             in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height))
         )
         return context.makeImage()
+    }
+
+    /// Apply the useful, model-independent portion of Koharu's Manga OCR crop
+    /// preprocessor before a Vision reread. Keep the operation bounded because
+    /// this is called for many vertical blocks on a manga page. A failed Core
+    /// Image conversion or resize is deliberately a safe no-op.
+    private static func prepareJapaneseCropForVision(
+        _ image: CGImage,
+        maximumPixels: CGFloat = 4_000_000,
+        preferredScale: CGFloat = 2
+    ) -> (image: CGImage, scale: CGFloat) {
+        let grayscale = grayscaleJapaneseCrop(image) ?? image
+        let pixels = CGFloat(grayscale.width) * CGFloat(grayscale.height)
+        guard pixels.isFinite, pixels > 0,
+              maximumPixels.isFinite, maximumPixels > 0,
+              preferredScale.isFinite, preferredScale > 1 else {
+            return (grayscale, 1)
+        }
+
+        let boundedScale = min(preferredScale, sqrt(maximumPixels / pixels))
+        guard boundedScale.isFinite,
+              boundedScale > 1.01,
+              let resized = resizedImage(grayscale, scale: boundedScale) else {
+            return (grayscale, 1)
+        }
+        return (resized, boundedScale)
+    }
+
+    /// Koharu Manga OCR receives a grayscale crop; applying that boundary to
+    /// Japanese Vision rereads suppresses colored screentones without touching
+    /// the normal-language full-page OCR path.
+    private static func grayscaleJapaneseCrop(_ image: CGImage) -> CGImage? {
+        let input = CIImage(cgImage: image)
+        guard let filter = CIFilter(name: "CIColorControls") else { return nil }
+        filter.setValue(input, forKey: kCIInputImageKey)
+        filter.setValue(0, forKey: kCIInputSaturationKey)
+        guard let output = filter.outputImage else { return nil }
+        let extent = output.extent.integral
+        guard extent.width >= 2, extent.height >= 2 else { return nil }
+        let context = CIContext(options: [.cacheIntermediates: false])
+        return context.createCGImage(output, from: extent)
     }
 
     private static func mapRotatedCropObservation(
