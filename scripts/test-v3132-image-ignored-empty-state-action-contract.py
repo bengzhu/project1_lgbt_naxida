@@ -111,6 +111,7 @@ class ImageIgnoredEmptyStateActionContractTests(unittest.TestCase):
             or "13[0-3]" in self.workflow
             or "13[0-7]" in self.workflow
             or "13[0-8]" in self.workflow
+            or "13[0-9]" in self.workflow
         )
 
 

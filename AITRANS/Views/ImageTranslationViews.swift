@@ -2498,6 +2498,14 @@ private struct ImageTranslationFocusPreview: View {
                 toggleReviewCompletion: toggleReviewCompletion
             )
         )
+        .modifier(
+            ImageFocusPreviewNavigationAccessibilityModifier(
+                canSelectPrevious: canSelectPrevious,
+                canSelectNext: canSelectNext,
+                selectPrevious: selectPrevious,
+                selectNext: selectNext
+            )
+        )
         .accessibilityFocused(
             accessibilityFocus,
             equals: "image-review-preview-\(block.id.uuidString)"
@@ -2607,6 +2615,38 @@ private struct ImageFocusPreviewReviewAccessibilityModifier: ViewModifier {
             content
                 .accessibilityAction(named: isReviewCompleted ? "重新加入待复查" : "完成并继续复查") {
                     toggleReviewCompletion()
+                }
+        } else {
+            content
+        }
+    }
+}
+
+private struct ImageFocusPreviewNavigationAccessibilityModifier: ViewModifier {
+    let canSelectPrevious: Bool
+    let canSelectNext: Bool
+    let selectPrevious: () -> Void
+    let selectNext: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if canSelectPrevious && canSelectNext {
+            content
+                .accessibilityAction(named: "上一个文字块") {
+                    selectPrevious()
+                }
+                .accessibilityAction(named: "下一个文字块") {
+                    selectNext()
+                }
+        } else if canSelectPrevious {
+            content
+                .accessibilityAction(named: "上一个文字块") {
+                    selectPrevious()
+                }
+        } else if canSelectNext {
+            content
+                .accessibilityAction(named: "下一个文字块") {
+                    selectNext()
                 }
         } else {
             content

@@ -76,7 +76,7 @@ class ImagePreviewStatusRetryActionContractTests(unittest.TestCase):
         self.assertIn(f"python3 -B {script}", self.workflow)
         old = "scripts/test-v3133-image-empty-result-accessibility-context-contract.py"
         self.assertLess(self.workflow.index(old), self.workflow.index(f"python3 -B {script}"))
-        self.assertTrue("13[0-7]" in self.workflow or "13[0-8]" in self.workflow)
+        self.assertTrue("13[0-7]" in self.workflow or "13[0-8]" in self.workflow or "13[0-9]" in self.workflow)
 
 
 if __name__ == "__main__":
