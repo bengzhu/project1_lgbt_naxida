@@ -28,7 +28,8 @@ struct VisionOCRService: Sendable {
                 recognitionLanguages: preferredLanguages,
                 minimumTextHeight: 0.012,
                 automaticallyDetectsLanguage: true,
-                rotationApplied: 0
+                rotationApplied: 0,
+                postProcessJapaneseText: sourceLanguage == .japanese
             )
 
             if sourceLanguage == .japanese {
@@ -47,7 +48,8 @@ struct VisionOCRService: Sendable {
                         recognitionLanguages: japaneseOrientationLanguages,
                         minimumTextHeight: 0.006,
                         automaticallyDetectsLanguage: false,
-                        rotationApplied: angle
+                        rotationApplied: angle,
+                        postProcessJapaneseText: true
                     ).map {
                         Self.mapRotatedObservation(
                             $0,
@@ -109,7 +111,8 @@ struct VisionOCRService: Sendable {
         recognitionLanguages: [String],
         minimumTextHeight: Float,
         automaticallyDetectsLanguage: Bool,
-        rotationApplied: Int
+        rotationApplied: Int,
+        postProcessJapaneseText: Bool = false
     ) throws -> [VisionOCRObservation] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
@@ -127,9 +130,14 @@ struct VisionOCRService: Sendable {
         try handler.perform([request])
 
         return (request.results ?? []).compactMap { observation in
-            guard let candidate = observation.topCandidates(1).first else { return nil }
+            guard let candidate = Self.selectOCRCandidate(
+                from: observation.topCandidates(postProcessJapaneseText ? 5 : 1),
+                japanese: postProcessJapaneseText
+            ) else { return nil }
             guard let rect = Self.normalizedRect(from: observation.boundingBox) else { return nil }
-            let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = postProcessJapaneseText
+                ? Self.postProcessJapaneseOCRText(candidate.string)
+                : candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return nil }
             let geometry = Self.recognizedTextGeometry(
                 for: candidate,
@@ -144,6 +152,86 @@ struct VisionOCRService: Sendable {
                 rotationApplied: rotationApplied
             )
         }
+    }
+
+    /// Mirrors Koharu Manga OCR's post-processing boundary for Japanese text.
+    /// Vision's candidate string is still the source of geometry; this only
+    /// removes recognition formatting noise before layout, dedupe, and translation.
+    private static func postProcessJapaneseOCRText(_ text: String) -> String {
+        let withoutWhitespace = text.filter { !$0.isWhitespace }
+            .replacingOccurrences(of: "…", with: "...")
+
+        var output = ""
+        var dotCount = 0
+        func flushDots() {
+            guard dotCount > 0 else { return }
+            output.append(contentsOf: String(repeating: ".", count: dotCount))
+            dotCount = 0
+        }
+
+        for scalar in withoutWhitespace.unicodeScalars {
+            switch scalar.value {
+            case 0x2E, 0x30FB:
+                dotCount += 1
+            default:
+                flushDots()
+                if scalar.value == 0x20 {
+                    output.unicodeScalars.append(UnicodeScalar(0x3000)!)
+                } else if (0x21...0x7E).contains(scalar.value),
+                          let fullwidth = UnicodeScalar(scalar.value + 0xFEE0) {
+                    output.unicodeScalars.append(fullwidth)
+                } else {
+                    output.unicodeScalars.append(scalar)
+                }
+            }
+        }
+        flushDots()
+        return output
+    }
+
+    private static func selectOCRCandidate(
+        from candidates: [VNRecognizedText],
+        japanese: Bool
+    ) -> VNRecognizedText? {
+        guard japanese else { return candidates.first }
+        guard let bestConfidence = candidates.map(\.confidence).max() else { return nil }
+
+        // Keep alternatives close to Vision's best score, then prefer the
+        // Japanese-script candidate. This avoids replacing a strong result with
+        // a speculative alternative while recovering common vertical glyph
+        // substitutions that Vision reports just below top-1.
+        return candidates
+            .filter { $0.confidence >= bestConfidence - 0.14 }
+            .max { lhs, rhs in
+                japaneseCandidateScore(lhs) < japaneseCandidateScore(rhs)
+            }
+    }
+
+    private static func japaneseCandidateScore(_ candidate: VNRecognizedText) -> Double {
+        let text = postProcessJapaneseOCRText(candidate.string)
+        let scalars = Array(text.unicodeScalars)
+        guard !scalars.isEmpty else { return Double(candidate.confidence) * 0.82 }
+        let japaneseCount = scalars.count { scalar in
+            switch scalar.value {
+            case 0x3000...0x303F, 0x3040...0x30FF, 0x3400...0x4DBF,
+                 0x4E00...0x9FFF, 0xF900...0xFAFF, 0xFF61...0xFF9F:
+                true
+            default:
+                false
+            }
+        }
+        let punctuationCount = scalars.count { scalar in
+            switch scalar.value {
+            case 0x3000...0x303F, 0xFF61...0xFF65:
+                true
+            default:
+                false
+            }
+        }
+        let scriptDensity = Double(japaneseCount) / Double(scalars.count)
+        let punctuationDensity = Double(punctuationCount) / Double(scalars.count)
+        let confidence = min(max(Double(candidate.confidence), 0), 1)
+        return confidence * 0.82 + scriptDensity * 0.14 + punctuationDensity * 0.04
     }
 
     private static func recognizedTextGeometry(
@@ -261,7 +349,8 @@ struct VisionOCRService: Sendable {
                       recognitionLanguages: recognitionLanguages,
                       minimumTextHeight: 0.004,
                       automaticallyDetectsLanguage: false,
-                      rotationApplied: angle
+                      rotationApplied: angle,
+                      postProcessJapaneseText: true
                   ) else {
                 continue
             }
@@ -352,7 +441,8 @@ struct VisionOCRService: Sendable {
                       recognitionLanguages: recognitionLanguages,
                       minimumTextHeight: 0.002,
                       automaticallyDetectsLanguage: false,
-                      rotationApplied: angle
+                      rotationApplied: angle,
+                      postProcessJapaneseText: true
                   ) else {
                 continue
             }
@@ -404,7 +494,8 @@ struct VisionOCRService: Sendable {
                   recognitionLanguages: recognitionLanguages,
                   minimumTextHeight: 0.002,
                   automaticallyDetectsLanguage: false,
-                  rotationApplied: angle
+                  rotationApplied: angle,
+                  postProcessJapaneseText: true
               ) else {
             return nil
         }
