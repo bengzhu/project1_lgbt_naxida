@@ -39,6 +39,10 @@ class ImageIgnoredEmptyStateActionContractTests(unittest.TestCase):
             self.inspector,
             "else if !store.imageTranslationIgnoredBlocks.isEmpty",
         )
+        self.empty_action_helper = braced_body(
+            self.panel,
+            "private func allIgnoredBlocksEmptyStateAccessibility<Content: View>",
+        )
         self.ignored_section = braced_body(
             self.panel,
             "if !store.imageTranslationIgnoredBlocks.isEmpty {\n                AppSectionHeader",
@@ -51,13 +55,17 @@ class ImageIgnoredEmptyStateActionContractTests(unittest.TestCase):
             'accessibilityLabel("当前没有保留文字块")',
             'accessibilityValue(',
             'imageIgnoredBlocksEmptyAccessibilityFocusID',
-            '.accessibilityAction(named: "恢复全部")',
-            "requestRestoreAllIgnoredImageTranslationBlocks()",
+            "allIgnoredBlocksEmptyStateAccessibility(",
             'action: requestRestoreAllIgnoredImageTranslationBlocks',
             ".disabled(!canModifyImageTranslation)",
             "imageModificationUnavailableDetail",
         ]:
             self.assertIn(marker, self.ignored_empty)
+        self.assertIn("if canModifyImageTranslation", self.empty_action_helper)
+        self.assertIn('.accessibilityAction(named: "恢复全部")', self.empty_action_helper)
+        self.assertIn("requestRestoreAllIgnoredImageTranslationBlocks()", self.empty_action_helper)
+        else_branch = self.empty_action_helper[self.empty_action_helper.index("else"):]
+        self.assertNotIn('.accessibilityAction(named: "恢复全部")', else_branch)
 
     def test_partial_ignore_section_keeps_one_visible_bulk_action(self) -> None:
         self.assertIn("if !store.imageTranslationBlocks.isEmpty", self.ignored_section)

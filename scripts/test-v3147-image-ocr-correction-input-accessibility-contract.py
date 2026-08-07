@@ -113,8 +113,7 @@ class ImageOCRCorrectionInputAccessibilityContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3146(self) -> None:
         self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.147;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.146;", self.project)
+        self.assertNotIn("MARKETING_VERSION = 3.147;", self.project)
         old = "python3 -B scripts/test-v3146-image-ignored-row-restore-action-contract.py"
         new = "python3 -B scripts/test-v3147-image-ocr-correction-input-accessibility-contract.py"
         route = (
