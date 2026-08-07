@@ -401,7 +401,16 @@ enum ImageOCRLayoutEngine {
         let sameColumn = horizontalOverlap(line.rect, rect) / max(min(line.rect.width, rect.width), 0.001) >= 0.45
             || abs(line.rect.midX - rect.midX) <= max(line.rect.width, rect.width) * 0.55
         let gap = line.rect.y - rect.maxY
-        return sameColumn && gap >= -0.015 && gap <= max(0.025, max(line.rect.width, rect.width) * 1.2)
+        // Koharu forms a text block before handing its crop to Manga OCR. Vision
+        // can represent one vertical column as a few tall, narrow line boxes;
+        // using only width here would split those boxes before the Japanese
+        // line-region reread gets a chance to repair them. Keep the original
+        // width signal, add a bounded average-height signal, and retain the
+        // same-column/overlap guards so adjacent columns are not merged.
+        let widthLimit = max(line.rect.width, rect.width) * 1.2
+        let heightLimit = max((line.rect.height + rect.height) / 2, 0.012) * 0.35
+        let verticalGapLimit = min(max(0.025, max(widthLimit, heightLimit)), 0.08)
+        return sameColumn && gap >= -0.015 && gap <= verticalGapLimit
     }
 
     private static func mergeReadingOrder(
