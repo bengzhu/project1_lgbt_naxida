@@ -81,7 +81,12 @@ enum ImageOCRLayoutEngine {
             return safeObservation
         }
         let resolved = safeObservations.map {
-            resolveDirection(for: $0, among: safeObservations, allowsVerticalText: allowsVerticalText)
+            resolveDirection(
+                for: $0,
+                among: safeObservations,
+                allowsVerticalText: allowsVerticalText,
+                prefersMangaReadingOrder: prefersMangaReadingOrder
+            )
         }
         let horizontal = orderedHorizontalBands(
             resolved.filter { $0.direction != .vertical },
@@ -97,7 +102,8 @@ enum ImageOCRLayoutEngine {
     private static func resolveDirection(
         for observation: ImageOCRLayoutObservation,
         among all: [ImageOCRLayoutObservation],
-        allowsVerticalText: Bool
+        allowsVerticalText: Bool,
+        prefersMangaReadingOrder: Bool
     ) -> ResolvedObservation {
         let width = max(observation.rect.width, 0.001)
         let height = max(observation.rect.height, 0.001)
@@ -116,6 +122,7 @@ enum ImageOCRLayoutEngine {
         let hasRowNeighbor = peers.contains { isCloseRowNeighbor(observation.rect, $0.rect) }
         let cjkCount = cjkCharacterCount(in: observation.text)
         let isShortCJKObservation = cjkCount > 0 && observation.text.count <= 2
+        let containsTextRun = cjkCount >= 2
 
         // Vision can return one near-square observation per glyph for a narrow
         // Japanese vertical column. Treat that shape as vertical only when
@@ -137,6 +144,28 @@ enum ImageOCRLayoutEngine {
             )
         }
 
+        // Small Japanese screenshots often produce a compact multi-glyph box
+        // instead of one tall detector line. Koharu already carries the
+        // detector's vertical source direction into its crop/OCR boundary; in
+        // the Vision path geometry is the only signal available here. Restrict
+        // this fallback to the Japanese manga-order path and require both a
+        // column neighbor and the absence of a row neighbor so icons and
+        // horizontal fragments do not enter the vertical crop reread.
+        if allowsVerticalText,
+           prefersMangaReadingOrder,
+           containsTextRun,
+           verticalRatio >= 1.35,
+           height >= 0.022,
+           hasColumnNeighbor,
+           !hasRowNeighbor {
+            return ResolvedObservation(
+                observation: observation,
+                direction: .vertical,
+                confidence: min(max((verticalRatio - 1) / 1.5, 0.2), 0.78),
+                reason: "cjkCompactColumnTextRun"
+            )
+        }
+
         guard allowsVerticalText, verticalRatio >= 1.6, height >= 0.035 else {
             return ResolvedObservation(
                 observation: observation,
@@ -146,7 +175,6 @@ enum ImageOCRLayoutEngine {
             )
         }
 
-        let containsTextRun = cjkCount >= 2
         guard containsTextRun || (hasColumnNeighbor && !hasRowNeighbor) else {
             return ResolvedObservation(
                 observation: observation,
