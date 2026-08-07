@@ -2,6 +2,7 @@
 """Static contracts for v3.149 gating the completed-review empty-state action."""
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -68,9 +69,10 @@ class ImageReviewCompletionActionGateContractTests(unittest.TestCase):
             self.assertNotIn(forbidden, self.action_helper)
 
     def test_version_and_ci_route_follow_v3148(self) -> None:
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.149;"), 2)
-        self.assertNotIn("MARKETING_VERSION = 3.148;", self.project)
+        versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 149) for version in versions))
+        self.assertNotIn("MARKETING_VERSION = 3.149;", self.project)
         old = "python3 -B scripts/test-v3148-image-ignored-empty-state-action-gate-contract.py"
         new = "python3 -B scripts/test-v3149-image-review-completion-action-gate-contract.py"
         route = (
