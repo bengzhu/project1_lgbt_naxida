@@ -1,4 +1,5 @@
 # 项目流程图
+v3.139 图片局部放大容器在对应邻居存在时提供同名 VoiceOver“上一个文字块／下一个文字块”action，首尾或单项筛选时隐藏不可用 action；只属于 View，复用既有导航入口。候选 exact-SHA full `31149836170`、PR #203 fast `31150269494`、merge fast `31150318388` 均通过。
 v3.138 图片局部放大容器在需要复查且 `canReview` 时提供同名 VoiceOver“完成并继续复查／重新加入待复查”action，锁定或非风险块时不暴露 action；只属于 View，复用既有复查入口。候选 exact-SHA full `31148861374`、PR #202 fast `31149234166`、merge fast `31149285259` 均通过。
 v3.137 图片局部放大容器在 `canEdit` 时提供同名 VoiceOver“修正识别文字”action，锁定时不暴露 action；只属于 View，复用既有 OCR 修正入口。候选 exact-SHA full `31147358078`、PR #201 fast `31147793085`、merge fast `31147924273` 均通过。
 v3.136 图片局部放大预览容器提供同名 VoiceOver“关闭局部放大”action，关闭按钮 hint 明确返回当前文字块结果行；只属于 View，复用既有焦点交接。候选 exact-SHA full `31144595687`、PR #200 fast `31144958126`、merge fast `31144998556` 均通过。
