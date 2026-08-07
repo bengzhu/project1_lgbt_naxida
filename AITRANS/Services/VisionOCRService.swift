@@ -474,6 +474,7 @@ struct VisionOCRService: Sendable {
         refined.reserveCapacity((perspectiveCandidates.count + axisCandidates.count) * 2)
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         var perspectiveWarpPixels: CGFloat = 0
+        var perspectiveCoveredCandidates: [VisionOCRObservation] = []
         for candidate in perspectiveCandidates {
             let angle = candidate.rotationApplied == 270 ? 270 : 90
             if let perspective = recognizeJapanesePerspectiveLineCrop(
@@ -484,11 +485,24 @@ struct VisionOCRService: Sendable {
                 consumedPixels: &perspectiveWarpPixels
             ) {
                 refined.append(perspective)
+                // Koharu's extract_text_block_regions uses a successful line
+                // polygon region instead of rereading the same line bbox. Keep
+                // the axis-aligned path as a quality fallback, but suppress it
+                // for a geometrically matching perspective result that is
+                // already strong enough to avoid a duplicate Vision request.
+                if !needsJapaneseOrientationFallback([perspective]) {
+                    perspectiveCoveredCandidates.append(candidate)
+                }
             }
         }
 
         var orientationFallbacksRemaining = 12
         for candidate in axisCandidates {
+            guard !perspectiveCoveredCandidates.contains(where: {
+                isSameJapaneseLineRegion(candidate, as: $0)
+            }) else {
+                continue
+            }
             let angle = candidate.rotationApplied == 270 ? 270 : 90
             let cropRect = expandedVerticalLineCropRect(for: candidate, imageSize: imageSize)
             guard let crop = cropImage(image, normalizedRect: cropRect) else {
@@ -622,6 +636,15 @@ struct VisionOCRService: Sendable {
             && japaneseScriptDensity(in: observation.text) >= 0.5
             && region.height >= 0.012
             && ratio >= 0.75
+    }
+
+    private static func isSameJapaneseLineRegion(
+        _ candidate: VisionOCRObservation,
+        as covered: VisionOCRObservation
+    ) -> Bool {
+        let candidateRegion = candidate.lineRegionRect ?? candidate.rect
+        let coveredRegion = covered.lineRegionRect ?? covered.rect
+        return overlapRatio(candidateRegion, coveredRegion) >= 0.72
     }
 
     private static func median(_ values: [Double]) -> Double {
