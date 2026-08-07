@@ -1,3 +1,23 @@
+## v3.157：日语竖排双向方向 OCR 复查
+
+日期：2026-08-07
+
+状态：Agent X 在 v3.156 的日语方向复查上补齐受限 90°／270° 双向比较：两次 Vision 结果映射回原图后统一去重，再交给既有日语竖排／右到左布局；候选 full、PR fast、merge fast 已完成云端验收并合入 `smalldata_test`。工程正式版本为 `MARKETING_VERSION=3.157`。候选 commit `894c7063e18a6dc40ea047dca015e7cf73af8e65` 已通过 PR [#221](https://github.com/bengzhu/project1_lgbt_naxida/pull/221) 合入，merge SHA `1266de53935525c1014ec0b4cbecb9b7f20b6e86`；`main` 未触碰。
+
+核心变更：
+
+- 日语源语言保留原图 Vision OCR，并在同一受限路径比较 90° 与 270° 两个方向；两次复查都使用 `ja-JP`／`ja`／`en-US`／`en` profile、`minimumTextHeight=0.006` 与关闭自动语言检测。
+- 每次旋转结果的 bounding box 映射回原图后，与原始及另一方向观察一起去重，再交给既有 `ImageOCRLayoutEngine`；既有日语／简体中文竖排判断、列邻居证据、垂直列右到左及块内自上而下排序保持不变。
+- 新增 `scripts/test-v3157-image-japanese-bidirectional-orientation-ocr-contract.py` 并扩展历史 v3.156 合同与 CI 路由；该步不读取探针报告、ground truth 或 Koharu active artifacts，不调用第二套模型，不改变翻译、renderer/export、Store、持久化、metrics 或 `output`。
+
+边界：本阶段仍只迁移 Koharu 的方向比较与检测／布局／识别分层边界，不是将 Manga OCR、PaddleOCR-VL 或 MIT 48px 模型直接打包进 iOS。仓库仍缺少真实 `test/koharu_artifacts/` 四件套、Speech corpus 与可用于质量评估的真实竖排图片 corpus；候选、PR、merge 均为 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31177442783](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31177442783)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `894c7063e18a6dc40ea047dca015e7cf73af8e65`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures/errors；Koharu active artifact validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #221 fast [31177914749](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31177914749)：`validationProfile=fast`，复用候选 full `894c7063e18a6dc40ea047dca015e7cf73af8e65 / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31177971252](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31177971252)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 复用候选 full `894c7063e18a6dc40ea047dca015e7cf73af8e65 / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.156：日语竖排方向 OCR 第一阶段迁移
 
 日期：2026-08-07

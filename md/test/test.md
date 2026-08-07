@@ -7,6 +7,13 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.157 日语竖排双向方向 OCR 合同
+
+- 普通图片源语言为日语时，`VisionOCRService` 必须保留原图 Vision OCR，并在同一受限路径比较恰好 90° 与 270° 两个方向；两次复查使用 `ja-JP`／`ja`／`en-US`／`en` profile、较低 `minimumTextHeight` 且关闭自动语言检测，结果框映射回原图后统一去重。
+- 双向复查结果必须继续进入既有 `ImageOCRLayoutEngine`，由现有日语／简体中文竖排证据、列邻居和右到左阅读顺序决定最终 block；不得读取 `groundTruth`、`test/koharu_artifacts`、FileManager 或 TranslationSessionStore，也不得把漫画探针 report-only 路径变成普通图片 OCR 依赖。
+- 新增 `scripts/test-v3157-image-japanese-bidirectional-orientation-ocr-contract.py` 并接入 UI/full fail-fast；该步仍只是 Koharu 方向比较边界迁移，不是 Manga OCR/PaddleOCR 模型替换，`test/jap.jpg` 只作真实 JPEG fixture，不生成质量指标。
+- 候选 exact-SHA full [31177442783](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31177442783)（`894c7063e18a6dc40ea047dca015e7cf73af8e65`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #221 fast [31177914749](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31177914749) 复用候选 full，merge fast [31177971252](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31177971252) 复用候选 full（merge SHA `1266de53935525c1014ec0b4cbecb9b7f20b6e86`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.156 日语竖排方向 OCR 合同
 
 - 普通图片源语言为日语时，`VisionOCRService` 必须保留原图 Vision OCR，并追加受限的 90° 方向复查；复查使用 `ja-JP`／`ja`／`en-US`／`en` profile、较低 `minimumTextHeight` 且关闭自动语言检测，结果框映射回原图后再去重与布局。
