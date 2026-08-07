@@ -2484,6 +2484,12 @@ private struct ImageTranslationFocusPreview: View {
         .accessibilityAction(named: "关闭局部放大") {
             close()
         }
+        .modifier(
+            ImageFocusPreviewEditAccessibilityModifier(
+                canEdit: canEdit,
+                edit: edit
+            )
+        )
         .accessibilityFocused(
             accessibilityFocus,
             equals: "image-review-preview-\(block.id.uuidString)"
@@ -2521,9 +2527,15 @@ private struct ImageTranslationFocusPreview: View {
 
     private var focusPreviewAccessibilityHint: String {
         if focusCrop == nil {
-            return "局部预览不可用；仍可关闭、编辑 OCR 原文或切换文字块"
+            if canEdit {
+                return "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+            }
+            return "局部预览不可用；仍可关闭或切换文字块；\(modificationUnavailableHint)"
         }
-        return "可关闭局部放大、编辑 OCR 原文或切换文字块"
+        if canEdit {
+            return "可执行“关闭局部放大”或“修正识别文字”，也可切换文字块"
+        }
+        return "可关闭局部放大或切换文字块；\(modificationUnavailableHint)"
     }
 
     private func relativeBlockRect(in cropRect: CGRect) -> CGRect {
@@ -2536,6 +2548,23 @@ private struct ImageTranslationFocusPreview: View {
         }
         let scale = min(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
         return CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+    }
+}
+
+private struct ImageFocusPreviewEditAccessibilityModifier: ViewModifier {
+    let canEdit: Bool
+    let edit: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if canEdit {
+            content
+                .accessibilityAction(named: "修正识别文字") {
+                    edit()
+                }
+        } else {
+            content
+        }
     }
 }
 

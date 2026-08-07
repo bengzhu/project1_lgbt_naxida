@@ -77,7 +77,7 @@ class ImageFocusPreviewCloseActionContractTests(unittest.TestCase):
         self.assertIn(f"python3 -B {old}", self.workflow)
         self.assertIn(f"python3 -B {new}", self.workflow)
         self.assertLess(self.workflow.index(f"python3 -B {old}"), self.workflow.index(f"python3 -B {new}"))
-        self.assertIn("13[0-6]", self.workflow)
+        self.assertIn("13[0-7]", self.workflow)
 
 
 if __name__ == "__main__":
