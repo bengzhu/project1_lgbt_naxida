@@ -65,7 +65,7 @@ class ImageEmptyResultRerunActionContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3143(self) -> None:
         self.assertEqual(self.project.count("MARKETING_VERSION = 3."), 2)
-        self.assertEqual(self.project.count("MARKETING_VERSION = 3.144;"), 2)
+        self.assertNotIn("MARKETING_VERSION = 3.144;", self.project)
         old = "python3 -B scripts/test-v3143-image-review-row-action-hint-contract.py"
         new = "python3 -B scripts/test-v3144-image-empty-result-rerun-action-contract.py"
         self.assertIn(old, self.workflow)
