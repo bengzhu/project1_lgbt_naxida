@@ -595,10 +595,14 @@ private struct Cluster {
             // the text sequence; sort the already-formed same-column cluster and
             // use the rightmost x coordinate only as a deterministic tie-breaker.
             let orderedObservations = observations.sorted {
-                stableKey($0, $0.rect.y, -$0.rect.midX)
-                    < stableKey($1, $1.rect.y, -$1.rect.midX)
+                if $0.rect.y != $1.rect.y { return $0.rect.y < $1.rect.y }
+                if $0.rect.midX != $1.rect.midX { return $0.rect.midX > $1.rect.midX }
+                if $0.rect.width != $1.rect.width { return $0.rect.width < $1.rect.width }
+                if $0.rect.height != $1.rect.height { return $0.rect.height < $1.rect.height }
+                if $0.text != $1.text { return $0.text < $1.text }
+                return $0.observation.confidence > $1.observation.confidence
             }
-            text = orderedObservations.map(\.text).joined()
+            text = orderedObservations.map { $0.text }.joined()
         } else {
             text = observations.enumerated().reduce(into: "") { output, entry in
                 let (index, observation) = entry

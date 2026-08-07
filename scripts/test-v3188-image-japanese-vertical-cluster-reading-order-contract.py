@@ -37,12 +37,16 @@ class JapaneseVerticalClusterReadingOrderContractTests(unittest.TestCase):
     def test_vertical_text_is_sorted_top_to_bottom_before_joining(self) -> None:
         direction = self.cluster.index("if direction == .vertical")
         ordered = self.cluster.index("let orderedObservations = observations.sorted", direction)
-        joined = self.cluster.index("orderedObservations.map(\\.text).joined()", ordered)
+        joined = self.cluster.index("orderedObservations.map { $0.text }.joined()", ordered)
         self.assertLess(direction, ordered)
         self.assertLess(ordered, joined)
         for marker in [
-            "stableKey($0, $0.rect.y, -$0.rect.midX)",
-            "stableKey($1, $1.rect.y, -$1.rect.midX)",
+            "if $0.rect.y != $1.rect.y { return $0.rect.y < $1.rect.y }",
+            "if $0.rect.midX != $1.rect.midX { return $0.rect.midX > $1.rect.midX }",
+            "if $0.rect.width != $1.rect.width { return $0.rect.width < $1.rect.width }",
+            "if $0.rect.height != $1.rect.height { return $0.rect.height < $1.rect.height }",
+            "if $0.text != $1.text { return $0.text < $1.text }",
+            "return $0.observation.confidence > $1.observation.confidence",
         ]:
             self.assertIn(marker, self.cluster)
 
@@ -52,7 +56,7 @@ class JapaneseVerticalClusterReadingOrderContractTests(unittest.TestCase):
         self.assertIn("observations.enumerated().reduce(into: \"\")", horizontal)
         self.assertIn("let sameLine = abs(previous.rect.y - observation.rect.y)", horizontal)
         self.assertIn("output += sameLine ? \" \" : \"\\n\"", horizontal)
-        self.assertEqual(self.cluster.count("orderedObservations.map(\\.text).joined()"), 1)
+        self.assertEqual(self.cluster.count("orderedObservations.map { $0.text }.joined()"), 1)
 
     def test_cluster_still_only_merges_same_vertical_column(self) -> None:
         merge = braced_body(self.layout, "private static func shouldMergeVertically(")
