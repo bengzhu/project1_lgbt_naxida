@@ -18,6 +18,7 @@
 - PR #219 fast [31173840102](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31173840102)：`validationProfile=fast`，复用候选 full `a6283b1be84ec4e6b227b6d5fbf74961a4fd108f / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
 - merge fast [31173897707](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31173897707)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `2c26886ee6676c549b88ad48b0447e595c636a40` 复用候选 full `a6283b1be84ec4e6b227b6d5fbf74961a4fd108f / success`，`receiptPropagationAllowed=true`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
 - 文档 metadata follow-up [31174097256](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31174097256)：`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用 merge SHA `2c26886ee6676c549b88ad48b0447e595c636a40 / success`，`receiptPropagationAllowed=true`，`smalldataIncrementalMetadataOnly=true`，仅上述 6 个文档文件变化，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- receipt follow-up [31174159740](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31174159740)：`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用父文档 SHA `a00df1a3860c61d9d08ab6df5d0da8f8a33514bc / success`，`receiptPropagationAllowed=true`，`smalldataIncrementalMetadataOnly=true`，仅 `update_log.md` 变化，Xcode skipped，JUnit `10/10`；不是新的编译证据。
 
 ## v3.154：普通图片空结果状态文案动态化
 
