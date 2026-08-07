@@ -1162,6 +1162,13 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationTaskID == taskID && !Task.isCancelled
     }
 
+    private func imageOCRRecognitionMessage(for sourceLanguage: SupportedLanguage) -> String {
+        if sourceLanguage == .japanese {
+            return "正在用 Vision 本机 OCR 识别日语文字，复查竖排方向与文字块位置"
+        }
+        return "正在用 Vision 本机 OCR 识别文字和位置"
+    }
+
     private func runImageTranslationPipeline(
         with data: Data,
         taskID: UUID,
@@ -1172,7 +1179,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationData = data
         imageTranslationRevision += 1
         imageTranslationState = .recognizing
-        imageTranslationMessage = "正在用 Vision 本机 OCR 识别文字和位置"
+        imageTranslationMessage = imageOCRRecognitionMessage(for: sourceLanguage)
 
         let recognizedBlocks = try await visionOCRService.recognizeTextBlocks(
             in: data,
