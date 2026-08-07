@@ -8629,3 +8629,22 @@ Agent C 最终验收：
 - PR #242 fast [31215410769](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31215410769)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=ec80c63d1b0d25903f0d462a020dec6bca768f94`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
 - merge fast [31215485897](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31215485897)：merge SHA `4f6aeca133c9684c6800ec795a9f0fac4f24fdca`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31215692968](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31215692968)：commit `5a5727dc918d7f9a17aabeab9c10809a9cb877f1`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用父 merge `4f6aeca133c9684c6800ec795a9f0fac4f24fdca / success`，`receiptPropagationAllowed=true`，仅上述 6 个文档文件变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
+
+## v3.179：日语 Koharu 后处理顺序对齐
+
+日期：2026-08-08
+
+状态：Agent X 对齐 `reference/koharu-main/koharu-ml/src/manga_ocr/mod.rs` 的 `post_process` 顺序，修正普通图片日语 OCR 在压缩点号／中点串后的全角化边界。AITRANS 现在先移除空白、把省略号统一成 `...`、将连续 `.`／`・` 压缩到中间字符串，再将该中间字符串中的 ASCII 标点统一映射为全角；压缩点号不再直接留在半角形态。候选 commit `c16e5593ef63113e2d3ba5ef1b72d7a09ee2396a` 已通过 PR [#243](https://github.com/bengzhu/project1_lgbt_naxida/pull/243) 合入，merge SHA `5f3c0aa1f45d9cee9774db4d0020370666b69273`；工程正式版本为 `MARKETING_VERSION=3.179`，`main` 未触碰。
+
+核心变更：
+
+- `postProcessJapaneseOCRText` 显式拆成 collapse 与 halfwidth-to-fullwidth 两阶段，整页、90°／270°、block crop、axis line 与 perspective line reread 均继续使用同一 helper；普通语言保留 top-1 与原后处理路径。
+- 新增 `scripts/test-v3179-image-japanese-koharu-postprocess-order-contract.py` 并接入显式 UI/full fail-fast；v3.178 及更早合同继续回归。
+
+边界：该改动只修正普通图片日语 OCR 文本归一化顺序，不加载 Manga OCR/PaddleOCR 权重，不读取探针报告、ground truth 或真实 Koharu 工件，不改变识别几何、布局、翻译、renderer/export、Store、Koharu active gate、metrics 或 `output`。`test/jap.jpg` 仍只作合同 fixture；真实竖排图片质量 corpus、Speech corpus 与 Koharu 四件套仍缺失，readiness 必须保持 `manifestMissing / stopUntilArtifactsProvided`，不能据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31216151856](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31216151856)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `c16e5593ef63113e2d3ba5ef1b72d7a09ee2396a`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #243 fast [31216723888](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31216723888)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=c16e5593ef63113e2d3ba5ef1b72d7a09ee2396a`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31216783591](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31216783591)：merge SHA `5f3c0aa1f45d9cee9774db4d0020370666b69273`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，不是新的编译证据。

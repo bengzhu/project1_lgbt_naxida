@@ -3,6 +3,8 @@
 
 ## 0. 一句话总览
 
+v3.179 日语 OCR 后处理：Vision／crop／line reread → 去空白、统一省略号、压缩 `.`／`・` → 再将 ASCII 标点映射为全角 → 日语候选融合、布局、翻译与渲染；普通语言与识别几何不变。候选 full `31216151856`、PR fast `31216723888`、merge fast `31216783591` 均通过，候选 SHA `c16e5593ef63113e2d3ba5ef1b72d7a09ee2396a` Xcode/JUnit `10/10`，merge SHA `5f3c0aa1f45d9cee9774db4d0020370666b69273` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.178 日语紧凑竖排 block crop：v3.177 compact direction reason → 标准高竖框或受限的 compact 尺寸门控 → 最多 16 个 block 进入 `crop_text_block_bbox` 对齐的 crop／预处理／方向 fallback → 坐标映射、去重、布局、翻译与渲染；标准候选与非日语边界不变。候选 full `31214729647`、PR fast `31215410769`、merge fast `31215485897` 均通过，候选 SHA `ec80c63d1b0d25903f0d462a020dec6bca768f94` Xcode/JUnit `10/10`，merge SHA `4f6aeca133c9684c6800ec795a9f0fac4f24fdca` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.177 日语紧凑竖排：日语 manga-order 偏好传入方向判定 → CJK 多字、`verticalRatio >= 1.35`、`height >= 0.022`、同列且无同行才标记 compact vertical run → 既有 Koharu 风格 block／line crop reread → 后处理、去重、布局、翻译与渲染；简中、非日语和旧门控不变。候选 full `31213076831`、PR fast `31213569259`、merge fast `31213642909` 均通过，候选 SHA `9777d167cca71deb753f5d0f721f6c2f9f2af48f` Xcode/JUnit `10/10`，merge SHA `f2c8a33ba66666a69a941d24fb5d8d78284b1695` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
