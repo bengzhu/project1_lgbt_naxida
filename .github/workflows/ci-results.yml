@@ -120,6 +120,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3141-image-review-row-restore-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3142-image-review-row-review-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3143-image-review-row-action-hint-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3144-image-empty-result-rerun-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -404,7 +405,7 @@ jobs:
             koharu_contract_required=true
           fi
 
-          if grep -E '^scripts/test-v3(1[1-9]|[2-7][0-9]|8[01]|12[2-9]|13[0-9]|14[0]|14[1]|14[2]|14[3])-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          if grep -E '^scripts/test-v3(1[1-9]|[2-7][0-9]|8[01]|12[2-9]|13[0-9]|14[0]|14[1]|14[2]|14[3]|14[4])-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v391-koharu-diagnostic-triage-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
@@ -1222,6 +1223,7 @@ jobs:
             python3 -B scripts/test-v3141-image-review-row-restore-action-contract.py
             python3 -B scripts/test-v3142-image-review-row-review-action-contract.py
             python3 -B scripts/test-v3143-image-review-row-action-hint-contract.py
+            python3 -B scripts/test-v3144-image-empty-result-rerun-action-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract

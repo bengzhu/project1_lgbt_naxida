@@ -515,15 +515,17 @@ struct ImageTranslationPanel: View {
                         )
                     }
                 } else {
-                    AppEmptyState(
-                        title: "正在准备识别结果",
-                        detail: store.imageTranslationMessage,
-                        systemImage: "viewfinder"
+                    imageResultEmptyStateAccessibility(
+                        AppEmptyState(
+                            title: "正在准备识别结果",
+                            detail: store.imageTranslationMessage,
+                            systemImage: "viewfinder"
+                        )
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(imageResultEmptyStateAccessibilityLabel)
+                        .accessibilityValue(store.imageTranslationMessage)
+                        .accessibilityHint(imageResultEmptyStateAccessibilityHint)
                     )
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(imageResultEmptyStateAccessibilityLabel)
-                    .accessibilityValue(store.imageTranslationMessage)
-                    .accessibilityHint(imageResultEmptyStateAccessibilityHint)
                 }
             } else if visibleImageTranslationBlocks.isEmpty {
                 if reviewFilter == .needsReview, reviewCompletedBlockCount > 0 {
@@ -728,11 +730,25 @@ struct ImageTranslationPanel: View {
         case .loading, .recognizing, .translating:
             return "图片正在读取、识别或翻译；可在上方状态取消或选择新图片"
         case .translated:
-            return "当前没有可显示的 OCR 文字块；可选择新图片重新识别"
+            return store.canRerunImageRecognition
+                ? "当前没有可显示的 OCR 文字块；可在此执行“重新识别”，只重跑当前图片的 Vision OCR 与翻译，也可选择新图片"
+                : "当前没有可显示的 OCR 文字块；可选择新图片重新识别"
         case .failed:
             return store.canRetryImageTranslation
                 ? "图片识别失败；可在上方状态或重试按钮重新识别当前图片，也可选择新图片"
                 : "图片识别失败；请从上方照片或文件按钮选择新图片"
+        }
+    }
+
+    @ViewBuilder
+    private func imageResultEmptyStateAccessibility<Content: View>(_ content: Content) -> some View {
+        if store.canRerunImageRecognition {
+            content
+                .accessibilityAction(named: "重新识别") {
+                    store.rerunImageRecognition()
+                }
+        } else {
+            content
         }
     }
 
