@@ -840,30 +840,41 @@ struct VisionOCRService: Sendable {
         let bounds = points.reduce(CGRect.null) { partial, point in
             partial.union(CGRect(origin: point, size: .zero))
         }.integral
-        guard bounds.width >= 2,
-              bounds.height >= 2,
-              bounds.width <= 4096,
-              bounds.height <= 4096 else {
+        let imageBounds = CGRect(x: 0, y: 0, width: width, height: height)
+        let cropBounds = bounds.intersection(imageBounds)
+        guard cropBounds.width >= 2,
+              cropBounds.height >= 2,
+              cropBounds.width <= 4096,
+              cropBounds.height <= 4096,
+              let croppedImage = image.cropping(to: cropBounds) else {
             return nil
         }
 
-        let ciImage = CIImage(cgImage: image)
+        // Koharu's warp_line_region first crops the line polygon's bbox and
+        // only then projects that local image. Keeping the same boundary avoids
+        // feeding unrelated page pixels into a tiny Japanese line crop and
+        // keeps the perspective budget proportional to the actual TextRegion.
+        let localPoints = points.map {
+            CGPoint(x: $0.x - cropBounds.minX, y: $0.y - cropBounds.minY)
+        }
+        let croppedHeight = CGFloat(croppedImage.height)
+        let ciImage = CIImage(cgImage: croppedImage)
         let filter = CIFilter(name: "CIPerspectiveCorrection")
         filter?.setValue(ciImage, forKey: kCIInputImageKey)
         filter?.setValue(
-            CIVector(cgPoint: CGPoint(x: points[0].x, y: height - points[0].y)),
+            CIVector(cgPoint: CGPoint(x: localPoints[0].x, y: croppedHeight - localPoints[0].y)),
             forKey: "inputTopLeft"
         )
         filter?.setValue(
-            CIVector(cgPoint: CGPoint(x: points[1].x, y: height - points[1].y)),
+            CIVector(cgPoint: CGPoint(x: localPoints[1].x, y: croppedHeight - localPoints[1].y)),
             forKey: "inputTopRight"
         )
         filter?.setValue(
-            CIVector(cgPoint: CGPoint(x: points[2].x, y: height - points[2].y)),
+            CIVector(cgPoint: CGPoint(x: localPoints[2].x, y: croppedHeight - localPoints[2].y)),
             forKey: "inputBottomRight"
         )
         filter?.setValue(
-            CIVector(cgPoint: CGPoint(x: points[3].x, y: height - points[3].y)),
+            CIVector(cgPoint: CGPoint(x: localPoints[3].x, y: croppedHeight - localPoints[3].y)),
             forKey: "inputBottomLeft"
         )
         guard let output = filter?.outputImage else { return nil }
