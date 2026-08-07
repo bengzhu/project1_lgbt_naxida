@@ -2407,6 +2407,7 @@ private struct ImageTranslationFocusPreview: View {
                     .foregroundStyle(.white)
                     .frame(minWidth: 44, minHeight: 44)
                     .background(Color.black.opacity(0.82), in: Circle())
+                    .accessibilityHint("关闭局部放大并返回当前文字块结果行")
                 Button("修正识别文字", systemImage: "pencil", action: edit)
                     .labelStyle(.iconOnly)
                     .foregroundStyle(.white)
@@ -2480,6 +2481,9 @@ private struct ImageTranslationFocusPreview: View {
         .accessibilityLabel("已定位文字块局部放大")
         .accessibilityValue("\(positionText)，\(accessibilityOriginalText)")
         .accessibilityHint(focusPreviewAccessibilityHint)
+        .accessibilityAction(named: "关闭局部放大") {
+            close()
+        }
         .accessibilityFocused(
             accessibilityFocus,
             equals: "image-review-preview-\(block.id.uuidString)"

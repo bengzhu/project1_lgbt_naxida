@@ -72,7 +72,7 @@ class ImagePreviewStatusHintContractTests(unittest.TestCase):
         self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 135) for version in versions))
         self.assertNotIn("MARKETING_VERSION = 3.134;", self.project)
         self.assertIn("python3 -B scripts/test-v3135-image-preview-status-hint-contract.py", self.workflow)
-        self.assertIn("13[0-5]", self.workflow)
+        self.assertIn("13[0-6]", self.workflow)
 
 
 if __name__ == "__main__":
