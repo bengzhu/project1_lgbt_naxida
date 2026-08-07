@@ -160,6 +160,12 @@
 - `.preparing`／`.rendering` 等运行中状态不得抢焦点；焦点与失败分流必须保持 View 私有，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
 - 合同接在 v3.125 后进入 UI/full fail-fast，并沿用表达式长度安全的既有 UI 路由。候选 full `31082994159`（exact SHA `244f97435d340207c7684c3a2ab553b552b3b780`）Xcode/JUnit `10/10` 成功；PR #190 fast `31083400009`、merge fast `31083557316` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.133 图片空预览与识别结果空态 VoiceOver 合同
+
+- `scripts/test-v3133-image-empty-result-accessibility-context-contract.py` 必须验证 `ImageTranslationPreview` 无图片分支成为稳定 VoiceOver element，label/value/hint 分别说明“图片翻译预览”“当前没有图片”和从照片／文件开始本机 OCR、翻译与屏幕预览；`ImageTranslationPanel` 的空结果分支必须使用动态 `imageResultEmptyStateAccessibilityLabel`／`imageResultEmptyStateAccessibilityHint`，按 idle、载入／识别／翻译、完成和失败说明阶段、结果缺失和 `canRetryImageTranslation` 恢复边界。
+- 该合同只允许 View 私有 accessibility 语义与既有 Store 状态读取，不得新增 Store／持久化、OCR、翻译、renderer/export、probe_report、Koharu active gate、metrics 或 `output` 路径。
+- 合同接在 v3.132 后进入 UI/full fail-fast。候选 exact-SHA full `31140850232`（`a1bc1ba4a73d4337e83c2a99f911ce3f709dc207`）Xcode/JUnit `10/10` 成功；PR #197 fast `31141276534`、merge fast `31141320676` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.132 图片已忽略文字块空态 action 合同
 
 - `scripts/test-v3132-image-ignored-empty-state-action-contract.py` 必须验证当普通图片所有 OCR 文字块已被忽略时，空态提供 label/value/hint、稳定 `imageIgnoredBlocksEmptyAccessibilityFocusID`、同名 VoiceOver“恢复全部”action 和唯一可见 `恢复全部 N` 按钮；恢复仍受 `canModifyImageTranslation` 与导出重绘门控，部分忽略状态保留下方批量入口，避免重复显示。

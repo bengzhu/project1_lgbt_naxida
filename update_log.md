@@ -1,3 +1,23 @@
+## v3.133：图片空预览与识别结果空态 VoiceOver 上下文
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.133 普通图片空预览与识别结果空态的 VoiceOver 语义优化、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.133`。候选 commit `a1bc1ba4a73d4337e83c2a99f911ce3f709dc207` 已通过 PR [#197](https://github.com/bengzhu/project1_lgbt_naxida/pull/197) 合入，merge SHA `30678f089d5764b06bdf2d459c55ba2677d872cb`；候选远端分支已清理，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationPreview` 无图片分支现在是稳定的 VoiceOver 上下文，读出“图片翻译预览”“当前没有图片”和从照片／文件开始本机 OCR、翻译与屏幕预览的下一步。
+- `ImageTranslationPanel` 的空识别结果分支按 idle、载入／识别／翻译、完成和失败动态读出阶段、结果缺失与恢复边界；失败时仅在既有 `canRetryImageTranslation` 可用时说明重试当前图片。
+- 新增 `scripts/test-v3133-image-empty-result-accessibility-context-contract.py` 并接入 UI/full fail-fast；改动只属于 View，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31140850232](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31140850232)：`validationReason=manual_full`，commit `a1bc1ba4a73d4337e83c2a99f911ce3f709dc207`，Xcode build success，UI／Speech／home／paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #197 fast [31141276534](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31141276534)：`validationProfile=fast`，复用候选 full `a1bc1ba4a73d4337e83c2a99f911ce3f709dc207 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31141320676](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31141320676)：merge SHA `30678f089d5764b06bdf2d459c55ba2677d872cb`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.132：图片已忽略文字块空态 action
 
 日期：2026-08-07
