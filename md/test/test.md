@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.175 日语竖排字体尺寸 crop padding 合同
+
+- `VisionOCRService` 的日语 block/line crop 必须从源图片像素宽高推导 `fontSizePixels = min(widthPixels, heightPixels)`，按 Koharu 规则计算 `base = max(font × 0.08, 2px)`、竖排 `horizontal = max(font × 0.18, base)`、`vertical = max(font × 0.12, base)`，映射回归一化坐标并保留单轴 `0.08` 上限；block 与 line 入口必须传递同一 `imageSize` 并共享 helper。
+- 缺少或非法源尺寸时必须安全回退既有常量；仅作用于普通图片日语 block/line reread，不改变普通语言、整页 OCR、翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`，不得把 padding 变化描述为已测得质量提升。
+- 新增 `scripts/test-v3175-image-japanese-font-size-padding-contract.py` 并接入显式 UI/full fail-fast；v3.160/v3.161/v3.162/v3.174 及更早合同继续回归。候选 exact-SHA full [31210073265](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31210073265)、PR #239 fast [31210705708](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31210705708)、merge fast [31210782269](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31210782269) 均通过；候选 SHA `e47014bb6cc68ec70029b3000d0b84c0156fe21e` Xcode/JUnit `10/10`，merge SHA `7b7a57b4d091fc3bd10305a6997e9dd24fba42ba` 复用候选 full，三次均为 `probe_mode=skip`、readiness `manifestMissing / stopUntilArtifactsProvided`。
+
 ### v3.174 日语竖排聚类间距合同
 
 - `ImageOCRLayoutEngine.shouldMergeVertically` 必须保留同列／水平重叠门控与原有 `widthLimit`，并以两框平均高度产生有界 `heightLimit`；最终 `verticalGapLimit` 取不超过 `0.08` 的宽度／高度信号，避免高而窄的同列 Vision line box 在日语 line-region reread 前被过早拆开。

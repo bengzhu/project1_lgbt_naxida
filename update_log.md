@@ -8548,3 +8548,22 @@ Agent C 最终验收：
 - PR #238 fast [31209161098](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31209161098)：`validationProfile=fast`、`reusedFullValidationSha=49b987b3765e0df0c0511e30f955aa6aa7f487bf`、state `success`；Xcode skipped，不是新的编译证据。
 - merge fast [31209248983](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31209248983)：merge SHA `5efc690d0f8c3b41282518a8bc76d12559efa114`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，不是新的编译证据。
 - 文档 metadata follow-up [31209502813](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31209502813)：commit `7ee490368d6ae72c52399a1a02e609245b3cd378`，`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用 merge SHA `5efc690d0f8c3b41282518a8bc76d12559efa114 / success`，`receiptPropagationAllowed=true`，仅上述 6 个文档文件变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
+
+## v3.175：日语竖排字体尺寸 crop padding
+
+日期：2026-08-08
+
+状态：Agent X 按 Koharu `detected_font_size_px` 的 crop 边界继续收敛普通图片日语竖排 reread。日语文字块与 line crop 现在读取源图片像素尺寸，以 `min(widthPixels, heightPixels)` 作为保守字体大小，计算 `base=max(font×0.08, 2px)`、竖排水平 padding `max(font×0.18, base)`、垂直 padding `max(font×0.12, base)`，再映射回归一化 Vision 坐标；缺少或非法尺寸时回退既有安全常量。工程正式版本为 `MARKETING_VERSION=3.175`。候选 commit `e47014bb6cc68ec70029b3000d0b84c0156fe21e` 已通过 PR [#239](https://github.com/bengzhu/project1_lgbt_naxida/pull/239) 合入，merge SHA `7b7a57b4d091fc3bd10305a6997e9dd24fba42ba`；`main` 未触碰。
+
+核心变更：
+
+- `recognizeJapaneseVerticalCrops` 与 `recognizeJapaneseVerticalLineCrops` 将源图片 `imageSize` 传入共享 `koharuVerticalCropPadding`，block／line reread 使用同一字体尺寸与方向 padding 公式，并保留归一化单轴上限和无源尺寸 fallback。
+- 新增 `scripts/test-v3175-image-japanese-font-size-padding-contract.py` 并接入显式 UI/full fail-fast；v3.160、v3.161、v3.162、v3.174 与更早合同继续回归，历史合同接受共享 helper 的等价调用。
+
+边界：该改动只调整普通图片日语 block／line crop 的边界估计，不加载 Manga OCR/PaddleOCR 权重，不改变普通语言、整页 OCR、翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`。`test/jap.jpg` 仍只作合同 fixture；真实竖排图片质量 corpus、Speech corpus 与 Koharu 四件套仍缺失，readiness 必须保持 `manifestMissing / stopUntilArtifactsProvided`，不能据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31210073265](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31210073265)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `e47014bb6cc68ec70029b3000d0b84c0156fe21e`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #239 fast [31210705708](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31210705708)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=e47014bb6cc68ec70029b3000d0b84c0156fe21e`、state `success`；Xcode skipped，不是新的编译证据。
+- merge fast [31210782269](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31210782269)：merge SHA `7b7a57b4d091fc3bd10305a6997e9dd24fba42ba`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，不是新的编译证据。
