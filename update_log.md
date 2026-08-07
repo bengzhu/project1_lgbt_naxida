@@ -1,3 +1,23 @@
+## v3.156：日语竖排方向 OCR 第一阶段迁移
+
+日期：2026-08-07
+
+状态：Agent X 已将 Koharu 的“检测／布局与识别分层、方向比较后再进入布局”边界迁入普通图片 Vision OCR 的第一阶段，并完成候选 full、PR fast、merge fast 云端验收；工程正式版本为 `MARKETING_VERSION=3.156`。候选 commit `99a333a8297faf193c8058d7f919626bb17daf80` 已通过 PR [#220](https://github.com/bengzhu/project1_lgbt_naxida/pull/220) 合入，merge SHA `7750c7e62b82cb952ab302b9afd206ecf15068dd`；`main` 未触碰。
+
+核心变更：
+
+- `VisionOCRService` 在保留原图 Vision OCR 的前提下，日语源语言追加一次受限 90° 方向 OCR：使用 `ja-JP`／`ja`／`en-US`／`en` profile、`minimumTextHeight=0.006` 与关闭自动语言检测；旋转结果的 bounding box 映射回原图后，与原始观察去重，再交给既有 `ImageOCRLayoutEngine`。
+- 继续复用既有日语／简体中文竖排判断、列邻居证据、垂直列右到左及块内自上而下排序；方向复查只改变普通图片 OCR 的观察候选，不读取探针报告、ground truth 或 Koharu active artifacts，不调用第二套模型，不改变翻译、renderer/export、Store、持久化、metrics 或 `output`。
+- 新增 `scripts/test-v3156-image-japanese-orientation-ocr-contract.py` 与真实日语竖排参考图片 `test/jap.jpg`。合同检查方向 pass、框映射／去重／布局边界、历史方向合同、CI 路由及 fixture JPEG 边界；参考目录仅作为开发阅读材料，不成为 CI 运行时依赖。
+
+边界：本阶段迁移的是 Koharu 的方向比较与分层边界，不是将 Manga OCR、PaddleOCR-VL 或 MIT 48px 模型直接打包进 iOS。仓库仍缺少真实 `test/koharu_artifacts/` 四件套、Speech corpus 与可用于质量评估的真实竖排图片 corpus；候选、PR、merge 均为 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31176163879](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31176163879)：`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures/errors；Koharu active artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #220 fast [31176662793](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31176662793)：`validationProfile=fast`，复用候选 full `99a333a8297faf193c8058d7f919626bb17daf80 / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31176739499](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31176739499)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `7750c7e62b82cb952ab302b9afd206ecf15068dd` 复用候选 full `99a333a8297faf193c8058d7f919626bb17daf80 / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.155：普通图片空结果就地重试 action
 
 日期：2026-08-07
