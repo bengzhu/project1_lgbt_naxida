@@ -1,4 +1,6 @@
 # 项目流程图
+v3.163 日语竖排 reading order：Vision 文字块 → 中位宽／高中位数阈值 → Recursive XY-Cut 最大空白切分 → 右侧面板优先／竖排列自上而下 → 稳定回退 → 既有翻译与渲染；只改 `ImageOCRLayoutEngine`。候选 full `31189049773`、PR fast `31189799793`、merge fast `31189875449` 均通过，候选 SHA `c37808634df8d87cfb9f24c22acadc472f71d3c0` Xcode/JUnit `10/10`，merge SHA `e93f3844c359214c0cdfe09cd609fb11c51b924d` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
+
 v3.162 普通图片日语竖排 OCR 将字符范围四角 geometry 作为最多 24 条 line crop 的 `CIPerspectiveCorrection` hint，2× 复读受单条 4M／总计 16M 像素限制，失败回退轴对齐 crop，request-level box 仍负责布局／去重；整页／局部旋转映射保持一致。候选 full `31186264941`、PR fast `31186901253`、merge fast `31186979637` 均通过，候选 SHA `8a8e653f953c233f5b0d28249bb9b324ef0baab3` Xcode/JUnit `10/10`，merge SHA `b1c272b9fea90e07967e21db082538be50c8b516` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.161 普通图片日语竖排 OCR 将 Vision 字符范围 bounds 用作更紧的 line-region crop hint，保留 request-level box 做布局／去重，并穿过 90°／270° 与 2× crop 映射；缺失时回退原框。候选 full `31184241208`、PR fast `31184939184`、merge fast `31185021159` 均通过，候选 SHA `9164066706faed78494384d79ec1544d46084c20` Xcode/JUnit `10/10`，merge SHA `1eb026c2ce3df861b6efcc7ae9d61a5d08fd86ea` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。

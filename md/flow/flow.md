@@ -3,6 +3,8 @@
 
 ## 0. 一句话总览
 
+v3.163 普通图片日语竖排布局继续迁移 Koharu `sort_manga_reading_order` 的 Recursive XY-Cut：以文字块中位宽／高中位数估计动态空白阈值，递归按最大横／纵间隙切分，右侧面板优先、竖排列自上而下，并在无法切分时稳定回退；只作用于 `ImageOCRLayoutEngine` reading order。候选 full `31189049773`、PR fast `31189799793`、merge fast `31189875449` 均通过，候选 SHA `c37808634df8d87cfb9f24c22acadc472f71d3c0` Xcode/JUnit `10/10`，merge SHA `e93f3844c359214c0cdfe09cd609fb11c51b924d` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
+
 v3.162 普通图片日语竖排 OCR 在 line-region hint 上继续迁移 Koharu 四点透视校正：字符范围四角 geometry 只用于最多 24 条 line crop 的 `CIPerspectiveCorrection` 与 2× 复读，request-level box 仍负责布局／去重，单条 4M／总计 16M 像素门控，失败回到轴对齐 crop，并穿过整页／局部旋转映射。候选 full `31186264941`、PR fast `31186901253`、merge fast `31186979637` 均通过，候选 SHA `8a8e653f953c233f5b0d28249bb9b324ef0baab3` Xcode/JUnit `10/10`，merge SHA `b1c272b9fea90e07967e21db082538be50c8b516` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.161 普通图片日语竖排 OCR 使用 Vision 字符范围 bounds 作为更紧的 line-region crop hint，request-level box 仍负责布局／去重，整页旋转和 2× crop 都传递该 hint；缺失时回退原框。候选 full `31184241208`、PR fast `31184939184`、merge fast `31185021159` 均通过，候选 SHA `9164066706faed78494384d79ec1544d46084c20` Xcode/JUnit `10/10`，merge SHA `1eb026c2ce3df861b6efcc7ae9d61a5d08fd86ea` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
