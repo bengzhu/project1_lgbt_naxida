@@ -110,6 +110,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3131-image-ignored-blocks-bulk-restore-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3132-image-ignored-empty-state-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3133-image-empty-result-accessibility-context-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3134-image-preview-status-retry-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -394,7 +395,7 @@ jobs:
             koharu_contract_required=true
           fi
 
-          if grep -E '^scripts/test-v3(1[1-9]|[2-7][0-9]|8[01]|12[2-9]|13[0-3])-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          if grep -E '^scripts/test-v3(1[1-9]|[2-7][0-9]|8[01]|12[2-9]|13[0-4])-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v391-koharu-diagnostic-triage-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
@@ -1202,6 +1203,7 @@ jobs:
             python3 -B scripts/test-v3131-image-ignored-blocks-bulk-restore-contract.py
             python3 -B scripts/test-v3132-image-ignored-empty-state-action-contract.py
             python3 -B scripts/test-v3133-image-empty-result-accessibility-context-contract.py
+            python3 -B scripts/test-v3134-image-preview-status-retry-action-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract

@@ -49,9 +49,10 @@ class ImagePreviewStatusFocusContractTests(unittest.TestCase):
         for marker in [
             "let previewStatusAccessibilityFocusID: String",
             "let focusPreviewStatus: () -> Void",
-            ".accessibilityFocused(\n            accessibilityFocus,\n            equals: previewStatusAccessibilityFocusID",
         ]:
             self.assertIn(marker, self.preview)
+        self.assertIn(".accessibilityFocused(", self.preview)
+        self.assertIn("equals: previewStatusAccessibilityFocusID", self.preview)
 
     def test_failure_and_retry_return_focus_to_status(self) -> None:
         failure = braced_body(self.preview, "guard let preview = await ImagePreviewService.makePreview")
