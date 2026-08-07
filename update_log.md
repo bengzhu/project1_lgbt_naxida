@@ -1,3 +1,23 @@
+## v3.141：普通图片 OCR 结果行 VoiceOver restore action
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.141 普通图片 OCR 结果行直接恢复 Vision OCR 操作的 View-only UX 优化、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.141`。候选 commit `3a98ecb36bcfef8dfc77823b0eae26b06f0980bd` 已通过 PR [#205](https://github.com/bengzhu/project1_lgbt_naxida/pull/205) 合入，merge SHA `7b0684765acdf7f79ae01b462b8a0eb1ddaee674`；`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationBlockRow` 对已人工修正且 `canEdit` 为真的结果行，通过 View-only `ImageReviewRowRestoreAccessibilityModifier` 提供同名“恢复 Vision OCR” VoiceOver action，直接复用既有 `restoreVisionOCR()`，让 VoiceOver 用户无需先下钻到行内恢复按钮即可回到 Vision OCR 原文与初始译文。
+- 未人工修正或 `canEdit` 为假时不暴露该 action；可见“恢复 Vision OCR”按钮、`.disabled(!canEdit)`、现有 `modificationUnavailableHint`、结果行定位 label/value/hint 与 `image-review-row-*` focus identity 保持不变。
+- 新增 `scripts/test-v3141-image-review-row-restore-action-contract.py` 并接入 UI/full fail-fast；改动只属于 View，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31151758844](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31151758844)：`validationProfile=full`、`validationReason=manual_full`，commit `3a98ecb36bcfef8dfc77823b0eae26b06f0980bd`，Xcode build success，UI／Speech／home／paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；Koharu readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #205 fast [31152271664](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31152271664)：`validationProfile=fast`，复用候选 full `3a98ecb36bcfef8dfc77823b0eae26b06f0980bd / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31152319773](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31152319773)：merge SHA `7b0684765acdf7f79ae01b462b8a0eb1ddaee674`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.140：普通图片 OCR 结果行 VoiceOver edit action
 
 日期：2026-08-07

@@ -3,6 +3,7 @@
 
 ## 0. 一句话总览
 
+v3.141 已人工修正的普通图片 OCR 结果行在 `isManuallyCorrected && canEdit` 时提供同名 VoiceOver“恢复 Vision OCR”action，直接复用既有 `restoreVisionOCR()`；未修正或锁定时隐藏 action，保留可见恢复按钮与禁用原因。只属于 View，不改变 OCR、翻译、renderer/export、探针、Koharu active gate、metrics 或 `output`。候选 exact-SHA full `31151758844`、PR #205 fast `31152271664`、merge fast `31152319773` 均通过。
 v3.140 普通图片 OCR 结果行在 `canEdit` 时提供同名 VoiceOver“修正识别文字”action，直接复用既有 `edit()`；锁定时隐藏 action，保留可见修正按钮、定位／焦点语义和 `modificationUnavailableHint`。只属于 View，不改变 OCR、翻译、renderer/export、探针、Koharu active gate、metrics 或 `output`。候选 exact-SHA full `31150859808`、PR #204 fast `31151298078`、merge fast `31151339355` 均通过。
 v3.139 图片局部放大容器在对应邻居存在时提供同名 VoiceOver“上一个文字块／下一个文字块”action，直接复用既有 `selectPrevious()`／`selectNext()`；首尾或单项筛选时隐藏不可用 action，保留当前位置 value 与按钮 disabled hint。只属于 View，不改变 OCR、翻译、renderer/export、探针、Koharu active gate、metrics 或 `output`。候选 exact-SHA full `31149836170`、PR #203 fast `31150269494`、merge fast `31150318388` 均通过。
 v3.138 图片局部放大容器在需要复查且 `canReview` 时提供同名 VoiceOver“完成并继续复查／重新加入待复查”action，直接复用既有 `toggleReviewCompletion()`；不需要复查或复查被锁定时不暴露 action，父级 hint 说明 `reviewUnavailableHint`。只属于 View，不改变 OCR、翻译、renderer/export、探针、Koharu active gate、metrics 或 `output`。候选 exact-SHA full `31148861374`、PR #202 fast `31149234166`、merge fast `31149285259` 均通过。
