@@ -505,12 +505,13 @@ struct VisionOCRService: Sendable {
                 minimumTextHeight: 0.003,
                 cropScale: preparedCrop.scale
             )
-            refined.append(contentsOf: primary)
+            let verticalPrimary = filterJapaneseVerticalTileObservations(primary)
+            refined.append(contentsOf: verticalPrimary)
 
             if orientationFallbacksRemaining > 0,
-               needsJapaneseOrientationFallback(primary) {
+               needsJapaneseOrientationFallback(verticalPrimary) {
                 orientationFallbacksRemaining -= 1
-                refined.append(contentsOf: recognizeJapaneseCropPass(
+                let opposite = recognizeJapaneseCropPass(
                     crop: preparedCrop.image,
                     cropRect: crop.rect,
                     originalImage: image,
@@ -518,10 +519,33 @@ struct VisionOCRService: Sendable {
                     recognitionLanguages: recognitionLanguages,
                     minimumTextHeight: 0.003,
                     cropScale: preparedCrop.scale
-                ))
+                )
+                refined.append(contentsOf: filterJapaneseVerticalTileObservations(opposite))
             }
         }
         return deduplicateJapaneseObservations(refined)
+    }
+
+    /// A full-height tile is deliberately broader than a Koharu TextBox. Keep
+    /// its reread output on the vertical-column boundary so horizontal Japanese
+    /// lines discovered incidentally in the same tile do not become duplicate
+    /// fallback observations. Compact one- or two-glyph CJK fragments remain
+    /// eligible through the same bounded geometry gate used by line synthesis.
+    private static func filterJapaneseVerticalTileObservations(
+        _ observations: [VisionOCRObservation]
+    ) -> [VisionOCRObservation] {
+        observations.filter { observation in
+            let region = observation.lineRegionRect ?? observation.rect
+            let ratio = region.height / max(region.width, 0.001)
+            let scriptDensity = japaneseScriptDensity(in: observation.text)
+            guard scriptDensity >= 0.5 else { return false }
+
+            let isTallColumn = region.height >= 0.022 && ratio >= 1.18
+            let isCompactFragment = region.height >= 0.018
+                && ratio >= 0.90
+                && observation.text.unicodeScalars.count <= 2
+            return isTallColumn || isCompactFragment
+        }
     }
 
     private static func verticalTileIsCovered(
