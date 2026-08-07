@@ -114,6 +114,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3135-image-preview-status-hint-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3136-image-focus-close-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3137-image-focus-edit-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3138-image-focus-review-action-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -398,7 +399,7 @@ jobs:
             koharu_contract_required=true
           fi
 
-          if grep -E '^scripts/test-v3(1[1-9]|[2-7][0-9]|8[01]|12[2-9]|13[0-7])-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          if grep -E '^scripts/test-v3(1[1-9]|[2-7][0-9]|8[01]|12[2-9]|13[0-8])-.*-contract\.py$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v391-koharu-diagnostic-triage-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
@@ -1210,6 +1211,7 @@ jobs:
             python3 -B scripts/test-v3135-image-preview-status-hint-contract.py
             python3 -B scripts/test-v3136-image-focus-close-action-contract.py
             python3 -B scripts/test-v3137-image-focus-edit-action-contract.py
+            python3 -B scripts/test-v3138-image-focus-review-action-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract

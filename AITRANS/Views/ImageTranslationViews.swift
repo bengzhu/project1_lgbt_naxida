@@ -2490,6 +2490,14 @@ private struct ImageTranslationFocusPreview: View {
                 edit: edit
             )
         )
+        .modifier(
+            ImageFocusPreviewReviewAccessibilityModifier(
+                isReviewRequired: isReviewRequired,
+                canReview: canReview,
+                isReviewCompleted: isReviewCompleted,
+                toggleReviewCompletion: toggleReviewCompletion
+            )
+        )
         .accessibilityFocused(
             accessibilityFocus,
             equals: "image-review-preview-\(block.id.uuidString)"
@@ -2528,14 +2536,33 @@ private struct ImageTranslationFocusPreview: View {
     private var focusPreviewAccessibilityHint: String {
         if focusCrop == nil {
             if canEdit {
-                return "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+                if !isReviewRequired {
+                    return "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+                }
+                let base = "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+                return reviewAccessibilityHint(appendingTo: base)
             }
-            return "局部预览不可用；仍可关闭或切换文字块；\(modificationUnavailableHint)"
+            let base = "局部预览不可用；仍可关闭或切换文字块；\(modificationUnavailableHint)"
+            return reviewAccessibilityHint(appendingTo: base)
         }
         if canEdit {
-            return "可执行“关闭局部放大”或“修正识别文字”，也可切换文字块"
+            let base = "可执行“关闭局部放大”或“修正识别文字”，也可切换文字块"
+            return reviewAccessibilityHint(appendingTo: base)
         }
-        return "可关闭局部放大或切换文字块；\(modificationUnavailableHint)"
+        let base = "可关闭局部放大或切换文字块；\(modificationUnavailableHint)"
+        return reviewAccessibilityHint(appendingTo: base)
+    }
+
+    private func reviewAccessibilityHint(appendingTo base: String) -> String {
+        guard isReviewRequired else { return base }
+        if canReview {
+            return "\(base)；可执行“\(reviewActionAccessibilityName)”"
+        }
+        return "\(base)；\(reviewUnavailableHint)"
+    }
+
+    private var reviewActionAccessibilityName: String {
+        isReviewCompleted ? "重新加入待复查" : "完成并继续复查"
     }
 
     private func relativeBlockRect(in cropRect: CGRect) -> CGRect {
@@ -2561,6 +2588,25 @@ private struct ImageFocusPreviewEditAccessibilityModifier: ViewModifier {
             content
                 .accessibilityAction(named: "修正识别文字") {
                     edit()
+                }
+        } else {
+            content
+        }
+    }
+}
+
+private struct ImageFocusPreviewReviewAccessibilityModifier: ViewModifier {
+    let isReviewRequired: Bool
+    let canReview: Bool
+    let isReviewCompleted: Bool
+    let toggleReviewCompletion: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isReviewRequired && canReview {
+            content
+                .accessibilityAction(named: isReviewCompleted ? "重新加入待复查" : "完成并继续复查") {
+                    toggleReviewCompletion()
                 }
         } else {
             content
