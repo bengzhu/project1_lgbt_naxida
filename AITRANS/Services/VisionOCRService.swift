@@ -34,25 +34,29 @@ struct VisionOCRService: Sendable {
                 // Koharu keeps detection/layout separate from recognition and gives Japanese
                 // candidates a bounded orientation comparison before its cropped OCR engines.
                 // Vision is the on-device engine here, so use the same first migration step:
-                // re-read the page in the rotated orientation, map boxes back, then let the
-                // existing layout engine restore manga right-to-left vertical order.
-                let rotatedOCRImage = try Self.rotatedImage(ocrImage, angle: 90)
+                // re-read the page in both rotated orientations, map boxes back, then let the
+                // existing layout engine restore manga right-to-left vertical order. Running
+                // both directions matters because a photographed page can be mirrored or
+                // presented with either vertical writing direction.
                 let japaneseOrientationLanguages = ["ja-JP", "ja", "en-US", "en"]
-                let rotatedObservations = try Self.recognizeObservations(
-                    in: rotatedOCRImage,
-                    recognitionLanguages: japaneseOrientationLanguages,
-                    minimumTextHeight: 0.006,
-                    automaticallyDetectsLanguage: false,
-                    rotationApplied: 90
-                ).map {
-                    Self.mapRotatedObservation(
-                        $0,
-                        rotatedImage: rotatedOCRImage,
-                        originalImage: ocrImage,
-                        angle: 90
-                    )
+                for angle in [90, 270] {
+                    let rotatedOCRImage = try Self.rotatedImage(ocrImage, angle: angle)
+                    let rotatedObservations = try Self.recognizeObservations(
+                        in: rotatedOCRImage,
+                        recognitionLanguages: japaneseOrientationLanguages,
+                        minimumTextHeight: 0.006,
+                        automaticallyDetectsLanguage: false,
+                        rotationApplied: angle
+                    ).map {
+                        Self.mapRotatedObservation(
+                            $0,
+                            rotatedImage: rotatedOCRImage,
+                            originalImage: ocrImage,
+                            angle: angle
+                        )
+                    }
+                    observations.append(contentsOf: rotatedObservations)
                 }
-                observations.append(contentsOf: rotatedObservations)
             }
 
             let layoutObservations = Self.deduplicateObservations(observations).map {
