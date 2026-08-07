@@ -50,18 +50,28 @@ class JapaneseCropOCRContractTests(unittest.TestCase):
         self.assertIn("existing vertical layout candidates", self.vision)
 
     def test_crop_reread_uses_koharu_padding_rotation_and_box_mapping(self) -> None:
-        for marker in [
+        direct_markers = [
             "expandedVerticalCropRect",
             "cropImage(image, normalizedRect:",
-            "try? rotatedImage(crop.image, angle: angle)",
             "minimumTextHeight: 0.004",
             "automaticallyDetectsLanguage: false",
+        ]
+        crop_scope = self.crop + self.vision
+        for marker in direct_markers:
+            self.assertIn(marker, crop_scope)
+        # Later crop refinements share the rotation/mapping helper so the
+        # primary and opposite orientation passes cannot drift apart.
+        self.assertTrue(
+            "try? rotatedImage(crop.image, angle: angle)" in self.crop
+            or "recognizeJapaneseCropPass(" in self.crop
+        )
+        for marker in [
             "mapRotatedCropObservation(",
             "cropRect.minX + local.x",
             "cropRect.minY + local.y",
             "rotationApplied: observation.rotationApplied",
         ]:
-            self.assertIn(marker, self.crop if marker not in {"cropRect.minX + local.x", "cropRect.minY + local.y", "rotationApplied: observation.rotationApplied"} else self.vision)
+            self.assertIn(marker, self.vision)
 
     def test_crop_refinement_is_fallback_safe_and_deduped_before_final_layout(self) -> None:
         self.assertIn("guard let crop = cropImage", self.crop)
