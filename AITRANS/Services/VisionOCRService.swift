@@ -110,11 +110,9 @@ struct VisionOCRService: Sendable {
 
         return (request.results ?? []).compactMap { observation in
             guard let candidate = observation.topCandidates(1).first else { return nil }
+            guard let rect = Self.normalizedRect(from: observation.boundingBox) else { return nil }
             let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty,
-                  let rect = Self.normalizedRect(from: observation.boundingBox) else {
-                return nil
-            }
+            guard !text.isEmpty else { return nil }
             return VisionOCRObservation(
                 text: text,
                 confidence: candidate.confidence,
@@ -126,7 +124,7 @@ struct VisionOCRService: Sendable {
 
     private static func deduplicateObservations(_ observations: [VisionOCRObservation]) -> [VisionOCRObservation] {
         var output: [VisionOCRObservation] = []
-        for observation in observations.sorted(by: isBetterObservation) {
+        for observation in observations.sorted(by: { isBetterObservation($0, $1) }) {
             guard let duplicateIndex = output.firstIndex(where: {
                 isDuplicateObservation(observation, of: $0)
             }) else {
