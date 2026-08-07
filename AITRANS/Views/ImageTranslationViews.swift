@@ -515,17 +515,28 @@ struct ImageTranslationPanel: View {
                         )
                     }
                 } else {
-                    imageResultEmptyStateAccessibility(
-                        AppEmptyState(
-                            title: "正在准备识别结果",
-                            detail: store.imageTranslationMessage,
-                            systemImage: "viewfinder"
+                    VStack(spacing: AppTheme.Spacing.control) {
+                        imageResultEmptyStateAccessibility(
+                            AppEmptyState(
+                                title: "正在准备识别结果",
+                                detail: store.imageTranslationMessage,
+                                systemImage: "viewfinder"
+                            )
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(imageResultEmptyStateAccessibilityLabel)
+                            .accessibilityValue(store.imageTranslationMessage)
+                            .accessibilityHint(imageResultEmptyStateAccessibilityHint)
                         )
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(imageResultEmptyStateAccessibilityLabel)
-                        .accessibilityValue(store.imageTranslationMessage)
-                        .accessibilityHint(imageResultEmptyStateAccessibilityHint)
-                    )
+
+                        if store.canRerunImageRecognition {
+                            AppSecondaryButton(
+                                title: "重新识别",
+                                systemImage: "text.viewfinder",
+                                action: store.rerunImageRecognition
+                            )
+                            .accessibilityHint("使用当前图片语言重新运行 Vision OCR，并重新翻译识别到的文字")
+                        }
+                    }
                 }
             } else if visibleImageTranslationBlocks.isEmpty {
                 if reviewFilter == .needsReview, reviewCompletedBlockCount > 0 {
