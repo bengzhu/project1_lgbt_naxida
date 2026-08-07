@@ -479,24 +479,23 @@ struct ImageTranslationPanel: View {
                     )
                 } else if !store.imageTranslationIgnoredBlocks.isEmpty {
                     VStack(alignment: .leading, spacing: AppTheme.Spacing.control) {
-                        AppEmptyState(
-                            title: "当前没有保留文字块",
-                            detail: "已忽略 \(store.imageTranslationIgnoredBlocks.count) 个 OCR 文字块；图片会以原图导出，可在此恢复全部。",
-                            systemImage: "eye.slash"
+                        allIgnoredBlocksEmptyStateAccessibility(
+                            AppEmptyState(
+                                title: "当前没有保留文字块",
+                                detail: "已忽略 \(store.imageTranslationIgnoredBlocks.count) 个 OCR 文字块；图片会以原图导出，可在此恢复全部。",
+                                systemImage: "eye.slash"
+                            )
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("当前没有保留文字块")
+                            .accessibilityValue(
+                                "已忽略 \(store.imageTranslationIgnoredBlocks.count) 个 OCR 文字块；图片会以原图导出"
+                            )
+                            .accessibilityHint(
+                                canModifyImageTranslation
+                                    ? "可在此执行“恢复全部”，把文字块恢复到图片预览、导出和当前转录"
+                                    : imageModificationUnavailableDetail
+                            )
                         )
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("当前没有保留文字块")
-                        .accessibilityValue(
-                            "已忽略 \(store.imageTranslationIgnoredBlocks.count) 个 OCR 文字块；图片会以原图导出"
-                        )
-                        .accessibilityHint(
-                            canModifyImageTranslation
-                                ? "可在此执行“恢复全部”，把文字块恢复到图片预览、导出和当前转录"
-                                : imageModificationUnavailableDetail
-                        )
-                        .accessibilityAction(named: "恢复全部") {
-                            requestRestoreAllIgnoredImageTranslationBlocks()
-                        }
                         .accessibilityFocused(
                             $reviewAccessibilityFocusID,
                             equals: Self.imageIgnoredBlocksEmptyAccessibilityFocusID
@@ -746,6 +745,18 @@ struct ImageTranslationPanel: View {
             content
                 .accessibilityAction(named: "重新识别") {
                     store.rerunImageRecognition()
+                }
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
+    private func allIgnoredBlocksEmptyStateAccessibility<Content: View>(_ content: Content) -> some View {
+        if canModifyImageTranslation {
+            content
+                .accessibilityAction(named: "恢复全部") {
+                    requestRestoreAllIgnoredImageTranslationBlocks()
                 }
         } else {
             content
