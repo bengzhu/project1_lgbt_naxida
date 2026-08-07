@@ -1,3 +1,23 @@
+## v3.154：普通图片空结果状态文案动态化
+
+日期：2026-08-07
+
+状态：Agent X 已完成普通图片识别结果空态的状态化可见标题／说明优化、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.154`。候选 commit `11028f3de4886aad18e911dd8dc3f60e6593ba9f` 已通过 PR [#218](https://github.com/bengzhu/project1_lgbt_naxida/pull/218) 合入，merge SHA `b51ab8a880f3a1998a5a4e249e6c7113e0a3c451`；`main` 未触碰。
+
+核心变更：
+
+- 普通图片 `imageTranslationBlocks` 为空时，结果空态的可见标题与说明不再固定为“正在准备识别结果”，而是由 View 私有 `imageResultEmptyStateTitle`／`imageResultEmptyStateDetail` 按 idle、读取／Vision OCR／翻译进行中、translated 与 failed 分流；translated 明确说明没有可显示 OCR 文字块与重新识别边界，处理中保留 Store 的阶段消息，失败保留失败原因。
+- 既有 VoiceOver label/value/hint、稳定空态焦点 identity、受 `store.canRerunImageRecognition` 门控的“重新识别” action 与可见按钮保持不变；helper 只改变显示文案，不新增 Store、OCR、翻译、持久化或重跑管线。
+- 新增 `scripts/test-v3154-image-empty-result-state-contract.py` 并接入 UI/full fail-fast；同步 v3.133、v3.152、v3.153 历史合同接受动态标题／说明，继续锁定 View-only 与单一 Store 入口。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`；不得据此声称 OCR、翻译、识别或 Koharu 质量提升。文档 follow-up 只属于 metadata receipt 传播，不是新的编译证据。
+
+云端证据：
+
+- 候选 exact-SHA full [31171837188](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31171837188)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `11028f3de4886aad18e911dd8dc3f60e6593ba9f`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu active artifact validator 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #218 fast [31172320096](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31172320096)：`validationProfile=fast`，复用候选 full `11028f3de4886aad18e911dd8dc3f60e6593ba9f / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31172393014](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31172393014)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `b51ab8a880f3a1998a5a4e249e6c7113e0a3c451` 复用候选 full `11028f3de4886aad18e911dd8dc3f60e6593ba9f / success`，`receiptPropagationAllowed=true`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.153：普通图片空结果 VoiceOver 焦点稳定化
 
 日期：2026-08-07
