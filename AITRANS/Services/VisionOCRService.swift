@@ -919,7 +919,112 @@ struct VisionOCRService: Sendable {
             return nil
         }
         let context = CIContext(options: [.cacheIntermediates: false])
-        return context.createCGImage(output, from: outputExtent)
+        guard let rendered = context.createCGImage(output, from: outputExtent) else {
+            return nil
+        }
+
+        // Koharu's `warp_line_region` does not rely on the projection library's
+        // natural output extent. It derives a target canvas from the quad's
+        // vertical/horizontal axis lengths first, then projects into that
+        // canvas. Core Image owns the projection here, so apply the same
+        // geometry contract as a bounded post-projection resize. This keeps a
+        // skewed/narrow Japanese line at a stable glyph aspect ratio before the
+        // shared grayscale/upscale preprocessor runs.
+        guard let targetSize = koharuVerticalLineWarpTargetSize(
+            localPoints,
+            maximumDimension: 4_096,
+            maximumPixels: 4_000_000
+        ) else {
+            // Character-range geometry can be unavailable or degenerate on a
+            // particular Vision revision. Preserve the existing natural warp
+            // as the safe fallback instead of dropping the line reread.
+            return rendered
+        }
+        let targetWidth = Int(targetSize.width.rounded())
+        let targetHeight = Int(targetSize.height.rounded())
+        guard targetWidth >= 2, targetHeight >= 2 else {
+            return rendered
+        }
+        guard rendered.width != targetWidth || rendered.height != targetHeight else {
+            return rendered
+        }
+        return resizedImage(
+            rendered,
+            pixelWidth: targetWidth,
+            pixelHeight: targetHeight
+        ) ?? rendered
+    }
+
+    /// Mirror Koharu's vertical `warp_line_region` target geometry. Its
+    /// `quad_axis_lengths` returns the line's long (vertical) and short
+    /// (horizontal/text-height) axes; vertical crops are projected to
+    /// `(textHeight, textHeight * ratio)` before the later 90°/270° reread.
+    /// Keep the target finite and bounded so malformed Vision geometry cannot
+    /// create an oversized intermediate image.
+    private static func koharuVerticalLineWarpTargetSize(
+        _ points: [CGPoint],
+        maximumDimension: CGFloat,
+        maximumPixels: CGFloat
+    ) -> CGSize? {
+        guard points.count == 4,
+              points.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
+              maximumDimension.isFinite,
+              maximumDimension >= 2,
+              maximumPixels.isFinite,
+              maximumPixels >= 4 else {
+            return nil
+        }
+
+        func midpoint(_ lhs: CGPoint, _ rhs: CGPoint) -> CGPoint {
+            CGPoint(
+                x: (lhs.x + rhs.x) * 0.5,
+                y: (lhs.y + rhs.y) * 0.5
+            )
+        }
+        func distance(_ lhs: CGPoint, _ rhs: CGPoint) -> CGFloat {
+            hypot(lhs.x - rhs.x, lhs.y - rhs.y)
+        }
+
+        let top = midpoint(points[0], points[1])
+        let right = midpoint(points[1], points[2])
+        let bottom = midpoint(points[2], points[3])
+        let left = midpoint(points[3], points[0])
+        let verticalLength = distance(top, bottom)
+        let horizontalLength = distance(left, right)
+        guard verticalLength.isFinite,
+              horizontalLength.isFinite,
+              verticalLength > 0,
+              horizontalLength > 0 else {
+            return nil
+        }
+
+        let textHeight = max(horizontalLength.rounded(), 1)
+        let ratio = verticalLength / horizontalLength
+        let rawWidth = textHeight
+        let rawHeight = max((textHeight * ratio).rounded(), 1)
+        guard rawWidth.isFinite,
+              rawHeight.isFinite,
+              rawWidth >= 1,
+              rawHeight >= 1 else {
+            return nil
+        }
+
+        let areaScale = sqrt(maximumPixels / (rawWidth * rawHeight))
+        let scale = min(
+            1,
+            maximumDimension / rawWidth,
+            maximumDimension / rawHeight,
+            areaScale
+        )
+        guard scale.isFinite, scale > 0 else { return nil }
+        let width = max((rawWidth * scale).rounded(), 1)
+        let height = max((rawHeight * scale).rounded(), 1)
+        guard width.isFinite,
+              height.isFinite,
+              width * height <= maximumPixels + 1 else {
+            return nil
+        }
+        return CGSize(width: width, height: height)
     }
 
     private static func isVerticalLineCandidate(_ rect: ImageOCRLayoutRect) -> Bool {
@@ -1028,10 +1133,23 @@ struct VisionOCRService: Sendable {
         guard scale.isFinite, scale > 0 else { return nil }
         let width = max(Int((CGFloat(image.width) * scale).rounded()), 1)
         let height = max(Int((CGFloat(image.height) * scale).rounded()), 1)
+        return resizedImage(
+            image,
+            pixelWidth: width,
+            pixelHeight: height
+        )
+    }
+
+    private static func resizedImage(
+        _ image: CGImage,
+        pixelWidth: Int,
+        pixelHeight: Int
+    ) -> CGImage? {
+        guard pixelWidth >= 1, pixelHeight >= 1 else { return nil }
         guard let context = CGContext(
             data: nil,
-            width: width,
-            height: height,
+            width: pixelWidth,
+            height: pixelHeight,
             bitsPerComponent: 8,
             bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(),
@@ -1042,7 +1160,12 @@ struct VisionOCRService: Sendable {
         context.interpolationQuality = .high
         context.draw(
             image,
-            in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height))
+            in: CGRect(
+                x: 0,
+                y: 0,
+                width: CGFloat(pixelWidth),
+                height: CGFloat(pixelHeight)
+            )
         )
         return context.makeImage()
     }
