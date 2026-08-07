@@ -56,6 +56,12 @@ struct ImageOCRLayoutObservation: Equatable, Sendable {
     var text: String
     var confidence: Float
     var rect: ImageOCRLayoutRect
+    /// Optional provenance from a bounded OCR crop. Koharu carries the
+    /// detector's source direction alongside each TextBox, so a crop that was
+    /// explicitly requested from a vertical Japanese candidate must not be
+    /// reclassified solely because its mapped Vision box is unusually wide.
+    /// Page-level observations leave this unset and continue using geometry.
+    var sourceDirectionHint: ImageOCRLayoutDirection? = nil
 }
 
 struct ImageOCRLayoutBlock: Equatable, Sendable {
@@ -109,6 +115,32 @@ enum ImageOCRLayoutEngine {
         let height = max(observation.rect.height, 0.001)
         let horizontalRatio = width / height
         let verticalRatio = height / width
+        let peers = all.filter { $0 != observation }
+        let hasColumnNeighbor = peers.contains { isColumnNeighbor(observation.rect, $0.rect) }
+        let hasRowNeighbor = peers.contains { isCloseRowNeighbor(observation.rect, $0.rect) }
+        let cjkCount = cjkCharacterCount(in: observation.text)
+        let isShortCJKObservation = cjkCount > 0 && observation.text.count <= 2
+        let containsTextRun = cjkCount >= 2
+
+        // Koharu keeps the detector/source direction on a TextBox and lets it
+        // override a misleading bbox aspect ratio. The Vision path has no
+        // external detector metadata, but its bounded Japanese block/line/tile
+        // rereads are explicitly entered from a vertical candidate. Preserve
+        // that provenance through layout, while requiring CJK text and the
+        // Japanese manga-order path so normal language and page-level geometry
+        // heuristics remain unchanged.
+        if allowsVerticalText,
+           prefersMangaReadingOrder,
+           observation.sourceDirectionHint == .vertical,
+           containsTextRun {
+            return ResolvedObservation(
+                observation: observation,
+                direction: .vertical,
+                confidence: 0.84,
+                reason: "koharuVerticalCropHint"
+            )
+        }
+
         if horizontalRatio >= 1.35 {
             return ResolvedObservation(
                 observation: observation,
@@ -117,12 +149,6 @@ enum ImageOCRLayoutEngine {
                 reason: "wideBox"
             )
         }
-        let peers = all.filter { $0 != observation }
-        let hasColumnNeighbor = peers.contains { isColumnNeighbor(observation.rect, $0.rect) }
-        let hasRowNeighbor = peers.contains { isCloseRowNeighbor(observation.rect, $0.rect) }
-        let cjkCount = cjkCharacterCount(in: observation.text)
-        let isShortCJKObservation = cjkCount > 0 && observation.text.count <= 2
-        let containsTextRun = cjkCount >= 2
 
         // Vision can return one near-square observation per glyph for a narrow
         // Japanese vertical column. Treat that shape as vertical only when

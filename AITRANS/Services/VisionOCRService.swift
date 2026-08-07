@@ -81,7 +81,8 @@ struct VisionOCRService: Sendable {
                 ImageOCRLayoutObservation(
                     text: $0.text,
                     confidence: $0.confidence,
-                    rect: $0.rect
+                    rect: $0.rect,
+                    sourceDirectionHint: $0.sourceDirectionHint
                 )
             }
             let allowsVerticalText = sourceLanguage == .japanese || sourceLanguage == .simplifiedChinese
@@ -321,7 +322,8 @@ struct VisionOCRService: Sendable {
             ImageOCRLayoutObservation(
                 text: $0.text,
                 confidence: $0.confidence,
-                rect: $0.rect
+                rect: $0.rect,
+                sourceDirectionHint: $0.sourceDirectionHint
             )
         }
         let verticalBlocks = ImageOCRLayoutEngine.layout(
@@ -764,7 +766,8 @@ struct VisionOCRService: Sendable {
                         rect: rect,
                         lineRegionRect: rect,
                         lineRegionQuad: nil,
-                        rotationApplied: best.rotationApplied
+                        rotationApplied: best.rotationApplied,
+                        sourceDirectionHint: .vertical
                     )
                 )
             }
@@ -957,7 +960,8 @@ struct VisionOCRService: Sendable {
             rect: candidate.rect,
             lineRegionRect: candidate.lineRegionRect,
             lineRegionQuad: candidate.lineRegionQuad,
-            rotationApplied: angle
+            rotationApplied: angle,
+            sourceDirectionHint: .vertical
         )
     }
 
@@ -1421,7 +1425,8 @@ struct VisionOCRService: Sendable {
             rect: originalRect,
             lineRegionRect: originalLineRegionRect,
             lineRegionQuad: originalLineRegionQuad,
-            rotationApplied: observation.rotationApplied
+            rotationApplied: observation.rotationApplied,
+            sourceDirectionHint: .vertical
         )
     }
 
@@ -1920,6 +1925,10 @@ private struct VisionOCRObservation: Equatable, Sendable {
     /// recognition hint; request-level `rect` remains the stable layout geometry.
     var lineRegionQuad: ImageOCRLayoutQuad?
     var rotationApplied: Int
+    /// Set only by Japanese block/line/tile rereads that originate from a
+    /// vertical layout candidate. This mirrors Koharu's TextBox source
+    /// direction and prevents mapped crop geometry from overriding it.
+    var sourceDirectionHint: ImageOCRLayoutDirection? = nil
 }
 
 private struct JapaneseVerticalCropFragment: Sendable {
