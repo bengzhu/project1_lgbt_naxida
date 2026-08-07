@@ -1,3 +1,24 @@
+## v3.162：日语竖排 line-region perspective OCR
+
+日期：2026-08-07
+
+状态：Agent X 继续按 Koharu `extract_text_block_regions` 的四点 line-region 透视校正边界改进普通图片日语竖排 OCR，并完成候选 full、PR fast、merge fast 云端验收合入 `smalldata_test`。工程正式版本为 `MARKETING_VERSION=3.162`。候选 commit `8a8e653f953c233f5b0d28249bb9b324ef0baab3` 已通过 PR [#226](https://github.com/bengzhu/project1_lgbt_naxida/pull/226) 合入，merge SHA `b1c272b9fea90e07967e21db082538be50c8b516`；`main` 未触碰。
+
+核心变更：
+
+- 读取 Vision `VNRecognizedText.boundingBox(for:)` 返回的 `VNRectangleObservation` 四角，和 request-level observation box 分开保存；只有有限、凸、有效边长的四点 geometry 才作为 line-region crop hint。
+- 日语竖排最多处理 24 条 line crop；每条 `CIPerspectiveCorrection` 输出限制 4M 像素、总计限制 16M 像素，随后 2× Vision 复读；透视校正、resize、rotate 或局部 OCR 失败时保留并回到既有轴对齐 crop。
+- 四角 geometry 在整页 90°／270° 与局部 crop 的坐标回映射中同步传播，但 request-level box 继续负责布局／去重；这是 Koharu line polygon warp 的 Vision 过渡层，不是已加载 Manga OCR、PaddleOCR-VL 或 MIT 48px 模型。
+- 新增 `scripts/test-v3162-image-japanese-line-perspective-ocr-contract.py`，并让 v3.161 历史合同接受 `recognizedTextGeometry` 等价 helper；不读取探针报告、ground truth 或 Koharu active artifacts，不改变翻译、renderer/export、Store、持久化、metrics 或 `output`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31186264941](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31186264941)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `8a8e653f953c233f5b0d28249bb9b324ef0baab3`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #226 fast [31186901253](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31186901253)：`validationProfile=fast`，`reusedFullValidationSha=8a8e653f953c233f5b0d28249bb9b324ef0baab3`、state `success`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31186979637](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31186979637)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `b1c272b9fea90e07967e21db082538be50c8b516` 复用候选 full，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.161：日语竖排 line-region geometry hint
 
 日期：2026-08-07

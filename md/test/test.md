@@ -7,6 +7,13 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.162 日语竖排 line-region perspective OCR 合同
+
+- `VisionOCRService` 必须从 `VNRecognizedText.boundingBox(for:)` 保留字符范围的四角 geometry，同时维持 request-level observation box 作为布局／去重几何；只有有效、凸且有限的四点 geometry 才能进入 line crop hint。
+- 日语竖排 line crop 最多处理 24 条；可选的 Core Image `CIPerspectiveCorrection` 每条输出不超过 4M、总计不超过 16M 像素，随后做 2× Vision 复读；透视过滤器、resize、rotate 或局部 OCR 失败时必须回到既有轴对齐 crop，不得使整张图片 OCR 失败。
+- 四角 geometry 必须在整页 90°／270° 与局部 crop 的回映射中同步传播，但不能替换稳定布局 box；不得读取漫画探针 report、ground truth、`test/koharu_artifacts`、FileManager 或 TranslationSessionStore，也不得描述为真实 Manga OCR/PaddleOCR 模型或质量提升。
+- 新增 `scripts/test-v3162-image-japanese-line-perspective-ocr-contract.py`，并接入 UI/full fail-fast；v3.161 及更早合同继续回归。候选 exact-SHA full [31186264941](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31186264941)（`8a8e653f953c233f5b0d28249bb9b324ef0baab3`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #226 fast [31186901253](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31186901253) 复用候选 full，merge fast [31186979637](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31186979637) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `b1c272b9fea90e07967e21db082538be50c8b516`），后两者跳过 Xcode/UI/Speech，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得把透视 geometry 迁移描述为日语 OCR、翻译或 Koharu 质量提升。
+
 ### v3.161 日语竖排 line-region geometry 合同
 
 - `VisionOCRService` 必须读取 `VNRecognizedText.boundingBox(for:)` 的整段字符范围作为可选 line-region crop hint；request-level observation box 仍保留给布局与去重，避免更紧的 crop 几何改变最终 block identity。
