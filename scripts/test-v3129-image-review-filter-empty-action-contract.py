@@ -62,7 +62,22 @@ class ImageReviewFilterEmptyActionContractTests(unittest.TestCase):
         completion_index = self.inspector.index("reviewFilter == .needsReview, reviewCompletedBlockCount > 0")
         empty_index = self.inspector.index("else if reviewFilter != .all")
         self.assertLess(completion_index, empty_index)
-        self.assertIn('.accessibilityAction(named: "重新复查")', self.inspector)
+        # The completion state may attach its action directly to the container,
+        # or route it through a View-only helper so locked states can omit the
+        # action while retaining the same accessibility context and hint.
+        if '.accessibilityAction(named: "重新复查")' not in self.inspector:
+            helper = braced_body(
+                self.panel,
+                "private func reviewCompletionEmptyStateAccessibility<Content: View>",
+            )
+            self.assertIn("reviewCompletionEmptyStateAccessibility(", self.inspector)
+            self.assertIn("if canReviewImageTranslation", helper)
+            self.assertIn('.accessibilityAction(named: "重新复查")', helper)
+            self.assertIn("restartReviewQueue()", helper)
+            locked_branch = helper[helper.index("else"):]
+            self.assertNotIn('.accessibilityAction(named: "重新复查")', locked_branch)
+        else:
+            self.assertIn('.accessibilityAction(named: "重新复查")', self.inspector)
 
     def test_version_and_ci_route_follow_v3128(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)

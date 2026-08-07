@@ -39,16 +39,24 @@ class ImageReviewCompletionActionContractTests(unittest.TestCase):
             self.inspector,
             "if reviewFilter == .needsReview, reviewCompletedBlockCount > 0",
         )
+        self.completion_action_helper = braced_body(
+            self.panel,
+            "private func reviewCompletionEmptyStateAccessibility<Content: View>",
+        )
 
     def test_completion_state_is_a_single_stable_accessibility_context(self) -> None:
         self.assertIn(".accessibilityElement(children: .ignore)", self.completion)
         self.assertIn('.accessibilityLabel("本次复查完成")', self.completion)
         self.assertIn(".accessibilityValue(reviewCompletionAccessibilityValue)", self.completion)
+        self.assertIn("reviewCompletionEmptyStateAccessibility(", self.completion)
         self.assertIn("Self.reviewCompletionAccessibilityFocusID", self.completion)
 
     def test_completion_state_exposes_direct_restart_action(self) -> None:
-        self.assertIn('.accessibilityAction(named: "重新复查")', self.completion)
-        self.assertIn("restartReviewQueue()", self.completion)
+        self.assertIn("if canReviewImageTranslation", self.completion_action_helper)
+        self.assertIn('.accessibilityAction(named: "重新复查")', self.completion_action_helper)
+        self.assertIn("restartReviewQueue()", self.completion_action_helper)
+        locked_branch = self.completion_action_helper[self.completion_action_helper.index("else"):]
+        self.assertNotIn('.accessibilityAction(named: "重新复查")', locked_branch)
 
     def test_completion_value_and_hint_reuse_existing_view_guards(self) -> None:
         value = braced_body(self.panel, "private var reviewCompletionAccessibilityValue")

@@ -528,22 +528,21 @@ struct ImageTranslationPanel: View {
                 }
             } else if visibleImageTranslationBlocks.isEmpty {
                 if reviewFilter == .needsReview, reviewCompletedBlockCount > 0 {
-                    AppEmptyState(
-                        title: "本次复查完成",
-                        detail: "所有风险块都已标记为已复查，可随时重新开始。",
-                        systemImage: "checkmark.circle.fill"
+                    reviewCompletionEmptyStateAccessibility(
+                        AppEmptyState(
+                            title: "本次复查完成",
+                            detail: "所有风险块都已标记为已复查，可随时重新开始。",
+                            systemImage: "checkmark.circle.fill"
+                        )
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("本次复查完成")
+                        .accessibilityValue(reviewCompletionAccessibilityValue)
+                        .accessibilityHint(
+                            canReviewImageTranslation
+                                ? "所有风险块都已完成本次复查；可在此状态上执行“重新复查”"
+                                : imageReviewUnavailableDetail
+                        )
                     )
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("本次复查完成")
-                    .accessibilityValue(reviewCompletionAccessibilityValue)
-                    .accessibilityHint(
-                        canReviewImageTranslation
-                            ? "所有风险块都已完成本次复查；可在此状态上执行“重新复查”"
-                            : imageReviewUnavailableDetail
-                    )
-                    .accessibilityAction(named: "重新复查") {
-                        restartReviewQueue()
-                    }
                     .accessibilityFocused(
                         $reviewAccessibilityFocusID,
                         equals: Self.reviewCompletionAccessibilityFocusID
@@ -757,6 +756,18 @@ struct ImageTranslationPanel: View {
             content
                 .accessibilityAction(named: "恢复全部") {
                     requestRestoreAllIgnoredImageTranslationBlocks()
+                }
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
+    private func reviewCompletionEmptyStateAccessibility<Content: View>(_ content: Content) -> some View {
+        if canReviewImageTranslation {
+            content
+                .accessibilityAction(named: "重新复查") {
+                    restartReviewQueue()
                 }
         } else {
             content
