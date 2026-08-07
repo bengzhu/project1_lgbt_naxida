@@ -8773,3 +8773,23 @@ Agent C 最终验收：
 - PR #249 fast [31225019712](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31225019712)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=0c0585a850f4a0a7a4fc4a5735c791439713c4c2`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
 - merge fast [31225064534](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31225064534)：merge SHA `ccd46c169ae7447d4f0485e4d982277f8ba33e46`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31225311934](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31225311934)：commit `493217c97c1c568443d3dbaf7bbac2e1b92bd8c6`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `ccd46c169ae7447d4f0485e4d982277f8ba33e46 / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
+
+## v3.186：日语竖排 tile 结果过滤
+
+日期：2026-08-08
+
+状态：Agent X 继续收敛 v3.185 的 bounded detector fallback：全高 tile 为了找漏掉的日语竖列，可能同时看到同一 tile 内的横排文字；AITRANS 现在先对 90° tile pass 结果应用日语脚本密度与竖排几何过滤，再决定是否消耗 270° fallback 预算，270° 结果也复用同一过滤器。高竖框保留，一／二字紧凑 CJK 片段只在受限尺寸下保留，从而避免横排噪声成为新的最终 observation。工程正式版本为 `MARKETING_VERSION=3.186`。候选 commit `86cf3fd289b4d42c18658d48d5c93308e4f5f91c` 已通过 PR [#250](https://github.com/bengzhu/project1_lgbt_naxida/pull/250) 合入，merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`；`main` 未触碰。
+
+核心变更：
+
+- `filterJapaneseVerticalTileObservations` 要求日语脚本密度至少 `0.5`；高竖框需高度至少 `0.022` 且高宽比至少 `1.18`，紧凑片段需高度至少 `0.018`、高宽比至少 `0.90` 且最多两个 Unicode scalar。该过滤只读取已有 observation 几何与文本，不新增模型、探针或外部工件依赖。
+- `recognizeJapaneseVerticalTileFallback` 将过滤后的 90° 结果传给 `needsJapaneseOrientationFallback`，并对 270° pass 复用过滤器；原有 6 tile、18% overlap、覆盖跳过、4 次方向预算、灰度／放大、原图映射与日语去重边界保持不变。
+- 新增 `scripts/test-v3186-image-japanese-vertical-tile-filter-contract.py`；v3.185 合同放宽为接受等价 filtered-primary helper，并接入显式 UI/full fail-fast。该迁移只作用于普通图片日语 tile fallback，不加载 Manga OCR/PaddleOCR 权重，不读取探针、ground truth 或真实 Koharu 四件套，不改变普通语言、block/line crop、布局、翻译、renderer/export、Store、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。`test/jap.jpg` 只作合同 fixture，没有新的 OCR／翻译／Koharu 指标，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31225584307](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31225584307)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `86cf3fd289b4d42c18658d48d5c93308e4f5f91c`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #250 fast [31225981653](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31225981653)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=86cf3fd289b4d42c18658d48d5c93308e4f5f91c`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31226027759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226027759)：merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。

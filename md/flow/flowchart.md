@@ -1,4 +1,6 @@
 # 项目流程图
+v3.186 日语 tile 过滤：tile crop OCR → 日语脚本密度／竖排几何过滤 → 过滤后弱结果才触发 270° fallback → 原图映射／去重 → block/line reread、布局、翻译／渲染；真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31225584307`、PR fast `31225981653`、merge fast `31226027759` 均通过。
+
 v3.185 日语竖排漏列：整页／旋转 Vision → 既有竖排 block → 未覆盖 tile（最多 6、18% overlap）→ 90° crop OCR／最多 4 次弱结果 270° fallback → 原图映射／日语去重 → block/line reread、布局、翻译／渲染；真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31224644168`、PR fast `31225019712`、merge fast `31225064534` 均通过。
 
 v3.184 日语 OCR 融合：整页／crop／line observations → 双方有 `lineRegionRect` 时按紧 line-region geometry 去重，否则回退 request-level `rect` → 日语竖排布局 → 翻译／渲染；普通语言不切换几何，缺失 hint 安全回退，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31223348790`、PR fast `31223808151`、merge fast `31223883384` 均通过。

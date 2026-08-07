@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.186 日语 tile 结果收敛：tile crop OCR → 日语脚本密度＋高竖框／受限紧凑片段过滤 → 过滤结果决定 270° fallback → 原图映射、日语去重与既有 block/line reread、布局、翻译、渲染；v3.185 的 6 tile／18% overlap／4 fallback 预算与其他语言路径不变。候选 full `31225584307`、PR fast `31225981653`、merge fast `31226027759` 均通过，候选 SHA `86cf3fd289b4d42c18658d48d5c93308e4f5f91c` Xcode/JUnit `10/10`，merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.185 日语竖排漏列恢复：整页／90°／270° Vision observation → 既有竖排 block 形成后，对未被覆盖的最多 6 个全高、18% 重叠 tile 做 bounded reconnaissance → 灰度／放大、90° crop OCR，弱结果最多 4 次 270° fallback → 原图映射、日语去重、既有 block/line reread、布局、翻译与渲染；普通语言与失败边界不变。候选 full `31224644168`、PR fast `31225019712`、merge fast `31225064534` 均通过，候选 SHA `0c0585a850f4a0a7a4fc4a5735c791439713c4c2` Xcode/JUnit `10/10`，merge SHA `ccd46c169ae7447d4f0485e4d982277f8ba33e46` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.184 日语 OCR 融合：Vision observation → 日语双方都有 `lineRegionRect` 时按紧 line geometry 去重，缺失时回退 `rect` → 竖排 line candidate 同样传入日语偏好 → 布局、翻译与渲染；普通语言继续 request-box 去重，文本相似度与 fallback 不变。候选 full `31223348790`、PR fast `31223808151`、merge fast `31223883384` 均通过，候选 SHA `1bc212b0cf5c8190a9aa9746fb44c0f03ae638dd` Xcode/JUnit `10/10`，merge SHA `211dab273bf9b0830b411f0586938ba77c93b46d` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
