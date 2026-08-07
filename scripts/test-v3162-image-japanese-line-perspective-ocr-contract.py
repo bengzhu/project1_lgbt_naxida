@@ -79,10 +79,19 @@ class JapaneseLinePerspectiveOCRContractTests(unittest.TestCase):
             "lineRegionRect: candidate.lineRegionRect",
         ]:
             self.assertIn(marker, self.lines + self.perspective)
+        self.assertTrue(
+            "pixels <= 4_000_000" in self.perspective
+            or "warpedPixels <= 4_000_000" in self.perspective
+        )
+        self.assertTrue(
+            "consumedPixels + pixels <= 16_000_000" in self.perspective
+            or "consumedPixels + preparedPixels <= 16_000_000" in self.perspective
+        )
+        self.assertTrue(
+            "resizedImage(warped, scale: 2)" in self.perspective
+            or "prepareJapaneseCropForVision(warped)" in self.perspective
+        )
         for marker in [
-            "pixels <= 4_000_000",
-            "consumedPixels + pixels <= 16_000_000",
-            "resizedImage(warped, scale: 2)",
             "minimumTextHeight: 0.002",
             "automaticallyDetectsLanguage: false",
         ]:

@@ -446,37 +446,33 @@ struct VisionOCRService: Sendable {
                 continue
             }
 
-            let cropScale: CGFloat
-            let scaledCrop: CGImage
-            if let resized = resizedImage(crop.image, scale: 2) {
-                scaledCrop = resized
-                cropScale = 2
-            } else {
-                scaledCrop = crop.image
-                cropScale = 1
-            }
+            // Keep line-region rereads on the same model-independent Koharu
+            // crop boundary as block rereads: grayscale first, then apply a
+            // bounded resolution boost. The returned scale is preserved for
+            // the existing source-image geometry mapping.
+            let preparedCrop = prepareJapaneseCropForVision(crop.image)
 
             let primary = recognizeJapaneseCropPass(
-                crop: scaledCrop,
+                crop: preparedCrop.image,
                 cropRect: crop.rect,
                 originalImage: image,
                 angle: angle,
                 recognitionLanguages: recognitionLanguages,
                 minimumTextHeight: 0.002,
-                cropScale: cropScale
+                cropScale: preparedCrop.scale
             )
             refined.append(contentsOf: primary)
             if orientationFallbacksRemaining > 0,
                needsJapaneseOrientationFallback(primary) {
                 orientationFallbacksRemaining -= 1
                 refined.append(contentsOf: recognizeJapaneseCropPass(
-                    crop: scaledCrop,
+                    crop: preparedCrop.image,
                     cropRect: crop.rect,
                     originalImage: image,
                     angle: oppositeJapaneseOrientation(angle),
                     recognitionLanguages: recognitionLanguages,
                     minimumTextHeight: 0.002,
-                    cropScale: cropScale
+                    cropScale: preparedCrop.scale
                 ))
             }
         }
@@ -561,22 +557,28 @@ struct VisionOCRService: Sendable {
             return nil
         }
 
-        let pixels = CGFloat(warped.width) * CGFloat(warped.height)
-        guard pixels.isFinite,
-              pixels >= 4,
-              pixels <= 4_000_000,
-              consumedPixels + pixels <= 16_000_000 else {
+        let warpedPixels = CGFloat(warped.width) * CGFloat(warped.height)
+        guard warpedPixels.isFinite,
+              warpedPixels >= 4,
+              warpedPixels <= 4_000_000 else {
             return nil
         }
-        consumedPixels += pixels
 
-        let scaled: CGImage
-        if let resized = resizedImage(warped, scale: 2) {
-            scaled = resized
-        } else {
-            scaled = warped
+        // Perspective line regions are also Koharu text-node crops. Reuse the
+        // same grayscale + bounded upscale boundary as block/axis-aligned
+        // rereads, and charge the bounded result against the page budget so a
+        // collection of tiny lines cannot expand into an unbounded workload.
+        let preparedCrop = prepareJapaneseCropForVision(warped)
+        let preparedPixels = CGFloat(preparedCrop.image.width) * CGFloat(preparedCrop.image.height)
+        guard preparedPixels.isFinite,
+              preparedPixels >= 4,
+              preparedPixels <= 4_000_000,
+              consumedPixels + preparedPixels <= 16_000_000 else {
+            return nil
         }
-        guard let rotated = try? rotatedImage(scaled, angle: angle),
+        consumedPixels += preparedPixels
+
+        guard let rotated = try? rotatedImage(preparedCrop.image, angle: angle),
               let observations = try? recognizeObservations(
                   in: rotated,
                   recognitionLanguages: recognitionLanguages,

@@ -65,9 +65,12 @@ class JapaneseCropOrientationFallbackContractTests(unittest.TestCase):
             "recognizeJapaneseCropPass(",
             "needsJapaneseOrientationFallback(primary)",
             "minimumTextHeight: 0.002",
-            "cropScale: cropScale",
         ]:
             self.assertIn(marker, self.line_crops)
+        self.assertTrue(
+            "cropScale: cropScale" in self.line_crops
+            or "cropScale: preparedCrop.scale" in self.line_crops
+        )
 
     def test_primary_and_opposite_pass_share_mapping_and_postprocess(self) -> None:
         for marker in [
