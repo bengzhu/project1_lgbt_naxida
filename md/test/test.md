@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.153 普通图片空结果 VoiceOver 焦点合同
+
+- 普通图片翻译已完成、保留源图片且没有可显示 OCR 文字块时，结果空态必须使用稳定的 `imageResultEmptyAccessibilityFocusID`；`focusImageTranslationTerminalStateIfNeeded()` 的优先级保持“全部忽略空态 → 翻译完成空态 → 图片状态行”，避免终态焦点落回不可操作或失效的上下文。
+- 现有 v3.144 的“重新识别” action 与 v3.152 可见按钮门控保持不变；只增加 View 私有焦点 identity，不新增 Store／OCR／翻译／持久化管线。焦点仍受 `imageTranslationRevision` 与 request generation guard 约束，旧图片任务不得抢回焦点。
+- 新增 `scripts/test-v3153-image-empty-result-focus-contract.py` 并接入 UI/full fail-fast；候选 exact-SHA full [31170387940](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31170387940)（`6c838ef220470753cb6abf4867babc48a6ea795c`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #217 fast [31170963538](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31170963538) 复用候选 full，merge fast [31171022668](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31171022668) 复用候选 full（merge SHA `a938b8b73803e0570e0ec9bb8e6ec354e3cf85b0`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.152 普通图片空结果可见重新识别合同
 
 - 普通图片翻译已完成但 `imageTranslationBlocks` 为空且仍保留源图片时，结果空态必须提供可见“重新识别”按钮；按钮仅在既有 `store.canRerunImageRecognition` 为真时显示，复用 `store.rerunImageRecognition`，不得新增 OCR、翻译、Store 或持久化管线。

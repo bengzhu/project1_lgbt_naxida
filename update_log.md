@@ -1,3 +1,23 @@
+## v3.153：普通图片空结果 VoiceOver 焦点稳定化
+
+日期：2026-08-07
+
+状态：Agent X 已完成普通图片翻译完成但没有可显示 OCR 文字块时的终态 VoiceOver 焦点修复、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.153`。候选 commit `6c838ef220470753cb6abf4867babc48a6ea795c` 已通过 PR [#217](https://github.com/bengzhu/project1_lgbt_naxida/pull/217) 合入，merge SHA `a938b8b73803e0570e0ec9bb8e6ec354e3cf85b0`；`main` 未触碰。
+
+核心变更：
+
+- 普通图片在翻译已完成、源图片仍保留且没有可显示 OCR 文字块时，结果空态使用稳定 `imageResultEmptyAccessibilityFocusID`，让可操作的空态成为终态 VoiceOver 焦点，而不是回到泛化状态行。
+- `focusImageTranslationTerminalStateIfNeeded()` 保留全部忽略空态优先级；非忽略的 `.translated` 无 blocks 聚焦空态，失败、取消、初始 idle 或其他状态继续回到图片状态行。焦点请求继续受 revision 与 View 私有 generation guard 约束。
+- v3.144 的 VoiceOver“重新识别” action 与 v3.152 的可见按钮及其源图片门控保持不变；本次不新增 Store、OCR、翻译或持久化管线。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`；不得据此声称 OCR、翻译、识别或 Koharu 质量提升。后续云端文档跟进只属于元数据传播，不是新的编译证据。
+
+云端证据：
+
+- 候选 exact-SHA full [31170387940](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31170387940)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `6c838ef220470753cb6abf4867babc48a6ea795c`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu active artifact validator 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #217 fast [31170963538](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31170963538)：`validationProfile=fast`，复用候选 full `6c838ef220470753cb6abf4867babc48a6ea795c / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31171022668](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31171022668)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `a938b8b73803e0570e0ec9bb8e6ec354e3cf85b0` 复用候选 full `6c838ef220470753cb6abf4867babc48a6ea795c / success`，`receiptPropagationAllowed=true`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.152：普通图片空结果可见重新识别
 
 日期：2026-08-07
