@@ -164,11 +164,16 @@ struct VisionOCRService: Sendable {
         let withoutWhitespace = text.filter { !$0.isWhitespace }
             .replacingOccurrences(of: "…", with: "...")
 
-        var output = ""
+        // Keep Koharu's two-stage boundary explicit: collapse dot/middle-dot
+        // runs first, then apply halfwidth-to-fullwidth conversion to the
+        // collapsed result. Emitting the dots directly into the final output
+        // would leave them halfwidth while all other ASCII punctuation becomes
+        // fullwidth.
+        var collapsed = ""
         var dotCount = 0
         func flushDots() {
             guard dotCount > 0 else { return }
-            output.append(contentsOf: String(repeating: ".", count: dotCount))
+            collapsed.append(contentsOf: String(repeating: ".", count: dotCount))
             dotCount = 0
         }
 
@@ -178,17 +183,22 @@ struct VisionOCRService: Sendable {
                 dotCount += 1
             default:
                 flushDots()
-                if scalar.value == 0x20 {
-                    output.unicodeScalars.append(UnicodeScalar(0x3000)!)
-                } else if (0x21...0x7E).contains(scalar.value),
-                          let fullwidth = UnicodeScalar(scalar.value + 0xFEE0) {
-                    output.unicodeScalars.append(fullwidth)
-                } else {
-                    output.unicodeScalars.append(scalar)
-                }
+                collapsed.unicodeScalars.append(scalar)
             }
         }
         flushDots()
+
+        var output = ""
+        for scalar in collapsed.unicodeScalars {
+            if scalar.value == 0x20 {
+                output.unicodeScalars.append(UnicodeScalar(0x3000)!)
+            } else if (0x21...0x7E).contains(scalar.value),
+                      let fullwidth = UnicodeScalar(scalar.value + 0xFEE0) {
+                output.unicodeScalars.append(fullwidth)
+            } else {
+                output.unicodeScalars.append(scalar)
+            }
+        }
         return output
     }
 
