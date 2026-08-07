@@ -1,3 +1,23 @@
+## v3.137：图片局部放大 VoiceOver edit action
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.137 图片局部放大容器直接修正 OCR 操作的 View-only UX 优化、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.137`。候选 commit `46f617f8ce9a78628c4bdef54a800e4a4dc4e5a3` 已通过 PR [#201](https://github.com/bengzhu/project1_lgbt_naxida/pull/201) 合入，merge SHA `9f8a05bd0b6001e8cfc0a94213cfee8a5f2e3583`；候选远端分支已清理，`main` 未触碰。
+
+核心变更：
+
+- `ImageTranslationFocusPreview` 在 `canEdit` 为真时通过 View-only accessibility modifier 提供同名“修正识别文字” action，直接复用既有 `edit()`，让 VoiceOver 用户无需先下钻到可见按钮即可进入 OCR 修正。
+- `canEdit` 为假时不暴露该 action；局部预览可用／不可用两条父级 hint 分别说明可执行操作或现有 `modificationUnavailableHint`，可见修正按钮、close action、focus identity 与 OCR 修正 sheet 入口保持不变。
+- 新增 `scripts/test-v3137-image-focus-edit-action-contract.py` 并接入 UI/full fail-fast；历史 v3.68/v3.77 合同放宽为接受这条等价的 gated hint 语义。改动只属于 View，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31147358078](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31147358078)：`validationReason=candidate_development_push`，commit `46f617f8ce9a78628c4bdef54a800e4a4dc4e5a3`，Xcode build success，UI／Speech／home／paste 合同 success，JUnit `10/10` 且 0 failures，`probe_mode=skip`；active Koharu validator 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #201 fast [31147793085](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31147793085)：`validationProfile=fast`，复用候选 full `46f617f8ce9a78628c4bdef54a800e4a4dc4e5a3 / success`，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31147924273](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31147924273)：merge SHA `9f8a05bd0b6001e8cfc0a94213cfee8a5f2e3583`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.136：图片局部放大 VoiceOver close action
 
 日期：2026-08-07

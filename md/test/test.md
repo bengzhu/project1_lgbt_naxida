@@ -160,6 +160,12 @@
 - `.preparing`／`.rendering` 等运行中状态不得抢焦点；焦点与失败分流必须保持 View 私有，不新增 Store／持久化，不改变 OCR、翻译、renderer/export、probe_report 或 Koharu active gate。
 - 合同接在 v3.125 后进入 UI/full fail-fast，并沿用表达式长度安全的既有 UI 路由。候选 full `31082994159`（exact SHA `244f97435d340207c7684c3a2ab553b552b3b780`）Xcode/JUnit `10/10` 成功；PR #190 fast `31083400009`、merge fast `31083557316` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，真实 Koharu 四件套缺失，不声称 OCR、翻译、识别或 Koharu 质量提升。
 
+### v3.137 图片局部放大 VoiceOver edit action 合同
+
+- `scripts/test-v3137-image-focus-edit-action-contract.py` 必须验证 `ImageTranslationFocusPreview` 在 `canEdit` 为真时通过 View-only modifier 暴露同名“修正识别文字” VoiceOver action，并直接复用既有 `edit()`；`canEdit` 为假时不得暴露该 action，父级 hint 必须说明现有 `modificationUnavailableHint`。
+- 稳定的局部预览 label/value/hint、close action、focus identity、可见修正按钮和 OCR 修正 sheet 入口必须保持；改动不得新增 Store／持久化或改变 OCR、翻译、renderer/export、探针、Koharu、metrics、`output`。
+- 合同接在 v3.136 后进入 UI/full fail-fast。候选 exact-SHA full `31147358078`（`46f617f8ce9a78628c4bdef54a800e4a4dc4e5a3`）Xcode/JUnit `10/10` 成功；PR #201 fast `31147793085`、merge fast `31147924273` 复用候选 full，Xcode skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.136 图片局部放大 VoiceOver close action 合同
 
 - `scripts/test-v3136-image-focus-close-action-contract.py` 必须验证 `ImageTranslationFocusPreview` 的父容器提供同名“关闭局部放大” action 且直接复用既有 `close()`；可见关闭按钮 hint 必须说明返回当前文字块结果行。
