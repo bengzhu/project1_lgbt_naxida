@@ -50,11 +50,15 @@ class JapaneseVerticalFragmentLineContractTests(unittest.TestCase):
             "let perspectiveCandidates = Array(uniqueCandidates.prefix(24))",
             "synthesizeJapaneseVerticalLineCandidates(",
             "let axisCandidates = Array(",
-            "deduplicateObservations(uniqueCandidates + synthesizedCandidates)",
             ".prefix(24)",
             "recognizeJapanesePerspectiveLineCrop(",
         ]:
             self.assertIn(marker, self.lines)
+        self.assertTrue(
+            "deduplicateObservations(uniqueCandidates + synthesizedCandidates)" in self.lines
+            or "deduplicateJapaneseObservations(uniqueCandidates + synthesizedCandidates)"
+            in self.lines
+        )
 
     def test_synthesis_requires_short_japanese_same_column_fragments(self) -> None:
         for marker in [
