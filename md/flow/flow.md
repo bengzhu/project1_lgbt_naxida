@@ -3,6 +3,8 @@
 
 ## 0. 一句话总览
 
+v3.161 普通图片日语竖排 OCR 使用 Vision 字符范围 bounds 作为更紧的 line-region crop hint，request-level box 仍负责布局／去重，整页旋转和 2× crop 都传递该 hint；缺失时回退原框。候选 full `31184241208`、PR fast `31184939184`、merge fast `31185021159` 均通过，候选 SHA `9164066706faed78494384d79ec1544d46084c20` Xcode/JUnit `10/10`，merge SHA `1eb026c2ce3df861b6efcc7ae9d61a5d08fd86ea` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
+
 v3.160 普通图片日语竖排 OCR 在既有 block 候选上继续对齐 Koharu `extract_text_block_regions`：按重叠与纵向条件筛选最多 24 个 line-region proxy，方向感知扩边后 2× crop 复读，结果按缩放比例映射回原图并去重；没有 line polygons 时仅为保守 Vision 过渡层，不是模型替换。候选 full `31182335743`、PR fast `31183007517`、merge fast `31183084173` 均通过，候选 SHA `68c1c1b8eb1390b808204c3c16b7b1dbc72a28b9` Xcode/JUnit `10/10`，merge SHA `19b018101a4937474e2f3b030a1e24dc58807704` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR／翻译质量提升。
 
 v3.159 普通图片日语源语言进入 Vision OCR 时，Store 状态文案会明确说明“识别日语文字，复查竖排方向与文字块位置”；其他语言继续使用通用 OCR 状态，View 仍消费同一个 `imageTranslationMessage`，不新增管线、Store 状态或持久化。候选 full `31180141884`、PR fast `31180615748`、merge fast `31180708039` 均通过，候选 SHA `f30fbab503ff9c694af0d4f2c123113b1802648d` Xcode/JUnit `10/10`，merge SHA `9c68b5c9f7e5e5d341a3cfaec1f764964b71b9f0` 复用候选 full receipt；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR／翻译质量提升。

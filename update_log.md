@@ -1,3 +1,23 @@
+## v3.161：日语竖排 line-region geometry hint
+
+日期：2026-08-07
+
+状态：Agent X 继续按 Koharu 的 line-region 几何边界改进普通图片日语竖排 OCR，并完成候选 full、PR fast、merge fast 云端验收合入 `smalldata_test`。工程正式版本为 `MARKETING_VERSION=3.161`。候选 commit `9164066706faed78494384d79ec1544d46084c20` 已通过 PR [#225](https://github.com/bengzhu/project1_lgbt_naxida/pull/225) 合入，merge SHA `1eb026c2ce3df861b6efcc7ae9d61a5d08fd86ea`；`main` 未触碰。
+
+核心变更：
+
+- 读取 Vision `VNRecognizedText.boundingBox(for:)` 的整段字符范围 bounds，作为更紧的日语 line-region crop hint；request-level box 继续作为布局／去重的稳定几何。
+- 该 hint 在整页 90°／270° 方向复查与局部 2× crop 的坐标回映射中同步传播；字符范围调用失败、几何重叠／面积比例不合格时回退原框，不影响整张图片 OCR。
+- 这是在缺少 Koharu 真实 `line_polygons` 时对 line-region 几何的渐进迁移，不是已加载 Manga OCR、PaddleOCR-VL 或 MIT 48px 模型；不读取探针报告、ground truth 或 Koharu active artifacts，不改变翻译、renderer/export、Store、持久化、metrics 或 `output`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31184241208](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31184241208)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `9164066706faed78494384d79ec1544d46084c20`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #225 fast [31184939184](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31184939184)：`validationProfile=fast`，`reusedFullValidationSha=9164066706faed78494384d79ec1544d46084c20`、state `success`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31185021159](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31185021159)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `1eb026c2ce3df861b6efcc7ae9d61a5d08fd86ea` 复用候选 full，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.160：日语竖排 line-region OCR 过渡层
 
 日期：2026-08-07
