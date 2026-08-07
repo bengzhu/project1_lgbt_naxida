@@ -57,6 +57,18 @@ struct VisionOCRService: Sendable {
                     }
                     observations.append(contentsOf: rotatedObservations)
                 }
+
+                // Koharu crops each detected text node before handing it to the OCR
+                // engine. The iOS path has no bundled Manga OCR/PaddleOCR model yet,
+                // so mirror that boundary with a bounded Vision crop reread: use the
+                // existing vertical layout candidates, crop only those nodes, reread
+                // the chosen orientation, map the boxes back, then dedupe again.
+                let cropRefinedObservations = Self.recognizeJapaneseVerticalCrops(
+                    in: ocrImage,
+                    observations: observations,
+                    recognitionLanguages: japaneseOrientationLanguages
+                )
+                observations.append(contentsOf: cropRefinedObservations)
             }
 
             let layoutObservations = Self.deduplicateObservations(observations).map {
@@ -126,6 +138,155 @@ struct VisionOCRService: Sendable {
         }
     }
 
+    private static func recognizeJapaneseVerticalCrops(
+        in image: CGImage,
+        observations: [VisionOCRObservation],
+        recognitionLanguages: [String]
+    ) -> [VisionOCRObservation] {
+        let safeObservations = deduplicateObservations(observations)
+        let layoutObservations = safeObservations.map {
+            ImageOCRLayoutObservation(
+                text: $0.text,
+                confidence: $0.confidence,
+                rect: $0.rect
+            )
+        }
+        let verticalBlocks = ImageOCRLayoutEngine.layout(
+            layoutObservations,
+            allowsVerticalText: true
+        )
+        .filter { block in
+            let aspectRatio = block.rect.height / max(block.rect.width, 0.001)
+            return block.direction == .vertical
+                && aspectRatio >= 1.45
+                && block.rect.height >= 0.04
+        }
+        .sorted { lhs, rhs in
+            if lhs.confidence != rhs.confidence {
+                return lhs.confidence > rhs.confidence
+            }
+            if lhs.rect.height != rhs.rect.height {
+                return lhs.rect.height > rhs.rect.height
+            }
+            return lhs.text < rhs.text
+        }
+        .prefix(16)
+
+        var refined: [VisionOCRObservation] = []
+        refined.reserveCapacity(verticalBlocks.count * 2)
+        for block in verticalBlocks {
+            let angle = safeObservations
+                .filter { overlapRatio($0.rect, block.rect) >= 0.25 }
+                .sorted { isBetterObservation($0, $1) }
+                .first
+                .map { $0.rotationApplied == 270 ? 270 : 90 }
+                ?? 90
+            guard let crop = cropImage(image, normalizedRect: expandedVerticalCropRect(block.rect)),
+                  let rotatedCrop = try? rotatedImage(crop.image, angle: angle),
+                  let cropObservations = try? recognizeObservations(
+                      in: rotatedCrop,
+                      recognitionLanguages: recognitionLanguages,
+                      minimumTextHeight: 0.004,
+                      automaticallyDetectsLanguage: false,
+                      rotationApplied: angle
+                  ) else {
+                continue
+            }
+
+            refined.append(contentsOf: cropObservations.map {
+                mapRotatedCropObservation(
+                    $0,
+                    rotatedImage: rotatedCrop,
+                    cropRect: crop.rect,
+                    originalImage: image,
+                    angle: angle
+                )
+            })
+        }
+        return refined
+    }
+
+    private static func expandedVerticalCropRect(_ rect: ImageOCRLayoutRect) -> ImageOCRLayoutRect {
+        let horizontalPadding = min(max(rect.width * 0.18, 0.01), 0.08)
+        let verticalPadding = min(max(rect.height * 0.12, 0.01), 0.08)
+        return ImageOCRLayoutRect(
+            x: rect.x - horizontalPadding,
+            y: rect.y - verticalPadding,
+            width: rect.width + horizontalPadding * 2,
+            height: rect.height + verticalPadding * 2
+        ).normalizedToUnit() ?? rect
+    }
+
+    private static func cropImage(
+        _ image: CGImage,
+        normalizedRect: ImageOCRLayoutRect
+    ) -> (image: CGImage, rect: CGRect)? {
+        let bounds = CGRect(
+            x: 0,
+            y: 0,
+            width: CGFloat(image.width),
+            height: CGFloat(image.height)
+        )
+        let pixelRect = CGRect(
+            x: normalizedRect.x * bounds.width,
+            y: normalizedRect.y * bounds.height,
+            width: normalizedRect.width * bounds.width,
+            height: normalizedRect.height * bounds.height
+        )
+        .integral
+        .intersection(bounds)
+        guard pixelRect.width >= 2, pixelRect.height >= 2,
+              let cropped = image.cropping(to: pixelRect) else {
+            return nil
+        }
+        return (cropped, pixelRect)
+    }
+
+    private static func mapRotatedCropObservation(
+        _ observation: VisionOCRObservation,
+        rotatedImage: CGImage,
+        cropRect: CGRect,
+        originalImage: CGImage,
+        angle: Int
+    ) -> VisionOCRObservation {
+        let rotatedSize = CGSize(width: CGFloat(rotatedImage.width), height: CGFloat(rotatedImage.height))
+        let cropSize = CGSize(width: cropRect.width, height: cropRect.height)
+        let originalSize = CGSize(width: CGFloat(originalImage.width), height: CGFloat(originalImage.height))
+        let pixelRect = CGRect(
+            x: observation.rect.x * rotatedSize.width,
+            y: observation.rect.y * rotatedSize.height,
+            width: observation.rect.width * rotatedSize.width,
+            height: observation.rect.height * rotatedSize.height
+        )
+        let points = [
+            pixelRect.origin,
+            CGPoint(x: pixelRect.maxX, y: pixelRect.minY),
+            CGPoint(x: pixelRect.minX, y: pixelRect.maxY),
+            CGPoint(x: pixelRect.maxX, y: pixelRect.maxY)
+        ].map {
+            let local = Self.mapPointToOriginal($0, angle: angle, originalSize: cropSize)
+            return CGPoint(x: cropRect.minX + local.x, y: cropRect.minY + local.y)
+        }
+        let xs = points.map(\.x)
+        let ys = points.map(\.y)
+        let minX = xs.min() ?? cropRect.minX
+        let maxX = xs.max() ?? cropRect.maxX
+        let minY = ys.min() ?? cropRect.minY
+        let maxY = ys.max() ?? cropRect.maxY
+        let originalRect = ImageOCRLayoutRect(
+            x: minX / originalSize.width,
+            y: minY / originalSize.height,
+            width: (maxX - minX) / originalSize.width,
+            height: (maxY - minY) / originalSize.height
+        ).normalizedToUnit() ?? observation.rect
+        return VisionOCRObservation(
+            text: observation.text,
+            confidence: observation.confidence,
+            rect: originalRect,
+            rotationApplied: observation.rotationApplied
+        )
+    }
+
     private static func deduplicateObservations(_ observations: [VisionOCRObservation]) -> [VisionOCRObservation] {
         var output: [VisionOCRObservation] = []
         for observation in observations.sorted(by: { isBetterObservation($0, $1) }) {
@@ -187,6 +348,12 @@ struct VisionOCRService: Sendable {
             return true
         }
         return overlap >= 0.72 && textSimilarity(leftText, rightText) >= 0.62
+    }
+
+    private static func overlapRatio(_ lhs: ImageOCRLayoutRect, _ rhs: ImageOCRLayoutRect) -> Double {
+        let intersection = intersectionArea(lhs, rhs)
+        let minimumArea = max(min(lhs.width * lhs.height, rhs.width * rhs.height), 0.0001)
+        return intersection / minimumArea
     }
 
     private static func intersectionArea(_ lhs: ImageOCRLayoutRect, _ rhs: ImageOCRLayoutRect) -> Double {
