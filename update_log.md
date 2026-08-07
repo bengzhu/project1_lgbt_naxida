@@ -8568,3 +8568,22 @@ Agent C 最终验收：
 - PR #239 fast [31210705708](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31210705708)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=e47014bb6cc68ec70029b3000d0b84c0156fe21e`、state `success`；Xcode skipped，不是新的编译证据。
 - merge fast [31210782269](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31210782269)：merge SHA `7b7a57b4d091fc3bd10305a6997e9dd24fba42ba`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，不是新的编译证据。
 - 文档 metadata follow-up [31211090597](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31211090597)：commit `cabb3aefe5af8840006207d793bdee5efe823276`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用父 merge `7b7a57b4d091fc3bd10305a6997e9dd24fba42ba / success`，`receiptPropagationAllowed=true`，仅上述 6 个文档文件变化，Xcode/UI/Speech 与漫画探针跳过，不是新的编译证据。
+
+## v3.176：日语竖排 perspective line reading order
+
+日期：2026-08-08
+
+状态：Agent X 继续按 Koharu `extract_text_block_regions`／`warp_line_region` 的“先得到一个 line region，再交给 OCR”边界，修正普通图片日语竖排四点 perspective line crop 的多 observation 拼接方向。Koharu 的竖排 line 会先 `rotate270` 成可识别的横向 crop；AITRANS 现在把 90° pass 的旋转图 x 轴视为正向，把 270° pass 的 x 轴视为反向，同一 x 位置才用 y 与既有日语 observation score 稳定排序，避免 Vision 拆分一条 line 后把文字顺序反转。候选 commit `6a61068f292e4e842b570a455eb357bd5b9a7c40` 已通过 PR [#240](https://github.com/bengzhu/project1_lgbt_naxida/pull/240) 合入，merge SHA `eaa523f4d29f8be9e7e2f16131bbc21a9363706f`；工程正式版本为 `MARKETING_VERSION=3.176`，`main` 未触碰。
+
+核心变更：
+
+- `recognizeJapanesePerspectiveLineCrop` 改用共享 `orderedJapanesePerspectiveLineObservations`：90° 读取 x 递增、270° 读取 x 递减，接近同一 x 时以 y 递增和 `isBetterJapaneseObservation` 做稳定 tie-breaker；单 observation 保持原样返回。
+- 新增 `scripts/test-v3176-image-japanese-line-reading-order-contract.py` 并接入显式 UI/full fail-fast；v3.162、v3.175 与更早合同继续回归，四点 warp、像素预算、语言后处理、坐标映射与失败 fallback 未改变。
+
+边界：该改动只影响普通图片日语 perspective line reread 的文字组装顺序，不加载 Manga OCR/PaddleOCR 权重，不改变普通语言、整页 OCR、翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`。`test/jap.jpg` 继续只作合同 fixture；真实竖排图片质量 corpus、Speech corpus 与 Koharu 四件套仍缺失，readiness 必须保持 `manifestMissing / stopUntilArtifactsProvided`，不能据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31211585649](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31211585649)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `6a61068f292e4e842b570a455eb357bd5b9a7c40`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #240 fast [31212154910](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31212154910)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=6a61068f292e4e842b570a455eb357bd5b9a7c40`、state `success`；Xcode skipped，不是新的编译证据。
+- merge fast [31212217877](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31212217877)：merge SHA `eaa523f4d29f8be9e7e2f16131bbc21a9363706f`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode skipped，不是新的编译证据。

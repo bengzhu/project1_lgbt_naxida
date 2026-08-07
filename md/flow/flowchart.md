@@ -1,4 +1,6 @@
 # 项目流程图
+v3.176 日语竖排：四点 line warp → 90° x 正序／270° x 逆序拼接 → y／日语评分 tie-breaker → OCR 后处理／去重／布局 → 翻译／渲染；单 observation 与失败路径安全回退，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31211585649`、PR fast `31212154910`、merge fast `31212217877` 均通过。
+
 v3.175 日语竖排：Vision block/line → 源像素字体大小 → Koharu padding（8% base／18% 横／12% 纵，最小 2px）→ 归一化 crop → 既有 OCR reread／方向 fallback → 去重／布局 → 翻译／渲染；缺尺寸安全回退，其他语言不变。候选 full `31210073265`、PR fast `31210705708`、merge fast `31210782269` 均通过；真实 Koharu 工件仍缺失，不声称 OCR 质量提升。
 
 v3.174 日语竖排：Vision 高而窄 line box → 同列／重叠门控 + 有界平均高度 gap → 文字块 → Koharu 风格 crop／line reread → 去重／布局 → 翻译／渲染；横排、非日语与整页路径不变。候选 full `31208462786`、PR fast `31209161098`、merge fast `31209248983` 均通过，候选 SHA `49b987b3765e0df0c0511e30f955aa6aa7f487bf` Xcode/JUnit `10/10`，merge SHA `5efc690d0f8c3b41282518a8bc76d12559efa114` 复用候选 full；真实 Koharu 工件仍缺失，不声称 OCR 质量提升。

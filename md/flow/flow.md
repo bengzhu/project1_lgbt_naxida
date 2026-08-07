@@ -3,6 +3,8 @@
 
 ## 0. 一句话总览
 
+v3.176 日语竖排 perspective line：四点 warp → 90°／270° Vision reread → 按旋转图 x 轴分别正序／逆序拼接 observation，同一位置用 y 与日语评分稳定排序 → 后处理、去重、布局、翻译与渲染；无多 observation 或 warp 失败时安全回退，其他语言与整页路径不变。候选 full `31211585649`、PR fast `31212154910`、merge fast `31212217877` 均通过，候选 SHA `6a61068f292e4e842b570a455eb357bd5b9a7c40` Xcode/JUnit `10/10`，merge SHA `eaa523f4d29f8be9e7e2f16131bbc21a9363706f` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.175 日语竖排 crop：Vision block/line → 读取源图片像素尺寸并按 Koharu 字体大小推导 padding（base 8%、竖排水平 18%、垂直 12%，最小 2px）→ 映射回归一化 crop → 既有灰度化／放大、方向 fallback、去重与布局 → 翻译／渲染；无源尺寸时安全回退，其他语言与整页路径不变。候选 full `31210073265`、PR fast `31210705708`、merge fast `31210782269` 均通过，候选 SHA `e47014bb6cc68ec70029b3000d0b84c0156fe21e` Xcode/JUnit `10/10`，merge SHA `7b7a57b4d091fc3bd10305a6997e9dd24fba42ba` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.174 日语竖排聚类：Vision 高而窄的 line box → 保留同列／重叠门控并加入有界平均高度 gap 信号 → 形成更完整的文字块 → 既有 Koharu 风格 crop／line reread → 去重、布局、翻译与渲染；横排、非日语与整页 OCR 路径不变。候选 full `31208462786`、PR fast `31209161098`、merge fast `31209248983` 均通过，候选 SHA `49b987b3765e0df0c0511e30f955aa6aa7f487bf` Xcode/JUnit `10/10`，merge SHA `5efc690d0f8c3b41282518a8bc76d12559efa114` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。

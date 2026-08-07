@@ -7,6 +7,12 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.176 日语竖排 perspective line reading order 合同
+
+- `recognizeJapanesePerspectiveLineCrop` 必须把同一四点 warp 后的 Vision observations 交给共享 `orderedJapanesePerspectiveLineObservations`；90° pass 按旋转图 x 轴正序，270° pass 按 x 轴逆序，x 位置接近时才使用 y 与 `isBetterJapaneseObservation` 稳定 tie-breaker，避免一条竖排 line 被拆分后文字顺序反转。
+- 单 observation 直接返回；四点 warp、Vision reread、语言后处理、坐标／布局 box、像素预算与失败回退边界保持既有行为。该改动只作用于普通图片日语 perspective line reread，不改变普通语言、整页 OCR、翻译、renderer/export、Store、探针、Koharu active gate、metrics 或 `output`，不得把顺序修正描述为已测得质量提升。
+- 新增 `scripts/test-v3176-image-japanese-line-reading-order-contract.py` 并接入显式 UI/full fail-fast；v3.162/v3.175 及更早合同继续回归。候选 exact-SHA full [31211585649](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31211585649)、PR #240 fast [31212154910](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31212154910)、merge fast [31212217877](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31212217877) 均通过；候选 SHA `6a61068f292e4e842b570a455eb357bd5b9a7c40` Xcode/JUnit `10/10`，merge SHA `eaa523f4d29f8be9e7e2f16131bbc21a9363706f` 复用候选 full，三次均为 `probe_mode=skip`、readiness `manifestMissing / stopUntilArtifactsProvided`。
+
 ### v3.175 日语竖排字体尺寸 crop padding 合同
 
 - `VisionOCRService` 的日语 block/line crop 必须从源图片像素宽高推导 `fontSizePixels = min(widthPixels, heightPixels)`，按 Koharu 规则计算 `base = max(font × 0.08, 2px)`、竖排 `horizontal = max(font × 0.18, base)`、`vertical = max(font × 0.12, base)`，映射回归一化坐标并保留单轴 `0.08` 上限；block 与 line 入口必须传递同一 `imageSize` 并共享 helper。
