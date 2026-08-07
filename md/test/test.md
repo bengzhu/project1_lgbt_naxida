@@ -7,6 +7,13 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.149 普通图片复查完成空态 action 门控合同
+
+- 普通图片筛选到 `.needsReview` 且所有风险块已完成时，完成空态只在 `canReviewImageTranslation` 为真时提供 VoiceOver“重新复查” action，并复用既有 `restartReviewQueue()`；翻译未完成或导出重绘期间不得暴露一个只会被 guard 拒绝的无效 action。
+- 锁定状态继续保留“本次复查完成”的稳定 label/value、`imageReviewUnavailableDetail` hint、可见“重新复查”按钮及 `.disabled(!canReviewImageTranslation)`；焦点仍回到 View 私有完成空态 identity。
+- 新增 `scripts/test-v3149-image-review-completion-action-gate-contract.py`，并让 v3.128/v3.129/v3.148 历史合同接受同一 View-only helper 形式。候选 exact-SHA full `31161816278`（`b0fc332c565fe501c8e2e939a086b79c142c9853`）Xcode/JUnit `10/10` 成功；PR #213 fast `31162344568`、merge fast `31162426726` 复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`。探针默认 `probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+
 ### v3.148 普通图片全部忽略空态 action 门控合同
 
 - 全部 OCR 文字块被忽略时，空态父级仅在 `canModifyImageTranslation` 为真时提供 VoiceOver“恢复全部” action；翻译未完成或导出重绘期间不得暴露一个只会被 guard 拒绝的无效 action。

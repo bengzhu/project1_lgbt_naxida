@@ -1,3 +1,23 @@
+## v3.149：普通图片复查完成空态 VoiceOver action 门控
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.149 普通图片“本次复查完成”空态的 VoiceOver action 门控优化、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.149`。候选 commit `b0fc332c565fe501c8e2e939a086b79c142c9853` 已通过 PR [#213](https://github.com/bengzhu/project1_lgbt_naxida/pull/213) 合入，merge SHA `137d8d61a4c6b10d4126b3ae07e9163edbf07878`；`main` 未触碰。
+
+核心变更：
+
+- 普通图片筛选到 `.needsReview` 且所有风险块都已完成时，完成空态通过 View 私有 `reviewCompletionEmptyStateAccessibility` helper 暴露 VoiceOver“重新复查” action，且仅在 `canReviewImageTranslation` 为真时提供；可用时直接复用既有 `restartReviewQueue()`，不会新增 Store 或重跑 OCR。
+- 翻译未完成或导出重绘期间保留“本次复查完成”的稳定 label/value、`imageReviewUnavailableDetail` 具体原因、可见按钮的 disabled 边界和既有完成空态焦点；锁定时不把只会被 guard 拒绝的 action 暴露给 VoiceOver。
+- 新增 `scripts/test-v3149-image-review-completion-action-gate-contract.py`，并让 v3.128/v3.129/v3.148 历史合同接受同一 View-only helper 形式。改动只属于 View、静态合同和 CI 路由，不新增 Store／持久化状态，不改变 Vision OCR、模型翻译、renderer/export、漫画探针、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31161816278](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31161816278)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `b0fc332c565fe501c8e2e939a086b79c142c9853`，Xcode build success，静态、UI、Speech、home、paste 合同 success，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #213 fast [31162344568](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31162344568)：`validationProfile=fast`，复用候选 full `b0fc332c565fe501c8e2e939a086b79c142c9853 / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31162426726](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31162426726)：`validationProfile=fast`，`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full `b0fc332c565fe501c8e2e939a086b79c142c9853 / success`，`receiptPropagationAllowed=true`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.148：普通图片全部忽略空态 VoiceOver action 门控
 
 日期：2026-08-07
