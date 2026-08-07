@@ -1,3 +1,23 @@
+## v3.144：普通图片 OCR 空结果直接重新识别 VoiceOver action
+
+日期：2026-08-07
+
+状态：Agent X 已完成 v3.144 普通图片 OCR 空结果直接重新识别的 View-only UX 优化、候选 exact-SHA full、PR fast、merge fast 云端验收并合入 `smalldata_test`；工程正式版本为 `MARKETING_VERSION=3.144`。候选 commit `ff31f66f71698c6f34a7e1b7e52a940485984eea` 已通过 PR [#208](https://github.com/bengzhu/project1_lgbt_naxida/pull/208) 合入，merge SHA `914bf3d5c35354ce4e23e5f6bc470d6e2ba886f0`；`main` 未触碰。
+
+核心变更：
+
+- 当普通图片翻译已完成、当前没有可显示 OCR 文字块且源图片仍由 Store 保留时，结果空态通过 View-only helper 提供同名“重新识别” VoiceOver action，直接复用既有 `store.rerunImageRecognition()`。
+- action 受既有 `store.canRerunImageRecognition` 门控；源图片文件缺失或状态不是 `.translated` 时不暴露 action。提示明确该操作只重跑当前图片的 Vision OCR 与翻译，不把空态恢复误解为新图片选择或漫画探针。
+- 新增 `scripts/test-v3144-image-empty-result-rerun-action-contract.py` 并接入 UI/full fail-fast；未新增 Store／持久化状态，不改变 OCR、翻译、renderer/export、探针报告、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 使用 `probe_mode=skip`，没有新的 OCR／翻译／Koharu 指标，也没有更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片 corpus 仍缺失，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31154791726](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31154791726)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `ff31f66f71698c6f34a7e1b7e52a940485984eea`，Xcode build success，静态、UI、Speech、home、paste 合同 success，JUnit `10/10` 且 0 failures/errors，`probe_mode=skip`；Koharu readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #208 fast [31155305272](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31155305272)：`validationProfile=fast`，复用候选 full `ff31f66f71698c6f34a7e1b7e52a940485984eea / success`，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+- merge fast [31155356211](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31155356211)：merge SHA `914bf3d5c35354ce4e23e5f6bc470d6e2ba886f0`，`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech skipped，JUnit `10/10`；不是新的编译证据。
+
 ## v3.143：普通图片 OCR 结果行 VoiceOver action hint
 
 日期：2026-08-07
