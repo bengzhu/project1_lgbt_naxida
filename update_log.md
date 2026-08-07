@@ -18,6 +18,7 @@
 - 候选 exact-SHA full [31186264941](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31186264941)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `8a8e653f953c233f5b0d28249bb9b324ef0baab3`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
 - PR #226 fast [31186901253](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31186901253)：`validationProfile=fast`，`reusedFullValidationSha=8a8e653f953c233f5b0d28249bb9b324ef0baab3`、state `success`，Xcode/UI/Speech 跳过，不是新的编译证据。
 - merge fast [31186979637](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31186979637)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `b1c272b9fea90e07967e21db082538be50c8b516` 复用候选 full，Xcode/UI/Speech 跳过，不是新的编译证据。
+- 文档 metadata follow-up [31187213167](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31187213167)：`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，复用 merge SHA `b1c272b9fea90e07967e21db082538be50c8b516 / success`，`receiptPropagationAllowed=true`、`smalldataIncrementalMetadataOnly=true`，仅上述 6 个文档文件变化，Xcode/UI/Speech 跳过，不是新的编译证据。
 
 ## v3.161：日语竖排 line-region geometry hint
 
