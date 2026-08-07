@@ -43,7 +43,10 @@ class FocusPreviewUnavailableVoiceOverContractTests(unittest.TestCase):
         self.assertIn(".accessibilityHidden(true)", state)
         hint = braced_body(self.focus, "private var focusPreviewAccessibilityHint")
         self.assertIn("局部预览不可用", hint)
-        self.assertIn("仍可关闭、编辑 OCR 原文或切换文字块", hint)
+        self.assertTrue(
+            "仍可关闭、编辑 OCR 原文或切换文字块" in hint
+            or "仍可关闭、修正 OCR 原文或切换文字块" in hint
+        )
 
     def test_focus_container_and_actions_remain_accessible(self) -> None:
         self.assertIn(".accessibilityElement(children: .contain)", self.focus)
