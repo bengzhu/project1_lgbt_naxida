@@ -7,6 +7,13 @@
 - Agent C 只验收与 `codeb/...` HEAD commit 完全一致的云端结果包，不只看 Agent B 的文字说明。
 - 加密打包 workflow 只在软件包交付时手动触发，不随 merge 自动 archive，也不作为 Agent C 验收依据；Agent C 使用独立未加密 CI 结果包。
 
+### v3.159 日语图片 OCR 进度上下文合同
+
+- `TranslationSessionStore` 的图片 OCR 阶段必须通过 View／Store 私有 helper 按源语言分流：日语显示“正在用 Vision 本机 OCR 识别日语文字，复查竖排方向与文字块位置”，其他语言保留“正在用 Vision 本机 OCR 识别文字和位置”。
+- helper 只能产生既有 `imageTranslationMessage` 文案，并由 `.recognizing` 阶段继续写入同一状态；图片状态行和结果空态继续消费 Store message，不得新增 OCR、翻译、持久化或第二条管线。
+- 新增 `scripts/test-v3159-image-japanese-ocr-status-context-contract.py` 并接入 UI/full fail-fast；合同同时检查 v3.158 路由顺序、版本号和无效的 helper 依赖。
+- 候选 exact-SHA full [31180141884](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31180141884)（`f30fbab503ff9c694af0d4f2c123113b1802648d`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #223 fast [31180615748](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31180615748) 复用候选 full，merge fast [31180708039](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31180708039) 复用候选 full（merge SHA `9c68b5c9f7e5e5d341a3cfaec1f764964b71b9f0`），后两者跳过 Xcode/UI/Speech，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.158 日语竖排裁剪复读 OCR 合同
 
 - 普通图片源语言为日语时，`VisionOCRService` 必须在保留整页 Vision OCR 与 90°／270° 方向复查后，从既有 `ImageOCRLayoutEngine` 竖排 block 中最多选择 16 个候选文字块；每个候选按 Koharu 的文字块裁剪边界扩展后再执行一次 Vision OCR。

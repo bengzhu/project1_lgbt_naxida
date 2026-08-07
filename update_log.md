@@ -1,3 +1,22 @@
+## v3.159：日语图片 OCR 进度上下文
+
+日期：2026-08-07
+
+状态：Agent X 继续收敛普通图片日语 OCR 的可理解性：当源语言为日语且进入 `.recognizing` 时，`TranslationSessionStore` 通过私有 helper 将既有 `imageTranslationMessage` 设置为“正在用 Vision 本机 OCR 识别日语文字，复查竖排方向与文字块位置”；其他语言保持通用“识别文字和位置”文案。图片状态行与结果空态继续读取同一 Store message，因此 VoiceOver 能说明当前日语竖排／文字块复查边界；不新增 OCR、翻译、持久化、renderer/export 或探针流程。
+
+核心变更：
+
+- 新增 `scripts/test-v3159-image-japanese-ocr-status-context-contract.py`，锁定日语／通用两条文案、`.recognizing` 写入顺序、View 消费路径以及不调用 OCR／Store 持久化的边界。
+- `MARKETING_VERSION` 更新为 `3.159`，CI scope 正则与 UI/full fail-fast 路由接入 v3.159；v3.158 及更早合同继续回归。
+
+边界：该版本只改善图片 OCR 进行中的状态与无障碍上下文，不读取 ground truth、Koharu artifact 或探针 report，不创建模型工件，不更新 `metrics/version_history.csv` 或仓库 `output/`。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，不得据此声称 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31180141884](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31180141884)：`validationProfile=full`、`validationReason=candidate_development_push`，候选 SHA `f30fbab503ff9c694af0d4f2c123113b1802648d`，Xcode/static/UI/Speech/home/paste 全部成功，JUnit `10/10`；active Koharu artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。
+- PR #223 fast [31180615748](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31180615748)：`validationProfile=fast`，`reusedFullValidationSha=f30fbab503ff9c694af0d4f2c123113b1802648d`、state `success`，Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31180708039](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31180708039)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `9c68b5c9f7e5e5d341a3cfaec1f764964b71b9f0` 复用候选 full，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.158：日语竖排文字块裁剪复读 OCR
 
 日期：2026-08-07
