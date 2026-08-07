@@ -1278,6 +1278,7 @@ jobs:
             python3 -B scripts/test-v3173-image-japanese-observation-fusion-contract.py
             python3 -B scripts/test-v3174-image-japanese-vertical-cluster-gap-contract.py
             python3 -B scripts/test-v3175-image-japanese-font-size-padding-contract.py
+            python3 -B scripts/test-v3176-image-japanese-line-reading-order-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract
