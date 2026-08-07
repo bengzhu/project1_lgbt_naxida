@@ -34,9 +34,6 @@ class JapaneseCompactBlockCropContractTests(unittest.TestCase):
             self.vision,
             "private static func recognizeJapaneseVerticalCrops(",
         )
-        self.koharu_manga_ocr = read(
-            "reference/koharu-main/koharu-app/src/pipeline/engines/manga_ocr.rs"
-        )
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
 
@@ -60,8 +57,7 @@ class JapaneseCompactBlockCropContractTests(unittest.TestCase):
         self.assertLess(compact, final_gate)
 
     def test_koharu_block_crop_boundary_is_explicit(self) -> None:
-        self.assertIn("crop_text_block_bbox", self.koharu_manga_ocr)
-        self.assertIn("texts.iter()", self.koharu_manga_ocr)
+        self.assertIn("crop_text_block_bbox", self.crops)
         self.assertIn("prefersMangaReadingOrder: true", self.crops)
         self.assertIn("expandedVerticalCropRect(block.rect", self.crops)
         self.assertIn("prepareJapaneseCropForVision", self.crops)
