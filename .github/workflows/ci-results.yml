@@ -168,6 +168,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3198-image-japanese-koharu-vertical-line-orientation-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3199-image-japanese-koharu-block-line-envelope-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3200-image-japanese-koharu-font-anchor-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3201-image-japanese-koharu-line-orientation-provenance-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -1327,6 +1328,7 @@ jobs:
             python3 -B scripts/test-v3198-image-japanese-koharu-vertical-line-orientation-contract.py
             python3 -B scripts/test-v3199-image-japanese-koharu-block-line-envelope-contract.py
             python3 -B scripts/test-v3200-image-japanese-koharu-font-anchor-contract.py
+            python3 -B scripts/test-v3201-image-japanese-koharu-line-orientation-provenance-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract

@@ -116,7 +116,8 @@ struct VisionOCRService: Sendable {
         minimumTextHeight: Float,
         automaticallyDetectsLanguage: Bool,
         rotationApplied: Int,
-        postProcessJapaneseText: Bool = false
+        postProcessJapaneseText: Bool = false,
+        observationRole: VisionOCRObservationRole = .page
     ) throws -> [VisionOCRObservation] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
@@ -153,7 +154,8 @@ struct VisionOCRService: Sendable {
                 rect: rect,
                 lineRegionRect: geometry.rect,
                 lineRegionQuad: geometry.quad,
-                rotationApplied: rotationApplied
+                rotationApplied: rotationApplied,
+                observationRole: observationRole
             )
         }
     }
@@ -768,7 +770,8 @@ struct VisionOCRService: Sendable {
                 angle: angle,
                 recognitionLanguages: recognitionLanguages,
                 minimumTextHeight: 0.002,
-                cropScale: preparedCrop.scale
+                cropScale: preparedCrop.scale,
+                observationRole: .verticalLine
             )
             refined.append(contentsOf: primary)
             if orientationFallbacksRemaining > 0,
@@ -781,7 +784,8 @@ struct VisionOCRService: Sendable {
                     angle: oppositeJapaneseOrientation(angle),
                     recognitionLanguages: recognitionLanguages,
                     minimumTextHeight: 0.002,
-                    cropScale: preparedCrop.scale
+                    cropScale: preparedCrop.scale,
+                    observationRole: .verticalLine
                 ))
             }
         }
@@ -865,7 +869,8 @@ struct VisionOCRService: Sendable {
                         lineRegionRect: rect,
                         lineRegionQuad: nil,
                         rotationApplied: best.rotationApplied,
-                        sourceDirectionHint: .vertical
+                        sourceDirectionHint: .vertical,
+                        observationRole: best.observationRole
                     )
                 )
             }
@@ -910,7 +915,8 @@ struct VisionOCRService: Sendable {
         angle: Int,
         recognitionLanguages: [String],
         minimumTextHeight: Float,
-        cropScale: CGFloat = 1
+        cropScale: CGFloat = 1,
+        observationRole: VisionOCRObservationRole = .crop
     ) -> [VisionOCRObservation] {
         guard let rotatedCrop = try? rotatedImage(crop, angle: angle),
               let cropObservations = try? recognizeObservations(
@@ -919,7 +925,8 @@ struct VisionOCRService: Sendable {
                   minimumTextHeight: minimumTextHeight,
                   automaticallyDetectsLanguage: false,
                   rotationApplied: angle,
-                  postProcessJapaneseText: true
+                  postProcessJapaneseText: true,
+                  observationRole: observationRole
               ) else {
             return []
         }
@@ -1043,7 +1050,8 @@ struct VisionOCRService: Sendable {
                   minimumTextHeight: 0.002,
                   automaticallyDetectsLanguage: false,
                   rotationApplied: angle,
-                  postProcessJapaneseText: true
+                  postProcessJapaneseText: true,
+                  observationRole: .verticalLine
               ) else {
             return nil
         }
@@ -1067,7 +1075,8 @@ struct VisionOCRService: Sendable {
             lineRegionRect: candidate.lineRegionRect,
             lineRegionQuad: candidate.lineRegionQuad,
             rotationApplied: angle,
-            sourceDirectionHint: .vertical
+            sourceDirectionHint: .vertical,
+            observationRole: .verticalLine
         )
     }
 
@@ -1592,7 +1601,8 @@ struct VisionOCRService: Sendable {
             lineRegionRect: originalLineRegionRect,
             lineRegionQuad: originalLineRegionQuad,
             rotationApplied: observation.rotationApplied,
-            sourceDirectionHint: .vertical
+            sourceDirectionHint: .vertical,
+            observationRole: observation.observationRole
         )
     }
 
@@ -1738,9 +1748,22 @@ struct VisionOCRService: Sendable {
             return lhsScore > rhsScore
         }
         if lhs.rotationApplied != rhs.rotationApplied {
+            let lhsUsesPreferredRotation = lhs.rotationApplied
+                == preferredJapaneseRotation(for: lhs)
+            let rhsUsesPreferredRotation = rhs.rotationApplied
+                == preferredJapaneseRotation(for: rhs)
+            if lhsUsesPreferredRotation != rhsUsesPreferredRotation {
+                return lhsUsesPreferredRotation
+            }
             return lhs.rotationApplied == 90
         }
         return lhs.text < rhs.text
+    }
+
+    private static func preferredJapaneseRotation(
+        for observation: VisionOCRObservation
+    ) -> Int {
+        observation.observationRole == .verticalLine ? 270 : 90
     }
 
     private static func isBetterObservation(
@@ -1761,10 +1784,19 @@ struct VisionOCRService: Sendable {
             default: false
             }
         }
+        let rotationBonus: Double
+        if prefersJapanese, observation.observationRole == .verticalLine {
+            // Koharu's vertical line region always enters OCR through rotate270.
+            // Keep this bounded so a genuinely stronger opposite-direction
+            // result can still win on confidence or text evidence.
+            rotationBonus = observation.rotationApplied == 270 ? 0.15 : 0
+        } else {
+            rotationBonus = observation.rotationApplied == 90 ? 0.15 : 0
+        }
         let baseScore = Double(observation.text.unicodeScalars.count)
             + Double(observation.confidence) * 8
             + Double(cjkCount) * 0.25
-            + (observation.rotationApplied == 90 ? 0.15 : 0)
+            + rotationBonus
         guard prefersJapanese else { return baseScore }
 
         // A crop can produce a long, high-confidence Latin-looking fallback
@@ -1946,7 +1978,8 @@ struct VisionOCRService: Sendable {
             rect: originalRect,
             lineRegionRect: originalLineRegionRect,
             lineRegionQuad: originalLineRegionQuad,
-            rotationApplied: observation.rotationApplied
+            rotationApplied: observation.rotationApplied,
+            observationRole: observation.observationRole
         )
     }
 
@@ -2109,6 +2142,12 @@ struct VisionOCRService: Sendable {
     }
 }
 
+private enum VisionOCRObservationRole: Equatable, Sendable {
+    case page
+    case crop
+    case verticalLine
+}
+
 private struct VisionOCRObservation: Equatable, Sendable {
     var text: String
     var confidence: Float
@@ -2126,6 +2165,10 @@ private struct VisionOCRObservation: Equatable, Sendable {
     /// vertical layout candidate. This mirrors Koharu's TextBox source
     /// direction and prevents mapped crop geometry from overriding it.
     var sourceDirectionHint: ImageOCRLayoutDirection? = nil
+    /// Keeps Koharu's vertical-line orientation preference alive through crop
+    /// mapping and final Japanese observation fusion. Page/block/tile rereads
+    /// retain their historical rotation tie-breaker.
+    var observationRole: VisionOCRObservationRole = .page
 }
 
 private struct JapaneseVerticalCropFragment: Sendable {
