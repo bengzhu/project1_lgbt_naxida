@@ -711,7 +711,11 @@ struct VisionOCRService: Sendable {
         var perspectiveWarpPixels: CGFloat = 0
         var perspectiveCoveredCandidates: [VisionOCRObservation] = []
         for candidate in perspectiveCandidates {
-            let angle = candidate.rotationApplied == 270 ? 270 : 90
+            // Koharu's `warp_line_region` rotates every vertical line region
+            // with `rotate270` before line-level OCR. Keep that as the
+            // primary direction for this line-only path; the bounded opposite
+            // orientation below remains available for weak/empty results.
+            let angle = koharuPreferredJapaneseVerticalLineOrientation()
             if let perspective = recognizeJapanesePerspectiveLineCrop(
                 candidate: candidate,
                 in: image,
@@ -738,7 +742,10 @@ struct VisionOCRService: Sendable {
             }) else {
                 continue
             }
-            let angle = candidate.rotationApplied == 270 ? 270 : 90
+            // Keep axis-aligned line rereads on the same Koharu-preferred
+            // vertical direction as perspective line regions. Block and tile
+            // crops intentionally retain their own candidate-derived angle.
+            let angle = koharuPreferredJapaneseVerticalLineOrientation()
             let cropRect = expandedVerticalLineCropRect(for: candidate, imageSize: imageSize)
             guard let crop = cropImage(image, normalizedRect: cropRect) else {
                 continue
@@ -926,6 +933,14 @@ struct VisionOCRService: Sendable {
 
     private static func oppositeJapaneseOrientation(_ angle: Int) -> Int {
         angle == 270 ? 90 : 270
+    }
+
+    /// Koharu's vertical `warp_line_region` normalizes a vertical line region
+    /// and then applies `rotate270` before OCR. Keep this preference scoped to
+    /// ordinary-image Japanese line rereads; block/tile paths still use their
+    /// own orientation evidence and retain the opposite-direction fallback.
+    private static func koharuPreferredJapaneseVerticalLineOrientation() -> Int {
+        270
     }
 
     private static func needsJapaneseOrientationFallback(
