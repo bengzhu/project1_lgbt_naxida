@@ -488,13 +488,18 @@ struct VisionOCRService: Sendable {
             imageHeight: imageHeight,
             stripWidth: tileWidth
         )
+        // Manga reading order is right-to-left across columns, then
+        // top-to-bottom inside each column. Spend a finite reconnaissance
+        // budget on the rightmost columns first so a very tall page does not
+        // truncate the Japanese reading frontier on the left.
+        let mangaOrderedStarts = starts.sorted { $0 > $1 }
 
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(maximumWindows * 2)
         var orientationFallbacksRemaining = 4
         var processedWindowCount = 0
 
-        for start in starts {
+        for start in mangaOrderedStarts {
             let pixelWidth = min(tileWidth, imageWidth - start)
             guard pixelWidth >= 2 else { continue }
             for window in verticalWindows {
