@@ -1721,18 +1721,22 @@ struct VisionOCRService: Sendable {
         guard overlap >= 0.45 else { return false }
 
         // Koharu's merge_slice_regions collapses a detector region that is
-        // almost completely contained in another slice before OCR text is
-        // compared. At this stage the closest safe equivalent is a pair of
-        // tight character-range regions: when both Japanese candidates carry
-        // those regions and their minimum-area overlap is at least 0.85, the
-        // geometry itself is strong enough to treat them as one observation.
+        // almost completely contained in another slice, or whose same-label
+        // regions have IoU >= 0.50, before OCR text is compared. At this stage
+        // the closest safe equivalent is a pair of tight character-range
+        // regions: when both Japanese candidates carry those regions and they
+        // satisfy either Koharu geometry threshold, the geometry itself is
+        // strong enough to treat them as one observation.
         // Request-level boxes remain text-dependent so neighboring vertical
         // lines cannot be merged merely because their broad crops overlap.
         let hasTightJapaneseGeometry = prefersJapanese
             && lhs.lineRegionRect != nil
             && rhs.lineRegionRect != nil
-        if hasTightJapaneseGeometry && overlap >= 0.85 {
-            return true
+        if hasTightJapaneseGeometry {
+            let tightRegionIoU = intersectionOverUnion(lhsGeometry, rhsGeometry)
+            if overlap >= 0.85 || tightRegionIoU >= 0.50 {
+                return true
+            }
         }
 
         let leftText = normalizedOCRText(lhs.text)
@@ -1754,6 +1758,18 @@ struct VisionOCRService: Sendable {
         let width = max(0, min(lhs.maxX, rhs.maxX) - max(lhs.x, rhs.x))
         let height = max(0, min(lhs.maxY, rhs.maxY) - max(lhs.y, rhs.y))
         return width * height
+    }
+
+    private static func intersectionOverUnion(
+        _ lhs: ImageOCRLayoutRect,
+        _ rhs: ImageOCRLayoutRect
+    ) -> Double {
+        let intersection = intersectionArea(lhs, rhs)
+        let lhsArea = max(lhs.width * lhs.height, 0)
+        let rhsArea = max(rhs.width * rhs.height, 0)
+        let union = lhsArea + rhsArea - intersection
+        guard union > 0 else { return 0 }
+        return intersection / union
     }
 
     private static func normalizedOCRText(_ text: String) -> String {
