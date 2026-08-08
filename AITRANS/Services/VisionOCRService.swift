@@ -1720,6 +1720,21 @@ struct VisionOCRService: Sendable {
         let overlap = intersection / minimumArea
         guard overlap >= 0.45 else { return false }
 
+        // Koharu's merge_slice_regions collapses a detector region that is
+        // almost completely contained in another slice before OCR text is
+        // compared. At this stage the closest safe equivalent is a pair of
+        // tight character-range regions: when both Japanese candidates carry
+        // those regions and their minimum-area overlap is at least 0.85, the
+        // geometry itself is strong enough to treat them as one observation.
+        // Request-level boxes remain text-dependent so neighboring vertical
+        // lines cannot be merged merely because their broad crops overlap.
+        let hasTightJapaneseGeometry = prefersJapanese
+            && lhs.lineRegionRect != nil
+            && rhs.lineRegionRect != nil
+        if hasTightJapaneseGeometry && overlap >= 0.85 {
+            return true
+        }
+
         let leftText = normalizedOCRText(lhs.text)
         let rightText = normalizedOCRText(rhs.text)
         guard !leftText.isEmpty, !rightText.isEmpty else { return overlap >= 0.72 }
