@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.193 日语紧字符区域去重合同
+
+- `isDuplicateObservation` 只有在 `prefersJapanese` 且双方都带 `lineRegionRect` 时，才允许把 minimum-area overlap `>= 0.85` 的紧字符区域按 Koharu `merge_slice_regions` 的 containment-like 规则直接视为重复；缺少任一 hint 时继续使用 request-level `rect`。
+- 宽 request-level box、非日语路径与低重叠候选仍要求原有非空文本相等／包含或 `overlap >= 0.72 && textSimilarity >= 0.62`，避免相邻日语竖排列被宽 crop 或几何偶合误合并。只影响普通图片日语 OCR fusion，不改变 OCR 模型、布局、翻译、renderer/export、Store、探针、Koharu gate、metrics 或 `output`。
+- 新增 `scripts/test-v3193-image-japanese-tight-region-dedupe-contract.py` 并接入 UI/full fail-fast；v3.156–v3.192 日语合同继续回归。候选 exact-SHA full [31232333781](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31232333781)（`a645943b85345790309adde433344a53209bbccc`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #257 fast [31232570686](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31232570686) 复用候选 full，merge fast [31232612519](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31232612519) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `c00ffc306a193351179e86b7fd7ad0783bd1ad4b`，`receiptPropagationAllowed=true`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，`test/jap.jpg` 只作合同 fixture，无新 metrics/output，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.192 日语漫画窗口阅读顺序合同
 
 - `recognizeJapaneseVerticalTileFallback` 必须在消费 `japaneseVerticalSliceWindows` 后先按窗口 `start` 从大到小排序（x 右到左），再在每个窗口内按 `verticalWindows` 的 y 上到下读取；最多 18 个有效窗口预算、覆盖抑制、90° 主读取、最多 4 次 270° fallback、日语过滤、灰度／放大、原图映射与去重边界保持不变。

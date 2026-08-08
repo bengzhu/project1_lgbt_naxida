@@ -8795,6 +8795,26 @@ Agent C 最终验收：
 - merge fast [31226027759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226027759)：merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31226162752](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226162752)：commit `f3d4081227d0bfbf681009b517c611f03c0e8c79`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `5bb34b44d0c93ab93d816a848266f65c95ad9d6c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
 
+## v3.193：日语 OCR 紧字符区域去重
+
+日期：2026-08-08
+
+状态：Agent X 继续把 Koharu `comic_text_bubble_detector::merge_slice_regions` 的 containment-first 边界迁入普通图片日语 OCR。`isDuplicateObservation` 现在仅在双方都有 Vision 字符范围 `lineRegionRect` 且 minimum-area overlap `>= 0.85` 时，允许几何本身合并几乎包含的重复候选；缺少任一紧区域、只有宽 request-level box 或非日语路径仍使用原有非空文本相等／包含与文本相似度门控，避免相邻竖排列因宽 crop 重叠而被误合并。工程正式版本为 `MARKETING_VERSION=3.193`。候选 commit `a645943b85345790309adde433344a53209bbccc` 已通过 PR [#257](https://github.com/bengzhu/project1_lgbt_naxida/pull/257) 合入，merge SHA `c00ffc306a193351179e86b7fd7ad0783bd1ad4b`；`main` 未触碰。
+
+核心变更：
+
+- 在既有日本语 tight `lineRegionRect` geometry 选择后增加 `hasTightJapaneseGeometry && overlap >= 0.85` 快速去重，直接对应 Koharu `merge_slice_regions` 的 containment-like 合并语义；request-level `rect` 仍不能仅凭几何合并。
+- 新增 `scripts/test-v3193-image-japanese-tight-region-dedupe-contract.py` 并接入显式 UI/full fail-fast；同步让 v3.192 历史版本合同接受后续版本，避免版本推进破坏历史回归。
+- 该步只作用于普通图片日语 OCR fusion，不加载新模型或真实 Koharu 工件，不读取探针、ground truth，不改变普通语言、布局、翻译、renderer/export、Store、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。`test/jap.jpg` 只作合同 fixture，没有新的 OCR／翻译／Koharu 指标，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31232333781](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31232333781)：`validationProfile=full`、`validationReason=manual_full`，commit `a645943b85345790309adde433344a53209bbccc`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #257 fast [31232570686](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31232570686)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=a645943b85345790309adde433344a53209bbccc`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31232612519](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31232612519)：merge SHA `c00ffc306a193351179e86b7fd7ad0783bd1ad4b`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
+
 ## v3.192：日语竖排漫画窗口阅读顺序
 
 日期：2026-08-08

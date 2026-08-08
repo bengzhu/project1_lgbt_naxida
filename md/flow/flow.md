@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.193 日语 OCR 紧区域去重：Koharu `merge_slice_regions` containment-like 规则 → 双方 `lineRegionRect` 且 overlap `>= 0.85` 时合并 → 宽 request box／缺少紧区域仍走文本相似度 → 布局／翻译／渲染；候选 full `31232333781`、PR fast `31232570686`、merge fast `31232612519` 均通过，候选 SHA `a645943b85345790309adde433344a53209bbccc` Xcode/JUnit `10/10`，merge SHA `c00ffc306a193351179e86b7fd7ad0783bd1ad4b` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.192 日语竖排 fallback 窗口调度：Koharu `ImageSlicer` 局部窗口 → x 坐标右到左消费、每列 y 上到下 → 最多 18 个 90° crop OCR／最多 4 次 270° fallback → 日语过滤／原图映射／去重／布局／翻译／渲染；候选 full `31231339154`、PR fast `31231689829`、merge fast `31231720315` 均通过，候选 SHA `d4a7811b634df7f300fb60a99e331a27f69287bd` Xcode/JUnit `10/10`，merge SHA `2aae0d7ff0e5394bed6a0c13edbb3a2624f67c1a` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.191 日语竖排切片：横向窄条 → 按 Koharu `ImageSlicer` 目标 3:1、20% 纵向 overlap、70% 尾片阈值生成局部窗口并触底 → 最多 18 个有效窗口做 90° crop OCR／最多 4 次弱结果 270° fallback → 日语过滤、原图映射、去重、block/line reread、布局、翻译与渲染；最终 full `31230729061`、PR fast `31231091935`、merge fast `31231128313` 均通过，最终 SHA `32c350c6ce4c40d90dd1d9505a830c083a62ce49` Xcode/JUnit `10/10`，merge SHA `16cce70a48afda648f045edf9d97f9a1191890cd` 复用 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。

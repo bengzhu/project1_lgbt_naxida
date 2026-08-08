@@ -1,4 +1,6 @@
 # 项目流程图
+v3.193 日语 OCR 候选 → 双方紧 `lineRegionRect` 且 overlap `>= 0.85` 时按 Koharu containment-like 规则合并 → 宽框／缺紧区域走文本相似度 → 布局／翻译／渲染；普通语言路径不变，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31232333781`、PR fast `31232570686`、merge fast `31232612519` 均通过。
+
 v3.192 日语竖排局部窗口 → x 右到左、列内 y 上到下 → 最多 18 个 90° crop OCR／最多 4 次 270° fallback → 日语过滤／原图映射／去重／布局／翻译／渲染；真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31231339154`、PR fast `31231689829`、merge fast `31231720315` 均通过。
 
 v3.191 日语长图竖排漏列 → 横向窄条按 Koharu `ImageSlicer` 3:1／20% overlap／70% 尾片规则切成触底局部窗口 → 最多 18 个 90° crop OCR／最多 4 次 270° fallback → 日语过滤／原图映射／去重／布局／翻译／渲染；真实 Koharu 工件仍缺失，不声称 OCR 质量提升。最终 full `31230729061`、PR fast `31231091935`、merge fast `31231128313` 均通过。
