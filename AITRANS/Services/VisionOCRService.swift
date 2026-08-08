@@ -456,7 +456,7 @@ struct VisionOCRService: Sendable {
         guard imageWidth >= 8, imageHeight >= 8 else { return [] }
 
         let maximumTiles = 6
-        let maximumWindows = 12
+        let maximumWindows = 18
         let tileWidth = max(Int((Double(imageWidth) / 4).rounded()), 2)
         let overlapPixels = max(Int((Double(tileWidth) * 0.18).rounded()), 1)
         let step = max(tileWidth - overlapPixels, 1)
@@ -478,38 +478,16 @@ struct VisionOCRService: Sendable {
             }
         }
 
-        // Full-height strips make glyphs unnecessarily small on tall pages such
-        // as test/jap.jpg. Keep at most two overlapping vertical windows for a
-        // typical portrait manga page and force the final window to the bottom
-        // edge, mirroring the horizontal right-edge coverage above.
-        let preferredWindowHeight = max(
-            Int((Double(imageHeight) * 0.58).rounded()),
-            min(tileWidth * 3, imageHeight)
+        // Mirror Koharu's comic_text_bubble_detector::ImageSlicer instead of
+        // sizing windows as a percentage of the page: target a 3:1 slice,
+        // advance by 80%, and fold a final sliver into the preceding slice when
+        // it would be no more than 70% of the target height. Applying the same
+        // geometry to each narrow reconnaissance strip keeps glyphs large on
+        // test/jap.jpg while guaranteeing bottom-edge coverage.
+        let verticalWindows = japaneseVerticalSliceWindows(
+            imageHeight: imageHeight,
+            stripWidth: tileWidth
         )
-        let windowHeight = min(max(preferredWindowHeight, 2), imageHeight)
-        let verticalOverlapPixels = max(
-            Int((Double(windowHeight) * 0.18).rounded()),
-            1
-        )
-        let verticalStep = max(windowHeight - verticalOverlapPixels, 1)
-        var verticalStarts: [Int] = []
-        var nextVerticalStart = 0
-        while nextVerticalStart < imageHeight,
-              verticalStarts.count < maximumWindows {
-            verticalStarts.append(nextVerticalStart)
-            guard nextVerticalStart + windowHeight < imageHeight else { break }
-            nextVerticalStart += verticalStep
-        }
-        let lastVerticalStart = max(imageHeight - windowHeight, 0)
-        if !verticalStarts.contains(lastVerticalStart) {
-            if let previous = verticalStarts.last,
-               lastVerticalStart > previous,
-               lastVerticalStart - previous < verticalOverlapPixels {
-                verticalStarts[verticalStarts.count - 1] = lastVerticalStart
-            } else {
-                verticalStarts.append(lastVerticalStart)
-            }
-        }
 
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(maximumWindows * 2)
@@ -519,13 +497,13 @@ struct VisionOCRService: Sendable {
         for start in starts {
             let pixelWidth = min(tileWidth, imageWidth - start)
             guard pixelWidth >= 2 else { continue }
-            for verticalStart in verticalStarts {
+            for window in verticalWindows {
                 guard processedWindowCount < maximumWindows else { break }
-                let pixelHeight = min(windowHeight, imageHeight - verticalStart)
+                let pixelHeight = window.height
                 guard pixelHeight >= 2 else { continue }
                 let tileRect = ImageOCRLayoutRect(
                     x: Double(start) / Double(imageWidth),
-                    y: Double(verticalStart) / Double(imageHeight),
+                    y: Double(window.start) / Double(imageHeight),
                     width: Double(pixelWidth) / Double(imageWidth),
                     height: Double(pixelHeight) / Double(imageHeight)
                 )
@@ -570,6 +548,53 @@ struct VisionOCRService: Sendable {
             guard processedWindowCount < maximumWindows else { break }
         }
         return deduplicateJapaneseObservations(refined)
+    }
+
+    /// Port of Koharu's `ImageSlicer::calculate_slice_params` for a single
+    /// vertical reconnaissance strip. The final returned window always reaches
+    /// the image bottom; an undersized tail is folded into that final window.
+    private static func japaneseVerticalSliceWindows(
+        imageHeight: Int,
+        stripWidth: Int
+    ) -> [(start: Int, height: Int)] {
+        guard imageHeight >= 2, stripWidth >= 1 else { return [] }
+
+        let sliceTargetAspectRatio = 3.0
+        let sliceOverlapRatio = 0.20
+        let minimumLastSliceRatio = 0.70
+        let targetHeight = min(
+            max(Int((Double(stripWidth) * sliceTargetAspectRatio).rounded()), 2),
+            imageHeight
+        )
+        guard targetHeight < imageHeight else {
+            return [(start: 0, height: imageHeight)]
+        }
+
+        let effectiveHeight = max(
+            Int((Double(targetHeight) * (1 - sliceOverlapRatio)).rounded()),
+            1
+        )
+        var sliceCount = max(
+            Int(ceil(Double(imageHeight) / Double(effectiveHeight))),
+            1
+        )
+        if sliceCount > 1 {
+            let lastStart = (sliceCount - 1) * effectiveHeight
+            let lastHeight = max(imageHeight - lastStart, 0)
+            if Double(lastHeight) / Double(targetHeight) <= minimumLastSliceRatio {
+                sliceCount -= 1
+            }
+        }
+
+        return (0..<sliceCount).compactMap { index in
+            let start = index * effectiveHeight
+            guard start < imageHeight else { return nil }
+            let height = index + 1 == sliceCount
+                ? imageHeight - start
+                : min(targetHeight, imageHeight - start)
+            guard height >= 2 else { return nil }
+            return (start: start, height: height)
+        }
     }
 
     /// A localized reconnaissance window is still broader than a Koharu TextBox.
