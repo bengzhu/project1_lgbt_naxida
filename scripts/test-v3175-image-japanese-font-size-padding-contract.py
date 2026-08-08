@@ -64,9 +64,9 @@ class JapaneseFontSizePaddingContractTests(unittest.TestCase):
         image_size_marker = "let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))"
         self.assertIn(image_size_marker, self.blocks)
         self.assertIn(image_size_marker, self.lines)
-        self.assertIn(
-            "expandedVerticalCropRect(block.rect, imageSize: imageSize)",
-            self.blocks,
+        self.assertTrue(
+            "expandedVerticalCropRect(block.rect, imageSize: imageSize)" in self.blocks
+            or "koharuVerticalBlockCropRect(" in self.blocks
         )
         self.assertIn(
             "let cropRect = expandedVerticalLineCropRect(for: candidate, imageSize: imageSize)",

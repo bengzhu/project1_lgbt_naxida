@@ -391,7 +391,11 @@ struct VisionOCRService: Sendable {
                 ?? 90
             guard let crop = cropImage(
                 image,
-                normalizedRect: expandedVerticalCropRect(block.rect, imageSize: imageSize)
+                normalizedRect: koharuVerticalBlockCropRect(
+                    block,
+                    observations: safeObservations,
+                    imageSize: imageSize
+                )
             ),
                   crop.image.width >= 2,
                   crop.image.height >= 2 else {
@@ -1327,6 +1331,34 @@ struct VisionOCRService: Sendable {
     ) -> ImageOCRLayoutRect {
         let region = observation.lineRegionRect ?? observation.rect
         return expandedVerticalLineCropRect(region, imageSize: imageSize)
+    }
+
+    /// Mirror Koharu's `crop_text_block_bbox` envelope rule for a vertical
+    /// Japanese block. Koharu starts with the detector TextRegion bbox and
+    /// expands it to include every line polygon before applying direction-aware
+    /// font padding. Vision exposes that tighter geometry as `lineRegionRect`;
+    /// union only related observations and never shrink the layout block, so a
+    /// missing or invalid line hint safely returns the original block crop.
+    private static func koharuVerticalBlockCropRect(
+        _ block: ImageOCRLayoutBlock,
+        observations: [VisionOCRObservation],
+        imageSize: CGSize
+    ) -> ImageOCRLayoutRect {
+        let lineRegions = observations
+            .filter { observation in
+                overlapRatio(observation.rect, block.rect) >= 0.25
+            }
+            .compactMap(\.lineRegionRect)
+            .compactMap { $0.normalizedToUnit() }
+
+        guard !lineRegions.isEmpty else {
+            return expandedVerticalCropRect(block.rect, imageSize: imageSize)
+        }
+
+        let envelope = lineRegions.reduce(block.rect) { partial, region in
+            partial.union(region)
+        }
+        return expandedVerticalCropRect(envelope, imageSize: imageSize)
     }
 
     private static func expandedVerticalCropRect(
