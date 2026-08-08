@@ -441,9 +441,11 @@ struct VisionOCRService: Sendable {
     /// not expose as observations. Koharu's detector creates TextBoxes before
     /// crop/OCR; when Vision misses an entire column there is no candidate to
     /// crop, so use a bounded, overlapping reconnaissance pass as a detector
-    /// fallback. Existing vertical blocks suppress covered tiles, while the
-    /// hard six-tile and four-opposite-orientation budgets keep dense pages
-    /// from turning into an unbounded second full-page OCR run.
+    /// fallback. Split each narrow strip into overlapping local windows so text
+    /// on a long manga page occupies materially more of Vision's input, closer
+    /// to Koharu's TextBox -> crop/OCR boundary than a full-height strip. Existing
+    /// vertical blocks suppress covered windows, while the hard horizontal,
+    /// total-window, and opposite-orientation budgets keep dense pages bounded.
     private static func recognizeJapaneseVerticalTileFallback(
         in image: CGImage,
         verticalBlocks: [ImageOCRLayoutBlock],
@@ -454,6 +456,7 @@ struct VisionOCRService: Sendable {
         guard imageWidth >= 8, imageHeight >= 8 else { return [] }
 
         let maximumTiles = 6
+        let maximumWindows = 12
         let tileWidth = max(Int((Double(imageWidth) / 4).rounded()), 2)
         let overlapPixels = max(Int((Double(tileWidth) * 0.18).rounded()), 1)
         let step = max(tileWidth - overlapPixels, 1)
@@ -475,64 +478,106 @@ struct VisionOCRService: Sendable {
             }
         }
 
+        // Full-height strips make glyphs unnecessarily small on tall pages such
+        // as test/jap.jpg. Keep at most two overlapping vertical windows for a
+        // typical portrait manga page and force the final window to the bottom
+        // edge, mirroring the horizontal right-edge coverage above.
+        let preferredWindowHeight = max(
+            Int((Double(imageHeight) * 0.58).rounded()),
+            min(tileWidth * 3, imageHeight)
+        )
+        let windowHeight = min(max(preferredWindowHeight, 2), imageHeight)
+        let verticalOverlapPixels = max(
+            Int((Double(windowHeight) * 0.18).rounded()),
+            1
+        )
+        let verticalStep = max(windowHeight - verticalOverlapPixels, 1)
+        var verticalStarts: [Int] = []
+        var nextVerticalStart = 0
+        while nextVerticalStart < imageHeight,
+              verticalStarts.count < maximumWindows {
+            verticalStarts.append(nextVerticalStart)
+            guard nextVerticalStart + windowHeight < imageHeight else { break }
+            nextVerticalStart += verticalStep
+        }
+        let lastVerticalStart = max(imageHeight - windowHeight, 0)
+        if !verticalStarts.contains(lastVerticalStart) {
+            if let previous = verticalStarts.last,
+               lastVerticalStart > previous,
+               lastVerticalStart - previous < verticalOverlapPixels {
+                verticalStarts[verticalStarts.count - 1] = lastVerticalStart
+            } else {
+                verticalStarts.append(lastVerticalStart)
+            }
+        }
+
         var refined: [VisionOCRObservation] = []
-        refined.reserveCapacity(starts.count * 2)
+        refined.reserveCapacity(maximumWindows * 2)
         var orientationFallbacksRemaining = 4
+        var processedWindowCount = 0
 
         for start in starts {
             let pixelWidth = min(tileWidth, imageWidth - start)
             guard pixelWidth >= 2 else { continue }
-            let tileRect = ImageOCRLayoutRect(
-                x: Double(start) / Double(imageWidth),
-                y: 0,
-                width: Double(pixelWidth) / Double(imageWidth),
-                height: 1
-            )
-            guard !verticalBlocks.contains(where: {
-                verticalTileIsCovered($0.rect, by: tileRect)
-            }),
-                  let crop = cropImage(image, normalizedRect: tileRect),
-                  crop.image.width >= 2,
-                  crop.image.height >= 2 else {
-                continue
-            }
+            for verticalStart in verticalStarts {
+                guard processedWindowCount < maximumWindows else { break }
+                let pixelHeight = min(windowHeight, imageHeight - verticalStart)
+                guard pixelHeight >= 2 else { continue }
+                let tileRect = ImageOCRLayoutRect(
+                    x: Double(start) / Double(imageWidth),
+                    y: Double(verticalStart) / Double(imageHeight),
+                    width: Double(pixelWidth) / Double(imageWidth),
+                    height: Double(pixelHeight) / Double(imageHeight)
+                )
+                guard !verticalBlocks.contains(where: {
+                    verticalTileIsCovered($0.rect, by: tileRect)
+                }),
+                      let crop = cropImage(image, normalizedRect: tileRect),
+                      crop.image.width >= 2,
+                      crop.image.height >= 2 else {
+                    continue
+                }
 
-            let preparedCrop = prepareJapaneseCropForVision(crop.image)
-            let primary = recognizeJapaneseCropPass(
-                crop: preparedCrop.image,
-                cropRect: crop.rect,
-                originalImage: image,
-                angle: 90,
-                recognitionLanguages: recognitionLanguages,
-                minimumTextHeight: 0.003,
-                cropScale: preparedCrop.scale
-            )
-            let verticalPrimary = filterJapaneseVerticalTileObservations(primary)
-            refined.append(contentsOf: verticalPrimary)
-
-            if orientationFallbacksRemaining > 0,
-               needsJapaneseOrientationFallback(verticalPrimary) {
-                orientationFallbacksRemaining -= 1
-                let opposite = recognizeJapaneseCropPass(
+                processedWindowCount += 1
+                let preparedCrop = prepareJapaneseCropForVision(crop.image)
+                let primary = recognizeJapaneseCropPass(
                     crop: preparedCrop.image,
                     cropRect: crop.rect,
                     originalImage: image,
-                    angle: 270,
+                    angle: 90,
                     recognitionLanguages: recognitionLanguages,
                     minimumTextHeight: 0.003,
                     cropScale: preparedCrop.scale
                 )
-                refined.append(contentsOf: filterJapaneseVerticalTileObservations(opposite))
+                let verticalPrimary = filterJapaneseVerticalTileObservations(primary)
+                refined.append(contentsOf: verticalPrimary)
+
+                if orientationFallbacksRemaining > 0,
+                   needsJapaneseOrientationFallback(verticalPrimary) {
+                    orientationFallbacksRemaining -= 1
+                    let opposite = recognizeJapaneseCropPass(
+                        crop: preparedCrop.image,
+                        cropRect: crop.rect,
+                        originalImage: image,
+                        angle: 270,
+                        recognitionLanguages: recognitionLanguages,
+                        minimumTextHeight: 0.003,
+                        cropScale: preparedCrop.scale
+                    )
+                    refined.append(contentsOf: filterJapaneseVerticalTileObservations(opposite))
+                }
             }
+            guard processedWindowCount < maximumWindows else { break }
         }
         return deduplicateJapaneseObservations(refined)
     }
 
-    /// A full-height tile is deliberately broader than a Koharu TextBox. Keep
-    /// its reread output on the vertical-column boundary so horizontal Japanese
-    /// lines discovered incidentally in the same tile do not become duplicate
-    /// fallback observations. Compact one- or two-glyph CJK fragments remain
-    /// eligible through the same bounded geometry gate used by line synthesis.
+    /// A localized reconnaissance window is still broader than a Koharu TextBox.
+    /// Keep its reread output on the vertical-column boundary so horizontal
+    /// Japanese lines discovered incidentally in the same window do not become
+    /// duplicate fallback observations. Compact one- or two-glyph CJK fragments
+    /// remain eligible through the same bounded geometry gate used by line
+    /// synthesis.
     private static func filterJapaneseVerticalTileObservations(
         _ observations: [VisionOCRObservation]
     ) -> [VisionOCRObservation] {
