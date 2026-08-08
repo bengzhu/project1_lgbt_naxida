@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.191 Koharu ImageSlicer 迁移合同
+
+- `japaneseVerticalSliceWindows` 必须使用 Koharu 的目标比例 `3.0`、纵向 overlap `0.20` 与最小尾片比例 `0.70`；目标高度以窄条宽度推导，最后一个窗口必须到达源图底边，尾片过小时并入最后窗口。
+- `recognizeJapaneseVerticalTileFallback` 必须从该 helper 消费窗口并保留最多 `18` 个有效窗口预算；窗口的归一化 `y/height` 必须映射回原图，既有覆盖抑制、90° 主读取、最多 4 次 270° fallback、日语脚本／几何过滤、灰度／放大与去重保持不变。
+- 新增 `scripts/test-v3191-image-japanese-koharu-slicer-contract.py` 并接入 UI/full fail-fast；v3.156–v3.190 日语合同继续回归。最终 exact-SHA full [31230729061](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31230729061)（`32c350c6ce4c40d90dd1d9505a830c083a62ce49`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #255 fast [31231091935](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31231091935) 复用最终 full，merge fast [31231128313](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31231128313) 以 `merge_reuses_successful_candidate_full_validation` 复用最终 full（merge SHA `16cce70a48afda648f045edf9d97f9a1191890cd`，`receiptPropagationAllowed=true`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.190 日语局部 tile-window 合同
 
 - `recognizeJapaneseVerticalTileFallback` 必须把横向窄条拆成局部纵向窗口：优先高度为页面的 `0.58`，同时至少覆盖 `tileWidth * 3`；相邻窗口保留 `0.18` overlap，并强制覆盖页面底边，避免长漫画页中的文字在全高 crop 内占比过小。
