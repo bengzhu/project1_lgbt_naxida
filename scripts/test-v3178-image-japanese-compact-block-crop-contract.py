@@ -59,7 +59,14 @@ class JapaneseCompactBlockCropContractTests(unittest.TestCase):
     def test_koharu_block_crop_boundary_is_explicit(self) -> None:
         self.assertIn("crop_text_block_bbox", self.crops)
         self.assertIn("prefersMangaReadingOrder: true", self.crops)
-        self.assertIn("expandedVerticalCropRect(block.rect", self.crops)
+        # v3.199 may route the same Koharu block envelope through a helper that
+        # unions related tight line regions before applying the original
+        # direction-aware padding. Accept either spelling so this historical
+        # compact-block contract continues to guard the unchanged crop boundary.
+        self.assertTrue(
+            "expandedVerticalCropRect(block.rect" in self.crops
+            or "koharuVerticalBlockCropRect(" in self.crops
+        )
         self.assertIn("prepareJapaneseCropForVision", self.crops)
 
     def test_existing_tall_gate_and_scope_remain_safe(self) -> None:
