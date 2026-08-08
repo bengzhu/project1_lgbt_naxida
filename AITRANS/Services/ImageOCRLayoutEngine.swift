@@ -101,7 +101,8 @@ enum ImageOCRLayoutEngine {
         let vertical = orderedVerticalBands(resolved.filter { $0.direction == .vertical })
         return mergeReadingOrder(
             horizontal: cluster(horizontal, direction: .horizontal),
-            vertical: cluster(vertical, direction: .vertical)
+            vertical: cluster(vertical, direction: .vertical),
+            prefersRightToLeft: prefersMangaReadingOrder
         )
     }
 
@@ -471,6 +472,119 @@ enum ImageOCRLayoutEngine {
     }
 
     private static func mergeReadingOrder(
+        horizontal: [ImageOCRLayoutBlock],
+        vertical: [ImageOCRLayoutBlock],
+        prefersRightToLeft: Bool
+    ) -> [ImageOCRLayoutBlock] {
+        // Koharu sorts detector TextBoxes as one mixed collection before any
+        // downstream OCR engine runs. Keep the old interleave for ordinary
+        // languages, but let Japanese manga-order use the same recursive
+        // geometry cut after direction-specific clusters have been formed.
+        guard prefersRightToLeft else {
+            return interleaveReadingOrder(horizontal: horizontal, vertical: vertical)
+        }
+
+        let combined = horizontal + vertical
+        guard combined.count > 1 else { return combined }
+        let medianWidth = median(combined.map(\.rect.width))
+        let medianHeight = median(combined.map(\.rect.height))
+        let minimumGapX = max(medianWidth * 0.15, 0.01)
+        let minimumGapY = max(medianHeight * 0.10, 0.008)
+        return recursiveMangaBlockReadingOrder(
+            combined,
+            minimumGapX: minimumGapX,
+            minimumGapY: minimumGapY
+        )
+    }
+
+    private static func recursiveMangaBlockReadingOrder(
+        _ blocks: [ImageOCRLayoutBlock],
+        minimumGapX: Double,
+        minimumGapY: Double
+    ) -> [ImageOCRLayoutBlock] {
+        guard blocks.count > 1,
+              let cut = bestMangaBlockReadingCut(
+                  blocks,
+                  minimumGapX: minimumGapX,
+                  minimumGapY: minimumGapY
+              ) else {
+            return fallbackMangaBlockReadingOrder(blocks, minimumGapY: minimumGapY)
+        }
+
+        let first: [ImageOCRLayoutBlock]
+        let second: [ImageOCRLayoutBlock]
+        switch cut.axis {
+        case .x:
+            first = blocks.filter { $0.rect.midX >= cut.coordinate }
+            second = blocks.filter { $0.rect.midX < cut.coordinate }
+        case .y:
+            first = blocks.filter { $0.rect.midY <= cut.coordinate }
+            second = blocks.filter { $0.rect.midY > cut.coordinate }
+        }
+
+        guard !first.isEmpty, !second.isEmpty else {
+            return fallbackMangaBlockReadingOrder(blocks, minimumGapY: minimumGapY)
+        }
+        return recursiveMangaBlockReadingOrder(
+            first,
+            minimumGapX: minimumGapX,
+            minimumGapY: minimumGapY
+        ) + recursiveMangaBlockReadingOrder(
+            second,
+            minimumGapX: minimumGapX,
+            minimumGapY: minimumGapY
+        )
+    }
+
+    private static func bestMangaBlockReadingCut(
+        _ blocks: [ImageOCRLayoutBlock],
+        minimumGapX: Double,
+        minimumGapY: Double
+    ) -> MangaReadingCut? {
+        let xIntervals = blocks.map { ($0.rect.x, $0.rect.maxX) }
+        let yIntervals = blocks.map { ($0.rect.y, $0.rect.maxY) }
+        let gapX = largestMangaGap(xIntervals, minimum: minimumGapX)
+        let gapY = largestMangaGap(yIntervals, minimum: minimumGapY)
+
+        switch (gapX, gapY) {
+        case let (x?, y?):
+            let widthX = x.1 - x.0
+            let widthY = y.1 - y.0
+            if widthY > max(0.01, widthX * 0.4) {
+                return MangaReadingCut(axis: .y, coordinate: (y.0 + y.1) / 2)
+            }
+            return MangaReadingCut(axis: .x, coordinate: (x.0 + x.1) / 2)
+        case let (x?, nil):
+            return MangaReadingCut(axis: .x, coordinate: (x.0 + x.1) / 2)
+        case let (nil, y?):
+            return MangaReadingCut(axis: .y, coordinate: (y.0 + y.1) / 2)
+        case (nil, nil):
+            return nil
+        }
+    }
+
+    private static func fallbackMangaBlockReadingOrder(
+        _ blocks: [ImageOCRLayoutBlock],
+        minimumGapY: Double
+    ) -> [ImageOCRLayoutBlock] {
+        // This is Koharu's no-cut fallback: quantize a small row height, then
+        // read each row from the right. It avoids the previous global x-first
+        // fallback interleaving mixed horizontal and vertical panel blocks.
+        let rowHeight = max(minimumGapY * 4, 0.01)
+        return blocks.sorted { lhs, rhs in
+            let lhsRow = floor(lhs.rect.y / rowHeight)
+            let rhsRow = floor(rhs.rect.y / rowHeight)
+            if lhsRow != rhsRow { return lhsRow < rhsRow }
+            if lhs.rect.midX != rhs.rect.midX { return lhs.rect.midX > rhs.rect.midX }
+            if lhs.rect.y != rhs.rect.y { return lhs.rect.y < rhs.rect.y }
+            if lhs.rect.width != rhs.rect.width { return lhs.rect.width < rhs.rect.width }
+            if lhs.rect.height != rhs.rect.height { return lhs.rect.height < rhs.rect.height }
+            if lhs.text != rhs.text { return lhs.text < rhs.text }
+            return lhs.confidence > rhs.confidence
+        }
+    }
+
+    private static func interleaveReadingOrder(
         horizontal: [ImageOCRLayoutBlock],
         vertical: [ImageOCRLayoutBlock]
     ) -> [ImageOCRLayoutBlock] {

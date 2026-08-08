@@ -92,7 +92,10 @@ class JapaneseTightRegionIoUDedupeContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3193(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.194", "3.194"])
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(
+            all(tuple(map(int, version.split("."))) >= (3, 194) for version in versions)
+        )
         old = "python3 -B scripts/test-v3193-image-japanese-tight-region-dedupe-contract.py"
         new = "python3 -B scripts/test-v3194-image-japanese-tight-region-iou-dedupe-contract.py"
         self.assertIn(old, self.workflow)
