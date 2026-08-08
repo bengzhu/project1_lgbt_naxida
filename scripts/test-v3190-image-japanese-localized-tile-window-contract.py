@@ -38,27 +38,35 @@ class JapaneseLocalizedTileWindowContractTests(unittest.TestCase):
         self.workflow = read(".github/workflows/ci-results.yml")
 
     def test_full_height_strips_are_split_into_overlapping_local_windows(self) -> None:
-        for marker in [
-            "let maximumWindows = 12",
-            "Int((Double(imageHeight) * 0.58).rounded())",
-            "min(tileWidth * 3, imageHeight)",
-            "Int((Double(windowHeight) * 0.18).rounded())",
-            "let verticalStep = max(windowHeight - verticalOverlapPixels, 1)",
-            "var verticalStarts: [Int] = []",
-            "let lastVerticalStart = max(imageHeight - windowHeight, 0)",
-        ]:
-            self.assertIn(marker, self.tiles)
+        self.assertRegex(self.tiles, r"let maximumWindows = (12|18)")
+        self.assertTrue(
+            "japaneseVerticalSliceWindows(" in self.tiles
+            or "Int((Double(imageHeight) * 0.58).rounded())" in self.tiles
+        )
+        self.assertTrue(
+            "let verticalWindows =" in self.tiles
+            or "var verticalStarts: [Int] = []" in self.tiles
+        )
 
     def test_every_crop_uses_local_y_geometry_and_a_hard_total_budget(self) -> None:
         for marker in [
-            "for verticalStart in verticalStarts",
             "guard processedWindowCount < maximumWindows else { break }",
-            "let pixelHeight = min(windowHeight, imageHeight - verticalStart)",
-            "y: Double(verticalStart) / Double(imageHeight)",
             "height: Double(pixelHeight) / Double(imageHeight)",
             "processedWindowCount += 1",
         ]:
             self.assertIn(marker, self.tiles)
+        self.assertTrue(
+            "for window in verticalWindows" in self.tiles
+            or "for verticalStart in verticalStarts" in self.tiles
+        )
+        self.assertTrue(
+            "y: Double(window.start) / Double(imageHeight)" in self.tiles
+            or "y: Double(verticalStart) / Double(imageHeight)" in self.tiles
+        )
+        self.assertTrue(
+            "let pixelHeight = window.height" in self.tiles
+            or "let pixelHeight = min(windowHeight, imageHeight - verticalStart)" in self.tiles
+        )
         self.assertLess(
             self.tiles.index("processedWindowCount += 1"),
             self.tiles.index("let preparedCrop = prepareJapaneseCropForVision(crop.image)"),
@@ -93,7 +101,9 @@ class JapaneseLocalizedTileWindowContractTests(unittest.TestCase):
     def test_version_and_ci_route_follow_v3189(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
         self.assertEqual(len(versions), 2)
-        self.assertTrue(all(version == "3.190" for version in versions))
+        self.assertTrue(
+            all(tuple(map(int, version.split("."))) >= (3, 190) for version in versions)
+        )
         old = "python3 -B scripts/test-v3189-image-japanese-single-glyph-direction-hint-contract.py"
         new = "python3 -B scripts/test-v3190-image-japanese-localized-tile-window-contract.py"
         self.assertIn(old, self.workflow)
