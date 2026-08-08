@@ -1,4 +1,6 @@
 # 项目流程图
+v3.198 日语竖排 line → Koharu `rotate270` 主方向 → perspective／轴对齐 crop OCR → 弱／空结果 90° fallback → 去重／布局／批翻译／渲染；block、tile、非日语路径不变，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。候选 full `31259014271`、PR fast `31259242739`、merge fast `31259272510` 均通过。
+
 v3.197 日语竖排 block → Koharu `pp_doclayout_v3` aspect `1.15`／方向置信度 `0.25`／高度 `0.035` 门控 → 最多 16 个 block crop OCR → 方向 fallback／line/tile reread／去重／布局／批翻译／渲染；非日语与失败回退不变，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。候选 full `31258318641`、PR fast `31258329662`、merge fast `31258606990` 均通过。
 
 v3.196 日语图片 OCR blocks → `[N]` 标签有界批翻译 → 保持漫画语气／块顺序 → 严格解析，失败回退逐块 → 布局／渲染；非日语与修正 sheet 不变，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。候选 full `31257482066`、PR fast `31257709942`、merge fast `31257752177` 均通过。

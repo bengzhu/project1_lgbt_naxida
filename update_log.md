@@ -8795,6 +8795,26 @@ Agent C 最终验收：
 - merge fast [31226027759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226027759)：merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31226162752](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226162752)：commit `f3d4081227d0bfbf681009b517c611f03c0e8c79`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `5bb34b44d0c93ab93d816a848266f65c95ad9d6c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
 
+## v3.198：Koharu 日语竖排 line rotate270 方向迁移
+
+日期：2026-08-08
+
+状态：Agent X 继续参考 Koharu `warp_line_region` 的竖排 line-region 消费边界。Koharu 对 vertical `TextRegion` 先按长短轴构造目标画布，再以 `rotate270` 进入 line-level OCR；AITRANS 现在把这一方向语义落实到普通图片日语 perspective 与轴对齐 line reread，270° 作为主方向，弱／空结果仍在既有 12 次页级预算内回退 90°。block crop 继续使用候选自身方向，tile fallback 继续使用 90° 主／270° 弱结果回退，非日语、翻译、渲染、Store、探针、metrics 与 output 边界不变。工程正式版本为 `MARKETING_VERSION=3.198`。候选 commit `24c8f9c23f3bec3e6536ad4752e99a4703ff07f4` 已通过 PR #262 合入，merge SHA `0b7352be9393e17fc55224269604dfc6859d2351`；`main` 未触碰。
+
+核心变更：
+
+- `recognizeJapaneseVerticalLineCrops` 的 perspective 与轴对齐 line path 统一调用 `koharuPreferredJapaneseVerticalLineOrientation()`，固定返回 270，复用 `orderedJapanesePerspectiveLineObservations` 的右到左方向组装；`needsJapaneseOrientationFallback` 仍只对弱／空／低日语证据结果消耗最多 12 次 opposite 90° reread。
+- 该步只作用于普通图片日语 line crop，不加载 Manga OCR/PaddleOCR 权重，不读取探针、ground truth、真实 Koharu 工件、metrics 或仓库 `output/`；v3.197 的 block threshold、v3.185–v3.192 的 tile/slicer 与阅读顺序边界不变。
+- 新增 `scripts/test-v3198-image-japanese-koharu-vertical-line-orientation-contract.py`，并接入显式 UI/full fail-fast；v3.197 及更早日语合同全部回归。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。`test/jap.jpg` 只作合同 fixture，没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31259014271](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31259014271)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `24c8f9c23f3bec3e6536ad4752e99a4703ff07f4`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #262 fast [31259242739](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31259242739)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=24c8f9c23f3bec3e6536ad4752e99a4703ff07f4`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31259272510](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31259272510)：merge SHA `0b7352be9393e17fc55224269604dfc6859d2351`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，`reusedFullValidationSha=24c8f9c23f3bec3e6536ad4752e99a4703ff07f4`、state `success`、`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，JUnit `10/10`，不是新的编译证据。
+
 ## v3.197：Koharu 日语竖排 block 检测门控
 
 日期：2026-08-08
