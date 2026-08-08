@@ -335,6 +335,16 @@ struct VisionOCRService: Sendable {
             let aspectRatio = block.rect.height / max(block.rect.width, 0.001)
             let isStandardVerticalCandidate = aspectRatio >= 1.45
                 && block.rect.height >= 0.04
+            // Koharu's PP-DocLayout detector marks a text region as vertical
+            // at `height / width >= 1.15` and keeps detector confidence >= 0.25.
+            // Vision layout has already resolved this block as vertical, so
+            // carry that bounded detector boundary into the crop stage instead
+            // of dropping medium-height columns before OCR reread. Keep a
+            // normalized height floor so small icons and incidental fragments
+            // do not consume a block crop budget.
+            let isKoharuDetectorVerticalCandidate = aspectRatio >= 1.15
+                && block.rect.height >= 0.035
+                && block.directionConfidence >= 0.25
             // Koharu sends every detector TextRegion through
             // crop_text_block_bbox. A v3.177 compact direction result is a
             // similarly explicit Japanese block, even when its normalized
@@ -348,7 +358,9 @@ struct VisionOCRService: Sendable {
                 && aspectRatio >= 1.20
                 && block.rect.height >= 0.022
             return block.direction == .vertical
-                && (isStandardVerticalCandidate || isCompactVerticalCandidate)
+                && (isStandardVerticalCandidate
+                    || isKoharuDetectorVerticalCandidate
+                    || isCompactVerticalCandidate)
         }
         .sorted { lhs, rhs in
             if lhs.confidence != rhs.confidence {
