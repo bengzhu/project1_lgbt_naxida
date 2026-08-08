@@ -27,6 +27,28 @@ private struct ImageTranslationIgnoredBlockSnapshot {
     let wasManuallyCorrected: Bool
 }
 
+private struct ImageTranslationBatch {
+    let startIndex: Int
+    let blocks: [ImageTranslationBlock]
+}
+
+private enum ImageMangaBatchTranslationError: LocalizedError {
+    case missingTags
+    case unexpectedTags
+    case emptyTranslation
+
+    var errorDescription: String? {
+        switch self {
+        case .missingTags:
+            "漫画批翻译没有返回完整的编号文本块"
+        case .unexpectedTags:
+            "漫画批翻译返回了错误的编号顺序"
+        case .emptyTranslation:
+            "漫画批翻译返回了空文本块"
+        }
+    }
+}
+
 @MainActor
 final class TranslationSessionStore: ObservableObject {
     @Published var mode: SessionMode = .live {
@@ -1203,22 +1225,48 @@ final class TranslationSessionStore: ObservableObject {
         )
         imageTranslationBlocks = recognizedBlocks
         imageTranslationState = .translating
-        imageTranslationMessage = "已识别 \(recognizedBlocks.count) 个文本块，正在翻译为\(targetLanguage.rawValue)"
+        imageTranslationMessage = sourceLanguage == .japanese
+            ? "已识别 \(recognizedBlocks.count) 个日语文本块，正在按漫画文本组翻译为\(targetLanguage.rawValue)"
+            : "已识别 \(recognizedBlocks.count) 个文本块，正在翻译为\(targetLanguage.rawValue)"
 
-        var translatedBlocks: [ImageTranslationBlock] = []
-        for (index, block) in recognizedBlocks.enumerated() {
-            try Task.checkCancellation()
-            guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
-            var translatedBlock = block
-            translatedBlock.translation = try await translate(
-                block.original,
-                sourceLanguage: sourceLanguage,
-                targetLanguage: targetLanguage
-            )
-            guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
-            translatedBlocks.append(translatedBlock)
-            imageTranslationBlocks = translatedBlocks + Array(recognizedBlocks.dropFirst(translatedBlocks.count))
-            imageTranslationMessage = "正在翻译 \(index + 1)/\(recognizedBlocks.count) 个文本块"
+        var translatedBlocks = recognizedBlocks
+        if sourceLanguage == .japanese {
+            let batches = Self.imageTranslationBatches(recognizedBlocks)
+            var translatedCount = 0
+            for batch in batches {
+                try Task.checkCancellation()
+                guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                let translations = try await translateJapaneseImageBatch(
+                    batch.blocks,
+                    startIndex: batch.startIndex,
+                    sourceLanguage: sourceLanguage,
+                    targetLanguage: targetLanguage
+                )
+                guard translations.count == batch.blocks.count else {
+                    throw ImageMangaBatchTranslationError.missingTags
+                }
+                for (offset, translation) in translations.enumerated() {
+                    translatedBlocks[batch.startIndex + offset].translation = translation
+                }
+                translatedCount += translations.count
+                guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                imageTranslationBlocks = translatedBlocks
+                imageTranslationMessage = "正在按漫画文本组翻译 \(translatedCount)/\(recognizedBlocks.count) 个日语文本块"
+            }
+        } else {
+            for (index, block) in recognizedBlocks.enumerated() {
+                try Task.checkCancellation()
+                guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                translatedBlocks[index].translation = try await translate(
+                    block.original,
+                    sourceLanguage: sourceLanguage,
+                    targetLanguage: targetLanguage
+                )
+                guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                imageTranslationBlocks = Array(translatedBlocks.prefix(index + 1))
+                    + Array(recognizedBlocks.dropFirst(index + 1))
+                imageTranslationMessage = "正在翻译 \(index + 1)/\(recognizedBlocks.count) 个文本块"
+            }
         }
 
         imageTranslationBlocks = translatedBlocks
@@ -4190,6 +4238,185 @@ final class TranslationSessionStore: ObservableObject {
             guard isCurrentSpeechTranslation(expectedSpeechRunID) else { return }
             dataTransferMessage = "翻译已完成，摘要生成失败：\(error.localizedDescription)"
         }
+    }
+
+    private func translateJapaneseImageBatch(
+        _ blocks: [ImageTranslationBlock],
+        startIndex: Int,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) async throws -> [String] {
+        guard !blocks.isEmpty else { return [] }
+
+        let expectedIDs = blocks.indices.map { startIndex + $0 + 1 }
+        let taggedInput = blocks.enumerated().map { offset, block in
+            let text = block.original
+                .replacingOccurrences(of: "\r\n", with: " ")
+                .replacingOccurrences(of: "\n", with: " ")
+                .replacingOccurrences(of: "\r", with: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return "[\(expectedIDs[offset])] \(text)"
+        }.joined(separator: "\n")
+        let request = makeRequest(
+            task: .translation,
+            inputText: taggedInput,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            translationProfile: .mangaBlocks,
+            requestSampling: Self.mangaBatchSampling(
+                current: sampling,
+                blockCount: blocks.count,
+                inputCharacterCount: taggedInput.count
+            )
+        )
+
+        writeLaunchLLMSmokeProbe(
+            "manga-batch-request source=\(request.sourceLanguage.rawValue) " +
+            "target=\(request.targetLanguage.rawValue) ids=\(expectedIDs.map(String.init).joined(separator: ",")) " +
+            "input=\(Self.probeField(taggedInput))"
+        )
+
+        do {
+            let result = try await generateWithSelectedEngine(request)
+            let translations = try Self.parseMangaTaggedTranslations(
+                result.text,
+                expectedIDs: expectedIDs
+            )
+            writeLaunchLLMSmokeProbe(
+                "manga-batch-result state=parsed engine=\(result.engineName) " +
+                "count=\(translations.count) output=\(Self.probeField(result.text))"
+            )
+            return translations
+        } catch {
+            if error is CancellationError {
+                throw error
+            }
+            writeLaunchLLMSmokeProbe(
+                "manga-batch-result state=fallback error=\(Self.probeField(error.localizedDescription)) " +
+                "ids=\(expectedIDs.map(String.init).joined(separator: ","))"
+            )
+            imageTranslationMessage = "漫画文本组格式不完整，正在逐块安全回退"
+
+            var fallbackTranslations: [String] = []
+            fallbackTranslations.reserveCapacity(blocks.count)
+            for block in blocks {
+                try Task.checkCancellation()
+                fallbackTranslations.append(try await translate(
+                    block.original,
+                    sourceLanguage: sourceLanguage,
+                    targetLanguage: targetLanguage
+                ))
+            }
+            return fallbackTranslations
+        }
+    }
+
+    private static func imageTranslationBatches(
+        _ blocks: [ImageTranslationBlock]
+    ) -> [ImageTranslationBatch] {
+        let maximumBlocks = 8
+        let maximumCharacters = 1_800
+        var batches: [ImageTranslationBatch] = []
+        var startIndex = 0
+        var current: [ImageTranslationBlock] = []
+        var currentCharacters = 0
+
+        func flush() {
+            guard !current.isEmpty else { return }
+            batches.append(ImageTranslationBatch(startIndex: startIndex, blocks: current))
+            startIndex += current.count
+            current.removeAll(keepingCapacity: true)
+            currentCharacters = 0
+        }
+
+        for block in blocks {
+            let normalizedLength = block.original
+                .replacingOccurrences(of: "\r", with: " ")
+                .replacingOccurrences(of: "\n", with: " ")
+                .count
+            let additionalCharacters = normalizedLength + (current.isEmpty ? 0 : 1)
+            if !current.isEmpty,
+               (current.count >= maximumBlocks || currentCharacters + additionalCharacters > maximumCharacters) {
+                flush()
+            }
+            current.append(block)
+            currentCharacters += normalizedLength + (current.count == 1 ? 0 : 1)
+        }
+        flush()
+        return batches
+    }
+
+    private static func mangaBatchSampling(
+        current: GenerationSampling,
+        blockCount: Int,
+        inputCharacterCount: Int
+    ) -> GenerationSampling {
+        let estimatedOutputTokens = max(192, blockCount * 42 + inputCharacterCount / 24)
+        return GenerationSampling(
+            temperature: current.temperature,
+            maxTokens: min(max(current.maxTokens, estimatedOutputTokens), 2_048)
+        )
+    }
+
+    private static func parseMangaTaggedTranslations(
+        _ output: String,
+        expectedIDs: [Int]
+    ) throws -> [String] {
+        var normalized = output
+            .replacingOccurrences(of: "```text", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        for marker in ["<end_of_turn>", "<start_of_turn>"] {
+            if let range = normalized.range(of: marker) {
+                normalized = String(normalized[..<range.lowerBound])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+
+        let pattern = #"(?m)^\s*\[(\d+)\]\s*"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            throw ImageMangaBatchTranslationError.missingTags
+        }
+        let nsOutput = normalized as NSString
+        let matches = regex.matches(
+            in: normalized,
+            range: NSRange(location: 0, length: nsOutput.length)
+        )
+        guard !matches.isEmpty else {
+            throw ImageMangaBatchTranslationError.missingTags
+        }
+
+        var ids: [Int] = []
+        var values: [String] = []
+        ids.reserveCapacity(matches.count)
+        values.reserveCapacity(matches.count)
+        for (index, match) in matches.enumerated() {
+            guard let idRange = Range(match.range(at: 1), in: normalized),
+                  let id = Int(normalized[idRange]) else {
+                throw ImageMangaBatchTranslationError.unexpectedTags
+            }
+            let valueStart = match.range.location + match.range.length
+            let valueEnd = index + 1 < matches.count
+                ? matches[index + 1].range.location
+                : nsOutput.length
+            guard valueEnd >= valueStart else {
+                throw ImageMangaBatchTranslationError.emptyTranslation
+            }
+            let value = nsOutput.substring(with: NSRange(
+                location: valueStart,
+                length: valueEnd - valueStart
+            )).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !value.isEmpty else {
+                throw ImageMangaBatchTranslationError.emptyTranslation
+            }
+            ids.append(id)
+            values.append(value)
+        }
+
+        guard ids == expectedIDs else {
+            throw ImageMangaBatchTranslationError.unexpectedTags
+        }
+        return values
     }
 
     private func translate(_ text: String) async throws -> String {
@@ -25856,7 +26083,8 @@ final class TranslationSessionStore: ObservableObject {
             sourceLanguage: probeCase.source,
             targetLanguage: probeCase.target,
             prompt: selectedPrompt,
-            sampling: sampling
+            sampling: sampling,
+            translationProfile: .standard
         )
     }
 
@@ -26004,7 +26232,9 @@ final class TranslationSessionStore: ObservableObject {
         task: ModelTask,
         inputText: String,
         sourceLanguage requestSourceLanguage: SupportedLanguage? = nil,
-        targetLanguage requestTargetLanguage: SupportedLanguage? = nil
+        targetLanguage requestTargetLanguage: SupportedLanguage? = nil,
+        translationProfile: TranslationRequestProfile = .standard,
+        requestSampling: GenerationSampling? = nil
     ) -> ModelGenerationRequest {
         ModelGenerationRequest(
             task: task,
@@ -26014,7 +26244,8 @@ final class TranslationSessionStore: ObservableObject {
             sourceLanguage: requestSourceLanguage ?? sourceLanguage,
             targetLanguage: requestTargetLanguage ?? targetLanguage,
             prompt: selectedPrompt,
-            sampling: sampling
+            sampling: requestSampling ?? sampling,
+            translationProfile: translationProfile
         )
     }
 
@@ -26025,6 +26256,7 @@ final class TranslationSessionStore: ObservableObject {
         mode: \(request.mode.rawValue)
         sourceLanguage: \(request.sourceLanguage.rawValue)
         targetLanguage: \(request.targetLanguage.rawValue)
+        translationProfile: \(request.translationProfile.rawValue)
         prompt.title: \(request.prompt.title)
         prompt.instruction: \(request.prompt.instruction(source: request.sourceLanguage, target: request.targetLanguage))
         prompt.tone: \(request.prompt.tone)
@@ -26049,7 +26281,8 @@ final class TranslationSessionStore: ObservableObject {
             sourceLanguage: source,
             targetLanguage: target,
             prompt: selectedPrompt,
-            sampling: sampling
+            sampling: sampling,
+            translationProfile: .standard
         )
     }
 

@@ -41,6 +41,10 @@ struct MockGemmaService: LocalLanguageModeling {
     }
 
     private func translatedText(for request: ModelGenerationRequest) -> String {
+        if request.translationProfile == .mangaBlocks {
+            return mangaBlockTranslation(for: request)
+        }
+
         let normalized = request.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let promptHint = request.prompt.title
 
@@ -58,6 +62,38 @@ struct MockGemmaService: LocalLanguageModeling {
         case .german:
             return "[\(promptHint)] Dies ist eine simulierte deutsche Übersetzung."
         }
+    }
+
+    private func mangaBlockTranslation(for request: ModelGenerationRequest) -> String {
+        let pattern = #"(?m)^\s*\[(\d+)\]\s*"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return "" }
+        let input = request.inputText
+        let nsInput = input as NSString
+        let matches = regex.matches(
+            in: input,
+            range: NSRange(location: 0, length: nsInput.length)
+        )
+        guard !matches.isEmpty else { return "" }
+
+        let promptHint = request.prompt.title
+        return matches.enumerated().compactMap { index, match in
+            guard let idRange = Range(match.range(at: 1), in: input) else { return nil }
+            let id = input[idRange]
+            let translation: String
+            switch request.targetLanguage {
+            case .simplifiedChinese:
+                translation = "【\(promptHint)】这是 Mock 生成的中文漫画译文。"
+            case .englishUS:
+                translation = "[\(promptHint)] This is a mock English manga translation."
+            case .japanese:
+                translation = "【\(promptHint)】これは Mock 生成の漫画日本語訳です。"
+            case .french:
+                translation = "[\(promptHint)] Ceci est une traduction manga française simulée."
+            case .german:
+                translation = "[\(promptHint)] Dies ist eine simulierte Manga-Übersetzung."
+            }
+            return "[\(id)] \(translation)"
+        }.joined(separator: "\n")
     }
 
     private func summary(for request: ModelGenerationRequest) -> AISummary {

@@ -6688,6 +6688,11 @@ enum ModelTask: String, Codable, Sendable {
     case summary
 }
 
+enum TranslationRequestProfile: String, Sendable {
+    case standard
+    case mangaBlocks
+}
+
 struct ModelAdapterMetadata: Equatable, Sendable {
     var engine: ModelEngine
     var displayName: String
@@ -6705,6 +6710,7 @@ struct ModelGenerationRequest: Sendable {
     var targetLanguage: SupportedLanguage
     var prompt: PromptTemplate
     var sampling: GenerationSampling
+    var translationProfile: TranslationRequestProfile = .standard
 }
 
 struct ModelGenerationResult: Sendable {

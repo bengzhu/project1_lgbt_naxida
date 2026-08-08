@@ -101,7 +101,8 @@ class JapaneseMixedLayoutReadingOrderContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3194(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.195", "3.195"])
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(all(tuple(map(int, version.split("."))) >= (3, 195) for version in versions))
         old = "python3 -B scripts/test-v3194-image-japanese-tight-region-iou-dedupe-contract.py"
         new = "python3 -B scripts/test-v3195-image-japanese-mixed-layout-reading-order-contract.py"
         self.assertIn(old, self.workflow)

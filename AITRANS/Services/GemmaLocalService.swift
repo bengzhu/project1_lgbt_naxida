@@ -130,6 +130,10 @@ struct GemmaLocalService: LocalLanguageModeling {
     }
 
     private func generateTranslation(for request: ModelGenerationRequest) throws -> String {
+        if request.translationProfile == .mangaBlocks {
+            return try generateMangaBlockTranslation(for: request)
+        }
+
         var lastError: Error?
         for (index, prompt) in translationPrompts(for: request).enumerated() {
             do {
@@ -166,6 +170,39 @@ struct GemmaLocalService: LocalLanguageModeling {
         throw lastError ?? GemmaLocalServiceError.emptyOutput
     }
 
+    private func generateMangaBlockTranslation(for request: ModelGenerationRequest) throws -> String {
+        var lastError: Error?
+        for (index, prompt) in translationPrompts(for: request).enumerated() {
+            do {
+                Self.writeTranslationProbeLog(
+                    "manga-batch-attempt-start index=\(index + 1) " +
+                    "source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
+                    "input=\(Self.probeField(request.inputText)) prompt=\(Self.probeField(prompt))"
+                )
+                let output = try Self.runtime.generate(
+                    prompt: prompt,
+                    maxTokens: min(max(request.sampling.maxTokens, 192), 768),
+                    decodingProfile: .sampled
+                )
+                Self.writeTranslationProbeLog(
+                    "manga-batch-attempt-raw index=\(index + 1) output=\(Self.probeField(output))"
+                )
+                let cleanedOutput = try cleanMangaBlockOutput(output, input: request.inputText)
+                Self.writeTranslationProbeLog(
+                    "manga-batch-attempt-clean index=\(index + 1) output=\(Self.probeField(cleanedOutput))"
+                )
+                return cleanedOutput
+            } catch {
+                Self.writeTranslationProbeLog(
+                    "manga-batch-attempt-error index=\(index + 1) error=\(Self.probeField(error.localizedDescription))"
+                )
+                lastError = error
+            }
+        }
+
+        throw lastError ?? GemmaLocalServiceError.emptyOutput
+    }
+
     private func modelURL() throws -> URL {
         let marker = modelDirectory.appendingPathComponent("model.gguf")
         guard FileManager.default.fileExists(atPath: marker.path) else {
@@ -179,6 +216,33 @@ struct GemmaLocalService: LocalLanguageModeling {
             source: request.sourceLanguage,
             target: request.targetLanguage
         )
+
+        if request.translationProfile == .mangaBlocks {
+            let mangaInstruction = """
+            你是专业的漫画翻译器。源语言是\(request.sourceLanguage.rawValue)，目标语言是\(request.targetLanguage.rawValue)。
+            输入由带编号的文字块组成，例如 [1]、[2]。只翻译每个编号后面的文字。
+            必须原样保留每个 [N] 标签，并按输入顺序逐个输出；不要合并、拆分、遗漏或重排文字块。
+            保留角色语气、情绪、关系、强调和拟声词；译文自然、简洁、适合漫画气泡。
+            不要输出解释、注释、罗马音或额外标题。每个标签单独一行，格式为 [N] 译文。
+            用户补充要求：\(instruction)
+            """
+            return [
+                """
+                <start_of_turn>user
+                \(mangaInstruction)
+                \(request.inputText)
+                <end_of_turn>
+                <start_of_turn>model
+                """,
+                """
+                <start_of_turn>user
+                漫画编号块翻译。保留所有 [N] 标签及顺序，只输出每个标签对应的\(request.targetLanguage.rawValue)译文，不合并、不拆分、不解释：
+                \(request.inputText)
+                <end_of_turn>
+                <start_of_turn>model
+                """
+            ]
+        }
 
         if request.sourceLanguage == .englishUS, request.targetLanguage == .simplifiedChinese {
             return [
@@ -222,6 +286,76 @@ struct GemmaLocalService: LocalLanguageModeling {
             <start_of_turn>model
             """
         ]
+    }
+
+    private func cleanMangaBlockOutput(_ output: String, input: String) throws -> String {
+        var text = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        for marker in ["<end_of_turn>", "<start_of_turn>"] {
+            if let range = text.range(of: marker) {
+                text = String(text[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        text = text
+            .replacingOccurrences(of: "```text", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let expectedIDs = Self.mangaBlockIDs(in: input)
+        let outputIDs = Self.mangaBlockIDs(in: text)
+        guard !expectedIDs.isEmpty,
+              matchesFirstTagAtStart(in: text),
+              outputIDs == expectedIDs,
+              !text.isEmpty else {
+            throw GemmaLocalServiceError.emptyOutput
+        }
+
+        let inputParts = Self.mangaBlockParts(in: input)
+        let outputParts = Self.mangaBlockParts(in: text)
+        guard inputParts.count == outputParts.count,
+              zip(inputParts, outputParts).allSatisfy({ source, translated in
+                  let sourceText = source.value.trimmingCharacters(in: .whitespacesAndNewlines)
+                  let translatedText = translated.value.trimmingCharacters(in: .whitespacesAndNewlines)
+                  return !translatedText.isEmpty
+                      && sourceText.localizedCaseInsensitiveCompare(translatedText) != .orderedSame
+              }) else {
+            throw GemmaLocalServiceError.repeatedInput
+        }
+        return text
+    }
+
+    private func matchesFirstTagAtStart(in text: String) -> Bool {
+        text.first == "["
+    }
+
+    private struct MangaBlockPart {
+        let id: Int
+        let value: String
+    }
+
+    private static func mangaBlockIDs(in text: String) -> [Int] {
+        mangaBlockParts(in: text).map(\.id)
+    }
+
+    private static func mangaBlockParts(in text: String) -> [MangaBlockPart] {
+        let pattern = #"(?m)^\s*\[(\d+)\]\s*"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let nsText = text as NSString
+        let fullRange = NSRange(location: 0, length: nsText.length)
+        let matches = regex.matches(in: text, range: fullRange)
+        return matches.enumerated().compactMap { index, match in
+            guard let idRange = Range(match.range(at: 1), in: text),
+                  let id = Int(text[idRange]) else { return nil }
+            let valueStart = match.range.location + match.range.length
+            let valueEnd = index + 1 < matches.count
+                ? matches[index + 1].range.location
+                : nsText.length
+            guard valueEnd >= valueStart else { return nil }
+            let value = nsText.substring(with: NSRange(
+                location: valueStart,
+                length: valueEnd - valueStart
+            ))
+            return MangaBlockPart(id: id, value: value)
+        }
     }
 
     private func summaryPrompt(for request: ModelGenerationRequest) -> String {
