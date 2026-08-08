@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.199 Koharu 日语竖排 block line envelope 合同
+
+- 普通图片源语言为日语且 block 为竖排时，`recognizeJapaneseVerticalCrops` 通过 `koharuVerticalBlockCropRect` 收集与 block 有 `overlap >= 0.25` 的有效 `lineRegionRect`，归一化后与原 `block.rect` 做 union，再交给既有方向感知 padding；因此紧 line geometry 可扩展 block crop，但绝不缩小 detector/layout block。
+- 缺少或非法 line geometry 时必须回退 `expandedVerticalCropRect(block.rect, imageSize: imageSize)`；非日语、整页 OCR、line/tile reread、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 路径不变，不加载 Manga OCR/PaddleOCR 权重。v3.175/v3.178 历史合同接受等价 helper，但仍验证原有 padding 与 compact block 边界。
+- 新增 `scripts/test-v3199-image-japanese-koharu-block-line-envelope-contract.py` 并接入 UI/full fail-fast；v3.198 及更早合同继续回归。候选 exact-SHA full [31260137161](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31260137161)（`b85f12389eddf1cd82d8aa2892fe5f730d4b8a56`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #263 fast [31260466644](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31260466644) 复用候选 full，merge fast [31260501796](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31260501796) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `20d5987c245bf6768257e61d6ee030cf2324aef0`，`receiptPropagationAllowed=true`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.198 Koharu 日语竖排 line 方向合同
 
 - 普通图片源语言为日语时，`recognizeJapaneseVerticalLineCrops` 的 perspective 与轴对齐 line reread 必须通过共享 helper 以 Koharu `warp_line_region` 的 `rotate270`（270°）作为主方向；结果为空、日语脚本密度低、置信度弱或单字时，仍只在既有 12 次页级预算内使用 90° opposite fallback。block crop 保留候选自身方向，tile fallback 保留 90° 主／270° 弱结果回退。

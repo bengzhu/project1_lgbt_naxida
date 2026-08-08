@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.199 日语竖排 block → 收集相关 Vision `lineRegionRect` → 与原 block 做 Koharu envelope union（不缩小原框）→ 方向感知 padding → block crop OCR／弱方向 fallback → line reread／去重／布局／批翻译／渲染；缺失 geometry 回退旧 crop，非日语与其他路径不变，候选 full `31260137161`、PR fast `31260466644`、merge fast `31260501796` 均通过，候选 SHA `b85f12389eddf1cd82d8aa2892fe5f730d4b8a56` Xcode/JUnit `10/10`，merge SHA `20d5987c245bf6768257e61d6ee030cf2324aef0` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.198 日语竖排 line → Koharu `warp_line_region` `rotate270` 主方向 → perspective／轴对齐 line crop OCR → 弱／空结果在 12 次预算内 90° fallback → 去重／布局／批翻译／渲染；block、tile 与非日语路径不变，候选 full `31259014271`、PR fast `31259242739`、merge fast `31259272510` 均通过，候选 SHA `24c8f9c23f3bec3e6536ad4752e99a4703ff07f4` Xcode/JUnit `10/10`，merge SHA `0b7352be9393e17fc55224269604dfc6859d2351` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.197 日语竖排 block → Koharu `pp_doclayout_v3` aspect `1.15`／方向置信度 `0.25`／高度 `0.035` 门控 → 最多 16 个 block crop OCR → 既有 90°／270° fallback、line/tile reread、去重、布局、批翻译与渲染；非日语与失败回退不变，候选 full `31258318641`、PR fast `31258329662`、merge fast `31258606990` 均通过，候选 SHA `e099acb375cf799d9f3d26b203eead6505b9b65c` Xcode/JUnit `10/10`，merge SHA `bd91910ccfe38b78d2827095b7e2970c1347d881` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。

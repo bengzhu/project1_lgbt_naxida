@@ -8795,6 +8795,26 @@ Agent C 最终验收：
 - merge fast [31226027759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226027759)：merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31226162752](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226162752)：commit `f3d4081227d0bfbf681009b517c611f03c0e8c79`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `5bb34b44d0c93ab93d816a848266f65c95ad9d6c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
 
+## v3.199：Koharu 日语竖排 block line envelope
+
+日期：2026-08-08
+
+状态：Agent X 继续参考 Koharu `crop_text_block_bbox` 的 block-region 消费边界。Koharu 会以 detector 的 TextRegion bbox 为最小外框，把相关 line polygons 并入 envelope 后再做方向感知字体 padding；AITRANS 现在把 Vision 已有的紧 `lineRegionRect` 作为受限过渡 geometry，普通图片日语竖排 block crop 先与原 `block.rect` 做 union，再进入既有 crop／预处理／方向 fallback／原图映射与去重。该 union 永不缩小原 block，缺失或非法 line geometry 安全回退旧 `expandedVerticalCropRect`；非日语、页级 OCR、line/tile、翻译、渲染、Store、探针、metrics 与 `output` 边界不变。工程正式版本为 `MARKETING_VERSION=3.199`。候选 commit `b85f12389eddf1cd82d8aa2892fe5f730d4b8a56` 已通过 PR #263 合入，merge SHA `20d5987c245bf6768257e61d6ee030cf2324aef0`；`main` 未触碰。
+
+核心变更：
+
+- `recognizeJapaneseVerticalCrops` 的 block crop 通过 `koharuVerticalBlockCropRect` 收集与 block 重叠至少 `0.25` 的有效 `lineRegionRect`，统一归一化后以 `lineRegions.reduce(block.rect) { $0.union($1) }` 形成 Koharu 风格 envelope，再调用原有方向感知扩边；因此 line-region 能补回被 request-level box 截掉的字尾，同时保留原 block 的安全下限。
+- 无紧 geometry 时 helper 直接回退 `expandedVerticalCropRect(block.rect, imageSize: imageSize)`；v3.175 字体 padding 与 v3.178 compact block 历史合同改为接受等价 helper，不改变既有 `8%/18%/12%` padding、compact 门控、16 block 预算或失败回退。
+- 新增 `scripts/test-v3199-image-japanese-koharu-block-line-envelope-contract.py`，并接入 `.github/workflows/ci-results.yml` 的 UI/full fail-fast；合同验证 union、overlap 过滤、normalized geometry、fallback、普通图片日语 scope 与 v3.198 路由。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。`test/jap.jpg` 只作合同 fixture，没有新的 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31260137161](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31260137161)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `b85f12389eddf1cd82d8aa2892fe5f730d4b8a56`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #263 fast [31260466644](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31260466644)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=b85f12389eddf1cd82d8aa2892fe5f730d4b8a56`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31260501796](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31260501796)：merge SHA `20d5987c245bf6768257e61d6ee030cf2324aef0`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，`reusedFullValidationSha=b85f12389eddf1cd82d8aa2892fe5f730d4b8a56`、state `success`、`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，JUnit `10/10`，不是新的编译证据。
+
 ## v3.198：Koharu 日语竖排 line rotate270 方向迁移
 
 日期：2026-08-08
