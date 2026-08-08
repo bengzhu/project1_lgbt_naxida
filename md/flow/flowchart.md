@@ -1,4 +1,6 @@
 # 项目流程图
+v3.200 日语竖排 block → line-region 与原 block envelope union → 原 block 最小边 font anchor → 方向感知 padding → block crop OCR／fallback → line reread／去重／布局／批翻译／渲染；避免多行 envelope 过度扩边，缺失 geometry 回退旧 crop，非日语路径不变。exact-SHA full `31260969111` 已通过 Xcode/JUnit `10/10`；候选静态路由 `31261252088` 不作为新的编译证据，PR/merge receipt 待补，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。
+
 v3.199 日语竖排 block → 相关 `lineRegionRect` 与原 block envelope union → 方向感知 padding → block crop OCR／fallback → line reread／去重／布局／批翻译／渲染；缺失 geometry 回退旧 crop，非日语路径不变，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。候选 full `31260137161`、PR fast `31260466644`、merge fast `31260501796` 均通过。
 
 v3.198 日语竖排 line → Koharu `rotate270` 主方向 → perspective／轴对齐 crop OCR → 弱／空结果 90° fallback → 去重／布局／批翻译／渲染；block、tile、非日语路径不变，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。候选 full `31259014271`、PR fast `31259242739`、merge fast `31259272510` 均通过。

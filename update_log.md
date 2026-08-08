@@ -8795,6 +8795,24 @@ Agent C 最终验收：
 - merge fast [31226027759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226027759)：merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31226162752](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226162752)：commit `f3d4081227d0bfbf681009b517c611f03c0e8c79`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `5bb34b44d0c93ab93d816a848266f65c95ad9d6c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
 
+## v3.200：Koharu 日语竖排 block font-size anchor
+
+日期：2026-08-08
+
+状态：Agent X 继续参考 Koharu `expanded_text_block_crop_bounds` 的 block crop 边界。Koharu 以原始 `TextRegion.detected_font_size_px`（PP-DocLayout 的 bbox 最小边）计算字体 padding，再把 padding 应用于包含 line polygons 的 envelope；AITRANS 现在在普通图片日语竖排 block 已完成 v3.199 line-region union 后，保留原始 Vision `block.rect` 作为 `fontSizeReference`，再对 union envelope 应用既有方向感知 `8%/18%/12%` padding。这样多行 envelope 变大时不会反向放大字体锚点，缺失或非法 geometry 仍安全回退旧 crop；line、tile、非日语、翻译、渲染、Store、探针、metrics 与 `output` 边界不变。工程正式版本为 `MARKETING_VERSION=3.200`，新增 `scripts/test-v3200-image-japanese-koharu-font-anchor-contract.py`，v3.199 历史合同接受等价 helper；`main` 未触碰。
+
+核心变更：
+
+- `koharuVerticalBlockCropRect` 在 union 相关有效 `lineRegionRect` 后调用 `expandedKoharuVerticalBlockEnvelopeCropRect(envelope, fontSizeReference: block.rect, imageSize:)`；helper 只以 `fontSizeReference` 计算 padding，再对 envelope 扩边并归一化，padding 失败回退既有 `expandedVerticalCropRect`。
+- 合同验证原 block anchor、union envelope、fallback、安全 scope、版本与 CI route；v3.175/v3.178/v3.199/v3.198 及全套 218 个 Python 合同均通过，`git diff --check` 通过。
+
+边界：当前云端 full 与候选路由均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。`test/jap.jpg` 只作合同 fixture，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- exact-SHA full [31260969111](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31260969111)：commit `c91858868cace78b846bd742f69a95f765b5737a`，`validationProfile=full`、`validationReason=direct_or_unclassified_push`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；manifest 明确 `probeMode=skip`，readiness `manifestMissing / stopUntilArtifactsProvided`。
+- 候选分支路由 [31261252088](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31261252088)：同一 SHA 的 `candidate_development_push` 静态 full，因 candidate merge-base 没有新增文件而跳过 Xcode/UI/Speech；该 run 只作路由记录，不作为新的编译证据。PR/merge receipt 在候选记录补齐后更新。
+
 ## v3.199：Koharu 日语竖排 block line envelope
 
 日期：2026-08-08
