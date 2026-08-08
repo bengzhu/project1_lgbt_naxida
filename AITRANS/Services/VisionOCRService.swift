@@ -1358,7 +1358,39 @@ struct VisionOCRService: Sendable {
         let envelope = lineRegions.reduce(block.rect) { partial, region in
             partial.union(region)
         }
-        return expandedVerticalCropRect(envelope, imageSize: imageSize)
+        // Koharu keeps `detected_font_size_px` from the original TextRegion
+        // while expanding the union envelope. The Vision layout block has no
+        // detector font field, so retain its original min-dimension proxy as
+        // the padding anchor instead of letting a multi-line envelope inflate
+        // the inferred glyph size.
+        return expandedKoharuVerticalBlockEnvelopeCropRect(
+            envelope,
+            fontSizeReference: block.rect,
+            imageSize: imageSize
+        )
+    }
+
+    /// Apply Koharu's direction-aware font padding to a line-expanded block
+    /// while preserving the original block's font-size proxy. This mirrors
+    /// `expanded_text_block_crop_bounds`: line geometry changes the envelope,
+    /// not the detected glyph-size estimate used for padding.
+    private static func expandedKoharuVerticalBlockEnvelopeCropRect(
+        _ envelope: ImageOCRLayoutRect,
+        fontSizeReference: ImageOCRLayoutRect,
+        imageSize: CGSize
+    ) -> ImageOCRLayoutRect {
+        guard let padding = koharuVerticalCropPadding(
+            fontSizeReference,
+            imageSize: imageSize
+        ) else {
+            return expandedVerticalCropRect(envelope, imageSize: imageSize)
+        }
+        return ImageOCRLayoutRect(
+            x: envelope.x - padding.horizontal,
+            y: envelope.y - padding.vertical,
+            width: envelope.width + padding.horizontal * 2,
+            height: envelope.height + padding.vertical * 2
+        ).normalizedToUnit() ?? envelope
     }
 
     private static func expandedVerticalCropRect(
