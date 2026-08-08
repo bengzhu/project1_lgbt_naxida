@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.195 日语混合版面递归阅读顺序合同
+
+- `ImageOCRLayoutEngine.layout` 在 `prefersMangaReadingOrder` 下必须把横排与竖排 block 放入同一集合，按动态中位宽／高中位数阈值递归选择 XY-cut；横向切分右组先读、纵向切分顶部先读，无法切分时按 `4 × min_gap_y` 行桶从右到左稳定回退。
+- 非日语调用必须保留既有横／竖交错路径；合同只验证 View-independent layout ordering，不读取探针报告、ground truth 或 `test/koharu_artifacts`，不改变 Vision OCR、翻译、renderer/export、Store、metrics 或 `output`。
+- 新增 `scripts/test-v3195-image-japanese-mixed-layout-reading-order-contract.py` 并接入 UI/full fail-fast；v3.194 及更早合同继续回归。候选 exact-SHA full [31233606259](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31233606259)（`52963a4c1cbe16f8662a99ae443aea36f1dbb486`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #259 fast [31233872614](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31233872614) 复用候选 full，merge fast [31234023270](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31234023270) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `12b0217c7c56a2993986f4a42ba6e6f98c7df6a2`），后两者跳过 Xcode/UI/Speech，不是新的编译证据。三次均为 `probe_mode=skip`；真实 Koharu 四件套 readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得把混合版面排序迁移描述为日语 OCR、翻译或识别质量提升。
+
 ### v3.194 日语紧字符区域 IoU 去重合同
 
 - `isDuplicateObservation` 只有在 `prefersJapanese` 且双方都带 `lineRegionRect` 时，才允许把 minimum-area overlap `>= 0.85` 或紧区域 IoU `>= 0.50` 的候选按 Koharu `merge_slice_regions` 几何规则视为重复；IoU 使用交集除以并集并在零面积时安全回退。

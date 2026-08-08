@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.195 日语混合版面 → 横排／竖排 block 合并 → Koharu 风格递归 XY-cut（横切右侧、纵切顶部）→ `4 × min_gap_y` 行桶右到左回退 → 布局／翻译／渲染；非日语继续旧交错，候选 full `31233606259`、PR fast `31233872614`、merge fast `31234023270` 均通过，候选 SHA `52963a4c1cbe16f8662a99ae443aea36f1dbb486` Xcode/JUnit `10/10`，merge SHA `12b0217c7c56a2993986f4a42ba6e6f98c7df6a2` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.194 日语 OCR 紧区域去重：Koharu containment-like overlap `>= 0.85` 或 IoU `>= 0.50` → 双方 `lineRegionRect` 几何合并 → 宽 request box／缺紧区域走文本相似度 → 布局／翻译／渲染；候选 full `31232966715`、PR fast `31233259741`、merge fast `31233297104` 均通过，候选 SHA `e4388409785bc60278b819e36e8b4afdc7ec7307` Xcode/JUnit `10/10`，merge SHA `5ce315332aa6ab073e3e9733f174cbf2ccac0121` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.193 日语 OCR 紧区域去重：Koharu `merge_slice_regions` containment-like 规则 → 双方 `lineRegionRect` 且 overlap `>= 0.85` 时合并 → 宽 request box／缺少紧区域仍走文本相似度 → 布局／翻译／渲染；候选 full `31232333781`、PR fast `31232570686`、merge fast `31232612519` 均通过，候选 SHA `a645943b85345790309adde433344a53209bbccc` Xcode/JUnit `10/10`，merge SHA `c00ffc306a193351179e86b7fd7ad0783bd1ad4b` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。

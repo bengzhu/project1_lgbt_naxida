@@ -8795,6 +8795,26 @@ Agent C 最终验收：
 - merge fast [31226027759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226027759)：merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31226162752](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226162752)：commit `f3d4081227d0bfbf681009b517c611f03c0e8c79`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `5bb34b44d0c93ab93d816a848266f65c95ad9d6c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
 
+## v3.195：日语混合版面 Koharu 阅读顺序
+
+日期：2026-08-08
+
+状态：Agent X 继续对齐 Koharu `sort_manga_reading_order` 的版面消费边界。日语漫画阅读模式把横排与竖排 block 合并为同一集合，递归使用动态 XY-cut，横向切分优先读取右侧组、纵向切分优先读取顶部组；无有效切分时按 `4 × min_gap_y` 行桶从右到左稳定回退，非日语保留原有横／竖交错路径。工程正式版本为 `MARKETING_VERSION=3.195`。候选 commit `52963a4c1cbe16f8662a99ae443aea36f1dbb486` 已通过 PR [#259](https://github.com/bengzhu/project1_lgbt_naxida/pull/259) 合入，merge SHA `12b0217c7c56a2993986f4a42ba6e6f98c7df6a2`；`main` 未触碰。
+
+核心变更：
+
+- `mergeReadingOrder` 在日语 manga-order 下统一收集 horizontal／vertical blocks，通过中位宽／高中位数推导 gap 阈值，复用 Koharu 风格的横／纵递归分割与右／顶部优先顺序。
+- 无切分时按最小 y 间隙的四倍生成稳定 row bucket，再按 x 从右到左和输入序号 tie-breaker 排序；非日语继续 `interleaveReadingOrder`，不改变既有 OCR、翻译、renderer/export、Store 或持久化边界。
+- 新增 `scripts/test-v3195-image-japanese-mixed-layout-reading-order-contract.py` 并接入显式 UI/full fail-fast；不读取探针、ground truth 或真实 Koharu 四件套，不更新 `metrics/version_history.csv` 或仓库 `output/`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。`test/jap.jpg` 只作合同 fixture，没有新的 OCR／翻译／Koharu 指标，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31233606259](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31233606259)：`validationProfile=full`、`validationReason=manual_full`，commit `52963a4c1cbe16f8662a99ae443aea36f1dbb486`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；`probe_mode=skip`，Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #259 fast [31233872614](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31233872614)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=52963a4c1cbe16f8662a99ae443aea36f1dbb486`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31234023270](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31234023270)：merge SHA `12b0217c7c56a2993986f4a42ba6e6f98c7df6a2`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
+
 ## v3.194：日语 OCR 紧字符区域 IoU 去重
 
 日期：2026-08-08

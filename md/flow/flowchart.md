@@ -1,4 +1,6 @@
 # 项目流程图
+v3.195 日语混合版面 block → 横排／竖排合并 → 递归 XY-cut（横切右侧、纵切顶部）→ 无切分时按 `4 × min_gap_y` 行桶右到左 → 布局／翻译／渲染；非日语旧交错路径不变，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31233606259`、PR fast `31233872614`、merge fast `31234023270` 均通过。
+
 v3.194 日语 OCR 候选 → 双方紧 `lineRegionRect` 且 overlap `>= 0.85` 或 IoU `>= 0.50` 时按 Koharu 几何规则合并 → 宽框／缺紧区域走文本相似度 → 布局／翻译／渲染；普通语言路径不变，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31232966715`、PR fast `31233259741`、merge fast `31233297104` 均通过。
 
 v3.193 日语 OCR 候选 → 双方紧 `lineRegionRect` 且 overlap `>= 0.85` 时按 Koharu containment-like 规则合并 → 宽框／缺紧区域走文本相似度 → 布局／翻译／渲染；普通语言路径不变，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31232333781`、PR fast `31232570686`、merge fast `31232612519` 均通过。
