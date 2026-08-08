@@ -8810,8 +8810,10 @@ Agent C 最终验收：
 
 云端证据：
 
-- exact-SHA full [31260969111](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31260969111)：commit `c91858868cace78b846bd742f69a95f765b5737a`，`validationProfile=full`、`validationReason=direct_or_unclassified_push`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；manifest 明确 `probeMode=skip`，readiness `manifestMissing / stopUntilArtifactsProvided`。
-- 候选分支路由 [31261252088](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31261252088)：同一 SHA 的 `candidate_development_push` 静态 full，因 candidate merge-base 没有新增文件而跳过 Xcode/UI/Speech；该 run 只作路由记录，不作为新的编译证据。PR/merge receipt 在候选记录补齐后更新。
+- 实现 exact-SHA full [31260969111](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31260969111)：commit `c91858868cace78b846bd742f69a95f765b5737a`，`validationProfile=full`、`validationReason=direct_or_unclassified_push`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；manifest 明确 `probeMode=skip`，readiness `manifestMissing / stopUntilArtifactsProvided`。
+- 候选 metadata [31261967648](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31261967648)：commit `feca666cf47888317601f8f3c88901e48e209e0e`，`validationProfile=fast`、`validationReason=candidate_metadata_followup_reuses_parent_full_validation`，复用实现 full `c91858868cace78b846bd742f69a95f765b5737a / success`，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
+- PR #264 fast [31261881073](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31261881073)：head `feca666cf47888317601f8f3c88901e48e209e0e`，`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，复用该 head 的成功 full-validation receipt；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31261995539](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31261995539)：merge SHA `bc9a0827bfb5f6b9bfbbe397a404d09c89a88914`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 `feca666cf47888317601f8f3c88901e48e209e0e / success`，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 
 ## v3.199：Koharu 日语竖排 block line envelope
 
