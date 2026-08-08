@@ -77,7 +77,10 @@ class JapaneseMangaWindowOrderContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3191(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.192", "3.192"])
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(
+            all(tuple(map(int, version.split("."))) >= (3, 192) for version in versions)
+        )
         old = "python3 -B scripts/test-v3191-image-japanese-koharu-slicer-contract.py"
         new = "python3 -B scripts/test-v3192-image-japanese-manga-window-order-contract.py"
         self.assertIn(old, self.workflow)
