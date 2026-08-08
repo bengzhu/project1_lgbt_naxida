@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.194 日语紧字符区域 IoU 去重合同
+
+- `isDuplicateObservation` 只有在 `prefersJapanese` 且双方都带 `lineRegionRect` 时，才允许把 minimum-area overlap `>= 0.85` 或紧区域 IoU `>= 0.50` 的候选按 Koharu `merge_slice_regions` 几何规则视为重复；IoU 使用交集除以并集并在零面积时安全回退。
+- 宽 request-level box、非日语路径与低重叠候选仍要求原有非空文本相等／包含或 `overlap >= 0.72 && textSimilarity >= 0.62`，避免相邻日语竖排列被宽 crop 或普通路径误合并。只影响普通图片日语 OCR fusion，不改变 OCR 模型、布局、翻译、renderer/export、Store、探针、Koharu gate、metrics 或 `output`。
+- 新增 `scripts/test-v3194-image-japanese-tight-region-iou-dedupe-contract.py` 并接入 UI/full fail-fast；v3.156–v3.193 日语合同继续回归。候选 exact-SHA full [31232966715](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31232966715)（`e4388409785bc60278b819e36e8b4afdc7ec7307`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #258 fast [31233259741](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31233259741) 复用候选 full，merge fast [31233297104](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31233297104) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full（merge SHA `5ce315332aa6ab073e3e9733f174cbf2ccac0121`，`receiptPropagationAllowed=true`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，`test/jap.jpg` 只作合同 fixture，无新 metrics/output，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.193 日语紧字符区域去重合同
 
 - `isDuplicateObservation` 只有在 `prefersJapanese` 且双方都带 `lineRegionRect` 时，才允许把 minimum-area overlap `>= 0.85` 的紧字符区域按 Koharu `merge_slice_regions` 的 containment-like 规则直接视为重复；缺少任一 hint 时继续使用 request-level `rect`。
