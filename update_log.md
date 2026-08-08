@@ -8795,6 +8795,26 @@ Agent C 最终验收：
 - merge fast [31226027759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226027759)：merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31226162752](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226162752)：commit `f3d4081227d0bfbf681009b517c611f03c0e8c79`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `5bb34b44d0c93ab93d816a848266f65c95ad9d6c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
 
+## v3.196：日语漫画编号块批翻译
+
+日期：2026-08-08
+
+状态：Agent X 继续参考 Koharu translate_texts 与 BLOCK_TAG_INSTRUCTIONS 的批翻译边界，把普通图片日语翻译从逐块孤立请求迁移为保序的编号文本块协议。OCR blocks 按全局 [N] 标签切成最多 8 块、约 1800 字符的有界批次；Local/Mock prompt 要求只翻译标签后的文本，保留角色语气、情绪、关系、强调和拟声词，禁止合并、拆分、遗漏或重排。严格解析缺 tag、乱序、空块或生成错误时回退既有逐块翻译，非日语图片和修正 sheet 保持原路径。工程正式版本为 MARKETING_VERSION=3.196。候选 commit 4282395bd982c2c6fcb92058b3cdfb8409defd01 已通过 PR #260 合入，merge SHA dd007a40705903bcc92800f30a905ead44810503；main 未触碰。
+
+核心变更：
+
+- 新增 TranslationRequestProfile.mangaBlocks，图片日语主流程构造全局 [N] 输入并按 block 数／字符数分批，模型输出保持相同 tag 顺序；批次采样 token 有界提升但不改变普通翻译采样。
+- GemmaLocalService 迁入 Koharu 风格漫画翻译提示与 tag 完整性清洗，MockGemmaService 返回可解析的编号译文；Store 对输出执行严格 tag、顺序、非空校验，失败时逐块回退并反馈 UI 状态。
+- 新增 scripts/test-v3196-image-japanese-koharu-batch-translation-contract.py，并让 v3.195 历史合同接受后续版本；不加载 Manga OCR/PaddleOCR 权重，不读取探针、ground truth 或真实 Koharu 工件，不改变 OCR、普通语言、renderer/export、Store 持久化、Koharu active gate、metrics 或 output。
+
+边界：候选、PR、merge 均为 probe_mode=skip；真实 test/koharu_artifacts/ 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 manifestMissing / stopUntilArtifactsProvided。test/jap.jpg 只作合同 fixture，没有新的 OCR／翻译／Koharu 指标，不得据此声称日语 OCR、翻译或识别质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full 31257482066：https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31257482066；validationProfile=full、validationReason=candidate_development_push，commit 4282395bd982c2c6fcb92058b3cdfb8409defd01，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit 10/10 且 0 failures；probe_mode=skip，Koharu active artifact verdict manifestMissing，nextAction stopUntilArtifactsProvided。
+- PR #260 fast 31257709942：https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31257709942；validationProfile=fast、validationReason=pull_request_followup_no_synchronize，reusedFullValidationSha=4282395bd982c2c6fcb92058b3cdfb8409defd01、state success；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast 31257752177：https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31257752177；merge SHA dd007a40705903bcc92800f30a905ead44810503，validationProfile=fast、validationReason=merge_reuses_successful_candidate_full_validation，复用候选 full，receiptPropagationAllowed=true；Xcode/UI/Speech skipped，不是新的编译证据。
+
 ## v3.195：日语混合版面 Koharu 阅读顺序
 
 日期：2026-08-08

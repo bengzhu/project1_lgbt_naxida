@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.196 日语图片 OCR blocks → 全局 `[N]` 标签有界批次（最多 8 块／约 1800 字符）→ Koharu 漫画语气与顺序提示 → 严格 tag 解析 → 翻译／渲染；缺 tag、乱序或空块安全回退逐块翻译，非日语与修正 sheet 保持原路径，候选 full `31257482066`、PR fast `31257709942`、merge fast `31257752177` 均通过，候选 SHA `4282395bd982c2c6fcb92058b3cdfb8409defd01` Xcode/JUnit `10/10`，merge SHA `dd007a40705903bcc92800f30a905ead44810503` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.195 日语混合版面 → 横排／竖排 block 合并 → Koharu 风格递归 XY-cut（横切右侧、纵切顶部）→ `4 × min_gap_y` 行桶右到左回退 → 布局／翻译／渲染；非日语继续旧交错，候选 full `31233606259`、PR fast `31233872614`、merge fast `31234023270` 均通过，候选 SHA `52963a4c1cbe16f8662a99ae443aea36f1dbb486` Xcode/JUnit `10/10`，merge SHA `12b0217c7c56a2993986f4a42ba6e6f98c7df6a2` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.194 日语 OCR 紧区域去重：Koharu containment-like overlap `>= 0.85` 或 IoU `>= 0.50` → 双方 `lineRegionRect` 几何合并 → 宽 request box／缺紧区域走文本相似度 → 布局／翻译／渲染；候选 full `31232966715`、PR fast `31233259741`、merge fast `31233297104` 均通过，候选 SHA `e4388409785bc60278b819e36e8b4afdc7ec7307` Xcode/JUnit `10/10`，merge SHA `5ce315332aa6ab073e3e9733f174cbf2ccac0121` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
