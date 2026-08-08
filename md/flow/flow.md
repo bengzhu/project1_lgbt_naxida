@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.190 日语长图漏列侦察：横向重叠窄条 → 每条拆成约 58% 页面高度、18% 纵向重叠且覆盖底边的局部窗口 → 最多 12 个有效窗口做 90° crop OCR／最多 4 次弱结果 270° fallback → 日语过滤、原图映射、去重、block/line reread、布局、翻译与渲染；候选 full `31229567448`、PR fast `31229946643`、merge fast `31229977158` 均通过，候选 SHA `44e0030aa1914468fceedfc5404eaf7510e9673b` Xcode/JUnit `10/10`，merge SHA `ec8ad6333005527042fd7f13f8f203bfa36fafe5` 复用 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.189 日语单字 crop provenance：日语 block／line／tile crop → 映射回原图保留 `sourceDirectionHint=.vertical` → 只要含 CJK（单 glyph 也有效）就在日语 manga-order layout 先尊重 source direction → 再进入宽框回退、去重、翻译、渲染；页级 observation、普通语言与横排路径不变。候选 full `31228731388`、PR fast `31229051329`、merge fast `31229096792` 均通过，候选 SHA `8c89b0c0d1c0dff91efd3c115583ab5f04d14017` Xcode/JUnit `10/10`，merge SHA `6a510efece0b7ef6deeb9f1c3dd19c11f625ba1a` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.188 日语竖排 block 拼接：Koharu 同一右到左文字列内自上而下 → AITRANS 合并后的 vertical `Cluster` 显式按 y↑、同 y 时右侧 x↓、几何／文字／confidence 稳定排序 → 拼接文本 → 去重、翻译、渲染；横排换行、同列合并门控、普通语言与页级路径不变。候选 full `31227754288`、PR fast `31228156354`、merge fast `31228206021` 均通过，候选 SHA `1580a5c145efede4fefa23fd743c8170e077b1f9` Xcode/JUnit `10/10`，merge SHA `bbba2eee0a31a3bfd8b82508c77caac3677e1810` 复用候选 full；探针默认 skip，Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。

@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.190 日语局部 tile-window 合同
+
+- `recognizeJapaneseVerticalTileFallback` 必须把横向窄条拆成局部纵向窗口：优先高度为页面的 `0.58`，同时至少覆盖 `tileWidth * 3`；相邻窗口保留 `0.18` overlap，并强制覆盖页面底边，避免长漫画页中的文字在全高 crop 内占比过小。
+- 只对未被既有竖排 block 覆盖且成功裁剪的窗口计入预算，总有效窗口最多 `12`；每个窗口的归一化 `y/height` 必须映射回原图。已有 90° 主读取、最多 4 次 270° 弱结果 fallback、灰度／放大、日语脚本与竖排几何过滤、坐标映射和最终去重保持不变。
+- 新增 `scripts/test-v3190-image-japanese-localized-tile-window-contract.py` 并接入 UI/full fail-fast；v3.156–v3.189 日语合同继续回归。候选 exact-SHA full [31229567448](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31229567448)（`44e0030aa1914468fceedfc5404eaf7510e9673b`）Xcode/static/UI/Speech/home/paste 均成功，JUnit `10/10` 且 0 failures；PR #254 fast [31229946643](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31229946643) 与 merge fast [31229977158](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31229977158) 均复用候选 full（merge SHA `ec8ad6333005527042fd7f13f8f203bfa36fafe5`，`receiptPropagationAllowed=true`），后两者跳过 Xcode，不是新的编译证据。三次均为 `probe_mode=skip`；readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，无新 metrics/output，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.189 日语单字 crop direction-hint 合同
 
 - `resolveDirection` 必须在日语 manga-order、允许竖排且 `sourceDirectionHint == .vertical` 时接受任意含 CJK 的 crop 文本；不得再要求 `containsTextRun`（至少两个 CJK），这样 Vision 拆出的单 glyph 仍保持 Koharu `TextBox.source_direction`。
