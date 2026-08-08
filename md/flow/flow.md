@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.192 日语竖排 fallback 窗口调度：Koharu `ImageSlicer` 局部窗口 → x 坐标右到左消费、每列 y 上到下 → 最多 18 个 90° crop OCR／最多 4 次 270° fallback → 日语过滤／原图映射／去重／布局／翻译／渲染；候选 full `31231339154`、PR fast `31231689829`、merge fast `31231720315` 均通过，候选 SHA `d4a7811b634df7f300fb60a99e331a27f69287bd` Xcode/JUnit `10/10`，merge SHA `2aae0d7ff0e5394bed6a0c13edbb3a2624f67c1a` 复用候选 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.191 日语竖排切片：横向窄条 → 按 Koharu `ImageSlicer` 目标 3:1、20% 纵向 overlap、70% 尾片阈值生成局部窗口并触底 → 最多 18 个有效窗口做 90° crop OCR／最多 4 次弱结果 270° fallback → 日语过滤、原图映射、去重、block/line reread、布局、翻译与渲染；最终 full `31230729061`、PR fast `31231091935`、merge fast `31231128313` 均通过，最终 SHA `32c350c6ce4c40d90dd1d9505a830c083a62ce49` Xcode/JUnit `10/10`，merge SHA `16cce70a48afda648f045edf9d97f9a1191890cd` 复用 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.190 日语长图漏列侦察：横向重叠窄条 → 每条拆成约 58% 页面高度、18% 纵向重叠且覆盖底边的局部窗口 → 最多 12 个有效窗口做 90° crop OCR／最多 4 次弱结果 270° fallback → 日语过滤、原图映射、去重、block/line reread、布局、翻译与渲染；候选 full `31229567448`、PR fast `31229946643`、merge fast `31229977158` 均通过，候选 SHA `44e0030aa1914468fceedfc5404eaf7510e9673b` Xcode/JUnit `10/10`，merge SHA `ec8ad6333005527042fd7f13f8f203bfa36fafe5` 复用 full；探针 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。

@@ -8795,6 +8795,26 @@ Agent C 最终验收：
 - merge fast [31226027759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226027759)：merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31226162752](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226162752)：commit `f3d4081227d0bfbf681009b517c611f03c0e8c79`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `5bb34b44d0c93ab93d816a848266f65c95ad9d6c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
 
+## v3.192：日语竖排漫画窗口阅读顺序
+
+日期：2026-08-08
+
+状态：Agent X 在 v3.191 迁移 Koharu `ImageSlicer` 局部窗口几何后，补齐漫画阅读方向的窗口消费顺序：日语竖排 fallback 先按窗口 x 坐标从右到左，再在同一列内按 y 从上到下读取。总有效窗口仍最多 18 个，候选覆盖、90°／270° OCR、日语过滤、灰度／放大、原图映射与去重边界保持不变。工程正式版本为 `MARKETING_VERSION=3.192`。候选 commit `d4a7811b634df7f300fb60a99e331a27f69287bd` 已通过 PR [#256](https://github.com/bengzhu/project1_lgbt_naxida/pull/256) 合入，merge SHA `2aae0d7ff0e5394bed6a0c13edbb3a2624f67c1a`；`main` 未触碰。
+
+核心变更：
+
+- `recognizeJapaneseVerticalTileFallback` 将 `japaneseVerticalSliceWindows` 产生的窗口按 x 位置降序消费，使预算不足时先覆盖日式漫画右侧阅读前沿；每个窗口内部继续按 y 升序读取，保持列内自上而下。
+- 新增 `scripts/test-v3192-image-japanese-manga-window-order-contract.py`，合同锁定右到左外层顺序、列内 y 顺序与 v3.191 的 18 窗口／覆盖／方向 fallback 边界，并接入显式 UI/full fail-fast。
+- 该步只改变普通图片日语 tile fallback 的调度，不加载新 OCR 模型，不读取探针、ground truth 或真实 Koharu 工件，不改变普通语言、整页／block／line OCR、翻译、renderer/export、Store、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。`test/jap.jpg` 只作合同 fixture，没有新的 OCR／翻译／Koharu 指标，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31231339154](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31231339154)：`validationProfile=full`、`validationReason=candidate_development_push`，commit `d4a7811b634df7f300fb60a99e331a27f69287bd`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #256 fast [31231689829](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31231689829)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=d4a7811b634df7f300fb60a99e331a27f69287bd`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
+- merge fast [31231720315](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31231720315)：`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，merge SHA `2aae0d7ff0e5394bed6a0c13edbb3a2624f67c1a` 复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
+
 ## v3.191：日语竖排 Koharu ImageSlicer 迁移
 
 日期：2026-08-08
