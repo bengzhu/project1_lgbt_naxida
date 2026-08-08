@@ -8795,6 +8795,25 @@ Agent C 最终验收：
 - merge fast [31226027759](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226027759)：merge SHA `5bb34b44d0c93ab93d816a848266f65c95ad9d6c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31226162752](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226162752)：commit `f3d4081227d0bfbf681009b517c611f03c0e8c79`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `5bb34b44d0c93ab93d816a848266f65c95ad9d6c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
 
+## v3.189：日语单字 crop direction hint
+
+日期：2026-08-08
+
+状态：Agent X 继续对齐 Koharu 的 `TextBox.source_direction` 语义。v3.187 已让日语竖排 crop reread 携带 `.vertical` hint，但布局仍要求文本至少两个 CJK scalar 才接受该 hint；Vision 将窄列拆成单 glyph 时，这个可信 provenance 会被丢弃，随后可能被 `wideBox` 几何回退误判为横排。v3.189 将门控改为“只要含 CJK 即可”，仍保留 `allowsVerticalText` 与 `prefersMangaReadingOrder` 两层日语边界，并继续让页级 observation 不携带 hint。工程正式版本为 `MARKETING_VERSION=3.189`。候选 commit `8c89b0c0d1c0dff91efd3c115583ab5f04d14017` 已通过 PR [#253](https://github.com/bengzhu/project1_lgbt_naxida/pull/253) 合入，merge SHA `6a510efece0b7ef6deeb9f1c3dd19c11f625ba1a`；`main` 未触碰。
+
+核心变更：
+
+- `ImageOCRLayoutEngine.resolveDirection` 新增 `hasCJKText = cjkCount > 0`，日语 manga-order 且 `sourceDirectionHint == .vertical` 时以 `hasCJKText` 提前返回 `koharuVerticalCropHint`；单字／单标点 crop 不再要求 `containsTextRun`，仍位于 `wideBox` 回退之前。
+- hint 仍只由日语竖排 block／line／tile crop reread 与合成结果提供；整页 `mapRotatedObservation`、普通语言、横排与非日语路径保持原几何启发式。新增合同覆盖单 glyph、作用域、页级 mapper 与版本/CI route；不加载 Manga OCR/PaddleOCR 权重、不读取探针或 ground truth，不改变 OCR、翻译、renderer/export、Store、Koharu active gate、metrics 或 `output`。
+
+边界：候选、PR、merge 均为 `probe_mode=skip`；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。`test/jap.jpg` 只作合同 fixture，没有新 OCR／翻译／Koharu 指标，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31228731388](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31228731388)：`validationProfile=full`、`validationReason=candidate_development_push`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Koharu active artifact verdict `manifestMissing`，nextAction `stopUntilArtifactsProvided`。
+- PR #253 fast [31229051329](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31229051329)：`validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=8c89b0c0d1c0dff91efd3c115583ab5f04d14017`、state `success`；Xcode/UI/Speech 跳过，不是新的编译证据。
+- merge fast [31229096792](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31229096792)：merge SHA `6a510efece0b7ef6deeb9f1c3dd19c11f625ba1a`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，复用候选 full，`receiptPropagationAllowed=true`；Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.188：日语竖排 Cluster 确定性读取顺序
 
 日期：2026-08-08

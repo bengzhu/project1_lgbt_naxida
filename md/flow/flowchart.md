@@ -1,4 +1,6 @@
 # 项目流程图
+v3.189 日语单字 crop → 保留 `.vertical` source-direction hint → 单 glyph 也进入日语 manga-order 竖排布局 → 宽框回退／去重／翻译／渲染；页级、普通语言与横排路径不变，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31228731388`、PR fast `31229051329`、merge fast `31229096792` 均通过。
+
 v3.188 日语竖排 Cluster → 同列内显式 y↑、同 y 右侧优先与稳定 tie-breaker → 自上而下拼接 → 去重／翻译／渲染；横排换行与同列合并门控不变，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31227754288`、PR fast `31228156354`、merge fast `31228206021` 均通过。
 
 v3.187 日语 crop provenance：竖排 block／line／tile crop → 原图映射时保留 `sourceDirectionHint=.vertical` → 日语 manga-order layout 优先使用 Koharu-style source direction → 去重／翻译／渲染；普通语言和页级 observation 保持原几何路径，真实 Koharu 工件仍缺失，不声称 OCR 质量提升。候选 full `31226671116`、PR fast `31226855629`、merge fast `31227082382` 均通过。
