@@ -10,11 +10,12 @@
 - `observationScore` 与 tie-breaker 对 `.verticalLine` 采用 270° bounded bonus，其余 page／crop 仍采用原 90° 偏好；line primary/fallback 与 block/tile 预算、映射、去重保持原有安全边界。
 - 新增 `scripts/test-v3201-image-japanese-koharu-line-orientation-provenance-contract.py` 并接入 UI/full fail-fast；全套 219 个 Python 合同通过。该迁移不加载 Manga OCR/PaddleOCR 权重，不读取探针或 ground truth。
 
-边界：当前实现 full 已通过，候选、PR、merge 与文档 follow-up 尚待完成；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 维持 `manifestMissing / stopUntilArtifactsProvided`。探针为 `skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+边界：候选、PR、merge 均已通过并复用实现 full；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 维持 `manifestMissing / stopUntilArtifactsProvided`。探针为 `skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
 
 云端证据：
 
 - 实现 exact-SHA full [31262554391](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31262554391)：commit `97120cf38d85729f605e3d8bdbc836a0271e1c99`，`validationProfile=full`，Xcode build、静态、UI、Speech、home、paste 均成功，JUnit `10/10` 且 0 failures；Xcode result bundle 已生成。
+- 候选 metadata [31262979444](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31262979444)：candidate SHA `cad5056936efb3933ae39897a24179ab8eeae15b`，`validationProfile=fast`，复用实现 full；PR #265 fast [31263017146](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31263017146) 复用候选 receipt；merge fast [31263072991](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31263072991) 以 merge SHA `3aac10326a987a47ea1786cd76c37b96b3ca9b36` 复用候选 receipt，后三者 Xcode skipped，JUnit `10/10` 且 0 failures。
 - 该 full 的 `probe_mode=skip`，Koharu active artifact verdict 为 `manifestMissing`，nextAction 为 `stopUntilArtifactsProvided`；因此没有新的 OCR／翻译／漫画 probe 指标。
 
 ## v3.172：日语竖排碎片 line-region 合成
