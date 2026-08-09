@@ -7,9 +7,15 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.210 图片翻译文字块单独重试合同
+
+- `.failed`／可恢复的 `.translated` 图片结果只允许原文非空且译文为空的文字块重试；已完成译文、block geometry 与 OCR 原文保留，不重新调用 `visionOCRService` 或 `recognizeTextBlocks`。
+- 日语单块继续走既有 `translateJapaneseImageBatch` 的 `[N]` 协议，非日语走既有单块 `translate`；retry ID、content task ID 与原文一致性共同阻止过期结果写回。部分成功保持 `.failed` 并允许继续重试，全部译文完成后才恢复 `.translated`、更新转录并重绘导出。
+- 结果行和局部预览提供图标按钮、状态 value、动态 hint 与 VoiceOver action；新增 `scripts/test-v3210-image-translation-block-retry-contract.py` 并接入 UI/full fail-fast。本地 v3.157–v3.210 共 54 个合同通过；exact-SHA full [31299660925](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31299660925)（SHA `b9ec296d0cdafbe0bfbbe0aebc90e1255a44d6d2`）Xcode/JUnit `10/10` 且 0 failures；PR/merge fast receipt 待生成，probe `skip`，本轮仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.209 Koharu 日语竖排 line-first dispatch 合同
 
-- `recognizeJapaneseVerticalCrops` 先运行 `recognizeJapaneseVerticalLineCrops`，pixel detector 与 tile fallback 接收 line observations，只跳过被可靠 line reread 覆盖至少 `0.60` 的区域，block crop 仍是最后兜底；detector/tile OCR 结果使用 `.verticalLine` provenance。
+- `recognizeJapaneseVerticalCrops` 先运行 `recognizeJapaneseVerticalLineCrops`，pixel detector 与 tile fallback 接收 line observations，只跳过被可靠 line reread 覆盖至少 `0.60` 的区域，block crop 仍是最后兜底；pixel detector OCR 结果使用 `.verticalLine` provenance，tile fallback 保持历史 `.crop` provenance。
 - 可靠 line coverage 仅接受非空文本、`confidence >= 0.48`、日语脚本密度 `>= 0.5` 和有效 `lineRegionRect ?? rect`；弱、空、非日语或非法 geometry 不抑制更宽 recovery。普通语言、布局、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 边界不变。
 - 新增 `scripts/test-v3209-image-japanese-koharu-line-first-dispatch-contract.py` 并接入 UI/full fail-fast；本地 v3.157–v3.209 共 53 个合同通过；exact-SHA full [31297254547](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297254547)（SHA `17f19bb2505d504e1255ab925d2aa7572020435a`）Xcode/JUnit `10/10` 且 0 failures；PR #273 fast [31297894114](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297894114) 与 merge fast [31297941634](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297941634) 均复用候选 full，merge SHA `4e2b8fdceec51359bb923bd583687fa2e3ed9e24`，fast Xcode skipped。探针 `skip`，真实 Koharu readiness `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
 

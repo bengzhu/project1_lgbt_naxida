@@ -155,6 +155,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published private(set) var imageTranslationContentTargetLanguage: SupportedLanguage?
     @Published private(set) var imageTranslationRetrySourceLanguage: SupportedLanguage?
     @Published private(set) var imageTranslationRetryTargetLanguage: SupportedLanguage?
+    @Published private(set) var imageTranslationRetryingBlockID: UUID?
     @Published private(set) var imageTranslationCorrectionBlockID: UUID?
     @Published private(set) var imageTranslationCorrectionMessage: String?
     @Published private(set) var imageTranslationCorrectedBlockIDs: Set<UUID> = []
@@ -178,6 +179,8 @@ final class TranslationSessionStore: ObservableObject {
     private var imageTranslationTask: Task<Void, Never>?
     private var imageTranslationTaskID = UUID()
     private var imageTranslationCorrectionID = UUID()
+    private var imageTranslationBlockRetryTask: Task<Void, Never>?
+    private var imageTranslationBlockRetryID = UUID()
     private var imageTranslationVisionOriginalBlocks: [UUID: ImageTranslationBlock] = [:]
     private var imageTranslationIgnoredBlockSnapshots: [UUID: ImageTranslationIgnoredBlockSnapshot] = [:]
     private var imageTranslationOriginalBlockOrder: [UUID: Int] = [:]
@@ -239,6 +242,7 @@ final class TranslationSessionStore: ObservableObject {
         ticker?.cancel()
         modelDownloadTask?.cancel()
         imageTranslationTask?.cancel()
+        imageTranslationBlockRetryTask?.cancel()
         imageOverlayRenderTask?.cancel()
         speechTranslationTask?.cancel()
         speechQualityProbeTask?.cancel()
@@ -406,6 +410,22 @@ final class TranslationSessionStore: ObservableObject {
             return false
         }
         return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    /// A failed/partial image translation keeps its OCR blocks in memory. Allow
+    /// the user to retry only an empty block instead of paying for Vision OCR
+    /// and every successful translation again.
+    func canRetryImageTranslationBlock(_ blockID: UUID) -> Bool {
+        guard imageTranslationRetryingBlockID == nil,
+              imageTranslationState == .translated || imageTranslationState == .failed,
+              let block = imageTranslationBlocks.first(where: { $0.id == blockID }),
+              !block.original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              block.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              imageTranslationContentSourceLanguage != nil,
+              imageTranslationContentTargetLanguage != nil else {
+            return false
+        }
+        return true
     }
 
     var currentSpeechCapability: SpeechRecognitionCapability {
@@ -1146,6 +1166,9 @@ final class TranslationSessionStore: ObservableObject {
         preservingSourceURL: URL? = nil
     ) -> UUID {
         imageTranslationTask?.cancel()
+        imageTranslationBlockRetryTask?.cancel()
+        imageTranslationBlockRetryTask = nil
+        invalidateImageTranslationBlockRetry()
         invalidateImageTranslationCorrection()
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
@@ -1571,6 +1594,9 @@ final class TranslationSessionStore: ObservableObject {
     func clearImageTranslation() {
         imageTranslationTask?.cancel()
         imageTranslationTask = nil
+        imageTranslationBlockRetryTask?.cancel()
+        imageTranslationBlockRetryTask = nil
+        invalidateImageTranslationBlockRetry()
         invalidateImageTranslationCorrection()
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
@@ -1673,6 +1699,9 @@ final class TranslationSessionStore: ObservableObject {
     func cancelImageTranslation() {
         imageTranslationTask?.cancel()
         imageTranslationTask = nil
+        imageTranslationBlockRetryTask?.cancel()
+        imageTranslationBlockRetryTask = nil
+        invalidateImageTranslationBlockRetry()
         invalidateImageTranslationCorrection()
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
@@ -1917,6 +1946,11 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationCorrectionMessage = nil
     }
 
+    private func invalidateImageTranslationBlockRetry() {
+        imageTranslationBlockRetryID = UUID()
+        imageTranslationRetryingBlockID = nil
+    }
+
     private func invalidateImageOverlayRender() {
         imageOverlayRenderTask?.cancel()
         imageOverlayRenderTask = nil
@@ -2037,6 +2071,99 @@ final class TranslationSessionStore: ObservableObject {
             sourceLanguage: selectedSourceLanguage,
             targetLanguage: selectedTargetLanguage
         )
+    }
+
+    /// Retry one already-recognized image block. This deliberately never calls
+    /// Vision OCR; successful blocks and their geometry stay untouched.
+    func retryImageTranslationBlock(_ blockID: UUID) {
+        guard canRetryImageTranslationBlock(blockID),
+              let block = imageTranslationBlocks.first(where: { $0.id == blockID }),
+              let sourceLanguage = imageTranslationContentSourceLanguage,
+              let targetLanguage = imageTranslationContentTargetLanguage else {
+            return
+        }
+
+        imageTranslationBlockRetryTask?.cancel()
+        let retryID = UUID()
+        let contentTaskID = imageTranslationTaskID
+        imageTranslationBlockRetryID = retryID
+        imageTranslationRetryingBlockID = blockID
+        imageTranslationState = .translating
+        imageTranslationMessage = "正在重新翻译此文字块"
+        isProcessing = true
+
+        imageTranslationBlockRetryTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let translation: String
+                if sourceLanguage == .japanese {
+                    let startIndex = self.imageTranslationOriginalBlockOrder[blockID]
+                        ?? self.imageTranslationBlocks.firstIndex(where: { $0.id == blockID })
+                        ?? 0
+                    translation = try await self.translateJapaneseImageBatch(
+                        [block],
+                        startIndex: startIndex,
+                        sourceLanguage: sourceLanguage,
+                        targetLanguage: targetLanguage
+                    ).first ?? ""
+                } else {
+                    translation = try await self.translate(
+                        block.original,
+                        sourceLanguage: sourceLanguage,
+                        targetLanguage: targetLanguage
+                    )
+                }
+                try Task.checkCancellation()
+                let cleanTranslation = translation.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !cleanTranslation.isEmpty else {
+                    throw ImageMangaBatchTranslationError.emptyTranslation
+                }
+                guard self.imageTranslationBlockRetryID == retryID,
+                      self.imageTranslationTaskID == contentTaskID,
+                      self.imageTranslationRetryingBlockID == blockID,
+                      let blockIndex = self.imageTranslationBlocks.firstIndex(where: { $0.id == blockID }),
+                      self.imageTranslationBlocks[blockIndex].original == block.original else {
+                    return
+                }
+
+                self.imageTranslationBlocks[blockIndex].translation = cleanTranslation
+                self.imageTranslationRetryingBlockID = nil
+                self.imageTranslationBlockRetryTask = nil
+                self.isProcessing = false
+                let remainingCount = self.imageTranslationBlocks.count(where: {
+                    $0.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                })
+                self.updateImageTranslationTranscript(blocks: self.imageTranslationBlocks)
+                if remainingCount == 0 {
+                    self.imageTranslationState = .translated
+                    self.imageTranslationMessage = "已完成全部图片文字块翻译，正在更新导出图"
+                    self.invalidateImageOverlayRender()
+                    self.discardImageTranslationExport()
+                    self.rerenderImageTranslationExport()
+                } else {
+                    self.imageTranslationState = .failed
+                    self.imageTranslationMessage = "已重新翻译此文字块，仍有 \(remainingCount) 个文字块等待翻译"
+                    self.dataTransferMessage = self.imageTranslationMessage
+                }
+                self.persist()
+            } catch is CancellationError {
+                guard self.imageTranslationBlockRetryID == retryID,
+                      self.imageTranslationTaskID == contentTaskID else { return }
+                self.imageTranslationRetryingBlockID = nil
+                self.imageTranslationBlockRetryTask = nil
+                self.isProcessing = false
+            } catch {
+                guard self.imageTranslationBlockRetryID == retryID,
+                      self.imageTranslationTaskID == contentTaskID else { return }
+                self.imageTranslationRetryingBlockID = nil
+                self.imageTranslationBlockRetryTask = nil
+                self.isProcessing = false
+                self.imageTranslationState = .failed
+                self.imageTranslationMessage = "此文字块翻译失败：\(error.localizedDescription)"
+                self.dataTransferMessage = self.imageTranslationMessage
+                self.persist()
+            }
+        }
     }
 
     func rerunImageRecognition() {
