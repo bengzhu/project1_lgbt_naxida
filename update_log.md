@@ -1,4 +1,18 @@
 
+## v3.207：Koharu 日语竖排 line coverage quality gate
+
+日期：2026-08-09
+
+状态：Agent X 收紧 v3.205 line-first OCR 的“覆盖成功”定义。普通图片日语竖排 block 只有在每个可枚举 source line 都被独立 `verticalLine` reread 以 `confidence >= 0.48`、日语脚本密度 `>= 0.5` 通过质量门控时才跳过 block crop；多 glyph source line 不接受单 glyph 结果作为完整覆盖，弱、非日语或空结果继续安全回退 block crop，避免错误的 line success 造成竖排漏字。工程版本为 `MARKETING_VERSION=3.207`，候选分支 `codeb/v3.207-image-japanese-koharu-line-quality-gate` 已推送；候选 exact-SHA full [31294146132](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31294146132) 对 SHA `f7a18e4c008903fd50f15183fa3b9a8629216bef` 完成 Xcode/JUnit `10/10`（0 failures）。
+
+核心变更：
+
+- 新增 `isReliableJapaneseLineCoverageResult`，在既有 tight geometry、一对一 source line 匹配之前过滤低置信度和缺少日语脚本证据的 line 结果。
+- 单 glyph 仍可覆盖真实单 glyph source line，但不能覆盖包含多个 glyph 的 source line；其余 block crop、line/tile/page、方向 fallback、映射、去重、布局、翻译、渲染与 UI 边界不变。
+- 新增 `scripts/test-v3207-image-japanese-koharu-line-coverage-quality-contract.py` 并接入 CI；本地 v3.157–v3.207 共 51 个合同通过，`git diff --check` 与 `plutil -lint AITRANS.xcodeproj/project.pbxproj` 通过。
+
+边界：真实 `test/koharu_artifacts/` 四件套、真实竖排图片质量 corpus 与 Manga OCR/PaddleOCR 模型仍缺失；active readiness 为 `manifestMissing / stopUntilArtifactsProvided`，探针为 `skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`，不声称 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.206：Koharu 日语竖排 observation 行桶回退
 
 日期：2026-08-09

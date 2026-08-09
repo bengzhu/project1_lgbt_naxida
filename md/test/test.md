@@ -1,6 +1,11 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.207 Koharu 日语竖排 line coverage quality 合同
+
+- `hasCompleteJapaneseLineCoverage` 在 tight geometry 与一对一 source-line 匹配之外，要求 `isReliableJapaneseLineCoverageResult`：结果非空、`confidence >= 0.48`、日语脚本密度 `>= 0.5`；多 glyph source line 不接受单 glyph 结果，避免弱 OCR 被误当成完整覆盖。
+- 质量门控失败时继续执行既有 block crop fallback；line perspective／axis、方向 fallback、去重、布局、翻译、渲染、Store、探针、真实 Koharu artifact 边界不变。新增 `scripts/test-v3207-image-japanese-koharu-line-coverage-quality-contract.py` 并接入 UI/full fail-fast；本地 v3.157–v3.207 共 51 个合同通过。候选 exact-SHA full [31294146132](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31294146132)（`f7a18e4c008903fd50f15183fa3b9a8629216bef`）Xcode/JUnit `10/10` 且 0 failures；`probe_mode=skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.206 Koharu 日语竖排 observation 行桶回退合同
 
 - `ImageOCRLayoutEngine.recursiveMangaReadingOrder` 在没有有效 XY-cut 或切分失效时调用 `fallbackMangaObservationReadingOrder`；按 `4 × minimumGapY` 行桶先读上方，同一行按 `midX` 从右到左，再以 y、宽高、文字、confidence 稳定 tie-breaker，避免重叠竖排列全局 x-first 交错。
