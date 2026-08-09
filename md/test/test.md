@@ -5,7 +5,7 @@
 
 - 普通图片源语言为日语时，`recognizeJapaneseVerticalLineCrops` 先消费与 vertical block 归属相符的 line-region proxy；只有 line perspective／轴对齐 reread 没有可用 observation 时，才执行原 block crop fallback，避免同一 TextRegion 被宽 block 重复读取。
 - line path 继续复用 v3.203 tight ownership、`verticalLine`／rotate270 provenance、既有方向 fallback、原图映射、去重与有界预算；block、tile、page、非日语、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 边界不变。
-- 新增 `scripts/test-v3204-image-japanese-koharu-line-first-ocr-contract.py` 并接入 UI/full fail-fast；v3.157/v3.158、v3.159/v3.160 与 v3.201–v3.203 合同继续回归。实现 exact-SHA full [31290525270](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31290525270)（`ae922bda0bf566cc14d422a6d9c9a4c042b34218`）Xcode/JUnit `10/10` 且 0 failures；候选 metadata、PR 与 merge 待完成。探针 `skip`，真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+- 新增 `scripts/test-v3204-image-japanese-koharu-line-first-ocr-contract.py` 并接入 UI/full fail-fast；v3.157/v3.158、v3.159/v3.160 与 v3.201–v3.203 合同继续回归。实现 exact-SHA full [31290525270](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31290525270)（`ae922bda0bf566cc14d422a6d9c9a4c042b34218`）Xcode/JUnit `10/10` 且 0 failures；候选 metadata [31290904290](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31290904290)、PR #268 fast [31290942391](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31290942391) 与 merge fast [31290981606](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31290981606) 均复用成功 receipt，merge SHA `b65653bc577ba65c51ed6cc1c2bd373b00e76aec`；后三者 Xcode skipped，不是新的编译证据。探针 `skip`，真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
 
 ### v3.203 Koharu 日语竖排 line-block ownership 合同
 
