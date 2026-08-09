@@ -673,6 +673,7 @@ struct VisionOCRService: Sendable {
             candidates.append(contentsOf: safeObservations.filter { observation in
                 let lineRegion = observation.lineRegionRect ?? observation.rect
                 return overlapRatio(observation.rect, block.rect) >= 0.25
+                    && japaneseLineRegionOverlapsBlock(observation, block: block)
                     && isVerticalLineCandidate(lineRegion)
             })
         }
@@ -807,6 +808,7 @@ struct VisionOCRService: Sendable {
             let fragments = observations
                 .filter { observation in
                     overlapRatio(observation.rect, block.rect) >= 0.25
+                        && japaneseLineRegionOverlapsBlock(observation, block: block)
                         && isJapaneseVerticalFragment(observation)
                 }
                 .map {
@@ -1288,6 +1290,21 @@ struct VisionOCRService: Sendable {
             && rect.height >= 0.018
     }
 
+    /// Koharu associates each detector line polygon with its owning TextRegion.
+    /// Vision's request-level box can be wider after rotation, so require the
+    /// tighter character-range geometry to overlap the current Japanese block
+    /// whenever that geometry is available. Missing/invalid tight geometry
+    /// keeps the request-level overlap as the safe compatibility fallback.
+    private static func japaneseLineRegionOverlapsBlock(
+        _ observation: VisionOCRObservation,
+        block: ImageOCRLayoutBlock
+    ) -> Bool {
+        guard let lineRegion = observation.lineRegionRect?.normalizedToUnit() else {
+            return true
+        }
+        return overlapRatio(lineRegion, block.rect) >= 0.25
+    }
+
     private static func koharuVerticalCropPadding(
         _ rect: ImageOCRLayoutRect,
         imageSize: CGSize
@@ -1357,6 +1374,7 @@ struct VisionOCRService: Sendable {
         let lineRegions = observations
             .filter { observation in
                 overlapRatio(observation.rect, block.rect) >= 0.25
+                    && japaneseLineRegionOverlapsBlock(observation, block: block)
             }
             .compactMap(\.lineRegionRect)
             .compactMap { $0.normalizedToUnit() }
