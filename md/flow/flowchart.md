@@ -1,4 +1,6 @@
 # 项目流程图
+v3.204 日语竖排 block → line polygon proxy 优先 line crop／OCR → line 无结果才 block crop fallback → v3.203 tight ownership／方向 provenance／bounded fallback → 映射／去重／布局／批翻译／渲染；v3.157/v3.158 历史合同继续回归。实现 full `31290525270`（SHA `ae922bda0bf566cc14d422a6d9c9a4c042b34218`）Xcode/JUnit `10/10` 通过，候选 metadata、PR 与 merge 待完成，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。
+
 v3.203 日语竖排 line candidate → 宽 `rect` overlap → 有效紧 `lineRegionRect` block ownership（缺失／非法时回退宽框）→ candidate gate／碎片合成／block envelope → `verticalLine`／Koharu `rotate270` → crop／映射／去重／布局／批翻译／渲染；实现 full `31287319601`（SHA `01fdaf16dde9029079231eb7c5406042fcab8cfc`）Xcode/JUnit `10/10` 通过，候选 metadata `31287648270`、PR #267 fast `31287677451`、merge fast `31287707581` 均复用成功 receipt，merge SHA `295c59a72a886cbc19cd9c3126d9e162ce525afd`，后三者 Xcode skipped；真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。
 
 v3.202 日语竖排 line candidate → 紧 `lineRegionRect ?? rect` 几何门控（block overlap 仍用宽 `rect`）→ `verticalLine`／Koharu `rotate270` 主方向 → perspective／轴对齐 crop → 映射／合成／去重／布局／批翻译／渲染；实现 full `31286506178`（SHA `2f198f9f12e62c5e10fe7a73b76cdc0af9d69107`）Xcode/JUnit `10/10` 通过，候选 metadata `31286843872`、PR #266 fast `31286875844`、merge fast `31286908329` 均复用成功 receipt，merge SHA `839c5e9d9f5705f50c85d65e7085157c5b876b07`，后三者 Xcode skipped，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。

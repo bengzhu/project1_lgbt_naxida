@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.204 Koharu 日语竖排 line-first OCR 合同
+
+- 普通图片源语言为日语时，`recognizeJapaneseVerticalLineCrops` 先消费与 vertical block 归属相符的 line-region proxy；只有 line perspective／轴对齐 reread 没有可用 observation 时，才执行原 block crop fallback，避免同一 TextRegion 被宽 block 重复读取。
+- line path 继续复用 v3.203 tight ownership、`verticalLine`／rotate270 provenance、既有方向 fallback、原图映射、去重与有界预算；block、tile、page、非日语、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 边界不变。
+- 新增 `scripts/test-v3204-image-japanese-koharu-line-first-ocr-contract.py` 并接入 UI/full fail-fast；v3.157/v3.158、v3.159/v3.160 与 v3.201–v3.203 合同继续回归。实现 exact-SHA full [31290525270](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31290525270)（`ae922bda0bf566cc14d422a6d9c9a4c042b34218`）Xcode/JUnit `10/10` 且 0 failures；候选 metadata、PR 与 merge 待完成。探针 `skip`，真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.203 Koharu 日语竖排 line-block ownership 合同
 
 - 普通图片源语言为日语时，line candidate、`synthesizeJapaneseVerticalLineCandidates` 与 `koharuVerticalBlockCropRect` 在宽 `observation.rect` overlap 之外，若存在有效 `lineRegionRect`，必须要求紧区域与当前 vertical block 的 overlap `>= 0.25`；缺失／非法紧 geometry 回退宽框，避免相邻列污染当前 TextRegion。
