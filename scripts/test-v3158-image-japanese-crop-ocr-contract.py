@@ -47,7 +47,10 @@ class JapaneseCropOCRContractTests(unittest.TestCase):
             ".prefix(16)",
         ]:
             self.assertIn(marker, self.recognize if marker.startswith("let ") or marker.startswith("observations") else self.crop)
-        self.assertIn("existing vertical layout candidates", self.vision)
+        self.assertTrue(
+            "existing vertical layout candidates" in self.vision
+            or "crop existing vertical layout nodes" in self.vision
+        )
 
     def test_crop_reread_uses_koharu_padding_rotation_and_box_mapping(self) -> None:
         direct_markers = [
@@ -92,7 +95,12 @@ class JapaneseCropOCRContractTests(unittest.TestCase):
         ]:
             self.assertNotIn(forbidden, self.vision)
         self.assertIn("Koharu crops each detected text node", self.vision)
-        self.assertIn("no bundled Manga OCR/PaddleOCR model", self.vision)
+        if "no bundled Manga OCR/PaddleOCR model" not in self.vision:
+            manga_service = read("AITRANS/Services/MangaOCRService.swift")
+            self.assertIn("await Self.recognizeJapaneseMangaOCR(", self.vision)
+            self.assertNotIn("import CoreML", self.vision)
+            self.assertIn("import CoreML", manga_service)
+            self.assertIn("actor MangaOCRService", manga_service)
 
     def test_fixture_and_version_route(self) -> None:
         fixture = ROOT / "test/jap.jpg"

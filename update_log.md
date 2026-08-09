@@ -1,3 +1,21 @@
+## v3.214：内置 Koharu Manga OCR Core ML
+
+日期：2026-08-09
+
+状态：Agent X 结束了只迁移几何／预处理、仍让 Vision 代替 Manga OCR 的阶段。应用现内置 `kha-white/manga-ocr-base` revision `aa6573bd10b0d446cbf622e29c3e084914df9741` 的 Core ML 转换：ViT encoder 使用 FP16，BERT decoder 运算保持 FP32 以避免 causal mask 在 FP16 下产生 NaN，两者常量权重再做 linear-symmetric INT8，合计约 `106 MB`。模型、6144 行 vocab、Apache-2.0 license／notice 与转换脚本均可审计。
+
+核心变更：
+
+- 新增 actor 隔离的 `MangaOCRService`，跨图片缓存 encoder／decoder；CPU-only 执行规避量化模型在当前 Metal graph 上的编译失败。服务直接消费 Vision 已完成 EXIF 校正与 1800px 有界缩放的同一张 `CGImage`，保证 detector 归一化坐标和 crop 像素一致；每个 crop 按 Koharu 语义灰度化并变形到 `224×224`，归一化到 `[-1, 1]`，从 CLS `2` 开始最多 300 token greedy decode，SEP `3` 停止，并用 token 概率几何平均提供 bounded confidence。
+- 普通图片日语 pixel-first detector 的最多 12 个紧 TextRegion 先进入 Manga OCR；输出必须含平假名／片假名／CJK 字符，百叶窗产生的纯点号结果被拒绝。成功结果保留 detector rect、`.vertical` direction hint 与 `verticalLine` provenance，再进入既有日语去重、XY-cut 漫画顺序和翻译。模型资源缺失或推理失败安全返回空，原 Vision page／line／pixel／tile／block 全部继续兜底。
+- 新增 `scripts/convert-manga-ocr-coreml.py`、`scripts/test-v3214-image-japanese-bundled-manga-ocr-contract.py` 与真实运行脚本 `scripts/test-v3214-image-japanese-manga-ocr-runtime.sh`；v3.158 历史合同只放宽已被本版本有意替代的“永远没有 bundled model”断言，同时继续要求 Core ML 与缓存不得直接进入 `VisionOCRService`。
+
+验证与边界：
+
+- 真实 `test/jap.jpg` 使用当前产品 `VisionOCRService + MangaOCRService + ImageOCRLayoutEngine`：v3.213 为 3 个弱块（`ＡｍＤａｉＭ`、`．では最後に`、`－山`），v3.214 为 12 个竖排块，稳定包含 `前は生意気に`、`あー！！俺の誘い断り...`、`持ち帰る`、`監督より挨拶を`；macOS CPU-only 冷启动约 `3.75s`。
+- 同一 fixture 仍有跨列／错字结果，如 `今度こそこの暴れ`、`そのせいでつまりまーズ`、`うまんねー女に`、`いします`。本轮可以声明该固定样图的实测改善，但没有多图 ground-truth corpus，不把它外推为通用日语 OCR 或翻译质量。
+- 本地 v3.157–v3.214 共 `58` 份合同／`293` tests、真实 Core ML runtime 合同、generic iOS Simulator Xcode build、`plutil` 与 `git diff --check` 通过。exact-SHA full [31315520990](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31315520990) 对 SHA `0a92317fae8a9e6dae89fe5592dec27b94995000` 完成真实 runtime、Xcode 与 JUnit `10/10`（0 failures）；Koharu mask artifact 四件套的 readiness 仍独立为 `manifestMissing / stopUntilArtifactsProvided`，probe 仍为 `skip`。
+
 ## v3.213：Koharu 日语 detector 字符紧 envelope
 
 日期：2026-08-09

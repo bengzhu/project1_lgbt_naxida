@@ -45,6 +45,12 @@
 		0A00000100000000000000B8 /* SpeechQualityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000B9 /* SpeechQualityModels.swift */; };
 		0A00000100000000000000BA /* SpeechQualityEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000BB /* SpeechQualityEvaluator.swift */; };
 		0A00000100000000000000BC /* SpeechQualityProbeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000BD /* SpeechQualityProbeService.swift */; };
+		0A00000100000000000000C8 /* MangaOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000C9 /* MangaOCRService.swift */; };
+		0A00000100000000000000CA /* MangaOCREncoderINT8.mlpackage in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000CB /* MangaOCREncoderINT8.mlpackage */; };
+		0A00000100000000000000CC /* MangaOCRDecoderINT8.mlpackage in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000CD /* MangaOCRDecoderINT8.mlpackage */; };
+		0A00000100000000000000CE /* MangaOCRVocab.txt in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000CF /* MangaOCRVocab.txt */; };
+		0A00000100000000000000D0 /* LICENSE-APACHE in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D1 /* LICENSE-APACHE */; };
+		0A00000100000000000000D2 /* NOTICE.md in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D3 /* NOTICE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -102,6 +108,12 @@
 		0A00000100000000000000B9 /* SpeechQualityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechQualityModels.swift; sourceTree = "<group>"; };
 		0A00000100000000000000BB /* SpeechQualityEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechQualityEvaluator.swift; sourceTree = "<group>"; };
 		0A00000100000000000000BD /* SpeechQualityProbeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechQualityProbeService.swift; sourceTree = "<group>"; };
+		0A00000100000000000000C9 /* MangaOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaOCRService.swift; sourceTree = "<group>"; };
+		0A00000100000000000000CB /* MangaOCREncoderINT8.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = MangaOCREncoderINT8.mlpackage; sourceTree = "<group>"; };
+		0A00000100000000000000CD /* MangaOCRDecoderINT8.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = MangaOCRDecoderINT8.mlpackage; sourceTree = "<group>"; };
+		0A00000100000000000000CF /* MangaOCRVocab.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = MangaOCRVocab.txt; sourceTree = "<group>"; };
+		0A00000100000000000000D1 /* LICENSE-APACHE */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE-APACHE"; sourceTree = "<group>"; };
+		0A00000100000000000000D3 /* NOTICE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = NOTICE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -176,6 +188,7 @@
 				0A00000100000000000000C7 /* ImagePreviewService.swift */,
 				0A00000100000000000000BF /* ImageOCRLayoutEngine.swift */,
 				0A000001000000000000001C /* VisionOCRService.swift */,
+				0A00000100000000000000C9 /* MangaOCRService.swift */,
 				0A0000010000000000000015 /* MockGemmaService.swift */,
 				0A0000010000000000000019 /* GemmaLocalService.swift */,
 				0A000001000000000000001E /* LlamaRuntime.swift */,
@@ -214,8 +227,21 @@
 			children = (
 				0A0000010000000000000016 /* Assets.xcassets */,
 				0A0000010000000000000017 /* Info.plist */,
+				0A00000100000000000000D4 /* MangaOCR */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		0A00000100000000000000D4 /* MangaOCR */ = {
+			isa = PBXGroup;
+			children = (
+				0A00000100000000000000CB /* MangaOCREncoderINT8.mlpackage */,
+				0A00000100000000000000CD /* MangaOCRDecoderINT8.mlpackage */,
+				0A00000100000000000000CF /* MangaOCRVocab.txt */,
+				0A00000100000000000000D1 /* LICENSE-APACHE */,
+				0A00000100000000000000D3 /* NOTICE.md */,
+			);
+			path = MangaOCR;
 			sourceTree = "<group>";
 		};
 		0A0000010000000000000038 /* Frameworks */ = {
@@ -291,6 +317,11 @@
 			files = (
 				0A00000100000000000000B3 /* Assets.xcassets in Resources */,
 				0A0000010000000000000027 /* test in Resources */,
+				0A00000100000000000000CA /* MangaOCREncoderINT8.mlpackage in Resources */,
+				0A00000100000000000000CC /* MangaOCRDecoderINT8.mlpackage in Resources */,
+				0A00000100000000000000CE /* MangaOCRVocab.txt in Resources */,
+				0A00000100000000000000D0 /* LICENSE-APACHE in Resources */,
+				0A00000100000000000000D2 /* NOTICE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -333,6 +364,7 @@
 				0A00000100000000000000B8 /* SpeechQualityModels.swift in Sources */,
 				0A00000100000000000000BA /* SpeechQualityEvaluator.swift in Sources */,
 				0A00000100000000000000BC /* SpeechQualityProbeService.swift in Sources */,
+				0A00000100000000000000C8 /* MangaOCRService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -469,7 +501,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.213;
+				MARKETING_VERSION = 3.214;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -496,7 +528,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.213;
+				MARKETING_VERSION = 3.214;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

@@ -70,11 +70,19 @@ struct VisionOCRService: Sendable {
                     observations.append(contentsOf: rotatedObservations)
                 }
 
+                // Koharu recognizes each detector TextRegion with its dedicated
+                // Manga OCR model. Run the bundled Core ML port on the same
+                // pixel-first regions before Vision crop rereads; if the model
+                // cannot load or infer, an empty result leaves every historical
+                // Vision fallback available.
+                observations.append(contentsOf: await Self.recognizeJapaneseMangaOCR(
+                    image: ocrImage
+                ))
+
                 // Koharu crops each detected text node before handing it to the OCR
-                // engine. The iOS path has no bundled Manga OCR/PaddleOCR model yet,
-                // so mirror that boundary with a bounded Vision crop reread: use the
-                // existing vertical layout candidates, crop only those nodes, reread
-                // the chosen orientation, map the boxes back, then dedupe again.
+                // engine. Keep the bounded Vision crop reread after bundled Manga OCR
+                // as a recovery path for regions the pixel detector or model misses:
+                // crop existing vertical layout nodes, map boxes back, then dedupe.
                 let cropRefinedObservations = Self.recognizeJapaneseVerticalCrops(
                     in: ocrImage,
                     observations: observations,
@@ -498,6 +506,46 @@ struct VisionOCRService: Sendable {
         }
 
         return refined
+    }
+
+    private static func recognizeJapaneseMangaOCR(
+        image: CGImage
+    ) async -> [VisionOCRObservation] {
+        let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
+        let regions = detectJapanesePixelFirstVerticalRegions(
+            in: image,
+            observations: [],
+            verticalBlocks: [],
+            lineObservations: []
+        )
+        let requests = regions.prefix(12).map { region in
+            MangaOCRRequest(
+                textRect: region.rect,
+                cropRect: expandedVerticalLineCropRect(
+                    region.rect,
+                    imageSize: imageSize
+                )
+            )
+        }
+        guard !requests.isEmpty,
+              let results = try? await MangaOCRService.shared.recognize(
+                  image: image,
+                  requests: requests
+              ) else {
+            return []
+        }
+        return results.map { result in
+            VisionOCRObservation(
+                text: result.text,
+                confidence: result.confidence,
+                rect: result.textRect,
+                lineRegionRect: result.textRect,
+                lineRegionQuad: nil,
+                rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
+                sourceDirectionHint: .vertical,
+                observationRole: .verticalLine
+            )
+        }
     }
 
     /// Use Vision's pixel-first text rectangle detector as a bounded proxy for
