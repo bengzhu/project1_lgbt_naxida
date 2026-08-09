@@ -1,7 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
-v3.210 图片翻译失败／部分失败 → 保留 OCR blocks、geometry 与已完成译文 → 仅空译文 block 单独 retry（日本語复用 `[N]` batch，其他语言复用单块翻译）→ retry/content ID 防过期写回 → 仍有空块则保持 failed，全部完成才 translated → 更新 transcript 与 overlay export；结果行／局部预览／VoiceOver 提供门控 action，不重跑 Vision OCR，真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+v3.210 图片翻译失败／部分失败 → 保留 OCR blocks、geometry 与已完成译文 → 仅空译文 block 单独 retry（日本語复用 `[N]` batch，其他语言复用单块翻译）→ retry/content ID 防过期写回 → 仍有空块则保持 failed，全部完成才 translated → 更新 transcript 与 overlay export；结果行／局部预览／VoiceOver 提供门控 action，不重跑 Vision OCR。exact-SHA full `31299660925`（SHA `b9ec296d0cdafbe0bfbbe0aebc90e1255a44d6d2`，Xcode/JUnit `10/10`，0 failures）通过，PR/merge fast receipt 待生成，readiness `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.209 日语竖排 block → `verticalLine` perspective／轴对齐 reread first → 可靠 line coverage（非空、confidence `>= 0.48`、日语脚本密度 `>= 0.5`、紧 geometry 有效）→ 未覆盖区域才进入 pixel detector → 未覆盖区域再进入 tile fallback → 最后 block crop → 映射／日语去重／布局／批翻译／渲染；pixel detector 保留 `verticalLine` provenance，tile fallback 保持历史 `.crop` provenance，缺失紧 geometry 回退宽 `rect`，普通语言与其他路径不变。exact-SHA full `31297254547`（SHA `17f19bb2505d504e1255ab925d2aa7572020435a`，Xcode/JUnit `10/10`）通过；本地 v3.157–v3.209 合同 `53/53` 通过；PR #273 fast `31297894114` 与 merge fast `31297941634` 均复用候选 full，merge SHA `4e2b8fdceec51359bb923bd583687fa2e3ed9e24`，fast Xcode skipped；readiness `manifestMissing / stopUntilArtifactsProvided`，探针 skip。
 

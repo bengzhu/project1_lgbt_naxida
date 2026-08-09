@@ -11,7 +11,7 @@
 
 - `.failed`／可恢复的 `.translated` 图片结果只允许原文非空且译文为空的文字块重试；已完成译文、block geometry 与 OCR 原文保留，不重新调用 `visionOCRService` 或 `recognizeTextBlocks`。
 - 日语单块继续走既有 `translateJapaneseImageBatch` 的 `[N]` 协议，非日语走既有单块 `translate`；retry ID、content task ID 与原文一致性共同阻止过期结果写回。部分成功保持 `.failed` 并允许继续重试，全部译文完成后才恢复 `.translated`、更新转录并重绘导出。
-- 结果行和局部预览提供图标按钮、状态 value、动态 hint 与 VoiceOver action；新增 `scripts/test-v3210-image-translation-block-retry-contract.py` 并接入 UI/full fail-fast。本地 v3.157–v3.210 共 54 个合同通过后再记录云端 receipt；本轮仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+- 结果行和局部预览提供图标按钮、状态 value、动态 hint 与 VoiceOver action；新增 `scripts/test-v3210-image-translation-block-retry-contract.py` 并接入 UI/full fail-fast。本地 v3.157–v3.210 共 54 个合同通过；exact-SHA full [31299660925](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31299660925)（SHA `b9ec296d0cdafbe0bfbbe0aebc90e1255a44d6d2`）Xcode/JUnit `10/10` 且 0 failures；PR/merge fast receipt 待生成，probe `skip`，本轮仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
 
 ### v3.209 Koharu 日语竖排 line-first dispatch 合同
 
