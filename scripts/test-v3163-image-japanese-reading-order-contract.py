@@ -70,7 +70,10 @@ class JapaneseReadingOrderContractTests(unittest.TestCase):
             "largest.map",
         ]:
             self.assertIn(marker, self.gap)
-        self.assertIn("stableKey($0, -$0.rect.midX, $0.rect.y)", self.recursive)
+        # Later iterations use Koharu's row-bucket fallback when recursive
+        # partitioning cannot produce a valid cut.
+        self.assertIn("fallbackMangaObservationReadingOrder(", self.recursive)
+        self.assertIn("minimumGapY: minimumGapY", self.recursive)
 
     def test_layout_scope_stays_vertical_and_does_not_touch_translation(self) -> None:
         self.assertIn(

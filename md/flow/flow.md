@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.206 日语竖排 observation → Recursive XY-cut；无有效 cut 或分区失效时按 `4 × min_gap_y` 行桶从上到下、同一行右到左回退 → 同列 Cluster／批翻译／渲染；混合 block fallback 与非日语交错路径不变。新增 v3.206 observation-row fallback 合同，云端 full 待验证。
+
 v3.205 日语竖排 block → 枚举 source line → 每条独立 tight `verticalLine` 覆盖才跳过 block crop → 部分／合成／噪声结果安全回退 block crop → 映射／去重／布局／批翻译／渲染；实现 full `31292332659`（SHA `7891cfeaf3486eb6a507d1b2045a9b662b8c66ca`，Xcode/JUnit `10/10`）通过，探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
 
 v3.204 日语竖排 block → 有效 line polygon proxy 先走 perspective／轴对齐 line OCR → 只有 line 无可用 observation 才回退 block crop → v3.203 tight ownership／方向 provenance／bounded fallback → 映射／去重／布局／批翻译／渲染；v3.157/v3.158 双向方向与 block crop 合同继续回归。实现 full `31290525270`（SHA `ae922bda0bf566cc14d422a6d9c9a4c042b34218`，Xcode/JUnit `10/10`）通过，候选 metadata `31290904290`、PR #268 fast `31290942391`、merge fast `31290981606` 均复用成功 receipt，merge SHA `b65653bc577ba65c51ed6cc1c2bd373b00e76aec`，后三者 Xcode skipped；探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。

@@ -9172,3 +9172,14 @@ Agent C 最终验收：
 - PR #251 fast [31226855629](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226855629)：重跑后 `validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=881d2b4fe49d8adde181d8e33d210a38515fcdd8`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
 - merge fast [31227082382](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31227082382)：merge SHA `c1bb36ba956e5a48b583ff1e2a2214e3dcee916c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，`reusedFullValidationSha=881d2b4fe49d8adde181d8e33d210a38515fcdd8`、state `success`、`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31227221992](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31227221992)：commit `9075a9282c2414a42306287af6cf833b53f54d55`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `c1bb36ba956e5a48b583ff1e2a2214e3dcee916c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
+## v3.206：Koharu 日语竖排 observation 行桶回退
+
+日期：2026-08-09
+
+状态：Agent X 对照 `reference/koharu-main/koharu-app/src/pipeline/engines/support.rs` 的 `sort_manga_reading_order`，发现混合 block 路径已有行桶回退，但行级 `recursiveMangaReadingOrder` 在无切分时仍按全局 x 优先排序。v3.206 将普通图片日语竖排 observation 的无 cut／分区失效回退改为 `4 × minimumGapY` 行桶：先按 y 行桶从上到下，同一行按 `midX` 从右到左，再用 y、宽高、文字和 confidence 做确定性 tie-breaker，避免重叠或错位列跨行交错。
+
+核心变更：
+
+- 新增 `fallbackMangaObservationReadingOrder`，两个安全 fallback 分支统一调用；已有 Recursive XY-cut 的 x/y 分区逻辑不变。
+- 混合 block fallback、普通语言交错、OCR、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 边界保持不变。
+- 新增 `scripts/test-v3206-image-japanese-koharu-observation-row-fallback-contract.py` 并接入 CI；云端 full 待本轮验证，当前不声称日语 OCR、翻译或识别质量提升。

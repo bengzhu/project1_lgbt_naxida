@@ -1,4 +1,6 @@
 # 项目流程图
+v3.206 日语竖排 observation → Recursive XY-cut → 无 cut 时 `4 × min_gap_y` 行桶（上到下／行内右到左）→ Cluster／翻译／渲染；非日语仍走既有交错路径。
+
 v3.205 日语竖排 block → source line 完整 coverage gate → 每条独立 tight `verticalLine` 成功才跳过 block crop → 部分／合成／噪声结果回退 block crop → 映射／去重／布局／批翻译／渲染；实现 full `31292332659`（SHA `7891cfeaf3486eb6a507d1b2045a9b662b8c66ca`）Xcode/JUnit `10/10` 通过，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。
 
 v3.204 日语竖排 block → line polygon proxy 优先 line crop／OCR → line 无结果才 block crop fallback → v3.203 tight ownership／方向 provenance／bounded fallback → 映射／去重／布局／批翻译／渲染；v3.157/v3.158 历史合同继续回归。实现 full `31290525270`（SHA `ae922bda0bf566cc14d422a6d9c9a4c042b34218`）Xcode/JUnit `10/10` 通过，候选 metadata `31290904290`、PR #268 fast `31290942391`、merge fast `31290981606` 均复用成功 receipt，merge SHA `b65653bc577ba65c51ed6cc1c2bd373b00e76aec`，后三者 Xcode skipped，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。
