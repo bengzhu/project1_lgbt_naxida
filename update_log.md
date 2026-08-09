@@ -1,3 +1,22 @@
+## v3.216：内置 Koharu comic text detector
+
+日期：2026-08-09
+
+状态：Agent X 将 Koharu 默认 detect stage 使用的 `ogkalu/comic-text-and-bubble-detector` 真正迁入普通图片日语路径，结束专用 Manga OCR 仍完全依赖 Vision rectangle 代理 TextRegion 的阶段。模型固定 revision `16e8a622f91fabc6b5b65c96d32d1183f8843546`，转换产物、来源 metadata、Apache-2.0 license／notice 与可复现脚本均随应用入库。
+
+核心变更：
+
+- 新增 `ComicTextBubbleDetectorService` actor 和 `ComicTextBubbleDetectorINT8.mlpackage`。RT-DETR-v2 R50 接收 RGB `640x640`、`1/255` 输入，输出 `logits [1,300,3]` 与 `pred_boxes [1,300,4]`；FP16 compute、linear-symmetric INT8 权重文件为 `43,185,600` bytes，SHA-256 `952e9a455664a37fe0c197695a5f799ace748866bad3b3591408f0eaa88b8e48`。
+- runtime 复刻 Koharu 的 top-300 全 class sigmoid 排序、`0.30` confidence threshold、text label 1/2 过滤、5px 最小边及 IoU `>= 0.50`／containment `>= 0.30` 的 TextRegion union。actor 跨图片缓存 Core ML runtime；固定 `.cpuOnly` 是因为 `.all` 在当前转换图上触发不可恢复的 MPSGraph assertion，无法被 Swift error fallback 捕获。
+- `recognizeJapaneseMangaOCR` 先消费专用 detector regions，再用 Vision 90°／270° regions 补充未被 overlap `>= 0.60` 或 IoU `>= 0.50` 覆盖的区域，组合预算仍为 12。detector 只提供 geometry，文字继续由 v3.214 Manga OCR 识别；专用模型缺失、加载或推理失败时返回空 primary list，完整保留历史 Vision fallback。
+- 新增 `scripts/convert-comic-text-bubble-detector-coreml.py` 与 `scripts/test-v3216-image-japanese-comic-text-detector-contract.py`，并把 detector 编译和真实样图 gate 接入 v3.214 runtime 与云端 UI-interaction contract 路由。
+
+验证与边界：
+
+- 当前产品 `VisionOCRService + ComicTextBubbleDetectorService + MangaOCRService + ImageOCRLayoutEngine` 对 `test/jap.jpg` 返回精确 5 个竖排块：`前は生意気に俺の誘い断りやがって...`、`今度こそこの爆乳を持ち帰る！`、`そのせいでつまんねー女に絡まれるし...`、`...では最後に監督より挨拶をお願いします`、`こっ、`。这补回 v3.215 仍漏失的 `やがって...`，并把相邻片段合并为完整 detector block。
+- 本地 v3.157-v3.216 共 `60` 份合同／`307` tests、真实 Core ML runtime、generic iOS Simulator Xcode build、`plutil`、JSON/YAML 解析与 `git diff --check` 通过。
+- exact-SHA full [31321620928](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31321620928) 对实现 SHA `e25bf798323dbbabe154c1849436711d90ab8888` 以 `candidate_development_push` 完成真实 detector/Manga OCR runtime、Xcode 和 JUnit `10/10`（0 failures），并发布 `AITRANS CI/full-validation = success` receipt；probe 继续 `skip`。翻译、渲染、非日语、Store、metrics 与 output 边界不变，Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。单一固定 fixture 不足以证明通用日语 OCR、翻译或识别质量。
+
 ## v3.215：Manga OCR 相邻竖列 ownership
 
 日期：2026-08-09

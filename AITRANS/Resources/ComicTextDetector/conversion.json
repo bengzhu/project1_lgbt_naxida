@@ -1,0 +1,19 @@
+{
+  "source": "ogkalu/comic-text-and-bubble-detector",
+  "revision": "16e8a622f91fabc6b5b65c96d32d1183f8843546",
+  "architecture": "RT-DETR-v2 R50",
+  "input": "RGB 640x640, scale=1/255",
+  "outputs": [
+    "logits[1,300,3]",
+    "pred_boxes[1,300,4]"
+  ],
+  "labels": [
+    "bubble",
+    "text_bubble",
+    "text_free"
+  ],
+  "textConfidenceThreshold": 0.3,
+  "computePrecision": "float16",
+  "weightQuantization": "linear-symmetric-int8",
+  "minimumDeploymentTarget": "iOS17"
+}
