@@ -315,6 +315,9 @@ struct ImageTranslationPanel: View {
                 selectNext: { selectAdjacentBlock(offset: 1) },
                 editBlock: { beginCorrectionFromFocusPreview(of: $0) },
                 restoreVisionOCR: { requestVisionOCRRestore(for: $0) },
+                canRetryTranslation: { store.canRetryImageTranslationBlock($0) },
+                isRetryingTranslation: { store.imageTranslationRetryingBlockID == $0 },
+                retryTranslation: { store.retryImageTranslationBlock($0) },
                 toggleReviewCompletion: { blockID in
                     toggleReviewCompletion(blockID, focusInPreview: true)
                 }
@@ -617,6 +620,10 @@ struct ImageTranslationPanel: View {
                             canReview: canReviewImageTranslation,
                             modificationUnavailableHint: imageModificationUnavailableDetail,
                             reviewUnavailableHint: imageReviewUnavailableDetail,
+                            canRetryTranslation: store.canRetryImageTranslationBlock(block.id),
+                            isRetryingTranslation: store.imageTranslationRetryingBlockID == block.id,
+                            retryTranslation: { store.retryImageTranslationBlock(block.id) },
+                            retryUnavailableHint: imageTranslationBlockRetryUnavailableHint,
                             accessibilityFocus: $reviewAccessibilityFocusID,
                             select: { toggleSelection(of: block.id) },
                             edit: { beginCorrection(of: block) },
@@ -1478,6 +1485,19 @@ struct ImageTranslationPanel: View {
         }
     }
 
+    private var imageTranslationBlockRetryUnavailableHint: String {
+        switch store.imageTranslationState {
+        case .failed:
+            return "只重新翻译此空白文字块，不会重新运行 Vision OCR；其他已完成译文会保留。"
+        case .translated:
+            return "只重新翻译此空白文字块，不会重新运行 Vision OCR。"
+        case .loading, .recognizing, .translating:
+            return "当前图片正在处理；完成后可单独重试空白译文块。"
+        case .idle:
+            return "请先完成图片识别，再单独重试空白译文块。"
+        }
+    }
+
     private var imageReviewUnavailableDetail: String {
         switch store.imageTranslationState {
         case .idle:
@@ -1927,6 +1947,9 @@ private struct ImageTranslationPreview: View {
     let selectNext: () -> Void
     let editBlock: (ImageTranslationBlock) -> Void
     let restoreVisionOCR: (ImageTranslationBlock) -> Void
+    let canRetryTranslation: (UUID) -> Bool
+    let isRetryingTranslation: (UUID) -> Bool
+    let retryTranslation: (UUID) -> Void
     let toggleReviewCompletion: (UUID) -> Void
     @State private var previewImage: UIImage?
     @State private var previewRevision: Int?
@@ -1979,6 +2002,12 @@ private struct ImageTranslationPreview: View {
                                 canReview: canReview,
                                 modificationUnavailableHint: modificationUnavailableHint,
                                 reviewUnavailableHint: reviewUnavailableHint,
+                                canRetryTranslation: canRetryTranslation(selectedBlock.id),
+                                isRetryingTranslation: isRetryingTranslation(selectedBlock.id),
+                                retryTranslation: { retryTranslation(selectedBlock.id) },
+                                retryUnavailableHint: canRetryTranslation(selectedBlock.id)
+                                    ? "只重新翻译此文字块，不会重新运行 Vision OCR"
+                                    : "当前文字块没有可重试的空白译文",
                                 accessibilityFocus: accessibilityFocus,
                                 close: clearSelection,
                                 selectPrevious: selectPrevious,
@@ -2459,6 +2488,10 @@ private struct ImageTranslationFocusPreview: View {
     let canReview: Bool
     let modificationUnavailableHint: String
     let reviewUnavailableHint: String
+    let canRetryTranslation: Bool
+    let isRetryingTranslation: Bool
+    let retryTranslation: () -> Void
+    let retryUnavailableHint: String
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let close: () -> Void
     let selectPrevious: () -> Void
@@ -2555,6 +2588,25 @@ private struct ImageTranslationFocusPreview: View {
                                 ? "恢复当前文字块的 Vision OCR 原文与初始译文"
                                 : modificationUnavailableHint
                         )
+                }
+                if block.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   canRetryTranslation || isRetryingTranslation {
+                    Button(
+                        isRetryingTranslation ? "正在重试翻译" : "重试此文字块翻译",
+                        systemImage: isRetryingTranslation ? "hourglass" : "arrow.clockwise",
+                        action: retryTranslation
+                    )
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.white)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .background(Color.black.opacity(0.82), in: Circle())
+                    .disabled(!canRetryTranslation || isRetryingTranslation)
+                    .opacity(canRetryTranslation && !isRetryingTranslation ? 1 : 0.55)
+                    .accessibilityHint(
+                        isRetryingTranslation
+                            ? "正在只翻译此文字块，不会重新识别图片"
+                            : retryUnavailableHint
+                    )
                 }
             }
         }
@@ -2982,6 +3034,10 @@ private struct ImageTranslationBlockRow: View {
     let canReview: Bool
     let modificationUnavailableHint: String
     let reviewUnavailableHint: String
+    let canRetryTranslation: Bool
+    let isRetryingTranslation: Bool
+    let retryTranslation: () -> Void
+    let retryUnavailableHint: String
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let select: () -> Void
     let edit: () -> Void
@@ -3080,6 +3136,13 @@ private struct ImageTranslationBlockRow: View {
                     toggleReviewCompletion: toggleReviewCompletion
                 )
             )
+            .modifier(
+                ImageReviewRowRetryAccessibilityModifier(
+                    canRetryTranslation: canRetryTranslation,
+                    isRetryingTranslation: isRetryingTranslation,
+                    retryTranslation: retryTranslation
+                )
+            )
 
             VStack(spacing: AppTheme.Spacing.compact) {
                 Button("修正识别文字", systemImage: "pencil", action: edit)
@@ -3104,6 +3167,24 @@ private struct ImageTranslationBlockRow: View {
                                 ? "恢复此文字块的 Vision OCR 原文与初始译文"
                                 : modificationUnavailableHint
                         )
+                }
+
+                if block.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   canRetryTranslation || isRetryingTranslation {
+                    Button(
+                        isRetryingTranslation ? "正在重试翻译" : "重试此文字块翻译",
+                        systemImage: isRetryingTranslation ? "hourglass" : "arrow.clockwise",
+                        action: retryTranslation
+                    )
+                    .labelStyle(.iconOnly)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .foregroundStyle(Color.appWarning)
+                    .disabled(!canRetryTranslation || isRetryingTranslation)
+                    .accessibilityHint(
+                        isRetryingTranslation
+                            ? "正在只翻译此文字块，不会重新识别图片"
+                            : retryUnavailableHint
+                    )
                 }
 
                 if ImageOCRResultSummary.requiresReview(block) {
@@ -3160,6 +3241,9 @@ private struct ImageTranslationBlockRow: View {
         }
 
         parts.append(block.translation.isEmpty ? "等待翻译" : "译文：\(block.translation)")
+        if block.translation.isEmpty, isRetryingTranslation || canRetryTranslation {
+            parts.append(isRetryingTranslation ? "正在重试译文" : "可重试此块")
+        }
 
         return parts.joined(separator: "；")
     }
@@ -3203,12 +3287,33 @@ private struct ImageTranslationBlockRow: View {
         if ImageOCRResultSummary.requiresReview(block) && canReview {
             actions.append(isReviewCompleted ? "撤销本次复查" : "完成并继续复查")
         }
+        if canRetryTranslation {
+            actions.append("重试此文字块翻译")
+        }
         guard !actions.isEmpty else { return base }
         return "\(base)；VoiceOver 可执行：\(actions.joined(separator: "、"))"
     }
 
     private var displayConfidence: Double {
         Double(ImageOCRResultSummary.normalizedConfidence(block.confidence))
+    }
+}
+
+private struct ImageReviewRowRetryAccessibilityModifier: ViewModifier {
+    let canRetryTranslation: Bool
+    let isRetryingTranslation: Bool
+    let retryTranslation: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if canRetryTranslation && !isRetryingTranslation {
+            content
+                .accessibilityAction(named: "重试此文字块翻译") {
+                    retryTranslation()
+                }
+        } else {
+            content
+        }
     }
 }
 
