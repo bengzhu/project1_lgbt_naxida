@@ -184,6 +184,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3214-image-japanese-bundled-manga-ocr-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3215-image-japanese-manga-column-ownership-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3216-image-japanese-comic-text-detector-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3217-image-japanese-comic-detector-slicer-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -634,6 +635,9 @@ jobs:
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v3216-image-japanese-comic-text-detector-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3217-image-japanese-comic-detector-slicer-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
@@ -1428,7 +1432,9 @@ jobs:
             python3 -B scripts/test-v3214-image-japanese-bundled-manga-ocr-contract.py
             python3 -B scripts/test-v3215-image-japanese-manga-column-ownership-contract.py
             python3 -B scripts/test-v3216-image-japanese-comic-text-detector-contract.py
+            python3 -B scripts/test-v3217-image-japanese-comic-detector-slicer-contract.py
             bash scripts/test-v3214-image-japanese-manga-ocr-runtime.sh
+            bash scripts/test-v3217-image-japanese-comic-detector-slicer-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract

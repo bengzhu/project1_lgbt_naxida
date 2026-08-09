@@ -108,9 +108,15 @@ class JapaneseComicTextDetectorContractTests(unittest.TestCase):
             "Self.textLabelIDs.contains(prediction.labelID)",
             "rect.width > minimumWidth",
             "rect.height > minimumHeight",
-            "Self.mergeTextRegions(detections)",
         ]:
             self.assertIn(marker, detect)
+        self.assertTrue(
+            "Self.mergeTextRegions(detections)" in detect
+            or (
+                "Self.mergeTextRegions(Self.mergeSliceRegions(detections))"
+                in detect
+            )
+        )
         merge = braced_body(self.detector, "private static func mergeTextRegions(")
         for marker in [
             "intersectionOverUnion(candidate.rect, other.rect) >= 0.50",
@@ -186,7 +192,10 @@ class JapaneseComicTextDetectorContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, self.project)
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.216", "3.216"])
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(
+            all(tuple(map(int, version.split("."))) >= (3, 216) for version in versions)
+        )
         previous = (
             "python3 -B "
             "scripts/test-v3215-image-japanese-manga-column-ownership-contract.py"

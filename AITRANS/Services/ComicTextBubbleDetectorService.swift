@@ -53,6 +53,10 @@ private struct ComicTextBubbleDetectorRuntime {
     private static let labelCount = 3
     private static let confidenceThreshold: Float = 0.30
     private static let textLabelIDs = Set([1, 2])
+    private static let sliceAspectRatioThreshold = 3.5
+    private static let sliceTargetAspectRatio = 3.0
+    private static let sliceOverlapRatio = 0.20
+    private static let minimumLastSliceRatio = 0.70
 
     private let model: MLModel
 
@@ -75,6 +79,48 @@ private struct ComicTextBubbleDetectorRuntime {
     }
 
     func detectTextRegions(in image: CGImage) throws -> [ComicTextDetectorRegion] {
+        let slices = Self.detectorSlices(
+            imageWidth: image.width,
+            imageHeight: image.height
+        )
+        var detections: [DetectorPrediction] = []
+        for slice in slices {
+            try Task.checkCancellation()
+            let sliceImage: CGImage
+            if slice.startY == 0, slice.height == image.height {
+                sliceImage = image
+            } else {
+                let cropRect = CGRect(
+                    x: 0,
+                    y: slice.startY,
+                    width: image.width,
+                    height: slice.height
+                )
+                guard let cropped = image.cropping(to: cropRect) else {
+                    throw ComicTextBubbleDetectorServiceError.imageRenderFailed
+                }
+                sliceImage = cropped
+            }
+            detections.append(contentsOf: try detectPredictions(in: sliceImage).compactMap {
+                Self.mapPredictionToFullImage(
+                    $0,
+                    slice: slice,
+                    imageHeight: image.height
+                )
+            })
+        }
+
+        return Self.mergeTextRegions(Self.mergeSliceRegions(detections)).map {
+            ComicTextDetectorRegion(rect: $0.rect, confidence: $0.confidence)
+        }
+        .sorted {
+            if $0.confidence != $1.confidence { return $0.confidence > $1.confidence }
+            if $0.rect.y != $1.rect.y { return $0.rect.y < $1.rect.y }
+            return $0.rect.x > $1.rect.x
+        }
+    }
+
+    private func detectPredictions(in image: CGImage) throws -> [DetectorPrediction] {
         let pixelBuffer = try Self.makePixelBuffer(from: image)
         let input = try MLDictionaryFeatureProvider(
             dictionary: ["image": MLFeatureValue(pixelBuffer: pixelBuffer)]
@@ -146,15 +192,72 @@ private struct ComicTextBubbleDetectorRuntime {
                 )
             )
         }
+        return detections
+    }
 
-        return Self.mergeTextRegions(detections).map {
-            ComicTextDetectorRegion(rect: $0.rect, confidence: $0.confidence)
+    /// Exact normalized-coordinate port of Koharu's ImageSlicer defaults.
+    /// The last slice always reaches the page bottom; a short tail is folded
+    /// into that slice instead of paying for a mostly empty extra inference.
+    private static func detectorSlices(
+        imageWidth: Int,
+        imageHeight: Int
+    ) -> [DetectorSlice] {
+        guard imageWidth >= 1, imageHeight >= 1 else { return [] }
+        let pageAspectRatio = Double(imageHeight) / Double(max(imageWidth, 1))
+        guard pageAspectRatio > sliceAspectRatioThreshold else {
+            return [DetectorSlice(startY: 0, height: imageHeight)]
         }
-        .sorted {
-            if $0.confidence != $1.confidence { return $0.confidence > $1.confidence }
-            if $0.rect.y != $1.rect.y { return $0.rect.y < $1.rect.y }
-            return $0.rect.x > $1.rect.x
+
+        let targetHeight = max(
+            Int((Double(imageWidth) * sliceTargetAspectRatio).rounded()),
+            1
+        )
+        let effectiveHeight = max(
+            Int((Double(targetHeight) * (1 - sliceOverlapRatio)).rounded()),
+            1
+        )
+        var sliceCount = max(
+            Int(ceil(Double(imageHeight) / Double(effectiveHeight))),
+            1
+        )
+        if sliceCount > 1 {
+            let lastStart = (sliceCount - 1) * effectiveHeight
+            let lastHeight = max(imageHeight - lastStart, 0)
+            if Double(lastHeight) / Double(targetHeight) <= minimumLastSliceRatio {
+                sliceCount -= 1
+            }
         }
+
+        return (0..<sliceCount).compactMap { index in
+            let startY = index * effectiveHeight
+            guard startY < imageHeight else { return nil }
+            let height = index + 1 == sliceCount
+                ? imageHeight - startY
+                : min(targetHeight, imageHeight - startY)
+            guard height >= 1 else { return nil }
+            return DetectorSlice(startY: startY, height: height)
+        }
+    }
+
+    private static func mapPredictionToFullImage(
+        _ prediction: DetectorPrediction,
+        slice: DetectorSlice,
+        imageHeight: Int
+    ) -> DetectorPrediction? {
+        let fullHeight = Double(max(imageHeight, 1))
+        guard let rect = ImageOCRLayoutRect(
+            x: prediction.rect.x,
+            y: (Double(slice.startY) + prediction.rect.y * Double(slice.height)) / fullHeight,
+            width: prediction.rect.width,
+            height: prediction.rect.height * Double(slice.height) / fullHeight
+        ).normalizedToUnit() else {
+            return nil
+        }
+        return DetectorPrediction(
+            labelID: prediction.labelID,
+            confidence: prediction.confidence,
+            rect: rect
+        )
     }
 
     private static func makePixelBuffer(from image: CGImage) throws -> CVPixelBuffer {
@@ -236,11 +339,115 @@ private struct ComicTextBubbleDetectorRuntime {
                 }
                 candidate.rect = candidate.rect.union(other.rect)
                 candidate.confidence = max(candidate.confidence, other.confidence)
-                remaining.remove(at: index)
+                swapRemove(at: index, from: &remaining)
             }
             merged.append(candidate)
         }
         return merged
+    }
+
+    /// Koharu first reconciles same-label regions emitted by overlapping image
+    /// slices. Coordinates are normalized here, so the reference implementation's
+    /// `image_height * 0.1` bound is exactly `0.1` in this coordinate space.
+    private static func mergeSliceRegions(
+        _ detections: [DetectorPrediction]
+    ) -> [DetectorPrediction] {
+        var regions = detections
+        let yDistanceThreshold = 0.1
+        var index = 0
+        while index < regions.count {
+            var compare = index + 1
+            while compare < regions.count {
+                guard regions[index].labelID == regions[compare].labelID else {
+                    compare += 1
+                    continue
+                }
+
+                let first = regions[index].rect
+                let second = regions[compare].rect
+                let firstArea = area(first)
+                let secondArea = area(second)
+                let regionIoU = intersectionOverUnion(first, second)
+                let containment = containmentRelation(first, second, threshold: 0.85)
+
+                if containment.contained {
+                    if !containment.firstContainsSecond {
+                        regions[index].rect = second
+                    }
+                    regions[index].confidence = max(
+                        regions[index].confidence,
+                        regions[compare].confidence
+                    )
+                    swapRemove(at: compare, from: &regions)
+                    continue
+                }
+
+                if regionIoU >= 0.50 {
+                    if secondArea > firstArea {
+                        regions[index].rect = second
+                    }
+                    regions[index].confidence = max(
+                        regions[index].confidence,
+                        regions[compare].confidence
+                    )
+                    swapRemove(at: compare, from: &regions)
+                    continue
+                }
+
+                let firstWidth = max(first.width, 0.000_001)
+                let firstHeight = max(first.height, 0.000_001)
+                let secondWidth = max(second.width, 0.000_001)
+                let secondHeight = max(second.height, 0.000_001)
+                let yDistance = min(
+                    abs(first.y - second.maxY),
+                    abs(first.maxY - second.y)
+                )
+                let localYThreshold = min(
+                    yDistanceThreshold,
+                    max(firstHeight, secondHeight) * 0.1
+                )
+                let xOverlap = max(
+                    min(first.maxX, second.maxX) - max(first.x, second.x),
+                    0
+                )
+                let xOverlapRatio = xOverlap / min(firstWidth, secondWidth)
+                let largestArea = max(firstArea, secondArea)
+                let sizeRatio = largestArea > 0
+                    ? min(firstArea, secondArea) / largestArea
+                    : 0
+
+                if yDistance < localYThreshold,
+                   xOverlapRatio > 0.2,
+                   sizeRatio > 0.3,
+                   abs(first.x - second.x) < 0.5 * max(firstWidth, secondWidth),
+                   abs(first.maxX - second.maxX) < 0.5 * max(firstWidth, secondWidth) {
+                    let mergedRect = first.union(second)
+                    if area(mergedRect) <= 3.0 * largestArea {
+                        regions[index].rect = mergedRect
+                        regions[index].confidence = max(
+                            regions[index].confidence,
+                            regions[compare].confidence
+                        )
+                        swapRemove(at: compare, from: &regions)
+                        continue
+                    }
+                }
+                compare += 1
+            }
+            index += 1
+        }
+        return regions
+    }
+
+    private static func swapRemove(
+        at index: Int,
+        from regions: inout [DetectorPrediction]
+    ) {
+        let lastIndex = regions.index(before: regions.endIndex)
+        if index != lastIndex {
+            regions.swapAt(index, lastIndex)
+        }
+        regions.removeLast()
     }
 
     private static func intersectionOverUnion(
@@ -260,6 +467,19 @@ private struct ComicTextBubbleDetectorRuntime {
         let innerArea = area(inner)
         guard innerArea > 0, area(outer) >= innerArea else { return false }
         return intersectionArea(outer, inner) / innerArea >= threshold
+    }
+
+    private static func containmentRelation(
+        _ first: ImageOCRLayoutRect,
+        _ second: ImageOCRLayoutRect,
+        threshold: Double
+    ) -> (contained: Bool, firstContainsSecond: Bool) {
+        let firstArea = area(first)
+        let secondArea = area(second)
+        guard firstArea > 0, secondArea > 0 else { return (false, false) }
+        let containmentRatio = intersectionArea(first, second) / min(firstArea, secondArea)
+        guard containmentRatio >= threshold else { return (false, false) }
+        return (true, firstArea >= secondArea)
     }
 
     private static func intersectionArea(
@@ -286,4 +506,9 @@ private struct DetectorPrediction {
     var labelID: Int
     var confidence: Float
     var rect: ImageOCRLayoutRect
+}
+
+private struct DetectorSlice {
+    var startY: Int
+    var height: Int
 }
