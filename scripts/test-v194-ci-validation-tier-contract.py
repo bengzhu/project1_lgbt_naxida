@@ -83,11 +83,16 @@ class CIValidationTierContractTests(unittest.TestCase):
             '[ "$smalldata_parent_full_validation_state" = "success" ]',
             self.workflow,
         )
-        merge_branch = self.workflow.split(
+        merge_branch_marker = (
             'elif [ "${{ steps.meta.outputs.branch }}" = "smalldata_test" ] && '
-            '[ "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d \'[:space:]\')" -gt 2 ]; then',
-            1,
-        )[1].split("            else", 1)[0]
+            '[ "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d \'[:space:]\')" -gt 2 ]; then'
+        )
+        if merge_branch_marker not in self.workflow:
+            merge_branch_marker = (
+                'elif [ "$ci_branch" = "smalldata_test" ] && '
+                '[ "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d \'[:space:]\')" -gt 2 ]; then'
+            )
+        merge_branch = self.workflow.split(merge_branch_marker, 1)[1].split("            else", 1)[0]
         self.assertIn('receipt_propagation_allowed=true', merge_branch)
         self.assertIn(
             '[ "$smalldata_metadata_requires_full_validation" = "true" ]',

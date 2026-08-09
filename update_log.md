@@ -1,4 +1,22 @@
 
+## v3.205：Koharu 日语竖排 line coverage fallback
+
+日期：2026-08-09
+
+状态：Agent X 修复 v3.204 line-first OCR 的过宽跳过边界。普通图片日语竖排 block 只有在每个可枚举 source line 都被独立、有效且紧 geometry 对齐的 `verticalLine` reread 覆盖时才跳过 block crop；部分成功、合成 envelope、噪声结果或缺失 geometry 继续回退 block crop，避免多行 TextRegion 在单条 line 成功时丢失其余文字。实现正式版本为 `MARKETING_VERSION=3.205`，候选 exact SHA `7891cfeaf3486eb6a507d1b2045a9b662b8c66ca` 已通过云端 full；`main` 未触碰。
+
+核心变更：
+
+- 新增 `hasCompleteJapaneseLineCoverage`，枚举 block 所属 source line 并要求一对一的紧 geometry 匹配。
+- 只有带 `verticalLine`、非空文本、有效 `lineRegionRect` 且结果 envelope 没有异常膨胀时才可证明 line coverage。
+- block、line、tile、page、非日语、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 边界保持不变；保留 v3.157/v3.158 历史合同回归。
+
+边界：实现 full 已通过；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。探针为 `skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31292332659](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31292332659)：commit `7891cfeaf3486eb6a507d1b2045a9b662b8c66ca`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode/static/UI/Speech/home/paste 成功，JUnit `10/10` 且 0 failures，`probe_mode=skip`；Koharu readiness `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.204：Koharu 日语竖排 line-first OCR
 
 日期：2026-08-09

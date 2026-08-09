@@ -1,6 +1,11 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.205 Koharu 日语竖排 line coverage fallback 合同
+
+- 普通图片源语言为日语时，block crop 只有在每个可枚举 source line 都被独立、有效、紧 geometry 对齐的 `verticalLine` reread 覆盖后才跳过；部分 line 成功、合成 envelope、噪声结果、缺失或非法 geometry 继续走 block fallback，避免多行 TextRegion 丢失未读文字。
+- 新增 `scripts/test-v3205-image-japanese-koharu-line-coverage-fallback-contract.py` 并接入 UI/full fail-fast；v3.157/v3.158、v3.194–v3.204 合同继续回归。实现 exact-SHA full [31292332659](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31292332659)（`7891cfeaf3486eb6a507d1b2045a9b662b8c66ca`）Xcode/JUnit `10/10` 且 0 failures；`probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.204 Koharu 日语竖排 line-first OCR 合同
 
 - 普通图片源语言为日语时，`recognizeJapaneseVerticalLineCrops` 先消费与 vertical block 归属相符的 line-region proxy；只有 line perspective／轴对齐 reread 没有可用 observation 时，才执行原 block crop fallback，避免同一 TextRegion 被宽 block 重复读取。

@@ -387,11 +387,12 @@ struct VisionOCRService: Sendable {
         // Koharu's extract_text_block_regions is line-first: once a TextRegion
         // has usable line polygons, it sends those regions to OCR and does not
         // also feed the wider block crop through Manga OCR. Vision does not expose those polygons,
-        // so the mapped line observations are our bounded
-        // equivalent. Run them before block crops and use the old block crop
-        // only for a block whose line reread produced no usable observation.
+        // so the mapped line observations are our bounded equivalent. Run them
+        // before block crops and use the old block crop only when every
+        // enumerable source line is covered by a distinct usable line reread.
         // This keeps mixed vertical columns out of a larger crop while retaining
-        // the safe fallback when a perspective/axis line pass fails entirely.
+        // the safe fallback for partial, synthetic, or otherwise ambiguous line
+        // coverage.
         let lineRefined = Self.recognizeJapaneseVerticalLineCrops(
             in: image,
             observations: safeObservations,
@@ -403,10 +404,15 @@ struct VisionOCRService: Sendable {
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         var orientationFallbacksRemaining = 8
         for block in verticalBlocks {
+            let hasCompleteLineCoverage = Self.hasCompleteJapaneseLineCoverage(
+                for: block,
+                sourceObservations: safeObservations,
+                lineRefined: lineRefined
+            )
             let hasLineOCRResult = lineRefined.contains { observation in
                 overlapRatio(observation.rect, block.rect) >= 0.25
                     && japaneseLineRegionOverlapsBlock(observation, block: block)
-            }
+            } && hasCompleteLineCoverage
             guard !hasLineOCRResult else { continue }
 
             let angle = safeObservations
@@ -805,6 +811,102 @@ struct VisionOCRService: Sendable {
             }
         }
         return refined
+    }
+
+    /// Decide whether a Japanese block is safe to omit after line rereads.
+    ///
+    /// A single successful line can sit inside a multi-line Vision block.  The
+    /// old any-overlap check therefore dropped the remaining text before the
+    /// block crop had a chance to recover it.  Reconstruct the source line set
+    /// from the page observations, require a valid source candidate, and match
+    /// each candidate to a distinct, tight `.verticalLine` result.  The
+    /// one-to-one rule also prevents a synthesized column envelope from being
+    /// treated as proof that several independent source lines were read.
+    private static func hasCompleteJapaneseLineCoverage(
+        for block: ImageOCRLayoutBlock,
+        sourceObservations: [VisionOCRObservation],
+        lineRefined: [VisionOCRObservation]
+    ) -> Bool {
+        let sourceLineCandidates = japaneseLineCoverageSourceCandidates(
+            for: block,
+            sourceObservations: sourceObservations
+        )
+        guard !sourceLineCandidates.isEmpty else {
+            return false
+        }
+
+        var availableLineResults = lineRefined
+            .filter { observation in
+                guard observation.observationRole == .verticalLine,
+                      !observation.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                      let lineRegion = observation.lineRegionRect?.normalizedToUnit() else {
+                    return false
+                }
+                return overlapRatio(observation.rect, block.rect) >= 0.25
+                    && japaneseLineRegionOverlapsBlock(observation, block: block)
+                    && isVerticalLineCandidate(lineRegion)
+            }
+            .sorted { isBetterJapaneseObservation($0, $1) }
+
+        guard availableLineResults.count >= sourceLineCandidates.count else {
+            return false
+        }
+
+        for candidate in sourceLineCandidates {
+            guard let resultIndex = availableLineResults.firstIndex(where: {
+                japaneseLineCoverageMatches($0, candidate: candidate)
+            }) else {
+                return false
+            }
+            // A result can prove coverage for only one source line.  Removing
+            // it keeps a broad/synthesized result from satisfying every line.
+            availableLineResults.remove(at: resultIndex)
+        }
+        return true
+    }
+
+    private static func japaneseLineCoverageSourceCandidates(
+        for block: ImageOCRLayoutBlock,
+        sourceObservations: [VisionOCRObservation]
+    ) -> [VisionOCRObservation] {
+        let candidates = sourceObservations.filter { observation in
+            let lineRegion = observation.lineRegionRect ?? observation.rect
+            return overlapRatio(observation.rect, block.rect) >= 0.25
+                && japaneseLineRegionOverlapsBlock(observation, block: block)
+                && isVerticalLineCandidate(lineRegion)
+        }
+
+        var uniqueCandidates: [VisionOCRObservation] = []
+        for candidate in candidates.sorted(by: { isBetterJapaneseObservation($0, $1) }) {
+            guard !uniqueCandidates.contains(where: {
+                isDuplicateObservation(candidate, of: $0, prefersJapanese: true)
+            }) else {
+                continue
+            }
+            uniqueCandidates.append(candidate)
+        }
+        return uniqueCandidates
+    }
+
+    private static func japaneseLineCoverageMatches(
+        _ lineResult: VisionOCRObservation,
+        candidate: VisionOCRObservation
+    ) -> Bool {
+        guard let resultRegion = lineResult.lineRegionRect?.normalizedToUnit(),
+              let candidateRegion = (candidate.lineRegionRect ?? candidate.rect).normalizedToUnit() else {
+            return false
+        }
+        let overlap = overlapRatio(resultRegion, candidateRegion)
+        guard overlap >= 0.72 else {
+            return false
+        }
+
+        // A line result may be slightly wider after crop mapping, but a result
+        // whose tight region is materially larger than the source line is a
+        // synthesized/noisy envelope rather than proof of per-line OCR.
+        let candidateArea = max(candidateRegion.width * candidateRegion.height, 0.0001)
+        let resultArea = resultRegion.width * resultRegion.height
+        return resultArea <= candidateArea * 1.75
     }
 
     /// Build a conservative Koharu-style line-region proxy for fragmented
