@@ -2,7 +2,7 @@
 
 日期：2026-08-09
 
-状态：Agent X 继续参考 Koharu `TextRegion` 对 line polygon 的 ownership 边界。普通图片日语竖排 line candidate、碎片合成与 block line-envelope 在宽 request-level overlap 之外，只要有有效 `lineRegionRect` 就必须与当前 vertical block 相交；紧 geometry 缺失或非法时回退宽 `rect`。工程正式版本为 `MARKETING_VERSION=3.203`，候选、PR 与 merge 尚待完成，`main` 未触碰。
+状态：Agent X 继续参考 Koharu `TextRegion` 对 line polygon 的 ownership 边界。普通图片日语竖排 line candidate、碎片合成与 block line-envelope 在宽 request-level overlap 之外，只要有有效 `lineRegionRect` 就必须与当前 vertical block 相交；紧 geometry 缺失或非法时回退宽 `rect`。工程正式版本为 `MARKETING_VERSION=3.203`，候选、PR 与 merge 已完成，`main` 未触碰。
 
 核心变更：
 
@@ -14,7 +14,8 @@
 
 云端证据：
 
-- 实现 exact-SHA full [31287319601](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31287319601)：commit `01fdaf16dde9029079231eb7c5406042fcab8cfc`，`validationProfile=full`，Xcode/static/UI/Speech 成功，JUnit `10/10` 且 0 failures；候选 metadata、PR fast 与 merge fast 待后续流程完成。
+- 实现 exact-SHA full [31287319601](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31287319601)：commit `01fdaf16dde9029079231eb7c5406042fcab8cfc`，`validationProfile=full`，Xcode/static/UI/Speech 成功，JUnit `10/10` 且 0 failures。
+- 候选 metadata [31287648270](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31287648270)：candidate SHA `cc3d24f68dfb4b391ba019d2549a1084381d1305`，复用实现 full；PR #267 fast [31287677451](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31287677451) 复用候选 receipt；merge fast [31287707581](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31287707581) 以 merge SHA `295c59a72a886cbc19cd9c3126d9e162ce525afd` 复用候选 receipt，后三者 `receiptPropagationAllowed=true` 或 PR fast metadata 传播，Xcode skipped，不是新的编译证据。
 
 ## v3.202：Koharu 日语紧 line-region candidate gate
 

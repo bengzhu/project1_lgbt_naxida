@@ -1,7 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
-v3.203 日语竖排 line → 宽 `rect` overlap 后再以有效紧 `lineRegionRect` 校验 block ownership（缺失／非法 geometry 回退宽框）→ candidate gate／碎片合成／block envelope → perspective／轴对齐 crop → `verticalLine`／rotate270 → 映射／去重／布局／批翻译／渲染；实现 full `31287319601`（SHA `01fdaf16dde9029079231eb7c5406042fcab8cfc`，Xcode/JUnit `10/10`）通过，候选 metadata、PR 与 merge 待完成，探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
+v3.203 日语竖排 line → 宽 `rect` overlap 后再以有效紧 `lineRegionRect` 校验 block ownership（缺失／非法 geometry 回退宽框）→ candidate gate／碎片合成／block envelope → perspective／轴对齐 crop → `verticalLine`／rotate270 → 映射／去重／布局／批翻译／渲染；实现 full `31287319601`（SHA `01fdaf16dde9029079231eb7c5406042fcab8cfc`，Xcode/JUnit `10/10`）通过，候选 metadata `31287648270`、PR #267 fast `31287677451`、merge fast `31287707581` 均复用成功 receipt，merge SHA `295c59a72a886cbc19cd9c3126d9e162ce525afd`，后三者 Xcode skipped；探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
 
 v3.202 日语竖排 line → 用紧 `lineRegionRect`（缺失时回退 `rect`）执行高宽比／高度 candidate gate → 仍以宽 `observation.rect` 与 block 做 overlap → perspective／轴对齐 crop → `verticalLine` provenance／rotate270 → 映射／合成／去重／布局／批翻译／渲染；实现 full `31286506178`（SHA `2f198f9f12e62c5e10fe7a73b76cdc0af9d69107`，Xcode/JUnit `10/10`）通过，候选 metadata `31286843872`、PR #266 fast `31286875844`、merge fast `31286908329` 均复用成功 receipt，merge SHA `839c5e9d9f5705f50c85d65e7085157c5b876b07`，后三者 Xcode skipped，探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
 
