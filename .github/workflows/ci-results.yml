@@ -338,14 +338,19 @@ jobs:
             echo "KOHARU_ARTIFACT_SHA256=$koharu_artifact_sha256"
           } >> "$GITHUB_ENV"
 
-      - name: Detect CI scope
-        id: ci_scope
+      - name: Prepare CI scope inputs
+        id: ci_scope_inputs
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p "$RESULT_ROOT"
+          ci_branch="${{ steps.meta.outputs.branch }}"
+          requested_validation_profile="${{ steps.meta.outputs.requested_validation_profile }}"
+          requested_probe_mode="${{ steps.meta.outputs.probe_mode }}"
+          koharu_artifact_requested="${{ steps.meta.outputs.koharu_artifact_requested }}"
+          requested_ui_evidence_mode="${{ steps.meta.outputs.requested_ui_evidence_mode }}"
           before="${{ github.event.pull_request.base.sha }}"
           if [ -z "$before" ]; then
             before="${{ github.event.before }}"
@@ -391,7 +396,7 @@ jobs:
               --jq '[.statuses[] | select(.context == "AITRANS CI/full-validation")][0].state // "missing"' \
               2>/dev/null || echo lookup_failed
           }
-          if [[ "${{ steps.meta.outputs.branch }}" == codeb/* ]]; then
+          if [[ "$ci_branch" == codeb/* ]]; then
             candidate_parent_sha="$(git rev-parse HEAD^ 2>/dev/null || true)"
             if [ -n "$candidate_parent_sha" ]; then
               candidate_parent_full_validation_state="$(full_validation_state_for "$candidate_parent_sha")"
@@ -417,7 +422,7 @@ jobs:
               fi
             fi
           fi
-          if [ "${{ steps.meta.outputs.branch }}" = "smalldata_test" ]; then
+          if [ "$ci_branch" = "smalldata_test" ]; then
             smalldata_parent_sha="$(git rev-parse HEAD^ 2>/dev/null || true)"
             if [ -n "$smalldata_parent_sha" ]; then
               smalldata_parent_full_validation_state="$(full_validation_state_for "$smalldata_parent_sha")"
@@ -429,6 +434,34 @@ jobs:
               smalldata_metadata_requires_full_validation=true
             fi
           fi
+
+          cat > "$RESULT_ROOT/ci-scope-inputs.env" <<EOF
+          ci_branch=$ci_branch
+          requested_validation_profile=$requested_validation_profile
+          requested_probe_mode=$requested_probe_mode
+          koharu_artifact_requested=$koharu_artifact_requested
+          requested_ui_evidence_mode=$requested_ui_evidence_mode
+          scope_diff_method=$scope_diff_method
+          scope_diff_base_sha=$scope_diff_base_sha
+          scope_diff_fallback_used=$scope_diff_fallback_used
+          candidate_parent_sha=$candidate_parent_sha
+          candidate_parent_full_validation_state=$candidate_parent_full_validation_state
+          candidate_incremental_metadata_only=$candidate_incremental_metadata_only
+          smalldata_parent_sha=$smalldata_parent_sha
+          smalldata_parent_full_validation_state=$smalldata_parent_full_validation_state
+          smalldata_incremental_metadata_only=$smalldata_incremental_metadata_only
+          smalldata_metadata_requires_full_validation=$smalldata_metadata_requires_full_validation
+          receipt_propagation_allowed=$receipt_propagation_allowed
+          EOF
+
+      - name: Detect CI scope
+        id: ci_scope
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source "$RESULT_ROOT/ci-scope-inputs.env"
 
           app_build_changed=false
           speech_contract_required=false
@@ -562,12 +595,12 @@ jobs:
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
           # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
 
-          validation_profile="${{ steps.meta.outputs.requested_validation_profile }}"
+          validation_profile="$requested_validation_profile"
           validation_reason="manual_${validation_profile}"
           reused_full_validation_sha=""
           reused_full_validation_state="not_applicable"
           if [ "$validation_profile" = "auto" ]; then
-            if [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] || [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ]; then
+            if [ "$requested_probe_mode" != "skip" ] || [ "$koharu_artifact_requested" = "true" ]; then
               validation_profile="full"
               validation_reason="probe_or_koharu_artifact_requires_full"
             elif [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
@@ -579,7 +612,7 @@ jobs:
                 "repos/${GITHUB_REPOSITORY}/commits/${reused_full_validation_sha}/status" \
                 --jq '[.statuses[] | select(.context == "AITRANS CI/full-validation")][0].state // "missing"' \
                 2>/dev/null || echo lookup_failed)"
-            elif [[ "${{ steps.meta.outputs.branch }}" == codeb/* ]]; then
+            elif [[ "$ci_branch" == codeb/* ]]; then
               if [ "$candidate_incremental_metadata_only" = "true" ] && [ "$candidate_parent_full_validation_state" = "success" ]; then
                 validation_profile="fast"
                 validation_reason="candidate_metadata_followup_reuses_parent_full_validation"
@@ -590,10 +623,10 @@ jobs:
                 validation_profile="full"
                 validation_reason="candidate_development_push"
               fi
-            elif [[ "${{ steps.meta.outputs.branch }}" == 1.* ]]; then
+            elif [[ "$ci_branch" == 1.* ]]; then
               validation_profile="full"
               validation_reason="integration_development_push"
-            elif [ "${{ steps.meta.outputs.branch }}" = "smalldata_test" ] && [ "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d '[:space:]')" -gt 2 ]; then
+            elif [ "$ci_branch" = "smalldata_test" ] && [ "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d '[:space:]')" -gt 2 ]; then
               reused_full_validation_sha="$(git rev-parse HEAD^2)"
               reused_full_validation_state="$(gh api \
                 -H 'Accept: application/vnd.github+json' \
@@ -608,7 +641,7 @@ jobs:
                 validation_profile="full"
                 validation_reason="merge_missing_successful_candidate_full_validation"
               fi
-            elif [ "${{ steps.meta.outputs.branch }}" = "smalldata_test" ] && [ "$smalldata_incremental_metadata_only" = "true" ] && [ "$smalldata_parent_full_validation_state" = "success" ]; then
+            elif [ "$ci_branch" = "smalldata_test" ] && [ "$smalldata_incremental_metadata_only" = "true" ] && [ "$smalldata_parent_full_validation_state" = "success" ]; then
               validation_profile="fast"
               validation_reason="smalldata_metadata_followup_reuses_parent_full_validation"
               reused_full_validation_sha="$smalldata_parent_sha"
@@ -630,7 +663,7 @@ jobs:
 
           ui_evidence_required=false
           ui_evidence_reason="not_requested"
-          if [ "${{ steps.meta.outputs.requested_ui_evidence_mode }}" = "full" ]; then
+          if [ "$requested_ui_evidence_mode" = "full" ]; then
             ui_evidence_required=true
             ui_evidence_reason="manual_full"
             validation_profile="full"
@@ -649,7 +682,7 @@ jobs:
 
           xcode_build_required=false
           xcode_build_skip_reason="non_app_build_related_full_validation"
-          if [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] || [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ]; then
+          if [ "$requested_probe_mode" != "skip" ] || [ "$koharu_artifact_requested" = "true" ]; then
             xcode_build_required=true
             xcode_build_skip_reason=""
           elif [ "$validation_profile" = "fast" ]; then
@@ -664,7 +697,7 @@ jobs:
           fi
 
           koharu_validator_extended_required=false
-          if [ "$koharu_contract_required" = "true" ] && { [ "${{ steps.meta.outputs.koharu_artifact_requested }}" = "true" ] || grep -E '^(scripts/validate-koharu-artifacts\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; }; then
+          if [ "$koharu_contract_required" = "true" ] && { [ "$koharu_artifact_requested" = "true" ] || grep -E '^(scripts/validate-koharu-artifacts\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; }; then
             koharu_validator_extended_required=true
           fi
 
