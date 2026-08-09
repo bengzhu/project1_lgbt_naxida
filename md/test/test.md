@@ -7,6 +7,11 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.212 Koharu 日语 crop raw recognition 合同
+
+- `recognizeObservations` 默认必须显式保持 `request.usesLanguageCorrection = true`，仅在受限 caller 传入 `false` 时关闭；page reconnaissance 与非日语路径不得传入 `false`。日语 `recognizeJapaneseCropPass` 和 `recognizeJapanesePerspectiveLineCrop` 必须同时保留日语 post-process、language-specific gate 与 raw correction 边界。
+- 新增 `scripts/test-v3212-image-japanese-koharu-raw-crop-recognition-contract.py` 并接入 UI/full fail-fast；本地 v3.157-v3.212 共 `56/56` 个合同通过，v3.157/v3.158 已合入当前基线、无活动分支。exact-SHA full [31302657064](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31302657064)（SHA `bd7c510b99ac78c22ca330ae2e125a5193610fe4`）Xcode/static/UI/Speech/home/paste 成功，JUnit `10/10` 且 0 failures；probe `skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.211 日语竖排 Vision 语言门控合同
 
 - line/block/tile reread 使用 `ja-JP`/`ja`，页级 reconnaissance 保留混合日语／拉丁集合；缺少语言 profile 时只跳过 language-specific reread，不影响页级结果。新增 `scripts/test-v3211-image-japanese-vertical-language-gate-contract.py` 并接入 UI/full fail-fast；exact-SHA full [31300669764](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31300669764)（SHA `c0c26aaddb3db641c59cb878d1434207b9879f54`）Xcode/JUnit `10/10` 通过。probe `skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR、翻译或识别质量提升。

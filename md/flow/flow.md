@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.212 普通图片日语 page reconnaissance（Vision language correction 保持开启）→ line-first／pixel detector／tile／block local crop（仅这些日语 crop 关闭 correction）→ Koharu 风格日语 post-process → 原图映射／日语去重／布局／批翻译／渲染；普通语言路径不变。request helper 显式保留 `true` 默认并允许受限 caller opt out，兼容 v3.156；本地 v3.157-v3.212 合同 `56/56` 通过，v3.157/v3.158 已合入且无活动分支；exact-SHA full `31302657064`（SHA `bd7c510b99ac78c22ca330ae2e125a5193610fe4`，Xcode/JUnit `10/10`）通过，probe `skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
+
 v3.211 日语图片 page reconnaissance 保留 `ja-JP`/`ja`/`en-US`/`en` → line/block/tile vertical reread 只用 `ja-JP`/`ja`，不支持的日语 profile 安全跳过该 reread → 原有 line-first、pixel detector、tile、block fallback → 映射／日语去重／布局／批翻译／渲染；full `31300669764`（SHA `c0c26aaddb3db641c59cb878d1434207b9879f54`，Xcode/JUnit `10/10`）通过，probe `skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 v3.210 图片翻译失败／部分失败 → 保留 OCR blocks、geometry 与已完成译文 → 仅空译文 block 单独 retry（日本語复用 `[N]` batch，其他语言复用单块翻译）→ retry/content ID 防过期写回 → 仍有空块则保持 failed，全部完成才 translated → 更新 transcript 与 overlay export；结果行／局部预览／VoiceOver 提供门控 action，不重跑 Vision OCR。exact-SHA full `31299660925`（SHA `b9ec296d0cdafbe0bfbbe0aebc90e1255a44d6d2`，Xcode/JUnit `10/10`，0 failures）通过；候选 metadata `31300023503`（docs SHA `0dc5b019e231aa35137de705a6a2b8e0a377d029`）复用成功 full，PR #274 fast `31300071078` 与 merge fast `31300107560` 均复用候选 full，merge SHA `ee7e41f0679fd999b8f9337a3bf0622742e095c3`，后续 fast Xcode skipped；v3.157/v3.158 已合入当前基线，无活动分支；readiness `manifestMissing / stopUntilArtifactsProvided`，probe `skip`，不声称质量提升。
