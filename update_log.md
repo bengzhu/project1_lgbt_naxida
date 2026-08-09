@@ -1,4 +1,17 @@
 
+## v3.210：图片翻译失败 block 受限重试
+
+日期：2026-08-09
+
+状态：Agent X 为图片翻译失败／部分失败增加受限恢复路径。保留 OCR blocks、geometry 与已完成译文，只重试空译文 block；日语复用全局 `[N]` 批翻译协议，非日语复用单块翻译，绝不重新调用 Vision OCR。retry/content ID 防止过期结果写回，全部译文完成后才恢复 `.translated` 并重绘导出；结果行、局部预览与 VoiceOver 提供门控 retry action。
+
+验证与边界：
+
+- 本地 v3.157–v3.210 合同 `54/54` 通过，未引入模型、探针、ground truth、metrics 或 `output/` 质量声明。
+- exact-SHA full [31299660925](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31299660925) 对 SHA `b9ec296d0cdafbe0bfbbe0aebc90e1255a44d6d2` 完成 Xcode/JUnit `10/10` 且 0 failures；probe `skip`。
+- 候选 metadata [31300023503](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31300023503) 对 docs SHA `0dc5b019e231aa35137de705a6a2b8e0a377d029` 复用成功 full；PR #274 fast [31300071078](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31300071078) 与 merge fast [31300107560](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31300107560) 均复用候选 full，merge SHA `ee7e41f0679fd999b8f9337a3bf0622742e095c3`，后三者 Xcode skipped，不是新的编译证据。
+- 真实 Koharu 四件套仍缺失，readiness 保持 `manifestMissing / stopUntilArtifactsProvided`；v3.157/v3.158 已合入当前基线，无活动分支，不声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.209：Koharu 日语竖排 line-first dispatch
 
 日期：2026-08-09
