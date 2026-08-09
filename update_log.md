@@ -16,7 +16,7 @@
 - 长页 runtime 将真实 `test/jap.jpg` 纵向绘制 4 次，生成 `1136x6400` 输入；参考参数计算为 2 个重叠 slice，bundled detector 最终稳定输出 17 个 regions。四个 25% 高度区间各至少 4 个结果，最低结果 y 为约 `0.94`，所有框均为正面积且高度不超过页面 30%。
 - 原 `test/jap.jpg` 产品 runtime 继续精确输出 v3.216 的 5 个完整竖排块，证明非长图单片路径和 Manga OCR 结果未回归。
 - 本地 v3.157-v3.217 共 `61` 份合同／`314` tests、两条真实 Core ML runtime、generic iOS Simulator Xcode build、`plutil`、YAML 解析及 `git diff --check` 通过。
-- exact-SHA 云端 full 必须在实现提交后运行，目前尚无云端编译证据；probe 继续 `skip`，Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。重复单一 fixture 只验证切片覆盖和既有文字结果稳定，不证明真实多页 corpus 的通用 OCR 或翻译质量。
+- exact-SHA full [31323013519](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31323013519) 对实现 SHA `8c037482e175818bb5c3f3714c5a3992fbf70644` 以 `candidate_development_push` 完成长页／单页真实 Core ML runtime、Xcode 和 JUnit `10/10`（0 failures），并发布 `AITRANS CI/full-validation = success` receipt；probe 继续 `skip`，Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。重复单一 fixture 只验证切片覆盖和既有文字结果稳定，不证明真实多页 corpus 的通用 OCR 或翻译质量。
 
 ## v3.216：内置 Koharu comic text detector
 
