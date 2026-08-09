@@ -14,7 +14,7 @@
 
 - 真实 `test/jap.jpg` 使用当前产品 `VisionOCRService + MangaOCRService + ImageOCRLayoutEngine`：v3.213 为 3 个弱块（`ＡｍＤａｉＭ`、`．では最後に`、`－山`），v3.214 为 12 个竖排块，稳定包含 `前は生意気に`、`あー！！俺の誘い断り...`、`持ち帰る`、`監督より挨拶を`；macOS CPU-only 冷启动约 `3.75s`。
 - 同一 fixture 仍有跨列／错字结果，如 `今度こそこの暴れ`、`そのせいでつまりまーズ`、`うまんねー女に`、`いします`。本轮可以声明该固定样图的实测改善，但没有多图 ground-truth corpus，不把它外推为通用日语 OCR 或翻译质量。
-- 本地 v3.157–v3.214 共 `58` 份合同／`293` tests、真实 Core ML runtime 合同、generic iOS Simulator Xcode build、`plutil` 与 `git diff --check` 通过。exact-SHA 云端 full 尚待提交；Koharu mask artifact 四件套的 readiness 仍独立为 `manifestMissing / stopUntilArtifactsProvided`，probe 仍为 `skip`。
+- 本地 v3.157–v3.214 共 `58` 份合同／`293` tests、真实 Core ML runtime 合同、generic iOS Simulator Xcode build、`plutil` 与 `git diff --check` 通过。exact-SHA full [31315520990](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31315520990) 对 SHA `0a92317fae8a9e6dae89fe5592dec27b94995000` 完成真实 runtime、Xcode 与 JUnit `10/10`（0 failures）；Koharu mask artifact 四件套的 readiness 仍独立为 `manifestMissing / stopUntilArtifactsProvided`，probe 仍为 `skip`。
 
 ## v3.213：Koharu 日语 detector 字符紧 envelope
 
