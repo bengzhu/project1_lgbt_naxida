@@ -1,6 +1,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.202 Koharu 日语竖排紧 line-region candidate gate 合同
+
+- 普通图片源语言为日语且进入 `recognizeJapaneseVerticalLineCrops` 时，`isVerticalLineCandidate` 必须接收 `observation.lineRegionRect ?? observation.rect`；Vision 字符范围缺失时回退 request-level box。与 vertical block 的 `overlapRatio` 仍必须使用宽 `observation.rect`，避免紧 line geometry 改写布局／去重外框。
+- 该 gate 只作用于日语 line candidate 的高宽比／高度筛选，保留既有 `1.25`、`0.018`、最多 24 条、perspective／axis crop、`verticalLine` provenance、rotate270 主方向与 opposite fallback；page、block、tile、非日语、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 不变。
+- 新增 `scripts/test-v3202-image-japanese-koharu-tight-line-candidate-gate-contract.py` 并接入 UI/full fail-fast；v3.201、v3.200、v3.199、v3.160 及更早合同继续回归。实现 exact-SHA full [31286506178](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31286506178)（`2f198f9f12e62c5e10fe7a73b76cdc0af9d69107`）Xcode/JUnit `10/10` 且 0 failures；候选 metadata、PR 与 merge 待完成。探针 `skip`，真实 Koharu readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.201 Koharu 日语竖排 line orientation provenance 合同
 
 - 普通图片源语言为日语且进入 `recognizeJapaneseVerticalLineCrops` 时，perspective／轴对齐 line pass 必须标记 `VisionOCRObservationRole.verticalLine`；该角色要随 Vision observation、crop mapper、perspective result、合成候选和最终 dedupe 保留，使 `rotate270` 成为 line 专用的有界主方向偏好，弱／空结果仍按既有预算 fallback 到 90°。
