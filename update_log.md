@@ -8,7 +8,7 @@
 核心变更：
 
 - `recursiveMangaReadingOrder` 的无切分和分区失效分支统一使用 `fallbackMangaObservationReadingOrder`，行高取 `4 × minimumGapY`，行内保持漫画右到左顺序。
-- 混合 block fallback、非日语交错路径、OCR、翻译、渲染、Store、探针、metrics 与 `output` 边界不变；历史 v3.157/v3.158 合同仅放宽为接受后续等价 fallback 实现，不改变其方向／裁剪语义。
+- 混合 block fallback、非日语交错路径、OCR、翻译、渲染、Store、探针、metrics 与 `output` 边界不变；v3.157/v3.158 合同脚本保持原样并继续回归，v3.163/v3.205 后续合同仅放宽为接受等价 fallback 实现，不改变方向／裁剪语义。
 
 边界：候选 full 已通过；PR/merge fast 仅复用候选 full，不是新的 Xcode 编译证据。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。探针为 `skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
 
