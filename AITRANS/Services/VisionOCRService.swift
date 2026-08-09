@@ -384,10 +384,10 @@ struct VisionOCRService: Sendable {
             recognitionLanguages: recognitionLanguages
         ))
 
-        // Koharu's `extract_text_block_regions` is line-first: once a TextRegion
+        // Koharu's extract_text_block_regions is line-first: once a TextRegion
         // has usable line polygons, it sends those regions to OCR and does not
-        // also feed the wider block crop through Manga OCR. Vision has no
-        // detector polygons, so the mapped line observations are our bounded
+        // also feed the wider block crop through Manga OCR. Vision does not expose those polygons,
+        // so the mapped line observations are our bounded
         // equivalent. Run them before block crops and use the old block crop
         // only for a block whose line reread produced no usable observation.
         // This keeps mixed vertical columns out of a larger crop while retaining
@@ -395,7 +395,7 @@ struct VisionOCRService: Sendable {
         let lineRefined = Self.recognizeJapaneseVerticalLineCrops(
             in: image,
             observations: safeObservations,
-            blocks: verticalBlockArray,
+            blocks: Array(verticalBlocks),
             recognitionLanguages: recognitionLanguages
         )
         refined.append(contentsOf: lineRefined)
