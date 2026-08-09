@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.205 日语竖排 block → 枚举 source line → 每条独立 tight `verticalLine` 覆盖才跳过 block crop → 部分／合成／噪声结果安全回退 block crop → 映射／去重／布局／批翻译／渲染；实现 full `31292332659`（SHA `7891cfeaf3486eb6a507d1b2045a9b662b8c66ca`，Xcode/JUnit `10/10`）通过，探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
+
 v3.204 日语竖排 block → 有效 line polygon proxy 先走 perspective／轴对齐 line OCR → 只有 line 无可用 observation 才回退 block crop → v3.203 tight ownership／方向 provenance／bounded fallback → 映射／去重／布局／批翻译／渲染；v3.157/v3.158 双向方向与 block crop 合同继续回归。实现 full `31290525270`（SHA `ae922bda0bf566cc14d422a6d9c9a4c042b34218`，Xcode/JUnit `10/10`）通过，候选 metadata `31290904290`、PR #268 fast `31290942391`、merge fast `31290981606` 均复用成功 receipt，merge SHA `b65653bc577ba65c51ed6cc1c2bd373b00e76aec`，后三者 Xcode skipped；探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
 
 v3.203 日语竖排 line → 宽 `rect` overlap 后再以有效紧 `lineRegionRect` 校验 block ownership（缺失／非法 geometry 回退宽框）→ candidate gate／碎片合成／block envelope → perspective／轴对齐 crop → `verticalLine`／rotate270 → 映射／去重／布局／批翻译／渲染；实现 full `31287319601`（SHA `01fdaf16dde9029079231eb7c5406042fcab8cfc`，Xcode/JUnit `10/10`）通过，候选 metadata `31287648270`、PR #267 fast `31287677451`、merge fast `31287707581` 均复用成功 receipt，merge SHA `295c59a72a886cbc19cd9c3126d9e162ce525afd`，后三者 Xcode skipped；探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
