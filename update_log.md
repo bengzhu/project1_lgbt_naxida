@@ -16,6 +16,7 @@
 - 当前产品 `VisionOCRService + ComicTextBubbleDetectorService + MangaOCRService + ImageOCRLayoutEngine` 对 `test/jap.jpg` 返回精确 5 个竖排块：`前は生意気に俺の誘い断りやがって...`、`今度こそこの爆乳を持ち帰る！`、`そのせいでつまんねー女に絡まれるし...`、`...では最後に監督より挨拶をお願いします`、`こっ、`。这补回 v3.215 仍漏失的 `やがって...`，并把相邻片段合并为完整 detector block。
 - 本地 v3.157-v3.216 共 `60` 份合同／`307` tests、真实 Core ML runtime、generic iOS Simulator Xcode build、`plutil`、JSON/YAML 解析与 `git diff --check` 通过。
 - exact-SHA full [31321620928](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31321620928) 对实现 SHA `e25bf798323dbbabe154c1849436711d90ab8888` 以 `candidate_development_push` 完成真实 detector/Manga OCR runtime、Xcode 和 JUnit `10/10`（0 failures），并发布 `AITRANS CI/full-validation = success` receipt；probe 继续 `skip`。翻译、渲染、非日语、Store、metrics 与 output 边界不变，Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。单一固定 fixture 不足以证明通用日语 OCR、翻译或识别质量。
+- 候选 metadata [31322010365](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31322010365) 对 docs SHA `fb9385645ed8524bf0a6dc58df22d7064153d1be` 以 `candidate_metadata_followup_reuses_parent_full_validation` 复用实现 full；PR #280 fast [31322080575](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31322080575) 与 merge fast [31322150176](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31322150176) 均复用成功 candidate receipt，merge SHA `f0a85c2b3f60d5d37652dc76c83aa8703692a245`。后三者 JUnit `10/10`、Xcode skipped，不是新的编译证据；v3.216 功能分支已在本地和远端清理。
 
 ## v3.215：Manga OCR 相邻竖列 ownership
 
