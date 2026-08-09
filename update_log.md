@@ -1,4 +1,22 @@
 
+## v3.209：Koharu 日语竖排 line-first dispatch
+
+日期：2026-08-09
+
+状态：Agent X 将普通图片日语竖排 OCR 调度改为 Koharu 风格的 line-first 顺序。`recognizeJapaneseVerticalCrops` 先消费 `verticalLine` perspective／轴对齐 reread；pixel detector 与 tile fallback 只处理可靠 line 结果未覆盖的区域，block crop 保留为最后兜底。可靠 line coverage 要求非空文本、`confidence >= 0.48`、日语脚本密度 `>= 0.5` 和有效紧 geometry；缺失或非法 `lineRegionRect` 安全回退 observation 的宽 `rect`。pixel detector/tile 复读结果也保留 `verticalLine` provenance，使后续方向、映射和去重继续沿用 line 专用边界。
+
+核心变更：
+
+- `recognizeJapaneseVerticalLineCrops` 在 detector、tile 和 block crop 前运行；后两类 recovery 接收 `lineObservations`，对可靠 line region／tile overlap `>= 0.60` 的区域跳过重复侦察。
+- 新增 `japaneseLinePathRegion` 可靠性 helper，过滤空、低置信度、低日语脚本密度和非法几何；弱、非日语或空 line 结果不会抑制更宽 fallback。
+- `recognizeJapanesePixelFirstVerticalCrops` 的 detector OCR 角色由 `.crop` 收敛为 `.verticalLine`；新增 `scripts/test-v3209-image-japanese-koharu-line-first-dispatch-contract.py`，并让 v3.208 历史合同接受等价 provenance。
+
+验证与边界：
+
+- 本地 v3.157–v3.209 共 53 个日语合同通过，`git diff --check` 与 `plutil -lint AITRANS.xcodeproj/project.pbxproj` 通过。
+- exact-SHA full [31297254547](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297254547) 对 SHA `17f19bb2505d504e1255ab925d2aa7572020435a` 完成 Xcode/JUnit `10/10` 且 0 failures；该 receipt 是当前实现提交的云端 full 证据。
+- 当前候选尚未记录 PR/merge fast receipt；待文档提交后按 `smalldata_test` 流程继续验证。真实 `test/koharu_artifacts/` 四件套、Manga OCR/PaddleOCR 模型与真实竖排图片质量 corpus 仍缺失，active readiness 保持 `manifestMissing / stopUntilArtifactsProvided`，探针默认 `skip`，不更新 `metrics/version_history.csv` 或 `output/`，不声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.208：Koharu detector 到 pixel-first 日语竖排 crop 代理
 
 日期：2026-08-09

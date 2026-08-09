@@ -7,6 +7,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.209 Koharu 日语竖排 line-first dispatch 合同
+
+- `recognizeJapaneseVerticalCrops` 先运行 `recognizeJapaneseVerticalLineCrops`，pixel detector 与 tile fallback 接收 line observations，只跳过被可靠 line reread 覆盖至少 `0.60` 的区域，block crop 仍是最后兜底；detector/tile OCR 结果使用 `.verticalLine` provenance。
+- 可靠 line coverage 仅接受非空文本、`confidence >= 0.48`、日语脚本密度 `>= 0.5` 和有效 `lineRegionRect ?? rect`；弱、空、非日语或非法 geometry 不抑制更宽 recovery。普通语言、布局、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 边界不变。
+- 新增 `scripts/test-v3209-image-japanese-koharu-line-first-dispatch-contract.py` 并接入 UI/full fail-fast；本地 v3.157–v3.209 共 53 个合同通过；exact-SHA full [31297254547](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297254547)（SHA `17f19bb2505d504e1255ab925d2aa7572020435a`）Xcode/JUnit `10/10` 且 0 failures。探针 `skip`，真实 Koharu readiness `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ### v3.207 Koharu 日语竖排 line coverage quality 合同
 
 - `hasCompleteJapaneseLineCoverage` 在 tight geometry 与一对一 source-line 匹配之外，要求 `isReliableJapaneseLineCoverageResult`：结果非空、`confidence >= 0.48`、日语脚本密度 `>= 0.5`；多 glyph source line 不接受单 glyph 结果，避免弱 OCR 被误当成完整覆盖。
