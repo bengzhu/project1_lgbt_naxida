@@ -178,6 +178,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3208-image-japanese-koharu-pixel-detector-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3209-image-japanese-koharu-line-first-dispatch-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3210-image-translation-block-retry-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3211-image-japanese-vertical-language-gate-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -610,6 +611,9 @@ jobs:
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v3210-image-translation-block-retry-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3211-image-japanese-vertical-language-gate-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
@@ -1398,6 +1402,7 @@ jobs:
             python3 -B scripts/test-v3208-image-japanese-koharu-pixel-detector-contract.py
             python3 -B scripts/test-v3209-image-japanese-koharu-line-first-dispatch-contract.py
             python3 -B scripts/test-v3210-image-translation-block-retry-contract.py
+            python3 -B scripts/test-v3211-image-japanese-vertical-language-gate-contract.py
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
       - name: v1.88 home UI contract
