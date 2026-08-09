@@ -1,3 +1,23 @@
+## v3.217：Koharu comic detector 长图切片
+
+日期：2026-08-10
+
+状态：Agent X 在 v3.216 真实 RT-DETR TextRegion detector 上继续迁入 Koharu `ImageSlicer` 与 `merge_slice_regions`，避免超长漫画页先被整体压成单个 `640x640` 输入。模型权重、Manga OCR、Vision fallback、翻译和渲染不变。
+
+核心变更：
+
+- `ComicTextBubbleDetectorRuntime` 仅在整页 `height / width > 3.5` 时切片；slice 高度为 `3.0 x page width`，步长为 80%，末段高度不超过 target 的 70% 时减少一个 slice，最终 slice 始终延伸至页面底边。普通页面返回单个全图 slice，不增加推理次数。
+- 每个 slice 独立执行 v3.216 bundled Core ML detector；局部 normalized rect 的 y 和 height 通过 slice 起点／高度映射回整页坐标，并在每片之间检查 cancellation。
+- 先按相同 detector label 复刻 Koharu `merge_slice_regions`：minimum-area containment `>= 0.85` 或 IoU `>= 0.50` 时保留较大框和最高 confidence；相邻框还需通过局部 y 距离、x overlap `> 0.2`、size ratio `> 0.3`、左右边差与 union area `<= 3x` 门控。随后才执行跨 text label 的 TextRegion union。
+- `mergeSliceRegions` 与 `mergeTextRegions` 都用 Swift 等价 `swapRemove`，匹配 Rust `Vec::swap_remove` 的候选消费顺序。新增 v3.217 静态合同、长图 Swift harness 和 shell runtime，并接入云端 UI-interaction contract 路由。
+
+验证与边界：
+
+- 长页 runtime 将真实 `test/jap.jpg` 纵向绘制 4 次，生成 `1136x6400` 输入；参考参数计算为 2 个重叠 slice，bundled detector 最终稳定输出 17 个 regions。四个 25% 高度区间各至少 4 个结果，最低结果 y 为约 `0.94`，所有框均为正面积且高度不超过页面 30%。
+- 原 `test/jap.jpg` 产品 runtime 继续精确输出 v3.216 的 5 个完整竖排块，证明非长图单片路径和 Manga OCR 结果未回归。
+- 本地 v3.157-v3.217 共 `61` 份合同／`314` tests、两条真实 Core ML runtime、generic iOS Simulator Xcode build、`plutil`、YAML 解析及 `git diff --check` 通过。
+- exact-SHA 云端 full 必须在实现提交后运行，目前尚无云端编译证据；probe 继续 `skip`，Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。重复单一 fixture 只验证切片覆盖和既有文字结果稳定，不证明真实多页 corpus 的通用 OCR 或翻译质量。
+
 ## v3.216：内置 Koharu comic text detector
 
 日期：2026-08-09
