@@ -11,6 +11,7 @@
 
 - `recognizeObservations` 默认必须显式保持 `request.usesLanguageCorrection = true`，仅在受限 caller 传入 `false` 时关闭；page reconnaissance 与非日语路径不得传入 `false`。日语 `recognizeJapaneseCropPass` 和 `recognizeJapanesePerspectiveLineCrop` 必须同时保留日语 post-process、language-specific gate 与 raw correction 边界。
 - 新增 `scripts/test-v3212-image-japanese-koharu-raw-crop-recognition-contract.py` 并接入 UI/full fail-fast；本地 v3.157-v3.212 共 `56/56` 个合同通过，v3.157/v3.158 已合入当前基线、无活动分支。exact-SHA full [31302657064](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31302657064)（SHA `bd7c510b99ac78c22ca330ae2e125a5193610fe4`）Xcode/static/UI/Speech/home/paste 成功，JUnit `10/10` 且 0 failures；probe `skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+- 候选 metadata [31309651292](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31309651292)、PR #276 fast [31309712340](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31309712340) 与 merge fast [31309783552](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31309783552) 均成功复用候选 receipt；merge SHA `ccab9e318b0c71447b59cb2b370d5778a9c68904`，后三者 Xcode skipped，不是新的编译证据。
 
 ### v3.211 日语竖排 Vision 语言门控合同
 
