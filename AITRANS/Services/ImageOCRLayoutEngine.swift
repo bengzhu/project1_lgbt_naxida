@@ -298,10 +298,10 @@ enum ImageOCRLayoutEngine {
                   minimumGapX: minimumGapX,
                   minimumGapY: minimumGapY
               ) else {
-            return observations.sorted {
-                stableKey($0, -$0.rect.midX, $0.rect.y)
-                    < stableKey($1, -$1.rect.midX, $1.rect.y)
-            }
+            return fallbackMangaObservationReadingOrder(
+                observations,
+                minimumGapY: minimumGapY
+            )
         }
 
         let first: [ResolvedObservation]
@@ -319,10 +319,10 @@ enum ImageOCRLayoutEngine {
         }
 
         guard !first.isEmpty, !second.isEmpty else {
-            return observations.sorted {
-                stableKey($0, -$0.rect.midX, $0.rect.y)
-                    < stableKey($1, -$1.rect.midX, $1.rect.y)
-            }
+            return fallbackMangaObservationReadingOrder(
+                observations,
+                minimumGapY: minimumGapY
+            )
         }
         return recursiveMangaReadingOrder(
             first,
@@ -333,6 +333,27 @@ enum ImageOCRLayoutEngine {
             minimumGapX: minimumGapX,
             minimumGapY: minimumGapY
         )
+    }
+
+    private static func fallbackMangaObservationReadingOrder(
+        _ observations: [ResolvedObservation],
+        minimumGapY: Double
+    ) -> [ResolvedObservation] {
+        // Match Koharu's no-cut fallback: quantize a bounded row height, then
+        // consume each row from the right. A global x-first sort can otherwise
+        // interleave separate rows when columns overlap or stagger vertically.
+        let rowHeight = max(minimumGapY * 4, 0.01)
+        return observations.sorted { lhs, rhs in
+            let lhsRow = floor(lhs.rect.y / rowHeight)
+            let rhsRow = floor(rhs.rect.y / rowHeight)
+            if lhsRow != rhsRow { return lhsRow < rhsRow }
+            if lhs.rect.midX != rhs.rect.midX { return lhs.rect.midX > rhs.rect.midX }
+            if lhs.rect.y != rhs.rect.y { return lhs.rect.y < rhs.rect.y }
+            if lhs.rect.width != rhs.rect.width { return lhs.rect.width < rhs.rect.width }
+            if lhs.rect.height != rhs.rect.height { return lhs.rect.height < rhs.rect.height }
+            if lhs.text != rhs.text { return lhs.text < rhs.text }
+            return lhs.observation.confidence > rhs.observation.confidence
+        }
     }
 
     private static func bestMangaReadingCut(

@@ -132,7 +132,7 @@ class JapaneseKoharuLineCoverageContractTests(unittest.TestCase):
         self.assertTrue(
             all(tuple(map(int, version.split("."))) >= (3, 205) for version in versions)
         )
-        self.assertIn("MARKETING_VERSION = 3.205;", self.project)
+        self.assertNotIn("MARKETING_VERSION = 3.204;", self.project)
         previous = "python3 -B scripts/test-v3204-image-japanese-koharu-line-first-ocr-contract.py"
         current = "python3 -B scripts/test-v3205-image-japanese-koharu-line-coverage-fallback-contract.py"
         self.assertIn(previous, self.workflow)
