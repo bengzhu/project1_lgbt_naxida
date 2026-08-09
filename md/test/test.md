@@ -4,7 +4,7 @@
 ### v3.206 Koharu 日语竖排 observation 行桶回退合同
 
 - `ImageOCRLayoutEngine.recursiveMangaReadingOrder` 在没有有效 XY-cut 或切分失效时调用 `fallbackMangaObservationReadingOrder`；按 `4 × minimumGapY` 行桶先读上方，同一行按 `midX` 从右到左，再以 y、宽高、文字、confidence 稳定 tie-breaker，避免重叠竖排列全局 x-first 交错。
-- 混合 block 的既有 `fallbackMangaBlockReadingOrder`、普通语言 `interleaveReadingOrder`、OCR/翻译/渲染/Store/探针/真实 Koharu artifact 边界不变。新增 `scripts/test-v3206-image-japanese-koharu-observation-row-fallback-contract.py` 并接入 UI/full fail-fast；云端 full 待本轮验证。
+- 混合 block 的既有 `fallbackMangaBlockReadingOrder`、普通语言 `interleaveReadingOrder`、OCR/翻译/渲染/Store/探针/真实 Koharu artifact 边界不变。新增 `scripts/test-v3206-image-japanese-koharu-observation-row-fallback-contract.py` 并接入 UI/full fail-fast；实现 full [31293120347](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31293120347)（`5aefe027e97f37aa209c09d2a9d33ecf0a1d848c`）Xcode/JUnit `10/10` 且 0 failures；PR #270 fast [31293135057](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31293135057) 与 merge fast [31293388944](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31293388944) 复用成功 full，merge SHA `9513cd7c9d33610f0b93a4e435f9e3f1867328bb`，后两者 Xcode skipped，不是新的编译证据。v3.157/v3.158 已合入当前基线并继续回归；`probe_mode=skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
 
 ### v3.205 Koharu 日语竖排 line coverage fallback 合同
 

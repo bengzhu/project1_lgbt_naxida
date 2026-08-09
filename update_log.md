@@ -1,4 +1,23 @@
 
+## v3.206：Koharu 日语竖排 observation 行桶回退
+
+日期：2026-08-09
+
+状态：Agent X 对齐 Koharu `sort_manga_reading_order` 的无切分消费边界。普通图片日语竖排 observation 在 Recursive XY-cut 无有效切分或分区失效时按 `4 × min_gap_y` 行桶先读上方、同一行从右到左，再以几何、文字和 confidence 做确定性 tie-breaker，避免重叠列按全局 x 优先造成跨行交错。v3.157/v3.158 历史合同保持回归，二者已在当前基线，不存在未合入活动分支。工程正式版本为 `MARKETING_VERSION=3.206`，PR #270 已合入 `smalldata_test`，`main` 未触碰。
+
+核心变更：
+
+- `recursiveMangaReadingOrder` 的无切分和分区失效分支统一使用 `fallbackMangaObservationReadingOrder`，行高取 `4 × minimumGapY`，行内保持漫画右到左顺序。
+- 混合 block fallback、非日语交错路径、OCR、翻译、渲染、Store、探针、metrics 与 `output` 边界不变；历史 v3.157/v3.158 合同仅放宽为接受后续等价 fallback 实现，不改变其方向／裁剪语义。
+
+边界：候选 full 已通过；PR/merge fast 仅复用候选 full，不是新的 Xcode 编译证据。真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 为 `manifestMissing / stopUntilArtifactsProvided`。探针为 `skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 候选 exact-SHA full [31293120347](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31293120347)：commit `5aefe027e97f37aa209c09d2a9d33ecf0a1d848c`，`validationProfile=full`、`validationReason=candidate_development_push`，Xcode/static/UI/Speech/home/paste 成功，JUnit `10/10` 且 0 failures，`probe_mode=skip`。
+- PR #270 fast [31293135057](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31293135057)：复用候选 full，Xcode/UI/Speech 按 fast 路由跳过，不是新的编译证据。
+- merge fast [31293388944](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31293388944)：merge SHA `9513cd7c9d33610f0b93a4e435f9e3f1867328bb`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`、`receiptPropagationAllowed=true`，复用候选 full，Xcode/UI/Speech 跳过，不是新的编译证据。
+
 ## v3.205：Koharu 日语竖排 line coverage fallback
 
 日期：2026-08-09
