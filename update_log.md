@@ -16,6 +16,8 @@
 - 同一 fixture 仍有跨列／错字结果，如 `今度こそこの暴れ`、`そのせいでつまりまーズ`、`うまんねー女に`、`いします`。本轮可以声明该固定样图的实测改善，但没有多图 ground-truth corpus，不把它外推为通用日语 OCR 或翻译质量。
 - 本地 v3.157–v3.214 共 `58` 份合同／`293` tests、真实 Core ML runtime 合同、generic iOS Simulator Xcode build、`plutil` 与 `git diff --check` 通过。exact-SHA full [31315520990](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31315520990) 对 SHA `0a92317fae8a9e6dae89fe5592dec27b94995000` 完成真实 runtime、Xcode 与 JUnit `10/10`（0 failures）；Koharu mask artifact 四件套的 readiness 仍独立为 `manifestMissing / stopUntilArtifactsProvided`，probe 仍为 `skip`。
 
+候选 metadata [31316016491](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31316016491) 对 docs SHA `02c3ea0632298878baffdfbec4af1fe8d9660f69` 复用实现 full；PR #278 fast [31316067683](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31316067683) 与 merge fast [31316119282](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31316119282) 均复用成功候选 receipt，merge SHA `ad7a265abfa620e93ea345429d14558ed61536be`；后三者 Xcode skipped，不是新的编译证据。
+
 ## v3.213：Koharu 日语 detector 字符紧 envelope
 
 日期：2026-08-09
