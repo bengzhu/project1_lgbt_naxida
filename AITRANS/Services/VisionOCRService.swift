@@ -378,27 +378,13 @@ struct VisionOCRService: Sendable {
         let verticalBlockArray = Array(verticalBlocks)
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(verticalBlockArray.count * 2 + 12)
-        refined.append(contentsOf: Self.recognizeJapanesePixelFirstVerticalCrops(
-            in: image,
-            observations: safeObservations,
-            verticalBlocks: verticalBlockArray,
-            recognitionLanguages: recognitionLanguages
-        ))
-        refined.append(contentsOf: Self.recognizeJapaneseVerticalTileFallback(
-            in: image,
-            verticalBlocks: verticalBlockArray,
-            recognitionLanguages: recognitionLanguages
-        ))
 
         // Koharu's extract_text_block_regions is line-first: once a TextRegion
-        // has usable line polygons, it sends those regions to OCR and does not
-        // also feed the wider block crop through Manga OCR. Vision does not expose those polygons,
-        // so the mapped line observations are our bounded equivalent. Run them
-        // before block crops and use the old block crop only when every
-        // enumerable source line is covered by a distinct usable line reread.
-        // This keeps mixed vertical columns out of a larger crop while retaining
-        // the safe fallback for partial, synthetic, or otherwise ambiguous line
-        // coverage.
+        // has usable line polygons, it sends those regions to OCR before any
+        // wider detector or block crop fallback. Vision does not expose those polygons,
+        // so the mapped line observations are our bounded equivalent.
+        // Run this path first and let later reconnaissance consume only gaps
+        // that were not reliably covered by a line reread.
         let lineRefined = Self.recognizeJapaneseVerticalLineCrops(
             in: image,
             observations: safeObservations,
@@ -406,6 +392,20 @@ struct VisionOCRService: Sendable {
             recognitionLanguages: recognitionLanguages
         )
         refined.append(contentsOf: lineRefined)
+
+        refined.append(contentsOf: Self.recognizeJapanesePixelFirstVerticalCrops(
+            in: image,
+            observations: safeObservations,
+            verticalBlocks: verticalBlockArray,
+            lineObservations: lineRefined,
+            recognitionLanguages: recognitionLanguages
+        ))
+        refined.append(contentsOf: Self.recognizeJapaneseVerticalTileFallback(
+            in: image,
+            verticalBlocks: verticalBlockArray,
+            lineObservations: lineRefined,
+            recognitionLanguages: recognitionLanguages
+        ))
 
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         var orientationFallbacksRemaining = 8
@@ -488,12 +488,14 @@ struct VisionOCRService: Sendable {
         in image: CGImage,
         observations: [VisionOCRObservation],
         verticalBlocks: [ImageOCRLayoutBlock],
+        lineObservations: [VisionOCRObservation],
         recognitionLanguages: [String]
     ) -> [VisionOCRObservation] {
         let candidates = detectJapanesePixelFirstVerticalRegions(
             in: image,
             observations: observations,
-            verticalBlocks: verticalBlocks
+            verticalBlocks: verticalBlocks,
+            lineObservations: lineObservations
         )
         guard !candidates.isEmpty else { return [] }
 
@@ -522,7 +524,7 @@ struct VisionOCRService: Sendable {
                 recognitionLanguages: recognitionLanguages,
                 minimumTextHeight: 0.002,
                 cropScale: preparedCrop.scale,
-                observationRole: .crop
+                observationRole: .verticalLine
             )
             refined.append(contentsOf: primary)
 
@@ -539,7 +541,7 @@ struct VisionOCRService: Sendable {
                     recognitionLanguages: recognitionLanguages,
                     minimumTextHeight: 0.002,
                     cropScale: preparedCrop.scale,
-                    observationRole: .crop
+                    observationRole: .verticalLine
                 ))
             }
         }
@@ -554,7 +556,8 @@ struct VisionOCRService: Sendable {
     private static func detectJapanesePixelFirstVerticalRegions(
         in image: CGImage,
         observations: [VisionOCRObservation],
-        verticalBlocks: [ImageOCRLayoutBlock]
+        verticalBlocks: [ImageOCRLayoutBlock],
+        lineObservations: [VisionOCRObservation]
     ) -> [JapanesePixelFirstRegion] {
         guard image.width >= 8, image.height >= 8 else { return [] }
 
@@ -564,6 +567,9 @@ struct VisionOCRService: Sendable {
                 return nil
             }
             return observation.lineRegionRect ?? observation.rect
+        }
+        let reliableLineRegions = lineObservations.compactMap { observation in
+            japaneseLinePathRegion(observation)
         }
         var candidates: [JapanesePixelFirstRegion] = []
         for angle in [90, 270] {
@@ -592,6 +598,9 @@ struct VisionOCRService: Sendable {
                       }),
                       !existingVerticalRegions.contains(where: {
                           japanesePixelDetectorRegionIsCovered($0, by: mappedRect)
+                      }),
+                      !reliableLineRegions.contains(where: {
+                          overlapRatio($0, mappedRect) >= 0.60
                       }) else {
                     continue
                 }
@@ -678,6 +687,7 @@ struct VisionOCRService: Sendable {
     private static func recognizeJapaneseVerticalTileFallback(
         in image: CGImage,
         verticalBlocks: [ImageOCRLayoutBlock],
+        lineObservations: [VisionOCRObservation],
         recognitionLanguages: [String]
     ) -> [VisionOCRObservation] {
         let imageWidth = image.width
@@ -722,6 +732,9 @@ struct VisionOCRService: Sendable {
         // budget on the rightmost columns first so a very tall page does not
         // truncate the Japanese reading frontier on the left.
         let mangaOrderedStarts = starts.sorted { $0 > $1 }
+        let reliableLineRegions = lineObservations.compactMap { observation in
+            japaneseLinePathRegion(observation)
+        }
 
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(maximumWindows * 2)
@@ -744,6 +757,9 @@ struct VisionOCRService: Sendable {
                 guard !verticalBlocks.contains(where: {
                     verticalTileIsCovered($0.rect, by: tileRect)
                 }),
+                      !reliableLineRegions.contains(where: {
+                          overlapRatio($0, tileRect) >= 0.60
+                      }),
                       let crop = cropImage(image, normalizedRect: tileRect),
                       crop.image.width >= 2,
                       crop.image.height >= 2 else {
@@ -1618,6 +1634,29 @@ struct VisionOCRService: Sendable {
     private static func isVerticalLineCandidate(_ rect: ImageOCRLayoutRect) -> Bool {
         rect.height / max(rect.width, 0.001) >= 1.25
             && rect.height >= 0.018
+    }
+
+    /// Return only reliable line rereads that may suppress a broader fallback.
+    /// Missing or invalid tight geometry falls back to the request-level box,
+    /// matching the existing safe geometry boundary. Weak or non-Japanese text
+    /// remains uncovered so detector/tile and block recovery can try again.
+    private static func japaneseLinePathRegion(
+        _ observation: VisionOCRObservation
+    ) -> ImageOCRLayoutRect? {
+        let text = observation.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard observation.observationRole == .verticalLine,
+              !text.isEmpty,
+              observation.confidence.isFinite,
+              observation.confidence >= 0.48,
+              japaneseScriptDensity(in: text) >= 0.5 else {
+            return nil
+        }
+        let region = observation.lineRegionRect?.normalizedToUnit()
+            ?? observation.rect.normalizedToUnit()
+        guard let region, isVerticalLineCandidate(region) else {
+            return nil
+        }
+        return region
     }
 
     /// Koharu associates each detector line polygon with its owning TextRegion.

@@ -85,13 +85,16 @@ class JapaneseKoharuPixelDetectorContractTests(unittest.TestCase):
             "expandedVerticalLineCropRect(",
             "prepareJapaneseCropForVision(crop.image)",
             "recognizeJapaneseCropPass(",
-            "observationRole: .crop",
             "var orientationFallbacksRemaining = 4",
             "oppositeJapaneseOrientation(",
             "cropScale: preparedCrop.scale",
             "return deduplicateJapaneseObservations(refined)",
         ]:
             self.assertIn(marker, self.pixel)
+        self.assertTrue(
+            "observationRole: .crop" in self.pixel
+            or "observationRole: .verticalLine" in self.pixel
+        )
 
     def test_pixel_detector_does_not_cross_model_probe_or_artifact_boundaries(self) -> None:
         for forbidden in [
