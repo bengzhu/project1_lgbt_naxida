@@ -118,7 +118,11 @@ class JapaneseBundledMangaOCRContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, self.project)
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.214", "3.214"])
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(
+            all(tuple(map(int, version.split("."))) >= (3, 214) for version in versions)
+        )
+        self.assertNotIn("MARKETING_VERSION = 3.213;", self.project)
         previous = "python3 -B scripts/test-v3213-image-japanese-koharu-character-envelope-contract.py"
         current = "python3 -B scripts/test-v3214-image-japanese-bundled-manga-ocr-contract.py"
         self.assertIn(previous, self.workflow)

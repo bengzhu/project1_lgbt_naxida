@@ -1,3 +1,22 @@
+## v3.215：Manga OCR 相邻竖列 ownership
+
+日期：2026-08-09
+
+状态：Agent X 依据 v3.214 真实 Core ML 输出和逐 crop 几何诊断，修复 pixel-first TextRegion 的跨列字符框、相邻列 padding 泄漏与短列顶部截断。模型权重、actor runtime、12 个请求预算、Vision fallback、翻译和渲染均不变。
+
+核心变更：
+
+- `japanesePixelDetectorRobustColumnEnvelope` 从宽／高至少达到 observation 最大字符框 `35%` 的 glyph-sized boxes 提取中位 x 中心和中位宽度；只有中位宽为 broad envelope 的 `35%...82%` 时才替换横向范围，y／height 继续复用完整字符 envelope，异常集合回退 broad request geometry。
+- `alignPartialJapaneseMangaOCRColumns` 只处理 2–4 个字符框的候选；相邻列必须字符更多、中心间距在 `0.55...2.0 ×` 列宽、顶部差在 `0.012...min(0.65 × height, 0.06)`、邻列高度至少 `0.75 ×` 且纵向重叠 `>= 0.60`，仅向上补齐 y，不改底边也不凭空生成列。
+- `japaneseMangaOCRCropRect` 先保留 Koharu 字体 padding，再对纵向重叠 `>= 0.50` 的相邻列按中心 bisector 限制水平扩展；clamp 使用 detector core 作为硬下限，因此不会为隔离 sibling 而切掉当前列。
+- 新增 `scripts/test-v3215-image-japanese-manga-column-ownership-contract.py`；真实 Core ML runtime 现在要求精确 12 块、10 个稳定文本，并拒绝 v3.214 的四类跨列／截断字符串。
+
+验证与边界：
+
+- `test/jap.jpg` 的产品链路仍返回 12 个竖排块；`今度こそこの暴れ` + `の爆乳を` 变为 `今度こそ` + `この爆乳を`，`そのせいでつまりまーズ` + `うまんねー女に` 变为 `そのせいで` + `つまんねー女に`，`いします` 变为 `お願いします`。
+- 固定 fixture 仍漏读右上第三列 `やがって...`，且保留 `．では最後に`、`こっ、` 等错误；没有多图 ground-truth corpus，因此不声明通用日语 OCR、翻译或识别质量。
+- 本地 v3.157–v3.215 共 `59` 份合同／`299` tests、真实 Core ML runtime、generic Simulator Xcode build、`plutil`、workflow YAML 与 `git diff --check` 通过；exact-SHA 云端 full 待提交。probe 仍为 `skip`，Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.214：内置 Koharu Manga OCR Core ML
 
 日期：2026-08-09
