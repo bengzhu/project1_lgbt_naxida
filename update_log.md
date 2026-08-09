@@ -15,7 +15,7 @@
 
 - 本地 v3.157–v3.209 共 53 个日语合同通过，`git diff --check` 与 `plutil -lint AITRANS.xcodeproj/project.pbxproj` 通过。
 - exact-SHA full [31297254547](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297254547) 对 SHA `17f19bb2505d504e1255ab925d2aa7572020435a` 完成 Xcode/JUnit `10/10` 且 0 failures；该 receipt 是当前实现提交的云端 full 证据。
-- 当前候选尚未记录 PR/merge fast receipt；待文档提交后按 `smalldata_test` 流程继续验证。真实 `test/koharu_artifacts/` 四件套、Manga OCR/PaddleOCR 模型与真实竖排图片质量 corpus 仍缺失，active readiness 保持 `manifestMissing / stopUntilArtifactsProvided`，探针默认 `skip`，不更新 `metrics/version_history.csv` 或 `output/`，不声称日语 OCR、翻译、识别或 Koharu 质量提升。
+- PR #273 fast [31297894114](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297894114) 与 merge fast [31297941634](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297941634) 均复用候选 full，merge SHA `4e2b8fdceec51359bb923bd583687fa2e3ed9e24`；fast Xcode skipped，不是新的编译证据。真实 `test/koharu_artifacts/` 四件套、Manga OCR/PaddleOCR 模型与真实竖排图片质量 corpus 仍缺失，active readiness 保持 `manifestMissing / stopUntilArtifactsProvided`，探针默认 `skip`，不更新 `metrics/version_history.csv` 或 `output/`，不声称日语 OCR、翻译、识别或 Koharu 质量提升。
 
 ## v3.208：Koharu detector 到 pixel-first 日语竖排 crop 代理
 

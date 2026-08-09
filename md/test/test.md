@@ -11,7 +11,7 @@
 
 - `recognizeJapaneseVerticalCrops` 先运行 `recognizeJapaneseVerticalLineCrops`，pixel detector 与 tile fallback 接收 line observations，只跳过被可靠 line reread 覆盖至少 `0.60` 的区域，block crop 仍是最后兜底；detector/tile OCR 结果使用 `.verticalLine` provenance。
 - 可靠 line coverage 仅接受非空文本、`confidence >= 0.48`、日语脚本密度 `>= 0.5` 和有效 `lineRegionRect ?? rect`；弱、空、非日语或非法 geometry 不抑制更宽 recovery。普通语言、布局、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 边界不变。
-- 新增 `scripts/test-v3209-image-japanese-koharu-line-first-dispatch-contract.py` 并接入 UI/full fail-fast；本地 v3.157–v3.209 共 53 个合同通过；exact-SHA full [31297254547](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297254547)（SHA `17f19bb2505d504e1255ab925d2aa7572020435a`）Xcode/JUnit `10/10` 且 0 failures。探针 `skip`，真实 Koharu readiness `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+- 新增 `scripts/test-v3209-image-japanese-koharu-line-first-dispatch-contract.py` 并接入 UI/full fail-fast；本地 v3.157–v3.209 共 53 个合同通过；exact-SHA full [31297254547](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297254547)（SHA `17f19bb2505d504e1255ab925d2aa7572020435a`）Xcode/JUnit `10/10` 且 0 failures；PR #273 fast [31297894114](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297894114) 与 merge fast [31297941634](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31297941634) 均复用候选 full，merge SHA `4e2b8fdceec51359bb923bd583687fa2e3ed9e24`，fast Xcode skipped。探针 `skip`，真实 Koharu readiness `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
 
 ### v3.207 Koharu 日语竖排 line coverage quality 合同
 

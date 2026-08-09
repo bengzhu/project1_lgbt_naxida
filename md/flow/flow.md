@@ -1,7 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
-v3.209 日语竖排 block → `verticalLine` perspective／轴对齐 reread first → 可靠 line coverage（非空、confidence `>= 0.48`、日语脚本密度 `>= 0.5`、紧 geometry 有效）→ 未覆盖区域才进入 pixel detector → 未覆盖区域再进入 tile fallback → 最后 block crop → 映射／日语去重／布局／批翻译／渲染；detector/tile 保留 `verticalLine` provenance，缺失紧 geometry 回退宽 `rect`，普通语言与其他路径不变。exact-SHA full `31297254547`（SHA `17f19bb2505d504e1255ab925d2aa7572020435a`，Xcode/JUnit `10/10`）通过；本地 v3.157–v3.209 合同 `53/53` 通过，readiness `manifestMissing / stopUntilArtifactsProvided`，探针 skip。
+v3.209 日语竖排 block → `verticalLine` perspective／轴对齐 reread first → 可靠 line coverage（非空、confidence `>= 0.48`、日语脚本密度 `>= 0.5`、紧 geometry 有效）→ 未覆盖区域才进入 pixel detector → 未覆盖区域再进入 tile fallback → 最后 block crop → 映射／日语去重／布局／批翻译／渲染；detector/tile 保留 `verticalLine` provenance，缺失紧 geometry 回退宽 `rect`，普通语言与其他路径不变。exact-SHA full `31297254547`（SHA `17f19bb2505d504e1255ab925d2aa7572020435a`，Xcode/JUnit `10/10`）通过；本地 v3.157–v3.209 合同 `53/53` 通过；PR #273 fast `31297894114` 与 merge fast `31297941634` 均复用候选 full，merge SHA `4e2b8fdceec51359bb923bd583687fa2e3ed9e24`，fast Xcode skipped；readiness `manifestMissing / stopUntilArtifactsProvided`，探针 skip。
 
 v3.208 日语竖排 page／block observation → 90°／270° `VNDetectTextRectanglesRequest` pixel-first geometry 侦察 → 映射回原图、竖排比例／尺寸门控、排除已覆盖 vertical block → 最多 12 个 detector crop → grayscale／有界放大／Vision OCR，最多 4 次 opposite fallback → 日语去重／布局／批翻译／渲染；detector 不加载 Koharu 模型，普通语言与既有路径不变，exact-SHA full `31295791350`（SHA `41eff6cb86073900332d9785eea32606a5688dce`，Xcode/JUnit `10/10`）通过，PR #272 fast `31296131671` 与 merge fast `31296221789` 复用候选 full，merge SHA `7c8642af855fcbf79cfad7a3a9052a5465d83632`，后三者 Xcode skipped；readiness `manifestMissing / stopUntilArtifactsProvided`，探针 skip。
 
