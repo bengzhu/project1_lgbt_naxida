@@ -14,6 +14,7 @@
 
 - 本地 v3.157–v3.213 共 `57` 份合同／`286` tests 通过，v3.157、v3.158、v3.208、v3.212 与 v3.213 定向合同通过；本地 generic iOS Simulator Xcode build 为 `BUILD SUCCEEDED`，`git diff --check` 与 `plutil -lint AITRANS.xcodeproj/project.pbxproj` 通过。
 - exact-SHA full [31310411961](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31310411961) 对 SHA `2ba635fd6e39f24954d8e731cbdfb59dc83b9900` 以 `validationProfile=full`、`validationReason=candidate_development_push` 完成 Xcode/static/UI/Speech/home/paste；JUnit `10/10`、0 failures。这是本轮新的独立云端编译证据。
+- 候选 metadata [31310728862](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31310728862) 对 docs SHA `bf0ed503ad534870f33ef17f30d6eeca06c71c97` 以 `candidate_metadata_followup_reuses_parent_full_validation` 复用实现 full；PR #277 fast [31310775114](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31310775114) 与 merge fast [31310809139](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31310809139) 均成功并复用候选收据，merge SHA `6ef85fce62d24a1f668a60484369dd24774caf59`。后三者 Xcode skipped，不是新的编译证据。
 - v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c` 仍在当前祖先链上，没有活动 v3.157/v3.158 分支或待 cherry-pick 提交。
 - probe 保持 `skip`；真实 Koharu artifact 四件套仍缺失，readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有真实图片质量 corpus 或 probe 执行结果，不声称日语 OCR、翻译、识别或 Koharu 质量提升。
 
