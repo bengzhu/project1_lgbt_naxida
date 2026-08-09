@@ -4,7 +4,7 @@
 ### v3.207 Koharu 日语竖排 line coverage quality 合同
 
 - `hasCompleteJapaneseLineCoverage` 在 tight geometry 与一对一 source-line 匹配之外，要求 `isReliableJapaneseLineCoverageResult`：结果非空、`confidence >= 0.48`、日语脚本密度 `>= 0.5`；多 glyph source line 不接受单 glyph 结果，避免弱 OCR 被误当成完整覆盖。
-- 质量门控失败时继续执行既有 block crop fallback；line perspective／axis、方向 fallback、去重、布局、翻译、渲染、Store、探针、真实 Koharu artifact 边界不变。新增 `scripts/test-v3207-image-japanese-koharu-line-coverage-quality-contract.py` 并接入 UI/full fail-fast；本地 v3.157–v3.207 共 51 个合同通过。候选 exact-SHA full [31294146132](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31294146132)（`f7a18e4c008903fd50f15183fa3b9a8629216bef`）Xcode/JUnit `10/10` 且 0 failures；`probe_mode=skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
+- 质量门控失败时继续执行既有 block crop fallback；line perspective／axis、方向 fallback、去重、布局、翻译、渲染、Store、探针、真实 Koharu artifact 边界不变。新增 `scripts/test-v3207-image-japanese-koharu-line-coverage-quality-contract.py` 并接入 UI/full fail-fast；本地 v3.157–v3.207 共 51 个合同通过。候选 exact-SHA full [31294146132](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31294146132)（`f7a18e4c008903fd50f15183fa3b9a8629216bef`）Xcode/JUnit `10/10` 且 0 failures；候选 metadata [31294486910](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31294486910)、PR fast [31294542723](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31294542723)、merge fast [31294614418](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31294614418) 均复用候选 full，merge SHA `15577b7a184f9b6a8d281f1551367b1c72231a65`；后三者 Xcode skipped，不是新的编译证据。`probe_mode=skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不得声称日语 OCR、翻译、识别或 Koharu 质量提升。
 
 ### v3.206 Koharu 日语竖排 observation 行桶回退合同
 

@@ -1,7 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
-v3.207 日语竖排 block → 枚举 source line → 每条独立 `verticalLine` reread 先过 confidence／日语脚本／glyph 数量质量门控 → 只有完整可靠覆盖才跳过 block crop，弱结果回退 block crop → 映射／去重／布局／批翻译／渲染；普通语言、tile、page、探针与真实模型边界不变。本地 v3.157–v3.207 合同 51/51 通过；候选 full `31294146132`（SHA `f7a18e4c008903fd50f15183fa3b9a8629216bef`，Xcode/JUnit `10/10`，0 failures）成功，readiness `manifestMissing / stopUntilArtifactsProvided`，探针 skip。
+v3.207 日语竖排 block → 枚举 source line → 每条独立 `verticalLine` reread 先过 confidence／日语脚本／glyph 数量质量门控 → 只有完整可靠覆盖才跳过 block crop，弱结果回退 block crop → 映射／去重／布局／批翻译／渲染；普通语言、tile、page、探针与真实模型边界不变。本地 v3.157–v3.207 合同 51/51 通过；候选 full `31294146132`（SHA `f7a18e4c008903fd50f15183fa3b9a8629216bef`，Xcode/JUnit `10/10`，0 failures）成功，候选 metadata `31294486910`、PR fast `31294542723`、merge fast `31294614418` 均复用候选 full，merge SHA `15577b7a184f9b6a8d281f1551367b1c72231a65`；readiness `manifestMissing / stopUntilArtifactsProvided`，探针 skip。
 
 v3.206 日语竖排 observation → Recursive XY-cut；无有效 cut 或分区失效时按 `4 × min_gap_y` 行桶从上到下、同一行右到左回退 → 同列 Cluster／批翻译／渲染；混合 block fallback 与非日语交错路径不变。新增 v3.206 observation-row fallback 合同；full `31293120347`（SHA `5aefe027e97f37aa209c09d2a9d33ecf0a1d848c`，Xcode/JUnit `10/10`）、PR #270 fast `31293135057`、merge fast `31293388944` 均成功，后两者复用 full，merge SHA `9513cd7c9d33610f0b93a4e435f9e3f1867328bb`，Xcode skipped；探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
 
