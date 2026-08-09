@@ -512,6 +512,9 @@ struct VisionOCRService: Sendable {
         image: CGImage
     ) async -> [VisionOCRObservation] {
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
+        let detectorSliceCount = ComicTextBubbleDetectorService.inferenceWindowCount(
+            for: image
+        )
         let detectorRegions = (try? await ComicTextBubbleDetectorService.shared.detectTextRegions(
             in: image
         )) ?? []
@@ -527,12 +530,19 @@ struct VisionOCRService: Sendable {
             detectorRegions: detectorRegions,
             visionRegions: visionRegions
         )
-        let requests = regions.prefix(12).map { region in
+        let selectedRegions = detectorSliceCount > 1
+            ? japaneseLongPageMangaOCRRegions(
+                regions,
+                detectorSliceCount: detectorSliceCount
+            )
+            : Array(regions.prefix(12))
+        let cropRegions = detectorSliceCount > 1 ? regions : selectedRegions
+        let requests = selectedRegions.map { region in
             MangaOCRRequest(
                 textRect: region.rect,
                 cropRect: japaneseMangaOCRCropRect(
                     region.rect,
-                    among: regions,
+                    among: cropRegions,
                     imageSize: imageSize
                 )
             )
@@ -582,7 +592,98 @@ struct VisionOCRService: Sendable {
                     || intersectionOverUnion($0.rect, candidate.rect) >= 0.50
             }
         }
-        return Array((primary + supplemental).prefix(12))
+        return primary + supplemental
+    }
+
+    /// Koharu sends every detector TextRegion to Manga OCR. The iOS port keeps
+    /// CPU work bounded, but scales the historical 12-request budget with the
+    /// detector's actual long-page windows and distributes capped work across
+    /// the full page so confidence-heavy upper slices cannot starve the tail.
+    private static func japaneseLongPageMangaOCRRegions(
+        _ regions: [JapanesePixelFirstRegion],
+        detectorSliceCount: Int
+    ) -> [JapanesePixelFirstRegion] {
+        let requestsPerSlice = 12
+        let maximumRequests = 48
+        let requestLimit = min(
+            maximumRequests,
+            max(detectorSliceCount, 1) * requestsPerSlice
+        )
+        let bandCount = min(max(detectorSliceCount, 1), requestLimit)
+        let primary = regions.filter {
+            if case .comicTextBubble = $0.detector { return true }
+            return false
+        }
+        var selected = verticallyBalancedJapaneseMangaOCRRegions(
+            primary,
+            bandCount: bandCount,
+            limit: requestLimit
+        )
+        let remaining = requestLimit - selected.count
+        if remaining > 0 {
+            let supplemental = regions.filter {
+                if case .vision = $0.detector { return true }
+                return false
+            }
+            selected.append(contentsOf: verticallyBalancedJapaneseMangaOCRRegions(
+                supplemental,
+                bandCount: bandCount,
+                limit: remaining
+            ))
+        }
+        return selected
+    }
+
+    private static func verticallyBalancedJapaneseMangaOCRRegions(
+        _ regions: [JapanesePixelFirstRegion],
+        bandCount: Int,
+        limit: Int
+    ) -> [JapanesePixelFirstRegion] {
+        guard limit > 0, !regions.isEmpty else { return [] }
+        guard regions.count > limit else { return regions }
+
+        let boundedBandCount = min(max(bandCount, 1), limit)
+        var bands = Array(
+            repeating: [JapanesePixelFirstRegion](),
+            count: boundedBandCount
+        )
+        for region in regions {
+            let normalizedCenter = min(max(region.rect.midY, 0), 1)
+            let bandIndex = min(
+                Int(normalizedCenter * Double(boundedBandCount)),
+                boundedBandCount - 1
+            )
+            bands[bandIndex].append(region)
+        }
+
+        let baseQuota = limit / boundedBandCount
+        let extraQuota = limit % boundedBandCount
+        var selected: [JapanesePixelFirstRegion] = []
+        var overflow: [JapanesePixelFirstRegion] = []
+        selected.reserveCapacity(limit)
+        for (index, band) in bands.enumerated() {
+            let quota = baseQuota + (index < extraQuota ? 1 : 0)
+            selected.append(contentsOf: band.prefix(quota))
+            overflow.append(contentsOf: band.dropFirst(quota))
+        }
+        if selected.count < limit {
+            overflow.sort(by: isBetterJapaneseMangaOCRRegion)
+            selected.append(contentsOf: overflow.prefix(limit - selected.count))
+        }
+        return selected
+    }
+
+    private static func isBetterJapaneseMangaOCRRegion(
+        _ lhs: JapanesePixelFirstRegion,
+        _ rhs: JapanesePixelFirstRegion
+    ) -> Bool {
+        if lhs.detectorConfidence != rhs.detectorConfidence {
+            return lhs.detectorConfidence > rhs.detectorConfidence
+        }
+        if lhs.rect.y != rhs.rect.y { return lhs.rect.y < rhs.rect.y }
+        if lhs.rect.x != rhs.rect.x { return lhs.rect.x > rhs.rect.x }
+        if lhs.rect.height != rhs.rect.height { return lhs.rect.height > rhs.rect.height }
+        return lhs.rect.width < rhs.rect.width
     }
 
     /// Use Vision's pixel-first text rectangle detector as a bounded recovery

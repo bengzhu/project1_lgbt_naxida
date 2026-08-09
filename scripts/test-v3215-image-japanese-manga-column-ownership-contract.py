@@ -61,7 +61,7 @@ class JapaneseMangaColumnOwnershipContractTests(unittest.TestCase):
         )
         for marker in [
             "japaneseMangaOCRCropRect(",
-            "among: regions",
+            "among: cropRegions",
             "textRect: region.rect",
             "regions.prefix(12)",
         ]:

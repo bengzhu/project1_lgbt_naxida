@@ -153,7 +153,12 @@ class JapaneseComicDetectorSlicerContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3216(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.217", "3.217"])
+        self.assertEqual(len(versions), 2)
+        self.assertEqual(len(set(versions)), 1)
+        self.assertGreaterEqual(
+            tuple(int(part) for part in versions[0].split(".")),
+            (3, 217),
+        )
         previous = (
             "python3 -B "
             "scripts/test-v3216-image-japanese-comic-text-detector-contract.py"

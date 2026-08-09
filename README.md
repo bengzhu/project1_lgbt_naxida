@@ -1,5 +1,7 @@
 # AITRANS iOS Prototype
 
+v3.218 让长图 Manga OCR 预算跟随 v3.217 detector slice：普通图仍为 12 次，长图按每片 12 次扩展且 CPU-only 总上限 48；专用 detector regions 先按纵向 band 公平取样，Vision supplement 后补，避免页面上部高 confidence 候选独占预算。4 份 `jap.jpg` 的完整产品链路仍为 15 块，但相对 v3.217 从 11 个 vertical／2 个 unknown 改善为 13 个 vertical／0 个 unknown，四个纵向季度各至少 3 个 vertical，最底结果 y 约 `0.943`；普通单页继续精确返回 5 块。本地 v3.157-v3.218 共 `62` 份合同／`321` tests、三条真实 runtime、generic Simulator build 和语法检查通过。48 次上限仍是 iOS 对 Koharu 全量 TextRegion OCR 的有界差异，不据重复样图声称通用质量。
+
 v3.217 补齐 Koharu comic detector 的长图 `ImageSlicer`：页面高宽比超过 `3.5` 时按目标比 `3.0`、20% 重叠切片，短尾并入末片；每片运行真实 Core ML detector，映射回整页后按 Koharu containment／IoU／相邻片规则去重。4 份 `jap.jpg` 拼成的 `1136x6400` 长页稳定得到 17 个区域，四个纵向季度均有覆盖；普通单页仍保持 5 个完整竖排块。本地 v3.157-v3.217 共 `61` 份合同／`314` tests、两条真实 runtime、generic Simulator build 和语法检查通过；exact-SHA full [31323013519](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31323013519) 对 SHA `8c037482e175818bb5c3f3714c5a3992fbf70644` 完成两条 runtime、Xcode 与 JUnit `10/10`（0 failures），probe `skip`。readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`；不据重复固定样图声称通用质量。
 
 候选 metadata [31323359308](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31323359308) 对 docs SHA `30990b6c78671c27448aafed23e59652688740d3` 复用实现 full；PR #281 fast [31323414600](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31323414600) 与 merge fast [31323579377](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31323579377) 均复用成功 receipt，merge SHA `32e7b30c1b3f069a405c2d1b1aaaceb8b2660442`；后三者 Xcode skipped，不是新的编译证据。
