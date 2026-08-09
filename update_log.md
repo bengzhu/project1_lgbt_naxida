@@ -15,7 +15,7 @@
 
 - `test/jap.jpg` 的产品链路仍返回 12 个竖排块；`今度こそこの暴れ` + `の爆乳を` 变为 `今度こそ` + `この爆乳を`，`そのせいでつまりまーズ` + `うまんねー女に` 变为 `そのせいで` + `つまんねー女に`，`いします` 变为 `お願いします`。
 - 固定 fixture 仍漏读右上第三列 `やがって...`，且保留 `．では最後に`、`こっ、` 等错误；没有多图 ground-truth corpus，因此不声明通用日语 OCR、翻译或识别质量。
-- 本地 v3.157–v3.215 共 `59` 份合同／`299` tests、真实 Core ML runtime、generic Simulator Xcode build、`plutil`、workflow YAML 与 `git diff --check` 通过；exact-SHA 云端 full 待提交。probe 仍为 `skip`，Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- 本地 v3.157–v3.215 共 `59` 份合同／`299` tests、真实 Core ML runtime、generic Simulator Xcode build、`plutil`、workflow YAML 与 `git diff --check` 通过；exact-SHA full [31317279248](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31317279248) 对 SHA `a9433f2649c22388aa54a72530c2c8db1404fcdd` 完成真实 runtime、Xcode 与 JUnit `10/10`（0 failures）。probe 仍为 `skip`，Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
 ## v3.214：内置 Koharu Manga OCR Core ML
 
