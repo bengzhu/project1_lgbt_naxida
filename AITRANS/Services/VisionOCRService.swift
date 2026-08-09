@@ -126,11 +126,14 @@ struct VisionOCRService: Sendable {
         automaticallyDetectsLanguage: Bool,
         rotationApplied: Int,
         postProcessJapaneseText: Bool = false,
+        usesLanguageCorrection: Bool = true,
         observationRole: VisionOCRObservationRole = .page
     ) throws -> [VisionOCRObservation] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
+        // Koharu's Manga OCR crop inference decodes directly; crop callers can
+        // disable Vision's language rewrite while page reconnaissance keeps it.
+        request.usesLanguageCorrection = usesLanguageCorrection
         request.automaticallyDetectsLanguage = automaticallyDetectsLanguage
         request.minimumTextHeight = minimumTextHeight
 
@@ -1288,6 +1291,7 @@ struct VisionOCRService: Sendable {
                   automaticallyDetectsLanguage: false,
                   rotationApplied: angle,
                   postProcessJapaneseText: true,
+                  usesLanguageCorrection: false,
                   observationRole: observationRole
               ) else {
             return []
@@ -1413,6 +1417,7 @@ struct VisionOCRService: Sendable {
                   automaticallyDetectsLanguage: false,
                   rotationApplied: angle,
                   postProcessJapaneseText: true,
+                  usesLanguageCorrection: false,
                   observationRole: .verticalLine
               ) else {
             return nil
