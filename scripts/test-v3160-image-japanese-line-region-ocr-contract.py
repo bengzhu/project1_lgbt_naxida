@@ -56,9 +56,15 @@ class JapaneseLineRegionOCRContractTests(unittest.TestCase):
             "blocks: Array(verticalBlocks)",
         ]:
             self.assertIn(marker, self.crop)
+        self.assertIn("overlapRatio(observation.rect, block.rect) >= 0.25", self.line)
+        self.assertTrue(
+            "isVerticalLineCandidate(observation.rect)" in self.line
+            or (
+                "let lineRegion = observation.lineRegionRect ?? observation.rect" in self.line
+                and "isVerticalLineCandidate(lineRegion)" in self.line
+            )
+        )
         for marker in [
-            "overlapRatio(observation.rect, block.rect) >= 0.25",
-            "isVerticalLineCandidate(observation.rect)",
             ".prefix(24)",
             "expandedVerticalLineCropRect",
         ]:

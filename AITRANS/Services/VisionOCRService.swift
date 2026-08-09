@@ -671,8 +671,9 @@ struct VisionOCRService: Sendable {
         var candidates: [VisionOCRObservation] = []
         for block in blocks {
             candidates.append(contentsOf: safeObservations.filter { observation in
+                let lineRegion = observation.lineRegionRect ?? observation.rect
                 overlapRatio(observation.rect, block.rect) >= 0.25
-                    && isVerticalLineCandidate(observation.rect)
+                    && isVerticalLineCandidate(lineRegion)
             })
         }
 
