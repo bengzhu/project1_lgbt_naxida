@@ -377,7 +377,13 @@ struct VisionOCRService: Sendable {
 
         let verticalBlockArray = Array(verticalBlocks)
         var refined: [VisionOCRObservation] = []
-        refined.reserveCapacity(verticalBlockArray.count * 2)
+        refined.reserveCapacity(verticalBlockArray.count * 2 + 12)
+        refined.append(contentsOf: Self.recognizeJapanesePixelFirstVerticalCrops(
+            in: image,
+            observations: safeObservations,
+            verticalBlocks: verticalBlockArray,
+            recognitionLanguages: recognitionLanguages
+        ))
         refined.append(contentsOf: Self.recognizeJapaneseVerticalTileFallback(
             in: image,
             verticalBlocks: verticalBlockArray,
@@ -472,6 +478,192 @@ struct VisionOCRService: Sendable {
         }
 
         return refined
+    }
+
+    /// Use Vision's pixel-first text rectangle detector as a bounded proxy for
+    /// Koharu's detector -> TextRegion -> crop/OCR boundary. The detector only
+    /// contributes geometry; recognition still runs through the existing
+    /// Japanese crop helper and remains isolated from model/artifact paths.
+    private static func recognizeJapanesePixelFirstVerticalCrops(
+        in image: CGImage,
+        observations: [VisionOCRObservation],
+        verticalBlocks: [ImageOCRLayoutBlock],
+        recognitionLanguages: [String]
+    ) -> [VisionOCRObservation] {
+        let candidates = detectJapanesePixelFirstVerticalRegions(
+            in: image,
+            observations: observations,
+            verticalBlocks: verticalBlocks
+        )
+        guard !candidates.isEmpty else { return [] }
+
+        let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
+        var refined: [VisionOCRObservation] = []
+        refined.reserveCapacity(candidates.count * 2)
+        var orientationFallbacksRemaining = 4
+
+        for candidate in candidates.prefix(12) {
+            let cropRect = expandedVerticalLineCropRect(
+                candidate.rect,
+                imageSize: imageSize
+            )
+            guard let crop = cropImage(image, normalizedRect: cropRect),
+                  crop.image.width >= 2,
+                  crop.image.height >= 2 else {
+                continue
+            }
+
+            let preparedCrop = prepareJapaneseCropForVision(crop.image)
+            let primary = recognizeJapaneseCropPass(
+                crop: preparedCrop.image,
+                cropRect: crop.rect,
+                originalImage: image,
+                angle: koharuPreferredJapaneseVerticalLineOrientation(),
+                recognitionLanguages: recognitionLanguages,
+                minimumTextHeight: 0.002,
+                cropScale: preparedCrop.scale,
+                observationRole: .crop
+            )
+            refined.append(contentsOf: primary)
+
+            if orientationFallbacksRemaining > 0,
+               needsJapaneseOrientationFallback(primary) {
+                orientationFallbacksRemaining -= 1
+                refined.append(contentsOf: recognizeJapaneseCropPass(
+                    crop: preparedCrop.image,
+                    cropRect: crop.rect,
+                    originalImage: image,
+                    angle: oppositeJapaneseOrientation(
+                        koharuPreferredJapaneseVerticalLineOrientation()
+                    ),
+                    recognitionLanguages: recognitionLanguages,
+                    minimumTextHeight: 0.002,
+                    cropScale: preparedCrop.scale,
+                    observationRole: .crop
+                ))
+            }
+        }
+
+        return deduplicateJapaneseObservations(refined)
+    }
+
+    /// Detect text rectangles on both rotated page views, map them back to the
+    /// source image, and retain only uncovered vertical candidates. This is a
+    /// geometry-only fallback: it does not claim detector confidence or OCR
+    /// quality until the normal crop pass produces a usable observation.
+    private static func detectJapanesePixelFirstVerticalRegions(
+        in image: CGImage,
+        observations: [VisionOCRObservation],
+        verticalBlocks: [ImageOCRLayoutBlock]
+    ) -> [JapanesePixelFirstRegion] {
+        guard image.width >= 8, image.height >= 8 else { return [] }
+
+        let existingVerticalRegions = observations.compactMap { observation -> ImageOCRLayoutRect? in
+            guard observation.sourceDirectionHint == .vertical
+                || observation.observationRole == .verticalLine else {
+                return nil
+            }
+            return observation.lineRegionRect ?? observation.rect
+        }
+        var candidates: [JapanesePixelFirstRegion] = []
+        for angle in [90, 270] {
+            guard let rotated = try? rotatedImage(image, angle: angle) else {
+                continue
+            }
+
+            let request = VNDetectTextRectanglesRequest()
+            request.reportCharacterBoxes = false
+            let handler = VNImageRequestHandler(cgImage: rotated, options: [:])
+            guard (try? handler.perform([request])) != nil else { continue }
+
+            for detection in request.results ?? [] {
+                guard let rotatedRect = normalizedRect(from: detection.boundingBox) else {
+                    continue
+                }
+                let mappedRect = mapRotatedRegionRect(
+                    rotatedRect,
+                    rotatedImage: rotated,
+                    originalImage: image,
+                    angle: angle
+                )
+                guard isJapanesePixelFirstVerticalCandidate(mappedRect),
+                      !verticalBlocks.contains(where: {
+                          japanesePixelDetectorRegionIsCovered($0.rect, by: mappedRect)
+                      }),
+                      !existingVerticalRegions.contains(where: {
+                          japanesePixelDetectorRegionIsCovered($0, by: mappedRect)
+                      }) else {
+                    continue
+                }
+                candidates.append(
+                    JapanesePixelFirstRegion(
+                        rect: mappedRect,
+                        detectorRotation: angle
+                    )
+                )
+            }
+        }
+
+        var unique: [JapanesePixelFirstRegion] = []
+        for candidate in candidates.sorted(by: { lhs, rhs in
+            if lhs.rect.height != rhs.rect.height {
+                return lhs.rect.height > rhs.rect.height
+            }
+            if lhs.rect.width != rhs.rect.width {
+                return lhs.rect.width < rhs.rect.width
+            }
+            if lhs.rect.y != rhs.rect.y {
+                return lhs.rect.y < rhs.rect.y
+            }
+            if lhs.rect.x != rhs.rect.x {
+                return lhs.rect.x > rhs.rect.x
+            }
+            return lhs.detectorRotation == 270 && rhs.detectorRotation != 270
+        }) {
+            guard !unique.contains(where: {
+                isSameJapanesePixelFirstRegion(candidate, as: $0)
+            }) else {
+                continue
+            }
+            unique.append(candidate)
+            if unique.count == 12 { break }
+        }
+        return unique
+    }
+
+    private static func isJapanesePixelFirstVerticalCandidate(
+        _ rect: ImageOCRLayoutRect
+    ) -> Bool {
+        let aspectRatio = rect.height / max(rect.width, 0.001)
+        return rect.width <= 0.30
+            && rect.height >= 0.025
+            && aspectRatio >= 1.15
+    }
+
+    private static func japanesePixelDetectorRegionIsCovered(
+        _ block: ImageOCRLayoutRect,
+        by candidate: ImageOCRLayoutRect
+    ) -> Bool {
+        let horizontalIntersection = max(
+            0,
+            min(block.maxX, candidate.maxX) - max(block.x, candidate.x)
+        )
+        let horizontalCoverage = horizontalIntersection
+            / max(min(block.width, candidate.width), 0.001)
+        let verticalIntersection = max(
+            0,
+            min(block.maxY, candidate.maxY) - max(block.y, candidate.y)
+        )
+        let verticalCoverage = verticalIntersection / max(candidate.height, 0.001)
+        return horizontalCoverage >= 0.45 && verticalCoverage >= 0.60
+    }
+
+    private static func isSameJapanesePixelFirstRegion(
+        _ candidate: JapanesePixelFirstRegion,
+        as other: JapanesePixelFirstRegion
+    ) -> Bool {
+        intersectionOverUnion(candidate.rect, other.rect) >= 0.45
+            || overlapRatio(candidate.rect, other.rect) >= 0.65
     }
 
     /// Recover Japanese vertical columns that the page-level Vision passes did
@@ -2331,6 +2523,11 @@ private struct VisionOCRObservation: Equatable, Sendable {
 private struct JapaneseVerticalCropFragment: Sendable {
     var observation: VisionOCRObservation
     var rect: ImageOCRLayoutRect
+}
+
+private struct JapanesePixelFirstRegion: Sendable {
+    var rect: ImageOCRLayoutRect
+    var detectorRotation: Int
 }
 
 private struct ImageOCRLayoutPoint: Equatable, Sendable {
