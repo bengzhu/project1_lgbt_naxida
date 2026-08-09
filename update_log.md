@@ -2,7 +2,7 @@
 
 日期：2026-08-09
 
-状态：Agent X 继续参考 Koharu `extract_text_block_regions` 的紧 line-region 边界。普通图片日语竖排 line candidate 现在以 `lineRegionRect ?? rect` 执行高宽比／高度门控；与 vertical block 的 overlap 仍使用宽 request-level `rect`，避免把布局／去重外框误替换成局部 geometry。工程正式版本为 `MARKETING_VERSION=3.202`，候选、PR 与 merge 尚待完成，`main` 未触碰。
+状态：Agent X 继续参考 Koharu `extract_text_block_regions` 的紧 line-region 边界。普通图片日语竖排 line candidate 现在以 `lineRegionRect ?? rect` 执行高宽比／高度门控；与 vertical block 的 overlap 仍使用宽 request-level `rect`，避免把布局／去重外框误替换成局部 geometry。工程正式版本为 `MARKETING_VERSION=3.202`，候选、PR 与 merge 已完成，`main` 未触碰。
 
 核心变更：
 
@@ -14,7 +14,8 @@
 
 云端证据：
 
-- 实现 exact-SHA full [31286506178](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31286506178)：commit `2f198f9f12e62c5e10fe7a73b76cdc0af9d69107`，`validationProfile=full`，Xcode build 成功，JUnit `10/10` 且 0 failures；候选 metadata、PR fast 与 merge fast 待后续流程完成。
+- 实现 exact-SHA full [31286506178](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31286506178)：commit `2f198f9f12e62c5e10fe7a73b76cdc0af9d69107`，`validationProfile=full`，Xcode build 成功，JUnit `10/10` 且 0 failures。
+- 候选 metadata [31286843872](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31286843872)：candidate SHA `a2ddc0819ecc9d92c6cbcb1d21d9473d8d2b1a94`，`validationProfile=fast`，复用实现 full；PR #266 fast [31286875844](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31286875844) 复用候选 receipt；merge fast [31286908329](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31286908329) 以 merge SHA `839c5e9d9f5705f50c85d65e7085157c5b876b07` 复用候选 receipt，后三者 `receiptPropagationAllowed=true` 或 PR fast metadata 传播，Xcode skipped，不是新的编译证据。
 
 ## v3.201：Koharu 日语竖排 line orientation provenance
 

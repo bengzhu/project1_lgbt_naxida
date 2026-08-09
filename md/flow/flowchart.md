@@ -1,5 +1,5 @@
 # 项目流程图
-v3.202 日语竖排 line candidate → 紧 `lineRegionRect ?? rect` 几何门控（block overlap 仍用宽 `rect`）→ `verticalLine`／Koharu `rotate270` 主方向 → perspective／轴对齐 crop → 映射／合成／去重／布局／批翻译／渲染；实现 full `31286506178`（SHA `2f198f9f12e62c5e10fe7a73b76cdc0af9d69107`）Xcode/JUnit `10/10` 通过，候选 metadata、PR 与 merge 待完成，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。
+v3.202 日语竖排 line candidate → 紧 `lineRegionRect ?? rect` 几何门控（block overlap 仍用宽 `rect`）→ `verticalLine`／Koharu `rotate270` 主方向 → perspective／轴对齐 crop → 映射／合成／去重／布局／批翻译／渲染；实现 full `31286506178`（SHA `2f198f9f12e62c5e10fe7a73b76cdc0af9d69107`）Xcode/JUnit `10/10` 通过，候选 metadata `31286843872`、PR #266 fast `31286875844`、merge fast `31286908329` 均复用成功 receipt，merge SHA `839c5e9d9f5705f50c85d65e7085157c5b876b07`，后三者 Xcode skipped，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。
 
 v3.201 日语竖排 line → `verticalLine` provenance → Koharu `rotate270` 主方向 → perspective／轴对齐 crop → 映射／合成／去重保持方向 → 弱结果 90° fallback → 布局／批翻译／渲染；page、block、tile 路径不变。实现 full `31262554391` 已通过 Xcode/JUnit `10/10`；候选 metadata `31262979444`、PR #265 fast `31263017146`、merge fast `31263072991` 均复用成功 receipt，merge SHA `3aac10326a987a47ea1786cd76c37b96b3ca9b36`，真实 Koharu 工件仍缺失，不声称 OCR／翻译质量提升。
 
