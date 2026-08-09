@@ -15,7 +15,7 @@
 
 - 当前产品 `VisionOCRService + ComicTextBubbleDetectorService + MangaOCRService + ImageOCRLayoutEngine` 对 `test/jap.jpg` 返回精确 5 个竖排块：`前は生意気に俺の誘い断りやがって...`、`今度こそこの爆乳を持ち帰る！`、`そのせいでつまんねー女に絡まれるし...`、`...では最後に監督より挨拶をお願いします`、`こっ、`。这补回 v3.215 仍漏失的 `やがって...`，并把相邻片段合并为完整 detector block。
 - 本地 v3.157-v3.216 共 `60` 份合同／`307` tests、真实 Core ML runtime、generic iOS Simulator Xcode build、`plutil`、JSON/YAML 解析与 `git diff --check` 通过。
-- exact-SHA 云端 full 必须在实现提交后再运行，目前尚无云端编译证据；probe 继续 `skip`。翻译、渲染、非日语、Store、metrics 与 output 边界不变，Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。单一固定 fixture 不足以证明通用日语 OCR、翻译或识别质量。
+- exact-SHA full [31321620928](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31321620928) 对实现 SHA `e25bf798323dbbabe154c1849436711d90ab8888` 以 `candidate_development_push` 完成真实 detector/Manga OCR runtime、Xcode 和 JUnit `10/10`（0 failures），并发布 `AITRANS CI/full-validation = success` receipt；probe 继续 `skip`。翻译、渲染、非日语、Store、metrics 与 output 边界不变，Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。单一固定 fixture 不足以证明通用日语 OCR、翻译或识别质量。
 
 ## v3.215：Manga OCR 相邻竖列 ownership
 
