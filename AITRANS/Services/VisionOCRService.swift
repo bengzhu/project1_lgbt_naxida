@@ -598,7 +598,7 @@ struct VisionOCRService: Sendable {
             }
 
             let request = VNDetectTextRectanglesRequest()
-            request.reportCharacterBoxes = false
+            request.reportCharacterBoxes = true
             let handler = VNImageRequestHandler(cgImage: rotated, options: [:])
             guard (try? handler.perform([request])) != nil else { continue }
 
@@ -606,8 +606,15 @@ struct VisionOCRService: Sendable {
                 guard let rotatedRect = normalizedRect(from: detection.boundingBox) else {
                     continue
                 }
-                let mappedRect = mapRotatedRegionRect(
+                let mappedRequestRect = mapRotatedRegionRect(
                     rotatedRect,
+                    rotatedImage: rotated,
+                    originalImage: image,
+                    angle: angle
+                )
+                let mappedRect = japanesePixelDetectorCharacterEnvelope(
+                    detection,
+                    fallback: mappedRequestRect,
                     rotatedImage: rotated,
                     originalImage: image,
                     angle: angle
@@ -658,6 +665,53 @@ struct VisionOCRService: Sendable {
             if unique.count == 12 { break }
         }
         return unique
+    }
+
+    /// Prefer the detector's character-level envelope as the closest Vision
+    /// equivalent to Koharu's tight line polygon. A broad request rectangle
+    /// remains the fallback when Vision omits character boxes or returns an
+    /// isolated/invalid set, so detector recall never depends on this hint.
+    private static func japanesePixelDetectorCharacterEnvelope(
+        _ detection: VNTextObservation,
+        fallback: ImageOCRLayoutRect,
+        rotatedImage: CGImage,
+        originalImage: CGImage,
+        angle: Int
+    ) -> ImageOCRLayoutRect {
+        let characterRects = (detection.characterBoxes ?? []).compactMap {
+            character -> ImageOCRLayoutRect? in
+            guard let rotatedRect = normalizedRect(from: character.boundingBox) else {
+                return nil
+            }
+            return mapRotatedRegionRect(
+                rotatedRect,
+                rotatedImage: rotatedImage,
+                originalImage: originalImage,
+                angle: angle
+            ).normalizedToUnit()
+        }
+        guard characterRects.count >= 2,
+              let envelope = characterRects
+                .dropFirst()
+                .reduce(characterRects[0], { $0.union($1) })
+                .normalizedToUnit() else {
+            return fallback
+        }
+
+        let envelopeArea = envelope.width * envelope.height
+        let fallbackArea = max(fallback.width * fallback.height, 0.0001)
+        let areaRatio = envelopeArea / fallbackArea
+        let horizontalCoverage = envelope.width / max(fallback.width, 0.001)
+        let verticalCoverage = envelope.height / max(fallback.height, 0.001)
+        guard isJapanesePixelFirstVerticalCandidate(envelope),
+              overlapRatio(envelope, fallback) >= 0.80,
+              areaRatio >= 0.25,
+              areaRatio <= 1.05,
+              horizontalCoverage >= 0.35,
+              verticalCoverage >= 0.60 else {
+            return fallback
+        }
+        return envelope
     }
 
     private static func isJapanesePixelFirstVerticalCandidate(
