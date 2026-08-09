@@ -1,3 +1,21 @@
+## v3.212：Koharu 日语 crop raw recognition 边界
+
+日期：2026-08-09
+
+状态：Agent X 将普通图片日语局部 crop reread 对齐到 Koharu `MangaOcr::inference` 的直接解码边界。block、轴对齐 line 与 perspective line 继续使用 Vision 作为当前设备 OCR 引擎，但在识别局部日语 crop 时关闭 `usesLanguageCorrection`，避免 Vision 在 Koharu 风格日语后处理前改写短句、拟声词或碎片；页级 reconnaissance 和普通语言 OCR 仍保留默认 correction。
+
+核心变更：
+
+- `recognizeObservations` 新增默认开启的 `usesLanguageCorrection` 参数；日语 `recognizeJapaneseCropPass` 与 `recognizeJapanesePerspectiveLineCrop` 显式传入 `false`，page caller 不传参并继续使用 `true`。
+- request helper 先显式设置 `request.usesLanguageCorrection = true`，只在 caller opt out 时设为 `false`；该写法保留 v3.156 的普通路径合同，同时让 v3.212 合同验证受限开关两侧语义。
+- 新增 `scripts/test-v3212-image-japanese-koharu-raw-crop-recognition-contract.py` 并接入 CI；不改变 crop geometry、方向、预算、布局、去重、翻译、渲染、Store、probe、metrics 或 `output/`。
+
+验证与边界：
+
+- 本地 v3.157-v3.212 共 `56/56` 个合同通过；v3.156、v3.157、v3.158 与 v3.212 定向合同也通过，`git diff --check` 与 `plutil -lint AITRANS.xcodeproj/project.pbxproj` 通过。
+- exact-SHA full [31302657064](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31302657064) 对 SHA `bd7c510b99ac78c22ca330ae2e125a5193610fe4` 以 `validationProfile=full`、`validationReason=candidate_development_push` 完成 Xcode/static/UI/Speech/home/paste，JUnit `10/10` 且 0 failures；这是本轮新的编译证据。
+- v3.157 候选 `894c7063e18a6dc40ea047dca015e7cf73af8e65`／merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 与 v3.158 候选 `ee21c07d5175b38b41161822043b7ce1bbeea3ff`／merge `c940815a43e300685667d8b01888e53af910ec9c` 均已在当前基线祖先链上，无待 cherry-pick 或活动分支；两份历史合同继续通过。
+- probe 保持 `skip`；真实 Koharu 四件套仍缺失，readiness 为 `manifestMissing / stopUntilArtifactsProvided`。本轮没有真实图片质量 corpus 或探针结果，不声称日语 OCR、翻译、识别或 Koharu 质量提升。
 
 ## v3.210：图片翻译失败 block 受限重试
 

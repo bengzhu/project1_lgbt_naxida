@@ -1,4 +1,6 @@
 # 项目流程图
+v3.212 page OCR／日语 page reconnaissance（`usesLanguageCorrection=true`）→ 日语 block／line／perspective line crop reread（`false`）→ Koharu 风格 post-process → 映射／去重／布局／批翻译／渲染；普通语言和 page 默认 correction 不变，v3.156 旧合同兼容。v3.157/v3.158 已合入、无活动分支；本地 v3.157-v3.212 合同 `56/56`，exact-SHA full `31302657064`（SHA `bd7c510b99ac78c22ca330ae2e125a5193610fe4`，Xcode/JUnit `10/10`）通过；probe `skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR／翻译质量提升。
+
 v3.211 日语 page reconnaissance（`ja-JP`/`ja`/`en-US`/`en`）→ vertical line/block/tile reread（仅 `ja-JP`/`ja`，profile 缺失时安全跳过）→ 既有 line-first／pixel detector／tile／block fallback → 映射／去重／布局／批翻译／渲染；full `31300669764`（SHA `c0c26aaddb3db641c59cb878d1434207b9879f54`，Xcode/JUnit `10/10`）通过，probe `skip`，readiness `manifestMissing / stopUntilArtifactsProvided`。
 
 v3.210 图片翻译失败／部分失败 → 保留 OCR blocks、geometry 与已完成译文 → 空译文 block 单独 retry → 日本語 `[N]` batch／其他语言单块翻译 → retry/content ID 防旧结果写回 → 全部完成才 translated／重绘导出；结果行、局部预览与 VoiceOver action 受状态门控，绝不重跑 Vision OCR；full `31299660925`（SHA `b9ec296d0cdafbe0bfbbe0aebc90e1255a44d6d2`，Xcode/JUnit `10/10`）通过，候选 metadata `31300023503` 复用成功 full，PR #274 fast `31300071078` 与 merge fast `31300107560` 复用候选 full，merge SHA `ee7e41f0679fd999b8f9337a3bf0622742e095c3`，后续 fast Xcode skipped；v3.157/v3.158 已合入当前基线，无活动分支，readiness `manifestMissing / stopUntilArtifactsProvided`，probe `skip`。
