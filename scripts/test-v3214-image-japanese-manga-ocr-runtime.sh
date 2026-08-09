@@ -41,11 +41,30 @@ import sys
 
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
 match = re.search(r"^blocks=(\d+)$", text, re.MULTILINE)
-if match is None or int(match.group(1)) < 10:
-    raise SystemExit(f"expected at least 10 OCR blocks, got: {text}")
-for expected in ["前は生意気に", "持ち帰る", "監督より挨拶を"]:
+if match is None or int(match.group(1)) != 12:
+    raise SystemExit(f"expected exactly 12 OCR blocks, got: {text}")
+for expected in [
+    "前は生意気に",
+    "俺の誘い断り",
+    "今度こそ",
+    "この爆乳を",
+    "持ち帰る",
+    "そのせいで",
+    "つまんねー女に",
+    "絡まれるし",
+    "監督より挨拶を",
+    "お願いします",
+]:
     if expected not in text:
         raise SystemExit(f"missing expected Manga OCR text: {expected}")
+for rejected in [
+    "今度こそこの暴れ",
+    "そのせいでつまりまーズ",
+    "うまんねー女に",
+    "vertical\tいします",
+]:
+    if rejected in text:
+        raise SystemExit(f"retained cross-column or truncated Manga OCR text: {rejected}")
 if not all(line.startswith("vertical\t") for line in text.splitlines()[1:] if line):
     raise SystemExit(f"expected vertical provenance for every sample block: {text}")
 PY

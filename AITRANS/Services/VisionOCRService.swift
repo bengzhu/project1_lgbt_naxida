@@ -512,17 +512,20 @@ struct VisionOCRService: Sendable {
         image: CGImage
     ) async -> [VisionOCRObservation] {
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
-        let regions = detectJapanesePixelFirstVerticalRegions(
-            in: image,
-            observations: [],
-            verticalBlocks: [],
-            lineObservations: []
+        let regions = alignPartialJapaneseMangaOCRColumns(
+            detectJapanesePixelFirstVerticalRegions(
+                in: image,
+                observations: [],
+                verticalBlocks: [],
+                lineObservations: []
+            )
         )
         let requests = regions.prefix(12).map { region in
             MangaOCRRequest(
                 textRect: region.rect,
-                cropRect: expandedVerticalLineCropRect(
+                cropRect: japaneseMangaOCRCropRect(
                     region.rect,
+                    among: regions,
                     imageSize: imageSize
                 )
             )
@@ -682,7 +685,8 @@ struct VisionOCRService: Sendable {
                 candidates.append(
                     JapanesePixelFirstRegion(
                         rect: mappedRect,
-                        detectorRotation: angle
+                        detectorRotation: angle,
+                        characterCount: detection.characterBoxes?.count ?? 0
                     )
                 )
             }
@@ -739,12 +743,16 @@ struct VisionOCRService: Sendable {
             ).normalizedToUnit()
         }
         guard characterRects.count >= 2,
-              let envelope = characterRects
+              let broadEnvelope = characterRects
                 .dropFirst()
                 .reduce(characterRects[0], { $0.union($1) })
                 .normalizedToUnit() else {
             return fallback
         }
+        let envelope = japanesePixelDetectorRobustColumnEnvelope(
+            characterRects,
+            broadEnvelope: broadEnvelope
+        ) ?? broadEnvelope
 
         let envelopeArea = envelope.width * envelope.height
         let fallbackArea = max(fallback.width * fallback.height, 0.0001)
@@ -760,6 +768,137 @@ struct VisionOCRService: Sendable {
             return fallback
         }
         return envelope
+    }
+
+    /// Vision occasionally reports one character rectangle spanning two
+    /// neighboring manga columns. Koharu's detector line polygons stay tied to
+    /// one TextRegion, so use the median center and width of glyph-sized boxes
+    /// when that produces a materially tighter column. The broad envelope is
+    /// retained for vertical extent and remains the safe fallback.
+    private static func japanesePixelDetectorRobustColumnEnvelope(
+        _ characterRects: [ImageOCRLayoutRect],
+        broadEnvelope: ImageOCRLayoutRect
+    ) -> ImageOCRLayoutRect? {
+        guard characterRects.count >= 3,
+              let maximumWidth = characterRects.map(\.width).max(),
+              let maximumHeight = characterRects.map(\.height).max() else {
+            return nil
+        }
+        let glyphRects = characterRects.filter {
+            $0.width >= maximumWidth * 0.35
+                && $0.height >= maximumHeight * 0.35
+        }
+        guard glyphRects.count >= 3 else { return nil }
+
+        let medianCenter = median(glyphRects.map(\.midX))
+        let medianWidth = median(glyphRects.map(\.width))
+        guard medianWidth >= broadEnvelope.width * 0.35,
+              medianWidth <= broadEnvelope.width * 0.82 else {
+            return nil
+        }
+        return ImageOCRLayoutRect(
+            x: medianCenter - medianWidth / 2,
+            y: broadEnvelope.y,
+            width: medianWidth,
+            height: broadEnvelope.height
+        ).normalizedToUnit()
+    }
+
+    /// A rotated Vision detector can start a short column several glyphs below
+    /// its siblings even though their vertical ranges clearly belong to one
+    /// manga text group. Extend only small candidates toward the top of a
+    /// nearby, better-supported column; never alter the bottom or synthesize a
+    /// new column without detector geometry.
+    private static func alignPartialJapaneseMangaOCRColumns(
+        _ regions: [JapanesePixelFirstRegion]
+    ) -> [JapanesePixelFirstRegion] {
+        regions.map { candidate in
+            guard candidate.characterCount >= 2,
+                  candidate.characterCount <= 4 else {
+                return candidate
+            }
+            let neighbors = regions.filter { neighbor in
+                guard neighbor.characterCount > candidate.characterCount else {
+                    return false
+                }
+                let centerDistance = abs(neighbor.rect.midX - candidate.rect.midX)
+                let minimumSeparation = min(neighbor.rect.width, candidate.rect.width) * 0.55
+                let maximumSeparation = max(neighbor.rect.width, candidate.rect.width) * 2.0
+                let topGap = candidate.rect.y - neighbor.rect.y
+                let verticalIntersection = max(
+                    0,
+                    min(candidate.rect.maxY, neighbor.rect.maxY)
+                        - max(candidate.rect.y, neighbor.rect.y)
+                )
+                let verticalOverlap = verticalIntersection
+                    / max(min(candidate.rect.height, neighbor.rect.height), 0.001)
+                return centerDistance >= minimumSeparation
+                    && centerDistance <= maximumSeparation
+                    && topGap >= 0.012
+                    && topGap <= min(candidate.rect.height * 0.65, 0.06)
+                    && neighbor.rect.height >= candidate.rect.height * 0.75
+                    && verticalOverlap >= 0.60
+            }
+            guard let neighbor = neighbors.min(by: {
+                abs($0.rect.midX - candidate.rect.midX)
+                    < abs($1.rect.midX - candidate.rect.midX)
+            }) else {
+                return candidate
+            }
+            let alignedRect = ImageOCRLayoutRect(
+                x: candidate.rect.x,
+                y: neighbor.rect.y,
+                width: candidate.rect.width,
+                height: candidate.rect.maxY - neighbor.rect.y
+            ).normalizedToUnit()
+            guard let alignedRect,
+                  isJapanesePixelFirstVerticalCandidate(alignedRect) else {
+                return candidate
+            }
+            var aligned = candidate
+            aligned.rect = alignedRect
+            return aligned
+        }
+    }
+
+    /// Keep Koharu's font-relative padding, but stop horizontal expansion at
+    /// the ownership bisector of an adjacent vertical TextRegion. This prevents
+    /// Manga OCR from seeing a sibling column while preserving the complete
+    /// detector core and all vertical context.
+    private static func japaneseMangaOCRCropRect(
+        _ rect: ImageOCRLayoutRect,
+        among regions: [JapanesePixelFirstRegion],
+        imageSize: CGSize
+    ) -> ImageOCRLayoutRect {
+        let expanded = expandedVerticalLineCropRect(rect, imageSize: imageSize)
+        var left = expanded.x
+        var right = expanded.maxX
+        for neighbor in regions where neighbor.rect != rect {
+            let verticalIntersection = max(
+                0,
+                min(rect.maxY, neighbor.rect.maxY) - max(rect.y, neighbor.rect.y)
+            )
+            let verticalOverlap = verticalIntersection
+                / max(min(rect.height, neighbor.rect.height), 0.001)
+            let centerDistance = abs(neighbor.rect.midX - rect.midX)
+            guard verticalOverlap >= 0.50,
+                  centerDistance >= min(rect.width, neighbor.rect.width) * 0.55,
+                  centerDistance <= max(rect.width, neighbor.rect.width) * 2.25 else {
+                continue
+            }
+            let boundary = (rect.midX + neighbor.rect.midX) / 2
+            if neighbor.rect.midX < rect.midX {
+                left = max(left, min(boundary, rect.x))
+            } else {
+                right = min(right, max(boundary, rect.maxX))
+            }
+        }
+        return ImageOCRLayoutRect(
+            x: left,
+            y: expanded.y,
+            width: right - left,
+            height: expanded.height
+        ).normalizedToUnit() ?? expanded
     }
 
     private static func isJapanesePixelFirstVerticalCandidate(
@@ -2691,6 +2830,7 @@ private struct JapaneseVerticalCropFragment: Sendable {
 private struct JapanesePixelFirstRegion: Sendable {
     var rect: ImageOCRLayoutRect
     var detectorRotation: Int
+    var characterCount: Int
 }
 
 private struct ImageOCRLayoutPoint: Equatable, Sendable {
