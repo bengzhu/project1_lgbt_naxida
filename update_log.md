@@ -1,3 +1,21 @@
+## v3.202：Koharu 日语紧 line-region candidate gate
+
+日期：2026-08-09
+
+状态：Agent X 继续参考 Koharu `extract_text_block_regions` 的紧 line-region 边界。普通图片日语竖排 line candidate 现在以 `lineRegionRect ?? rect` 执行高宽比／高度门控；与 vertical block 的 overlap 仍使用宽 request-level `rect`，避免把布局／去重外框误替换成局部 geometry。工程正式版本为 `MARKETING_VERSION=3.202`，候选、PR 与 merge 尚待完成，`main` 未触碰。
+
+核心变更：
+
+- `recognizeJapaneseVerticalLineCrops` 仅将紧 `lineRegionRect` 送入既有 `isVerticalLineCandidate`；Vision 未提供字符范围时安全回退 `observation.rect`。
+- 新增 `scripts/test-v3202-image-japanese-koharu-tight-line-candidate-gate-contract.py`，v3.160 历史合同接受该等价 helper；其余 line crop、perspective、方向 provenance、映射、去重、布局、批翻译与渲染边界不变。
+- 该迁移只调整普通图片日语 line candidate 的几何筛选，不加载 Manga OCR/PaddleOCR 权重，不读取探针、ground truth 或真实 Koharu 工件。
+
+边界：实现 full 已通过；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 维持 `manifestMissing / stopUntilArtifactsProvided`。探针为 `skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 实现 exact-SHA full [31286506178](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31286506178)：commit `2f198f9f12e62c5e10fe7a73b76cdc0af9d69107`，`validationProfile=full`，Xcode build 成功，JUnit `10/10` 且 0 failures；候选 metadata、PR fast 与 merge fast 待后续流程完成。
+
 ## v3.201：Koharu 日语竖排 line orientation provenance
 
 日期：2026-08-08

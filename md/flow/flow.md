@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.202 日语竖排 line → 用紧 `lineRegionRect`（缺失时回退 `rect`）执行高宽比／高度 candidate gate → 仍以宽 `observation.rect` 与 block 做 overlap → perspective／轴对齐 crop → `verticalLine` provenance／rotate270 → 映射／合成／去重／布局／批翻译／渲染；实现 full `31286506178`（SHA `2f198f9f12e62c5e10fe7a73b76cdc0af9d69107`，Xcode/JUnit `10/10`）通过，候选 metadata、PR 与 merge 待完成，探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
+
 v3.201 日语竖排 line → 标记 `verticalLine` provenance → perspective／轴对齐 crop 以 Koharu `rotate270` 主方向读取 → 原图映射／合成／去重继续保留该方向偏好 → 弱结果按预算走 90° fallback → 布局／批翻译／渲染；page、block、tile 方向边界不变。实现 full `31262554391`（SHA `97120cf38d85729f605e3d8bdbc836a0271e1c99`，Xcode/JUnit `10/10`）通过；候选 metadata `31262979444`、PR #265 fast `31263017146`、merge fast `31263072991` 均复用成功 receipt，merge SHA `3aac10326a987a47ea1786cd76c37b96b3ca9b36`，探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
 
 v3.200 日语竖排 block → 收集相关 `lineRegionRect` 并与原 block 做 envelope union → 以原 `block.rect` 最小边作为 Koharu font-size anchor 计算方向感知 padding → block crop OCR／fallback → line reread／去重／布局／批翻译／渲染；避免 union envelope 变大造成过度扩边，缺失 geometry 回退旧 crop，非日语与其他路径不变。实现 full `31260969111`（SHA `c91858868cace78b846bd742f69a95f765b5737a`，Xcode/JUnit `10/10`）通过；候选 metadata `31261967648`、PR #264 fast `31261881073`、merge fast `31261995539` 均复用成功 receipt、Xcode skipped，探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
