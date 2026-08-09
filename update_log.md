@@ -1,3 +1,22 @@
+## v3.213：Koharu 日语 detector 字符紧 envelope
+
+日期：2026-08-09
+
+状态：Agent X 将普通图片日语 pixel-first detector 的宽 request rectangle 补齐为 Koharu `TextRegion.line_polygons` 风格的紧行几何消费。90°／270° Vision 侦察开启 character boxes；每个字符框单独映射回原图后合成 envelope，只有至少两个字符框且 envelope 通过竖排形状、宽框一致性和完整覆盖门控时才进入既有 crop/OCR，任何缺失、单字符、异常或不完整 geometry 都回退原 request box。
+
+核心变更：
+
+- `VNDetectTextRectanglesRequest.reportCharacterBoxes` 改为 `true`，新增 `japanesePixelDetectorCharacterEnvelope`；紧 envelope 必须满足 minimum-area overlap `>= 0.80`、面积比 `0.25...1.05`、横向覆盖 `>= 0.35`、纵向覆盖 `>= 0.60`，并继续通过既有 `height / width >= 1.15`、高度与宽度竖排门控。
+- 紧 geometry 只影响普通图片日语 pixel detector crop；双方向侦察、最多 12 个候选、line-first 覆盖抑制、4 次方向 fallback、Vision OCR、去重、布局、翻译、渲染、Store、probe、metrics 与 `output/` 边界不变。
+- 新增 `scripts/test-v3213-image-japanese-koharu-character-envelope-contract.py`，并更新 v3.208 历史合同接受 character-box 等价实现；工程版本为 `MARKETING_VERSION=3.213`。
+
+验证与边界：
+
+- 本地 v3.157–v3.213 共 `57` 份合同／`286` tests 通过，v3.157、v3.158、v3.208、v3.212 与 v3.213 定向合同通过；本地 generic iOS Simulator Xcode build 为 `BUILD SUCCEEDED`，`git diff --check` 与 `plutil -lint AITRANS.xcodeproj/project.pbxproj` 通过。
+- exact-SHA full [31310411961](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31310411961) 对 SHA `2ba635fd6e39f24954d8e731cbdfb59dc83b9900` 以 `validationProfile=full`、`validationReason=candidate_development_push` 完成 Xcode/static/UI/Speech/home/paste；JUnit `10/10`、0 failures。这是本轮新的独立云端编译证据。
+- v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c` 仍在当前祖先链上，没有活动 v3.157/v3.158 分支或待 cherry-pick 提交。
+- probe 保持 `skip`；真实 Koharu artifact 四件套仍缺失，readiness 为 `manifestMissing / stopUntilArtifactsProvided`。没有真实图片质量 corpus 或 probe 执行结果，不声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
 ## v3.212：Koharu 日语 crop raw recognition 边界
 
 日期：2026-08-09
