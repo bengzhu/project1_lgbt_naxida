@@ -7,6 +7,10 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.211 日语竖排 Vision 语言门控合同
+
+- line/block/tile reread 使用 `ja-JP`/`ja`，页级 reconnaissance 保留混合日语／拉丁集合；缺少语言 profile 时只跳过 language-specific reread，不影响页级结果。新增 `scripts/test-v3211-image-japanese-vertical-language-gate-contract.py` 并接入 UI/full fail-fast；exact-SHA full [31300669764](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31300669764)（SHA `c0c26aaddb3db641c59cb878d1434207b9879f54`）Xcode/JUnit `10/10` 通过。probe `skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不声称日语 OCR、翻译或识别质量提升。
+
 ### v3.210 图片翻译文字块单独重试合同
 
 - `.failed`／可恢复的 `.translated` 图片结果只允许原文非空且译文为空的文字块重试；已完成译文、block geometry 与 OCR 原文保留，不重新调用 `visionOCRService` 或 `recognizeTextBlocks`。

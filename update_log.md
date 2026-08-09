@@ -9263,3 +9263,14 @@ Agent C 最终验收：
 - 新增 `fallbackMangaObservationReadingOrder`，两个安全 fallback 分支统一调用；已有 Recursive XY-cut 的 x/y 分区逻辑不变。
 - 混合 block fallback、普通语言交错、OCR、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 边界保持不变。
 - 新增 `scripts/test-v3206-image-japanese-koharu-observation-row-fallback-contract.py` 并接入 CI；云端 full 待本轮验证，当前不声称日语 OCR、翻译或识别质量提升。
+## v3.211：日语竖排 Vision 语言门控
+
+日期：2026-08-09
+
+状态：Agent X 将普通图片日语竖排 line/block/tile reread 的 Vision 语言集合收敛为 `ja-JP`/`ja`，避免窄竖排被邻近拉丁候选抢占；页级 90°／270° reconnaissance 仍保留 `ja-JP`/`ja`/`en-US`/`en` 混合集合，以支持混合面板。若系统不支持日语 profile，language-specific reread 安全返回空结果，原页级路径继续可用。
+
+验证与边界：
+
+- exact-SHA full [31300669764](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31300669764) 对 SHA `c0c26aaddb3db641c59cb878d1434207b9879f54` 完成 Xcode/JUnit `10/10`，静态、语音与 UI 合同通过；probe `skip`。
+- 新增 `scripts/test-v3211-image-japanese-vertical-language-gate-contract.py`；真实 Koharu 四件套仍缺失，readiness 保持 `manifestMissing / stopUntilArtifactsProvided`。
+- 本轮只改变 language-specific reread 的候选集合与失败隔离，不加载 Manga OCR/PaddleOCR 权重，不读取 ground truth，不更新 metrics/output，不声称日语 OCR、翻译、识别或 Koharu 质量提升。

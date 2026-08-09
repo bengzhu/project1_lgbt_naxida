@@ -41,22 +41,31 @@ struct VisionOCRService: Sendable {
                 // both directions matters because a photographed page can be mirrored or
                 // presented with either vertical writing direction.
                 let japaneseOrientationLanguages = ["ja-JP", "ja", "en-US", "en"]
+                // Koharu's manga OCR crop is language-specific. Keep the page
+                // reconnaissance bilingual for mixed Japanese/Latin panels, but
+                // constrain vertical line/block/tile rereads to Japanese so a
+                // nearby Latin candidate cannot win a narrow column.
+                let japaneseVerticalRecognitionLanguages = ["ja-JP", "ja"]
                 for angle in [90, 270] {
-                    let rotatedOCRImage = try Self.rotatedImage(ocrImage, angle: angle)
-                    let rotatedObservations = try Self.recognizeObservations(
-                        in: rotatedOCRImage,
-                        recognitionLanguages: japaneseOrientationLanguages,
-                        minimumTextHeight: 0.006,
-                        automaticallyDetectsLanguage: false,
-                        rotationApplied: angle,
-                        postProcessJapaneseText: true
-                    ).map {
-                        Self.mapRotatedObservation(
-                            $0,
-                            rotatedImage: rotatedOCRImage,
-                            originalImage: ocrImage,
-                            angle: angle
-                        )
+                    guard let rotatedOCRImage = try? Self.rotatedImage(ocrImage, angle: angle),
+                          let rotatedObservations = try? Self.recognizeObservations(
+                              in: rotatedOCRImage,
+                              recognitionLanguages: japaneseOrientationLanguages,
+                              minimumTextHeight: 0.006,
+                              automaticallyDetectsLanguage: false,
+                              rotationApplied: angle,
+                              postProcessJapaneseText: true
+                          ).map({
+                              Self.mapRotatedObservation(
+                                  $0,
+                                  rotatedImage: rotatedOCRImage,
+                                  originalImage: ocrImage,
+                                  angle: angle
+                              )
+                          }) else {
+                        // Keep the original page pass usable when one rotated
+                        // reconnaissance render or Vision request fails.
+                        continue
                     }
                     observations.append(contentsOf: rotatedObservations)
                 }
@@ -69,7 +78,7 @@ struct VisionOCRService: Sendable {
                 let cropRefinedObservations = Self.recognizeJapaneseVerticalCrops(
                     in: ocrImage,
                     observations: observations,
-                    recognitionLanguages: japaneseOrientationLanguages
+                    recognitionLanguages: japaneseVerticalRecognitionLanguages
                 )
                 observations.append(contentsOf: cropRefinedObservations)
             }
@@ -129,6 +138,10 @@ struct VisionOCRService: Sendable {
         let availableLanguages = recognitionLanguages.filter { supportedLanguages.contains($0) }
         if !availableLanguages.isEmpty {
             request.recognitionLanguages = availableLanguages
+        } else if !automaticallyDetectsLanguage {
+            // Do not silently fall back to the device locale for a
+            // language-specific reread. The page-level pass remains available.
+            return []
         }
 
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
