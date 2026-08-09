@@ -375,16 +375,40 @@ struct VisionOCRService: Sendable {
         }
         .prefix(16)
 
+        let verticalBlockArray = Array(verticalBlocks)
         var refined: [VisionOCRObservation] = []
-        refined.reserveCapacity(verticalBlocks.count * 2)
+        refined.reserveCapacity(verticalBlockArray.count * 2)
         refined.append(contentsOf: Self.recognizeJapaneseVerticalTileFallback(
             in: image,
-            verticalBlocks: Array(verticalBlocks),
+            verticalBlocks: verticalBlockArray,
             recognitionLanguages: recognitionLanguages
         ))
+
+        // Koharu's extract_text_block_regions is line-first: once a TextRegion
+        // has usable line polygons, it sends those regions to OCR and does not
+        // also feed the wider block crop through Manga OCR. Vision does not expose those polygons,
+        // so the mapped line observations are our bounded
+        // equivalent. Run them before block crops and use the old block crop
+        // only for a block whose line reread produced no usable observation.
+        // This keeps mixed vertical columns out of a larger crop while retaining
+        // the safe fallback when a perspective/axis line pass fails entirely.
+        let lineRefined = Self.recognizeJapaneseVerticalLineCrops(
+            in: image,
+            observations: safeObservations,
+            blocks: Array(verticalBlocks),
+            recognitionLanguages: recognitionLanguages
+        )
+        refined.append(contentsOf: lineRefined)
+
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         var orientationFallbacksRemaining = 8
         for block in verticalBlocks {
+            let hasLineOCRResult = lineRefined.contains { observation in
+                overlapRatio(observation.rect, block.rect) >= 0.25
+                    && japaneseLineRegionOverlapsBlock(observation, block: block)
+            }
+            guard !hasLineOCRResult else { continue }
+
             let angle = safeObservations
                 .filter { overlapRatio($0.rect, block.rect) >= 0.25 }
                 .sorted { isBetterJapaneseObservation($0, $1) }
@@ -441,17 +465,6 @@ struct VisionOCRService: Sendable {
             }
         }
 
-        // Koharu's extract_text_block_regions prefers detector line polygons when
-        // available. Vision does not expose those polygons, so use the mapped,
-        // deduplicated vertical observations as conservative line-region proxies.
-        // Each proxy gets its own direction-aware crop and a small upscale before
-        // OCR, keeping narrow Japanese glyph columns out of a larger block crop.
-        refined.append(contentsOf: Self.recognizeJapaneseVerticalLineCrops(
-            in: image,
-            observations: safeObservations,
-            blocks: Array(verticalBlocks),
-            recognitionLanguages: recognitionLanguages
-        ))
         return refined
     }
 

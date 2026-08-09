@@ -9132,3 +9132,20 @@ Agent C 最终验收：
 - PR #251 fast [31226855629](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31226855629)：重跑后 `validationProfile=fast`、`validationReason=pull_request_followup_no_synchronize`，`reusedFullValidationSha=881d2b4fe49d8adde181d8e33d210a38515fcdd8`、state `success`；Xcode/UI/Speech skipped，不是新的编译证据。
 - merge fast [31227082382](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31227082382)：merge SHA `c1bb36ba956e5a48b583ff1e2a2214e3dcee916c`，`validationProfile=fast`、`validationReason=merge_reuses_successful_candidate_full_validation`，`reusedFullValidationSha=881d2b4fe49d8adde181d8e33d210a38515fcdd8`、state `success`、`receiptPropagationAllowed=true`；Xcode/UI/Speech skipped，不是新的编译证据。
 - 文档 metadata follow-up [31227221992](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31227221992)：commit `9075a9282c2414a42306287af6cf833b53f54d55`，`validationProfile=fast`、`validationReason=smalldata_metadata_followup_reuses_parent_full_validation`，`smalldataIncrementalMetadataOnly=true`，复用父 merge `c1bb36ba956e5a48b583ff1e2a2214e3dcee916c / success`，`receiptPropagationAllowed=true`，仅六份项目文档变化，Xcode/UI/Speech 与漫画探针跳过，JUnit `10/10`；不是新的编译证据。
+## v3.204：Koharu 日语竖排 line-first OCR
+
+日期：2026-08-09
+
+状态：Agent X 继续参考 Koharu `extract_text_block_regions` 的 line-first 消费边界。普通图片日语竖排 block 在存在有效 line polygon proxy 时先执行 perspective／轴对齐 line reread，只有 line OCR 没有可用 observation 才回退 block crop；v3.203 tight ownership、方向 provenance、fallback 与预算边界保持不变。工程正式版本为 `MARKETING_VERSION=3.204`，候选、PR 与 merge 尚待完成，`main` 未触碰。v3.157/v3.158 对应历史候选已合入当前基线，本次继续作为回归合同，不存在未合入的活动分支。
+
+核心变更：
+
+- `recognizeJapaneseVerticalLineCrops` 在 block crop 前消费 line-region proxy，按 block ownership gate 保持相邻竖排隔离。
+- line reread 有可用结果时跳过对应 block crop；line 失败或为空时安全回退原 block crop、既有预处理、方向 fallback、映射与去重。
+- 新增 `scripts/test-v3204-image-japanese-koharu-line-first-ocr-contract.py`；v3.157、v3.158、v3.159、v3.160 与 v3.201–v3.203 合同回归通过。
+
+边界：实现 full 已通过；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 维持 `manifestMissing / stopUntilArtifactsProvided`。探针为 `skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 实现 exact-SHA full [31290525270](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31290525270)：commit `ae922bda0bf566cc14d422a6d9c9a4c042b34218`，`validationProfile=full`，Xcode/static/UI/Speech/home/paste 成功，JUnit `10/10` 且 0 failures；候选 metadata、PR fast 与 merge fast 待后续流程完成。
