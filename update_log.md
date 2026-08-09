@@ -1,3 +1,21 @@
+## v3.203：Koharu 日语竖排 line-block ownership
+
+日期：2026-08-09
+
+状态：Agent X 继续参考 Koharu `TextRegion` 对 line polygon 的 ownership 边界。普通图片日语竖排 line candidate、碎片合成与 block line-envelope 在宽 request-level overlap 之外，只要有有效 `lineRegionRect` 就必须与当前 vertical block 相交；紧 geometry 缺失或非法时回退宽 `rect`。工程正式版本为 `MARKETING_VERSION=3.203`，候选、PR 与 merge 尚待完成，`main` 未触碰。
+
+核心变更：
+
+- 新增 `japaneseLineRegionOverlapsBlock`，在 tight geometry 可用时执行 block ownership gate；缺失／非法 geometry 保持旧宽框兼容回退。
+- `recognizeJapaneseVerticalLineCrops`、`synthesizeJapaneseVerticalLineCandidates` 与 `koharuVerticalBlockCropRect` 共用该 gate，避免相邻竖排 observation 被错误送入当前 block 的 line OCR 或 envelope。
+- 新增 `scripts/test-v3203-image-japanese-koharu-line-block-ownership-contract.py` 并接入 CI；不改变布局宽框、普通语言、翻译、渲染、探针或 metrics/output 边界。
+
+边界：实现 full 已通过；真实 `test/koharu_artifacts/` 四件套、Speech corpus 与真实竖排图片质量 corpus 仍缺失，active readiness 维持 `manifestMissing / stopUntilArtifactsProvided`。探针为 `skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`，不得据此声称日语 OCR、翻译、识别或 Koharu 质量提升。
+
+云端证据：
+
+- 实现 exact-SHA full [31287319601](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31287319601)：commit `01fdaf16dde9029079231eb7c5406042fcab8cfc`，`validationProfile=full`，Xcode/static/UI/Speech 成功，JUnit `10/10` 且 0 failures；候选 metadata、PR fast 与 merge fast 待后续流程完成。
+
 ## v3.202：Koharu 日语紧 line-region candidate gate
 
 日期：2026-08-09
