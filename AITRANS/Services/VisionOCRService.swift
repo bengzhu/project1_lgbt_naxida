@@ -854,7 +854,8 @@ struct VisionOCRService: Sendable {
 
         for candidate in sourceLineCandidates {
             guard let resultIndex = availableLineResults.firstIndex(where: {
-                japaneseLineCoverageMatches($0, candidate: candidate)
+                isReliableJapaneseLineCoverageResult($0, candidate: candidate)
+                    && japaneseLineCoverageMatches($0, candidate: candidate)
             }) else {
                 return false
             }
@@ -886,6 +887,28 @@ struct VisionOCRService: Sendable {
             uniqueCandidates.append(candidate)
         }
         return uniqueCandidates
+    }
+
+    /// A line-region geometry match alone is not proof that OCR recovered the
+    /// line. Keep weak Vision output on the block-crop fallback path, where the
+    /// surrounding glyph context gives the recognizer another chance. A single
+    /// glyph may still cover a genuinely single-glyph source line, but it must
+    /// not make a multi-glyph source line look complete.
+    private static func isReliableJapaneseLineCoverageResult(
+        _ result: VisionOCRObservation,
+        candidate: VisionOCRObservation
+    ) -> Bool {
+        let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty,
+              result.confidence.isFinite,
+              result.confidence >= 0.48,
+              japaneseScriptDensity(in: text) >= 0.5 else {
+            return false
+        }
+
+        let candidateLength = candidate.text.unicodeScalars.count
+        let resultLength = text.unicodeScalars.count
+        return candidateLength < 2 || resultLength >= 2
     }
 
     private static func japaneseLineCoverageMatches(
