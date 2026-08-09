@@ -3,13 +3,13 @@
 
 日期：2026-08-09
 
-状态：Agent X 补齐当前 Vision 路径在“整列完全漏识别”时没有 TextRegion 可供 crop 的缺口。普通图片日语路径现在在既有 page／block observation 之外，对 90°／270° 旋转图执行系统 `VNDetectTextRectanglesRequest`，把检测到的矩形映射回原图，应用 `height / width >= 1.15`、高度 `>= 0.025`、宽度 `<= 0.30` 的竖排门控，并排除已被现有 vertical block 覆盖的候选；最多 12 个未覆盖 geometry 进入既有 Koharu 风格 grayscale／有界放大／crop／Vision OCR，最多 4 次弱结果 opposite orientation fallback。detector 只提供 geometry，不加载真实 Manga OCR/PaddleOCR 模型，不读取探针、ground truth 或外部 artifact。工程版本为 `MARKETING_VERSION=3.208`，候选分支 `codeb/v3.208-image-japanese-pixel-detector` 已创建；云端 full 待验证。
+状态：Agent X 补齐当前 Vision 路径在“整列完全漏识别”时没有 TextRegion 可供 crop 的缺口。普通图片日语路径现在在既有 page／block observation 之外，对 90°／270° 旋转图执行系统 `VNDetectTextRectanglesRequest`，把检测到的矩形映射回原图，应用 `height / width >= 1.15`、高度 `>= 0.025`、宽度 `<= 0.30` 的竖排门控，并排除已被现有 vertical block 覆盖的候选；最多 12 个未覆盖 geometry 进入既有 Koharu 风格 grayscale／有界放大／crop／Vision OCR，最多 4 次弱结果 opposite orientation fallback。detector 只提供 geometry，不加载真实 Manga OCR/PaddleOCR 模型，不读取探针、ground truth 或外部 artifact。工程版本为 `MARKETING_VERSION=3.208`；exact-SHA full [31295791350](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31295791350) 对 SHA `41eff6cb86073900332d9785eea32606a5688dce` 完成 Xcode/JUnit `10/10`；候选分支已通过 PR #272 合入 `smalldata_test`，merge SHA `7c8642af855fcbf79cfad7a3a9052a5465d83632`；PR fast [31296131671](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31296131671) 与 merge fast [31296221789](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31296221789) 均复用候选 full，后三者 Xcode skipped，不是新的编译证据。
 
 核心变更：
 
 - `recognizeJapanesePixelFirstVerticalCrops` 在已有 tile fallback 前消费 `VNDetectTextRectanglesRequest` 的双方向矩形，复用 `expandedVerticalLineCropRect`、`prepareJapaneseCropForVision`、`recognizeJapaneseCropPass`、原图映射与日语去重。
 - `detectJapanesePixelFirstVerticalRegions` 只保留有效竖排 geometry，按 IoU／minimum-area overlap 去重并限制 12 个；已有 block 覆盖的区域不消耗 detector crop 预算。
-- 新增 `scripts/test-v3208-image-japanese-koharu-pixel-detector-contract.py` 并接入 CI；本地轻量合同与全历史合同待实现完成后运行。
+- 新增 `scripts/test-v3208-image-japanese-koharu-pixel-detector-contract.py` 并接入 CI；本地 v3.157–v3.208 共 52 个日语合同回归通过；云端 full、PR fast 与 merge fast receipt 已完成。
 
 边界：真实 `test/koharu_artifacts/` 四件套、Manga OCR/PaddleOCR 模型、Speech corpus 与真实竖排图片质量 corpus 仍缺失；active readiness 维持 `manifestMissing / stopUntilArtifactsProvided`，探针默认 `skip`，不更新 `metrics/version_history.csv` 或仓库 `output/`，不声称 OCR、翻译、识别或 Koharu 质量提升。
 

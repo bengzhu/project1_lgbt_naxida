@@ -2,7 +2,7 @@
 
 - 普通图片源语言为日语时，`VisionOCRService` 在既有 page／block observation 之外，对 90°／270° 旋转图执行系统 `VNDetectTextRectanglesRequest`，只把映射回原图且满足竖排比例／尺寸门控、未被已有 vertical block 覆盖的最多 12 个矩形交给既有 crop/OCR helper。
 - detector 结果继续使用 Koharu 风格 grayscale／有界放大、crop 映射与日语去重，最多 4 次 opposite orientation fallback；detector 只提供 geometry，不加载 Manga OCR/PaddleOCR 模型，不读取探针、ground truth 或 artifact。
-- 新增 `scripts/test-v3208-image-japanese-koharu-pixel-detector-contract.py` 并接入 UI/full fail-fast；云端 full 尚待本轮验证，探针默认 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称 OCR／翻译／识别质量提升。
+- 新增 `scripts/test-v3208-image-japanese-koharu-pixel-detector-contract.py` 并接入 UI/full fail-fast；exact-SHA full [31295791350](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31295791350)（SHA `41eff6cb86073900332d9785eea32606a5688dce`）Xcode/JUnit `10/10` 通过；PR #272 fast [31296131671](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31296131671) 与 merge fast [31296221789](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31296221789) 复用候选 full，merge SHA `7c8642af855fcbf79cfad7a3a9052a5465d83632`，后三者 Xcode skipped；探针默认 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不得声称 OCR／翻译／识别质量提升。
 
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。

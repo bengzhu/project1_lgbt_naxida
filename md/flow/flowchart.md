@@ -1,5 +1,5 @@
 # 项目流程图
-v3.208 日语竖排 page／block → 90°／270° `VNDetectTextRectanglesRequest` pixel-first rectangles → 映射／竖排几何门控／排除已覆盖 block → 最多 12 个 crop → grayscale／有界放大／Vision OCR／最多 4 次 opposite fallback → 日语去重／布局／批翻译／渲染；真实 Koharu 工件仍缺失，云端 full 待验证。
+v3.208 日语竖排 page／block → 90°／270° `VNDetectTextRectanglesRequest` pixel-first rectangles → 映射／竖排几何门控／排除已覆盖 block → 最多 12 个 crop → grayscale／有界放大／Vision OCR／最多 4 次 opposite fallback → 日语去重／布局／批翻译／渲染；真实 Koharu 工件仍缺失；exact-SHA full `31295791350`（SHA `41eff6cb86073900332d9785eea32606a5688dce`，Xcode/JUnit `10/10`）通过，PR #272 fast `31296131671` 与 merge fast `31296221789` 复用候选 full，merge SHA `7c8642af855fcbf79cfad7a3a9052a5465d83632`，后三者 Xcode skipped；readiness `manifestMissing / stopUntilArtifactsProvided`，探针 skip。
 
 v3.206 日语竖排 observation → Recursive XY-cut → 无 cut 时 `4 × min_gap_y` 行桶（上到下／行内右到左）→ Cluster／翻译／渲染；非日语仍走既有交错路径。full `31293120347` Xcode/JUnit `10/10` 通过，PR #270 fast `31293135057` 与 merge fast `31293388944` 复用 full，merge SHA `9513cd7c9d33610f0b93a4e435f9e3f1867328bb`，后两者 Xcode skipped；探针 skip，readiness `manifestMissing / stopUntilArtifactsProvided`。
 
