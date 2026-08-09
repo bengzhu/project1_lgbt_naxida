@@ -25,9 +25,13 @@ xcrun coremlcompiler compile \
 xcrun coremlcompiler compile \
   "$repo_root/AITRANS/Resources/MangaOCR/MangaOCRDecoderINT8.mlpackage" \
   "$resources"
+xcrun coremlcompiler compile \
+  "$repo_root/AITRANS/Resources/ComicTextDetector/ComicTextBubbleDetectorINT8.mlpackage" \
+  "$resources"
 xcrun swiftc -parse-as-library \
   "$repo_root/AITRANS/Services/ImageOCRLayoutEngine.swift" \
   "$repo_root/AITRANS/Services/MangaOCRService.swift" \
+  "$repo_root/AITRANS/Services/ComicTextBubbleDetectorService.swift" \
   "$repo_root/AITRANS/Services/VisionOCRService.swift" \
   "$repo_root/scripts/fixtures/v3214-manga-ocr-runtime-harness.swift" \
   -o "$executable"
@@ -41,19 +45,13 @@ import sys
 
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
 match = re.search(r"^blocks=(\d+)$", text, re.MULTILINE)
-if match is None or int(match.group(1)) != 12:
-    raise SystemExit(f"expected exactly 12 OCR blocks, got: {text}")
+if match is None or int(match.group(1)) != 5:
+    raise SystemExit(f"expected exactly 5 detector-grouped OCR blocks, got: {text}")
 for expected in [
-    "前は生意気に",
-    "俺の誘い断り",
-    "今度こそ",
-    "この爆乳を",
-    "持ち帰る",
-    "そのせいで",
-    "つまんねー女に",
-    "絡まれるし",
-    "監督より挨拶を",
-    "お願いします",
+    "前は生意気に俺の誘い断りやがって...",
+    "今度こそこの爆乳を持ち帰る！",
+    "そのせいでつまんねー女に絡まれるし...",
+    "監督より挨拶をお願いします",
 ]:
     if expected not in text:
         raise SystemExit(f"missing expected Manga OCR text: {expected}")
@@ -62,6 +60,8 @@ for rejected in [
     "そのせいでつまりまーズ",
     "うまんねー女に",
     "vertical\tいします",
+    "前は生意気に\n",
+    "俺の誘い断り\n",
 ]:
     if rejected in text:
         raise SystemExit(f"retained cross-column or truncated Manga OCR text: {rejected}")

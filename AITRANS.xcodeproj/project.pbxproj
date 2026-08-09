@@ -51,6 +51,11 @@
 		0A00000100000000000000CE /* MangaOCRVocab.txt in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000CF /* MangaOCRVocab.txt */; };
 		0A00000100000000000000D0 /* LICENSE-APACHE in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D1 /* LICENSE-APACHE */; };
 		0A00000100000000000000D2 /* NOTICE.md in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D3 /* NOTICE.md */; };
+		0A00000100000000000000D6 /* ComicTextBubbleDetectorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D5 /* ComicTextBubbleDetectorService.swift */; };
+		0A00000100000000000000D8 /* ComicTextBubbleDetectorINT8.mlpackage in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D7 /* ComicTextBubbleDetectorINT8.mlpackage */; };
+		0A00000100000000000000DA /* ComicTextDetector-LICENSE-APACHE in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D9 /* ComicTextDetector-LICENSE-APACHE */; };
+		0A00000100000000000000DC /* ComicTextDetector-NOTICE.md in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000DB /* ComicTextDetector-NOTICE.md */; };
+		0A00000100000000000000DE /* conversion.json in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000DD /* conversion.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -114,6 +119,11 @@
 		0A00000100000000000000CF /* MangaOCRVocab.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = MangaOCRVocab.txt; sourceTree = "<group>"; };
 		0A00000100000000000000D1 /* LICENSE-APACHE */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE-APACHE"; sourceTree = "<group>"; };
 		0A00000100000000000000D3 /* NOTICE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = NOTICE.md; sourceTree = "<group>"; };
+		0A00000100000000000000D5 /* ComicTextBubbleDetectorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComicTextBubbleDetectorService.swift; sourceTree = "<group>"; };
+		0A00000100000000000000D7 /* ComicTextBubbleDetectorINT8.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = ComicTextBubbleDetectorINT8.mlpackage; sourceTree = "<group>"; };
+		0A00000100000000000000D9 /* ComicTextDetector-LICENSE-APACHE */ = {isa = PBXFileReference; lastKnownFileType = text; path = "ComicTextDetector-LICENSE-APACHE"; sourceTree = "<group>"; };
+		0A00000100000000000000DB /* ComicTextDetector-NOTICE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "ComicTextDetector-NOTICE.md"; sourceTree = "<group>"; };
+		0A00000100000000000000DD /* conversion.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = conversion.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -189,6 +199,7 @@
 				0A00000100000000000000BF /* ImageOCRLayoutEngine.swift */,
 				0A000001000000000000001C /* VisionOCRService.swift */,
 				0A00000100000000000000C9 /* MangaOCRService.swift */,
+				0A00000100000000000000D5 /* ComicTextBubbleDetectorService.swift */,
 				0A0000010000000000000015 /* MockGemmaService.swift */,
 				0A0000010000000000000019 /* GemmaLocalService.swift */,
 				0A000001000000000000001E /* LlamaRuntime.swift */,
@@ -228,6 +239,7 @@
 				0A0000010000000000000016 /* Assets.xcassets */,
 				0A0000010000000000000017 /* Info.plist */,
 				0A00000100000000000000D4 /* MangaOCR */,
+				0A00000100000000000000DF /* ComicTextDetector */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -242,6 +254,17 @@
 				0A00000100000000000000D3 /* NOTICE.md */,
 			);
 			path = MangaOCR;
+			sourceTree = "<group>";
+		};
+		0A00000100000000000000DF /* ComicTextDetector */ = {
+			isa = PBXGroup;
+			children = (
+				0A00000100000000000000D7 /* ComicTextBubbleDetectorINT8.mlpackage */,
+				0A00000100000000000000D9 /* ComicTextDetector-LICENSE-APACHE */,
+				0A00000100000000000000DB /* ComicTextDetector-NOTICE.md */,
+				0A00000100000000000000DD /* conversion.json */,
+			);
+			path = ComicTextDetector;
 			sourceTree = "<group>";
 		};
 		0A0000010000000000000038 /* Frameworks */ = {
@@ -322,6 +345,10 @@
 				0A00000100000000000000CE /* MangaOCRVocab.txt in Resources */,
 				0A00000100000000000000D0 /* LICENSE-APACHE in Resources */,
 				0A00000100000000000000D2 /* NOTICE.md in Resources */,
+				0A00000100000000000000D8 /* ComicTextBubbleDetectorINT8.mlpackage in Resources */,
+				0A00000100000000000000DA /* ComicTextDetector-LICENSE-APACHE in Resources */,
+				0A00000100000000000000DC /* ComicTextDetector-NOTICE.md in Resources */,
+				0A00000100000000000000DE /* conversion.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -365,6 +392,7 @@
 				0A00000100000000000000BA /* SpeechQualityEvaluator.swift in Sources */,
 				0A00000100000000000000BC /* SpeechQualityProbeService.swift in Sources */,
 				0A00000100000000000000C8 /* MangaOCRService.swift in Sources */,
+				0A00000100000000000000D6 /* ComicTextBubbleDetectorService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -501,7 +529,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.215;
+				MARKETING_VERSION = 3.216;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -528,7 +556,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.215;
+				MARKETING_VERSION = 3.216;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

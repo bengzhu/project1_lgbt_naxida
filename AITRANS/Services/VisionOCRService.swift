@@ -512,13 +512,20 @@ struct VisionOCRService: Sendable {
         image: CGImage
     ) async -> [VisionOCRObservation] {
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
-        let regions = alignPartialJapaneseMangaOCRColumns(
+        let detectorRegions = (try? await ComicTextBubbleDetectorService.shared.detectTextRegions(
+            in: image
+        )) ?? []
+        let visionRegions = alignPartialJapaneseMangaOCRColumns(
             detectJapanesePixelFirstVerticalRegions(
                 in: image,
                 observations: [],
                 verticalBlocks: [],
                 lineObservations: []
             )
+        )
+        let regions = japaneseMangaOCRRegions(
+            detectorRegions: detectorRegions,
+            visionRegions: visionRegions
         )
         let requests = regions.prefix(12).map { region in
             MangaOCRRequest(
@@ -551,10 +558,37 @@ struct VisionOCRService: Sendable {
         }
     }
 
-    /// Use Vision's pixel-first text rectangle detector as a bounded proxy for
-    /// Koharu's detector -> TextRegion -> crop/OCR boundary. The detector only
-    /// contributes geometry; recognition still runs through the existing
-    /// Japanese crop helper and remains isolated from model/artifact paths.
+    /// Koharu's RT-DETR TextRegions are the primary Manga OCR geometry. Vision's
+    /// rotated text rectangles remain a bounded supplement only when a candidate
+    /// is not already covered by a dedicated detector region. If the bundled
+    /// detector cannot load or infer, an empty primary list preserves the full
+    /// historical Vision request budget and behavior.
+    private static func japaneseMangaOCRRegions(
+        detectorRegions: [ComicTextDetectorRegion],
+        visionRegions: [JapanesePixelFirstRegion]
+    ) -> [JapanesePixelFirstRegion] {
+        let primary = detectorRegions.map {
+            JapanesePixelFirstRegion(
+                rect: $0.rect,
+                detectorRotation: 0,
+                characterCount: 0,
+                detector: .comicTextBubble,
+                detectorConfidence: $0.confidence
+            )
+        }
+        let supplemental = visionRegions.filter { candidate in
+            !primary.contains {
+                overlapRatio($0.rect, candidate.rect) >= 0.60
+                    || intersectionOverUnion($0.rect, candidate.rect) >= 0.50
+            }
+        }
+        return Array((primary + supplemental).prefix(12))
+    }
+
+    /// Use Vision's pixel-first text rectangle detector as a bounded recovery
+    /// path for dedicated TextRegions that fail or miss a region. The detector
+    /// contributes geometry only; recognition still runs through the existing
+    /// Japanese crop helper.
     private static func recognizeJapanesePixelFirstVerticalCrops(
         in image: CGImage,
         observations: [VisionOCRObservation],
@@ -2831,6 +2865,13 @@ private struct JapanesePixelFirstRegion: Sendable {
     var rect: ImageOCRLayoutRect
     var detectorRotation: Int
     var characterCount: Int
+    var detector: JapanesePixelFirstDetector = .vision
+    var detectorConfidence: Float = 0
+}
+
+private enum JapanesePixelFirstDetector: Sendable {
+    case vision
+    case comicTextBubble
 }
 
 private struct ImageOCRLayoutPoint: Equatable, Sendable {
