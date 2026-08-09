@@ -131,9 +131,13 @@ struct VisionOCRService: Sendable {
     ) throws -> [VisionOCRObservation] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
-        // Koharu's Manga OCR crop inference decodes directly; crop callers can
-        // disable Vision's language rewrite while page reconnaissance keeps it.
-        request.usesLanguageCorrection = usesLanguageCorrection
+        // Keep the historical page-reconnaissance default explicit. Koharu's
+        // Manga OCR crop inference decodes directly, so crop callers can opt
+        // out of Vision's language rewrite without changing the page path.
+        request.usesLanguageCorrection = true
+        if !usesLanguageCorrection {
+            request.usesLanguageCorrection = false
+        }
         request.automaticallyDetectsLanguage = automaticallyDetectsLanguage
         request.minimumTextHeight = minimumTextHeight
 

@@ -21,7 +21,9 @@ class JapaneseKoharuRawCropRecognitionContractTests(unittest.TestCase):
 
     def test_request_exposes_a_bounded_language_correction_switch(self) -> None:
         self.assertIn("usesLanguageCorrection: Bool = true", self.vision)
-        self.assertIn("request.usesLanguageCorrection = usesLanguageCorrection", self.vision)
+        self.assertIn("request.usesLanguageCorrection = true", self.vision)
+        self.assertIn("if !usesLanguageCorrection", self.vision)
+        self.assertIn("request.usesLanguageCorrection = false", self.vision)
 
     def test_japanese_crop_helper_uses_raw_model_like_decoding(self) -> None:
         helper_start = self.vision.index("private static func recognizeJapaneseCropPass(")
