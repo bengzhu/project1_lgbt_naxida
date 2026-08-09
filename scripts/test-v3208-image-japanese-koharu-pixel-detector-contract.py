@@ -58,7 +58,7 @@ class JapaneseKoharuPixelDetectorContractTests(unittest.TestCase):
             "for angle in [90, 270]",
             "try? rotatedImage(image, angle: angle)",
             "VNDetectTextRectanglesRequest()",
-            "request.reportCharacterBoxes = false",
+            "request.reportCharacterBoxes = true",
             "request.results ?? []",
             "normalizedRect(from: detection.boundingBox)",
             "mapRotatedRegionRect(",
