@@ -1,5 +1,5 @@
 # 项目流程图
-v3.241 detector TextRegion → bbox 主 crop → 弱结果才走严格 vertical quad fallback → quad axis target `(textHeight, textHeight × ratio)` → bounded warp → `rotate270` → Manga OCR；target／rotation／projection failure → natural warp 或 bbox fallback；ownership、budget、Vision fallback、translation、render 与非日语路径不变。
+v3.241 detector TextRegion → bbox 主 crop → 弱结果才走严格 vertical quad fallback → 显式 vertical hint 的 quad axis target `(textHeight, textHeight × ratio)` → bounded warp → `rotate270` → Manga OCR；未标记通用 quad 保留自然 warp，target／rotation／projection failure → natural warp 或 bbox fallback；ownership、budget、Vision fallback、translation、render 与非日语路径不变。
 
 v3.232 detector TextRegion → strict character quad gate → bounded `CIPerspectiveCorrection` line crop → Manga OCR；quad failure → expanded bbox crop fallback；layout／ownership `rect`、batch、budget、fallback、translation、render 和非日语路径不变。
 

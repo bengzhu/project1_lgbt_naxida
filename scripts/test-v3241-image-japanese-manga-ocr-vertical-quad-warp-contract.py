@@ -46,6 +46,7 @@ class JapaneseMangaOCRVerticalQuadWarpContractTests(unittest.TestCase):
         for marker in [
             "let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)",
             "let perspectiveCrop = request.cropQuad.flatMap",
+            "cropQuadIsVertical: Bool = false",
             "primaryBoundingBoxCrop: boundingBoxCrop",
             "lineQuadFallbackCrop: perspectiveCrop",
             "chunk.map(\\.primaryBoundingBoxCrop)",
@@ -59,6 +60,7 @@ class JapaneseMangaOCRVerticalQuadWarpContractTests(unittest.TestCase):
 
     def test_vertical_quad_uses_koharu_axis_target_and_rotation(self) -> None:
         for marker in [
+            "guard applyVerticalWarp else { return rendered }",
             "guard let targetSize = koharuVerticalQuadWarpTargetSize(",
             "maximumDimension: CGFloat(maximumQuadWarpDimension)",
             "maximumPixels: maximumQuadWarpPixels",
@@ -70,6 +72,7 @@ class JapaneseMangaOCRVerticalQuadWarpContractTests(unittest.TestCase):
             "return rotated",
         ]:
             self.assertIn(marker, self.crop)
+        self.assertIn("applyVerticalWarp: request.cropQuadIsVertical", self.service)
         self.assertLess(
             self.crop.index("koharuVerticalQuadWarpTargetSize("),
             self.crop.index("rotateImage270(bounded)"),
@@ -108,6 +111,10 @@ class JapaneseMangaOCRVerticalQuadWarpContractTests(unittest.TestCase):
     def test_quad_path_is_strict_vertical_geometry_only(self) -> None:
         self.assertIn(
             "cropQuadHint: japaneseDetectorCropQuadHint(",
+            self.vision,
+        )
+        self.assertIn(
+            "cropQuadIsVertical: region.cropQuadHint != nil",
             self.vision,
         )
         self.assertIn(

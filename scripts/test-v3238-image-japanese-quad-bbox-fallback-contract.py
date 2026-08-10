@@ -56,18 +56,16 @@ class JapaneseQuadBBoxFallbackContractTests(unittest.TestCase):
             "var primaryBoundingBoxCrop: CGImage",
             "var lineQuadFallbackCrop: CGImage?",
             "let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)",
-            "let perspectiveCrop = perspectiveCorrectedCrop(image, quad: cropQuad)",
+            "cropQuadIsVertical: Bool = false",
             "primaryBoundingBoxCrop: boundingBoxCrop",
             "lineQuadFallbackCrop: perspectiveCrop",
             "lineQuadFallbackCrop: nil",
         ]:
-            if marker == "let perspectiveCrop = perspectiveCorrectedCrop(image, quad: cropQuad)":
-                self.assertTrue(
-                    marker in self.service
-                    or "perspectiveCorrectedCrop(image, quad: $0)" in self.service
-                )
-            else:
-                self.assertIn(marker, self.service)
+            self.assertIn(marker, self.service)
+        self.assertIn("perspectiveCorrectedCrop(", self.service)
+        self.assertIn("applyVerticalWarp: request.cropQuadIsVertical", self.service)
+        self.assertIn("guard applyVerticalWarp else { return rendered }", self.service)
+        self.assertIn("cropQuadIsVertical: false", self.harness)
         self.assertIn("CIPerspectiveCorrection", self.service)
 
     def test_only_weak_bbox_results_pay_for_quad_retry(self) -> None:

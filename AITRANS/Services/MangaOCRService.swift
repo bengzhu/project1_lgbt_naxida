@@ -9,15 +9,22 @@ struct MangaOCRRequest: Sendable {
     /// Optional Koharu `line_polygon` equivalent. The detector/layout rectangle
     /// remains the ownership geometry and is always the safe fallback.
     var cropQuad: ImageOCRLayoutQuad?
+    /// Only the strict Japanese vertical detector hint uses Koharu's bounded
+    /// target canvas and rotate270 orientation. Unmarked quads retain the
+    /// historical natural perspective crop for compatibility with callers that
+    /// use a quad as a generic content fallback.
+    var cropQuadIsVertical: Bool
 
     init(
         textRect: ImageOCRLayoutRect,
         cropRect: ImageOCRLayoutRect,
-        cropQuad: ImageOCRLayoutQuad? = nil
+        cropQuad: ImageOCRLayoutQuad? = nil,
+        cropQuadIsVertical: Bool = false
     ) {
         self.textRect = textRect
         self.cropRect = cropRect
         self.cropQuad = cropQuad
+        self.cropQuadIsVertical = cropQuadIsVertical
     }
 }
 
@@ -214,7 +221,11 @@ actor MangaOCRService {
     ) -> CroppedRequest? {
         let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)
         let perspectiveCrop = request.cropQuad.flatMap {
-            perspectiveCorrectedCrop(image, quad: $0)
+            perspectiveCorrectedCrop(
+                image,
+                quad: $0,
+                applyVerticalWarp: request.cropQuadIsVertical
+            )
         }
         if let boundingBoxCrop {
             return CroppedRequest(
@@ -321,7 +332,8 @@ actor MangaOCRService {
     /// crop rather than losing a detector region.
     private static func perspectiveCorrectedCrop(
         _ image: CGImage,
-        quad: ImageOCRLayoutQuad
+        quad: ImageOCRLayoutQuad,
+        applyVerticalWarp: Bool
     ) -> CGImage? {
         guard let normalizedQuad = quad.normalized() else { return nil }
         let imageWidth = CGFloat(image.width)
@@ -395,6 +407,10 @@ actor MangaOCRService {
         guard let rendered = context.createCGImage(output, from: extent) else {
             return nil
         }
+
+        // Generic quad callers keep the natural projection. Only a strictly
+        // gated Japanese vertical hint may change the model-facing orientation.
+        guard applyVerticalWarp else { return rendered }
 
         // Koharu's vertical warp does not feed the projection's natural extent
         // directly to Manga OCR. It derives a bounded canvas from the quad's
