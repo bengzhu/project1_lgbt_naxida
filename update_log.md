@@ -14,7 +14,7 @@
 
 - 单页 `test/jap.jpg` 真实产品 runtime 精确返回 5 个竖排块：`前は生意気に俺の誘い断りやがって...`、`今度こそこの爆乳を持ち帰る！`、`そのせいでつまんねー女に絡まれるし...`、`...では最後に監督より挨拶をお願いします`、`こっ、`。
 - 四页长图真实产品 runtime 输出 `18` blocks、`16` vertical、`0` unknown；四份 `今度こそこの爆乳を持ち帰る！` 与四份包含 `挨拶` 的页尾均通过，`お願いします前は` 不再跨页串联。弱横排 `やがってま` 与实际图片中的 `ニコッ` 仍保留，未把固定样图的残余噪声宣称为通用质量。
-- 本地 v3.157-v3.220 共 `70` 份合同脚本／`373` tests；三条真实 Core ML runtime（单页 Manga OCR、detector-only 长页、完整长页）、generic iOS Simulator Xcode build、`plutil`、workflow YAML、Python/shell 语法和 `git diff --check` 在云端 full 前完成。云端 receipt 将在实现 SHA 验收后追加；probe 继续 `skip`，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- 本地 v3.157-v3.220 共 `70` 份合同脚本／`373` tests；三条真实 Core ML runtime（单页 Manga OCR、detector-only 长页、完整长页）、generic iOS Simulator Xcode build、`plutil`、workflow YAML、Python/shell 语法和 `git diff --check` 通过。exact-SHA full [31350115177](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31350115177) 对实现 SHA `51e779ac81ec1706c4a846dc44ab55ba0d14f161` 以 `candidate_development_push` 完成三条真实 runtime、Xcode 与 JUnit `10/10`（0 failures），并发布 `AITRANS CI/full-validation = success` receipt；云端完整长页为 `19 blocks`、`16 vertical`、`0 unknown`，四份 `爆乳` 与 `挨拶` 均通过 gate；probe 继续 `skip`，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
 ## v3.219：保留 detector TextRegion OCR 后边界
 
