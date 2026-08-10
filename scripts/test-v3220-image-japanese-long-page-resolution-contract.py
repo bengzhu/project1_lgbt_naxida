@@ -111,7 +111,7 @@ class JapaneseLongPageResolutionContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3219(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.220", "3.220"])
+        self.assertEqual(len(versions), 2)
         previous = "python3 -B scripts/test-v3219-image-japanese-detector-boundary-contract.py"
         current = "python3 -B scripts/test-v3220-image-japanese-long-page-resolution-contract.py"
         runtime = "bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh"
@@ -124,6 +124,10 @@ class JapaneseLongPageResolutionContractTests(unittest.TestCase):
             "if grep -Fx 'scripts/test-v3220-image-japanese-long-page-resolution-contract.py'",
             self.workflow,
         )
+        self.assertTrue(
+            all(tuple(map(int, version.split("."))) >= (3, 220) for version in versions)
+        )
+        self.assertNotIn("MARKETING_VERSION = 3.219;", self.project)
 
 
 if __name__ == "__main__":

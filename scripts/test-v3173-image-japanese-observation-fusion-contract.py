@@ -52,12 +52,20 @@ class JapaneseObservationFusionContractTests(unittest.TestCase):
     def test_japanese_path_uses_a_scoped_fusion_helper(self) -> None:
         for marker in [
             "let finalObservations = sourceLanguage == .japanese",
-            "Self.deduplicateJapaneseObservations(observations)",
             "Self.deduplicateObservations(observations)",
             "private static func deduplicateJapaneseObservations(",
             "deduplicateObservations(observations, prefersJapanese: true)",
         ]:
-            self.assertIn(marker, self.vision if marker.startswith("private") or marker.startswith("deduplicate") else self.recognize)
+            self.assertIn(
+                marker,
+                self.vision
+                if marker.startswith("private") or marker.startswith("deduplicate")
+                else self.recognize,
+            )
+        self.assertTrue(
+            "Self.deduplicateJapaneseObservations(observations)" in self.recognize
+            or "Self.deduplicateJapaneseObservations(\n" in self.recognize
+        )
 
     def test_japanese_scoring_is_bounded_and_keeps_normal_score(self) -> None:
         for marker in [
