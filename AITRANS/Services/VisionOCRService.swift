@@ -175,9 +175,14 @@ struct VisionOCRService: Sendable {
 
         if sourceLanguage == .japanese {
             do {
+                let cropOrientation: MangaOCRCropOrientation =
+                    block.effectiveSourceDirection == .vertical
+                        ? .koharuVertical270
+                        : .natural
                 let request = MangaOCRRequest(
                     textRect: rect,
-                    cropRect: rect
+                    cropRect: rect,
+                    cropOrientation: cropOrientation
                 )
                 if let result = try await MangaOCRService.shared
                     .recognize(image: image, requests: [request])
