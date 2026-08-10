@@ -36,6 +36,10 @@ class JapaneseMangaOCRResilienceContractTests(unittest.TestCase):
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
         self.recognize = braced_body(self.service, "func recognize(")
+        self.recognize_crops = braced_body(
+            self.service,
+            "private func recognizeCrops(",
+        )
         self.manga = braced_body(
             self.vision,
             "private static func recognizeJapaneseMangaOCR(",
@@ -53,13 +57,15 @@ class JapaneseMangaOCRResilienceContractTests(unittest.TestCase):
         runtime_index = self.recognize.index("let runtime = try loadedRuntime()")
         loop_index = self.recognize.index("for request in requests {")
         self.assertLess(runtime_index, loop_index)
-        crop_index = self.recognize.index("guard let crop = Self.cropImage")
-        self.assertLess(crop_index, self.recognize.index("do {"))
-        self.assertIn("catch is CancellationError", self.recognize)
-        self.assertIn("throw CancellationError()", self.recognize)
-        self.assertIn("catch {", self.recognize)
+        crop_index = self.recognize.index("guard let cropped = Self.cropImages")
+        self.assertLess(crop_index, self.recognize.index("try recognizeCrops("))
+        self.assertGreaterEqual(self.recognize.count("try recognizeCrops("), 2)
+        self.assertIn("catch is CancellationError", self.recognize_crops)
+        self.assertIn("throw CancellationError()", self.recognize_crops)
+        self.assertIn("catch {", self.recognize_crops)
         self.assertIn("continue", self.recognize)
-        self.assertIn("One malformed crop or model output", self.recognize)
+        self.assertIn("One malformed crop or model output", self.recognize_crops)
+        self.assertIn("recognitions.append(nil)", self.recognize_crops)
 
     def test_manga_ocr_preserves_cancellation_and_vision_fallback(self) -> None:
         self.assertIn(") async throws -> [VisionOCRObservation]", self.vision)
