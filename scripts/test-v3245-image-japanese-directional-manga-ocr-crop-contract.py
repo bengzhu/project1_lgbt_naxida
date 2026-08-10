@@ -73,6 +73,15 @@ class JapaneseDirectionalMangaOCRCropContractTests(unittest.TestCase):
             self.assertIn(marker, self.rerecognition)
         self.assertNotIn("block.sourceDirection == .vertical", self.rerecognition)
 
+    def test_scoped_retry_reuses_the_koharu_crop_envelope(self) -> None:
+        for marker in [
+            "let blockCropRect = sourceLanguage == .japanese",
+            "Self.expandedVerticalCropRect(",
+            "cropRect: blockCropRect",
+            "Self.cropImageForBlock(image, normalizedRect: blockCropRect)",
+        ]:
+            self.assertIn(marker, self.rerecognition)
+
     def test_rotation_is_pixel_only_and_natural_crop_is_recoverable(self) -> None:
         for marker in [
             "let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)",
