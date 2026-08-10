@@ -1,3 +1,11 @@
+## v3.243：图片 OCR 来源文字方向覆盖
+
+日期：2026-08-11
+
+图片 OCR block 现在分离 detector／OCR 原始 `sourceDirection` 与用户可选的 `sourceDirectionOverride`，由 `effectiveSourceDirection` 作为显示和消费边界。复查页、结果行和局部预览提供自动／横排／竖排选择；摘要、筛选、竖排渲染、PNG 导出和 VoiceOver 同步使用 effective direction。覆盖只更新当前 block 的方向与显示／导出，不重跑 OCR、翻译、布局或整页请求；重新识别、忽略／恢复和旧结果继续保留覆盖边界。
+
+新增 `scripts/test-v3243-image-japanese-direction-override-contract.py`、`scripts/test-v3243-image-japanese-direction-override-evaluator.swift` 并接入 CI，工程版本为 `3.243`。本地 v3.243 合同 `7/7` 通过；exact-SHA full [31426517160](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31426517160) 对 SHA `ef37c1a2c36cbb0792a933868ae4f70bf3af6149` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe `skip`。随后通过 PR #301 合入 `smalldata_test`，merge SHA `8675a7dca6fbff27ed5bc1a8725cff967d5637e1`，PR fast [31427377302](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31427377302) 通过。固定 `test/jap.jpg` 只作方向／布局／渲染回归，不声称通用日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.242：Koharu VerticalRl 日语标点排版对齐
 
 日期：2026-08-11
