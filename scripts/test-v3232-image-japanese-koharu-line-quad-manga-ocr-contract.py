@@ -91,8 +91,8 @@ class JapaneseKoharuLineQuadMangaOCRContractTests(unittest.TestCase):
         for marker in [
             "cropQuad: region.cropQuadHint",
             "var cropQuad: ImageOCRLayoutQuad?",
-            "Self.cropImage(image, request: request)",
-            "return cropImage(image, normalizedRect: request.cropRect)",
+            "Self.cropImages(image, request: request)",
+            "let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)",
             "CIPerspectiveCorrection",
             "guard let normalizedQuad = quad.normalized()",
         ]:

@@ -53,6 +53,16 @@ enum MangaOCRServiceError: LocalizedError {
 actor MangaOCRService {
     static let shared = MangaOCRService()
     private static let maximumBatchSize = 4
+    private static let preferredCropConfidence: Float = 0.55
+    private static let preferredJapaneseScriptDensity = 0.5
+
+    private typealias Recognition = (text: String, confidence: Float)
+
+    private struct CroppedRequest {
+        var request: MangaOCRRequest
+        var primaryCrop: CGImage
+        var boundingBoxFallbackCrop: CGImage?
+    }
 
     private var runtime: MangaOCRRuntime?
 
@@ -65,14 +75,14 @@ actor MangaOCRService {
         var results: [MangaOCRResult] = []
         results.reserveCapacity(requests.count)
 
-        var croppedRequests: [(request: MangaOCRRequest, crop: CGImage)] = []
+        var croppedRequests: [CroppedRequest] = []
         croppedRequests.reserveCapacity(requests.count)
         for request in requests {
             try Task.checkCancellation()
-            guard let crop = Self.cropImage(image, request: request) else {
+            guard let cropped = Self.cropImages(image, request: request) else {
                 continue
             }
-            croppedRequests.append((request, crop))
+            croppedRequests.append(cropped)
         }
 
         for start in stride(from: 0, to: croppedRequests.count, by: Self.maximumBatchSize) {
@@ -80,51 +90,86 @@ actor MangaOCRService {
             let end = min(start + Self.maximumBatchSize, croppedRequests.count)
             let chunk = Array(croppedRequests[start..<end])
 
-            if runtime.supportsBatchInference {
-                do {
-                    let recognitions = try runtime.recognizeBatch(
-                        chunk.map { $0.crop }
-                    )
-                    guard recognitions.count == chunk.count else {
-                        throw MangaOCRServiceError.modelOutputMissing(
-                            "batched recognition row count"
-                        )
-                    }
-                    for (entry, recognition) in zip(chunk, recognitions) {
-                        Self.appendJapaneseResult(
-                            recognition,
-                            request: entry.request,
-                            to: &results
-                        )
-                    }
-                    continue
-                } catch is CancellationError {
-                    throw CancellationError()
-                } catch {
-                    // A bad batch falls back to isolated crops below so one row
-                    // cannot hide otherwise valid Japanese regions.
+            let primaryRecognitions = try recognizeCrops(
+                chunk.map(\.primaryCrop),
+                runtime: runtime
+            )
+            let fallbackIndexes = chunk.indices.filter { index in
+                chunk[index].boundingBoxFallbackCrop != nil
+                    && Self.shouldRetryBoundingBox(after: primaryRecognitions[index])
+            }
+            let fallbackCrops = fallbackIndexes.compactMap {
+                chunk[$0].boundingBoxFallbackCrop
+            }
+            let fallbackRecognitions = try recognizeCrops(
+                fallbackCrops,
+                runtime: runtime
+            )
+            var fallbackByIndex: [Int: Recognition] = [:]
+            fallbackByIndex.reserveCapacity(fallbackIndexes.count)
+            for (offset, index) in fallbackIndexes.enumerated() {
+                if let recognition = fallbackRecognitions[offset] {
+                    fallbackByIndex[index] = recognition
                 }
             }
 
-            for entry in chunk {
-                try Task.checkCancellation()
-                do {
-                    let recognition = try runtime.recognize(entry.crop)
-                    Self.appendJapaneseResult(
-                        recognition,
-                        request: entry.request,
-                        to: &results
-                    )
-                } catch is CancellationError {
-                    // A user cancellation must stop the whole bounded batch.
-                    throw CancellationError()
-                } catch {
-                    // One malformed crop or model output must not discard good regions.
-                    continue
-                }
+            for index in chunk.indices {
+                let recognition = Self.preferredRecognition(
+                    primary: primaryRecognitions[index],
+                    boundingBoxFallback: fallbackByIndex[index]
+                )
+                Self.appendJapaneseResult(
+                    recognition,
+                    request: chunk[index].request,
+                    to: &results
+                )
             }
         }
         return results
+    }
+
+    /// Batch first, then isolate failures per crop. The same routine is used
+    /// for primary line quads and the smaller set of weak-result bbox retries.
+    private func recognizeCrops(
+        _ crops: [CGImage],
+        runtime: MangaOCRRuntime
+    ) throws -> [Recognition?] {
+        guard !crops.isEmpty else { return [] }
+        if runtime.supportsBatchInference {
+            do {
+                let recognitions = try runtime.recognizeBatch(crops)
+                guard recognitions.count == crops.count else {
+                    throw MangaOCRServiceError.modelOutputMissing(
+                        "batched recognition row count"
+                    )
+                }
+                return recognitions.map { Optional.some($0) }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // A bad batch falls back to isolated crops below so one row
+                // cannot hide otherwise valid Japanese regions.
+                // Do not let a simultaneous cancellation be hidden by a Core ML
+                // error before falling back to isolated crops.
+                try Task.checkCancellation()
+            }
+        }
+
+        var recognitions: [Recognition?] = []
+        recognitions.reserveCapacity(crops.count)
+        for crop in crops {
+            try Task.checkCancellation()
+            do {
+                recognitions.append(try runtime.recognize(crop))
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // One malformed crop or model output must not discard good regions.
+                try Task.checkCancellation()
+                recognitions.append(nil)
+            }
+        }
+        return recognitions
     }
 
     /// Exposes the loaded model shape to the runtime harness without making
@@ -134,10 +179,11 @@ actor MangaOCRService {
     }
 
     private static func appendJapaneseResult(
-        _ recognition: (text: String, confidence: Float),
+        _ recognition: Recognition?,
         request: MangaOCRRequest,
         to results: inout [MangaOCRResult]
     ) {
+        guard let recognition else { return }
         guard containsJapaneseLetter(recognition.text) else { return }
         results.append(
             MangaOCRResult(
@@ -157,15 +203,88 @@ actor MangaOCRService {
         return loaded
     }
 
-    private static func cropImage(
+    /// Koharu's Manga OCR consumes the expanded detector bbox. A strictly gated
+    /// line quad may be tried first, but retain that bbox as a content-quality
+    /// fallback whenever perspective correction actually produced the primary.
+    private static func cropImages(
         _ image: CGImage,
         request: MangaOCRRequest
-    ) -> CGImage? {
+    ) -> CroppedRequest? {
+        let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)
         if let cropQuad = request.cropQuad,
            let perspectiveCrop = perspectiveCorrectedCrop(image, quad: cropQuad) {
-            return perspectiveCrop
+            return CroppedRequest(
+                request: request,
+                primaryCrop: perspectiveCrop,
+                boundingBoxFallbackCrop: boundingBoxCrop
+            )
         }
-        return cropImage(image, normalizedRect: request.cropRect)
+        guard let boundingBoxCrop else { return nil }
+        return CroppedRequest(
+            request: request,
+            primaryCrop: boundingBoxCrop,
+            boundingBoxFallbackCrop: nil
+        )
+    }
+
+    private static func shouldRetryBoundingBox(
+        after recognition: Recognition?
+    ) -> Bool {
+        guard let recognition else { return true }
+        return !isPreferredRecognition(recognition)
+    }
+
+    private static func preferredRecognition(
+        primary: Recognition?,
+        boundingBoxFallback: Recognition?
+    ) -> Recognition? {
+        let primaryIsJapanese = primary.map { containsJapaneseLetter($0.text) } ?? false
+        let fallbackIsJapanese = boundingBoxFallback.map {
+            containsJapaneseLetter($0.text)
+        } ?? false
+        switch (primaryIsJapanese, fallbackIsJapanese) {
+        case (false, false):
+            return nil
+        case (true, false):
+            return primary
+        case (false, true):
+            return boundingBoxFallback
+        case (true, true):
+            guard let primary, let boundingBoxFallback else { return primary }
+            let primaryRank = recognitionQualityRank(primary)
+            let fallbackRank = recognitionQualityRank(boundingBoxFallback)
+            if fallbackRank != primaryRank {
+                return fallbackRank > primaryRank ? boundingBoxFallback : primary
+            }
+            let primaryConfidence = finiteConfidence(primary.confidence)
+            let fallbackConfidence = finiteConfidence(boundingBoxFallback.confidence)
+            if fallbackConfidence != primaryConfidence {
+                return fallbackConfidence > primaryConfidence
+                    ? boundingBoxFallback
+                    : primary
+            }
+            return japaneseLetterCount(boundingBoxFallback.text)
+                > japaneseLetterCount(primary.text)
+                ? boundingBoxFallback
+                : primary
+        }
+    }
+
+    private static func finiteConfidence(_ confidence: Float) -> Float {
+        confidence.isFinite ? confidence : -.infinity
+    }
+
+    private static func isPreferredRecognition(_ recognition: Recognition) -> Bool {
+        recognition.confidence.isFinite
+            && recognition.confidence >= preferredCropConfidence
+            && containsJapaneseLetter(recognition.text)
+            && japaneseScriptDensity(in: recognition.text)
+                >= preferredJapaneseScriptDensity
+    }
+
+    private static func recognitionQualityRank(_ recognition: Recognition) -> Int {
+        if isPreferredRecognition(recognition) { return 2 }
+        return containsJapaneseLetter(recognition.text) ? 1 : 0
     }
 
     private static func cropImage(
@@ -271,16 +390,35 @@ actor MangaOCRService {
     }
 
     private static func containsJapaneseLetter(_ text: String) -> Bool {
-        text.unicodeScalars.contains { scalar in
+        japaneseLetterCount(text) > 0
+    }
+
+    private static func japaneseLetterCount(_ text: String) -> Int {
+        text.unicodeScalars.reduce(into: 0) { count, scalar in
             switch scalar.value {
             case 0x3041...0x3096, 0x30A1...0x30FA, 0x30FD...0x30FF,
                  0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF,
                  0xFF66...0xFF9D:
+                count += 1
+            default:
+                break
+            }
+        }
+    }
+
+    private static func japaneseScriptDensity(in text: String) -> Double {
+        let scalars = Array(text.unicodeScalars)
+        guard !scalars.isEmpty else { return 0 }
+        let japaneseCount = scalars.count { scalar in
+            switch scalar.value {
+            case 0x3000...0x303F, 0x3040...0x30FF, 0x3400...0x4DBF,
+                 0x4E00...0x9FFF, 0xF900...0xFAFF, 0xFF61...0xFF9F:
                 true
             default:
                 false
             }
         }
+        return Double(japaneseCount) / Double(scalars.count)
     }
 }
 

@@ -1,3 +1,11 @@
+## v3.238：Manga OCR line-quad 内容质量回退
+
+日期：2026-08-10
+
+严格门控的 line quad 仍是 detector-owned Manga OCR 的首选 crop，但不再成为单向决策。每个成功投影的 quad 都保留 Koharu 扩展 detector bbox；quad 推理为空、失败、非日文、日文脚本密度 `<0.5`、置信度非有限或 `<0.55` 时，只对该项批量补跑 bbox，并先按同一可靠性等级、再按有限置信度和日文字符数择优。可靠 quad 不增加推理，bbox-only 请求不重复运行；batch／单 crop 故障隔离、取消传播、ownership、12／48 请求预算、Vision fallback、布局、翻译、渲染和非日语路径不变。
+
+新增 `scripts/test-v3238-image-japanese-quad-bbox-fallback-contract.py` 和真实 Core ML blank-quad→detector-bbox runtime 并接入 CI，工程版本为 `3.238`。本地 `238` 份合同、fallback／单页／长页真实 Core ML runtime 通过；exact-SHA full [31403964016](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31403964016) 对 SHA `12b4f17c864019d88b3128373b4d393dd61ae628` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode build 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe 为 `skip`。云端 blank quad 输出 `それは、`、置信度 `0.17586856`，detector bbox 回退以 `0.99948084` 恢复 `今度こそこの爆乳を持ち帰る！`；单页保持 5 个 vertical blocks，四页长图保持 16 个 vertical blocks、底部 y=`0.940558`。固定 `test/jap.jpg` 只验证回退路径和既有单页／长页回归，不外推通用日语 OCR、翻译或识别质量，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.236：Koharu 批量日语翻译容错
 
 日语图片批翻译现在按全局 `[N]` ID 消费模型输出，允许小模型返回乱序、未知标签或部分有效块；已识别的译文直接写回对应文字块，缺失块才逐块补译。完全无效或空输出继续沿用原有逐块安全回退，取消传播不变。Gemma 本地漫画 block 清理同步放宽为“至少一个已知、非空且不等于原文的译文”，避免因整批标签顺序／完整性偏差丢弃有效结果。
