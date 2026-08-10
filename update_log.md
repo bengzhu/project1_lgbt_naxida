@@ -1,3 +1,9 @@
+## v3.227：受限 batch Manga OCR 与竖排预览容量一致性
+
+状态：Agent X 继续按 Koharu `MangaOcr::inference(&crops)` 的批量边界迁移。转换脚本新增 `--batch-size`，为大于 1 的输出使用 flexible batch 维度并生成 `MangaOCREncoderINT8Batch`／`MangaOCRDecoderINT8Batch`；Swift 端按最多 4 个 crop 分块，只有成对可选模型资源存在时执行 encoder／decoder batch，模型输出或批次失败立即回退到逐 crop，取消传播、请求顺序和坏 crop 隔离保持不变。当前仓库仍只内置 batch=1 模型，因此本地既有真实 runtime 的行为与输出不变。
+
+竖排 SwiftUI 覆盖现在按可用行列容量截断并追加 `…`，不再让长译文被 `.clipped()` 静默吞掉；PNG export 已有的容量规则继续作为边界。补齐 Xcode 已引用但缺失的 `AITRANS/Resources/MangaOCR/conversion.json`，记录模型 revision、精度、量化和 batch readiness。新增 `scripts/test-v3227-image-japanese-batch-preview-contract.py`，本地 `5/5` 通过；云端 Xcode／Core ML full validation 待提交后运行。该版本只证明执行边界、UI 可见性与转换 provenance，不声称日语 OCR 准确率提升，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.226：Manga OCR detector ownership 质量门
 
 v3.226 将日语 bundled Manga OCR 的 detector TextRegion ownership 收敛到可靠结果：只有 confidence 有限且 `>=0.55`、日文脚本密度 `>=0.5` 的结果才继续作为受保护 owner；低质量结果不丢弃，仍以普通候选参与 Vision fallback，但不再压制 page-level Vision 或强制 detector 边界。模型加载、单 crop 故障隔离、取消传播、长页预算、布局、翻译、渲染与非日语路径保持不变。新增 `scripts/test-v3226-image-japanese-manga-ocr-quality-gate-contract.py`，并更新 v3.219/v3.221/v3.223 历史合同接受等价质量门。

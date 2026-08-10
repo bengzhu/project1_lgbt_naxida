@@ -3058,10 +3058,19 @@ private struct ImageTranslationVerticalText: View {
             let characters = text.map(String.init)
             let rowHeight: CGFloat = 18
             let rowCapacity = max(Int(geometry.size.height / rowHeight), 1)
-            let columns = makeColumns(characters, rowCapacity: rowCapacity)
+            let columnCapacity = max(
+                Int(geometry.size.width / max(rowHeight * 0.9, 1)),
+                1
+            )
+            let maximumCharacters = max(rowCapacity * columnCapacity, 1)
+            let drawableCharacters = boundedCharacters(
+                characters,
+                maximumCharacters: maximumCharacters
+            )
+            let columns = makeColumns(drawableCharacters, rowCapacity: rowCapacity)
             let columnWidth = max(
                 geometry.size.width / CGFloat(max(columns.count, 1)),
-                14
+                1
             )
 
             HStack(alignment: .top, spacing: 0) {
@@ -3090,6 +3099,15 @@ private struct ImageTranslationVerticalText: View {
         return stride(from: 0, to: characters.count, by: rowCapacity).map { start in
             Array(characters[start..<min(start + rowCapacity, characters.count)])
         }
+    }
+
+    private func boundedCharacters(
+        _ characters: [String],
+        maximumCharacters: Int
+    ) -> [String] {
+        guard characters.count > maximumCharacters else { return characters }
+        let prefixCount = max(maximumCharacters - 1, 1)
+        return Array(characters.prefix(prefixCount)) + ["…"]
     }
 }
 

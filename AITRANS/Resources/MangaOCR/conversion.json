@@ -1,0 +1,13 @@
+{
+  "source": "kha-white/manga-ocr-base",
+  "revision": "aa6573bd10b0d446cbf622e29c3e084914df9741",
+  "encoderComputePrecision": "float16",
+  "decoderComputePrecision": "float32",
+  "weightQuantization": "linear-symmetric-int8",
+  "minimumDeploymentTarget": "iOS17",
+  "batchInference": {
+    "bundledModelBatchSize": 1,
+    "optionalFlexibleBatchModel": true,
+    "maximumBatchSize": 4
+  }
+}
