@@ -862,13 +862,15 @@ struct ImageTranslationPanel: View {
     private var reviewFilterAccessibilityHint: String {
         switch reviewFilter {
         case .all:
-            return "显示全部 OCR 文字块；可以切换到待复查、低置信或方向待定"
+            return "显示全部 OCR 文字块；可以切换到待复查、低置信、方向待定或竖排"
         case .needsReview:
             return "显示尚未完成复查的低置信或方向待定文字块"
         case .lowConfidence:
             return "只显示 OCR 置信度低于 50% 的文字块；已复查的风险块仍会保留"
         case .unknownDirection:
             return "只显示方向待定的文字块；已复查的风险块仍会保留"
+        case .vertical:
+            return "只显示来源方向为竖排的文字块；包含高置信度结果，方便逐列检查日语识别"
         }
     }
 
@@ -888,13 +890,15 @@ struct ImageTranslationPanel: View {
     private var filterEmptyStateDetail: String {
         switch reviewFilter {
         case .all:
-            return "切换到待复查、低置信或方向待定可查看风险块。"
+            return "切换到待复查、低置信、方向待定或竖排可查看对应文字块。"
         case .needsReview:
             return "当前没有尚未完成复查的风险块；可以切换到全部查看已复查结果。"
         case .lowConfidence:
-            return "当前没有低于 50% 置信度的文字块；可切换到全部或方向待定。"
+            return "当前没有低于 50% 置信度的文字块；可切换到全部、方向待定或竖排。"
         case .unknownDirection:
-            return "当前没有方向待定的文字块；可切换到全部或低置信。"
+            return "当前没有方向待定的文字块；可切换到全部、低置信或竖排。"
+        case .vertical:
+            return "当前没有竖排文字块；可切换到全部查看所有 OCR 结果。"
         }
     }
 
@@ -908,6 +912,8 @@ struct ImageTranslationPanel: View {
             "低置信 \(ImageOCRReviewFilter.lowConfidence.blocks(from: store.imageTranslationBlocks).count)"
         case .unknownDirection:
             "方向待定 \(ImageOCRReviewFilter.unknownDirection.blocks(from: store.imageTranslationBlocks).count)"
+        case .vertical:
+            "竖排 \(ImageOCRReviewFilter.vertical.blocks(from: store.imageTranslationBlocks).count)"
         }
     }
 
