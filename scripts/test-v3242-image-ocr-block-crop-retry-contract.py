@@ -38,6 +38,10 @@ class ImageOCRBlockCropRetryContractTests(unittest.TestCase):
             self.ocr,
             "func recognizeTextBlock(",
         )
+        self.recognize_detached = braced_body(
+            self.ocr,
+            "private static func recognizeTextBlockDetached(",
+        )
         self.gate = braced_body(
             self.store,
             "func canRerecognizeImageTranslationBlock(",
@@ -57,6 +61,12 @@ class ImageOCRBlockCropRetryContractTests(unittest.TestCase):
 
     def test_ocr_service_is_crop_only_and_keeps_japanese_model_fallback(self) -> None:
         for marker in [
+            "let task = Task.detached(priority: .userInitiated)",
+            "try await Self.recognizeTextBlockDetached(",
+            "return try await task.value",
+        ]:
+            self.assertIn(marker, self.recognize)
+        for marker in [
             "let image = try Self.makeOCRImage(from: imageData)",
             "MangaOCRRequest(",
             "MangaOCRService.shared",
@@ -69,14 +79,14 @@ class ImageOCRBlockCropRetryContractTests(unittest.TestCase):
             "usesLanguageCorrection: !japanese",
             "observationRole: .crop",
         ]:
-            self.assertIn(marker, self.recognize)
+            self.assertIn(marker, self.recognize_detached)
         for forbidden in [
             "recognizeTextBlocks(",
             "ImageOCRLayoutEngine.layout(",
             "RTDETR",
             "detectJapanese",
         ]:
-            self.assertNotIn(forbidden, self.recognize)
+            self.assertNotIn(forbidden, self.recognize_detached)
 
     def test_gate_requires_existing_content_and_terminal_session(self) -> None:
         for marker in [

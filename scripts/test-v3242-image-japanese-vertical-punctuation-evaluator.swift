@@ -1,5 +1,11 @@
 import Foundation
 
+// TranscriptModels references service-owned diagnostics. Keep this model-only
+// evaluator independent from Vision/Core ML services with equivalent stubs.
+struct MangaOverlayBubbleGeometryDiagnostics: Equatable, Codable, Sendable {}
+struct MangaOverlaySliceOCRDiagnostics: Equatable, Codable, Sendable {}
+struct MangaOverlayCropFallbackSelfTest: Equatable, Codable, Sendable {}
+
 private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
     precondition(condition(), message)
 }

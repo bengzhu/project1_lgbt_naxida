@@ -147,107 +147,120 @@ struct VisionOCRService: Sendable {
         sourceLanguage: SupportedLanguage,
         block: ImageTranslationBlock
     ) async throws -> ImageTranslationBlock? {
-        let task = Task.detached(priority: .userInitiated) { () -> ImageTranslationBlock? in
-            let image = try Self.makeOCRImage(from: imageData)
-            guard let rect = ImageOCRLayoutRect(
-                x: block.boundingBox.x,
-                y: block.boundingBox.y,
-                width: block.boundingBox.width,
-                height: block.boundingBox.height
-            ).normalizedToUnit() else {
-                throw VisionOCRServiceError.blockRecognitionFailed
-            }
-
-            if sourceLanguage == .japanese {
-                do {
-                    let request = MangaOCRRequest(
-                        textRect: rect,
-                        cropRect: rect
-                    )
-                    if let result = try await MangaOCRService.shared
-                        .recognize(image: image, requests: [request])
-                        .first,
-                       let text = Self.cleanRecognizedBlockText(result.text),
-                       !text.isEmpty,
-                       result.confidence.isFinite,
-                       result.confidence >= 0.55,
-                       Self.japaneseScriptDensity(in: text) >= 0.5 {
-                        return Self.recognizedBlock(
-                            block,
-                            text: text,
-                            confidence: result.confidence
-                        )
-                    }
-                } catch is CancellationError {
-                    throw CancellationError()
-                } catch {
-                    // A missing or incompatible bundled model must not remove
-                    // the existing block; the crop-level Vision fallback below
-                    // remains available.
-                }
-            }
-
-            guard let crop = Self.cropImageForBlock(image, normalizedRect: rect) else {
-                throw VisionOCRServiceError.blockRecognitionFailed
-            }
-
-            let japanese = sourceLanguage == .japanese
-            let angles: [Int]
-            if japanese {
-                switch block.sourceDirection {
-                case .some(.vertical):
-                    angles = [270, 90]
-                case .some(.horizontal):
-                    angles = [0]
-                case .some(.unknown), .none:
-                    angles = [270, 90, 0]
-                }
-            } else {
-                angles = [0]
-            }
-
-            var observations: [VisionOCRObservation] = []
-            for angle in angles {
-                try Task.checkCancellation()
-                let orientedCrop: CGImage
-                if angle == 0 {
-                    orientedCrop = crop
-                } else {
-                    guard let rotated = try? Self.rotatedImage(crop, angle: angle) else {
-                        continue
-                    }
-                    orientedCrop = rotated
-                }
-                observations.append(contentsOf: try Self.recognizeObservations(
-                    in: orientedCrop,
-                    recognitionLanguages: japanese
-                        ? ["ja-JP", "ja"]
-                        : sourceLanguage.visionRecognitionLanguageIdentifiers,
-                    minimumTextHeight: japanese ? 0.006 : 0.01,
-                    automaticallyDetectsLanguage: !japanese,
-                    rotationApplied: angle,
-                    postProcessJapaneseText: japanese,
-                    usesLanguageCorrection: !japanese,
-                    observationRole: .crop
-                ))
-            }
-
-            try Task.checkCancellation()
-            guard let best = observations.max(by: {
-                Self.isBetterObservation($0, $1, prefersJapanese: japanese)
-            }),
-                  let text = Self.cleanRecognizedBlockText(best.text),
-                  !text.isEmpty else {
-                return nil
-            }
-            return Self.recognizedBlock(
-                block,
-                text: text,
-                confidence: best.confidence
+        let task = Task.detached(priority: .userInitiated) {
+            try await Self.recognizeTextBlockDetached(
+                imageData: imageData,
+                sourceLanguage: sourceLanguage,
+                block: block
             )
         }
 
         return try await task.value
+    }
+
+    private static func recognizeTextBlockDetached(
+        imageData: Data,
+        sourceLanguage: SupportedLanguage,
+        block: ImageTranslationBlock
+    ) async throws -> ImageTranslationBlock? {
+        let image = try Self.makeOCRImage(from: imageData)
+        guard let rect = ImageOCRLayoutRect(
+            x: block.boundingBox.x,
+            y: block.boundingBox.y,
+            width: block.boundingBox.width,
+            height: block.boundingBox.height
+        ).normalizedToUnit() else {
+            throw VisionOCRServiceError.blockRecognitionFailed
+        }
+
+        if sourceLanguage == .japanese {
+            do {
+                let request = MangaOCRRequest(
+                    textRect: rect,
+                    cropRect: rect
+                )
+                if let result = try await MangaOCRService.shared
+                    .recognize(image: image, requests: [request])
+                    .first,
+                   let text = Self.cleanRecognizedBlockText(result.text),
+                   !text.isEmpty,
+                   result.confidence.isFinite,
+                   result.confidence >= 0.55,
+                   Self.japaneseScriptDensity(in: text) >= 0.5 {
+                    return Self.recognizedBlock(
+                        block,
+                        text: text,
+                        confidence: result.confidence
+                    )
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // A missing or incompatible bundled model must not remove
+                // the existing block; the crop-level Vision fallback below
+                // remains available.
+            }
+        }
+
+        guard let crop = Self.cropImageForBlock(image, normalizedRect: rect) else {
+            throw VisionOCRServiceError.blockRecognitionFailed
+        }
+
+        let japanese = sourceLanguage == .japanese
+        let angles: [Int]
+        if japanese {
+            // Keep this comparison compatible with the lightweight runtime
+            // harness, whose block direction predates the app's optional field.
+            if block.sourceDirection == .vertical {
+                angles = [270, 90]
+            } else if block.sourceDirection == .horizontal {
+                angles = [0]
+            } else {
+                angles = [270, 90, 0]
+            }
+        } else {
+            angles = [0]
+        }
+
+        var observations: [VisionOCRObservation] = []
+        for angle in angles {
+            try Task.checkCancellation()
+            let orientedCrop: CGImage
+            if angle == 0 {
+                orientedCrop = crop
+            } else {
+                guard let rotated = try? Self.rotatedImage(crop, angle: angle) else {
+                    continue
+                }
+                orientedCrop = rotated
+            }
+            observations.append(contentsOf: try Self.recognizeObservations(
+                in: orientedCrop,
+                recognitionLanguages: japanese
+                    ? ["ja-JP", "ja"]
+                    : sourceLanguage.visionRecognitionLanguageIdentifiers,
+                minimumTextHeight: japanese ? 0.006 : 0.01,
+                automaticallyDetectsLanguage: !japanese,
+                rotationApplied: angle,
+                postProcessJapaneseText: japanese,
+                usesLanguageCorrection: !japanese,
+                observationRole: .crop
+            ))
+        }
+
+        try Task.checkCancellation()
+        guard let best = observations.max(by: {
+            Self.isBetterObservation($0, $1, prefersJapanese: japanese)
+        }),
+              let text = Self.cleanRecognizedBlockText(best.text),
+              !text.isEmpty else {
+            return nil
+        }
+        return Self.recognizedBlock(
+            block,
+            text: text,
+            confidence: best.confidence
+        )
     }
 
     private static func recognizeObservations(
