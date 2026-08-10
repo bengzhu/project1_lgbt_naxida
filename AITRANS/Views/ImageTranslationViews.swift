@@ -4058,7 +4058,9 @@ private struct ImageOCRCorrectionSheet: View {
                 selectedDirectionOverride = direction
                 directionUpdateMessage = direction == nil
                     ? "已恢复自动方向"
-                    : "已设置(direction == .vertical ? "竖排" : "横排")，不会重新识别或翻译"
+                    : (direction == .vertical
+                        ? "已设置竖排，不会重新识别或翻译"
+                        : "已设置横排，不会重新识别或翻译")
             }
         )
     }
