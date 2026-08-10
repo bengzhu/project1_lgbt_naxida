@@ -1,5 +1,7 @@
 # AGENTS.md
 
+v3.229 修复 v3.228 云端真实 runtime 暴露的 flexible-batch encoder 图错误：ViT CLS token 不再以动态 `tile(reps)` 扩展，改为动态 shape `fill` 广播；encoder 的 1…4 batch 使用 `EnumeratedShapes` 专化，decoder 保留动态 sequence 与 legacy 单 crop 回退。v3.228 云端 Xcode build 已通过，但 batch encoder runtime 因 `tile` shape inference 回退 Vision，run [31366707811](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31366707811) 的 UI contract 正确失败；新增 `scripts/test-v3229-image-japanese-batch-model-shape-contract.py` 锁定模型规格与失败边界，新的 Core ML runtime 尚待验证。v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86`、v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c` 仍在祖先链，本地／远端旧分支已清理。
+
 v3.228 将 v3.227 的 flexible-batch Manga OCR 从可选接口推进为实际随包资源：encoder／decoder 均为 1…4 flexible batch，runtime 仍保留单 crop 模型作为兼容回退；单页和长页 harness 会明确校验 batch 模型已加载，坏 batch 仍逐 crop 隔离回退。新增 `scripts/test-v3228-image-japanese-bundled-batch-runtime-contract.py`，云端 Core ML 编译与真实 runtime 尚待当前提交验证。该版本只证明执行路径和性能资源可用，不声称日语 OCR 准确率提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
 v3.227 继续向 Koharu 的真实 batch Manga OCR 迁移：`scripts/convert-manga-ocr-coreml.py` 支持上限为 4 的 flexible-batch encoder／decoder，Swift `MangaOCRRuntime` 仅在成对可选 batch 模型存在时启用，并在 batch 错误后逐 crop 回退；当前入库的 batch=1 模型与既有单页 12／长页 48 请求预算不变。`ImageTranslationVerticalText` 现在按行列容量主动追加省略号，和 PNG 导出一致；补入 Xcode 已引用的 `AITRANS/Resources/MangaOCR/conversion.json`。新增 `scripts/test-v3227-image-japanese-batch-preview-contract.py`，云端 full 尚待本版本提交后验证。该版本不声称 OCR 准确率提升，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。

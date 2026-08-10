@@ -7,6 +7,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.229 flexible-batch encoder shape fix
+
+- `scripts/test-v3229-image-japanese-batch-model-shape-contract.py`：锁定 encoder `EnumeratedShapes(1…4)`、CLS `fill` 广播、encoder 模型规格 SHA，以及 decoder 动态 sequence／legacy fallback 边界。
+- v3.228 云端 run `31366707811` 的 Xcode build 通过，但实际 encoder runtime 报 `tile` shape inference 错误并被 contract 拒绝；本版本必须重新完成 Xcode、单页和长页 Core ML runtime，不能以 capability 或 Vision fallback 冒充 batch 成功。
+- 本版本不新增 OCR accuracy 或 ground-truth 指标；`test/jap.jpg` 只验证 batch 执行和既有几何／布局回归，Koharu artifact readiness 仍单独门控。
+
 ### v3.228 flexible-batch Manga OCR
 
 - `scripts/test-v3228-image-japanese-bundled-batch-runtime-contract.py`：验证两个 batch Core ML 包的 hash、Manifest、Xcode Resources、`1…4` shape provenance、legacy fallback、CI 路由以及单页／长页 harness 的 `batchInference=true` 断言。

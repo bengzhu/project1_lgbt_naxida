@@ -33,6 +33,53 @@ class Encoder(nn.Module):
         return self.encoder(pixel_values, return_dict=False)[0]
 
 
+class BatchSafeViTEmbeddings(nn.Module):
+    """Keep CLS-token broadcasting legal for Core ML flexible batch shapes."""
+
+    def __init__(self, source: nn.Module) -> None:
+        super().__init__()
+        self.cls_token = source.cls_token
+        self.mask_token = source.mask_token
+        self.patch_embeddings = source.patch_embeddings
+        self.position_embeddings = source.position_embeddings
+        self.dropout = source.dropout
+
+    def forward(
+        self,
+        pixel_values: torch.Tensor,
+        bool_masked_pos: torch.Tensor | None = None,
+        interpolate_pos_encoding: bool = False,
+    ) -> torch.Tensor:
+        batch_size, _, _, _ = pixel_values.shape
+        embeddings = self.patch_embeddings(
+            pixel_values,
+            interpolate_pos_encoding=interpolate_pos_encoding,
+        )
+        if bool_masked_pos is not None:
+            sequence_length = embeddings.shape[1]
+            mask_tokens = self.mask_token * torch.ones(
+                (batch_size, sequence_length, 1),
+                dtype=self.mask_token.dtype,
+                device=self.mask_token.device,
+            )
+            mask = bool_masked_pos.unsqueeze(-1).type_as(mask_tokens)
+            embeddings = embeddings * (1.0 - mask) + mask_tokens * mask
+
+        cls_tokens = self.cls_token * torch.ones(
+            (batch_size, 1, 1),
+            dtype=self.cls_token.dtype,
+            device=self.cls_token.device,
+        )
+        embeddings = torch.cat((cls_tokens, embeddings), dim=1)
+        embeddings = embeddings + self.position_embeddings
+        return self.dropout(embeddings)
+
+
+def make_batch_safe_encoder(encoder: nn.Module) -> nn.Module:
+    encoder.embeddings = BatchSafeViTEmbeddings(encoder.embeddings)
+    return encoder
+
+
 class Decoder(nn.Module):
     def __init__(self, decoder: nn.Module) -> None:
         super().__init__()
@@ -52,6 +99,7 @@ class Decoder(nn.Module):
 
 
 def coreml_batch_dimension(batch_size: int) -> int | ct.RangeDim:
+    """Keep the legacy scalar helper for the single-crop conversion path."""
     if batch_size == 1:
         return 1
     return ct.RangeDim(
@@ -61,14 +109,38 @@ def coreml_batch_dimension(batch_size: int) -> int | ct.RangeDim:
     )
 
 
+def coreml_batch_shape(
+    batch_size: int,
+    trailing_shape: tuple[int | ct.RangeDim, ...],
+    default_trailing_shape: tuple[int, ...] | None = None,
+) -> tuple[int | ct.RangeDim, ...] | ct.EnumeratedShapes:
+    """Specialize each valid batch to avoid dynamic ViT tile repetition."""
+    if batch_size == 1:
+        return (1, *trailing_shape)
+    default_tail = default_trailing_shape or tuple(
+        dimension.default if isinstance(dimension, ct.RangeDim) else dimension
+        for dimension in trailing_shape
+    )
+    shapes = [(batch, *trailing_shape) for batch in range(1, batch_size + 1)]
+    return ct.EnumeratedShapes(
+        shapes=shapes,
+        default=(min(batch_size, 4), *default_tail),
+    )
+
+
 def convert_encoder(
     model: VisionEncoderDecoderModel,
     batch_size: int,
 ) -> ct.models.MLModel:
     example = torch.rand(batch_size, 3, 224, 224)
     batch_dimension = coreml_batch_dimension(batch_size)
+    batch_shape = coreml_batch_shape(batch_size, (3, 224, 224))
     with torch.inference_mode():
-        traced = torch.jit.trace(Encoder(model.encoder).eval(), example, strict=False)
+        traced = torch.jit.trace(
+            Encoder(make_batch_safe_encoder(model.encoder).eval()).eval(),
+            example,
+            strict=False,
+        )
     return ct.convert(
         traced,
         convert_to="mlprogram",
@@ -77,7 +149,7 @@ def convert_encoder(
         inputs=[
             ct.TensorType(
                 name="pixel_values",
-                shape=(batch_dimension, 3, 224, 224),
+                shape=batch_shape,
                 dtype=np.float32,
             )
         ],
@@ -96,6 +168,7 @@ def convert_decoder(
         dtype=torch.int64,
     )
     hidden_states = torch.rand(batch_size, 197, 768)
+    sequence = ct.RangeDim(lower_bound=1, upper_bound=300, default=4)
     batch_dimension = coreml_batch_dimension(batch_size)
     with torch.inference_mode():
         traced = torch.jit.trace(
@@ -103,7 +176,6 @@ def convert_decoder(
             (input_ids, hidden_states),
             strict=False,
         )
-    sequence = ct.RangeDim(lower_bound=1, upper_bound=300, default=4)
     # Decoder math stays FP32 because the BERT causal-mask sentinel overflows
     # FP16. Constants are quantized separately after conversion.
     return ct.convert(

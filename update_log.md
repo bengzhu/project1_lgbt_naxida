@@ -9552,3 +9552,8 @@ Agent C 最终验收：
 状态：继续沿 Koharu `MangaOcr::inference(&crops)` 的批量边界推进。v3.227 只提供可选 batch 接口，本版本把同 revision 转换出的 `MangaOCREncoderINT8Batch.mlpackage`／`MangaOCRDecoderINT8Batch.mlpackage` 纳入 Xcode Resources；两者声明 batch `1…4`，Swift runtime 仍按最多 4 个 crop 分块，只有成对 batch 模型可用时启用，批次输出错误、资源不成对或单 crop 失败都会回到既有单 crop 模型。单页／长页 harness 输出 `batchInference=true` 才算真实 batch runtime 通过。
 
 新增 `scripts/test-v3228-image-japanese-bundled-batch-runtime-contract.py`，更新单页／长页 Core ML runtime 脚本编译并验证 batch 资源，版本为 `3.228`。当前提交尚未取得云端 Core ML 编译与真实 runtime 收据；本地只能完成合同、资源 hash、JSON／plist／YAML 与 diff 检查，本机缺少完整 Xcode。该版本只证明可执行路径与性能资源，不声称日语 OCR 准确率提升；`test/jap.jpg` 仍是固定回归 fixture，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+## v3.229：修复 flexible-batch encoder shape inference
+
+状态：处理 v3.228 云端真实 runtime 暴露的问题。run [31366707811](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31366707811) 的 Xcode build、静态合同和 UI 合同前置检查均完成，但 encoder 运行时在 `tile` 的动态 `reps` shape inference 报 `All values of reps must be at least 1`；harness 虽显示 `batchInference=true`，实际结果回退 Vision，vertical provenance gate 正确拒绝该假通过。转换脚本现在用 `BatchSafeViTEmbeddings` 以动态 shape `fill` 广播 CLS token，并只对 encoder 使用 `EnumeratedShapes` 的 1…4 batch，decoder 继续保留动态 sequence 与 legacy 单 crop 回退。
+
+新增 `scripts/test-v3229-image-japanese-batch-model-shape-contract.py`，替换 encoder `model.mlmodel`（权重 SHA、大小和 decoder 不变），版本为 `3.229`。当前修复尚待云端 Xcode／真实单页／长页 runtime 收据；不声称日语 OCR 准确率提升，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c` 仍在祖先链，本地／远端旧分支已清理。
