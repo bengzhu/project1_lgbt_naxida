@@ -6374,6 +6374,140 @@ enum ImageTextDirection: String, Codable, Sendable {
     case unknown
 }
 
+/// Shared VerticalRl text preparation for the SwiftUI preview and PNG export.
+///
+/// Koharu normalizes adjacent emphasis marks before shaping and centers
+/// fullwidth punctuation in each vertical cell. UIKit and SwiftUI do not
+/// expose the same OpenType `vert`/`vrt2` shaping controls, so the renderers
+/// use the Unicode vertical presentation forms where they are available.
+enum ImageTranslationVerticalTextLayout {
+    static func normalizedCharacters(in text: String) -> [String] {
+        normalizeVerticalEmphasisPunctuation(
+            text.filter { !$0.isNewline }
+        ).map(String.init)
+    }
+
+    static func verticalGlyph(for character: String) -> String {
+        switch character {
+        case "、": "︑"
+        case "。": "︒"
+        case "，": "︐"
+        case "．": "︒"
+        case "：": "︓"
+        case "；": "︔"
+        case "（": "︵"
+        case "）": "︶"
+        case "｛": "︷"
+        case "｝": "︸"
+        case "［": "﹇"
+        case "］": "﹈"
+        case "【": "︻"
+        case "】": "︼"
+        case "〔": "︹"
+        case "〕": "︺"
+        case "〈": "︿"
+        case "〉": "﹀"
+        case "《": "︽"
+        case "》": "︾"
+        case "「": "﹁"
+        case "」": "﹂"
+        case "『": "﹃"
+        case "』": "﹄"
+        case "…": "︙"
+        case "！": "﹗"
+        case "？": "﹖"
+        default: character
+        }
+    }
+
+    static func isFullwidthPunctuation(_ character: String) -> Bool {
+        guard character.unicodeScalars.count == 1,
+              let scalar = character.unicodeScalars.first else {
+            return false
+        }
+
+        switch scalar.value {
+        case 0x3001, 0x3002,
+             0x3008...0x3011,
+             0x3014...0x301F,
+             0x3030,
+             0x30FB,
+             0xFF01...0xFF0F,
+             0xFF1A...0xFF20,
+             0xFF3B...0xFF40,
+             0xFF5B...0xFF65:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private enum EmphasisMark {
+        case bang
+        case question
+    }
+
+    private static func emphasisMarkKind(for character: Character) -> EmphasisMark? {
+        switch character {
+        case "!", "！": .bang
+        case "?", "？": .question
+        default: nil
+        }
+    }
+
+    private static func emphasisPairSymbol(
+        _ left: EmphasisMark,
+        _ right: EmphasisMark
+    ) -> Character {
+        switch (left, right) {
+        case (.bang, .bang): "‼"
+        case (.question, .question): "⁇"
+        case (.bang, .question): "⁉"
+        case (.question, .bang): "⁈"
+        }
+    }
+
+    private static func normalizeVerticalEmphasisPunctuation(_ text: String) -> String {
+        let characters = Array(text)
+        var normalized = String()
+        var index = 0
+
+        while index < characters.count {
+            guard let kind = emphasisMarkKind(for: characters[index]) else {
+                normalized.append(characters[index])
+                index += 1
+                continue
+            }
+
+            guard index + 1 < characters.count,
+                  let nextKind = emphasisMarkKind(for: characters[index + 1]) else {
+                normalized.append(characters[index])
+                index += 1
+                continue
+            }
+
+            if kind == nextKind {
+                normalized.append(emphasisPairSymbol(kind, nextKind))
+                index += 2
+                continue
+            }
+
+            if index + 2 < characters.count,
+               let lookaheadKind = emphasisMarkKind(for: characters[index + 2]),
+               nextKind == lookaheadKind {
+                normalized.append(characters[index])
+                index += 1
+                continue
+            }
+
+            normalized.append(emphasisPairSymbol(kind, nextKind))
+            index += 2
+        }
+
+        return normalized
+    }
+}
+
 enum ImageTranslationShareState: Equatable, Sendable {
     case idle
     case preparing

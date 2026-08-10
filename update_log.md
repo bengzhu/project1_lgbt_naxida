@@ -1,3 +1,11 @@
+## v3.242：Koharu VerticalRl 日语标点排版对齐
+
+日期：2026-08-11
+
+Koharu 在 VerticalRl layout 中先归并相邻强调符号，再启用 `vert`／`vrt2` shaping，并按 glyph bounds 居中全角标点。v3.242 将同一边界收敛到图片翻译的两个实际渲染器：`ImageTranslationVerticalTextLayout` 统一处理 `!!`、`??`、`!?`、`?!`（含全角输入）、换行过滤、全角标点分类和 Unicode vertical presentation glyph；SwiftUI 预览与 PNG 导出共同消费归一化字符，并在 bounded cell 中居中全角标点。竖排仍只在 `.replace && block.prefersVerticalWriting` 开启，Latin-only、`.adjacent`、横排来源和 OCR、layout、翻译、导出生命周期边界不变。
+
+新增 `scripts/test-v3242-image-japanese-vertical-punctuation-contract.py`、`scripts/test-v3242-image-japanese-vertical-punctuation-evaluator.swift` 与 `scripts/test-v3242-image-ocr-block-crop-retry-contract.py` 并接入 CI，工程版本为 `3.242`。单块 OCR retry 沿用当前 block bbox，日语先走 bundled Manga OCR、失败回退 Vision crop；成功只提交该 block 的原文／置信度与对应翻译，保留 UUID、geometry、方向、顺序，失败／取消／过期结果不改旧 block，不重跑整页 detector、聚类或布局。云端 full 尚待候选 SHA 验证；固定 `test/jap.jpg` 只作既有 runtime／渲染回归，不声称通用日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.241：Koharu 竖排 Manga OCR quad warp 方向对齐
 
 日期：2026-08-11
