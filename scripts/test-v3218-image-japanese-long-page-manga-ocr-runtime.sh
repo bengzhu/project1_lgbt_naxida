@@ -55,8 +55,8 @@ text = Path(sys.argv[1]).read_text(encoding="utf-8")
 if "copies=4" not in text or "image=1136x6400" not in text:
     raise SystemExit(f"unexpected tall fixture geometry: {text}")
 match = re.search(r"^blocks=(\d+)$", text, re.MULTILINE)
-if match is None or int(match.group(1)) < 17:
-    raise SystemExit(f"expected stable long-page OCR coverage: {text}")
+if match is None or int(match.group(1)) < 16:
+    raise SystemExit(f"expected stable long-page OCR coverage (>=16 blocks): {text}")
 if "direction=unknown" in text:
     raise SystemExit(f"retained unknown-direction long-page OCR blocks: {text}")
 

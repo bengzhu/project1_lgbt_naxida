@@ -6,7 +6,7 @@
 
 - `VisionOCRService` 保存本次 Manga OCR detector observations，最终日语融合先执行 detector-owned page supplement 过滤，再执行既有几何／文本去重；只门控 `.page` 与日语脚本密度 `>= 0.5` 的 page／旋转结果，普通语言使用原 dedupe 路径。
 - 更新 `scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh`，在真实长页输出上计算 horizontal 与 vertical 的最小面积覆盖，拒绝任何 `>= 0.60` 的 page-level horizontal duplicate，同时保留未重叠 `ニコッ`。新增 `scripts/test-v3221-image-japanese-detector-owned-vision-noise-contract.py` 并接入 task-scoped full CI。
-- 本地单页真实 Core ML runtime 继续精确返回 5 个 vertical blocks；四页 `test/jap.jpg` 长图为 `17 blocks`、`16 vertical`、`0 unknown`，四份 `爆乳`、`挨拶` 与完整 `前は生意気に俺の誘い断りやがって...` 均通过，`やがってま` 重叠噪声消失，`ニコッ` 保留。固定重复样图只证明 detector-owned supplement 过滤路径改善，不外推通用日语 OCR、翻译或识别质量；readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- 本地单页真实 Core ML runtime 继续精确返回 5 个 vertical blocks；四页 `test/jap.jpg` 长图本地为 `17 blocks`、云端 Core ML runner 为 `16 blocks`，两者均为 `16 vertical`、`0 unknown`，长页 gate 要求至少 16 个 blocks 且四个季度各至少 4 个 vertical。四份 `爆乳`、`挨拶` 与完整 `前は生意気に俺の誘い断りやがって...` 均通过，`やがってま` 重叠噪声被拒绝，本地 `ニコッ` 保留。固定重复样图只证明 detector-owned supplement 过滤路径改善，不外推通用日语 OCR、翻译或识别质量；readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
 ## v3.220：长页 OCR 保留 Koharu 切片分辨率
 
