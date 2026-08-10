@@ -4407,13 +4407,36 @@ final class TranslationSessionStore: ObservableObject {
 
         do {
             let result = try await generateWithSelectedEngine(request)
-            let translations = try Self.parseMangaTaggedTranslations(
+            let parsedTranslations = try Self.parseMangaTaggedTranslations(
                 result.text,
                 expectedIDs: expectedIDs
             )
+            var translations = Array(repeating: "", count: blocks.count)
+            var missingOffsets: [Int] = []
+            for offset in blocks.indices {
+                if let translation = parsedTranslations[offset] {
+                    translations[offset] = translation
+                } else {
+                    missingOffsets.append(offset)
+                }
+            }
+            if !missingOffsets.isEmpty {
+                imageTranslationMessage = "漫画批翻译缺少 \(missingOffsets.count) 个文本块，正在逐块补译"
+                for offset in missingOffsets {
+                    try Task.checkCancellation()
+                    translations[offset] = try await translate(
+                        blocks[offset].original,
+                        sourceLanguage: sourceLanguage,
+                        targetLanguage: targetLanguage
+                    )
+                }
+            }
+            guard translations.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+                throw ImageMangaBatchTranslationError.emptyTranslation
+            }
             writeLaunchLLMSmokeProbe(
                 "manga-batch-result state=parsed engine=\(result.engineName) " +
-                "count=\(translations.count) output=\(Self.probeField(result.text))"
+                "count=\(translations.count) missing=\(missingOffsets.count) output=\(Self.probeField(result.text))"
             )
             return translations
         } catch {
@@ -4490,7 +4513,7 @@ final class TranslationSessionStore: ObservableObject {
     private static func parseMangaTaggedTranslations(
         _ output: String,
         expectedIDs: [Int]
-    ) throws -> [String] {
+    ) throws -> [String?] {
         var normalized = output
             .replacingOccurrences(of: "```text", with: "")
             .replacingOccurrences(of: "```", with: "")
@@ -4515,10 +4538,14 @@ final class TranslationSessionStore: ObservableObject {
             throw ImageMangaBatchTranslationError.missingTags
         }
 
-        var ids: [Int] = []
-        var values: [String] = []
-        ids.reserveCapacity(matches.count)
-        values.reserveCapacity(matches.count)
+        let expectedIndexByID = Dictionary(
+            uniqueKeysWithValues: expectedIDs.enumerated().map { index, id in
+                (id, index)
+            }
+        )
+        var values = Array<String?>(repeating: nil, count: expectedIDs.count)
+        var recognizedCount = 0
+        var sawExpectedTag = false
         for (index, match) in matches.enumerated() {
             guard let idRange = Range(match.range(at: 1), in: normalized),
                   let id = Int(normalized[idRange]) else {
@@ -4535,15 +4562,22 @@ final class TranslationSessionStore: ObservableObject {
                 location: valueStart,
                 length: valueEnd - valueStart
             )).trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !value.isEmpty else {
-                throw ImageMangaBatchTranslationError.emptyTranslation
+            guard let expectedIndex = expectedIndexByID[id] else {
+                // Match Koharu's parser: tolerate an unknown tag emitted by a
+                // small model and keep all recognized blocks addressable.
+                continue
             }
-            ids.append(id)
-            values.append(value)
+            sawExpectedTag = true
+            guard !value.isEmpty else { continue }
+            values[expectedIndex] = value
+            recognizedCount += 1
         }
 
-        guard ids == expectedIDs else {
-            throw ImageMangaBatchTranslationError.unexpectedTags
+        guard recognizedCount > 0 else {
+            if sawExpectedTag {
+                throw ImageMangaBatchTranslationError.emptyTranslation
+            }
+            throw ImageMangaBatchTranslationError.missingTags
         }
         return values
     }

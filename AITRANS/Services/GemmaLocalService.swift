@@ -301,23 +301,32 @@ struct GemmaLocalService: LocalLanguageModeling {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         let expectedIDs = Self.mangaBlockIDs(in: input)
-        let outputIDs = Self.mangaBlockIDs(in: text)
+        let inputParts = Self.mangaBlockParts(in: input)
+        let outputParts = Self.mangaBlockParts(in: text)
+        let expectedPartsByID = Dictionary(
+            uniqueKeysWithValues: inputParts.map { ($0.id, $0.value) }
+        )
+        let recognizedOutputParts = outputParts.filter {
+            expectedPartsByID[$0.id] != nil
+        }
         guard !expectedIDs.isEmpty,
               matchesFirstTagAtStart(in: text),
-              outputIDs == expectedIDs,
+              !recognizedOutputParts.isEmpty,
               !text.isEmpty else {
             throw GemmaLocalServiceError.emptyOutput
         }
 
-        let inputParts = Self.mangaBlockParts(in: input)
-        let outputParts = Self.mangaBlockParts(in: text)
-        guard inputParts.count == outputParts.count,
-              zip(inputParts, outputParts).allSatisfy({ source, translated in
-                  let sourceText = source.value.trimmingCharacters(in: .whitespacesAndNewlines)
-                  let translatedText = translated.value.trimmingCharacters(in: .whitespacesAndNewlines)
-                  return !translatedText.isEmpty
-                      && sourceText.localizedCaseInsensitiveCompare(translatedText) != .orderedSame
-              }) else {
+        // Match Koharu's tagged-block parser: ordering and completeness are
+        // recovered by the caller, so a small local model can return a subset
+        // or reorder blocks without discarding the valid translations.
+        guard recognizedOutputParts.allSatisfy({ translated in
+            let sourceText = expectedPartsByID[translated.id]?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let translatedText = translated.value
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return !translatedText.isEmpty
+                && sourceText.localizedCaseInsensitiveCompare(translatedText) != .orderedSame
+        }) else {
             throw GemmaLocalServiceError.repeatedInput
         }
         return text
