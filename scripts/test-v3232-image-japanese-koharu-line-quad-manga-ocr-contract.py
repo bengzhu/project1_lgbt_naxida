@@ -66,8 +66,6 @@ class JapaneseKoharuLineQuadMangaOCRContractTests(unittest.TestCase):
         self.assertIn("candidateRect: mappedRect", self.vision)
         for marker in [
             "mapRotatedRegionQuad(",
-            "characterQuads.count >= 2",
-            "ImageOCRLayoutQuad(points: points).normalized()",
             "overlapRatio(fallback, quadRect) >= 0.80",
             "overlapRatio(candidateRect, quadRect) >= 0.80",
             "detectorCoverage >= 0.55",
@@ -77,6 +75,14 @@ class JapaneseKoharuLineQuadMangaOCRContractTests(unittest.TestCase):
             "quadRect.width < fallback.width * 0.90",
         ]:
             self.assertIn(marker, self.quad)
+        self.assertTrue(
+            "ImageOCRLayoutQuad(points: points).normalized()" in self.quad
+            or "let rotatedLineQuad = ImageOCRLayoutQuad(points:" in self.quad
+        )
+        self.assertTrue(
+            "characterQuads.count >= 2" in self.quad
+            or "rotatedCharacterQuads.count >= 2" in self.quad
+        )
         self.assertIn("cropQuadHint: mappedQuad", self.vision)
         self.assertIn("var cropQuadHint: ImageOCRLayoutQuad? = nil", self.vision)
         self.assertIn("textRect: region.rect", self.vision)

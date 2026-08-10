@@ -1,3 +1,11 @@
+## v3.233：Koharu line quad 整行覆盖修复
+
+日期：2026-08-10
+
+Vision 字符框在旋转坐标中不再对对应角取 median（该做法只留下中间 glyph，常被严格 coverage 门控拒绝）；现在用有效 glyph 的外侧极值构造覆盖整行的 quad，再映射回原图。原有 overlap、coverage、面积比、宽度收窄门控和 detector bbox fallback 全部保留，ownership、预算、取消、Vision fallback、布局、翻译、渲染与非日语路径不变。
+
+新增 `scripts/test-v3233-image-japanese-line-quad-coverage-contract.py` 并接入 CI，工程版本为 `3.233`。云端 full 待当前研发提交验证；固定 `test/jap.jpg` 只证明整行 crop geometry 与既有 runtime 边界，不外推通用日语 OCR／翻译质量。
+
 ## v3.232：Koharu line polygon 四边形进入 Manga OCR crop
 
 日期：2026-08-10
