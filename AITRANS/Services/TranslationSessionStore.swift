@@ -1723,6 +1723,43 @@ final class TranslationSessionStore: ObservableObject {
         rerenderImageTranslationExport()
     }
 
+    /// Applies a reviewer-only writing-mode correction to one completed block.
+    /// The detector/Vision direction remains available as provenance; only the
+    /// effective direction consumed by review, preview, and export changes.
+    @discardableResult
+    func setImageTranslationBlockDirectionOverride(
+        _ blockID: UUID,
+        direction: ImageTextDirection?
+    ) -> Bool {
+        guard direction == nil || direction == .horizontal || direction == .vertical,
+              imageTranslationCorrectionBlockID == nil,
+              imageTranslationState == .translated,
+              imageTranslationExportRenderState != .rendering,
+              let blockIndex = imageTranslationBlocks.firstIndex(where: { $0.id == blockID }) else {
+            imageTranslationCorrectionMessage = "当前文字块暂时无法设置方向，请等待图片翻译完成"
+            return false
+        }
+
+        guard imageTranslationBlocks[blockIndex].sourceDirectionOverride != direction else {
+            return true
+        }
+
+        var updatedBlock = imageTranslationBlocks[blockIndex]
+        updatedBlock.sourceDirectionOverride = direction
+        imageTranslationBlocks[blockIndex] = updatedBlock
+        imageTranslationReviewedBlockIDs.remove(blockID)
+        imageTranslationCorrectionMessage = nil
+        imageTranslationMessage = direction == nil
+            ? "已恢复 OCR 文字方向，正在更新导出图"
+            : "已手动设置文字方向，正在更新导出图"
+        updateImageTranslationTranscript(blocks: imageTranslationBlocks)
+        invalidateImageOverlayRender()
+        discardImageTranslationExport()
+        rerenderImageTranslationExport()
+        persist()
+        return true
+    }
+
     func retryImageTranslationExportRender() {
         guard case .failed = imageTranslationExportRenderState else { return }
         rerenderImageTranslationExport()

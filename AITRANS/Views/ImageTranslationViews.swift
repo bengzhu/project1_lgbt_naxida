@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 
 private enum ImageOCRDirectionPresentation {
     static func displayTitle(for block: ImageTranslationBlock) -> String {
-        switch block.sourceDirection {
+        switch block.effectiveSourceDirection {
         case .horizontal:
             "横排"
         case .vertical:
@@ -16,7 +16,7 @@ private enum ImageOCRDirectionPresentation {
 
     static func accessibilityContext(for block: ImageTranslationBlock) -> String? {
         let title: String
-        switch block.sourceDirection {
+        switch block.effectiveSourceDirection {
         case .horizontal:
             title = "横排"
         case .vertical:
@@ -27,17 +27,57 @@ private enum ImageOCRDirectionPresentation {
 
         guard let rawConfidence = block.directionConfidence,
               rawConfidence.isFinite else {
-            return title
+            return block.hasSourceDirectionOverride ? "\(title)，手动覆盖" : title
         }
         let confidence = min(max(rawConfidence, 0), 1)
         let percent = Int((confidence * 100).rounded())
-        return "\(title)，方向置信度 \(percent)%"
+        let overrideSuffix = block.hasSourceDirectionOverride ? "，手动覆盖" : ""
+        return "\(title)，方向置信度 \(percent)%\(overrideSuffix)"
+    }
+
+    static func choice(for block: ImageTranslationBlock) -> ImageTextDirectionOverrideChoice {
+        switch block.sourceDirectionOverride {
+        case .horizontal: .horizontal
+        case .vertical: .vertical
+        case .unknown, .none: .automatic
+        }
     }
 }
 
 private enum ImageOCRGeometryPresentation {
     static func isLocatable(for block: ImageTranslationBlock) -> Bool {
         block.boundingBox.normalizedToUnit() != nil
+    }
+}
+
+private struct ImageOCRDirectionOverrideMenu: View {
+    let block: ImageTranslationBlock
+    let canEdit: Bool
+    let unavailableHint: String
+    let setDirectionOverride: (ImageTextDirection?) -> Void
+
+    var body: some View {
+        Menu {
+            ForEach(ImageTextDirectionOverrideChoice.allCases) { choice in
+                Button {
+                    setDirectionOverride(choice.direction)
+                } label: {
+                    Label(choice.rawValue, systemImage: choice.systemImage)
+                }
+            }
+        } label: {
+            Image(systemName: "text.alignleft")
+                .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+        }
+        .disabled(!canEdit)
+        .opacity(canEdit ? 1 : 0.45)
+        .accessibilityLabel("设置文字方向")
+        .accessibilityValue(ImageOCRDirectionPresentation.choice(for: block).rawValue)
+        .accessibilityHint(
+            canEdit
+                ? "选择自动、横排或竖排；只更新当前文字块的显示和导出方向"
+                : unavailableHint
+        )
     }
 }
 
@@ -176,6 +216,12 @@ struct ImageTranslationPanel: View {
                 imageData: store.imageTranslationData,
                 didSave: {
                     completeReviewAfterCorrection(block.id)
+                },
+                setDirectionOverride: { direction in
+                    store.setImageTranslationBlockDirectionOverride(
+                        block.id,
+                        direction: direction
+                    )
                 },
                 requestIgnore: {
                     ignoreImageTranslationBlock(block)
@@ -320,6 +366,14 @@ struct ImageTranslationPanel: View {
                 selectNext: { selectAdjacentBlock(offset: 1) },
                 editBlock: { beginCorrectionFromFocusPreview(of: $0) },
                 restoreVisionOCR: { requestVisionOCRRestore(for: $0) },
+                setDirectionOverride: { direction in
+                    guard let selectedImageTranslationBlockID else { return }
+                    setImageTranslationBlockDirection(
+                        direction,
+                        for: selectedImageTranslationBlockID,
+                        focusInPreview: true
+                    )
+                },
                 canRetryTranslation: { store.canRetryImageTranslationBlock($0) },
                 isRetryingTranslation: { store.imageTranslationRetryingBlockID == $0 },
                 retryTranslation: { store.retryImageTranslationBlock($0) },
@@ -639,6 +693,13 @@ struct ImageTranslationPanel: View {
                             select: { toggleSelection(of: block.id) },
                             edit: { beginCorrection(of: block) },
                             restoreVisionOCR: { requestVisionOCRRestore(for: block) },
+                            setDirectionOverride: { direction in
+                                setImageTranslationBlockDirection(
+                                    direction,
+                                    for: block.id,
+                                    focusInPreview: false
+                                )
+                            },
                             toggleReviewCompletion: {
                                 toggleReviewCompletion(block.id, focusInPreview: false)
                             }
@@ -979,6 +1040,23 @@ struct ImageTranslationPanel: View {
         guard store.restoreImageTranslationBlockToVisionOCR(blockID) else { return false }
         selectedImageTranslationBlockID = blockID
         return true
+    }
+
+    private func setImageTranslationBlockDirection(
+        _ direction: ImageTextDirection?,
+        for blockID: UUID,
+        focusInPreview: Bool
+    ) {
+        guard canModifyImageTranslation,
+              store.setImageTranslationBlockDirectionOverride(blockID, direction: direction) else {
+            return
+        }
+        selectedImageTranslationBlockID = blockID
+        moveReviewAccessibilityFocus(
+            to: focusInPreview
+                ? reviewPreviewAccessibilityFocusID(blockID)
+                : reviewRowAccessibilityFocusID(blockID)
+        )
     }
 
     @discardableResult
@@ -1975,6 +2053,7 @@ private struct ImageTranslationPreview: View {
     let selectNext: () -> Void
     let editBlock: (ImageTranslationBlock) -> Void
     let restoreVisionOCR: (ImageTranslationBlock) -> Void
+    let setDirectionOverride: (ImageTextDirection?) -> Void
     let canRetryTranslation: (UUID) -> Bool
     let isRetryingTranslation: (UUID) -> Bool
     let retryTranslation: (UUID) -> Void
@@ -2048,6 +2127,7 @@ private struct ImageTranslationPreview: View {
                                 selectNext: selectNext,
                                 edit: { editBlock(selectedBlock) },
                                 restoreVisionOCR: { restoreVisionOCR(selectedBlock) },
+                                setDirectionOverride: { setDirectionOverride($0) },
                                 toggleReviewCompletion: { toggleReviewCompletion(selectedBlock.id) }
                             )
                             .frame(
@@ -2535,6 +2615,7 @@ private struct ImageTranslationFocusPreview: View {
     let selectNext: () -> Void
     let edit: () -> Void
     let restoreVisionOCR: () -> Void
+    let setDirectionOverride: (ImageTextDirection?) -> Void
     let toggleReviewCompletion: () -> Void
 
     var body: some View {
@@ -2612,6 +2693,14 @@ private struct ImageTranslationFocusPreview: View {
                             ? "打开当前文字块的 OCR 修正页面"
                             : modificationUnavailableHint
                     )
+                ImageOCRDirectionOverrideMenu(
+                    block: block,
+                    canEdit: canEdit,
+                    unavailableHint: modificationUnavailableHint,
+                    setDirectionOverride: setDirectionOverride
+                )
+                .foregroundStyle(.white)
+                .background(Color.black.opacity(0.82), in: Circle())
                 if isManuallyCorrected {
                     Button("恢复 Vision OCR", systemImage: "arrow.counterclockwise", action: restoreVisionOCR)
                         .labelStyle(.iconOnly)
@@ -2738,6 +2827,13 @@ private struct ImageTranslationFocusPreview: View {
                 isManuallyCorrected: isManuallyCorrected,
                 canEdit: canEdit,
                 restoreVisionOCR: restoreVisionOCR
+            )
+        )
+        .modifier(
+            ImageFocusPreviewDirectionOverrideAccessibilityModifier(
+                block: block,
+                canEdit: canEdit,
+                setDirectionOverride: setDirectionOverride
             )
         )
         .modifier(
@@ -2907,6 +3003,30 @@ private struct ImageFocusPreviewRerecognitionAccessibilityModifier: ViewModifier
             content
                 .accessibilityAction(named: "重新识别此文字块") {
                     rerecognize()
+                }
+        } else {
+            content
+        }
+    }
+}
+
+private struct ImageFocusPreviewDirectionOverrideAccessibilityModifier: ViewModifier {
+    let block: ImageTranslationBlock
+    let canEdit: Bool
+    let setDirectionOverride: (ImageTextDirection?) -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if canEdit {
+            content
+                .accessibilityAction(named: "设为横排") {
+                    setDirectionOverride(.horizontal)
+                }
+                .accessibilityAction(named: "设为竖排") {
+                    setDirectionOverride(.vertical)
+                }
+                .accessibilityAction(named: "恢复自动方向") {
+                    setDirectionOverride(nil)
                 }
         } else {
             content
@@ -3209,6 +3329,7 @@ private struct ImageTranslationBlockRow: View {
     let select: () -> Void
     let edit: () -> Void
     let restoreVisionOCR: () -> Void
+    let setDirectionOverride: (ImageTextDirection?) -> Void
     let toggleReviewCompletion: () -> Void
 
     var body: some View {
@@ -3296,6 +3417,12 @@ private struct ImageTranslationBlockRow: View {
                 )
             )
             .modifier(
+                ImageReviewRowDirectionOverrideAccessibilityModifier(
+                    canEdit: canEdit,
+                    setDirectionOverride: setDirectionOverride
+                )
+            )
+            .modifier(
                 ImageReviewRowRerecognitionAccessibilityModifier(
                     canRerecognize: canRerecognize,
                     isRerecognizing: isRerecognizing,
@@ -3342,6 +3469,13 @@ private struct ImageTranslationBlockRow: View {
                                 : modificationUnavailableHint
                         )
                 }
+
+                ImageOCRDirectionOverrideMenu(
+                    block: block,
+                    canEdit: canEdit,
+                    unavailableHint: modificationUnavailableHint,
+                    setDirectionOverride: setDirectionOverride
+                )
 
                 if canRerecognize || isRerecognizing {
                     Button(
@@ -3546,6 +3680,29 @@ private struct ImageReviewRowRestoreAccessibilityModifier: ViewModifier {
     }
 }
 
+private struct ImageReviewRowDirectionOverrideAccessibilityModifier: ViewModifier {
+    let canEdit: Bool
+    let setDirectionOverride: (ImageTextDirection?) -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if canEdit {
+            content
+                .accessibilityAction(named: "设为横排") {
+                    setDirectionOverride(.horizontal)
+                }
+                .accessibilityAction(named: "设为竖排") {
+                    setDirectionOverride(.vertical)
+                }
+                .accessibilityAction(named: "恢复自动方向") {
+                    setDirectionOverride(nil)
+                }
+        } else {
+            content
+        }
+    }
+}
+
 private struct ImageReviewRowRerecognitionAccessibilityModifier: ViewModifier {
     let canRerecognize: Bool
     let isRerecognizing: Bool
@@ -3686,9 +3843,12 @@ private struct ImageOCRCorrectionSheet: View {
     let block: ImageTranslationBlock
     let imageData: Data?
     let didSave: () -> Void
+    let setDirectionOverride: (ImageTextDirection?) -> Bool
     let requestIgnore: () -> Bool
 
     @State private var correctedOriginal: String
+    @State private var selectedDirectionOverride: ImageTextDirection?
+    @State private var directionUpdateMessage: String?
     @State private var errorMessage: String?
     @State private var showDiscardCorrectionConfirmation = false
     @State private var showIgnoreBlockConfirmation = false
@@ -3698,13 +3858,16 @@ private struct ImageOCRCorrectionSheet: View {
         block: ImageTranslationBlock,
         imageData: Data?,
         didSave: @escaping () -> Void,
+        setDirectionOverride: @escaping (ImageTextDirection?) -> Bool,
         requestIgnore: @escaping () -> Bool
     ) {
         self.block = block
         self.imageData = imageData
         self.didSave = didSave
+        self.setDirectionOverride = setDirectionOverride
         self.requestIgnore = requestIgnore
         _correctedOriginal = State(initialValue: block.original)
+        _selectedDirectionOverride = State(initialValue: block.sourceDirectionOverride)
     }
 
     var body: some View {
@@ -3759,6 +3922,25 @@ private struct ImageOCRCorrectionSheet: View {
                 Section("当前翻译") {
                     Text(block.translation.isEmpty ? "等待翻译" : block.translation)
                         .foregroundStyle(Color.appTextSecondary)
+                }
+
+                Section("文字方向") {
+                    Picker("文字方向", selection: directionOverrideBinding) {
+                        ForEach(ImageTextDirectionOverrideChoice.allCases) { choice in
+                            Label(choice.rawValue, systemImage: choice.systemImage)
+                                .tag(choice.direction)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .disabled(isSaving)
+                    .accessibilityLabel("文字方向")
+                    .accessibilityValue(directionOverrideChoice.rawValue)
+                    .accessibilityHint("只更新当前文字块的显示、筛选和导出方向，不会重新识别或翻译")
+                    if let directionUpdateMessage {
+                        Text(directionUpdateMessage)
+                            .font(.caption)
+                            .foregroundStyle(Color.appTextSecondary)
+                    }
                 }
 
                 Section("识别有误？") {
@@ -3858,6 +4040,27 @@ private struct ImageOCRCorrectionSheet: View {
 
     private var displayConfidence: Double {
         Double(ImageOCRResultSummary.normalizedConfidence(block.confidence))
+    }
+
+    private var directionOverrideChoice: ImageTextDirectionOverrideChoice {
+        switch selectedDirectionOverride {
+        case .horizontal: .horizontal
+        case .vertical: .vertical
+        case .unknown, .none: .automatic
+        }
+    }
+
+    private var directionOverrideBinding: Binding<ImageTextDirection?> {
+        Binding(
+            get: { selectedDirectionOverride },
+            set: { direction in
+                guard setDirectionOverride(direction) else { return }
+                selectedDirectionOverride = direction
+                directionUpdateMessage = direction == nil
+                    ? "已恢复自动方向"
+                    : "已设置(direction == .vertical ? "竖排" : "横排")，不会重新识别或翻译"
+            }
+        )
     }
 
     private var requiresRetranslation: Bool {

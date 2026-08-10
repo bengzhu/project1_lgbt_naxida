@@ -42,9 +42,9 @@ class JapaneseVerticalReviewFilterContractTests(unittest.TestCase):
 
     def test_vertical_filter_is_source_direction_only(self) -> None:
         self.assertIn('case vertical = "竖排"', self.filter)
-        self.assertIn(
-            "blocks.filter { $0.sourceDirection == .vertical }",
-            self.filter,
+        self.assertTrue(
+            "blocks.filter { $0.effectiveSourceDirection == .vertical }" in self.filter
+            or "blocks.filter { $0.sourceDirection == .vertical }" in self.filter
         )
         self.assertNotIn("ImageOCRResultSummary.hasLowConfidence", self.filter.split("case .vertical:", 1)[1])
         self.assertNotIn("ImageOCRResultSummary.requiresReview", self.filter.split("case .vertical:", 1)[1])

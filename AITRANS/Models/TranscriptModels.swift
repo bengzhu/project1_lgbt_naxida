@@ -6374,6 +6374,30 @@ enum ImageTextDirection: String, Codable, Sendable {
     case unknown
 }
 
+enum ImageTextDirectionOverrideChoice: String, CaseIterable, Identifiable, Codable, Sendable {
+    case automatic = "自动（OCR）"
+    case horizontal = "横排"
+    case vertical = "竖排"
+
+    var id: String { rawValue }
+
+    var direction: ImageTextDirection? {
+        switch self {
+        case .automatic: nil
+        case .horizontal: .horizontal
+        case .vertical: .vertical
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .automatic: "wand.and.stars"
+        case .horizontal: "text.alignleft"
+        case .vertical: "text.alignright"
+        }
+    }
+}
+
 /// Shared VerticalRl text preparation for the SwiftUI preview and PNG export.
 ///
 /// Koharu normalizes adjacent emphasis marks before shaping and centers
@@ -6564,6 +6588,7 @@ struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
     var confidence: Float
     var boundingBox: NormalizedImageRect
     var sourceDirection: ImageTextDirection?
+    var sourceDirectionOverride: ImageTextDirection?
     var directionConfidence: Double?
     var directionReason: String?
 
@@ -6574,6 +6599,7 @@ struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
         confidence: Float,
         boundingBox: NormalizedImageRect,
         sourceDirection: ImageTextDirection? = nil,
+        sourceDirectionOverride: ImageTextDirection? = nil,
         directionConfidence: Double? = nil,
         directionReason: String? = nil
     ) {
@@ -6583,14 +6609,31 @@ struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
         self.confidence = confidence
         self.boundingBox = boundingBox
         self.sourceDirection = sourceDirection
+        self.sourceDirectionOverride = sourceDirectionOverride
         self.directionConfidence = directionConfidence
         self.directionReason = directionReason
+    }
+
+    /// Keeps detector/Vision provenance intact while allowing a reviewer to
+    /// correct the writing mode used by the preview, filters, and export.
+    var effectiveSourceDirection: ImageTextDirection? {
+        switch sourceDirectionOverride {
+        case .horizontal, .vertical:
+            sourceDirectionOverride
+        case .unknown, .none:
+            sourceDirection
+        }
+    }
+
+    var hasSourceDirectionOverride: Bool {
+        sourceDirectionOverride == .horizontal || sourceDirectionOverride == .vertical
     }
 
     /// Mirrors Koharu's writing-mode decision: a trusted vertical source
     /// direction only becomes vertical output for CJK text. Latin translations
     /// remain horizontal even when the original Japanese block is tall.
     var prefersVerticalWriting: Bool {
+        let sourceDirection = effectiveSourceDirection
         guard sourceDirection == .vertical else { return false }
         let displayedText = translation.isEmpty ? original : translation
         return displayedText.unicodeScalars.contains { scalar in

@@ -10,7 +10,15 @@ struct ImageTranslationBlock {
     var token: Int
     var confidence: Float
     var sourceDirection: ImageTextDirection?
+    var sourceDirectionOverride: ImageTextDirection?
     var translation: String
+
+    var effectiveSourceDirection: ImageTextDirection? {
+        switch sourceDirectionOverride {
+        case .horizontal, .vertical: sourceDirectionOverride
+        case .unknown, .none: sourceDirection
+        }
+    }
 }
 
 private func block(
@@ -22,6 +30,7 @@ private func block(
         token: token,
         confidence: confidence,
         sourceDirection: direction,
+        sourceDirectionOverride: nil,
         translation: "translated"
     )
 }
@@ -45,7 +54,7 @@ private func testVerticalFilterPreservesOrderAndIncludesHighConfidenceBlocks() {
     )
     require(
         ImageOCRReviewFilter.vertical.blocks(from: blocks).allSatisfy {
-            $0.sourceDirection == .vertical
+            $0.effectiveSourceDirection == .vertical
         },
         "vertical filter must exclude horizontal and unknown direction blocks"
     )

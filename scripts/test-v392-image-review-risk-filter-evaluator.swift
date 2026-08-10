@@ -9,11 +9,24 @@ enum ImageTextDirection {
 struct ImageTranslationBlock {
     var confidence: Float
     var sourceDirection: ImageTextDirection?
+    var sourceDirectionOverride: ImageTextDirection?
     var translation: String
+
+    var effectiveSourceDirection: ImageTextDirection? {
+        switch sourceDirectionOverride {
+        case .horizontal, .vertical: sourceDirectionOverride
+        case .unknown, .none: sourceDirection
+        }
+    }
 }
 
 private func block(_ confidence: Float, _ direction: ImageTextDirection?) -> ImageTranslationBlock {
-    ImageTranslationBlock(confidence: confidence, sourceDirection: direction, translation: "translated")
+    ImageTranslationBlock(
+        confidence: confidence,
+        sourceDirection: direction,
+        sourceDirectionOverride: nil,
+        translation: "translated"
+    )
 }
 
 private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
