@@ -6436,9 +6436,9 @@ enum ImageTranslationVerticalTextLayout {
              0xFF1A...0xFF20,
              0xFF3B...0xFF40,
              0xFF5B...0xFF65:
-            true
+            return true
         default:
-            false
+            return false
         }
     }
 
