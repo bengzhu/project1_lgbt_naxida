@@ -6452,6 +6452,24 @@ struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
         self.directionConfidence = directionConfidence
         self.directionReason = directionReason
     }
+
+    /// Mirrors Koharu's writing-mode decision: a trusted vertical source
+    /// direction only becomes vertical output for CJK text. Latin translations
+    /// remain horizontal even when the original Japanese block is tall.
+    var prefersVerticalWriting: Bool {
+        guard sourceDirection == .vertical else { return false }
+        let displayedText = translation.isEmpty ? original : translation
+        return displayedText.unicodeScalars.contains { scalar in
+            switch scalar.value {
+            case 0x3041...0x3096, 0x30A1...0x30FA, 0x30FD...0x30FF,
+                 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF,
+                 0xFF66...0xFF9D:
+                true
+            default:
+                false
+            }
+        }
+    }
 }
 
 enum ModelEngine: String, CaseIterable, Identifiable, Codable, Sendable {

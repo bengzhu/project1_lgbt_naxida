@@ -2945,12 +2945,19 @@ private struct ImageTranslationOverlayBlock: View {
             .accessibilityHint(accessibilityHint)
         case .replace:
             Button(action: select) {
-                Text(block.translation.isEmpty ? displayOCRText : block.translation)
-                    .font(.caption.bold())
-                    .lineLimit(4)
-                    .multilineTextAlignment(.center)
-                    .padding(3)
-                    .frame(width: max(rect.width, 44), height: max(rect.height, 24))
+                let text = block.translation.isEmpty ? displayOCRText : block.translation
+                Group {
+                    if block.prefersVerticalWriting {
+                        ImageTranslationVerticalText(text: text)
+                    } else {
+                        Text(text)
+                            .font(.caption.bold())
+                            .lineLimit(4)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .padding(3)
+                .frame(width: max(rect.width, 44), height: max(rect.height, 24))
                     .background(Color.appAccentStrong.opacity(0.94), in: .rect(cornerRadius: 4))
                     .overlay { selectionBorder }
             }
@@ -3038,6 +3045,51 @@ private struct ImageTranslationOverlayBlock: View {
         let rightLimit = imageOrigin.x + imageSize.width - bubbleWidth / 2
         if rightCenter <= rightLimit { return rightCenter }
         return max(imageOrigin.x + bubbleWidth / 2, rect.minX - 6 - bubbleWidth / 2)
+    }
+}
+
+/// Small, bounded VerticalRl-style preview for CJK replacement overlays.
+/// Columns are emitted right-to-left while glyphs advance top-to-bottom.
+private struct ImageTranslationVerticalText: View {
+    let text: String
+
+    var body: some View {
+        GeometryReader { geometry in
+            let characters = text.map(String.init)
+            let rowHeight: CGFloat = 18
+            let rowCapacity = max(Int(geometry.size.height / rowHeight), 1)
+            let columns = makeColumns(characters, rowCapacity: rowCapacity)
+            let columnWidth = max(
+                geometry.size.width / CGFloat(max(columns.count, 1)),
+                14
+            )
+
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(Array(columns.indices.reversed()), id: \.self) { columnIndex in
+                    VStack(spacing: 0) {
+                        ForEach(Array(columns[columnIndex].indices), id: \.self) { characterIndex in
+                            Text(columns[columnIndex][characterIndex])
+                                .font(.caption.bold())
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.65)
+                                .frame(width: columnWidth, height: rowHeight)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            .clipped()
+        }
+    }
+
+    private func makeColumns(
+        _ characters: [String],
+        rowCapacity: Int
+    ) -> [[String]] {
+        guard !characters.isEmpty else { return [[]] }
+        return stride(from: 0, to: characters.count, by: rowCapacity).map { start in
+            Array(characters[start..<min(start + rowCapacity, characters.count)])
+        }
     }
 }
 
