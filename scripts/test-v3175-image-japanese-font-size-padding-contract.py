@@ -46,7 +46,7 @@ class JapaneseFontSizePaddingContractTests(unittest.TestCase):
         )
 
     def test_padding_uses_koharu_font_size_in_pixel_space(self) -> None:
-        for marker in [
+        legacy_markers = [
             "let imageWidth = Double(imageSize.width)",
             "let imageHeight = Double(imageSize.height)",
             "let widthPixels = max(rect.width * imageWidth, 1)",
@@ -57,8 +57,25 @@ class JapaneseFontSizePaddingContractTests(unittest.TestCase):
             "let verticalPaddingPixels = max(fontSizePixels * 0.12, basePaddingPixels)",
             "min(horizontalPaddingPixels / imageWidth, 0.08)",
             "min(verticalPaddingPixels / imageHeight, 0.08)",
-        ]:
-            self.assertIn(marker, self.padding)
+        ]
+        directional_markers = [
+            "let imageWidth = Double(imageSize.width)",
+            "let imageHeight = Double(imageSize.height)",
+            "let widthPixels = max(rect.width * imageWidth, 1)",
+            "let heightPixels = max(rect.height * imageHeight, 1)",
+            "let fontSizePixels = max(min(widthPixels, heightPixels), 1)",
+            "let basePaddingPixels = max(fontSizePixels * 0.08, 2)",
+            "let horizontalPaddingFraction = direction == .horizontal ? 0.12 : 0.18",
+            "let verticalPaddingFraction = direction == .horizontal ? 0.18 : 0.12",
+            "fontSizePixels * horizontalPaddingFraction",
+            "fontSizePixels * verticalPaddingFraction",
+            "min(horizontalPaddingPixels / imageWidth, 0.08)",
+            "min(verticalPaddingPixels / imageHeight, 0.08)",
+        ]
+        self.assertTrue(
+            all(marker in self.padding for marker in legacy_markers)
+            or all(marker in self.padding for marker in directional_markers)
+        )
 
     def test_block_and_line_paths_share_source_pixel_dimensions(self) -> None:
         image_size_marker = "let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))"

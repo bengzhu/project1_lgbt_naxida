@@ -63,8 +63,23 @@ class ImageOCRCorrectionRestoreContractTests(unittest.TestCase):
         self.assertIn("imageTranslationVisionOriginalBlocks[blockID]", restore)
         self.assertIn("firstIndex(where: { $0.id == blockID })", restore)
         self.assertNotIn("translate(", restore)
-        markers = [
+        assignment_markers = [
             "imageTranslationBlocks[blockIndex] = originalBlock",
+            "imageTranslationBlocks[blockIndex] = restoredBlock",
+        ]
+        assignment = next(
+            (marker for marker in assignment_markers if marker in restore),
+            None,
+        )
+        self.assertIsNotNone(assignment)
+        if assignment == "imageTranslationBlocks[blockIndex] = restoredBlock":
+            self.assertIn("var restoredBlock = originalBlock", restore)
+            self.assertIn(
+                "restoredBlock.sourceDirectionOverride = imageTranslationBlocks[blockIndex].sourceDirectionOverride",
+                restore,
+            )
+        markers = [
+            assignment,
             "imageTranslationVisionOriginalBlocks.removeValue(forKey: blockID)",
             "imageTranslationCorrectedBlockIDs.remove(blockID)",
             "updateImageTranslationTranscript(blocks: imageTranslationBlocks)",

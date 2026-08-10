@@ -1999,7 +1999,11 @@ final class TranslationSessionStore: ObservableObject {
             return false
         }
 
-        imageTranslationBlocks[blockIndex] = originalBlock
+        // OCR restoration should not erase a writing-mode decision made after
+        // the correction snapshot was captured.
+        var restoredBlock = originalBlock
+        restoredBlock.sourceDirectionOverride = imageTranslationBlocks[blockIndex].sourceDirectionOverride
+        imageTranslationBlocks[blockIndex] = restoredBlock
         imageTranslationVisionOriginalBlocks.removeValue(forKey: blockID)
         imageTranslationCorrectedBlockIDs.remove(blockID)
         imageTranslationReviewedBlockIDs.remove(blockID)
