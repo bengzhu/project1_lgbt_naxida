@@ -10,7 +10,7 @@
 ### v3.230 batch runtime provenance parser
 
 - `scripts/test-v3214-image-japanese-manga-ocr-runtime.sh` 的 harness 输出先包含 `batchInference=true`、`blocks=5` 等元数据，再输出带方向的 block 记录；parser 只消费 `horizontal|vertical|unknown` 制表符记录，不能把元数据当作 provenance。
-- `scripts/test-v3230-image-japanese-batch-runtime-parser-contract.py` 锁定该解析边界、v3.229→v3.230 CI 顺序和工程版本。云端 full 必须重新证明 Xcode、单页 batch runtime、长页 batch runtime 与 JUnit `10/10`；不能把旧 run 的 parser 误报当成模型失败或以 Vision fallback 冒充 batch 成功。
+- `scripts/test-v3230-image-japanese-batch-runtime-parser-contract.py` 锁定该解析边界、v3.229→v3.230 CI 顺序和工程版本。exact-SHA full [31370139122](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31370139122) 对 SHA `064810987125742b31ff0e5cc422d35b576a37f3` 已完成 Xcode、单页 batch runtime、长页 batch runtime 与 JUnit `10/10`（0 failures）；不能把旧 run 的 parser 误报当成模型失败或以 Vision fallback 冒充 batch 成功。
 - 该修复只纠正验证器边界，不新增 OCR accuracy 或 ground-truth 指标；Koharu artifact readiness 仍独立门控。
 
 ### v3.229 flexible-batch encoder shape fix
