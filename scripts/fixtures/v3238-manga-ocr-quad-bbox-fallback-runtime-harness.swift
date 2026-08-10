@@ -66,11 +66,11 @@ enum MangaOCRQuadBBoxFallbackRuntimeHarness {
             width: 0.34,
             height: 0.64
         )
-        let blankQuad = ImageOCRLayoutQuad(points: [
-            ImageOCRLayoutPoint(x: blankRect.x, y: blankRect.y),
-            ImageOCRLayoutPoint(x: blankRect.maxX, y: blankRect.y),
-            ImageOCRLayoutPoint(x: blankRect.maxX, y: blankRect.maxY),
-            ImageOCRLayoutPoint(x: blankRect.x, y: blankRect.maxY),
+        let detectorQuad = ImageOCRLayoutQuad(points: [
+            ImageOCRLayoutPoint(x: detectorCrop.x, y: detectorCrop.y),
+            ImageOCRLayoutPoint(x: detectorCrop.maxX, y: detectorCrop.y),
+            ImageOCRLayoutPoint(x: detectorCrop.maxX, y: detectorCrop.maxY),
+            ImageOCRLayoutPoint(x: detectorCrop.x, y: detectorCrop.maxY),
         ])
 
         let blankResults = try await MangaOCRService.shared.recognize(
@@ -84,8 +84,8 @@ enum MangaOCRQuadBBoxFallbackRuntimeHarness {
             requests: [
                 MangaOCRRequest(
                     textRect: detectorCrop,
-                    cropRect: detectorCrop,
-                    cropQuad: blankQuad
+                    cropRect: blankRect,
+                    cropQuad: detectorQuad
                 ),
             ]
         )

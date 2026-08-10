@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract for retrying weak line-quad Manga OCR with Koharu's bbox crop."""
+"""Historical contract for retaining both line-quad and Koharu bbox crops."""
 
 from pathlib import Path
 import re
@@ -44,25 +44,33 @@ class JapaneseQuadBBoxFallbackContractTests(unittest.TestCase):
         )
         self.retry = braced_body(
             self.service,
-            "private static func shouldRetryBoundingBox(",
+            "private static func shouldRetryLineQuad(",
         )
         self.preference = braced_body(
             self.service,
             "private static func preferredRecognition(",
         )
 
-    def test_line_quad_retains_koharu_bbox_as_content_fallback(self) -> None:
+    def test_koharu_bbox_retains_line_quad_as_content_fallback(self) -> None:
         for marker in [
-            "var boundingBoxFallbackCrop: CGImage?",
+            "var primaryBoundingBoxCrop: CGImage",
+            "var lineQuadFallbackCrop: CGImage?",
             "let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)",
             "let perspectiveCrop = perspectiveCorrectedCrop(image, quad: cropQuad)",
-            "boundingBoxFallbackCrop: boundingBoxCrop",
-            "boundingBoxFallbackCrop: nil",
+            "primaryBoundingBoxCrop: boundingBoxCrop",
+            "lineQuadFallbackCrop: perspectiveCrop",
+            "lineQuadFallbackCrop: nil",
         ]:
-            self.assertIn(marker, self.service)
+            if marker == "let perspectiveCrop = perspectiveCorrectedCrop(image, quad: cropQuad)":
+                self.assertTrue(
+                    marker in self.service
+                    or "perspectiveCorrectedCrop(image, quad: $0)" in self.service
+                )
+            else:
+                self.assertIn(marker, self.service)
         self.assertIn("CIPerspectiveCorrection", self.service)
 
-    def test_only_weak_quad_results_pay_for_bbox_retry(self) -> None:
+    def test_only_weak_bbox_results_pay_for_quad_retry(self) -> None:
         for marker in [
             "guard let recognition else { return true }",
             "!isPreferredRecognition(recognition)",
@@ -78,10 +86,10 @@ class JapaneseQuadBBoxFallbackContractTests(unittest.TestCase):
             ">= preferredJapaneseScriptDensity",
         ]:
             self.assertIn(marker, self.service)
-        self.assertIn("Self.shouldRetryBoundingBox(after: primaryRecognitions[index])", self.service)
+        self.assertIn("Self.shouldRetryLineQuad(after: primaryRecognitions[index])", self.service)
         self.assertIn("let fallbackCrops = fallbackIndexes.compactMap", self.service)
 
-    def test_primary_and_bbox_retries_keep_batch_and_isolated_fallback(self) -> None:
+    def test_bbox_primary_and_quad_retries_keep_batch_and_isolated_fallback(self) -> None:
         recognize = braced_body(self.service, "private func recognizeCrops(")
         for marker in [
             "runtime.supportsBatchInference",
@@ -100,20 +108,21 @@ class JapaneseQuadBBoxFallbackContractTests(unittest.TestCase):
             "case (false, false):",
             "case (true, false):",
             "case (false, true):",
-            "recognitionQualityRank(primary)",
-            "recognitionQualityRank(boundingBoxFallback)",
-            "finiteConfidence(primary.confidence)",
-            "finiteConfidence(boundingBoxFallback.confidence)",
-            "japaneseLetterCount(boundingBoxFallback.text)",
+            "recognitionQualityRank(boundingBox)",
+            "recognitionQualityRank(lineQuadFallback)",
+            "finiteConfidence(boundingBox.confidence)",
+            "finiteConfidence(lineQuadFallback.confidence)",
+            "japaneseLetterCount(lineQuadFallback.text)",
         ]:
             self.assertIn(marker, self.preference)
         self.assertIn("confidence.isFinite ? confidence : -.infinity", self.service)
 
-    def test_real_runtime_forces_blank_quad_and_recovers_detector_bbox(self) -> None:
+    def test_real_runtime_forces_blank_bbox_and_recovers_line_quad(self) -> None:
         for marker in [
             "ComicTextBubbleDetectorService.shared.detectTextRegions",
-            "let blankQuad = ImageOCRLayoutQuad",
-            "cropQuad: blankQuad",
+            "let detectorQuad = ImageOCRLayoutQuad",
+            "cropRect: blankRect",
+            "cropQuad: detectorQuad",
             "blankResults=\\(blankResults.count)",
             "blankConfidence=\\(result.confidence)",
             "fallbackResults=\\(fallbackResults.count)",
@@ -121,10 +130,10 @@ class JapaneseQuadBBoxFallbackContractTests(unittest.TestCase):
             self.assertIn(marker, self.harness)
         for marker in [
             "blankResults=1",
-            "blank quad must produce a weak primary result",
+            "blank bbox must produce a weak primary result",
             "fallbackResults=1",
-            "detector bbox retry did not replace the weak quad text",
-            "bbox retry did not recover Japanese Manga OCR text",
+            "line quad retry did not replace the weak bbox text",
+            "line quad retry did not recover Japanese Manga OCR text",
         ]:
             self.assertIn(marker, self.runtime)
         self.assertIn(

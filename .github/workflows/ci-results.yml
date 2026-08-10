@@ -201,6 +201,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3232-image-japanese-koharu-line-quad-manga-ocr-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3237-image-japanese-detector-cancellation-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3238-image-japanese-quad-bbox-fallback-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3239-image-japanese-manga-ocr-bbox-primary-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -714,6 +715,9 @@ jobs:
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v3238-image-japanese-quad-bbox-fallback-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3239-image-japanese-manga-ocr-bbox-primary-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
@@ -1533,6 +1537,8 @@ jobs:
             python3 -B scripts/test-v3237-image-japanese-detector-cancellation-contract.py
             python3 -B scripts/test-v3238-image-japanese-quad-bbox-fallback-contract.py
             bash scripts/test-v3238-image-japanese-quad-bbox-fallback-runtime.sh
+            python3 -B scripts/test-v3239-image-japanese-manga-ocr-bbox-primary-contract.py
+            bash scripts/test-v3239-image-japanese-manga-ocr-bbox-primary-runtime.sh
             bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
