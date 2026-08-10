@@ -543,7 +543,7 @@ struct VisionOCRService: Sendable {
             MangaOCRRequest(
                 textRect: region.rect,
                 cropRect: japaneseMangaOCRCropRect(
-                    region.rect,
+                    region,
                     among: cropRegions,
                     imageSize: imageSize
                 )
@@ -1004,11 +1004,19 @@ struct VisionOCRService: Sendable {
     /// Manga OCR from seeing a sibling column while preserving the complete
     /// detector core and all vertical context.
     private static func japaneseMangaOCRCropRect(
-        _ rect: ImageOCRLayoutRect,
+        _ region: JapanesePixelFirstRegion,
         among regions: [JapanesePixelFirstRegion],
         imageSize: CGSize
     ) -> ImageOCRLayoutRect {
+        let rect = region.rect
         let expanded = expandedVerticalLineCropRect(rect, imageSize: imageSize)
+        // A bundled comic detector region is already Koharu's TextRegion
+        // ownership boundary. Do not let a Vision supplement bisect its crop;
+        // the detector bbox plus font-relative padding is the authoritative
+        // `crop_text_block_bbox` envelope.
+        guard case .vision = region.detector else {
+            return expanded
+        }
         var left = expanded.x
         var right = expanded.maxX
         for neighbor in regions where neighbor.rect != rect {
@@ -2902,11 +2910,12 @@ struct VisionOCRService: Sendable {
             throw VisionOCRServiceError.imageDecodeFailed
         }
 
+        let thumbnailMaxPixelSize = longPageThumbnailMaxPixelSize(for: source)
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: 1_800
+            kCGImageSourceThumbnailMaxPixelSize: thumbnailMaxPixelSize
         ]
 
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
@@ -2914,6 +2923,42 @@ struct VisionOCRService: Sendable {
         }
 
         return image
+    }
+
+    /// Koharu slices a tall page before running detector/OCR. A single global
+    /// 1,800-pixel thumbnail would shrink a 1,136px-wide long page to a few
+    /// hundred pixels wide before slicing, making vertical glyphs ambiguous.
+    /// Preserve display width for tall pages when memory allows, while keeping
+    /// an explicit width and total-pixel bound for very large inputs.
+    private static func longPageThumbnailMaxPixelSize(
+        for source: CGImageSource
+    ) -> Int {
+        let fallback = 1_800
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
+                as? [CFString: Any],
+              let rawWidth = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
+              let rawHeight = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue,
+              rawWidth.isFinite,
+              rawHeight.isFinite,
+              rawWidth >= 2,
+              rawHeight >= 2 else {
+            return fallback
+        }
+
+        let orientation = (properties[kCGImagePropertyOrientation] as? NSNumber)?.intValue ?? 1
+        let swapsAxes = [5, 6, 7, 8].contains(orientation)
+        let displayWidth = swapsAxes ? rawHeight : rawWidth
+        let displayHeight = swapsAxes ? rawWidth : rawHeight
+        let aspectRatio = displayHeight / max(displayWidth, 1)
+        guard aspectRatio > 3.5 else { return fallback }
+
+        let maximumWidth = 1_800.0
+        let maximumPixels = 16_000_000.0
+        let widthScale = min(1, maximumWidth / displayWidth)
+        let pixelScale = min(1, sqrt(maximumPixels / (displayWidth * displayHeight)))
+        let scale = min(widthScale, pixelScale)
+        let sourceMaxDimension = max(rawWidth, rawHeight)
+        return max(Int(ceil(sourceMaxDimension * scale)), 2)
     }
 
     private static func normalizedRect(from rawBox: CGRect) -> ImageOCRLayoutRect? {

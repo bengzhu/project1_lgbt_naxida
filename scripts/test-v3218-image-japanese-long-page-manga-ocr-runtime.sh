@@ -81,10 +81,17 @@ if not any(y > 0.75 for _, y, _, _ in vertical_rects):
 vertical_texts = re.findall(r"direction=vertical text=(.+)$", text, re.MULTILINE)
 if "お願いします前は" in text:
     raise SystemExit(f"joined adjacent detector TextRegions across repeated pages: {text}")
+for rejected in ["撮乳", "城乳", "授乳", "技拶"]:
+    if rejected in text:
+        raise SystemExit(f"long-page Manga OCR retained known low-resolution error {rejected}: {text}")
 if sum("今度こそ" in value for value in vertical_texts) < 4:
     raise SystemExit(f"not every repeated page received vertical Manga OCR: {text}")
+if sum("爆乳" in value for value in vertical_texts) < 4:
+    raise SystemExit(f"long-page Manga OCR did not preserve the target kanji in every repeated page: {text}")
 if sum("前は生意気に俺の誘い断りやがって..." in value for value in vertical_texts) < 4:
     raise SystemExit(f"long-page Manga OCR did not replace weak fallback text: {text}")
 if sum("では最後に" in value for value in vertical_texts) < 4:
     raise SystemExit(f"detector boundary preservation lost a repeated page tail: {text}")
+if sum("挨拶" in value for value in vertical_texts) < 4:
+    raise SystemExit(f"long-page Manga OCR did not preserve the target greeting kanji in every repeated page: {text}")
 PY

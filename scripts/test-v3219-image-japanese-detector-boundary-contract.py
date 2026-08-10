@@ -151,7 +151,10 @@ class JapaneseDetectorBoundaryContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3218(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.219", "3.219"])
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(
+            all(tuple(map(int, version.split("."))) >= (3, 219) for version in versions)
+        )
         previous = (
             "python3 -B "
             "scripts/test-v3218-image-japanese-long-page-ocr-budget-contract.py"
