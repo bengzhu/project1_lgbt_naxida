@@ -1,3 +1,15 @@
+## v3.244：图片日语方向覆盖驱动单块重新识别
+
+日期：2026-08-11
+
+图片翻译结果行、复查页或局部预览触发单块重新识别时，日语 crop retry 现在读取当前 block 的 `effectiveSourceDirection`。用户设为竖排时优先尝试 `[270, 90]`，设为横排时只执行 `[0]`，自动方向继续按 `[270, 90, 0]` 侦察；覆盖不改写 detector／OCR 原始 `sourceDirection`，也不改变整页 OCR、非日语、翻译、布局、渲染、取消或旧结果边界。
+
+同步 v3.214、v3.218、v3.238、v3.239 的 standalone Core ML runtime harness：精简 `ImageTranslationBlock` 现在提供默认空的 `sourceDirectionOverride` 和派生 `effectiveSourceDirection`，与生产模型共享方向契约，避免后续 Swift service 字段演进破坏真实 runtime 编译。新增 `scripts/test-v3244-image-japanese-direction-override-rerecognition-contract.py` 并接入 CI，工程版本为 `3.244`。本地 v3.244 合同 `5/5`、全量 Python 合同套件与 `git diff --check` 通过。
+
+首轮 exact-SHA full [31428789542](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31428789542) 的静态、Speech、UI、home、paste 与 Xcode 均完成，但 UI interaction harness 编译暴露精简模型缺少 `effectiveSourceDirection`；修复提交 `1859d8a3615b502e67fd3a8abc93590f96ae250f` 的 exact-SHA full [31429739511](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31429739511) 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe `skip`。随后通过 PR #303 合入 `smalldata_test`，merge SHA `d38ac11aff9afae1aba6a67cef856cb547bd1e26`，PR fast [31430655623](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31430655623) 通过。
+
+本版固定 `test/jap.jpg` 只用于方向／布局／runtime 回归，不声称通用日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c` 已在祖先链，PR #303 合并后本地／origin 仅保留 `main` 与 `smalldata_test`，无待 cherry-pick。
+
 ## v3.243：图片 OCR 来源文字方向覆盖
 
 日期：2026-08-11
