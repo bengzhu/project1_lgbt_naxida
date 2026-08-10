@@ -1,10 +1,18 @@
+## v3.234：图片日语竖排复查筛选
+
+日期：2026-08-10
+
+图片 OCR 复查面板新增 `竖排` 筛选，按来源方向显示全部竖排文字块，不再只暴露低置信或方向待定块；这为固定日语竖排样图中的高置信错字提供可定位的人工复查入口。筛选只作用于 inspector 列表和辅助功能文案，预览、导出、Store、OCR、翻译和布局保持完整结果。
+
+新增 `scripts/test-v3234-image-japanese-vertical-review-filter-contract.py` 与可执行 evaluator 并接入 CI，工程版本为 `3.234`。云端 full 待当前研发提交验证；本版本不把筛选能力表述为 OCR 准确率提升。
+
 ## v3.233：Koharu line quad 整行覆盖修复
 
 日期：2026-08-10
 
 Vision 字符框在旋转坐标中不再对对应角取 median（该做法只留下中间 glyph，常被严格 coverage 门控拒绝）；现在用有效 glyph 的外侧极值构造覆盖整行的 quad，再映射回原图。原有 overlap、coverage、面积比、宽度收窄门控和 detector bbox fallback 全部保留，ownership、预算、取消、Vision fallback、布局、翻译、渲染与非日语路径不变。
 
-新增 `scripts/test-v3233-image-japanese-line-quad-coverage-contract.py` 并接入 CI，工程版本为 `3.233`。云端 full 待当前研发提交验证；固定 `test/jap.jpg` 只证明整行 crop geometry 与既有 runtime 边界，不外推通用日语 OCR／翻译质量。
+新增 `scripts/test-v3233-image-japanese-line-quad-coverage-contract.py` 并接入 CI，工程版本为 `3.233`。exact-SHA full [31381929512](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31381929512) 对 SHA `fea4967b2dd94c7aff735c5c57139cbe66784fd6` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode build 与 JUnit `10/10`（0 failures），probe 按配置为 `skip`；artifact manifest 已核对 branch/run/attempt，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。固定 `test/jap.jpg` 只证明整行 crop geometry 与既有 runtime 边界，不外推通用日语 OCR／翻译质量。v3.233 已通过 PR #288 合入 `smalldata_test`，merge SHA `b0fca98d6f9e6b7df0459efdfaa31ee6c3e61ef0`，候选分支已清理。
 
 ## v3.232：Koharu line polygon 四边形进入 Manga OCR crop
 

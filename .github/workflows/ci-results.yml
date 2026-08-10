@@ -702,6 +702,9 @@ jobs:
           if grep -Fx 'scripts/test-v3233-image-japanese-line-quad-coverage-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
+          if grep -Fx 'scripts/test-v3234-image-japanese-vertical-review-filter-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
           # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
 
@@ -1513,6 +1516,7 @@ jobs:
             python3 -B scripts/test-v3231-image-japanese-detector-tight-crop-hint-contract.py
             python3 -B scripts/test-v3232-image-japanese-koharu-line-quad-manga-ocr-contract.py
             python3 -B scripts/test-v3233-image-japanese-line-quad-coverage-contract.py
+            python3 -B scripts/test-v3234-image-japanese-vertical-review-filter-contract.py
             bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
