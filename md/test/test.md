@@ -11,7 +11,7 @@
 
 - Vision 字符框只有在至少两个字符、与 detector `rect` 和候选 envelope 的 overlap／coverage、面积比、横向／纵向支持以及宽度收窄门控全部通过时，才形成可选 `ImageOCRLayoutQuad`；它只作为 Manga OCR 的 recognition-only crop geometry，`textRect`、layout、去重与 detector ownership 继续使用 detector `rect`。
 - `MangaOCRService` 使用 Core Image `CIPerspectiveCorrection` 执行 bounded line crop；quad 缺失、退化、投影失败或模型／单 crop 错误时回退既有扩展 `cropRect`。batch、12／48 预算、取消传播、Vision fallback、翻译、渲染与非日语路径不变。
-- 新增 `scripts/test-v3232-image-japanese-koharu-line-quad-manga-ocr-contract.py` 并接入 UI/full fail-fast；工程版本为 `3.232`。本地 v3 合同共 `232` 份，单页继续精确返回 `5` 个 vertical blocks，四页长图继续返回 `17` blocks／`16` vertical／底部 y 约 `0.940558`；云端 full 需对当前 exact SHA 重新验证。固定 fixture 只验证 line crop geometry 与既有 runtime 回归，不声称通用日语 OCR、翻译或识别质量，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- 新增 `scripts/test-v3232-image-japanese-koharu-line-quad-manga-ocr-contract.py` 并接入 UI/full fail-fast；工程版本为 `3.232`。本地 v3 合同共 `232` 份，单页继续精确返回 `5` 个 vertical blocks，四页长图继续返回 `17` blocks／`16` vertical／底部 y 约 `0.940558`；exact-SHA full [31379487189](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31379487189) 对 SHA `f030b9582d1eadb45a3c73acdf8c24219b35ba20` 完成 Xcode `26.6 (17F113)`、JUnit `10/10` 与 `AITRANS CI/full-validation=success`，probe 按配置为 `skip`。固定 fixture 只验证 line crop geometry 与既有 runtime 回归，不声称通用日语 OCR、翻译或识别质量，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
 ### v3.231 detector-owned tight crop hint
 
