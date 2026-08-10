@@ -1,3 +1,20 @@
+## v3.247：Manga OCR 后处理与单块复查焦点边界
+
+日期：2026-08-11
+
+bundled Manga OCR 的后处理现在按 Koharu 的顺序执行：先移除空白、把 Unicode 省略号归一化为三个点、合并连续的 `.`／`・`，最后把 ASCII 标点（含点号）统一为全角。这样模型返回的 `...` 进入结果、翻译和导出前稳定成为 `．．．`，不会在中间步骤被错误拆分或重复转换。
+
+图片 OCR 结果行或复查页触发单块重新识别时，Store 新增独立的 completion generation 与完成 block ID；只有 replacement 成功提交、该 block 的翻译刷新完成并进入图片终态后才递增。Panel 在当前 revision、generation、block ID 和终态仍匹配时聚焦更新后的结果行；如果 block 因筛选离开可见列表，则清理旧 selection，转移到下一行、完成态或空态，避免把辅助功能焦点留在已消失的内容上。失败、取消、过期 retry、新图片、整页 OCR、布局、渲染、非日语路径与既有翻译边界不变。
+
+新增 `scripts/test-v3247-image-ocr-rerecognition-review-focus-contract.py` 与 `scripts/test-v3247-image-japanese-manga-ocr-postprocess-contract.py` 并接入 `.github/workflows/ci-results.yml`，工程版本为 `3.247`。
+
+验证边界：
+
+- 本地全量 `269` 个 `test-*.py` 合同、单页／长页真实 Core ML runtime、Xcode generic Simulator build、`plutil`、Python/Shell 语法和 `git diff --check` 通过；单页保持 `5` 个 vertical blocks，长页保持 `17` blocks／`16` vertical，底部结果 `y=0.940558`，省略号为全角。
+- exact-SHA full [31442768415](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31442768415) 对 SHA `001eb996ea76cf17c9bd715ce20c66a9ec1f8a48` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe 按配置为 `skip`。
+- 固定 `test/jap.jpg` 只作后处理/runtime/UI 回归，不外推通用日语 OCR、翻译或识别质量；Koharu artifact readiness 独立保持 `manifestMissing / stopUntilArtifactsProvided`。
+- v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c` 已在祖先链；v3.247 合入后本地／origin 仅保留 `main` 与 `smalldata_test`，无待 cherry-pick。
+
 ## v3.246：Koharu 方向感知 crop padding 与恢复覆盖保留
 
 日期：2026-08-11
