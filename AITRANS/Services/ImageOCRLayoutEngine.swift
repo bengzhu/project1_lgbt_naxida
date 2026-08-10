@@ -62,6 +62,11 @@ struct ImageOCRLayoutObservation: Equatable, Sendable {
     /// reclassified solely because its mapped Vision box is unusually wide.
     /// Page-level observations leave this unset and continue using geometry.
     var sourceDirectionHint: ImageOCRLayoutDirection? = nil
+    /// Koharu keeps each detector TextRegion as one text node through OCR.
+    /// Two such nodes may be close in the same column, but layout must not join
+    /// them after recognition. Vision-only line fragments leave this false and
+    /// retain the historical same-column clustering path.
+    var preservesDetectorTextRegionBoundary = false
 }
 
 struct ImageOCRLayoutBlock: Equatable, Sendable {
@@ -476,6 +481,10 @@ enum ImageOCRLayoutEngine {
 
     private static func shouldMergeVertically(_ line: ResolvedObservation, into cluster: Cluster?) -> Bool {
         guard let cluster else { return false }
+        guard !(line.preservesDetectorTextRegionBoundary
+            && cluster.containsPreservedDetectorTextRegionBoundary) else {
+            return false
+        }
         let rect = cluster.rect
         let sameColumn = horizontalOverlap(line.rect, rect) / max(min(line.rect.width, rect.width), 0.001) >= 0.45
             || abs(line.rect.midX - rect.midX) <= max(line.rect.width, rect.width) * 0.55
@@ -672,6 +681,9 @@ private struct ResolvedObservation {
     var reason: String
     var text: String { observation.text }
     var rect: ImageOCRLayoutRect { observation.rect }
+    var preservesDetectorTextRegionBoundary: Bool {
+        observation.preservesDetectorTextRegionBoundary
+    }
 }
 
 private struct StableKey: Comparable {
@@ -714,6 +726,10 @@ private struct Cluster {
     mutating func append(_ observation: ResolvedObservation) {
         observations.append(observation)
         rect = rect.union(observation.rect)
+    }
+
+    var containsPreservedDetectorTextRegionBoundary: Bool {
+        observations.contains(where: \.preservesDetectorTextRegionBoundary)
     }
 
     var block: ImageOCRLayoutBlock {

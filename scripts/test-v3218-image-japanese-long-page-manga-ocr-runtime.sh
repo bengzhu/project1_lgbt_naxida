@@ -55,7 +55,7 @@ text = Path(sys.argv[1]).read_text(encoding="utf-8")
 if "copies=4" not in text or "image=1136x6400" not in text:
     raise SystemExit(f"unexpected tall fixture geometry: {text}")
 match = re.search(r"^blocks=(\d+)$", text, re.MULTILINE)
-if match is None or int(match.group(1)) < 14:
+if match is None or int(match.group(1)) < 17:
     raise SystemExit(f"expected stable long-page OCR coverage: {text}")
 if "direction=unknown" in text:
     raise SystemExit(f"retained unknown-direction long-page OCR blocks: {text}")
@@ -68,19 +68,23 @@ vertical_rects = [
         re.MULTILINE,
     )
 ]
-if len(vertical_rects) < 12:
-    raise SystemExit(f"expected at least 12 vertical long-page OCR blocks: {text}")
+if len(vertical_rects) < 16:
+    raise SystemExit(f"expected at least 16 vertical long-page OCR blocks: {text}")
 for quarter in range(4):
     lower = quarter * 0.25
     upper = lower + 0.25
-    if sum(lower <= y < upper for _, y, _, _ in vertical_rects) < 3:
+    if sum(lower <= y < upper for _, y, _, _ in vertical_rects) < 4:
         raise SystemExit(f"insufficient vertical OCR coverage in quarter {quarter}: {text}")
 if not any(y > 0.75 for _, y, _, _ in vertical_rects):
     raise SystemExit(f"missing final OCR output near the long-page tail: {text}")
 
 vertical_texts = re.findall(r"direction=vertical text=(.+)$", text, re.MULTILINE)
+if "お願いします前は" in text:
+    raise SystemExit(f"joined adjacent detector TextRegions across repeated pages: {text}")
 if sum("今度こそ" in value for value in vertical_texts) < 4:
     raise SystemExit(f"not every repeated page received vertical Manga OCR: {text}")
-if sum("前は生意気に俺の誘い断りやがって..." in value for value in vertical_texts) < 3:
+if sum("前は生意気に俺の誘い断りやがって..." in value for value in vertical_texts) < 4:
     raise SystemExit(f"long-page Manga OCR did not replace weak fallback text: {text}")
+if sum("では最後に" in value for value in vertical_texts) < 4:
+    raise SystemExit(f"detector boundary preservation lost a repeated page tail: {text}")
 PY

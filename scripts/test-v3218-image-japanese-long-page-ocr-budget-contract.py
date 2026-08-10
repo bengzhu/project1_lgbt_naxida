@@ -124,7 +124,12 @@ class JapaneseLongPageOCRBudgetContractTests(unittest.TestCase):
 
     def test_version_runtime_and_ci_route_follow_v3217(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.218", "3.218"])
+        self.assertEqual(len(versions), 2)
+        self.assertEqual(len(set(versions)), 1)
+        self.assertGreaterEqual(
+            tuple(int(part) for part in versions[0].split(".")),
+            (3, 218),
+        )
         for marker in [
             "private static let sourceCopies = 4",
             "VisionOCRService().recognizeTextBlocks(",
@@ -132,10 +137,11 @@ class JapaneseLongPageOCRBudgetContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, self.harness)
         for marker in [
-            "int(match.group(1)) < 14",
-            "len(vertical_rects) < 12",
+            "int(match.group(1)) < 17",
+            "len(vertical_rects) < 16",
             '"direction=unknown" in text',
             "for quarter in range(4)",
+            '"お願いします前は" in text',
             'sum("今度こそ" in value for value in vertical_texts) < 4',
             "trash \"$runtime_root\"",
         ]:
