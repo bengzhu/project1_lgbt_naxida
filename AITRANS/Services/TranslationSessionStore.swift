@@ -142,7 +142,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var speechQualityProbeReport: SpeechQualityProbeReport?
     @Published var isRunningSpeechQualityProbe = false
     @Published var imageTranslationState: ImageTranslationState = .idle
-    @Published var imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
+    @Published var imageTranslationMessage = "选择图片后，会用本机 OCR 识别文字并定位"
     @Published var imageTranslationBlocks: [ImageTranslationBlock] = []
     @Published var imageTranslationData: Data?
     @Published var imageTranslationFilename = ""
@@ -1210,7 +1210,7 @@ final class TranslationSessionStore: ObservableObject {
 
     private func imageOCRRecognitionMessage(for sourceLanguage: SupportedLanguage) -> String {
         if sourceLanguage == .japanese {
-            return "正在用 Vision 本机 OCR 识别日语文字，复查竖排方向与文字块位置"
+            return "正在用本机 Manga OCR 与 Vision 识别日语文字，复查竖排方向与文字块位置"
         }
         return "正在用 Vision 本机 OCR 识别文字和位置"
     }
@@ -1236,7 +1236,7 @@ final class TranslationSessionStore: ObservableObject {
 
         guard !recognizedBlocks.isEmpty else {
             imageTranslationState = .failed
-            imageTranslationMessage = "Vision OCR 没有识别到可翻译文字"
+            imageTranslationMessage = "本机 OCR 没有识别到可翻译文字"
             dataTransferMessage = imageTranslationMessage
             isProcessing = false
             return
@@ -1338,8 +1338,8 @@ final class TranslationSessionStore: ObservableObject {
         }
         imageTranslationState = .translated
         imageTranslationMessage = imageTranslationExportURL == nil
-            ? "已完成 Vision OCR、\(targetLanguage.rawValue)翻译和定位覆盖"
-            : "已完成 Vision OCR、\(targetLanguage.rawValue)翻译和覆盖图导出"
+            ? "已完成本机 OCR、\(targetLanguage.rawValue)翻译和定位覆盖"
+            : "已完成本机 OCR、\(targetLanguage.rawValue)翻译和覆盖图导出"
         dataTransferMessage = imageTranslationMessage
         appendImageTranslationTranscript(blocks: translatedBlocks)
         isProcessing = false
@@ -1608,7 +1608,7 @@ final class TranslationSessionStore: ObservableObject {
         discardImageTranslationExport()
         imageTranslationTaskID = UUID()
         imageTranslationState = .idle
-        imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
+        imageTranslationMessage = "选择图片后，会用本机 OCR 识别文字并定位"
         imageTranslationBlocks = []
         imageTranslationCorrectedBlockIDs = []
         imageTranslationReviewedBlockIDs = []

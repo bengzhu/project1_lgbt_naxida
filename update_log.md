@@ -1,3 +1,21 @@
+## v3.224：隔离 Manga OCR crop 故障并修正本机 OCR 状态说明
+
+日期：2026-08-10
+
+状态：Agent X 继续沿 Koharu detector→TextRegion→crop→OCR 边界收敛错误隔离。`MangaOCRService` 仍在模型加载失败时让整批请求安全回到 Vision，但单个 detector crop 的图像解码、encoder／decoder 输出或其它非取消推理错误只跳过当前 crop，继续处理剩余区域；`CancellationError` 继续向 `VisionOCRService` 与图片翻译任务传播，不再由 Manga OCR 的 `try?` 吞掉。日语识别阶段文案明确写出本机 Manga OCR 与 Vision fallback，空结果、完成态、初始提示与 VoiceOver 统一使用准确的本机 OCR 描述，普通语言仍保留 Vision 路径。
+
+核心变更：
+
+- `MangaOCRService` 将 crop 级推理包在受限 `do/catch` 中，取消只抛出，坏 crop 只 `continue`；模型加载仍位于循环外，保持整批 fallback 边界。
+- `VisionOCRService` 让 Manga OCR helper 使用 `async throws`，取消可到达图片任务的既有取消状态，模型加载／其它非取消错误仍返回空并保留 Vision line／block／tile fallback。
+- `TranslationSessionStore` 与 `ImageTranslationViews` 的本机 OCR 进度、空结果、完成态和可访问性提示不再误称所有图片都只使用 Vision。
+- 新增 `scripts/test-v3224-image-japanese-manga-ocr-resilience-contract.py`，并更新 v3.214、v3.221 历史合同接受取消传播调用。
+
+验证边界：
+
+- 固定 `test/jap.jpg` 单页和四页长图 runtime 继续只验证既有 RT-DETR／Manga OCR geometry、预算和 layout 回归，不把单一 fixture 外推为通用日语 OCR、翻译或识别质量证明。
+- Koharu mask artifact readiness 继续为 `manifestMissing / stopUntilArtifactsProvided`；云端 Xcode full validation 在本次提交后记录。
+
 ## v3.223：分离 detector ownership 与方向 provenance
 
 日期：2026-08-10

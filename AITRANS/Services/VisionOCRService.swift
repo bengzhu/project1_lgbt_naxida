@@ -76,7 +76,7 @@ struct VisionOCRService: Sendable {
                 // pixel-first regions before Vision crop rereads; if the model
                 // cannot load or infer, an empty result leaves every historical
                 // Vision fallback available.
-                detectorMangaOCRObservations = await Self.recognizeJapaneseMangaOCR(
+                detectorMangaOCRObservations = try await Self.recognizeJapaneseMangaOCR(
                     image: ocrImage
                 )
                 observations.append(contentsOf: detectorMangaOCRObservations)
@@ -519,7 +519,7 @@ struct VisionOCRService: Sendable {
 
     private static func recognizeJapaneseMangaOCR(
         image: CGImage
-    ) async -> [VisionOCRObservation] {
+    ) async throws -> [VisionOCRObservation] {
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         let detectorSliceCount = ComicTextBubbleDetectorService.inferenceWindowCount(
             for: image
@@ -556,11 +556,19 @@ struct VisionOCRService: Sendable {
                 )
             )
         }
-        guard !requests.isEmpty,
-              let results = try? await MangaOCRService.shared.recognize(
-                  image: image,
-                  requests: requests
-              ) else {
+        guard !requests.isEmpty else {
+            return []
+        }
+        let results: [MangaOCRResult]
+        do {
+            results = try await MangaOCRService.shared.recognize(
+                image: image,
+                requests: requests
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            // Model loading remains an all-or-nothing fallback to Vision OCR.
             return []
         }
         return results.map { result in

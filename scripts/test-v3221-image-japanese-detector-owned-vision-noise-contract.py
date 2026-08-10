@@ -42,7 +42,7 @@ class JapaneseDetectorOwnedVisionNoiseContractTests(unittest.TestCase):
         for marker in [
             "observationRole: .detectorTextRegion",
             "preservesDetectorTextRegionBoundary: true",
-            "detectorMangaOCRObservations = await Self.recognizeJapaneseMangaOCR(",
+            "detectorMangaOCRObservations = try await Self.recognizeJapaneseMangaOCR(",
             "observations.append(contentsOf: detectorMangaOCRObservations)",
         ]:
             self.assertIn(marker, self.vision if "detectorManga" in marker else manga)

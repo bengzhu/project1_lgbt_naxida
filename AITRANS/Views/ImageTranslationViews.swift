@@ -1452,7 +1452,7 @@ struct ImageTranslationPanel: View {
         case .loading:
             return "正在读取图片；可以取消或选择新图片"
         case .recognizing:
-            return "正在使用 Vision 本机 OCR；可以取消或选择新图片"
+            return "正在使用本机 OCR；可以取消或选择新图片"
         case .translating:
             return "正在逐块翻译；仍可查看和定位，完成后可修正文字或更新复查"
         case .translated:

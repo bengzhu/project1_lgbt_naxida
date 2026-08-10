@@ -55,15 +55,23 @@ actor MangaOCRService {
             guard let crop = Self.cropImage(image, normalizedRect: request.cropRect) else {
                 continue
             }
-            let recognition = try runtime.recognize(crop)
-            guard Self.containsJapaneseLetter(recognition.text) else { continue }
-            results.append(
-                MangaOCRResult(
-                    text: recognition.text,
-                    confidence: recognition.confidence,
-                    textRect: request.textRect
+            do {
+                let recognition = try runtime.recognize(crop)
+                guard Self.containsJapaneseLetter(recognition.text) else { continue }
+                results.append(
+                    MangaOCRResult(
+                        text: recognition.text,
+                        confidence: recognition.confidence,
+                        textRect: request.textRect
+                    )
                 )
-            )
+            } catch is CancellationError {
+                // A user cancellation must stop the whole bounded batch.
+                throw CancellationError()
+            } catch {
+                // One malformed crop or model output must not discard good regions.
+                continue
+            }
         }
         return results
     }
