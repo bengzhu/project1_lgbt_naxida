@@ -59,6 +59,19 @@ enum DirectionalMangaOCRCropRuntimeHarness {
         guard let target = strong.min(by: { $0.rect.x < $1.rect.x }) else {
             throw HarnessError.detectorRegionsMissing
         }
+        let directCrop = expandedDetectorCrop(target.rect, image: image)
+        let direct = try await MangaOCRService.shared.recognize(
+            image: image,
+            requests: [
+                MangaOCRRequest(
+                    textRect: target.rect,
+                    cropRect: directCrop,
+                    cropOrientation: .koharuVertical270
+                ),
+            ]
+        ).first
+        print("directText=\(direct?.text ?? \"<missing>\")")
+        print("directConfidence=\(direct?.confidence ?? -.infinity)")
 
         let block = ImageTranslationBlock(
             original: "",
