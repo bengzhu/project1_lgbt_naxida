@@ -99,7 +99,8 @@ struct VisionOCRService: Sendable {
                     text: $0.text,
                     confidence: $0.confidence,
                     rect: $0.rect,
-                    sourceDirectionHint: $0.sourceDirectionHint
+                    sourceDirectionHint: $0.sourceDirectionHint,
+                    preservesDetectorTextRegionBoundary: $0.preservesDetectorTextRegionBoundary
                 )
             }
             let allowsVerticalText = sourceLanguage == .japanese || sourceLanguage == .simplifiedChinese
@@ -353,7 +354,8 @@ struct VisionOCRService: Sendable {
                 text: $0.text,
                 confidence: $0.confidence,
                 rect: $0.rect,
-                sourceDirectionHint: $0.sourceDirectionHint
+                sourceDirectionHint: $0.sourceDirectionHint,
+                preservesDetectorTextRegionBoundary: $0.preservesDetectorTextRegionBoundary
             )
         }
         let verticalBlocks = ImageOCRLayoutEngine.layout(
@@ -563,7 +565,8 @@ struct VisionOCRService: Sendable {
                 lineRegionQuad: nil,
                 rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
                 sourceDirectionHint: .vertical,
-                observationRole: .verticalLine
+                observationRole: .verticalLine,
+                preservesDetectorTextRegionBoundary: true
             )
         }
     }
@@ -2505,6 +2508,9 @@ struct VisionOCRService: Sendable {
                 output.append(observation)
                 continue
             }
+            let preservesDetectorTextRegionBoundary =
+                observation.preservesDetectorTextRegionBoundary
+                || output[duplicateIndex].preservesDetectorTextRegionBoundary
             if isBetterObservation(
                 observation,
                 than: output[duplicateIndex],
@@ -2512,6 +2518,8 @@ struct VisionOCRService: Sendable {
             ) {
                 output[duplicateIndex] = observation
             }
+            output[duplicateIndex].preservesDetectorTextRegionBoundary =
+                preservesDetectorTextRegionBoundary
         }
         return output
     }
@@ -2955,6 +2963,10 @@ private struct VisionOCRObservation: Equatable, Sendable {
     /// mapping and final Japanese observation fusion. Page/block/tile rereads
     /// retain their historical rotation tie-breaker.
     var observationRole: VisionOCRObservationRole = .page
+    /// Set by bundled Manga OCR because its geometry originates from one
+    /// dedicated detector TextRegion. Japanese dedupe carries this provenance
+    /// onto the selected text so layout cannot join two detector nodes later.
+    var preservesDetectorTextRegionBoundary = false
 }
 
 private struct JapaneseVerticalCropFragment: Sendable {
