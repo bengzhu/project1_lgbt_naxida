@@ -11,6 +11,14 @@ struct ImageTranslationBlock {
     var translation: String
     var confidence: Float
     var sourceDirection: ImageTextDirection?
+    var sourceDirectionOverride: ImageTextDirection?
+
+    var effectiveSourceDirection: ImageTextDirection? {
+        switch sourceDirectionOverride {
+        case .horizontal, .vertical: sourceDirectionOverride
+        case .unknown, .none: sourceDirection
+        }
+    }
 }
 
 private func block(
@@ -23,7 +31,8 @@ private func block(
         token: token,
         translation: translation,
         confidence: confidence,
-        sourceDirection: direction
+        sourceDirection: direction,
+        sourceDirectionOverride: nil
     )
 }
 

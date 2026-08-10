@@ -10,6 +10,14 @@ struct ImageTranslationBlock {
     var translation: String
     var confidence: Float
     var sourceDirection: ImageTextDirection?
+    var sourceDirectionOverride: ImageTextDirection?
+
+    var effectiveSourceDirection: ImageTextDirection? {
+        switch sourceDirectionOverride {
+        case .horizontal, .vertical: sourceDirectionOverride
+        case .unknown, .none: sourceDirection
+        }
+    }
 }
 
 private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
@@ -17,7 +25,12 @@ private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
 }
 
 private func block(_ confidence: Float) -> ImageTranslationBlock {
-    ImageTranslationBlock(translation: "", confidence: confidence, sourceDirection: .horizontal)
+    ImageTranslationBlock(
+        translation: "",
+        confidence: confidence,
+        sourceDirection: .horizontal,
+        sourceDirectionOverride: nil
+    )
 }
 
 private func testNonFiniteConfidenceFallsBackToReviewableZero() {

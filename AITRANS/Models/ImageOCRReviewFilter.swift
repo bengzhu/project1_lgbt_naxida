@@ -20,7 +20,7 @@ enum ImageOCRReviewFilter: String, CaseIterable, Identifiable, Sendable {
         case .unknownDirection:
             blocks.filter { ImageOCRResultSummary.hasUnknownDirection($0) }
         case .vertical:
-            blocks.filter { $0.sourceDirection == .vertical }
+            blocks.filter { $0.effectiveSourceDirection == .vertical }
         }
     }
 }

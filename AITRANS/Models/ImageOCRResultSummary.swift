@@ -26,10 +26,10 @@ struct ImageOCRResultSummary: Equatable, Sendable {
         lowConfidenceBlockCount = blocks.count(where: {
             Self.hasLowConfidence($0, lowConfidenceThreshold: lowConfidenceThreshold)
         })
-        horizontalBlockCount = blocks.count(where: { $0.sourceDirection == .horizontal })
-        verticalBlockCount = blocks.count(where: { $0.sourceDirection == .vertical })
+        horizontalBlockCount = blocks.count(where: { $0.effectiveSourceDirection == .horizontal })
+        verticalBlockCount = blocks.count(where: { $0.effectiveSourceDirection == .vertical })
         unknownDirectionBlockCount = blocks.count(where: {
-            $0.sourceDirection == nil || $0.sourceDirection == .unknown
+            $0.effectiveSourceDirection == nil || $0.effectiveSourceDirection == .unknown
         })
         reviewRequiredBlockCount = blocks.count(where: {
             Self.requiresReview($0, lowConfidenceThreshold: lowConfidenceThreshold)
@@ -58,7 +58,7 @@ struct ImageOCRResultSummary: Equatable, Sendable {
     }
 
     static func hasUnknownDirection(_ block: ImageTranslationBlock) -> Bool {
-        block.sourceDirection == nil || block.sourceDirection == .unknown
+        block.effectiveSourceDirection == nil || block.effectiveSourceDirection == .unknown
     }
 
 }
