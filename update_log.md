@@ -13,9 +13,10 @@
 
 验证与边界：
 
-- 新增长页完整产品 runtime：将 `test/jap.jpg` 纵向绘制 4 次并编码后，交给真实 `VisionOCRService + ComicTextBubbleDetectorService + MangaOCRService + ImageOCRLayoutEngine`。最终稳定为 15 blocks；v3.217 同 harness 基线是 11 个 vertical、2 个 unknown，v3.218 是 13 个 vertical、0 个 unknown。
-- 四个 25% 高度区间各至少 3 个 vertical blocks，最底结果 y 约 `0.943`；4 份 `今度こそ...` 均恢复为 vertical Manga OCR，完整 `前は生意気に俺の誘い断りやがって...` 至少进入 3 个 vertical blocks。仍有两个历史 Vision 横排噪声和 `撮乳`／`城乳`／`授乳` 等错字，不把方向／覆盖改善描述成文字准确率已经解决。
+- 新增长页完整产品 runtime：将 `test/jap.jpg` 纵向绘制 4 次并编码后，交给真实 `VisionOCRService + ComicTextBubbleDetectorService + MangaOCRService + ImageOCRLayoutEngine`。本地返回 15 blocks，云端 exact-SHA runtime 返回 14 blocks；两者都从 v3.217 同 harness 基线的 11 个 vertical、2 个 unknown 改善为 13 个 vertical、0 个 unknown。
+- 四个 25% 高度区间各至少 3 个 vertical blocks，最底结果 y 约 `0.943`；4 份 `今度こそ...` 均恢复为 vertical Manga OCR，完整 `前は生意気に俺の誘い断りやがって...` 至少进入 3 个 vertical blocks。本地保留两个、云端保留一个历史 Vision 横排噪声，并仍有 `撮乳`／`城乳`／`授乳` 等错字；这个横排弱候选差异不影响 vertical 覆盖 gate，也不把方向／覆盖改善描述成文字准确率已经解决。
 - 原单页产品 runtime 继续精确返回 5 个历史竖排块，v3.217 detector-only 长页 runtime 继续返回 17 regions；本地 v3.157-v3.218 共 `62` 份合同／`321` tests、三条真实 Core ML runtime、generic iOS Simulator Xcode build、`plutil`、YAML 解析与 `git diff --check` 通过。
+- exact-SHA full [31346445800](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31346445800) 对实现 SHA `0a275445fcbe3ce3c86e14be0567ab4204251f06` 以 `candidate_development_push` 完成三条真实 Core ML runtime、Xcode 和 JUnit `10/10`（0 failures），并发布 `AITRANS CI/full-validation = success` receipt；probe 继续 `skip`。
 - 单一 fixture 的四次重复不是多图 ground-truth corpus；Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称通用日语 OCR、翻译或识别质量。
 
 ## v3.217：Koharu comic detector 长图切片
