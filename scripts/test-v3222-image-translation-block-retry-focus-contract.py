@@ -38,9 +38,9 @@ class ImageTranslationBlockRetryFocusContractTests(unittest.TestCase):
             self.view,
             ".onChange(of: store.imageTranslationBlockRetryCompletionGeneration)",
         )
-        self.focus_helper = braced_body(
+        self.retry_focus_helper = braced_body(
             self.view,
-            "private func focusImageTranslationTerminalStateIfNeeded(",
+            "private func focusImageTranslationRetryCompletionIfNeeded(_ generation: Int)",
         )
 
     def test_store_publishes_a_separate_retry_completion_generation(self) -> None:
@@ -76,14 +76,14 @@ class ImageTranslationBlockRetryFocusContractTests(unittest.TestCase):
         self.assertIn("generation > 0", self.focus_change)
         self.assertIn("store.imageTranslationState == .translated", self.focus_change)
         self.assertIn(
-            "focusImageTranslationTerminalStateIfNeeded(\n                retryCompletionGeneration: generation",
+            "focusImageTranslationRetryCompletionIfNeeded(generation)",
             self.focus_change,
         )
-        self.assertIn("retryCompletionGeneration: Int? = nil", self.view)
-        self.assertIn("revision == store.imageTranslationRevision", self.focus_helper)
+        self.assertIn("let revision = store.imageTranslationRevision", self.retry_focus_helper)
+        self.assertIn("revision == store.imageTranslationRevision", self.retry_focus_helper)
         self.assertIn(
-            "retryCompletionGeneration != store.imageTranslationBlockRetryCompletionGeneration",
-            self.focus_helper,
+            "generation == store.imageTranslationBlockRetryCompletionGeneration",
+            self.retry_focus_helper,
         )
 
     def test_existing_retry_stale_result_guards_remain(self) -> None:

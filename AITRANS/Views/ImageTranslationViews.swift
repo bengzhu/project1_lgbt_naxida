@@ -268,9 +268,7 @@ struct ImageTranslationPanel: View {
         .onChange(of: store.imageTranslationBlockRetryCompletionGeneration) { _, generation in
             guard generation > 0,
                   store.imageTranslationState == .translated else { return }
-            focusImageTranslationTerminalStateIfNeeded(
-                retryCompletionGeneration: generation
-            )
+            focusImageTranslationRetryCompletionIfNeeded(generation)
         }
         .onChange(of: store.imageTranslationRetryLanguageSummary) { oldSummary, newSummary in
             guard newSummary != nil, newSummary != oldSummary else { return }
@@ -1282,17 +1280,22 @@ struct ImageTranslationPanel: View {
         moveReviewAccessibilityFocus(to: focusID)
     }
 
-    private func focusImageTranslationTerminalStateIfNeeded(
-        retryCompletionGeneration: Int? = nil
-    ) {
+    private func focusImageTranslationRetryCompletionIfNeeded(_ generation: Int) {
+        let revision = store.imageTranslationRevision
+        Task { @MainActor in
+            await Task.yield()
+            guard revision == store.imageTranslationRevision,
+                  generation == store.imageTranslationBlockRetryCompletionGeneration,
+                  store.imageTranslationState == .translated else { return }
+            focusImageTranslationTerminalStateIfNeeded()
+        }
+    }
+
+    private func focusImageTranslationTerminalStateIfNeeded() {
         let revision = store.imageTranslationRevision
         Task { @MainActor in
             await Task.yield()
             guard revision == store.imageTranslationRevision else { return }
-            if let retryCompletionGeneration,
-               retryCompletionGeneration != store.imageTranslationBlockRetryCompletionGeneration {
-                return
-            }
             if store.imageTranslationBlocks.isEmpty {
                 if store.imageTranslationState == .translated,
                    store.imageTranslationData != nil,
