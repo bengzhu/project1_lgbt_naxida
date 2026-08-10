@@ -1,10 +1,16 @@
+## v3.235：Manga OCR decoder token budget 对齐
+
+日期：2026-08-10
+
+单 crop 与 batch decoder 都从 `1..<maximumTokens` 改为 `0..<maximumTokens`，与 Koharu 的 `max_length` generation step 语义一致；300 token 上限、EOS 提前结束、取消传播、batch／单 crop fallback、请求预算、布局、翻译、渲染和非日语路径不变。新增 `scripts/test-v3235-image-japanese-manga-ocr-token-budget-contract.py` 并接入 CI，工程版本为 `3.235`。exact-SHA full [31386561223](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31386561223) 对 SHA `e96e621a3a9e57560b830d898b56d80a1c3f17a6` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode build 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe 按配置为 `skip`；Koharu artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。本版本不把 token budget 对齐表述为通用日语 OCR、翻译或识别质量提升。
+
 ## v3.234：图片日语竖排复查筛选
 
 日期：2026-08-10
 
 图片 OCR 复查面板新增 `竖排` 筛选，按来源方向显示全部竖排文字块，不再只暴露低置信或方向待定块；这为固定日语竖排样图中的高置信错字提供可定位的人工复查入口。筛选只作用于 inspector 列表和辅助功能文案，预览、导出、Store、OCR、翻译和布局保持完整结果。
 
-新增 `scripts/test-v3234-image-japanese-vertical-review-filter-contract.py` 与可执行 evaluator 并接入 CI，工程版本为 `3.234`。云端 full 待当前研发提交验证；本版本不把筛选能力表述为 OCR 准确率提升。
+新增 `scripts/test-v3234-image-japanese-vertical-review-filter-contract.py` 与可执行 evaluator 并接入 CI，工程版本为 `3.234`。exact-SHA full [31384120344](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31384120344) 对 SHA `b67284f30f91fa23d48965f4633f91ce0e85d669` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode build 与 JUnit `10/10`（0 failures），probe 按配置为 `skip`；随后通过 PR #289 合入 `smalldata_test`，merge SHA `31ce1c2f38db0bc3b25ffe4d52ec942497b0f423`。本版本不把筛选能力表述为 OCR 准确率提升。
 
 ## v3.233：Koharu line quad 整行覆盖修复
 

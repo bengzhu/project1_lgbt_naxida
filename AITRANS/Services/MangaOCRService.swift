@@ -360,7 +360,9 @@ private struct MangaOCRRuntime {
         var tokens = [Self.decoderStartToken]
         var tokenLogProbabilities: [Double] = []
         tokenLogProbabilities.reserveCapacity(32)
-        for _ in 1..<Self.maximumTokens {
+        // Koharu's decoder performs max_length generation steps, including the
+        // first step from the decoder start token.
+        for _ in 0..<Self.maximumTokens {
             try Task.checkCancellation()
             let inputIDs = try Self.makeInputIDs(tokens)
             let decoderInput = try MLDictionaryFeatureProvider(
@@ -432,7 +434,7 @@ private struct MangaOCRRuntime {
         var logProbabilities = Array(repeating: [Double](), count: batch)
         var finished = Array(repeating: false, count: batch)
 
-        for _ in 1..<Self.maximumTokens {
+        for _ in 0..<Self.maximumTokens {
             try Task.checkCancellation()
             let inputIDs = try Self.makeInputIDs(tokenRows)
             let decoderInput = try MLDictionaryFeatureProvider(
