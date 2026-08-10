@@ -4,7 +4,7 @@
 
 v3.239 已经在 `MangaOCRService` 内把 detector bbox 作为第一 crop、line quad 作为弱结果回退，但真实 `VisionOCRService` 请求组装仍先用 `region.cropRectHint` 计算 detector crop。v3.240 将 crop base 的 role 分支前移：`.comicTextBubble` 永远从 RT-DETR `region.rect` 加 Koharu font-relative padding，`.vision` supplement 才能使用严格门控的 `region.cropRectHint ?? rect`。detector 的 `textRect` ownership 与 `cropQuadHint` 传递不变，后者仍由 Manga OCR 在弱 bbox 结果时按既有质量门控重试。
 
-新增 `scripts/test-v3240-image-japanese-detector-bbox-crop-contract.py` 并接入 CI，工程版本为 `3.240`。本地 `240` 份合同、历史 v3.239 bbox-primary／v3.238 quad-bbox fallback 合同、Python／shell 语法与 `git diff --check` 通过；当前机器只有 CommandLineTools，无法本地运行 Core ML compiler，exact-SHA full 待云端验证。该版本只收紧真实请求 wiring，不声称通用日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+新增 `scripts/test-v3240-image-japanese-detector-bbox-crop-contract.py` 并接入 CI，工程版本为 `3.240`。本地 `240` 份合同、历史 v3.239 bbox-primary／v3.238 quad-bbox fallback 合同、Python／shell 语法与 `git diff --check` 通过；exact-SHA full [31410644573](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31410644573) 对 SHA `22ff6b1491aba22b8233bd65811333591cbf74a1` 使用 Xcode `26.6 (17F113)` 完成，JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe `skip`；随后通过 PR #295 合入 `smalldata_test`，merge SHA `62a6c8ca3ca33c6d5a328677dea1ad76fbb8540c`。该版本只收紧真实请求 wiring，不声称通用日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
 ## v3.239：Koharu Manga OCR bbox-first ownership
 
