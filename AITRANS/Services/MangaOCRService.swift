@@ -3,9 +3,18 @@ import CoreImage
 import CoreML
 import Foundation
 
+enum MangaOCRCropOrientation: Int, Sendable {
+    case natural = 0
+    /// Koharu's vertical `warp_line_region` feeds Manga OCR after rotate270.
+    case koharuVertical270 = 270
+}
+
 struct MangaOCRRequest: Sendable {
     var textRect: ImageOCRLayoutRect
     var cropRect: ImageOCRLayoutRect
+    /// Orientation for the detector bbox crop. Ownership geometry remains in
+    /// `textRect`/`cropRect`; this only changes pixels presented to the model.
+    var cropOrientation: MangaOCRCropOrientation
     /// Optional Koharu `line_polygon` equivalent. The detector/layout rectangle
     /// remains the ownership geometry and is always the safe fallback.
     var cropQuad: ImageOCRLayoutQuad?
@@ -18,11 +27,13 @@ struct MangaOCRRequest: Sendable {
     init(
         textRect: ImageOCRLayoutRect,
         cropRect: ImageOCRLayoutRect,
+        cropOrientation: MangaOCRCropOrientation = .natural,
         cropQuad: ImageOCRLayoutQuad? = nil,
         cropQuadIsVertical: Bool = false
     ) {
         self.textRect = textRect
         self.cropRect = cropRect
+        self.cropOrientation = cropOrientation
         self.cropQuad = cropQuad
         self.cropQuadIsVertical = cropQuadIsVertical
     }
@@ -220,6 +231,7 @@ actor MangaOCRService {
         request: MangaOCRRequest
     ) -> CroppedRequest? {
         let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)
+            .map { orientedBoundingBoxCrop($0, orientation: request.cropOrientation) }
         let perspectiveCrop = request.cropQuad.flatMap {
             perspectiveCorrectedCrop(
                 image,
@@ -240,6 +252,28 @@ actor MangaOCRService {
             primaryBoundingBoxCrop: perspectiveCrop,
             lineQuadFallbackCrop: nil
         )
+    }
+
+    /// Keep the bbox primary while matching Koharu's vertical model-facing
+    /// orientation. Rotation failure returns the natural crop, so a renderer
+    /// or Core Graphics limitation cannot discard detector ownership.
+    private static func orientedBoundingBoxCrop(
+        _ crop: CGImage,
+        orientation: MangaOCRCropOrientation
+    ) -> CGImage {
+        switch orientation {
+        case .natural:
+            return crop
+        case .koharuVertical270:
+            // RT-DETR ownership boxes can be broad even when their OCR result
+            // is vertical. Rotate only a clearly line-like crop; a slightly
+            // portrait detector bbox is still a multi-glyph ownership region
+            // whose natural orientation is the recoverable model input.
+            guard CGFloat(crop.height) > CGFloat(crop.width) * 1.75 else {
+                return crop
+            }
+            return rotateImage270(crop) ?? crop
+        }
     }
 
     private static func shouldRetryLineQuad(

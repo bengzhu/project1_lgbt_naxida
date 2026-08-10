@@ -71,7 +71,7 @@ class ImageOCRBlockCropRetryContractTests(unittest.TestCase):
             "MangaOCRRequest(",
             "MangaOCRService.shared",
             ".recognize(image: image, requests: [request])",
-            "Self.cropImageForBlock(image, normalizedRect: rect)",
+            "Self.cropImageForBlock(image, normalizedRect: blockCropRect)",
             "result.confidence.isFinite",
             "result.confidence >= 0.55",
             "Self.japaneseScriptDensity(in: text) >= 0.5",

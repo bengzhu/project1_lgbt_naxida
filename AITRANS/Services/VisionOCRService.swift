@@ -173,11 +173,27 @@ struct VisionOCRService: Sendable {
             throw VisionOCRServiceError.blockRecognitionFailed
         }
 
+        // Reuse the same Koharu font-relative envelope as the page-level
+        // detector crop. The block's layout rect remains the ownership
+        // geometry; padding only makes this scoped reread see the glyphs at
+        // the edge of a detector bbox.
+        let blockCropRect = sourceLanguage == .japanese
+            ? Self.expandedVerticalCropRect(
+                rect,
+                imageSize: CGSize(width: image.width, height: image.height)
+            )
+            : rect
+
         if sourceLanguage == .japanese {
             do {
+                let cropOrientation: MangaOCRCropOrientation =
+                    block.effectiveSourceDirection == .vertical
+                        ? .koharuVertical270
+                        : .natural
                 let request = MangaOCRRequest(
                     textRect: rect,
-                    cropRect: rect
+                    cropRect: blockCropRect,
+                    cropOrientation: cropOrientation
                 )
                 if let result = try await MangaOCRService.shared
                     .recognize(image: image, requests: [request])
@@ -202,7 +218,7 @@ struct VisionOCRService: Sendable {
             }
         }
 
-        guard let crop = Self.cropImageForBlock(image, normalizedRect: rect) else {
+        guard let crop = Self.cropImageForBlock(image, normalizedRect: blockCropRect) else {
             throw VisionOCRServiceError.blockRecognitionFailed
         }
 
