@@ -323,6 +323,9 @@ struct ImageTranslationPanel: View {
                 canRetryTranslation: { store.canRetryImageTranslationBlock($0) },
                 isRetryingTranslation: { store.imageTranslationRetryingBlockID == $0 },
                 retryTranslation: { store.retryImageTranslationBlock($0) },
+                canRerecognize: { store.canRerecognizeImageTranslationBlock($0) },
+                isRerecognizing: { store.imageTranslationRerecognizingBlockID == $0 },
+                rerecognize: { store.rerecognizeImageTranslationBlock($0) },
                 toggleReviewCompletion: { blockID in
                     toggleReviewCompletion(blockID, focusInPreview: true)
                 }
@@ -628,6 +631,9 @@ struct ImageTranslationPanel: View {
                             canRetryTranslation: store.canRetryImageTranslationBlock(block.id),
                             isRetryingTranslation: store.imageTranslationRetryingBlockID == block.id,
                             retryTranslation: { store.retryImageTranslationBlock(block.id) },
+                            canRerecognize: store.canRerecognizeImageTranslationBlock(block.id),
+                            isRerecognizing: store.imageTranslationRerecognizingBlockID == block.id,
+                            rerecognize: { store.rerecognizeImageTranslationBlock(block.id) },
                             retryUnavailableHint: imageTranslationBlockRetryUnavailableHint,
                             accessibilityFocus: $reviewAccessibilityFocusID,
                             select: { toggleSelection(of: block.id) },
@@ -1972,6 +1978,9 @@ private struct ImageTranslationPreview: View {
     let canRetryTranslation: (UUID) -> Bool
     let isRetryingTranslation: (UUID) -> Bool
     let retryTranslation: (UUID) -> Void
+    let canRerecognize: (UUID) -> Bool
+    let isRerecognizing: (UUID) -> Bool
+    let rerecognize: (UUID) -> Void
     let toggleReviewCompletion: (UUID) -> Void
     @State private var previewImage: UIImage?
     @State private var previewRevision: Int?
@@ -2027,6 +2036,9 @@ private struct ImageTranslationPreview: View {
                                 canRetryTranslation: canRetryTranslation(selectedBlock.id),
                                 isRetryingTranslation: isRetryingTranslation(selectedBlock.id),
                                 retryTranslation: { retryTranslation(selectedBlock.id) },
+                                canRerecognize: canRerecognize(selectedBlock.id),
+                                isRerecognizing: isRerecognizing(selectedBlock.id),
+                                rerecognize: { rerecognize(selectedBlock.id) },
                                 retryUnavailableHint: canRetryTranslation(selectedBlock.id)
                                     ? "只重新翻译此文字块，不会重新运行 Vision OCR"
                                     : "当前文字块没有可重试的空白译文",
@@ -2513,6 +2525,9 @@ private struct ImageTranslationFocusPreview: View {
     let canRetryTranslation: Bool
     let isRetryingTranslation: Bool
     let retryTranslation: () -> Void
+    let canRerecognize: Bool
+    let isRerecognizing: Bool
+    let rerecognize: () -> Void
     let retryUnavailableHint: String
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let close: () -> Void
@@ -2611,6 +2626,24 @@ private struct ImageTranslationFocusPreview: View {
                                 : modificationUnavailableHint
                         )
                 }
+                if canRerecognize || isRerecognizing {
+                    Button(
+                        isRerecognizing ? "正在重新识别" : "重新识别此文字块",
+                        systemImage: isRerecognizing ? "hourglass" : "text.viewfinder",
+                        action: rerecognize
+                    )
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.white)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .background(Color.black.opacity(0.82), in: Circle())
+                    .disabled(!canRerecognize || isRerecognizing)
+                    .opacity(canRerecognize && !isRerecognizing ? 1 : 0.55)
+                    .accessibilityHint(
+                        isRerecognizing
+                            ? "正在只重新识别此文字块，不会重新运行整张图片 OCR"
+                            : "只使用此文字块现有位置重新识别，成功后保留位置并刷新此块翻译"
+                    )
+                }
                 if block.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                    canRetryTranslation || isRetryingTranslation {
                     Button(
@@ -2708,6 +2741,13 @@ private struct ImageTranslationFocusPreview: View {
             )
         )
         .modifier(
+            ImageFocusPreviewRerecognitionAccessibilityModifier(
+                canRerecognize: canRerecognize,
+                isRerecognizing: isRerecognizing,
+                rerecognize: rerecognize
+            )
+        )
+        .modifier(
             ImageFocusPreviewReviewAccessibilityModifier(
                 isReviewRequired: isReviewRequired,
                 canReview: canReview,
@@ -2786,8 +2826,14 @@ private struct ImageTranslationFocusPreview: View {
     }
 
     private func focusPreviewModificationHint(appendingTo base: String) -> String {
-        guard isManuallyCorrected else { return base }
-        return "\(base)；也可执行“恢复 Vision OCR”"
+        var detail = base
+        if canRerecognize || isRerecognizing {
+            detail += isRerecognizing
+                ? "；正在重新识别此文字块"
+                : "；也可执行“重新识别此文字块”"
+        }
+        guard isManuallyCorrected else { return detail }
+        return "\(detail)；也可执行“恢复 Vision OCR”"
     }
 
     private func reviewAccessibilityHint(appendingTo base: String) -> String {
@@ -2843,6 +2889,24 @@ private struct ImageFocusPreviewRestoreAccessibilityModifier: ViewModifier {
             content
                 .accessibilityAction(named: "恢复 Vision OCR") {
                     restoreVisionOCR()
+                }
+        } else {
+            content
+        }
+    }
+}
+
+private struct ImageFocusPreviewRerecognitionAccessibilityModifier: ViewModifier {
+    let canRerecognize: Bool
+    let isRerecognizing: Bool
+    let rerecognize: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if canRerecognize && !isRerecognizing {
+            content
+                .accessibilityAction(named: "重新识别此文字块") {
+                    rerecognize()
                 }
         } else {
             content
@@ -3061,7 +3125,7 @@ private struct ImageTranslationVerticalText: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let characters = text.map(String.init)
+            let characters = ImageTranslationVerticalTextLayout.normalizedCharacters(in: text)
             let rowHeight: CGFloat = 18
             let rowCapacity = max(Int(geometry.size.height / rowHeight), 1)
             let columnCapacity = max(
@@ -3083,11 +3147,19 @@ private struct ImageTranslationVerticalText: View {
                 ForEach(Array(columns.indices.reversed()), id: \.self) { columnIndex in
                     VStack(spacing: 0) {
                         ForEach(Array(columns[columnIndex].indices), id: \.self) { characterIndex in
-                            Text(columns[columnIndex][characterIndex])
+                            let character = columns[columnIndex][characterIndex]
+                            let glyph = ImageTranslationVerticalTextLayout.verticalGlyph(for: character)
+                            let isFullwidthPunctuation = ImageTranslationVerticalTextLayout
+                                .isFullwidthPunctuation(character)
+                            Text(glyph)
                                 .font(.caption.bold())
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.65)
-                                .frame(width: columnWidth, height: rowHeight)
+                                .frame(
+                                    width: columnWidth,
+                                    height: rowHeight,
+                                    alignment: isFullwidthPunctuation ? .center : .top
+                                )
                         }
                     }
                 }
@@ -3129,6 +3201,9 @@ private struct ImageTranslationBlockRow: View {
     let canRetryTranslation: Bool
     let isRetryingTranslation: Bool
     let retryTranslation: () -> Void
+    let canRerecognize: Bool
+    let isRerecognizing: Bool
+    let rerecognize: () -> Void
     let retryUnavailableHint: String
     let accessibilityFocus: AccessibilityFocusState<String?>.Binding
     let select: () -> Void
@@ -3221,6 +3296,13 @@ private struct ImageTranslationBlockRow: View {
                 )
             )
             .modifier(
+                ImageReviewRowRerecognitionAccessibilityModifier(
+                    canRerecognize: canRerecognize,
+                    isRerecognizing: isRerecognizing,
+                    rerecognize: rerecognize
+                )
+            )
+            .modifier(
                 ImageReviewRowReviewAccessibilityModifier(
                     isReviewRequired: ImageOCRResultSummary.requiresReview(block),
                     isReviewCompleted: isReviewCompleted,
@@ -3259,6 +3341,23 @@ private struct ImageTranslationBlockRow: View {
                                 ? "恢复此文字块的 Vision OCR 原文与初始译文"
                                 : modificationUnavailableHint
                         )
+                }
+
+                if canRerecognize || isRerecognizing {
+                    Button(
+                        isRerecognizing ? "正在重新识别" : "重新识别此文字块",
+                        systemImage: isRerecognizing ? "hourglass" : "text.viewfinder",
+                        action: rerecognize
+                    )
+                    .labelStyle(.iconOnly)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .foregroundStyle(Color.appAccent)
+                    .disabled(!canRerecognize || isRerecognizing)
+                    .accessibilityHint(
+                        isRerecognizing
+                            ? "正在只重新识别此文字块，不会重新运行整张图片 OCR"
+                            : "只使用此文字块现有位置重新识别，成功后保留位置并刷新此块翻译"
+                    )
                 }
 
                 if block.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -3335,6 +3434,9 @@ private struct ImageTranslationBlockRow: View {
         parts.append(block.translation.isEmpty ? "等待翻译" : "译文：\(block.translation)")
         if block.translation.isEmpty, isRetryingTranslation || canRetryTranslation {
             parts.append(isRetryingTranslation ? "正在重试译文" : "可重试此块")
+        }
+        if isRerecognizing || canRerecognize {
+            parts.append(isRerecognizing ? "正在重新识别此块" : "可重新识别此块")
         }
 
         return parts.joined(separator: "；")
@@ -3437,6 +3539,24 @@ private struct ImageReviewRowRestoreAccessibilityModifier: ViewModifier {
             content
                 .accessibilityAction(named: "恢复 Vision OCR") {
                     restoreVisionOCR()
+                }
+        } else {
+            content
+        }
+    }
+}
+
+private struct ImageReviewRowRerecognitionAccessibilityModifier: ViewModifier {
+    let canRerecognize: Bool
+    let isRerecognizing: Bool
+    let rerecognize: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if canRerecognize && !isRerecognizing {
+            content
+                .accessibilityAction(named: "重新识别此文字块") {
+                    rerecognize()
                 }
         } else {
             content
