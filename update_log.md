@@ -3,7 +3,7 @@
 v3.226 将日语 bundled Manga OCR 的 detector TextRegion ownership 收敛到可靠结果：只有 confidence 有限且 `>=0.55`、日文脚本密度 `>=0.5` 的结果才继续作为受保护 owner；低质量结果不丢弃，仍以普通候选参与 Vision fallback，但不再压制 page-level Vision 或强制 detector 边界。模型加载、单 crop 故障隔离、取消传播、长页预算、布局、翻译、渲染与非日语路径保持不变。新增 `scripts/test-v3226-image-japanese-manga-ocr-quality-gate-contract.py`，并更新 v3.219/v3.221/v3.223 历史合同接受等价质量门。
 
 - 本地完整 `226` 份 `test-v3*.py` 合同全部通过；真实单页／四页长图 Core ML runtime、`plutil`、workflow YAML 与 `git diff --check` 通过。
-- 云端 full 尚待本轮 exact-SHA 验证；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- 候选 exact-SHA full [31361469086](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31361469086) 对 SHA `a2258f8de4205e7cbb99ca059bd30307ffba96b6` 使用 Xcode `26.6 (17F113)` 完成，JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`；probe 按配置为 `skip`。Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 - 固定 `test/jap.jpg` 与重复长图只验证当前 ownership／布局回归，不外推通用日语 OCR、翻译或识别质量。
 - v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86`（PR #221）与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c`（PR #222）已在当前祖先链，本地与 `origin` 均无残留候选分支或待 cherry-pick。
 
