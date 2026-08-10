@@ -467,6 +467,10 @@ enum ImageOCRLayoutEngine {
 
     private static func shouldMergeHorizontally(_ line: ResolvedObservation, into cluster: Cluster?) -> Bool {
         guard let cluster else { return false }
+        guard !(line.preservesDetectorTextRegionBoundary
+            && cluster.containsPreservedDetectorTextRegionBoundary) else {
+            return false
+        }
         let rect = cluster.rect
         let verticalGap = line.rect.y - rect.maxY
         let averageHeight = max((line.rect.height + rect.height) / 2, 0.012)

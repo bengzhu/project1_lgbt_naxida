@@ -94,7 +94,7 @@ class JapaneseBundledMangaOCRContractTests(unittest.TestCase):
             "try? await MangaOCRService.shared.recognize(",
             "image: image,",
             "sourceDirectionHint: .vertical",
-            "observationRole: .verticalLine",
+            "observationRole: .detectorTextRegion",
         ]:
             self.assertIn(marker, self.vision)
 

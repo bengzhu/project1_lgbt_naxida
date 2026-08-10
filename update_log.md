@@ -1,3 +1,22 @@
+## v3.223：分离 detector ownership 与方向 provenance
+
+日期：2026-08-10
+
+状态：Agent X 处理 Koharu detector TextRegion 在日语路径中的 provenance 边界。bundled Manga OCR 的成功结果现在使用独立 `detectorTextRegion` role；由于 RT-DETR detector 不提供 Koharu `source_direction`，仍保留 `.vertical` source hint，但不再把 detector ownership 误标为 `verticalLine`。detector-owned supplement 过滤改为只依据受保护 boundary provenance，横排与竖排 layout 都阻止两个受保护 detector nodes 被通用 clustering 合并。
+
+核心变更：
+
+- `VisionOCRService` 新增 `detectorTextRegion` observation role。专用 detector 结果保留 detector ownership 与日语方向提示；模型失败／取消时 owner 为空，既有 page／line／block／tile Vision fallback 继续完整生效。
+- `ImageOCRLayoutEngine` 的横排与竖排合并都尊重 `preservesDetectorTextRegionBoundary`，避免方向分类变化把相邻 detector TextRegion 串成单一 block；普通 Vision fragments 仍按历史规则合并。
+- 新增 `scripts/test-v3223-image-japanese-detector-direction-provenance-contract.py`，并让 v3.214、v3.221 合同接受新的独立 provenance role；版本升至 `MARKETING_VERSION=3.223`，CI 路由接入新合同。
+
+验证与边界：
+
+- 单页真实 `VisionOCRService + RT-DETR + MangaOCR + layout` 继续精确返回 5 个竖排块：`前は生意気に俺の誘い断りやがって...`、`今度こそこの爆乳を持ち帰る！`、`そのせいでつまんねー女に絡まれるし...`、`...では最後に監督より挨拶をお願いします`、`こっ、`。
+- 四页 `test/jap.jpg` 拼接的 `1136x6400` 长页真实 Core ML runtime 继续返回 17 blocks、16 vertical，最低区域仍覆盖页面底部；未重叠的 `ニコッ` 横排 Vision 噪声保留，未把它声明为目标文字。当前本地定向合同、真实 runtime、`plutil`、Python/YAML 语法与 `git diff --check` 通过。
+- 本机只有 `/Library/Developer/CommandLineTools`，因此不把本地缺少完整 Xcode 当作编译证据；提交后由云端 full validation 产生新的 Xcode/JUnit 收据。固定样图只验证 provenance 与布局消费，不外推通用日语 OCR、翻译或识别质量；Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86`（PR #221）与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c`（PR #222）均为当前祖先链，候选分支已从本地与 `origin` 清理，无待 cherry-pick。
+
 ## v3.222：图片翻译 scoped retry 完成焦点
 
 日期：2026-08-10

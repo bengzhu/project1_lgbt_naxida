@@ -40,7 +40,7 @@ class JapaneseDetectorOwnedVisionNoiseContractTests(unittest.TestCase):
     def test_detector_results_are_kept_as_explicit_owners(self) -> None:
         manga = braced_body(self.vision, "private static func recognizeJapaneseMangaOCR(")
         for marker in [
-            "observationRole: .verticalLine",
+            "observationRole: .detectorTextRegion",
             "preservesDetectorTextRegionBoundary: true",
             "detectorMangaOCRObservations = await Self.recognizeJapaneseMangaOCR(",
             "observations.append(contentsOf: detectorMangaOCRObservations)",
@@ -53,7 +53,6 @@ class JapaneseDetectorOwnedVisionNoiseContractTests(unittest.TestCase):
             "private static func suppressJapaneseDetectorOwnedPageSupplements(",
         )
         for marker in [
-            "observation.observationRole == .verticalLine",
             "observation.preservesDetectorTextRegionBoundary",
             "observation.observationRole == .page",
             "japaneseScriptDensity(in: observation.text) >= 0.5",

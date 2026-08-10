@@ -564,15 +564,19 @@ struct VisionOCRService: Sendable {
             return []
         }
         return results.map { result in
-            VisionOCRObservation(
+            return VisionOCRObservation(
                 text: result.text,
                 confidence: result.confidence,
                 rect: result.textRect,
                 lineRegionRect: result.textRect,
                 lineRegionQuad: nil,
                 rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
+                // The bundled RT-DETR output has no Koharu `source_direction`
+                // field. Keep the proven Japanese vertical hint for this
+                // dedicated path; the separate detector role below prevents
+                // ownership from being confused with Vision line provenance.
                 sourceDirectionHint: .vertical,
-                observationRole: .verticalLine,
+                observationRole: .detectorTextRegion,
                 preservesDetectorTextRegionBoundary: true
             )
         }
@@ -2511,8 +2515,7 @@ struct VisionOCRService: Sendable {
         detectorObservations: [VisionOCRObservation]
     ) -> [VisionOCRObservation] {
         let detectorOwners = detectorObservations.filter { observation in
-            observation.observationRole == .verticalLine
-                && observation.preservesDetectorTextRegionBoundary
+            observation.preservesDetectorTextRegionBoundary
                 && !observation.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
         guard !detectorOwners.isEmpty else { return observations }
@@ -3021,6 +3024,7 @@ private enum VisionOCRObservationRole: Equatable, Sendable {
     case page
     case crop
     case verticalLine
+    case detectorTextRegion
 }
 
 private struct VisionOCRObservation: Equatable, Sendable {
