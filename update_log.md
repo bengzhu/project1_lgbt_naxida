@@ -1,3 +1,13 @@
+## v3.245：图片日语方向驱动 Manga OCR crop 旋转门控
+
+日期：2026-08-11
+
+图片翻译结果行、复查页或局部预览触发单块重新识别时，日语 crop retry 现在把当前 block 的 `effectiveSourceDirection` 传给 Manga OCR：竖排覆盖请求 Koharu `rotate270`，横排与自动方向保留 natural／Vision 侦察边界。RT-DETR detector 的 ownership bbox 可能只是略微偏高的宽区域，因此只有 crop 高度超过宽度 `1.75` 倍、明显像窄竖排 line crop 时才旋转；宽 detector crop 保持 natural 输入，避免旋转破坏已验证的 detector-owned 识别。日语继续复用 font-relative crop padding，detector ownership、模型／Vision fallback、取消、整页 OCR、翻译、布局、渲染和非日语路径不变。
+
+新增 `scripts/test-v3245-image-japanese-directional-manga-ocr-crop-contract.py` 与 `scripts/fixtures/v3245-directional-manga-ocr-crop-runtime-harness.swift`，并接入 `.github/workflows/ci-results.yml`，工程版本为 `3.245`。本地 v3.245 合同 `9/9` 与 `git diff --check` 通过；本地真实 Core ML runtime 的 direct 与 scoped crop 均返回 `今度こそこの爆乳を持ち帰る！`，`batchInference=true`，scoped confidence `0.9994928`。固定 `test/jap.jpg` 只作方向／crop／runtime 回归，不声称通用日语 OCR、翻译或识别质量提升。
+
+旧诊断 exact-SHA run [31435877273](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31435877273) 暴露 harness 字符串转义编译错误；修复提交 `ec80a3efaa5087608ab064acfed022af7609c5ff` 的 exact-SHA full [31437080333](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31437080333) 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe `skip`。随后通过 PR #305 合入 `smalldata_test`，merge SHA `9f3d6784645902afe8c3ee90998a23c798af96b9`，PR fast [31437769765](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31437769765) 通过；合入后远端仅保留 `main` 与 `smalldata_test`。Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.244：图片日语方向覆盖驱动单块重新识别
 
 日期：2026-08-11
