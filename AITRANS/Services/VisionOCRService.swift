@@ -76,7 +76,7 @@ struct VisionOCRService: Sendable {
                 // pixel-first regions before Vision crop rereads; if the model
                 // cannot load or infer, an empty result leaves every historical
                 // Vision fallback available.
-                detectorMangaOCRObservations = await Self.recognizeJapaneseMangaOCR(
+                detectorMangaOCRObservations = try await Self.recognizeJapaneseMangaOCR(
                     image: ocrImage
                 )
                 observations.append(contentsOf: detectorMangaOCRObservations)
@@ -519,7 +519,7 @@ struct VisionOCRService: Sendable {
 
     private static func recognizeJapaneseMangaOCR(
         image: CGImage
-    ) async -> [VisionOCRObservation] {
+    ) async throws -> [VisionOCRObservation] {
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         let detectorSliceCount = ComicTextBubbleDetectorService.inferenceWindowCount(
             for: image
@@ -556,11 +556,19 @@ struct VisionOCRService: Sendable {
                 )
             )
         }
-        guard !requests.isEmpty,
-              let results = try? await MangaOCRService.shared.recognize(
-                  image: image,
-                  requests: requests
-              ) else {
+        guard !requests.isEmpty else {
+            return []
+        }
+        let results: [MangaOCRResult]
+        do {
+            results = try await MangaOCRService.shared.recognize(
+                image: image,
+                requests: requests
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            // Model loading remains an all-or-nothing fallback to Vision OCR.
             return []
         }
         return results.map { result in
@@ -577,9 +585,24 @@ struct VisionOCRService: Sendable {
                 // ownership from being confused with Vision line provenance.
                 sourceDirectionHint: .vertical,
                 observationRole: .detectorTextRegion,
-                preservesDetectorTextRegionBoundary: true
+                preservesDetectorTextRegionBoundary:
+                    Self.isReliableJapaneseMangaOCRResult(result)
             )
         }
+    }
+
+    /// A detector TextRegion becomes a protected Koharu owner only when the
+    /// bundled OCR result has enough Japanese evidence to be trusted over a
+    /// page-level Vision fallback. Keep weaker text as a normal candidate so
+    /// it can still help when no fallback exists, but do not let it suppress
+    /// or permanently merge a stronger observation.
+    private static func isReliableJapaneseMangaOCRResult(
+        _ result: MangaOCRResult
+    ) -> Bool {
+        let confidence = Double(result.confidence)
+        return confidence.isFinite
+            && confidence >= 0.55
+            && japaneseScriptDensity(in: result.text) >= 0.5
     }
 
     /// Koharu's RT-DETR TextRegions are the primary Manga OCR geometry. Vision's
@@ -591,13 +614,17 @@ struct VisionOCRService: Sendable {
         detectorRegions: [ComicTextDetectorRegion],
         visionRegions: [JapanesePixelFirstRegion]
     ) -> [JapanesePixelFirstRegion] {
-        let primary = detectorRegions.map {
+        let primary = detectorRegions.map { detectorRegion in
             JapanesePixelFirstRegion(
-                rect: $0.rect,
+                rect: detectorRegion.rect,
                 detectorRotation: 0,
                 characterCount: 0,
                 detector: .comicTextBubble,
-                detectorConfidence: $0.confidence
+                detectorConfidence: detectorRegion.confidence,
+                cropRectHint: japaneseDetectorCropHint(
+                    detectorRegion.rect,
+                    from: visionRegions
+                )
             )
         }
         let supplemental = visionRegions.filter { candidate in
@@ -607,6 +634,57 @@ struct VisionOCRService: Sendable {
             }
         }
         return primary + supplemental
+    }
+
+    /// A detector TextRegion is the stable layout owner, but its bbox can be
+    /// wider than the actual Japanese column. Vision character envelopes are
+    /// useful as a Koharu `line_polygon` proxy only when they cover nearly all
+    /// of the detector region and retain enough vertical context. The hint is
+    /// crop-only; the detector rect remains the text/layout geometry.
+    private static func japaneseDetectorCropHint(
+        _ detectorRect: ImageOCRLayoutRect,
+        from visionRegions: [JapanesePixelFirstRegion]
+    ) -> ImageOCRLayoutRect? {
+        let candidates = visionRegions.filter { candidate in
+            guard case .vision = candidate.detector,
+                  candidate.characterCount >= 2,
+                  let rect = candidate.rect.normalizedToUnit(),
+                  isJapanesePixelFirstVerticalCandidate(rect) else {
+                return false
+            }
+            let detectorArea = max(detectorRect.width * detectorRect.height, 0.0001)
+            let candidateArea = rect.width * rect.height
+            let overlap = overlapRatio(detectorRect, rect)
+            let intersection = intersectionArea(detectorRect, rect)
+            let detectorCoverage = intersection / detectorArea
+            let candidateCoverage = intersection / max(candidateArea, 0.0001)
+            let areaRatio = candidateArea / detectorArea
+            let horizontalCoverage = min(
+                detectorRect.maxX,
+                rect.maxX
+            ) - max(detectorRect.x, rect.x)
+            let verticalCoverage = min(
+                detectorRect.maxY,
+                rect.maxY
+            ) - max(detectorRect.y, rect.y)
+            return overlap >= 0.80
+                && detectorCoverage >= 0.55
+                && candidateCoverage >= 0.80
+                && areaRatio >= 0.35
+                && areaRatio <= 1.05
+                && horizontalCoverage / max(detectorRect.width, 0.001) >= 0.45
+                && verticalCoverage / max(detectorRect.height, 0.001) >= 0.85
+                && rect.width < detectorRect.width * 0.90
+        }
+        return candidates.min { lhs, rhs in
+            let lhsWidth = lhs.rect.width
+            let rhsWidth = rhs.rect.width
+            if lhsWidth != rhsWidth { return lhsWidth < rhsWidth }
+            if lhs.characterCount != rhs.characterCount {
+                return lhs.characterCount > rhs.characterCount
+            }
+            return lhs.rect.x > rhs.rect.x
+        }?.rect
     }
 
     /// Koharu sends every detector TextRegion to Manga OCR. The iOS port keeps
@@ -1020,7 +1098,10 @@ struct VisionOCRService: Sendable {
         imageSize: CGSize
     ) -> ImageOCRLayoutRect {
         let rect = region.rect
-        let expanded = expandedVerticalLineCropRect(rect, imageSize: imageSize)
+        let expanded = expandedVerticalLineCropRect(
+            region.cropRectHint ?? rect,
+            imageSize: imageSize
+        )
         // A bundled comic detector region is already Koharu's TextRegion
         // ownership boundary. Do not let a Vision supplement bisect its crop;
         // the detector bbox plus font-relative padding is the authoritative
@@ -3065,6 +3146,10 @@ private struct JapanesePixelFirstRegion: Sendable {
     var characterCount: Int
     var detector: JapanesePixelFirstDetector = .vision
     var detectorConfidence: Float = 0
+    /// Optional tight character-envelope crop. This never replaces `rect` in
+    /// layout or ownership decisions and is only populated after strict
+    /// detector-coverage gates pass.
+    var cropRectHint: ImageOCRLayoutRect? = nil
 }
 
 private enum JapanesePixelFirstDetector: Sendable {

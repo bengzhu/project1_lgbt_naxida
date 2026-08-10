@@ -142,7 +142,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var speechQualityProbeReport: SpeechQualityProbeReport?
     @Published var isRunningSpeechQualityProbe = false
     @Published var imageTranslationState: ImageTranslationState = .idle
-    @Published var imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
+    @Published var imageTranslationMessage = "选择图片后，会用本机 OCR 识别文字并定位"
     @Published var imageTranslationBlocks: [ImageTranslationBlock] = []
     @Published var imageTranslationData: Data?
     @Published var imageTranslationFilename = ""
@@ -1210,7 +1210,7 @@ final class TranslationSessionStore: ObservableObject {
 
     private func imageOCRRecognitionMessage(for sourceLanguage: SupportedLanguage) -> String {
         if sourceLanguage == .japanese {
-            return "正在用 Vision 本机 OCR 识别日语文字，复查竖排方向与文字块位置"
+            return "正在用本机 Manga OCR 与 Vision 识别日语文字，复查竖排方向与文字块位置"
         }
         return "正在用 Vision 本机 OCR 识别文字和位置"
     }
@@ -1236,7 +1236,7 @@ final class TranslationSessionStore: ObservableObject {
 
         guard !recognizedBlocks.isEmpty else {
             imageTranslationState = .failed
-            imageTranslationMessage = "Vision OCR 没有识别到可翻译文字"
+            imageTranslationMessage = "本机 OCR 没有识别到可翻译文字"
             dataTransferMessage = imageTranslationMessage
             isProcessing = false
             return
@@ -1338,8 +1338,8 @@ final class TranslationSessionStore: ObservableObject {
         }
         imageTranslationState = .translated
         imageTranslationMessage = imageTranslationExportURL == nil
-            ? "已完成 Vision OCR、\(targetLanguage.rawValue)翻译和定位覆盖"
-            : "已完成 Vision OCR、\(targetLanguage.rawValue)翻译和覆盖图导出"
+            ? "已完成本机 OCR、\(targetLanguage.rawValue)翻译和定位覆盖"
+            : "已完成本机 OCR、\(targetLanguage.rawValue)翻译和覆盖图导出"
         dataTransferMessage = imageTranslationMessage
         appendImageTranslationTranscript(blocks: translatedBlocks)
         isProcessing = false
@@ -1608,7 +1608,7 @@ final class TranslationSessionStore: ObservableObject {
         discardImageTranslationExport()
         imageTranslationTaskID = UUID()
         imageTranslationState = .idle
-        imageTranslationMessage = "选择图片后，会用 Apple Vision 本机 OCR 识别文字并定位"
+        imageTranslationMessage = "选择图片后，会用本机 OCR 识别文字并定位"
         imageTranslationBlocks = []
         imageTranslationCorrectedBlockIDs = []
         imageTranslationReviewedBlockIDs = []
@@ -26567,21 +26567,25 @@ final class TranslationSessionStore: ObservableObject {
                     let text = mode == .adjacent && translation != block.original
                         ? "\(translation)\n\(block.original)"
                         : translation
-                    let fontSize = max(min(overlayRect.height * 0.30, canvas.width * 0.034), 11)
+                    let usesVerticalWriting = mode == .replace && block.prefersVerticalWriting
+                    let fontSize = usesVerticalWriting
+                        ? max(min(overlayRect.width * 0.72, canvas.width * 0.034), 9)
+                        : max(min(overlayRect.height * 0.30, canvas.width * 0.034), 11)
                     let paragraph = NSMutableParagraphStyle()
-                    paragraph.alignment = mode == .replace ? .center : .left
+                    paragraph.alignment = usesVerticalWriting || mode == .replace ? .center : .left
                     let attributes: [NSAttributedString.Key: Any] = [
                         .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
                         .foregroundColor: UIColor.white,
                         .paragraphStyle: paragraph
                     ]
-                    NSAttributedString(string: text, attributes: attributes).draw(
-                        with: overlayRect.insetBy(
+                    Self.drawImageTranslationText(
+                        text,
+                        in: overlayRect.insetBy(
                             dx: max(canvas.width * 0.009, 6),
                             dy: max(canvas.height * 0.005, 5)
                         ),
-                        options: [.usesLineFragmentOrigin, .usesFontLeading, .truncatesLastVisibleLine],
-                        context: nil
+                        attributes: attributes,
+                        vertical: usesVerticalWriting
                     )
                 }
             }
@@ -26594,6 +26598,83 @@ final class TranslationSessionStore: ObservableObject {
             try outputData.write(to: stagingURL, options: .atomic)
             return stagingURL
         }.value
+    }
+
+    /// Draws CJK replacement text in bounded right-to-left columns, matching
+    /// Koharu's VerticalRl writing mode while keeping Latin output horizontal.
+    nonisolated private static func drawImageTranslationText(
+        _ text: String,
+        in rect: CGRect,
+        attributes: [NSAttributedString.Key: Any],
+        vertical: Bool
+    ) {
+        guard vertical else {
+            NSAttributedString(string: text, attributes: attributes).draw(
+                with: rect,
+                options: [.usesLineFragmentOrigin, .usesFontLeading, .truncatesLastVisibleLine],
+                context: nil
+            )
+            return
+        }
+
+        let characters = text
+            .filter { !$0.isNewline }
+            .map(String.init)
+        guard !characters.isEmpty,
+              rect.width > 0,
+              rect.height > 0,
+              let sourceFont = attributes[.font] as? UIFont else {
+            return
+        }
+
+        let minimumFontSize: CGFloat = 7
+        var fontSize = max(min(sourceFont.pointSize, rect.width * 0.82), minimumFontSize)
+        for _ in 0..<3 {
+            let font = sourceFont.withSize(fontSize)
+            let rowHeight = max(font.lineHeight, 1)
+            let rows = max(Int(floor(rect.height / rowHeight)), 1)
+            let columnWidth = max(rowHeight * 0.9, 1)
+            let columns = max(Int(floor(rect.width / columnWidth)), 1)
+            let requiredRows = max(Int(ceil(Double(characters.count) / Double(columns))), 1)
+            let fittedSize = min(
+                fontSize,
+                min(
+                    rect.height / CGFloat(requiredRows) * 0.88,
+                    rect.width / CGFloat(columns) * 0.84
+                )
+            )
+            guard fittedSize < fontSize - 0.1 else { break }
+            fontSize = max(fittedSize, minimumFontSize)
+        }
+
+        let font = sourceFont.withSize(fontSize)
+        let rowHeight = max(font.lineHeight, 1)
+        let rowCapacity = max(Int(floor(rect.height / rowHeight)), 1)
+        let columnCapacity = max(Int(floor(rect.width / max(rowHeight * 0.9, 1))), 1)
+        let maximumCharacters = max(rowCapacity * columnCapacity, 1)
+        let drawableCharacters: [String]
+        if characters.count > maximumCharacters {
+            let prefixCount = max(maximumCharacters - 1, 1)
+            drawableCharacters = Array(characters.prefix(prefixCount)) + ["…"]
+        } else {
+            drawableCharacters = characters
+        }
+
+        let columnCount = max(Int(ceil(Double(drawableCharacters.count) / Double(rowCapacity))), 1)
+        let actualColumnWidth = rect.width / CGFloat(columnCount)
+        var adjustedAttributes = attributes
+        adjustedAttributes[.font] = font
+        for (index, character) in drawableCharacters.enumerated() {
+            let column = index / rowCapacity
+            let row = index % rowCapacity
+            let characterSize = NSString(string: character).size(withAttributes: adjustedAttributes)
+            let x = rect.maxX - CGFloat(column + 1) * actualColumnWidth
+                + max((actualColumnWidth - characterSize.width) / 2, 0)
+            let y = rect.minY + CGFloat(row) * rowHeight
+            NSAttributedString(string: character, attributes: adjustedAttributes).draw(
+                at: CGPoint(x: x, y: y)
+            )
+        }
     }
 
     nonisolated private static func publishImageTranslationOverlay(

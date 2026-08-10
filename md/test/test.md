@@ -7,6 +7,30 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.231 detector-owned tight crop hint
+
+- `japaneseDetectorCropHint` 只从 Vision 字符框生成 Manga OCR 的 crop-only hint；RT-DETR `rect` 继续作为布局、去重和 detector ownership 几何。至少两个字符、竖排候选以及 overlap `>=0.80`、detector coverage `>=0.55`、candidate coverage `>=0.80`、面积比 `0.35...1.05`、横向 coverage `>=0.45`、纵向 coverage `>=0.85`、宽度收窄 `>=10%` 全部通过时才使用 hint，否则回退 detector bbox。
+- 新增 `scripts/test-v3231-image-japanese-detector-tight-crop-hint-contract.py` 并接入 UI/full fail-fast；工程版本为 `3.231`。模型加载／单 crop 故障／取消传播、Vision fallback、长页预算、布局、翻译、渲染和非日语路径不变。
+- 本地 `249` 份合同和单页／长页真实 Core ML runtime 通过；exact-SHA full [31372501552](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31372501552) 对 SHA `bb579e97f9ded42d7b0352dcccc5592194610e20` 使用 Xcode `26.6 (17F113)` 完成 UI/Speech/home/paste、JUnit `10/10` 与 `AITRANS CI/full-validation=success`，probe `skip`。本版本只验证固定 fixture 的 detector crop 几何边界，不新增 OCR accuracy、ground-truth、metrics 或 output 声明；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。v3.157/v3.158 已合入当前基线，无本地／origin 活动分支或 stale ref。
+
+### v3.230 batch runtime provenance parser
+
+- `scripts/test-v3214-image-japanese-manga-ocr-runtime.sh` 的 harness 输出先包含 `batchInference=true`、`blocks=5` 等元数据，再输出带方向的 block 记录；parser 只消费 `horizontal|vertical|unknown` 制表符记录，不能把元数据当作 provenance。
+- `scripts/test-v3230-image-japanese-batch-runtime-parser-contract.py` 锁定该解析边界、v3.229→v3.230 CI 顺序和工程版本。exact-SHA full [31370139122](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31370139122) 对 SHA `064810987125742b31ff0e5cc422d35b576a37f3` 已完成 Xcode、单页 batch runtime、长页 batch runtime 与 JUnit `10/10`（0 failures）；不能把旧 run 的 parser 误报当成模型失败或以 Vision fallback 冒充 batch 成功。
+- 该修复只纠正验证器边界，不新增 OCR accuracy 或 ground-truth 指标；Koharu artifact readiness 仍独立门控。
+
+### v3.229 flexible-batch encoder shape fix
+
+- `scripts/test-v3229-image-japanese-batch-model-shape-contract.py`：锁定 encoder `EnumeratedShapes(1…4)`、CLS `fill` 广播、encoder 模型规格 SHA，以及 decoder 动态 sequence／legacy fallback 边界。
+- v3.228 云端 run `31366707811` 的 Xcode build 通过，但实际 encoder runtime 报 `tile` shape inference 错误并被 contract 拒绝；本版本必须重新完成 Xcode、单页和长页 Core ML runtime，不能以 capability 或 Vision fallback 冒充 batch 成功。
+- 本版本不新增 OCR accuracy 或 ground-truth 指标；`test/jap.jpg` 只验证 batch 执行和既有几何／布局回归，Koharu artifact readiness 仍单独门控。
+
+### v3.228 flexible-batch Manga OCR
+
+- `scripts/test-v3228-image-japanese-bundled-batch-runtime-contract.py`：验证两个 batch Core ML 包的 hash、Manifest、Xcode Resources、`1…4` shape provenance、legacy fallback、CI 路由以及单页／长页 harness 的 `batchInference=true` 断言。
+- `scripts/test-v3214-image-japanese-manga-ocr-runtime.sh` 与 `scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh`：在完整 Xcode 环境编译 batch 包并运行真实 Core ML；batch 编译或 capability 失败时不得以 Vision fallback 冒充通过。
+- 本版本不新增 OCR accuracy 或 ground-truth 指标；固定 `test/jap.jpg` 只验证模型执行与既有几何／布局回归，Koharu artifact readiness 仍单独门控。
+
 ### v3.221 Koharu detector-owned 日语 OCR supplement 合同
 
 - 成功 bundled Manga OCR 的 `verticalLine` 且 `preservesDetectorTextRegionBoundary` 结果是该 TextRegion 的 owner；最终日语 layout 前只过滤 `.page`／旋转 Vision observation，且要求日语脚本密度 `>= 0.5`、与 owner 的最小面积覆盖 `>= 0.60`。line、block、tile crop 与未重叠横排音效继续保留。

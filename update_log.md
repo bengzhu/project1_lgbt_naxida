@@ -1,3 +1,57 @@
+## v3.231：detector-owned 日语竖排 tight crop hint
+
+日期：2026-08-10
+
+状态：继续沿 Koharu `TextRegion + line_polygon -> crop -> OCR` 分层，RT-DETR detector `rect` 保持布局与 ownership 的稳定边界；只有 Vision 至少两个字符框形成的竖排 envelope 同时通过 overlap `>=0.80`、detector coverage `>=0.55`、candidate coverage `>=0.80`、面积比 `0.35...1.05`、横向 coverage `>=0.45`、纵向 coverage `>=0.85` 且宽度至少收窄 `10%`，才作为 Manga OCR crop-only hint。严格门控失败、几何缺失、模型错误或取消都回退既有 detector bbox／Vision 路径，12／48 请求预算、ownership、布局、翻译、渲染与非日语路径不变。
+
+新增 `scripts/test-v3231-image-japanese-detector-tight-crop-hint-contract.py` 并接入 CI，工程版本为 `3.231`。本地 `249` 份合同和单页／长页真实 Core ML runtime 通过；exact-SHA full [31372501552](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31372501552) 对 SHA `bb579e97f9ded42d7b0352dcccc5592194610e20` 使用 Xcode `26.6 (17F113)` 完成 UI/Speech/home/paste、JUnit `10/10` 与 `AITRANS CI/full-validation=success`，probe `skip`。固定 `test/jap.jpg` 只验证 crop geometry 与既有 runtime 边界，不声称通用日语 OCR、翻译或识别质量，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
+v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86`（PR #221）与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c`（PR #222）均已在当前祖先链；本地／origin 活动分支不存在，刷新 `.git/info/refs` 后也无 stale ref 或待 cherry-pick。
+
+## v3.227：受限 batch Manga OCR 与竖排预览容量一致性
+
+状态：Agent X 继续按 Koharu `MangaOcr::inference(&crops)` 的批量边界迁移。转换脚本新增 `--batch-size`，为大于 1 的输出使用 flexible batch 维度并生成 `MangaOCREncoderINT8Batch`／`MangaOCRDecoderINT8Batch`；Swift 端按最多 4 个 crop 分块，只有成对可选模型资源存在时执行 encoder／decoder batch，模型输出或批次失败立即回退到逐 crop，取消传播、请求顺序和坏 crop 隔离保持不变。当前仓库仍只内置 batch=1 模型，因此本地既有真实 runtime 的行为与输出不变。
+
+竖排 SwiftUI 覆盖现在按可用行列容量截断并追加 `…`，不再让长译文被 `.clipped()` 静默吞掉；PNG export 已有的容量规则继续作为边界。补齐 Xcode 已引用但缺失的 `AITRANS/Resources/MangaOCR/conversion.json`，记录模型 revision、精度、量化和 batch readiness。新增 `scripts/test-v3227-image-japanese-batch-preview-contract.py`，本地 `5/5` 通过；云端 Xcode／Core ML full validation 待提交后运行。该版本只证明执行边界、UI 可见性与转换 provenance，不声称日语 OCR 准确率提升，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
+## v3.226：Manga OCR detector ownership 质量门
+
+v3.226 将日语 bundled Manga OCR 的 detector TextRegion ownership 收敛到可靠结果：只有 confidence 有限且 `>=0.55`、日文脚本密度 `>=0.5` 的结果才继续作为受保护 owner；低质量结果不丢弃，仍以普通候选参与 Vision fallback，但不再压制 page-level Vision 或强制 detector 边界。模型加载、单 crop 故障隔离、取消传播、长页预算、布局、翻译、渲染与非日语路径保持不变。新增 `scripts/test-v3226-image-japanese-manga-ocr-quality-gate-contract.py`，并更新 v3.219/v3.221/v3.223 历史合同接受等价质量门。
+
+- 本地完整 `226` 份 `test-v3*.py` 合同全部通过；真实单页／四页长图 Core ML runtime、`plutil`、workflow YAML 与 `git diff --check` 通过。
+- 候选 exact-SHA full [31361469086](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31361469086) 对 SHA `a2258f8de4205e7cbb99ca059bd30307ffba96b6` 使用 Xcode `26.6 (17F113)` 完成，JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`；probe 按配置为 `skip`。Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- 固定 `test/jap.jpg` 与重复长图只验证当前 ownership／布局回归，不外推通用日语 OCR、翻译或识别质量。
+- v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86`（PR #221）与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c`（PR #222）已在当前祖先链，本地与 `origin` 均无残留候选分支或待 cherry-pick。
+
+## v3.225：图片翻译 CJK 竖排渲染
+
+日期：2026-08-10
+
+状态：Agent X 将 Koharu `source_direction` 继续迁移到图片翻译渲染。`ImageTranslationBlock.prefersVerticalWriting` 只有来源方向为 `.vertical` 且当前显示文本含 CJK 时启用竖排；SwiftUI 覆盖使用右到左列、列内上到下，旁贴模式保持水平信息卡。PNG 导出新增 `drawImageTranslationText`，CJK 译文使用 bounded VerticalRl 风格列绘制，英文译文与横排来源保持水平绘制，过长文本安全截断并追加省略号。
+
+- 新增 `scripts/test-v3225-image-japanese-vertical-render-contract.py` 并接入 CI；本地 v3.157+ 共 `217` 份合同，新合同 `5/5` 通过。
+- 固定 `test/jap.jpg` 单页继续返回 `5` 个 vertical blocks；四页长图继续返回 `17` blocks、`16` vertical，底部结果约 `y=0.940558`。固定 fixture 只验证方向 provenance 与渲染／布局回归，不外推通用日语 OCR、翻译或识别质量。
+- 云端 full [31359607372](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31359607372) 对 exact SHA `e2965b6a8b32b6a796402faeb395b43883f97b6a` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`；UI screenshot evidence 与 probe 按配置为 `skip`。Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86`（PR #221）与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c`（PR #222）均为当前祖先链；候选分支已从本地与 `origin` 清理，无待 cherry-pick。
+
+## v3.224：隔离 Manga OCR crop 故障并修正本机 OCR 状态说明
+
+日期：2026-08-10
+
+状态：Agent X 继续沿 Koharu detector→TextRegion→crop→OCR 边界收敛错误隔离。`MangaOCRService` 仍在模型加载失败时让整批请求安全回到 Vision，但单个 detector crop 的图像解码、encoder／decoder 输出或其它非取消推理错误只跳过当前 crop，继续处理剩余区域；`CancellationError` 继续向 `VisionOCRService` 与图片翻译任务传播，不再由 Manga OCR 的 `try?` 吞掉。日语识别阶段文案明确写出本机 Manga OCR 与 Vision fallback，空结果、完成态、初始提示与 VoiceOver 统一使用准确的本机 OCR 描述，普通语言仍保留 Vision 路径。
+
+核心变更：
+
+- `MangaOCRService` 将 crop 级推理包在受限 `do/catch` 中，取消只抛出，坏 crop 只 `continue`；模型加载仍位于循环外，保持整批 fallback 边界。
+- `VisionOCRService` 让 Manga OCR helper 使用 `async throws`，取消可到达图片任务的既有取消状态，模型加载／其它非取消错误仍返回空并保留 Vision line／block／tile fallback。
+- `TranslationSessionStore` 与 `ImageTranslationViews` 的本机 OCR 进度、空结果、完成态和可访问性提示不再误称所有图片都只使用 Vision。
+- 新增 `scripts/test-v3224-image-japanese-manga-ocr-resilience-contract.py`，并更新 v3.214、v3.221 历史合同接受取消传播调用。
+
+验证边界：
+
+- 固定 `test/jap.jpg` 单页和四页长图 runtime 继续只验证既有 RT-DETR／Manga OCR geometry、预算和 layout 回归，不把单一 fixture 外推为通用日语 OCR、翻译或识别质量证明。
+- 本地 v3.157+ 共 `216` 份合同、真实单页／长页 Core ML runtime、project/workflow 语法与 `git diff --check` 通过。云端 full [31357934638](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31357934638) 对 exact SHA `b868ac52ab91ed3450c48da18cbc75010ec55b09` 完成 Xcode、static/UI/Speech/home/paste 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe `skip`；Koharu mask artifact readiness 继续为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.223：分离 detector ownership 与方向 provenance
 
 日期：2026-08-10
@@ -9503,3 +9557,17 @@ Agent C 最终验收：
 - exact-SHA full [31300669764](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31300669764) 对 SHA `c0c26aaddb3db641c59cb878d1434207b9879f54` 完成 Xcode/JUnit `10/10`，静态、语音与 UI 合同通过；probe `skip`。
 - 新增 `scripts/test-v3211-image-japanese-vertical-language-gate-contract.py`；真实 Koharu 四件套仍缺失，readiness 保持 `manifestMissing / stopUntilArtifactsProvided`。
 - 本轮只改变 language-specific reread 的候选集合与失败隔离，不加载 Manga OCR/PaddleOCR 权重，不读取 ground truth，不更新 metrics/output，不声称日语 OCR、翻译、识别或 Koharu 质量提升。
+## v3.228：实际随包 flexible-batch Manga OCR
+
+状态：继续沿 Koharu `MangaOcr::inference(&crops)` 的批量边界推进。v3.227 只提供可选 batch 接口，本版本把同 revision 转换出的 `MangaOCREncoderINT8Batch.mlpackage`／`MangaOCRDecoderINT8Batch.mlpackage` 纳入 Xcode Resources；两者声明 batch `1…4`，Swift runtime 仍按最多 4 个 crop 分块，只有成对 batch 模型可用时启用，批次输出错误、资源不成对或单 crop 失败都会回到既有单 crop 模型。单页／长页 harness 输出 `batchInference=true` 才算真实 batch runtime 通过。
+
+新增 `scripts/test-v3228-image-japanese-bundled-batch-runtime-contract.py`，更新单页／长页 Core ML runtime 脚本编译并验证 batch 资源，版本为 `3.228`。当前提交尚未取得云端 Core ML 编译与真实 runtime 收据；本地只能完成合同、资源 hash、JSON／plist／YAML 与 diff 检查，本机缺少完整 Xcode。该版本只证明可执行路径与性能资源，不声称日语 OCR 准确率提升；`test/jap.jpg` 仍是固定回归 fixture，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+## v3.229：修复 flexible-batch encoder shape inference
+
+状态：处理 v3.228 云端真实 runtime 暴露的问题。run [31366707811](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31366707811) 的 Xcode build、静态合同和 UI 合同前置检查均完成，但 encoder 运行时在 `tile` 的动态 `reps` shape inference 报 `All values of reps must be at least 1`；harness 虽显示 `batchInference=true`，实际结果回退 Vision，vertical provenance gate 正确拒绝该假通过。转换脚本现在用 `BatchSafeViTEmbeddings` 以动态 shape `fill` 广播 CLS token，并只对 encoder 使用 `EnumeratedShapes` 的 1…4 batch，decoder 继续保留动态 sequence 与 legacy 单 crop 回退。
+
+新增 `scripts/test-v3229-image-japanese-batch-model-shape-contract.py`，替换 encoder `model.mlmodel`（权重 SHA、大小和 decoder 不变），版本为 `3.229`。当前修复尚待云端 Xcode／真实单页／长页 runtime 收据；不声称日语 OCR 准确率提升，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c` 仍在祖先链，本地／远端旧分支已清理。
+
+## v3.230：修复 batch runtime provenance parser
+
+状态：run [31368735253](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31368735253) 的单页真实输出已经是 `batchInference=true`、5 个 blocks 且每条 OCR 记录均为 `vertical`，但旧 shell parser 把 `blocks=5` 元数据也纳入“每个 block 必须 vertical”的检查，导致 UI contract 错误失败。本版本只让 parser 过滤带方向的制表符记录后再执行五块／vertical gate，并新增 `scripts/test-v3230-image-japanese-batch-runtime-parser-contract.py`。exact-SHA full [31370139122](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31370139122) 对 SHA `064810987125742b31ff0e5cc422d35b576a37f3` 完成单页／长页真实 batch runtime、Xcode 与 JUnit `10/10`（0 failures），单页 5 个 vertical blocks，四页 `1136x6400` 长页 16 个 vertical blocks，最底 y=`0.940558`，probe `skip`。该版本只纠正验证器边界，不声称日语 OCR 准确率提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。

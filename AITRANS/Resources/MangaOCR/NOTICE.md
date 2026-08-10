@@ -1,6 +1,7 @@
 # Manga OCR model notice
 
-The bundled Core ML encoder and decoder are converted from
+The bundled Core ML encoder and decoder, including the flexible-batch pair,
+are converted from
 `kha-white/manga-ocr-base` at revision
 `aa6573bd10b0d446cbf622e29c3e084914df9741`.
 

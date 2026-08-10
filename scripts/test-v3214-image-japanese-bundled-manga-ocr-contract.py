@@ -91,12 +91,15 @@ class JapaneseBundledMangaOCRContractTests(unittest.TestCase):
         for marker in [
             "detectJapanesePixelFirstVerticalRegions(",
             "MangaOCRRequest(",
-            "try? await MangaOCRService.shared.recognize(",
             "image: image,",
             "sourceDirectionHint: .vertical",
             "observationRole: .detectorTextRegion",
         ]:
             self.assertIn(marker, self.vision)
+        self.assertTrue(
+            "try await MangaOCRService.shared.recognize(" in self.vision
+            or "try? await MangaOCRService.shared.recognize(" in self.vision
+        )
 
     def test_converter_preserves_fp32_decoder_and_int8_weights(self) -> None:
         for marker in [

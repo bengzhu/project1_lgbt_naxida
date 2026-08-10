@@ -38,6 +38,7 @@ enum MangaOCRServiceError: LocalizedError {
 /// failure for linearly quantized decoder masks while retaining bounded memory.
 actor MangaOCRService {
     static let shared = MangaOCRService()
+    private static let maximumBatchSize = 4
 
     private var runtime: MangaOCRRuntime?
 
@@ -50,22 +51,87 @@ actor MangaOCRService {
         var results: [MangaOCRResult] = []
         results.reserveCapacity(requests.count)
 
+        var croppedRequests: [(request: MangaOCRRequest, crop: CGImage)] = []
+        croppedRequests.reserveCapacity(requests.count)
         for request in requests {
             try Task.checkCancellation()
             guard let crop = Self.cropImage(image, normalizedRect: request.cropRect) else {
                 continue
             }
-            let recognition = try runtime.recognize(crop)
-            guard Self.containsJapaneseLetter(recognition.text) else { continue }
-            results.append(
-                MangaOCRResult(
-                    text: recognition.text,
-                    confidence: recognition.confidence,
-                    textRect: request.textRect
-                )
-            )
+            croppedRequests.append((request, crop))
+        }
+
+        for start in stride(from: 0, to: croppedRequests.count, by: Self.maximumBatchSize) {
+            try Task.checkCancellation()
+            let end = min(start + Self.maximumBatchSize, croppedRequests.count)
+            let chunk = Array(croppedRequests[start..<end])
+
+            if runtime.supportsBatchInference {
+                do {
+                    let recognitions = try runtime.recognizeBatch(
+                        chunk.map { $0.crop }
+                    )
+                    guard recognitions.count == chunk.count else {
+                        throw MangaOCRServiceError.modelOutputMissing(
+                            "batched recognition row count"
+                        )
+                    }
+                    for (entry, recognition) in zip(chunk, recognitions) {
+                        Self.appendJapaneseResult(
+                            recognition,
+                            request: entry.request,
+                            to: &results
+                        )
+                    }
+                    continue
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    // A bad batch falls back to isolated crops below so one row
+                    // cannot hide otherwise valid Japanese regions.
+                }
+            }
+
+            for entry in chunk {
+                try Task.checkCancellation()
+                do {
+                    let recognition = try runtime.recognize(entry.crop)
+                    Self.appendJapaneseResult(
+                        recognition,
+                        request: entry.request,
+                        to: &results
+                    )
+                } catch is CancellationError {
+                    // A user cancellation must stop the whole bounded batch.
+                    throw CancellationError()
+                } catch {
+                    // One malformed crop or model output must not discard good regions.
+                    continue
+                }
+            }
         }
         return results
+    }
+
+    /// Exposes the loaded model shape to the runtime harness without making
+    /// Core ML models or mutable runtime state part of the app-facing API.
+    func batchInferenceEnabled() throws -> Bool {
+        try loadedRuntime().supportsBatchInference
+    }
+
+    private static func appendJapaneseResult(
+        _ recognition: (text: String, confidence: Float),
+        request: MangaOCRRequest,
+        to results: inout [MangaOCRResult]
+    ) {
+        guard containsJapaneseLetter(recognition.text) else { return }
+        results.append(
+            MangaOCRResult(
+                text: recognition.text,
+                confidence: recognition.confidence,
+                textRect: request.textRect
+            )
+        )
     }
 
     private func loadedRuntime() throws -> MangaOCRRuntime {
@@ -116,6 +182,7 @@ actor MangaOCRService {
 
 private struct MangaOCRRuntime {
     private static let imageSize = 224
+    private static let encoderSequenceLength = 197
     private static let vocabularySize = 6_144
     private static let decoderStartToken = 2
     private static let decoderEndToken = 3
@@ -123,6 +190,8 @@ private struct MangaOCRRuntime {
 
     private let encoder: MLModel
     private let decoder: MLModel
+    private let batchEncoder: MLModel?
+    private let batchDecoder: MLModel?
     private let vocabulary: [String]
 
     init(bundle: Bundle) throws {
@@ -138,6 +207,23 @@ private struct MangaOCRRuntime {
             bundle: bundle,
             configuration: configuration
         )
+        let optionalBatchEncoder = try? Self.loadModel(
+            named: "MangaOCREncoderINT8Batch",
+            bundle: bundle,
+            configuration: configuration
+        )
+        let optionalBatchDecoder = try? Self.loadModel(
+            named: "MangaOCRDecoderINT8Batch",
+            bundle: bundle,
+            configuration: configuration
+        )
+        if let optionalBatchEncoder, let optionalBatchDecoder {
+            batchEncoder = optionalBatchEncoder
+            batchDecoder = optionalBatchDecoder
+        } else {
+            batchEncoder = nil
+            batchDecoder = nil
+        }
         guard let vocabularyURL = bundle.url(
             forResource: "MangaOCRVocab",
             withExtension: "txt"
@@ -149,6 +235,10 @@ private struct MangaOCRRuntime {
         guard vocabulary.count == Self.vocabularySize else {
             throw MangaOCRServiceError.vocabularyInvalid
         }
+    }
+
+    var supportsBatchInference: Bool {
+        batchEncoder != nil && batchDecoder != nil
     }
 
     func recognize(_ image: CGImage) throws -> (text: String, confidence: Float) {
@@ -205,6 +295,89 @@ private struct MangaOCRRuntime {
         )
     }
 
+    func recognizeBatch(
+        _ images: [CGImage]
+    ) throws -> [(text: String, confidence: Float)] {
+        guard !images.isEmpty,
+              images.count <= 4,
+              let batchEncoder,
+              let batchDecoder else {
+            throw MangaOCRServiceError.modelResourceMissing(
+                "MangaOCREncoderINT8Batch.mlmodelc/MangaOCRDecoderINT8Batch.mlmodelc"
+            )
+        }
+
+        let batch = images.count
+        let pixels = try Self.makePixelValues(images)
+        let encoderInput = try MLDictionaryFeatureProvider(
+            dictionary: ["pixel_values": MLFeatureValue(multiArray: pixels)]
+        )
+        let encoderOutput = try batchEncoder.prediction(from: encoderInput)
+        guard let hiddenStates = encoderOutput
+            .featureValue(for: "encoder_hidden_states")?
+            .multiArrayValue,
+            hiddenStates.dataType == .float32,
+            hiddenStates.count == batch * Self.encoderSequenceLength * 768 else {
+            throw MangaOCRServiceError.modelOutputMissing("encoder_hidden_states")
+        }
+
+        var tokenRows = Array(
+            repeating: [Self.decoderStartToken],
+            count: batch
+        )
+        var logProbabilities = Array(repeating: [Double](), count: batch)
+        var finished = Array(repeating: false, count: batch)
+
+        for _ in 1..<Self.maximumTokens {
+            try Task.checkCancellation()
+            let inputIDs = try Self.makeInputIDs(tokenRows)
+            let decoderInput = try MLDictionaryFeatureProvider(
+                dictionary: [
+                    "input_ids": MLFeatureValue(multiArray: inputIDs),
+                    "encoder_hidden_states": MLFeatureValue(multiArray: hiddenStates),
+                ]
+            )
+            let decoderOutput = try batchDecoder.prediction(from: decoderInput)
+            guard let logits = decoderOutput
+                .featureValue(for: "next_token_logits")?
+                .multiArrayValue else {
+                throw MangaOCRServiceError.modelOutputMissing("next_token_logits")
+            }
+            let predictions = try Self.nextTokens(in: logits, batch: batch)
+            for index in 0..<batch where !finished[index] {
+                let prediction = predictions[index]
+                tokenRows[index].append(prediction.id)
+                if prediction.id >= 5 {
+                    logProbabilities[index].append(
+                        log(max(prediction.probability, 1e-12))
+                    )
+                }
+                if prediction.id == Self.decoderEndToken {
+                    finished[index] = true
+                }
+            }
+            if finished.allSatisfy({ $0 }) {
+                break
+            }
+        }
+
+        return tokenRows.enumerated().map { index, tokens in
+            let decoded = tokens.compactMap { token -> String? in
+                guard token >= 5, token < vocabulary.count else { return nil }
+                return vocabulary[token]
+            }
+            .joined()
+            let probabilities = logProbabilities[index]
+            let confidence = probabilities.isEmpty
+                ? 0
+                : exp(probabilities.reduce(0, +) / Double(probabilities.count))
+            return (
+                Self.postProcess(decoded),
+                Float(min(max(confidence, 0), 1))
+            )
+        }
+    }
+
     private static func loadModel(
         named name: String,
         bundle: Bundle,
@@ -217,56 +390,97 @@ private struct MangaOCRRuntime {
     }
 
     private static func makePixelValues(_ image: CGImage) throws -> MLMultiArray {
-        let planeSize = imageSize * imageSize
-        var grayscale = [UInt8](repeating: 0, count: planeSize)
-        let rendered = grayscale.withUnsafeMutableBytes { bytes -> Bool in
-            guard let context = CGContext(
-                data: bytes.baseAddress,
-                width: imageSize,
-                height: imageSize,
-                bitsPerComponent: 8,
-                bytesPerRow: imageSize,
-                space: CGColorSpaceCreateDeviceGray(),
-                bitmapInfo: CGImageAlphaInfo.none.rawValue
-            ) else {
-                return false
-            }
-            context.interpolationQuality = .high
-            context.draw(
-                image,
-                in: CGRect(x: 0, y: 0, width: imageSize, height: imageSize)
-            )
-            return true
-        }
-        guard rendered else {
+        try makePixelValues([image])
+    }
+
+    private static func makePixelValues(_ images: [CGImage]) throws -> MLMultiArray {
+        guard !images.isEmpty else {
             throw MangaOCRServiceError.imageDecodeFailed
+        }
+        let planeSize = imageSize * imageSize
+        let grayscaleImages = try images.map { image in
+            var grayscale = [UInt8](repeating: 0, count: planeSize)
+            let rendered = grayscale.withUnsafeMutableBytes { bytes -> Bool in
+                guard let context = CGContext(
+                    data: bytes.baseAddress,
+                    width: imageSize,
+                    height: imageSize,
+                    bitsPerComponent: 8,
+                    bytesPerRow: imageSize,
+                    space: CGColorSpaceCreateDeviceGray(),
+                    bitmapInfo: CGImageAlphaInfo.none.rawValue
+                ) else {
+                    return false
+                }
+                context.interpolationQuality = .high
+                context.draw(
+                    image,
+                    in: CGRect(x: 0, y: 0, width: imageSize, height: imageSize)
+                )
+                return true
+            }
+            guard rendered else {
+                throw MangaOCRServiceError.imageDecodeFailed
+            }
+            return grayscale
         }
 
         let values = try MLMultiArray(
-            shape: [1, 3, NSNumber(value: imageSize), NSNumber(value: imageSize)],
+            shape: [
+                NSNumber(value: images.count),
+                3,
+                NSNumber(value: imageSize),
+                NSNumber(value: imageSize),
+            ],
             dataType: .float32
         )
         let pointer = values.dataPointer.bindMemory(
             to: Float.self,
-            capacity: planeSize * 3
+            capacity: images.count * planeSize * 3
         )
-        for index in 0..<planeSize {
-            let normalized = Float(grayscale[index]) / 127.5 - 1
-            pointer[index] = normalized
-            pointer[planeSize + index] = normalized
-            pointer[planeSize * 2 + index] = normalized
+        let imagePlaneSize = planeSize * 3
+        for (imageIndex, grayscale) in grayscaleImages.enumerated() {
+            let imageOffset = imageIndex * imagePlaneSize
+            for index in 0..<planeSize {
+                let normalized = Float(grayscale[index]) / 127.5 - 1
+                pointer[imageOffset + index] = normalized
+                pointer[imageOffset + planeSize + index] = normalized
+                pointer[imageOffset + planeSize * 2 + index] = normalized
+            }
         }
         return values
     }
 
     private static func makeInputIDs(_ tokens: [Int]) throws -> MLMultiArray {
+        try makeInputIDs([tokens])
+    }
+
+    private static func makeInputIDs(_ tokenRows: [[Int]]) throws -> MLMultiArray {
+        guard !tokenRows.isEmpty else {
+            throw MangaOCRServiceError.modelOutputMissing("input_ids")
+        }
+        let sequenceLength = tokenRows.map(\.count).max() ?? 0
+        guard sequenceLength > 0 else {
+            throw MangaOCRServiceError.modelOutputMissing("input_ids")
+        }
         let values = try MLMultiArray(
-            shape: [1, NSNumber(value: tokens.count)],
+            shape: [
+                NSNumber(value: tokenRows.count),
+                NSNumber(value: sequenceLength),
+            ],
             dataType: .int32
         )
-        let pointer = values.dataPointer.bindMemory(to: Int32.self, capacity: tokens.count)
-        for (index, token) in tokens.enumerated() {
-            pointer[index] = Int32(token)
+        let pointer = values.dataPointer.bindMemory(
+            to: Int32.self,
+            capacity: tokenRows.count * sequenceLength
+        )
+        for (rowIndex, tokens) in tokenRows.enumerated() {
+            let rowOffset = rowIndex * sequenceLength
+            for index in 0..<sequenceLength {
+                pointer[rowOffset + index] = Int32(
+                    index < tokens.count ? tokens[index] : Self.decoderEndToken
+                )
+            }
         }
         return values
     }
@@ -274,22 +488,34 @@ private struct MangaOCRRuntime {
     private static func nextToken(
         in logits: MLMultiArray
     ) throws -> (id: Int, probability: Double) {
-        guard logits.dataType == .float32, logits.count == vocabularySize else {
+        try nextTokens(in: logits, batch: 1)[0]
+    }
+
+    private static func nextTokens(
+        in logits: MLMultiArray,
+        batch: Int
+    ) throws -> [(id: Int, probability: Double)] {
+        guard batch > 0,
+              logits.dataType == .float32,
+              logits.count == batch * vocabularySize else {
             throw MangaOCRServiceError.modelOutputMissing("next_token_logits")
         }
         let pointer = logits.dataPointer.bindMemory(to: Float.self, capacity: logits.count)
-        var bestIndex = 0
-        var bestLogit = pointer[0]
-        for index in 1..<logits.count where pointer[index] > bestLogit {
-            bestIndex = index
-            bestLogit = pointer[index]
+        return (0..<batch).map { row in
+            let offset = row * vocabularySize
+            var bestIndex = 0
+            var bestLogit = pointer[offset]
+            for index in 1..<vocabularySize where pointer[offset + index] > bestLogit {
+                bestIndex = index
+                bestLogit = pointer[offset + index]
+            }
+            var denominator = 0.0
+            for index in 0..<vocabularySize {
+                denominator += exp(Double(pointer[offset + index] - bestLogit))
+            }
+            let probability = denominator.isFinite && denominator > 0 ? 1 / denominator : 0
+            return (bestIndex, probability)
         }
-        var denominator = 0.0
-        for index in 0..<logits.count {
-            denominator += exp(Double(pointer[index] - bestLogit))
-        }
-        let probability = denominator.isFinite && denominator > 0 ? 1 / denominator : 0
-        return (bestIndex, probability)
     }
 
     private static func postProcess(_ text: String) -> String {

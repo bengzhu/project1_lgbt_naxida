@@ -1452,7 +1452,7 @@ struct ImageTranslationPanel: View {
         case .loading:
             return "正在读取图片；可以取消或选择新图片"
         case .recognizing:
-            return "正在使用 Vision 本机 OCR；可以取消或选择新图片"
+            return "正在使用本机 OCR；可以取消或选择新图片"
         case .translating:
             return "正在逐块翻译；仍可查看和定位，完成后可修正文字或更新复查"
         case .translated:
@@ -2945,12 +2945,19 @@ private struct ImageTranslationOverlayBlock: View {
             .accessibilityHint(accessibilityHint)
         case .replace:
             Button(action: select) {
-                Text(block.translation.isEmpty ? displayOCRText : block.translation)
-                    .font(.caption.bold())
-                    .lineLimit(4)
-                    .multilineTextAlignment(.center)
-                    .padding(3)
-                    .frame(width: max(rect.width, 44), height: max(rect.height, 24))
+                let text = block.translation.isEmpty ? displayOCRText : block.translation
+                Group {
+                    if block.prefersVerticalWriting {
+                        ImageTranslationVerticalText(text: text)
+                    } else {
+                        Text(text)
+                            .font(.caption.bold())
+                            .lineLimit(4)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .padding(3)
+                .frame(width: max(rect.width, 44), height: max(rect.height, 24))
                     .background(Color.appAccentStrong.opacity(0.94), in: .rect(cornerRadius: 4))
                     .overlay { selectionBorder }
             }
@@ -3038,6 +3045,69 @@ private struct ImageTranslationOverlayBlock: View {
         let rightLimit = imageOrigin.x + imageSize.width - bubbleWidth / 2
         if rightCenter <= rightLimit { return rightCenter }
         return max(imageOrigin.x + bubbleWidth / 2, rect.minX - 6 - bubbleWidth / 2)
+    }
+}
+
+/// Small, bounded VerticalRl-style preview for CJK replacement overlays.
+/// Columns are emitted right-to-left while glyphs advance top-to-bottom.
+private struct ImageTranslationVerticalText: View {
+    let text: String
+
+    var body: some View {
+        GeometryReader { geometry in
+            let characters = text.map(String.init)
+            let rowHeight: CGFloat = 18
+            let rowCapacity = max(Int(geometry.size.height / rowHeight), 1)
+            let columnCapacity = max(
+                Int(geometry.size.width / max(rowHeight * 0.9, 1)),
+                1
+            )
+            let maximumCharacters = max(rowCapacity * columnCapacity, 1)
+            let drawableCharacters = boundedCharacters(
+                characters,
+                maximumCharacters: maximumCharacters
+            )
+            let columns = makeColumns(drawableCharacters, rowCapacity: rowCapacity)
+            let columnWidth = max(
+                geometry.size.width / CGFloat(max(columns.count, 1)),
+                1
+            )
+
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(Array(columns.indices.reversed()), id: \.self) { columnIndex in
+                    VStack(spacing: 0) {
+                        ForEach(Array(columns[columnIndex].indices), id: \.self) { characterIndex in
+                            Text(columns[columnIndex][characterIndex])
+                                .font(.caption.bold())
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.65)
+                                .frame(width: columnWidth, height: rowHeight)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            .clipped()
+        }
+    }
+
+    private func makeColumns(
+        _ characters: [String],
+        rowCapacity: Int
+    ) -> [[String]] {
+        guard !characters.isEmpty else { return [[]] }
+        return stride(from: 0, to: characters.count, by: rowCapacity).map { start in
+            Array(characters[start..<min(start + rowCapacity, characters.count)])
+        }
+    }
+
+    private func boundedCharacters(
+        _ characters: [String],
+        maximumCharacters: Int
+    ) -> [String] {
+        guard characters.count > maximumCharacters else { return characters }
+        let prefixCount = max(maximumCharacters - 1, 1)
+        return Array(characters.prefix(prefixCount)) + ["…"]
     }
 }
 
