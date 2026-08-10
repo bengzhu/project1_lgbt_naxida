@@ -7,6 +7,14 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.241 Manga OCR 竖排 quad warp 合同
+
+- 上述 bounded warp 仅由 `MangaOCRRequest.cropQuadIsVertical == true` 的严格日语竖排 hint 触发；未标记的通用 quad 保留自然 projection，以维持历史兼容回退。
+
+- `MangaOCRService` 必须继续先把 `request.cropRect` 作为 `primaryBoundingBoxCrop`，只把严格门控的 `request.cropQuad` 保存为 `lineQuadFallbackCrop`，并仅在 bbox 结果弱时调用 quad reread；不得改变 detector `textRect` ownership、batch／单 crop 故障隔离、取消传播或 12／48 请求预算。
+- `perspectiveCorrectedCrop` 在 Core Image projection 成功后，按四点中点轴长计算 Koharu `textHeight` 与 `ratio`，把竖排 quad 有界重采样到 `(textHeight, textHeight × ratio)`（最长边 `4096`、单条最多 `4_000_000` 像素），随后以 `rotate270` 进入 Manga OCR；target／resize／rotation 失败保留自然 warp，projection 失败继续由 bbox crop 兜底。
+- 新增 `scripts/test-v3241-image-japanese-manga-ocr-vertical-quad-warp-contract.py` 并接入 UI/full fail-fast；只验证源代码边界和既有单页／长页 runtime 回归，不把 `test/jap.jpg` 外推为通用日语 OCR／翻译质量，也不加载外部 Koharu artifact。
+
 ### v3.232 detector line quad Manga OCR crop
 
 - Vision 字符框只有在至少两个字符、与 detector `rect` 和候选 envelope 的 overlap／coverage、面积比、横向／纵向支持以及宽度收窄门控全部通过时，才形成可选 `ImageOCRLayoutQuad`；它只作为 Manga OCR 的 recognition-only crop geometry，`textRect`、layout、去重与 detector ownership 继续使用 detector `rect`。

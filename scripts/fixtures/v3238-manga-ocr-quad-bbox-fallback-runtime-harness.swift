@@ -85,7 +85,8 @@ enum MangaOCRQuadBBoxFallbackRuntimeHarness {
                 MangaOCRRequest(
                     textRect: detectorCrop,
                     cropRect: blankRect,
-                    cropQuad: detectorQuad
+                    cropQuad: detectorQuad,
+                    cropQuadIsVertical: false
                 ),
             ]
         )

@@ -567,7 +567,8 @@ struct VisionOCRService: Sendable {
                     among: cropRegions,
                     imageSize: imageSize
                 ),
-                cropQuad: region.cropQuadHint
+                cropQuad: region.cropQuadHint,
+                cropQuadIsVertical: region.cropQuadHint != nil
             )
         }
         guard !requests.isEmpty else {

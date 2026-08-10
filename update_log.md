@@ -1,3 +1,13 @@
+## v3.241：Koharu 竖排 Manga OCR quad warp 方向对齐
+
+日期：2026-08-11
+
+兼容边界修正：只有 Vision 严格生成并显式标记的 vertical `cropQuadHint` 才启用 bounded target 与 `rotate270`；未标记的通用 quad 保留自然 perspective crop，避免历史 quad fallback harness 被新方向转换误伤。bbox-first、弱结果重试、ownership、预算、取消、Vision fallback 与非日语路径不变。
+
+v3.240 已让 detector bbox 成为 Manga OCR 的主 crop，但严格门控的 `cropQuadHint` 在 `MangaOCRService` 中仍直接使用 Core Image perspective 输出的自然画布，未复刻 Koharu `warp_line_region` 的竖排目标尺寸与方向。v3.241 在不改变 bbox-first／弱结果 quad fallback 顺序的前提下，按 quad 四点的长短轴计算 `(textHeight, textHeight × ratio)` 目标画布，限制最长边 `4096`、单条最多 `4,000,000` 像素，并对竖排 quad 执行 `rotate270` 后再交给 Manga OCR。目标尺寸、旋转或渲染失败时保留自然 warp；投影失败仍让既有 cropImages 回退 detector bbox。ownership、batch、取消、12／48 预算、Vision fallback、布局、翻译、渲染与非日语路径不变。
+
+新增 `scripts/test-v3241-image-japanese-manga-ocr-vertical-quad-warp-contract.py` 并接入 CI，工程版本为 `3.241`。本地与 exact-SHA 云端 full 验证待候选提交后补充；固定 `test/jap.jpg` 只作既有几何／runtime 回归，不声称通用日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.240：detector bbox 主 crop wiring 收紧
 
 日期：2026-08-11

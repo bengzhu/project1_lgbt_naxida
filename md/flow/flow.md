@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.241 日语 detector TextRegion → 严格 quad gate → Manga OCR bbox 主 crop；仅当 bbox 结果弱时才执行 line quad fallback，且只有显式 vertical hint 的四点 quad 才按 Koharu 长短轴生成 bounded target canvas → `rotate270` → Manga OCR，通用 quad 保留自然 perspective crop，目标／旋转失败保留自然 warp，投影失败回到 bbox。layout／ownership `rect`、batch、12-48 预算、取消、Vision fallback、批翻译、竖排渲染与非日语路径不变。
+
 v3.232 日语 detector TextRegion → Vision 字符四边形严格 coverage gate → 可选 Core Image `CIPerspectiveCorrection` line crop → Manga OCR；quad 缺失／非法／投影失败回退 v3.231 扩展 `cropRect`。`textRect`、layout／ownership 几何、batch／12-48 预算、模型失败／取消、Vision fallback、去重、批翻译、竖排渲染与非日语路径不变。
 
 v3.231 日语 detector TextRegion `rect`（布局／ownership owner）→ Vision 字符 envelope 严格 coverage gate → 仅 Manga OCR crop 使用 tight hint，失败回退 detector bbox → 既有 batch／12-48 预算、Vision fallback、日语去重／布局／批翻译／竖排渲染；普通语言与 detector ownership 几何不变。

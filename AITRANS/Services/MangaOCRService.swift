@@ -9,15 +9,22 @@ struct MangaOCRRequest: Sendable {
     /// Optional Koharu `line_polygon` equivalent. The detector/layout rectangle
     /// remains the ownership geometry and is always the safe fallback.
     var cropQuad: ImageOCRLayoutQuad?
+    /// Only the strict Japanese vertical detector hint uses Koharu's bounded
+    /// target canvas and rotate270 orientation. Unmarked quads retain the
+    /// historical natural perspective crop for compatibility with callers that
+    /// use a quad as a generic content fallback.
+    var cropQuadIsVertical: Bool
 
     init(
         textRect: ImageOCRLayoutRect,
         cropRect: ImageOCRLayoutRect,
-        cropQuad: ImageOCRLayoutQuad? = nil
+        cropQuad: ImageOCRLayoutQuad? = nil,
+        cropQuadIsVertical: Bool = false
     ) {
         self.textRect = textRect
         self.cropRect = cropRect
         self.cropQuad = cropQuad
+        self.cropQuadIsVertical = cropQuadIsVertical
     }
 }
 
@@ -55,6 +62,8 @@ actor MangaOCRService {
     private static let maximumBatchSize = 4
     private static let preferredCropConfidence: Float = 0.55
     private static let preferredJapaneseScriptDensity = 0.5
+    private static let maximumQuadWarpDimension = 4_096
+    private static let maximumQuadWarpPixels: CGFloat = 4_000_000
 
     private typealias Recognition = (text: String, confidence: Float)
 
@@ -212,7 +221,11 @@ actor MangaOCRService {
     ) -> CroppedRequest? {
         let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)
         let perspectiveCrop = request.cropQuad.flatMap {
-            perspectiveCorrectedCrop(image, quad: $0)
+            perspectiveCorrectedCrop(
+                image,
+                quad: $0,
+                applyVerticalWarp: request.cropQuadIsVertical
+            )
         }
         if let boundingBoxCrop {
             return CroppedRequest(
@@ -319,7 +332,8 @@ actor MangaOCRService {
     /// crop rather than losing a detector region.
     private static func perspectiveCorrectedCrop(
         _ image: CGImage,
-        quad: ImageOCRLayoutQuad
+        quad: ImageOCRLayoutQuad,
+        applyVerticalWarp: Bool
     ) -> CGImage? {
         guard let normalizedQuad = quad.normalized() else { return nil }
         let imageWidth = CGFloat(image.width)
@@ -390,7 +404,176 @@ actor MangaOCRService {
             return nil
         }
         let context = CIContext(options: [.cacheIntermediates: false])
-        return context.createCGImage(output, from: extent)
+        guard let rendered = context.createCGImage(output, from: extent) else {
+            return nil
+        }
+
+        // Generic quad callers keep the natural projection. Only a strictly
+        // gated Japanese vertical hint may change the model-facing orientation.
+        guard applyVerticalWarp else { return rendered }
+
+        // Koharu's vertical warp does not feed the projection's natural extent
+        // directly to Manga OCR. It derives a bounded canvas from the quad's
+        // long/short axes and rotates the line 270 degrees so the model sees
+        // the original top-to-bottom column as a horizontal reading span.
+        // This is only the strict Japanese line-quad fallback; the detector
+        // bbox remains the primary crop and remains unrotated.
+        guard let targetSize = koharuVerticalQuadWarpTargetSize(
+            localPoints,
+            maximumDimension: CGFloat(maximumQuadWarpDimension),
+            maximumPixels: maximumQuadWarpPixels
+        ) else {
+            return rendered
+        }
+        let targetWidth = Int(targetSize.width.rounded())
+        let targetHeight = Int(targetSize.height.rounded())
+        guard targetWidth >= 2, targetHeight >= 2 else {
+            return rendered
+        }
+        let bounded = rendered.width == targetWidth && rendered.height == targetHeight
+            ? rendered
+            : resizedImage(
+                rendered,
+                pixelWidth: targetWidth,
+                pixelHeight: targetHeight
+            )
+        guard let bounded,
+              let rotated = rotateImage270(bounded) else {
+            // Natural projection is the compatibility fallback if either the
+            // target canvas or the rotation renderer is unavailable.
+            return rendered
+        }
+        return rotated
+    }
+
+    /// Match Koharu's `quad_axis_lengths` and vertical target canvas. The
+    /// points are local image-space corners in top-left, top-right,
+    /// bottom-right, bottom-left order.
+    private static func koharuVerticalQuadWarpTargetSize(
+        _ points: [CGPoint],
+        maximumDimension: CGFloat,
+        maximumPixels: CGFloat
+    ) -> CGSize? {
+        guard points.count == 4,
+              points.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
+              maximumDimension.isFinite,
+              maximumDimension >= 2,
+              maximumPixels.isFinite,
+              maximumPixels >= 4 else {
+            return nil
+        }
+
+        func midpoint(_ lhs: CGPoint, _ rhs: CGPoint) -> CGPoint {
+            CGPoint(
+                x: (lhs.x + rhs.x) * 0.5,
+                y: (lhs.y + rhs.y) * 0.5
+            )
+        }
+        func distance(_ lhs: CGPoint, _ rhs: CGPoint) -> CGFloat {
+            hypot(lhs.x - rhs.x, lhs.y - rhs.y)
+        }
+
+        let top = midpoint(points[0], points[1])
+        let right = midpoint(points[1], points[2])
+        let bottom = midpoint(points[2], points[3])
+        let left = midpoint(points[3], points[0])
+        let verticalLength = distance(top, bottom)
+        let horizontalLength = distance(left, right)
+        guard verticalLength.isFinite,
+              horizontalLength.isFinite,
+              verticalLength > 0,
+              horizontalLength > 0 else {
+            return nil
+        }
+
+        let textHeight = max(horizontalLength.rounded(), 1)
+        let ratio = verticalLength / horizontalLength
+        let rawWidth = textHeight
+        let rawHeight = max((textHeight * ratio).rounded(), 1)
+        guard rawWidth.isFinite,
+              rawHeight.isFinite,
+              rawWidth > 0,
+              rawHeight > 0 else {
+            return nil
+        }
+
+        let areaScale = sqrt(maximumPixels / (rawWidth * rawHeight))
+        let scale = min(
+            1,
+            maximumDimension / rawWidth,
+            maximumDimension / rawHeight,
+            areaScale
+        )
+        guard scale.isFinite, scale > 0 else { return nil }
+        let width = max((rawWidth * scale).rounded(), 1)
+        let height = max((rawHeight * scale).rounded(), 1)
+        guard width.isFinite,
+              height.isFinite,
+              width * height <= maximumPixels + 1 else {
+            return nil
+        }
+        return CGSize(width: width, height: height)
+    }
+
+    private static func resizedImage(
+        _ image: CGImage,
+        pixelWidth: Int,
+        pixelHeight: Int
+    ) -> CGImage? {
+        guard pixelWidth >= 2, pixelHeight >= 2 else { return nil }
+        guard let context = CGContext(
+            data: nil,
+            width: pixelWidth,
+            height: pixelHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+        context.interpolationQuality = .high
+        context.draw(
+            image,
+            in: CGRect(
+                x: 0,
+                y: 0,
+                width: CGFloat(pixelWidth),
+                height: CGFloat(pixelHeight)
+            )
+        )
+        return context.makeImage()
+    }
+
+    /// Return the Core Graphics equivalent of Koharu's `rotate270`.
+    private static func rotateImage270(_ image: CGImage) -> CGImage? {
+        let outputSize = CGSize(
+            width: CGFloat(image.height),
+            height: CGFloat(image.width)
+        )
+        guard let context = CGContext(
+            data: nil,
+            width: Int(outputSize.width),
+            height: Int(outputSize.height),
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+        context.translateBy(x: 0, y: outputSize.height)
+        context.rotate(by: -.pi / 2)
+        context.draw(
+            image,
+            in: CGRect(
+                x: 0,
+                y: 0,
+                width: CGFloat(image.width),
+                height: CGFloat(image.height)
+            )
+        )
+        return context.makeImage()
     }
 
     private static func containsJapaneseLetter(_ text: String) -> Bool {
