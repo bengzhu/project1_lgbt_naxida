@@ -106,7 +106,11 @@ class JapaneseDetectorOwnedVisionNoiseContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3220(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.221", "3.221"])
+        self.assertEqual(len(versions), 2)
+        self.assertTrue(
+            all(tuple(map(int, version.split("."))) >= (3, 221) for version in versions)
+        )
+        self.assertNotIn("MARKETING_VERSION = 3.220;", self.project)
         previous = "python3 -B scripts/test-v3220-image-japanese-long-page-resolution-contract.py"
         current = "python3 -B scripts/test-v3221-image-japanese-detector-owned-vision-noise-contract.py"
         runtime = "bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh"

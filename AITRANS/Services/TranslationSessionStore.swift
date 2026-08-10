@@ -156,6 +156,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published private(set) var imageTranslationRetrySourceLanguage: SupportedLanguage?
     @Published private(set) var imageTranslationRetryTargetLanguage: SupportedLanguage?
     @Published private(set) var imageTranslationRetryingBlockID: UUID?
+    @Published private(set) var imageTranslationBlockRetryCompletionGeneration = 0
     @Published private(set) var imageTranslationCorrectionBlockID: UUID?
     @Published private(set) var imageTranslationCorrectionMessage: String?
     @Published private(set) var imageTranslationCorrectedBlockIDs: Set<UUID> = []
@@ -2137,6 +2138,7 @@ final class TranslationSessionStore: ObservableObject {
                 if remainingCount == 0 {
                     self.imageTranslationState = .translated
                     self.imageTranslationMessage = "已完成全部图片文字块翻译，正在更新导出图"
+                    self.imageTranslationBlockRetryCompletionGeneration &+= 1
                     self.invalidateImageOverlayRender()
                     self.discardImageTranslationExport()
                     self.rerenderImageTranslationExport()
