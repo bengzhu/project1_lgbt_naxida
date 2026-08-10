@@ -211,9 +211,9 @@ struct VisionOCRService: Sendable {
         if japanese {
             // Keep this comparison compatible with the lightweight runtime
             // harness, whose block direction predates the app's optional field.
-            if block.sourceDirection == .vertical {
+            if block.effectiveSourceDirection == .vertical {
                 angles = [270, 90]
-            } else if block.sourceDirection == .horizontal {
+            } else if block.effectiveSourceDirection == .horizontal {
                 angles = [0]
             } else {
                 angles = [270, 90, 0]
