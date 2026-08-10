@@ -32,8 +32,13 @@ struct ImageTranslationBlock {
     var confidence: Float
     var boundingBox: NormalizedImageRect
     var sourceDirection: ImageTextDirection
+    var sourceDirectionOverride: ImageTextDirection? = nil
     var directionConfidence: Double
     var directionReason: String
+
+    var effectiveSourceDirection: ImageTextDirection {
+        sourceDirectionOverride ?? sourceDirection
+    }
 }
 
 @main
