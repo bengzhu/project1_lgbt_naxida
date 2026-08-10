@@ -265,6 +265,12 @@ actor MangaOCRService {
         case .natural:
             return crop
         case .koharuVertical270:
+            // RT-DETR ownership boxes can be wide even when their OCR result
+            // is vertical (the fixed manga fixture is one such case). Only a
+            // portrait bbox is a native vertical line crop that benefits from
+            // Koharu's rotate270 model-facing orientation; keep wide boxes
+            // natural so rotation cannot destroy detector-owned content.
+            guard crop.height > crop.width else { return crop }
             return rotateImage270(crop) ?? crop
         }
     }

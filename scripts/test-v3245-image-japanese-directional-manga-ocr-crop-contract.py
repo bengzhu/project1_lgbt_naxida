@@ -79,6 +79,7 @@ class JapaneseDirectionalMangaOCRCropContractTests(unittest.TestCase):
             ".map { orientedBoundingBoxCrop($0, orientation: request.cropOrientation) }",
             "case .natural:",
             "case .koharuVertical270:",
+            "guard crop.height > crop.width else { return crop }",
             "return rotateImage270(crop) ?? crop",
         ]:
             self.assertIn(marker, self.service)
