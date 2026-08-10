@@ -81,9 +81,10 @@ class JapaneseBatchPreviewContractTests(unittest.TestCase):
             "def coreml_batch_dimension(batch_size: int)",
             "ct.RangeDim(",
             'parser.add_argument(\n        "--batch-size"',
-            "shape=(coreml_batch_dimension(batch_size), 3, 224, 224)",
-            "shape=(coreml_batch_dimension(batch_size), sequence)",
-            "shape=(coreml_batch_dimension(batch_size), 197, 768)",
+            "batch_dimension = coreml_batch_dimension(batch_size)",
+            "shape=(batch_dimension, 3, 224, 224)",
+            "shape=(batch_dimension, sequence)",
+            "shape=(batch_dimension, 197, 768)",
             'suffix = "" if args.batch_size == 1 else "Batch"',
             '"flexibleBatch": args.batch_size > 1',
         ]:
