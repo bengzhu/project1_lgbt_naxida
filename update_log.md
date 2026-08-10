@@ -4,7 +4,7 @@
 
 状态：继续沿 Koharu `TextRegion + line_polygon -> crop -> OCR` 分层，RT-DETR detector `rect` 保持布局与 ownership 的稳定边界；只有 Vision 至少两个字符框形成的竖排 envelope 同时通过 overlap `>=0.80`、detector coverage `>=0.55`、candidate coverage `>=0.80`、面积比 `0.35...1.05`、横向 coverage `>=0.45`、纵向 coverage `>=0.85` 且宽度至少收窄 `10%`，才作为 Manga OCR crop-only hint。严格门控失败、几何缺失、模型错误或取消都回退既有 detector bbox／Vision 路径，12／48 请求预算、ownership、布局、翻译、渲染与非日语路径不变。
 
-新增 `scripts/test-v3231-image-japanese-detector-tight-crop-hint-contract.py` 并接入 CI，工程版本为 `3.231`。本轮尚未取得云端 Xcode／Core ML receipt；固定 `test/jap.jpg` 只验证 crop geometry 与既有 runtime 边界，不声称通用日语 OCR、翻译或识别质量，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+新增 `scripts/test-v3231-image-japanese-detector-tight-crop-hint-contract.py` 并接入 CI，工程版本为 `3.231`。本地 `249` 份合同和单页／长页真实 Core ML runtime 通过；exact-SHA full [31372501552](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31372501552) 对 SHA `bb579e97f9ded42d7b0352dcccc5592194610e20` 使用 Xcode `26.6 (17F113)` 完成 UI/Speech/home/paste、JUnit `10/10` 与 `AITRANS CI/full-validation=success`，probe `skip`。固定 `test/jap.jpg` 只验证 crop geometry 与既有 runtime 边界，不声称通用日语 OCR、翻译或识别质量，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
 v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86`（PR #221）与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c`（PR #222）均已在当前祖先链；本地／origin 活动分支不存在，刷新 `.git/info/refs` 后也无 stale ref 或待 cherry-pick。
 
