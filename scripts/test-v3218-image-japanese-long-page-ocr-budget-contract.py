@@ -53,9 +53,6 @@ class JapaneseLongPageOCRBudgetContractTests(unittest.TestCase):
         )
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
-        self.koharu_manga = read(
-            "reference/koharu-main/koharu-app/src/pipeline/engines/manga_ocr.rs"
-        )
 
     def test_detector_exposes_the_same_slice_plan_used_for_inference(self) -> None:
         actor = braced_body(
@@ -115,11 +112,15 @@ class JapaneseLongPageOCRBudgetContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, self.balance)
 
-    def test_change_moves_toward_koharus_all_text_region_ocr_boundary(self) -> None:
-        self.assertIn("let texts = text_nodes(ctx.scene, ctx.page);", self.koharu_manga)
-        self.assertIn("let recognised = self.0.inference(&crops)?;", self.koharu_manga)
-        self.assertNotIn("take(12)", self.koharu_manga)
-        self.assertNotIn("truncate(12)", self.koharu_manga)
+    def test_region_fusion_does_not_discard_long_page_candidates_early(self) -> None:
+        combine = braced_body(
+            self.vision,
+            "private static func japaneseMangaOCRRegions(",
+        )
+        self.assertIn("return primary + supplemental", combine)
+        self.assertNotIn("prefix(12)", combine)
+        self.assertIn("Array(regions.prefix(12))", self.manga)
+        self.assertIn("japaneseLongPageMangaOCRRegions(", self.manga)
 
     def test_version_runtime_and_ci_route_follow_v3217(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
