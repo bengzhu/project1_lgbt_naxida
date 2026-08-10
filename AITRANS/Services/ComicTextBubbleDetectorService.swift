@@ -30,6 +30,13 @@ actor ComicTextBubbleDetectorService {
 
     private var runtime: ComicTextBubbleDetectorRuntime?
 
+    static func inferenceWindowCount(for image: CGImage) -> Int {
+        ComicTextBubbleDetectorRuntime.inferenceWindowCount(
+            imageWidth: image.width,
+            imageHeight: image.height
+        )
+    }
+
     func detectTextRegions(in image: CGImage) throws -> [ComicTextDetectorRegion] {
         try Task.checkCancellation()
         let regions = try loadedRuntime().detectTextRegions(in: image)
@@ -118,6 +125,13 @@ private struct ComicTextBubbleDetectorRuntime {
             if $0.rect.y != $1.rect.y { return $0.rect.y < $1.rect.y }
             return $0.rect.x > $1.rect.x
         }
+    }
+
+    fileprivate static func inferenceWindowCount(
+        imageWidth: Int,
+        imageHeight: Int
+    ) -> Int {
+        detectorSlices(imageWidth: imageWidth, imageHeight: imageHeight).count
     }
 
     private func detectPredictions(in image: CGImage) throws -> [DetectorPrediction] {

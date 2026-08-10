@@ -1,3 +1,24 @@
+## v3.218：长页 Manga OCR slice-aware 预算
+
+日期：2026-08-10
+
+状态：Agent X 修复 v3.217 只扩展 detector、没有扩展 Manga OCR request budget 的断层。Koharu 会把 detector 产生的全部 TextRegion 交给 Manga OCR；AITRANS 的 CPU-only Core ML 路径仍需有界，但不再让超长页和普通单页共享一个全局前 12 个候选。
+
+核心变更：
+
+- `ComicTextBubbleDetectorService.inferenceWindowCount` 直接复用 runtime 的 `detectorSlices` 结果，预算规划与真正执行的 `height / width > 3.5`、目标比 3.0、20% overlap 和短尾合并始终一致，不另造近似的长页判断。
+- 单 slice 页面继续使用 `Array(regions.prefix(12))`，crop ownership 也只读取这 12 个，保持 v3.217 固定图的请求、几何和输出边界。多 slice 页面按每片 12 次扩展，总上限 48；这是向 Koharu 全 TextRegion OCR 靠近、同时避免 iOS CPU-only decoder 无界运行的明确差异。
+- 长页先从 bundled comic detector regions 分配预算，再由未覆盖的 Vision candidates 补位。超过上限时，候选按 normalized `midY` 进入与 slice 数对应的纵向 bands，每个 band 先拿基础／余数 quota，剩余空位才按 confidence、y、右到左 x 和大小 tie-breaker 消费 overflow，因此页面顶部不能再让底部永久饥饿。
+- 长页 crop padding/ownership 可查看未被预算选中的完整邻区，普通图仍只看已选 12 个；模型缺失／加载／推理失败继续让 Manga OCR 返回空并保留 Vision page／line／pixel／tile／block 回退。布局、翻译、渲染、Store、metrics、output 和非日语路径不变。
+
+验证与边界：
+
+- 新增长页完整产品 runtime：将 `test/jap.jpg` 纵向绘制 4 次并编码后，交给真实 `VisionOCRService + ComicTextBubbleDetectorService + MangaOCRService + ImageOCRLayoutEngine`。本地返回 15 blocks，云端 exact-SHA runtime 返回 14 blocks；两者都从 v3.217 同 harness 基线的 11 个 vertical、2 个 unknown 改善为 13 个 vertical、0 个 unknown。
+- 四个 25% 高度区间各至少 3 个 vertical blocks，最底结果 y 约 `0.943`；4 份 `今度こそ...` 均恢复为 vertical Manga OCR，完整 `前は生意気に俺の誘い断りやがって...` 至少进入 3 个 vertical blocks。本地保留两个、云端保留一个历史 Vision 横排噪声，并仍有 `撮乳`／`城乳`／`授乳` 等错字；这个横排弱候选差异不影响 vertical 覆盖 gate，也不把方向／覆盖改善描述成文字准确率已经解决。
+- 原单页产品 runtime 继续精确返回 5 个历史竖排块，v3.217 detector-only 长页 runtime 继续返回 17 regions；本地 v3.157-v3.218 共 `62` 份合同／`321` tests、三条真实 Core ML runtime、generic iOS Simulator Xcode build、`plutil`、YAML 解析与 `git diff --check` 通过。
+- exact-SHA full [31346445800](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31346445800) 对实现 SHA `0a275445fcbe3ce3c86e14be0567ab4204251f06` 以 `candidate_development_push` 完成三条真实 Core ML runtime、Xcode 和 JUnit `10/10`（0 failures），并发布 `AITRANS CI/full-validation = success` receipt；probe 继续 `skip`。
+- 单一 fixture 的四次重复不是多图 ground-truth corpus；Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称通用日语 OCR、翻译或识别质量。
+
 ## v3.217：Koharu comic detector 长图切片
 
 日期：2026-08-10
