@@ -18,6 +18,7 @@
 - 原单页产品 runtime 继续精确输出 5 个历史竖排块；detector-only 长页 runtime 继续精确输出 17 regions。模型、slice-aware 12/48 请求预算、crop ownership、失败／取消、Vision fallback、翻译、渲染、Store、metrics、output 与非日语边界不变。
 - 本地 v3.157-v3.219 共 `63` 份合同／`328` tests、三条真实 Core ML runtime、generic iOS Simulator Xcode build、`plutil`、workflow YAML、shell/Python 语法与 `git diff --check` 通过。
 - exact-SHA full [31348116248](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31348116248) 对实现 SHA `f90f48a6a98c8d4d3ca722f9d1abf993bae633a1` 以 `candidate_development_push` 完成三条真实 Core ML runtime、Xcode 和 JUnit `10/10`（0 failures），并发布 `AITRANS CI/full-validation = success` receipt；probe 继续 `skip`。
+- 候选 metadata [31348550765](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31348550765) 对 docs SHA `d7ccbe2f07f9878bafaa59905348d83cc4ced057` 以 `candidate_metadata_followup_reuses_parent_full_validation` 复用实现 full；PR #283 fast [31348617791](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31348617791) 与 merge fast [31348684301](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31348684301) 均复用成功 receipt，merge SHA `6c6bb7ae2b300d0934fd30d7a170979ba66d390f`。后三者 JUnit `10/10`、Xcode skipped，不是新的编译证据。
 - 单一 fixture 重复四次只验证 detector boundary provenance 和布局消费，不是多图 ground-truth corpus；Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称通用日语 OCR、翻译或识别质量。
 
 ## v3.218：长页 Manga OCR slice-aware 预算
