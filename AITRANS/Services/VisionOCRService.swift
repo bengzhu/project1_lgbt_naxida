@@ -614,13 +614,17 @@ struct VisionOCRService: Sendable {
         detectorRegions: [ComicTextDetectorRegion],
         visionRegions: [JapanesePixelFirstRegion]
     ) -> [JapanesePixelFirstRegion] {
-        let primary = detectorRegions.map {
+        let primary = detectorRegions.map { detectorRegion in
             JapanesePixelFirstRegion(
-                rect: $0.rect,
+                rect: detectorRegion.rect,
                 detectorRotation: 0,
                 characterCount: 0,
                 detector: .comicTextBubble,
-                detectorConfidence: $0.confidence
+                detectorConfidence: detectorRegion.confidence,
+                cropRectHint: japaneseDetectorCropHint(
+                    detectorRegion.rect,
+                    from: visionRegions
+                )
             )
         }
         let supplemental = visionRegions.filter { candidate in
@@ -630,6 +634,57 @@ struct VisionOCRService: Sendable {
             }
         }
         return primary + supplemental
+    }
+
+    /// A detector TextRegion is the stable layout owner, but its bbox can be
+    /// wider than the actual Japanese column. Vision character envelopes are
+    /// useful as a Koharu `line_polygon` proxy only when they cover nearly all
+    /// of the detector region and retain enough vertical context. The hint is
+    /// crop-only; the detector rect remains the text/layout geometry.
+    private static func japaneseDetectorCropHint(
+        _ detectorRect: ImageOCRLayoutRect,
+        from visionRegions: [JapanesePixelFirstRegion]
+    ) -> ImageOCRLayoutRect? {
+        let candidates = visionRegions.filter { candidate in
+            guard case .vision = candidate.detector,
+                  candidate.characterCount >= 2,
+                  let rect = candidate.rect.normalizedToUnit(),
+                  isJapanesePixelFirstVerticalCandidate(rect) else {
+                return false
+            }
+            let detectorArea = max(detectorRect.width * detectorRect.height, 0.0001)
+            let candidateArea = rect.width * rect.height
+            let overlap = overlapRatio(detectorRect, rect)
+            let intersection = intersectionArea(detectorRect, rect)
+            let detectorCoverage = intersection / detectorArea
+            let candidateCoverage = intersection / max(candidateArea, 0.0001)
+            let areaRatio = candidateArea / detectorArea
+            let horizontalCoverage = min(
+                detectorRect.maxX,
+                rect.maxX
+            ) - max(detectorRect.x, rect.x)
+            let verticalCoverage = min(
+                detectorRect.maxY,
+                rect.maxY
+            ) - max(detectorRect.y, rect.y)
+            return overlap >= 0.80
+                && detectorCoverage >= 0.55
+                && candidateCoverage >= 0.80
+                && areaRatio >= 0.35
+                && areaRatio <= 1.05
+                && horizontalCoverage / max(detectorRect.width, 0.001) >= 0.45
+                && verticalCoverage / max(detectorRect.height, 0.001) >= 0.85
+                && rect.width < detectorRect.width * 0.90
+        }
+        return candidates.min { lhs, rhs in
+            let lhsWidth = lhs.rect.width
+            let rhsWidth = rhs.rect.width
+            if lhsWidth != rhsWidth { return lhsWidth < rhsWidth }
+            if lhs.characterCount != rhs.characterCount {
+                return lhs.characterCount > rhs.characterCount
+            }
+            return lhs.rect.x > rhs.rect.x
+        }?.rect
     }
 
     /// Koharu sends every detector TextRegion to Manga OCR. The iOS port keeps
@@ -1043,7 +1098,10 @@ struct VisionOCRService: Sendable {
         imageSize: CGSize
     ) -> ImageOCRLayoutRect {
         let rect = region.rect
-        let expanded = expandedVerticalLineCropRect(rect, imageSize: imageSize)
+        let expanded = expandedVerticalLineCropRect(
+            region.cropRectHint ?? rect,
+            imageSize: imageSize
+        )
         // A bundled comic detector region is already Koharu's TextRegion
         // ownership boundary. Do not let a Vision supplement bisect its crop;
         // the detector bbox plus font-relative padding is the authoritative
@@ -3088,6 +3146,10 @@ private struct JapanesePixelFirstRegion: Sendable {
     var characterCount: Int
     var detector: JapanesePixelFirstDetector = .vision
     var detectorConfidence: Float = 0
+    /// Optional tight character-envelope crop. This never replaces `rect` in
+    /// layout or ownership decisions and is only populated after strict
+    /// detector-coverage gates pass.
+    var cropRectHint: ImageOCRLayoutRect? = nil
 }
 
 private enum JapanesePixelFirstDetector: Sendable {

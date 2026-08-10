@@ -1,3 +1,13 @@
+## v3.231：detector-owned 日语竖排 tight crop hint
+
+日期：2026-08-10
+
+状态：继续沿 Koharu `TextRegion + line_polygon -> crop -> OCR` 分层，RT-DETR detector `rect` 保持布局与 ownership 的稳定边界；只有 Vision 至少两个字符框形成的竖排 envelope 同时通过 overlap `>=0.80`、detector coverage `>=0.55`、candidate coverage `>=0.80`、面积比 `0.35...1.05`、横向 coverage `>=0.45`、纵向 coverage `>=0.85` 且宽度至少收窄 `10%`，才作为 Manga OCR crop-only hint。严格门控失败、几何缺失、模型错误或取消都回退既有 detector bbox／Vision 路径，12／48 请求预算、ownership、布局、翻译、渲染与非日语路径不变。
+
+新增 `scripts/test-v3231-image-japanese-detector-tight-crop-hint-contract.py` 并接入 CI，工程版本为 `3.231`。本轮尚未取得云端 Xcode／Core ML receipt；固定 `test/jap.jpg` 只验证 crop geometry 与既有 runtime 边界，不声称通用日语 OCR、翻译或识别质量，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
+v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86`（PR #221）与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c`（PR #222）均已在当前祖先链；本地／origin 活动分支不存在，刷新 `.git/info/refs` 后也无 stale ref 或待 cherry-pick。
+
 ## v3.227：受限 batch Manga OCR 与竖排预览容量一致性
 
 状态：Agent X 继续按 Koharu `MangaOcr::inference(&crops)` 的批量边界迁移。转换脚本新增 `--batch-size`，为大于 1 的输出使用 flexible batch 维度并生成 `MangaOCREncoderINT8Batch`／`MangaOCRDecoderINT8Batch`；Swift 端按最多 4 个 crop 分块，只有成对可选模型资源存在时执行 encoder／decoder batch，模型输出或批次失败立即回退到逐 crop，取消传播、请求顺序和坏 crop 隔离保持不变。当前仓库仍只内置 batch=1 模型，因此本地既有真实 runtime 的行为与输出不变。

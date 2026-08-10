@@ -7,6 +7,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.231 detector-owned tight crop hint
+
+- `japaneseDetectorCropHint` 只从 Vision 字符框生成 Manga OCR 的 crop-only hint；RT-DETR `rect` 继续作为布局、去重和 detector ownership 几何。至少两个字符、竖排候选以及 overlap `>=0.80`、detector coverage `>=0.55`、candidate coverage `>=0.80`、面积比 `0.35...1.05`、横向 coverage `>=0.45`、纵向 coverage `>=0.85`、宽度收窄 `>=10%` 全部通过时才使用 hint，否则回退 detector bbox。
+- 新增 `scripts/test-v3231-image-japanese-detector-tight-crop-hint-contract.py` 并接入 UI/full fail-fast；工程版本为 `3.231`。模型加载／单 crop 故障／取消传播、Vision fallback、长页预算、布局、翻译、渲染和非日语路径不变。
+- 本版本只验证固定 fixture 的 detector crop 几何边界，不新增 OCR accuracy、ground-truth、metrics 或 output 声明；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。v3.157/v3.158 已合入当前基线，无本地／origin 活动分支或 stale ref。
+
 ### v3.230 batch runtime provenance parser
 
 - `scripts/test-v3214-image-japanese-manga-ocr-runtime.sh` 的 harness 输出先包含 `batchInference=true`、`blocks=5` 等元数据，再输出带方向的 block 记录；parser 只消费 `horizontal|vertical|unknown` 制表符记录，不能把元数据当作 provenance。

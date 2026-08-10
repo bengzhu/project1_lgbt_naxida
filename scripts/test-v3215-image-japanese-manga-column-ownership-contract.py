@@ -105,8 +105,14 @@ class JapaneseMangaColumnOwnershipContractTests(unittest.TestCase):
         self.assertNotIn("expectedText", self.align)
 
     def test_padding_stops_at_neighbor_bisectors_without_cutting_core(self) -> None:
+        self.assertTrue(
+            "expandedVerticalLineCropRect(rect, imageSize: imageSize)" in self.crop
+            or (
+                "expandedVerticalLineCropRect(" in self.crop
+                and "region.cropRectHint ?? rect" in self.crop
+            )
+        )
         for marker in [
-            "expandedVerticalLineCropRect(rect, imageSize: imageSize)",
             "verticalOverlap >= 0.50",
             "centerDistance >= min(rect.width, neighbor.rect.width) * 0.55",
             "centerDistance <= max(rect.width, neighbor.rect.width) * 2.25",
