@@ -158,6 +158,8 @@ final class TranslationSessionStore: ObservableObject {
     @Published private(set) var imageTranslationRetryingBlockID: UUID?
     @Published private(set) var imageTranslationRerecognizingBlockID: UUID?
     @Published private(set) var imageTranslationBlockRetryCompletionGeneration = 0
+    @Published private(set) var imageTranslationBlockRerecognitionCompletionGeneration = 0
+    @Published private(set) var imageTranslationBlockRerecognitionCompletedBlockID: UUID?
     @Published private(set) var imageTranslationCorrectionBlockID: UUID?
     @Published private(set) var imageTranslationCorrectionMessage: String?
     @Published private(set) var imageTranslationCorrectedBlockIDs: Set<UUID> = []
@@ -1214,6 +1216,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationContentTargetLanguage = targetLanguage
         imageTranslationRetrySourceLanguage = nil
         imageTranslationRetryTargetLanguage = nil
+        imageTranslationBlockRerecognitionCompletedBlockID = nil
         imageTranslationState = .loading
         imageTranslationMessage = "正在载入图片"
         imageTranslationBlocks = []
@@ -1655,6 +1658,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationContentTargetLanguage = nil
         imageTranslationRetrySourceLanguage = nil
         imageTranslationRetryTargetLanguage = nil
+        imageTranslationBlockRerecognitionCompletedBlockID = nil
         imageTranslationRevision += 1
         isProcessing = false
     }
@@ -1778,6 +1782,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationFileSelectionID = nil
         invalidateImageOverlayRender()
         imageTranslationReviewedBlockIDs = []
+        imageTranslationBlockRerecognitionCompletedBlockID = nil
         imageTranslationTaskID = UUID()
         imageTranslationState = .idle
         imageTranslationMessage = "图片翻译已取消"
@@ -2363,6 +2368,8 @@ final class TranslationSessionStore: ObservableObject {
                     self.imageTranslationMessage = "已重新识别此文字块，仍有 \(remainingCount) 个文字块等待翻译"
                     self.dataTransferMessage = self.imageTranslationMessage
                 }
+                self.imageTranslationBlockRerecognitionCompletedBlockID = blockID
+                self.imageTranslationBlockRerecognitionCompletionGeneration &+= 1
                 self.persist()
             } catch is CancellationError {
                 guard self.imageTranslationBlockRerecognitionID == requestID,
