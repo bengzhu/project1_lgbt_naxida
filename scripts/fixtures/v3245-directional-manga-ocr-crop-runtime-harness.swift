@@ -70,8 +70,8 @@ enum DirectionalMangaOCRCropRuntimeHarness {
                 ),
             ]
         ).first
-        print("directText=\(direct?.text ?? "<missing>")")
-        print("directConfidence=\(direct?.confidence ?? -.infinity)")
+        emit("directText=\(direct?.text ?? "<missing>")")
+        emit("directConfidence=\(direct?.confidence ?? -.infinity)")
 
         let block = ImageTranslationBlock(
             original: "",
@@ -97,11 +97,15 @@ enum DirectionalMangaOCRCropRuntimeHarness {
         }
 
         let batchInference = try await MangaOCRService.shared.batchInferenceEnabled()
-        print("batchInference=\(batchInference)")
-        print("detectorRegions=\(detectorRegions.count)")
-        print("effectiveDirection=\(block.effectiveSourceDirection.rawValue)")
-        print("text=\(recognized.original)")
-        print("confidence=\(recognized.confidence)")
+        emit("batchInference=\(batchInference)")
+        emit("detectorRegions=\(detectorRegions.count)")
+        emit("effectiveDirection=\(block.effectiveSourceDirection.rawValue)")
+        emit("text=\(recognized.original)")
+        emit("confidence=\(recognized.confidence)")
+    }
+
+    private static func emit(_ line: String) {
+        FileHandle.standardOutput.write(Data((line + "\n").utf8))
     }
 
     private static func expandedDetectorCrop(
