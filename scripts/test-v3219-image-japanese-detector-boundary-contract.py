@@ -128,7 +128,7 @@ class JapaneseDetectorBoundaryContractTests(unittest.TestCase):
 
     def test_real_long_page_runtime_rejects_cross_page_concatenation(self) -> None:
         for marker in [
-            "int(match.group(1)) < 17",
+            "int(match.group(1)) < 16",
             "len(vertical_rects) < 16",
             "< 4:",
             '"お願いします前は" in text',
