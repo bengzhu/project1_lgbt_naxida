@@ -34,9 +34,10 @@ class JapaneseKoharuLineQuadMangaOCRContractTests(unittest.TestCase):
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
         self.runtime = read("scripts/test-v3214-image-japanese-manga-ocr-runtime.sh")
-        self.reference_postprocess = read(
-            "reference/koharu-main/koharu-ml/src/comic_text_detector/postprocess.rs"
-        )
+        # The Koharu checkout is intentionally ignored and is not available in
+        # CI. Use the tracked product line-polygon implementation as the local
+        # contract oracle instead of making a clean checkout depend on it.
+        self.line_warp = read("AITRANS/Services/MangaOverlayProbeService.swift")
         self.regions = braced_body(
             self.vision,
             "private static func japaneseMangaOCRRegions(",
@@ -50,14 +51,16 @@ class JapaneseKoharuLineQuadMangaOCRContractTests(unittest.TestCase):
             "private static func perspectiveCorrectedCrop(",
         )
 
-    def test_reference_uses_line_polygon_warp_before_ocr(self) -> None:
+    def test_product_line_polygon_warp_precedes_ocr(self) -> None:
         for marker in [
-            "extract_text_block_regions",
-            "line_polygons",
-            "warp_line_region",
-            "crop_text_block_bbox",
+            "recognizeLinePolygonWarpedText",
+            "linePolygons",
+            "orderedLinePolygonCorners",
+            "CIPerspectiveCorrection",
+            "preprocessedImage",
+            "recognizeTextCandidates",
         ]:
-            self.assertIn(marker, self.reference_postprocess)
+            self.assertIn(marker, self.line_warp)
 
     def test_detector_quad_is_strict_and_recognition_only(self) -> None:
         self.assertIn("candidateRect: mappedRect", self.vision)
