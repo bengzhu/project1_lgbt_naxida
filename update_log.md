@@ -1,3 +1,19 @@
+## v3.222：图片翻译 scoped retry 完成焦点
+
+日期：2026-08-10
+
+状态：Agent X 修复 v3.210 scoped block retry 的最后一个可访问性边界：最后一个空译文块成功后，Store 进入 `.translated` 并重绘导出，但 `imageTranslationRevision` 保持不变，旧的 revision-scoped terminal focus 不会可靠触发。现在使用独立 completion generation 传递“本次 retry 已完成”事件，同时继续用当前内容 revision、generation 和终态校验阻止旧任务抢焦点。
+
+- `TranslationSessionStore` 新增 `@Published private(set) var imageTranslationBlockRetryCompletionGeneration`；只有 `remainingCount == 0` 的 scoped retry 成功分支递增，部分成功、空译文、取消、失败和过期 content/task ID 均不发布完成事件。OCR 不会因 retry 再次运行，日语 `[N]` 批翻译、非日语单块翻译、导出失效与重绘边界保持不变。
+- `ImageTranslationPanel` 新增 generation 监听和独立 retry-completion focus helper；先等待一帧，再要求 revision、generation、`.translated` 同时有效，最后复用既有结果行／空态／状态行终态焦点。保留无参 `focusImageTranslationTerminalStateIfNeeded()` 以维持历史合同的稳定边界。
+- 新增 `scripts/test-v3222-image-translation-block-retry-focus-contract.py`，覆盖 generation 只在全部完成时递增、stale retry guard、View focus guard、版本和 CI 路由；v3.221 历史合同改为接受后续版本，避免版本升级破坏回归。
+
+验证与边界：
+
+- 本地 v3.3112、v3.3115、v3.3153、v3.3210、v3.3220、v3.3221、v3.3222 定向合同通过；`plutil -lint AITRANS.xcodeproj/project.pbxproj`、workflow YAML 解析与 `git diff --check` 通过。本机仅有 CommandLineTools，未把本地缺少完整 Xcode 当作编译证据。
+- exact-SHA full [31354629914](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31354629914) 对 SHA `5fbccb16fd4db4489ac4bb054f0422ea0c591af9` 完成 Xcode build、静态检查、UI interaction、speech 合同，JUnit `10/10`（0 failures），`AITRANS CI/full-validation=success`；probe 默认 `skip`。
+- 该版本只改善 scoped retry 完成后的 VoiceOver 焦点与状态传达，不据 `test/jap.jpg` 或本次 UI 验证声称日语 OCR、翻译或识别质量提升；Koharu mask artifact readiness 继续为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.221：Koharu detector-owned 日语 OCR supplement 边界
 
 日期：2026-08-10
