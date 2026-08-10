@@ -4,9 +4,15 @@ import ImageIO
 
 enum SupportedLanguage: Equatable {
     case japanese
+    case simplifiedChinese
 
     var visionRecognitionLanguageIdentifiers: [String] {
-        ["ja-JP", "ja", "en-US", "en"]
+        switch self {
+        case .japanese:
+            ["ja-JP", "ja", "en-US", "en"]
+        case .simplifiedChinese:
+            ["zh-Hans", "zh-CN", "en-US", "en"]
+        }
     }
 }
 
