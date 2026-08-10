@@ -137,7 +137,7 @@ class JapaneseLongPageOCRBudgetContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, self.harness)
         for marker in [
-            "int(match.group(1)) < 17",
+            "int(match.group(1)) < 16",
             "len(vertical_rects) < 16",
             '"direction=unknown" in text',
             "for quarter in range(4)",

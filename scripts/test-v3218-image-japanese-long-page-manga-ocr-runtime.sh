@@ -55,8 +55,8 @@ text = Path(sys.argv[1]).read_text(encoding="utf-8")
 if "copies=4" not in text or "image=1136x6400" not in text:
     raise SystemExit(f"unexpected tall fixture geometry: {text}")
 match = re.search(r"^blocks=(\d+)$", text, re.MULTILINE)
-if match is None or int(match.group(1)) < 17:
-    raise SystemExit(f"expected stable long-page OCR coverage: {text}")
+if match is None or int(match.group(1)) < 16:
+    raise SystemExit(f"expected stable long-page OCR coverage (>=16 blocks): {text}")
 if "direction=unknown" in text:
     raise SystemExit(f"retained unknown-direction long-page OCR blocks: {text}")
 
@@ -64,6 +64,14 @@ vertical_rects = [
     tuple(float(value) for value in values)
     for values in re.findall(
         r"^block=([0-9.]+),([0-9.]+),([0-9.]+),([0-9.]+) direction=vertical text=.+$",
+        text,
+        re.MULTILINE,
+    )
+]
+horizontal_blocks = [
+    (tuple(float(value) for value in values[:4]), values[4])
+    for values in re.findall(
+        r"^block=([0-9.]+),([0-9.]+),([0-9.]+),([0-9.]+) direction=horizontal text=(.+)$",
         text,
         re.MULTILINE,
     )
@@ -77,6 +85,20 @@ for quarter in range(4):
         raise SystemExit(f"insufficient vertical OCR coverage in quarter {quarter}: {text}")
 if not any(y > 0.75 for _, y, _, _ in vertical_rects):
     raise SystemExit(f"missing final OCR output near the long-page tail: {text}")
+
+def minimum_area_overlap(lhs, rhs):
+    lx, ly, lw, lh = lhs
+    rx, ry, rw, rh = rhs
+    intersection = max(0.0, min(lx + lw, rx + rw) - max(lx, rx)) * max(
+        0.0, min(ly + lh, ry + rh) - max(ly, ry)
+    )
+    return intersection / max(min(lw * lh, rw * rh), 0.0001)
+
+for rect, value in horizontal_blocks:
+    if any(minimum_area_overlap(rect, vertical) >= 0.60 for vertical in vertical_rects):
+        raise SystemExit(
+            f"retained page-level horizontal OCR inside a detector-owned vertical region {value}: {text}"
+        )
 
 vertical_texts = re.findall(r"direction=vertical text=(.+)$", text, re.MULTILINE)
 if "お願いします前は" in text:

@@ -7,6 +7,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.221 Koharu detector-owned 日语 OCR supplement 合同
+
+- 成功 bundled Manga OCR 的 `verticalLine` 且 `preservesDetectorTextRegionBoundary` 结果是该 TextRegion 的 owner；最终日语 layout 前只过滤 `.page`／旋转 Vision observation，且要求日语脚本密度 `>= 0.5`、与 owner 的最小面积覆盖 `>= 0.60`。line、block、tile crop 与未重叠横排音效继续保留。
+- detector 返回空结果时过滤 helper 原样返回全部 observation，因此模型加载／推理失败、取消、Vision fallback、普通语言、翻译、渲染、Store、探针、ground truth、metrics 与 `output` 边界不变。
+- 新增 `scripts/test-v3221-image-japanese-detector-owned-vision-noise-contract.py`，并把既有长页真实 runtime 提升为重叠几何 gate。`test/jap.jpg` 单页保持 5 个 vertical blocks；四页长图要求至少 16 个 blocks、每个季度至少 4 个 vertical blocks，本地保持 16 个 vertical blocks，重叠 `やがってま` 消失，未重叠 `ニコッ` 保留；固定样图不作为通用 OCR 质量声明。
+
 ### v3.212 Koharu 日语 crop raw recognition 合同
 
 - `recognizeObservations` 默认必须显式保持 `request.usesLanguageCorrection = true`，仅在受限 caller 传入 `false` 时关闭；page reconnaissance 与非日语路径不得传入 `false`。日语 `recognizeJapaneseCropPass` 和 `recognizeJapanesePerspectiveLineCrop` 必须同时保留日语 post-process、language-specific gate 与 raw correction 边界。

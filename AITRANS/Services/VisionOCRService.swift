@@ -32,6 +32,7 @@ struct VisionOCRService: Sendable {
                 postProcessJapaneseText: sourceLanguage == .japanese
             )
 
+            var detectorMangaOCRObservations: [VisionOCRObservation] = []
             if sourceLanguage == .japanese {
                 // Koharu keeps detection/layout separate from recognition and gives Japanese
                 // candidates a bounded orientation comparison before its cropped OCR engines.
@@ -75,9 +76,10 @@ struct VisionOCRService: Sendable {
                 // pixel-first regions before Vision crop rereads; if the model
                 // cannot load or infer, an empty result leaves every historical
                 // Vision fallback available.
-                observations.append(contentsOf: await Self.recognizeJapaneseMangaOCR(
+                detectorMangaOCRObservations = await Self.recognizeJapaneseMangaOCR(
                     image: ocrImage
-                ))
+                )
+                observations.append(contentsOf: detectorMangaOCRObservations)
 
                 // Koharu crops each detected text node before handing it to the OCR
                 // engine. Keep the bounded Vision crop reread after bundled Manga OCR
@@ -92,7 +94,12 @@ struct VisionOCRService: Sendable {
             }
 
             let finalObservations = sourceLanguage == .japanese
-                ? Self.deduplicateJapaneseObservations(observations)
+                ? Self.deduplicateJapaneseObservations(
+                    Self.suppressJapaneseDetectorOwnedPageSupplements(
+                        observations,
+                        detectorObservations: detectorMangaOCRObservations
+                    )
+                )
                 : Self.deduplicateObservations(observations)
             let layoutObservations = finalObservations.map {
                 ImageOCRLayoutObservation(
@@ -2490,6 +2497,35 @@ struct VisionOCRService: Sendable {
             )
         }
         return ImageOCRLayoutQuad(points: points).normalized() ?? quad
+    }
+
+    /// Keep successful detector TextRegions authoritative at the final layout
+    /// boundary. Koharu does not retain a second page-level OCR stream after a
+    /// text node has been handed to Manga OCR; Vision's rotated reconnaissance
+    /// can otherwise add a wide, lower-quality duplicate for the same region.
+    /// Only page observations are removed, and only when a detector-owned
+    /// vertical result covers most of their smaller geometry. An empty detector
+    /// result leaves every historical Vision fallback untouched.
+    private static func suppressJapaneseDetectorOwnedPageSupplements(
+        _ observations: [VisionOCRObservation],
+        detectorObservations: [VisionOCRObservation]
+    ) -> [VisionOCRObservation] {
+        let detectorOwners = detectorObservations.filter { observation in
+            observation.observationRole == .verticalLine
+                && observation.preservesDetectorTextRegionBoundary
+                && !observation.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        guard !detectorOwners.isEmpty else { return observations }
+
+        return observations.filter { observation in
+            guard observation.observationRole == .page,
+                  japaneseScriptDensity(in: observation.text) >= 0.5 else {
+                return true
+            }
+            return !detectorOwners.contains { owner in
+                overlapRatio(observation.rect, owner.rect) >= 0.60
+            }
+        }
     }
 
     private static func deduplicateJapaneseObservations(
