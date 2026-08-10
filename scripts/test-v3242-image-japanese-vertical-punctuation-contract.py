@@ -141,21 +141,27 @@ class JapaneseVerticalPunctuationContractTests(unittest.TestCase):
             developer_directory = Path("/Applications/Xcode.app/Contents/Developer")
             if developer_directory.is_dir():
                 environment["DEVELOPER_DIR"] = str(developer_directory)
-            subprocess.run(
-                [
-                    "xcrun", "--sdk", "macosx", "swiftc",
-                    "-parse-as-library",
-                    "-module-cache-path", str(Path(temporary_directory) / "module-cache"),
-                    "AITRANS/Models/TranscriptModels.swift",
-                    "scripts/test-v3242-image-japanese-vertical-punctuation-evaluator.swift",
-                    "-o", str(executable),
-                ],
-                cwd=ROOT,
-                env=environment,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+            try:
+                subprocess.run(
+                    [
+                        "xcrun", "--sdk", "macosx", "swiftc",
+                        "-parse-as-library",
+                        "-module-cache-path", str(Path(temporary_directory) / "module-cache"),
+                        "AITRANS/Models/TranscriptModels.swift",
+                        "scripts/test-v3242-image-japanese-vertical-punctuation-evaluator.swift",
+                        "-o", str(executable),
+                    ],
+                    cwd=ROOT,
+                    env=environment,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as error:
+                self.fail(
+                    "vertical punctuation evaluator compilation failed:\n"
+                    f"stdout={error.stdout}\nstderr={error.stderr}"
+                )
             result = subprocess.run(
                 [str(executable)], cwd=ROOT, check=True, capture_output=True, text=True
             )

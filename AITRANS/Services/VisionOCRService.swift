@@ -195,11 +195,11 @@ struct VisionOCRService: Sendable {
             let angles: [Int]
             if japanese {
                 switch block.sourceDirection {
-                case .vertical:
+                case .some(.vertical):
                     angles = [270, 90]
-                case .horizontal:
+                case .some(.horizontal):
                     angles = [0]
-                case .unknown, nil:
+                case .some(.unknown), .none:
                     angles = [270, 90, 0]
                 }
             } else {
