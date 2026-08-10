@@ -26841,7 +26841,6 @@ final class TranslationSessionStore: ObservableObject {
         for _ in 0..<3 {
             let font = sourceFont.withSize(fontSize)
             let rowHeight = max(font.lineHeight, 1)
-            let rows = max(Int(floor(rect.height / rowHeight)), 1)
             let columnWidth = max(rowHeight * 0.9, 1)
             let columns = max(Int(floor(rect.width / columnWidth)), 1)
             let requiredRows = max(Int(ceil(Double(characters.count) / Double(columns))), 1)

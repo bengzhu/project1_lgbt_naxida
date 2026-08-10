@@ -147,7 +147,7 @@ struct VisionOCRService: Sendable {
         sourceLanguage: SupportedLanguage,
         block: ImageTranslationBlock
     ) async throws -> ImageTranslationBlock? {
-        let task = Task.detached(priority: .userInitiated) {
+        let task = Task.detached(priority: .userInitiated) { () -> ImageTranslationBlock? in
             let image = try Self.makeOCRImage(from: imageData)
             guard let rect = ImageOCRLayoutRect(
                 x: block.boundingBox.x,
@@ -199,7 +199,7 @@ struct VisionOCRService: Sendable {
                     angles = [270, 90]
                 case .horizontal:
                     angles = [0]
-                case .unknown, .none:
+                case .unknown, nil:
                     angles = [270, 90, 0]
                 }
             } else {
