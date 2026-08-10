@@ -72,9 +72,9 @@ class JapaneseLineQuadCoverageContractTests(unittest.TestCase):
         for marker in [
             "cropQuad: region.cropQuadHint",
             "let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)",
-            "if let cropQuad = request.cropQuad",
-            "guard let boundingBoxCrop else { return nil }",
-            "boundingBoxFallbackCrop: nil",
+            "let perspectiveCrop = request.cropQuad.flatMap",
+            "guard let perspectiveCrop else { return nil }",
+            "lineQuadFallbackCrop: nil",
             "CIPerspectiveCorrection",
         ]:
             self.assertIn(marker, self.service + self.manga)

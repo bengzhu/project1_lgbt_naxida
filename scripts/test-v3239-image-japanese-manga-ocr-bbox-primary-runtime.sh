@@ -7,7 +7,7 @@ if [ -z "${DEVELOPER_DIR:-}" ] && [ -d /Applications/Xcode.app/Contents/Develope
 fi
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-runtime_root=$(mktemp -d "${TMPDIR:-/tmp}/aitrans-v3238-quad-fallback.XXXXXX")
+runtime_root=$(mktemp -d "${TMPDIR:-/tmp}/aitrans-v3239-bbox-primary.XXXXXX")
 cleanup() {
   if command -v trash >/dev/null 2>&1 && [ -d "$runtime_root" ]; then
     trash "$runtime_root"
@@ -15,14 +15,14 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
-bundle="$runtime_root/AITRANSQuadFallbackHarness.app"
+bundle="$runtime_root/AITRANSBBoxPrimaryHarness.app"
 resources="$bundle/Contents/Resources"
-executable="$bundle/Contents/MacOS/AITRANSQuadFallbackHarness"
+executable="$bundle/Contents/MacOS/AITRANSBBoxPrimaryHarness"
 
 mkdir -p "$resources" "$(dirname "$executable")"
 plutil -create xml1 "$bundle/Contents/Info.plist"
-plutil -insert CFBundleIdentifier -string com.local.aitrans.quad-fallback-harness "$bundle/Contents/Info.plist"
-plutil -insert CFBundleExecutable -string AITRANSQuadFallbackHarness "$bundle/Contents/Info.plist"
+plutil -insert CFBundleIdentifier -string com.local.aitrans.bbox-primary-harness "$bundle/Contents/Info.plist"
+plutil -insert CFBundleExecutable -string AITRANSBBoxPrimaryHarness "$bundle/Contents/Info.plist"
 plutil -insert CFBundlePackageType -string APPL "$bundle/Contents/Info.plist"
 
 cp "$repo_root/AITRANS/Resources/MangaOCR/MangaOCRVocab.txt" "$resources/"
@@ -49,7 +49,7 @@ xcrun swiftc -parse-as-library \
   "$repo_root/AITRANS/Services/MangaOCRService.swift" \
   "$repo_root/AITRANS/Services/ComicTextBubbleDetectorService.swift" \
   "$repo_root/AITRANS/Services/VisionOCRService.swift" \
-  "$repo_root/scripts/fixtures/v3238-manga-ocr-quad-bbox-fallback-runtime-harness.swift" \
+  "$repo_root/scripts/fixtures/v3239-manga-ocr-bbox-primary-runtime-harness.swift" \
   -o "$executable"
 
 output="$runtime_root/output.txt"
@@ -63,28 +63,37 @@ import sys
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
 for marker in [
     "batchInference=true",
-    "blankResults=1",
-    "blankConfidence=",
-    "blankText=",
-    "fallbackResults=1",
-    "fallbackConfidence=",
-    "fallbackText=",
+    "targetConfidence=",
+    "targetText=",
+    "distractorConfidence=",
+    "distractorText=",
+    "adversarialConfidence=",
+    "adversarialText=",
 ]:
     if marker not in text:
-        raise SystemExit(f"missing quad-to-bbox fallback evidence {marker}: {text}")
+        raise SystemExit(f"missing bbox-primary runtime evidence {marker}: {text}")
 match = re.search(r"^detectorRegions=(\d+)$", text, re.MULTILINE)
-if match is None or int(match.group(1)) < 1:
-    raise SystemExit(f"expected a real RT-DETR text region: {text}")
-blank_confidence = re.search(r"^blankConfidence=([0-9.]+)$", text, re.MULTILINE)
-fallback_confidence = re.search(r"^fallbackConfidence=([0-9.]+)$", text, re.MULTILINE)
-blank = re.search(r"^blankText=(.+)$", text, re.MULTILINE)
-fallback = re.search(r"^fallbackText=(.+)$", text, re.MULTILINE)
-if blank_confidence is None or float(blank_confidence.group(1)) >= 0.55:
-    raise SystemExit(f"blank bbox must produce a weak primary result: {text}")
-if fallback_confidence is None or float(fallback_confidence.group(1)) < 0.55:
-    raise SystemExit(f"line quad retry must produce a reliable result: {text}")
-if blank is None or fallback is None or blank.group(1) == fallback.group(1):
-    raise SystemExit(f"line quad retry did not replace the weak bbox text: {text}")
-if not re.search(r"[\u3041-\u30ff\u3400-\u9fff]", fallback.group(1)):
-    raise SystemExit(f"line quad retry did not recover Japanese Manga OCR text: {text}")
+if match is None or int(match.group(1)) < 4:
+    raise SystemExit(f"expected real RT-DETR Japanese regions: {text}")
+
+def value(name: str) -> str:
+    match = re.search(rf"^{name}=(.+)$", text, re.MULTILINE)
+    if match is None:
+        raise SystemExit(f"missing {name}: {text}")
+    return match.group(1)
+
+target = value("targetText")
+distractor = value("distractorText")
+adversarial = value("adversarialText")
+if "爆乳" not in target or "生意気" not in distractor:
+    raise SystemExit(f"fixture regions no longer identify distinct Japanese columns: {text}")
+if target == distractor:
+    raise SystemExit(f"target and distractor must be distinct: {text}")
+if adversarial != target:
+    raise SystemExit(f"misplaced reliable quad replaced detector bbox owner: {text}")
+if adversarial == distractor:
+    raise SystemExit(f"neighboring quad text leaked into detector owner: {text}")
+for name in ["targetConfidence", "distractorConfidence", "adversarialConfidence"]:
+    if float(value(name)) < 0.55:
+        raise SystemExit(f"expected reliable {name}: {text}")
 PY

@@ -60,8 +60,8 @@ actor MangaOCRService {
 
     private struct CroppedRequest {
         var request: MangaOCRRequest
-        var primaryCrop: CGImage
-        var boundingBoxFallbackCrop: CGImage?
+        var primaryBoundingBoxCrop: CGImage
+        var lineQuadFallbackCrop: CGImage?
     }
 
     private var runtime: MangaOCRRuntime?
@@ -91,15 +91,15 @@ actor MangaOCRService {
             let chunk = Array(croppedRequests[start..<end])
 
             let primaryRecognitions = try recognizeCrops(
-                chunk.map(\.primaryCrop),
+                chunk.map(\.primaryBoundingBoxCrop),
                 runtime: runtime
             )
             let fallbackIndexes = chunk.indices.filter { index in
-                chunk[index].boundingBoxFallbackCrop != nil
-                    && Self.shouldRetryBoundingBox(after: primaryRecognitions[index])
+                chunk[index].lineQuadFallbackCrop != nil
+                    && Self.shouldRetryLineQuad(after: primaryRecognitions[index])
             }
             let fallbackCrops = fallbackIndexes.compactMap {
-                chunk[$0].boundingBoxFallbackCrop
+                chunk[$0].lineQuadFallbackCrop
             }
             let fallbackRecognitions = try recognizeCrops(
                 fallbackCrops,
@@ -115,8 +115,8 @@ actor MangaOCRService {
 
             for index in chunk.indices {
                 let recognition = Self.preferredRecognition(
-                    primary: primaryRecognitions[index],
-                    boundingBoxFallback: fallbackByIndex[index]
+                    boundingBox: primaryRecognitions[index],
+                    lineQuadFallback: fallbackByIndex[index]
                 )
                 Self.appendJapaneseResult(
                     recognition,
@@ -129,7 +129,7 @@ actor MangaOCRService {
     }
 
     /// Batch first, then isolate failures per crop. The same routine is used
-    /// for primary line quads and the smaller set of weak-result bbox retries.
+    /// for primary Koharu bboxes and the smaller set of weak-result line retries.
     private func recognizeCrops(
         _ crops: [CGImage],
         runtime: MangaOCRRuntime
@@ -203,31 +203,33 @@ actor MangaOCRService {
         return loaded
     }
 
-    /// Koharu's Manga OCR consumes the expanded detector bbox. A strictly gated
-    /// line quad may be tried first, but retain that bbox as a content-quality
-    /// fallback whenever perspective correction actually produced the primary.
+    /// Koharu's Manga OCR consumes the expanded detector bbox. Keep it primary so
+    /// a valid but misplaced line quad cannot assign a neighboring Japanese column
+    /// to this detector owner. A strictly gated quad remains a weak-bbox fallback.
     private static func cropImages(
         _ image: CGImage,
         request: MangaOCRRequest
     ) -> CroppedRequest? {
         let boundingBoxCrop = cropImage(image, normalizedRect: request.cropRect)
-        if let cropQuad = request.cropQuad,
-           let perspectiveCrop = perspectiveCorrectedCrop(image, quad: cropQuad) {
+        let perspectiveCrop = request.cropQuad.flatMap {
+            perspectiveCorrectedCrop(image, quad: $0)
+        }
+        if let boundingBoxCrop {
             return CroppedRequest(
                 request: request,
-                primaryCrop: perspectiveCrop,
-                boundingBoxFallbackCrop: boundingBoxCrop
+                primaryBoundingBoxCrop: boundingBoxCrop,
+                lineQuadFallbackCrop: perspectiveCrop
             )
         }
-        guard let boundingBoxCrop else { return nil }
+        guard let perspectiveCrop else { return nil }
         return CroppedRequest(
             request: request,
-            primaryCrop: boundingBoxCrop,
-            boundingBoxFallbackCrop: nil
+            primaryBoundingBoxCrop: perspectiveCrop,
+            lineQuadFallbackCrop: nil
         )
     }
 
-    private static func shouldRetryBoundingBox(
+    private static func shouldRetryLineQuad(
         after recognition: Recognition?
     ) -> Bool {
         guard let recognition else { return true }
@@ -235,38 +237,40 @@ actor MangaOCRService {
     }
 
     private static func preferredRecognition(
-        primary: Recognition?,
-        boundingBoxFallback: Recognition?
+        boundingBox: Recognition?,
+        lineQuadFallback: Recognition?
     ) -> Recognition? {
-        let primaryIsJapanese = primary.map { containsJapaneseLetter($0.text) } ?? false
-        let fallbackIsJapanese = boundingBoxFallback.map {
+        let boundingBoxIsJapanese = boundingBox.map {
             containsJapaneseLetter($0.text)
         } ?? false
-        switch (primaryIsJapanese, fallbackIsJapanese) {
+        let fallbackIsJapanese = lineQuadFallback.map {
+            containsJapaneseLetter($0.text)
+        } ?? false
+        switch (boundingBoxIsJapanese, fallbackIsJapanese) {
         case (false, false):
             return nil
         case (true, false):
-            return primary
+            return boundingBox
         case (false, true):
-            return boundingBoxFallback
+            return lineQuadFallback
         case (true, true):
-            guard let primary, let boundingBoxFallback else { return primary }
-            let primaryRank = recognitionQualityRank(primary)
-            let fallbackRank = recognitionQualityRank(boundingBoxFallback)
-            if fallbackRank != primaryRank {
-                return fallbackRank > primaryRank ? boundingBoxFallback : primary
+            guard let boundingBox, let lineQuadFallback else { return boundingBox }
+            let boundingBoxRank = recognitionQualityRank(boundingBox)
+            let fallbackRank = recognitionQualityRank(lineQuadFallback)
+            if fallbackRank != boundingBoxRank {
+                return fallbackRank > boundingBoxRank ? lineQuadFallback : boundingBox
             }
-            let primaryConfidence = finiteConfidence(primary.confidence)
-            let fallbackConfidence = finiteConfidence(boundingBoxFallback.confidence)
-            if fallbackConfidence != primaryConfidence {
-                return fallbackConfidence > primaryConfidence
-                    ? boundingBoxFallback
-                    : primary
+            let boundingBoxConfidence = finiteConfidence(boundingBox.confidence)
+            let fallbackConfidence = finiteConfidence(lineQuadFallback.confidence)
+            if fallbackConfidence != boundingBoxConfidence {
+                return fallbackConfidence > boundingBoxConfidence
+                    ? lineQuadFallback
+                    : boundingBox
             }
-            return japaneseLetterCount(boundingBoxFallback.text)
-                > japaneseLetterCount(primary.text)
-                ? boundingBoxFallback
-                : primary
+            return japaneseLetterCount(lineQuadFallback.text)
+                > japaneseLetterCount(boundingBox.text)
+                ? lineQuadFallback
+                : boundingBox
         }
     }
 
