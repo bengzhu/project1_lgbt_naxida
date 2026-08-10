@@ -17,6 +17,7 @@
 - 四个 25% 高度区间各至少 3 个 vertical blocks，最底结果 y 约 `0.943`；4 份 `今度こそ...` 均恢复为 vertical Manga OCR，完整 `前は生意気に俺の誘い断りやがって...` 至少进入 3 个 vertical blocks。本地保留两个、云端保留一个历史 Vision 横排噪声，并仍有 `撮乳`／`城乳`／`授乳` 等错字；这个横排弱候选差异不影响 vertical 覆盖 gate，也不把方向／覆盖改善描述成文字准确率已经解决。
 - 原单页产品 runtime 继续精确返回 5 个历史竖排块，v3.217 detector-only 长页 runtime 继续返回 17 regions；本地 v3.157-v3.218 共 `62` 份合同／`321` tests、三条真实 Core ML runtime、generic iOS Simulator Xcode build、`plutil`、YAML 解析与 `git diff --check` 通过。
 - exact-SHA full [31346445800](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31346445800) 对实现 SHA `0a275445fcbe3ce3c86e14be0567ab4204251f06` 以 `candidate_development_push` 完成三条真实 Core ML runtime、Xcode 和 JUnit `10/10`（0 failures），并发布 `AITRANS CI/full-validation = success` receipt；probe 继续 `skip`。
+- 候选 metadata [31346910257](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31346910257) 对 docs SHA `80ad7e136f9ab16392259b604a8bf12a1fbb5924` 以 `candidate_metadata_followup_reuses_parent_full_validation` 复用实现 full；PR #282 fast [31346989809](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31346989809) 与 merge fast [31347051715](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31347051715) 均复用成功 receipt，merge SHA `e19c1187c8b9f79b2d97ce2f4418b2f37539cb37`。后三者 JUnit `10/10`、Xcode skipped，不是新的编译证据；v3.218 功能分支已在本地和远端清理。
 - 单一 fixture 的四次重复不是多图 ground-truth corpus；Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称通用日语 OCR、翻译或识别质量。
 
 ## v3.217：Koharu comic detector 长图切片
