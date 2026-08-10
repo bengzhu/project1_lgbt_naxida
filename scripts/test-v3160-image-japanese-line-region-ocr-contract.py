@@ -81,9 +81,18 @@ class JapaneseLineRegionOCRContractTests(unittest.TestCase):
             "let horizontalPaddingPixels = max(fontSizePixels * 0.18, basePaddingPixels)",
             "let verticalPaddingPixels = max(fontSizePixels * 0.12, basePaddingPixels)",
         ]
+        directional_markers = [
+            "private static func koharuVerticalCropPadding(",
+            "let fontSizePixels = max(min(widthPixels, heightPixels), 1)",
+            "let horizontalPaddingFraction = direction == .horizontal ? 0.12 : 0.18",
+            "let verticalPaddingFraction = direction == .horizontal ? 0.18 : 0.12",
+            "fontSizePixels * horizontalPaddingFraction",
+            "fontSizePixels * verticalPaddingFraction",
+        ]
         self.assertTrue(
             all(marker in self.padding for marker in legacy_markers)
             or all(marker in self.vision for marker in adaptive_markers)
+            or all(marker in self.vision for marker in directional_markers)
         )
         line_scope = self.line + self.vision
         self.assertTrue(
