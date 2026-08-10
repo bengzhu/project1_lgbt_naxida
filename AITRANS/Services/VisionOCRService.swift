@@ -1226,8 +1226,14 @@ struct VisionOCRService: Sendable {
         imageSize: CGSize
     ) -> ImageOCRLayoutRect {
         let rect = region.rect
+        let cropBase: ImageOCRLayoutRect
+        if case .vision = region.detector {
+            cropBase = region.cropRectHint ?? rect
+        } else {
+            cropBase = rect
+        }
         let expanded = expandedVerticalLineCropRect(
-            region.cropRectHint ?? rect,
+            cropBase,
             imageSize: imageSize
         )
         // A bundled comic detector region is already Koharu's TextRegion
