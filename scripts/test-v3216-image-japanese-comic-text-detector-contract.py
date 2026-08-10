@@ -139,8 +139,21 @@ class JapaneseComicTextDetectorContractTests(unittest.TestCase):
             manga.index("ComicTextBubbleDetectorService.shared.detectTextRegions("),
             manga.index("detectJapanesePixelFirstVerticalRegions("),
         )
+        legacy_detector_fallback = ")) ?? []" in manga
+        cancellation_safe_detector_fallback = all(
+            marker in manga
+            for marker in [
+                "let detectorRegions: [ComicTextDetectorRegion]",
+                "catch is CancellationError",
+                "throw CancellationError()",
+                "try Task.checkCancellation()",
+                "detectorRegions = []",
+            ]
+        )
+        self.assertTrue(
+            legacy_detector_fallback or cancellation_safe_detector_fallback
+        )
         for marker in [
-            ")) ?? []",
             "detectorRegions: detectorRegions",
             "visionRegions: visionRegions",
             "regions.prefix(12)",
