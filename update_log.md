@@ -14,7 +14,7 @@
 验证边界：
 
 - 固定 `test/jap.jpg` 单页和四页长图 runtime 继续只验证既有 RT-DETR／Manga OCR geometry、预算和 layout 回归，不把单一 fixture 外推为通用日语 OCR、翻译或识别质量证明。
-- Koharu mask artifact readiness 继续为 `manifestMissing / stopUntilArtifactsProvided`；云端 Xcode full validation 在本次提交后记录。
+- 本地 v3.157+ 共 `216` 份合同、真实单页／长页 Core ML runtime、project/workflow 语法与 `git diff --check` 通过。云端 full [31357934638](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31357934638) 对 exact SHA `b868ac52ab91ed3450c48da18cbc75010ec55b09` 完成 Xcode、static/UI/Speech/home/paste 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe `skip`；Koharu mask artifact readiness 继续为 `manifestMissing / stopUntilArtifactsProvided`。
 
 ## v3.223：分离 detector ownership 与方向 provenance
 
