@@ -77,14 +77,16 @@ class JapaneseKoharuBatchTranslationContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, self.store)
 
-    def test_parser_requires_complete_stable_tags_and_nonempty_values(self) -> None:
+    def test_parser_accepts_known_subset_and_nonempty_values(self) -> None:
         for marker in [
             'let pattern = #"(?m)^\\s*\\[(\\d+)\\]\\s*"#',
+            "let expectedIndexByID = Dictionary(",
+            "var values = Array<String?>(repeating: nil, count: expectedIDs.count)",
             "guard !matches.isEmpty else",
+            "var recognizedCount = 0",
+            "var sawExpectedTag = false",
             "throw ImageMangaBatchTranslationError.missingTags",
             "throw ImageMangaBatchTranslationError.emptyTranslation",
-            "guard ids == expectedIDs else",
-            "throw ImageMangaBatchTranslationError.unexpectedTags",
         ]:
             self.assertIn(marker, self.parser)
 
@@ -116,7 +118,8 @@ class JapaneseKoharuBatchTranslationContractTests(unittest.TestCase):
 
     def test_local_and_mock_adapters_return_tagged_blocks(self) -> None:
         for marker in [
-            "outputIDs == expectedIDs",
+            "let expectedPartsByID = Dictionary(",
+            "let recognizedOutputParts = outputParts.filter",
             "mangaBlockParts(in: input)",
             "translationProfile == .mangaBlocks",
             "mangaBlockTranslation(for: request)",

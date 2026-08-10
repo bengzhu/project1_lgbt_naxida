@@ -1521,6 +1521,7 @@ jobs:
             python3 -B scripts/test-v3233-image-japanese-line-quad-coverage-contract.py
             python3 -B scripts/test-v3234-image-japanese-vertical-review-filter-contract.py
             python3 -B scripts/test-v3235-image-japanese-manga-ocr-token-budget-contract.py
+            python3 -B scripts/test-v3236-image-japanese-koharu-tolerant-batch-translation-contract.py
             bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
