@@ -55,7 +55,8 @@ class JapaneseDetectorDirectionProvenanceContractTests(unittest.TestCase):
             "sourceDirectionHint: .vertical",
             "sourceDirectionHint: .vertical",
             "observationRole: .detectorTextRegion",
-            "preservesDetectorTextRegionBoundary: true",
+            "preservesDetectorTextRegionBoundary:",
+            "Self.isReliableJapaneseMangaOCRResult(result)",
         ]:
             self.assertIn(marker, self.manga)
         self.assertIn("case detectorTextRegion", self.vision)

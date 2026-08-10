@@ -49,7 +49,8 @@ class JapaneseDetectorBoundaryContractTests(unittest.TestCase):
             self.vision,
             "func recognizeTextBlocks(",
         )
-        self.assertIn("preservesDetectorTextRegionBoundary: true", manga)
+        self.assertIn("preservesDetectorTextRegionBoundary:", manga)
+        self.assertIn("Self.isReliableJapaneseMangaOCRResult(result)", manga)
         self.assertIn(
             "preservesDetectorTextRegionBoundary: $0.preservesDetectorTextRegionBoundary",
             final_mapping,

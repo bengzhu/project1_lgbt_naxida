@@ -1,5 +1,7 @@
 # AGENTS.md
 
+v3.226 收紧 Koharu detector TextRegion ownership 的质量边界：bundled Manga OCR 结果只有在 confidence 有限且 `>=0.55`、日文脚本密度 `>=0.5` 时才继续作为受保护 detector owner，弱结果仍保留为普通候选并允许 page-level Vision fallback 参与，避免低质量文本压制更可靠的页面识别。模型加载、单 crop 故障隔离、取消传播、长页预算、布局、翻译、渲染与非日语路径不变。新增 `scripts/test-v3226-image-japanese-manga-ocr-quality-gate-contract.py`，更新 v3.219/v3.221/v3.223 历史合同接受等价质量门；本地完整 `226` 份合同全部通过，真实单页／四页长图 Core ML runtime、`plutil`、workflow YAML 与 `git diff --check` 通过。云端 full 尚待本轮 exact-SHA 验证；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，固定 `test/jap.jpg` 只证明当前 ownership 回归，不外推通用日语 OCR、翻译或识别质量。
+
 v3.225 将 Koharu `source_direction` 继续迁移到图片翻译渲染：`ImageTranslationBlock.prefersVerticalWriting` 只有在来源方向为 `.vertical` 且当前显示文本含 CJK 时才启用竖排；SwiftUI 覆盖使用右到左列、列内上到下的布局，旁贴模式保持水平信息卡。PNG 导出新增 `drawImageTranslationText`，CJK 译文使用 bounded VerticalRl 风格列绘制，英文与横排来源继续水平绘制，过长文本安全截断并追加省略号。
 
 新增 `scripts/test-v3225-image-japanese-vertical-render-contract.py` 并接入 CI。固定 `test/jap.jpg` 单页继续返回 5 个 vertical blocks，四页长图继续返回 17 blocks、16 vertical，底部结果约 `y=0.940558`；这些固定 fixture 只验证方向 provenance 与渲染／布局回归，不外推通用日语 OCR、翻译或识别质量。云端 full [31359607372](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31359607372) 对 exact SHA `e2965b6a8b32b6a796402faeb395b43883f97b6a` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`；UI screenshot evidence 与 probe 按配置为 `skip`。Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。

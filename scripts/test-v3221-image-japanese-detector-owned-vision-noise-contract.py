@@ -41,7 +41,8 @@ class JapaneseDetectorOwnedVisionNoiseContractTests(unittest.TestCase):
         manga = braced_body(self.vision, "private static func recognizeJapaneseMangaOCR(")
         for marker in [
             "observationRole: .detectorTextRegion",
-            "preservesDetectorTextRegionBoundary: true",
+            "preservesDetectorTextRegionBoundary:",
+            "Self.isReliableJapaneseMangaOCRResult(result)",
             "detectorMangaOCRObservations = try await Self.recognizeJapaneseMangaOCR(",
             "observations.append(contentsOf: detectorMangaOCRObservations)",
         ]:

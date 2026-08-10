@@ -585,9 +585,24 @@ struct VisionOCRService: Sendable {
                 // ownership from being confused with Vision line provenance.
                 sourceDirectionHint: .vertical,
                 observationRole: .detectorTextRegion,
-                preservesDetectorTextRegionBoundary: true
+                preservesDetectorTextRegionBoundary:
+                    Self.isReliableJapaneseMangaOCRResult(result)
             )
         }
+    }
+
+    /// A detector TextRegion becomes a protected Koharu owner only when the
+    /// bundled OCR result has enough Japanese evidence to be trusted over a
+    /// page-level Vision fallback. Keep weaker text as a normal candidate so
+    /// it can still help when no fallback exists, but do not let it suppress
+    /// or permanently merge a stronger observation.
+    private static func isReliableJapaneseMangaOCRResult(
+        _ result: MangaOCRResult
+    ) -> Bool {
+        let confidence = Double(result.confidence)
+        return confidence.isFinite
+            && confidence >= 0.55
+            && japaneseScriptDensity(in: result.text) >= 0.5
     }
 
     /// Koharu's RT-DETR TextRegions are the primary Manga OCR geometry. Vision's
