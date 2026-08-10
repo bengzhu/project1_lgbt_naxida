@@ -70,7 +70,7 @@ enum DirectionalMangaOCRCropRuntimeHarness {
                 ),
             ]
         ).first
-        print("directText=\(direct?.text ?? \"<missing>\")")
+        print("directText=\(direct?.text ?? "<missing>")")
         print("directConfidence=\(direct?.confidence ?? -.infinity)")
 
         let block = ImageTranslationBlock(
@@ -102,6 +102,27 @@ enum DirectionalMangaOCRCropRuntimeHarness {
         print("effectiveDirection=\(block.effectiveSourceDirection.rawValue)")
         print("text=\(recognized.original)")
         print("confidence=\(recognized.confidence)")
+    }
+
+    private static func expandedDetectorCrop(
+        _ rect: ImageOCRLayoutRect,
+        image: CGImage
+    ) -> ImageOCRLayoutRect {
+        let imageWidth = Double(image.width)
+        let imageHeight = Double(image.height)
+        let fontPixels = max(
+            min(rect.width * imageWidth, rect.height * imageHeight),
+            1
+        )
+        let basePadding = max(fontPixels * 0.08, 2)
+        let horizontalPadding = max(fontPixels * 0.18, basePadding) / imageWidth
+        let verticalPadding = max(fontPixels * 0.12, basePadding) / imageHeight
+        return ImageOCRLayoutRect(
+            x: rect.x - horizontalPadding,
+            y: rect.y - verticalPadding,
+            width: rect.width + horizontalPadding * 2,
+            height: rect.height + verticalPadding * 2
+        ).normalizedToUnit() ?? rect
     }
 }
 
