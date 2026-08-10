@@ -2,7 +2,7 @@
 
 日期：2026-08-10
 
-单 crop 与 batch decoder 都从 `1..<maximumTokens` 改为 `0..<maximumTokens`，与 Koharu 的 `max_length` generation step 语义一致；300 token 上限、EOS 提前结束、取消传播、batch／单 crop fallback、请求预算、布局、翻译、渲染和非日语路径不变。新增 `scripts/test-v3235-image-japanese-manga-ocr-token-budget-contract.py` 并接入 CI，工程版本为 `3.235`。云端 exact-SHA full 待当前研发提交验证；本版本不把 token budget 对齐表述为通用日语 OCR 准确率提升。
+单 crop 与 batch decoder 都从 `1..<maximumTokens` 改为 `0..<maximumTokens`，与 Koharu 的 `max_length` generation step 语义一致；300 token 上限、EOS 提前结束、取消传播、batch／单 crop fallback、请求预算、布局、翻译、渲染和非日语路径不变。新增 `scripts/test-v3235-image-japanese-manga-ocr-token-budget-contract.py` 并接入 CI，工程版本为 `3.235`。exact-SHA full [31386561223](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31386561223) 对 SHA `e96e621a3a9e57560b830d898b56d80a1c3f17a6` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode build 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe 按配置为 `skip`；Koharu artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。本版本不把 token budget 对齐表述为通用日语 OCR、翻译或识别质量提升。
 
 ## v3.234：图片日语竖排复查筛选
 
