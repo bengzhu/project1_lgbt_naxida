@@ -1042,9 +1042,11 @@ struct VisionOCRService: Sendable {
     }
 
     /// Approximate Koharu's `line_polygon` from Vision character rectangles.
-    /// Corresponding corners are median-pooled across glyphs so one malformed
-    /// character box cannot stretch the crop. The same detector-coverage gate
-    /// used by the axis-aligned hint rejects incomplete or unsafe quads.
+    /// Character boxes arrive in the rotated image, where a vertical Japanese
+    /// line runs along the horizontal axis. Aggregate the outer glyph edges in
+    /// that coordinate space so the quad covers the whole line instead of the
+    /// middle glyph; the strict detector-coverage gate still rejects unsafe
+    /// geometry and callers retain the bbox crop as a fallback.
     private static func japanesePixelDetectorCharacterQuad(
         _ detection: VNTextObservation,
         fallback: ImageOCRLayoutRect,
@@ -1053,28 +1055,35 @@ struct VisionOCRService: Sendable {
         originalImage: CGImage,
         angle: Int
     ) -> ImageOCRLayoutQuad? {
-        let characterQuads = (detection.characterBoxes ?? []).compactMap {
+        let rotatedCharacterQuads = (detection.characterBoxes ?? []).compactMap {
             character -> ImageOCRLayoutQuad? in
-            guard let rotatedQuad = normalizedQuad(from: character) else {
-                return nil
-            }
-            return mapRotatedRegionQuad(
-                rotatedQuad,
-                rotatedImage: rotatedImage,
-                originalImage: originalImage,
-                angle: angle
-            )
+            normalizedQuad(from: character)
         }
-        guard characterQuads.count >= 2 else { return nil }
+        guard rotatedCharacterQuads.count >= 2 else { return nil }
 
-        let points = (0..<4).map { index in
-            ImageOCRLayoutPoint(
-                x: median(characterQuads.map { $0.points[index].x }),
-                y: median(characterQuads.map { $0.points[index].y })
-            )
+        let allPoints = rotatedCharacterQuads.flatMap(\.points)
+        guard let minX = allPoints.map(\.x).min(),
+              let maxX = allPoints.map(\.x).max(),
+              let minY = allPoints.map(\.y).min(),
+              let maxY = allPoints.map(\.y).max() else {
+            return nil
         }
-        guard let quad = ImageOCRLayoutQuad(points: points).normalized(),
-              let quadRect = quad.boundingRect.normalizedToUnit() else {
+        let rotatedLineQuad = ImageOCRLayoutQuad(points: [
+            ImageOCRLayoutPoint(x: minX, y: minY),
+            ImageOCRLayoutPoint(x: maxX, y: minY),
+            ImageOCRLayoutPoint(x: maxX, y: maxY),
+            ImageOCRLayoutPoint(x: minX, y: maxY),
+        ])
+        guard let normalizedRotatedLineQuad = rotatedLineQuad.normalized() else {
+            return nil
+        }
+        let quad = mapRotatedRegionQuad(
+            normalizedRotatedLineQuad,
+            rotatedImage: rotatedImage,
+            originalImage: originalImage,
+            angle: angle
+        )
+        guard let quadRect = quad.boundingRect.normalizedToUnit() else {
             return nil
         }
 
