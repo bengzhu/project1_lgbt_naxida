@@ -9557,3 +9557,7 @@ Agent C 最终验收：
 状态：处理 v3.228 云端真实 runtime 暴露的问题。run [31366707811](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31366707811) 的 Xcode build、静态合同和 UI 合同前置检查均完成，但 encoder 运行时在 `tile` 的动态 `reps` shape inference 报 `All values of reps must be at least 1`；harness 虽显示 `batchInference=true`，实际结果回退 Vision，vertical provenance gate 正确拒绝该假通过。转换脚本现在用 `BatchSafeViTEmbeddings` 以动态 shape `fill` 广播 CLS token，并只对 encoder 使用 `EnumeratedShapes` 的 1…4 batch，decoder 继续保留动态 sequence 与 legacy 单 crop 回退。
 
 新增 `scripts/test-v3229-image-japanese-batch-model-shape-contract.py`，替换 encoder `model.mlmodel`（权重 SHA、大小和 decoder 不变），版本为 `3.229`。当前修复尚待云端 Xcode／真实单页／长页 runtime 收据；不声称日语 OCR 准确率提升，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c` 仍在祖先链，本地／远端旧分支已清理。
+
+## v3.230：修复 batch runtime provenance parser
+
+状态：run [31368735253](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31368735253) 的单页真实输出已经是 `batchInference=true`、5 个 blocks 且每条 OCR 记录均为 `vertical`，但旧 shell parser 把 `blocks=5` 元数据也纳入“每个 block 必须 vertical”的检查，导致 UI contract 错误失败。本版本只让 parser 过滤带方向的制表符记录后再执行五块／vertical gate，并新增 `scripts/test-v3230-image-japanese-batch-runtime-parser-contract.py`；云端 full 尚待修复提交验证，不声称日语 OCR 准确率提升。

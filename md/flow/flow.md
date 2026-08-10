@@ -1,7 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
-v3.229 日语图片 batch OCR：crop list → encoder `EnumeratedShapes(1…4)`（CLS 广播使用动态 shape `fill`，不生成动态 `tile(reps)`）→ decoder 动态 sequence → batch 输出；任一资源／图错误仍按 crop 回退 legacy 单 crop，取消、12／48 请求上限、去重、布局、翻译与渲染不变。v3.228 云端 Xcode 通过但 encoder runtime contract 失败，新的 Core ML runtime 以云端收据为准。
+v3.230 日语图片 batch OCR runtime contract：harness 先读取 `batchInference`／`blocks` 元数据，再只解析带方向的 block 记录；元数据不得污染 provenance gate。v3.229 的 crop list → encoder `EnumeratedShapes(1…4)`（CLS 广播使用动态 shape `fill`，不生成动态 `tile(reps)`）→ decoder 动态 sequence → batch 输出及逐 crop fallback 保持不变。
 
 v3.228 日语图片路径：Vision page／Koharu RT-DETR TextRegion → 有界 Manga OCR 请求选择 → 最多 4 个 crop 组成一批，若随包 flexible-batch encoder／decoder 成对可加载则执行 batch，否则回退 legacy 单 crop；批次错误按 crop 隔离回退，取消传播与 12／48 请求上限不变 → 日语去重／布局／批翻译／竖排渲染。单页与长页 harness 要求 `batchInference=true`；实际 Core ML 编译与 runtime 以云端收据为准，不把该性能路径当作 OCR 质量证明。
 

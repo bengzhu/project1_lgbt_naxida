@@ -1,5 +1,7 @@
 # AITRANS iOS Prototype
 
+v3.230 修复 batch Manga OCR runtime harness 的 provenance 解析：`batchInference=true`、`blocks=5` 等元数据不会再被误计为 block，只验证方向记录；run [31368735253](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31368735253) 已显示模型实际加载且五个单页结果均为 vertical，旧 parser 的误报由新增 v3.230 合同锁定，云端 full 尚待修复提交验证。该版本不声称日语 OCR 准确率提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 v3.229 修复 v3.228 云端真实 runtime 暴露的 flexible-batch encoder 图错误：ViT CLS token 不再以动态 `tile(reps)` 扩展，改为动态 shape `fill` 广播；encoder 的 1…4 batch 使用 `EnumeratedShapes` 专化，decoder 保留动态 sequence 与 legacy 单 crop 回退。v3.228 云端 Xcode build 已通过，但 batch encoder runtime 因 `tile` shape inference 回退 Vision，run [31366707811](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31366707811) 的 UI contract 正确失败；新增 `scripts/test-v3229-image-japanese-batch-model-shape-contract.py`，新的 Core ML runtime 尚待验证。该版本只修复执行边界，不声称日语 OCR 准确率提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。v3.157/v3.158 merge 已在祖先链，旧分支已清理。
 
 v3.228 将 v3.227 的 flexible-batch Manga OCR 从可选接口推进为实际随包资源：encoder／decoder 均为 1…4 flexible batch，runtime 仍保留单 crop 模型作为兼容回退；单页和长页 harness 会明确校验 batch 模型已加载，坏 batch 仍逐 crop 隔离回退。新增 `scripts/test-v3228-image-japanese-bundled-batch-runtime-contract.py`，云端 Core ML 编译与真实 runtime 尚待当前提交验证。该版本只证明执行路径和性能资源可用，不声称日语 OCR 准确率提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。

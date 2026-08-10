@@ -76,6 +76,13 @@ for rejected in [
 ]:
     if rejected in text:
         raise SystemExit(f"retained cross-column or truncated Manga OCR text: {rejected}")
-if not all(line.startswith("vertical\t") for line in text.splitlines()[1:] if line):
+block_lines = [
+    line
+    for line in text.splitlines()
+    if re.match(r"^(horizontal|vertical|unknown)\t", line)
+]
+if len(block_lines) != 5:
+    raise SystemExit(f"expected five parsed sample blocks: {text}")
+if not all(line.startswith("vertical\t") for line in block_lines):
     raise SystemExit(f"expected vertical provenance for every sample block: {text}")
 PY

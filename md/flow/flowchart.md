@@ -1,5 +1,5 @@
 # 项目流程图
-v3.229 batch shape 修复：`crop list -> EnumeratedShapes encoder(1...4) -> dynamic-sequence decoder -> batch OCR`；encoder CLS 使用 `fill` 广播，避免 Core ML `tile` shape inference 失败；batch 失败仍逐 crop 回退 legacy。
+v3.230 runtime parser 修复：`metadata(batchInference, blocks) -> direction records -> provenance gate`；只有方向记录参与 vertical 检查。v3.229 的 `crop list -> EnumeratedShapes encoder(1...4) -> dynamic-sequence decoder -> batch OCR` 与 batch 失败逐 crop 回退保持不变。
 
 v3.228 batch OCR：`TextRegion -> bounded crop list -> flexible batch(1...4) -> per-crop fallback -> OCR fusion`；batch 资源缺失／不成对／失败时回退 legacy 单 crop，取消不吞掉，最终继续走既有去重、阅读顺序、翻译和渲染。
 

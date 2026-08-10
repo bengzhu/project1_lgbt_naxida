@@ -7,6 +7,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.230 batch runtime provenance parser
+
+- `scripts/test-v3214-image-japanese-manga-ocr-runtime.sh` 的 harness 输出先包含 `batchInference=true`、`blocks=5` 等元数据，再输出带方向的 block 记录；parser 只消费 `horizontal|vertical|unknown` 制表符记录，不能把元数据当作 provenance。
+- `scripts/test-v3230-image-japanese-batch-runtime-parser-contract.py` 锁定该解析边界、v3.229→v3.230 CI 顺序和工程版本。云端 full 必须重新证明 Xcode、单页 batch runtime、长页 batch runtime 与 JUnit `10/10`；不能把旧 run 的 parser 误报当成模型失败或以 Vision fallback 冒充 batch 成功。
+- 该修复只纠正验证器边界，不新增 OCR accuracy 或 ground-truth 指标；Koharu artifact readiness 仍独立门控。
+
 ### v3.229 flexible-batch encoder shape fix
 
 - `scripts/test-v3229-image-japanese-batch-model-shape-contract.py`：锁定 encoder `EnumeratedShapes(1…4)`、CLS `fill` 广播、encoder 模型规格 SHA，以及 decoder 动态 sequence／legacy fallback 边界。
