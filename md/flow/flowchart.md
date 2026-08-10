@@ -1,4 +1,6 @@
 # 项目流程图
+v3.232 detector TextRegion → strict character quad gate → bounded `CIPerspectiveCorrection` line crop → Manga OCR；quad failure → expanded bbox crop fallback；layout／ownership `rect`、batch、budget、fallback、translation、render 和非日语路径不变。
+
 v3.231 detector `TextRegion rect`（layout／ownership）→ Vision character envelope strict gate → Manga OCR crop-only tight hint／失败回退 bbox → 既有 batch OCR、去重、阅读顺序、翻译与渲染；layout geometry、budget、fallback、非日语路径不变。
 
 v3.230 runtime parser 修复：`metadata(batchInference, blocks) -> direction records -> provenance gate`；只有方向记录参与 vertical 检查。v3.229 的 `crop list -> EnumeratedShapes encoder(1...4) -> dynamic-sequence decoder -> batch OCR` 与 batch 失败逐 crop 回退保持不变。

@@ -1,10 +1,24 @@
 import CoreGraphics
+import CoreImage
 import CoreML
 import Foundation
 
 struct MangaOCRRequest: Sendable {
     var textRect: ImageOCRLayoutRect
     var cropRect: ImageOCRLayoutRect
+    /// Optional Koharu `line_polygon` equivalent. The detector/layout rectangle
+    /// remains the ownership geometry and is always the safe fallback.
+    var cropQuad: ImageOCRLayoutQuad?
+
+    init(
+        textRect: ImageOCRLayoutRect,
+        cropRect: ImageOCRLayoutRect,
+        cropQuad: ImageOCRLayoutQuad? = nil
+    ) {
+        self.textRect = textRect
+        self.cropRect = cropRect
+        self.cropQuad = cropQuad
+    }
 }
 
 struct MangaOCRResult: Sendable {
@@ -55,7 +69,7 @@ actor MangaOCRService {
         croppedRequests.reserveCapacity(requests.count)
         for request in requests {
             try Task.checkCancellation()
-            guard let crop = Self.cropImage(image, normalizedRect: request.cropRect) else {
+            guard let crop = Self.cropImage(image, request: request) else {
                 continue
             }
             croppedRequests.append((request, crop))
@@ -145,6 +159,17 @@ actor MangaOCRService {
 
     private static func cropImage(
         _ image: CGImage,
+        request: MangaOCRRequest
+    ) -> CGImage? {
+        if let cropQuad = request.cropQuad,
+           let perspectiveCrop = perspectiveCorrectedCrop(image, quad: cropQuad) {
+            return perspectiveCrop
+        }
+        return cropImage(image, normalizedRect: request.cropRect)
+    }
+
+    private static func cropImage(
+        _ image: CGImage,
         normalizedRect: ImageOCRLayoutRect
     ) -> CGImage? {
         guard let rect = normalizedRect.normalizedToUnit() else { return nil }
@@ -164,6 +189,85 @@ actor MangaOCRService {
         .intersection(bounds)
         guard pixels.width >= 2, pixels.height >= 2 else { return nil }
         return image.cropping(to: pixels)
+    }
+
+    /// Port Koharu's `warp_line_region` boundary for detector-owned crops.
+    /// Invalid or degenerate quads return nil so callers retain the proven bbox
+    /// crop rather than losing a detector region.
+    private static func perspectiveCorrectedCrop(
+        _ image: CGImage,
+        quad: ImageOCRLayoutQuad
+    ) -> CGImage? {
+        guard let normalizedQuad = quad.normalized() else { return nil }
+        let imageWidth = CGFloat(image.width)
+        let imageHeight = CGFloat(image.height)
+        let points = normalizedQuad.points.map {
+            CGPoint(x: $0.x * imageWidth, y: $0.y * imageHeight)
+        }
+        guard points.count == 4,
+              points.allSatisfy({ $0.x.isFinite && $0.y.isFinite }) else {
+            return nil
+        }
+
+        let imageBounds = CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
+        let bounds = points.reduce(CGRect.null) { partial, point in
+            partial.union(CGRect(origin: point, size: .zero))
+        }.integral.intersection(imageBounds)
+        guard bounds.width >= 2,
+              bounds.height >= 2,
+              bounds.width <= 4096,
+              bounds.height <= 4096,
+              let cropped = image.cropping(to: bounds) else {
+            return nil
+        }
+
+        let localPoints = points.map {
+            CGPoint(x: $0.x - bounds.minX, y: $0.y - bounds.minY)
+        }
+        let croppedHeight = CGFloat(cropped.height)
+        guard let filter = CIFilter(name: "CIPerspectiveCorrection") else {
+            return nil
+        }
+        let input = CIImage(cgImage: cropped)
+        filter.setValue(input, forKey: kCIInputImageKey)
+        filter.setValue(
+            CIVector(cgPoint: CGPoint(
+                x: localPoints[0].x,
+                y: croppedHeight - localPoints[0].y
+            )),
+            forKey: "inputTopLeft"
+        )
+        filter.setValue(
+            CIVector(cgPoint: CGPoint(
+                x: localPoints[1].x,
+                y: croppedHeight - localPoints[1].y
+            )),
+            forKey: "inputTopRight"
+        )
+        filter.setValue(
+            CIVector(cgPoint: CGPoint(
+                x: localPoints[2].x,
+                y: croppedHeight - localPoints[2].y
+            )),
+            forKey: "inputBottomRight"
+        )
+        filter.setValue(
+            CIVector(cgPoint: CGPoint(
+                x: localPoints[3].x,
+                y: croppedHeight - localPoints[3].y
+            )),
+            forKey: "inputBottomLeft"
+        )
+        guard let output = filter.outputImage else { return nil }
+        let extent = output.extent.integral
+        guard extent.width >= 2,
+              extent.height >= 2,
+              extent.width <= 4096,
+              extent.height <= 4096 else {
+            return nil
+        }
+        let context = CIContext(options: [.cacheIntermediates: false])
+        return context.createCGImage(output, from: extent)
     }
 
     private static func containsJapaneseLetter(_ text: String) -> Bool {
