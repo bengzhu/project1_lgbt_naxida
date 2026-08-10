@@ -1,3 +1,21 @@
+## v3.220：长页 OCR 保留 Koharu 切片分辨率
+
+日期：2026-08-10
+
+状态：Agent X 依据真实长页 runtime 定位到 v3.219 的低分辨率边界：`VisionOCRService.makeOCRImage` 对所有图片固定使用 `ThumbnailMaxPixelSize=1800`，四份 `test/jap.jpg` 拼接为 `1136x6400` 后先缩到约 `320x1800`，再交给 Koharu 风格 detector slice 与 Manga OCR，导致同一模型在长页将 `爆乳` 误读为 `撮乳`／`城乳`／`授乳`、将 `挨拶` 误读为 `技拶`。v3.220 保留普通图的有界缩放，只对高宽比超过 `3.5` 的长页按显示宽度和总像素计算安全上限，并修复 detector TextRegion crop ownership 被 Vision supplement 截断的边界。
+
+核心变更：
+
+- `longPageThumbnailMaxPixelSize(for:)` 读取 ImageIO 的像素尺寸与 EXIF 轴交换，普通图继续返回 1800px 上限；长页最多保留 `1800px` 显示宽度和 `16,000,000` 总像素，`1136x6400` 样图保持原始宽度后再由既有 `ImageSlicer` 切片。内存上限仍显式存在，超大长图按总像素安全降采样。
+- `japaneseMangaOCRCropRect` 接收完整 `JapanesePixelFirstRegion`。bundled comic detector 的 TextRegion 被视为 Koharu ownership boundary，使用自身字体相对 padding 后不再被 Vision supplement 的 bisector 截断；Vision supplement 仍保留既有相邻列 ownership 门控。普通页面 12 请求预算、长页 12/片与 CPU-only 48 上限、模型失败回退、取消、Vision OCR、布局、翻译、渲染和非日语路径不变。
+- 更新长页真实 runtime gate，除覆盖、方向和跨页边界外，明确拒绝 `撮乳`、`城乳`、`授乳`、`技拶`，并要求四份 `爆乳` 与 `挨拶`。新增 `scripts/test-v3220-image-japanese-long-page-resolution-contract.py`，回归 v3.219 历史合同并接入 full CI。
+
+验证与边界：
+
+- 单页 `test/jap.jpg` 真实产品 runtime 精确返回 5 个竖排块：`前は生意気に俺の誘い断りやがって...`、`今度こそこの爆乳を持ち帰る！`、`そのせいでつまんねー女に絡まれるし...`、`...では最後に監督より挨拶をお願いします`、`こっ、`。
+- 四页长图真实产品 runtime 输出 `18` blocks、`16` vertical、`0` unknown；四份 `今度こそこの爆乳を持ち帰る！` 与四份包含 `挨拶` 的页尾均通过，`お願いします前は` 不再跨页串联。弱横排 `やがってま` 与实际图片中的 `ニコッ` 仍保留，未把固定样图的残余噪声宣称为通用质量。
+- 本地 v3.157-v3.220 共 `70` 份合同脚本／`373` tests；三条真实 Core ML runtime（单页 Manga OCR、detector-only 长页、完整长页）、generic iOS Simulator Xcode build、`plutil`、workflow YAML、Python/shell 语法和 `git diff --check` 在云端 full 前完成。云端 receipt 将在实现 SHA 验收后追加；probe 继续 `skip`，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.219：保留 detector TextRegion OCR 后边界
 
 日期：2026-08-10
