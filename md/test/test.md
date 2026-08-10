@@ -7,6 +7,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.232 detector line quad Manga OCR crop
+
+- Vision 字符框只有在至少两个字符、与 detector `rect` 和候选 envelope 的 overlap／coverage、面积比、横向／纵向支持以及宽度收窄门控全部通过时，才形成可选 `ImageOCRLayoutQuad`；它只作为 Manga OCR 的 recognition-only crop geometry，`textRect`、layout、去重与 detector ownership 继续使用 detector `rect`。
+- `MangaOCRService` 使用 Core Image `CIPerspectiveCorrection` 执行 bounded line crop；quad 缺失、退化、投影失败或模型／单 crop 错误时回退既有扩展 `cropRect`。batch、12／48 预算、取消传播、Vision fallback、翻译、渲染与非日语路径不变。
+- 新增 `scripts/test-v3232-image-japanese-koharu-line-quad-manga-ocr-contract.py` 并接入 UI/full fail-fast；工程版本为 `3.232`。本地 v3 合同共 `232` 份，单页继续精确返回 `5` 个 vertical blocks，四页长图继续返回 `17` blocks／`16` vertical／底部 y 约 `0.940558`；云端 full 需对当前 exact SHA 重新验证。固定 fixture 只验证 line crop geometry 与既有 runtime 回归，不声称通用日语 OCR、翻译或识别质量，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ### v3.231 detector-owned tight crop hint
 
 - `japaneseDetectorCropHint` 只从 Vision 字符框生成 Manga OCR 的 crop-only hint；RT-DETR `rect` 继续作为布局、去重和 detector ownership 几何。至少两个字符、竖排候选以及 overlap `>=0.80`、detector coverage `>=0.55`、candidate coverage `>=0.80`、面积比 `0.35...1.05`、横向 coverage `>=0.45`、纵向 coverage `>=0.85`、宽度收窄 `>=10%` 全部通过时才使用 hint，否则回退 detector bbox。

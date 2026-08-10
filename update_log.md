@@ -1,3 +1,13 @@
+## v3.232：Koharu line polygon 四边形进入 Manga OCR crop
+
+日期：2026-08-10
+
+状态：继续沿 Koharu `extract_text_block_regions` 的 `line_polygons -> crop -> OCR` 边界迁移。Vision 字符框在至少两个字符、detector／candidate overlap 与 coverage、面积比、横向／纵向支持及宽度收窄门控全部通过后，形成可选 `ImageOCRLayoutQuad`，随 detector-owned `JapanesePixelFirstRegion` 进入 `MangaOCRRequest.cropQuad`。`MangaOCRService` 使用 Core Image `CIPerspectiveCorrection` 做 bounded line crop；四边形缺失、非法、投影失败或模型错误时回退既有扩展 `cropRect`。RT-DETR `textRect` 仍负责 layout／ownership，batch、12／48 请求预算、取消传播、Vision fallback、去重、布局、翻译、渲染与非日语路径不变。
+
+新增 `scripts/test-v3232-image-japanese-koharu-line-quad-manga-ocr-contract.py` 并接入 CI，工程版本为 `3.232`。本地 v3 合同共 `232` 份；单页真实 Core ML runtime 继续精确返回 `5` 个 vertical blocks，四页长图继续返回 `17` blocks／`16` vertical，底部 y 约 `0.940558`。云端 full 尚待当前提交的 exact SHA 验证；固定 `test/jap.jpg` 只证明 line crop geometry 与既有 runtime 边界，不声称通用日语 OCR、翻译或识别质量。Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
+v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86`（PR #221）与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c`（PR #222）继续在当前祖先链；本地／origin 仍只保留 `main`、`smalldata_test` 与当前一个研发分支，待 v3.232 full 成功后合入 `smalldata_test`。
+
 ## v3.231：detector-owned 日语竖排 tight crop hint
 
 日期：2026-08-10

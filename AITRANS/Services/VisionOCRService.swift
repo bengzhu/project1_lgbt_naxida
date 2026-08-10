@@ -553,7 +553,8 @@ struct VisionOCRService: Sendable {
                     region,
                     among: cropRegions,
                     imageSize: imageSize
-                )
+                ),
+                cropQuad: region.cropQuadHint
             )
         }
         guard !requests.isEmpty else {
@@ -624,6 +625,10 @@ struct VisionOCRService: Sendable {
                 cropRectHint: japaneseDetectorCropHint(
                     detectorRegion.rect,
                     from: visionRegions
+                ),
+                cropQuadHint: japaneseDetectorCropQuadHint(
+                    detectorRegion.rect,
+                    from: visionRegions
                 )
             )
         }
@@ -685,6 +690,36 @@ struct VisionOCRService: Sendable {
             }
             return lhs.rect.x > rhs.rect.x
         }?.rect
+    }
+
+    /// Carry the same strictly gated Vision candidate into the optional
+    /// Koharu line-polygon path. The existing crop-rectangle helper remains the
+    /// single authority for coverage/ownership gates; this only retrieves the
+    /// quad attached to that already-approved candidate.
+    private static func japaneseDetectorCropQuadHint(
+        _ detectorRect: ImageOCRLayoutRect,
+        from visionRegions: [JapanesePixelFirstRegion]
+    ) -> ImageOCRLayoutQuad? {
+        guard let rectHint = japaneseDetectorCropHint(
+            detectorRect,
+            from: visionRegions
+        ) else {
+            return nil
+        }
+        return visionRegions
+            .filter { candidate in
+                guard candidate.cropQuadHint != nil else { return false }
+                let rect = candidate.rect
+                return overlapRatio(rect, rectHint) >= 0.98
+                    && abs(rect.width - rectHint.width) <= 0.002
+                    && abs(rect.height - rectHint.height) <= 0.002
+            }
+            .min { lhs, rhs in
+                if lhs.characterCount != rhs.characterCount {
+                    return lhs.characterCount > rhs.characterCount
+                }
+                return lhs.rect.x > rhs.rect.x
+            }?.cropQuadHint?.normalized()
     }
 
     /// Koharu sends every detector TextRegion to Manga OCR. The iOS port keeps
@@ -897,6 +932,14 @@ struct VisionOCRService: Sendable {
                     originalImage: image,
                     angle: angle
                 )
+                let mappedQuad = japanesePixelDetectorCharacterQuad(
+                    detection,
+                    fallback: mappedRequestRect,
+                    candidateRect: mappedRect,
+                    rotatedImage: rotated,
+                    originalImage: image,
+                    angle: angle
+                )
                 guard isJapanesePixelFirstVerticalCandidate(mappedRect),
                       !verticalBlocks.contains(where: {
                           japanesePixelDetectorRegionIsCovered($0.rect, by: mappedRect)
@@ -913,7 +956,8 @@ struct VisionOCRService: Sendable {
                     JapanesePixelFirstRegion(
                         rect: mappedRect,
                         detectorRotation: angle,
-                        characterCount: detection.characterBoxes?.count ?? 0
+                        characterCount: detection.characterBoxes?.count ?? 0,
+                        cropQuadHint: mappedQuad
                     )
                 )
             }
@@ -995,6 +1039,68 @@ struct VisionOCRService: Sendable {
             return fallback
         }
         return envelope
+    }
+
+    /// Approximate Koharu's `line_polygon` from Vision character rectangles.
+    /// Corresponding corners are median-pooled across glyphs so one malformed
+    /// character box cannot stretch the crop. The same detector-coverage gate
+    /// used by the axis-aligned hint rejects incomplete or unsafe quads.
+    private static func japanesePixelDetectorCharacterQuad(
+        _ detection: VNTextObservation,
+        fallback: ImageOCRLayoutRect,
+        candidateRect: ImageOCRLayoutRect,
+        rotatedImage: CGImage,
+        originalImage: CGImage,
+        angle: Int
+    ) -> ImageOCRLayoutQuad? {
+        let characterQuads = (detection.characterBoxes ?? []).compactMap {
+            character -> ImageOCRLayoutQuad? in
+            guard let rotatedQuad = normalizedQuad(from: character) else {
+                return nil
+            }
+            return mapRotatedRegionQuad(
+                rotatedQuad,
+                rotatedImage: rotatedImage,
+                originalImage: originalImage,
+                angle: angle
+            )
+        }
+        guard characterQuads.count >= 2 else { return nil }
+
+        let points = (0..<4).map { index in
+            ImageOCRLayoutPoint(
+                x: median(characterQuads.map { $0.points[index].x }),
+                y: median(characterQuads.map { $0.points[index].y })
+            )
+        }
+        guard let quad = ImageOCRLayoutQuad(points: points).normalized(),
+              let quadRect = quad.boundingRect.normalizedToUnit() else {
+            return nil
+        }
+
+        let detectorArea = max(fallback.width * fallback.height, 0.0001)
+        let quadArea = quadRect.width * quadRect.height
+        let intersection = intersectionArea(fallback, quadRect)
+        let detectorCoverage = intersection / detectorArea
+        let quadCoverage = intersection / max(quadArea, 0.0001)
+        let areaRatio = quadArea / detectorArea
+        let horizontalCoverage = min(fallback.maxX, quadRect.maxX)
+            - max(fallback.x, quadRect.x)
+        let verticalCoverage = min(fallback.maxY, quadRect.maxY)
+            - max(fallback.y, quadRect.y)
+
+        guard overlapRatio(fallback, quadRect) >= 0.80,
+              overlapRatio(candidateRect, quadRect) >= 0.80,
+              detectorCoverage >= 0.55,
+              quadCoverage >= 0.80,
+              areaRatio >= 0.35,
+              areaRatio <= 1.05,
+              horizontalCoverage / max(fallback.width, 0.001) >= 0.45,
+              verticalCoverage / max(fallback.height, 0.001) >= 0.85,
+              quadRect.width < fallback.width * 0.90 else {
+            return nil
+        }
+        return quad
     }
 
     /// Vision occasionally reports one character rectangle spanning two
@@ -3150,6 +3256,9 @@ private struct JapanesePixelFirstRegion: Sendable {
     /// layout or ownership decisions and is only populated after strict
     /// detector-coverage gates pass.
     var cropRectHint: ImageOCRLayoutRect? = nil
+    /// Optional perspective crop equivalent to Koharu's `line_polygon`. Like
+    /// `cropRectHint`, this is recognition-only geometry with bbox fallback.
+    var cropQuadHint: ImageOCRLayoutQuad? = nil
 }
 
 private enum JapanesePixelFirstDetector: Sendable {
@@ -3157,12 +3266,12 @@ private enum JapanesePixelFirstDetector: Sendable {
     case comicTextBubble
 }
 
-private struct ImageOCRLayoutPoint: Equatable, Sendable {
+struct ImageOCRLayoutPoint: Equatable, Sendable {
     var x: Double
     var y: Double
 }
 
-private struct ImageOCRLayoutQuad: Equatable, Sendable {
+struct ImageOCRLayoutQuad: Equatable, Sendable {
     var points: [ImageOCRLayoutPoint]
 
     var boundingRect: ImageOCRLayoutRect {
