@@ -34,6 +34,12 @@ class JapaneseDirectionOverrideRerecognitionContractTests(unittest.TestCase):
         self.models = read("AITRANS/Models/TranscriptModels.swift")
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
+        self.runtime_harnesses = [
+            read("scripts/fixtures/v3214-manga-ocr-runtime-harness.swift"),
+            read("scripts/fixtures/v3218-long-page-manga-ocr-runtime-harness.swift"),
+            read("scripts/fixtures/v3238-manga-ocr-quad-bbox-fallback-runtime-harness.swift"),
+            read("scripts/fixtures/v3239-manga-ocr-bbox-primary-runtime-harness.swift"),
+        ]
         self.rerecognition = braced_body(
             self.vision,
             "private static func recognizeTextBlockDetached(",
@@ -63,6 +69,12 @@ class JapaneseDirectionOverrideRerecognitionContractTests(unittest.TestCase):
         self.assertIn("angles = [0]", self.rerecognition)
         self.assertIn("recognizeTextBlocks(in imageData", self.vision)
         self.assertIn("effectiveSourceDirection", self.vision)
+
+    def test_runtime_harnesses_match_direction_model(self) -> None:
+        for harness in self.runtime_harnesses:
+            self.assertIn("var sourceDirectionOverride: ImageTextDirection? = nil", harness)
+            self.assertIn("var effectiveSourceDirection: ImageTextDirection", harness)
+            self.assertIn("sourceDirectionOverride ?? sourceDirection", harness)
 
     def test_version_and_ci_route_follow_v3243(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
