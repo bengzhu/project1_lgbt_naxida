@@ -95,6 +95,16 @@ enum DirectionalMangaOCRCropRuntimeHarness {
               ) else {
             throw HarnessError.recognitionMissing
         }
+        var horizontalBlock = block
+        horizontalBlock.sourceDirectionOverride = .horizontal
+        guard horizontalBlock.effectiveSourceDirection == .horizontal,
+              let horizontalRecognized = try await VisionOCRService().recognizeTextBlock(
+                  in: data,
+                  sourceLanguage: .japanese,
+                  block: horizontalBlock
+              ) else {
+            throw HarnessError.horizontalRecognitionMissing
+        }
 
         let batchInference = try await MangaOCRService.shared.batchInferenceEnabled()
         emit("batchInference=\(batchInference)")
@@ -102,6 +112,9 @@ enum DirectionalMangaOCRCropRuntimeHarness {
         emit("effectiveDirection=\(block.effectiveSourceDirection.rawValue)")
         emit("text=\(recognized.original)")
         emit("confidence=\(recognized.confidence)")
+        emit("horizontalDirection=\(horizontalBlock.effectiveSourceDirection.rawValue)")
+        emit("horizontalText=\(horizontalRecognized.original)")
+        emit("horizontalConfidence=\(horizontalRecognized.confidence)")
     }
 
     private static func emit(_ line: String) {
@@ -134,4 +147,5 @@ private enum HarnessError: Error {
     case imageDecodeFailed
     case detectorRegionsMissing
     case recognitionMissing
+    case horizontalRecognitionMissing
 }

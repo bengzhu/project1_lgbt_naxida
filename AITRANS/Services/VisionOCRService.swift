@@ -180,7 +180,8 @@ struct VisionOCRService: Sendable {
         let blockCropRect = sourceLanguage == .japanese
             ? Self.expandedVerticalCropRect(
                 rect,
-                imageSize: CGSize(width: image.width, height: image.height)
+                imageSize: CGSize(width: image.width, height: image.height),
+                direction: block.effectiveSourceDirection ?? .vertical
             )
             : rect
 
@@ -2497,7 +2498,8 @@ struct VisionOCRService: Sendable {
 
     private static func koharuVerticalCropPadding(
         _ rect: ImageOCRLayoutRect,
-        imageSize: CGSize
+        imageSize: CGSize,
+        direction: ImageTextDirection = .vertical
     ) -> (horizontal: Double, vertical: Double)? {
         let imageWidth = Double(imageSize.width)
         let imageHeight = Double(imageSize.height)
@@ -2515,8 +2517,16 @@ struct VisionOCRService: Sendable {
         let heightPixels = max(rect.height * imageHeight, 1)
         let fontSizePixels = max(min(widthPixels, heightPixels), 1)
         let basePaddingPixels = max(fontSizePixels * 0.08, 2)
-        let horizontalPaddingPixels = max(fontSizePixels * 0.18, basePaddingPixels)
-        let verticalPaddingPixels = max(fontSizePixels * 0.12, basePaddingPixels)
+        let horizontalPaddingFraction = direction == .horizontal ? 0.12 : 0.18
+        let verticalPaddingFraction = direction == .horizontal ? 0.18 : 0.12
+        let horizontalPaddingPixels = max(
+            fontSizePixels * horizontalPaddingFraction,
+            basePaddingPixels
+        )
+        let verticalPaddingPixels = max(
+            fontSizePixels * verticalPaddingFraction,
+            basePaddingPixels
+        )
         return (
             min(horizontalPaddingPixels / imageWidth, 0.08),
             min(verticalPaddingPixels / imageHeight, 0.08)
@@ -2613,13 +2623,18 @@ struct VisionOCRService: Sendable {
 
     private static func expandedVerticalCropRect(
         _ rect: ImageOCRLayoutRect,
-        imageSize: CGSize? = nil
+        imageSize: CGSize? = nil,
+        direction: ImageTextDirection = .vertical
     ) -> ImageOCRLayoutRect {
-        let padding = imageSize.flatMap { koharuVerticalCropPadding(rect, imageSize: $0) }
+        let padding = imageSize.flatMap {
+            koharuVerticalCropPadding(rect, imageSize: $0, direction: direction)
+        }
+        let horizontalFraction = direction == .horizontal ? 0.12 : 0.18
+        let verticalFraction = direction == .horizontal ? 0.18 : 0.12
         let horizontalPadding = padding?.horizontal
-            ?? min(max(rect.width * 0.18, 0.01), 0.08)
+            ?? min(max(rect.width * horizontalFraction, 0.01), 0.08)
         let verticalPadding = padding?.vertical
-            ?? min(max(rect.height * 0.12, 0.01), 0.08)
+            ?? min(max(rect.height * verticalFraction, 0.01), 0.08)
         return ImageOCRLayoutRect(
             x: rect.x - horizontalPadding,
             y: rect.y - verticalPadding,

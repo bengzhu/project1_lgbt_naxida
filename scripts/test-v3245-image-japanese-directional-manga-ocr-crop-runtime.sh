@@ -73,4 +73,14 @@ if result is None or "爆乳" not in result.group(1):
 confidence = re.search(r"^confidence=([-0-9.eE]+)$", text, re.MULTILINE)
 if confidence is None or float(confidence.group(1)) < 0.55:
     raise SystemExit(f"directional Manga OCR result is not reliable: {text}")
+if "horizontalDirection=horizontal" not in text:
+    raise SystemExit(f"horizontal direction override was not consumed: {text}")
+horizontal = re.search(r"^horizontalText=(.+)$", text, re.MULTILINE)
+if horizontal is None or "爆乳" not in horizontal.group(1):
+    raise SystemExit(f"horizontal Manga OCR crop did not recover the fixture text: {text}")
+horizontal_confidence = re.search(
+    r"^horizontalConfidence=([-0-9.eE]+)$", text, re.MULTILINE
+)
+if horizontal_confidence is None or float(horizontal_confidence.group(1)) < 0.55:
+    raise SystemExit(f"horizontal Manga OCR result is not reliable: {text}")
 PY

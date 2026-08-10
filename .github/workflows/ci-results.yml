@@ -209,6 +209,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3243-image-japanese-direction-override-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3244-image-japanese-direction-override-rerecognition-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3245-image-japanese-directional-manga-ocr-crop-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3246-image-japanese-directional-koharu-padding-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -746,6 +747,9 @@ jobs:
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v3245-image-japanese-directional-manga-ocr-crop-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3246-image-japanese-directional-koharu-padding-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
@@ -1575,6 +1579,7 @@ jobs:
             python3 -B scripts/test-v3244-image-japanese-direction-override-rerecognition-contract.py
             python3 -B scripts/test-v3245-image-japanese-directional-manga-ocr-crop-contract.py
             bash scripts/test-v3245-image-japanese-directional-manga-ocr-crop-runtime.sh
+            python3 -B scripts/test-v3246-image-japanese-directional-koharu-padding-contract.py
             bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
