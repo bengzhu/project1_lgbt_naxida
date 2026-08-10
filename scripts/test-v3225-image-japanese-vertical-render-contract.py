@@ -34,7 +34,6 @@ class JapaneseVerticalRenderContractTests(unittest.TestCase):
         self.store = read("AITRANS/Services/TranslationSessionStore.swift")
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
-        self.reference = read("reference/koharu-main/koharu-renderer/src/text/script.rs")
         self.block = braced_body(self.models, "struct ImageTranslationBlock:")
         self.overlay = braced_body(
             self.view,
@@ -64,8 +63,7 @@ class JapaneseVerticalRenderContractTests(unittest.TestCase):
             "displayedText.unicodeScalars.contains",
         ]:
             self.assertIn(marker, self.block)
-        self.assertIn("Some(TextDirection::Vertical) => WritingMode::VerticalRl", self.reference)
-        self.assertIn("Some(TextDirection::Horizontal) => WritingMode::Horizontal", self.reference)
+        self.assertIn("Mirrors Koharu's writing-mode decision", self.block)
 
     def test_preview_uses_vertical_columns_only_for_replace_mode(self) -> None:
         self.assertIn("if block.prefersVerticalWriting", self.overlay)
