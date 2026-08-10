@@ -6,7 +6,7 @@
 
 v3.240 已让 detector bbox 成为 Manga OCR 的主 crop，但严格门控的 `cropQuadHint` 在 `MangaOCRService` 中仍直接使用 Core Image perspective 输出的自然画布，未复刻 Koharu `warp_line_region` 的竖排目标尺寸与方向。v3.241 在不改变 bbox-first／弱结果 quad fallback 顺序的前提下，按 quad 四点的长短轴计算 `(textHeight, textHeight × ratio)` 目标画布，限制最长边 `4096`、单条最多 `4,000,000` 像素，并对竖排 quad 执行 `rotate270` 后再交给 Manga OCR。目标尺寸、旋转或渲染失败时保留自然 warp；投影失败仍让既有 cropImages 回退 detector bbox。ownership、batch、取消、12／48 预算、Vision fallback、布局、翻译、渲染与非日语路径不变。
 
-新增 `scripts/test-v3241-image-japanese-manga-ocr-vertical-quad-warp-contract.py` 并接入 CI，工程版本为 `3.241`。本地与 exact-SHA 云端 full 验证待候选提交后补充；固定 `test/jap.jpg` 只作既有几何／runtime 回归，不声称通用日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+新增 `scripts/test-v3241-image-japanese-manga-ocr-vertical-quad-warp-contract.py` 并接入 CI，工程版本为 `3.241`。本地全量 v3 合同、Swift parse、Python syntax 与 `git diff --check` 通过；候选 exact-SHA full [31415212180](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31415212180) 对 SHA `178fc1e37db90cab6e3e38060f04f816945234c7` 使用 Xcode `26.6 (17F113)` 完成，JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe `skip`；PR #297 合入 `smalldata_test` 的 merge SHA 为 `86d24aadf4b94cdc3afe605dcf5b5101fb5bfb6d`，merge receipt [31416210957](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31416210957) 复用候选 full 成功。固定 `test/jap.jpg` 只作既有几何／runtime 回归，不声称通用日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
 
 ## v3.240：detector bbox 主 crop wiring 收紧
 
