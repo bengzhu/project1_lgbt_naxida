@@ -1,3 +1,14 @@
+## v3.225：图片翻译 CJK 竖排渲染
+
+日期：2026-08-10
+
+状态：Agent X 将 Koharu `source_direction` 继续迁移到图片翻译渲染。`ImageTranslationBlock.prefersVerticalWriting` 只有来源方向为 `.vertical` 且当前显示文本含 CJK 时启用竖排；SwiftUI 覆盖使用右到左列、列内上到下，旁贴模式保持水平信息卡。PNG 导出新增 `drawImageTranslationText`，CJK 译文使用 bounded VerticalRl 风格列绘制，英文译文与横排来源保持水平绘制，过长文本安全截断并追加省略号。
+
+- 新增 `scripts/test-v3225-image-japanese-vertical-render-contract.py` 并接入 CI；本地 v3.157+ 共 `217` 份合同，新合同 `5/5` 通过。
+- 固定 `test/jap.jpg` 单页继续返回 `5` 个 vertical blocks；四页长图继续返回 `17` blocks、`16` vertical，底部结果约 `y=0.940558`。固定 fixture 只验证方向 provenance 与渲染／布局回归，不外推通用日语 OCR、翻译或识别质量。
+- 云端 full [31359607372](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31359607372) 对 exact SHA `e2965b6a8b32b6a796402faeb395b43883f97b6a` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`；UI screenshot evidence 与 probe 按配置为 `skip`。Koharu mask artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+- v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86`（PR #221）与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c`（PR #222）均为当前祖先链；候选分支已从本地与 `origin` 清理，无待 cherry-pick。
+
 ## v3.224：隔离 Manga OCR crop 故障并修正本机 OCR 状态说明
 
 日期：2026-08-10
