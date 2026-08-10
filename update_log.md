@@ -1,3 +1,21 @@
+## v3.246：Koharu 方向感知 crop padding 与恢复覆盖保留
+
+日期：2026-08-11
+
+图片翻译结果行、复查页或局部预览触发日语单块重新识别时，scoped crop 现在消费当前 block 的 `effectiveSourceDirection`。Koharu 的 font-relative envelope 在 pixel space 估算 font size：横排使用 `pad_x=.12`、`pad_y=.18`，竖排和 unknown 继续使用 `pad_x=.18`、`pad_y=.12`；缺少 image size 的 normalized fallback 同步采用同一方向比例。整页 detector／line／block crop 仍使用既有竖排默认，不改变 detector ownership、Manga OCR 模型、Vision fallback、取消传播、12／48 预算、整页 OCR、布局、翻译、渲染和非日语路径。
+
+恢复某个文字块的 Vision OCR baseline 时，如果用户在 correction snapshot 之后设置过方向覆盖，Store 现在先恢复原文／初始译文，再把当前 `sourceDirectionOverride` 复制回 restored block；恢复动作不再抹掉 reviewer 的方向决定。该改动不重跑 OCR 或翻译，仍复用原有 transcript、overlay/export render 和 VoiceOver 焦点边界。
+
+新增 `scripts/test-v3246-image-japanese-directional-koharu-padding-contract.py` 并接入 `.github/workflows/ci-results.yml`；扩展 `scripts/fixtures/v3245-directional-manga-ocr-crop-runtime-harness.swift` 和 runtime gate，分别以 vertical 与 horizontal override 读取固定 `test/jap.jpg`。更新 v3.3160、v3.3175、v3.322 历史合同，接受方向变量实现与方向覆盖保留的等价边界。工程版本为 `3.246`。
+
+验证边界：
+
+- 本地全量 `267` 个 `test-*.py` 合同、Python/Shell 语法和 `git diff --check` 通过。
+- 本地真实 Core ML runtime 的 vertical scoped crop 返回 `今度こそこの爆乳を持ち帰る！`、confidence `0.9994928`；horizontal override 返回同一 fixture、confidence `0.99932444`。固定样图只验证方向／crop／runtime 回归，不外推通用日语 OCR、翻译或识别质量。
+- exact-SHA full [31440504163](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31440504163) 对 SHA `b05b0ca03c5f2efa3c3cee1575a7c5e1eda4c456` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe 按配置为 `skip`。
+- PR #307 fast [31441269747](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31441269747) 通过；随后以 merge commit `18194a396893b0a837ed8e30e87979220c140a87` 合入 `smalldata_test`，研发分支已从本地与 `origin` 删除。
+- Koharu artifact readiness 独立保持 `manifestMissing / stopUntilArtifactsProvided`，没有将固定 fixture 或 runtime 回归表述为通用模型质量提升；当前本地／origin 只保留 `main` 与 `smalldata_test`，无待 cherry-pick。
+
 ## v3.245：图片日语方向驱动 Manga OCR crop 旋转门控
 
 日期：2026-08-11
