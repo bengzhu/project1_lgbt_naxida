@@ -121,7 +121,7 @@ if sum("今度こそ" in value for value in vertical_texts) < 4:
     raise SystemExit(f"not every repeated page received vertical Manga OCR: {text}")
 if sum("爆乳" in value for value in vertical_texts) < 4:
     raise SystemExit(f"long-page Manga OCR did not preserve the target kanji in every repeated page: {text}")
-if sum("前は生意気に俺の誘い断りやがって..." in value for value in vertical_texts) < 4:
+if sum("前は生意気に俺の誘い断りやがって．．．" in value for value in vertical_texts) < 4:
     raise SystemExit(f"long-page Manga OCR did not replace weak fallback text: {text}")
 if sum("では最後に" in value for value in vertical_texts) < 4:
     raise SystemExit(f"detector boundary preservation lost a repeated page tail: {text}")

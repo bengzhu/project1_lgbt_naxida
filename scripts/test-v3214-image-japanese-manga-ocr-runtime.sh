@@ -59,9 +59,9 @@ match = re.search(r"^blocks=(\d+)$", text, re.MULTILINE)
 if match is None or int(match.group(1)) != 5:
     raise SystemExit(f"expected exactly 5 detector-grouped OCR blocks, got: {text}")
 for expected in [
-    "前は生意気に俺の誘い断りやがって...",
+    "前は生意気に俺の誘い断りやがって．．．",
     "今度こそこの爆乳を持ち帰る！",
-    "そのせいでつまんねー女に絡まれるし...",
+    "そのせいでつまんねー女に絡まれるし．．．",
     "監督より挨拶をお願いします",
 ]:
     if expected not in text:

@@ -316,6 +316,17 @@ struct ImageTranslationPanel: View {
                   store.imageTranslationState == .translated else { return }
             focusImageTranslationRetryCompletionIfNeeded(generation)
         }
+        .onChange(of: store.imageTranslationBlockRerecognitionCompletionGeneration) { _, generation in
+            guard generation > 0,
+                  let blockID = store.imageTranslationBlockRerecognitionCompletedBlockID,
+                  store.imageTranslationState == .translated || store.imageTranslationState == .failed else {
+                return
+            }
+            focusImageTranslationRerecognitionCompletionIfNeeded(
+                generation,
+                blockID: blockID
+            )
+        }
         .onChange(of: store.imageTranslationRetryLanguageSummary) { oldSummary, newSummary in
             guard newSummary != nil, newSummary != oldSummary else { return }
             moveReviewAccessibilityFocus(to: Self.imageRetryLanguageStatusAccessibilityFocusID)
@@ -1378,6 +1389,37 @@ struct ImageTranslationPanel: View {
                   generation == store.imageTranslationBlockRetryCompletionGeneration,
                   store.imageTranslationState == .translated else { return }
             focusImageTranslationTerminalStateIfNeeded()
+        }
+    }
+
+    private func focusImageTranslationRerecognitionCompletionIfNeeded(
+        _ generation: Int,
+        blockID: UUID
+    ) {
+        let revision = store.imageTranslationRevision
+        Task { @MainActor in
+            await Task.yield()
+            guard revision == store.imageTranslationRevision,
+                  generation == store.imageTranslationBlockRerecognitionCompletionGeneration,
+                  store.imageTranslationBlockRerecognitionCompletedBlockID == blockID,
+                  store.imageTranslationState == .translated || store.imageTranslationState == .failed else {
+                return
+            }
+
+            if visibleImageTranslationBlocks.contains(where: { $0.id == blockID }) {
+                moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))
+                return
+            }
+
+            if selectedImageTranslationBlockID == blockID {
+                selectedImageTranslationBlockID = nil
+            }
+            clearHiddenReviewSelection()
+            if visibleImageTranslationBlocks.isEmpty {
+                focusEmptyReviewStateIfNeeded()
+            } else {
+                focusReviewFilterResultIfNeeded()
+            }
         }
     }
 

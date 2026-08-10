@@ -985,29 +985,37 @@ private struct MangaOCRRuntime {
 
     private static func postProcess(_ text: String) -> String {
         let noWhitespace = text.filter { !$0.isWhitespace }
-        var output = ""
+            .replacing("…", with: "...")
+        var collapsed = ""
         var dotCount = 0
-        for character in noWhitespace.replacing("…", with: "...") {
-            if character == "." || character == "・" {
+
+        func flushDots() {
+            guard dotCount > 0 else { return }
+            collapsed.append(contentsOf: String(repeating: ".", count: dotCount))
+            dotCount = 0
+        }
+
+        for scalar in noWhitespace.unicodeScalars {
+            if scalar.value == 0x2E || scalar.value == 0x30FB {
                 dotCount += 1
                 continue
             }
-            if dotCount > 0 {
-                output.append(String(repeating: ".", count: dotCount))
-                dotCount = 0
-            }
-            if let scalar = character.unicodeScalars.first,
-               character.unicodeScalars.count == 1,
-               scalar.value >= 0x21,
-               scalar.value <= 0x7E,
-               let fullwidth = UnicodeScalar(scalar.value + 0xFEE0) {
+            flushDots()
+            collapsed.unicodeScalars.append(scalar)
+        }
+        flushDots()
+
+        var output = ""
+        for scalar in collapsed.unicodeScalars {
+            if scalar.value == 0x20,
+               let fullwidthSpace = UnicodeScalar(0x3000) {
+                output.unicodeScalars.append(fullwidthSpace)
+            } else if (0x21...0x7E).contains(scalar.value),
+                      let fullwidth = UnicodeScalar(scalar.value + 0xFEE0) {
                 output.unicodeScalars.append(fullwidth)
             } else {
-                output.append(character)
+                output.unicodeScalars.append(scalar)
             }
-        }
-        if dotCount > 0 {
-            output.append(String(repeating: ".", count: dotCount))
         }
         return output
     }
