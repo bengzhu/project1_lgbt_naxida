@@ -2,7 +2,7 @@
 
 日语图片批翻译现在按全局 `[N]` ID 消费模型输出，允许小模型返回乱序、未知标签或部分有效块；已识别的译文直接写回对应文字块，缺失块才逐块补译。完全无效或空输出继续沿用原有逐块安全回退，取消传播不变。Gemma 本地漫画 block 清理同步放宽为“至少一个已知、非空且不等于原文的译文”，避免因整批标签顺序／完整性偏差丢弃有效结果。
 
-新增 `scripts/test-v3236-image-japanese-koharu-tolerant-batch-translation-contract.py` 并接入 CI，工程版本为 `3.236`。云端 exact-SHA full 待候选提交验证；本版本不把批翻译容错表述为通用日语 OCR、翻译或识别质量提升。
+新增 `scripts/test-v3236-image-japanese-koharu-tolerant-batch-translation-contract.py` 并接入 CI，工程版本为 `3.236`。候选 exact-SHA full [31392104569](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31392104569) 对 SHA `968a11c94a9d296ab08066bb9e84782c5ec13bcf` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode build 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe 按配置为 `skip`；Koharu artifact readiness 为 `manifestMissing / stopUntilArtifactsProvided`。本版本不把批翻译容错表述为通用日语 OCR、翻译或识别质量提升。
 
 ## v3.235：Manga OCR decoder token budget 对齐
 
