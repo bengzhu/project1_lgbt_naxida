@@ -524,9 +524,22 @@ struct VisionOCRService: Sendable {
         let detectorSliceCount = ComicTextBubbleDetectorService.inferenceWindowCount(
             for: image
         )
-        let detectorRegions = (try? await ComicTextBubbleDetectorService.shared.detectTextRegions(
-            in: image
-        )) ?? []
+        let detectorRegions: [ComicTextDetectorRegion]
+        do {
+            detectorRegions = try await ComicTextBubbleDetectorService.shared.detectTextRegions(
+                in: image
+            )
+        } catch is CancellationError {
+            // A cancelled detector pass must cancel the whole bounded OCR run;
+            // it is not equivalent to a model load or inference failure.
+            throw CancellationError()
+        } catch {
+            // Preserve the historical Vision fallback for ordinary detector
+            // failures, but do not let a concurrent cancellation be hidden by
+            // an underlying Core ML error.
+            try Task.checkCancellation()
+            detectorRegions = []
+        }
         let visionRegions = alignPartialJapaneseMangaOCRColumns(
             detectJapanesePixelFirstVerticalRegions(
                 in: image,
