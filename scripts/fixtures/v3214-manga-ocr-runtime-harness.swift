@@ -44,6 +44,8 @@ enum MangaOCRRuntimeHarness {
             in: data,
             sourceLanguage: .japanese
         )
+        let batchInference = try await MangaOCRService.shared.batchInferenceEnabled()
+        print("batchInference=\(batchInference)")
         print("blocks=\(blocks.count)")
         for block in blocks {
             print("\(block.sourceDirection.rawValue)\t\(block.original)")

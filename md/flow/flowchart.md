@@ -1,4 +1,6 @@
 # 项目流程图
+v3.228 batch OCR：`TextRegion -> bounded crop list -> flexible batch(1...4) -> per-crop fallback -> OCR fusion`；batch 资源缺失／不成对／失败时回退 legacy 单 crop，取消不吞掉，最终继续走既有去重、阅读顺序、翻译和渲染。
+
 v3.212 page OCR／日语 page reconnaissance（`usesLanguageCorrection=true`）→ 日语 block／line／perspective line crop reread（`false`）→ Koharu 风格 post-process → 映射／去重／布局／批翻译／渲染；普通语言和 page 默认 correction 不变，v3.156 旧合同兼容。v3.157/v3.158 已合入、无活动分支；本地 v3.157-v3.212 合同 `56/56`，exact-SHA full `31302657064`（SHA `bd7c510b99ac78c22ca330ae2e125a5193610fe4`，Xcode/JUnit `10/10`）通过；probe `skip`，readiness `manifestMissing / stopUntilArtifactsProvided`，不声称 OCR／翻译质量提升。
 
 v3.212 receipt：candidate metadata `31309651292` → PR #276 fast `31309712340` → merge fast `31309783552`；均复用候选成功 receipt，merge SHA `ccab9e318b0c71447b59cb2b370d5778a9c68904`，后续 Xcode skipped。

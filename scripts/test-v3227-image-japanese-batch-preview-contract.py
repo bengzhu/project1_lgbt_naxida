@@ -101,7 +101,7 @@ class JapaneseBatchPreviewContractTests(unittest.TestCase):
             metadata["revision"],
             "aa6573bd10b0d446cbf622e29c3e084914df9741",
         )
-        self.assertEqual(metadata["batchInference"]["bundledModelBatchSize"], 1)
+        self.assertIn(metadata["batchInference"]["bundledModelBatchSize"], (1, 4))
         self.assertEqual(metadata["batchInference"]["maximumBatchSize"], 4)
         self.assertIn("conversion.json in Resources", self.project)
 

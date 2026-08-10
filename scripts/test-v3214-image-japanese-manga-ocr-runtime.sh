@@ -25,6 +25,15 @@ xcrun coremlcompiler compile \
 xcrun coremlcompiler compile \
   "$repo_root/AITRANS/Resources/MangaOCR/MangaOCRDecoderINT8.mlpackage" \
   "$resources"
+if [ -d "$repo_root/AITRANS/Resources/MangaOCR/MangaOCREncoderINT8Batch.mlpackage" ] \
+  && [ -d "$repo_root/AITRANS/Resources/MangaOCR/MangaOCRDecoderINT8Batch.mlpackage" ]; then
+  xcrun coremlcompiler compile \
+    "$repo_root/AITRANS/Resources/MangaOCR/MangaOCREncoderINT8Batch.mlpackage" \
+    "$resources"
+  xcrun coremlcompiler compile \
+    "$repo_root/AITRANS/Resources/MangaOCR/MangaOCRDecoderINT8Batch.mlpackage" \
+    "$resources"
+fi
 xcrun coremlcompiler compile \
   "$repo_root/AITRANS/Resources/ComicTextDetector/ComicTextBubbleDetectorINT8.mlpackage" \
   "$resources"
@@ -44,6 +53,8 @@ import re
 import sys
 
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
+if "batchInference=true" not in text:
+    raise SystemExit(f"expected bundled flexible-batch Manga OCR runtime: {text}")
 match = re.search(r"^blocks=(\d+)$", text, re.MULTILINE)
 if match is None or int(match.group(1)) != 5:
     raise SystemExit(f"expected exactly 5 detector-grouped OCR blocks, got: {text}")

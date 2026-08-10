@@ -6,8 +6,8 @@
   "weightQuantization": "linear-symmetric-int8",
   "minimumDeploymentTarget": "iOS17",
   "batchInference": {
-    "bundledModelBatchSize": 1,
-    "optionalFlexibleBatchModel": true,
+    "bundledModelBatchSize": 4,
+    "legacySingleCropFallback": true,
     "maximumBatchSize": 4
   }
 }

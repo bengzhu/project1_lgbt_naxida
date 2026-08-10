@@ -113,6 +113,12 @@ actor MangaOCRService {
         return results
     }
 
+    /// Exposes the loaded model shape to the runtime harness without making
+    /// Core ML models or mutable runtime state part of the app-facing API.
+    func batchInferenceEnabled() throws -> Bool {
+        try loadedRuntime().supportsBatchInference
+    }
+
     private static func appendJapaneseResult(
         _ recognition: (text: String, confidence: Float),
         request: MangaOCRRequest,

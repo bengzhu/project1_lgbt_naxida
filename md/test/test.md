@@ -7,6 +7,12 @@
 # 测试规范
 本文指导 Agent B 和 Agent C 选择 AITRANS 的验证层级。默认云端快验、本机只做轻量检查；只有人工明确要求“本机测试 / 本地 build / 本地跑探针 / 本地 xcodebuild”时，才把本机 Xcode build 或漫画探针作为默认验证路径。
 
+### v3.228 flexible-batch Manga OCR
+
+- `scripts/test-v3228-image-japanese-bundled-batch-runtime-contract.py`：验证两个 batch Core ML 包的 hash、Manifest、Xcode Resources、`1…4` shape provenance、legacy fallback、CI 路由以及单页／长页 harness 的 `batchInference=true` 断言。
+- `scripts/test-v3214-image-japanese-manga-ocr-runtime.sh` 与 `scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh`：在完整 Xcode 环境编译 batch 包并运行真实 Core ML；batch 编译或 capability 失败时不得以 Vision fallback 冒充通过。
+- 本版本不新增 OCR accuracy 或 ground-truth 指标；固定 `test/jap.jpg` 只验证模型执行与既有几何／布局回归，Koharu artifact readiness 仍单独门控。
+
 ### v3.221 Koharu detector-owned 日语 OCR supplement 合同
 
 - 成功 bundled Manga OCR 的 `verticalLine` 且 `preservesDetectorTextRegionBoundary` 结果是该 TextRegion 的 owner；最终日语 layout 前只过滤 `.page`／旋转 Vision observation，且要求日语脚本密度 `>= 0.5`、与 owner 的最小面积覆盖 `>= 0.60`。line、block、tile crop 与未重叠横排音效继续保留。

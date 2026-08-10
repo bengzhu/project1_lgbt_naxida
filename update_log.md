@@ -9547,3 +9547,8 @@ Agent C 最终验收：
 - exact-SHA full [31300669764](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31300669764) 对 SHA `c0c26aaddb3db641c59cb878d1434207b9879f54` 完成 Xcode/JUnit `10/10`，静态、语音与 UI 合同通过；probe `skip`。
 - 新增 `scripts/test-v3211-image-japanese-vertical-language-gate-contract.py`；真实 Koharu 四件套仍缺失，readiness 保持 `manifestMissing / stopUntilArtifactsProvided`。
 - 本轮只改变 language-specific reread 的候选集合与失败隔离，不加载 Manga OCR/PaddleOCR 权重，不读取 ground truth，不更新 metrics/output，不声称日语 OCR、翻译、识别或 Koharu 质量提升。
+## v3.228：实际随包 flexible-batch Manga OCR
+
+状态：继续沿 Koharu `MangaOcr::inference(&crops)` 的批量边界推进。v3.227 只提供可选 batch 接口，本版本把同 revision 转换出的 `MangaOCREncoderINT8Batch.mlpackage`／`MangaOCRDecoderINT8Batch.mlpackage` 纳入 Xcode Resources；两者声明 batch `1…4`，Swift runtime 仍按最多 4 个 crop 分块，只有成对 batch 模型可用时启用，批次输出错误、资源不成对或单 crop 失败都会回到既有单 crop 模型。单页／长页 harness 输出 `batchInference=true` 才算真实 batch runtime 通过。
+
+新增 `scripts/test-v3228-image-japanese-bundled-batch-runtime-contract.py`，更新单页／长页 Core ML runtime 脚本编译并验证 batch 资源，版本为 `3.228`。当前提交尚未取得云端 Core ML 编译与真实 runtime 收据；本地只能完成合同、资源 hash、JSON／plist／YAML 与 diff 检查，本机缺少完整 Xcode。该版本只证明可执行路径与性能资源，不声称日语 OCR 准确率提升；`test/jap.jpg` 仍是固定回归 fixture，Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。

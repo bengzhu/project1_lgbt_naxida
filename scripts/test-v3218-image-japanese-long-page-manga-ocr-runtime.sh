@@ -32,6 +32,15 @@ xcrun coremlcompiler compile \
 xcrun coremlcompiler compile \
   "$repo_root/AITRANS/Resources/MangaOCR/MangaOCRDecoderINT8.mlpackage" \
   "$resources"
+if [ -d "$repo_root/AITRANS/Resources/MangaOCR/MangaOCREncoderINT8Batch.mlpackage" ] \
+  && [ -d "$repo_root/AITRANS/Resources/MangaOCR/MangaOCRDecoderINT8Batch.mlpackage" ]; then
+  xcrun coremlcompiler compile \
+    "$repo_root/AITRANS/Resources/MangaOCR/MangaOCREncoderINT8Batch.mlpackage" \
+    "$resources"
+  xcrun coremlcompiler compile \
+    "$repo_root/AITRANS/Resources/MangaOCR/MangaOCRDecoderINT8Batch.mlpackage" \
+    "$resources"
+fi
 xcrun coremlcompiler compile \
   "$repo_root/AITRANS/Resources/ComicTextDetector/ComicTextBubbleDetectorINT8.mlpackage" \
   "$resources"
@@ -52,6 +61,8 @@ import sys
 
 
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
+if "batchInference=true" not in text:
+    raise SystemExit(f"expected bundled flexible-batch Manga OCR runtime: {text}")
 if "copies=4" not in text or "image=1136x6400" not in text:
     raise SystemExit(f"unexpected tall fixture geometry: {text}")
 match = re.search(r"^blocks=(\d+)$", text, re.MULTILINE)

@@ -94,6 +94,8 @@ enum LongPageMangaOCRRuntimeHarness {
             in: encoded as Data,
             sourceLanguage: .japanese
         )
+        let batchInference = try await MangaOCRService.shared.batchInferenceEnabled()
+        print("batchInference=\(batchInference)")
         print("copies=\(sourceCopies)")
         print("image=\(tallImage.width)x\(tallImage.height)")
         print("blocks=\(blocks.count)")
