@@ -111,6 +111,10 @@ class JapaneseMangaColumnOwnershipContractTests(unittest.TestCase):
                 "expandedVerticalLineCropRect(" in self.crop
                 and "region.cropRectHint ?? rect" in self.crop
             )
+            or (
+                "expandedVerticalCropRect(" in self.crop
+                and "direction: cropDirection" in self.crop
+            )
         )
         for marker in [
             "verticalOverlap >= 0.50",
