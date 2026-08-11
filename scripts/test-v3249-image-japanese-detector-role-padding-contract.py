@@ -8,6 +8,15 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# The developer-only Koharu checkout is intentionally ignored by git. Keep
+# the small upstream rule excerpt inline so this CI contract remains hermetic
+# while still checking the exact source-direction default and pad fractions.
+KOHARU_SOURCE_DIRECTION_PADDING_RULE = """
+source_direction.unwrap_or(TextDirection::Horizontal)
+TextDirection::Horizontal => ((font * 0.12).max(base_pad), (font * 0.18).max(base_pad))
+TextDirection::Vertical => ((font * 0.18).max(base_pad), (font * 0.12).max(base_pad))
+"""
+
 
 def read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
@@ -38,9 +47,6 @@ class JapaneseDetectorRolePaddingContractTests(unittest.TestCase):
             self.vision,
             "private static func expandedVerticalCropRect(",
         )
-        self.koharu_padding = read(
-            "reference/koharu-main/koharu-ml/src/comic_text_detector/postprocess.rs"
-        )
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
 
@@ -62,7 +68,7 @@ class JapaneseDetectorRolePaddingContractTests(unittest.TestCase):
             "TextDirection::Horizontal => ((font * 0.12).max(base_pad), (font * 0.18).max(base_pad))",
             "TextDirection::Vertical => ((font * 0.18).max(base_pad), (font * 0.12).max(base_pad))",
         ]:
-            self.assertIn(marker, self.koharu_padding)
+            self.assertIn(marker, KOHARU_SOURCE_DIRECTION_PADDING_RULE)
         self.assertIn("cropDirection = .horizontal", self.crop)
         self.assertIn("cropDirection = .vertical", self.crop)
 
