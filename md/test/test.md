@@ -1,3 +1,9 @@
+### v3.260 Koharu Manga OCR RGB luma contract
+
+- Manga OCR 预处理必须先用 32-bit canonical DeviceRGB 读取像素，再按 image-rs/Koharu 的 `(2126R + 7152G + 722B) / 10_000` 整数 floor 写入 luma；224×224 nearest floor coordinate mapping 保持不变。不得把隐式 DeviceGray 或四舍五入当作等价实现。
+- 新增 `scripts/test-v3260-koharu-manga-ocr-rgb-luma-contract.py` 与 `scripts/test-v3260-koharu-manga-ocr-rgb-luma-runtime.sh`，锁定 RGB 权重、floor probe、校验和与 CI 路由；本地 `280` 个 `scripts/test-v*.py` 合同和既有 Core ML runtime 通过。
+- exact-SHA full [31501763083](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31501763083)（SHA `a2963ff338a065a78112b451c37f3e1558f3e2a0`，Xcode/JUnit `10/10`，0 failures）通过并发布 `AITRANS CI/full-validation=success`；PR #335 merge SHA `68657d18ca192cd52c793064203f519d8d5c770e`，合入后 push CI [31503137128](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31503137128) 通过。probe 为 `skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称固定样图代表通用 OCR／翻译质量。
+
 ### v3.208 日语 pixel-first detector 合同
 
 - 普通图片源语言为日语时，`VisionOCRService` 在既有 page／block observation 之外，对 90°／270° 旋转图执行系统 `VNDetectTextRectanglesRequest`，只把映射回原图且满足竖排比例／尺寸门控、未被已有 vertical block 覆盖的最多 12 个矩形交给既有 crop/OCR helper。

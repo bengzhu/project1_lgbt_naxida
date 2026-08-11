@@ -1,3 +1,15 @@
+## v3.260：Koharu Manga OCR RGB luma floor 预处理对齐
+
+日期：2026-08-11
+
+Manga OCR crop 现在先把输入渲染为 canonical 8-bit DeviceRGB，再复刻 Koharu/image-rs `grayscale()` 的整数 luma floor：`(2126R + 7152G + 722B) / 10_000`。原有 224×224 nearest floor coordinate mapping 保持不变；不再依赖 Core Image 的隐式 DeviceGray profile 或 rounding。Manga OCR decoder、batch／单 crop fallback、取消传播、detector bbox／quad、布局、翻译、渲染和非图片路径不变。
+
+新增 `scripts/test-v3260-koharu-manga-ocr-rgb-luma-contract.py` 与 `scripts/test-v3260-koharu-manga-ocr-rgb-luma-runtime.sh`，工程版本为 `3.260`。本地 `280` 个 `scripts/test-v*.py` 合同、RGB luma runtime、既有 nearest／单页／长页／方向 crop／region diagnostic Core ML runtime、YAML、project plist、Python／shell 语法和 `git diff --check` 通过。
+
+exact-SHA full [31501763083](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31501763083) 对 SHA `a2963ff338a065a78112b451c37f3e1558f3e2a0` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe 按配置为 `skip`；PR #335 合入 `smalldata_test` 的 merge SHA `68657d18ca192cd52c793064203f519d8d5c770e`，合入后 push CI [31503137128](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31503137128) 通过。
+
+固定 `test/jap.jpg` 只用于输入预处理和既有 runtime 回归，不外推通用日语 OCR、翻译或识别质量；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c` 已在祖先链；研发分支已删除，本地／origin 仅保留 `main` 与 `smalldata_test`。
+
 ## v3.247：Manga OCR 后处理与单块复查焦点边界
 
 日期：2026-08-11
