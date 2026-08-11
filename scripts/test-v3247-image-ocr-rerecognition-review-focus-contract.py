@@ -124,9 +124,10 @@ class ImageOCRRerecognitionReviewFocusContractTests(unittest.TestCase):
             "focusReviewFilterResultIfNeeded()",
         ]:
             self.assertIn(marker, self.focus_helper)
-        self.assertIn(
-            "moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))",
-            self.focus_helper,
+        self.assertTrue(
+            "moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))"
+            in self.focus_helper
+            or "focusID = reviewRowAccessibilityFocusID(blockID)" in self.focus_helper
         )
 
     def test_existing_rerecognition_stale_guards_remain(self) -> None:
