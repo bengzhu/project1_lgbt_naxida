@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.261 图片 OCR 复查交互：结果行／局部预览触发 Vision OCR 恢复 → View 记录 `.row`／`.preview` → 确认成功后按入口回焦；目标因筛选隐藏时回退可见结果、完成态或空态。恢复仍只消费既有 Store baseline，不重跑 OCR、翻译或导出流程。
+
 v3.260 日语 Manga OCR crop：源图 → canonical 8-bit DeviceRGB → Koharu/image-rs luma floor `(2126R + 7152G + 722B) / 10_000` → 224×224 nearest floor resize → Manga OCR；decoder、batch／单 crop fallback、取消、detector ownership、布局、翻译、渲染和非图片路径不变。
 
 v3.241 日语 detector TextRegion → 严格 quad gate → Manga OCR bbox 主 crop；仅当 bbox 结果弱时才执行 line quad fallback，且只有显式 vertical hint 的四点 quad 才按 Koharu 长短轴生成 bounded target canvas → `rotate270` → Manga OCR，通用 quad 保留自然 perspective crop，目标／旋转失败保留自然 warp，投影失败回到 bbox。layout／ownership `rect`、batch、12-48 预算、取消、Vision fallback、批翻译、竖排渲染与非日语路径不变。

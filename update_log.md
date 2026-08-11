@@ -1,3 +1,15 @@
+## v3.261：图片 OCR Vision 恢复焦点来源连续性
+
+日期：2026-08-11
+
+图片 OCR 的“恢复 Vision OCR”确认动作现在保留入口上下文：从局部预览触发时记录 `.preview`，从结果行触发时记录 `.row`，确认成功后分别回到当前局部文字块或结果行。若恢复结果让 block 离开当前筛选，焦点安全回退到当前可见结果、复查完成态、筛选控件或空态；origin 只存在于 View，新图片 revision 与确认框关闭时清理。Store 的 Vision baseline、OCR、翻译、取消传播、generation、geometry、布局、导出和非图片路径不变。
+
+新增 `scripts/test-v3261-image-ocr-restore-focus-origin-contract.py` 并更新等价历史 restore 合同，工程版本为 `3.261`。本地 `281` 个 `scripts/test-v*.py` 合同、单页／长页／方向 crop／region diagnostic／RGB luma Core ML runtime、YAML、project plist、Python／shell 语法与 `git diff --check` 通过。
+
+exact-SHA full [31505154226](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31505154226) 对 SHA `c74205dbae3549b151ec536e9556c05b7a639207` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe 按配置为 `skip`；PR #337 合入 `smalldata_test` 的 merge SHA `1fa5ddaf2127946d817734da03565390515fa99a`，合入后 push CI [31506507801](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31506507801) 通过。
+
+固定 `test/jap.jpg` 只用于既有 OCR/runtime 回归，本版本只改善复查操作连续性，不外推通用日语 OCR、翻译或识别质量；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。v3.157 merge `1266de53935525c1014ec0b4cbecb9b7f20b6e86` 与 v3.158 merge `c940815a43e300685667d8b01888e53af910ec9c` 已在祖先链；代码研发分支已删除，receipt 合入后本地／origin 仅保留 `main` 与 `smalldata_test`。
+
 ## v3.260：Koharu Manga OCR RGB luma floor 预处理对齐
 
 日期：2026-08-11

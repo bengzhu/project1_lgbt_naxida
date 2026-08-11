@@ -1,3 +1,10 @@
+### v3.261 图片 OCR Vision 恢复焦点来源合同
+
+- 局部预览触发恢复时必须记录 `.preview`，结果行触发时保留 `.row`；确认成功后按来源分别聚焦预览文字块或结果行。若 restored block 不在当前筛选中，必须清理隐藏 selection 并回退到可见结果、完成态、筛选控件或空态。
+- origin 是 View-only state，不进入 `TranslationSessionStore`、持久化或 OCR pipeline；新图片 revision、取消／关闭确认框会清理 pending origin。现有 Store Vision baseline 恢复、OCR、翻译、布局、导出与非图片路径不变。
+- 新增 `scripts/test-v3261-image-ocr-restore-focus-origin-contract.py` 并更新 v3.322/v3.332/v3.341 等历史合同以接受等价 helper；本地全量 `281` 个 `scripts/test-v*.py` 合同和既有 Core ML runtime 通过。
+- exact-SHA full [31505154226](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31505154226)（SHA `c74205dbae3549b151ec536e9556c05b7a639207`，Xcode/JUnit `10/10`，0 failures）通过并发布 `AITRANS CI/full-validation=success`；PR #337 merge SHA `1fa5ddaf2127946d817734da03565390515fa99a`，合入后 push CI [31506507801](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31506507801) 通过。probe 为 `skip`，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称固定样图代表通用 OCR／翻译质量。
+
 ### v3.260 Koharu Manga OCR RGB luma contract
 
 - Manga OCR 预处理必须先用 32-bit canonical DeviceRGB 读取像素，再按 image-rs/Koharu 的 `(2126R + 7152G + 722B) / 10_000` 整数 floor 写入 luma；224×224 nearest floor coordinate mapping 保持不变。不得把隐式 DeviceGray 或四舍五入当作等价实现。
