@@ -59,7 +59,9 @@ class ImageOCRRestoreConfirmationContractTests(unittest.TestCase):
         self.assertNotIn("restoreVisionOCR: { restoreVisionOCR(for: block.id) }", inspector)
         request = braced_body(
             self.view,
-            "private func requestVisionOCRRestore(for block: ImageTranslationBlock)",
+            "private func requestVisionOCRRestore(\n"
+            "        for block: ImageTranslationBlock,\n"
+            "        focusOrigin: ImageTranslationRestoreFocusOrigin",
         )
         self.assertIn("imageTranslationCorrectedBlockIDs.contains(block.id)", request)
         self.assertIn("canModifyImageTranslation", request)

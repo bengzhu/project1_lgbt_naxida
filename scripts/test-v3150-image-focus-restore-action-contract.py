@@ -80,9 +80,9 @@ class ImageFocusPreviewRestoreActionContractTests(unittest.TestCase):
             "isManuallyCorrected: store.imageTranslationCorrectedBlockIDs.contains(selectedBlock.id)",
             self.preview,
         )
-        self.assertIn(
-            "restoreVisionOCR: { requestVisionOCRRestore(for: $0) }",
-            self.workspace,
+        self.assertTrue(
+            "restoreVisionOCR: { requestVisionOCRRestore(for: $0) }" in self.workspace
+            or "requestVisionOCRRestore(for: $0, focusOrigin: .preview)" in self.workspace
         )
         self.assertIn('.accessibilityLabel("已定位文字块局部放大")', self.focus)
         self.assertIn('.accessibilityValue("\\(positionText)，\\(accessibilityOriginalText)")', self.focus)

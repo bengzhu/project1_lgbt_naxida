@@ -54,11 +54,9 @@ class ImageOCRRestoreFocusHandoffContractTests(unittest.TestCase):
             "              restoreVisionOCR(for: block.id) else { return }",
             confirmation,
         )
-        self.assertIn(
-            "moveReviewAccessibilityFocusAfterRestoreConfirmationDismissal(\n"
-            "            to: reviewRowAccessibilityFocusID(block.id)",
-            confirmation,
-        )
+        self.assertIn("let focusID = restoreConfirmationFocusID(", confirmation)
+        self.assertIn("origin: imageTranslationRestoreFocusOrigin ?? .row", confirmation)
+        self.assertIn("to: focusID", confirmation)
         self.assertNotIn("restoreConfirmationBlock = nil", confirmation)
         self.assertNotIn("moveReviewAccessibilityFocus(to:", confirmation)
 
