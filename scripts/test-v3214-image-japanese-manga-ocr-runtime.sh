@@ -63,6 +63,7 @@ for expected in [
     "今度こそこの爆乳を持ち帰る！",
     "そのせいでつまんねー女に絡まれるし．．．",
     "監督より挨拶をお願いします",
+    "ニコッ",
 ]:
     if expected not in text:
         raise SystemExit(f"missing expected Manga OCR text: {expected}")
@@ -73,6 +74,7 @@ for rejected in [
     "vertical\tいします",
     "前は生意気に\n",
     "俺の誘い断り\n",
+    "vertical\tこっ、",
 ]:
     if rejected in text:
         raise SystemExit(f"retained cross-column or truncated Manga OCR text: {rejected}")

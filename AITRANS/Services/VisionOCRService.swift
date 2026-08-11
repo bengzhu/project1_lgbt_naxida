@@ -94,6 +94,10 @@ struct VisionOCRService: Sendable {
                     recognitionLanguages: japaneseVerticalRecognitionLanguages
                 )
                 observations.append(contentsOf: cropRefinedObservations)
+                observations = Self.preferCompactJapaneseCropRecovery(
+                    observations,
+                    detectorObservations: detectorMangaOCRObservations
+                )
             }
 
             let finalObservations = sourceLanguage == .japanese
@@ -2941,6 +2945,84 @@ struct VisionOCRService: Sendable {
             }
             return !detectorOwners.contains { owner in
                 overlapRatio(observation.rect, owner.rect) >= 0.60
+            }
+        }
+    }
+
+    /// A detector TextRegion can be geometrically correct while its bundled
+    /// Manga OCR result is a short, punctuation-heavy fragment.  The existing
+    /// bbox-primary rule must remain the default, but a tightly overlapping
+    /// Vision crop can be a better content read for this compact case (the
+    /// fixed sample's `こっ、` versus `ニコッ`).  Replace only when all of the
+    /// following hold: the owner is small and weak, the crop is a bounded
+    /// Japanese vertical reread, it contains at least one more Japanese letter
+    /// than the owner, and its geometry stays inside the owner neighborhood.
+    /// This is a fusion preference, not a new detector or request path.
+    private static func preferCompactJapaneseCropRecovery(
+        _ observations: [VisionOCRObservation],
+        detectorObservations: [VisionOCRObservation]
+    ) -> [VisionOCRObservation] {
+        var output = observations
+        for owner in detectorObservations {
+            let ownerText = owner.text.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            let ownerLetters = japaneseLetterCountForRecovery(ownerText)
+            guard owner.preservesDetectorTextRegionBoundary,
+                  owner.confidence.isFinite,
+                  owner.confidence < 0.80,
+                  owner.rect.width <= 0.08,
+                  owner.rect.height <= 0.08,
+                  ownerText.unicodeScalars.count <= 4,
+                  ownerLetters > 0 else {
+                continue
+            }
+
+            let candidate = observations
+                .filter { candidate in
+                    guard candidate != owner,
+                          candidate.observationRole == .crop
+                              || candidate.observationRole == .verticalLine,
+                          candidate.sourceDirectionHint == .vertical,
+                          candidate.confidence.isFinite,
+                          candidate.confidence >= 0.40,
+                          japaneseScriptDensity(in: candidate.text) >= 0.5,
+                          japaneseLetterCountForRecovery(candidate.text)
+                              > ownerLetters,
+                          overlapRatio(candidate.rect, owner.rect) >= 0.70,
+                          candidate.rect.width <= max(owner.rect.width * 3.0, 0.08),
+                          candidate.rect.height <= max(owner.rect.height * 2.5, 0.08) else {
+                        return false
+                    }
+                    return true
+                }
+                .max { lhs, rhs in
+                    let lhsLetters = japaneseLetterCountForRecovery(lhs.text)
+                    let rhsLetters = japaneseLetterCountForRecovery(rhs.text)
+                    if lhsLetters != rhsLetters { return lhsLetters < rhsLetters }
+                    if lhs.confidence != rhs.confidence {
+                        return lhs.confidence < rhs.confidence
+                    }
+                    return lhs.text < rhs.text
+                }
+            guard candidate != nil,
+                  let ownerIndex = output.firstIndex(of: owner) else {
+                continue
+            }
+            output.remove(at: ownerIndex)
+        }
+        return output
+    }
+
+    private static func japaneseLetterCountForRecovery(_ text: String) -> Int {
+        text.unicodeScalars.reduce(into: 0) { count, scalar in
+            switch scalar.value {
+            case 0x3041...0x3096, 0x30A1...0x30FA, 0x30FD...0x30FF,
+                 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF,
+                 0xFF66...0xFF9D:
+                count += 1
+            default:
+                break
             }
         }
     }
