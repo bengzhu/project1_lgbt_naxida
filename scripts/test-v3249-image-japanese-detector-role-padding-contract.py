@@ -52,13 +52,10 @@ class JapaneseDetectorRolePaddingContractTests(unittest.TestCase):
 
     def test_detector_and_vision_roles_select_koharu_direction_defaults(self) -> None:
         for marker in [
-            "let cropDirection: ImageTextDirection",
-            "switch region.detector",
-            "case .comicTextBubble:",
-            "cropDirection = .horizontal",
-            "case .vision:",
-            "cropDirection = .vertical",
-            "direction: cropDirection",
+            "guard case .vision = region.detector else {",
+            "return rect",
+            "let cropBase = region.cropRectHint ?? rect",
+            "direction: .vertical",
         ]:
             self.assertIn(marker, self.crop)
 
@@ -69,14 +66,14 @@ class JapaneseDetectorRolePaddingContractTests(unittest.TestCase):
             "TextDirection::Vertical => ((font * 0.18).max(base_pad), (font * 0.12).max(base_pad))",
         ]:
             self.assertIn(marker, KOHARU_SOURCE_DIRECTION_PADDING_RULE)
-        self.assertIn("cropDirection = .horizontal", self.crop)
-        self.assertIn("cropDirection = .vertical", self.crop)
+        self.assertIn("guard case .vision = region.detector else {", self.crop)
+        self.assertIn("return rect", self.crop)
 
     def test_detector_ownership_bbox_and_vision_hint_boundaries_remain_separate(self) -> None:
         for marker in [
-            "if case .vision = region.detector",
-            "cropBase = region.cropRectHint ?? rect",
-            "cropBase = rect",
+            "guard case .vision = region.detector else {",
+            "let cropBase = region.cropRectHint ?? rect",
+            "return rect",
             "guard case .vision = region.detector else",
             "let boundary = (rect.midX + neighbor.rect.midX) / 2",
             "return ImageOCRLayoutRect(\n            x: left,",

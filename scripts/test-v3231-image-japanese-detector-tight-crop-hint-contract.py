@@ -76,7 +76,7 @@ class JapaneseDetectorTightCropHintContractTests(unittest.TestCase):
     def test_hint_changes_crop_only_and_detector_regions_keep_existing_padding(self) -> None:
         self.assertIn("region.cropRectHint ?? rect", self.crop)
         self.assertIn("guard case .vision = region.detector else {", self.crop)
-        self.assertIn("return expanded", self.crop)
+        self.assertTrue("return rect" in self.crop or "return expanded" in self.crop)
         self.assertNotIn("region.cropRectHint =", self.vision)
 
     def test_existing_runtime_and_failure_boundaries_remain(self) -> None:

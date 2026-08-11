@@ -50,13 +50,10 @@ class JapaneseDetectorBBoxCropContractTests(unittest.TestCase):
         )
         for marker in [
             "let rect = region.rect",
-            "let cropBase: ImageOCRLayoutRect",
-            "if case .vision = region.detector",
-            "cropBase = region.cropRectHint ?? rect",
-            "cropBase = rect",
-            crop_marker,
             "guard case .vision = region.detector else {",
-            "return expanded",
+            "let cropBase = region.cropRectHint ?? rect",
+            "return rect",
+            crop_marker,
         ]:
             self.assertIn(marker, self.crop)
         self.assertNotIn(
@@ -64,15 +61,15 @@ class JapaneseDetectorBBoxCropContractTests(unittest.TestCase):
             self.crop,
         )
         self.assertLess(
-            self.crop.index("cropBase = rect"),
+            self.crop.index("guard case .vision = region.detector else {"),
             self.crop.index(crop_marker),
         )
 
     def test_vision_hint_remains_supplement_only(self) -> None:
         self.assertIn("cropBase = region.cropRectHint ?? rect", self.crop)
         self.assertLess(
-            self.crop.index("if case .vision = region.detector"),
             self.crop.index("guard case .vision = region.detector else {"),
+            self.crop.index("let cropBase = region.cropRectHint ?? rect"),
         )
         self.assertIn("cropRectHint: japaneseDetectorCropHint(", self.vision)
         self.assertIn("textRect: region.rect", self.request_path)
