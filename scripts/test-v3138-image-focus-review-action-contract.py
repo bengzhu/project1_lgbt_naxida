@@ -72,7 +72,10 @@ class ImageFocusPreviewReviewActionContractTests(unittest.TestCase):
         self.assertIn('.accessibilityValue("\\(positionText)，\\(accessibilityOriginalText)")', self.focus)
         self.assertIn('.accessibilityAction(named: "关闭局部放大")', self.focus)
         self.assertIn("ImageFocusPreviewEditAccessibilityModifier", self.focus)
-        self.assertIn("reviewAccessibilityHint(appendingTo: base)", self.focus)
+        self.assertTrue(
+            "reviewAccessibilityHint(appendingTo: base)" in self.focus
+            or "reviewAccessibilityHint(appendingTo: modificationHint)" in self.focus
+        )
         self.assertIn("reviewActionAccessibilityName", self.focus)
         self.assertIn("可执行“\\(reviewActionAccessibilityName)”", self.focus)
 

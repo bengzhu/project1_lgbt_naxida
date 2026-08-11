@@ -2997,30 +2997,20 @@ private struct ImageTranslationFocusPreview: View {
     }
 
     private var focusPreviewAccessibilityHint: String {
+        let base: String
         if focusCrop == nil {
             if canEdit {
-                if !isReviewRequired {
-                    guard isManuallyCorrected else {
-                        return "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
-                    }
-                    return focusPreviewModificationHint(
-                        appendingTo: "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
-                    )
-                }
-                let base = focusPreviewModificationHint(
-                    appendingTo: "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
-                )
-                return reviewAccessibilityHint(appendingTo: base)
+                base = "局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块"
+            } else {
+                base = "局部预览不可用；仍可关闭或切换文字块；\(modificationUnavailableHint)"
             }
-            let base = "局部预览不可用；仍可关闭或切换文字块；\(modificationUnavailableHint)"
-            return reviewAccessibilityHint(appendingTo: base)
+        } else if canEdit {
+            base = "可执行“关闭局部放大”或“修正识别文字”，也可切换文字块"
+        } else {
+            base = "可关闭局部放大或切换文字块；\(modificationUnavailableHint)"
         }
-        if canEdit {
-            let base = focusPreviewModificationHint(appendingTo: "可执行“关闭局部放大”或“修正识别文字”，也可切换文字块")
-            return reviewAccessibilityHint(appendingTo: base)
-        }
-        let base = "可关闭局部放大或切换文字块；\(modificationUnavailableHint)"
-        return reviewAccessibilityHint(appendingTo: base)
+        let modificationHint = focusPreviewModificationHint(appendingTo: base)
+        return reviewAccessibilityHint(appendingTo: modificationHint)
     }
 
     private func focusPreviewModificationHint(appendingTo base: String) -> String {
@@ -3030,7 +3020,7 @@ private struct ImageTranslationFocusPreview: View {
                 ? "；正在重新识别此文字块"
                 : "；也可执行“重新识别此文字块”"
         }
-        guard isManuallyCorrected else { return detail }
+        guard isManuallyCorrected, canEdit else { return detail }
         return "\(detail)；也可执行“恢复 Vision OCR”"
     }
 
@@ -3719,6 +3709,9 @@ private struct ImageTranslationBlockRow: View {
         }
         if canRetryTranslation {
             actions.append("重试此文字块翻译")
+        }
+        if canRerecognize && !isRerecognizing {
+            actions.append("重新识别此文字块")
         }
         guard !actions.isEmpty else { return base }
         return "\(base)；VoiceOver 可执行：\(actions.joined(separator: "、"))"
