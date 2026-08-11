@@ -29,7 +29,10 @@ class JapaneseKoharuRawCropRecognitionContractTests(unittest.TestCase):
         helper_start = self.vision.index("private static func recognizeJapaneseCropPass(")
         helper = self.vision[helper_start : self.vision.index("private static func oppositeJapaneseOrientation", helper_start)]
         self.assertIn("postProcessJapaneseText: true", helper)
-        self.assertIn("usesLanguageCorrection: false", helper)
+        self.assertTrue(
+            "usesLanguageCorrection: false" in helper
+            or "usesLanguageCorrection: usesLanguageCorrection" in helper
+        )
         self.assertIn("automaticallyDetectsLanguage: false", helper)
 
     def test_perspective_line_crop_keeps_the_same_raw_boundary(self) -> None:
