@@ -1093,15 +1093,16 @@ struct ImageTranslationPanel: View {
         return true
     }
 
+    @discardableResult
     private func setImageTranslationBlockDirection(
         _ direction: ImageTextDirection?,
         for blockID: UUID,
         focusInPreview: Bool,
         deferFocusUntilCorrectionSheetDismissal: Bool = false
-    ) {
+    ) -> Bool {
         guard canModifyImageTranslation,
               store.setImageTranslationBlockDirectionOverride(blockID, direction: direction) else {
-            return
+            return false
         }
         let focusID: String
         if visibleImageTranslationBlocks.contains(where: { $0.id == blockID }) {
@@ -1122,6 +1123,7 @@ struct ImageTranslationPanel: View {
         } else {
             moveReviewAccessibilityFocus(to: focusID)
         }
+        return true
     }
 
     private func reviewFocusIDAfterHiddenDirectionBlock() -> String {
