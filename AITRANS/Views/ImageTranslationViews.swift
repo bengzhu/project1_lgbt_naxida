@@ -193,6 +193,10 @@ struct ImageTranslationPanel: View {
     let revealPreview: () -> Void
 
     var body: some View {
+        imageTranslationPanelReviewObservers
+    }
+
+    private var imageTranslationPanelPresentation: some View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .top, spacing: AppTheme.Spacing.section) {
                 imageWorkspace
@@ -263,6 +267,10 @@ struct ImageTranslationPanel: View {
         } message: {
             Text("这会把 \(store.imageTranslationIgnoredBlocks.count) 个文字块恢复到图片预览、导出和当前转录；需要复查的文字块会重新回到待复查队列。")
         }
+    }
+
+    private var imageTranslationPanelStatusObservers: some View {
+        imageTranslationPanelPresentation
         .onChange(of: store.imageTranslationExportURL) { _, exportURL in
             guard exportURL == nil else { return }
             finishSharing()
@@ -278,6 +286,10 @@ struct ImageTranslationPanel: View {
         .onDisappear {
             finishSharing()
         }
+    }
+
+    private var imageTranslationPanelReviewObservers: some View {
+        imageTranslationPanelStatusObservers
         .onChange(of: store.imageTranslationRevision) { _, _ in
             prepareReviewFilterChange(
                 to: .all,
@@ -300,7 +312,26 @@ struct ImageTranslationPanel: View {
             }
         }
         .onChange(of: store.imageTranslationState) { oldState, state in
-            handleImageTranslationStateChange(oldState: oldState, state: state)
+            if state == .idle {
+                switch oldState {
+                case .loading, .recognizing, .translating:
+                    pendingImageTranslationTerminalFocusRevision = nil
+                    moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+                case .idle, .translated, .failed:
+                    break
+                }
+                return
+            }
+            if state == .failed,
+               pendingImageTranslationTerminalFocusRevision != store.imageTranslationRevision {
+                pendingImageTranslationTerminalFocusRevision = nil
+                moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+                return
+            }
+            guard state == .translated || state == .failed else { return }
+            guard pendingImageTranslationTerminalFocusRevision == store.imageTranslationRevision else { return }
+            pendingImageTranslationTerminalFocusRevision = nil
+            focusImageTranslationTerminalStateIfNeeded()
         }
         .onChange(of: store.imageTranslationBlockRetryCompletionGeneration) { _, generation in
             guard generation > 0,
@@ -343,32 +374,6 @@ struct ImageTranslationPanel: View {
             }
             focusEmptyReviewStateIfNeeded()
         }
-    }
-
-    private func handleImageTranslationStateChange(
-        oldState: ImageTranslationState,
-        state: ImageTranslationState
-    ) {
-        if state == .idle {
-            switch oldState {
-            case .loading, .recognizing, .translating:
-                pendingImageTranslationTerminalFocusRevision = nil
-                moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
-            case .idle, .translated, .failed:
-                break
-            }
-            return
-        }
-        if state == .failed,
-           pendingImageTranslationTerminalFocusRevision != store.imageTranslationRevision {
-            pendingImageTranslationTerminalFocusRevision = nil
-            moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
-            return
-        }
-        guard state == .translated || state == .failed else { return }
-        guard pendingImageTranslationTerminalFocusRevision == store.imageTranslationRevision else { return }
-        pendingImageTranslationTerminalFocusRevision = nil
-        focusImageTranslationTerminalStateIfNeeded()
     }
 
     private var imageWorkspace: some View {
