@@ -53,6 +53,7 @@ class ImagePreviewInvalidGeometryContractTests(unittest.TestCase):
         self.assertTrue(
             "return \"局部预览不可用；仍可关闭、编辑 OCR 原文或切换文字块\"" in preview
             or "return \"局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块\"" in preview
+            or "base = \"局部预览不可用；仍可关闭、修正 OCR 原文或切换文字块\"" in preview
         )
         self.assertIn("Button(\"关闭局部放大\"", preview)
         self.assertIn("Button(\"修正识别文字\"", preview)
