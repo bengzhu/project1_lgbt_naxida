@@ -79,7 +79,7 @@ class JapaneseKoharuPixelDetectorContractTests(unittest.TestCase):
             self.assertIn(marker, detector_scope)
         self.assertRegex(
             detector_scope,
-            r"japanesePixelDetectorRegionIsCovered\(\s*\$0\.rect,\s*by:\s*mappedRect\)",
+            r"japanesePixelDetectorRegionIsCovered\(\s*\$0\.rect,\s*by:\s*mappedRect\s*\)",
         )
 
     def test_detector_crop_reuses_koharu_preprocess_mapping_and_fallback_budget(self) -> None:
