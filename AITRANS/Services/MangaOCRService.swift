@@ -12,6 +12,11 @@ enum MangaOCRCropOrientation: Int, Sendable {
 struct MangaOCRRequest: Sendable {
     var textRect: ImageOCRLayoutRect
     var cropRect: ImageOCRLayoutRect
+    /// Optional upstream detector confidence. This is provenance only: the
+    /// Manga OCR model still scores the crop itself, while page-level fusion
+    /// can refuse to protect a weak detector owner from a higher-quality
+    /// Vision candidate.
+    var detectorConfidence: Float?
     /// Orientation for the detector bbox crop. Ownership geometry remains in
     /// `textRect`/`cropRect`; this only changes pixels presented to the model.
     var cropOrientation: MangaOCRCropOrientation
@@ -27,12 +32,14 @@ struct MangaOCRRequest: Sendable {
     init(
         textRect: ImageOCRLayoutRect,
         cropRect: ImageOCRLayoutRect,
+        detectorConfidence: Float? = nil,
         cropOrientation: MangaOCRCropOrientation = .natural,
         cropQuad: ImageOCRLayoutQuad? = nil,
         cropQuadIsVertical: Bool = false
     ) {
         self.textRect = textRect
         self.cropRect = cropRect
+        self.detectorConfidence = detectorConfidence
         self.cropOrientation = cropOrientation
         self.cropQuad = cropQuad
         self.cropQuadIsVertical = cropQuadIsVertical
@@ -43,6 +50,10 @@ struct MangaOCRResult: Sendable {
     var text: String
     var confidence: Float
     var textRect: ImageOCRLayoutRect
+    /// Detector provenance is retained so Japanese page fusion can distinguish
+    /// a strong model read from a weak detector owner that happens to decode
+    /// into high-confidence noise.
+    var detectorConfidence: Float?
 }
 
 enum MangaOCRServiceError: LocalizedError {
@@ -209,7 +220,8 @@ actor MangaOCRService {
             MangaOCRResult(
                 text: recognition.text,
                 confidence: recognition.confidence,
-                textRect: request.textRect
+                textRect: request.textRect,
+                detectorConfidence: request.detectorConfidence
             )
         )
     }

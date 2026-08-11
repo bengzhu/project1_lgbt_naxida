@@ -186,6 +186,10 @@ struct ImageTranslationPanel: View {
     @State private var pendingImageTranslationTerminalFocusRevision: Int?
     @State private var imageTranslationRerecognitionFocusOrigin:
         ImageTranslationRerecognitionFocusOrigin?
+    /// A rerecognition completion may arrive after the user has moved to a
+    /// different row or filter. Keep the origin tied to the requested block so
+    /// an intentional user navigation cancels only the pending focus jump.
+    @State private var imageTranslationRerecognitionFocusIntentBlockID: UUID?
     @State private var imageTranslationCorrectionFocusOrigin:
         ImageTranslationCorrectionFocusOrigin?
     @State private var selectedImageTranslationBlockID: UUID?
@@ -305,6 +309,7 @@ struct ImageTranslationPanel: View {
             )
             pendingImageTranslationTerminalFocusRevision = store.imageTranslationRevision
             imageTranslationRerecognitionFocusOrigin = nil
+            imageTranslationRerecognitionFocusIntentBlockID = nil
             imageTranslationCorrectionFocusOrigin = nil
             reviewAccessibilityFocusRequestID &+= 1
             selectedImageTranslationBlockID = nil
@@ -1044,6 +1049,7 @@ struct ImageTranslationPanel: View {
     }
 
     private func toggleSelection(of blockID: UUID) {
+        invalidateImageTranslationRerecognitionFocusIntent()
         if selectedImageTranslationBlockID == blockID {
             selectedImageTranslationBlockID = nil
             moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))
@@ -1059,6 +1065,7 @@ struct ImageTranslationPanel: View {
               store.imageTranslationBlocks.contains(where: { $0.id == block.id }) else {
             return
         }
+        invalidateImageTranslationRerecognitionFocusIntent()
         imageTranslationCorrectionFocusOrigin = .row
         selectedImageTranslationBlockID = block.id
         moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
@@ -1072,6 +1079,7 @@ struct ImageTranslationPanel: View {
               store.imageTranslationBlocks.contains(where: { $0.id == block.id }) else {
             return
         }
+        invalidateImageTranslationRerecognitionFocusIntent()
         imageTranslationCorrectionFocusOrigin = .preview
         selectedImageTranslationBlockID = block.id
         moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
@@ -1114,6 +1122,7 @@ struct ImageTranslationPanel: View {
               store.setImageTranslationBlockDirectionOverride(blockID, direction: direction) else {
             return false
         }
+        invalidateImageTranslationRerecognitionFocusIntent()
         let focusID: String
         if visibleImageTranslationBlocks.contains(where: { $0.id == blockID }) {
             selectedImageTranslationBlockID = blockID
@@ -1275,6 +1284,7 @@ struct ImageTranslationPanel: View {
     }
 
     private func selectBlockFromPreview(_ blockID: UUID) {
+        invalidateImageTranslationRerecognitionFocusIntent()
         if selectedImageTranslationBlockID == blockID {
             selectedImageTranslationBlockID = nil
             moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))
@@ -1292,6 +1302,7 @@ struct ImageTranslationPanel: View {
 
     private func closeImageTranslationFocusPreview() {
         guard let selectedImageTranslationBlockID else { return }
+        invalidateImageTranslationRerecognitionFocusIntent()
         self.selectedImageTranslationBlockID = nil
         moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(selectedImageTranslationBlockID))
     }
@@ -1299,6 +1310,7 @@ struct ImageTranslationPanel: View {
     private func beginReviewQueue() {
         guard canReviewImageTranslation,
               let firstBlockID = reviewRequiredBlocks.first?.id else { return }
+        invalidateImageTranslationRerecognitionFocusIntent()
         let retainedBlockID = selectedImageTranslationBlockID.flatMap { selectedBlockID in
             reviewRequiredBlocks.contains(where: { $0.id == selectedBlockID }) ? selectedBlockID : nil
         }
@@ -1315,6 +1327,7 @@ struct ImageTranslationPanel: View {
     private func toggleReviewCompletion(_ blockID: UUID, focusInPreview: Bool) {
         guard canReviewImageTranslation,
               allReviewRequiredBlocks.contains(where: { $0.id == blockID }) else { return }
+        invalidateImageTranslationRerecognitionFocusIntent()
         if store.reopenImageTranslationBlockReview(blockID) {
             let focusID = focusInPreview
                 ? reviewPreviewAccessibilityFocusID(blockID)
@@ -1345,6 +1358,7 @@ struct ImageTranslationPanel: View {
     private func restartReviewQueue() {
         guard canReviewImageTranslation,
               let firstBlockID = allReviewRequiredBlocks.first?.id else { return }
+        invalidateImageTranslationRerecognitionFocusIntent()
         store.resetImageTranslationReviewProgress()
         prepareReviewFilterChange(
             to: .needsReview,
@@ -1448,6 +1462,7 @@ struct ImageTranslationPanel: View {
         guard let selectedVisibleBlockIndex else { return }
         let targetIndex = selectedVisibleBlockIndex + offset
         guard visibleImageTranslationBlocks.indices.contains(targetIndex) else { return }
+        invalidateImageTranslationRerecognitionFocusIntent()
         let targetBlockID = visibleImageTranslationBlocks[targetIndex].id
         selectedImageTranslationBlockID = targetBlockID
         moveReviewAccessibilityFocus(to: reviewPreviewAccessibilityFocusID(targetBlockID))
@@ -1503,6 +1518,7 @@ struct ImageTranslationPanel: View {
     ) {
         guard store.canRerecognizeImageTranslationBlock(blockID) else { return }
         imageTranslationRerecognitionFocusOrigin = focusOrigin
+        imageTranslationRerecognitionFocusIntentBlockID = blockID
         store.rerecognizeImageTranslationBlock(blockID)
     }
 
@@ -1517,6 +1533,7 @@ struct ImageTranslationPanel: View {
             guard revision == store.imageTranslationRevision,
                   generation == store.imageTranslationBlockRerecognitionCompletionGeneration,
                   store.imageTranslationBlockRerecognitionCompletedBlockID == blockID,
+                  imageTranslationRerecognitionFocusIntentBlockID == blockID,
                   store.imageTranslationState == .translated || store.imageTranslationState == .failed else {
                 return
             }
@@ -1530,11 +1547,13 @@ struct ImageTranslationPanel: View {
                     focusID = reviewPreviewAccessibilityFocusID(blockID)
                 }
                 imageTranslationRerecognitionFocusOrigin = nil
+                imageTranslationRerecognitionFocusIntentBlockID = nil
                 moveReviewAccessibilityFocus(to: focusID)
                 return
             }
 
             imageTranslationRerecognitionFocusOrigin = nil
+            imageTranslationRerecognitionFocusIntentBlockID = nil
             if selectedImageTranslationBlockID == blockID {
                 selectedImageTranslationBlockID = nil
             }
@@ -1553,11 +1572,13 @@ struct ImageTranslationPanel: View {
             await Task.yield()
             guard revision == store.imageTranslationRevision,
                   generation == store.imageTranslationBlockRerecognitionFailureGeneration,
+                  imageTranslationRerecognitionFocusIntentBlockID != nil,
                   store.imageTranslationRerecognizingBlockID == nil,
                   store.imageTranslationState == .translated || store.imageTranslationState == .failed else {
                 return
             }
             imageTranslationRerecognitionFocusOrigin = nil
+            imageTranslationRerecognitionFocusIntentBlockID = nil
             moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
         }
     }
@@ -1589,6 +1610,7 @@ struct ImageTranslationPanel: View {
         focusID: String?,
         suppressResultFocus: Bool = false
     ) {
+        invalidateImageTranslationRerecognitionFocusIntent()
         guard reviewFilter != nextFilter else {
             pendingReviewFilterFocusID = nil
             suppressNextReviewFilterResultFocus = false
@@ -1597,6 +1619,14 @@ struct ImageTranslationPanel: View {
         pendingReviewFilterFocusID = focusID
         suppressNextReviewFilterResultFocus = suppressResultFocus
         reviewFilter = nextFilter
+    }
+
+    /// User navigation wins over an automatic rerecognition focus callback.
+    /// This does not cancel OCR or translation; it only prevents VoiceOver from
+    /// being pulled back to a stale row after the user chose another target.
+    private func invalidateImageTranslationRerecognitionFocusIntent() {
+        imageTranslationRerecognitionFocusOrigin = nil
+        imageTranslationRerecognitionFocusIntentBlockID = nil
     }
 
     private var reviewFilterEmptyStateAccessibilityValue: String {
