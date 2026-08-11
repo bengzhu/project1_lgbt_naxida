@@ -4086,7 +4086,7 @@ private struct ImageOCRCorrectionSheet: View {
 
                 if needsReview {
                     Section("复查提示") {
-                        if ImageOCRResultSummary.hasLowConfidence(block) {
+                        if ImageOCRResultSummary.hasLowConfidence(reviewBlock) {
                             HStack {
                                 Label("OCR 置信度", systemImage: "exclamationmark.triangle.fill")
                                     .foregroundStyle(Color.appWarning)
@@ -4098,7 +4098,7 @@ private struct ImageOCRCorrectionSheet: View {
                                 .font(.caption)
                                 .foregroundStyle(Color.appTextSecondary)
                         }
-                        if ImageOCRResultSummary.hasUnknownDirection(block) {
+                        if ImageOCRResultSummary.hasUnknownDirection(reviewBlock) {
                             Label("文字方向待定", systemImage: "questionmark.diamond.fill")
                                 .foregroundStyle(Color.appWarning)
                             Text("布局无法稳定判断横排或竖排，请按图片原文确认顺序。")
@@ -4239,7 +4239,17 @@ private struct ImageOCRCorrectionSheet: View {
     }
 
     private var needsReview: Bool {
-        ImageOCRResultSummary.requiresReview(block)
+        ImageOCRResultSummary.requiresReview(reviewBlock)
+    }
+
+    /// The direction picker is view-local until the user commits it. Keep the
+    /// review warning in sync with that pending choice so choosing horizontal
+    /// or vertical immediately clears a stale "direction pending" warning.
+    /// OCR, translation, and the persisted block remain unchanged here.
+    private var reviewBlock: ImageTranslationBlock {
+        var updated = block
+        updated.sourceDirectionOverride = selectedDirectionOverride
+        return updated
     }
 
     private var displayConfidence: Double {

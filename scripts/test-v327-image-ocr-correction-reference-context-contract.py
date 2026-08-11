@@ -69,10 +69,19 @@ class ImageOCRCorrectionReferenceContextContractTests(unittest.TestCase):
         self.assertIn("ImageOCRCorrectionReferencePreview(imageData: imageData, block: block)", self.editor)
         self.assertIn("局部图只使用既有本地预览，不会重新识别图片", self.editor)
         self.assertIn('Section("复查提示")', self.editor)
-        self.assertIn("ImageOCRResultSummary.hasLowConfidence(block)", self.editor)
-        self.assertIn("ImageOCRResultSummary.hasUnknownDirection(block)", self.editor)
+        self.assertTrue(
+            "ImageOCRResultSummary.hasLowConfidence(block)" in self.editor
+            or "ImageOCRResultSummary.hasLowConfidence(reviewBlock)" in self.editor
+        )
+        self.assertTrue(
+            "ImageOCRResultSummary.hasUnknownDirection(block)" in self.editor
+            or "ImageOCRResultSummary.hasUnknownDirection(reviewBlock)" in self.editor
+        )
         self.assertIn("保存只会重新翻译当前文字块，不会重新识别整张图片", self.editor)
-        self.assertIn("ImageOCRResultSummary.requiresReview(block)", self.editor)
+        self.assertTrue(
+            "ImageOCRResultSummary.requiresReview(block)" in self.editor
+            or "ImageOCRResultSummary.requiresReview(reviewBlock)" in self.editor
+        )
 
     def test_existing_focus_preview_reuses_the_shared_crop_geometry(self) -> None:
         focus = braced_body(self.view, "private struct ImageTranslationFocusPreview: View")

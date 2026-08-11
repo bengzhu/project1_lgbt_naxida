@@ -81,6 +81,14 @@ enum MangaOCRServiceError: LocalizedError {
 /// failure for linearly quantized decoder masks while retaining bounded memory.
 actor MangaOCRService {
     static let shared = MangaOCRService()
+
+    /// Test-only evidence hook for the bundled runtime harness. It exposes the
+    /// exact grayscale plane used by the encoder without loading model assets,
+    /// so CI can verify the Koharu sampling contract independently of OCR text.
+    static func diagnosticKoharuNearestGrayscale(_ image: CGImage) throws -> [UInt8] {
+        try MangaOCRRuntime.diagnosticKoharuNearestGrayscale(image)
+    }
+
     private static let maximumBatchSize = 4
     private static let preferredCropConfidence: Float = 0.55
     private static let preferredJapaneseScriptDensity = 0.5
@@ -887,32 +895,7 @@ private struct MangaOCRRuntime {
             throw MangaOCRServiceError.imageDecodeFailed
         }
         let planeSize = imageSize * imageSize
-        let grayscaleImages = try images.map { image in
-            var grayscale = [UInt8](repeating: 0, count: planeSize)
-            let rendered = grayscale.withUnsafeMutableBytes { bytes -> Bool in
-                guard let context = CGContext(
-                    data: bytes.baseAddress,
-                    width: imageSize,
-                    height: imageSize,
-                    bitsPerComponent: 8,
-                    bytesPerRow: imageSize,
-                    space: CGColorSpaceCreateDeviceGray(),
-                    bitmapInfo: CGImageAlphaInfo.none.rawValue
-                ) else {
-                    return false
-                }
-                context.interpolationQuality = .high
-                context.draw(
-                    image,
-                    in: CGRect(x: 0, y: 0, width: imageSize, height: imageSize)
-                )
-                return true
-            }
-            guard rendered else {
-                throw MangaOCRServiceError.imageDecodeFailed
-            }
-            return grayscale
-        }
+        let grayscaleImages = try images.map(Self.makeKoharuNearestGrayscale)
 
         let values = try MLMultiArray(
             shape: [
@@ -938,6 +921,65 @@ private struct MangaOCRRuntime {
             }
         }
         return values
+    }
+
+    /// Matches Koharu's current `candle` Manga OCR preprocessor. Its
+    /// `Tensor::interpolate2d` call is the nearest-neighbor `UpsampleNearest2D`
+    /// operator, using `floor(dst * src / target)` for each axis. Keep the
+    /// source color conversion separate, then sample the rendered grayscale
+    /// plane with that exact mapping instead of relying on Core Graphics' high
+    /// quality interpolation, which changes small vertical glyphs.
+    private static func makeKoharuNearestGrayscale(_ image: CGImage) throws -> [UInt8] {
+        guard image.width > 0, image.height > 0 else {
+            throw MangaOCRServiceError.imageDecodeFailed
+        }
+        var source = [UInt8](repeating: 0, count: image.width * image.height)
+        let rendered = source.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(
+                data: bytes.baseAddress,
+                width: image.width,
+                height: image.height,
+                bitsPerComponent: 8,
+                bytesPerRow: image.width,
+                space: CGColorSpaceCreateDeviceGray(),
+                bitmapInfo: CGImageAlphaInfo.none.rawValue
+            ) else {
+                return false
+            }
+            context.interpolationQuality = .none
+            context.draw(
+                image,
+                in: CGRect(x: 0, y: 0, width: image.width, height: image.height)
+            )
+            return true
+        }
+        guard rendered else {
+            throw MangaOCRServiceError.imageDecodeFailed
+        }
+
+        let scaleX = Double(image.width) / Double(imageSize)
+        let scaleY = Double(image.height) / Double(imageSize)
+        var resized = [UInt8](repeating: 0, count: imageSize * imageSize)
+        for targetY in 0..<imageSize {
+            let sourceY = min(
+                image.height - 1,
+                Int(Double(targetY) * scaleY)
+            )
+            let sourceRow = sourceY * image.width
+            let targetRow = targetY * imageSize
+            for targetX in 0..<imageSize {
+                let sourceX = min(
+                    image.width - 1,
+                    Int(Double(targetX) * scaleX)
+                )
+                resized[targetRow + targetX] = source[sourceRow + sourceX]
+            }
+        }
+        return resized
+    }
+
+    static func diagnosticKoharuNearestGrayscale(_ image: CGImage) throws -> [UInt8] {
+        try makeKoharuNearestGrayscale(image)
     }
 
     private static func makeInputIDs(_ tokens: [Int]) throws -> MLMultiArray {
