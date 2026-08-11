@@ -924,25 +924,27 @@ private struct MangaOCRRuntime {
     }
 
     /// Matches Koharu's current `candle` Manga OCR preprocessor. Its
-    /// `Tensor::interpolate2d` call is the nearest-neighbor `UpsampleNearest2D`
-    /// operator, using `floor(dst * src / target)` for each axis. Keep the
-    /// source color conversion separate, then sample the rendered grayscale
-    /// plane with that exact mapping instead of relying on Core Graphics' high
-    /// quality interpolation, which changes small vertical glyphs.
+    /// `image.grayscale()` conversion uses the image-rs sRGB luma weights and
+    /// integer floor before `Tensor::interpolate2d` applies nearest-neighbor
+    /// `UpsampleNearest2D` sampling with `floor(dst * src / target)` on each
+    /// axis. Keep both boundaries explicit instead of relying on Core
+    /// Graphics' color-profile and rounding choices.
     private static func makeKoharuNearestGrayscale(_ image: CGImage) throws -> [UInt8] {
         guard image.width > 0, image.height > 0 else {
             throw MangaOCRServiceError.imageDecodeFailed
         }
-        var source = [UInt8](repeating: 0, count: image.width * image.height)
+        let sourceBytesPerRow = image.width * 4
+        var source = [UInt8](repeating: 0, count: sourceBytesPerRow * image.height)
         let rendered = source.withUnsafeMutableBytes { bytes -> Bool in
             guard let context = CGContext(
                 data: bytes.baseAddress,
                 width: image.width,
                 height: image.height,
                 bitsPerComponent: 8,
-                bytesPerRow: image.width,
-                space: CGColorSpaceCreateDeviceGray(),
-                bitmapInfo: CGImageAlphaInfo.none.rawValue
+                bytesPerRow: sourceBytesPerRow,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue
+                    | CGImageAlphaInfo.noneSkipFirst.rawValue
             ) else {
                 return false
             }
@@ -955,6 +957,21 @@ private struct MangaOCRRuntime {
         }
         guard rendered else {
             throw MangaOCRServiceError.imageDecodeFailed
+        }
+
+        // image-rs `Rgb<u8>::to_luma()` uses SRGB_LUMA=[2126, 7152, 722]
+        // and the integer conversion truncates toward zero. The canonical
+        // context above stores B, G, R in byte offsets 0, 1, 2.
+        for sourceIndex in 0..<(image.width * image.height) {
+            let sourceOffset = sourceIndex * 4
+            let blue = Int(source[sourceOffset])
+            let green = Int(source[sourceOffset + 1])
+            let red = Int(source[sourceOffset + 2])
+            // Reuse the first byte of each BGRA texel so a large screenshot
+            // does not need a second full-size grayscale allocation.
+            source[sourceOffset] = UInt8(
+                (2126 * red + 7152 * green + 722 * blue) / 10_000
+            )
         }
 
         let scaleX = Double(image.width) / Double(imageSize)
@@ -972,7 +989,7 @@ private struct MangaOCRRuntime {
                     image.width - 1,
                     Int(Double(targetX) * scaleX)
                 )
-                resized[targetRow + targetX] = source[sourceRow + sourceX]
+                resized[targetRow + targetX] = source[(sourceRow + sourceX) * 4]
             }
         }
         return resized

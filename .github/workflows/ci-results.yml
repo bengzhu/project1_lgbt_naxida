@@ -230,6 +230,8 @@ permissions:
 # if grep -Fx 'scripts/test-v3254-image-japanese-region-diagnostic-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3259-koharu-nearest-manga-preprocess-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3259-koharu-nearest-manga-preprocess-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3260-koharu-manga-ocr-rgb-luma-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3260-koharu-manga-ocr-rgb-luma-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -830,6 +832,12 @@ jobs:
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v3259-koharu-nearest-manga-preprocess-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3260-koharu-manga-ocr-rgb-luma-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3260-koharu-manga-ocr-rgb-luma-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
@@ -1676,6 +1684,8 @@ jobs:
             python3 -B scripts/test-v3258-image-japanese-detector-confidence-gate-contract.py
             python3 -B scripts/test-v3259-koharu-nearest-manga-preprocess-contract.py
             bash scripts/test-v3259-koharu-nearest-manga-preprocess-runtime.sh
+            python3 -B scripts/test-v3260-koharu-manga-ocr-rgb-luma-contract.py
+            bash scripts/test-v3260-koharu-manga-ocr-rgb-luma-runtime.sh
             bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
