@@ -1403,44 +1403,31 @@ struct VisionOCRService: Sendable {
         }
     }
 
-    /// Keep Koharu's font-relative padding, but stop horizontal expansion at
-    /// the ownership bisector of an adjacent vertical TextRegion. This prevents
-    /// Manga OCR from seeing a sibling column while preserving the complete
-    /// detector core and all vertical context.
+    /// Match Koharu's role boundary for Manga OCR crops. Its RT-DETR
+    /// `comic-text-bubble-detector` TextRegion has neither `ctd` line polygons
+    /// nor a detected font size, so `crop_text_block_bbox` returns the detector
+    /// bbox unchanged. Vision-only supplements are the bounded compatibility
+    /// path where our line envelope and direction-aware padding still apply.
     private static func japaneseMangaOCRCropRect(
         _ region: JapanesePixelFirstRegion,
         among regions: [JapanesePixelFirstRegion],
         imageSize: CGSize
     ) -> ImageOCRLayoutRect {
         let rect = region.rect
-        let cropBase: ImageOCRLayoutRect
-        if case .vision = region.detector {
-            cropBase = region.cropRectHint ?? rect
-        } else {
-            cropBase = rect
+        guard case .vision = region.detector else {
+            // Do not expand an RT-DETR owner. A padded detector crop can pull a
+            // neighboring vertical column into the model input even though the
+            // ownership/layout rect itself remains correct.
+            return rect
         }
-        let cropDirection: ImageTextDirection
-        switch region.detector {
-        case .comicTextBubble:
-            // Koharu's RT-DETR TextRegion has no source_direction field, so
-            // crop_text_block_bbox uses its horizontal default padding.
-            cropDirection = .horizontal
-        case .vision:
-            // Vision supplements are discovered from rotated vertical passes.
-            cropDirection = .vertical
-        }
+        let cropBase = region.cropRectHint ?? rect
         let expanded = expandedVerticalCropRect(
             cropBase,
             imageSize: imageSize,
-            direction: cropDirection
+            direction: .vertical
         )
-        // A bundled comic detector region is already Koharu's TextRegion
-        // ownership boundary. Do not let a Vision supplement bisect its crop;
-        // the detector bbox plus font-relative padding is the authoritative
-        // `crop_text_block_bbox` envelope.
-        guard case .vision = region.detector else {
-            return expanded
-        }
+        // Do not let a Vision supplement bisect its own expanded crop at an
+        // adjacent detector/column boundary.
         var left = expanded.x
         var right = expanded.maxX
         for neighbor in regions where neighbor.rect != rect {

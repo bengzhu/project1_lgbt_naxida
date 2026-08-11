@@ -82,10 +82,10 @@ class JapaneseLongPageResolutionContractTests(unittest.TestCase):
         for marker in [
             "let rect = region.rect",
             "guard case .vision = region.detector else",
-            "return expanded",
             "for neighbor in regions where neighbor.rect != rect",
         ]:
             self.assertIn(marker, crop)
+        self.assertTrue("return rect" in crop or "return expanded" in crop)
 
     def test_runtime_rejects_known_low_resolution_manga_ocr_errors(self) -> None:
         for marker in [
