@@ -159,6 +159,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published private(set) var imageTranslationRerecognizingBlockID: UUID?
     @Published private(set) var imageTranslationBlockRetryCompletionGeneration = 0
     @Published private(set) var imageTranslationBlockRerecognitionCompletionGeneration = 0
+    @Published private(set) var imageTranslationBlockRerecognitionFailureGeneration = 0
     @Published private(set) var imageTranslationBlockRerecognitionCompletedBlockID: UUID?
     @Published private(set) var imageTranslationCorrectionBlockID: UUID?
     @Published private(set) var imageTranslationCorrectionMessage: String?
@@ -2379,6 +2380,7 @@ final class TranslationSessionStore: ObservableObject {
                 self.imageTranslationState = previousState
                 self.isProcessing = false
                 self.imageTranslationMessage = "此图片文字块重新识别已取消"
+                self.imageTranslationBlockRerecognitionFailureGeneration &+= 1
             } catch {
                 guard self.imageTranslationBlockRerecognitionID == requestID,
                       self.imageTranslationTaskID == contentTaskID else { return }
@@ -2388,6 +2390,7 @@ final class TranslationSessionStore: ObservableObject {
                 self.isProcessing = false
                 self.imageTranslationMessage = "此图片文字块重新识别失败：\(error.localizedDescription)"
                 self.dataTransferMessage = self.imageTranslationMessage
+                self.imageTranslationBlockRerecognitionFailureGeneration &+= 1
                 self.persist()
             }
         }

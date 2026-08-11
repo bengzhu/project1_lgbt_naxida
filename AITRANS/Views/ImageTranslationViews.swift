@@ -327,6 +327,14 @@ struct ImageTranslationPanel: View {
                 blockID: blockID
             )
         }
+        .onChange(of: store.imageTranslationBlockRerecognitionFailureGeneration) { _, generation in
+            guard generation > 0,
+                  store.imageTranslationRerecognizingBlockID == nil,
+                  store.imageTranslationState == .translated || store.imageTranslationState == .failed else {
+                return
+            }
+            focusImageTranslationRerecognitionFailureIfNeeded(generation)
+        }
         .onChange(of: store.imageTranslationRetryLanguageSummary) { oldSummary, newSummary in
             guard newSummary != nil, newSummary != oldSummary else { return }
             moveReviewAccessibilityFocus(to: Self.imageRetryLanguageStatusAccessibilityFocusID)
@@ -1420,6 +1428,20 @@ struct ImageTranslationPanel: View {
             } else {
                 focusReviewFilterResultIfNeeded()
             }
+        }
+    }
+
+    private func focusImageTranslationRerecognitionFailureIfNeeded(_ generation: Int) {
+        let revision = store.imageTranslationRevision
+        Task { @MainActor in
+            await Task.yield()
+            guard revision == store.imageTranslationRevision,
+                  generation == store.imageTranslationBlockRerecognitionFailureGeneration,
+                  store.imageTranslationRerecognizingBlockID == nil,
+                  store.imageTranslationState == .translated || store.imageTranslationState == .failed else {
+                return
+            }
+            moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
         }
     }
 
