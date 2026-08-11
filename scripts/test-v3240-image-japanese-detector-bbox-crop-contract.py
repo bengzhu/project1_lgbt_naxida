@@ -43,13 +43,18 @@ class JapaneseDetectorBBoxCropContractTests(unittest.TestCase):
         )
 
     def test_detector_bbox_is_selected_before_padding(self) -> None:
+        crop_marker = (
+            "expandedVerticalLineCropRect(\n            cropBase,"
+            if "expandedVerticalLineCropRect(\n            cropBase," in self.crop
+            else "expandedVerticalCropRect(\n            cropBase,"
+        )
         for marker in [
             "let rect = region.rect",
             "let cropBase: ImageOCRLayoutRect",
             "if case .vision = region.detector",
             "cropBase = region.cropRectHint ?? rect",
             "cropBase = rect",
-            "expandedVerticalLineCropRect(\n            cropBase,",
+            crop_marker,
             "guard case .vision = region.detector else {",
             "return expanded",
         ]:
@@ -60,7 +65,7 @@ class JapaneseDetectorBBoxCropContractTests(unittest.TestCase):
         )
         self.assertLess(
             self.crop.index("cropBase = rect"),
-            self.crop.index("expandedVerticalLineCropRect(\n            cropBase,"),
+            self.crop.index(crop_marker),
         )
 
     def test_vision_hint_remains_supplement_only(self) -> None:
