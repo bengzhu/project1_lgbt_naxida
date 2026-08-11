@@ -1441,8 +1441,8 @@ struct VisionOCRService: Sendable {
         guard case .vision = region.detector else {
             return expanded
         }
-        var leftBound: Double = expanded.x
-        var rightBound: Double = expanded.maxX
+        var left = expanded.x
+        var right = expanded.maxX
         for neighbor in regions where neighbor.rect != rect {
             let verticalIntersection = max(
                 0,
@@ -1458,15 +1458,15 @@ struct VisionOCRService: Sendable {
             }
             let boundary = (rect.midX + neighbor.rect.midX) / 2
             if neighbor.rect.midX < rect.midX {
-                leftBound = max(leftBound, min(boundary, rect.x))
+                left = max(left, min(boundary, rect.x))
             } else {
-                rightBound = min(rightBound, max(boundary, rect.maxX))
+                right = min(right, max(boundary, rect.maxX))
             }
         }
         return ImageOCRLayoutRect(
-            x: leftBound,
+            x: left,
             y: expanded.y,
-            width: rightBound - leftBound,
+            width: right - left,
             height: expanded.height
         ).normalizedToUnit() ?? expanded
     }
