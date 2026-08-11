@@ -225,9 +225,11 @@ struct ImageTranslationPanel: View {
                     completeReviewAfterCorrection(block.id)
                 },
                 setDirectionOverride: { direction in
-                    store.setImageTranslationBlockDirectionOverride(
-                        block.id,
-                        direction: direction
+                    setImageTranslationBlockDirection(
+                        direction,
+                        for: block.id,
+                        focusInPreview: false,
+                        deferFocusUntilCorrectionSheetDismissal: true
                     )
                 },
                 requestIgnore: {
@@ -1082,18 +1084,64 @@ struct ImageTranslationPanel: View {
     private func setImageTranslationBlockDirection(
         _ direction: ImageTextDirection?,
         for blockID: UUID,
-        focusInPreview: Bool
+        focusInPreview: Bool,
+        deferFocusUntilCorrectionSheetDismissal: Bool = false
     ) {
         guard canModifyImageTranslation,
               store.setImageTranslationBlockDirectionOverride(blockID, direction: direction) else {
             return
         }
-        selectedImageTranslationBlockID = blockID
-        moveReviewAccessibilityFocus(
-            to: focusInPreview
+        let focusID: String
+        if visibleImageTranslationBlocks.contains(where: { $0.id == blockID }) {
+            selectedImageTranslationBlockID = blockID
+            focusID = focusInPreview
                 ? reviewPreviewAccessibilityFocusID(blockID)
                 : reviewRowAccessibilityFocusID(blockID)
-        )
+        } else {
+            // A direction override can immediately remove a block from the
+            // active filter. Never retain a selection or VoiceOver target for
+            // a row that no longer exists in the current result list.
+            selectedImageTranslationBlockID = nil
+            focusID = reviewFocusIDAfterHiddenDirectionBlock()
+        }
+
+        if deferFocusUntilCorrectionSheetDismissal {
+            moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(to: focusID)
+        } else {
+            moveReviewAccessibilityFocus(to: focusID)
+        }
+    }
+
+    private func reviewFocusIDAfterHiddenDirectionBlock() -> String {
+        if let firstVisibleBlock = visibleImageTranslationBlocks.first {
+            return reviewRowAccessibilityFocusID(firstVisibleBlock.id)
+        }
+        if reviewFilter == .needsReview, reviewCompletedBlockCount > 0 {
+            return Self.reviewCompletionAccessibilityFocusID
+        }
+        if reviewFilter == .all {
+            return Self.reviewFilterAccessibilityFocusID
+        }
+        return Self.reviewFilterEmptyAccessibilityFocusID
+    }
+
+    private func isVisibleReviewBlockFocusID(_ focusID: String) -> Bool {
+        visibleImageTranslationBlocks.contains { block in
+            focusID == reviewRowAccessibilityFocusID(block.id)
+                || focusID == reviewPreviewAccessibilityFocusID(block.id)
+        }
+    }
+
+    private func focusAfterHiddenCorrectionSheetTargetIfNeeded(_ focusID: String) -> Bool {
+        guard !isVisibleReviewBlockFocusID(focusID) else { return false }
+        // Completion, empty, filter, and ignored-row targets are independent
+        // accessibility nodes and should pass through unchanged.
+        let isReviewBlockID = focusID.hasPrefix("image-review-row-")
+            || focusID.hasPrefix("image-review-preview-")
+        guard isReviewBlockID else { return false }
+        selectedImageTranslationBlockID = nil
+        moveReviewAccessibilityFocus(to: reviewFocusIDAfterHiddenDirectionBlock())
+        return true
     }
 
     @discardableResult
@@ -1325,6 +1373,9 @@ struct ImageTranslationPanel: View {
             return
         }
         clearPendingCorrectionSheetDismissalFocus()
+        if focusAfterHiddenCorrectionSheetTargetIfNeeded(focusID) {
+            return
+        }
         moveReviewAccessibilityFocus(to: focusID)
     }
 
