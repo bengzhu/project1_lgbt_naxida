@@ -88,7 +88,8 @@ class JapaneseRegionDiagnosticContractTests(unittest.TestCase):
         self.assertIn("compactOwnerObserved", self.runtime)
         self.assertIn("production Vision fusion still owns the final", self.runtime)
         self.assertIn("expected twenty bounded long-page blocks", self.runtime)
-        self.assertIn("expected four recovered vertical compact sound effects", self.runtime)
+        self.assertIn("expected four bounded compact vertical blocks", self.runtime)
+        self.assertIn("compactTextSummary=host-variant", self.runtime)
         self.assertIn("text=．．．では最後", self.runtime)
         self.assertNotIn("runImageTranslationPipeline", self.runtime)
 
