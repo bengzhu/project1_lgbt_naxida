@@ -1429,7 +1429,7 @@ struct VisionOCRService: Sendable {
             // Vision supplements are discovered from rotated vertical passes.
             cropDirection = .vertical
         }
-        let expanded = expandedVerticalLineCropRect(
+        let expanded = expandedVerticalCropRect(
             cropBase,
             imageSize: imageSize,
             direction: cropDirection
@@ -1441,8 +1441,8 @@ struct VisionOCRService: Sendable {
         guard case .vision = region.detector else {
             return expanded
         }
-        var left = expanded.x
-        var right = expanded.maxX
+        var leftBound: Double = expanded.x
+        var rightBound: Double = expanded.maxX
         for neighbor in regions where neighbor.rect != rect {
             let verticalIntersection = max(
                 0,
@@ -1458,15 +1458,15 @@ struct VisionOCRService: Sendable {
             }
             let boundary = (rect.midX + neighbor.rect.midX) / 2
             if neighbor.rect.midX < rect.midX {
-                left = max(left, min(boundary, rect.x))
+                leftBound = max(leftBound, min(boundary, rect.x))
             } else {
-                right = min(right, max(boundary, rect.maxX))
+                rightBound = min(rightBound, max(boundary, rect.maxX))
             }
         }
         return ImageOCRLayoutRect(
-            x: left,
+            x: leftBound,
             y: expanded.y,
-            width: right - left,
+            width: rightBound - leftBound,
             height: expanded.height
         ).normalizedToUnit() ?? expanded
     }

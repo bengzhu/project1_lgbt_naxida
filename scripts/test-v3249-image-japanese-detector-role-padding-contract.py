@@ -73,7 +73,7 @@ class JapaneseDetectorRolePaddingContractTests(unittest.TestCase):
             "cropBase = rect",
             "guard case .vision = region.detector else",
             "let boundary = (rect.midX + neighbor.rect.midX) / 2",
-            "return ImageOCRLayoutRect(\n            x: left,",
+            "return ImageOCRLayoutRect(\n            x: leftBound,",
         ]:
             self.assertIn(marker, self.crop)
 
