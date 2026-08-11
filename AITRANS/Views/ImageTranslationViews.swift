@@ -1254,10 +1254,7 @@ struct ImageTranslationPanel: View {
     }
 
     private func completeReviewAfterCorrection(_ blockID: UUID) {
-        guard store.imageTranslationBlocks.contains(where: { $0.id == blockID }) else {
-            imageTranslationCorrectionFocusOrigin = nil
-            return
-        }
+        guard store.imageTranslationBlocks.contains(where: { $0.id == blockID }) else { return }
         imageTranslationCorrectionFocusOrigin = nil
         let shouldAdvanceReviewQueue = reviewFilter == .needsReview
             && allReviewRequiredBlocks.contains(where: { $0.id == blockID })
