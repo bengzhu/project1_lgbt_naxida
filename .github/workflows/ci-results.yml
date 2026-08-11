@@ -220,6 +220,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3253-image-ocr-rerecognition-accessibility-hint-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3254-image-japanese-region-diagnostic-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3255-image-japanese-manga-ocr-batch-eos-alignment-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3256-image-review-direction-filter-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -526,7 +527,7 @@ jobs:
           if grep -E '^(AITRANS/Services/(TranslationSessionStore|SpeechQualityEvaluator|SpeechQualityProbeService)\.swift|AITRANS/Models/(TranscriptModels|SpeechQualityModels)\.swift|AITRANS/Views/(AudioTranslationView|ProViews|DeveloperConsoleView)\.swift|scripts/(test-speech-recognition-contract|test-speech-quality-contract|test-speech-quality-evaluator)\.(py|swift)|scripts/validate-speech-corpus\.py|test/speech_corpus/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             speech_contract_required=true
           fi
-          if grep -E '^(AITRANS/Views/|AITRANS/Models/ImageOCR(ResultSummary|ReviewFilter)\.swift|AITRANS/Services/(ImageOCRLayoutEngine|TranslationSessionStore|VisionOCRService|ImagePreviewService)\.swift|scripts/test-v(187-ui-interaction|202-image-import-run-isolation|203-image-cancel-retry|204-image-export-lifecycle|205-image-workspace-recovery|206-image-share-lifecycle|207-image-ocr-direction|208-image-share-feedback|209-image-render-feedback|300-image-ocr-rerun|310-image-ocr-review-filter|310-image-preview-downsample|34-image-retry-language|35-image-retry-credential-display|36-image-retry-language-reset|37-image-source-pro-feedback|38-image-entry-pro-gate|39-image-clear-confirmation)-(contract\.py|evaluator\.swift)|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+          if grep -E '^(AITRANS/Views/|AITRANS/Models/ImageOCR(ResultSummary|ReviewFilter)\.swift|AITRANS/Services/(ImageOCRLayoutEngine|TranslationSessionStore|VisionOCRService|ImagePreviewService|MangaOCRService)\.swift|AITRANS/Resources/MangaOCR/|scripts/test-v(187-ui-interaction|202-image-import-run-isolation|203-image-cancel-retry|204-image-export-lifecycle|205-image-workspace-recovery|206-image-share-lifecycle|207-image-ocr-direction|208-image-share-feedback|209-image-render-feedback|300-image-ocr-rerun|310-image-ocr-review-filter|310-image-preview-downsample|34-image-retry-language|35-image-retry-credential-display|36-image-retry-language-reset|37-image-source-pro-feedback|38-image-entry-pro-gate|39-image-clear-confirmation)-(contract\.py|evaluator\.swift)|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             ui_interaction_contract_required=true
           fi
           if grep -E '^(AITRANS/Views/TextTranslationView\.swift|AITRANS/Views/AppPreviewSupport\.swift|scripts/test-v188-home-ui-contract\.py|scripts/test-v189-paste-manual-matrix-contract\.py|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
@@ -790,6 +791,9 @@ jobs:
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v3255-image-japanese-manga-ocr-batch-eos-alignment-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3256-image-review-direction-filter-focus-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
@@ -1631,6 +1635,7 @@ jobs:
             python3 -B scripts/test-v3254-image-japanese-region-diagnostic-contract.py
             bash scripts/test-v3254-image-japanese-region-diagnostic-runtime.sh
             python3 -B scripts/test-v3255-image-japanese-manga-ocr-batch-eos-alignment-contract.py
+            python3 -B scripts/test-v3256-image-review-direction-filter-focus-contract.py
             bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
