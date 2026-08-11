@@ -1,4 +1,6 @@
 # 项目流程图
+v3.261 OCR 复查恢复：`row/preview action -> confirmation -> restore existing Vision baseline -> origin-aware VoiceOver focus -> hidden-filter fallback`；不重新运行 OCR、翻译或整图请求。
+
 v3.260 Manga OCR 输入：`source image -> canonical 8-bit DeviceRGB -> floor((2126R + 7152G + 722B) / 10000) -> 224x224 nearest floor -> decoder`；后续 batch／fallback、取消、ownership、翻译与渲染边界不变。
 
 v3.241 detector TextRegion → bbox 主 crop → 弱结果才走严格 vertical quad fallback → 显式 vertical hint 的 quad axis target `(textHeight, textHeight × ratio)` → bounded warp → `rotate270` → Manga OCR；未标记通用 quad 保留自然 warp，target／rotation／projection failure → natural warp 或 bbox fallback；ownership、budget、Vision fallback、translation、render 与非日语路径不变。
