@@ -809,7 +809,19 @@ private struct MangaOCRRuntime {
                 throw MangaOCRServiceError.modelOutputMissing("next_token_logits")
             }
             let predictions = try Self.nextTokens(in: logits, batch: batch)
-            for index in 0..<batch where !finished[index] {
+            for index in 0..<batch {
+                if finished[index] {
+                    // Core ML's decoder returns only the logits at the final
+                    // sequence position. Keep every row the same length after
+                    // EOS so an active row's final position is always its own
+                    // latest token rather than right-padding inserted by
+                    // `makeInputIDs`. This preserves Koharu's greedy decode
+                    // semantics when crops in one batch finish at different
+                    // token counts.
+                    tokenRows[index].append(Self.decoderEndToken)
+                    continue
+                }
+
                 let prediction = predictions[index]
                 tokenRows[index].append(prediction.id)
                 if prediction.id >= 5 {

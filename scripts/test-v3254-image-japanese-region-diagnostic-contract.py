@@ -95,10 +95,10 @@ class JapaneseRegionDiagnosticContractTests(unittest.TestCase):
 
     def test_ci_and_version_are_advanced(self) -> None:
         previous = (
-            "python3 -B scripts/test-v3253-image-ocr-rerecognition-accessibility-hint-contract.py"
+            "python3 -B scripts/test-v3254-image-japanese-region-diagnostic-contract.py"
         )
         current = (
-            "python3 -B scripts/test-v3254-image-japanese-region-diagnostic-contract.py"
+            "python3 -B scripts/test-v3255-image-japanese-manga-ocr-batch-eos-alignment-contract.py"
         )
         self.assertIn(previous, self.workflow)
         self.assertIn(current, self.workflow)
@@ -108,8 +108,8 @@ class JapaneseRegionDiagnosticContractTests(unittest.TestCase):
             self.workflow,
         )
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.254", "3.254"])
-        self.assertNotIn("MARKETING_VERSION = 3.253;", self.project)
+        self.assertEqual(versions, ["3.255", "3.255"])
+        self.assertNotIn("MARKETING_VERSION = 3.254;", self.project)
 
 
 if __name__ == "__main__":
