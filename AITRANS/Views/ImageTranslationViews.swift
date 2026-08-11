@@ -152,6 +152,11 @@ struct ImageTranslationView: View {
 }
 
 struct ImageTranslationPanel: View {
+    private enum ImageTranslationRerecognitionFocusOrigin {
+        case row
+        case preview
+    }
+
     static let previewScrollID = "imageTranslationPreview"
     private static let reviewCompletionAccessibilityFocusID = "image-review-complete"
     private static let reviewFilterAccessibilityFocusID = "image-review-filter"
@@ -174,6 +179,8 @@ struct ImageTranslationPanel: View {
     @State private var suppressNextReviewFilterResultFocus = false
     @State private var reviewAccessibilityFocusRequestID = 0
     @State private var pendingImageTranslationTerminalFocusRevision: Int?
+    @State private var imageTranslationRerecognitionFocusOrigin:
+        ImageTranslationRerecognitionFocusOrigin?
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
     @State private var restoreConfirmationBlock: ImageTranslationBlock?
@@ -276,6 +283,7 @@ struct ImageTranslationPanel: View {
                 suppressResultFocus: true
             )
             pendingImageTranslationTerminalFocusRevision = store.imageTranslationRevision
+            imageTranslationRerecognitionFocusOrigin = nil
             reviewAccessibilityFocusRequestID &+= 1
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
@@ -398,7 +406,12 @@ struct ImageTranslationPanel: View {
                 retryTranslation: { store.retryImageTranslationBlock($0) },
                 canRerecognize: { store.canRerecognizeImageTranslationBlock($0) },
                 isRerecognizing: { store.imageTranslationRerecognizingBlockID == $0 },
-                rerecognize: { store.rerecognizeImageTranslationBlock($0) },
+                rerecognize: {
+                    requestImageTranslationRerecognition(
+                        $0,
+                        focusOrigin: .preview
+                    )
+                },
                 toggleReviewCompletion: { blockID in
                     toggleReviewCompletion(blockID, focusInPreview: true)
                 }
@@ -706,7 +719,12 @@ struct ImageTranslationPanel: View {
                             retryTranslation: { store.retryImageTranslationBlock(block.id) },
                             canRerecognize: store.canRerecognizeImageTranslationBlock(block.id),
                             isRerecognizing: store.imageTranslationRerecognizingBlockID == block.id,
-                            rerecognize: { store.rerecognizeImageTranslationBlock(block.id) },
+                            rerecognize: {
+                                requestImageTranslationRerecognition(
+                                    block.id,
+                                    focusOrigin: .row
+                                )
+                            },
                             retryUnavailableHint: imageTranslationBlockRetryUnavailableHint,
                             accessibilityFocus: $reviewAccessibilityFocusID,
                             select: { toggleSelection(of: block.id) },
@@ -1400,11 +1418,21 @@ struct ImageTranslationPanel: View {
         }
     }
 
+    private func requestImageTranslationRerecognition(
+        _ blockID: UUID,
+        focusOrigin: ImageTranslationRerecognitionFocusOrigin
+    ) {
+        guard store.canRerecognizeImageTranslationBlock(blockID) else { return }
+        imageTranslationRerecognitionFocusOrigin = focusOrigin
+        store.rerecognizeImageTranslationBlock(blockID)
+    }
+
     private func focusImageTranslationRerecognitionCompletionIfNeeded(
         _ generation: Int,
         blockID: UUID
     ) {
         let revision = store.imageTranslationRevision
+        let focusOrigin = imageTranslationRerecognitionFocusOrigin ?? .row
         Task { @MainActor in
             await Task.yield()
             guard revision == store.imageTranslationRevision,
@@ -1415,10 +1443,19 @@ struct ImageTranslationPanel: View {
             }
 
             if visibleImageTranslationBlocks.contains(where: { $0.id == blockID }) {
-                moveReviewAccessibilityFocus(to: reviewRowAccessibilityFocusID(blockID))
+                let focusID: String
+                switch focusOrigin {
+                case .row:
+                    focusID = reviewRowAccessibilityFocusID(blockID)
+                case .preview:
+                    focusID = reviewPreviewAccessibilityFocusID(blockID)
+                }
+                imageTranslationRerecognitionFocusOrigin = nil
+                moveReviewAccessibilityFocus(to: focusID)
                 return
             }
 
+            imageTranslationRerecognitionFocusOrigin = nil
             if selectedImageTranslationBlockID == blockID {
                 selectedImageTranslationBlockID = nil
             }
@@ -1441,6 +1478,7 @@ struct ImageTranslationPanel: View {
                   store.imageTranslationState == .translated || store.imageTranslationState == .failed else {
                 return
             }
+            imageTranslationRerecognitionFocusOrigin = nil
             moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
         }
     }
