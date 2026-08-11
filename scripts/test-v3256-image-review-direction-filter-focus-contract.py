@@ -104,7 +104,7 @@ class ImageReviewDirectionFilterFocusContractTests(unittest.TestCase):
 
     def test_sheet_direction_picker_uses_the_same_focus_safe_path(self) -> None:
         self.assertIn(
-            "setImageTranslationBlockDirection(\n                        direction,\n                        for: block.id,\n                        focusInPreview: false,\n                        deferFocusUntilCorrectionSheetDismissal: true",
+            "setImageTranslationBlockDirection(\n                        direction,\n                        for: block.id,\n                        focusInPreview: imageTranslationCorrectionFocusOrigin == .preview,\n                        deferFocusUntilCorrectionSheetDismissal: true",
             self.view,
         )
         self.assertNotIn(
@@ -130,7 +130,7 @@ class ImageReviewDirectionFilterFocusContractTests(unittest.TestCase):
         )
         self.assertEqual(
             set(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)),
-            {"3.256"},
+            {"3.257"},
         )
         self.assertIn(
             "python3 -B scripts/test-v3255-image-japanese-manga-ocr-batch-eos-alignment-contract.py",
