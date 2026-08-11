@@ -1419,9 +1419,20 @@ struct VisionOCRService: Sendable {
         } else {
             cropBase = rect
         }
+        let cropDirection: ImageTextDirection
+        switch region.detector {
+        case .comicTextBubble:
+            // Koharu's RT-DETR TextRegion has no source_direction field, so
+            // crop_text_block_bbox uses its horizontal default padding.
+            cropDirection = .horizontal
+        case .vision:
+            // Vision supplements are discovered from rotated vertical passes.
+            cropDirection = .vertical
+        }
         let expanded = expandedVerticalLineCropRect(
             cropBase,
-            imageSize: imageSize
+            imageSize: imageSize,
+            direction: cropDirection
         )
         // A bundled comic detector region is already Koharu's TextRegion
         // ownership boundary. Do not let a Vision supplement bisect its crop;
