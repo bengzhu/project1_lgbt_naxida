@@ -47,7 +47,9 @@ class ImageReviewFinalStateLockContractTests(unittest.TestCase):
 
         restore = braced_body(
             self.panel,
-            "private func requestVisionOCRRestore(for block: ImageTranslationBlock)",
+            "private func requestVisionOCRRestore(\n"
+            "        for block: ImageTranslationBlock,\n"
+            "        focusOrigin: ImageTranslationRestoreFocusOrigin",
         )
         self.assertIn("canModifyImageTranslation", restore)
         self.assertIn("store.imageTranslationCorrectedBlockIDs.contains(block.id)", restore)

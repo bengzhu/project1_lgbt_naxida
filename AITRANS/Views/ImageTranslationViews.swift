@@ -162,6 +162,11 @@ struct ImageTranslationPanel: View {
         case preview
     }
 
+    private enum ImageTranslationRestoreFocusOrigin: Equatable {
+        case row
+        case preview
+    }
+
     static let previewScrollID = "imageTranslationPreview"
     private static let reviewCompletionAccessibilityFocusID = "image-review-complete"
     private static let reviewFilterAccessibilityFocusID = "image-review-filter"
@@ -192,6 +197,8 @@ struct ImageTranslationPanel: View {
     @State private var imageTranslationRerecognitionFocusIntentBlockID: UUID?
     @State private var imageTranslationCorrectionFocusOrigin:
         ImageTranslationCorrectionFocusOrigin?
+    @State private var imageTranslationRestoreFocusOrigin:
+        ImageTranslationRestoreFocusOrigin?
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
     @State private var restoreConfirmationBlock: ImageTranslationBlock?
@@ -311,6 +318,7 @@ struct ImageTranslationPanel: View {
             imageTranslationRerecognitionFocusOrigin = nil
             imageTranslationRerecognitionFocusIntentBlockID = nil
             imageTranslationCorrectionFocusOrigin = nil
+            imageTranslationRestoreFocusOrigin = nil
             reviewAccessibilityFocusRequestID &+= 1
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
@@ -419,7 +427,9 @@ struct ImageTranslationPanel: View {
                 selectPrevious: { selectAdjacentBlock(offset: -1) },
                 selectNext: { selectAdjacentBlock(offset: 1) },
                 editBlock: { beginCorrectionFromFocusPreview(of: $0) },
-                restoreVisionOCR: { requestVisionOCRRestore(for: $0) },
+                restoreVisionOCR: {
+                    requestVisionOCRRestore(for: $0, focusOrigin: .preview)
+                },
                 setDirectionOverride: { direction in
                     guard let selectedImageTranslationBlockID else { return }
                     setImageTranslationBlockDirection(
@@ -823,6 +833,7 @@ struct ImageTranslationPanel: View {
                 guard !isPresented else { return }
                 restoreConfirmationBlock = nil
                 applyPendingRestoreConfirmationDismissalFocus()
+                imageTranslationRestoreFocusOrigin = nil
             }
         )
     }
@@ -1089,19 +1100,44 @@ struct ImageTranslationPanel: View {
     }
 
     private func requestVisionOCRRestore(for block: ImageTranslationBlock) {
+        requestVisionOCRRestore(for: block, focusOrigin: .row)
+    }
+
+    private func requestVisionOCRRestore(
+        for block: ImageTranslationBlock,
+        focusOrigin: ImageTranslationRestoreFocusOrigin
+    ) {
         guard store.imageTranslationCorrectedBlockIDs.contains(block.id),
               canModifyImageTranslation else {
             return
         }
+        imageTranslationRestoreFocusOrigin = focusOrigin
         restoreConfirmationBlock = block
     }
 
     private func confirmVisionOCRRestore(_ block: ImageTranslationBlock) {
         guard restoreConfirmationBlock?.id == block.id,
               restoreVisionOCR(for: block.id) else { return }
-        moveReviewAccessibilityFocusAfterRestoreConfirmationDismissal(
-            to: reviewRowAccessibilityFocusID(block.id)
+        let focusID = restoreConfirmationFocusID(
+            for: block.id,
+            origin: imageTranslationRestoreFocusOrigin ?? .row
         )
+        moveReviewAccessibilityFocusAfterRestoreConfirmationDismissal(
+            to: focusID
+        )
+    }
+
+    private func restoreConfirmationFocusID(
+        for blockID: UUID,
+        origin: ImageTranslationRestoreFocusOrigin
+    ) -> String {
+        guard visibleImageTranslationBlocks.contains(where: { $0.id == blockID }) else {
+            selectedImageTranslationBlockID = nil
+            return reviewFocusIDAfterHiddenDirectionBlock()
+        }
+        return origin == .preview
+            ? reviewPreviewAccessibilityFocusID(blockID)
+            : reviewRowAccessibilityFocusID(blockID)
     }
 
     @discardableResult
