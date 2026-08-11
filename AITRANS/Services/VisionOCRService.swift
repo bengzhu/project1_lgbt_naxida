@@ -21,7 +21,100 @@ enum VisionOCRServiceError: LocalizedError {
     }
 }
 
+struct JapanesePixelFirstRegionDiagnostic: Sendable {
+    var rect: ImageOCRLayoutRect
+    var detectorRotation: Int
+    var characterCount: Int
+    var isCompactCandidate: Bool
+}
+
+struct JapaneseCompactCropReadDiagnostic: Sendable {
+    var rect: ImageOCRLayoutRect
+    var angle: Int
+    var text: String
+    var confidence: Float
+}
+
 struct VisionOCRService: Sendable {
+    /// Read-only runtime evidence for the bounded Japanese pixel-first
+    /// supplement. This is intentionally separate from the production OCR
+    /// request path so a fixture can show which geometry gates admitted or
+    /// rejected a compact candidate before any fusion decision is made.
+    static func diagnosticJapanesePixelFirstRegions(
+        in image: CGImage
+    ) -> [JapanesePixelFirstRegionDiagnostic] {
+        detectJapanesePixelFirstVerticalRegions(
+            in: image,
+            observations: [],
+            verticalBlocks: [],
+            lineObservations: []
+        ).map { region in
+            JapanesePixelFirstRegionDiagnostic(
+                rect: region.rect,
+                detectorRotation: region.detectorRotation,
+                characterCount: region.characterCount,
+                isCompactCandidate: isJapanesePixelFirstCompactCandidate(
+                    region.rect,
+                    characterCount: region.characterCount
+                )
+            )
+        }
+    }
+
+    /// Run both bounded Vision crop orientations for compact candidates without
+    /// entering page fusion. This keeps the orientation/content decision
+    /// inspectable before a production gate is tightened further.
+    static func diagnosticJapaneseCompactCropReads(
+        in image: CGImage
+    ) -> [JapaneseCompactCropReadDiagnostic] {
+        let regions = detectJapanesePixelFirstVerticalRegions(
+            in: image,
+            observations: [],
+            verticalBlocks: [],
+            lineObservations: []
+        ).filter {
+            isJapanesePixelFirstCompactCandidate(
+                $0.rect,
+                characterCount: $0.characterCount
+            )
+        }.prefix(4)
+        let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
+        var reads: [JapaneseCompactCropReadDiagnostic] = []
+        for candidate in regions {
+            let cropRect = expandedVerticalLineCropRect(
+                candidate.rect,
+                imageSize: imageSize
+            )
+            guard let crop = cropImage(image, normalizedRect: cropRect) else { continue }
+            let prepared = prepareJapaneseCropForVision(crop.image)
+            for angle in [270, 90] {
+                let observations = recognizeJapaneseCropPass(
+                    crop: prepared.image,
+                    cropRect: crop.rect,
+                    originalImage: image,
+                    angle: angle,
+                    recognitionLanguages: ["ja-JP", "ja"],
+                    minimumTextHeight: 0.002,
+                    cropScale: prepared.scale,
+                    observationRole: .verticalLine,
+                    usesLanguageCorrection: true
+                )
+                guard let best = observations.max(by: {
+                    isBetterObservation($0, $1, prefersJapanese: true)
+                }) else { continue }
+                reads.append(
+                    JapaneseCompactCropReadDiagnostic(
+                        rect: candidate.rect,
+                        angle: angle,
+                        text: best.text,
+                        confidence: best.confidence
+                    )
+                )
+            }
+        }
+        return reads
+    }
+
     func recognizeTextBlocks(in imageData: Data, sourceLanguage: SupportedLanguage) async throws -> [ImageTranslationBlock] {
         let task = Task.detached(priority: .userInitiated) {
             let ocrImage = try Self.makeOCRImage(from: imageData)
@@ -97,6 +190,9 @@ struct VisionOCRService: Sendable {
                 observations = Self.preferCompactJapaneseCropRecovery(
                     observations,
                     detectorObservations: detectorMangaOCRObservations
+                )
+                observations = Self.promoteCompactJapaneseHorizontalObservations(
+                    observations
                 )
             }
 
@@ -1042,6 +1138,10 @@ struct VisionOCRService: Sendable {
         var orientationFallbacksRemaining = 4
 
         for candidate in candidates.prefix(12) {
+            let isCompactCandidate = isJapanesePixelFirstCompactCandidate(
+                candidate.rect,
+                characterCount: candidate.characterCount
+            )
             let cropRect = expandedVerticalLineCropRect(
                 candidate.rect,
                 imageSize: imageSize
@@ -1061,12 +1161,15 @@ struct VisionOCRService: Sendable {
                 recognitionLanguages: recognitionLanguages,
                 minimumTextHeight: 0.002,
                 cropScale: preparedCrop.scale,
-                observationRole: .verticalLine
+                observationRole: .verticalLine,
+                preservesDetectorTextRegionBoundary: isCompactCandidate,
+                isCompactJapaneseRecovery: isCompactCandidate,
+                usesLanguageCorrection: isCompactCandidate
             )
             refined.append(contentsOf: primary)
 
             if orientationFallbacksRemaining > 0,
-               needsJapaneseOrientationFallback(primary) {
+               (isCompactCandidate || needsJapaneseOrientationFallback(primary)) {
                 orientationFallbacksRemaining -= 1
                 refined.append(contentsOf: recognizeJapaneseCropPass(
                     crop: preparedCrop.image,
@@ -1078,12 +1181,47 @@ struct VisionOCRService: Sendable {
                     recognitionLanguages: recognitionLanguages,
                     minimumTextHeight: 0.002,
                     cropScale: preparedCrop.scale,
-                    observationRole: .verticalLine
+                    observationRole: .verticalLine,
+                    preservesDetectorTextRegionBoundary: isCompactCandidate,
+                    isCompactJapaneseRecovery: isCompactCandidate,
+                    usesLanguageCorrection: isCompactCandidate
                 ))
             }
         }
 
-        return deduplicateJapaneseObservations(refined)
+        return deduplicateJapaneseCompactRecoveryObservations(
+            deduplicateJapaneseObservations(refined)
+        )
+    }
+
+    private static func deduplicateJapaneseCompactRecoveryObservations(
+        _ observations: [VisionOCRObservation]
+    ) -> [VisionOCRObservation] {
+        var output: [VisionOCRObservation] = []
+        for observation in observations {
+            guard observation.isCompactJapaneseRecovery else {
+                output.append(observation)
+                continue
+            }
+            let duplicateIndex = output.firstIndex { existing in
+                existing.isCompactJapaneseRecovery
+                    && overlapRatio(
+                        existing.lineRegionRect ?? existing.rect,
+                        observation.lineRegionRect ?? observation.rect
+                    ) >= 0.45
+            }
+            guard let duplicateIndex else {
+                output.append(observation)
+                continue
+            }
+            if isBetterCompactJapaneseRecovery(
+                observation,
+                than: output[duplicateIndex]
+            ) {
+                output[duplicateIndex] = observation
+            }
+        }
+        return output
     }
 
     /// Detect text rectangles on both rotated page views, map them back to the
@@ -1101,6 +1239,13 @@ struct VisionOCRService: Sendable {
         let existingVerticalRegions = observations.compactMap { observation -> ImageOCRLayoutRect? in
             guard observation.sourceDirectionHint == .vertical
                 || observation.observationRole == .verticalLine else {
+                return nil
+            }
+            // A detector-owned compact result below the reliability ceiling is
+            // exactly the case where the bounded Vision reread must be allowed
+            // to compete. Do not let that weak owner hide its own crop
+            // candidate before the v3.252 content-quality fusion gate runs.
+            if isWeakCompactJapaneseOwner(observation) {
                 return nil
             }
             return observation.lineRegionRect ?? observation.rect
@@ -1144,10 +1289,22 @@ struct VisionOCRService: Sendable {
                     originalImage: image,
                     angle: angle
                 )
-                guard isJapanesePixelFirstVerticalCandidate(mappedRect),
-                      !verticalBlocks.contains(where: {
-                          japanesePixelDetectorRegionIsCovered($0.rect, by: mappedRect)
-                      }),
+                let characterCount = detection.characterBoxes?.count ?? 0
+                let isCompactCandidate = isJapanesePixelFirstCompactCandidate(
+                    mappedRect,
+                    characterCount: characterCount
+                )
+                let overlapsLayoutBlock = verticalBlocks.contains {
+                    japanesePixelDetectorRegionIsCovered(
+                        $0.rect,
+                        by: mappedRect
+                    )
+                }
+                guard (
+                    isJapanesePixelFirstVerticalCandidate(mappedRect)
+                        || isCompactCandidate
+                ),
+                      !overlapsLayoutBlock,
                       !existingVerticalRegions.contains(where: {
                           japanesePixelDetectorRegionIsCovered($0, by: mappedRect)
                       }),
@@ -1160,7 +1317,7 @@ struct VisionOCRService: Sendable {
                     JapanesePixelFirstRegion(
                         rect: mappedRect,
                         detectorRotation: angle,
-                        characterCount: detection.characterBoxes?.count ?? 0,
+                        characterCount: characterCount,
                         cropQuadHint: mappedQuad
                     )
                 )
@@ -1189,9 +1346,33 @@ struct VisionOCRService: Sendable {
                 continue
             }
             unique.append(candidate)
-            if unique.count == 12 { break }
+            // Collect a bounded overflow before applying the 12-request cap so
+            // compact candidates in a long-page band cannot be hidden behind
+            // taller Vision boxes. The final selection below reserves at most
+            // four compact candidates and still returns no more than 12.
+            if unique.count == 128 { break }
         }
-        return unique
+        let compactCandidates = unique
+            .filter {
+                isJapanesePixelFirstCompactCandidate(
+                    $0.rect,
+                    characterCount: $0.characterCount
+                )
+            }
+            .sorted { lhs, rhs in
+                if lhs.rect.y != rhs.rect.y { return lhs.rect.y < rhs.rect.y }
+                return lhs.rect.x > rhs.rect.x
+            }
+        let reservedCompact = Array(compactCandidates.prefix(4))
+        let regularCandidates = unique.filter { candidate in
+            !reservedCompact.contains(where: {
+                $0.rect == candidate.rect
+                    && $0.detectorRotation == candidate.detectorRotation
+                    && $0.characterCount == candidate.characterCount
+            })
+        }
+        let remaining = max(0, 12 - reservedCompact.count)
+        return reservedCompact + regularCandidates.prefix(remaining)
     }
 
     /// Prefer the detector's character-level envelope as the closest Vision
@@ -1469,6 +1650,40 @@ struct VisionOCRService: Sendable {
         return rect.width <= 0.30
             && rect.height >= 0.025
             && aspectRatio >= 1.15
+    }
+
+    /// Vision can expose a short Japanese sound effect from a rotated page as
+    /// a compact, near-square envelope after mapping it back to the source.
+    /// Keep this recovery gate separate from the normal vertical geometry so a
+    /// genuinely horizontal short line cannot globally become a vertical
+    /// candidate. The four-character cap mirrors Koharu's bounded small-node
+    /// ownership and lets long-page bands reserve one compact candidate each.
+    private static func isJapanesePixelFirstCompactCandidate(
+        _ rect: ImageOCRLayoutRect,
+        characterCount: Int
+    ) -> Bool {
+        guard (2...4).contains(characterCount),
+              rect.width >= 0.012,
+              rect.height >= 0.006,
+              rect.width <= 0.08,
+              rect.height <= 0.08 else {
+            return false
+        }
+        let shortest = max(min(rect.width, rect.height), 0.001)
+        let longest = max(rect.width, rect.height)
+        let aspectRatio = longest / shortest
+        return aspectRatio <= 4.5
+    }
+
+    private static func isWeakCompactJapaneseOwner(
+        _ observation: VisionOCRObservation
+    ) -> Bool {
+        observation.observationRole == .detectorTextRegion
+            && observation.confidence.isFinite
+            && observation.confidence < 0.80
+            && observation.rect.width <= 0.08
+            && observation.rect.height <= 0.08
+            && observation.text.unicodeScalars.count <= 4
     }
 
     private static func japanesePixelDetectorRegionIsCovered(
@@ -2087,7 +2302,10 @@ struct VisionOCRService: Sendable {
         recognitionLanguages: [String],
         minimumTextHeight: Float,
         cropScale: CGFloat = 1,
-        observationRole: VisionOCRObservationRole = .crop
+        observationRole: VisionOCRObservationRole = .crop,
+        preservesDetectorTextRegionBoundary: Bool = false,
+        isCompactJapaneseRecovery: Bool = false,
+        usesLanguageCorrection: Bool = false
     ) -> [VisionOCRObservation] {
         guard let rotatedCrop = try? rotatedImage(crop, angle: angle),
               let cropObservations = try? recognizeObservations(
@@ -2097,13 +2315,13 @@ struct VisionOCRService: Sendable {
                   automaticallyDetectsLanguage: false,
                   rotationApplied: angle,
                   postProcessJapaneseText: true,
-                  usesLanguageCorrection: false,
+                  usesLanguageCorrection: usesLanguageCorrection,
                   observationRole: observationRole
               ) else {
             return []
         }
         return cropObservations.map {
-            mapRotatedCropObservation(
+            var mapped = mapRotatedCropObservation(
                 $0,
                 rotatedImage: rotatedCrop,
                 cropRect: cropRect,
@@ -2111,6 +2329,10 @@ struct VisionOCRService: Sendable {
                 angle: angle,
                 cropScale: cropScale
             )
+            mapped.preservesDetectorTextRegionBoundary =
+                preservesDetectorTextRegionBoundary
+            mapped.isCompactJapaneseRecovery = isCompactJapaneseRecovery
+            return mapped
         }
     }
 
@@ -3027,6 +3249,51 @@ struct VisionOCRService: Sendable {
         }
     }
 
+    /// A short page-level Vision observation can be mapped as horizontal even
+    /// when it sits in the same narrow column as the surrounding vertical
+    /// Japanese text. Promote only a bounded 2–4-character Japanese candidate
+    /// with a strong same-column vertical neighbor; unrelated horizontal UI
+    /// labels and ordinary prose remain untouched.
+    private static func promoteCompactJapaneseHorizontalObservations(
+        _ observations: [VisionOCRObservation]
+    ) -> [VisionOCRObservation] {
+        var output = observations
+        for index in output.indices {
+            let candidate = output[index]
+            guard candidate.observationRole == .page,
+                  candidate.sourceDirectionHint != .vertical,
+                  candidate.confidence.isFinite,
+                  candidate.confidence >= 0.40,
+                  candidate.rect.width <= 0.05,
+                  candidate.rect.height <= 0.02,
+                  japaneseScriptDensity(in: candidate.text) >= 0.5,
+                  (2...4).contains(japaneseLetterCountForRecovery(candidate.text)) else {
+                continue
+            }
+            let hasVerticalColumnNeighbor = output.enumerated().contains { neighborIndex, neighbor in
+                guard neighborIndex != index,
+                      neighbor.observationRole == .verticalLine
+                          || neighbor.sourceDirectionHint == .vertical,
+                      neighbor.confidence.isFinite,
+                      japaneseScriptDensity(in: neighbor.text) >= 0.5 else {
+                    return false
+                }
+                let centerDistance = abs(neighbor.rect.midX - candidate.rect.midX)
+                let gap = candidate.rect.y - neighbor.rect.maxY
+                return centerDistance <= max(0.08, neighbor.rect.width * 0.65)
+                    && gap >= -0.015
+                    && gap <= 0.12
+                    && neighbor.rect.width >= candidate.rect.width * 1.8
+            }
+            guard hasVerticalColumnNeighbor else { continue }
+            output[index].sourceDirectionHint = .vertical
+            output[index].observationRole = .verticalLine
+            output[index].preservesDetectorTextRegionBoundary = true
+            output[index].isCompactJapaneseRecovery = true
+        }
+        return output
+    }
+
     private static func deduplicateJapaneseObservations(
         _ observations: [VisionOCRObservation]
     ) -> [VisionOCRObservation] {
@@ -3051,6 +3318,27 @@ struct VisionOCRService: Sendable {
                 output.append(observation)
                 continue
             }
+            if observation.isCompactJapaneseRecovery {
+                if output[duplicateIndex].isCompactJapaneseRecovery {
+                    if isBetterCompactJapaneseRecovery(
+                        observation,
+                        than: output[duplicateIndex]
+                    ) {
+                        output[duplicateIndex] = observation
+                    }
+                } else if isUsableCompactJapaneseRecovery(observation) {
+                    output.remove(at: duplicateIndex)
+                    output.append(observation)
+                }
+                continue
+            }
+            if output[duplicateIndex].isCompactJapaneseRecovery {
+                if isUsableCompactJapaneseRecovery(output[duplicateIndex]) {
+                    continue
+                }
+                output[duplicateIndex] = observation
+                continue
+            }
             let preservesDetectorTextRegionBoundary =
                 observation.preservesDetectorTextRegionBoundary
                 || output[duplicateIndex].preservesDetectorTextRegionBoundary
@@ -3065,6 +3353,28 @@ struct VisionOCRService: Sendable {
                 preservesDetectorTextRegionBoundary
         }
         return output
+    }
+
+    private static func isUsableCompactJapaneseRecovery(
+        _ observation: VisionOCRObservation
+    ) -> Bool {
+        observation.confidence.isFinite
+            && observation.confidence >= 0.40
+            && japaneseScriptDensity(in: observation.text) >= 0.5
+            && japaneseLetterCountForRecovery(observation.text) >= 3
+    }
+
+    private static func isBetterCompactJapaneseRecovery(
+        _ lhs: VisionOCRObservation,
+        than rhs: VisionOCRObservation
+    ) -> Bool {
+        let lhsLetters = japaneseLetterCountForRecovery(lhs.text)
+        let rhsLetters = japaneseLetterCountForRecovery(rhs.text)
+        if lhsLetters != rhsLetters { return lhsLetters > rhsLetters }
+        let lhsDensity = japaneseScriptDensity(in: lhs.text)
+        let rhsDensity = japaneseScriptDensity(in: rhs.text)
+        if lhsDensity != rhsDensity { return lhsDensity > rhsDensity }
+        return isBetterObservation(lhs, than: rhs, prefersJapanese: true)
     }
 
     private static func isBetterJapaneseObservation(
@@ -3548,6 +3858,10 @@ private struct VisionOCRObservation: Equatable, Sendable {
     /// dedicated detector TextRegion. Japanese dedupe carries this provenance
     /// onto the selected text so layout cannot join two detector nodes later.
     var preservesDetectorTextRegionBoundary = false
+    /// Marks the bounded compact sound-effect recovery candidate. It wins over
+    /// a duplicate page-level short line so long-page output keeps the compact
+    /// candidate's vertical provenance instead of retaining a horizontal echo.
+    var isCompactJapaneseRecovery = false
 }
 
 private struct JapaneseVerticalCropFragment: Sendable {

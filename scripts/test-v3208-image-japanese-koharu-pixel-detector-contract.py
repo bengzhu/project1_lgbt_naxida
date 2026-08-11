@@ -70,7 +70,6 @@ class JapaneseKoharuPixelDetectorContractTests(unittest.TestCase):
         detector_scope = self.detector + self.vision
         for marker in [
             "!verticalBlocks.contains(where:",
-            "japanesePixelDetectorRegionIsCovered($0.rect, by: mappedRect)",
             "rect.width <= 0.30",
             "rect.height >= 0.025",
             "aspectRatio >= 1.15",
@@ -78,6 +77,10 @@ class JapaneseKoharuPixelDetectorContractTests(unittest.TestCase):
             "isSameJapanesePixelFirstRegion(candidate, as: $0)",
         ]:
             self.assertIn(marker, detector_scope)
+        self.assertRegex(
+            detector_scope,
+            r"japanesePixelDetectorRegionIsCovered\(\s*\$0\.rect,\s*by:\s*mappedRect\)",
+        )
 
     def test_detector_crop_reuses_koharu_preprocess_mapping_and_fallback_budget(self) -> None:
         for marker in [
@@ -88,7 +91,9 @@ class JapaneseKoharuPixelDetectorContractTests(unittest.TestCase):
             "var orientationFallbacksRemaining = 4",
             "oppositeJapaneseOrientation(",
             "cropScale: preparedCrop.scale",
-            "return deduplicateJapaneseObservations(refined)",
+            # v3.254 keeps the historical Japanese dedupe and adds a compact
+            # recovery tie-break before returning the same bounded observations.
+            "deduplicateJapaneseObservations(refined)",
         ]:
             self.assertIn(marker, self.pixel)
         self.assertTrue(
