@@ -157,6 +157,11 @@ struct ImageTranslationPanel: View {
         case preview
     }
 
+    private enum ImageTranslationCorrectionFocusOrigin: Equatable {
+        case row
+        case preview
+    }
+
     static let previewScrollID = "imageTranslationPreview"
     private static let reviewCompletionAccessibilityFocusID = "image-review-complete"
     private static let reviewFilterAccessibilityFocusID = "image-review-filter"
@@ -181,6 +186,8 @@ struct ImageTranslationPanel: View {
     @State private var pendingImageTranslationTerminalFocusRevision: Int?
     @State private var imageTranslationRerecognitionFocusOrigin:
         ImageTranslationRerecognitionFocusOrigin?
+    @State private var imageTranslationCorrectionFocusOrigin:
+        ImageTranslationCorrectionFocusOrigin?
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
     @State private var restoreConfirmationBlock: ImageTranslationBlock?
@@ -232,7 +239,7 @@ struct ImageTranslationPanel: View {
                     setImageTranslationBlockDirection(
                         direction,
                         for: block.id,
-                        focusInPreview: false,
+                        focusInPreview: imageTranslationCorrectionFocusOrigin == .preview,
                         deferFocusUntilCorrectionSheetDismissal: true
                     )
                 },
@@ -298,6 +305,7 @@ struct ImageTranslationPanel: View {
             )
             pendingImageTranslationTerminalFocusRevision = store.imageTranslationRevision
             imageTranslationRerecognitionFocusOrigin = nil
+            imageTranslationCorrectionFocusOrigin = nil
             reviewAccessibilityFocusRequestID &+= 1
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
@@ -1051,6 +1059,7 @@ struct ImageTranslationPanel: View {
               store.imageTranslationBlocks.contains(where: { $0.id == block.id }) else {
             return
         }
+        imageTranslationCorrectionFocusOrigin = .row
         selectedImageTranslationBlockID = block.id
         moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
             to: reviewRowAccessibilityFocusID(block.id)
@@ -1063,6 +1072,7 @@ struct ImageTranslationPanel: View {
               store.imageTranslationBlocks.contains(where: { $0.id == block.id }) else {
             return
         }
+        imageTranslationCorrectionFocusOrigin = .preview
         selectedImageTranslationBlockID = block.id
         moveReviewAccessibilityFocusAfterCorrectionSheetDismissal(
             to: reviewPreviewAccessibilityFocusID(block.id)
@@ -1180,6 +1190,7 @@ struct ImageTranslationPanel: View {
         }
 
         guard store.ignoreImageTranslationBlock(block.id) else { return false }
+        imageTranslationCorrectionFocusOrigin = nil
 
         if store.imageTranslationBlocks.isEmpty {
             selectedImageTranslationBlockID = nil
@@ -1243,7 +1254,11 @@ struct ImageTranslationPanel: View {
     }
 
     private func completeReviewAfterCorrection(_ blockID: UUID) {
-        guard store.imageTranslationBlocks.contains(where: { $0.id == blockID }) else { return }
+        guard store.imageTranslationBlocks.contains(where: { $0.id == blockID }) else {
+            imageTranslationCorrectionFocusOrigin = nil
+            return
+        }
+        imageTranslationCorrectionFocusOrigin = nil
         let shouldAdvanceReviewQueue = reviewFilter == .needsReview
             && allReviewRequiredBlocks.contains(where: { $0.id == blockID })
             && store.imageTranslationReviewedBlockIDs.contains(blockID)
@@ -1384,9 +1399,11 @@ struct ImageTranslationPanel: View {
         guard let focusID = pendingCorrectionSheetDismissalFocusID,
               pendingCorrectionSheetDismissalRevision == store.imageTranslationRevision else {
             clearPendingCorrectionSheetDismissalFocus()
+            imageTranslationCorrectionFocusOrigin = nil
             return
         }
         clearPendingCorrectionSheetDismissalFocus()
+        imageTranslationCorrectionFocusOrigin = nil
         if focusAfterHiddenCorrectionSheetTargetIfNeeded(focusID) {
             return
         }
