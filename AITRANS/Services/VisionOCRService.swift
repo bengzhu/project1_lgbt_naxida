@@ -853,6 +853,9 @@ struct VisionOCRService: Sendable {
                     among: cropRegions,
                     imageSize: imageSize
                 ),
+                detectorConfidence: Self.detectorConfidenceForMangaOCR(
+                    region
+                ),
                 cropQuad: region.cropQuadHint,
                 cropQuadIsVertical: region.cropQuadHint != nil
             )
@@ -901,9 +904,29 @@ struct VisionOCRService: Sendable {
         _ result: MangaOCRResult
     ) -> Bool {
         let confidence = Double(result.confidence)
-        return confidence.isFinite
-            && confidence >= 0.55
-            && japaneseScriptDensity(in: result.text) >= 0.5
+        guard confidence.isFinite,
+              confidence >= 0.55,
+              japaneseScriptDensity(in: result.text) >= 0.5 else {
+            return false
+        }
+        if let detectorConfidence = result.detectorConfidence {
+            let detectorScore = Double(detectorConfidence)
+            guard detectorScore.isFinite, detectorScore >= 0.55 else {
+                return false
+            }
+        }
+        return true
+    }
+
+    /// Only RT-DETR-owned requests carry a detector score. Vision supplemental
+    /// regions remain eligible for the existing model/content gate, but can
+    /// never accidentally claim a detector-owner boundary from a synthetic
+    /// zero default.
+    private static func detectorConfidenceForMangaOCR(
+        _ region: JapanesePixelFirstRegion
+    ) -> Float? {
+        guard case .comicTextBubble = region.detector else { return nil }
+        return region.detectorConfidence
     }
 
     /// Koharu's RT-DETR TextRegions are the primary Manga OCR geometry. Vision's
