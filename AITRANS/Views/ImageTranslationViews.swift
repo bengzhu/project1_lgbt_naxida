@@ -300,26 +300,7 @@ struct ImageTranslationPanel: View {
             }
         }
         .onChange(of: store.imageTranslationState) { oldState, state in
-            if state == .idle {
-                switch oldState {
-                case .loading, .recognizing, .translating:
-                    pendingImageTranslationTerminalFocusRevision = nil
-                    moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
-                case .idle, .translated, .failed:
-                    break
-                }
-                return
-            }
-            if state == .failed,
-               pendingImageTranslationTerminalFocusRevision != store.imageTranslationRevision {
-                pendingImageTranslationTerminalFocusRevision = nil
-                moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
-                return
-            }
-            guard state == .translated || state == .failed else { return }
-            guard pendingImageTranslationTerminalFocusRevision == store.imageTranslationRevision else { return }
-            pendingImageTranslationTerminalFocusRevision = nil
-            focusImageTranslationTerminalStateIfNeeded()
+            handleImageTranslationStateChange(oldState: oldState, state: state)
         }
         .onChange(of: store.imageTranslationBlockRetryCompletionGeneration) { _, generation in
             guard generation > 0,
@@ -362,6 +343,32 @@ struct ImageTranslationPanel: View {
             }
             focusEmptyReviewStateIfNeeded()
         }
+    }
+
+    private func handleImageTranslationStateChange(
+        oldState: ImageTranslationState,
+        state: ImageTranslationState
+    ) {
+        if state == .idle {
+            switch oldState {
+            case .loading, .recognizing, .translating:
+                pendingImageTranslationTerminalFocusRevision = nil
+                moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+            case .idle, .translated, .failed:
+                break
+            }
+            return
+        }
+        if state == .failed,
+           pendingImageTranslationTerminalFocusRevision != store.imageTranslationRevision {
+            pendingImageTranslationTerminalFocusRevision = nil
+            moveReviewAccessibilityFocus(to: Self.imageTranslationStatusAccessibilityFocusID)
+            return
+        }
+        guard state == .translated || state == .failed else { return }
+        guard pendingImageTranslationTerminalFocusRevision == store.imageTranslationRevision else { return }
+        pendingImageTranslationTerminalFocusRevision = nil
+        focusImageTranslationTerminalStateIfNeeded()
     }
 
     private var imageWorkspace: some View {
