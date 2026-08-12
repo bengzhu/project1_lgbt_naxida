@@ -1,4 +1,6 @@
 # 项目流程图
+v3.264 vertical quad warp：`line polygon -> canonical DeviceRGB -> inverse projective sampling -> bilinear/constant-black -> Koharu axis target -> rotate270 -> weak quad fallback`；detector bbox 主路径和 generic/natural fallback 独立保留。
+
 v3.263 scoped cancel：`image block rerecognition -> dedicated cancel action -> cancel only block task -> retain session/review progress -> restore previous state + failure generation -> accessibility status feedback`；global image cancellation remains separate.
 
 v3.262 detector 预处理：`source CGImage -> canonical DeviceRGB -> separable Koharu/image-rs Triangle (pixel-centred, bounded support, edge-normalized) -> RGB plane -> explicit 32BGRA -> RT-DETR 640x640 -> TextRegion ownership -> existing Manga OCR/Vision fusion`；不改变 threshold、12/48 budget、取消、布局、翻译、渲染与非图片路径。

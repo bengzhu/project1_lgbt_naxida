@@ -1,3 +1,20 @@
+## v3.264：Koharu 垂直 line quad 的确定性 bilinear warp
+
+日期：2026-08-12
+
+垂直日语 line polygon 的 Manga OCR fallback 继续以 detector bbox 为主，但在 quad fallback 触发时不再把 Core Image 的自然 perspective extent 交给 Core Graphics `.high` 二次 resize。现在沿用 Koharu `quad_axis_lengths` 计算 bounded target canvas，在 canonical DeviceRGB crop 上直接求 destination-to-source projective map，逐个目标像素使用 image-rs `warp_into` 的 bilinear 语义（floor source coordinate、四邻域权重、越界常量黑色）生成目标 canvas，再执行 `rotate270`。无效 geometry、Direct warp 失败和 generic/non-vertical quad 仍回退自然投影。
+
+detector bbox ownership、弱 bbox 才付费的 quad fallback、Manga OCR decoder／batch、取消传播、布局、翻译、渲染与非图片路径不变。该版本只改善 Koharu 垂直 quad 的像素采样一致性，不把固定样图结果外推为通用日语 OCR、翻译或识别质量提升。
+
+新增 `scripts/fixtures/v3264-koharu-vertical-quad-warp-harness.swift`、`scripts/test-v3264-koharu-vertical-quad-warp-contract.py` 与 `scripts/test-v3264-koharu-vertical-quad-warp-runtime.sh`，工程版本为 `3.264`。
+
+验证边界：
+
+- 本地 `284` 个 `scripts/test-v*.py` 合同全通过；4×4→5×7 确定性 harness checksum 为 `e0288a1c4c38d1f8`，既有 `test/jap.jpg` quad fallback 与 directional crop runtime 保持可靠结果。
+- exact-SHA full [31559883595](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31559883595) 对实现 SHA `a8816fd2a11a64317625f0970c9eeace7ea72d1f` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`。
+- PR #343 合入 `smalldata_test` 的 merge SHA `d19f0c9e715d0856f80c4d2a906caa6eb5a193d5`；合入后 push CI [31560465371](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31560465371) 通过，代码研发分支已删除。
+- Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.263：图片 OCR 单块重新识别 scoped cancel 与 VoiceOver 边界
 
 日期：2026-08-12

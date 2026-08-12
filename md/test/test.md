@@ -1,3 +1,11 @@
+### v3.264 Koharu 垂直 line quad bilinear warp 合同
+
+- vertical quad fallback 必须保留 detector bbox primary；只有弱 bbox recognition 才执行 `cropQuad` fallback。Koharu axis target 继续由 quad 长短轴、4096 dimension 与 4,000,000 pixels bound 决定。
+- vertical path 必须从 canonical DeviceRGB crop 直接求 destination-to-source projective map，并按 image-rs `Interpolation::Bilinear` 语义做 floor 四邻域、常量黑边采样；不得退回“Core Image natural extent + Core Graphics `.high` 二次 resize”作为 vertical warp 实现。采样结果再 rotate270；无效／失败和 generic quad 保留 natural projection fallback。
+- `scripts/test-v3264-koharu-vertical-quad-warp-contract.py` 锁定 geometry、采样、channel、CI route 与 `3.264` 版本；`scripts/test-v3264-koharu-vertical-quad-warp-runtime.sh` 锁定 4×4→5×7 checksum `e0288a1c4c38d1f8`。
+- exact-SHA full [31559883595](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31559883595)（实现 SHA `a8816fd2a11a64317625f0970c9eeace7ea72d1f`，Xcode/JUnit `10/10`）通过；PR #343 merge SHA `d19f0c9e715d0856f80c4d2a906caa6eb5a193d5`，合入后 push CI [31560465371](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31560465371) 通过。
+- 本版只改善垂直 quad 的像素采样一致性，不声称通用日语 OCR／翻译质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ### v3.263 图片 OCR 单块重新识别 scoped cancel 合同
 
 - `imageTranslationRerecognizingBlockID != nil` 时必须显示专用“取消重新识别”，只调用 `cancelImageTranslationBlockRerecognition()`；不得调用全局 `cancelImageTranslation()`，不得清空 reviewed block IDs、替换 image task ID、invalidate scoped request 或把整图状态强制设为 idle。
