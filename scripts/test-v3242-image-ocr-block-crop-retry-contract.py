@@ -171,7 +171,7 @@ class ImageOCRBlockCropRetryContractTests(unittest.TestCase):
                 "isRerecognizing",
                 "rerecognize",
                 '"重新识别此文字块"',
-                'systemImage: isRerecognizing ? "hourglass" : "text.viewfinder"',
+                'systemImage: isRerecognizing ? "xmark.circle" : "text.viewfinder"',
             ]:
                 self.assertIn(marker, body)
         self.assertIn(

@@ -64,7 +64,7 @@ class JapaneseQuadBBoxFallbackContractTests(unittest.TestCase):
             self.assertIn(marker, self.service)
         self.assertIn("perspectiveCorrectedCrop(", self.service)
         self.assertIn("applyVerticalWarp: request.cropQuadIsVertical", self.service)
-        self.assertIn("guard applyVerticalWarp else { return rendered }", self.service)
+        self.assertIn("if applyVerticalWarp,", self.service)
         self.assertIn("cropQuadIsVertical: false", self.harness)
         self.assertIn("CIPerspectiveCorrection", self.service)
 

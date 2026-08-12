@@ -53,9 +53,14 @@ class KoharuVerticalQuadWarpContractTests(unittest.TestCase):
         perspective = braced_body(
             self.service, "private static func perspectiveCorrectedCrop("
         )
-        self.assertIn("guard applyVerticalWarp else { return rendered }", perspective)
+        self.assertIn("if applyVerticalWarp,", perspective)
+        self.assertIn("let rotated = rotateImage270(bounded)", perspective)
         self.assertIn("koharuVerticalQuadWarp(", perspective)
         self.assertIn("sourcePoints: localPoints", perspective)
+        self.assertLess(
+            perspective.index("koharuVerticalQuadWarp("),
+            perspective.index('CIFilter(name: "CIPerspectiveCorrection")'),
+        )
         self.assertNotIn("interpolationQuality = .high", perspective)
         self.assertNotIn("resizedImage(", perspective)
 
@@ -128,7 +133,7 @@ class KoharuVerticalQuadWarpContractTests(unittest.TestCase):
 
     def test_version_is_3264(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.265", "3.265"])
+        self.assertEqual(versions, ["3.266", "3.266"])
 
 
 if __name__ == "__main__":

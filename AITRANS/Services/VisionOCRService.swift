@@ -3671,6 +3671,17 @@ struct VisionOCRService: Sendable {
                 angle: angle
             )
         }
+        // The rotated page pass is Koharu's bounded orientation
+        // reconnaissance. Carry a vertical source hint only when the mapped
+        // Japanese geometry is actually column-like; horizontal Japanese
+        // captions observed in the same pass must keep the normal layout
+        // heuristics instead of inheriting rotation provenance blindly.
+        let directionRect = originalLineRegionRect ?? originalRect
+        let verticalSourceHint: ImageOCRLayoutDirection? =
+            japaneseScriptDensity(in: observation.text) >= 0.5
+                && directionRect.height / max(directionRect.width, 0.001) >= 1.05
+                ? .vertical
+                : nil
         return VisionOCRObservation(
             text: observation.text,
             confidence: observation.confidence,
@@ -3678,6 +3689,7 @@ struct VisionOCRService: Sendable {
             lineRegionRect: originalLineRegionRect,
             lineRegionQuad: originalLineRegionQuad,
             rotationApplied: observation.rotationApplied,
+            sourceDirectionHint: verticalSourceHint,
             observationRole: observation.observationRole
         )
     }

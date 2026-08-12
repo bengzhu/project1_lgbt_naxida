@@ -111,7 +111,7 @@ class ScopedRerecognitionCancelContractTests(unittest.TestCase):
             self.workflow,
         )
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.265", "3.265"])
+        self.assertEqual(versions, ["3.266", "3.266"])
         self.assertNotIn("MARKETING_VERSION = 3.262;", self.project)
 
 

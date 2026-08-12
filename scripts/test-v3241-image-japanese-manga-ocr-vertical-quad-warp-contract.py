@@ -60,8 +60,8 @@ class JapaneseMangaOCRVerticalQuadWarpContractTests(unittest.TestCase):
 
     def test_vertical_quad_uses_koharu_axis_target_and_rotation(self) -> None:
         for marker in [
-            "guard applyVerticalWarp else { return rendered }",
-            "guard let targetSize = koharuVerticalQuadWarpTargetSize(",
+            "if applyVerticalWarp,",
+            "let targetSize = koharuVerticalQuadWarpTargetSize(",
             "maximumDimension: CGFloat(maximumQuadWarpDimension)",
             "maximumPixels: maximumQuadWarpPixels",
             "let targetWidth = Int(targetSize.width.rounded())",
@@ -100,11 +100,11 @@ class JapaneseMangaOCRVerticalQuadWarpContractTests(unittest.TestCase):
     def test_projection_target_and_rotation_failures_keep_natural_warp(self) -> None:
         self.assertIn("guard let rendered = context.createCGImage", self.crop)
         self.assertIn("return rendered", self.crop)
+        self.assertIn("let bounded = koharuVerticalQuadWarp(", self.crop)
         self.assertIn(
-            "guard let bounded = koharuVerticalQuadWarp(\n            cropped,",
+            "compatibility fallback",
             self.crop,
         )
-        self.assertIn("Natural projection is the compatibility fallback", self.crop)
         self.assertIn("private static func rotateImage270", self.service)
         self.assertIn("context.rotate(by: -.pi / 2)", self.service)
 

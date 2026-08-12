@@ -50,9 +50,11 @@ class ImageOCRRerecognitionAccessibilityHintContractTests(unittest.TestCase):
         self.workflow = read(".github/workflows/ci-results.yml")
 
     def test_row_hint_matches_the_enabled_action_gate(self) -> None:
-        self.assertIn("if canRerecognize && !isRerecognizing", self.row_hint)
+        self.assertIn("if isRerecognizing", self.row_hint)
+        self.assertIn("else if canRerecognize", self.row_hint)
         self.assertIn("重新识别此文字块", self.row_hint)
-        self.assertIn("if canRerecognize && !isRerecognizing", self.rerecognition_modifier)
+        self.assertIn("if isRerecognizing", self.rerecognition_modifier)
+        self.assertIn("else if canRerecognize", self.rerecognition_modifier)
         self.assertIn("accessibilityAction(named: \"重新识别此文字块\")", self.view)
 
     def test_focus_preview_appends_actions_after_every_geometry_branch(self) -> None:
@@ -64,7 +66,7 @@ class ImageOCRRerecognitionAccessibilityHintContractTests(unittest.TestCase):
 
     def test_focus_action_hint_respects_busy_and_edit_gates(self) -> None:
         self.assertIn("if canRerecognize || isRerecognizing", self.focus_modification)
-        self.assertIn("正在重新识别此文字块", self.focus_modification)
+        self.assertIn("正在重新识别此文字块，可取消当前文字块的重新识别", self.focus_modification)
         self.assertIn("也可执行“重新识别此文字块”", self.focus_modification)
         self.assertIn("guard isManuallyCorrected, canEdit else { return detail }", self.focus_modification)
         self.assertIn("也可执行“恢复 Vision OCR”", self.focus_modification)
