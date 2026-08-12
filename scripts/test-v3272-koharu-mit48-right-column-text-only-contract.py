@@ -28,7 +28,7 @@ class KoharuMit48RightColumnTextOnlyContractTests(unittest.TestCase):
 
     def test_existing_quality_gates_remain_strict(self) -> None:
         for marker in [
-            "len(accepted) < 6",
+            "len(accepted) < 7",
             'compact["text"] != "ニコッ"',
             'compact["confidence"] < 0.55',
             '"compactNikoText": "ニコッ"',
