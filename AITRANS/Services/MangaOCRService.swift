@@ -7,6 +7,10 @@ enum MangaOCRCropOrientation: Int, Sendable {
     case natural = 0
     /// Koharu's vertical `warp_line_region` feeds Manga OCR after rotate270.
     case koharuVertical270 = 270
+    /// A tight Vision/Koharu line region is already a text-node crop. Unlike a
+    /// broad detector ownership bbox, it may rotate at the line boundary even
+    /// when its aspect ratio is only moderately portrait.
+    case koharuVerticalLine270 = 271
 }
 
 struct MangaOCRRequest: Sendable {
@@ -312,6 +316,8 @@ actor MangaOCRService {
             guard CGFloat(crop.height) > CGFloat(crop.width) * 1.75 else {
                 return crop
             }
+            return rotateImage270(crop) ?? crop
+        case .koharuVerticalLine270:
             return rotateImage270(crop) ?? crop
         }
     }

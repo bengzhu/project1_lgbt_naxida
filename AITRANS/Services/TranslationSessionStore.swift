@@ -186,6 +186,7 @@ final class TranslationSessionStore: ObservableObject {
     private var imageTranslationCorrectionID = UUID()
     private var imageTranslationBlockRetryTask: Task<Void, Never>?
     private var imageTranslationBlockRetryID = UUID()
+    private var imageTranslationBlockRetryPreviousState: ImageTranslationState?
     private var imageTranslationBlockRerecognitionTask: Task<Void, Never>?
     private var imageTranslationBlockRerecognitionID = UUID()
     private var imageTranslationVisionOriginalBlocks: [UUID: ImageTranslationBlock] = [:]
@@ -1800,6 +1801,14 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationBlockRerecognitionTask?.cancel()
     }
 
+    /// Cancel only the in-place translation retry for one image block. The
+    /// scoped task catch restores the previous terminal state and leaves the
+    /// other translations, OCR geometry, and review progress untouched.
+    func cancelImageTranslationBlockRetry() {
+        guard imageTranslationRetryingBlockID != nil else { return }
+        imageTranslationBlockRetryTask?.cancel()
+    }
+
     @discardableResult
     func markImageTranslationBlockReviewed(_ blockID: UUID) -> Bool {
         guard imageTranslationState == .translated,
@@ -2039,6 +2048,7 @@ final class TranslationSessionStore: ObservableObject {
 
     private func invalidateImageTranslationBlockRetry() {
         imageTranslationBlockRetryID = UUID()
+        imageTranslationBlockRetryPreviousState = nil
         imageTranslationRetryingBlockID = nil
     }
 
@@ -2182,7 +2192,9 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationBlockRetryTask?.cancel()
         let retryID = UUID()
         let contentTaskID = imageTranslationTaskID
+        let previousState = imageTranslationState
         imageTranslationBlockRetryID = retryID
+        imageTranslationBlockRetryPreviousState = previousState
         imageTranslationRetryingBlockID = blockID
         imageTranslationState = .translating
         imageTranslationMessage = "正在重新翻译此文字块"
@@ -2224,6 +2236,7 @@ final class TranslationSessionStore: ObservableObject {
 
                 self.imageTranslationBlocks[blockIndex].translation = cleanTranslation
                 self.imageTranslationRetryingBlockID = nil
+                self.imageTranslationBlockRetryPreviousState = nil
                 self.imageTranslationBlockRetryTask = nil
                 self.isProcessing = false
                 let remainingCount = self.imageTranslationBlocks.count(where: {
@@ -2246,13 +2259,20 @@ final class TranslationSessionStore: ObservableObject {
             } catch is CancellationError {
                 guard self.imageTranslationBlockRetryID == retryID,
                       self.imageTranslationTaskID == contentTaskID else { return }
+                let restoredState = self.imageTranslationBlockRetryPreviousState ?? .failed
                 self.imageTranslationRetryingBlockID = nil
+                self.imageTranslationBlockRetryPreviousState = nil
                 self.imageTranslationBlockRetryTask = nil
+                self.imageTranslationState = restoredState
+                self.imageTranslationMessage = "已取消此文字块翻译重试，保留其它译文和复查进度"
+                self.dataTransferMessage = self.imageTranslationMessage
                 self.isProcessing = false
+                self.persist()
             } catch {
                 guard self.imageTranslationBlockRetryID == retryID,
                       self.imageTranslationTaskID == contentTaskID else { return }
                 self.imageTranslationRetryingBlockID = nil
+                self.imageTranslationBlockRetryPreviousState = nil
                 self.imageTranslationBlockRetryTask = nil
                 self.isProcessing = false
                 self.imageTranslationState = .failed

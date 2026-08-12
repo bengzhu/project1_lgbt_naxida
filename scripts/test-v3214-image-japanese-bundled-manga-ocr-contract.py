@@ -84,7 +84,7 @@ class JapaneseBundledMangaOCRContractTests(unittest.TestCase):
 
     def test_manga_ocr_runs_before_vision_crop_fallback(self) -> None:
         call = "await Self.recognizeJapaneseMangaOCR("
-        fallback = "let cropRefinedObservations = Self.recognizeJapaneseVerticalCrops("
+        fallback = "let cropRefinedObservations = try await Self.recognizeJapaneseVerticalCrops("
         self.assertIn(call, self.vision)
         self.assertIn(fallback, self.vision)
         self.assertLess(self.vision.index(call), self.vision.index(fallback))

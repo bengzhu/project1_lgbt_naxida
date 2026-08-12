@@ -36,6 +36,12 @@ struct JapaneseCompactCropReadDiagnostic: Sendable {
 }
 
 struct VisionOCRService: Sendable {
+    /// Koharu's line-region OCR is a bounded supplement to the existing
+    /// detector TextRegion budget. It runs only on tight Japanese vertical
+    /// candidates; detector bbox OCR remains the owner path and Vision remains
+    /// the fallback when the bundled model is unavailable.
+    private static let maximumJapaneseMangaLineOCRRequests = 8
+
     /// Read-only runtime evidence for the bounded Japanese pixel-first
     /// supplement. This is intentionally separate from the production OCR
     /// request path so a fixture can show which geometry gates admitted or
@@ -181,7 +187,7 @@ struct VisionOCRService: Sendable {
                 // engine. Keep the bounded Vision crop reread after bundled Manga OCR
                 // as a recovery path for regions the pixel detector or model misses:
                 // crop existing vertical layout nodes, map boxes back, then dedupe.
-                let cropRefinedObservations = Self.recognizeJapaneseVerticalCrops(
+                let cropRefinedObservations = try await Self.recognizeJapaneseVerticalCrops(
                     in: ocrImage,
                     observations: observations,
                     recognitionLanguages: japaneseVerticalRecognitionLanguages
@@ -640,7 +646,7 @@ struct VisionOCRService: Sendable {
         in image: CGImage,
         observations: [VisionOCRObservation],
         recognitionLanguages: [String]
-    ) -> [VisionOCRObservation] {
+    ) async throws -> [VisionOCRObservation] {
         let safeObservations = deduplicateJapaneseObservations(observations)
         let layoutObservations = safeObservations.map {
             ImageOCRLayoutObservation(
@@ -708,7 +714,7 @@ struct VisionOCRService: Sendable {
         // so the mapped line observations are our bounded equivalent.
         // Run this path first and let later reconnaissance consume only gaps
         // that were not reliably covered by a line reread.
-        let lineRefined = Self.recognizeJapaneseVerticalLineCrops(
+        let lineRefined = try await Self.recognizeJapaneseVerticalLineCrops(
             in: image,
             observations: safeObservations,
             blocks: Array(verticalBlocks),
@@ -1953,7 +1959,7 @@ struct VisionOCRService: Sendable {
         observations: [VisionOCRObservation],
         blocks: [ImageOCRLayoutBlock],
         recognitionLanguages: [String]
-    ) -> [VisionOCRObservation] {
+    ) async throws -> [VisionOCRObservation] {
         let safeObservations = deduplicateJapaneseObservations(observations)
         var candidates: [VisionOCRObservation] = []
         for block in blocks {
@@ -2000,9 +2006,21 @@ struct VisionOCRService: Sendable {
                 .prefix(24)
         )
 
-        var refined: [VisionOCRObservation] = []
-        refined.reserveCapacity((perspectiveCandidates.count + axisCandidates.count) * 2)
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
+        let mangaLineCandidates = japaneseMangaLineOCRCandidates(
+            uniqueCandidates: uniqueCandidates,
+            synthesizedCandidates: synthesizedCandidates
+        )
+        let mangaLineRefined = try await recognizeJapaneseMangaLineOCR(
+            in: image,
+            candidates: mangaLineCandidates,
+            imageSize: imageSize
+        )
+        var refined: [VisionOCRObservation] = []
+        refined.append(contentsOf: mangaLineRefined)
+        refined.reserveCapacity(
+            mangaLineRefined.count + (perspectiveCandidates.count + axisCandidates.count) * 2
+        )
         var perspectiveWarpPixels: CGFloat = 0
         var perspectiveCoveredCandidates: [VisionOCRObservation] = []
         for candidate in perspectiveCandidates {
@@ -2079,6 +2097,109 @@ struct VisionOCRService: Sendable {
             }
         }
         return refined
+    }
+
+    /// Select tight Vision line geometry as a bounded equivalent of Koharu's
+    /// `TextRegion.line_polygons`. Detector-owned Manga OCR results are excluded
+    /// so the same TextRegion is never submitted twice; synthesized columns are
+    /// admitted because they are the closest local proxy for fragmented lines.
+    private static func japaneseMangaLineOCRCandidates(
+        uniqueCandidates: [VisionOCRObservation],
+        synthesizedCandidates: [VisionOCRObservation]
+    ) -> [VisionOCRObservation] {
+        let candidates = deduplicateJapaneseObservations(
+            synthesizedCandidates + uniqueCandidates
+        ).filter { candidate in
+            guard candidate.observationRole != .detectorTextRegion else {
+                return false
+            }
+            let region = candidate.lineRegionRect ?? candidate.rect
+            let text = candidate.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return isVerticalLineCandidate(region)
+                && !text.isEmpty
+                && japaneseScriptDensity(in: text) >= 0.5
+        }
+        return Array(candidates.sorted { lhs, rhs in
+            let lhsLength = lhs.text.unicodeScalars.count
+            let rhsLength = rhs.text.unicodeScalars.count
+            if lhsLength != rhsLength {
+                return lhsLength > rhsLength
+            }
+            if lhs.confidence != rhs.confidence {
+                return lhs.confidence < rhs.confidence
+            }
+            return lhs.rect.y < rhs.rect.y
+        }.prefix(maximumJapaneseMangaLineOCRRequests))
+    }
+
+    /// Feed a tight vertical line crop through the bundled Koharu Manga OCR
+    /// model. The request keeps the candidate's line quad as recognition-only
+    /// geometry, uses the line-specific rotate270 boundary, and maps output back
+    /// to the original line ownership rect. A missing/incompatible model is an
+    /// ordinary fallback; cancellation still propagates to the image task.
+    private static func recognizeJapaneseMangaLineOCR(
+        in image: CGImage,
+        candidates: [VisionOCRObservation],
+        imageSize: CGSize
+    ) async throws -> [VisionOCRObservation] {
+        guard !candidates.isEmpty else { return [] }
+        let requests = candidates.map { candidate in
+            let lineRect = candidate.lineRegionRect ?? candidate.rect
+            return MangaOCRRequest(
+                textRect: lineRect,
+                cropRect: expandedVerticalLineCropRect(
+                    lineRect,
+                    imageSize: imageSize
+                ),
+                cropOrientation: .koharuVerticalLine270,
+                cropQuad: candidate.lineRegionQuad,
+                cropQuadIsVertical: candidate.lineRegionQuad != nil
+            )
+        }
+
+        let results: [MangaOCRResult]
+        do {
+            results = try await MangaOCRService.shared.recognize(
+                image: image,
+                requests: requests
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            return []
+        }
+
+        var unmatchedCandidates = candidates
+        var observations: [VisionOCRObservation] = []
+        observations.reserveCapacity(results.count)
+        for result in results {
+            guard let text = Self.cleanRecognizedBlockText(result.text),
+                  result.confidence.isFinite,
+                  result.confidence >= 0.55,
+                  japaneseScriptDensity(in: text) >= 0.5 else {
+                continue
+            }
+            guard let candidateIndex = unmatchedCandidates.firstIndex(where: {
+                let lineRect = $0.lineRegionRect ?? $0.rect
+                return lineRect == result.textRect
+            }) else {
+                continue
+            }
+            let candidate = unmatchedCandidates.remove(at: candidateIndex)
+            observations.append(
+                VisionOCRObservation(
+                    text: text,
+                    confidence: result.confidence,
+                    rect: candidate.rect,
+                    lineRegionRect: candidate.lineRegionRect ?? candidate.rect,
+                    lineRegionQuad: candidate.lineRegionQuad,
+                    rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
+                    sourceDirectionHint: .vertical,
+                    observationRole: .verticalLine
+                )
+            )
+        }
+        return observations
     }
 
     /// Decide whether a Japanese block is safe to omit after line rereads.

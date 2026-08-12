@@ -40,7 +40,7 @@ class JapaneseCropOCRContractTests(unittest.TestCase):
 
     def test_japanese_path_uses_existing_layout_to_bound_crop_rereads(self) -> None:
         for marker in [
-            "let cropRefinedObservations = Self.recognizeJapaneseVerticalCrops(",
+            "let cropRefinedObservations = try await Self.recognizeJapaneseVerticalCrops(",
             "observations.append(contentsOf: cropRefinedObservations)",
             "ImageOCRLayoutEngine.layout(",
             "allowsVerticalText: true",
