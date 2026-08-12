@@ -1,3 +1,17 @@
+## v3.274：图片 OCR 复查阈值文案与共享质量 gate 对齐
+
+日期：2026-08-12
+
+v3.273 已将图片 OCR／bundled Manga OCR 的共享低置信阈值从 `0.50` 收紧到 `0.55`，但结果筛选 VoiceOver、低置信空态和修正页警告仍硬编码显示“低于 50%”。本版新增 `ImageOCRReviewPresentation.lowConfidencePercent`，直接读取 `ImageOCRResultSummary.lowConfidenceThreshold` 并统一驱动这 3 个 UI 文案，避免 gate 与用户提示再次漂移；OCR 模型、crop／geometry、detector ownership、方向、预算、翻译、布局、渲染和非图片路径不变。新增 `scripts/test-v3274-image-ocr-review-threshold-copy-contract.py`，工程版本为 `3.274`。
+
+这只是已有 OCR 结果的复查风险提示修复，不声称固定 `test/jap.jpg` 之外的通用日语 OCR／翻译／识别质量提升；GPL MIT48 权重与 Koharu GPL runtime 仍只在云端 parity 使用，不打包进 AITRANS，也不替换 bundled Apache Manga OCR。
+
+验证边界：
+
+- 本地未运行项目 `xcodebuild`、app Swift 编译、Rust／Cargo、Core ML 或 runtime 编译；新合同 `3/3`、安全静态 v3.254–v3.274 合同 `23` 个、Python AST `296` 个、YAML／shell 语法与 `git diff --check` 通过。早期一次误触发的历史 v2.01 geometry contract 内置 `xcrun swiftc` evaluator 已立即中断且未完成，之后已默认跳过所有 compile-bearing 合同。
+- PR #355 的快速 CI [31594718557](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31594718557) 成功；为满足 full cloud gate，精确实现 SHA `d5d3c9440840d0bce898d209210be4778abd273f` 的 full [31594790350](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31594790350) 成功，Cloud Koharu MIT48 parity job `94107625720`、macOS job `94109179520`、UI contracts、云端 Xcode build、JUnit summary 与 receipt 全部成功。
+- PR #355 已合入 `smalldata_test`，merge SHA 为 `36a2efb8500ac0262251906137ea1183fa5a3119`；研发分支已删除，本地／origin 仅保留 `main` 与 `smalldata_test`。
+
 ## v3.273：图片 OCR 复查阈值与 bundled Manga OCR 质量 gate 对齐
 
 日期：2026-08-12
