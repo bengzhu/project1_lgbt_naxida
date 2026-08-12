@@ -1,3 +1,19 @@
+## v3.271：Koharu 右上竖排 line 的云端 crop 边界收紧
+
+日期：2026-08-12
+
+v3.270 的 Koharu MIT48 云端 smoke 已经能稳定读出右上列 `やがって`，但原 crop 混入人物／头发背景，confidence 只有 `0.14473826`。本版依据 `test/jap.jpg` 的实际文字与背景分布，将 `right-column-a` 从 `(846,116)-(906,432)` 收紧到 `(864,136)-(908,342)`。固定 pinned reference 云端实测仍输出 `やがって`，confidence 提升到 `0.23084585`；它仍低于 AITRANS 可靠 owner 的 `>=.55` 门槛，因此本版只记录为 crop 诊断改善，不改变 iOS detector ownership、bundled Manga OCR、翻译或布局路径。
+
+既有质量边界保持严格：7 个 crop 至少 6 个通过有限 confidence／日语脚本密度，compact crop 必须精确输出 `ニコッ` 且 confidence `>=.55`。本次云端 evidence 的 compact 为 `ニコッ`／`0.59093773`，accepted `6/7`。这只是固定 `test/jap.jpg` 的云端 reference crop 证据，不是通用日语 OCR／翻译／识别质量声明；GPL MIT48 权重、Koharu GPL runtime 仍只在云端 parity 使用，不打包进 AITRANS，也不替换现有 bundled Apache Manga OCR。
+
+新增 `scripts/test-v3271-koharu-mit48-right-column-quality-contract.py`，工程版本为 `3.271`。本地严格遵守“不要本地编译”，只执行安全 Python 合同、YAML／shell 语法与 `git diff --check`，未运行本地 Xcode、Swift、Rust、Core ML 或 runtime 编译。
+
+验证边界：
+
+- exact-SHA full [31580831851](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31580831851) 对实现 SHA `deed8f9c9b67c535167daa3989ce7e4654aed1a9` 成功；Cloud Koharu parity job 为 `94063266497`，云端 Xcode/JUnit/UI/Home/Paste/Speech 与 receipt 全部通过。
+- PR #352 的 CI [31582462714](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31582462714) 通过；merge SHA 为 `e3ab42b4d9a6ad368a4dd4c27e5e2a35ddbe315f`，合入 `smalldata_test` 后 push CI [31582532563](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31582532563) 通过。
+- 研发分支已删除，本地／origin 仅保留 `main` 与 `smalldata_test`。
+
 ## v3.270：Koharu 竖排 parity 方向修正与 compact 质量 gate
 
 日期：2026-08-12
