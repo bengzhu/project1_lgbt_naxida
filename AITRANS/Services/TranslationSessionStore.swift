@@ -2409,7 +2409,9 @@ final class TranslationSessionStore: ObservableObject {
                 self.imageTranslationState = previousState
                 self.isProcessing = false
                 self.imageTranslationMessage = "此图片文字块重新识别已取消"
+                self.dataTransferMessage = self.imageTranslationMessage
                 self.imageTranslationBlockRerecognitionFailureGeneration &+= 1
+                self.persist()
             } catch {
                 guard self.imageTranslationBlockRerecognitionID == requestID,
                       self.imageTranslationTaskID == contentTaskID else { return }
