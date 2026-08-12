@@ -47,15 +47,16 @@ private func testEmptySummary() {
 private func testConfidenceAndTranslationSummary() {
     let summary = ImageOCRResultSummary(blocks: [
         block(confidence: -0.2, translation: "translated", direction: .horizontal),
-        block(confidence: 0.5, direction: .vertical),
+        block(confidence: 0.55, direction: .vertical),
         block(confidence: 1.4, translation: "translated", direction: .unknown),
         block(confidence: 0.25)
     ])
 
     require(summary.totalBlockCount == 4, "all blocks must be counted")
     require(summary.translatedBlockCount == 2, "only non-empty translations count")
-    require(summary.averageConfidence == 0.4375, "confidence must be clamped before averaging")
-    require(summary.lowConfidenceBlockCount == 2, "threshold is strict and excludes exactly 50 percent")
+    let expectedAverage = (Double(Float(0.55)) + 1.0 + 0.25) / 4.0
+    require(summary.averageConfidence == expectedAverage, "confidence must be clamped before averaging")
+    require(summary.lowConfidenceBlockCount == 2, "threshold is strict and excludes exactly 55 percent")
 }
 
 private func testDirectionPartition() {

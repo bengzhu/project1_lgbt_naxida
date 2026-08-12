@@ -39,11 +39,11 @@ private func testRiskFiltersPreserveSourceOrderAndOverlap() {
         block(0.91, .unknown),
         block(0.20, nil),
         block(0.80, .vertical),
-        block(0.50, .horizontal)
+        block(0.55, .horizontal)
     ]
 
     require(
-        ImageOCRReviewFilter.all.blocks(from: blocks).map(\.confidence) == [0.49, 0.91, 0.20, 0.80, 0.50],
+        ImageOCRReviewFilter.all.blocks(from: blocks).map(\.confidence) == [0.49, 0.91, 0.20, 0.80, 0.55],
         "all filter must preserve every block and source order"
     )
     require(
@@ -61,10 +61,10 @@ private func testRiskFiltersPreserveSourceOrderAndOverlap() {
 }
 
 private func testThresholdBoundaryRemainsStrict() {
-    let boundary = block(0.50, .horizontal)
+    let boundary = block(0.55, .horizontal)
     require(
         ImageOCRReviewFilter.lowConfidence.blocks(from: [boundary]).isEmpty,
-        "exactly 50 percent must not be classified as low confidence"
+        "exactly 55 percent must not be classified as low confidence"
     )
 }
 

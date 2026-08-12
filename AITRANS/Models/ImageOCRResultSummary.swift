@@ -1,7 +1,9 @@
 import Foundation
 
 struct ImageOCRResultSummary: Equatable, Sendable {
-    static let lowConfidenceThreshold: Float = 0.5
+    // Keep the review surface aligned with the bundled Manga OCR quality gate.
+    // A result below 0.55 is not reliable enough to silently leave out of review.
+    static let lowConfidenceThreshold: Float = 0.55
 
     var totalBlockCount: Int
     var translatedBlockCount: Int
