@@ -57,7 +57,7 @@ class ImageOCRRerunContractTests(unittest.TestCase):
 
     def test_summary_preserves_confidence_and_direction_evidence(self) -> None:
         summary = read("AITRANS/Models/ImageOCRResultSummary.swift")
-        self.assertIn("static let lowConfidenceThreshold: Float = 0.5", summary)
+        self.assertIn("static let lowConfidenceThreshold: Float = 0.55", summary)
         self.assertIn("blocks.count(where: { !$0.translation.isEmpty })", summary)
         self.assertIn("Self.hasLowConfidence($0, lowConfidenceThreshold: lowConfidenceThreshold)", summary)
         self.assertIn("return confidence < threshold", summary)
