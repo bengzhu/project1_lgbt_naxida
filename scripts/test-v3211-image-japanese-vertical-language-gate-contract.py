@@ -29,7 +29,9 @@ class JapaneseVerticalLanguageGateContractTests(unittest.TestCase):
         marker = 'let japaneseVerticalRecognitionLanguages = ["ja-JP", "ja"]'
         self.assertIn(marker, self.vision)
         branch = self.vision[self.vision.index("if sourceLanguage == .japanese {") :]
-        crop_call = branch.index("let cropRefinedObservations = Self.recognizeJapaneseVerticalCrops(")
+        crop_call = branch.index(
+            "let cropRefinedObservations = try await Self.recognizeJapaneseVerticalCrops("
+        )
         crop_tail = branch[crop_call : crop_call + 500]
         self.assertIn("recognitionLanguages: japaneseVerticalRecognitionLanguages", crop_tail)
         self.assertNotIn("recognitionLanguages: japaneseOrientationLanguages", crop_tail)

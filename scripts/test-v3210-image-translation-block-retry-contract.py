@@ -141,8 +141,8 @@ class ImageTranslationBlockRetryContractTests(unittest.TestCase):
             "canRetryTranslation: Bool",
             "isRetryingTranslation: Bool",
             "retryTranslation: () -> Void",
-            'isRetryingTranslation ? "正在重试翻译" : "重试此文字块翻译"',
-            'systemImage: isRetryingTranslation ? "hourglass" : "arrow.clockwise"',
+            'isRetryingTranslation ? "取消此文字块翻译重试" : "重试此文字块翻译"',
+            'systemImage: isRetryingTranslation ? "xmark.circle" : "arrow.clockwise"',
             '"可重试此块"',
             "ImageReviewRowRetryAccessibilityModifier(",
         ]:
@@ -157,7 +157,7 @@ class ImageTranslationBlockRetryContractTests(unittest.TestCase):
             "let retryTranslation: () -> Void",
             "let retryUnavailableHint: String",
             "block.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty",
-            '"正在只翻译此文字块，不会重新识别图片"',
+            '"取消只针对当前文字块的翻译重试；保留其它译文、OCR 和复查进度"',
         ]:
             self.assertIn(marker, self.focus)
         self.assertIn("retryTranslation: { retryTranslation(selectedBlock.id) }", self.view)

@@ -50,9 +50,12 @@ class JapaneseKoharuLineFirstDispatchContractTests(unittest.TestCase):
         self.workflow = read(".github/workflows/ci-results.yml")
 
     def test_line_path_precedes_detector_tile_and_block_fallback(self) -> None:
-        line_call = self.crops.index(
-            "let lineRefined = Self.recognizeJapaneseVerticalLineCrops("
+        line_match = re.search(
+            r"let lineRefined = (?:try await )?Self\.recognizeJapaneseVerticalLineCrops\(",
+            self.crops,
         )
+        self.assertIsNotNone(line_match)
+        line_call = line_match.start()
         detector_call = self.crops.index(
             "Self.recognizeJapanesePixelFirstVerticalCrops("
         )

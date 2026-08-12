@@ -42,9 +42,12 @@ class JapaneseKoharuLineFirstOCRContractTests(unittest.TestCase):
         self.workflow = read(".github/workflows/ci-results.yml")
 
     def test_line_regions_run_before_block_crop(self) -> None:
-        line_call = self.crops.index(
-            "let lineRefined = Self.recognizeJapaneseVerticalLineCrops("
+        line_match = re.search(
+            r"let lineRefined = (?:try await )?Self\.recognizeJapaneseVerticalLineCrops\(",
+            self.crops,
         )
+        self.assertIsNotNone(line_match)
+        line_call = line_match.start()
         block_crop_call = self.crops.index(
             "let primary = recognizeJapaneseCropPass("
         )

@@ -441,6 +441,7 @@ struct ImageTranslationPanel: View {
                 canRetryTranslation: { store.canRetryImageTranslationBlock($0) },
                 isRetryingTranslation: { store.imageTranslationRetryingBlockID == $0 },
                 retryTranslation: { store.retryImageTranslationBlock($0) },
+                cancelRetryTranslation: { store.cancelImageTranslationBlockRetry() },
                 canRerecognize: { store.canRerecognizeImageTranslationBlock($0) },
                 isRerecognizing: { store.imageTranslationRerecognizingBlockID == $0 },
                 rerecognize: {
@@ -757,6 +758,7 @@ struct ImageTranslationPanel: View {
                             canRetryTranslation: store.canRetryImageTranslationBlock(block.id),
                             isRetryingTranslation: store.imageTranslationRetryingBlockID == block.id,
                             retryTranslation: { store.retryImageTranslationBlock(block.id) },
+                            cancelRetryTranslation: { store.cancelImageTranslationBlockRetry() },
                             canRerecognize: store.canRerecognizeImageTranslationBlock(block.id),
                             isRerecognizing: store.imageTranslationRerecognizingBlockID == block.id,
                             rerecognize: {
@@ -1800,6 +1802,9 @@ struct ImageTranslationPanel: View {
             }
             return "正在使用本机 OCR；可以取消或选择新图片"
         case .translating:
+            if store.imageTranslationRetryingBlockID != nil {
+                return "正在只翻译当前图片文字块；可以取消此文字块操作，不会取消整张图片或清除复查进度"
+            }
             return "正在逐块翻译；仍可查看和定位，完成后可修正文字或更新复查"
         case .translated:
             if store.imageTranslationMessage.hasPrefix("此图片文字块重新识别") {
@@ -2171,6 +2176,14 @@ private struct ImageCommandBar: View {
                 action: store.cancelImageTranslationBlockRerecognition
             )
             .accessibilityHint("取消当前文字块重新识别；保留其它 OCR、译文和复查进度")
+        } else if store.imageTranslationRetryingBlockID != nil {
+            AppSecondaryButton(
+                title: "取消翻译重试",
+                systemImage: "xmark.circle.fill",
+                tone: .danger,
+                action: store.cancelImageTranslationBlockRetry
+            )
+            .accessibilityHint("取消当前文字块翻译重试；保留其它译文、OCR 和复查进度")
         } else if isRunning {
             AppSecondaryButton(title: "取消", systemImage: "xmark.circle.fill", tone: .danger, action: store.cancelImageTranslation)
                 .accessibilityHint("取消当前图片读取、OCR 或翻译；保留已载入图片以便重试")
@@ -2324,6 +2337,7 @@ private struct ImageTranslationPreview: View {
     let canRetryTranslation: (UUID) -> Bool
     let isRetryingTranslation: (UUID) -> Bool
     let retryTranslation: (UUID) -> Void
+    let cancelRetryTranslation: (UUID) -> Void
     let canRerecognize: (UUID) -> Bool
     let isRerecognizing: (UUID) -> Bool
     let rerecognize: (UUID) -> Void
@@ -2383,6 +2397,7 @@ private struct ImageTranslationPreview: View {
                                 canRetryTranslation: canRetryTranslation(selectedBlock.id),
                                 isRetryingTranslation: isRetryingTranslation(selectedBlock.id),
                                 retryTranslation: { retryTranslation(selectedBlock.id) },
+                                cancelRetryTranslation: { cancelRetryTranslation(selectedBlock.id) },
                                 canRerecognize: canRerecognize(selectedBlock.id),
                                 isRerecognizing: isRerecognizing(selectedBlock.id),
                                 rerecognize: { rerecognize(selectedBlock.id) },
@@ -2874,6 +2889,7 @@ private struct ImageTranslationFocusPreview: View {
     let canRetryTranslation: Bool
     let isRetryingTranslation: Bool
     let retryTranslation: () -> Void
+    let cancelRetryTranslation: () -> Void
     let canRerecognize: Bool
     let isRerecognizing: Bool
     let rerecognize: () -> Void
@@ -3006,19 +3022,19 @@ private struct ImageTranslationFocusPreview: View {
                 if block.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                    canRetryTranslation || isRetryingTranslation {
                     Button(
-                        isRetryingTranslation ? "正在重试翻译" : "重试此文字块翻译",
-                        systemImage: isRetryingTranslation ? "hourglass" : "arrow.clockwise",
-                        action: retryTranslation
+                        isRetryingTranslation ? "取消此文字块翻译重试" : "重试此文字块翻译",
+                        systemImage: isRetryingTranslation ? "xmark.circle" : "arrow.clockwise",
+                        action: isRetryingTranslation ? cancelRetryTranslation : retryTranslation
                     )
                     .labelStyle(.iconOnly)
                     .foregroundStyle(.white)
                     .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
                     .background(Color.black.opacity(0.82), in: Circle())
-                    .disabled(!canRetryTranslation || isRetryingTranslation)
-                    .opacity(canRetryTranslation && !isRetryingTranslation ? 1 : 0.55)
+                    .disabled(!canRetryTranslation && !isRetryingTranslation)
+                    .opacity(canRetryTranslation || isRetryingTranslation ? 1 : 0.55)
                     .accessibilityHint(
                         isRetryingTranslation
-                            ? "正在只翻译此文字块，不会重新识别图片"
+                            ? "取消只针对当前文字块的翻译重试；保留其它译文、OCR 和复查进度"
                             : retryUnavailableHint
                     )
                 }
@@ -3588,6 +3604,7 @@ private struct ImageTranslationBlockRow: View {
     let canRetryTranslation: Bool
     let isRetryingTranslation: Bool
     let retryTranslation: () -> Void
+    let cancelRetryTranslation: () -> Void
     let canRerecognize: Bool
     let isRerecognizing: Bool
     let rerecognize: () -> Void
@@ -3710,7 +3727,8 @@ private struct ImageTranslationBlockRow: View {
                 ImageReviewRowRetryAccessibilityModifier(
                     canRetryTranslation: canRetryTranslation,
                     isRetryingTranslation: isRetryingTranslation,
-                    retryTranslation: retryTranslation
+                    retryTranslation: retryTranslation,
+                    cancelRetryTranslation: cancelRetryTranslation
                 )
             )
 
@@ -3767,17 +3785,17 @@ private struct ImageTranslationBlockRow: View {
                 if block.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                    canRetryTranslation || isRetryingTranslation {
                     Button(
-                        isRetryingTranslation ? "正在重试翻译" : "重试此文字块翻译",
-                        systemImage: isRetryingTranslation ? "hourglass" : "arrow.clockwise",
-                        action: retryTranslation
+                        isRetryingTranslation ? "取消此文字块翻译重试" : "重试此文字块翻译",
+                        systemImage: isRetryingTranslation ? "xmark.circle" : "arrow.clockwise",
+                        action: isRetryingTranslation ? cancelRetryTranslation : retryTranslation
                     )
                     .labelStyle(.iconOnly)
                     .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
                     .foregroundStyle(Color.appWarning)
-                    .disabled(!canRetryTranslation || isRetryingTranslation)
+                    .disabled(!canRetryTranslation && !isRetryingTranslation)
                     .accessibilityHint(
                         isRetryingTranslation
-                            ? "正在只翻译此文字块，不会重新识别图片"
+                            ? "取消只针对当前文字块的翻译重试；保留其它译文、OCR 和复查进度"
                             : retryUnavailableHint
                     )
                 }
@@ -3887,7 +3905,9 @@ private struct ImageTranslationBlockRow: View {
         if ImageOCRResultSummary.requiresReview(block) && canReview {
             actions.append(isReviewCompleted ? "撤销本次复查" : "完成并继续复查")
         }
-        if canRetryTranslation {
+        if isRetryingTranslation {
+            actions.append("取消此文字块翻译重试")
+        } else if canRetryTranslation {
             actions.append("重试此文字块翻译")
         }
         if isRerecognizing {
@@ -3908,10 +3928,16 @@ private struct ImageReviewRowRetryAccessibilityModifier: ViewModifier {
     let canRetryTranslation: Bool
     let isRetryingTranslation: Bool
     let retryTranslation: () -> Void
+    let cancelRetryTranslation: () -> Void
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if canRetryTranslation && !isRetryingTranslation {
+        if isRetryingTranslation {
+            content
+                .accessibilityAction(named: "取消此文字块翻译重试") {
+                    cancelRetryTranslation()
+                }
+        } else if canRetryTranslation {
             content
                 .accessibilityAction(named: "重试此文字块翻译") {
                     retryTranslation()
