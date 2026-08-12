@@ -1,3 +1,19 @@
+## v3.272：Koharu 右上竖排 line 的 text-only 云端 crop
+
+日期：2026-08-12
+
+v3.271 已把右上 `やがって` 的 crop 收紧到文字与省略号范围，但下方仍有人物／背景干扰，confidence 为 `0.23084585`。本版进一步依据 `test/jap.jpg` 的四个主字符连通组件，将 `right-column-a` 从 `(864,136)-(908,342)` 收紧到 `(864,136)-(908,298)`，去掉省略号与下方干扰。固定 pinned Koharu MIT48 reference 在云端仍准确输出 `やがって`，confidence 提升到 `0.98682830`；compact `ニコッ` 为 `0.59093815`，7 个 crop 中 6 个通过日语脚本密度 gate。
+
+既有 `confidence >= .55`、日语脚本密度、compact 精确文本、detector ownership、预算与方向边界保持不变。这是固定样图的云端 crop 诊断改进，不是通用日语 OCR／翻译／识别质量声明；GPL MIT48 权重与 Koharu GPL runtime 仍只在云端 parity 使用，不打包进 AITRANS，也不替换现有 bundled Apache Manga OCR。
+
+新增 `scripts/test-v3272-koharu-mit48-right-column-text-only-contract.py`，工程版本为 `3.272`。本地严格遵守“不要本地编译”，只执行安全 Python 合同、YAML／shell 语法与 `git diff --check`，未运行本地 Xcode、Swift、Rust、Core ML 或 runtime 编译。
+
+验证边界：
+
+- exact-SHA full [31582991645](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31582991645) 对实现 SHA `6c28599fbc205939fc1e50c0dc25d34cda28b184` 成功；Cloud Koharu parity job 为 `94070186027`，云端 Xcode/JUnit/UI/Home/Paste/Speech 与 receipt 全部通过。
+- PR #353 的 CI [31584467786](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31584467786) 通过；merge SHA 为 `4c9e50d7e41dc99a1289fa82e0601f5e7f924fb2`，合入 `smalldata_test` 后 push CI [31584537250](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31584537250) 通过。
+- 研发分支已删除，本地／origin 仅保留 `main` 与 `smalldata_test`。
+
 ## v3.271：Koharu 右上竖排 line 的云端 crop 边界收紧
 
 日期：2026-08-12
