@@ -1789,10 +1789,16 @@ struct ImageTranslationPanel: View {
         case .loading:
             return "正在读取图片；可以取消或选择新图片"
         case .recognizing:
+            if store.imageTranslationRerecognizingBlockID != nil {
+                return "正在重新识别当前图片文字块；可以取消此文字块操作，不会取消整张图片或清除复查进度"
+            }
             return "正在使用本机 OCR；可以取消或选择新图片"
         case .translating:
             return "正在逐块翻译；仍可查看和定位，完成后可修正文字或更新复查"
         case .translated:
+            if store.imageTranslationMessage.hasPrefix("此图片文字块重新识别") {
+                return "当前图片文字块未替换，原文与复查进度已保留；可以继续复查或重新识别"
+            }
             return "图片翻译完成；可以修正文字、更新复查、切换覆盖方式或导出"
         case .failed:
             return store.canRetryImageTranslation && store.imageTranslationRetryLanguageSummary == nil
@@ -2151,7 +2157,15 @@ private struct ImageCommandBar: View {
             .accessibilityHint("图片翻译需要 Pro；不会修改当前图片或文本页语言")
         }
 
-        if isRunning {
+        if store.imageTranslationRerecognizingBlockID != nil {
+            AppSecondaryButton(
+                title: "取消重新识别",
+                systemImage: "xmark.circle.fill",
+                tone: .danger,
+                action: store.cancelImageTranslationBlockRerecognition
+            )
+            .accessibilityHint("取消当前文字块重新识别；保留其它 OCR、译文和复查进度")
+        } else if isRunning {
             AppSecondaryButton(title: "取消", systemImage: "xmark.circle.fill", tone: .danger, action: store.cancelImageTranslation)
                 .accessibilityHint("取消当前图片读取、OCR 或翻译；保留已载入图片以便重试")
         } else if store.canRetryImageTranslation {
