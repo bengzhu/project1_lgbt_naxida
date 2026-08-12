@@ -1,3 +1,11 @@
+### v3.262 Koharu detector Triangle resize 合同
+
+- `ComicTextBubbleDetectorService` 的 detector 640×640 输入必须先从 canonical 8-bit DeviceRGB 生成 RGB plane，再执行 image-rs/Koharu 等价的 separable Triangle sampling；不得继续使用 Core Graphics `.high` 作为等价实现。下采样 support、edge weight normalization、vertical pass 保留 Float、horizontal pass 后统一 round 均属于契约。
+- RGB plane 只在最后显式复制为 32BGRA，alpha 固定为 255；detector threshold、ownership bbox／quad、Manga OCR、Vision fallback、12／48 请求预算、取消、布局、翻译、渲染和非图片路径不变。
+- `scripts/test-v3262-koharu-detector-triangle-contract.py` 锁定源代码边界、RGB/BGRA 顺序、checksum harness、项目版本与 CI route；`scripts/test-v3262-koharu-detector-triangle-runtime.sh` 以 synthetic 2×2 fixture（checksum `e7e9d1fe4bb47c45`）和 `test/jap.jpg` detector runtime 验证真实 Core ML 路径。历史 v3.254 长页诊断只允许已实测的 `0.940558`、`0.940838`、`0.940873` host geometry values。
+- exact-SHA full [31556290782](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31556290782)（SHA `2fd53c4a555b5fe2d41f82a9860b3e3e55c7dc61`，Xcode/JUnit `10/10`）通过并发布 `AITRANS CI/full-validation=success`；PR #339 merge SHA `c7517492a66b3b095bc6e12f8e50d8090d558328`，合入后 push CI [31557042896](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31557042896) 通过。
+- 固定样图只证明预处理、detector geometry 与既有 OCR/runtime 回归，不外推通用日语 OCR、翻译或识别质量；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ### v3.261 图片 OCR Vision 恢复焦点来源合同
 
 - 局部预览触发恢复时必须记录 `.preview`，结果行触发时保留 `.row`；确认成功后按来源分别聚焦预览文字块或结果行。若 restored block 不在当前筛选中，必须清理隐藏 selection 并回退到可见结果、完成态、筛选控件或空态。

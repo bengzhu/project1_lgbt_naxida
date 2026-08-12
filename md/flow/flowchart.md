@@ -1,4 +1,6 @@
 # 项目流程图
+v3.262 detector 预处理：`source CGImage -> canonical DeviceRGB -> separable Koharu/image-rs Triangle (pixel-centred, bounded support, edge-normalized) -> RGB plane -> explicit 32BGRA -> RT-DETR 640x640 -> TextRegion ownership -> existing Manga OCR/Vision fusion`；不改变 threshold、12/48 budget、取消、布局、翻译、渲染与非图片路径。
+
 v3.261 OCR 复查恢复：`row/preview action -> confirmation -> restore existing Vision baseline -> origin-aware VoiceOver focus -> hidden-filter fallback`；不重新运行 OCR、翻译或整图请求。
 
 v3.260 Manga OCR 输入：`source image -> canonical 8-bit DeviceRGB -> floor((2126R + 7152G + 722B) / 10000) -> 224x224 nearest floor -> decoder`；后续 batch／fallback、取消、ownership、翻译与渲染边界不变。
