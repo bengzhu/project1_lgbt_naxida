@@ -50,7 +50,9 @@ image = ImageOps.exif_transpose(Image.open(source)).convert("RGB")
 specs = [
     ("left-column-a", (238, 86, 322, 448)),
     ("left-column-b", (322, 86, 405, 448)),
-    ("left-column-c", (405, 86, 491, 448)),
+    # Connected-component bounds for 今度こそ are approximately x=393..448;
+    # keep a small measured margin instead of clipping the first glyph at x=405.
+    ("left-column-c", (388, 86, 452, 448)),
     ("right-column-a", (864, 136, 908, 298)),
     ("right-column-b", (904, 116, 970, 432)),
     ("right-column-c", (968, 116, 1030, 432)),
@@ -144,7 +146,7 @@ for path in sorted((output / "predictions").glob("*.json")):
 if not accepted:
     raise AssertionError("MIT48 reference runtime produced no nonempty Japanese crop output")
 
-if len(accepted) < 6:
+if len(accepted) < 7:
     raise AssertionError(
         f"MIT48 reference runtime accepted only {len(accepted)}/7 Japanese crops"
     )
@@ -155,6 +157,12 @@ if compact is None or compact["text"] != "ニコッ":
 if compact["confidence"] < 0.55:
     raise AssertionError(f"compact-niko confidence is below 0.55: {compact}")
 
+left_column_c = next((row for row in rows if row["id"] == "left-column-c"), None)
+if left_column_c is None or left_column_c["text"] != "今度こそ":
+    raise AssertionError(f"left-column-c did not recover 今度こそ: {left_column_c}")
+if left_column_c["confidence"] < 0.55:
+    raise AssertionError(f"left-column-c confidence is below 0.55: {left_column_c}")
+
 report = {
     "status": "success",
     "runtime": "koharu-ml/bin/mit48px-ocr",
@@ -163,9 +171,11 @@ report = {
     "cropCount": len(rows),
     "acceptedJapanesePredictions": len(accepted),
     "qualityGate": {
-        "minimumAcceptedJapanesePredictions": 6,
+        "minimumAcceptedJapanesePredictions": 7,
         "compactNikoText": "ニコッ",
         "compactNikoMinimumConfidence": 0.55,
+        "leftColumnCText": "今度こそ",
+        "leftColumnCMinimumConfidence": 0.55,
     },
     "predictions": rows,
     "qualityClaim": "cloud reference smoke only; no general OCR quality claim",

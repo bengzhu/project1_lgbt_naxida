@@ -28,7 +28,7 @@ class KoharuMit48RightColumnTextOnlyContractTests(unittest.TestCase):
 
     def test_existing_quality_gates_remain_strict(self) -> None:
         for marker in [
-            "len(accepted) < 6",
+            "len(accepted) < 7",
             'compact["text"] != "ニコッ"',
             'compact["confidence"] < 0.55',
             '"compactNikoText": "ニコッ"',
@@ -44,7 +44,7 @@ class KoharuMit48RightColumnTextOnlyContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.274", "3.274"],
+            ["3.275", "3.275"],
         )
 
 

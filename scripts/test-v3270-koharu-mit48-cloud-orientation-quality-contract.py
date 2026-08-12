@@ -35,10 +35,13 @@ class KoharuMit48CloudOrientationQualityContractTests(unittest.TestCase):
             "math.isfinite(confidence)",
             "density >= 0.5",
             "acceptedJapanesePredictions",
-            "len(accepted) < 6",
+            "len(accepted) < 7",
             'compact["text"] != "ニコッ"',
             'compact["confidence"] < 0.55',
+            'left_column_c["text"] != "今度こそ"',
+            'left_column_c["confidence"] < 0.55',
             '"compactNikoText": "ニコッ"',
+            '"leftColumnCText": "今度こそ"',
             '"qualityClaim": "cloud reference smoke only; no general OCR quality claim"',
         ]:
             self.assertIn(marker, self.smoke)
@@ -52,7 +55,7 @@ class KoharuMit48CloudOrientationQualityContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.274", "3.274"],
+            ["3.275", "3.275"],
         )
 
 
