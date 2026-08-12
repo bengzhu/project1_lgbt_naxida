@@ -1,3 +1,19 @@
+## v3.273：图片 OCR 复查阈值与 bundled Manga OCR 质量 gate 对齐
+
+日期：2026-08-12
+
+v3.272 之后，bundled Manga OCR 与 Koharu parity 已把可靠结果边界固定为 confidence `>=.55`，但图片结果汇总和复查筛选的默认 `lowConfidenceThreshold` 仍为 `0.50`。本版将 `ImageOCRResultSummary` 的共享默认阈值统一为 `0.55`：低于 `0.55` 的 block 现在会进入低置信筛选、需要复查状态、结果行、局部预览和 VoiceOver 原因提示；严格比较仍为 `<`，因此恰好 `0.55` 不会被标为低置信，方向待定 union 保持不变。
+
+这只改善已有 OCR 结果的风险暴露和复查可发现性，不重跑 OCR、不改 detector ownership、bbox／quad、方向、请求预算、翻译、布局、渲染或非图片路径；不把固定样图外推为通用日语 OCR／翻译／识别质量提升。同步更新 v3.300、v3.310、v3.392 历史 evaluator 的阈值边界 fixture，新增 `scripts/test-v3273-image-ocr-review-confidence-gate-contract.py`，工程版本为 `3.273`。
+
+本地严格遵守“不要本地编译”：运行 v3.273 Python 合同、全量 `scripts/test-v*.py` Python AST 解析、YAML 解析、`bash -n scripts/run-koharu-mit48px-cloud-smoke.sh` 与 `git diff --check`；未运行本地 Xcode、`xcodebuild`、Swift、Rust、Cargo、Core ML 或 runtime 编译／探针。
+
+验证边界：
+
+- 实现 SHA `0cb74436b92dc1f4a1998869499432371461e306` 的云端 run [31591506269](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31591506269) 已完成 macOS Xcode build；其后仅修改历史 evaluator fixture 的修复 SHA `d3112bbdc1d00812bc154f4f5ecf7465a4761bc5` 的 exact-SHA full [31592607326](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31592607326) 成功，Koharu parity job 为 `94100749608`，UI contracts 与 `AITRANS CI/full-validation` receipt 全部通过。
+- PR #354 CI [31593583088](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31593583088) 通过；merge SHA 为 `1bcdb2ea8b41ac69f8ff81a60c33e8982d23a1d0`，合入 `smalldata_test` 后 push CI [31593661426](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31593661426) 通过。
+- v3.272 固定样图 parity 回归仍保持 `やがって` confidence `0.98682830`、compact `ニコッ` confidence `0.59093815`、7 个 crop 中 `6/7` 通过；MIT48 权重与 Koharu GPL runtime 仍只在云端 parity 使用，不打包进 AITRANS，也不替换 bundled Apache Manga OCR。研发分支已删除，本地／origin 仅保留 `main` 与 `smalldata_test`。
+
 ## v3.272：Koharu 右上竖排 line 的 text-only 云端 crop
 
 日期：2026-08-12
