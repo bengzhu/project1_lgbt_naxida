@@ -54,7 +54,7 @@ specs = [
     ("right-column-a", (846, 116, 906, 432)),
     ("right-column-b", (904, 116, 970, 432)),
     ("right-column-c", (968, 116, 1030, 432)),
-    ("compact-niko", (530, 1084, 582, 1166)),
+    ("compact-niko", (530, 1048, 582, 1166)),
 ]
 
 manifest = []
