@@ -1,3 +1,20 @@
+## v3.270：Koharu 竖排 parity 方向修正与 compact 质量 gate
+
+日期：2026-08-12
+
+云端 evidence 暴露 v3.269 smoke 的两个真实问题：Pillow `rotate(270)` 与 Koharu image-rs 的 `rotate270` 方向相反；compact crop 只读到了部分文字。v3.270 将 Pillow 方向改为等价的 `rotate(90)`，并根据 `test/jap.jpg` 黑字连通组件重新确定 compact `ニコッ` 的紧边界 `(532,1050)-(578,1142)`，而不是继续扩大输入或放宽识别门。
+
+parity smoke 现在有可验证的固定样图质量边界：7 个 crop 至少 6 个必须通过非空、finite confidence 和日语脚本密度 `>=.5`；`compact-niko` 必须输出精确 `ニコッ` 且 confidence `>=.55`。最终云端输出为：`ニコッ` confidence `0.590938`、accepted `6/7`；左侧主列 `持ち帰る！`／`この爆乳を`，右侧主列 `前は生意気に`／`俺の誘い断り`。这是 pinned GPL Koharu MIT48 reference 在云端的 crop parity 证据，不是把 GPL artifact 迁入 iOS，也不是固定样图之外的通用日语 OCR／翻译／识别质量声明；现有 bundled Apache Manga OCR 路径不变。
+
+新增 `scripts/test-v3270-koharu-mit48-cloud-orientation-quality-contract.py`，工程版本为 `3.270`。MIT48 artifact revision、Koharu source revision、`LLAMA_CPP_TAG=b8935`、license boundary、cloud-only guard、模型不上传和 full-validation parity dependency 沿用 v3.269；质量 gate 现在会在云端直接拒绝低质量 compact output。
+
+验证边界：
+
+- 本地严格遵守“不要本地编译”，只执行 Python 合同、YAML／shell 语法与 `git diff --check`；未运行本地 Xcode、Swift、Rust、Core ML 或 runtime 编译。
+- exact-SHA full [31578984648](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31578984648) 对实现 SHA `56473a2803dcfc94d9b198409e2dca4df4bcb3e4` 成功：Cloud Koharu MIT48 reference parity job 与 Build/publish full validation job 均 success，云端 Xcode/JUnit/UI/Home/Paste/Speech/receipt 全部通过。
+- PR #351 的 PR CI [31580131472](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31580131472) 通过（PR parity 按设计 skip），merge SHA 为 `7651dacb2a8cc4e768f57fefdc0e2c38c0376a56`；合入 `smalldata_test` 后 push CI [31580218296](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31580218296) 通过。
+- 研发分支已删除，本地／origin 仅保留 `main` 与 `smalldata_test`。
+
 ## v3.269：云端 Koharu MIT48 reference parity 与 scoped cancel 持久化
 
 日期：2026-08-12
