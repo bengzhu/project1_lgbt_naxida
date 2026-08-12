@@ -33,8 +33,8 @@ class KoharuBlockFallbackReplacementContractTests(unittest.TestCase):
         cls.vision = read("AITRANS/Services/VisionOCRService.swift")
         cls.layout = read("AITRANS/Services/ImageOCRLayoutEngine.swift")
         cls.models = read("AITRANS/Models/TranscriptModels.swift")
-        cls.reference = read(
-            "reference/koharu-main/koharu-ml/src/mit48px_ocr/mod.rs"
+        cls.cloud_smoke = read(
+            "scripts/run-koharu-mit48px-cloud-smoke.sh"
         )
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
@@ -53,14 +53,15 @@ class KoharuBlockFallbackReplacementContractTests(unittest.TestCase):
             "static func blockFallbackCanReplacePartialLines(",
         )
 
-    def test_reference_emits_one_joined_prediction_per_text_region(self) -> None:
+    def test_cloud_reference_boundary_returns_one_prediction_per_crop(self) -> None:
         for marker in (
-            "grouped[block_index].push(prediction)",
-            "for (block_index, lines) in grouped.into_iter().enumerate()",
-            '.join("")',
-            "block_index,\n                text,",
+            'KOHARU_SOURCE_REVISION="35f3e6d1a418d9617fd922e2bc865fe5b8fff818"',
+            'regions = payload.get("regions")',
+            "if not isinstance(regions, list) or len(regions) != 1:",
+            "expected one MIT48 region prediction",
+            "prediction = regions[0]",
         ):
-            self.assertIn(marker, self.reference)
+            self.assertIn(marker, self.cloud_smoke)
 
     def test_incomplete_coverage_collects_one_block_fallback_source(self) -> None:
         coverage = self.crops.index("let hasCompleteLineCoverage")
