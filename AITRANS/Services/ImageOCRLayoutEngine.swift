@@ -113,7 +113,11 @@ enum ImageOCRLayoutEngine {
         let vertical = orderedVerticalBands(resolved.filter { $0.direction == .vertical })
         return mergeReadingOrder(
             horizontal: cluster(horizontal, direction: .horizontal),
-            vertical: cluster(vertical, direction: .vertical),
+            vertical: cluster(
+                vertical,
+                direction: .vertical,
+                groupsVerticalTextRegionsByOwner: prefersMangaReadingOrder
+            ),
             prefersRightToLeft: prefersMangaReadingOrder
         )
     }
@@ -437,14 +441,61 @@ enum ImageOCRLayoutEngine {
 
     private static func cluster(
         _ observations: [ResolvedObservation],
-        direction: ImageOCRLayoutDirection
+        direction: ImageOCRLayoutDirection,
+        groupsVerticalTextRegionsByOwner: Bool = false
     ) -> [ImageOCRLayoutBlock] {
         var clusters: [Cluster] = []
-        for observation in observations {
-            let compatibleIndices = clusters.indices.filter { index in
-                direction == .vertical
+
+        // Koharu assigns every line prediction a block_index, then groups by
+        // that owner without applying another geometry gate. Seed one cluster
+        // per known Japanese TextRegion before handling ownerless Vision
+        // fallbacks so distant line polygons from the same region cannot split.
+        // Keep this owner-first path scoped to vertical manga layout; all other
+        // OCR layouts continue through the historical geometry clustering.
+        var remaining = observations
+        if direction == .vertical, groupsVerticalTextRegionsByOwner {
+            var clusterIndexByOwner: [Int: Int] = [:]
+            for observation in observations {
+                guard let owner = observation.verticalTextRegionOwner else { continue }
+                if let clusterIndex = clusterIndexByOwner[owner] {
+                    clusters[clusterIndex].append(observation)
+                } else {
+                    clusterIndexByOwner[owner] = clusters.count
+                    clusters.append(Cluster(observation))
+                }
+            }
+            remaining = observations.filter { $0.verticalTextRegionOwner == nil }
+        }
+
+        for observation in remaining {
+            var compatibleIndices = clusters.indices.filter { index in
+                if direction == .vertical,
+                   groupsVerticalTextRegionsByOwner,
+                   clusters[index].containsKnownVerticalTextRegionOwner {
+                    return shouldMergeOwnerlessVertically(
+                        observation,
+                        into: clusters[index]
+                    )
+                }
+                return direction == .vertical
                     ? shouldMergeVertically(observation, into: clusters[index])
                     : shouldMergeHorizontally(observation, into: clusters[index])
+            }
+
+            // An ownerless fallback may still join one unambiguous TextRegion,
+            // preserving v3.276 compatibility. If it geometrically matches two
+            // known owners, keep it on the ownerless path instead of assigning
+            // it arbitrarily or allowing it to bridge detector TextRegions.
+            if groupsVerticalTextRegionsByOwner,
+               observation.verticalTextRegionOwner == nil {
+                let knownOwnerMatchCount = compatibleIndices.count { index in
+                    clusters[index].containsKnownVerticalTextRegionOwner
+                }
+                if knownOwnerMatchCount > 1 {
+                    compatibleIndices.removeAll { index in
+                        clusters[index].containsKnownVerticalTextRegionOwner
+                    }
+                }
             }
             let bestIndex = compatibleIndices.min { lhs, rhs in
                 let lhsScore = mergeScore(observation, cluster: clusters[lhs], direction: direction)
@@ -458,6 +509,25 @@ enum ImageOCRLayoutEngine {
             }
         }
         return clusters.map(\.block)
+    }
+
+    private static func shouldMergeOwnerlessVertically(
+        _ line: ResolvedObservation,
+        into cluster: Cluster
+    ) -> Bool {
+        guard line.verticalTextRegionOwner == nil else { return false }
+        // Owner-first seeding can reverse the historical comparison order when
+        // an ownerless fallback sits above its known TextRegion. Compare against
+        // each existing line in both directions rather than against the
+        // owner's union rect, which could absorb unrelated geometry between two
+        // distant same-owner lines. Existing ownerless fallbacks remain eligible
+        // so their historical geometry chaining still works.
+        let ownerlessCluster = Cluster(line)
+        return cluster.observations.contains { existingLine in
+            let existingLineCluster = Cluster(existingLine)
+            return shouldMergeVertically(line, into: existingLineCluster)
+                || shouldMergeVertically(existingLine, into: ownerlessCluster)
+        }
     }
 
     private static func mergeScore(
@@ -751,6 +821,10 @@ private struct Cluster {
 
     var containsPreservedDetectorTextRegionBoundary: Bool {
         observations.contains(where: \.preservesDetectorTextRegionBoundary)
+    }
+
+    var containsKnownVerticalTextRegionOwner: Bool {
+        observations.contains { $0.verticalTextRegionOwner != nil }
     }
 
     func allows(verticalTextRegionOwner: Int?) -> Bool {

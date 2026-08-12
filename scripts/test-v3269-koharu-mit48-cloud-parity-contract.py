@@ -91,6 +91,27 @@ class KoharuMit48CloudParityContractTests(unittest.TestCase):
             self.assertIn(marker, self.smoke)
         self.assertNotIn("xcodebuild", self.smoke)
 
+    def test_runtime_download_retry_is_bounded_and_network_only(self) -> None:
+        for marker in [
+            'KOHARU_DATA_ROOT="${KOHARU_DATA_ROOT:-${RUNNER_TEMP:?RUNNER_TEMP is required}/koharu-mit48-runtime}"',
+            "MIT48_RUNTIME_DOWNLOAD_MAX_ATTEMPTS=3",
+            "is_transient_llama_runtime_download_failure",
+            'failed to prepare package `runtime:llama`',
+            "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_CPP_TAG/",
+            "HTTP status server error \\(5[0-9][0-9]",
+            "HTTP status client error \\(429",
+            "http2 error",
+            "run_mit48_crop",
+            "runtime_attempt >= MIT48_RUNTIME_DOWNLOAD_MAX_ATTEMPTS",
+            'sleep "$((runtime_attempt * 5))"',
+        ]:
+            self.assertIn(marker, self.smoke)
+        retry_body = self.smoke.split("run_mit48_crop()", 1)[1].split(
+            "while IFS= read -r crop", 1
+        )[0]
+        self.assertNotIn("japanese_density", retry_body)
+        self.assertNotIn('compact["confidence"]', retry_body)
+
     def test_workflow_is_manual_cloud_only_and_never_uploads_weights(self) -> None:
         for marker in [
             "workflow_dispatch:",
@@ -118,7 +139,7 @@ class KoharuMit48CloudParityContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.276", "3.276"],
+            ["3.277", "3.277"],
         )
 
 

@@ -1,3 +1,19 @@
+## v3.277：Koharu 同 owner 竖排 line 强归组
+
+日期：2026-08-13
+
+v3.276 已把 Koharu `inference_text_blocks` 的临时 `block_index` 贯穿 Vision line、bundled Manga OCR、去重和 layout，但 layout 只把不同 known owner 当作硬分区；同一 owner 的 line 仍须通过普通 same-column、gap 和 protected-boundary 门控。因此，同一 detector TextRegion 中相距较远的多个 line prediction 仍可能被拆成多个最终 block，与 Koharu 先按 `block_index` 无条件归组、再 `join("")` 的语义不一致。
+
+本版只在日语 `prefersMangaReadingOrder` 的 vertical clustering 中启用 owner-first：先为每个 known `verticalTextRegionOwner` 建立一个 cluster，同 owner observations 不再经过第二次 geometry gate；`Cluster.block` 继续按稳定 top-to-bottom 行序无分隔拼接，并以所有 line confidence 的算术平均作为 block confidence。ownerless observations 仍走历史 geometry fallback；它可与唯一命中的 known owner 单行 geometry 保持双向兼容，但同时匹配多个 known owner 时会留在 ownerless cluster，不能成为跨 TextRegion 的桥，也不会被远距离同 owner lines 的 union rect 吸附。不同 known owner 仍绝不合并，非 manga／横排／ownerless-only 路径不启用 owner-first。
+
+临时 owner 仍只存在于 OCR recognition/layout pass，不进入 `ImageTranslationBlock`、Store、UI、导出或持久化。8 个 Manga line 请求、12/24 Vision line candidate、16M perspective pixel、confidence `>=.55`／日语脚本密度 `>=.5`、detector bbox ownership、quad/bbox fallback、crop／warp／方向、取消传播、翻译、渲染和非图片路径均不变。该版本迁移的是 Koharu 的块级分组语义，不新增或替换模型权重，也不把固定 `test/jap.jpg` 外推为通用日语 OCR／翻译质量提升。
+
+新增 `scripts/test-v3277-koharu-owned-line-grouping-contract.py`、`scripts/fixtures/v3277-koharu-owned-line-grouping-evaluator.swift` 与 cloud-only runtime，覆盖远距离同 owner、不同 owner、ownerless 几何回归、known owner 上／下方的单义 ownerless、歧义 ownerless、非 manga 隔离、行序和 confidence 平均；工程版本为 `3.277`，CI changed-file route 与图片 OCR 合同组已接入。本地 272 个不具备进程启动入口的 Python 合同、299 个 Python 合同 AST、YAML／shell 语法、工程 plist 与 `git diff --check` 通过；27 个可能调用外部进程的合同按约束跳过，runtime 脚本本地仅做 `bash -n`。没有运行 `xcodebuild`、Rust/Cargo、Core ML 或 app/runtime probe；修复首轮验证时误选的历史 v3.219 Python 合同内置 `xcrun swiftc` evaluator，已在约 4 秒内编译运行完成且无残留进程，后续恢复只运行预先扫描确认无进程入口的静态合同。
+
+候选 `a4b243e213e528f25d1655e79f880de354fe0912` 的 exact-SHA full [31631827061](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31631827061) attempt 1 的 UI owner evaluators、云端 Xcode 26.6 与 JUnit `10/10` 已通过；但 parity attempt 1／2 均在 Rust release build 成功后、任何 OCR 推理之前准备 Koharu pinned `runtime:llama` 时失败，证据分别为 GitHub Release HTTP/2 refused stream 与 `503 Service Unavailable`。cloud smoke 因此新增外层有界重试：复用显式 `KOHARU_DATA_ROOT`，只有日志同时匹配 `runtime:llama`、pinned `b8935` URL 和 5xx／429／HTTP2／timeout／reset 网络特征时才重启 binary，最多 3 次；模型加载、OCR 推理、JSON 与既有 7/7、`ニコッ >=.55`、`今度こそ >=.55` 质量失败不重试、不降级。
+
+云端与合并证据待本轮 exact-SHA full、PR、合并和 receipt 完成后补齐。
+
 ## v3.276：Koharu 竖排 line owner 分组边界
 
 日期：2026-08-13
