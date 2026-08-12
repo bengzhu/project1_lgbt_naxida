@@ -1,3 +1,15 @@
+## v3.278：Koharu line coverage 的 owner-exact 跳过证明
+
+日期：2026-08-13
+
+v3.276/v3.277 已把 Koharu `block_index` 迁入日语竖排 line recognition 与最终 owner-first grouping，但 owner compatibility 有意保留“任一侧 ownerless 即可按历史 geometry fallback 匹配”。该规则适合普通观察结果融合，却不够强到证明某个 known detector TextRegion 的所有 line 都已恢复：歧义 ownerless line 结果理论上可同时满足相邻 known blocks 的 geometry coverage，让二者过早跳过整块 crop。
+
+本版只收紧 `hasCompleteJapaneseLineCoverage` 的 skip proof。known owner block 的每一对 source line candidate／可靠 line OCR result 都必须精确等于该 block 的 `verticalTextRegionOwner`，随后才继续既有 confidence `>=.48`、日语脚本密度 `>=.5`、文本长度、几何 overlap／面积和一对一消费检查。任一 source/result ownerless 或不同 owner 都使 coverage 不完整，继续执行已有 bounded block crop；ownerless block 则保留 `verticalTextRegionOwnersCompatible` 的历史 geometry fallback。
+
+该变化不禁止 ownerless observation 参与 OCR、去重、fallback fusion 或最终布局，不新增 line/block 请求上限，也不生成 Koharu 的空 prediction 用户块。最多 8 个 Manga line 请求、12/24 Vision line candidates、16M perspective pixels、最多 16 个 block crops 与 8 次方向 fallback、detector bbox ownership、crop／warp／方向、confidence／日语密度 gate、owner-first grouping、取消传播、翻译、UI、渲染和非图片路径保持不变。新增 `scripts/test-v3278-koharu-line-coverage-owner-contract.py` 与 cloud-only Swift evaluator，覆盖 exact owner、candidate/result ownerless、foreign owner 和 ownerless block 历史兼容；接入 cloud UI/Xcode scope，工程版本为 `3.278`。
+
+本地验证只执行不具备进程启动入口的静态边界：273 个 Python 合同、300 个 Python AST、workflow YAML、shell 语法、工程 plist、新 v3.278 合同 `6/6`、版本与 `git diff --check` 全部通过；27 个可能启动外部进程的合同按约束跳过。未运行本地 Xcode、Swift evaluator、Rust/Cargo、Core ML 或 app/runtime。云端 full、PR、合并和 receipt 待本轮完成。
+
 ## v3.277：Koharu 同 owner 竖排 line 强归组
 
 日期：2026-08-13

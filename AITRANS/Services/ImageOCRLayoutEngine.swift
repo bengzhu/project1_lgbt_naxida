@@ -86,6 +86,22 @@ struct ImageOCRLayoutBlock: Equatable, Sendable {
 }
 
 enum ImageOCRLayoutEngine {
+    /// A known Koharu TextRegion may skip its wider recovery crop only when
+    /// both the source line and OCR result prove that exact owner. With no
+    /// block owner, retain the historical rule that an ownerless side is
+    /// geometry-compatible and two known sides must agree.
+    static func lineCoverageOwnersProveBlock(
+        lineResultOwner: Int?,
+        candidateOwner: Int?,
+        blockOwner: Int?
+    ) -> Bool {
+        guard let blockOwner else {
+            guard let lineResultOwner, let candidateOwner else { return true }
+            return lineResultOwner == candidateOwner
+        }
+        return candidateOwner == blockOwner && lineResultOwner == blockOwner
+    }
+
     static func layout(
         _ observations: [ImageOCRLayoutObservation],
         allowsVerticalText: Bool,
