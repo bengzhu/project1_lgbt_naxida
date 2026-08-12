@@ -9,9 +9,9 @@
 验证边界：
 
 - 本地只运行安全 Python 静态合同与 `git diff --check`；未运行本地 `xcodebuild`、`swiftc`、Rust/Cargo、Core ML 或 runtime 编译。
-- exact-SHA full [31599871570](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31599871570) 对实现 SHA `62d72bcd40f0cc0b0b70dc9b51d378d5bc4e017a` 的 Koharu parity、静态检查、UI 合同、JUnit 与 receipt 成功；该轮按 scope 跳过 Xcode build。
+- exact-SHA full [31601245479](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31601245479) 对最终 SHA `161d83a928cd4f3aa5d2092c70adfeab28340040` 成功；Koharu parity job `94128921614`、macOS job `94130819057`、云端 Xcode build、simulator build、manga probe、UI 合同、JUnit `10/10`（0 failures）与 `AITRANS CI/full-validation=success` receipt 全部通过。
 - 云端 parity evidence：7/7 accepted；`left-column-c` 为 `今度こそ` confidence `0.99994445`，compact `ニコッ` confidence `0.59093773`；主列仍覆盖 `持ち帰る！`、`この爆乳を`、`今度こそ`、`前は生意気に`、`俺の誘い断り`。
-- v3.275 的最终 SHA 另用 `probe_mode=ci-fast` 请求云端 Xcode/simulator 验证；以该 run 的实际 job 与 receipt 为准。研发分支合入后删除，main 保持展示用途不动。
+- 该 run 使用 `validation_profile=full`、`probe_mode=ci-fast`；probe 输出为 13 个既有 `test/1` 诊断 blocks，报告中的翻译质量诊断仍按现有边界记录，不能外推为通用翻译质量提升。研发分支已以 PR #356 合入 `smalldata_test`（merge SHA `b5e5638d`），main 保持展示用途不动。
 
 ## v3.274：图片 OCR 复查阈值文案与共享质量 gate 对齐
 
