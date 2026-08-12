@@ -1,3 +1,11 @@
+## v3.266：Koharu vertical quad direct-first 与单块重识别行内取消
+
+日期：2026-08-12
+
+bundled Manga OCR 的严格 vertical quad 现在 direct-first 使用 bounded target canvas、canonical DeviceRGB projective bilinear sampler，成功后 rotate270；direct geometry／采样失败保留 Core Image natural projection fallback，detector bbox、弱结果 quad fallback、预算与非日语路径不变。Vision 旋转侦察仅在日语脚本密度 `>=.5` 且 mapped geometry 高宽比 `>=1.05` 时保留 `.vertical` source provenance，避免横排字幕误继承竖排方向。图片结果行和局部预览在单块重识别进行中提供“取消重新识别此文字块”，只取消既有 scoped block task，保留其它 OCR、译文与复查进度。新增 `scripts/test-v3266-image-ocr-inline-rerecognition-cancel-contract.py`，并同步历史等价合同到当前版本边界，工程版本为 `3.266`。
+
+本地 `286` 个 `scripts/test-v*.py` 合同已通过；云端 full validation 待提交后运行。该版本只改善 crop／方向 provenance／操作边界，不声称通用日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.265：Vision 日语垂直 line quad 共享 Koharu bilinear warp
 
 日期：2026-08-12

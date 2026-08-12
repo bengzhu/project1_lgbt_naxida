@@ -435,6 +435,35 @@ actor MangaOCRService {
         let localPoints = points.map {
             CGPoint(x: $0.x - bounds.minX, y: $0.y - bounds.minY)
         }
+
+        // Koharu's vertical `warp_line_region` is direct-first: derive the
+        // bounded target canvas, sample the canonical source once with
+        // bilinear interpolation, then rotate270. Do this before Core Image's
+        // natural projection so the normal path cannot acquire a second
+        // profile/interpolation boundary. The natural projection below remains
+        // the isolated compatibility fallback for malformed or unsupported
+        // direct geometry.
+        if applyVerticalWarp,
+           let targetSize = koharuVerticalQuadWarpTargetSize(
+               localPoints,
+               maximumDimension: CGFloat(maximumQuadWarpDimension),
+               maximumPixels: maximumQuadWarpPixels
+           ) {
+            let targetWidth = Int(targetSize.width.rounded())
+            let targetHeight = Int(targetSize.height.rounded())
+            if targetWidth >= 2,
+               targetHeight >= 2,
+               let bounded = koharuVerticalQuadWarp(
+                   cropped,
+                   sourcePoints: localPoints,
+                   targetWidth: targetWidth,
+                   targetHeight: targetHeight
+               ),
+               let rotated = rotateImage270(bounded) {
+                return rotated
+            }
+        }
+
         let croppedHeight = CGFloat(cropped.height)
         guard let filter = CIFilter(name: "CIPerspectiveCorrection") else {
             return nil
@@ -482,43 +511,9 @@ actor MangaOCRService {
             return nil
         }
 
-        // Generic quad callers keep the natural projection. Only a strictly
-        // gated Japanese vertical hint may change the model-facing orientation.
-        guard applyVerticalWarp else { return rendered }
-
-        // Koharu's vertical warp does not feed the projection's natural extent
-        // directly to Manga OCR. It derives a bounded canvas from the quad's
-        // long/short axes, samples the source directly into that canvas with
-        // image-rs-compatible bilinear interpolation, and rotates the line 270
-        // degrees so the model sees the original top-to-bottom column as a
-        // horizontal reading span. This is only the strict Japanese line-quad
-        // fallback; the detector bbox remains the primary crop and remains
-        // unrotated.
-        guard let targetSize = koharuVerticalQuadWarpTargetSize(
-            localPoints,
-            maximumDimension: CGFloat(maximumQuadWarpDimension),
-            maximumPixels: maximumQuadWarpPixels
-        ) else {
-            return rendered
-        }
-        let targetWidth = Int(targetSize.width.rounded())
-        let targetHeight = Int(targetSize.height.rounded())
-        guard targetWidth >= 2, targetHeight >= 2 else {
-            return rendered
-        }
-        guard let bounded = koharuVerticalQuadWarp(
-            cropped,
-            sourcePoints: localPoints,
-            targetWidth: targetWidth,
-            targetHeight: targetHeight
-        ),
-        let rotated = rotateImage270(bounded) else {
-            // Natural projection is the compatibility fallback if the direct
-            // target canvas, source conversion, or rotation renderer is
-            // unavailable.
-            return rendered
-        }
-        return rotated
+        // Generic quads and failed vertical direct warps retain the natural
+        // projection as the compatibility fallback.
+        return rendered
     }
 
     /// Match Koharu's `quad_axis_lengths` and vertical target canvas. The
