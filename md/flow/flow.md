@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.265 Vision vertical line quad：`line polygon -> local canonical DeviceRGB crop -> shared Koharu target geometry -> direct projective bilinear sampling -> rotate270 -> Vision line reread`；direct geometry／sampling failure 才回退 Core Image natural projection，detector bbox ownership、budget、OCR／翻译／布局边界不变。
+
 v3.264 垂直 quad crop：`canonical DeviceRGB crop -> destination-to-source projective map -> image-rs-compatible bilinear (floor/four-neighbor/constant-black border) -> bounded quad-axis canvas -> rotate270 -> Manga OCR weak fallback`；bbox primary、natural projection fallback、OCR／翻译／布局边界不变。
 
 v3.263 图片单块复查取消：`rerecognizingBlockID != nil -> scoped cancel current block task -> retain image task/review IDs/translated session -> current request cancellation catch restores previous state + failure generation -> VoiceOver status focus`；整图 OCR／翻译、换图和全局取消继续走原 cleanup。
