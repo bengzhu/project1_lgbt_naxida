@@ -133,7 +133,7 @@ class KoharuVerticalQuadWarpContractTests(unittest.TestCase):
 
     def test_version_is_3264(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.273", "3.273"])
+        self.assertEqual(versions, ["3.274", "3.274"])
 
 
 if __name__ == "__main__":
