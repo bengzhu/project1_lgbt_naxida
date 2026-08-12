@@ -1791,6 +1791,15 @@ final class TranslationSessionStore: ObservableObject {
         isProcessing = false
     }
 
+    /// Cancel only the in-place OCR retry for one completed image block.
+    /// Keep the image task identity, review progress, and translated session
+    /// alive so the scoped cancellation catch can restore the previous state
+    /// and publish its accessibility failure generation.
+    func cancelImageTranslationBlockRerecognition() {
+        guard imageTranslationRerecognizingBlockID != nil else { return }
+        imageTranslationBlockRerecognitionTask?.cancel()
+    }
+
     @discardableResult
     func markImageTranslationBlockReviewed(_ blockID: UUID) -> Bool {
         guard imageTranslationState == .translated,
