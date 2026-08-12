@@ -524,7 +524,10 @@ actor MangaOCRService {
     /// Match Koharu's `quad_axis_lengths` and vertical target canvas. The
     /// points are local image-space corners in top-left, top-right,
     /// bottom-right, bottom-left order.
-    private static func koharuVerticalQuadWarpTargetSize(
+    /// Shared target-canvas geometry for Koharu vertical line crops. Vision's
+    /// line reread uses the same bounded dimensions as the Manga OCR fallback
+    /// so the two Japanese paths cannot drift at the sampling boundary.
+    static func koharuVerticalQuadWarpTargetSize(
         _ points: [CGPoint],
         maximumDimension: CGFloat,
         maximumPixels: CGFloat
@@ -597,7 +600,10 @@ actor MangaOCRService {
     /// black border. Avoiding a natural Core Image extent followed by a second
     /// `.high` resize keeps the quad's perspective and target geometry in one
     /// deterministic sampling pass.
-    private static func koharuVerticalQuadWarp(
+    /// Shared direct projective sampler for Koharu vertical line crops. The
+    /// Vision line reread and Manga OCR quad fallback both use this exact
+    /// image-rs-compatible pixel path.
+    static func koharuVerticalQuadWarp(
         _ image: CGImage,
         sourcePoints: [CGPoint],
         targetWidth: Int,

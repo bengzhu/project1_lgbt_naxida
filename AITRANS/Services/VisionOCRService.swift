@@ -2563,6 +2563,35 @@ struct VisionOCRService: Sendable {
         let localPoints = points.map {
             CGPoint(x: $0.x - cropBounds.minX, y: $0.y - cropBounds.minY)
         }
+
+        // Koharu's `warp_line_region` samples the cropped source directly into
+        // a bounded target canvas with bilinear interpolation, then rotates a
+        // vertical line by 270 degrees. Reuse MangaOCRService's shared
+        // image-rs-compatible sampler here so Vision line rereads do not add
+        // a second Core Image projection followed by a `.high` resize. If the
+        // direct path cannot represent malformed or unsupported geometry, the
+        // natural Core Image projection below remains the compatibility
+        // fallback for this isolated line request.
+        if let targetSize = MangaOCRService.koharuVerticalQuadWarpTargetSize(
+            localPoints,
+            maximumDimension: 4_096,
+            maximumPixels: 4_000_000
+        ) {
+            let targetWidth = Int(targetSize.width.rounded())
+            let targetHeight = Int(targetSize.height.rounded())
+            if targetWidth >= 2,
+               targetHeight >= 2,
+               let bounded = MangaOCRService.koharuVerticalQuadWarp(
+                   croppedImage,
+                   sourcePoints: localPoints,
+                   targetWidth: targetWidth,
+                   targetHeight: targetHeight
+               ),
+               let rotated = try? rotatedImage(bounded, angle: 270) {
+                return rotated
+            }
+        }
+
         let croppedHeight = CGFloat(croppedImage.height)
         let ciImage = CIImage(cgImage: croppedImage)
         let filter = CIFilter(name: "CIPerspectiveCorrection")
