@@ -58,11 +58,18 @@ class JapaneseKoharuLineCoverageContractTests(unittest.TestCase):
             "let hasCompleteLineCoverage = Self.hasCompleteJapaneseLineCoverage(",
             self.crops,
         )
-        self.assertIn("sourceObservations: safeObservations", self.crops)
+        self.assertIn("sourceObservations: ownerAnnotatedObservations", self.crops)
         self.assertIn("lineRefined: lineRefined", self.crops)
         self.assertIn("guard !hasLineOCRResult else { continue }", self.crops)
+        owner_annotation = self.crops.index(
+            "let ownerAnnotatedObservations = annotateJapaneseVerticalTextRegionOwners("
+        )
+        coverage_check = self.crops.index(
+            "let hasCompleteLineCoverage = Self.hasCompleteJapaneseLineCoverage("
+        )
+        self.assertLess(owner_annotation, coverage_check)
         self.assertLess(
-            self.crops.index("let hasCompleteLineCoverage = Self.hasCompleteJapaneseLineCoverage("),
+            coverage_check,
             self.crops.index("guard !hasLineOCRResult else { continue }"),
         )
 

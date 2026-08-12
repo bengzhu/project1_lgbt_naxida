@@ -32,6 +32,9 @@ struct MangaOCRRequest: Sendable {
     /// historical natural perspective crop for compatibility with callers that
     /// use a quad as a generic content fallback.
     var cropQuadIsVertical: Bool
+    /// Ephemeral Koharu-style line owner. This is carried through batching so
+    /// two overlapping line requests cannot be matched to the wrong block.
+    var verticalTextRegionOwner: Int?
 
     init(
         textRect: ImageOCRLayoutRect,
@@ -39,7 +42,8 @@ struct MangaOCRRequest: Sendable {
         detectorConfidence: Float? = nil,
         cropOrientation: MangaOCRCropOrientation = .natural,
         cropQuad: ImageOCRLayoutQuad? = nil,
-        cropQuadIsVertical: Bool = false
+        cropQuadIsVertical: Bool = false,
+        verticalTextRegionOwner: Int? = nil
     ) {
         self.textRect = textRect
         self.cropRect = cropRect
@@ -47,6 +51,7 @@ struct MangaOCRRequest: Sendable {
         self.cropOrientation = cropOrientation
         self.cropQuad = cropQuad
         self.cropQuadIsVertical = cropQuadIsVertical
+        self.verticalTextRegionOwner = verticalTextRegionOwner
     }
 }
 
@@ -58,6 +63,8 @@ struct MangaOCRResult: Sendable {
     /// a strong model read from a weak detector owner that happens to decode
     /// into high-confidence noise.
     var detectorConfidence: Float?
+    /// Matches the request-local vertical TextRegion owner, when present.
+    var verticalTextRegionOwner: Int?
 }
 
 enum MangaOCRServiceError: LocalizedError {
@@ -253,7 +260,8 @@ actor MangaOCRService {
                 text: recognition.text,
                 confidence: recognition.confidence,
                 textRect: request.textRect,
-                detectorConfidence: request.detectorConfidence
+                detectorConfidence: request.detectorConfidence,
+                verticalTextRegionOwner: request.verticalTextRegionOwner
             )
         )
     }

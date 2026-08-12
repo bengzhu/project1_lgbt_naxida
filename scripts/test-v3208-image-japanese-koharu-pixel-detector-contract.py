@@ -47,9 +47,16 @@ class JapaneseKoharuPixelDetectorContractTests(unittest.TestCase):
 
     def test_detector_runs_before_window_fallback_and_is_japanese_scoped(self) -> None:
         self.assertIn("recognizeJapanesePixelFirstVerticalCrops(", self.crops)
-        self.assertIn("observations: safeObservations", self.crops)
+        self.assertIn("observations: ownerAnnotatedObservations", self.crops)
+        owner_annotation = self.crops.index(
+            "let ownerAnnotatedObservations = annotateJapaneseVerticalTextRegionOwners("
+        )
+        pixel_detector = self.crops.index(
+            "recognizeJapanesePixelFirstVerticalCrops("
+        )
+        self.assertLess(owner_annotation, pixel_detector)
         self.assertLess(
-            self.crops.index("recognizeJapanesePixelFirstVerticalCrops("),
+            pixel_detector,
             self.crops.index("recognizeJapaneseVerticalTileFallback("),
         )
 
