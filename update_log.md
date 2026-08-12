@@ -1,3 +1,20 @@
+## v3.269：云端 Koharu MIT48 reference parity 与 scoped cancel 持久化
+
+日期：2026-08-12
+
+本版把“直接迁移 Koharu 真实 OCR artifact”先收敛成可审计、云端执行的 parity 边界：固定 Hugging Face `mayocream/mit48px-ocr` revision `205395b155a041b068fd754a6e417cd71b4cb1de`，校验 48px config、词典、模型精确大小和 GPL 声明；固定 `mayocream/koharu` source revision `35f3e6d1a418d9617fd922e2bc865fe5b8fff818`，读取其 `.cargo/config.toml` 的 `LLAMA_CPP_TAG=b8935`。Ubuntu 24.04 云端构建 `koharu-ml/bin/mit48px-ocr`，使用 CPU 对 `test/jap.jpg` 的 6 个竖排列 crop 与 compact crop 做 rotate270 smoke，输出必须非空且日语脚本密度 `>=.5`。证据上传但不包含权重或 cargo build 目录。
+
+MIT48 权重是 GPL artifact，Koharu source/runtime 是 GPL-3.0-only；本版没有把它们打包进 AITRANS，也没有替换现有 bundled Apache `MangaOCRService`。因此这是“云端 reference 能够真实编译并读取固定日语 crop”的执行证明，不声称 GPL MIT48/PaddleOCR-VL 已迁移到 iOS，也不把固定 `test/jap.jpg` 外推为通用日语 OCR、翻译或识别质量提升。v3.269 另修复图片单块 scoped rerecognition cancel：取消恢复当前 block 终态后，同步 `dataTransferMessage`、递增 failure generation 并 `persist()`，不清理整图 task、其它译文或 reviewed progress。
+
+新增 `scripts/validate-koharu-mit48px-artifact.py`、`scripts/run-koharu-mit48px-cloud-smoke.sh`、`scripts/test-v3269-koharu-mit48-cloud-parity-contract.py`、`scripts/test-v3269-image-ocr-scoped-cancel-persistence-contract.py` 与 `.github/workflows/koharu-mit48-parity.yml`；full validation 在 `.github/workflows/ci-results.yml` 中对 parity job 建立依赖，工程版本为 `3.269`。
+
+验证边界：
+
+- 本地只做 291 个 `scripts/test-v*.py` 中的安全静态合同、YAML／shell 语法与 `git diff --check`；严格遵守“不要本地编译”，未运行本地 `xcodebuild`、`swiftc`、Rust、Core ML 或 runtime 编译。
+- exact-SHA full [31573726047](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31573726047) 对实现 SHA `031e1c98b198a0aadf3e78c5448701ba964d4a01` 成功：Cloud Koharu MIT48 reference parity job 与 Build/publish full validation job 均 success；前者实际完成 pinned source checkout、Rust build、artifact download、7 个 crop 的 CPU smoke 与 evidence upload。
+- PR #350 的 PR CI [31575023476](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31575023476) 通过（PR parity job按设计 skip），merge SHA 为 `e827e53252bad8b8e9a9e2190d619abdc52ea9c0`；合入 `smalldata_test` 后 push CI [31575090711](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31575090711) 通过。
+- 研发分支已删除，本地／origin 仅保留 `main` 与 `smalldata_test`。
+
 ## v3.268：受控 geometry-only 竖排 line recall 与云端验证
 
 日期：2026-08-12
