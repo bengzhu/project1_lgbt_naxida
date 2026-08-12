@@ -51,7 +51,7 @@ specs = [
     ("left-column-a", (238, 86, 322, 448)),
     ("left-column-b", (322, 86, 405, 448)),
     ("left-column-c", (405, 86, 491, 448)),
-    ("right-column-a", (864, 136, 908, 342)),
+    ("right-column-a", (864, 136, 908, 298)),
     ("right-column-b", (904, 116, 970, 432)),
     ("right-column-c", (968, 116, 1030, 432)),
     ("compact-niko", (532, 1050, 578, 1142)),
