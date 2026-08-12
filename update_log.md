@@ -1,3 +1,18 @@
+## v3.262：Koharu detector Triangle resize 预处理对齐
+
+日期：2026-08-12
+
+RT-DETR comic-text detector 的 640×640 输入现在先以 canonical 8-bit DeviceRGB 读取，再使用 image-rs/Koharu 等价的 separable Triangle filter：pixel-centred coordinate mapping、下采样 support 扩展、边缘权重归一化，以及只在最终 horizontal pass 后 round。生成的 RGB 平面随后显式复制为 Core ML 所需的 32BGRA（A=255），不再依赖 Core Graphics `.high` 插值、隐式 alpha 或色彩 profile。detector threshold、ownership bbox／quad、Manga OCR、Vision supplement、12／48 请求预算、取消传播、布局、翻译、渲染和非图片路径不变。
+
+新增 `scripts/fixtures/v3262-koharu-detector-triangle-harness.swift`、`scripts/test-v3262-koharu-detector-triangle-contract.py` 与 `scripts/test-v3262-koharu-detector-triangle-runtime.sh`，工程版本为 `3.262`。历史 v3.254 region diagnostic 的长页底部坐标门只接受已实测的 pre/post-Triangle host values `0.940558`、`0.940838`、`0.940873`，不放宽 block 数量、方向、文本或 ownership gate。
+
+验证边界：
+
+- 本地 `282` 个 `scripts/test-v*.py` 合同、Triangle synthetic checksum `e7e9d1fe4bb47c45`、single/long page、directional crop、region diagnostic、RGB luma Core ML runtime、YAML、project plist、Python／Shell 语法与 `git diff --check` 通过。
+- exact-SHA full [31556290782](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31556290782) 对实现 SHA `2fd53c4a555b5fe2d41f82a9860b3e3e55c7dc61` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`，probe 为 `skip`。
+- PR #339 合入 `smalldata_test` 的 merge SHA `c7517492a66b3b095bc6e12f8e50d8090d558328`；合入后 push CI [31557042896](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31557042896) 通过。研发分支已删除，远端仅保留 `main` 与 `smalldata_test`。
+- 固定 `test/jap.jpg` 仅用于预处理、detector geometry 与既有 OCR/runtime 回归：云端 detectorRegions=5，长页 20 blocks；这不构成通用日语 OCR、翻译或识别质量声明。Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.261：图片 OCR Vision 恢复焦点来源连续性
 
 日期：2026-08-11
