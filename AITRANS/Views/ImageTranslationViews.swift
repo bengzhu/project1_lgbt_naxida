@@ -441,7 +441,7 @@ struct ImageTranslationPanel: View {
                 canRetryTranslation: { store.canRetryImageTranslationBlock($0) },
                 isRetryingTranslation: { store.imageTranslationRetryingBlockID == $0 },
                 retryTranslation: { store.retryImageTranslationBlock($0) },
-                cancelRetryTranslation: { store.cancelImageTranslationBlockRetry() },
+                cancelRetryTranslation: { _ in store.cancelImageTranslationBlockRetry() },
                 canRerecognize: { store.canRerecognizeImageTranslationBlock($0) },
                 isRerecognizing: { store.imageTranslationRerecognizingBlockID == $0 },
                 rerecognize: {
