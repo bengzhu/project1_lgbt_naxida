@@ -24,7 +24,7 @@ class KoharuMit48CloudOrientationQualityContractTests(unittest.TestCase):
         for marker in [
             "image-rs rotate270",
             "rotate(90, expand=True)",
-            '("compact-niko", (530, 1062, 582, 1166))',
+            '("compact-niko", (532, 1050, 578, 1142))',
             '"orientation": "Pillow rotate90 equivalent to Koharu image-rs rotate270"',
         ]:
             self.assertIn(marker, self.smoke)
