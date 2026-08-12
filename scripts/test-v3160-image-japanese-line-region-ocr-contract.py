@@ -53,9 +53,18 @@ class JapaneseLineRegionOCRContractTests(unittest.TestCase):
         for marker in [
             "Koharu's extract_text_block_regions",
             "recognizeJapaneseVerticalLineCrops(",
-            "blocks: Array(verticalBlocks)",
+            "let verticalBlockArray = Array(verticalBlocks)",
+            "blocks: verticalBlockArray",
         ]:
             self.assertIn(marker, self.crop)
+        owner_annotation = self.crop.index(
+            "let ownerAnnotatedObservations = annotateJapaneseVerticalTextRegionOwners("
+        )
+        line_refinement = self.crop.index(
+            "let lineRefined = try await Self.recognizeJapaneseVerticalLineCrops("
+        )
+        self.assertLess(owner_annotation, line_refinement)
+        self.assertIn("blocks: verticalBlockArray", self.crop[owner_annotation:line_refinement])
         self.assertIn("overlapRatio(observation.rect, block.rect) >= 0.25", self.line)
         self.assertTrue(
             "isVerticalLineCandidate(observation.rect)" in self.line
