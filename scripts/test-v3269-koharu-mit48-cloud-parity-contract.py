@@ -20,14 +20,14 @@ class KoharuMit48CloudParityContractTests(unittest.TestCase):
         cls.smoke = read("scripts/run-koharu-mit48px-cloud-smoke.sh")
         cls.workflow = read(".github/workflows/koharu-mit48-parity.yml")
         cls.ci_workflow = read(".github/workflows/ci-results.yml")
-        cls.reference = read("reference/koharu-main/koharu-ml/src/mit48px_ocr/mod.rs")
-        cls.license = read("reference/koharu-main/LICENSE")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
 
     def test_artifact_identity_is_pinned_and_not_the_bundled_manga_model(self) -> None:
         for marker in [
             'HF_REPO = "mayocream/mit48px-ocr"',
             'HF_REVISION = "205395b155a041b068fd754a6e417cd71b4cb1de"',
+            'KOHARU_SOURCE_REPO = "mayocream/koharu"',
+            'KOHARU_SOURCE_REVISION = "35f3e6d1a418d9617fd922e2bc865fe5b8fff818"',
             '"config.json"',
             '"alphabet-all-v7.txt"',
             '"model.safetensors"',
@@ -58,17 +58,18 @@ class KoharuMit48CloudParityContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, self.validator)
         for marker in [
-            "const OCR_CHUNK_SIZE: usize = 16",
-            "pub fn load_from_dir",
-            "pub fn inference_regions",
-            "FilterType::Triangle",
-            "127.5",
+            'KOHARU_SOURCE_REPO = "mayocream/koharu"',
+            'KOHARU_SOURCE_REVISION = "35f3e6d1a418d9617fd922e2bc865fe5b8fff818"',
+            'referenceLicense": "GPL-3.0-only"',
         ]:
-            self.assertIn(marker, self.reference)
-        self.assertTrue(
-            "GNU GENERAL PUBLIC LICENSE" in self.license
-            or "GPL-3.0-only" in self.license
-        )
+            self.assertIn(marker, self.validator)
+        for marker in [
+            'KOHARU_SOURCE_ROOT="${KOHARU_SOURCE_ROOT:-$REPO_ROOT/reference/koharu-main}"',
+            'test -f "$KOHARU_SOURCE_ROOT/LICENSE"',
+            'test "$(git -C "$KOHARU_SOURCE_ROOT" rev-parse HEAD)" = "$KOHARU_SOURCE_REVISION"',
+            '--manifest-path "$KOHARU_SOURCE_ROOT/koharu-ml/Cargo.toml"',
+        ]:
+            self.assertIn(marker, self.smoke)
         self.assertIn('"modelLicense": "GPL-3.0"', self.validator)
 
     def test_cloud_smoke_uses_fixed_japanese_line_crops_and_cpu_reference_binary(self) -> None:

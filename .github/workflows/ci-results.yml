@@ -3346,6 +3346,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout pinned Koharu reference source
+        uses: actions/checkout@v4
+        with:
+          repository: mayocream/koharu
+          ref: 35f3e6d1a418d9617fd922e2bc865fe5b8fff818
+          path: reference/koharu-main
+          fetch-depth: 1
+
       - name: Verify requested commit
         if: inputs.expected_commit_sha != ''
         run: test "$(git rev-parse HEAD)" = "${{ inputs.expected_commit_sha }}"

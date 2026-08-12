@@ -14,6 +14,13 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 OUTPUT_ROOT="${KOHARU_MIT48_OUTPUT_ROOT:-${RUNNER_TEMP:?RUNNER_TEMP is required}/koharu-mit48-output}"
 MODEL_ROOT="${KOHARU_MIT48_ARTIFACT_ROOT:-${RUNNER_TEMP:?RUNNER_TEMP is required}/koharu-mit48-model}"
 CARGO_TARGET_DIR="${KOHARU_MIT48_CARGO_TARGET_DIR:-${RUNNER_TEMP:?RUNNER_TEMP is required}/koharu-mit48-cargo}"
+KOHARU_SOURCE_ROOT="${KOHARU_SOURCE_ROOT:-$REPO_ROOT/reference/koharu-main}"
+KOHARU_SOURCE_REVISION="35f3e6d1a418d9617fd922e2bc865fe5b8fff818"
+
+test -f "$KOHARU_SOURCE_ROOT/LICENSE"
+test -f "$KOHARU_SOURCE_ROOT/koharu-ml/Cargo.toml"
+test "$(git -C "$KOHARU_SOURCE_ROOT" rev-parse HEAD)" = "$KOHARU_SOURCE_REVISION"
+export KOHARU_SOURCE_ROOT
 
 mkdir -p "$OUTPUT_ROOT/crops" "$OUTPUT_ROOT/predictions" "$MODEL_ROOT" "$CARGO_TARGET_DIR"
 
@@ -63,7 +70,7 @@ PY
 
 export CARGO_TARGET_DIR
 cargo build \
-  --manifest-path "$REPO_ROOT/reference/koharu-main/koharu-ml/Cargo.toml" \
+  --manifest-path "$KOHARU_SOURCE_ROOT/koharu-ml/Cargo.toml" \
   --bin mit48px-ocr \
   --release \
   --locked \
@@ -137,7 +144,7 @@ if not accepted:
 
 report = {
     "status": "success",
-    "runtime": "reference/koharu-main/koharu-ml/bin/mit48px-ocr",
+    "runtime": "koharu-ml/bin/mit48px-ocr",
     "source": "test/jap.jpg",
     "cropCount": len(rows),
     "acceptedJapanesePredictions": len(accepted),

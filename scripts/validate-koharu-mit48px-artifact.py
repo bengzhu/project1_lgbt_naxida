@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -19,6 +20,8 @@ from typing import Any
 
 HF_REPO = "mayocream/mit48px-ocr"
 HF_REVISION = "205395b155a041b068fd754a6e417cd71b4cb1de"
+KOHARU_SOURCE_REPO = "mayocream/koharu"
+KOHARU_SOURCE_REVISION = "35f3e6d1a418d9617fd922e2bc865fe5b8fff818"
 REQUIRED_FILES = (
     "config.json",
     "alphabet-all-v7.txt",
@@ -111,7 +114,13 @@ def validate(root: Path) -> dict[str, Any]:
     if "gpl-3.0" not in model_readme and "gnu general public license" not in model_readme:
         raise AssertionError("MIT48 model README does not declare GPL-3.0")
 
-    reference_license = Path(__file__).resolve().parents[1] / "reference/koharu-main/LICENSE"
+    reference_root = Path(
+        os.environ.get(
+            "KOHARU_SOURCE_ROOT",
+            Path(__file__).resolve().parents[1] / "reference/koharu-main",
+        )
+    )
+    reference_license = reference_root / "LICENSE"
     license_text = reference_license.read_text(encoding="utf-8").lower()
     if "gpl-3.0-only" not in license_text and "gnu general public license" not in license_text:
         raise AssertionError("Koharu reference GPL license marker is missing")
@@ -120,13 +129,15 @@ def validate(root: Path) -> dict[str, Any]:
         "status": "success",
         "repo": HF_REPO,
         "revision": HF_REVISION,
+        "sourceRepo": KOHARU_SOURCE_REPO,
+        "sourceRevision": KOHARU_SOURCE_REVISION,
         "files": files,
         "config": config,
         "dictionaryTokenCount": len(tokens),
         "modelLicense": "GPL-3.0",
         "referenceLicense": "GPL-3.0-only",
         "bundledInAITRANS": False,
-        "runtime": "reference/koharu-main/koharu-ml/bin/mit48px-ocr.rs",
+        "runtime": "koharu-ml/bin/mit48px-ocr.rs",
     }
 
 
