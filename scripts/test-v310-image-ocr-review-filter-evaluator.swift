@@ -45,13 +45,13 @@ private func testReviewUnionAndStableOrder() {
         block(1, confidence: 0.49, direction: .horizontal),
         block(2, confidence: 0.91, direction: .unknown),
         block(3, confidence: 0.20, direction: nil),
-        block(4, confidence: 0.50, direction: .horizontal),
+        block(4, confidence: 0.55, direction: .horizontal),
         block(5, confidence: 0.92, direction: .vertical)
     ]
     let summary = ImageOCRResultSummary(blocks: blocks)
     let reviewBlocks = ImageOCRReviewFilter.needsReview.blocks(from: blocks)
 
-    require(summary.lowConfidenceBlockCount == 2, "strict threshold must exclude exactly 50 percent")
+    require(summary.lowConfidenceBlockCount == 2, "strict threshold must exclude exactly 55 percent")
     require(summary.unknownDirectionBlockCount == 2, "nil and unknown directions must be counted")
     require(summary.reviewRequiredBlockCount == 3, "overlapping risks must count once")
     require(reviewBlocks.map(\.token) == [1, 2, 3], "review filtering must preserve source order")

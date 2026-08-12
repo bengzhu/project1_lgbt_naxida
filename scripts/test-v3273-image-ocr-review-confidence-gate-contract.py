@@ -59,6 +59,18 @@ class ImageOCRReviewConfidenceGateContractTests(unittest.TestCase):
             'threshold is strict and excludes exactly 55 percent',
             self.legacy_evaluator,
         )
+        self.assertIn(
+            "block(4, confidence: 0.55, direction: .horizontal)",
+            read("scripts/test-v310-image-ocr-review-filter-evaluator.swift"),
+        )
+        self.assertIn(
+            "let boundary = block(0.55, .horizontal)",
+            read("scripts/test-v392-image-review-risk-filter-evaluator.swift"),
+        )
+        self.assertIn(
+            'exactly 55 percent must not be classified as low confidence',
+            read("scripts/test-v392-image-review-risk-filter-evaluator.swift"),
+        )
 
     def test_ci_route_and_project_version_are_current(self) -> None:
         current = "scripts/test-v3273-image-ocr-review-confidence-gate-contract.py"
