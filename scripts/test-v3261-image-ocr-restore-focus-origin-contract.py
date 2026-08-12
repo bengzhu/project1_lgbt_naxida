@@ -97,7 +97,7 @@ class ImageOCRRestoreFocusOriginContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3260(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.267", "3.267"])
+        self.assertEqual(versions, ["3.268", "3.268"])
         old = "scripts/test-v3260-koharu-manga-ocr-rgb-luma-contract.py"
         new = "scripts/test-v3261-image-ocr-restore-focus-origin-contract.py"
         self.assertIn(f"python3 -B {old}", self.workflow)
