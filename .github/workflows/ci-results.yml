@@ -246,6 +246,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3268-koharu-geometry-only-line-recall-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3269-koharu-mit48-cloud-parity-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3269-image-ocr-scoped-cancel-persistence-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3270-koharu-mit48-cloud-orientation-quality-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -897,6 +898,9 @@ jobs:
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v3269-image-ocr-scoped-cancel-persistence-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3270-koharu-mit48-cloud-orientation-quality-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
@@ -1759,6 +1763,7 @@ jobs:
             python3 -B scripts/test-v3268-koharu-geometry-only-line-recall-contract.py
             python3 -B scripts/test-v3269-koharu-mit48-cloud-parity-contract.py
             python3 -B scripts/test-v3269-image-ocr-scoped-cancel-persistence-contract.py
+            python3 -B scripts/test-v3270-koharu-mit48-cloud-orientation-quality-contract.py
             bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 

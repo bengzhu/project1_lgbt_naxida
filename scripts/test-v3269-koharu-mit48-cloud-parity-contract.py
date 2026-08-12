@@ -77,7 +77,8 @@ class KoharuMit48CloudParityContractTests(unittest.TestCase):
         for marker in [
             'GITHUB_ACTIONS:-',
             'test/jap.jpg',
-            'rotate(270, expand=True)',
+            'rotate(90, expand=True)',
+            "image-rs rotate270",
             'cargo build',
             'mit48px-ocr',
             '--model-dir',
@@ -117,7 +118,7 @@ class KoharuMit48CloudParityContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.269", "3.269"],
+            ["3.270", "3.270"],
         )
 
 
