@@ -66,8 +66,8 @@ class JapaneseMangaOCRVerticalQuadWarpContractTests(unittest.TestCase):
             "maximumPixels: maximumQuadWarpPixels",
             "let targetWidth = Int(targetSize.width.rounded())",
             "let targetHeight = Int(targetSize.height.rounded())",
-            "let bounded = rendered.width == targetWidth && rendered.height == targetHeight",
-            "resizedImage(",
+            "let bounded = koharuVerticalQuadWarp(",
+            "sourcePoints: localPoints",
             "let rotated = rotateImage270(bounded)",
             "return rotated",
         ]:
@@ -101,7 +101,7 @@ class JapaneseMangaOCRVerticalQuadWarpContractTests(unittest.TestCase):
         self.assertIn("guard let rendered = context.createCGImage", self.crop)
         self.assertIn("return rendered", self.crop)
         self.assertIn(
-            "guard let bounded,\n              let rotated = rotateImage270(bounded) else {",
+            "guard let bounded = koharuVerticalQuadWarp(\n            cropped,",
             self.crop,
         )
         self.assertIn("Natural projection is the compatibility fallback", self.crop)
