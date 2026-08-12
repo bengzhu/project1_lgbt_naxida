@@ -21,7 +21,7 @@ class KoharuMit48RightColumnQualityContractTests(unittest.TestCase):
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
 
     def test_right_column_uses_measured_text_bounds(self) -> None:
-        self.assertIn('("right-column-a", (864, 136, 908, 342))', self.smoke)
+        self.assertIn('("right-column-a", (864, 136, 908, 298))', self.smoke)
         self.assertIn('("compact-niko", (532, 1050, 578, 1142))', self.smoke)
         self.assertIn("image-rs rotate270", self.smoke)
         self.assertIn("rotate(90, expand=True)", self.smoke)
@@ -44,7 +44,7 @@ class KoharuMit48RightColumnQualityContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.271", "3.271"],
+            ["3.272", "3.272"],
         )
 
 
