@@ -250,6 +250,8 @@ permissions:
 jobs:
   ci-results:
     name: Build and publish CI result bundle
+    needs: [koharu_mit48_reference_parity]
+    if: always()
     runs-on: macos-latest
     env:
       SCHEME: AITRANS
@@ -260,6 +262,7 @@ jobs:
       TEST_RESULTS_DIR: ci-results/TestResults
       OUTPUT_COPY_DIR: ci-results/output
       MODEL_CACHE_DIR: .ci-models
+      KOHARU_MIT48_PARITY_REQUIRED: ${{ github.event_name == 'workflow_dispatch' && inputs.validation_profile == 'full' }}
       MODEL_TAG: model-gemma-3-270m-it-qat-q4_0-v1
       MODEL_ASSET: gemma-3-270m-it-qat-Q4_0.gguf
       MODEL_SHA256: 3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6
@@ -3283,6 +3286,15 @@ jobs:
           path: ci-results
           retention-days: 14
 
+      - name: Enforce cloud MIT48 parity dependency
+        id: koharu_mit48_gate
+        if: always()
+        shell: bash
+        run: |
+          if [ "$KOHARU_MIT48_PARITY_REQUIRED" = "true" ]; then
+            test "${{ needs.koharu_mit48_reference_parity.result }}" = "success"
+          fi
+
       - name: Publish full validation receipt
         if: always() && (steps.ci_scope.outputs.validation_profile == 'full' || steps.ci_scope.outputs.receipt_propagation_allowed == 'true') && github.event_name != 'pull_request'
         shell: bash
@@ -3294,6 +3306,10 @@ jobs:
           description="Task-scoped full validation passed"
           if [ "${{ steps.ci_scope.outputs.receipt_propagation_allowed }}" = "true" ]; then
             description="Reused successful parent full validation"
+          fi
+          if [ "${{ steps.koharu_mit48_gate.outcome }}" != "success" ]; then
+            state=failure
+            description="Task-scoped full validation failed: Koharu MIT48 cloud parity failed"
           fi
           if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; } || [ "${{ steps.upload_results.outcome }}" != "success" ]; then
             state=failure
@@ -3312,7 +3328,51 @@ jobs:
         if: always()
         shell: bash
         run: |
+          if [ "${{ steps.koharu_mit48_gate.outcome }}" != "success" ]; then
+            echo "Cloud Koharu MIT48 parity did not pass."
+            exit 1
+          fi
           if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; } || [ "${{ steps.upload_results.outcome }}" != "success" ]; then
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi
+
+  koharu_mit48_reference_parity:
+    name: Cloud Koharu MIT48 reference parity
+    if: github.event_name == 'workflow_dispatch' && inputs.validation_profile == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify requested commit
+        if: inputs.expected_commit_sha != ''
+        run: test "$(git rev-parse HEAD)" = "${{ inputs.expected_commit_sha }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cloud smoke dependencies
+        run: python -m pip install --disable-pip-version-check "huggingface_hub<1" "Pillow>=10,<12"
+
+      - name: Download, build and run Koharu MIT48 reference
+        env:
+          KOHARU_MIT48_OUTPUT_ROOT: ${{ runner.temp }}/koharu-mit48-output
+          KOHARU_MIT48_ARTIFACT_ROOT: ${{ runner.temp }}/koharu-mit48-model
+          KOHARU_MIT48_CARGO_TARGET_DIR: ${{ runner.temp }}/koharu-mit48-cargo
+        run: bash scripts/run-koharu-mit48px-cloud-smoke.sh
+
+      - name: Upload parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: koharu-mit48-reference-parity-${{ github.run_id }}
+          path: ${{ runner.temp }}/koharu-mit48-output
+          if-no-files-found: warn
+          retention-days: 14
