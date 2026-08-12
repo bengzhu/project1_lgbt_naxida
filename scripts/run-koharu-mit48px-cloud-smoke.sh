@@ -14,14 +14,16 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 OUTPUT_ROOT="${KOHARU_MIT48_OUTPUT_ROOT:-${RUNNER_TEMP:?RUNNER_TEMP is required}/koharu-mit48-output}"
 MODEL_ROOT="${KOHARU_MIT48_ARTIFACT_ROOT:-${RUNNER_TEMP:?RUNNER_TEMP is required}/koharu-mit48-model}"
 CARGO_TARGET_DIR="${KOHARU_MIT48_CARGO_TARGET_DIR:-${RUNNER_TEMP:?RUNNER_TEMP is required}/koharu-mit48-cargo}"
+KOHARU_DATA_ROOT="${KOHARU_DATA_ROOT:-${RUNNER_TEMP:?RUNNER_TEMP is required}/koharu-mit48-runtime}"
 KOHARU_SOURCE_ROOT="${KOHARU_SOURCE_ROOT:-$REPO_ROOT/reference/koharu-main}"
 KOHARU_SOURCE_REVISION="35f3e6d1a418d9617fd922e2bc865fe5b8fff818"
 LLAMA_CPP_TAG="${LLAMA_CPP_TAG:-b8935}"
+MIT48_RUNTIME_DOWNLOAD_MAX_ATTEMPTS=3
 
 test -f "$KOHARU_SOURCE_ROOT/LICENSE"
 test -f "$KOHARU_SOURCE_ROOT/koharu-ml/Cargo.toml"
 test "$(git -C "$KOHARU_SOURCE_ROOT" rev-parse HEAD)" = "$KOHARU_SOURCE_REVISION"
-export KOHARU_SOURCE_ROOT LLAMA_CPP_TAG
+export KOHARU_DATA_ROOT KOHARU_SOURCE_ROOT LLAMA_CPP_TAG
 
 mkdir -p "$OUTPUT_ROOT/crops" "$OUTPUT_ROOT/predictions" "$MODEL_ROOT" "$CARGO_TARGET_DIR"
 
@@ -83,15 +85,53 @@ cargo build \
 BINARY="$CARGO_TARGET_DIR/release/mit48px-ocr"
 test -x "$BINARY"
 
+is_transient_llama_runtime_download_failure() {
+  local log="$1"
+  grep -Fq 'failed to prepare package `runtime:llama`' "$log" || return 1
+  grep -Fq "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_CPP_TAG/" "$log" || return 1
+  grep -Eqi 'HTTP status server error \(5[0-9][0-9]|HTTP status client error \(429|http2 error|refused stream|timed out|timeout|connection reset|connection closed|error sending request' "$log"
+}
+
+run_mit48_crop() {
+  local crop="$1"
+  local id="$2"
+  local output_log="$OUTPUT_ROOT/predictions/$id.stdout.log"
+  local runtime_attempt=1
+  : >"$output_log"
+
+  while (( runtime_attempt <= MIT48_RUNTIME_DOWNLOAD_MAX_ATTEMPTS )); do
+    local attempt_log="$OUTPUT_ROOT/predictions/$id.runtime-attempt-$runtime_attempt.log"
+    local status
+    if "$BINARY" \
+      --input "$crop" \
+      --model-dir "$MODEL_ROOT" \
+      --json-output "$OUTPUT_ROOT/predictions/$id.json" \
+      --cpu \
+      >"$attempt_log" \
+      2>&1; then
+      cat "$attempt_log" >>"$output_log"
+      return 0
+    else
+      status=$?
+    fi
+
+    cat "$attempt_log" >>"$output_log"
+    if (( runtime_attempt >= MIT48_RUNTIME_DOWNLOAD_MAX_ATTEMPTS )) \
+      || ! is_transient_llama_runtime_download_failure "$attempt_log"; then
+      cat "$output_log" >&2
+      return "$status"
+    fi
+
+    echo "Retrying pinned llama runtime download after transient failure ($runtime_attempt/$MIT48_RUNTIME_DOWNLOAD_MAX_ATTEMPTS)" \
+      | tee -a "$output_log" >&2
+    sleep "$((runtime_attempt * 5))"
+    runtime_attempt=$((runtime_attempt + 1))
+  done
+}
+
 while IFS= read -r crop; do
   id="$(basename "$crop" .png)"
-  "$BINARY" \
-    --input "$crop" \
-    --model-dir "$MODEL_ROOT" \
-    --json-output "$OUTPUT_ROOT/predictions/$id.json" \
-    --cpu \
-    >"$OUTPUT_ROOT/predictions/$id.stdout.log" \
-    2>&1
+  run_mit48_crop "$crop" "$id"
 done < <(find "$OUTPUT_ROOT/crops" -maxdepth 1 -type f -name '*.png' -print | sort)
 
 python3 - "$OUTPUT_ROOT" <<'PY'
