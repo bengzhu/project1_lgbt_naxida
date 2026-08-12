@@ -37,6 +37,10 @@ actor ComicTextBubbleDetectorService {
         )
     }
 
+    static func diagnosticKoharuTriangleRGB(_ image: CGImage) throws -> [UInt8] {
+        try ComicTextBubbleDetectorRuntime.diagnosticKoharuTriangleRGB(image)
+    }
+
     func detectTextRegions(in image: CGImage) throws -> [ComicTextDetectorRegion] {
         try Task.checkCancellation()
         let regions = try loadedRuntime().detectTextRegions(in: image)
@@ -275,6 +279,7 @@ private struct ComicTextBubbleDetectorRuntime {
     }
 
     private static func makePixelBuffer(from image: CGImage) throws -> CVPixelBuffer {
+        let resizedRGB = try makeKoharuTriangleRGB(image)
         let attributes: [CFString: Any] = [
             kCVPixelBufferCGImageCompatibilityKey: true,
             kCVPixelBufferCGBitmapContextCompatibilityKey: true,
@@ -297,21 +302,206 @@ private struct ComicTextBubbleDetectorRuntime {
         }
         defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, []) }
 
-        guard let context = CGContext(
-            data: CVPixelBufferGetBaseAddress(pixelBuffer),
-            width: imageSize,
-            height: imageSize,
-            bitsPerComponent: 8,
-            bytesPerRow: CVPixelBufferGetBytesPerRow(pixelBuffer),
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue
-                | CGImageAlphaInfo.premultipliedFirst.rawValue
-        ) else {
+        guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
             throw ComicTextBubbleDetectorServiceError.imageRenderFailed
         }
-        context.interpolationQuality = .high
-        context.draw(image, in: CGRect(x: 0, y: 0, width: imageSize, height: imageSize))
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+        for row in 0..<imageSize {
+            let sourceRow = row * imageSize * 3
+            let targetRow = baseAddress.advanced(by: row * bytesPerRow)
+                .assumingMemoryBound(to: UInt8.self)
+            for column in 0..<imageSize {
+                let sourceOffset = sourceRow + column * 3
+                let targetOffset = column * 4
+                // CVPixelBuffer's 32BGRA layout is B, G, R, A. The RGB
+                // plane above is kept in Koharu's channel order until this
+                // final copy so the resampler never depends on Core Graphics
+                // interpolation, alpha, or color-profile behavior.
+                targetRow[targetOffset] = resizedRGB[sourceOffset + 2]
+                targetRow[targetOffset + 1] = resizedRGB[sourceOffset + 1]
+                targetRow[targetOffset + 2] = resizedRGB[sourceOffset]
+                targetRow[targetOffset + 3] = 255
+            }
+        }
         return pixelBuffer
+    }
+
+    /// Convert a CGImage to canonical DeviceRGB bytes and apply the same
+    /// separable triangle filter used by Koharu's image-rs
+    /// `resize_exact(..., FilterType::Triangle)`. Core Graphics' `.high`
+    /// interpolation is not equivalent: image-rs uses a pixel-centred
+    /// triangle kernel, enlarges the support when downsampling, normalizes
+    /// edge weights, and rounds only after the horizontal pass.
+    private static func makeKoharuTriangleRGB(_ image: CGImage) throws -> [UInt8] {
+        guard image.width > 0,
+              image.height > 0,
+              image.width <= Int.max / max(image.height, 1),
+              image.width * image.height <= 64_000_000 else {
+            throw ComicTextBubbleDetectorServiceError.imageRenderFailed
+        }
+        let sourceBytesPerRow = image.width * 4
+        var source = [UInt8](repeating: 0, count: sourceBytesPerRow * image.height)
+        let rendered = source.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(
+                data: bytes.baseAddress,
+                width: image.width,
+                height: image.height,
+                bitsPerComponent: 8,
+                bytesPerRow: sourceBytesPerRow,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue
+                    | CGImageAlphaInfo.noneSkipFirst.rawValue
+            ) else {
+                return false
+            }
+            context.interpolationQuality = .none
+            context.draw(
+                image,
+                in: CGRect(x: 0, y: 0, width: image.width, height: image.height)
+            )
+            return true
+        }
+        guard rendered else {
+            throw ComicTextBubbleDetectorServiceError.imageRenderFailed
+        }
+
+        var rgb = [UInt8](repeating: 0, count: image.width * image.height * 3)
+        for index in 0..<(image.width * image.height) {
+            let sourceOffset = index * 4
+            let targetOffset = index * 3
+            // DeviceRGB + byteOrder32Little stores B, G, R in the first
+            // three bytes. Keep the public diagnostic plane in R, G, B order.
+            rgb[targetOffset] = source[sourceOffset + 2]
+            rgb[targetOffset + 1] = source[sourceOffset + 1]
+            rgb[targetOffset + 2] = source[sourceOffset]
+        }
+        return triangleResize(
+            rgb,
+            sourceWidth: image.width,
+            sourceHeight: image.height,
+            targetWidth: imageSize,
+            targetHeight: imageSize
+        )
+    }
+
+    /// Read-only runtime oracle used by the deterministic preprocessing
+    /// harness. Production inference uses the same helper through
+    /// `makePixelBuffer(from:)`.
+    static func diagnosticKoharuTriangleRGB(_ image: CGImage) throws -> [UInt8] {
+        try makeKoharuTriangleRGB(image)
+    }
+
+    private static func triangleResize(
+        _ source: [UInt8],
+        sourceWidth: Int,
+        sourceHeight: Int,
+        targetWidth: Int,
+        targetHeight: Int
+    ) -> [UInt8] {
+        let sourcePixelCount = sourceWidth * sourceHeight
+        guard sourceWidth > 0,
+              sourceHeight > 0,
+              targetWidth > 0,
+              targetHeight > 0,
+              source.count == sourcePixelCount * 3 else {
+            return []
+        }
+
+        // image-rs vertical_sample keeps the first pass as f32 RGBA. We only
+        // need RGB here, but retaining Float until the final horizontal pass
+        // is important: rounding after the vertical pass changes detector
+        // pixels and is not Koharu-compatible.
+        let verticalCount = sourceWidth * targetHeight * 3
+        var vertical = [Float](repeating: 0, count: verticalCount)
+        let verticalRatio = Float(sourceHeight) / Float(targetHeight)
+        let verticalScale = max(verticalRatio, 1)
+        let verticalSupport = verticalScale
+        for outputY in 0..<targetHeight {
+            let inputY = (Float(outputY) + 0.5) * verticalRatio
+            let left = max(
+                0,
+                min(
+                    sourceHeight - 1,
+                    Int(floor(inputY - verticalSupport))
+                )
+            )
+            let right = max(
+                left + 1,
+                min(
+                    sourceHeight,
+                    Int(ceil(inputY + verticalSupport))
+                )
+            )
+            let kernelOrigin = inputY - 0.5
+            var weights: [(index: Int, value: Float)] = []
+            var weightSum: Float = 0
+            for sourceY in left..<right {
+                let distance = (Float(sourceY) - kernelOrigin) / verticalScale
+                let value = abs(distance) < 1 ? 1 - abs(distance) : 0
+                weights.append((sourceY, value))
+                weightSum += value
+            }
+            guard weightSum > 0, weightSum.isFinite else { continue }
+            for outputX in 0..<sourceWidth {
+                for channel in 0..<3 {
+                    var sum: Float = 0
+                    for weight in weights {
+                        let sourceOffset = (weight.index * sourceWidth + outputX) * 3 + channel
+                        sum += Float(source[sourceOffset]) * weight.value / weightSum
+                    }
+                    let targetOffset = (outputY * sourceWidth + outputX) * 3 + channel
+                    vertical[targetOffset] = sum
+                }
+            }
+        }
+
+        let targetPixelCount = targetWidth * targetHeight
+        var output = [UInt8](repeating: 0, count: targetPixelCount * 3)
+        let horizontalRatio = Float(sourceWidth) / Float(targetWidth)
+        let horizontalScale = max(horizontalRatio, 1)
+        let horizontalSupport = horizontalScale
+        for outputY in 0..<targetHeight {
+            for outputX in 0..<targetWidth {
+                let inputX = (Float(outputX) + 0.5) * horizontalRatio
+                let left = max(
+                    0,
+                    min(
+                        sourceWidth - 1,
+                        Int(floor(inputX - horizontalSupport))
+                    )
+                )
+                let right = max(
+                    left + 1,
+                    min(
+                        sourceWidth,
+                        Int(ceil(inputX + horizontalSupport))
+                    )
+                )
+                let kernelOrigin = inputX - 0.5
+                var weights: [(index: Int, value: Float)] = []
+                var weightSum: Float = 0
+                for sourceX in left..<right {
+                    let distance = (Float(sourceX) - kernelOrigin) / horizontalScale
+                    let value = abs(distance) < 1 ? 1 - abs(distance) : 0
+                    weights.append((sourceX, value))
+                    weightSum += value
+                }
+                guard weightSum > 0, weightSum.isFinite else { continue }
+                for channel in 0..<3 {
+                    var sum: Float = 0
+                    for weight in weights {
+                        let sourceOffset = (outputY * sourceWidth + weight.index) * 3 + channel
+                        sum += vertical[sourceOffset] * weight.value / weightSum
+                    }
+                    let rounded = sum.rounded()
+                    let targetOffset = (outputY * targetWidth + outputX) * 3 + channel
+                    output[targetOffset] = UInt8(
+                        min(max(rounded, 0), 255)
+                    )
+                }
+            }
+        }
+        return output
     }
 
     private static func sigmoid(_ value: Float) -> Float {
