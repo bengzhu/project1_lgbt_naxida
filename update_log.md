@@ -1,3 +1,18 @@
+## v3.275：Koharu MIT48 左列竖排 crop 完整恢复
+
+日期：2026-08-12
+
+审计 v3.274 的固定 `test/jap.jpg` Koharu parity 后发现，`left-column-c` 旧 crop `(405,86)-(491,448)` 从黑字连通组件中间开始，首个字被截断，导致该 crop 只返回非日语 `T`。本版按实测 glyph envelope 将 crop 调整为 `(388,86)-(452,448)`，并把云端质量门槛从 7 个 crop 至少 6 个日语结果提升为 7/7；同时要求该 crop 精确返回 `今度こそ` 且 confidence `>=.55`。历史 v3.270–v3.272 合同同步接受当前 7/7 gate，避免旧门槛断言阻断新证据。
+
+这仍是 pinned GPL Koharu MIT48 reference 对固定样图的云端 crop parity，不把 GPL 权重/runtime 打包进 AITRANS，不替换 bundled Apache Manga OCR，也不外推为通用日语 OCR、翻译或识别质量提升。
+
+验证边界：
+
+- 本地只运行安全 Python 静态合同与 `git diff --check`；未运行本地 `xcodebuild`、`swiftc`、Rust/Cargo、Core ML 或 runtime 编译。
+- exact-SHA full [31599871570](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31599871570) 对实现 SHA `62d72bcd40f0cc0b0b70dc9b51d378d5bc4e017a` 的 Koharu parity、静态检查、UI 合同、JUnit 与 receipt 成功；该轮按 scope 跳过 Xcode build。
+- 云端 parity evidence：7/7 accepted；`left-column-c` 为 `今度こそ` confidence `0.99994445`，compact `ニコッ` confidence `0.59093773`；主列仍覆盖 `持ち帰る！`、`この爆乳を`、`今度こそ`、`前は生意気に`、`俺の誘い断り`。
+- v3.275 的最终 SHA 另用 `probe_mode=ci-fast` 请求云端 Xcode/simulator 验证；以该 run 的实际 job 与 receipt 为准。研发分支合入后删除，main 保持展示用途不动。
+
 ## v3.274：图片 OCR 复查阈值文案与共享质量 gate 对齐
 
 日期：2026-08-12

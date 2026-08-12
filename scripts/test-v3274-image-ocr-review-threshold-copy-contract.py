@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.275's shared image-review threshold copy."""
+"""Static contract for v3.274's shared image-review threshold copy."""
 
 from pathlib import Path
 import re
