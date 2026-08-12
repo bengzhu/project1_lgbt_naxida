@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+v3.263 图片单块复查取消：`rerecognizingBlockID != nil -> scoped cancel current block task -> retain image task/review IDs/translated session -> current request cancellation catch restores previous state + failure generation -> VoiceOver status focus`；整图 OCR／翻译、换图和全局取消继续走原 cleanup。
+
 v3.262 detector 输入：源图 → canonical 8-bit DeviceRGB → image-rs/Koharu 等价 Triangle separable resize（pixel-centred sampling／edge normalization／最终 pass round）→ 显式 RGB→32BGRA → RT-DETR 640×640；threshold、ownership、Manga OCR、Vision fallback、12／48 budget、取消、布局、翻译、渲染与非图片路径不变。
 
 v3.261 图片 OCR 复查交互：结果行／局部预览触发 Vision OCR 恢复 → View 记录 `.row`／`.preview` → 确认成功后按入口回焦；目标因筛选隐藏时回退可见结果、完成态或空态。恢复仍只消费既有 Store baseline，不重跑 OCR、翻译或导出流程。
