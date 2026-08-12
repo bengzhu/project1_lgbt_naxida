@@ -54,7 +54,7 @@ specs = [
     ("right-column-a", (846, 116, 906, 432)),
     ("right-column-b", (904, 116, 970, 432)),
     ("right-column-c", (968, 116, 1030, 432)),
-    ("compact-niko", (530, 1048, 582, 1166)),
+    ("compact-niko", (530, 1062, 582, 1166)),
 ]
 
 manifest = []
@@ -144,6 +144,17 @@ for path in sorted((output / "predictions").glob("*.json")):
 if not accepted:
     raise AssertionError("MIT48 reference runtime produced no nonempty Japanese crop output")
 
+if len(accepted) < 6:
+    raise AssertionError(
+        f"MIT48 reference runtime accepted only {len(accepted)}/7 Japanese crops"
+    )
+
+compact = next((row for row in rows if row["id"] == "compact-niko"), None)
+if compact is None or compact["text"] != "ニコッ":
+    raise AssertionError(f"compact-niko did not recover ニコッ: {compact}")
+if compact["confidence"] < 0.55:
+    raise AssertionError(f"compact-niko confidence is below 0.55: {compact}")
+
 report = {
     "status": "success",
     "runtime": "koharu-ml/bin/mit48px-ocr",
@@ -151,6 +162,11 @@ report = {
     "orientation": "Pillow rotate90 equivalent to Koharu image-rs rotate270",
     "cropCount": len(rows),
     "acceptedJapanesePredictions": len(accepted),
+    "qualityGate": {
+        "minimumAcceptedJapanesePredictions": 6,
+        "compactNikoText": "ニコッ",
+        "compactNikoMinimumConfidence": 0.55,
+    },
     "predictions": rows,
     "qualityClaim": "cloud reference smoke only; no general OCR quality claim",
 }

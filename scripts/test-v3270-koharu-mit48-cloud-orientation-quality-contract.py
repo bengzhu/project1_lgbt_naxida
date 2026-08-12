@@ -24,7 +24,7 @@ class KoharuMit48CloudOrientationQualityContractTests(unittest.TestCase):
         for marker in [
             "image-rs rotate270",
             "rotate(90, expand=True)",
-            '("compact-niko", (530, 1048, 582, 1166))',
+            '("compact-niko", (530, 1062, 582, 1166))',
             '"orientation": "Pillow rotate90 equivalent to Koharu image-rs rotate270"',
         ]:
             self.assertIn(marker, self.smoke)
@@ -35,6 +35,10 @@ class KoharuMit48CloudOrientationQualityContractTests(unittest.TestCase):
             "math.isfinite(confidence)",
             "density >= 0.5",
             "acceptedJapanesePredictions",
+            "len(accepted) < 6",
+            'compact["text"] != "ニコッ"',
+            'compact["confidence"] < 0.55',
+            '"compactNikoText": "ニコッ"',
             '"qualityClaim": "cloud reference smoke only; no general OCR quality claim"',
         ]:
             self.assertIn(marker, self.smoke)
