@@ -915,6 +915,9 @@ jobs:
           if grep -Fx 'scripts/test-v3273-image-ocr-review-confidence-gate-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
+          if grep -Fx 'scripts/test-v3274-image-ocr-review-threshold-copy-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
           # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
 
@@ -1779,6 +1782,7 @@ jobs:
             python3 -B scripts/test-v3271-koharu-mit48-right-column-quality-contract.py
             python3 -B scripts/test-v3272-koharu-mit48-right-column-text-only-contract.py
             python3 -B scripts/test-v3273-image-ocr-review-confidence-gate-contract.py
+            python3 -B scripts/test-v3274-image-ocr-review-threshold-copy-contract.py
             bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 

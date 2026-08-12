@@ -50,6 +50,12 @@ private enum ImageOCRGeometryPresentation {
     }
 }
 
+private enum ImageOCRReviewPresentation {
+    static var lowConfidencePercent: Int {
+        Int((Double(ImageOCRResultSummary.lowConfidenceThreshold) * 100).rounded())
+    }
+}
+
 private struct ImageOCRDirectionOverrideMenu: View {
     let block: ImageTranslationBlock
     let canEdit: Bool
@@ -1016,7 +1022,7 @@ struct ImageTranslationPanel: View {
         case .needsReview:
             return "显示尚未完成复查的低置信或方向待定文字块"
         case .lowConfidence:
-            return "只显示 OCR 置信度低于 50% 的文字块；已复查的风险块仍会保留"
+            return "只显示 OCR 置信度低于 \(ImageOCRReviewPresentation.lowConfidencePercent)% 的文字块；已复查的风险块仍会保留"
         case .unknownDirection:
             return "只显示方向待定的文字块；已复查的风险块仍会保留"
         case .vertical:
@@ -1044,7 +1050,7 @@ struct ImageTranslationPanel: View {
         case .needsReview:
             return "当前没有尚未完成复查的风险块；可以切换到全部查看已复查结果。"
         case .lowConfidence:
-            return "当前没有低于 50% 置信度的文字块；可切换到全部、方向待定或竖排。"
+            return "当前没有低于 \(ImageOCRReviewPresentation.lowConfidencePercent)% 置信度的文字块；可切换到全部、方向待定或竖排。"
         case .unknownDirection:
             return "当前没有方向待定的文字块；可切换到全部、低置信或竖排。"
         case .vertical:
@@ -4199,7 +4205,7 @@ private struct ImageOCRCorrectionSheet: View {
                                 Text(displayConfidence, format: .percent.precision(.fractionLength(0)))
                                     .foregroundStyle(Color.appTextSecondary)
                             }
-                            Text("置信度低于 50%，请以局部原图为准确认文字。")
+                            Text("置信度低于 \(ImageOCRReviewPresentation.lowConfidencePercent)%，请以局部原图为准确认文字。")
                                 .font(.caption)
                                 .foregroundStyle(Color.appTextSecondary)
                         }
