@@ -3374,6 +3374,7 @@ jobs:
           KOHARU_MIT48_OUTPUT_ROOT: ${{ runner.temp }}/koharu-mit48-output
           KOHARU_MIT48_ARTIFACT_ROOT: ${{ runner.temp }}/koharu-mit48-model
           KOHARU_MIT48_CARGO_TARGET_DIR: ${{ runner.temp }}/koharu-mit48-cargo
+          LLAMA_CPP_TAG: b8935
         run: bash scripts/run-koharu-mit48px-cloud-smoke.sh
 
       - name: Upload parity evidence

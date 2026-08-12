@@ -68,6 +68,7 @@ class KoharuMit48CloudParityContractTests(unittest.TestCase):
             'test -f "$KOHARU_SOURCE_ROOT/LICENSE"',
             'test "$(git -C "$KOHARU_SOURCE_ROOT" rev-parse HEAD)" = "$KOHARU_SOURCE_REVISION"',
             '--manifest-path "$KOHARU_SOURCE_ROOT/koharu-ml/Cargo.toml"',
+            'LLAMA_CPP_TAG="${LLAMA_CPP_TAG:-b8935}"',
         ]:
             self.assertIn(marker, self.smoke)
         self.assertIn('"modelLicense": "GPL-3.0"', self.validator)
@@ -98,6 +99,7 @@ class KoharuMit48CloudParityContractTests(unittest.TestCase):
             "dtolnay/rust-toolchain@stable",
             '"huggingface_hub<1"',
             '"Pillow>=10,<12"',
+            "LLAMA_CPP_TAG: b8935",
             "bash scripts/run-koharu-mit48px-cloud-smoke.sh",
             "actions/upload-artifact@v4",
             "${{ runner.temp }}/koharu-mit48-output",
