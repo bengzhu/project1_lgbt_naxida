@@ -12,7 +12,11 @@ v3.276 已把 Koharu `inference_text_blocks` 的临时 `block_index` 贯穿 Visi
 
 候选 `a4b243e213e528f25d1655e79f880de354fe0912` 的 exact-SHA full [31631827061](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31631827061) attempt 1 的 UI owner evaluators、云端 Xcode 26.6 与 JUnit `10/10` 已通过；但 parity attempt 1／2 均在 Rust release build 成功后、任何 OCR 推理之前准备 Koharu pinned `runtime:llama` 时失败，证据分别为 GitHub Release HTTP/2 refused stream 与 `503 Service Unavailable`。cloud smoke 因此新增外层有界重试：复用显式 `KOHARU_DATA_ROOT`，只有日志同时匹配 `runtime:llama`、pinned `b8935` URL 和 5xx／429／HTTP2／timeout／reset 网络特征时才重启 binary，最多 3 次；模型加载、OCR 推理、JSON 与既有 7/7、`ニコッ >=.55`、`今度こそ >=.55` 质量失败不重试、不降级。
 
-云端与合并证据待本轮 exact-SHA full、PR、合并和 receipt 完成后补齐。
+云端与合并证据：
+
+- 应用实现候选 `a4b243e213e528f25d1655e79f880de354fe0912` 的 full [31631827061](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31631827061) attempt 1 已通过 v3.277 owner grouping evaluator、UI 合同、云端 Xcode 26.6 与 JUnit `10/10`；parity 后续只因 pinned llama GitHub Release 的 HTTP/2 refused stream／503 在 OCR 前失败，促成上述有界网络重试。
+- 最终 SHA `53e4209a0fdae623b6bedb4333079240e2087fbb` 的 exact-SHA full [31634058829](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31634058829) 两个 job 均成功：Cloud Koharu MIT48 parity job `94240722851` 和 macOS job `94242342699` 完成；parity 7/7 accepted，`ニコッ` confidence `0.59093815`、`今度こそ` `0.99994445`，其余固定 crop 也全部满足日语密度与质量门。UI interaction contract、JUnit summary 与 `AITRANS CI/full-validation=success` receipt 成功；最终提交仅改变 cloud smoke，Xcode build 按 changed-file scope 跳过，应用编译证据沿用同实现候选。
+- PR [#358](https://github.com/bengzhu/project1_lgbt_naxida/pull/358) CI [31635714958](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31635714958) 全部成功，以 merge SHA `2476d54596e2be99bd75ffdc1437847cdb11f5e1` 合入 `smalldata_test`；合入后 push CI [31635811775](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31635811775) 成功。GPL Koharu/MIT48 权重与 runtime 仍只用于云端 reference parity，不打包进 AITRANS，也不把固定 `test/jap.jpg` 外推为通用日语 OCR／翻译质量提升；main 未动，研发分支删除后本地／origin 仅保留 `main` 与 `smalldata_test`。
 
 ## v3.276：Koharu 竖排 line owner 分组边界
 
