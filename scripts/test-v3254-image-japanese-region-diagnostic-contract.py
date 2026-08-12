@@ -84,12 +84,13 @@ class JapaneseRegionDiagnosticContractTests(unittest.TestCase):
 
     def test_runtime_oracle_is_sample_specific_and_not_a_general_ocr_claim(self) -> None:
         self.assertIn("test/jap.jpg", self.runtime)
-        self.assertIn("expected six detector regions", self.runtime)
+        self.assertIn("expected five or six detector regions", self.runtime)
         self.assertIn("compactOwnerObserved", self.runtime)
         self.assertIn("production Vision fusion still owns the final", self.runtime)
         self.assertIn("expected twenty bounded long-page blocks", self.runtime)
         self.assertIn("expected four bounded compact vertical blocks", self.runtime)
         self.assertIn("compactTextSummary=host-variant", self.runtime)
+        self.assertIn("940873", self.runtime)
         self.assertIn("text=．．．では最後", self.runtime)
         self.assertNotIn("runImageTranslationPipeline", self.runtime)
 
@@ -108,7 +109,7 @@ class JapaneseRegionDiagnosticContractTests(unittest.TestCase):
             self.workflow,
         )
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.261", "3.261"])
+        self.assertEqual(versions, ["3.262", "3.262"])
         self.assertNotIn("MARKETING_VERSION = 3.255;", self.project)
 
 
