@@ -102,6 +102,22 @@ enum ImageOCRLayoutEngine {
         return candidateOwner == blockOwner && lineResultOwner == blockOwner
     }
 
+    /// A wider recovery pass may replace partial line reads only when all of
+    /// its observations prove the exact known TextRegion and together cover
+    /// every source line. Ownerless or partial fallbacks retain the line reads.
+    static func blockFallbackCanReplacePartialLines(
+        fallbackOwners: [Int?],
+        blockOwner: Int?,
+        hasCompleteLineCoverage: Bool
+    ) -> Bool {
+        guard hasCompleteLineCoverage,
+              !fallbackOwners.isEmpty,
+              let blockOwner else {
+            return false
+        }
+        return fallbackOwners.allSatisfy { $0 == blockOwner }
+    }
+
     static func layout(
         _ observations: [ImageOCRLayoutObservation],
         allowsVerticalText: Bool,

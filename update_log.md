@@ -1,3 +1,15 @@
+## v3.279：可靠整块 fallback 替代同 owner partial lines
+
+日期：2026-08-13
+
+Koharu `Mit48pxOcr::inference_text_blocks` 先为每个 `TextRegion` 提取 line regions，再按 `block_index` 收集所有 line prediction，最终为每个输入 block 只输出一个 joined prediction。AITRANS v3.276-v3.278 已迁移 owner 传递、owner-first grouping 与 exact-owner complete-coverage proof，但存在一个后续组合缺口：known owner 仅部分 line 识别成功时，v3.278 会正确执行整块 crop；partial lines 和 block fallback 随后同时进入 v3.277 owner-first layout，若两者 tight geometry 不构成去重，最终文本会变成“局部 line + 整块结果”的重复拼接。
+
+本版把该边界收敛为单 TextRegion recognition source。每个需要 block fallback 的竖排 block 先把主方向与最多一次反向结果收集并按现有日语规则去重为同一 `blockFallback`；该集合以仅在 replacement proof 开启的 `.crop` 资格重新调用 v3.278 `hasCompleteJapaneseLineCoverage`，对原 source lines 逐一满足 exact owner、有限 confidence `>=.48`、日语脚本密度 `>=.5`、文本长度、geometry overlap／面积与一对一消费，而且所有 fallback observations 都必须精确携带该 block owner，才从当前 `refined` 中移除该 owner 的 partial `.verticalLine` 结果，再追加完整 fallback。旧 block-crop skip 调用不传该参数，默认仍只接受 `.verticalLine`。弱、空、覆盖不完整、ownerless、foreign-owner fallback 或 ownerless block 都不会删除已成功 line，因此单个强片段或 fallback 失败时不损失局部 OCR。
+
+该变化不改变 v3.278 complete-coverage skip，不禁止 ownerless observations 参与普通 fusion，也不删除 page／tile／detector observation。最多 16 个 block crop、8 次 block orientation fallback、8 个 Manga line request、12/24 Vision line candidate、16M perspective pixel、detector bbox ownership、crop／warp／方向、confidence／日语密度 gate、owner-first grouping、取消传播、翻译、UI、渲染和非图片路径保持不变。新增 `scripts/test-v3279-koharu-block-fallback-replacement-contract.py` 与 cloud-only Swift policy evaluator，工程版本为 `3.279`。
+
+本地只执行静态边界：AST 预扫确认 301 个 `scripts/test-v*.py` 中 27 个实际调用 `subprocess`，全部跳过；其余 274 个合同全部通过。311 个 Python 文件 AST、3 个 workflow YAML、19 个 shell 语法、4 个 plist 与工程 project、版本解析、新 v3.279 合同 `7/7`、历史 v3.204/v3.205/v3.276-v3.278 owner/coverage 回归及 `git diff --check` 通过。未运行 Xcode、Swift evaluator、Rust/Cargo、Core ML 或 app/runtime。exact-SHA 云端 full、PR、合并和 receipt 待本轮完成。固定 `test/jap.jpg` 与 GPL Koharu/MIT48 parity 仍只用于云端 reference 验证，不打包进 AITRANS，也不外推为通用日语 OCR／翻译质量提升。
+
 ## v3.278：Koharu line coverage 的 owner-exact 跳过证明
 
 日期：2026-08-13
