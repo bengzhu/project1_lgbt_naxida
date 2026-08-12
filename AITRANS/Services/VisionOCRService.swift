@@ -2464,7 +2464,12 @@ struct VisionOCRService: Sendable {
 
         for candidate in sourceLineCandidates {
             guard let resultIndex = availableLineResults.firstIndex(where: {
-                isReliableJapaneseLineCoverageResult($0, candidate: candidate)
+                ImageOCRLayoutEngine.lineCoverageOwnersProveBlock(
+                    lineResultOwner: $0.verticalTextRegionOwner,
+                    candidateOwner: candidate.verticalTextRegionOwner,
+                    blockOwner: block.verticalTextRegionOwner
+                )
+                    && isReliableJapaneseLineCoverageResult($0, candidate: candidate)
                     && japaneseLineCoverageMatches($0, candidate: candidate)
             }) else {
                 return false
