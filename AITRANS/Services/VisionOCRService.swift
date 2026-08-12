@@ -1991,6 +1991,11 @@ struct VisionOCRService: Sendable {
             observations: safeObservations,
             blocks: blocks
         )
+        let geometryOnlyCandidates = japaneseGeometryOnlyVerticalLineCandidates(
+            in: image,
+            observations: safeObservations,
+            blocks: blocks
+        )
         // A synthesized line is the bounded TextRegion proxy for the column,
         // so do not reread an original axis candidate that it geometrically
         // covers. Keep the original candidate in `perspectiveCandidates` so
@@ -2009,7 +2014,8 @@ struct VisionOCRService: Sendable {
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         let mangaLineCandidates = japaneseMangaLineOCRCandidates(
             uniqueCandidates: uniqueCandidates,
-            synthesizedCandidates: synthesizedCandidates
+            synthesizedCandidates: synthesizedCandidates,
+            geometryOnlyCandidates: geometryOnlyCandidates
         )
         let mangaLineRefined = try await recognizeJapaneseMangaLineOCR(
             in: image,
@@ -2105,9 +2111,10 @@ struct VisionOCRService: Sendable {
     /// admitted because they are the closest local proxy for fragmented lines.
     private static func japaneseMangaLineOCRCandidates(
         uniqueCandidates: [VisionOCRObservation],
-        synthesizedCandidates: [VisionOCRObservation]
+        synthesizedCandidates: [VisionOCRObservation],
+        geometryOnlyCandidates: [VisionOCRObservation]
     ) -> [VisionOCRObservation] {
-        let candidates = deduplicateJapaneseObservations(
+        let textBackedCandidates = deduplicateJapaneseObservations(
             synthesizedCandidates + uniqueCandidates
         ).filter { candidate in
             guard candidate.observationRole != .detectorTextRegion else {
@@ -2119,7 +2126,7 @@ struct VisionOCRService: Sendable {
                 && !text.isEmpty
                 && japaneseScriptDensity(in: text) >= 0.5
         }
-        return Array(candidates.sorted { lhs, rhs in
+        let textBacked = textBackedCandidates.sorted { lhs, rhs in
             let lhsLength = lhs.text.unicodeScalars.count
             let rhsLength = rhs.text.unicodeScalars.count
             if lhsLength != rhsLength {
@@ -2129,7 +2136,143 @@ struct VisionOCRService: Sendable {
                 return lhs.confidence < rhs.confidence
             }
             return lhs.rect.y < rhs.rect.y
-        }.prefix(maximumJapaneseMangaLineOCRRequests))
+        }
+
+        // Geometry-only candidates are the closest local equivalent to
+        // Koharu's detector-supplied `line_polygons`: they have no OCR text or
+        // detector confidence, so reserve a small part of the same request
+        // budget for them instead of letting a page full of fragmented
+        // text-backed observations starve a missed line. A geometry candidate
+        // that is already covered by a text-backed line is not a recovery
+        // opportunity and must not consume that reserved capacity.
+        let uncoveredGeometry = geometryOnlyCandidates
+            .filter { geometry in
+                !textBacked.contains { textCandidate in
+                    isSameJapaneseLineRegion(geometry, as: textCandidate)
+                }
+            }
+            .sorted { lhs, rhs in
+                let lhsHeight = lhs.lineRegionRect?.height ?? lhs.rect.height
+                let rhsHeight = rhs.lineRegionRect?.height ?? rhs.rect.height
+                if lhsHeight != rhsHeight { return lhsHeight > rhsHeight }
+                if lhs.rect.y != rhs.rect.y { return lhs.rect.y < rhs.rect.y }
+                return lhs.rect.x > rhs.rect.x
+            }
+
+        let geometryReserve = min(
+            uncoveredGeometry.count,
+            min(2, maximumJapaneseMangaLineOCRRequests)
+        )
+        let textLimit = max(
+            0,
+            maximumJapaneseMangaLineOCRRequests - geometryReserve
+        )
+        return Array(
+            textBacked.prefix(textLimit)
+                + uncoveredGeometry.prefix(geometryReserve)
+        ).prefix(maximumJapaneseMangaLineOCRRequests).map { $0 }
+    }
+
+    /// Derive recognition-only line geometry from Vision's rotated
+    /// `VNTextObservation.characterBoxes`. This is deliberately a separate
+    /// source from text-backed observations: the candidate is admitted without
+    /// using recognized text, but only inside one already-established Japanese
+    /// vertical layout block. That is the safe boundary available on iOS when
+    /// the upstream RT-DETR exposes a bbox but no Koharu `line_polygons`.
+    private static func japaneseGeometryOnlyVerticalLineCandidates(
+        in image: CGImage,
+        observations: [VisionOCRObservation],
+        blocks: [ImageOCRLayoutBlock]
+    ) -> [VisionOCRObservation] {
+        guard !blocks.isEmpty else { return [] }
+
+        // Reuse the existing character-envelope/quad mapper, but do not pass
+        // broad page or detector observations as `existingVerticalRegions`.
+        // They are ownership context, not evidence that this line geometry was
+        // already recognized. Existing tight vertical-line observations and
+        // their reliable line results still suppress duplicate geometry.
+        let lineSeedObservations = observations.filter {
+            $0.observationRole == .verticalLine
+        }
+        let regions = detectJapanesePixelFirstVerticalRegions(
+            in: image,
+            observations: lineSeedObservations,
+            verticalBlocks: [],
+            lineObservations: []
+        )
+
+        var candidates: [VisionOCRObservation] = []
+        for region in regions {
+            guard region.characterCount >= 2,
+                  region.cropQuadHint != nil,
+                  isVerticalLineCandidate(region.rect) else {
+                continue
+            }
+
+            let matchingBlocks = blocks.filter { block in
+                guard block.direction == .vertical,
+                      block.directionConfidence >= 0.25,
+                      japaneseScriptDensity(in: block.text) >= 0.5 else {
+                    return false
+                }
+                return japanesePixelDetectorRegionIsCovered(
+                    block.rect,
+                    by: region.rect
+                )
+            }
+            // A line polygon belongs to exactly one TextRegion in Koharu. If
+            // Vision geometry crosses two layout owners, it is not safe to
+            // assign it to either owner, so leave the historical paths intact.
+            guard matchingBlocks.count == 1,
+                  let block = matchingBlocks.first else {
+                continue
+            }
+
+            let blockArea = max(block.rect.width * block.rect.height, 0.0001)
+            let candidateArea = region.rect.width * region.rect.height
+            let candidateCoverage = intersectionArea(block.rect, region.rect)
+                / blockArea
+            let areaRatio = candidateArea / blockArea
+            guard candidateCoverage >= 0.10,
+                  areaRatio <= 1.25,
+                  region.rect.width <= max(block.rect.width * 1.25, 0.05),
+                  region.rect.height <= max(block.rect.height * 1.25, 0.05) else {
+                continue
+            }
+
+            let duplicatesTextBackedGeometry = observations.contains { observation in
+                guard let tightRegion = observation.lineRegionRect?.normalizedToUnit(),
+                      observation.observationRole != .detectorTextRegion else {
+                    return false
+                }
+                return overlapRatio(tightRegion, region.rect) >= 0.72
+            }
+            guard !duplicatesTextBackedGeometry else { continue }
+
+            candidates.append(
+                VisionOCRObservation(
+                    text: "",
+                    confidence: 0,
+                    rect: region.rect,
+                    lineRegionRect: region.rect,
+                    lineRegionQuad: region.cropQuadHint,
+                    rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
+                    sourceDirectionHint: .vertical,
+                    observationRole: .verticalLine
+                )
+            )
+        }
+
+        var unique: [VisionOCRObservation] = []
+        for candidate in candidates {
+            guard !unique.contains(where: {
+                isSameJapaneseLineRegion(candidate, as: $0)
+            }) else {
+                continue
+            }
+            unique.append(candidate)
+        }
+        return unique
     }
 
     /// Feed a tight vertical line crop through the bundled Koharu Manga OCR
