@@ -89,6 +89,26 @@ actor MangaOCRService {
         try MangaOCRRuntime.diagnosticKoharuNearestGrayscale(image)
     }
 
+    /// Test-only oracle for the strict vertical line-quad sampler. The
+    /// production path keeps detector bboxes primary; this hook makes the
+    /// perspective pixel contract independently reproducible without loading
+    /// the bundled OCR models.
+    static func diagnosticKoharuVerticalQuadWarp(
+        _ image: CGImage,
+        quad: ImageOCRLayoutQuad,
+        targetWidth: Int,
+        targetHeight: Int
+    ) -> CGImage? {
+        Self.koharuVerticalQuadWarp(
+            image,
+            sourcePoints: quad.points.map {
+                CGPoint(x: $0.x * CGFloat(image.width), y: $0.y * CGFloat(image.height))
+            },
+            targetWidth: targetWidth,
+            targetHeight: targetHeight
+        )
+    }
+
     private static let maximumBatchSize = 4
     private static let preferredCropConfidence: Float = 0.55
     private static let preferredJapaneseScriptDensity = 0.5
@@ -468,10 +488,12 @@ actor MangaOCRService {
 
         // Koharu's vertical warp does not feed the projection's natural extent
         // directly to Manga OCR. It derives a bounded canvas from the quad's
-        // long/short axes and rotates the line 270 degrees so the model sees
-        // the original top-to-bottom column as a horizontal reading span.
-        // This is only the strict Japanese line-quad fallback; the detector
-        // bbox remains the primary crop and remains unrotated.
+        // long/short axes, samples the source directly into that canvas with
+        // image-rs-compatible bilinear interpolation, and rotates the line 270
+        // degrees so the model sees the original top-to-bottom column as a
+        // horizontal reading span. This is only the strict Japanese line-quad
+        // fallback; the detector bbox remains the primary crop and remains
+        // unrotated.
         guard let targetSize = koharuVerticalQuadWarpTargetSize(
             localPoints,
             maximumDimension: CGFloat(maximumQuadWarpDimension),
@@ -484,17 +506,16 @@ actor MangaOCRService {
         guard targetWidth >= 2, targetHeight >= 2 else {
             return rendered
         }
-        let bounded = rendered.width == targetWidth && rendered.height == targetHeight
-            ? rendered
-            : resizedImage(
-                rendered,
-                pixelWidth: targetWidth,
-                pixelHeight: targetHeight
-            )
-        guard let bounded,
-              let rotated = rotateImage270(bounded) else {
-            // Natural projection is the compatibility fallback if either the
-            // target canvas or the rotation renderer is unavailable.
+        guard let bounded = koharuVerticalQuadWarp(
+            cropped,
+            sourcePoints: localPoints,
+            targetWidth: targetWidth,
+            targetHeight: targetHeight
+        ),
+        let rotated = rotateImage270(bounded) else {
+            // Natural projection is the compatibility fallback if the direct
+            // target canvas, source conversion, or rotation renderer is
+            // unavailable.
             return rendered
         }
         return rotated
@@ -569,34 +590,260 @@ actor MangaOCRService {
         return CGSize(width: width, height: height)
     }
 
-    private static func resizedImage(
+    /// Sample one vertical line quad directly into Koharu's bounded target
+    /// canvas. `imageproc::warp_into(..., Interpolation::Bilinear)` maps each
+    /// integer output pixel through the inverse projective transform, floors
+    /// the source coordinate, and blends the four neighbours with a constant
+    /// black border. Avoiding a natural Core Image extent followed by a second
+    /// `.high` resize keeps the quad's perspective and target geometry in one
+    /// deterministic sampling pass.
+    private static func koharuVerticalQuadWarp(
         _ image: CGImage,
-        pixelWidth: Int,
-        pixelHeight: Int
+        sourcePoints: [CGPoint],
+        targetWidth: Int,
+        targetHeight: Int
     ) -> CGImage? {
-        guard pixelWidth >= 2, pixelHeight >= 2 else { return nil }
-        guard let context = CGContext(
-            data: nil,
-            width: pixelWidth,
-            height: pixelHeight,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
+        guard targetWidth >= 2,
+              targetHeight >= 2,
+              targetWidth <= maximumQuadWarpDimension,
+              targetHeight <= maximumQuadWarpDimension,
+              CGFloat(targetWidth) * CGFloat(targetHeight) <= maximumQuadWarpPixels,
+              sourcePoints.count == 4 else {
             return nil
         }
-        context.interpolationQuality = .high
-        context.draw(
-            image,
-            in: CGRect(
-                x: 0,
-                y: 0,
-                width: CGFloat(pixelWidth),
-                height: CGFloat(pixelHeight)
-            )
+        guard let sourceRGB = canonicalRGBBytes(image),
+              let mapping = projectiveMapping(
+                  from: [
+                      CGPoint(x: 0, y: 0),
+                      CGPoint(x: CGFloat(targetWidth - 1), y: 0),
+                      CGPoint(
+                          x: CGFloat(targetWidth - 1),
+                          y: CGFloat(targetHeight - 1)
+                      ),
+                      CGPoint(x: 0, y: CGFloat(targetHeight - 1)),
+                  ],
+                  to: sourcePoints
+              ) else {
+            return nil
+        }
+
+        let sourceWidth = image.width
+        let sourceHeight = image.height
+        guard sourceWidth >= 2,
+              sourceHeight >= 2,
+              sourceRGB.count == sourceWidth * sourceHeight * 3 else {
+            return nil
+        }
+
+        var output = [UInt8](repeating: 0, count: targetWidth * targetHeight * 4)
+        for outputY in 0..<targetHeight {
+            for outputX in 0..<targetWidth {
+                let source = mapping.map(
+                    x: Float(outputX),
+                    y: Float(outputY)
+                )
+                let sampled = bilinearRGBSample(
+                    sourceRGB,
+                    width: sourceWidth,
+                    height: sourceHeight,
+                    x: source.x,
+                    y: source.y
+                )
+                let targetOffset = (outputY * targetWidth + outputX) * 4
+                output[targetOffset] = sampled.0
+                output[targetOffset + 1] = sampled.1
+                output[targetOffset + 2] = sampled.2
+                output[targetOffset + 3] = 255
+            }
+        }
+
+        let data = Data(output)
+        guard let provider = CGDataProvider(data: data as CFData) else {
+            return nil
+        }
+        return CGImage(
+            width: targetWidth,
+            height: targetHeight,
+            bitsPerComponent: 8,
+            bitsPerPixel: 32,
+            bytesPerRow: targetWidth * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGBitmapInfo(
+                rawValue: CGImageAlphaInfo.premultipliedLast.rawValue
+            ),
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: false,
+            intent: .defaultIntent
         )
-        return context.makeImage()
+    }
+
+    private struct ProjectiveMapping {
+        var coefficients: [Float]
+
+        func map(x: Float, y: Float) -> CGPoint {
+            let denominator = coefficients[6] * x
+                + coefficients[7] * y
+                + coefficients[8]
+            guard denominator.isFinite, abs(denominator) > 0.0000001 else {
+                return CGPoint(x: CGFloat.nan, y: CGFloat.nan)
+            }
+            let mappedX = (
+                coefficients[0] * x
+                    + coefficients[1] * y
+                    + coefficients[2]
+            ) / denominator
+            let mappedY = (
+                coefficients[3] * x
+                    + coefficients[4] * y
+                    + coefficients[5]
+            ) / denominator
+            return CGPoint(x: CGFloat(mappedX), y: CGFloat(mappedY))
+        }
+    }
+
+    /// Solve the eight-parameter projective map from four destination corners
+    /// to the source quad. The final homogeneous coefficient is normalized to
+    /// one, matching imageproc's row-major projection representation.
+    private static func projectiveMapping(
+        from source: [CGPoint],
+        to destination: [CGPoint]
+    ) -> ProjectiveMapping? {
+        guard source.count == 4,
+              destination.count == 4,
+              source.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
+              destination.allSatisfy({ $0.x.isFinite && $0.y.isFinite }) else {
+            return nil
+        }
+
+        var matrix = Array(
+            repeating: Array(repeating: 0.0, count: 9),
+            count: 8
+        )
+        for index in 0..<4 {
+            let x = Double(source[index].x)
+            let y = Double(source[index].y)
+            let u = Double(destination[index].x)
+            let v = Double(destination[index].y)
+            let row = index * 2
+            matrix[row] = [
+                x, y, 1, 0, 0, 0, -u * x, -u * y, u,
+            ]
+            matrix[row + 1] = [
+                0, 0, 0, x, y, 1, -v * x, -v * y, v,
+            ]
+        }
+
+        for pivot in 0..<8 {
+            var pivotRow = pivot
+            for row in (pivot + 1)..<8 {
+                if abs(matrix[row][pivot]) > abs(matrix[pivotRow][pivot]) {
+                    pivotRow = row
+                }
+            }
+            guard abs(matrix[pivotRow][pivot]) > 0.0000000001 else {
+                return nil
+            }
+            if pivotRow != pivot {
+                matrix.swapAt(pivotRow, pivot)
+            }
+            let divisor = matrix[pivot][pivot]
+            for column in pivot..<9 {
+                matrix[pivot][column] /= divisor
+            }
+            for row in 0..<8 where row != pivot {
+                let factor = matrix[row][pivot]
+                guard factor != 0 else { continue }
+                for column in pivot..<9 {
+                    matrix[row][column] -= factor * matrix[pivot][column]
+                }
+            }
+        }
+
+        let solution = matrix.map { $0[8] }
+        guard solution.allSatisfy({ $0.isFinite }) else { return nil }
+        return ProjectiveMapping(
+            coefficients: solution.map(Float.init) + [1]
+        )
+    }
+
+    private static func bilinearRGBSample(
+        _ source: [UInt8],
+        width: Int,
+        height: Int,
+        x: CGFloat,
+        y: CGFloat
+    ) -> (UInt8, UInt8, UInt8) {
+        guard x.isFinite, y.isFinite else { return (0, 0, 0) }
+        let left = Int(floor(x))
+        let top = Int(floor(y))
+        let bottom = top + 1
+        let rightWeight = Float(x - CGFloat(left))
+        let bottomWeight = Float(y - CGFloat(top))
+
+        func channel(_ channel: Int) -> UInt8 {
+            func value(_ sourceX: Int, _ sourceY: Int) -> Float {
+                guard sourceX >= 0,
+                      sourceX < width,
+                      sourceY >= 0,
+                      sourceY < height else {
+                    return 0
+                }
+                return Float(source[(sourceY * width + sourceX) * 3 + channel])
+            }
+            let topValue = (1 - rightWeight) * value(left, top)
+                + rightWeight * value(left + 1, top)
+            let bottomValue = (1 - rightWeight) * value(left, bottom)
+                + rightWeight * value(left + 1, bottom)
+            let result = (1 - bottomWeight) * topValue
+                + bottomWeight * bottomValue
+            return UInt8(min(max(result, 0), 255))
+        }
+
+        return (channel(0), channel(1), channel(2))
+    }
+
+    /// Render a CGImage to canonical top-left RGB bytes without allowing a
+    /// source alpha channel or color profile to affect the warp math.
+    private static func canonicalRGBBytes(_ image: CGImage) -> [UInt8]? {
+        guard image.width > 0,
+              image.height > 0,
+              image.width <= Int.max / max(image.height, 1) else {
+            return nil
+        }
+        let bytesPerRow = image.width * 4
+        var source = [UInt8](repeating: 0, count: bytesPerRow * image.height)
+        let rendered = source.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(
+                data: bytes.baseAddress,
+                width: image.width,
+                height: image.height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue
+                    | CGImageAlphaInfo.noneSkipFirst.rawValue
+            ) else {
+                return false
+            }
+            context.interpolationQuality = .none
+            context.draw(
+                image,
+                in: CGRect(x: 0, y: 0, width: image.width, height: image.height)
+            )
+            return true
+        }
+        guard rendered else { return nil }
+
+        var rgb = [UInt8](repeating: 0, count: image.width * image.height * 3)
+        for index in 0..<(image.width * image.height) {
+            let sourceOffset = index * 4
+            let targetOffset = index * 3
+            rgb[targetOffset] = source[sourceOffset + 2]
+            rgb[targetOffset + 1] = source[sourceOffset + 1]
+            rgb[targetOffset + 2] = source[sourceOffset]
+        }
+        return rgb
     }
 
     /// Return the Core Graphics equivalent of Koharu's `rotate270`.

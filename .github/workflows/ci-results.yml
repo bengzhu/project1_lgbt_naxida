@@ -236,6 +236,8 @@ permissions:
 # if grep -Fx 'scripts/test-v3262-koharu-detector-triangle-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3262-koharu-detector-triangle-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3263-image-ocr-scoped-rerecognition-cancel-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3264-koharu-vertical-quad-warp-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3264-koharu-vertical-quad-warp-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -854,6 +856,12 @@ jobs:
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v3263-image-ocr-scoped-rerecognition-cancel-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3264-koharu-vertical-quad-warp-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3264-koharu-vertical-quad-warp-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
@@ -1706,6 +1714,8 @@ jobs:
             python3 -B scripts/test-v3262-koharu-detector-triangle-contract.py
             bash scripts/test-v3262-koharu-detector-triangle-runtime.sh
             python3 -B scripts/test-v3263-image-ocr-scoped-rerecognition-cancel-contract.py
+            python3 -B scripts/test-v3264-koharu-vertical-quad-warp-contract.py
+            bash scripts/test-v3264-koharu-vertical-quad-warp-runtime.sh
             bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
