@@ -113,7 +113,7 @@ class ImageOCRInlineRerecognitionCancelContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3265(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.274", "3.274"])
+        self.assertEqual(versions, ["3.275", "3.275"])
         previous = "python3 -B scripts/test-v3265-koharu-vision-vertical-quad-warp-contract.py"
         current = "python3 -B scripts/test-v3266-image-ocr-inline-rerecognition-cancel-contract.py"
         self.assertIn(previous, self.workflow)

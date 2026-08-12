@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.274's shared image-review threshold copy."""
+"""Static contract for v3.275's shared image-review threshold copy."""
 
 from pathlib import Path
 import re
@@ -52,7 +52,7 @@ class ImageOCRReviewThresholdCopyContractTests(unittest.TestCase):
         self.assertIn(f"python3 -B {current}", self.workflow)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.274", "3.274"],
+            ["3.275", "3.275"],
         )
 
 
