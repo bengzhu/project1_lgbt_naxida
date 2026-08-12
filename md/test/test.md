@@ -1,3 +1,9 @@
+### v3.265 Vision Koharu 垂直 line quad 共享采样合同
+
+- Vision `perspectiveCorrectedLineImage` 必须先复用 `MangaOCRService` 的 Koharu target geometry 与 direct projective bilinear sampler；成功后用 Vision `rotatedImage(..., angle: 270)`，不得把 Core Image natural projection + Core Graphics `.high` resize 作为正常 vertical line 路径。
+- direct geometry／采样失败保留自然投影 fallback；detector bbox／line overlap ownership、24 个 perspective candidate、16M perspective pixel budget、Vision OCR、去重、布局、翻译、渲染与非图片路径不变。
+- `scripts/test-v3265-koharu-vision-vertical-quad-warp-contract.py` 锁定共享 helper、fallback、预算、CI route 与 `3.265` 版本；runtime 复用 4×4→5×7 像素 oracle，checksum `e0288a1c4c38d1f8`。固定 `test/jap.jpg` 只作既有 OCR/runtime 回归，不外推通用日语 OCR／翻译质量；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ### v3.264 Koharu 垂直 line quad bilinear warp 合同
 
 - vertical quad fallback 必须保留 detector bbox primary；只有弱 bbox recognition 才执行 `cropQuad` fallback。Koharu axis target 继续由 quad 长短轴、4096 dimension 与 4,000,000 pixels bound 决定。

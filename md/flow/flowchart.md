@@ -1,4 +1,6 @@
 # 项目流程图
+v3.265 Vision vertical line quad：`line polygon -> local DeviceRGB -> shared Koharu axis target -> inverse projective bilinear/constant-black -> rotate270 -> Vision OCR`；采样失败才进入 Core Image natural fallback，bbox ownership 与 16M perspective budget 不变。
+
 v3.264 vertical quad warp：`line polygon -> canonical DeviceRGB -> inverse projective sampling -> bilinear/constant-black -> Koharu axis target -> rotate270 -> weak quad fallback`；detector bbox 主路径和 generic/natural fallback 独立保留。
 
 v3.263 scoped cancel：`image block rerecognition -> dedicated cancel action -> cancel only block task -> retain session/review progress -> restore previous state + failure generation -> accessibility status feedback`；global image cancellation remains separate.

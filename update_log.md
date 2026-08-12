@@ -1,3 +1,11 @@
+## v3.265：Vision 日语垂直 line quad 共享 Koharu bilinear warp
+
+日期：2026-08-12
+
+Vision 日语 `perspectiveCorrectedLineImage` 现在复用 `MangaOCRService` 的 Koharu bounded target-canvas geometry 与 canonical DeviceRGB projective bilinear sampler，成功后用 Vision 自身 `rotatedImage(..., angle: 270)`；正常路径不再是 Core Image natural projection 后再走 Core Graphics `.high` resize。direct geometry／采样失败时保留自然投影兼容 fallback；detector bbox ownership、line overlap、候选／像素预算、OCR、翻译、布局、渲染与非图片路径不变。新增 `scripts/test-v3265-koharu-vision-vertical-quad-warp-contract.py` 与 runtime，工程版本为 `3.265`。
+
+本地 `285` 个 `scripts/test-v*.py` 合同、`test/jap.jpg` 单页／长页／quad fallback／方向 crop／compact／预处理 runtime、4×4→5×7 checksum `e0288a1c4c38d1f8`、YAML、project plist、Python／shell 语法与 `git diff --check` 通过。exact-SHA full [31562167103](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31562167103) 对实现 SHA `54dec1ccc92de16bff907a4e45f85857a3287ad5` 使用 Xcode `26.6 (17F113)` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`；PR #345 merge SHA `1ea7910692a556037d94df1549f1b2de1f9da571`，合入后 push CI `31562843157` 运行中。该版本只改善 Vision vertical line crop 的 Koharu 像素采样一致性，不声称通用日语 OCR／翻译／识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.264：Koharu 垂直 line quad 的确定性 bilinear warp
 
 日期：2026-08-12
