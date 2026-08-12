@@ -8,7 +8,13 @@ Koharu 的 `Mit48pxOcr::inference_text_blocks` 在抽取每个 `TextRegion` 的 
 
 该 owner 仅属于 OCR recognition/layout pass，最终 `ImageTranslationBlock`、Store、UI、导出和持久化模型均不含此字段。8 个 Manga line 请求、12/24 Vision line candidate、16M perspective pixel、confidence `>=.55`／日语脚本密度 `>=.5`、detector bbox ownership、quad/bbox fallback、取消传播、方向、翻译、渲染和非图片路径不变。它迁移的是 Koharu 的分组语义，不新增或替换模型权重，也不把固定 `test/jap.jpg` 外推为通用日语 OCR／翻译质量提升。
 
-新增 `scripts/test-v3276-koharu-line-owner-boundary-contract.py` 与 cloud-only `scripts/test-v3276-koharu-line-owner-layout-runtime.sh`，工程版本为 `3.276`，CI changed-file route 与图片 OCR 合同组已接入。本地 25 个 v3.254-v3.276 相关静态合同、298 个 Python 合同 AST、YAML／shell 语法、工程 plist 与 `git diff --check` 通过；runtime 脚本本地仅做 `bash -n`，严格未运行 `xcodebuild`、`swiftc`、`xcrun`、Rust/Cargo、Core ML 或 runtime evaluator。exact-SHA full 云端验证、PR、合并与最终 receipt 待本轮完成。
+新增 `scripts/test-v3276-koharu-line-owner-boundary-contract.py` 与 cloud-only `scripts/test-v3276-koharu-line-owner-layout-runtime.sh`，工程版本为 `3.276`，CI changed-file route 与图片 OCR 合同组已接入。本地 271 个不具备进程启动入口的 Python 合同、298 个 Python 合同 AST、YAML／shell 语法、工程 plist 与 `git diff --check` 通过；27 个可能调用外部进程的合同按约束跳过，runtime 脚本本地仅做 `bash -n`，严格未运行 `xcodebuild`、`swiftc`、`xcrun`、Rust/Cargo、Core ML 或 runtime evaluator。
+
+云端与合并证据：
+
+- 最终候选 SHA `291f5dfe99915d8a3ed46f3b8dec3c3e8acfd99f` 的 exact-SHA full [31621643593](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31621643593) attempt 2 成功；Koharu parity job `94206481482`、macOS job `94208330602`、v3.276 owner layout evaluator、云端 Xcode build、simulator build、manga probe、UI 合同、JUnit `10/10`（0 failures）与 `AITRANS CI/full-validation=success` receipt 全部通过。attempt 1 的代码侧 JUnit 已为 `10/10`，唯一实质故障是 pinned llama Release 下载在应用逻辑前遇到一次 HTTP/2 refused stream；同 SHA failed-jobs rerun 后恢复，不是 OCR 输出或实现回归。
+- 云端 pinned MIT48 evidence 为 7/7 accepted；compact `ニコッ` confidence `0.59093773`，`left-column-c` `今度こそ` confidence `0.99994445`。这些仍只证明固定 `test/jap.jpg` 的 GPL Koharu reference parity，不把 GPL 权重/runtime 打包进 AITRANS，也不外推为通用日语 OCR／翻译质量提升。
+- PR [#357](https://github.com/bengzhu/project1_lgbt_naxida/pull/357) fast [31626589820](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31626589820) 成功，并以 merge SHA `0884de0d1e50c72a709c516c3e0fc9da2c62caf6` 合入 `smalldata_test`。合入后 push CI [31626815282](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31626815282) 以 `merge_reuses_successful_candidate_full_validation` 复用候选 full，`receiptPropagationAllowed=true`、JUnit `10/10`（0 failures）并成功；main 未动，研发分支最终删除后本地／origin 仅保留 `main` 与 `smalldata_test`。
 
 ## v3.275：Koharu MIT48 左列竖排 crop 完整恢复
 
