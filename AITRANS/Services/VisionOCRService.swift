@@ -216,7 +216,8 @@ struct VisionOCRService: Sendable {
                     confidence: $0.confidence,
                     rect: $0.rect,
                     sourceDirectionHint: $0.sourceDirectionHint,
-                    preservesDetectorTextRegionBoundary: $0.preservesDetectorTextRegionBoundary
+                    preservesDetectorTextRegionBoundary: $0.preservesDetectorTextRegionBoundary,
+                    verticalTextRegionOwner: $0.verticalTextRegionOwner
                 )
             }
             let allowsVerticalText = sourceLanguage == .japanese || sourceLanguage == .simplifiedChinese
@@ -654,7 +655,8 @@ struct VisionOCRService: Sendable {
                 confidence: $0.confidence,
                 rect: $0.rect,
                 sourceDirectionHint: $0.sourceDirectionHint,
-                preservesDetectorTextRegionBoundary: $0.preservesDetectorTextRegionBoundary
+                preservesDetectorTextRegionBoundary: $0.preservesDetectorTextRegionBoundary,
+                verticalTextRegionOwner: $0.verticalTextRegionOwner
             )
         }
         let verticalBlocks = ImageOCRLayoutEngine.layout(
@@ -703,8 +705,18 @@ struct VisionOCRService: Sendable {
             return lhs.text < rhs.text
         }
         .prefix(16)
+        .enumerated()
+        .map { index, block in
+            var owned = block
+            owned.verticalTextRegionOwner = index
+            return owned
+        }
 
         let verticalBlockArray = Array(verticalBlocks)
+        let ownerAnnotatedObservations = annotateJapaneseVerticalTextRegionOwners(
+            safeObservations,
+            blocks: verticalBlockArray
+        )
         var refined: [VisionOCRObservation] = []
         refined.reserveCapacity(verticalBlockArray.count * 2 + 12)
 
@@ -716,15 +728,15 @@ struct VisionOCRService: Sendable {
         // that were not reliably covered by a line reread.
         let lineRefined = try await Self.recognizeJapaneseVerticalLineCrops(
             in: image,
-            observations: safeObservations,
-            blocks: Array(verticalBlocks),
+            observations: ownerAnnotatedObservations,
+            blocks: verticalBlockArray,
             recognitionLanguages: recognitionLanguages
         )
         refined.append(contentsOf: lineRefined)
 
         refined.append(contentsOf: Self.recognizeJapanesePixelFirstVerticalCrops(
             in: image,
-            observations: safeObservations,
+            observations: ownerAnnotatedObservations,
             verticalBlocks: verticalBlockArray,
             lineObservations: lineRefined,
             recognitionLanguages: recognitionLanguages
@@ -741,17 +753,21 @@ struct VisionOCRService: Sendable {
         for block in verticalBlocks {
             let hasCompleteLineCoverage = Self.hasCompleteJapaneseLineCoverage(
                 for: block,
-                sourceObservations: safeObservations,
+                sourceObservations: ownerAnnotatedObservations,
                 lineRefined: lineRefined
             )
             let hasLineOCRResult = lineRefined.contains { observation in
-                overlapRatio(observation.rect, block.rect) >= 0.25
+                japaneseObservation(observation, belongsTo: block)
+                    && overlapRatio(observation.rect, block.rect) >= 0.25
                     && japaneseLineRegionOverlapsBlock(observation, block: block)
             } && hasCompleteLineCoverage
             guard !hasLineOCRResult else { continue }
 
-            let angle = safeObservations
-                .filter { overlapRatio($0.rect, block.rect) >= 0.25 }
+            let angle = ownerAnnotatedObservations
+                .filter {
+                    japaneseObservation($0, belongsTo: block)
+                        && overlapRatio($0.rect, block.rect) >= 0.25
+                }
                 .sorted { isBetterJapaneseObservation($0, $1) }
                 .first
                 .map { $0.rotationApplied == 270 ? 270 : 90 }
@@ -760,7 +776,7 @@ struct VisionOCRService: Sendable {
                 image,
                 normalizedRect: koharuVerticalBlockCropRect(
                     block,
-                    observations: safeObservations,
+                    observations: ownerAnnotatedObservations,
                     imageSize: imageSize
                 )
             ),
@@ -784,7 +800,8 @@ struct VisionOCRService: Sendable {
                 angle: angle,
                 recognitionLanguages: recognitionLanguages,
                 minimumTextHeight: 0.004,
-                cropScale: preparedCrop.scale
+                cropScale: preparedCrop.scale,
+                verticalTextRegionOwner: block.verticalTextRegionOwner
             )
             refined.append(contentsOf: primary)
 
@@ -801,7 +818,8 @@ struct VisionOCRService: Sendable {
                     angle: oppositeJapaneseOrientation(angle),
                     recognitionLanguages: recognitionLanguages,
                     minimumTextHeight: 0.004,
-                    cropScale: preparedCrop.scale
+                    cropScale: preparedCrop.scale,
+                    verticalTextRegionOwner: block.verticalTextRegionOwner
                 ))
             }
         }
@@ -1234,6 +1252,7 @@ struct VisionOCRService: Sendable {
             }
             let duplicateIndex = output.firstIndex { existing in
                 existing.isCompactJapaneseRecovery
+                    && verticalTextRegionOwnersCompatible(existing, observation)
                     && overlapRatio(
                         existing.lineRegionRect ?? existing.rect,
                         observation.lineRegionRect ?? observation.rect
@@ -1243,11 +1262,17 @@ struct VisionOCRService: Sendable {
                 output.append(observation)
                 continue
             }
+            let inheritedOwner = observation.verticalTextRegionOwner
+                ?? output[duplicateIndex].verticalTextRegionOwner
             if isBetterCompactJapaneseRecovery(
                 observation,
                 than: output[duplicateIndex]
             ) {
-                output[duplicateIndex] = observation
+                var winner = observation
+                winner.verticalTextRegionOwner = inheritedOwner
+                output[duplicateIndex] = winner
+            } else {
+                output[duplicateIndex].verticalTextRegionOwner = inheritedOwner
             }
         }
         return output
@@ -1963,11 +1988,15 @@ struct VisionOCRService: Sendable {
         let safeObservations = deduplicateJapaneseObservations(observations)
         var candidates: [VisionOCRObservation] = []
         for block in blocks {
-            candidates.append(contentsOf: safeObservations.filter { observation in
+            candidates.append(contentsOf: safeObservations.compactMap { observation in
                 let lineRegion = observation.lineRegionRect ?? observation.rect
-                return overlapRatio(observation.rect, block.rect) >= 0.25
-                    && japaneseLineRegionOverlapsBlock(observation, block: block)
-                    && isVerticalLineCandidate(lineRegion)
+                guard japaneseObservation(observation, belongsTo: block),
+                      overlapRatio(observation.rect, block.rect) >= 0.25,
+                      japaneseLineRegionOverlapsBlock(observation, block: block),
+                      isVerticalLineCandidate(lineRegion) else {
+                    return nil
+                }
+                return observation
             })
         }
 
@@ -2084,7 +2113,8 @@ struct VisionOCRService: Sendable {
                 recognitionLanguages: recognitionLanguages,
                 minimumTextHeight: 0.002,
                 cropScale: preparedCrop.scale,
-                observationRole: .verticalLine
+                observationRole: .verticalLine,
+                verticalTextRegionOwner: candidate.verticalTextRegionOwner
             )
             refined.append(contentsOf: primary)
             if orientationFallbacksRemaining > 0,
@@ -2098,11 +2128,53 @@ struct VisionOCRService: Sendable {
                     recognitionLanguages: recognitionLanguages,
                     minimumTextHeight: 0.002,
                     cropScale: preparedCrop.scale,
-                    observationRole: .verticalLine
+                    observationRole: .verticalLine,
+                    verticalTextRegionOwner: candidate.verticalTextRegionOwner
                 ))
             }
         }
         return refined
+    }
+
+    private static func annotateJapaneseVerticalTextRegionOwners(
+        _ observations: [VisionOCRObservation],
+        blocks: [ImageOCRLayoutBlock]
+    ) -> [VisionOCRObservation] {
+        observations.map { observation in
+            var annotated = observation
+            let ownerMatches = verticalTextRegionMatchIndices(
+                observation,
+                blocks: blocks
+            )
+            if ownerMatches.count == 1 {
+                annotated.verticalTextRegionOwner = blocks[ownerMatches[0]]
+                    .verticalTextRegionOwner
+            } else {
+                annotated.verticalTextRegionOwner = nil
+            }
+            return annotated
+        }
+    }
+
+    /// Return the vertical layout blocks whose geometry owns this line
+    /// candidate. Exactly one match is the Koharu `block_index` equivalent;
+    /// zero or multiple matches intentionally remain ownerless.
+    private static func verticalTextRegionMatchIndices(
+        _ observation: VisionOCRObservation,
+        blocks: [ImageOCRLayoutBlock]
+    ) -> [Int] {
+        blocks.enumerated().compactMap { index, block in
+            let lineRegion = observation.lineRegionRect ?? observation.rect
+            guard block.direction == .vertical,
+                  block.directionConfidence >= 0.25,
+                  japaneseScriptDensity(in: block.text) >= 0.5,
+                  overlapRatio(observation.rect, block.rect) >= 0.25,
+                  japaneseLineRegionOverlapsBlock(observation, block: block),
+                  isVerticalLineCandidate(lineRegion) else {
+                return nil
+            }
+            return index
+        }
     }
 
     /// Select tight Vision line geometry as a bounded equivalent of Koharu's
@@ -2227,6 +2299,7 @@ struct VisionOCRService: Sendable {
                   let block = matchingBlocks.first else {
                 continue
             }
+            let owner = block.verticalTextRegionOwner
 
             let blockArea = max(block.rect.width * block.rect.height, 0.0001)
             let candidateArea = region.rect.width * region.rect.height
@@ -2258,7 +2331,8 @@ struct VisionOCRService: Sendable {
                     lineRegionQuad: region.cropQuadHint,
                     rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
                     sourceDirectionHint: .vertical,
-                    observationRole: .verticalLine
+                    observationRole: .verticalLine,
+                    verticalTextRegionOwner: owner
                 )
             )
         }
@@ -2296,7 +2370,8 @@ struct VisionOCRService: Sendable {
                 ),
                 cropOrientation: .koharuVerticalLine270,
                 cropQuad: candidate.lineRegionQuad,
-                cropQuadIsVertical: candidate.lineRegionQuad != nil
+                cropQuadIsVertical: candidate.lineRegionQuad != nil,
+                verticalTextRegionOwner: candidate.verticalTextRegionOwner
             )
         }
 
@@ -2325,6 +2400,7 @@ struct VisionOCRService: Sendable {
             guard let candidateIndex = unmatchedCandidates.firstIndex(where: {
                 let lineRect = $0.lineRegionRect ?? $0.rect
                 return lineRect == result.textRect
+                    && $0.verticalTextRegionOwner == result.verticalTextRegionOwner
             }) else {
                 continue
             }
@@ -2338,7 +2414,8 @@ struct VisionOCRService: Sendable {
                     lineRegionQuad: candidate.lineRegionQuad,
                     rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
                     sourceDirectionHint: .vertical,
-                    observationRole: .verticalLine
+                    observationRole: .verticalLine,
+                    verticalTextRegionOwner: result.verticalTextRegionOwner
                 )
             )
         }
@@ -2374,7 +2451,8 @@ struct VisionOCRService: Sendable {
                       let lineRegion = observation.lineRegionRect?.normalizedToUnit() else {
                     return false
                 }
-                return overlapRatio(observation.rect, block.rect) >= 0.25
+                return japaneseObservation(observation, belongsTo: block)
+                    && overlapRatio(observation.rect, block.rect) >= 0.25
                     && japaneseLineRegionOverlapsBlock(observation, block: block)
                     && isVerticalLineCandidate(lineRegion)
             }
@@ -2404,7 +2482,8 @@ struct VisionOCRService: Sendable {
     ) -> [VisionOCRObservation] {
         let candidates = sourceObservations.filter { observation in
             let lineRegion = observation.lineRegionRect ?? observation.rect
-            return overlapRatio(observation.rect, block.rect) >= 0.25
+            return japaneseObservation(observation, belongsTo: block)
+                && overlapRatio(observation.rect, block.rect) >= 0.25
                 && japaneseLineRegionOverlapsBlock(observation, block: block)
                 && isVerticalLineCandidate(lineRegion)
         }
@@ -2447,6 +2526,9 @@ struct VisionOCRService: Sendable {
         _ lineResult: VisionOCRObservation,
         candidate: VisionOCRObservation
     ) -> Bool {
+        guard verticalTextRegionOwnersCompatible(lineResult, candidate) else {
+            return false
+        }
         guard let resultRegion = lineResult.lineRegionRect?.normalizedToUnit(),
               let candidateRegion = (candidate.lineRegionRect ?? candidate.rect).normalizedToUnit() else {
             return false
@@ -2477,7 +2559,8 @@ struct VisionOCRService: Sendable {
         for block in blocks {
             let fragments = observations
                 .filter { observation in
-                    overlapRatio(observation.rect, block.rect) >= 0.25
+                    japaneseObservation(observation, belongsTo: block)
+                        && overlapRatio(observation.rect, block.rect) >= 0.25
                         && japaneseLineRegionOverlapsBlock(observation, block: block)
                         && isJapaneseVerticalFragment(observation)
                 }
@@ -2531,6 +2614,13 @@ struct VisionOCRService: Sendable {
                 let best = ordered
                     .map(\.observation)
                     .max(by: { isBetterJapaneseObservation($0, $1) }) ?? ordered[0].observation
+                let ownerCandidates = Set(
+                    ordered.compactMap { $0.observation.verticalTextRegionOwner }
+                )
+                let owner = ownerCandidates.count == 1
+                    && ordered.allSatisfy({ $0.observation.verticalTextRegionOwner != nil })
+                    ? ownerCandidates.first
+                    : nil
                 let confidence = ordered
                     .map { $0.observation.confidence }
                     .reduce(Float(0), +) / Float(ordered.count)
@@ -2543,7 +2633,8 @@ struct VisionOCRService: Sendable {
                         lineRegionQuad: nil,
                         rotationApplied: best.rotationApplied,
                         sourceDirectionHint: .vertical,
-                        observationRole: best.observationRole
+                        observationRole: best.observationRole,
+                        verticalTextRegionOwner: owner
                     )
                 )
             }
@@ -2567,6 +2658,9 @@ struct VisionOCRService: Sendable {
         _ candidate: VisionOCRObservation,
         as covered: VisionOCRObservation
     ) -> Bool {
+        guard verticalTextRegionOwnersCompatible(candidate, covered) else {
+            return false
+        }
         let candidateRegion = candidate.lineRegionRect ?? candidate.rect
         let coveredRegion = covered.lineRegionRect ?? covered.rect
         return overlapRatio(candidateRegion, coveredRegion) >= 0.72
@@ -2592,7 +2686,8 @@ struct VisionOCRService: Sendable {
         observationRole: VisionOCRObservationRole = .crop,
         preservesDetectorTextRegionBoundary: Bool = false,
         isCompactJapaneseRecovery: Bool = false,
-        usesLanguageCorrection: Bool = false
+        usesLanguageCorrection: Bool = false,
+        verticalTextRegionOwner: Int? = nil
     ) -> [VisionOCRObservation] {
         guard let rotatedCrop = try? rotatedImage(crop, angle: angle),
               let cropObservations = try? recognizeObservations(
@@ -2619,6 +2714,7 @@ struct VisionOCRService: Sendable {
             mapped.preservesDetectorTextRegionBoundary =
                 preservesDetectorTextRegionBoundary
             mapped.isCompactJapaneseRecovery = isCompactJapaneseRecovery
+            mapped.verticalTextRegionOwner = verticalTextRegionOwner
             return mapped
         }
     }
@@ -2758,7 +2854,8 @@ struct VisionOCRService: Sendable {
             lineRegionQuad: candidate.lineRegionQuad,
             rotationApplied: angle,
             sourceDirectionHint: .vertical,
-            observationRole: .verticalLine
+            observationRole: .verticalLine,
+            verticalTextRegionOwner: candidate.verticalTextRegionOwner
         )
     }
 
@@ -3036,6 +3133,20 @@ struct VisionOCRService: Sendable {
         return overlapRatio(lineRegion, block.rect) >= 0.25
     }
 
+    /// Known Koharu-style owners are hard TextRegion partitions. Ownerless
+    /// Vision observations retain the historical geometry fallback because
+    /// they could not be assigned to exactly one vertical block.
+    private static func japaneseObservation(
+        _ observation: VisionOCRObservation,
+        belongsTo block: ImageOCRLayoutBlock
+    ) -> Bool {
+        guard let observationOwner = observation.verticalTextRegionOwner,
+              let blockOwner = block.verticalTextRegionOwner else {
+            return true
+        }
+        return observationOwner == blockOwner
+    }
+
     private static func koharuVerticalCropPadding(
         _ rect: ImageOCRLayoutRect,
         imageSize: CGSize,
@@ -3113,7 +3224,8 @@ struct VisionOCRService: Sendable {
     ) -> ImageOCRLayoutRect {
         let lineRegions = observations
             .filter { observation in
-                overlapRatio(observation.rect, block.rect) >= 0.25
+                japaneseObservation(observation, belongsTo: block)
+                    && overlapRatio(observation.rect, block.rect) >= 0.25
                     && japaneseLineRegionOverlapsBlock(observation, block: block)
             }
             .compactMap(\.lineRegionRect)
@@ -3366,7 +3478,8 @@ struct VisionOCRService: Sendable {
             lineRegionQuad: originalLineRegionQuad,
             rotationApplied: observation.rotationApplied,
             sourceDirectionHint: .vertical,
-            observationRole: observation.observationRole
+            observationRole: observation.observationRole,
+            verticalTextRegionOwner: observation.verticalTextRegionOwner
         )
     }
 
@@ -3482,7 +3595,8 @@ struct VisionOCRService: Sendable {
                 return true
             }
             return !detectorOwners.contains { owner in
-                overlapRatio(observation.rect, owner.rect) >= 0.60
+                verticalTextRegionOwnersCompatible(observation, owner)
+                    && overlapRatio(observation.rect, owner.rect) >= 0.60
             }
         }
     }
@@ -3521,6 +3635,7 @@ struct VisionOCRService: Sendable {
                     guard candidate != owner,
                           candidate.observationRole == .crop
                               || candidate.observationRole == .verticalLine,
+                          verticalTextRegionOwnersCompatible(candidate, owner),
                           candidate.sourceDirectionHint == .vertical,
                           candidate.confidence.isFinite,
                           candidate.confidence >= 0.40,
@@ -3604,6 +3719,27 @@ struct VisionOCRService: Sendable {
             guard hasVerticalColumnNeighbor else { continue }
             output[index].sourceDirectionHint = .vertical
             output[index].observationRole = .verticalLine
+            let ownerMatches = output.indices.filter { neighborIndex in
+                guard neighborIndex != index,
+                      output[neighborIndex].observationRole == .verticalLine,
+                      output[neighborIndex].verticalTextRegionOwner != nil else {
+                    return false
+                }
+                return overlapRatio(
+                    output[neighborIndex].rect,
+                    candidate.rect
+                ) >= 0.45
+            }
+            let owners = Set(ownerMatches.compactMap {
+                output[$0].verticalTextRegionOwner
+            })
+            if owners.count == 1 {
+                output[index].verticalTextRegionOwner = owners.first
+            }
+            // This compact recovery was already a protected layout node before
+            // owner tagging. Keep that fallback when geometry cannot identify
+            // exactly one TextRegion; the owner is an additional partition,
+            // not a prerequisite for retaining the compact block boundary.
             output[index].preservesDetectorTextRegionBoundary = true
             output[index].isCompactJapaneseRecovery = true
         }
@@ -3634,17 +3770,25 @@ struct VisionOCRService: Sendable {
                 output.append(observation)
                 continue
             }
+            let inheritedOwner = observation.verticalTextRegionOwner
+                ?? output[duplicateIndex].verticalTextRegionOwner
             if observation.isCompactJapaneseRecovery {
                 if output[duplicateIndex].isCompactJapaneseRecovery {
                     if isBetterCompactJapaneseRecovery(
                         observation,
                         than: output[duplicateIndex]
                     ) {
-                        output[duplicateIndex] = observation
+                        var winner = observation
+                        winner.verticalTextRegionOwner = inheritedOwner
+                        output[duplicateIndex] = winner
+                    } else if output[duplicateIndex].verticalTextRegionOwner == nil {
+                        output[duplicateIndex].verticalTextRegionOwner = inheritedOwner
                     }
                 } else if isUsableCompactJapaneseRecovery(observation) {
+                    var winner = observation
+                    winner.verticalTextRegionOwner = inheritedOwner
                     output.remove(at: duplicateIndex)
-                    output.append(observation)
+                    output.append(winner)
                 }
                 continue
             }
@@ -3652,7 +3796,9 @@ struct VisionOCRService: Sendable {
                 if isUsableCompactJapaneseRecovery(output[duplicateIndex]) {
                     continue
                 }
-                output[duplicateIndex] = observation
+                var winner = observation
+                winner.verticalTextRegionOwner = inheritedOwner
+                output[duplicateIndex] = winner
                 continue
             }
             let preservesDetectorTextRegionBoundary =
@@ -3663,10 +3809,15 @@ struct VisionOCRService: Sendable {
                 than: output[duplicateIndex],
                 prefersJapanese: prefersJapanese
             ) {
-                output[duplicateIndex] = observation
+                var winner = observation
+                winner.verticalTextRegionOwner = inheritedOwner
+                output[duplicateIndex] = winner
             }
             output[duplicateIndex].preservesDetectorTextRegionBoundary =
                 preservesDetectorTextRegionBoundary
+            if output[duplicateIndex].verticalTextRegionOwner == nil {
+                output[duplicateIndex].verticalTextRegionOwner = inheritedOwner
+            }
         }
         return output
     }
@@ -3776,6 +3927,9 @@ struct VisionOCRService: Sendable {
         of rhs: VisionOCRObservation,
         prefersJapanese: Bool = false
     ) -> Bool {
+        guard verticalTextRegionOwnersCompatible(lhs, rhs) else {
+            return false
+        }
         // Koharu's OCR is handed one detector line region at a time. Vision's
         // request-level boxes can be wider than that region, especially after
         // a rotated crop is mapped back to the page; using those boxes for all
@@ -3832,6 +3986,20 @@ struct VisionOCRService: Sendable {
             return true
         }
         return overlap >= 0.72 && textSimilarity(leftText, rightText) >= 0.62
+    }
+
+    /// A non-empty owner is a hard Koharu TextRegion partition. Ownerless
+    /// observations retain historical compatibility, while two distinct
+    /// known owners can never collapse into one OCR line.
+    private static func verticalTextRegionOwnersCompatible(
+        _ lhs: VisionOCRObservation,
+        _ rhs: VisionOCRObservation
+    ) -> Bool {
+        guard let lhsOwner = lhs.verticalTextRegionOwner,
+              let rhsOwner = rhs.verticalTextRegionOwner else {
+            return true
+        }
+        return lhsOwner == rhsOwner
     }
 
     private static func overlapRatio(_ lhs: ImageOCRLayoutRect, _ rhs: ImageOCRLayoutRect) -> Double {
@@ -3954,7 +4122,8 @@ struct VisionOCRService: Sendable {
             lineRegionQuad: originalLineRegionQuad,
             rotationApplied: observation.rotationApplied,
             sourceDirectionHint: verticalSourceHint,
-            observationRole: observation.observationRole
+            observationRole: observation.observationRole,
+            verticalTextRegionOwner: observation.verticalTextRegionOwner
         )
     }
 
@@ -4190,6 +4359,9 @@ private struct VisionOCRObservation: Equatable, Sendable {
     /// a duplicate page-level short line so long-page output keeps the compact
     /// candidate's vertical provenance instead of retaining a horizontal echo.
     var isCompactJapaneseRecovery = false
+    /// Ephemeral Koharu `block_index` equivalent for a uniquely matched
+    /// Japanese vertical TextRegion. This never enters the persisted block.
+    var verticalTextRegionOwner: Int? = nil
 }
 
 private struct JapaneseVerticalCropFragment: Sendable {

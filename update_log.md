@@ -1,3 +1,15 @@
+## v3.276：Koharu 竖排 line owner 分组边界
+
+日期：2026-08-13
+
+Koharu 的 `Mit48pxOcr::inference_text_blocks` 在抽取每个 `TextRegion` 的 line crop 时同步保存 `block_index`，批量 OCR 后再按该 index 分组，因而相邻或重叠文字块的 line prediction 不会互相串块。AITRANS 此前已经迁入 line crop、rotate270、geometry-only recall 和 batch OCR，但 line observation 仍主要靠几何去重与布局；两个重叠竖排 block 理论上可能重复消费同一 line，或在后续 coverage／cluster 阶段跨块合并。
+
+本版为最多 16 个日语竖排 recognition block 分配临时 `verticalTextRegionOwner`，只在 observation 能唯一匹配一个 vertical block 时写入。owner 从 Vision line／perspective／axis／合成候选传到 `MangaOCRRequest`，经 batch/fallback `MangaOCRResult` 原样返回，并以 `textRect + owner` 匹配原 candidate；known owner 同时约束 line candidate、完整覆盖、片段合成、block crop envelope、日语去重和 layout cluster。两个不同 known owner 是硬分区；无法唯一匹配的 observation 保持 ownerless，继续使用历史 geometry fallback，避免删除 Vision 兼容路径。compact 横排恢复无法唯一继承 owner 时仍保留既有 protected boundary，临时 owner 只是附加分组信息，不成为保留 `ニコッ` 等短块的前置条件。
+
+该 owner 仅属于 OCR recognition/layout pass，最终 `ImageTranslationBlock`、Store、UI、导出和持久化模型均不含此字段。8 个 Manga line 请求、12/24 Vision line candidate、16M perspective pixel、confidence `>=.55`／日语脚本密度 `>=.5`、detector bbox ownership、quad/bbox fallback、取消传播、方向、翻译、渲染和非图片路径不变。它迁移的是 Koharu 的分组语义，不新增或替换模型权重，也不把固定 `test/jap.jpg` 外推为通用日语 OCR／翻译质量提升。
+
+新增 `scripts/test-v3276-koharu-line-owner-boundary-contract.py` 与 cloud-only `scripts/test-v3276-koharu-line-owner-layout-runtime.sh`，工程版本为 `3.276`，CI changed-file route 与图片 OCR 合同组已接入。本地 25 个 v3.254-v3.276 相关静态合同、298 个 Python 合同 AST、YAML／shell 语法、工程 plist 与 `git diff --check` 通过；runtime 脚本本地仅做 `bash -n`，严格未运行 `xcodebuild`、`swiftc`、`xcrun`、Rust/Cargo、Core ML 或 runtime evaluator。exact-SHA full 云端验证、PR、合并与最终 receipt 待本轮完成。
+
 ## v3.275：Koharu MIT48 左列竖排 crop 完整恢复
 
 日期：2026-08-12

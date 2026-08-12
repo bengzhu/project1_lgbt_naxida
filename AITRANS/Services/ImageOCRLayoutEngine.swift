@@ -67,6 +67,10 @@ struct ImageOCRLayoutObservation: Equatable, Sendable {
     /// them after recognition. Vision-only line fragments leave this false and
     /// retain the historical same-column clustering path.
     var preservesDetectorTextRegionBoundary = false
+    /// Ephemeral Koharu-style `block_index` for a uniquely matched Japanese
+    /// vertical TextRegion. It is used only while line observations are fused;
+    /// the persisted image translation model never receives this value.
+    var verticalTextRegionOwner: Int? = nil
 }
 
 struct ImageOCRLayoutBlock: Equatable, Sendable {
@@ -76,6 +80,9 @@ struct ImageOCRLayoutBlock: Equatable, Sendable {
     var direction: ImageOCRLayoutDirection
     var directionConfidence: Double
     var directionReason: String
+    /// Recognition-pass owner context. A final block exposes an owner only
+    /// when all owned observations agree; it is not copied into UI state.
+    var verticalTextRegionOwner: Int? = nil
 }
 
 enum ImageOCRLayoutEngine {
@@ -467,6 +474,9 @@ enum ImageOCRLayoutEngine {
 
     private static func shouldMergeHorizontally(_ line: ResolvedObservation, into cluster: Cluster?) -> Bool {
         guard let cluster else { return false }
+        guard cluster.allows(verticalTextRegionOwner: line.verticalTextRegionOwner) else {
+            return false
+        }
         guard !(line.preservesDetectorTextRegionBoundary
             && cluster.containsPreservedDetectorTextRegionBoundary) else {
             return false
@@ -485,6 +495,9 @@ enum ImageOCRLayoutEngine {
 
     private static func shouldMergeVertically(_ line: ResolvedObservation, into cluster: Cluster?) -> Bool {
         guard let cluster else { return false }
+        guard cluster.allows(verticalTextRegionOwner: line.verticalTextRegionOwner) else {
+            return false
+        }
         guard !(line.preservesDetectorTextRegionBoundary
             && cluster.containsPreservedDetectorTextRegionBoundary) else {
             return false
@@ -688,6 +701,10 @@ private struct ResolvedObservation {
     var preservesDetectorTextRegionBoundary: Bool {
         observation.preservesDetectorTextRegionBoundary
     }
+
+    var verticalTextRegionOwner: Int? {
+        observation.verticalTextRegionOwner
+    }
 }
 
 private struct StableKey: Comparable {
@@ -736,6 +753,22 @@ private struct Cluster {
         observations.contains(where: \.preservesDetectorTextRegionBoundary)
     }
 
+    func allows(verticalTextRegionOwner: Int?) -> Bool {
+        guard let verticalTextRegionOwner else { return true }
+        return observations
+            .compactMap(\.verticalTextRegionOwner)
+            .allSatisfy { $0 == verticalTextRegionOwner }
+    }
+
+    var verticalTextRegionOwner: Int? {
+        guard observations.allSatisfy({ $0.verticalTextRegionOwner != nil }) else {
+            return nil
+        }
+        let owners = Set(observations.compactMap(\.verticalTextRegionOwner))
+        guard owners.count == 1 else { return nil }
+        return owners.first
+    }
+
     var block: ImageOCRLayoutBlock {
         let direction: ImageOCRLayoutDirection
         if observations.contains(where: { $0.direction == .vertical }) {
@@ -779,7 +812,8 @@ private struct Cluster {
             rect: rect,
             direction: direction,
             directionConfidence: observations.reduce(0) { $0 + $1.confidence } / Double(observations.count),
-            directionReason: Array(Set(observations.map(\.reason))).sorted().joined(separator: ",")
+            directionReason: Array(Set(observations.map(\.reason))).sorted().joined(separator: ","),
+            verticalTextRegionOwner: verticalTextRegionOwner
         )
     }
 }
