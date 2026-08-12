@@ -90,6 +90,7 @@ class JapaneseRegionDiagnosticContractTests(unittest.TestCase):
         self.assertIn("expected twenty bounded long-page blocks", self.runtime)
         self.assertIn("expected four bounded compact vertical blocks", self.runtime)
         self.assertIn("compactTextSummary=host-variant", self.runtime)
+        self.assertIn("940873", self.runtime)
         self.assertIn("text=．．．では最後", self.runtime)
         self.assertNotIn("runImageTranslationPipeline", self.runtime)
 

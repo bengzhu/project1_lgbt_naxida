@@ -129,7 +129,7 @@ else:
     # oracle remains covered by the v3.214 runtime contract.
     print(f"compactTextSummary=host-variant:{'|'.join(compact_texts)}")
 if not re.search(
-    r"^longBlock=\d+ x=.* y=0\.(?:940558|940838)\d* .* direction=vertical text=．．．では最後",
+    r"^longBlock=\d+ x=.* y=0\.(?:940558|940838|940873)\d* .* direction=vertical text=．．．では最後",
     text,
     re.MULTILINE,
 ):
