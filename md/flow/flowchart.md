@@ -1,4 +1,6 @@
 # 项目流程图
+v3.263 scoped cancel：`image block rerecognition -> dedicated cancel action -> cancel only block task -> retain session/review progress -> restore previous state + failure generation -> accessibility status feedback`；global image cancellation remains separate.
+
 v3.262 detector 预处理：`source CGImage -> canonical DeviceRGB -> separable Koharu/image-rs Triangle (pixel-centred, bounded support, edge-normalized) -> RGB plane -> explicit 32BGRA -> RT-DETR 640x640 -> TextRegion ownership -> existing Manga OCR/Vision fusion`；不改变 threshold、12/48 budget、取消、布局、翻译、渲染与非图片路径。
 
 v3.261 OCR 复查恢复：`row/preview action -> confirmation -> restore existing Vision baseline -> origin-aware VoiceOver focus -> hidden-filter fallback`；不重新运行 OCR、翻译或整图请求。

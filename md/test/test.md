@@ -1,3 +1,11 @@
+### v3.263 图片 OCR 单块重新识别 scoped cancel 合同
+
+- `imageTranslationRerecognizingBlockID != nil` 时必须显示专用“取消重新识别”，只调用 `cancelImageTranslationBlockRerecognition()`；不得调用全局 `cancelImageTranslation()`，不得清空 reviewed block IDs、替换 image task ID、invalidate scoped request 或把整图状态强制设为 idle。
+- scoped `CancellationError` 必须继续校验 request/content identity，清理 scoped block/task、恢复 `previousState`、写入取消消息并递增 `imageTranslationBlockRerecognitionFailureGeneration`；旧 block、其它译文和复查进度保持不变。全局取消路径仍保留原有整图 cleanup。
+- `scripts/test-v3263-image-ocr-scoped-rerecognition-cancel-contract.py` 锁定 Store、命令栏、状态 VoiceOver、全局边界、CI route 和 `3.263` 版本；本地与云端 full 均通过。
+- exact-SHA full [31557987897](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31557987897)（SHA `92b64f404eb3cf82ad033bfedfd59b4740ab367c`，Xcode/JUnit `10/10`）通过并发布 `AITRANS CI/full-validation=success`；PR #341 merge SHA `540f24fbc39a716ecac06fe11a01080c9421bb3b`，合入后 push CI [31558745662](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31558745662) 通过。
+- 本版只改善取消操作与辅助功能反馈，不外推通用日语 OCR／翻译质量；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ### v3.262 Koharu detector Triangle resize 合同
 
 - `ComicTextBubbleDetectorService` 的 detector 640×640 输入必须先从 canonical 8-bit DeviceRGB 生成 RGB plane，再执行 image-rs/Koharu 等价的 separable Triangle sampling；不得继续使用 Core Graphics `.high` 作为等价实现。下采样 support、edge weight normalization、vertical pass 保留 Float、horizontal pass 后统一 round 均属于契约。

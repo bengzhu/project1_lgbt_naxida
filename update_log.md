@@ -1,3 +1,20 @@
+## v3.263：图片 OCR 单块重新识别 scoped cancel 与 VoiceOver 边界
+
+日期：2026-08-12
+
+单块重新识别运行时不再复用整图取消按钮。命令栏在 `imageTranslationRerecognizingBlockID != nil` 时显示专用“取消重新识别”操作，只取消当前 block 的 rerecognition task；图片 task ID、其它 block 的译文、reviewed block IDs、复查 session 与整图状态不会被清空。当前 scoped request 的 `CancellationError` 仍通过 request/content guard 写回，恢复 `previousState`、清理 block task、保留旧 block，并递增既有 failure generation，让状态焦点反馈继续生效。全局读取、整图 OCR／翻译、换图和显式全局取消仍走原 cleanup 边界。
+
+状态 value/hint 明确区分“取消当前文字块”与“取消整张图片”，取消后的 translated 状态说明原文与复查进度已保留。OCR 输入、Manga OCR、翻译、geometry、布局、渲染、导出和非图片路径不变。
+
+新增 `scripts/test-v3263-image-ocr-scoped-rerecognition-cancel-contract.py`，工程版本为 `3.263`。
+
+验证边界：
+
+- 本地 `283` 个 `scripts/test-v*.py` 合同、v3.263 scoped cancel 6/6、历史 accessibility 合同、YAML、project plist、Python 语法与 `git diff --check` 通过。
+- exact-SHA full [31557987897](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31557987897) 对实现 SHA `92b64f404eb3cf82ad033bfedfd59b4740ab367c` 完成 static/UI/Speech/home/paste、Xcode 与 JUnit `10/10`（0 failures），`AITRANS CI/full-validation=success`。
+- PR #341 合入 `smalldata_test` 的 merge SHA `540f24fbc39a716ecac06fe11a01080c9421bb3b`；合入后 push CI [31558745662](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31558745662) 通过，研发分支已删除。
+- 本版是复查操作／辅助功能边界修复，不声称固定样图带来日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.262：Koharu detector Triangle resize 预处理对齐
 
 日期：2026-08-12
