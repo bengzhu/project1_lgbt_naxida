@@ -1,3 +1,13 @@
+## v3.268：受控 geometry-only 竖排 line recall 与云端验证
+
+日期：2026-08-12
+
+在 v3.267 的 bundled Manga OCR line-crop supplement 上继续推进 Koharu `TextRegion -> line crop -> OCR` 边界：当 Vision 已经建立日语竖排 layout block 时，使用 Vision `VNTextObservation.characterBoxes` 形成 recognition-only line geometry 候选。候选必须拥有至少 2 个字符、有效 quad、严格竖排比例，且只属于一个日语竖排 block；同时通过 block 覆盖、面积／尺寸、重复 geometry 门控。它们最多占用既有 8 个 line OCR 请求中的 2 个保留位，走现有 bounded crop、Koharu vertical `rotate270` 与 confidence `>=.55`／日语脚本密度 `>=.5` 输出门控，不生成空文本、不接管 detector bbox owner，也不改变取消、布局、翻译、渲染和非图片路径。
+
+新增 `scripts/test-v3268-koharu-geometry-only-line-recall-contract.py`，工程版本为 `3.268`。本地只执行了变更相关 Python 合同、YAML 解析与 `git diff --check`，遵守“不要本地编译”要求，未运行本地 `xcodebuild`、`swiftc` 或 runtime 编译。exact-SHA full [31570211484](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31570211484) 对实现 SHA `e64d5b19f31b999d9c3232c4ccb731b24e988a32` 的云端 Static／Speech／UI／Home／Paste、Xcode build、JUnit 与 receipt 全部成功；PR #349 合入 `smalldata_test` 的 merge SHA `6f02c217119afaed13d7bcb93df44bbd7052a50e`，合入后 push CI [31571032333](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31571032333) 通过。
+
+边界说明：本版本是从 Vision character geometry 到现有 bundled Manga OCR 的受控召回切片，不声称 GPL MIT48px/PaddleOCR-VL artifact 已打包或真实 Koharu OCR runtime 已迁移，也不把固定 `test/jap.jpg` 外推为通用日语 OCR、翻译或识别质量提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。研发分支已删除，本地／origin 仅保留 `main` 与 `smalldata_test`。
+
 ## v3.267：受控 Koharu line-crop OCR supplement 与单块翻译重试取消
 
 日期：2026-08-12
