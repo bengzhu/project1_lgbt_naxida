@@ -8,7 +8,13 @@ v3.276/v3.277 已把 Koharu `block_index` 迁入日语竖排 line recognition �
 
 该变化不禁止 ownerless observation 参与 OCR、去重、fallback fusion 或最终布局，不新增 line/block 请求上限，也不生成 Koharu 的空 prediction 用户块。最多 8 个 Manga line 请求、12/24 Vision line candidates、16M perspective pixels、最多 16 个 block crops 与 8 次方向 fallback、detector bbox ownership、crop／warp／方向、confidence／日语密度 gate、owner-first grouping、取消传播、翻译、UI、渲染和非图片路径保持不变。新增 `scripts/test-v3278-koharu-line-coverage-owner-contract.py` 与 cloud-only Swift evaluator，覆盖 exact owner、candidate/result ownerless、foreign owner 和 ownerless block 历史兼容；接入 cloud UI/Xcode scope，工程版本为 `3.278`。
 
-本地验证只执行不具备进程启动入口的静态边界：273 个 Python 合同、300 个 Python AST、workflow YAML、shell 语法、工程 plist、新 v3.278 合同 `6/6`、版本与 `git diff --check` 全部通过；27 个可能启动外部进程的合同按约束跳过。未运行本地 Xcode、Swift evaluator、Rust/Cargo、Core ML 或 app/runtime。云端 full、PR、合并和 receipt 待本轮完成。
+本地验证只执行不具备进程启动入口的静态边界：273 个 Python 合同、300 个 Python AST、workflow YAML、shell 语法、工程 plist、新 v3.278 合同 `6/6`、版本与 `git diff --check` 全部通过；27 个可能启动外部进程的合同按约束跳过。未运行本地 Xcode、Swift evaluator、Rust/Cargo、Core ML 或 app/runtime。
+
+云端与合并证据：
+
+- 最终 SHA `b00c6ba9071e3b12b23486606ae62bd3edd3b6cb` 的 exact-SHA full [31637022274](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31637022274) 成功。Koharu parity job `94249821250` 与 macOS job `94251604097` 均通过；云端 owner policy evaluator、Xcode 26.6、UI／Home／Paste／Speech、simulator manga probe、JUnit `10/10` 和 `AITRANS CI/full-validation=success` receipt 完整成功。
+- 固定 `test/jap.jpg` 的 cloud-only MIT48 reference parity 为 7/7 accepted：`ニコッ` confidence `0.59093773`、`今度こそ` `0.99994445`，其余五个 pinned crop 也通过日语密度与质量门。该证据不打包 GPL Koharu/MIT48 权重或 runtime，也不外推为通用日语 OCR／翻译质量提升。
+- PR [#359](https://github.com/bengzhu/project1_lgbt_naxida/pull/359) fast [31639423729](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31639423729) 成功，以 merge SHA `41f4d5ba707ae7c42378b97d4833f8280788a8f5` 合入 `smalldata_test`；合入后 push CI [31639486578](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31639486578) 复用候选 full receipt 成功。main 未动；回执提交完成并删除研发分支后，本地／origin 只保留 `main` 与 `smalldata_test`。
 
 ## v3.277：Koharu 同 owner 竖排 line 强归组
 
