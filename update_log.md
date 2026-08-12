@@ -1,3 +1,13 @@
+## v3.267：受控 Koharu line-crop OCR supplement 与单块翻译重试取消
+
+日期：2026-08-12
+
+Vision 仅对已有且严格判定为竖排 line 的 geometry 候选调用现有 bundled `MangaOCRService`：使用 line-specific bounded crop 与 rotate270，最多 8 个请求；输出经过清洗、finite confidence `>=.55`、日语脚本密度 `>=.5` 门控，作为 recognition-only supplement，不夺取可靠 detector bbox owner，既有 Vision perspective／axis fallback、预算、布局、翻译、渲染与非图片路径不变。图片单块翻译重试现在可从命令栏、结果行、局部预览和 VoiceOver scoped cancel，取消后恢复该 block 的终态并保留其它译文与复查进度。
+
+新增 `scripts/test-v3267-koharu-manga-ocr-line-region-contract.py` 与 `scripts/test-v3267-image-translation-block-retry-cancel-contract.py`，工程版本为 `3.267`。本地 `288` 个 `scripts/test-v*.py` 合同、`test/jap.jpg` 单页 5 blocks／长页 20 blocks／compact `ニコッ` runtime、YAML、project plist、Python／shell 语法与 `git diff --check` 通过。exact-SHA full [31567998753](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31567998753) 对实现 SHA `6d582e931241440f3d19b5ddadb0be468816de0c` 使用 Xcode/JUnit/UI/Home/Paste/Speech 全部通过，发布 `AITRANS CI/full-validation=success`；PR #348 合入 `smalldata_test` 的 merge SHA `891452ef662f1725d64394f02ec26979dc1cbf78`，合入后 push CI [31568653502](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31568653502) 通过。
+
+边界说明：这是一条使用现有 bundled Manga OCR 的受控 line-crop 复读路径，不是缺失的真实 Koharu MIT48px/PaddleOCR-VL artifact 迁移；固定 `test/jap.jpg` 只作回归证据，不外推通用日语 OCR、翻译或识别质量提升。Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+
 ## v3.266：Koharu vertical quad direct-first 与单块重识别行内取消
 
 日期：2026-08-12
