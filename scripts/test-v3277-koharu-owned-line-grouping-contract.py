@@ -41,6 +41,10 @@ class KoharuOwnedLineGroupingContractTests(unittest.TestCase):
         )
         cls.layout_entry = braced_body(cls.layout, "static func layout(")
         cls.cluster = braced_body(cls.layout, "private static func cluster(")
+        cls.ownerless_merge = braced_body(
+            cls.layout,
+            "private static func shouldMergeOwnerlessVertically(",
+        )
         cls.block = braced_body(cls.layout, "var block: ImageOCRLayoutBlock")
 
     def test_owner_first_grouping_is_vertical_manga_only(self) -> None:
@@ -65,7 +69,17 @@ class KoharuOwnedLineGroupingContractTests(unittest.TestCase):
         self.assertIn("containsKnownVerticalTextRegionOwner", self.cluster)
         self.assertIn("if knownOwnerMatchCount > 1", self.cluster)
         self.assertIn("compatibleIndices.removeAll", self.cluster)
-        self.assertIn("shouldMergeVertically(observation", self.cluster)
+        self.assertIn("shouldMergeOwnerlessVertically(", self.cluster)
+        self.assertIn("cluster.observations.contains", self.ownerless_merge)
+        self.assertIn("let existingLineCluster = Cluster(existingLine)", self.ownerless_merge)
+        self.assertIn(
+            "shouldMergeVertically(line, into: existingLineCluster)",
+            self.ownerless_merge,
+        )
+        self.assertIn(
+            "shouldMergeVertically(existingLine, into: ownerlessCluster)",
+            self.ownerless_merge,
+        )
 
     def test_block_keeps_koharu_line_order_and_mean_confidence(self) -> None:
         self.assertIn("let orderedObservations = observations.sorted", self.block)
@@ -88,6 +102,8 @@ class KoharuOwnedLineGroupingContractTests(unittest.TestCase):
             "distantOwnerless.count == 2",
             "ambiguousOwnerless.count == 3",
             "unambiguousOwnerless.count == 1",
+            "ownerlessAboveKnown.count == 1",
+            "ownerUnionTrap.count == 2",
             "nonManga.count == 2",
         ):
             self.assertIn(marker, self.evaluator)

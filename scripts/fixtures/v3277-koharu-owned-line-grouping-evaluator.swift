@@ -85,6 +85,23 @@ private enum KoharuOwnedLineGroupingEvaluator {
         require(unambiguousOwnerless[0].text == "上下", "unambiguous ownerless order changed")
         require(unambiguousOwnerless[0].verticalTextRegionOwner == nil, "mixed block exposed owner")
 
+        let ownerlessAboveKnown = layout([
+            observation("上", y: 0.08, owner: nil),
+            observation("下", y: 0.155, owner: 16),
+        ])
+        require(ownerlessAboveKnown.count == 1, "ownerless-above-known compatibility changed")
+        require(ownerlessAboveKnown[0].text == "上下", "ownerless-above-known order changed")
+        require(ownerlessAboveKnown[0].verticalTextRegionOwner == nil, "reversed mixed block exposed owner")
+
+        let ownerUnionTrap = layout([
+            observation("上", y: 0.08, owner: 17),
+            observation("下", y: 0.76, owner: 17),
+            observation("中", y: 0.42, owner: nil),
+        ])
+        require(ownerUnionTrap.count == 2, "owner union absorbed unrelated ownerless line")
+        require(ownerUnionTrap.contains { $0.text == "上下" }, "same-owner block changed in union trap")
+        require(ownerUnionTrap.contains { $0.text == "中" }, "ownerless union-trap line was lost")
+
         let nonManga = layout(
             [
                 observation("上段", y: 0.08, width: 0.04, height: 0.10, owner: 21),

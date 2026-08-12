@@ -469,7 +469,15 @@ enum ImageOCRLayoutEngine {
 
         for observation in remaining {
             var compatibleIndices = clusters.indices.filter { index in
-                direction == .vertical
+                if direction == .vertical,
+                   groupsVerticalTextRegionsByOwner,
+                   clusters[index].containsKnownVerticalTextRegionOwner {
+                    return shouldMergeOwnerlessVertically(
+                        observation,
+                        into: clusters[index]
+                    )
+                }
+                return direction == .vertical
                     ? shouldMergeVertically(observation, into: clusters[index])
                     : shouldMergeHorizontally(observation, into: clusters[index])
             }
@@ -501,6 +509,25 @@ enum ImageOCRLayoutEngine {
             }
         }
         return clusters.map(\.block)
+    }
+
+    private static func shouldMergeOwnerlessVertically(
+        _ line: ResolvedObservation,
+        into cluster: Cluster
+    ) -> Bool {
+        guard line.verticalTextRegionOwner == nil else { return false }
+        // Owner-first seeding can reverse the historical comparison order when
+        // an ownerless fallback sits above its known TextRegion. Compare against
+        // each existing line in both directions rather than against the
+        // owner's union rect, which could absorb unrelated geometry between two
+        // distant same-owner lines. Existing ownerless fallbacks remain eligible
+        // so their historical geometry chaining still works.
+        let ownerlessCluster = Cluster(line)
+        return cluster.observations.contains { existingLine in
+            let existingLineCluster = Cluster(existingLine)
+            return shouldMergeVertically(line, into: existingLineCluster)
+                || shouldMergeVertically(existingLine, into: ownerlessCluster)
+        }
     }
 
     private static func mergeScore(
