@@ -39,7 +39,7 @@ class JapaneseMangaOCRVerticalQuadWarpContractTests(unittest.TestCase):
         )
         self.target = braced_body(
             self.service,
-            "private static func koharuVerticalQuadWarpTargetSize(",
+            "static func koharuVerticalQuadWarpTargetSize(",
         )
 
     def test_bbox_remains_primary_and_quad_remains_weak_fallback(self) -> None:

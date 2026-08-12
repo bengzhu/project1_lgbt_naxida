@@ -61,7 +61,7 @@ class KoharuVerticalQuadWarpContractTests(unittest.TestCase):
 
     def test_target_canvas_and_projection_use_koharu_pixel_geometry(self) -> None:
         target = braced_body(
-            self.service, "private static func koharuVerticalQuadWarpTargetSize("
+            self.service, "static func koharuVerticalQuadWarpTargetSize("
         )
         for marker in [
             "let verticalLength = distance(top, bottom)",
@@ -72,7 +72,7 @@ class KoharuVerticalQuadWarpContractTests(unittest.TestCase):
             "width * height <= maximumPixels + 1",
         ]:
             self.assertIn(marker, target)
-        warp = braced_body(self.service, "private static func koharuVerticalQuadWarp(")
+        warp = braced_body(self.service, "static func koharuVerticalQuadWarp(")
         for marker in [
             "CGPoint(x: 0, y: 0)",
             "CGFloat(targetWidth - 1)",
@@ -128,7 +128,7 @@ class KoharuVerticalQuadWarpContractTests(unittest.TestCase):
 
     def test_version_is_3264(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.264", "3.264"])
+        self.assertEqual(versions, ["3.265", "3.265"])
 
 
 if __name__ == "__main__":
