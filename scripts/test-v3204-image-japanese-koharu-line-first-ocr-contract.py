@@ -65,7 +65,16 @@ class JapaneseKoharuLineFirstOCRContractTests(unittest.TestCase):
             guard_region,
         )
         self.assertIn("guard !hasLineOCRResult else { continue }", guard_region)
-        self.assertIn("refined.append(contentsOf: primary)", self.crops)
+        self.assertTrue(
+            "refined.append(contentsOf: primary)" in self.crops
+            or all(
+                marker in self.crops
+                for marker in (
+                    "var blockFallback = primary",
+                    "refined.append(contentsOf: blockFallback)",
+                )
+            )
+        )
 
     def test_line_path_keeps_its_own_bounded_fallbacks(self) -> None:
         self.assertIn("orientationFallbacksRemaining = 12", self.line)

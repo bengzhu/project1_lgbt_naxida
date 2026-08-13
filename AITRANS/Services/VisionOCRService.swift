@@ -803,7 +803,7 @@ struct VisionOCRService: Sendable {
                 cropScale: preparedCrop.scale,
                 verticalTextRegionOwner: block.verticalTextRegionOwner
             )
-            refined.append(contentsOf: primary)
+            var blockFallback = primary
 
             // A block can be laid out correctly while its first crop orientation
             // is still reversed. Retry only weak/empty crops and keep a strict
@@ -811,7 +811,7 @@ struct VisionOCRService: Sendable {
             if orientationFallbacksRemaining > 0,
                needsJapaneseOrientationFallback(primary) {
                 orientationFallbacksRemaining -= 1
-                refined.append(contentsOf: recognizeJapaneseCropPass(
+                blockFallback.append(contentsOf: recognizeJapaneseCropPass(
                     crop: preparedCrop.image,
                     cropRect: crop.rect,
                     originalImage: image,
@@ -822,6 +822,32 @@ struct VisionOCRService: Sendable {
                     verticalTextRegionOwner: block.verticalTextRegionOwner
                 ))
             }
+            blockFallback = deduplicateJapaneseObservations(blockFallback)
+
+            // Koharu emits one prediction per TextRegion. If incomplete line
+            // coverage required this wider crop, replace the owner's partial
+            // line fragments only when the fallback set itself proves complete,
+            // one-to-one source-line coverage for that exact owner. Otherwise
+            // owner-first layout would concatenate partial text with a complete
+            // fallback, while a merely strong fragment must not erase good lines.
+            let fallbackHasCompleteLineCoverage = Self.hasCompleteJapaneseLineCoverage(
+                for: block,
+                sourceObservations: ownerAnnotatedObservations,
+                lineRefined: blockFallback,
+                allowsBlockCropResults: true
+            )
+            if ImageOCRLayoutEngine.blockFallbackCanReplacePartialLines(
+                fallbackOwners: blockFallback.map(\.verticalTextRegionOwner),
+                blockOwner: block.verticalTextRegionOwner,
+                hasCompleteLineCoverage: fallbackHasCompleteLineCoverage
+            ),
+               let blockOwner = block.verticalTextRegionOwner {
+                refined.removeAll {
+                    $0.observationRole == .verticalLine
+                        && $0.verticalTextRegionOwner == blockOwner
+                }
+            }
+            refined.append(contentsOf: blockFallback)
         }
 
         return refined
@@ -2434,7 +2460,8 @@ struct VisionOCRService: Sendable {
     private static func hasCompleteJapaneseLineCoverage(
         for block: ImageOCRLayoutBlock,
         sourceObservations: [VisionOCRObservation],
-        lineRefined: [VisionOCRObservation]
+        lineRefined: [VisionOCRObservation],
+        allowsBlockCropResults: Bool = false
     ) -> Bool {
         let sourceLineCandidates = japaneseLineCoverageSourceCandidates(
             for: block,
@@ -2446,7 +2473,9 @@ struct VisionOCRService: Sendable {
 
         var availableLineResults = lineRefined
             .filter { observation in
-                guard observation.observationRole == .verticalLine,
+                let hasEligibleRole = observation.observationRole == .verticalLine
+                    || (allowsBlockCropResults && observation.observationRole == .crop)
+                guard hasEligibleRole,
                       !observation.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                       let lineRegion = observation.lineRegionRect?.normalizedToUnit() else {
                     return false
