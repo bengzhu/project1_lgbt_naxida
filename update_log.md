@@ -8,7 +8,14 @@ Koharu `Mit48pxOcr::inference_text_blocks` 先为每个 `TextRegion` 提取 line
 
 该变化不改变 v3.278 complete-coverage skip，不禁止 ownerless observations 参与普通 fusion，也不删除 page／tile／detector observation。最多 16 个 block crop、8 次 block orientation fallback、8 个 Manga line request、12/24 Vision line candidate、16M perspective pixel、detector bbox ownership、crop／warp／方向、confidence／日语密度 gate、owner-first grouping、取消传播、翻译、UI、渲染和非图片路径保持不变。新增 `scripts/test-v3279-koharu-block-fallback-replacement-contract.py` 与 cloud-only Swift policy evaluator，工程版本为 `3.279`。
 
-本地只执行静态边界：AST 预扫确认 301 个 `scripts/test-v*.py` 中 27 个实际调用 `subprocess`，全部跳过；其余 274 个合同全部通过。311 个 Python 文件 AST、3 个 workflow YAML、19 个 shell 语法、4 个 plist 与工程 project、版本解析、新 v3.279 合同 `7/7`、历史 v3.204/v3.205/v3.276-v3.278 owner/coverage 回归及 `git diff --check` 通过。未运行 Xcode、Swift evaluator、Rust/Cargo、Core ML 或 app/runtime。exact-SHA 云端 full、PR、合并和 receipt 待本轮完成。固定 `test/jap.jpg` 与 GPL Koharu/MIT48 parity 仍只用于云端 reference 验证，不打包进 AITRANS，也不外推为通用日语 OCR／翻译质量提升。
+本地只执行静态边界：AST 预扫确认 301 个 `scripts/test-v*.py` 中 27 个实际调用 `subprocess`，全部跳过；其余 274 个合同全部通过。311 个 Python 文件 AST、3 个 workflow YAML、19 个 shell 语法、4 个 tracked plist 与工程 project、版本解析、新 v3.279 合同 `7/7`、历史 v3.204/v3.205/v3.276-v3.278 owner/coverage 回归及 `git diff --check` 通过。未运行 Xcode、Swift evaluator、Rust/Cargo、Core ML 或 app/runtime。固定 `test/jap.jpg` 与 GPL Koharu/MIT48 parity 仍只用于云端 reference 验证，不打包进 AITRANS，也不外推为通用日语 OCR／翻译质量提升。
+
+云端与合并证据：
+
+- 初始实现 SHA `079f23753156dca93a4516ed8f9b4ce6a18897d2` 的 full [31641057742](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31641057742) 已通过 Koharu 7/7 parity、v3.279 cloud Swift evaluator、Xcode 26.6、Speech／UI／Home／Paste 与 manga probe；唯一失败是 v3.279 Python 合同从 macOS job 读取未 checkout 且被 `.gitignore` 排除的 `reference/koharu-main/koharu-ml/src/mit48px_ocr/mod.rs`，因此 JUnit 为 `9/10`。该合同随后改为读取仓库内 `scripts/run-koharu-mit48px-cloud-smoke.sh` 的 pinned revision 与单 prediction gate，不增加 reference checkout、网络步骤或应用行为变更。
+- 最终 SHA `388280cb7db23119cc99fdf2812537cd5ec0c705` 的 exact-SHA full [31643409108](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31643409108) 成功。Koharu parity job `94271228157` 与 macOS job `94272780695` 均通过；云端 v3.279 replacement evaluator、UI 合同、Xcode 26.6、simulator manga probe、JUnit `10/10`（0 failures）和 `AITRANS CI/full-validation=success` receipt 完整成功。
+- 固定 `test/jap.jpg` 的 cloud-only MIT48 reference parity 为 7/7 accepted：`ニコッ` confidence `0.59093773`、`持ち帰る！` `0.99878436`、`この爆乳を` `0.9999912`、`今度こそ` `0.99994445`、`やがって` `0.98682827`、`俺の誘い断り` `0.788739`、`前は生意気に` `0.986612`。长页 bundled Manga OCR runtime 为 20 个竖排 blocks。该证据不打包 GPL Koharu/MIT48 权重或 runtime，也不外推为通用日语 OCR／翻译质量提升。
+- PR [#360](https://github.com/bengzhu/project1_lgbt_naxida/pull/360) fast [31658387394](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31658387394) 成功，以 merge SHA `3a953b6e8fa06951e6bff81476489e9dbeaa471a` 合入 `smalldata_test`；合入后 push CI [31658445570](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31658445570) 以 `Reused successful parent full validation` 发布成功 receipt。main 未动；回执提交完成并删除研发分支后，本地／origin 只保留 `main` 与 `smalldata_test`。
 
 ## v3.278：Koharu line coverage 的 owner-exact 跳过证明
 
