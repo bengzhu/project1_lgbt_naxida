@@ -9,6 +9,8 @@
 - 第六个强制 UI evidence full [32272593193](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32272593193) 的 Koharu parity `96132362772`、benchmark `96132363000`、Xcode 与 UI evidence 成功，但 UI interaction contract 仍失败；主 job `96134348013` 为 JUnit `10` 项 `1` 失败。根因是 v3.285 selector runtime 漏编 `ImageOCRLayoutEngine.swift`，导致 `ImageOCRProvenance.swift` 中的 `ImageOCRLayoutRect` 未定义；当前修复补入该最小依赖，并由 v3.285 合同锁定 `provenance -> layout -> fixture` 顺序且排除 `TranscriptModels.swift`。仍待下一 exact-SHA full 的 UI interaction、Xcode、JUnit `10/10` 与 receipt。
 - 第七个 exact-SHA full [32277233442](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32277233442) 的 Koharu parity `96147655198`、benchmark `96147654855`、Xcode 与 UI evidence 成功，但 v3.285 Swift evaluator 因把 throwing encode/decode 放入 `precondition` autoclosure 而编译失败；主 job `96149631229` 为 JUnit `10` 项 `1` 失败。当前修复先绑定 `encodedPolicy`/`decodedPolicy`，再执行等价断言，合同同步锁定该边界，仍待下一 exact-SHA full receipt。
 
+- 第八个 exact-SHA full [32280583163](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32280583163) 的 benchmark `96158153691`、Koharu parity `96158154043`、Xcode 与 UI evidence 成功，但主 job `96160258529` 的 JUnit `10` 项有 `1` 项失败。唯一错误是 v3.286 evaluator 将 `JSONDecoder.decode` 放进 `precondition` autoclosure；当前修复先绑定 `decoded` 再执行断言，合同新增 `precondition(try ...)` 禁止项，仍待新 SHA 的完整 receipt。
+
 ### v3.289 图片复查、会话快照与结构 mutation 合同
 
 - 只读 provenance disclosure、低置信／方向待定 block 的 scoped bbox 编辑与 automatic baseline 均不得改变已有候选选择、整页 OCR/翻译、布局、预算或复查状态；拖动只改 draft，提交后才写回，scoped rerecognition 仍只取消当前 block task。

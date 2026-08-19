@@ -146,9 +146,12 @@ class LocalGGUFChatTemplateContractTests(unittest.TestCase):
             "renderWithBufferResize",
             "String(repeating: \"长文本😀\"",
             "[2] 二\\n[1] 一",
+            "let decoded = try JSONDecoder().decode(LocalModelPromptProfile.self, from: encoded)",
+            "precondition(decoded == .gemma)",
             "v3.286 local GGUF chat-template evaluator passed",
         ):
             self.assertIn(marker, self.fixture)
+        self.assertNotIn("precondition(try ", self.fixture)
         self.assertIn("GITHUB_ACTIONS", self.runtime_shell)
         self.assertIn("xcrun swiftc", self.runtime_shell)
         self.assertIn("LocalModelPromptProfile.swift", self.runtime_shell)

@@ -98,7 +98,8 @@ struct LocalGGUFChatTemplateEvaluator {
         precondition(gemmaFallback.contains("[1] 持ち帰る！"))
 
         let encoded = try JSONEncoder().encode(LocalModelPromptProfile.gemma)
-        precondition(try JSONDecoder().decode(LocalModelPromptProfile.self, from: encoded) == .gemma)
+        let decoded = try JSONDecoder().decode(LocalModelPromptProfile.self, from: encoded)
+        precondition(decoded == .gemma)
 
         print("v3.286 local GGUF chat-template evaluator passed")
     }

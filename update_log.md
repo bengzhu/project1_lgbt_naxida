@@ -22,6 +22,8 @@
 
 真实 BubbleMask/SegmentMask、授权语料、目标设备测量和成品盲评仍缺失；本版只建立风险提示协议，不声称 mask、inpainting、OCR/CER、翻译质量、Koharu parity 或 holdout 改善。未新增 metrics/version_history 条目，下一步仍需先取得真实外部 artifact/corpus/device evidence。
 
+第八个 exact-SHA full [32280583163](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32280583163) 的 benchmark `96158153691`、Koharu parity `96158154043`、Xcode 与 UI evidence 成功，但主 job `96160258529` 仍为 JUnit `10` 项 `1` 失败。唯一错误收敛到 v3.286 standalone GGUF chat-template evaluator：`JSONDecoder.decode` 被直接放入 `precondition` autoclosure，触发 non-throwing autoclosure 编译错误。当前修复先绑定 `decoded` 再断言，并由 v3.286 合同禁止 `precondition(try ...)`；该 SHA 仍不是成功 receipt，需由新的 exact-SHA full 重新验收。
+
 ## v3.289：图片复查、会话快照与结构 mutation 边界（2026-08-19）
 
 路线中的 v3.289 已完成只读 provenance disclosure、scoped bbox 复查、automatic baseline、受管图片会话跨重启快照，以及 split/merge/order 结构 mutation。所有 mutation 均通过 `TranslationSessionStore` 的终态/任务/generation guard；拆分和合并创建新 block identity 并清除受影响译文与旧 OCR 证据，阅读顺序调整保留有效 block metadata；快照对路径、文件类型、字节数、SHA-256、geometry、ID/order/review subset fail closed。临时 OCR shadow ledger 不进入持久化，单块取消不升级为整图取消。
