@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
-xcrun swiftc \
+xcrun swiftc -parse-as-library \
   "$ROOT_DIR/AITRANS/Models/ImageOCRProvenance.swift" \
   "$ROOT_DIR/AITRANS/Services/ImageOCRLayoutEngine.swift" \
   "$ROOT_DIR/AITRANS/Models/TranslationContextQuality.swift" \

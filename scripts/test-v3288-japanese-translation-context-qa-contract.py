@@ -159,6 +159,12 @@ class TranslationContextQAContractTests(unittest.TestCase):
             "outOfOrderTags",
         ):
             self.assertIn(marker, self.context_source)
+        self.assertRegex(
+            self.context_source,
+            r'(?s)guard index < expectedRecognized\.count,.*?else \{.*?'
+            r'addFailure\(offset: expectedOffset, reason: "outOfOrderTags"\).*?'
+            r'\n\s+continue\n\s+\}',
+        )
         for marker in (
             "var translationContext: TranslationPromptContext = .empty",
             "var translationTerms: [TranslationTermMemoryEntry]",
@@ -192,6 +198,11 @@ class TranslationContextQAContractTests(unittest.TestCase):
             "正在只补译",
         ):
             self.assertIn(marker, self.store)
+        self.assertIn(
+            "let resolvedTargetLanguage = requestTargetLanguage ?? targetLanguage\n"
+            "        return ModelGenerationRequest(",
+            self.store,
+        )
         self.assertNotIn("recognizeTextBlocks(in: data", self.store[self.store.index("private func translateJapaneseImageBatch("):self.store.index("private static func imageTranslationBatches(")])
 
     def test_standalone_transcript_model_evaluators_include_dependency_closure(self) -> None:
@@ -206,6 +217,7 @@ class TranslationContextQAContractTests(unittest.TestCase):
         )
         for relative in evaluator_sources:
             source = read(relative)
+            self.assertIn("parse-as-library", source, relative)
             self.assertIn("TranscriptModels.swift", source, relative)
             self.assertIn("ImageOCRProvenance.swift", source, relative)
             self.assertIn("ImageOCRLayoutEngine.swift", source, relative)

@@ -350,6 +350,7 @@ enum TranslationBatchQualityEvaluator {
                        let expectedOffset = items.firstIndex(where: { $0.id == expectedRecognized[index] }) {
                         addFailure(offset: expectedOffset, reason: "outOfOrderTags")
                     }
+                    continue
                 }
             }
         }

@@ -47,28 +47,35 @@ class KoharuShadowCoverageContractTests(unittest.TestCase):
             environment = os.environ.copy()
             if Path("/Applications/Xcode.app/Contents/Developer").is_dir():
                 environment["DEVELOPER_DIR"] = "/Applications/Xcode.app/Contents/Developer"
-            subprocess.run(
-                [
-                    "xcrun",
-                    "--sdk",
-                    "macosx",
-                    "swiftc",
-                    "-module-cache-path",
-                    str(module_cache),
-                    "AITRANS/Models/ImageOCRProvenance.swift",
-                    "AITRANS/Services/ImageOCRLayoutEngine.swift",
-                    "AITRANS/Models/TranslationContextQuality.swift",
-                    "AITRANS/Models/TranscriptModels.swift",
-                    "scripts/test-v200-koharu-shadow-coverage-evaluator.swift",
-                    "-o",
-                    str(executable),
-                ],
-                cwd=ROOT,
-                env=environment,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+            try:
+                subprocess.run(
+                    [
+                        "xcrun",
+                        "--sdk",
+                        "macosx",
+                        "swiftc",
+                        "-parse-as-library",
+                        "-module-cache-path",
+                        str(module_cache),
+                        "AITRANS/Models/ImageOCRProvenance.swift",
+                        "AITRANS/Services/ImageOCRLayoutEngine.swift",
+                        "AITRANS/Models/TranslationContextQuality.swift",
+                        "AITRANS/Models/TranscriptModels.swift",
+                        "scripts/test-v200-koharu-shadow-coverage-evaluator.swift",
+                        "-o",
+                        str(executable),
+                    ],
+                    cwd=ROOT,
+                    env=environment,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as error:
+                self.fail(
+                    "shadow coverage evaluator compilation failed:\n"
+                    f"stdout={error.stdout}\nstderr={error.stderr}"
+                )
             result = subprocess.run(
                 [str(executable)],
                 cwd=ROOT,

@@ -8,6 +8,8 @@
 
 修复后的本地允许范围验证：v3.290 合同 `7/7`、v3.289 structure 合同 `7/7`、v3.288 跨批次 QA 合同 `8/8`；全量 `316` 个 Python 合同中 `289` 个无进程入口合同通过、`27` 个含 `subprocess` 的合同跳过、`0` 失败；`334` 个 tracked Python AST、`3` 个 workflow YAML、`30` 个 tracked shell、`4` 个 plist、工程版本两处 `3.290` 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；修复仍须由下一次 exact-SHA cloud full 的 Xcode/JUnit/receipt 验收。
 
+第二个候选 `593d3ac63517e840da40d9a223ede414cf6be075` 的 CI [32261112799](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32261112799) 中 benchmark job `96094333122` 成功，首轮 `EnumeratedSequence` availability 错误已消失，但 main job `96094457578` 仍为 JUnit `7/10`。artifact 暴露出 v3.288 中两个此前被遮住的编译错误：out-of-order QA 的 `guard` mismatch body 缺少 `continue`，以及多语句 `makeRequest` 缺少显式 `return`。两处已修复并加合同；standalone evaluator 统一使用 `-parse-as-library`，v200/v201/v367 也会在编译失败时输出完整 Swift stderr。该 run 不作为成功 receipt，后续 exact-SHA full 仍是验收门。
+
 真实 BubbleMask/SegmentMask、授权语料、目标设备测量和成品盲评仍缺失；本版只建立风险提示协议，不声称 mask、inpainting、OCR/CER、翻译质量、Koharu parity 或 holdout 改善。未新增 metrics/version_history 条目，下一步仍需先取得真实外部 artifact/corpus/device evidence。
 
 ## v3.289：图片复查、会话快照与结构 mutation 边界（2026-08-19）

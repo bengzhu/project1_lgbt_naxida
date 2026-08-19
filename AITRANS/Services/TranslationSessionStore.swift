@@ -27190,7 +27190,7 @@ final class TranslationSessionStore: ObservableObject {
     ) -> ModelGenerationRequest {
         let resolvedSourceLanguage = requestSourceLanguage ?? sourceLanguage
         let resolvedTargetLanguage = requestTargetLanguage ?? targetLanguage
-        ModelGenerationRequest(
+        return ModelGenerationRequest(
             task: task,
             mode: mode,
             inputText: inputText,
