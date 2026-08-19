@@ -1,3 +1,13 @@
+## v3.293：共享语料四引擎矩阵完整性与 fail-closed policy 闸门（2026-08-20）
+
+本轮按 P0.3 的证据边界修正 v3.292 readiness evaluator 的可缩小矩阵漏洞：固定 AITRANS/Vision/Koharu MIT48/Koharu PaddleOCR-VL × `oracleCrop`/`detectedCrop`/`fullPage` 的 12 个 `dev` rows，canonical artifact ID 与 `referenceOnly` engine 角色不可伪装；actual `missing`/`failed` row、dataset SHA 不匹配、split page/region 总数不覆盖 dataset，以及 holdout/product-selection 安全 flag 违反均保持 `blocked`/直接拒绝，不改变产品路径。
+
+新增 `scripts/test-v3293-japanese-corpus-matrix-integrity-contract.py`，同步收紧 corpus manifest schema、cloud-only wrapper、workflow artifact 名称与工程版本 `3.293`。本轮只做证据层与静态合同，真实授权 corpus、预测 artifact、目标设备 evidence、OCR/CER、翻译盲评和 holdout 仍缺失；不修改 OCR、翻译、UI、renderer、持久化或模型选择。
+
+本地安全回归：v3.293 合同 `6/6`、v3.292 合同 `8/8`；`319` 个 tracked `scripts/test-v*.py` 中 `292` 个无进程入口合同通过，`27` 个含真实 `subprocess` 入口的合同跳过；`338` 个 tracked Python AST、`3` 个 workflow YAML、`32` 个 tracked shell、`4` 个 plist 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；contract-only readiness report 仍为 `blocked`。
+
+云端 exact-SHA full [32304497238](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32304497238) 精确验证实现 SHA `1de9c297834200233c19b9491f253bb9ba8c1bbe`：Koharu parity job `96234590642`、Japanese benchmark/readiness job `96234590825`、主 bundle job `96236313725` 全部成功；Xcode 26.6、UI interaction、Speech/Home/Paste、JUnit `10/10`（0 failures）和 `AITRANS CI/full-validation=success` receipt 均成立。`ui_evidence_mode=skip`、`probe_mode=skip`；云端 readiness report 的 `manifestSha256` 仍为 `8a761ecdb2ac96f4a3781800638807d62ba2f96a4c71bc6d26fdd09384127cbd`、`status=blocked`，真实授权 corpus、12 个四引擎同 crop `dev` rows、目标设备 evidence、OCR/CER、翻译盲评和 holdout 仍缺失，`productPathEnabled`、`productSelectionChanged`、`groundTruthUsedForDecision` 均为 `false`。该 run 只证明 v3.293 readiness 完整性合同、固定 reference parity 与产品编译边界，不证明通用 OCR/翻译质量或允许进入 holdout。
+
 ## v3.292：共享日语 OCR/translation corpus 与 holdout readiness 闸门（2026-08-20）
 
 真实授权完整页、人工 TextRegion/line 标注、同 crop 预测 artifact、目标设备测量和盲评仍未提供。本轮按 P0.1/P0.2/P0.3 只建立 evidence envelope：manifest 固定 dataset SHA、20 个完整页/150 个 TextRegion 最低门槛、七类标注字段、11 类场景、train/dev/holdout 隔离、AITRANS/Vision/MIT48/PaddleOCR-VL 四引擎的 oracle/detected/full 矩阵，以及 holdout 前冻结且禁止事后调参的 protocol；不创建或伪造真实 corpus。

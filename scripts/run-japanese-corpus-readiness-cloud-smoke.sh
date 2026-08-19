@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ "${GITHUB_ACTIONS:-false}" != "true" ]]; then
-  echo "v3.292 shared corpus readiness is cloud-only" >&2
+  echo "v3.293 shared corpus readiness is cloud-only" >&2
   exit 2
 fi
 
@@ -13,4 +13,4 @@ python3 scripts/evaluate-japanese-corpus-readiness.py \
   --manifest "$manifest_path" \
   --output "$output_path"
 
-echo "v3.292 shared corpus readiness report: ${output_path}"
+echo "v3.293 shared corpus readiness report: ${output_path}"
