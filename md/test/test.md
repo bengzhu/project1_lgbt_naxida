@@ -1,3 +1,9 @@
+### v3.294 共享语料 artifact intake 完整性合同
+
+- readiness schema 升级为 `1.1.0`；`--artifact-root` 只接受 root 内的 regular、非 symlink 文件，并核验 dataset/source manifest 与 12 个 prediction artifact 的实际 SHA-256、payload identity、唯一 prediction ID、`predictionCount` 及 `dev` page/region coverage。
+- 新合同：`scripts/test-v3294-japanese-corpus-artifact-intake-contract.py`；覆盖成功 materialization、缺 root、SHA 篡改、路径越界、symlink、payload dataset/count 不匹配和 page/region coverage 不完整。contract-only fixture 仍无真实 artifact，readiness 为 `blocked`、`artifactIntakeStatus=notRequired`。
+- 本轮只收口证据文件物化与 fail-closed 身份边界，不修改产品 OCR、翻译、selector、UI、renderer、持久化、请求/像素预算或模型路径；未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，也未使用真实授权 corpus、prediction artifact、目标设备证据或 holdout。
+
 ### v3.293 共享语料四引擎矩阵完整性合同
 
 - readiness evaluator 固定要求 4 engine × 3 crop level 的 12 个 `dev` rows，canonical artifact ID 与 reference-only 角色锁定；缺 row、failed/missing row、dataset split 计数不一致或 holdout/product-selection safety flag 违反均 fail closed。

@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
 import re
+import tempfile
 import unittest
 
 
@@ -118,7 +120,10 @@ class JapaneseCorpusMatrixIntegrityContractTests(unittest.TestCase):
                 "license": "authorized-test-use",
                 "authorized": True,
                 "permittedUses": ["benchmark"],
+                "artifactPath": "handoff/corpus.bin",
+                "artifactSha256": None,
                 "sourceManifestPath": "handoff/manifest.json",
+                "sourceManifestSha256": None,
             }
         )
         for index, split in enumerate(mutated["splits"]):
@@ -128,13 +133,22 @@ class JapaneseCorpusMatrixIntegrityContractTests(unittest.TestCase):
                     "pageCount": 1,
                     "regionCount": 1,
                     "assetIDs": [f"page-{index}"],
+                    "regionIDs": [f"region-{index}"],
                     "annotationStatus": "complete",
                     "groundTruthStatus": "available",
                 }
             )
-        self.rehash(mutated)
-
-        report = self.evaluator.evaluate_manifest(mutated)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifact = root / "handoff/corpus.bin"
+            artifact.parent.mkdir(parents=True, exist_ok=True)
+            artifact.write_bytes(b"corpus")
+            source_manifest = root / "handoff/manifest.json"
+            source_manifest.write_text("{\"authorized\":true}\n", encoding="utf-8")
+            mutated["dataset"]["artifactSha256"] = hashlib.sha256(artifact.read_bytes()).hexdigest()
+            mutated["dataset"]["sourceManifestSha256"] = hashlib.sha256(source_manifest.read_bytes()).hexdigest()
+            self.rehash(mutated)
+            report = self.evaluator.evaluate_manifest(mutated, root)
         self.assertEqual(report["status"], "blocked")
         reasons = " | ".join(report["reasons"])
         self.assertIn("split page counts do not cover", reasons)
@@ -150,12 +164,12 @@ class JapaneseCorpusMatrixIntegrityContractTests(unittest.TestCase):
             "holdoutUsedForProductSelection",
             "split page counts do not cover",
             "scripts/test-v3293-japanese-corpus-matrix-integrity-contract.py",
-            "japanese-benchmark-v3.293-",
+            "japanese-benchmark-v3.294-",
             "v3.293",
             "canonical four-engine dev matrix",
         ):
             self.assertIn(marker, self.source + self.workflow + self.route + self.update_log + self.test_log)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.293", "3.293"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.294", "3.294"])
 
 
 if __name__ == "__main__":

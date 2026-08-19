@@ -1,11 +1,11 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "benchmark": "japanese-corpus-readiness",
   "contractExampleOnly": true,
-  "manifestSha256": "8a761ecdb2ac96f4a3781800638807d62ba2f96a4c71bc6d26fdd09384127cbd",
+  "manifestSha256": "c3163a95b46a40396f66874bbeac815198a716c5f091f6b5baa43e8383af51d8",
   "run": {
     "appSha": "0000000000000000000000000000000000000000",
-    "evaluatorVersion": "v3.292-contract",
+    "evaluatorVersion": "v3.294-contract",
     "invocationMode": "cloud-only-shadow"
   },
   "dataset": {
@@ -18,12 +18,15 @@
     "license": "not-provided",
     "authorized": false,
     "permittedUses": [],
-    "sourceManifestPath": null
+    "artifactPath": null,
+    "artifactSha256": null,
+    "sourceManifestPath": null,
+    "sourceManifestSha256": null
   },
   "splits": [
-    { "splitID": "train", "status": "missing", "pageCount": 0, "regionCount": 0, "assetIDs": [], "annotationStatus": "missing", "groundTruthStatus": "missing" },
-    { "splitID": "dev", "status": "missing", "pageCount": 0, "regionCount": 0, "assetIDs": [], "annotationStatus": "missing", "groundTruthStatus": "missing" },
-    { "splitID": "holdout", "status": "missing", "pageCount": 0, "regionCount": 0, "assetIDs": [], "annotationStatus": "missing", "groundTruthStatus": "missing" }
+    { "splitID": "train", "status": "missing", "pageCount": 0, "regionCount": 0, "assetIDs": [], "regionIDs": [], "annotationStatus": "missing", "groundTruthStatus": "missing" },
+    { "splitID": "dev", "status": "missing", "pageCount": 0, "regionCount": 0, "assetIDs": [], "regionIDs": [], "annotationStatus": "missing", "groundTruthStatus": "missing" },
+    { "splitID": "holdout", "status": "missing", "pageCount": 0, "regionCount": 0, "assetIDs": [], "regionIDs": [], "annotationStatus": "missing", "groundTruthStatus": "missing" }
   ],
   "annotationProfile": {
     "requiredFields": [
@@ -96,6 +99,7 @@
       "20 complete pages and 150 annotated TextRegions",
       "disjoint train/dev/holdout asset IDs",
       "four-engine oracle/detected/full prediction matrix",
+      "materialized dataset/source-manifest/prediction artifacts with matching SHA-256",
       "protocol frozen before one-time holdout"
     ]
   }

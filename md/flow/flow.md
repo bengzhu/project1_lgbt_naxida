@@ -7,6 +7,8 @@
 
 当前 v3.293 readiness 完整性流程：`canonical four-engine dev matrix -> available-row/dataset-accounting/policy-flag gate -> blocked/readyForHoldout report`；required rows 固定为四引擎 × oracle/detected/full 的 12 个 `dev` 行，缺行、failed 行、分割计数不覆盖 dataset 或 holdout/product-selection 安全 flag 违反时 fail closed，仍不进入产品 OCR/翻译选择。
 
+当前 v3.294 readiness artifact intake 流程：`manifest declaration -> rooted regular-file/path-boundary/SHA verification -> prediction envelope/page-region coverage -> blocked/readyForHoldout report`；available dataset、source manifest 和 12 个 prediction artifact 必须在显式 artifact root 内一一对应，实际文件、payload dataset/engine/crop/split/referenceOnly、predictionCount 与 dev page/region coverage 任一不符即拒绝，不改变产品路径。
+
 当前 v3.289 图片复查流程：`persisted block -> read-only provenance disclosure -> low-confidence/direction-uncertain scoped bbox draft -> commit -> scoped rerecognition or restore`；draft 拖动不启动 OCR，提交与 rerecognition 仍由 block identity、request/content ID、generation 和 scoped cancel 保护。图片会话快照只在受管文件的 path/type/regular-file/byte-count/SHA-256 全部匹配时恢复；split／merge 生成新 block identity 并失效受影响译文／旧 OCR evidence，order mutation 保留可用 metadata 与 review progress。
 
 当前 v3.288 日语翻译流程：`OCR/layout blocks -> bounded Japanese batch (<=8 blocks, <=1,800 chars) -> confirmed/candidate/revoked terminology + read-only previous completed-batch summary -> strict tagged output -> per-block QA -> retry failed blocks only -> partial persistence/scoped cancel`。跨 batch summary 只作为下一批 prompt context，不能成为 pending input 或标签；QA 不重跑 OCR、检测、布局或整页翻译，已成功 block 保持不变。

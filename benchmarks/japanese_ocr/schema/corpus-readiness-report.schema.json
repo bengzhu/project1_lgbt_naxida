@@ -13,6 +13,7 @@
     "splitIsolationStatus",
     "annotationStatus",
     "predictionMatrixStatus",
+    "artifactIntakeStatus",
     "holdoutPolicyStatus",
     "productPathEnabled",
     "productSelectionChanged",
@@ -21,7 +22,7 @@
     "requiredEvidence"
   ],
   "properties": {
-    "schemaVersion": { "const": "1.0.0" },
+    "schemaVersion": { "const": "1.1.0" },
     "benchmark": { "const": "japanese-corpus-readiness" },
     "manifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "status": { "enum": ["blocked", "readyForHoldout"] },
@@ -29,6 +30,7 @@
     "splitIsolationStatus": { "enum": ["missing", "verified", "failed"] },
     "annotationStatus": { "enum": ["missing", "partial", "complete"] },
     "predictionMatrixStatus": { "enum": ["missing", "available", "failed"] },
+    "artifactIntakeStatus": { "enum": ["notRequired", "verified"] },
     "holdoutPolicyStatus": { "enum": ["missing", "verified", "failed"] },
     "productPathEnabled": { "const": false },
     "productSelectionChanged": { "const": false },

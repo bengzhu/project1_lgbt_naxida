@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Evaluate the v3.293 shared Japanese corpus and holdout readiness envelope.
+"""Evaluate the v3.294 shared Japanese corpus and holdout readiness envelope.
 
 The evaluator is intentionally model- and product-path agnostic.  It validates
 authorization, dataset identity, annotation coverage, split isolation, the
-same-crop prediction matrix, and a pre-holdout policy freeze.  It never loads
-an image/model, reads ground truth for a runtime decision, selects an engine,
-or enables OCR/translation behavior.
+same-crop prediction matrix, materialized artifact identity, and a pre-holdout
+policy freeze.  It never loads an image/model, reads ground truth for a runtime
+decision, selects an engine, or enables OCR/translation behavior.
 """
 
 from __future__ import annotations
@@ -20,7 +20,8 @@ import re
 from typing import Any
 
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
+PREDICTION_SCHEMA_VERSION = "1.0.0"
 BENCHMARK = "japanese-corpus-readiness"
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -128,6 +129,47 @@ def _nonnegative_int(value: Any, label: str) -> int:
     return value
 
 
+def _relative_path(value: Any, label: str, *, nullable: bool = False) -> str | None:
+    if nullable and value is None:
+        return None
+    _require(isinstance(value, str) and value.strip(), f"{label} must be a non-empty relative path")
+    _require("\x00" not in value and "\\" not in value, f"{label} contains an unsafe path character")
+    path = Path(value)
+    _require(not path.is_absolute() and value not in {".", ".."}, f"{label} must be relative")
+    _require(".." not in path.parts, f"{label} must not escape the artifact root")
+    _require(all(part not in {"", "."} for part in path.parts), f"{label} is not canonical")
+    return value
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError as error:
+        raise CorpusReadinessError(f"cannot read artifact {path}: {error}") from error
+    return digest.hexdigest()
+
+
+def _resolve_regular_file(relative_path: str, label: str, artifact_root: Path | None) -> Path:
+    _require(artifact_root is not None, f"{label} requires --artifact-root for intake verification")
+    root = artifact_root.resolve()
+    _require(root.is_dir(), f"artifact root is not a directory: {root}")
+    relative = Path(_relative_path(relative_path, label) or "")
+    candidate = (root / relative).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as error:
+        raise CorpusReadinessError(f"{label} resolves outside the artifact root") from error
+    cursor = root
+    for component in relative.parts:
+        cursor /= component
+        _require(not cursor.is_symlink(), f"{label} must not use symlinks")
+    _require(candidate.is_file() and not candidate.is_symlink(), f"{label} is not a regular file: {relative_path}")
+    return candidate
+
+
 def _validate_run(run: Any) -> None:
     _require(isinstance(run, dict), "run must be an object")
     _reject_unknown(run, {"appSha", "evaluatorVersion", "invocationMode"}, "run")
@@ -141,7 +183,7 @@ def _validate_dataset(dataset: Any) -> None:
     allowed = {
         "status", "datasetID", "datasetVersion", "sha256", "pageCount",
         "annotatedRegionCount", "license", "authorized", "permittedUses",
-        "sourceManifestPath",
+        "artifactPath", "artifactSha256", "sourceManifestPath", "sourceManifestSha256",
     }
     _reject_unknown(dataset, allowed, "dataset")
     for key in allowed:
@@ -150,6 +192,10 @@ def _validate_dataset(dataset: Any) -> None:
     _string(dataset["datasetID"], "dataset.datasetID")
     _string(dataset["datasetVersion"], "dataset.datasetVersion")
     _sha(dataset["sha256"], "dataset.sha256", nullable=True)
+    _relative_path(dataset["artifactPath"], "dataset.artifactPath", nullable=True)
+    _sha(dataset["artifactSha256"], "dataset.artifactSha256", nullable=True)
+    _relative_path(dataset["sourceManifestPath"], "dataset.sourceManifestPath", nullable=True)
+    _sha(dataset["sourceManifestSha256"], "dataset.sourceManifestSha256", nullable=True)
     _nonnegative_int(dataset["pageCount"], "dataset.pageCount")
     _nonnegative_int(dataset["annotatedRegionCount"], "dataset.annotatedRegionCount")
     _string(dataset["license"], "dataset.license")
@@ -157,24 +203,31 @@ def _validate_dataset(dataset: Any) -> None:
     _require(isinstance(dataset["permittedUses"], list), "dataset.permittedUses must be an array")
     for index, permitted_use in enumerate(dataset["permittedUses"]):
         _string(permitted_use, f"dataset.permittedUses[{index}]")
-    if dataset["sourceManifestPath"] is not None:
-        _string(dataset["sourceManifestPath"], "dataset.sourceManifestPath")
     if dataset["status"] == "available":
         _require(dataset["sha256"] is not None, "available dataset needs SHA-256")
+        _require(dataset["artifactPath"] is not None, "available dataset needs artifactPath")
+        _require(dataset["artifactSha256"] is not None, "available dataset needs artifact SHA-256")
         _require(dataset["authorized"], "available dataset must be authorized")
         _require(dataset["sourceManifestPath"] is not None, "available dataset needs source manifest")
+        _require(dataset["sourceManifestSha256"] is not None, "available dataset needs source manifest SHA-256")
     else:
         _require(not dataset["authorized"], "missing/failed dataset cannot be authorized")
+        for key in ("sha256", "artifactPath", "artifactSha256", "sourceManifestPath", "sourceManifestSha256"):
+            _require(dataset[key] is None, f"unavailable dataset must not carry {key}")
 
 
 def _validate_splits(splits: Any) -> dict[str, dict[str, Any]]:
     _require(isinstance(splits, list) and len(splits) == len(SPLITS), "splits must contain exactly train/dev/holdout")
     by_id: dict[str, dict[str, Any]] = {}
     all_assets: set[str] = set()
+    all_regions: set[str] = set()
     for index, split in enumerate(splits):
         label = f"splits[{index}]"
         _require(isinstance(split, dict), f"{label} must be an object")
-        allowed = {"splitID", "status", "pageCount", "regionCount", "assetIDs", "annotationStatus", "groundTruthStatus"}
+        allowed = {
+            "splitID", "status", "pageCount", "regionCount", "assetIDs", "regionIDs",
+            "annotationStatus", "groundTruthStatus",
+        }
         _reject_unknown(split, allowed, label)
         for key in allowed:
             _require(key in split, f"{label} missing {key}")
@@ -185,6 +238,7 @@ def _validate_splits(splits: Any) -> dict[str, dict[str, Any]]:
         _nonnegative_int(split["pageCount"], f"{label}.pageCount")
         _nonnegative_int(split["regionCount"], f"{label}.regionCount")
         _require(isinstance(split["assetIDs"], list), f"{label}.assetIDs must be an array")
+        _require(isinstance(split["regionIDs"], list), f"{label}.regionIDs must be an array")
         local_assets: set[str] = set()
         for asset_index, asset_id in enumerate(split["assetIDs"]):
             asset = _string(asset_id, f"{label}.assetIDs[{asset_index}]")
@@ -192,6 +246,13 @@ def _validate_splits(splits: Any) -> dict[str, dict[str, Any]]:
             _require(asset not in all_assets, f"asset ID crosses split boundary: {asset}")
             local_assets.add(asset)
             all_assets.add(asset)
+        local_regions: set[str] = set()
+        for region_index, region_id in enumerate(split["regionIDs"]):
+            region = _string(region_id, f"{label}.regionIDs[{region_index}]")
+            _require(region not in local_regions, f"duplicate region ID in {split_id}: {region}")
+            _require(region not in all_regions, f"region ID crosses split boundary: {region}")
+            local_regions.add(region)
+            all_regions.add(region)
         _require(split["annotationStatus"] in {"missing", "partial", "complete"}, f"{label}.annotationStatus is invalid")
         _require(split["groundTruthStatus"] in {"missing", "available", "failed"}, f"{label}.groundTruthStatus is invalid")
         if split["status"] == "available":
@@ -199,6 +260,10 @@ def _validate_splits(splits: Any) -> dict[str, dict[str, Any]]:
             _require(
                 split["pageCount"] == len(local_assets),
                 f"{label} pageCount does not match its page asset IDs",
+            )
+            _require(
+                split["regionCount"] == len(local_regions),
+                f"{label} regionCount does not match its region IDs",
             )
             _require(split["annotationStatus"] == "complete", f"{label} available split needs complete annotations")
             _require(split["groundTruthStatus"] == "available", f"{label} available split needs ground truth")
@@ -239,7 +304,7 @@ def _validate_matrix_row(row: Any, label: str) -> tuple[str, str, str]:
     _require(artifact_id == expected_artifact_id, f"{label}.artifactID is not canonical for its engine/crop")
     _require(row["status"] in {"missing", "available", "failed"}, f"{label}.status is invalid")
     if row["path"] is not None:
-        _string(row["path"], f"{label}.path")
+        _relative_path(row["path"], f"{label}.path")
     _sha(row["sha256"], f"{label}.sha256", nullable=True)
     _sha(row["datasetSha256"], f"{label}.datasetSha256", nullable=True)
     _string(row["sourceRevision"], f"{label}.sourceRevision")
@@ -258,6 +323,9 @@ def _validate_matrix_row(row: Any, label: str) -> tuple[str, str, str]:
         _require(row["predictionCount"] > 0, f"{label} available row is empty")
     else:
         _require(not row["authorized"], f"{label} unavailable row cannot be authorized")
+        for key in ("path", "sha256", "datasetSha256"):
+            _require(row[key] is None, f"{label} unavailable row must not carry {key}")
+        _require(row["predictionCount"] == 0, f"{label} unavailable row must have predictionCount 0")
     return engine_id, row["cropLevel"], row["splitID"]
 
 
@@ -285,6 +353,126 @@ def _validate_prediction_matrix(matrix: Any) -> tuple[set[tuple[str, str, str]],
         "predictionMatrix.requiredRows must contain the canonical four-engine dev matrix",
     )
     return required_keys, actual_keys
+
+
+def _validate_prediction_artifact(
+    row: dict[str, Any],
+    artifact_path: Path,
+    dataset_sha256: str,
+    dev_split: dict[str, Any],
+) -> None:
+    payload = load_json(artifact_path)
+    _require(isinstance(payload, dict), f"{row['artifactID']} artifact must be an object")
+    _reject_unknown(payload, {"schemaVersion", "benchmark", "datasetSha256", "run", "predictions"}, f"{row['artifactID']} artifact")
+    for key in ("schemaVersion", "benchmark", "datasetSha256", "run", "predictions"):
+        _require(key in payload, f"{row['artifactID']} artifact missing {key}")
+    _require(payload["schemaVersion"] == PREDICTION_SCHEMA_VERSION, f"{row['artifactID']} artifact schemaVersion is invalid")
+    _require(payload["benchmark"] == "japanese-ocr", f"{row['artifactID']} artifact benchmark is invalid")
+    _require(payload["datasetSha256"] == dataset_sha256, f"{row['artifactID']} artifact dataset SHA does not match the manifest")
+
+    run = payload["run"]
+    _require(isinstance(run, dict), f"{row['artifactID']} artifact run must be an object")
+    _reject_unknown(
+        run,
+        {"appSha", "engineID", "engineVersion", "model", "license", "device", "parameters"},
+        f"{row['artifactID']} artifact run",
+    )
+    for key in ("appSha", "engineID", "engineVersion", "model", "license", "device", "parameters"):
+        _require(key in run, f"{row['artifactID']} artifact run missing {key}")
+    _require(bool(HEX40.fullmatch(run["appSha"])), f"{row['artifactID']} artifact run.appSha is invalid")
+    _require(run["engineID"] == row["engineID"], f"{row['artifactID']} artifact engineID does not match the matrix row")
+    _string(run["engineVersion"], f"{row['artifactID']} artifact run.engineVersion")
+    _string(run["license"], f"{row['artifactID']} artifact run.license")
+    _string(run["device"], f"{row['artifactID']} artifact run.device")
+    _require(isinstance(run["model"], dict), f"{row['artifactID']} artifact run.model must be an object")
+    _require(isinstance(run["parameters"], dict), f"{row['artifactID']} artifact run.parameters must be an object")
+
+    predictions = payload["predictions"]
+    _require(isinstance(predictions, list), f"{row['artifactID']} artifact predictions must be an array")
+    _require(
+        len(predictions) == row["predictionCount"],
+        f"{row['artifactID']} predictionCount does not match the artifact payload",
+    )
+    expected_pages = set(dev_split["assetIDs"])
+    expected_regions = set(dev_split["regionIDs"])
+    seen_pages: set[str] = set()
+    seen_regions: set[str] = set()
+    seen_prediction_ids: set[str] = set()
+    prediction_keys = {
+        "predictionID", "pageID", "split", "evaluationLevel", "regionID", "lineID", "status", "text",
+        "rawText", "confidence", "bbox", "polygon", "writingDirection", "readingOrder", "engine",
+        "cropVariant", "referenceOnly", "failureReason",
+    }
+    for index, prediction in enumerate(predictions):
+        label = f"{row['artifactID']} artifact predictions[{index}]"
+        _require(isinstance(prediction, dict), f"{label} must be an object")
+        _reject_unknown(prediction, prediction_keys, label)
+        for key in prediction_keys:
+            _require(key in prediction, f"{label} missing {key}")
+        prediction_id = _string(prediction["predictionID"], f"{label}.predictionID")
+        _require(prediction_id not in seen_prediction_ids, f"duplicate predictionID in {row['artifactID']}: {prediction_id}")
+        seen_prediction_ids.add(prediction_id)
+        page_id = _string(prediction["pageID"], f"{label}.pageID")
+        _require(page_id in expected_pages, f"{label}.pageID is outside the dev split")
+        _require(prediction["split"] == row["splitID"], f"{label}.split does not match the matrix row")
+        _require(prediction["evaluationLevel"] == row["cropLevel"], f"{label}.evaluationLevel does not match the matrix row")
+        _require(prediction["engine"] == row["engineID"], f"{label}.engine does not match the matrix row")
+        _require(prediction["referenceOnly"] == row["referenceOnly"], f"{label}.referenceOnly does not match the matrix row")
+        _require(prediction["status"] in {"success", "empty", "failure"}, f"{label}.status is invalid")
+        _require(isinstance(prediction["text"], str), f"{label}.text must be a string")
+        seen_pages.add(page_id)
+        region_id = prediction["regionID"]
+        if row["cropLevel"] == "oracleCrop":
+            _require(isinstance(region_id, str) and region_id, f"{label}.regionID is required for oracleCrop")
+            _require(region_id in expected_regions, f"{label}.regionID is outside the dev annotations")
+            seen_regions.add(region_id)
+        else:
+            _require(region_id is None, f"{label}.regionID must be null for detected/full predictions")
+    _require(seen_pages == expected_pages, f"{row['artifactID']} artifact does not cover every dev page")
+    if row["cropLevel"] == "oracleCrop":
+        _require(seen_regions == expected_regions, f"{row['artifactID']} artifact does not cover every dev region")
+
+
+def _validate_artifact_intake(
+    manifest: dict[str, Any],
+    splits: dict[str, dict[str, Any]],
+    artifact_root: Path | None,
+) -> str:
+    dataset = manifest["dataset"]
+    available_rows = [
+        row for row in manifest["predictionMatrix"]["rows"]
+        if row["status"] == "available"
+    ]
+    requires_intake = dataset["status"] == "available" or bool(available_rows)
+    if not requires_intake:
+        return "notRequired"
+
+    _require(artifact_root is not None, "available evidence requires --artifact-root for intake verification")
+    if dataset["status"] == "available":
+        dataset_artifact = _resolve_regular_file(dataset["artifactPath"], "dataset.artifactPath", artifact_root)
+        _require(
+            _sha256_file(dataset_artifact) == dataset["artifactSha256"],
+            "dataset artifact SHA-256 does not match dataset.artifactSha256",
+        )
+        source_manifest = _resolve_regular_file(dataset["sourceManifestPath"], "dataset.sourceManifestPath", artifact_root)
+        _require(
+            _sha256_file(source_manifest) == dataset["sourceManifestSha256"],
+            "dataset source manifest SHA-256 does not match dataset.sourceManifestSha256",
+        )
+
+    dev_split = splits["dev"]
+    seen_prediction_paths: set[Path] = set()
+    for row in available_rows:
+        _require(row["datasetSha256"] == dataset["sha256"], f"{row['artifactID']} is tied to a different dataset SHA")
+        prediction_artifact = _resolve_regular_file(row["path"], f"predictionMatrix.{row['artifactID']}.path", artifact_root)
+        _require(prediction_artifact not in seen_prediction_paths, f"prediction artifact path is reused: {row['path']}")
+        seen_prediction_paths.add(prediction_artifact)
+        _require(
+            _sha256_file(prediction_artifact) == row["sha256"],
+            f"{row['artifactID']} artifact SHA-256 does not match the matrix row",
+        )
+        _validate_prediction_artifact(row, prediction_artifact, dataset["sha256"], dev_split)
+    return "verified"
 
 
 def _validate_holdout_policy(policy: Any) -> None:
@@ -326,7 +514,7 @@ def _validate_promotion(promotion: Any) -> None:
             _string(value, f"promotion.{key}[{index}]")
 
 
-def validate_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+def validate_manifest(manifest: dict[str, Any], artifact_root: Path | None = None) -> dict[str, Any]:
     _require(isinstance(manifest, dict), "corpus readiness manifest must be an object")
     allowed = {
         "schemaVersion", "benchmark", "contractExampleOnly", "manifestSha256", "run", "dataset", "splits",
@@ -347,11 +535,17 @@ def validate_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
     required_rows, actual_rows = _validate_prediction_matrix(manifest["predictionMatrix"])
     _validate_holdout_policy(manifest["holdoutPolicy"])
     _validate_promotion(manifest["promotion"])
-    return {"splits": splits, "requiredRows": required_rows, "actualRows": actual_rows}
+    artifact_intake_status = _validate_artifact_intake(manifest, splits, artifact_root)
+    return {
+        "splits": splits,
+        "requiredRows": required_rows,
+        "actualRows": actual_rows,
+        "artifactIntakeStatus": artifact_intake_status,
+    }
 
 
-def evaluate_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
-    validated = validate_manifest(manifest)
+def evaluate_manifest(manifest: dict[str, Any], artifact_root: Path | None = None) -> dict[str, Any]:
+    validated = validate_manifest(manifest, artifact_root)
     reasons: list[str] = []
     dataset = manifest["dataset"]
     profile = manifest["annotationProfile"]
@@ -420,6 +614,7 @@ def evaluate_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
         "splitIsolationStatus": policy["splitIsolation"],
         "annotationStatus": "complete" if dataset["annotatedRegionCount"] >= profile["minimumAnnotatedRegions"] else "partial",
         "predictionMatrixStatus": matrix["status"],
+        "artifactIntakeStatus": validated["artifactIntakeStatus"],
         "holdoutPolicyStatus": policy["status"],
         "productPathEnabled": False,
         "productSelectionChanged": False,
@@ -433,9 +628,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--artifact-root", type=Path, default=None)
     args = parser.parse_args()
     try:
-        report = evaluate_manifest(load_json(args.manifest))
+        report = evaluate_manifest(load_json(args.manifest), args.artifact_root)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     except CorpusReadinessError as error:
