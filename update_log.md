@@ -6,6 +6,8 @@
 
 本轮本地安全回归：v3.292 合同 `8/8`；`318` 个 tracked `scripts/test-v*.py` 全部 AST 解析成功，290 个无 `subprocess` 入口合同通过，27 个实际调用 `subprocess` 的历史合同跳过；3 个 workflow YAML、31 个 shell、4 个 plist、工程版本两处 `3.292` 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；contract-only evaluator 为 `blocked`，真实授权 corpus、预测 artifact、目标设备 evidence、一次性 holdout 和盲评仍是硬门，不声称 CER、翻译质量或 Koharu parity 提升。
 
+前一次短 SHA dispatch [32296949158](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32296949158) 因 workflow 要求完整 40 位 commit 而失败，不作为证据。随后 exact-SHA full [32297366464](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32297366464) 对完整 SHA `05995e907d21b6301e4ffd5279b8d7748cecd97d` 成功：Koharu parity `96211707766`、Japanese benchmark/readiness `96211707973`、主 full `96213641670` 均通过，Xcode 26.6、UI interaction、Speech/Home/Paste、JUnit `10/10` 与 `AITRANS CI/full-validation=success` receipt 成立。`ui_evidence_mode=skip`、`probe_mode=skip`；云端 corpus readiness report 为 `blocked`，manifest SHA `8a761ecdb2ac96f4a3781800638807d62ba2f96a4c71bc6d26fdd09384127cbd`，`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false`。本次只证明 cloud contract、固定 reference parity 和编译/静态边界；真实授权 corpus、预测 artifact、目标设备 evidence、OCR/CER、翻译质量与 v3.289 holdout 仍缺失。
+
 ## v3.291：BubbleMask / SegmentMask artifact readiness 前置闸门（2026-08-20）
 
 本轮按 P2 成品链路线建立独立的 readiness envelope，不接入产品 mask 主路。新增严格 manifest/report schema、contract-only 缺证据 fixture、纯 Python fail-closed evaluator、cloud-only wrapper 和 v3.291 contract；BubbleMask、SegmentMask、授权 render-quality 语料与目标设备 latency/memory/energy 均显式记录为 `missing`，报告必须为 `blocked`。manifest 的 canonical JSON 自哈希为 `b3616fd2fe6715a5537f0765661ffae7a357f488ae3d3986fdfd994a0db81efa`。

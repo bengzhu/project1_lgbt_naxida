@@ -3,6 +3,7 @@
 - 新增严格 corpus manifest/report schema、contract-only 缺证据 manifest、纯 Python fail-closed evaluator、cloud-only wrapper 和 `scripts/test-v3292-japanese-corpus-readiness-contract.py`；真实授权 dataset、20 页/150 TextRegion、三分割、四引擎同 crop 预测矩阵和 holdout freeze 均显式为 missing。
 - readiness 只允许 `blocked` 或 `readyForHoldout`，固定 `productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false`；不选择 OCR/翻译模型，不接入产品路径，不把 contract fixture 当作质量证据。
 - 本地结果：v3.292 合同 `8/8`；`318` 个 tracked `scripts/test-v*.py` 全部 AST 解析成功，290 个无 `subprocess` 入口合同通过、27 个实际调用 `subprocess` 的历史合同跳过；3 个 workflow YAML、31 个 shell、4 个 plist、工程版本两处 `3.292` 与 `git diff --check` 通过。contract-only evaluator 为 `blocked`；即使未来输出 `readyForHoldout`，也不等于真实 holdout、OCR/CER、翻译盲评或目标设备性能证据。
+- 短 SHA dispatch [32296949158](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32296949158) 因 workflow 要求完整 40 位 commit 而失败，不计入证据；随后 exact-SHA full [32297366464](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32297366464) 对 `05995e907d21b6301e4ffd5279b8d7748cecd97d` 成功：Koharu parity `96211707766`、benchmark `96211707973`、主 full `96213641670`、Xcode 26.6、UI interaction、Speech/Home/Paste、JUnit `10/10` 与 receipt 全部通过。`ui_evidence_mode=skip`、`probe_mode=skip`；corpus readiness report 为 `blocked`，manifest SHA `8a761ecdb2ac96f4a3781800638807d62ba2f96a4c71bc6d26fdd09384127cbd`，三个 product/ground-truth flags 均为 `false`。这只证明 cloud contract/reference parity/编译边界，不证明真实 corpus、OCR/CER、翻译质量、设备性能或 holdout。
 
 ### v3.291 BubbleMask / SegmentMask artifact readiness 合同
 
