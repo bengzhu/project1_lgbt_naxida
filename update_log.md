@@ -1,3 +1,15 @@
+## v3.291：BubbleMask / SegmentMask artifact readiness 前置闸门（2026-08-20）
+
+本轮按 P2 成品链路线建立独立的 readiness envelope，不接入产品 mask 主路。新增严格 manifest/report schema、contract-only 缺证据 fixture、纯 Python fail-closed evaluator、cloud-only wrapper 和 v3.291 contract；BubbleMask、SegmentMask、授权 render-quality 语料与目标设备 latency/memory/energy 均显式记录为 `missing`，报告必须为 `blocked`。manifest 的 canonical JSON 自哈希为 `b3616fd2fe6715a5537f0765661ffae7a357f488ae3d3986fdfd994a0db81efa`。
+
+`referenceOnly=true`、`defaultEnabled=false`、`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false` 固定不变；evaluator 不读取 `MangaOverlayProbeService`，不修改 `ImageTranslationBlock`、renderer、inpainting 或模型选择。CI 的 Japanese benchmark job 执行该合同、生成并上传 `japanese-render-mask-artifact-report.json`。本轮只收口证据闸门，不声称 mask、清字、inpainting、OCR/CER、翻译质量或目标设备性能改善；真实 artifact、授权语料、设备证据和后续独立成品 benchmark 仍待外部提供。
+
+本地安全回归：v3.291 合同 `10/10`；`317` 个 Python 合同 AST 全部解析，其中 `290` 个无进程入口合同通过、`27` 个含实际 `subprocess` 入口的合同跳过；`3` 个 workflow YAML、`31` 个 shell、`4` 个 plist、工程版本两处 `3.291` 和 `git diff --check` 通过。纯 evaluator 报告 `blocked`，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；exact-SHA cloud full、Xcode/JUnit/receipt 和真实外部证据仍待后续。
+
+exact-SHA full [32289021728](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32289021728) 对 SHA `d801f69c306716d7d5e60823d790b8a0e28b4def` 成功：Koharu parity `96185284954`、Japanese benchmark/readiness `96185285045`、主 full `96187425952` 全部成功，Xcode/UI interaction/Speech/Home/Paste、JUnit `10/10` 与 `AITRANS CI/full-validation=success` receipt 通过；UI evidence 与 simulator/manga probe 按配置 skip。云端 `japanese-render-mask-artifact-report.json` 为 `blocked`，BubbleMask/SegmentMask、授权语料和 target-device evidence 缺失，`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false`。该证据仅收口 readiness/report-only 边界，v3.291 尚未合入 `smalldata_test`，不声称 native mask/inpainting/shaped-renderer 或任何 OCR/翻译质量提升。
+
+文档 receipt SHA `4ced9fe203410aa7ea7906f58640dce9f1172859` 的 exact-SHA full [32292249313](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32292249313) 成功：Koharu parity `96195515343`、Japanese benchmark/readiness `96195515791`、主 full `96197364348` 全部成功，JUnit `10/10` 与 `AITRANS CI/full-validation=success` receipt 通过；仅文档变更使 Xcode、UI interaction/UI evidence、simulator/manga probe 按 scope skip。新 readiness report 仍为 `blocked`，BubbleMask/SegmentMask、授权语料和 target-device evidence 缺失，`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false`；v3.291 未合入 `smalldata_test`。
+
 ## v3.290：矩形 overlay 渲染安全预检（2026-08-19）
 
 本版只增加导出前的 report-only 几何预检：已完成图片会话的 `adjacent`/`replace` 矩形 overlay 检查无效 bbox、空文字、旁贴裁切、旁贴覆盖原块、源块重叠和跨块碰撞，并在结果面板以 VoiceOver 可读的 warning 暴露风险。`ImageTranslationRenderSafety.Report` 明确记录 `reportOnly=true`、`groundTruthUsedForDecision=false`，不改变 OCR、翻译、候选选择、持久化、复查状态或现有 renderer/export。

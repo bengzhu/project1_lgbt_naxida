@@ -199,7 +199,7 @@ class JapaneseOCRLineSignalContractTests(unittest.TestCase):
             "scripts/run-japanese-ocr-line-signal-cloud-smoke.sh",
             "japanese-ocr-line-signal-report.json",
             "Aggregate v3.283 native line/TextRegion shadow contract",
-            "japanese-benchmark-v3.290-",
+            "japanese-benchmark-v3.291-",
         ):
             self.assertIn(marker, self.workflow)
         evaluator_source = read("scripts/evaluate-japanese-ocr-line-signal.py")
@@ -210,7 +210,7 @@ class JapaneseOCRLineSignalContractTests(unittest.TestCase):
         self.assertIn("v3.283", self.route)
         self.assertIn("TextRegion/line", self.route)
         self.assertIn("shadow", self.route)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.290", "3.290"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.291", "3.291"])
 
 
 if __name__ == "__main__":
