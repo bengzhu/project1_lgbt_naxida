@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.local/benchmarks/japanese_translation/model-comparison-report.schema.json",
+  "title": "AITRANS clean-text translation model comparison report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "status", "datasetSha256", "contractExampleOnly", "corpus", "models", "quality", "runtime", "artifactGate", "promotion", "qualityClaim"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-translation-model-comparison" },
+    "status": { "enum": ["success", "blocked", "insufficientCorpus"] },
+    "datasetSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "contractExampleOnly": { "type": "boolean" },
+    "corpus": { "type": "object" },
+    "models": { "type": "array", "items": { "type": "object" } },
+    "quality": { "type": "object" },
+    "runtime": { "$ref": "#/$defs/runtime" },
+    "artifactGate": { "$ref": "#/$defs/artifactGate" },
+    "promotion": { "$ref": "#/$defs/promotion" },
+    "qualityClaim": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "percentiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sampleCount", "p50", "p95"],
+      "properties": {
+        "sampleCount": { "type": "integer", "minimum": 0 },
+        "p50": { "type": ["number", "null"], "minimum": 0 },
+        "p95": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "runtimeRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelID", "byWarmState", "contextOverflowCount", "contextOverflowRate", "peakMemoryBytesMax", "targetDeviceSampleCount", "completeSampleCount"],
+      "properties": {
+        "modelID": { "type": "string", "minLength": 1 },
+        "byWarmState": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cold", "warm"],
+          "properties": {
+            "cold": { "$ref": "#/$defs/warmRow" },
+            "warm": { "$ref": "#/$defs/warmRow" }
+          }
+        },
+        "contextOverflowCount": { "type": "integer", "minimum": 0 },
+        "contextOverflowRate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "peakMemoryBytesMax": { "type": ["integer", "null"], "minimum": 1 },
+        "targetDeviceSampleCount": { "type": "integer", "minimum": 0 },
+        "completeSampleCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "warmRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["latencyMilliseconds", "firstTokenMilliseconds", "sampleCount", "completeSampleCount"],
+      "properties": {
+        "latencyMilliseconds": { "$ref": "#/$defs/percentiles" },
+        "firstTokenMilliseconds": { "$ref": "#/$defs/percentiles" },
+        "sampleCount": { "type": "integer", "minimum": 0 },
+        "completeSampleCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["percentileMethod", "rows"],
+      "properties": {
+        "percentileMethod": { "type": "string", "minLength": 1 },
+        "rows": { "type": "array", "items": { "$ref": "#/$defs/runtimeRow" } }
+      }
+    },
+    "artifactGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allArtifactsAvailable", "allLicensesReviewed", "hasAuthorizedCorpus", "hasCompleteTargetDeviceRun", "resourceMatrixComplete", "reasons"],
+      "properties": {
+        "allArtifactsAvailable": { "type": "boolean" },
+        "allLicensesReviewed": { "type": "boolean" },
+        "hasAuthorizedCorpus": { "type": "boolean" },
+        "hasCompleteTargetDeviceRun": { "type": "boolean" },
+        "resourceMatrixComplete": { "type": "boolean" },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason", "groundTruthUsedForSelection", "productSelectionChanged", "defaultModelID", "defaultEnabledCandidateCount", "requires"],
+      "properties": {
+        "status": { "const": "notEligible" },
+        "reason": { "type": "string", "minLength": 1 },
+        "groundTruthUsedForSelection": { "const": false },
+        "productSelectionChanged": { "const": false },
+        "defaultModelID": { "type": "string", "minLength": 1 },
+        "defaultEnabledCandidateCount": { "const": 0 },
+        "requires": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

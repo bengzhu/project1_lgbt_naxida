@@ -47,7 +47,7 @@ class JapaneseDetectorBoundaryContractTests(unittest.TestCase):
         )
         final_mapping = braced_body(
             self.vision,
-            "func recognizeTextBlocks(",
+            "func recognizeTextBlocksWithShadowLedger(",
         )
         self.assertIn("preservesDetectorTextRegionBoundary:", manga)
         self.assertIn("Self.isReliableJapaneseMangaOCRResult(result)", manga)
@@ -104,6 +104,7 @@ class JapaneseDetectorBoundaryContractTests(unittest.TestCase):
                     "swiftc",
                     "-module-cache-path",
                     str(Path(temporary) / "module-cache"),
+                    "AITRANS/Models/ImageOCRProvenance.swift",
                     "AITRANS/Services/ImageOCRLayoutEngine.swift",
                     "scripts/fixtures/v3219-detector-boundary-layout-evaluator.swift",
                     "-o",

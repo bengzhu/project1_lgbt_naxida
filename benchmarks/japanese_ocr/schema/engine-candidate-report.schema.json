@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.invalid/schema/japanese-ocr-engine-candidate-report-v1.json",
+  "title": "AITRANS Japanese OCR distributable engine shadow report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "status", "datasetSha256", "run", "corpus", "contractExampleOnly", "artifactGate", "sameCrop", "resources", "licenseMatrix", "promotion", "qualityClaim"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "benchmark": {"const": "japanese-ocr-engine-candidate"},
+    "status": {"enum": ["success", "blocked", "insufficientCorpus"]},
+    "datasetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "run": {"$ref": "#/$defs/run"},
+    "corpus": {"$ref": "#/$defs/corpus"},
+    "contractExampleOnly": {"type": "boolean"},
+    "artifactGate": {"$ref": "#/$defs/artifactGate"},
+    "sameCrop": {"$ref": "#/$defs/sameCrop"},
+    "resources": {"$ref": "#/$defs/resources"},
+    "licenseMatrix": {"type": "array", "items": {"$ref": "#/$defs/licenseRow"}},
+    "promotion": {"$ref": "#/$defs/promotion"},
+    "qualityClaim": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appSha", "evaluatorVersion", "invocationMode"],
+      "properties": {
+        "appSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "evaluatorVersion": {"type": "string", "minLength": 1},
+        "invocationMode": {"const": "cloud-only-shadow"}
+      }
+    },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "source", "sourceLicense", "datasetVerified", "pageCount", "humanRegionCount", "holdoutPageCount"],
+      "properties": {
+        "status": {"enum": ["contractExampleOnly", "authorized"]},
+        "source": {"type": "string", "minLength": 1},
+        "sourceLicense": {"type": "string", "minLength": 1},
+        "datasetVerified": {"type": "boolean"},
+        "pageCount": {"type": "integer", "minimum": 0},
+        "humanRegionCount": {"type": "integer", "minimum": 0},
+        "holdoutPageCount": {"type": "integer", "minimum": 0}
+      }
+    },
+    "artifactGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allArtifactsAvailable", "allAvailableEnginesHaveCompleteMeasurements", "hasCompleteTargetDeviceRun", "resourceMatrixComplete", "reasons"],
+      "properties": {
+        "allArtifactsAvailable": {"type": "boolean"},
+        "allAvailableEnginesHaveCompleteMeasurements": {"type": "boolean"},
+        "hasCompleteTargetDeviceRun": {"type": "boolean"},
+        "resourceMatrixComplete": {"type": "boolean"},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "sameCrop": {
+      "type": "object",
+      "required": ["schemaVersion", "benchmark", "status", "datasetSha256", "alignment", "tables", "qualityClaim"],
+      "properties": {
+        "schemaVersion": {"const": "1.0.0"},
+        "benchmark": {"const": "japanese-ocr-multi-engine"},
+        "status": {"enum": ["success", "blocked"]},
+        "datasetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "alignment": {"type": "object"},
+        "tables": {"type": "object"},
+        "qualityClaim": {"type": "string", "minLength": 1}
+      }
+    },
+    "percentiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sampleCount", "p50", "p95"],
+      "properties": {
+        "sampleCount": {"type": "integer", "minimum": 0},
+        "p50": {"type": ["number", "null"], "minimum": 0},
+        "p95": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "resourceRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measurementID", "engineID", "deviceID", "deviceClass", "platform", "hardware", "os", "runtime", "status", "targetDevice", "coldLatencyMs", "warmLatencyMs", "peakMemoryBytes", "energyMilliwattHours", "sampleCount", "measurementSource", "failureReason", "license", "artifactStatus", "referenceOnly", "defaultEnabled"],
+      "properties": {
+        "measurementID": {"type": "string", "minLength": 1},
+        "engineID": {"type": "string", "minLength": 1},
+        "deviceID": {"type": "string", "minLength": 1},
+        "deviceClass": {"type": "string", "minLength": 1},
+        "platform": {"type": "string", "minLength": 1},
+        "hardware": {"type": "string", "minLength": 1},
+        "os": {"type": "string", "minLength": 1},
+        "runtime": {"type": "string", "minLength": 1},
+        "status": {"enum": ["complete", "partial", "failed", "missing"]},
+        "targetDevice": {"type": "boolean"},
+        "coldLatencyMs": {"$ref": "#/$defs/percentiles"},
+        "warmLatencyMs": {"$ref": "#/$defs/percentiles"},
+        "peakMemoryBytes": {"type": ["integer", "null"], "minimum": 1},
+        "energyMilliwattHours": {"type": ["number", "null"], "minimum": 0},
+        "sampleCount": {"type": "integer", "minimum": 0},
+        "measurementSource": {"type": "string", "minLength": 1},
+        "failureReason": {"type": ["string", "null"]},
+        "license": {"type": "string", "minLength": 1},
+        "artifactStatus": {"enum": ["available", "missing", "failed"]},
+        "referenceOnly": {"type": "boolean"},
+        "defaultEnabled": {"type": "boolean"}
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["percentileMethod", "rows"],
+      "properties": {
+        "percentileMethod": {"type": "string", "minLength": 1},
+        "rows": {"type": "array", "items": {"$ref": "#/$defs/resourceRow"}}
+      }
+    },
+    "licenseRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engineID", "candidateRole", "engineVersion", "sourceRevision", "runtimeRevision", "model", "artifact", "license", "referenceOnly", "distribution", "artifactStatus", "failureReason", "defaultEnabled"],
+      "properties": {
+        "engineID": {"type": "string", "minLength": 1},
+        "candidateRole": {"enum": ["baseline", "candidate"]},
+        "engineVersion": {"type": "string", "minLength": 1},
+        "sourceRevision": {"type": "string", "minLength": 1},
+        "runtimeRevision": {"type": "string", "minLength": 1},
+        "model": {"type": "object"},
+        "artifact": {"type": "object"},
+        "license": {"type": "string", "minLength": 1},
+        "referenceOnly": {"type": "boolean"},
+        "distribution": {"enum": ["bundled", "userProvided", "cloudOnlyReference", "notDistributable"]},
+        "artifactStatus": {"enum": ["available", "missing", "failed"]},
+        "failureReason": {"type": ["string", "null"]},
+        "defaultEnabled": {"type": "boolean"}
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason", "groundTruthUsedForSelection", "productSelectionChanged", "defaultEnabledCandidateCount", "requires"],
+      "properties": {
+        "status": {"const": "notEligible"},
+        "reason": {"type": "string", "minLength": 1},
+        "groundTruthUsedForSelection": {"const": false},
+        "productSelectionChanged": {"const": false},
+        "defaultEnabledCandidateCount": {"const": 0},
+        "requires": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}

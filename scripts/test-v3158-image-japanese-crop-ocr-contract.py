@@ -34,7 +34,7 @@ class JapaneseCropOCRContractTests(unittest.TestCase):
         self.workflow = read(".github/workflows/ci-results.yml")
         self.recognize = braced_body(
             self.vision,
-            "func recognizeTextBlocks(in imageData: Data, sourceLanguage: SupportedLanguage)",
+            "func recognizeTextBlocksWithShadowLedger(",
         )
         self.crop = braced_body(self.vision, "private static func recognizeJapaneseVerticalCrops(")
 

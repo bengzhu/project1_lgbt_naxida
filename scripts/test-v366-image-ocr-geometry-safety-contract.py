@@ -88,6 +88,7 @@ class ImageOCRGeometrySafetyContractTests(unittest.TestCase):
                     "swiftc",
                     "-module-cache-path",
                     str(Path(temporary_directory) / "module-cache"),
+                    "AITRANS/Models/ImageOCRProvenance.swift",
                     "AITRANS/Services/ImageOCRLayoutEngine.swift",
                     "scripts/test-v366-image-ocr-geometry-safety-evaluator.swift",
                     "-o",

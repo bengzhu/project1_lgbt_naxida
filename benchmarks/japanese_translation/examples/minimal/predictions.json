@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-translation",
+  "datasetSha256": "afe0e0f750034e5de16a14db003a7813e6bf0f6a536c935f46465358ff3c45c3",
+  "run": {
+    "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+    "engineID": "contract-example-translator",
+    "engineVersion": "1",
+    "model": "contract-example-model",
+    "provider": "offline",
+    "promptTemplate": "contract-tagged-v1",
+    "decoding": { "temperature": 0.0 },
+    "license": "Apache-2.0",
+    "device": "offline-contract-example"
+  },
+  "predictions": [
+    {
+      "predictionID": "contract-p-clean-001",
+      "fixtureID": "contract-clean-001",
+      "split": "dev",
+      "engineID": "contract-example-translator",
+      "model": "contract-example-model",
+      "provider": "offline",
+      "promptTemplate": "contract-tagged-v1",
+      "decoding": { "temperature": 0.0 },
+      "rawResponse": "[b1] 这次一定要\n[b2] 带回去！"
+    },
+    {
+      "predictionID": "contract-p-corrupted-001",
+      "fixtureID": "contract-corrupted-001",
+      "split": "dev",
+      "engineID": "contract-example-translator",
+      "model": "contract-example-model",
+      "provider": "offline",
+      "promptTemplate": "contract-tagged-v1",
+      "decoding": { "temperature": 0.0 },
+      "rawResponse": "[b1] 这次一定要\n[b2] 带回去！"
+    }
+  ]
+}

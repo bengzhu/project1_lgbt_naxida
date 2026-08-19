@@ -7,6 +7,10 @@ enum LlamaRuntimeError: LocalizedError, Sendable {
     case promptTooLong
     case decodeFailed
     case tokenizationFailed
+    case missingChatTemplate
+    case unsupportedChatTemplate
+    case chatTemplateBufferSizingFailed
+    case invalidRenderedPrompt
 
     var errorDescription: String? {
         switch self {
@@ -20,6 +24,14 @@ enum LlamaRuntimeError: LocalizedError, Sendable {
             "llama.cpp 解码失败。"
         case .tokenizationFailed:
             "提示词分词失败。"
+        case .missingChatTemplate:
+            "GGUF 没有内嵌 chat template，且当前模型 profile 没有获批准的 fallback。"
+        case .unsupportedChatTemplate:
+            "GGUF 的 chat template 不是当前 llama.cpp 支持的模板。"
+        case .chatTemplateBufferSizingFailed:
+            "chat template 输出缓冲区无法安全扩容。"
+        case .invalidRenderedPrompt:
+            "chat template 生成了无效的 UTF-8 prompt。"
         }
     }
 }
@@ -72,10 +84,42 @@ final class LlamaRuntime: @unchecked Sendable {
         return try generateLocked(prompt: prompt, maxTokens: maxTokens, trimsOutput: true, decodingProfile: decodingProfile)
     }
 
+    func generate(
+        messages: [LocalModelChatMessage],
+        fallbackProfile: LocalModelPromptProfile,
+        maxTokens: Int,
+        decodingProfile: ModelDecodingProfile = .sampled
+    ) throws -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let rendered = try renderChatMessagesLocked(
+            messages,
+            fallbackProfile: fallbackProfile
+        )
+        return try generateLocked(
+            prompt: rendered.prompt,
+            maxTokens: maxTokens,
+            trimsOutput: true,
+            decodingProfile: decodingProfile
+        )
+    }
+
     func generateRaw(prompt: String, maxTokens: Int, decodingProfile: ModelDecodingProfile = .deterministic) throws -> String {
         lock.lock()
         defer { lock.unlock() }
         return try generateLocked(prompt: prompt, maxTokens: maxTokens, trimsOutput: false, decodingProfile: decodingProfile)
+    }
+
+    func renderPrompt(
+        messages: [LocalModelChatMessage],
+        fallbackProfile: LocalModelPromptProfile
+    ) throws -> LocalModelRenderedPrompt {
+        lock.lock()
+        defer { lock.unlock() }
+        return try renderChatMessagesLocked(
+            messages,
+            fallbackProfile: fallbackProfile
+        )
     }
 
     private func loadModelIfNeededLocked(at path: String) throws {
@@ -175,6 +219,136 @@ final class LlamaRuntime: @unchecked Sendable {
 
         batch = currentBatch
         return trimsOutput ? generatedText.trimmingCharacters(in: .whitespacesAndNewlines) : generatedText
+    }
+
+    private func renderChatMessagesLocked(
+        _ messages: [LocalModelChatMessage],
+        fallbackProfile: LocalModelPromptProfile
+    ) throws -> LocalModelRenderedPrompt {
+        guard !messages.isEmpty else {
+            throw LocalModelPromptProfileError.emptyMessage
+        }
+        guard let model else {
+            throw LlamaRuntimeError.couldNotCreateContext
+        }
+
+        if let templatePointer = llama_model_chat_template(model, nil) {
+            let template = String(cString: templatePointer)
+            if !template.isEmpty {
+                let prompt = try withCChatMessages(messages) { chat, count in
+                    try applyChatTemplate(
+                        template,
+                        chat: chat,
+                        count: count
+                    )
+                }
+                return LocalModelRenderedPrompt(
+                    prompt: prompt,
+                    source: .embedded,
+                    embeddedTemplate: template
+                )
+            }
+        }
+
+        do {
+            let prompt = try fallbackProfile.fallbackPrompt(for: messages)
+            return LocalModelRenderedPrompt(
+                prompt: prompt,
+                source: .explicitKnownFallback,
+                embeddedTemplate: nil
+            )
+        } catch let error as LocalModelPromptProfileError {
+            if case .fallbackUnavailable = error {
+                throw LlamaRuntimeError.missingChatTemplate
+            }
+            throw error
+        }
+    }
+
+    private func withCChatMessages<T>(
+        _ messages: [LocalModelChatMessage],
+        body: (UnsafePointer<llama_chat_message>?, Int) throws -> T
+    ) rethrows -> T {
+        var cMessages: [llama_chat_message] = []
+        cMessages.reserveCapacity(messages.count)
+
+        func appendMessage(at index: Int) throws -> T {
+            if index == messages.count {
+                return try cMessages.withUnsafeBufferPointer { buffer in
+                    try body(buffer.baseAddress, buffer.count)
+                }
+            }
+
+            let message = messages[index]
+            return try message.role.rawValue.withCString { role in
+                try message.content.withCString { content in
+                    cMessages.append(llama_chat_message(role: role, content: content))
+                    return try appendMessage(at: index + 1)
+                }
+            }
+        }
+
+        return try appendMessage(at: 0)
+    }
+
+    private func applyChatTemplate(
+        _ template: String,
+        chat: UnsafePointer<llama_chat_message>?,
+        count: Int
+    ) throws -> String {
+        guard let count32 = Int32(exactly: count) else {
+            throw LlamaRuntimeError.chatTemplateBufferSizingFailed
+        }
+
+        return try template.withCString { templatePointer in
+            let required = llama_chat_apply_template(
+                templatePointer,
+                chat,
+                count,
+                true,
+                nil,
+                0
+            )
+            guard required >= 0 else {
+                throw LlamaRuntimeError.unsupportedChatTemplate
+            }
+            guard required < Int32.max else {
+                throw LlamaRuntimeError.chatTemplateBufferSizingFailed
+            }
+
+            var capacity = max(1, Int(required) + 1)
+            for _ in 0..<3 {
+                var buffer = [CChar](repeating: 0, count: capacity)
+                let written = buffer.withUnsafeMutableBufferPointer { buffer in
+                    llama_chat_apply_template(
+                        templatePointer,
+                        chat,
+                        count,
+                        true,
+                        buffer.baseAddress,
+                        Int32(buffer.count)
+                    )
+                }
+                guard written >= 0 else {
+                    throw LlamaRuntimeError.unsupportedChatTemplate
+                }
+                guard written < Int32.max else {
+                    throw LlamaRuntimeError.chatTemplateBufferSizingFailed
+                }
+                if Int(written) < buffer.count {
+                    let bytes = buffer.prefix(Int(written)).map { UInt8(bitPattern: $0) }
+                    guard let prompt = String(data: Data(bytes), encoding: .utf8) else {
+                        throw LlamaRuntimeError.invalidRenderedPrompt
+                    }
+                    guard !prompt.isEmpty else {
+                        throw LlamaRuntimeError.invalidRenderedPrompt
+                    }
+                    return prompt
+                }
+                capacity = Int(written) + 1
+            }
+            throw LlamaRuntimeError.chatTemplateBufferSizingFailed
+        }
     }
 
     private func unload() {

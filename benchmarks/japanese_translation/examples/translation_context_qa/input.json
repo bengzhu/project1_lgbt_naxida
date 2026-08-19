@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-translation-context-qa",
+  "run": {
+    "appSha": "0000000000000000000000000000000000000000",
+    "evaluatorVersion": "v3.288-contract",
+    "invocationMode": "cloud-only-shadow"
+  },
+  "contractExampleOnly": true,
+  "context": {
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh-CN",
+    "textKind": "dialogue",
+    "confirmedTerms": [
+      {"id": "koharu", "source": "Koharu", "target": "小春", "kind": "personName", "status": "confirmed", "note": "项目人名"},
+      {"id": "sensei", "source": "先生", "target": "老师", "kind": "addressing", "status": "confirmed", "note": "对白称呼"},
+      {"id": "revoked-tono", "source": "殿", "target": "大人", "kind": "addressing", "status": "revoked", "note": "旧项目译法已撤销"}
+    ],
+    "previousBatchSummary": {
+      "batchID": "page-01-batch-01",
+      "items": [
+        {"ordinal": 1, "sourceExcerpt": "Koharu先生、9時に来て。", "targetExcerpt": "小春老师，9点来。", "kind": "dialogue"}
+      ],
+      "isReadOnly": true,
+      "containsPendingInputBlocks": false,
+      "generatedFromCompletedBlocks": true
+    }
+  },
+  "batches": [
+    {
+      "batchID": "page-01-batch-01",
+      "sourceBlocks": [
+        {"id": 1, "sourceText": "Koharu先生、9時に来て。", "kind": "dialogue", "maxOutputCharacters": 64}
+      ],
+      "rawOutput": "[1] 小春老师，9点来。",
+      "expectedFailedBlockIDs": [],
+      "expectedAction": "accept",
+      "cancelScenario": {"requested": false, "scope": "none", "preservesCompletedBlocks": true, "persistsPartialState": true, "rerunsOCR": false, "rerunsWholePage": false}
+    },
+    {
+      "batchID": "page-01-batch-02",
+      "sourceBlocks": [
+        {"id": 2, "sourceText": "殿は3人を待つ。", "kind": "dialogue", "maxOutputCharacters": 64}
+      ],
+      "rawOutput": "[2] 你等了3个人。",
+      "expectedFailedBlockIDs": [],
+      "expectedAction": "accept",
+      "cancelScenario": {"requested": true, "scope": "block", "preservesCompletedBlocks": true, "persistsPartialState": true, "rerunsOCR": false, "rerunsWholePage": false}
+    },
+    {
+      "batchID": "page-01-batch-03",
+      "sourceBlocks": [
+        {"id": 3, "sourceText": "Koharu先生。", "kind": "dialogue", "maxOutputCharacters": 64},
+        {"id": 4, "sourceText": "君は12時に来て。", "kind": "dialogue", "maxOutputCharacters": 64}
+      ],
+      "rawOutput": "[3] 小春老师。\n[4] 你会在13点来。",
+      "expectedFailedBlockIDs": [4],
+      "expectedAction": "retryFailedBlocksOnly",
+      "cancelScenario": {"requested": true, "scope": "batch", "preservesCompletedBlocks": true, "persistsPartialState": true, "rerunsOCR": false, "rerunsWholePage": false}
+    },
+    {
+      "batchID": "page-01-batch-04",
+      "sourceBlocks": [
+        {"id": 5, "sourceText": "持ち帰る！", "kind": "sfx", "maxOutputCharacters": 64}
+      ],
+      "rawOutput": "[4] 我先走了\n[5] 带走！",
+      "expectedFailedBlockIDs": [5],
+      "expectedAction": "persistPartialAndStop",
+      "cancelScenario": {"requested": true, "scope": "block", "preservesCompletedBlocks": true, "persistsPartialState": true, "rerunsOCR": false, "rerunsWholePage": false}
+    }
+  ],
+  "boundary": {
+    "ocrRerunOnQAFailure": false,
+    "pageRerunOnQAFailure": false,
+    "extraTagsRejected": true,
+    "duplicateTagsRejected": true,
+    "outOfOrderTagsRejected": true,
+    "defaultProductSelectionChanged": false
+  }
+}

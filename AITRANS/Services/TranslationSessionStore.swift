@@ -36,6 +36,7 @@ private enum ImageMangaBatchTranslationError: LocalizedError {
     case missingTags
     case unexpectedTags
     case emptyTranslation
+    case qualityFailure([Int])
 
     var errorDescription: String? {
         switch self {
@@ -45,7 +46,14 @@ private enum ImageMangaBatchTranslationError: LocalizedError {
             "漫画批翻译返回了错误的编号顺序"
         case .emptyTranslation:
             "漫画批翻译返回了空文本块"
+        case .qualityFailure(let ids):
+            "漫画批翻译质量检查失败，待补译文本块：\(ids.map(String.init).joined(separator: ","))"
         }
+    }
+
+    var isQualityFailure: Bool {
+        if case .qualityFailure = self { return true }
+        return false
     }
 }
 
@@ -72,6 +80,12 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     @Published var prompts: [PromptTemplate] = PromptTemplate.defaultPrompts {
+        didSet { persist() }
+    }
+
+    /// Project-scoped confirmed terminology and addressing memory. Candidate
+    /// and revoked entries are persisted for audit but never enter a prompt.
+    @Published var translationTermMemory: [TranslationTermMemoryEntry] = [] {
         didSet { persist() }
     }
 
@@ -229,8 +243,10 @@ final class TranslationSessionStore: ObservableObject {
         guard performsStartupWork else { return }
 
         reconcileOrphanedImageTranslationSharesAtStartup()
-        reconcileOrphanedImageTranslationWorkspaceAtStartup()
         restoreSnapshot()
+        // Restore first so the authenticated input referenced by the snapshot
+        // is not mistaken for an orphan during workspace reconciliation.
+        reconcileOrphanedImageTranslationWorkspaceAtStartup()
         updateModelDownloadStateFromDisk()
 #if DEBUG
         if !Self.shouldRunMangaOverlayProbeFromLaunchEnvironment {
@@ -241,6 +257,11 @@ final class TranslationSessionStore: ObservableObject {
 #endif
         refreshModelStatus()
         persist()
+        if imageTranslationState == .translated,
+           imageTranslationSourceURL != nil,
+           imageTranslationData != nil {
+            rerenderImageTranslationExport()
+        }
         runLaunchLLMSmokeTestIfNeeded()
         runLaunchMangaOverlayProbeIfNeeded()
         runLaunchSpeechQualityProbeIfNeeded()
@@ -1234,6 +1255,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationRevision += 1
         imageTranslationFilename = filename
         isProcessing = true
+        persist()
         return taskID
     }
 
@@ -1290,6 +1312,7 @@ final class TranslationSessionStore: ObservableObject {
         if sourceLanguage == .japanese {
             let batches = Self.imageTranslationBatches(recognizedBlocks)
             var translatedCount = 0
+            var previousBatchSummary: TranslationReadOnlyBatchSummary?
             for batch in batches {
                 try Task.checkCancellation()
                 guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
@@ -1297,7 +1320,12 @@ final class TranslationSessionStore: ObservableObject {
                     batch.blocks,
                     startIndex: batch.startIndex,
                     sourceLanguage: sourceLanguage,
-                    targetLanguage: targetLanguage
+                    targetLanguage: targetLanguage,
+                    translationContext: TranslationPromptContext(
+                        confirmedTerms: translationTermMemory,
+                        previousBatchSummary: previousBatchSummary,
+                        textKind: batch.blocks.first?.textKind ?? .dialogue
+                    )
                 )
                 guard translations.count == batch.blocks.count else {
                     throw ImageMangaBatchTranslationError.missingTags
@@ -1305,6 +1333,19 @@ final class TranslationSessionStore: ObservableObject {
                 for (offset, translation) in translations.enumerated() {
                     translatedBlocks[batch.startIndex + offset].translation = translation
                 }
+                previousBatchSummary = TranslationReadOnlyBatchSummary(
+                    batchID: "image-\(taskID.uuidString)-\(batch.startIndex)",
+                    sourceLanguage: sourceLanguage,
+                    targetLanguage: targetLanguage,
+                    items: batch.blocks.enumerated().map { offset, block in
+                        TranslationReadOnlyBatchItem(
+                            ordinal: batch.startIndex + offset + 1,
+                            sourceExcerpt: block.original,
+                            targetExcerpt: translations[offset],
+                            kind: block.textKind ?? .dialogue
+                        )
+                    }
+                )
                 translatedCount += translations.count
                 guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
                 imageTranslationBlocks = translatedBlocks
@@ -1392,6 +1433,7 @@ final class TranslationSessionStore: ObservableObject {
             dataTransferMessage = imageTranslationMessage
             isProcessing = false
             imageTranslationTask = nil
+            persist()
             return
         }
 
@@ -1663,6 +1705,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationBlockRerecognitionCompletedBlockID = nil
         imageTranslationRevision += 1
         isProcessing = false
+        persist()
     }
 
     func prepareImageTranslationShareURL() async -> URL? {
@@ -1727,6 +1770,247 @@ final class TranslationSessionStore: ObservableObject {
               imageOverlayMode != mode else { return }
         imageOverlayMode = mode
         rerenderImageTranslationExport()
+        persist()
+    }
+
+    /// Structural review edits are terminal-session mutations. They never
+    /// start OCR or translation work and are unavailable while a scoped task
+    /// or export render could still commit an older block snapshot.
+    var canEditImageTranslationStructure: Bool {
+        imageTranslationState == .translated
+            && imageTranslationExportRenderState != .rendering
+            && imageTranslationTask == nil
+            && imageTranslationCorrectionBlockID == nil
+            && imageTranslationRetryingBlockID == nil
+            && imageTranslationRerecognizingBlockID == nil
+            && !imageTranslationBlocks.isEmpty
+    }
+
+    /// Report-only preflight for the current rectangular overlay. It is
+    /// intentionally absent outside a completed session and never gates or
+    /// rewrites the existing export renderer.
+    var imageTranslationRenderSafetyReport: ImageTranslationRenderSafety.Report? {
+        guard imageTranslationState == .translated else { return nil }
+        return ImageTranslationRenderSafety.analyze(
+            blocks: imageTranslationBlocks,
+            overlayMode: imageOverlayMode
+        )
+    }
+
+    /// Split one completed block at a user-supplied Character offset. The
+    /// resulting blocks deliberately receive fresh identities and no
+    /// automatic OCR baseline/provenance: their text and geometry are now
+    /// reviewer-authored structure, not fresh OCR evidence. Existing
+    /// translations are cleared so a stale sentence cannot be presented as a
+    /// correct translation of either child.
+    @discardableResult
+    func splitImageTranslationBlock(_ blockID: UUID, atCharacterOffset offset: Int) -> Bool {
+        guard canEditImageTranslationStructure,
+              let blockIndex = imageTranslationBlocks.firstIndex(where: { $0.id == blockID }),
+              let blockRect = imageTranslationBlocks[blockIndex].boundingBox.normalizedToUnit() else {
+            imageTranslationCorrectionMessage = "当前文字块暂时无法拆分，请等待图片翻译完成"
+            return false
+        }
+
+        let block = imageTranslationBlocks[blockIndex]
+        let characters = Array(block.original)
+        guard offset > 0, offset < characters.count else {
+            imageTranslationCorrectionMessage = "拆分位置必须位于文字块中间"
+            return false
+        }
+
+        let firstOriginal = String(characters.prefix(offset))
+        let secondOriginal = String(characters.dropFirst(offset))
+        guard !firstOriginal.isEmpty, !secondOriginal.isEmpty else {
+            imageTranslationCorrectionMessage = "拆分后的文字块不能为空"
+            return false
+        }
+
+        let ratio = Double(offset) / Double(characters.count)
+        let splitDirection: ImageTextDirection = block.effectiveSourceDirection == .vertical
+            ? .vertical
+            : .horizontal
+        let firstRect: NormalizedImageRect
+        let secondRect: NormalizedImageRect
+        if splitDirection == .vertical {
+            let firstHeight = blockRect.height * ratio
+            firstRect = NormalizedImageRect(
+                x: blockRect.x,
+                y: blockRect.y,
+                width: blockRect.width,
+                height: firstHeight
+            )
+            secondRect = NormalizedImageRect(
+                x: blockRect.x,
+                y: blockRect.y + firstHeight,
+                width: blockRect.width,
+                height: blockRect.height - firstHeight
+            )
+        } else {
+            let firstWidth = blockRect.width * ratio
+            firstRect = NormalizedImageRect(
+                x: blockRect.x,
+                y: blockRect.y,
+                width: firstWidth,
+                height: blockRect.height
+            )
+            secondRect = NormalizedImageRect(
+                x: blockRect.x + firstWidth,
+                y: blockRect.y,
+                width: blockRect.width - firstWidth,
+                height: blockRect.height
+            )
+        }
+        guard firstRect.normalizedToUnit() != nil,
+              secondRect.normalizedToUnit() != nil else {
+            imageTranslationCorrectionMessage = "拆分后的文字框无效"
+            return false
+        }
+
+        let firstBlock = Self.makeStructureMutationBlock(
+            from: block,
+            original: firstOriginal,
+            boundingBox: firstRect,
+            sourceDirection: block.sourceDirection,
+            sourceDirectionOverride: block.sourceDirectionOverride,
+            directionConfidence: block.directionConfidence,
+            directionReason: "手动拆分文字块",
+            textKind: block.textKind
+        )
+        let secondBlock = Self.makeStructureMutationBlock(
+            from: block,
+            original: secondOriginal,
+            boundingBox: secondRect,
+            sourceDirection: block.sourceDirection,
+            sourceDirectionOverride: block.sourceDirectionOverride,
+            directionConfidence: block.directionConfidence,
+            directionReason: "手动拆分文字块",
+            textKind: block.textKind
+        )
+
+        imageTranslationBlocks.replaceSubrange(
+            blockIndex...blockIndex,
+            with: [firstBlock, secondBlock]
+        )
+        imageTranslationReviewedBlockIDs.remove(blockID)
+        imageTranslationCorrectedBlockIDs.remove(blockID)
+        imageTranslationVisionOriginalBlocks.removeValue(forKey: blockID)
+        rebuildImageTranslationOriginalBlockOrder()
+        finalizeImageTranslationStructureMutation(
+            message: "已拆分文字块；两个新块的译文需分别重新翻译"
+        )
+        return true
+    }
+
+    /// Merge two adjacent completed blocks in their current reading order.
+    /// The merged block gets a fresh identity, conservative confidence, an
+    /// axis-aligned union rect, and no stale translation/baseline/provenance.
+    @discardableResult
+    func mergeImageTranslationBlocks(_ firstBlockID: UUID, _ secondBlockID: UUID) -> Bool {
+        guard canEditImageTranslationStructure,
+              let firstIndex = imageTranslationBlocks.firstIndex(where: { $0.id == firstBlockID }),
+              let secondIndex = imageTranslationBlocks.firstIndex(where: { $0.id == secondBlockID }),
+              abs(firstIndex - secondIndex) == 1 else {
+            imageTranslationCorrectionMessage = "只能合并当前阅读顺序中相邻的两个文字块"
+            return false
+        }
+
+        let lowerIndex = min(firstIndex, secondIndex)
+        let upperIndex = max(firstIndex, secondIndex)
+        let firstBlock = imageTranslationBlocks[lowerIndex]
+        let secondBlock = imageTranslationBlocks[upperIndex]
+        guard let firstRect = firstBlock.boundingBox.normalizedToUnit(),
+              let secondRect = secondBlock.boundingBox.normalizedToUnit() else {
+            imageTranslationCorrectionMessage = "文字框无效，无法合并"
+            return false
+        }
+
+        let left = min(firstRect.x, secondRect.x)
+        let top = min(firstRect.y, secondRect.y)
+        let right = max(firstRect.x + firstRect.width, secondRect.x + secondRect.width)
+        let bottom = max(firstRect.y + firstRect.height, secondRect.y + secondRect.height)
+        guard let unionRect = NormalizedImageRect(
+            x: left,
+            y: top,
+            width: right - left,
+            height: bottom - top
+        ).normalizedToUnit() else {
+            imageTranslationCorrectionMessage = "合并后的文字框无效"
+            return false
+        }
+
+        let mergedDirection: ImageTextDirection?
+        if firstBlock.effectiveSourceDirection == secondBlock.effectiveSourceDirection {
+            mergedDirection = firstBlock.effectiveSourceDirection
+        } else {
+            mergedDirection = .unknown
+        }
+        let mergedOverride: ImageTextDirection? =
+            firstBlock.sourceDirectionOverride == secondBlock.sourceDirectionOverride
+            ? firstBlock.sourceDirectionOverride
+            : nil
+        let mergedConfidence = min(
+            ImageOCRResultSummary.normalizedConfidence(firstBlock.confidence),
+            ImageOCRResultSummary.normalizedConfidence(secondBlock.confidence)
+        )
+        let mergedTextKind: TranslationTextKind? =
+            firstBlock.textKind?.rawValue == secondBlock.textKind?.rawValue
+            ? firstBlock.textKind
+            : nil
+        let mergedBlock = Self.makeStructureMutationBlock(
+            from: firstBlock,
+            original: firstBlock.original + secondBlock.original,
+            boundingBox: unionRect,
+            confidence: mergedConfidence,
+            sourceDirection: mergedDirection,
+            sourceDirectionOverride: mergedOverride,
+            directionConfidence: mergedDirection == .unknown ? nil : min(
+                firstBlock.directionConfidence ?? 0,
+                secondBlock.directionConfidence ?? 0
+            ),
+            directionReason: "手动合并文字块",
+            textKind: mergedTextKind
+        )
+
+        imageTranslationBlocks.replaceSubrange(
+            lowerIndex...upperIndex,
+            with: [mergedBlock]
+        )
+        imageTranslationReviewedBlockIDs.remove(firstBlockID)
+        imageTranslationReviewedBlockIDs.remove(secondBlockID)
+        imageTranslationCorrectedBlockIDs.remove(firstBlockID)
+        imageTranslationCorrectedBlockIDs.remove(secondBlockID)
+        imageTranslationVisionOriginalBlocks.removeValue(forKey: firstBlockID)
+        imageTranslationVisionOriginalBlocks.removeValue(forKey: secondBlockID)
+        rebuildImageTranslationOriginalBlockOrder()
+        finalizeImageTranslationStructureMutation(
+            message: "已合并相邻文字块；合并块的译文需重新翻译"
+        )
+        return true
+    }
+
+    /// Move one active block to a final array index. This mutation preserves
+    /// text, translations, OCR provenance, automatic baselines, and review
+    /// IDs; only the current reading order and transcript/export order change.
+    @discardableResult
+    func moveImageTranslationBlock(_ blockID: UUID, to index: Int) -> Bool {
+        guard canEditImageTranslationStructure,
+              let currentIndex = imageTranslationBlocks.firstIndex(where: { $0.id == blockID }) else {
+            imageTranslationCorrectionMessage = "当前文字块暂时无法调整顺序，请等待图片翻译完成"
+            return false
+        }
+
+        var reorderedBlocks = imageTranslationBlocks
+        let movedBlock = reorderedBlocks.remove(at: currentIndex)
+        let destination = min(max(index, 0), reorderedBlocks.count)
+        guard destination != currentIndex else { return true }
+        reorderedBlocks.insert(movedBlock, at: destination)
+        imageTranslationBlocks = reorderedBlocks
+        rebuildImageTranslationOriginalBlockOrder()
+        finalizeImageTranslationStructureMutation(
+            message: "已调整图片文字块阅读顺序；现有 OCR、译文和复查进度已保留"
+        )
+        return true
     }
 
     /// Applies a reviewer-only writing-mode correction to one completed block.
@@ -1790,6 +2074,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationMessage = "图片翻译已取消"
         dataTransferMessage = imageTranslationMessage
         isProcessing = false
+        persist()
     }
 
     /// Cancel only the in-place OCR retry for one completed image block.
@@ -1817,6 +2102,7 @@ final class TranslationSessionStore: ObservableObject {
             return false
         }
         imageTranslationReviewedBlockIDs.insert(blockID)
+        persist()
         return true
     }
 
@@ -1828,12 +2114,14 @@ final class TranslationSessionStore: ObservableObject {
               imageTranslationReviewedBlockIDs.remove(blockID) != nil else {
             return false
         }
+        persist()
         return true
     }
 
     func resetImageTranslationReviewProgress() {
         guard imageTranslationState == .translated else { return }
         imageTranslationReviewedBlockIDs = []
+        persist()
     }
 
     @discardableResult
@@ -1864,6 +2152,7 @@ final class TranslationSessionStore: ObservableObject {
         invalidateImageOverlayRender()
         discardImageTranslationExport()
         rerenderImageTranslationExport()
+        persist()
         return true
     }
 
@@ -1894,6 +2183,7 @@ final class TranslationSessionStore: ObservableObject {
         invalidateImageOverlayRender()
         discardImageTranslationExport()
         rerenderImageTranslationExport()
+        persist()
         return true
     }
 
@@ -1935,6 +2225,7 @@ final class TranslationSessionStore: ObservableObject {
         invalidateImageOverlayRender()
         discardImageTranslationExport()
         rerenderImageTranslationExport()
+        persist()
         return snapshots.map(\.block.id)
     }
 
@@ -1998,6 +2289,7 @@ final class TranslationSessionStore: ObservableObject {
             invalidateImageOverlayRender()
             discardImageTranslationExport()
             rerenderImageTranslationExport()
+            persist()
             return true
         } catch {
             guard imageTranslationCorrectionID == correctionID,
@@ -2037,6 +2329,7 @@ final class TranslationSessionStore: ObservableObject {
         invalidateImageOverlayRender()
         discardImageTranslationExport()
         rerenderImageTranslationExport()
+        persist()
         return true
     }
 
@@ -2212,13 +2505,21 @@ final class TranslationSessionStore: ObservableObject {
                         [block],
                         startIndex: startIndex,
                         sourceLanguage: sourceLanguage,
-                        targetLanguage: targetLanguage
+                        targetLanguage: targetLanguage,
+                        translationContext: TranslationPromptContext(
+                            confirmedTerms: self.translationTermMemory,
+                            textKind: block.textKind ?? .dialogue
+                        )
                     ).first ?? ""
                 } else {
                     translation = try await self.translate(
                         block.original,
                         sourceLanguage: sourceLanguage,
-                        targetLanguage: targetLanguage
+                        targetLanguage: targetLanguage,
+                        translationContext: TranslationPromptContext(
+                            confirmedTerms: self.translationTermMemory,
+                            textKind: block.textKind ?? .dialogue
+                        )
                     )
                 }
                 try Task.checkCancellation()
@@ -2283,17 +2584,38 @@ final class TranslationSessionStore: ObservableObject {
         }
     }
 
-    /// Re-recognize one existing OCR block in place. The old block is kept as
-    /// the commit candidate until both crop OCR and its replacement translation
-    /// succeed, so a weak model result, cancellation, or stale task cannot
-    /// damage the completed image session.
-    func rerecognizeImageTranslationBlock(_ blockID: UUID) {
+    /// Re-recognize one existing OCR block in place using its current geometry,
+    /// or an optional reviewer-provided normalized bbox. The old block is kept
+    /// as the commit candidate until both crop OCR and its replacement
+    /// translation succeed, so a weak model result, cancellation, or stale task
+    /// cannot damage the completed image session.
+    func rerecognizeImageTranslationBlock(
+        _ blockID: UUID,
+        boundingBox: NormalizedImageRect? = nil
+    ) {
         guard canRerecognizeImageTranslationBlock(blockID),
               let data = imageTranslationData,
               let sourceLanguage = imageTranslationContentSourceLanguage,
               let targetLanguage = imageTranslationContentTargetLanguage,
               let block = imageTranslationBlocks.first(where: { $0.id == blockID }) else {
             return
+        }
+
+        let editedBoundingBox: NormalizedImageRect?
+        if let boundingBox {
+            guard let normalizedBoundingBox = boundingBox.normalizedToUnit() else {
+                imageTranslationMessage = "文字框无效，未开始重新识别"
+                dataTransferMessage = imageTranslationMessage
+                return
+            }
+            editedBoundingBox = normalizedBoundingBox
+        } else {
+            editedBoundingBox = nil
+        }
+
+        var recognitionBlock = block
+        if let editedBoundingBox {
+            recognitionBlock.boundingBox = editedBoundingBox
         }
 
         imageTranslationBlockRerecognitionTask?.cancel()
@@ -2303,7 +2625,9 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationBlockRerecognitionID = requestID
         imageTranslationRerecognizingBlockID = blockID
         imageTranslationState = .recognizing
-        imageTranslationMessage = "正在重新识别此图片文字块"
+        imageTranslationMessage = editedBoundingBox == nil
+            ? "正在重新识别此图片文字块"
+            : "正在按调整后的文字框重新识别此图片文字块"
         isProcessing = true
 
         imageTranslationBlockRerecognitionTask = Task { [weak self] in
@@ -2312,7 +2636,7 @@ final class TranslationSessionStore: ObservableObject {
                 guard let recognized = try await self.visionOCRService.recognizeTextBlock(
                     in: data,
                     sourceLanguage: sourceLanguage,
-                    block: block
+                    block: recognitionBlock
                 ) else {
                     throw VisionOCRServiceError.blockRecognitionFailed
                 }
@@ -2348,13 +2672,21 @@ final class TranslationSessionStore: ObservableObject {
                             [translationBlock],
                             startIndex: startIndex,
                             sourceLanguage: sourceLanguage,
-                            targetLanguage: targetLanguage
+                            targetLanguage: targetLanguage,
+                            translationContext: TranslationPromptContext(
+                                confirmedTerms: self.translationTermMemory,
+                                textKind: translationBlock.textKind ?? .dialogue
+                            )
                         ).first ?? ""
                     } else {
                         translation = try await self.translate(
                             recognizedOriginal,
                             sourceLanguage: sourceLanguage,
-                            targetLanguage: targetLanguage
+                            targetLanguage: targetLanguage,
+                            translationContext: TranslationPromptContext(
+                                confirmedTerms: self.translationTermMemory,
+                                textKind: translationBlock.textKind ?? .dialogue
+                            )
                         )
                     }
                     cleanTranslation = translation.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2375,6 +2707,10 @@ final class TranslationSessionStore: ObservableObject {
                 replacement.original = recognizedOriginal
                 replacement.translation = cleanTranslation
                 replacement.confidence = recognized.confidence
+                applyEditedImageTranslationBoundingBox(
+                    editedBoundingBox,
+                    to: &replacement
+                )
                 self.imageTranslationBlocks[currentIndex] = replacement
                 self.imageTranslationCorrectedBlockIDs.remove(blockID)
                 self.imageTranslationVisionOriginalBlocks.removeValue(forKey: blockID)
@@ -2389,13 +2725,17 @@ final class TranslationSessionStore: ObservableObject {
                 self.updateImageTranslationTranscript(blocks: self.imageTranslationBlocks)
                 if remainingCount == 0 {
                     self.imageTranslationState = .translated
-                    self.imageTranslationMessage = "已重新识别此文字块，正在更新导出图"
+                    self.imageTranslationMessage = editedBoundingBox == nil
+                        ? "已重新识别此文字块，正在更新导出图"
+                        : "已按调整后的文字框重新识别此文字块，正在更新导出图"
                     self.invalidateImageOverlayRender()
                     self.discardImageTranslationExport()
                     self.rerenderImageTranslationExport()
                 } else {
                     self.imageTranslationState = .failed
-                    self.imageTranslationMessage = "已重新识别此文字块，仍有 \(remainingCount) 个文字块等待翻译"
+                    self.imageTranslationMessage = editedBoundingBox == nil
+                        ? "已重新识别此文字块，仍有 \(remainingCount) 个文字块等待翻译"
+                        : "已按调整后的文字框重新识别此文字块，仍有 \(remainingCount) 个文字块等待翻译"
                     self.dataTransferMessage = self.imageTranslationMessage
                 }
                 self.imageTranslationBlockRerecognitionCompletedBlockID = blockID
@@ -2425,6 +2765,14 @@ final class TranslationSessionStore: ObservableObject {
                 self.persist()
             }
         }
+    }
+
+    private func applyEditedImageTranslationBoundingBox(
+        _ boundingBox: NormalizedImageRect?,
+        to block: inout ImageTranslationBlock
+    ) {
+        guard let boundingBox else { return }
+        block.boundingBox = boundingBox
     }
 
     func rerunImageRecognition() {
@@ -2846,7 +3194,9 @@ final class TranslationSessionStore: ObservableObject {
                 sampling: sampling,
                 isProUnlocked: isProUnlocked,
                 isDeveloperModeEnabled: isDeveloperModeEnabled
-            )
+            ),
+            translationTerms: translationTermMemory,
+            imageTranslationSession: makeImageTranslationPersistenceSnapshot()
         )
 
         do {
@@ -2883,6 +3233,7 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         let importedPrompts = Self.mergeDefaultPrompts(with: snapshot.prompts)
+        translationTermMemory = snapshot.translationTerms
         for prompt in importedPrompts where !prompts.contains(where: { $0.id == prompt.id }) {
             prompts.append(prompt)
         }
@@ -2917,6 +3268,39 @@ final class TranslationSessionStore: ObservableObject {
 
     func selectPrompt(_ prompt: PromptTemplate) {
         selectedPromptID = prompt.id
+    }
+
+    func upsertTranslationTerm(
+        source: String,
+        target: String,
+        kind: TranslationTermKind,
+        note: String? = nil
+    ) {
+        let cleanSource = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanTarget = target.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanSource.isEmpty, !cleanTarget.isEmpty else { return }
+        let key = Self.translationTermKey(cleanSource)
+        let entry = TranslationTermMemoryEntry(
+            id: key,
+            source: cleanSource,
+            target: cleanTarget,
+            kind: kind,
+            status: .confirmed,
+            note: note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        if let index = translationTermMemory.firstIndex(where: { Self.translationTermKey($0.source) == key }) {
+            translationTermMemory[index] = entry
+        } else {
+            translationTermMemory.append(entry)
+        }
+    }
+
+    func revokeTranslationTerm(source: String) {
+        let key = Self.translationTermKey(source)
+        guard let index = translationTermMemory.firstIndex(where: { Self.translationTermKey($0.source) == key }) else {
+            return
+        }
+        translationTermMemory[index].status = .revoked
     }
 
     func createPrompt(
@@ -4632,7 +5016,8 @@ final class TranslationSessionStore: ObservableObject {
         _ blocks: [ImageTranslationBlock],
         startIndex: Int,
         sourceLanguage: SupportedLanguage,
-        targetLanguage: SupportedLanguage
+        targetLanguage: SupportedLanguage,
+        translationContext: TranslationPromptContext = .empty
     ) async throws -> [String] {
         guard !blocks.isEmpty else { return [] }
 
@@ -4655,7 +5040,8 @@ final class TranslationSessionStore: ObservableObject {
                 current: sampling,
                 blockCount: blocks.count,
                 inputCharacterCount: taggedInput.count
-            )
+            ),
+            translationContext: translationContext
         )
 
         writeLaunchLLMSmokeProbe(
@@ -4670,23 +5056,71 @@ final class TranslationSessionStore: ObservableObject {
                 result.text,
                 expectedIDs: expectedIDs
             )
+            let qualityReport = TranslationBatchQualityEvaluator.evaluate(
+                output: result.text,
+                items: blocks.enumerated().map { offset, block in
+                    TranslationBatchQAInputItem(
+                        id: expectedIDs[offset],
+                        sourceText: block.original,
+                        kind: block.textKind ?? translationContext.textKind
+                    )
+                },
+                configuration: TranslationBatchQAConfiguration(
+                    targetLanguage: targetLanguage,
+                    confirmedTerms: translationContext.confirmedTerms,
+                    previousBatchSummary: translationContext.previousBatchSummary,
+                    maximumOutputCharacters: translationContext.maxOutputCharacters
+                )
+            )
             var translations = Array(repeating: "", count: blocks.count)
             var missingOffsets: [Int] = []
             for offset in blocks.indices {
-                if let translation = parsedTranslations[offset] {
+                if let translation = parsedTranslations[offset],
+                   let qualityTranslation = qualityReport.values[offset],
+                   qualityTranslation == translation,
+                   !qualityReport.failedOffsets.contains(offset) {
                     translations[offset] = translation
                 } else {
                     missingOffsets.append(offset)
                 }
             }
-            if !missingOffsets.isEmpty {
-                imageTranslationMessage = "漫画批翻译缺少 \(missingOffsets.count) 个文本块，正在逐块补译"
-                for offset in missingOffsets {
+            let retryOffsets = Set(missingOffsets).union(qualityReport.failedOffsets)
+            if !retryOffsets.isEmpty {
+                imageTranslationMessage = "漫画批翻译质量检查失败，正在只补译 \(retryOffsets.count) 个文本块"
+                var failedOffsets = Set<Int>()
+                for offset in retryOffsets.sorted() {
                     try Task.checkCancellation()
-                    translations[offset] = try await translate(
-                        blocks[offset].original,
-                        sourceLanguage: sourceLanguage,
-                        targetLanguage: targetLanguage
+                    do {
+                        translations[offset] = try await translate(
+                            blocks[offset].original,
+                            sourceLanguage: sourceLanguage,
+                            targetLanguage: targetLanguage,
+                            translationContext: translationContext
+                        )
+                        let candidate = translations[offset]
+                        let failures = TranslationBatchQualityEvaluator.singleOutputFailures(
+                            output: candidate,
+                            sourceText: blocks[offset].original,
+                            kind: blocks[offset].textKind ?? translationContext.textKind,
+                            configuration: TranslationBatchQAConfiguration(
+                                targetLanguage: targetLanguage,
+                                confirmedTerms: translationContext.confirmedTerms,
+                                previousBatchSummary: translationContext.previousBatchSummary,
+                                maximumOutputCharacters: translationContext.maxOutputCharacters
+                            )
+                        )
+                        guard failures.isEmpty else {
+                            failedOffsets.insert(offset)
+                            continue
+                        }
+                        translations[offset] = candidate
+                    } catch {
+                        failedOffsets.insert(offset)
+                    }
+                }
+                guard failedOffsets.isEmpty else {
+                    throw ImageMangaBatchTranslationError.qualityFailure(
+                        failedOffsets.sorted().map { expectedIDs[$0] }
                     )
                 }
             }
@@ -4695,11 +5129,21 @@ final class TranslationSessionStore: ObservableObject {
             }
             writeLaunchLLMSmokeProbe(
                 "manga-batch-result state=parsed engine=\(result.engineName) " +
-                "count=\(translations.count) missing=\(missingOffsets.count) output=\(Self.probeField(result.text))"
+                "count=\(translations.count) missing=\(missingOffsets.count) " +
+                "qaMissing=\(retryOffsets.count) " +
+                "qaFailed=\(qualityReport.failedOffsets.count) output=\(Self.probeField(result.text))"
             )
             return translations
         } catch {
             if error is CancellationError {
+                throw error
+            }
+            if let batchError = error as? ImageMangaBatchTranslationError,
+               batchError.isQualityFailure {
+                writeLaunchLLMSmokeProbe(
+                    "manga-batch-result state=qa-failure error=\(Self.probeField(error.localizedDescription)) " +
+                    "ids=\(expectedIDs.map(String.init).joined(separator: ","))"
+                )
                 throw error
             }
             writeLaunchLLMSmokeProbe(
@@ -4715,7 +5159,8 @@ final class TranslationSessionStore: ObservableObject {
                 fallbackTranslations.append(try await translate(
                     block.original,
                     sourceLanguage: sourceLanguage,
-                    targetLanguage: targetLanguage
+                    targetLanguage: targetLanguage,
+                    translationContext: translationContext
                 ))
             }
             return fallbackTranslations
@@ -4852,13 +5297,15 @@ final class TranslationSessionStore: ObservableObject {
     private func translate(
         _ text: String,
         sourceLanguage: SupportedLanguage,
-        targetLanguage: SupportedLanguage
+        targetLanguage: SupportedLanguage,
+        translationContext: TranslationPromptContext? = nil
     ) async throws -> String {
         let request = makeRequest(
             task: .translation,
             inputText: text,
             sourceLanguage: sourceLanguage,
-            targetLanguage: targetLanguage
+            targetLanguage: targetLanguage,
+            translationContext: translationContext
         )
         writeLaunchLLMSmokeProbe(
             "translate-request source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
@@ -26187,6 +26634,88 @@ final class TranslationSessionStore: ObservableObject {
         updateImageTranslationTranscript(blocks: blocks)
     }
 
+    private static func makeStructureMutationBlock(
+        from source: ImageTranslationBlock,
+        original: String,
+        boundingBox: NormalizedImageRect,
+        confidence: Float? = nil,
+        sourceDirection: ImageTextDirection?,
+        sourceDirectionOverride: ImageTextDirection?,
+        directionConfidence: Double?,
+        directionReason: String?,
+        textKind: TranslationTextKind?
+    ) -> ImageTranslationBlock {
+        var mutation = ImageTranslationBlock(
+            id: UUID(),
+            original: original,
+            translation: "",
+            confidence: confidence ?? source.confidence,
+            boundingBox: boundingBox,
+            automaticBoundingBox: nil,
+            sourceDirection: sourceDirection,
+            sourceDirectionOverride: sourceDirectionOverride,
+            directionConfidence: directionConfidence,
+            directionReason: directionReason,
+            textKind: textKind,
+            ocrProvenance: nil
+        )
+        // The initializer provides a compatibility baseline when callers do
+        // not have one. A structure mutation explicitly has no OCR baseline.
+        mutation.automaticBoundingBox = nil
+        mutation.ocrProvenance = nil
+        return mutation
+    }
+
+    /// Rebuild the order map after a user mutation while keeping ignored
+    /// blocks anchored to their prior slots. The persisted snapshot requires a
+    /// contiguous order for every active and ignored identity.
+    private func rebuildImageTranslationOriginalBlockOrder() {
+        let previousOrder = imageTranslationOriginalBlockOrder
+        var orderedIDs = imageTranslationBlocks.map(\.id)
+        let ignoredSnapshots = imageTranslationIgnoredBlockSnapshots.values.sorted { lhs, rhs in
+            let lhsOrder = previousOrder[lhs.block.id] ?? lhs.originalOrder
+            let rhsOrder = previousOrder[rhs.block.id] ?? rhs.originalOrder
+            if lhsOrder == rhsOrder {
+                return lhs.block.id.uuidString < rhs.block.id.uuidString
+            }
+            return lhsOrder < rhsOrder
+        }
+
+        for snapshot in ignoredSnapshots {
+            let previousIndex = previousOrder[snapshot.block.id] ?? snapshot.originalOrder
+            let insertionIndex = min(max(previousIndex, 0), orderedIDs.count)
+            orderedIDs.insert(snapshot.block.id, at: insertionIndex)
+        }
+
+        imageTranslationOriginalBlockOrder = Dictionary(
+            uniqueKeysWithValues: orderedIDs.enumerated().map { index, blockID in
+                (blockID, index)
+            }
+        )
+        for (blockID, snapshot) in imageTranslationIgnoredBlockSnapshots {
+            guard let order = imageTranslationOriginalBlockOrder[blockID] else { continue }
+            imageTranslationIgnoredBlockSnapshots[blockID] = ImageTranslationIgnoredBlockSnapshot(
+                block: snapshot.block,
+                originalOrder: order,
+                visionOriginalBlock: snapshot.visionOriginalBlock,
+                wasManuallyCorrected: snapshot.wasManuallyCorrected
+            )
+        }
+        refreshImageTranslationIgnoredBlocks()
+    }
+
+    private func finalizeImageTranslationStructureMutation(message: String) {
+        imageTranslationCorrectionMessage = nil
+        imageTranslationBlockRerecognitionCompletedBlockID = nil
+        imageTranslationMessage = message
+        dataTransferMessage = message
+        synchronizeImageTranslationTranscript(blocks: imageTranslationBlocks)
+        invalidateImageOverlayRender()
+        discardImageTranslationExport()
+        rerenderImageTranslationExport()
+        persist()
+    }
+
     private func refreshImageTranslationIgnoredBlocks() {
         imageTranslationIgnoredBlocks = imageTranslationIgnoredBlockSnapshots.values
             .sorted { lhs, rhs in
@@ -26656,18 +27185,23 @@ final class TranslationSessionStore: ObservableObject {
         sourceLanguage requestSourceLanguage: SupportedLanguage? = nil,
         targetLanguage requestTargetLanguage: SupportedLanguage? = nil,
         translationProfile: TranslationRequestProfile = .standard,
-        requestSampling: GenerationSampling? = nil
+        requestSampling: GenerationSampling? = nil,
+        translationContext: TranslationPromptContext? = nil
     ) -> ModelGenerationRequest {
+        let resolvedSourceLanguage = requestSourceLanguage ?? sourceLanguage
+        let resolvedTargetLanguage = requestTargetLanguage ?? targetLanguage
         ModelGenerationRequest(
             task: task,
             mode: mode,
             inputText: inputText,
             transcriptContext: transcript,
-            sourceLanguage: requestSourceLanguage ?? sourceLanguage,
-            targetLanguage: requestTargetLanguage ?? targetLanguage,
+            sourceLanguage: resolvedSourceLanguage,
+            targetLanguage: resolvedTargetLanguage,
             prompt: selectedPrompt,
             sampling: requestSampling ?? sampling,
-            translationProfile: translationProfile
+            translationProfile: translationProfile,
+            translationContext: translationContext
+                ?? TranslationPromptContext(confirmedTerms: translationTermMemory)
         )
     }
 
@@ -26679,6 +27213,8 @@ final class TranslationSessionStore: ObservableObject {
         sourceLanguage: \(request.sourceLanguage.rawValue)
         targetLanguage: \(request.targetLanguage.rawValue)
         translationProfile: \(request.translationProfile.rawValue)
+        translationContext.hasConfirmedTerms: \(request.translationContext.confirmedTerms.count)
+        translationContext.hasPreviousBatchSummary: \(request.translationContext.previousBatchSummary != nil)
         prompt.title: \(request.prompt.title)
         prompt.instruction: \(request.prompt.instruction(source: request.sourceLanguage, target: request.targetLanguage))
         prompt.tone: \(request.prompt.tone)
@@ -27056,6 +27592,7 @@ final class TranslationSessionStore: ObservableObject {
 
     private func reconcileOrphanedImageTranslationWorkspaceAtStartup() {
         let directory = imageTranslationDirectory.standardizedFileURL
+        let restoredInputURL = imageTranslationSourceURL?.standardizedFileURL
         guard let candidates = try? FileManager.default.contentsOfDirectory(
             at: directory,
             includingPropertiesForKeys: nil
@@ -27068,7 +27605,8 @@ final class TranslationSessionStore: ObservableObject {
             if Self.isImageTranslationStableExportFilename(filename) {
                 imageTranslationOwnedExportURLs.insert(managedFile)
             } else if Self.isImageTranslationInputFilename(filename) ||
-                        Self.isImageTranslationStagingFilename(filename) {
+                        Self.isImageTranslationStagingFilename(filename),
+                        managedFile != restoredInputURL {
                 imageTranslationOwnedOrphanURLs.insert(managedFile)
             }
         }
@@ -27399,6 +27937,235 @@ final class TranslationSessionStore: ObservableObject {
         return left.localizedCaseInsensitiveCompare(right) == ComparisonResult.orderedSame
     }
 
+    private static func translationTermKey(_ source: String) -> String {
+        source
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .widthInsensitive], locale: .current)
+    }
+
+    private func makeImageTranslationPersistenceSnapshot() -> ImageTranslationPersistenceSnapshot? {
+        guard imageTranslationState == .translated || imageTranslationState == .failed,
+              let sourceURL = imageTranslationSourceURL?.standardizedFileURL,
+              let sourceData = imageTranslationData,
+              let sourceLanguage = imageTranslationContentSourceLanguage,
+              let targetLanguage = imageTranslationContentTargetLanguage,
+              !imageTranslationFilename.isEmpty else {
+            return nil
+        }
+
+        let directory = imageTranslationDirectory.standardizedFileURL
+        guard sourceData.isEmpty == false,
+              sourceURL.deletingLastPathComponent() == directory,
+              Self.isImageTranslationInputFilename(sourceURL.lastPathComponent),
+              sourceURL.lastPathComponent == URL(fileURLWithPath: sourceURL.lastPathComponent).lastPathComponent else {
+            return nil
+        }
+
+        let ignoredSnapshots = imageTranslationIgnoredBlockSnapshots.values
+            .sorted { lhs, rhs in
+                if lhs.originalOrder == rhs.originalOrder {
+                    return lhs.block.id.uuidString < rhs.block.id.uuidString
+                }
+                return lhs.originalOrder < rhs.originalOrder
+            }
+            .map { snapshot in
+                ImageTranslationIgnoredBlockPersistenceSnapshot(
+                    block: snapshot.block,
+                    originalOrder: snapshot.originalOrder,
+                    visionOriginalBlock: snapshot.visionOriginalBlock,
+                    wasManuallyCorrected: snapshot.wasManuallyCorrected
+                )
+            }
+        let activeBlockIDs = imageTranslationBlocks.map(\.id)
+        let ignoredBlockIDs = ignoredSnapshots.map { $0.block.id }
+        let allBlockIDs = activeBlockIDs + ignoredBlockIDs
+        guard !allBlockIDs.isEmpty else { return nil }
+        let activeBlockIDSet = Set(activeBlockIDs)
+        let visionOriginalBlocks = imageTranslationVisionOriginalBlocks
+            .filter { activeBlockIDSet.contains($0.key) }
+            .sorted { lhs, rhs in lhs.key.uuidString < rhs.key.uuidString }
+            .map(\.value)
+
+        var originalBlockOrder = imageTranslationOriginalBlockOrder
+            .sorted { lhs, rhs in
+                if lhs.value == rhs.value {
+                    return lhs.key.uuidString < rhs.key.uuidString
+                }
+                return lhs.value < rhs.value
+            }
+            .map(\.key)
+        for blockID in allBlockIDs where !originalBlockOrder.contains(blockID) {
+            originalBlockOrder.append(blockID)
+        }
+
+        let transcriptLineID = imageTranslationTranscriptLineID.flatMap { lineID in
+            transcript.contains(where: { $0.id == lineID }) ? lineID : nil
+        }
+        return ImageTranslationPersistenceSnapshot(
+            sourceFileRelativePath: sourceURL.lastPathComponent,
+            sourceFileSHA256: Self.sha256Hex(sourceData),
+            sourceFileByteCount: Int64(sourceData.count),
+            filename: imageTranslationFilename,
+            state: imageTranslationState,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            blocks: imageTranslationBlocks,
+            ignoredBlockSnapshots: ignoredSnapshots,
+            visionOriginalBlocks: visionOriginalBlocks,
+            reviewedBlockIDs: imageTranslationReviewedBlockIDs.sorted { $0.uuidString < $1.uuidString },
+            correctedBlockIDs: imageTranslationCorrectedBlockIDs.sorted { $0.uuidString < $1.uuidString },
+            ignoredBlockIDs: ignoredBlockIDs,
+            originalBlockOrder: originalBlockOrder,
+            overlayMode: imageOverlayMode,
+            transcriptLineID: transcriptLineID
+        )
+    }
+
+    private func restoreImageTranslationPersistenceSnapshot(
+        _ snapshot: ImageTranslationPersistenceSnapshot,
+        transcript: [TranscriptLine]
+    ) -> Bool {
+        guard Self.isValidImageTranslationPersistenceSnapshot(snapshot),
+              snapshot.sourceFileByteCount <= Int64(Int.max) else {
+            return false
+        }
+
+        let directory = imageTranslationDirectory.standardizedFileURL
+        let sourceURL = directory.appendingPathComponent(
+            snapshot.sourceFileRelativePath,
+            isDirectory: false
+        ).standardizedFileURL
+        guard sourceURL.deletingLastPathComponent() == directory,
+              sourceURL.lastPathComponent == snapshot.sourceFileRelativePath,
+              (try? FileManager.default.destinationOfSymbolicLink(atPath: sourceURL.path)) == nil,
+              let values = try? sourceURL.resourceValues(
+                  forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]
+              ),
+              values.isRegularFile == true,
+              values.isSymbolicLink != true,
+              let fileSize = values.fileSize,
+              Int64(fileSize) == snapshot.sourceFileByteCount,
+              let data = try? Data(contentsOf: sourceURL),
+              data.count == Int(snapshot.sourceFileByteCount),
+              Self.sha256Hex(data) == snapshot.sourceFileSHA256.lowercased() else {
+            return false
+        }
+
+        imageTranslationTaskID = UUID()
+        imageTranslationContentSourceLanguage = snapshot.sourceLanguage
+        imageTranslationContentTargetLanguage = snapshot.targetLanguage
+        imageTranslationRetrySourceLanguage = nil
+        imageTranslationRetryTargetLanguage = nil
+        imageTranslationState = snapshot.state
+        imageTranslationMessage = snapshot.state == .translated
+            ? "已恢复上次图片翻译会话"
+            : "已恢复上次图片翻译结果，可重试未完成文字块"
+        imageTranslationData = data
+        imageTranslationFilename = snapshot.filename
+        imageTranslationSourceURL = sourceURL
+        imageTranslationBlocks = snapshot.blocks
+        imageTranslationCorrectedBlockIDs = Set(snapshot.correctedBlockIDs)
+        imageTranslationReviewedBlockIDs = Set(snapshot.reviewedBlockIDs)
+        imageTranslationOriginalBlockOrder = Dictionary(
+            uniqueKeysWithValues: snapshot.originalBlockOrder.enumerated().map { index, blockID in
+                (blockID, index)
+            }
+        )
+        imageTranslationIgnoredBlockSnapshots = Dictionary(
+            uniqueKeysWithValues: snapshot.ignoredBlockSnapshots.map { persisted in
+                (
+                    persisted.block.id,
+                    ImageTranslationIgnoredBlockSnapshot(
+                        block: persisted.block,
+                        originalOrder: persisted.originalOrder,
+                        visionOriginalBlock: persisted.visionOriginalBlock,
+                        wasManuallyCorrected: persisted.wasManuallyCorrected
+                    )
+                )
+            }
+        )
+        imageTranslationVisionOriginalBlocks = Dictionary(
+            uniqueKeysWithValues: snapshot.visionOriginalBlocks.map { block in (block.id, block) }
+        )
+        for persisted in snapshot.ignoredBlockSnapshots {
+            guard let originalBlock = persisted.visionOriginalBlock else { continue }
+            imageTranslationVisionOriginalBlocks[persisted.block.id] = originalBlock
+        }
+        imageTranslationIgnoredBlocks = []
+        imageOverlayMode = snapshot.overlayMode
+        imageTranslationTranscriptLineID = snapshot.transcriptLineID.flatMap { lineID in
+            transcript.contains(where: { $0.id == lineID }) ? lineID : nil
+        }
+        imageTranslationRevision += 1
+        imageTranslationBlockRerecognitionCompletedBlockID = nil
+        isProcessing = false
+        refreshImageTranslationIgnoredBlocks()
+        return true
+    }
+
+    private static func isValidImageTranslationPersistenceSnapshot(
+        _ snapshot: ImageTranslationPersistenceSnapshot
+    ) -> Bool {
+        let hexCharacters = CharacterSet(charactersIn: "0123456789abcdefABCDEF")
+        guard snapshot.schemaVersion == ImageTranslationPersistenceSnapshot.currentSchemaVersion,
+              snapshot.sourceFileByteCount > 0,
+              snapshot.sourceFileRelativePath == URL(fileURLWithPath: snapshot.sourceFileRelativePath).lastPathComponent,
+              !snapshot.sourceFileRelativePath.isEmpty,
+              isImageTranslationInputFilename(snapshot.sourceFileRelativePath),
+              !snapshot.filename.isEmpty,
+              sanitizedImageFilename(snapshot.filename) == snapshot.filename,
+              snapshot.state == .translated || snapshot.state == .failed,
+              snapshot.sourceFileSHA256.count == 64,
+              snapshot.sourceFileSHA256.unicodeScalars.allSatisfy({ hexCharacters.contains($0) }) else {
+            return false
+        }
+
+        let activeIDs = snapshot.blocks.map(\.id)
+        let ignoredIDs = snapshot.ignoredBlockSnapshots.map { $0.block.id }
+        let allIDs = activeIDs + ignoredIDs
+        let activeIDSet = Set(activeIDs)
+        let ignoredIDSet = Set(ignoredIDs)
+        let visionOriginalIDs = snapshot.visionOriginalBlocks.map(\.id)
+        guard !allIDs.isEmpty,
+              Set(activeIDs).count == activeIDs.count,
+              Set(ignoredIDs).count == ignoredIDs.count,
+              activeIDSet.isDisjoint(with: ignoredIDSet),
+              Set(snapshot.ignoredBlockIDs) == ignoredIDSet,
+              snapshot.ignoredBlockIDs.count == ignoredIDSet.count,
+              Set(snapshot.originalBlockOrder) == Set(allIDs),
+              snapshot.originalBlockOrder.count == allIDs.count,
+              Set(visionOriginalIDs).count == visionOriginalIDs.count,
+              Set(visionOriginalIDs).isSubset(of: activeIDSet),
+              Set(snapshot.reviewedBlockIDs).count == snapshot.reviewedBlockIDs.count,
+              Set(snapshot.correctedBlockIDs).count == snapshot.correctedBlockIDs.count,
+              Set(snapshot.reviewedBlockIDs).isSubset(of: activeIDSet),
+              Set(snapshot.correctedBlockIDs).isSubset(of: activeIDSet) else {
+            return false
+        }
+
+        let allBlocks = snapshot.blocks
+            + snapshot.ignoredBlockSnapshots.map(\.block)
+            + snapshot.visionOriginalBlocks
+        guard allBlocks.allSatisfy({ block in
+            !block.original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && block.boundingBox.normalizedToUnit() != nil
+                && (block.automaticBoundingBox == nil || block.automaticBoundingBox?.normalizedToUnit() != nil)
+        }) else {
+            return false
+        }
+
+        for ignored in snapshot.ignoredBlockSnapshots {
+            guard snapshot.originalBlockOrder.firstIndex(of: ignored.block.id) == ignored.originalOrder else {
+                return false
+            }
+        }
+        return true
+    }
+
+    private static func sha256Hex(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
     private func restoreSnapshot() {
         isRestoring = true
         defer { isRestoring = false }
@@ -27410,6 +28177,7 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         prompts = Self.mergeDefaultPrompts(with: snapshot.prompts)
+        translationTermMemory = snapshot.translationTerms
         history = snapshot.history.map { record in
             var sanitizedRecord = record
             sanitizedRecord.transcript = sanitizeTranscript(
@@ -27433,6 +28201,13 @@ final class TranslationSessionStore: ObservableObject {
             summary = activeSession.summary
         } else {
             applySeedSession(settings: snapshot.settings)
+        }
+
+        if let imageSnapshot = snapshot.imageTranslationSession {
+            _ = restoreImageTranslationPersistenceSnapshot(
+                imageSnapshot,
+                transcript: transcript
+            )
         }
 
         if !prompts.contains(where: { $0.id == selectedPromptID }) {
@@ -27505,7 +28280,9 @@ final class TranslationSessionStore: ObservableObject {
                 sampling: sampling,
                 isProUnlocked: isProUnlocked,
                 isDeveloperModeEnabled: isDeveloperModeEnabled
-            )
+            ),
+            translationTerms: translationTermMemory,
+            imageTranslationSession: makeImageTranslationPersistenceSnapshot()
         )
         Self.save(snapshot, to: persistenceURL)
     }

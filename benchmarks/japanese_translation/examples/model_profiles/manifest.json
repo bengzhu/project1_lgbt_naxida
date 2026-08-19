@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-translation-model-profiles",
+  "contractExampleOnly": true,
+  "profiles": [
+    {
+      "profileID": "gemma-contract",
+      "modelFamily": "Gemma",
+      "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+      "model": {
+        "filename": "gemma-contract-model.gguf",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "quantization": "Q4_0",
+        "license": "contract-example-only",
+        "licenseReviewed": false
+      },
+      "template": {
+        "source": "embedded",
+        "templateID": "gemma",
+        "templateSha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "fallbackProfileID": "gemma",
+        "applyAPI": "llama_chat_apply_template"
+      },
+      "capability": {
+        "contextLength": 1024,
+        "maxBatchBlocks": 8,
+        "maxBatchCharacters": 1800,
+        "sourceLanguages": ["Japanese", "English (US)"],
+        "targetLanguages": ["简体中文", "English (US)"]
+      },
+      "decoding": {
+        "profileID": "sampled-v1",
+        "mode": "sampled",
+        "seed": null,
+        "temperature": 0.2,
+        "topK": 40,
+        "topP": 0.9,
+        "minP": 0.05
+      }
+    },
+    {
+      "profileID": "qwen-contract",
+      "modelFamily": "Qwen",
+      "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+      "model": {
+        "filename": "qwen-contract-model.gguf",
+        "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "quantization": "Q4_K_M",
+        "license": "contract-example-only",
+        "licenseReviewed": false
+      },
+      "template": {
+        "source": "embedded",
+        "templateID": "chatml",
+        "templateSha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "fallbackProfileID": null,
+        "applyAPI": "llama_chat_apply_template"
+      },
+      "capability": {
+        "contextLength": 1024,
+        "maxBatchBlocks": 8,
+        "maxBatchCharacters": 1800,
+        "sourceLanguages": ["Japanese", "English (US)"],
+        "targetLanguages": ["简体中文", "English (US)"]
+      },
+      "decoding": {
+        "profileID": "sampled-v1",
+        "mode": "sampled",
+        "seed": null,
+        "temperature": 0.2,
+        "topK": 40,
+        "topP": 0.9,
+        "minP": 0.05
+      }
+    },
+    {
+      "profileID": "sakura-missing-template-contract",
+      "modelFamily": "Sakura",
+      "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+      "model": {
+        "filename": "sakura-contract-model.gguf",
+        "sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "quantization": "Q5_K_M",
+        "license": "contract-example-only",
+        "licenseReviewed": false
+      },
+      "template": {
+        "source": "missingRejected",
+        "templateID": null,
+        "templateSha256": null,
+        "fallbackProfileID": null,
+        "applyAPI": "llama_chat_apply_template"
+      },
+      "capability": {
+        "contextLength": 1024,
+        "maxBatchBlocks": 8,
+        "maxBatchCharacters": 1800,
+        "sourceLanguages": ["Japanese"],
+        "targetLanguages": ["简体中文", "English (US)"]
+      },
+      "decoding": {
+        "profileID": "deterministic-v1",
+        "mode": "deterministic",
+        "seed": 42,
+        "temperature": 0,
+        "topK": null,
+        "topP": null,
+        "minP": null
+      }
+    }
+  ]
+}

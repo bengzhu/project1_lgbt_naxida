@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.local/benchmarks/japanese_translation/translation-context-qa-input.schema.json",
+  "title": "AITRANS v3.288 translation context and QA input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "run", "contractExampleOnly", "context", "batches", "boundary"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-translation-context-qa" },
+    "run": { "$ref": "#/$defs/run" },
+    "contractExampleOnly": { "type": "boolean" },
+    "context": { "$ref": "#/$defs/context" },
+    "batches": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/batch" } },
+    "boundary": { "$ref": "#/$defs/boundary" }
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appSha", "evaluatorVersion", "invocationMode"],
+      "properties": {
+        "appSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "evaluatorVersion": { "type": "string", "minLength": 1 },
+        "invocationMode": { "const": "cloud-only-shadow" }
+      }
+    },
+    "term": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source", "target", "kind", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["terminology", "personName", "addressing", "sfx", "narration"] },
+        "status": { "enum": ["confirmed", "candidate", "revoked"] },
+        "note": { "type": ["string", "null"] }
+      }
+    },
+    "summaryItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ordinal", "sourceExcerpt", "targetExcerpt", "kind"],
+      "properties": {
+        "ordinal": { "type": "integer", "minimum": 1 },
+        "sourceExcerpt": { "type": "string", "minLength": 1 },
+        "targetExcerpt": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["dialogue", "narration", "sfx", "title", "other"] }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceLanguage", "targetLanguage", "textKind", "confirmedTerms", "previousBatchSummary"],
+      "properties": {
+        "sourceLanguage": { "const": "ja" },
+        "targetLanguage": { "enum": ["zh-CN", "en"] },
+        "textKind": { "enum": ["dialogue", "narration", "sfx", "title", "other"] },
+        "confirmedTerms": { "type": "array", "items": { "$ref": "#/$defs/term" } },
+        "previousBatchSummary": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["batchID", "items", "isReadOnly", "containsPendingInputBlocks", "generatedFromCompletedBlocks"],
+          "properties": {
+            "batchID": { "type": "string", "minLength": 1 },
+            "items": { "type": "array", "items": { "$ref": "#/$defs/summaryItem" } },
+            "isReadOnly": { "const": true },
+            "containsPendingInputBlocks": { "const": false },
+            "generatedFromCompletedBlocks": { "const": true }
+          }
+        }
+      }
+    },
+    "sourceBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceText", "kind", "maxOutputCharacters"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "sourceText": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["dialogue", "narration", "sfx", "title", "other"] },
+        "maxOutputCharacters": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["batchID", "sourceBlocks", "rawOutput", "expectedFailedBlockIDs", "expectedAction", "cancelScenario"],
+      "properties": {
+        "batchID": { "type": "string", "minLength": 1 },
+        "sourceBlocks": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/sourceBlock" } },
+        "rawOutput": { "type": "string" },
+        "expectedFailedBlockIDs": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "expectedAction": { "enum": ["accept", "retryFailedBlocksOnly", "persistPartialAndStop"] },
+        "cancelScenario": { "$ref": "#/$defs/cancelScenario" }
+      }
+    },
+    "cancelScenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requested", "scope", "preservesCompletedBlocks", "persistsPartialState", "rerunsOCR", "rerunsWholePage"],
+      "properties": {
+        "requested": { "type": "boolean" },
+        "scope": { "enum": ["none", "block", "batch"] },
+        "preservesCompletedBlocks": { "type": "boolean" },
+        "persistsPartialState": { "type": "boolean" },
+        "rerunsOCR": { "type": "boolean" },
+        "rerunsWholePage": { "type": "boolean" }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ocrRerunOnQAFailure", "pageRerunOnQAFailure", "extraTagsRejected", "duplicateTagsRejected", "outOfOrderTagsRejected", "defaultProductSelectionChanged"],
+      "properties": {
+        "ocrRerunOnQAFailure": { "const": false },
+        "pageRerunOnQAFailure": { "const": false },
+        "extraTagsRejected": { "const": true },
+        "duplicateTagsRejected": { "const": true },
+        "outOfOrderTagsRejected": { "const": true },
+        "defaultProductSelectionChanged": { "const": false }
+      }
+    }
+  }
+}

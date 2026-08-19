@@ -32,7 +32,7 @@ class JapaneseCompactCropRecoveryContractTests(unittest.TestCase):
         self.vision = read("AITRANS/Services/VisionOCRService.swift")
         self.recognition = braced_body(
             self.vision,
-            "func recognizeTextBlocks(in imageData: Data",
+            "func recognizeTextBlocksWithShadowLedger(",
         )
         self.recovery = braced_body(
             self.vision,

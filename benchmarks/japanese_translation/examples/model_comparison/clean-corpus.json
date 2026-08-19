@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0.0",
+  "datasetVersion": "v3.287-contract-example",
+  "cases": [
+    {
+      "caseID": "ja-zh-contract-001",
+      "sourceLanguage": "ja",
+      "targetLanguage": "zh-CN",
+      "sourceText": "今度こそ"
+    },
+    {
+      "caseID": "ja-en-contract-001",
+      "sourceLanguage": "ja",
+      "targetLanguage": "en",
+      "sourceText": "持ち帰る！"
+    },
+    {
+      "caseID": "en-zh-contract-001",
+      "sourceLanguage": "en",
+      "targetLanguage": "zh-CN",
+      "sourceText": "Do not look back."
+    }
+  ]
+}

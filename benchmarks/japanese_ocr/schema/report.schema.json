@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.local/benchmarks/japanese_ocr/report.schema.json",
+  "title": "AITRANS Japanese OCR benchmark report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "benchmark",
+    "status",
+    "datasetSha256",
+    "predictionSha256",
+    "config",
+    "counts",
+    "metrics",
+    "failures",
+    "qualityClaim"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-ocr" },
+    "status": { "enum": ["success", "noGroundTruth"] },
+    "datasetSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "predictionSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "config": { "type": "object" },
+    "counts": { "type": "object" },
+    "metrics": { "type": "object" },
+    "failures": { "type": "array" },
+    "qualityClaim": { "type": "string", "minLength": 1 }
+  }
+}

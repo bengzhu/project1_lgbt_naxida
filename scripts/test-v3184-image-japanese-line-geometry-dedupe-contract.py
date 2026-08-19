@@ -32,7 +32,7 @@ class JapaneseLineGeometryDedupeContractTests(unittest.TestCase):
         self.vision = read("AITRANS/Services/VisionOCRService.swift")
         self.recognize = braced_body(
             self.vision,
-            "func recognizeTextBlocks(in imageData: Data, sourceLanguage: SupportedLanguage)",
+            "func recognizeTextBlocksWithShadowLedger(",
         )
         self.dedupe = braced_body(
             self.vision,

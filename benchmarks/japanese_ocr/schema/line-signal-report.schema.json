@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.invalid/schema/japanese-ocr-line-signal-report-v1.json",
+  "title": "AITRANS Japanese OCR native line/TextRegion shadow report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "status", "datasetSha256", "signalSha256", "config", "run", "budgets", "pages", "totals", "promotion", "qualityClaim"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "benchmark": {"const": "japanese-ocr-line-signal"},
+    "status": {"enum": ["success", "blocked", "insufficientCorpus"]},
+    "datasetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signalSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["regionIoUThreshold", "lineIoUThreshold", "candidateLeakageRejected", "groundTruthUsedForSelection"],
+      "properties": {
+        "regionIoUThreshold": {"type": "number", "const": 0.5},
+        "lineIoUThreshold": {"type": "number", "const": 0.5},
+        "candidateLeakageRejected": {"const": true},
+        "groundTruthUsedForSelection": {"const": false}
+      }
+    },
+    "run": {"type": "object"},
+    "budgets": {"type": "object"},
+    "pages": {"type": "array", "items": {"$ref": "#/$defs/page"}},
+    "totals": {"type": "object"},
+    "promotion": {"type": "object"},
+    "qualityClaim": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidateCount", "referenceCount", "matchedCount", "recall", "precision", "f1", "omissionCount", "duplicateCount", "falsePositiveCount", "crossRegionMergeCount", "cutCandidateCount"],
+      "properties": {
+        "candidateCount": {"type": "integer", "minimum": 0},
+        "referenceCount": {"type": "integer", "minimum": 0},
+        "matchedCount": {"type": "integer", "minimum": 0},
+        "recall": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "precision": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "f1": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "omissionCount": {"type": "integer", "minimum": 0},
+        "duplicateCount": {"type": "integer", "minimum": 0},
+        "falsePositiveCount": {"type": "integer", "minimum": 0},
+        "crossRegionMergeCount": {"type": "integer", "minimum": 0},
+        "cutCandidateCount": {"type": "integer", "minimum": 0}
+      }
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pageID", "annotationStatus", "textRegions", "lines", "directionAccuracy", "readingOrderAccuracy", "orphanLineCount", "budget"],
+      "properties": {
+        "pageID": {"type": "string", "minLength": 1},
+        "annotationStatus": {"type": "string", "minLength": 1},
+        "textRegions": {"$ref": "#/$defs/metric"},
+        "lines": {"$ref": "#/$defs/metric"},
+        "directionAccuracy": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "readingOrderAccuracy": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "orphanLineCount": {"type": "integer", "minimum": 0},
+        "budget": {"type": "object"}
+      }
+    }
+  }
+}

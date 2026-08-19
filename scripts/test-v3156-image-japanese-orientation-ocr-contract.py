@@ -35,7 +35,7 @@ class JapaneseOrientationOCRContractTests(unittest.TestCase):
         self.workflow = read(".github/workflows/ci-results.yml")
         self.recognize = braced_body(
             self.vision,
-            "func recognizeTextBlocks(in imageData: Data, sourceLanguage: SupportedLanguage)",
+            "func recognizeTextBlocksWithShadowLedger(",
         )
 
     def test_japanese_uses_a_bounded_koharu_style_orientation_pass(self) -> None:

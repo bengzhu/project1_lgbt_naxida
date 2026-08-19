@@ -6,6 +6,9 @@ import Foundation
 struct ComicTextDetectorRegion: Equatable, Sendable {
     var rect: ImageOCRLayoutRect
     var confidence: Float
+    /// Assigned only after detector merge and deterministic sort. This is a
+    /// session-local TextRegion identity, not a product-visible block ID.
+    var regionID: ImageOCRRegionID? = nil
 }
 
 enum ComicTextBubbleDetectorServiceError: LocalizedError {
@@ -121,13 +124,21 @@ private struct ComicTextBubbleDetectorRuntime {
             })
         }
 
-        return Self.mergeTextRegions(Self.mergeSliceRegions(detections)).map {
-            ComicTextDetectorRegion(rect: $0.rect, confidence: $0.confidence)
-        }
-        .sorted {
+        let merged = Self.mergeTextRegions(Self.mergeSliceRegions(detections))
+            .map {
+                ComicTextDetectorRegion(rect: $0.rect, confidence: $0.confidence)
+            }
+        let sorted = merged.sorted {
             if $0.confidence != $1.confidence { return $0.confidence > $1.confidence }
             if $0.rect.y != $1.rect.y { return $0.rect.y < $1.rect.y }
-            return $0.rect.x > $1.rect.x
+            if $0.rect.x != $1.rect.x { return $0.rect.x > $1.rect.x }
+            if $0.rect.width != $1.rect.width { return $0.rect.width < $1.rect.width }
+            return $0.rect.height < $1.rect.height
+        }
+        return sorted.enumerated().map { index, region in
+            var identified = region
+            identified.regionID = ImageOCRRegionID("detector-region-\(index)")
+            return identified
         }
     }
 

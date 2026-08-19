@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-ocr",
+  "datasetSha256": "7c46c5ce972af96d0927bfe832a61eaf795b0f9d7a714442c724a061b74a8b34",
+  "run": {
+    "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+    "engineID": "no-app-predictions",
+    "engineVersion": "v3.280-schema-only",
+    "model": { "id": "not-run", "version": "not-run", "sha256": "0000000000000000000000000000000000000000000000000000000000000000", "license": "not-applicable" },
+    "license": "not-applicable",
+    "device": "offline-schema-only",
+    "parameters": { "status": "legacy-reference-only" }
+  },
+  "predictions": []
+}

@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-ocr-line-signal",
+  "datasetSha256": "15027ef0b03ed42868d4c78c6fcb1baa240adde5d9bd3127f83b2fe697db4c6c",
+  "run": {
+    "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+    "engineID": "aitrans-native-line-shadow",
+    "engineVersion": "contract-example",
+    "model": {
+      "id": "contract-example-native-line-signal",
+      "version": "1",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "license": "Apache-2.0"
+    },
+    "license": "Apache-2.0",
+    "device": "offline-contract-example",
+    "parameters": {
+      "mode": "shadow-only",
+      "regionIoUThreshold": 0.5,
+      "lineIoUThreshold": 0.5
+    }
+  },
+  "budgets": {
+    "maxTextRegionCandidates": 4,
+    "maxLineCandidates": 8,
+    "maxTotalCandidates": 12
+  },
+  "pages": [
+    {
+      "pageID": "line-signal-contract-jap",
+      "textRegionStatus": "success",
+      "lineStatus": "success",
+      "failureReason": null
+    }
+  ],
+  "candidates": [
+    {
+      "candidateID": "native-region-0",
+      "pageID": "line-signal-contract-jap",
+      "kind": "textRegion",
+      "status": "success",
+      "bbox": [0.4683098591549296, 0.65625, 0.04049295774647887, 0.0575],
+      "polygon": [[0.4683098591549296, 0.65625], [0.5088028169014085, 0.65625], [0.5088028169014085, 0.71375], [0.4683098591549296, 0.71375]],
+      "confidence": 0.9,
+      "writingDirection": "vertical",
+      "readingOrder": 0,
+      "parentCandidateID": null,
+      "source": "nativeTextRegion",
+      "referenceOnly": false,
+      "failureReason": null
+    },
+    {
+      "candidateID": "native-region-1",
+      "pageID": "line-signal-contract-jap",
+      "kind": "textRegion",
+      "status": "success",
+      "bbox": [0.2, 0.1, 0.08, 0.24],
+      "polygon": [[0.2, 0.1], [0.28, 0.1], [0.28, 0.34], [0.2, 0.34]],
+      "confidence": 0.85,
+      "writingDirection": "vertical",
+      "readingOrder": 1,
+      "parentCandidateID": null,
+      "source": "nativeTextRegion",
+      "referenceOnly": false,
+      "failureReason": null
+    },
+    {
+      "candidateID": "native-line-0-0",
+      "pageID": "line-signal-contract-jap",
+      "kind": "line",
+      "status": "success",
+      "bbox": [0.4683098591549296, 0.65625, 0.04049295774647887, 0.0575],
+      "polygon": [[0.4683098591549296, 0.65625], [0.5088028169014085, 0.65625], [0.5088028169014085, 0.71375], [0.4683098591549296, 0.71375]],
+      "confidence": 0.9,
+      "writingDirection": "vertical",
+      "readingOrder": null,
+      "parentCandidateID": "native-region-0",
+      "source": "nativeLine",
+      "referenceOnly": false,
+      "failureReason": null
+    },
+    {
+      "candidateID": "native-line-1-0",
+      "pageID": "line-signal-contract-jap",
+      "kind": "line",
+      "status": "success",
+      "bbox": [0.21, 0.1, 0.06, 0.08],
+      "polygon": [[0.21, 0.1], [0.27, 0.1], [0.27, 0.18], [0.21, 0.18]],
+      "confidence": 0.8,
+      "writingDirection": "vertical",
+      "readingOrder": null,
+      "parentCandidateID": "native-region-1",
+      "source": "nativeLine",
+      "referenceOnly": false,
+      "failureReason": null
+    },
+    {
+      "candidateID": "native-line-1-1",
+      "pageID": "line-signal-contract-jap",
+      "kind": "line",
+      "status": "success",
+      "bbox": [0.21, 0.18, 0.06, 0.08],
+      "polygon": [[0.21, 0.18], [0.27, 0.18], [0.27, 0.26], [0.21, 0.26]],
+      "confidence": 0.8,
+      "writingDirection": "vertical",
+      "readingOrder": null,
+      "parentCandidateID": "native-region-1",
+      "source": "nativeLine",
+      "referenceOnly": false,
+      "failureReason": null
+    },
+    {
+      "candidateID": "native-line-1-2",
+      "pageID": "line-signal-contract-jap",
+      "kind": "line",
+      "status": "success",
+      "bbox": [0.21, 0.26, 0.06, 0.08],
+      "polygon": [[0.21, 0.26], [0.27, 0.26], [0.27, 0.34], [0.21, 0.34]],
+      "confidence": 0.8,
+      "writingDirection": "vertical",
+      "readingOrder": null,
+      "parentCandidateID": "native-region-1",
+      "source": "nativeLine",
+      "referenceOnly": false,
+      "failureReason": null
+    }
+  ]
+}

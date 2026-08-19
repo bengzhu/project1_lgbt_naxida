@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-translation",
+  "datasetVersion": "v3.280-contract-example",
+  "manifestSha256": "afe0e0f750034e5de16a14db003a7813e6bf0f6a536c935f46465358ff3c45c3",
+  "sourceLanguage": "ja",
+  "targetLanguage": "zh-CN",
+  "fixtures": [
+    {
+      "fixtureID": "contract-clean-001",
+      "split": "dev",
+      "inputKind": "cleanSource",
+      "pairedFixtureID": "contract-corrupted-001",
+      "input": {
+        "path": "clean-source.json",
+        "sha256": "7b355e53650438d905a44ba03b66e76dec91488f2450b252dd1d47dd620ff518",
+        "format": "json",
+        "license": "repository-controlled-contract-fixture",
+        "permittedUses": ["benchmark-contract"]
+      },
+      "annotationStatus": "contractExampleOnly",
+      "exampleOnly": true,
+      "blocks": [
+        { "blockID": "b1", "order": 0, "sourceText": "今度こそ", "sourceTextNFC": "今度こそ", "textType": "dialogue", "maxTranslationCharacters": 12 },
+        { "blockID": "b2", "order": 1, "sourceText": "持ち帰る！", "sourceTextNFC": "持ち帰る！", "textType": "dialogue", "maxTranslationCharacters": 12 }
+      ]
+    },
+    {
+      "fixtureID": "contract-corrupted-001",
+      "split": "dev",
+      "inputKind": "ocrCorrupted",
+      "pairedFixtureID": "contract-clean-001",
+      "input": {
+        "path": "ocr-corrupted-source.json",
+        "sha256": "ee730ec39ab41c5306ef52010c06bf5cd83ba3f38ed7d500cb5e14ef639c8ec5",
+        "format": "json",
+        "license": "repository-controlled-contract-fixture",
+        "permittedUses": ["benchmark-contract"]
+      },
+      "annotationStatus": "contractExampleOnly",
+      "exampleOnly": true,
+      "blocks": [
+        { "blockID": "b1", "order": 0, "sourceText": "今度こ", "sourceTextNFC": "今度こ", "textType": "dialogue", "maxTranslationCharacters": 12 },
+        { "blockID": "b2", "order": 1, "sourceText": "持ち帰る", "sourceTextNFC": "持ち帰る", "textType": "dialogue", "maxTranslationCharacters": 12 }
+      ]
+    }
+  ]
+}

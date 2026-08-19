@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.local/benchmarks/japanese_translation/model-comparison-manifest.schema.json",
+  "title": "AITRANS clean-text translation model comparison manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "datasetVersion", "contractExampleOnly", "manifestSha256", "requiredLanguagePairs", "source", "cases"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-translation-model-comparison" },
+    "datasetVersion": { "type": "string", "minLength": 1 },
+    "contractExampleOnly": { "type": "boolean" },
+    "manifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "requiredLanguagePairs": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          { "enum": ["ja", "en"] },
+          { "enum": ["zh-CN", "en"] }
+        ],
+        "minItems": 2,
+        "maxItems": 2,
+        "items": false
+      }
+    },
+    "source": { "$ref": "#/$defs/source" },
+    "cases": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/case" }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "format", "license", "permittedUses"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "format": { "const": "json" },
+        "license": { "type": "string", "minLength": 1 },
+        "permittedUses": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseID", "split", "inputKind", "sourceLanguage", "targetLanguage", "sourceText", "sourceTextNFC", "referenceTranslation", "referenceStatus", "textType"],
+      "properties": {
+        "caseID": { "type": "string", "minLength": 1 },
+        "split": { "enum": ["train", "dev", "holdout"] },
+        "inputKind": { "const": "cleanSource" },
+        "sourceLanguage": { "enum": ["ja", "en"] },
+        "targetLanguage": { "enum": ["zh-CN", "en"] },
+        "sourceText": { "type": "string", "minLength": 1 },
+        "sourceTextNFC": { "type": "string", "minLength": 1 },
+        "referenceTranslation": { "type": ["string", "null"] },
+        "referenceStatus": { "enum": ["human", "contractExampleOnly", "pending", "none"] },
+        "textType": { "enum": ["dialogue", "narration", "SFX", "title", "other"] },
+        "maxTranslationCharacters": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    }
+  }
+}

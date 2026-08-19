@@ -35,6 +35,10 @@ struct MangaOCRRequest: Sendable {
     /// Ephemeral Koharu-style line owner. This is carried through batching so
     /// two overlapping line requests cannot be matched to the wrong block.
     var verticalTextRegionOwner: Int?
+    /// Stable session identity and source line identity for v3.281 shadow
+    /// comparison. These do not participate in crop selection or fusion.
+    var regionID: ImageOCRRegionID?
+    var lineID: ImageOCRLineID?
 
     init(
         textRect: ImageOCRLayoutRect,
@@ -43,7 +47,9 @@ struct MangaOCRRequest: Sendable {
         cropOrientation: MangaOCRCropOrientation = .natural,
         cropQuad: ImageOCRLayoutQuad? = nil,
         cropQuadIsVertical: Bool = false,
-        verticalTextRegionOwner: Int? = nil
+        verticalTextRegionOwner: Int? = nil,
+        regionID: ImageOCRRegionID? = nil,
+        lineID: ImageOCRLineID? = nil
     ) {
         self.textRect = textRect
         self.cropRect = cropRect
@@ -52,6 +58,8 @@ struct MangaOCRRequest: Sendable {
         self.cropQuad = cropQuad
         self.cropQuadIsVertical = cropQuadIsVertical
         self.verticalTextRegionOwner = verticalTextRegionOwner
+        self.regionID = regionID
+        self.lineID = lineID
     }
 }
 
@@ -65,6 +73,12 @@ struct MangaOCRResult: Sendable {
     var detectorConfidence: Float?
     /// Matches the request-local vertical TextRegion owner, when present.
     var verticalTextRegionOwner: Int?
+    var regionID: ImageOCRRegionID?
+    var lineID: ImageOCRLineID?
+    /// Records whether the selected recognition came from the detector bbox
+    /// or the already-existing weak-result line-quad fallback.
+    var cropVariant: ImageOCRCropVariant
+    var geometrySource: ImageOCRGeometrySource
 }
 
 enum MangaOCRServiceError: LocalizedError {
@@ -128,6 +142,12 @@ actor MangaOCRService {
 
     private typealias Recognition = (text: String, confidence: Float)
 
+    private struct PreferredRecognition {
+        var recognition: Recognition
+        var cropVariant: ImageOCRCropVariant
+        var geometrySource: ImageOCRGeometrySource
+    }
+
     private struct CroppedRequest {
         var request: MangaOCRRequest
         var primaryBoundingBoxCrop: CGImage
@@ -186,7 +206,10 @@ actor MangaOCRService {
             for index in chunk.indices {
                 let recognition = Self.preferredRecognition(
                     boundingBox: primaryRecognitions[index],
-                    lineQuadFallback: fallbackByIndex[index]
+                    lineQuadFallback: fallbackByIndex[index],
+                    boundingBoxVariant: chunk[index].request.cropOrientation == .koharuVerticalLine270
+                        ? .lineBBox
+                        : .detectorBBox
                 )
                 Self.appendJapaneseResult(
                     recognition,
@@ -249,11 +272,12 @@ actor MangaOCRService {
     }
 
     private static func appendJapaneseResult(
-        _ recognition: Recognition?,
+        _ selected: PreferredRecognition?,
         request: MangaOCRRequest,
         to results: inout [MangaOCRResult]
     ) {
-        guard let recognition else { return }
+        guard let selected else { return }
+        let recognition = selected.recognition
         guard containsJapaneseLetter(recognition.text) else { return }
         results.append(
             MangaOCRResult(
@@ -261,7 +285,11 @@ actor MangaOCRService {
                 confidence: recognition.confidence,
                 textRect: request.textRect,
                 detectorConfidence: request.detectorConfidence,
-                verticalTextRegionOwner: request.verticalTextRegionOwner
+                verticalTextRegionOwner: request.verticalTextRegionOwner,
+                regionID: request.regionID,
+                lineID: request.lineID,
+                cropVariant: selected.cropVariant,
+                geometrySource: selected.geometrySource
             )
         )
     }
@@ -339,8 +367,9 @@ actor MangaOCRService {
 
     private static func preferredRecognition(
         boundingBox: Recognition?,
-        lineQuadFallback: Recognition?
-    ) -> Recognition? {
+        lineQuadFallback: Recognition?,
+        boundingBoxVariant: ImageOCRCropVariant
+    ) -> PreferredRecognition? {
         let boundingBoxIsJapanese = boundingBox.map {
             containsJapaneseLetter($0.text)
         } ?? false
@@ -351,27 +380,39 @@ actor MangaOCRService {
         case (false, false):
             return nil
         case (true, false):
-            return boundingBox
+            guard let boundingBox else { return nil }
+            return PreferredRecognition(
+                recognition: boundingBox,
+                cropVariant: boundingBoxVariant,
+                geometrySource: .bbox
+            )
         case (false, true):
-            return lineQuadFallback
+            guard let lineQuadFallback else { return nil }
+            return PreferredRecognition(
+                recognition: lineQuadFallback,
+                cropVariant: .lineQuad,
+                geometrySource: .lineQuad
+            )
         case (true, true):
-            guard let boundingBox, let lineQuadFallback else { return boundingBox }
+            guard let boundingBox, let lineQuadFallback else { return nil }
             let boundingBoxRank = recognitionQualityRank(boundingBox)
             let fallbackRank = recognitionQualityRank(lineQuadFallback)
             if fallbackRank != boundingBoxRank {
-                return fallbackRank > boundingBoxRank ? lineQuadFallback : boundingBox
+                return fallbackRank > boundingBoxRank
+                    ? PreferredRecognition(recognition: lineQuadFallback, cropVariant: .lineQuad, geometrySource: .lineQuad)
+                    : PreferredRecognition(recognition: boundingBox, cropVariant: boundingBoxVariant, geometrySource: .bbox)
             }
             let boundingBoxConfidence = finiteConfidence(boundingBox.confidence)
             let fallbackConfidence = finiteConfidence(lineQuadFallback.confidence)
             if fallbackConfidence != boundingBoxConfidence {
                 return fallbackConfidence > boundingBoxConfidence
-                    ? lineQuadFallback
-                    : boundingBox
+                    ? PreferredRecognition(recognition: lineQuadFallback, cropVariant: .lineQuad, geometrySource: .lineQuad)
+                    : PreferredRecognition(recognition: boundingBox, cropVariant: boundingBoxVariant, geometrySource: .bbox)
             }
             return japaneseLetterCount(lineQuadFallback.text)
                 > japaneseLetterCount(boundingBox.text)
-                ? lineQuadFallback
-                : boundingBox
+                ? PreferredRecognition(recognition: lineQuadFallback, cropVariant: .lineQuad, geometrySource: .lineQuad)
+                : PreferredRecognition(recognition: boundingBox, cropVariant: boundingBoxVariant, geometrySource: .bbox)
         }
     }
 

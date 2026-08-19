@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.invalid/schema/japanese-ocr-engine-selector-report-v1.json",
+  "title": "AITRANS Japanese OCR GT-isolated selector report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "status", "contractExampleOnly", "run", "policy", "decisions", "selectionInputContract", "evidenceGate", "promotion"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "benchmark": {"const": "japanese-ocr-engine-selector"},
+    "status": {"enum": ["blocked", "insufficientEvidence", "readyForReview"]},
+    "contractExampleOnly": {"type": "boolean"},
+    "run": {"$ref": "#/$defs/run"},
+    "policy": {"$ref": "#/$defs/policy"},
+    "decisions": {"type": "array", "items": {"$ref": "#/$defs/decision"}},
+    "selectionInputContract": {"$ref": "#/$defs/selectionInputContract"},
+    "evidenceGate": {"$ref": "#/$defs/evidenceGate"},
+    "promotion": {"$ref": "#/$defs/promotion"}
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appSha", "evaluatorVersion", "invocationMode"],
+      "properties": {
+        "appSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "evaluatorVersion": {"type": "string", "minLength": 1},
+        "invocationMode": {"const": "cloud-only-shadow"}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policyID", "policyVersion", "selectorMode", "featureFlag", "featureFlagEnabled",
+        "baselineEngineID", "candidateEngineID", "candidateMinCalibratedQuality",
+        "candidateCalibrationProfileID", "candidateMaxWarmLatencyMs", "candidateMaxPeakMemoryBytes",
+        "rollbackFailureThreshold", "thresholdsFrozen", "freezeSource", "groundTruthUsedForSelection",
+        "benchmarkInputAvailable", "requestBudgetDelta", "pixelBudgetDelta", "storeProvenance",
+        "preserveReviewStateOnRollback"
+      ],
+      "properties": {
+        "policyID": {"type": "string", "minLength": 1},
+        "policyVersion": {"type": "string", "minLength": 1},
+        "selectorMode": {"enum": ["shadow-only", "controlled-rollout"]},
+        "featureFlag": {"type": "string", "minLength": 1},
+        "featureFlagEnabled": {"type": "boolean"},
+        "baselineEngineID": {"type": "string", "minLength": 1},
+        "candidateEngineID": {"type": "string", "minLength": 1},
+        "candidateMinCalibratedQuality": {"type": "number", "minimum": 0, "maximum": 1},
+        "candidateCalibrationProfileID": {"type": "string", "minLength": 1},
+        "candidateMaxWarmLatencyMs": {"type": "number", "exclusiveMinimum": 0},
+        "candidateMaxPeakMemoryBytes": {"type": "integer", "minimum": 1},
+        "rollbackFailureThreshold": {"type": "integer", "minimum": 1},
+        "thresholdsFrozen": {"const": true},
+        "freezeSource": {"const": "train-dev"},
+        "groundTruthUsedForSelection": {"const": false},
+        "benchmarkInputAvailable": {"const": false},
+        "requestBudgetDelta": {"const": 0},
+        "pixelBudgetDelta": {"const": 0},
+        "storeProvenance": {"const": true},
+        "preserveReviewStateOnRollback": {"const": true}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseID", "blockID", "selectedEngineID", "selectionReason", "candidateConsidered", "candidateAccepted", "fallbackReasons", "rollbackApplied", "storeProvenance", "reviewStatePreserved", "requestBudgetDelta", "pixelBudgetDelta"],
+      "properties": {
+        "caseID": {"type": "string", "minLength": 1},
+        "blockID": {"type": "string", "minLength": 1},
+        "selectedEngineID": {"type": ["string", "null"]},
+        "selectionReason": {"enum": ["baselineDefault", "candidateShadowEligible", "rollbackToBaseline", "noEngineAvailable"]},
+        "candidateConsidered": {"type": "boolean"},
+        "candidateAccepted": {"type": "boolean"},
+        "fallbackReasons": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "rollbackApplied": {"type": "boolean"},
+        "storeProvenance": {"type": "boolean"},
+        "reviewStatePreserved": {"type": "boolean"},
+        "requestBudgetDelta": {"const": 0},
+        "pixelBudgetDelta": {"const": 0}
+      }
+    },
+    "selectionInputContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["groundTruthRead", "benchmarkFixtureRead", "rawConfidenceCompared", "allowedRuntimeSignals"],
+      "properties": {
+        "groundTruthRead": {"const": false},
+        "benchmarkFixtureRead": {"const": false},
+        "rawConfidenceCompared": {"const": false},
+        "allowedRuntimeSignals": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "evidenceGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "candidateArtifactReady", "authorizedCorpusReady", "policyFrozenBeforeHoldout", "holdoutEvaluatedOnce", "holdoutTunedAfterEvaluation", "outputMetricsPassed", "duplicateOmissionOrderPassed", "cancellationPassed", "memoryPassed", "rollbackVerified", "reason"],
+      "properties": {
+        "status": {"enum": ["contractExampleOnly", "missing", "ready"]},
+        "candidateArtifactReady": {"type": "boolean"},
+        "authorizedCorpusReady": {"type": "boolean"},
+        "policyFrozenBeforeHoldout": {"type": "boolean"},
+        "holdoutEvaluatedOnce": {"type": "boolean"},
+        "holdoutTunedAfterEvaluation": {"const": false},
+        "outputMetricsPassed": {"type": "boolean"},
+        "duplicateOmissionOrderPassed": {"type": "boolean"},
+        "cancellationPassed": {"type": "boolean"},
+        "memoryPassed": {"type": "boolean"},
+        "rollbackVerified": {"type": "boolean"},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason", "groundTruthUsedForSelection", "productSelectionChanged", "defaultCandidateEnabled", "rollbackAvailable", "shadowCandidateSelectedCount"],
+      "properties": {
+        "status": {"enum": ["notEligible", "eligibleForReview"]},
+        "reason": {"type": "string", "minLength": 1},
+        "groundTruthUsedForSelection": {"const": false},
+        "productSelectionChanged": {"const": false},
+        "defaultCandidateEnabled": {"const": false},
+        "rollbackAvailable": {"const": true},
+        "shadowCandidateSelectedCount": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-ocr",
+  "datasetVersion": "v3.280-legacy-boundary",
+  "manifestSha256": "7c46c5ce972af96d0927bfe832a61eaf795b0f9d7a714442c724a061b74a8b34",
+  "coordinateSpace": "normalizedTopLeft",
+  "fixtures": [
+    {
+      "pageID": "legacy-test-jap",
+      "split": "holdout",
+      "asset": {
+        "path": "../../../test/jap.jpg",
+        "sha256": "6b02626cd9ddf7ec3c81fad42d7d017af00789092758570a35160f9baed27a40",
+        "width": 1136,
+        "height": 1600,
+        "source": "repository test fixture test/jap.jpg",
+        "license": "repository-controlled-test-fixture",
+        "permittedUses": ["regression", "cloud-reference-parity", "benchmark-contract"]
+      },
+      "annotationStatus": "legacyRegressionOnly",
+      "legacyRegression": true,
+      "regions": [],
+      "oracleCrops": [
+        { "cropID": "left-column-a", "pixelBBox": [238, 86, 84, 362], "expectedText": "持ち帰る！", "expectedTextNFC": "持ち帰る！", "referenceOnly": true },
+        { "cropID": "left-column-b", "pixelBBox": [322, 86, 83, 362], "expectedText": "この爆乳を", "expectedTextNFC": "この爆乳を", "referenceOnly": true },
+        { "cropID": "left-column-c", "pixelBBox": [388, 86, 64, 362], "expectedText": "今度こそ", "expectedTextNFC": "今度こそ", "referenceOnly": true },
+        { "cropID": "right-column-a", "pixelBBox": [864, 136, 44, 162], "expectedText": "やがって", "expectedTextNFC": "やがって", "referenceOnly": true },
+        { "cropID": "right-column-b", "pixelBBox": [904, 116, 66, 316], "expectedText": "俺の誘い断り", "expectedTextNFC": "俺の誘い断り", "referenceOnly": true },
+        { "cropID": "right-column-c", "pixelBBox": [968, 116, 62, 316], "expectedText": "前は生意気に", "expectedTextNFC": "前は生意気に", "referenceOnly": true },
+        { "cropID": "compact-niko", "pixelBBox": [532, 1050, 46, 92], "expectedText": "ニコッ", "expectedTextNFC": "ニコッ", "referenceOnly": true }
+      ]
+    }
+  ]
+}

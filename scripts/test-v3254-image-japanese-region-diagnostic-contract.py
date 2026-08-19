@@ -109,7 +109,7 @@ class JapaneseRegionDiagnosticContractTests(unittest.TestCase):
             self.workflow,
         )
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.279", "3.279"])
+        self.assertEqual(versions, ["3.290", "3.290"])
         self.assertNotIn("MARKETING_VERSION = 3.255;", self.project)
 
 

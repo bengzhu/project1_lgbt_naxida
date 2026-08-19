@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.local/benchmarks/japanese_translation/translation-context-qa-report.schema.json",
+  "title": "AITRANS v3.288 translation context and QA report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "status", "promotionStatus", "contractExampleOnly", "batchReports", "gateLedger", "productSelectionChanged"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-translation-context-qa" },
+    "status": { "enum": ["passed", "blocked", "failed"] },
+    "promotionStatus": { "const": "notEligible" },
+    "contractExampleOnly": { "type": "boolean" },
+    "productSelectionChanged": { "const": false },
+    "batchReports": { "type": "array", "items": { "$ref": "#/$defs/batchReport" } },
+    "gateLedger": { "type": "array", "items": { "$ref": "#/$defs/gate" } }
+  },
+  "$defs": {
+    "batchReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["batchID", "acceptedBlockIDs", "failedBlockIDs", "failureReasons", "action", "cancelBoundaryPassed"],
+      "properties": {
+        "batchID": { "type": "string", "minLength": 1 },
+        "acceptedBlockIDs": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "failedBlockIDs": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "failureReasons": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string", "minLength": 1 } } },
+        "action": { "enum": ["accept", "retryFailedBlocksOnly", "persistPartialAndStop"] },
+        "cancelBoundaryPassed": { "type": "boolean" }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gateID", "status", "detail"],
+      "properties": {
+        "gateID": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["passed", "blocked", "failed"] },
+        "detail": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

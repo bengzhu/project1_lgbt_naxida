@@ -11,6 +11,7 @@ runtime_root=$(mktemp -d "${TMPDIR:-/tmp}/aitrans-v3260-rgb-luma.XXXXXX")
 executable="$runtime_root/KoharuMangaOCRRGBLumaHarness"
 
 xcrun swiftc -parse-as-library \
+  "$repo_root/AITRANS/Models/ImageOCRProvenance.swift" \
   "$repo_root/AITRANS/Services/ImageOCRLayoutEngine.swift" \
   "$repo_root/AITRANS/Services/MangaOCRService.swift" \
   "$repo_root/scripts/fixtures/v3260-koharu-manga-ocr-rgb-luma-harness.swift" \

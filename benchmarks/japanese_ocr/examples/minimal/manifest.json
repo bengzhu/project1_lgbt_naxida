@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-ocr",
+  "datasetVersion": "v3.280-contract-example",
+  "manifestSha256": "ccf9e12e3c94994fc0b7592df347d9ad525c6ab7e83d087f18c34b3858cdb28b",
+  "coordinateSpace": "normalizedTopLeft",
+  "fixtures": [
+    {
+      "pageID": "contract-example-jap",
+      "split": "dev",
+      "asset": {
+        "path": "../../../../test/jap.jpg",
+        "sha256": "6b02626cd9ddf7ec3c81fad42d7d017af00789092758570a35160f9baed27a40",
+        "width": 1136,
+        "height": 1600,
+        "source": "repository test fixture; one crop-shaped contract example only",
+        "license": "repository-controlled-test-fixture",
+        "permittedUses": ["benchmark-contract"]
+      },
+      "annotationStatus": "contractExampleOnly",
+      "exampleOnly": true,
+      "legacyRegression": false,
+      "regions": [
+        {
+          "regionID": "contract-r-niko",
+          "bbox": [0.4683098591549296, 0.65625, 0.04049295774647887, 0.0575],
+          "polygon": [[0.4683098591549296, 0.65625], [0.5088028169014085, 0.65625], [0.5088028169014085, 0.71375], [0.4683098591549296, 0.71375]],
+          "sourceText": "ニコッ",
+          "sourceTextNFC": "ニコッ",
+          "writingDirection": "vertical",
+          "readingOrder": 0,
+          "textType": "SFX",
+          "tags": ["vertical", "SFX", "smallText"]
+        }
+      ]
+    }
+  ]
+}

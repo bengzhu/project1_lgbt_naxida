@@ -23,7 +23,14 @@ enum GemmaLocalServiceError: LocalizedError, Sendable {
 struct GemmaLocalService: LocalLanguageModeling {
     private static let runtime = LlamaRuntime()
 
+    private static var defaultModelDirectory: URL {
+        FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Models/Gemma-1.5B", isDirectory: true)
+    }
+
     let modelDirectory: URL
+    let promptProfile: LocalModelPromptProfile
     let metadata = ModelAdapterMetadata(
         engine: .local,
         displayName: "Local GGUF",
@@ -33,11 +40,14 @@ struct GemmaLocalService: LocalLanguageModeling {
     )
 
     init(
-        modelDirectory: URL = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Models/Gemma-1.5B", isDirectory: true)
+        modelDirectory: URL = GemmaLocalService.defaultModelDirectory,
+        promptProfile: LocalModelPromptProfile? = nil
     ) {
         self.modelDirectory = modelDirectory
+        let isBundledGemmaDirectory = modelDirectory.standardizedFileURL.path
+            == Self.defaultModelDirectory.standardizedFileURL.path
+        self.promptProfile = promptProfile
+            ?? (isBundledGemmaDirectory ? .gemma : .experimental)
     }
 
     func prepare() async throws {
@@ -46,12 +56,38 @@ struct GemmaLocalService: LocalLanguageModeling {
     }
 
     func rawTranslationProbe(for request: ModelGenerationRequest) -> RawModelProbeResult {
-        let prompt = translationPrompts(for: request).first ?? ""
-        return rawProbe(
-            prompt: prompt,
-            maxTokens: min(request.sampling.maxTokens, 160),
-            decodingProfile: .deterministic
-        )
+        let messages = translationMessages(for: request).first ?? []
+        let fallbackPrompt = fallbackPrompt(for: messages)
+        let limitedMaxTokens = max(1, min(request.sampling.maxTokens, 220))
+
+        do {
+            let modelURL = try modelURL()
+            try Self.runtime.loadModelIfNeeded(at: modelURL.path)
+            let rendered = try Self.runtime.renderPrompt(
+                messages: messages,
+                fallbackProfile: promptProfile
+            )
+            let output = try Self.runtime.generateRaw(
+                prompt: rendered.prompt,
+                maxTokens: limitedMaxTokens,
+                decodingProfile: .deterministic
+            )
+            return RawModelProbeResult(
+                prompt: rendered.prompt,
+                output: output,
+                errorCode: nil,
+                decodingMode: ModelDecodingProfile.deterministic.mode,
+                decodingSeed: ModelDecodingProfile.deterministic.seed
+            )
+        } catch {
+            return RawModelProbeResult(
+                prompt: fallbackPrompt,
+                output: "",
+                errorCode: "\(type(of: error)): \(error.localizedDescription)",
+                decodingMode: ModelDecodingProfile.deterministic.mode,
+                decodingSeed: ModelDecodingProfile.deterministic.seed
+            )
+        }
     }
 
     func rawProbe(
@@ -105,7 +141,8 @@ struct GemmaLocalService: LocalLanguageModeling {
 
         case .summary:
             let output = try Self.runtime.generate(
-                prompt: summaryPrompt(for: request),
+                messages: summaryMessages(for: request),
+                fallbackProfile: promptProfile,
                 maxTokens: min(request.sampling.maxTokens, 220),
                 decodingProfile: .sampled
             )
@@ -135,15 +172,17 @@ struct GemmaLocalService: LocalLanguageModeling {
         }
 
         var lastError: Error?
-        for (index, prompt) in translationPrompts(for: request).enumerated() {
+        for (index, messages) in translationMessages(for: request).enumerated() {
+            let promptForLog = promptForLogging(for: messages)
             do {
                 Self.writeTranslationProbeLog(
                     "local-attempt-start index=\(index + 1) " +
                     "source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
-                    "input=\(Self.probeField(request.inputText)) prompt=\(Self.probeField(prompt))"
+                    "input=\(Self.probeField(request.inputText)) prompt=\(Self.probeField(promptForLog))"
                 )
                 let output = try Self.runtime.generate(
-                    prompt: prompt,
+                    messages: messages,
+                    fallbackProfile: promptProfile,
                     maxTokens: min(request.sampling.maxTokens, 160),
                     decodingProfile: .sampled
                 )
@@ -172,15 +211,17 @@ struct GemmaLocalService: LocalLanguageModeling {
 
     private func generateMangaBlockTranslation(for request: ModelGenerationRequest) throws -> String {
         var lastError: Error?
-        for (index, prompt) in translationPrompts(for: request).enumerated() {
+        for (index, messages) in translationMessages(for: request).enumerated() {
+            let promptForLog = promptForLogging(for: messages)
             do {
                 Self.writeTranslationProbeLog(
                     "manga-batch-attempt-start index=\(index + 1) " +
                     "source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
-                    "input=\(Self.probeField(request.inputText)) prompt=\(Self.probeField(prompt))"
+                    "input=\(Self.probeField(request.inputText)) prompt=\(Self.probeField(promptForLog))"
                 )
                 let output = try Self.runtime.generate(
-                    prompt: prompt,
+                    messages: messages,
+                    fallbackProfile: promptProfile,
                     maxTokens: min(max(request.sampling.maxTokens, 192), 768),
                     decodingProfile: .sampled
                 )
@@ -212,10 +253,44 @@ struct GemmaLocalService: LocalLanguageModeling {
     }
 
     private func translationPrompts(for request: ModelGenerationRequest) -> [String] {
+        translationMessages(for: request).map { messages in
+            let body = messages.first?.content ?? ""
+            return """
+            <start_of_turn>user
+            \(body)
+            <end_of_turn>
+            <start_of_turn>model
+            """
+        }
+    }
+
+    private func translationMessages(for request: ModelGenerationRequest) -> [[LocalModelChatMessage]] {
+        translationPromptBodies(for: request).map { body in
+            [LocalModelChatMessage(role: .user, content: body)]
+        }
+    }
+
+    private func fallbackPrompt(for messages: [LocalModelChatMessage]) -> String {
+        (try? promptProfile.fallbackPrompt(for: messages)) ?? ""
+    }
+
+    private func promptForLogging(for messages: [LocalModelChatMessage]) -> String {
+        if let rendered = try? Self.runtime.renderPrompt(
+            messages: messages,
+            fallbackProfile: promptProfile
+        ) {
+            return rendered.prompt
+        }
+        return fallbackPrompt(for: messages)
+    }
+
+    private func translationPromptBodies(for request: ModelGenerationRequest) -> [String] {
         let instruction = request.prompt.instruction(
             source: request.sourceLanguage,
             target: request.targetLanguage
         )
+        let contextSection = request.translationContext.promptSection()
+        let contextualInstruction = contextSection.isEmpty ? "" : "\n\n\(contextSection)"
 
         if request.translationProfile == .mangaBlocks {
             let mangaInstruction = """
@@ -224,22 +299,16 @@ struct GemmaLocalService: LocalLanguageModeling {
             必须原样保留每个 [N] 标签，并按输入顺序逐个输出；不要合并、拆分、遗漏或重排文字块。
             保留角色语气、情绪、关系、强调和拟声词；译文自然、简洁、适合漫画气泡。
             不要输出解释、注释、罗马音或额外标题。每个标签单独一行，格式为 [N] 译文。
-            用户补充要求：\(instruction)
+            用户补充要求：\(instruction)\(contextualInstruction)
             """
             return [
                 """
-                <start_of_turn>user
                 \(mangaInstruction)
                 \(request.inputText)
-                <end_of_turn>
-                <start_of_turn>model
                 """,
                 """
-                <start_of_turn>user
-                漫画编号块翻译。保留所有 [N] 标签及顺序，只输出每个标签对应的\(request.targetLanguage.rawValue)译文，不合并、不拆分、不解释：
+                漫画编号块翻译。保留所有 [N] 标签及顺序，只输出每个标签对应的\(request.targetLanguage.rawValue)译文，不合并、不拆分、不解释。上下文仅供术语和语气参考，不得生成额外标签：\(contextualInstruction)
                 \(request.inputText)
-                <end_of_turn>
-                <start_of_turn>model
                 """
             ]
         }
@@ -247,43 +316,28 @@ struct GemmaLocalService: LocalLanguageModeling {
         if request.sourceLanguage == .englishUS, request.targetLanguage == .simplifiedChinese {
             return [
                 """
-                <start_of_turn>user
-                \(instruction)
+                \(instruction)\(contextualInstruction)
                 \(request.inputText)
-                <end_of_turn>
-                <start_of_turn>model
                 """,
                 """
-                <start_of_turn>user
-                English -> 简体中文。只输出中文译文：
+                English -> 简体中文。只输出中文译文。上下文仅供一致性参考：\(contextualInstruction)
                 \(request.inputText)
-                <end_of_turn>
-                <start_of_turn>model
                 """,
                 """
-                <start_of_turn>user
-                请把下面英文翻译成简体中文，只输出中文译文：
+                请把下面英文翻译成简体中文，只输出中文译文。上下文仅供一致性参考：\(contextualInstruction)
                 \(request.inputText)
-                <end_of_turn>
-                <start_of_turn>model
                 """
             ]
         }
 
         return [
             """
-            <start_of_turn>user
-            \(instruction)
+            \(instruction)\(contextualInstruction)
             \(request.inputText)
-            <end_of_turn>
-            <start_of_turn>model
             """,
             """
-            <start_of_turn>user
-            翻译成\(request.targetLanguage.rawValue)，不要输出原文，不要解释：
+            翻译成\(request.targetLanguage.rawValue)，不要输出原文，不要解释。上下文仅供一致性参考：\(contextualInstruction)
             \(request.inputText)
-            <end_of_turn>
-            <start_of_turn>model
             """
         ]
     }
@@ -368,19 +422,30 @@ struct GemmaLocalService: LocalLanguageModeling {
     }
 
     private func summaryPrompt(for request: ModelGenerationRequest) -> String {
+        let body = summaryMessageContent(for: request)
+        return """
+        <start_of_turn>user
+        \(body)
+        <end_of_turn>
+        <start_of_turn>model
+        """
+    }
+
+    private func summaryMessages(for request: ModelGenerationRequest) -> [LocalModelChatMessage] {
+        [LocalModelChatMessage(role: .user, content: summaryMessageContent(for: request))]
+    }
+
+    private func summaryMessageContent(for request: ModelGenerationRequest) -> String {
         let context = request.transcriptContext
             .prefix(8)
             .map { "\($0.speaker): \($0.translation)" }
             .joined(separator: "\n")
 
         return """
-        <start_of_turn>user
         Summarize the following transcript in \(request.targetLanguage.rawValue).
         Return three short bullet points only.
 
         \(context.isEmpty ? request.inputText : context)
-        <end_of_turn>
-        <start_of_turn>model
         """
     }
 

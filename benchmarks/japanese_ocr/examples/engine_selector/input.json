@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-ocr-engine-selector",
+  "contractExampleOnly": true,
+  "run": {
+    "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+    "evaluatorVersion": "v3.285-contract",
+    "invocationMode": "cloud-only-shadow"
+  },
+  "policy": {
+    "policyID": "aitrans-image-ocr-candidate-selector",
+    "policyVersion": "v3.285-shadow-1",
+    "selectorMode": "shadow-only",
+    "featureFlag": "image_ocr_candidate_selector",
+    "featureFlagEnabled": false,
+    "baselineEngineID": "bundled-manga-ocr",
+    "candidateEngineID": "candidate-ocr-vl",
+    "candidateMinCalibratedQuality": 0.78,
+    "candidateCalibrationProfileID": "ocr-calibration-v1",
+    "candidateMaxWarmLatencyMs": 250.0,
+    "candidateMaxPeakMemoryBytes": 268435456,
+    "rollbackFailureThreshold": 1,
+    "thresholdsFrozen": true,
+    "freezeSource": "train-dev",
+    "groundTruthUsedForSelection": false,
+    "benchmarkInputAvailable": false,
+    "requestBudgetDelta": 0,
+    "pixelBudgetDelta": 0,
+    "storeProvenance": true,
+    "preserveReviewStateOnRollback": true
+  },
+  "evidenceGate": {
+    "status": "contractExampleOnly",
+    "candidateArtifactReady": false,
+    "authorizedCorpusReady": false,
+    "policyFrozenBeforeHoldout": false,
+    "holdoutEvaluatedOnce": false,
+    "holdoutTunedAfterEvaluation": false,
+    "outputMetricsPassed": false,
+    "duplicateOmissionOrderPassed": false,
+    "cancellationPassed": false,
+    "memoryPassed": false,
+    "rollbackVerified": false,
+    "reason": "synthetic contract only; no candidate artifact or authorized holdout evidence is available"
+  },
+  "runtimeCases": [
+    {
+      "caseID": "detector-bbox-fallback",
+      "blockID": "block-001",
+      "cropRole": "detectorBBox",
+      "geometryValid": true,
+      "duplicateRisk": false,
+      "requestBudgetRemaining": 1,
+      "pixelBudgetRemaining": 16000000,
+      "cancellationState": "active",
+      "generationMatches": true,
+      "candidateFailureCount": 0,
+      "previousEngineID": "bundled-manga-ocr",
+      "engines": [
+        {
+          "engineID": "bundled-manga-ocr",
+          "candidateRole": "baseline",
+          "artifactStatus": "available",
+          "licenseReviewed": true,
+          "supportsCropRoles": ["detectorBBox", "lineQuadFallback", "blockCrop"],
+          "outputStatus": "success",
+          "text": "既存結果",
+          "calibratedQuality": null,
+          "calibrationProfileID": null,
+          "warmLatencyMs": 9.4,
+          "peakMemoryBytes": 104857600,
+          "failureReason": null
+        },
+        {
+          "engineID": "candidate-ocr-vl",
+          "candidateRole": "candidate",
+          "artifactStatus": "missing",
+          "licenseReviewed": false,
+          "supportsCropRoles": [],
+          "outputStatus": "failure",
+          "text": "",
+          "calibratedQuality": null,
+          "calibrationProfileID": null,
+          "warmLatencyMs": null,
+          "peakMemoryBytes": null,
+          "failureReason": "candidate artifact is not provided"
+        }
+      ]
+    },
+    {
+      "caseID": "line-quad-cancelled",
+      "blockID": "block-002",
+      "cropRole": "lineQuadFallback",
+      "geometryValid": true,
+      "duplicateRisk": false,
+      "requestBudgetRemaining": 1,
+      "pixelBudgetRemaining": 16000000,
+      "cancellationState": "cancelled",
+      "generationMatches": true,
+      "candidateFailureCount": 1,
+      "previousEngineID": "bundled-manga-ocr",
+      "engines": [
+        {
+          "engineID": "bundled-manga-ocr",
+          "candidateRole": "baseline",
+          "artifactStatus": "available",
+          "licenseReviewed": true,
+          "supportsCropRoles": ["detectorBBox", "lineQuadFallback", "blockCrop"],
+          "outputStatus": "success",
+          "text": "保留状态",
+          "calibratedQuality": null,
+          "calibrationProfileID": null,
+          "warmLatencyMs": 9.4,
+          "peakMemoryBytes": 104857600,
+          "failureReason": null
+        },
+        {
+          "engineID": "candidate-ocr-vl",
+          "candidateRole": "candidate",
+          "artifactStatus": "missing",
+          "licenseReviewed": false,
+          "supportsCropRoles": [],
+          "outputStatus": "failure",
+          "text": "",
+          "calibratedQuality": null,
+          "calibrationProfileID": null,
+          "warmLatencyMs": null,
+          "peakMemoryBytes": null,
+          "failureReason": "candidate artifact is not provided"
+        }
+      ]
+    },
+    {
+      "caseID": "duplicate-risk-fallback",
+      "blockID": "block-003",
+      "cropRole": "blockCrop",
+      "geometryValid": true,
+      "duplicateRisk": true,
+      "requestBudgetRemaining": 1,
+      "pixelBudgetRemaining": 16000000,
+      "cancellationState": "active",
+      "generationMatches": true,
+      "candidateFailureCount": 0,
+      "previousEngineID": "bundled-manga-ocr",
+      "engines": [
+        {
+          "engineID": "bundled-manga-ocr",
+          "candidateRole": "baseline",
+          "artifactStatus": "available",
+          "licenseReviewed": true,
+          "supportsCropRoles": ["detectorBBox", "lineQuadFallback", "blockCrop"],
+          "outputStatus": "success",
+          "text": "去重保护",
+          "calibratedQuality": null,
+          "calibrationProfileID": null,
+          "warmLatencyMs": 9.4,
+          "peakMemoryBytes": 104857600,
+          "failureReason": null
+        },
+        {
+          "engineID": "candidate-ocr-vl",
+          "candidateRole": "candidate",
+          "artifactStatus": "missing",
+          "licenseReviewed": false,
+          "supportsCropRoles": [],
+          "outputStatus": "failure",
+          "text": "",
+          "calibratedQuality": null,
+          "calibrationProfileID": null,
+          "warmLatencyMs": null,
+          "peakMemoryBytes": null,
+          "failureReason": "candidate artifact is not provided"
+        }
+      ]
+    },
+    {
+      "caseID": "stale-generation-fallback",
+      "blockID": "block-004",
+      "cropRole": "detectorBBox",
+      "geometryValid": true,
+      "duplicateRisk": false,
+      "requestBudgetRemaining": 0,
+      "pixelBudgetRemaining": 0,
+      "cancellationState": "cancelRequested",
+      "generationMatches": false,
+      "candidateFailureCount": 0,
+      "previousEngineID": "bundled-manga-ocr",
+      "engines": [
+        {
+          "engineID": "bundled-manga-ocr",
+          "candidateRole": "baseline",
+          "artifactStatus": "available",
+          "licenseReviewed": true,
+          "supportsCropRoles": ["detectorBBox", "lineQuadFallback", "blockCrop"],
+          "outputStatus": "success",
+          "text": "旧引擎回退",
+          "calibratedQuality": null,
+          "calibrationProfileID": null,
+          "warmLatencyMs": 9.4,
+          "peakMemoryBytes": 104857600,
+          "failureReason": null
+        },
+        {
+          "engineID": "candidate-ocr-vl",
+          "candidateRole": "candidate",
+          "artifactStatus": "missing",
+          "licenseReviewed": false,
+          "supportsCropRoles": [],
+          "outputStatus": "failure",
+          "text": "",
+          "calibratedQuality": null,
+          "calibrationProfileID": null,
+          "warmLatencyMs": null,
+          "peakMemoryBytes": null,
+          "failureReason": "candidate artifact is not provided"
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,19 @@
+## v3.290：矩形 overlay 渲染安全预检（2026-08-19）
+
+本版只增加导出前的 report-only 几何预检：已完成图片会话的 `adjacent`/`replace` 矩形 overlay 检查无效 bbox、空文字、旁贴裁切、旁贴覆盖原块、源块重叠和跨块碰撞，并在结果面板以 VoiceOver 可读的 warning 暴露风险。`ImageTranslationRenderSafety.Report` 明确记录 `reportOnly=true`、`groundTruthUsedForDecision=false`，不改变 OCR、翻译、候选选择、持久化、复查状态或现有 renderer/export。
+
+新增 `scripts/test-v3290-image-translation-render-safety-contract.py` 与 cloud-only Swift evaluator/runtime，工程版本为 `3.290`。v3.289 及更早历史合同只同步当前工程版本断言和 benchmark artifact 名称；v3.289 的历史 feature marker 保持不变。SwiftUI 静态审计同时修正了预检详情和质量失败提示中的字符串插值，并把新 model 文件归入 Xcode Models group。
+
+本地允许范围验证：v3.290 合同 `7/7`；v3.288 跨批次 QA 合同 `7/7`；全量 `316` 个 Python 合同中 `289` 个无进程入口合同通过、`27` 个含 `subprocess` 的合同跳过、`0` 失败；`334` 个 Python AST、`3` 个 workflow YAML、`29` 个 shell、`4` 个 plist、工程版本两处 `3.290` 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，也未运行云端 evaluator。
+
+真实 BubbleMask/SegmentMask、授权语料、目标设备测量和成品盲评仍缺失；本版只建立风险提示协议，不声称 mask、inpainting、OCR/CER、翻译质量、Koharu parity 或 holdout 改善。未新增 metrics/version_history 条目，下一步仍需先取得真实外部 artifact/corpus/device evidence。
+
+## v3.289：图片复查、会话快照与结构 mutation 边界（2026-08-19）
+
+路线中的 v3.289 已完成只读 provenance disclosure、scoped bbox 复查、automatic baseline、受管图片会话跨重启快照，以及 split/merge/order 结构 mutation。所有 mutation 均通过 `TranslationSessionStore` 的终态/任务/generation guard；拆分和合并创建新 block identity 并清除受影响译文与旧 OCR 证据，阅读顺序调整保留有效 block metadata；快照对路径、文件类型、字节数、SHA-256、geometry、ID/order/review subset fail closed。临时 OCR shadow ledger 不进入持久化，单块取消不升级为整图取消。
+
+这些合同只证明可审计的状态、Codable、VoiceOver 和 scoped cancellation 边界，不证明真实图片几何、OCR/CER、翻译质量、目标设备性能或 holdout。真实 GGUF、授权 clean-text corpus、盲评、target-device evidence、exact-SHA full、Xcode/JUnit 和 receipt 仍待外部提供。
+
 ## v3.279：可靠整块 fallback 替代同 owner partial lines
 
 日期：2026-08-13
@@ -10011,3 +10027,83 @@ Agent C 最终验收：
 ## v3.230：修复 batch runtime provenance parser
 
 状态：run [31368735253](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31368735253) 的单页真实输出已经是 `batchInference=true`、5 个 blocks 且每条 OCR 记录均为 `vertical`，但旧 shell parser 把 `blocks=5` 元数据也纳入“每个 block 必须 vertical”的检查，导致 UI contract 错误失败。本版本只让 parser 过滤带方向的制表符记录后再执行五块／vertical gate，并新增 `scripts/test-v3230-image-japanese-batch-runtime-parser-contract.py`。exact-SHA full [31370139122](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/31370139122) 对 SHA `064810987125742b31ff0e5cc422d35b576a37f3` 完成单页／长页真实 batch runtime、Xcode 与 JUnit `10/10`（0 failures），单页 5 个 vertical blocks，四页 `1136x6400` 长页 16 个 vertical blocks，最底 y=`0.940558`，probe `skip`。该版本只纠正验证器边界，不声称日语 OCR 准确率提升；Koharu artifact readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`。
+## v3.280：先建立可复跑的日语 OCR / 翻译 benchmark 边界
+
+日期：2026-08-13
+
+依据：`md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md` 的 v3.280 执行协议。新增顶层 `benchmarks/japanese_ocr/` 与 `benchmarks/japanese_translation/` schema、SHA 固定 manifest、contract-only examples、纯 Python scorer 和 `scripts/test-v3280-japanese-benchmark-contract.py`；CI 新增独立 `japanese_benchmark` 任务，只验证 schema/fixture、运行离线 scorer 并上传报告，不调用 Xcode、Swift、Core ML、Rust/Cargo 或 App runtime。工程版本为 `3.280`，产品 OCR/翻译/渲染路径不变。
+
+本地证据：新合同 `8/8`；302 个 Python 合同中 27 个实际含进程入口跳过、275 个安全合同通过；新 Python AST、YAML 解析与 `git diff --check` 通过。合同同时证明 `oracleCrop` 必须显式绑定 `regionID`，`detectedCrop/fullPage` 必须匿名并走 IoU 匹配，页面无检测时保留显式 empty/failure 行。OCR/translation contract fixture 的分数只证明 scorer 的确定性与边界（不是质量 benchmark）；legacy `test/jap.jpg` 的 7 个 MIT48 crop 仍是 `referenceOnly`，无整页人工 GT，不追加 `metrics/version_history.csv`。当前工作树尚未提交，候选 SHA、exact-SHA cloud full、artifact/receipt、真实授权语料和人工评测均待后续补齐。
+
+## v3.281：OCR provenance shadow ledger 与零选择回归边界
+
+日期：2026-08-17
+
+依据：`md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md` 的 v3.281 协议。新增可选 `ImageOCRBlockProvenance`／`ImageOCRShadowLedger`，沿既有 Vision、bundled Manga OCR、detector region、line bbox/quad 和 owner observation 记录 engine/crop/geometry/region-line/raw confidence；原 `recognizeTextBlocks` 仍只返回旧 blocks，layout/fusion 不读取 provenance 做选择。detector ID 在既有 merge+sort 后分配，Manga bbox/line-quad winner 只增加 provenance，旧 `ImageTranslationBlock` Codable fixture 缺失字段时解码为 `nil`。新增 `scripts/test-v3281-image-ocr-provenance-no-selection-change-contract.py` 与 cloud-only `scripts/test-v3281-image-ocr-provenance-runtime.sh`，工程版本为 `3.281`。
+
+本地证据：v3.281 合同 `5/5`、v3.280 benchmark contract `8/8` 通过；当前 `303` 个 Python 合同中 `276` 个无进程入口合同通过、`27` 个含 `subprocess` 入口跳过，Python AST `303` 个、YAML `3` 个、shell syntax `20` 个、JSON `16` 个和 `git diff --check` 通过。本地继续跳过 Swift/Core ML/Xcode/Rust/App runtime。standalone evaluator、旧 harness、Xcode/JUnit、exact-SHA full 和 receipt 尚未运行/取得；当前只记录结构与静态边界，不声称 OCR、检测、MIT48/PaddleOCR-VL parity、日语翻译或通用质量提升。工作树尚未提交，候选 SHA、真实授权语料和人工评测待后续补齐。
+## v3.282：同 crop 多引擎 OCR 归因边界（2026-08-17）
+
+新增 `scripts/evaluate-japanese-ocr-multi-engine.py` 与 Japanese OCR multi-engine input/report schema。比较 key 固定为 `datasetSha256 + pageID + regionID + cropLevel`，每个 crop 另带 `cropSha256` 内容身份，禁止按数组下标拼接不同 engine；`oracleCrop` 与 `detectedCrop` 分表，只有 oracle 表计算 exact/NFC/CER，detected 表拒绝 ground-truth text。每个 engine 必须记录 source/runtime/model revision、model SHA、license、referenceOnly 与 artifact status；缺失 MIT48/PaddleOCR-VL 时保留显式 failure rows 并输出 `blocked`，不伪造质量分数。
+
+新增 synthetic 四引擎 contract fixture、云端 handoff 说明与 `scripts/run-japanese-ocr-multi-engine-cloud-smoke.sh`。该 shell 仅在 GitHub Actions 聚合已生成的 pinned artifact envelope，不下载/打包 GPL 权重，不启动 Xcode、Rust/Cargo 或 App runtime；CI benchmark job 上传 same-crop report，但 fixture 只证明 schema/alignment。工程版本更新为 `3.282`，v3.282 contract 已接入 CI；当前未提交、未取得 exact-SHA cloud full/真实授权 corpus/真实四引擎 artifact/Xcode/JUnit/receipt，因此不声称任何 OCR、检测或翻译质量提升。
+
+## v3.283：native TextRegion/line shadow geometry 协议边界（2026-08-17）
+
+依据 `md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md` 的 v3.283 阶段，新增独立的 line/TextRegion shadow input/report schema、纯 Python evaluator、contract-only fixture、cloud-only aggregation wrapper 和 `scripts/test-v3283-japanese-ocr-line-signal-contract.py`。候选行只携带自身 geometry/source，不允许 ground-truth region ID；evaluator 以 IoU `0.5` 输出 region/line recall、precision、F1、duplicate/omission、cross-region merge、cut candidate、方向/阅读顺序、orphan line 与候选预算，并强制 `groundTruthUsedForSelection=false`。contract/legacy fixture 固定报告 `insufficientCorpus`，promotion `notEligible`。
+
+本轮不把 shadow geometry 接入 `AITRANS/`，不改变 Vision fallback、OCR/translation engine、请求预算、布局、UI、renderer 或非图片路径；cloud wrapper 不下载/构建模型。manifest SHA 为 `15027ef0b03ed42868d4c78c6fcb1baa240adde5d9bd3127f83b2fe697db4c6c`，signal SHA 为 `1233d15a829727071d0c7da8d136f9bb41c008f885a1d94f8daa74c9da82be50`；新合同 `4/4`，正常 contract fixture region/line recall 与 precision 为 `1.0`，但这只证明协议，不是 OCR/检测/翻译质量。
+
+本地允许范围验证为 `305` 个 Python AST；无进程入口合同 `278` 个通过，`27` 个含 `subprocess`/外部进程入口跳过；3 个 workflow YAML、22 个 benchmark JSON、22 个 shell syntax、4 个 plist/project version 与 `git diff --check` 通过。当前仍缺真实授权 corpus、native signal artifact、AITRANS/Koharu 同 crop/fullPage 预测、holdout 统计、exact-SHA cloud full、Xcode/JUnit 与 receipt；本地严格不运行 `xcodebuild`、`swiftc`、`xcrun`、Core ML、Rust/Cargo 或 App runtime。工程版本为 `3.283`，工作树尚未提交。
+
+## v3.284：可分发 OCR 候选 shadow 资源矩阵（2026-08-17）
+
+新增 `engine-candidate-input/report.schema.json`、synthetic engine candidate envelope、纯 Python `scripts/evaluate-japanese-ocr-engine-candidate.py`、cloud-only wrapper 与 `scripts/test-v3284-japanese-ocr-engine-candidate-contract.py`。该 evaluator 复用 v3.282 的稳定同 crop key，分离 oracle/detected 文字指标，并补充模型/artifact SHA、大小、量化、license、distribution、cold/warm latency p50/p95、peak memory、energy、target-device、referenceOnly 与 default-enabled matrix。artifact 缺失、资源测量不完整或没有 candidate 真实目标设备时输出 `blocked`，不填入推测值；candidate 保持 `defaultEnabled=false`，报告 `productSelectionChanged=false`，不进入 AITRANS 产品选择。
+
+当前 fixture 使用 synthetic dataset SHA `ccf9e12e3c94994fc0b7592df347d9ad525c6ab7e83d087f18c34b3858cdb28b`；候选 artifact/model/license/runtime 未提供，报告为 `blocked`，新合同 `5/5`，promotion `notEligible`。该结果只证明 fail-closed 结构，不是 OCR/CER/资源或 license 质量证据。本地允许范围验证为 `306` 个 Python AST；无进程入口合同 `279` 个通过，`27` 个含 `subprocess`/外部进程入口跳过；3 个 workflow YAML、25 个 benchmark JSON、23 个 shell syntax、4 个 plist/project version 与 `git diff --check` 通过。真实候选模型、授权 corpus、detected/fullPage 预测、目标设备测量、exact-SHA cloud full、Xcode/JUnit 与 receipt 仍缺失；本地继续不运行 Xcode/Swift/Core ML/Rust/App runtime。工程版本为 `3.284`，工作树尚未提交。
+
+## v3.285：GT 隔离的 OCR selector / rollback shadow policy（2026-08-17）
+
+依据路线中的 v3.285 边界继续推进。v3.284 真实 candidate artifact、授权 corpus 与目标设备测量仍缺失，因此本轮只冻结 runtime-only selector/rollback 协议，不接入产品候选选择。
+
+新增 `engine-selector-input/report.schema.json`、`engine_selector/` protocol 与 synthetic envelope、纯标准库 `scripts/evaluate-japanese-ocr-engine-selector.py`、cloud-only wrapper、`scripts/test-v3285-japanese-ocr-engine-selector-contract.py` 和 cloud-only Swift policy evaluator/runtime script。selector 只接受 artifact/license availability、crop role、geometry、duplicate risk、校准后的 engine-local quality、warm latency、peak memory、cancel/generation 与剩余预算；ground truth、benchmark fixture/文件名、expected region count 和跨 engine raw confidence 均被结构排除。阈值固定来自 train/dev，evidence gate 只用于报告，不改变 per-block decision。
+
+`AITRANS/Models/ImageOCRProvenance.swift` 同步增加隔离的 `ImageOCRSelectorPolicy`、runtime signal、context、decision 与纯 policy core；默认 feature flag 关闭，当前 Vision/Manga OCR/Layout/Store caller 不调用它，既有产品选择与 provenance 投影不变。
+
+当前 fixture `contractExampleOnly=true`、feature flag `false`、candidate artifact missing，四个 case 全部回到 bundled Manga OCR；candidate shadow mutation 可观察到单 case candidate decision，但始终 `productSelectionChanged=false`、`defaultCandidateEnabled=false`、promotion `notEligible`。geometry/duplicate/cancel/stale generation/budget/低质量与 rollback provenance 均有合同覆盖；本轮不声称 OCR/CER/资源/license/翻译质量提升。
+
+ 工程版本为 `3.285`。v3.285 合同 `6/6` 通过；本地 `307` 个 Python AST、无进程入口合同 `280` 个通过且 `27` 个跳过，3 个 workflow YAML、28 个 benchmark JSON、25 个 shell syntax、4 个 tracked plist/project version 与 `git diff --check` 通过。按约束未运行本地 `xcodebuild`、`swiftc`、`xcrun`、Core ML、Rust/Cargo、runtime 或 App，Swift policy evaluator 的编译/行为验证留给云端。真实 candidate artifact、授权 corpus、一次性 holdout、detected/fullPage 结果、目标设备资源证据、exact-SHA cloud full、Xcode/JUnit 与 receipt 仍待外部状态提供；在此之前不允许默认启用候选或进入生产 selector。
+
+## v3.288：术语记忆、跨 batch 只读 context 与 block-level translation QA（2026-08-17）
+
+v3.287 的 clean-text 多模型比较仍只有 synthetic envelope，真实 GGUF、授权语料和目标设备证据未提供。本轮实现路线中的 v3.288 产品边界：项目术语/人名/称呼记忆显式区分 `confirmed`、`candidate`、`revoked`；上一批只读摘要只进下一批 prompt，不进入待翻译标签；tag、原文泄漏、数字、确认术语、目标语言密度和长度 QA 只产生失败 block 集合，不重跑 OCR、检测、布局或整页。
+
+新增 `AITRANS/Models/TranslationContextQuality.swift`，包含 `TranslationTermMemoryEntry`、terminology/personName/addressing/sfx/narration 类型、`TranslationReadOnlyBatchSummary`、`TranslationPromptContext` 与纯 QA evaluator。`AppPersistenceSnapshot`、`TranslationSessionStore` 和 `ModelGenerationRequest` 接入项目术语记忆/context；Gemma message-level prompt 仅追加显式只读 context。日语图片 batch 在原有最多 8 blocks/1,800 chars 边界内传递已完成上一批摘要，严格拒绝 extra/duplicate/out-of-order tags，并只补译失败 block；scoped cancel、已完成块和部分持久化保持。
+
+新增 translation-context-qa input/report schema、synthetic `benchmarks/japanese_translation/examples/translation_context_qa/`、纯标准库 `scripts/evaluate-japanese-translation-context-qa.py`、cloud-only wrapper 与 `scripts/test-v3288-japanese-translation-context-qa-contract.py`。contract 覆盖跨 batch 泄漏、旧术语撤销、数字/专名、原文泄漏、超长输出、标签边界、取消与部分成功持久化；报告固定 `blocked`/`promotion=notEligible`/`productSelectionChanged=false`，不选择模型。
+
+固定不变：detector、Vision/Manga OCR、Koharu parity、OCR 请求预算、crop/warp、layout、默认模型、UI/renderer 和非图片路径。当前仍无真实 GGUF/template/quantization identity、授权 clean-text corpus、盲评、目标设备资源、exact-SHA cloud full、Xcode/JUnit 或 receipt；本轮不声称 OCR、翻译或通用日语质量提升，下一步需先补齐这些外部证据后再推进 v3.289 holdout。
+
+## v3.287：clean-text 多模型 / 量化对照协议（2026-08-17）
+
+依据路线中的 v3.287 边界继续推进。v3.286 已完成 template/profile adapter，但真实模型、授权 clean-text 语料和目标设备证据仍缺失，因此本版只增加比较协议，不更换默认 Local GGUF 或让 candidate 进入产品选择。
+
+新增 `benchmarks/japanese_translation/schema/model-comparison-manifest.schema.json`、`model-comparison-input.schema.json`、`model-comparison-report.schema.json` 和 `examples/model_comparison/` contract-only 三语言 corpus。每个比较模型显式记录 model filename/SHA、quantization、license review、template source/SHA、context、decoding profile、floor/candidate role 和 default-enabled 状态；case 集固定覆盖日译中、日译英、英译中，且只允许 cleanSource。
+
+新增纯标准库 `scripts/evaluate-japanese-translation-model-comparison.py`、cloud-only `scripts/run-japanese-translation-model-comparison-cloud-smoke.sh` 和 `scripts/test-v3287-japanese-translation-model-comparison-contract.py`。evaluator 对所有 model×case×cold/warm key 做一对一 coverage 校验，按 nearest-rank 输出 latency/首 token p50/p95、peak memory、context overflow 和 structural output，quality/human review 与 selection 分开；`groundTruthUsedForSelection=false`、`productSelectionChanged=false`、`promotion=notEligible` 固定不变。
+
+当前 synthetic envelope 含 Gemma 270M floor、Qwen 1.5B disabled candidate 和 Sakura 7B disabled candidate，但 evaluator 报告保持 `blocked`：模型 artifact/SHA/license、授权 corpus、target-device measurement 和 human holdout 均未提供，contract-only rows 不代表实际性能或质量。v3.287 没有改 `GemmaLocalService`、默认模型、context/batch、prompt/decoder、OCR、UI、renderer 或非图片路径；工程版本为 `3.287`。
+
+新合同 `7/7`；本地 `309` 个 Python AST、无进程入口合同 `282` 个通过且 `27` 个跳过，`3` 个 workflow YAML、`36` 个 benchmark JSON、`27` 个 shell syntax、`4` 个 tracked plist/project version 与 `git diff --check` 通过。按约束不运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。下一步必须先补真实模型与同一授权 clean-text holdout，再决定是否进入 v3.288 术语/context/QA，不能用 synthetic percentile 或 contract output 宣称翻译提升。
+
+## v3.286：GGUF chat-template / model profile adapter（2026-08-17）
+
+依据路线中的 v3.286 翻译适配边界继续推进。真实 Gemma/Qwen/Sakura artifact、license、clean-text corpus 和设备证据仍缺失，因此本版先冻结 fail-closed 的 message/template 协议，不把 synthetic fixture 当成翻译质量结论。
+
+新增 `AITRANS/Models/LocalModelPromptProfile.swift`，以 system/user/assistant message、Gemma/Qwen/Sakura/Llama/Hunyuan profile、known fallback、context capability 和 decoding profile 分离模型包装；只有 Gemma 有显式 legacy fallback。`AITRANS/Services/LlamaRuntime.swift` 读取 `llama_model_chat_template`，在 C string lifetime 内调用 `llama_chat_apply_template`，先查询 required length，再以 `required + 1` buffer 重试；负值、未知模板、空/坏 UTF-8 输出、溢出和扩容失败均显式处理，`nil`/空 template 进入缺失模板分支，缺 template 不会隐式落到 ChatML。
+
+`GemmaLocalService` 的 instruction、message 与 wrapper 已分离，普通翻译、manga tagged batch、summary 和 deterministic raw probe 使用 message API；日志记录实际 rendered prompt，缺 template 时才保留 Gemma legacy prompt 的审计形态。清洗、partial-valid/缺 tag 补译、失败回退和最多 `8` blocks / `1_800` chars 保持不变。没有替换默认模型、增加上下文或批量、接入 Qwen/Sakura 真实模型，OCR/UI/renderer/非图片路径也未改动。
+
+新增 `benchmarks/japanese_translation/schema/model-profile-manifest.schema.json`、contract-only `examples/model_profiles/manifest.json`、`scripts/test-v3286-local-gguf-chat-template-contract.py` 与 cloud-only Swift fixture/runtime。manifest 明确记录 model filename、SHA-256、quantization、license review、template source/SHA、`llama_chat_apply_template`、context、batch ceiling 和 decoding profile；synthetic Gemma/Qwen/Sakura 行不代表可下载模型或授权。新合同 `7/7`，workflow 已把 Python contract、manifest artifact 和 macOS cloud-only evaluator 接入当前路由。
+
+工程版本为 `3.286`。本地 `308` 个 Python AST、无进程入口合同 `281` 个通过且 `27` 个跳过，3 个 workflow YAML、30 个 benchmark JSON、26 个 shell syntax、4 个 tracked plist/project version 与 `git diff --check` 通过；只做静态/安全 Python 合同、JSON、YAML、shell、plist/project version，不运行本地 `xcodebuild`、`swiftc`、`xcrun`、Core ML、Rust/Cargo、GGUF 或 App runtime。当前没有真实模板/模型 SHA、license、设备资源、clean-text holdout、exact-SHA cloud full、Xcode/JUnit 或 receipt，因此本版只证明模板兼容和旧 Gemma prompt 边界，不声称翻译质量提升；v3.287 才进入同一 clean-text corpus 的多模型对照，270M 继续只作 floor。

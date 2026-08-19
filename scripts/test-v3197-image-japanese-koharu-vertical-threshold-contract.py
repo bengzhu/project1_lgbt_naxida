@@ -30,7 +30,7 @@ def braced_body(source: str, marker: str) -> str:
 class JapaneseKoharuVerticalThresholdContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.vision = read("AITRANS/Services/VisionOCRService.swift")
-        self.pipeline = braced_body(self.vision, "func recognizeTextBlocks(")
+        self.pipeline = braced_body(self.vision, "func recognizeTextBlocksWithShadowLedger(")
         self.crops = braced_body(
             self.vision,
             "private static func recognizeJapaneseVerticalCrops(",

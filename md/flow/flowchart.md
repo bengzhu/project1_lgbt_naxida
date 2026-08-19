@@ -1,4 +1,12 @@
 # 项目流程图
+v3.290 图片翻译完成后：`translated session -> existing rectangle overlay/export -> report-only render-safety preflight -> VoiceOver warning (optional)`；invalid geometry、空文字、旁贴裁切／覆盖、源块重叠和跨块 collision 只进入诊断报告，不改变主 renderer、export、OCR、翻译或 persistence。
+
+v3.289 图片复查：`persisted block -> provenance disclosure (read-only) -> scoped bbox draft -> commit -> scoped rerecognition/cancel`；会话快照先做受管文件 identity fail-closed 校验，split/merge 创建新 block identity 并清理受影响译文／旧 OCR evidence，order mutation 保留可用 metadata 与 review progress。
+
+v3.288 日语翻译：`OCR/layout blocks -> <=8/1,800 bounded batch -> terminology memory + read-only completed-batch context -> strict tags/QA -> failed-block set -> retry only failed blocks -> partial persistence`；summary 不进入 pending labels，QA 不重跑 OCR／检测／布局，scoped cancel 与已完成块保持。
+
+验证闸门：`safe local static contracts -> cloud-only evaluator/full when authorized -> real GGUF + licensed corpus + target-device evidence -> frozen holdout`；synthetic fixture、report-only overlay 和固定样图仅证明协议／回归边界，不能直接转化为 OCR/CER、翻译质量或性能结论。
+
 v3.265 Vision vertical line quad：`line polygon -> local DeviceRGB -> shared Koharu axis target -> inverse projective bilinear/constant-black -> rotate270 -> Vision OCR`；采样失败才进入 Core Image natural fallback，bbox ownership 与 16M perspective budget 不变。
 
 v3.264 vertical quad warp：`line polygon -> canonical DeviceRGB -> inverse projective sampling -> bilinear/constant-black -> Koharu axis target -> rotate270 -> weak quad fallback`；detector bbox 主路径和 generic/natural fallback 独立保留。

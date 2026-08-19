@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.invalid/schema/japanese-ocr-engine-selector-input-v1.json",
+  "title": "AITRANS Japanese OCR GT-isolated selector input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "contractExampleOnly", "run", "policy", "evidenceGate", "runtimeCases"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "benchmark": {"const": "japanese-ocr-engine-selector"},
+    "contractExampleOnly": {"type": "boolean"},
+    "run": {"$ref": "#/$defs/run"},
+    "policy": {"$ref": "#/$defs/policy"},
+    "evidenceGate": {"$ref": "#/$defs/evidenceGate"},
+    "runtimeCases": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/runtimeCase"}}
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appSha", "evaluatorVersion", "invocationMode"],
+      "properties": {
+        "appSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "evaluatorVersion": {"type": "string", "minLength": 1},
+        "invocationMode": {"const": "cloud-only-shadow"}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policyID", "policyVersion", "selectorMode", "featureFlag", "featureFlagEnabled",
+        "baselineEngineID", "candidateEngineID", "candidateMinCalibratedQuality",
+        "candidateCalibrationProfileID", "candidateMaxWarmLatencyMs", "candidateMaxPeakMemoryBytes",
+        "rollbackFailureThreshold", "thresholdsFrozen", "freezeSource", "groundTruthUsedForSelection",
+        "benchmarkInputAvailable", "requestBudgetDelta", "pixelBudgetDelta", "storeProvenance",
+        "preserveReviewStateOnRollback"
+      ],
+      "properties": {
+        "policyID": {"type": "string", "minLength": 1},
+        "policyVersion": {"type": "string", "minLength": 1},
+        "selectorMode": {"enum": ["shadow-only", "controlled-rollout"]},
+        "featureFlag": {"type": "string", "minLength": 1},
+        "featureFlagEnabled": {"type": "boolean"},
+        "baselineEngineID": {"type": "string", "minLength": 1},
+        "candidateEngineID": {"type": "string", "minLength": 1},
+        "candidateMinCalibratedQuality": {"type": "number", "minimum": 0, "maximum": 1},
+        "candidateCalibrationProfileID": {"type": "string", "minLength": 1},
+        "candidateMaxWarmLatencyMs": {"type": "number", "exclusiveMinimum": 0},
+        "candidateMaxPeakMemoryBytes": {"type": "integer", "minimum": 1},
+        "rollbackFailureThreshold": {"type": "integer", "minimum": 1},
+        "thresholdsFrozen": {"const": true},
+        "freezeSource": {"const": "train-dev"},
+        "groundTruthUsedForSelection": {"const": false},
+        "benchmarkInputAvailable": {"const": false},
+        "requestBudgetDelta": {"const": 0},
+        "pixelBudgetDelta": {"const": 0},
+        "storeProvenance": {"const": true},
+        "preserveReviewStateOnRollback": {"const": true}
+      }
+    },
+    "evidenceGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status", "candidateArtifactReady", "authorizedCorpusReady", "policyFrozenBeforeHoldout",
+        "holdoutEvaluatedOnce", "holdoutTunedAfterEvaluation", "outputMetricsPassed",
+        "duplicateOmissionOrderPassed", "cancellationPassed", "memoryPassed", "rollbackVerified",
+        "reason"
+      ],
+      "properties": {
+        "status": {"enum": ["contractExampleOnly", "missing", "ready"]},
+        "candidateArtifactReady": {"type": "boolean"},
+        "authorizedCorpusReady": {"type": "boolean"},
+        "policyFrozenBeforeHoldout": {"type": "boolean"},
+        "holdoutEvaluatedOnce": {"type": "boolean"},
+        "holdoutTunedAfterEvaluation": {"const": false},
+        "outputMetricsPassed": {"type": "boolean"},
+        "duplicateOmissionOrderPassed": {"type": "boolean"},
+        "cancellationPassed": {"type": "boolean"},
+        "memoryPassed": {"type": "boolean"},
+        "rollbackVerified": {"type": "boolean"},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "engineSignal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engineID", "candidateRole", "artifactStatus", "licenseReviewed", "supportsCropRoles",
+        "outputStatus", "text", "calibratedQuality", "calibrationProfileID", "warmLatencyMs",
+        "peakMemoryBytes", "failureReason"
+      ],
+      "properties": {
+        "engineID": {"type": "string", "minLength": 1},
+        "candidateRole": {"enum": ["baseline", "candidate"]},
+        "artifactStatus": {"enum": ["available", "missing", "failed"]},
+        "licenseReviewed": {"type": "boolean"},
+        "supportsCropRoles": {"type": "array", "items": {"enum": ["detectorBBox", "lineQuadFallback", "blockCrop"]}},
+        "outputStatus": {"enum": ["success", "empty", "failure"]},
+        "text": {"type": "string"},
+        "calibratedQuality": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "calibrationProfileID": {"type": ["string", "null"]},
+        "warmLatencyMs": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "peakMemoryBytes": {"type": ["integer", "null"], "minimum": 1},
+        "failureReason": {"type": ["string", "null"]}
+      }
+    },
+    "runtimeCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseID", "blockID", "cropRole", "geometryValid", "duplicateRisk", "requestBudgetRemaining",
+        "pixelBudgetRemaining", "cancellationState", "generationMatches", "candidateFailureCount", "previousEngineID", "engines"
+      ],
+      "properties": {
+        "caseID": {"type": "string", "minLength": 1},
+        "blockID": {"type": "string", "minLength": 1},
+        "cropRole": {"enum": ["detectorBBox", "lineQuadFallback", "blockCrop"]},
+        "geometryValid": {"type": "boolean"},
+        "duplicateRisk": {"type": "boolean"},
+        "requestBudgetRemaining": {"type": "integer", "minimum": 0},
+        "pixelBudgetRemaining": {"type": "integer", "minimum": 0},
+        "cancellationState": {"enum": ["active", "cancelRequested", "cancelled"]},
+        "generationMatches": {"type": "boolean"},
+        "candidateFailureCount": {"type": "integer", "minimum": 0},
+        "previousEngineID": {"type": ["string", "null"]},
+        "engines": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/engineSignal"}}
+      }
+    }
+  }
+}

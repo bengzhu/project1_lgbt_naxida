@@ -1,0 +1,7 @@
+{
+  "inputKind": "cleanSource",
+  "blocks": [
+    { "blockID": "b1", "order": 0, "text": "今度こそ" },
+    { "blockID": "b2", "order": 1, "text": "持ち帰る！" }
+  ]
+}

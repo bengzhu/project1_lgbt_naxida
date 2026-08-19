@@ -32,7 +32,7 @@ class JapaneseVerticalTileFallbackContractTests(unittest.TestCase):
         self.vision = read("AITRANS/Services/VisionOCRService.swift")
         self.recognize = braced_body(
             self.vision,
-            "func recognizeTextBlocks(in imageData: Data, sourceLanguage: SupportedLanguage)",
+            "func recognizeTextBlocksWithShadowLedger(",
         )
         self.crops = braced_body(
             self.vision,

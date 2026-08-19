@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.local/benchmarks/japanese_translation/model-comparison-input.schema.json",
+  "title": "AITRANS clean-text translation model comparison input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "datasetSha256", "run", "corpus", "contractExampleOnly", "selection", "models", "predictions", "measurements"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-translation-model-comparison" },
+    "datasetSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "run": { "$ref": "#/$defs/run" },
+    "corpus": { "$ref": "#/$defs/corpus" },
+    "contractExampleOnly": { "type": "boolean" },
+    "selection": { "$ref": "#/$defs/selection" },
+    "models": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/model" } },
+    "predictions": { "type": "array", "items": { "$ref": "#/$defs/prediction" } },
+    "measurements": { "type": "array", "items": { "$ref": "#/$defs/measurement" } }
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appSha", "evaluatorVersion", "invocationMode"],
+      "properties": {
+        "appSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "evaluatorVersion": { "type": "string", "minLength": 1 },
+        "invocationMode": { "const": "cloud-only-shadow" }
+      }
+    },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "manifestPath", "manifestSha256", "datasetVerified", "caseCount", "holdoutCaseCount", "humanReviewStatus"],
+      "properties": {
+        "status": { "enum": ["contractExampleOnly", "authorized"] },
+        "manifestPath": { "type": "string", "minLength": 1 },
+        "manifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "datasetVerified": { "type": "boolean" },
+        "caseCount": { "type": "integer", "minimum": 0 },
+        "holdoutCaseCount": { "type": "integer", "minimum": 0 },
+        "humanReviewStatus": { "enum": ["notStarted", "pending", "complete"] }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaultModelID", "productSelectionChanged", "groundTruthUsedForSelection", "promotionStatus", "reason"],
+      "properties": {
+        "defaultModelID": { "type": "string", "minLength": 1 },
+        "productSelectionChanged": { "const": false },
+        "groundTruthUsedForSelection": { "const": false },
+        "promotionStatus": { "const": "notEligible" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "templateID", "templateSha256", "fallbackProfileID", "applyAPI"],
+      "properties": {
+        "source": { "enum": ["embedded", "explicitKnownFallback", "missingRejected", "unsupportedRejected"] },
+        "templateID": { "type": ["string", "null"] },
+        "templateSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "fallbackProfileID": { "type": ["string", "null"] },
+        "applyAPI": { "const": "llama_chat_apply_template" }
+      }
+    },
+    "decoding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileID", "mode", "seed", "temperature", "topK", "topP", "minP"],
+      "properties": {
+        "profileID": { "type": "string", "minLength": 1 },
+        "mode": { "enum": ["deterministic", "sampled"] },
+        "seed": { "type": ["integer", "null"], "minimum": 0 },
+        "temperature": { "type": "number", "minimum": 0 },
+        "topK": { "type": ["integer", "null"], "minimum": 1 },
+        "topP": { "type": ["number", "null"], "exclusiveMinimum": 0, "maximum": 1 },
+        "minP": { "type": ["number", "null"], "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelID", "modelFamily", "comparisonRole", "modelFilename", "modelSha256", "quantization", "sizeBytes", "license", "licenseReviewed", "artifactStatus", "distribution", "referenceOnly", "defaultEnabled", "contextLength", "template", "decoding"],
+      "properties": {
+        "modelID": { "type": "string", "minLength": 1 },
+        "modelFamily": { "enum": ["Gemma", "Qwen", "Sakura", "Llama", "Hunyuan", "remoteProvider", "other"] },
+        "comparisonRole": { "enum": ["floor", "candidate", "reference"] },
+        "modelFilename": { "type": "string", "pattern": "\\.gguf$" },
+        "modelSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "quantization": { "type": ["string", "null"] },
+        "sizeBytes": { "type": ["integer", "null"], "minimum": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "licenseReviewed": { "type": "boolean" },
+        "artifactStatus": { "enum": ["available", "missing", "failed", "notProvided"] },
+        "distribution": { "enum": ["bundled", "userProvided", "cloudOnlyReference", "remoteProvider", "notDistributable"] },
+        "referenceOnly": { "type": "boolean" },
+        "defaultEnabled": { "type": "boolean" },
+        "contextLength": { "type": "integer", "minimum": 1 },
+        "template": { "$ref": "#/$defs/template" },
+        "decoding": { "$ref": "#/$defs/decoding" }
+      }
+    },
+    "prediction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["predictionID", "modelID", "caseID", "split", "status", "output", "promptTemplateID", "decodingProfileID", "contextOverflow", "failureReason", "referenceOnly"],
+      "properties": {
+        "predictionID": { "type": "string", "minLength": 1 },
+        "modelID": { "type": "string", "minLength": 1 },
+        "caseID": { "type": "string", "minLength": 1 },
+        "split": { "enum": ["train", "dev", "holdout"] },
+        "status": { "enum": ["success", "empty", "failure", "notRun"] },
+        "output": { "type": ["string", "null"] },
+        "promptTemplateID": { "type": "string", "minLength": 1 },
+        "decodingProfileID": { "type": "string", "minLength": 1 },
+        "contextOverflow": { "type": "boolean" },
+        "failureReason": { "type": ["string", "null"] },
+        "referenceOnly": { "type": "boolean" }
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measurementID", "modelID", "caseID", "warmState", "sampleIndex", "status", "latencyMilliseconds", "firstTokenMilliseconds", "peakMemoryBytes", "contextOverflow", "deviceID", "deviceClass", "platform", "hardware", "os", "runtime", "measurementSource", "targetDevice"],
+      "properties": {
+        "measurementID": { "type": "string", "minLength": 1 },
+        "modelID": { "type": "string", "minLength": 1 },
+        "caseID": { "type": "string", "minLength": 1 },
+        "warmState": { "enum": ["cold", "warm"] },
+        "sampleIndex": { "type": "integer", "minimum": 0 },
+        "status": { "enum": ["complete", "partial", "failed", "notRun"] },
+        "latencyMilliseconds": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "firstTokenMilliseconds": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "peakMemoryBytes": { "type": ["integer", "null"], "minimum": 1 },
+        "contextOverflow": { "type": ["boolean", "null"] },
+        "deviceID": { "type": "string", "minLength": 1 },
+        "deviceClass": { "type": "string", "minLength": 1 },
+        "platform": { "type": "string", "minLength": 1 },
+        "hardware": { "type": "string", "minLength": 1 },
+        "os": { "type": "string", "minLength": 1 },
+        "runtime": { "type": "string", "minLength": 1 },
+        "measurementSource": { "type": "string", "minLength": 1 },
+        "targetDevice": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.local/benchmarks/japanese_ocr/prediction.schema.json",
+  "title": "AITRANS Japanese OCR prediction batch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "datasetSha256", "run", "predictions"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-ocr" },
+    "datasetSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "run": { "$ref": "#/$defs/run" },
+    "predictions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/prediction" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appSha", "engineID", "engineVersion", "model", "license", "device", "parameters"],
+      "properties": {
+        "appSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "engineID": { "type": "string", "minLength": 1 },
+        "engineVersion": { "type": "string", "minLength": 1 },
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "version", "sha256", "license"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "version": { "type": "string", "minLength": 1 },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "license": { "type": "string", "minLength": 1 }
+          }
+        },
+        "license": { "type": "string", "minLength": 1 },
+        "device": { "type": "string", "minLength": 1 },
+        "parameters": { "type": "object" }
+      }
+    },
+    "bbox": {
+      "type": ["array", "null"],
+      "prefixItems": [
+        { "type": "number" },
+        { "type": "number" },
+        { "type": "number" },
+        { "type": "number" }
+      ],
+      "items": false,
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "point": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "polygon": {
+      "type": ["array", "null"],
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/point" }
+    },
+    "prediction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "predictionID",
+        "pageID",
+        "split",
+        "evaluationLevel",
+        "regionID",
+        "status",
+        "text",
+        "confidence",
+        "bbox",
+        "readingOrder",
+        "engine",
+        "cropVariant",
+        "referenceOnly"
+      ],
+      "properties": {
+        "predictionID": { "type": "string", "minLength": 1 },
+        "pageID": { "type": "string", "minLength": 1 },
+        "split": { "enum": ["train", "dev", "holdout"] },
+        "evaluationLevel": { "enum": ["oracleCrop", "detectedCrop", "fullPage"] },
+        "regionID": { "type": ["string", "null"] },
+        "lineID": { "type": ["string", "null"] },
+        "status": { "enum": ["success", "empty", "failure"] },
+        "text": { "type": "string" },
+        "rawText": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"] },
+        "bbox": { "$ref": "#/$defs/bbox" },
+        "polygon": { "$ref": "#/$defs/polygon" },
+        "writingDirection": {
+          "type": ["string", "null"],
+          "enum": ["vertical", "horizontal", "mixed", "unknown", null]
+        },
+        "readingOrder": { "type": ["integer", "null"], "minimum": 0 },
+        "engine": { "type": "string", "minLength": 1 },
+        "cropVariant": { "type": "string", "minLength": 1 },
+        "referenceOnly": { "type": "boolean" },
+        "failureReason": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

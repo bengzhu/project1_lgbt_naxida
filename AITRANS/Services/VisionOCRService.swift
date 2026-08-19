@@ -4,6 +4,11 @@ import Foundation
 import ImageIO
 import Vision
 
+struct ImageOCRRecognitionOutput: Sendable {
+    var blocks: [ImageTranslationBlock]
+    var shadowLedger: ImageOCRShadowLedger
+}
+
 enum VisionOCRServiceError: LocalizedError {
     case imageDecodeFailed
     case imageRenderFailed
@@ -122,6 +127,19 @@ struct VisionOCRService: Sendable {
     }
 
     func recognizeTextBlocks(in imageData: Data, sourceLanguage: SupportedLanguage) async throws -> [ImageTranslationBlock] {
+        try await recognizeTextBlocksWithShadowLedger(
+            in: imageData,
+            sourceLanguage: sourceLanguage
+        ).blocks
+    }
+
+    /// Cloud-only and diagnostic callers can inspect the same candidate
+    /// stream without changing the production block API. The existing Store
+    /// continues to call `recognizeTextBlocks`, which discards this ledger.
+    func recognizeTextBlocksWithShadowLedger(
+        in imageData: Data,
+        sourceLanguage: SupportedLanguage
+    ) async throws -> ImageOCRRecognitionOutput {
         let task = Task.detached(priority: .userInitiated) {
             let ocrImage = try Self.makeOCRImage(from: imageData)
             let preferredLanguages = sourceLanguage.visionRecognitionLanguageIdentifiers
@@ -217,29 +235,40 @@ struct VisionOCRService: Sendable {
                     rect: $0.rect,
                     sourceDirectionHint: $0.sourceDirectionHint,
                     preservesDetectorTextRegionBoundary: $0.preservesDetectorTextRegionBoundary,
-                    verticalTextRegionOwner: $0.verticalTextRegionOwner
+                    verticalTextRegionOwner: $0.verticalTextRegionOwner,
+                    provenance: $0.candidateProvenance
                 )
             }
             let allowsVerticalText = sourceLanguage == .japanese || sourceLanguage == .simplifiedChinese
-            return ImageOCRLayoutEngine.layout(
-                layoutObservations,
-                allowsVerticalText: allowsVerticalText,
-                prefersMangaReadingOrder: sourceLanguage == .japanese
-            ).map { block in
-                ImageTranslationBlock(
-                    original: block.text,
-                    confidence: block.confidence,
-                    boundingBox: NormalizedImageRect(
-                        x: block.rect.x,
-                        y: block.rect.y,
-                        width: block.rect.width,
-                        height: block.rect.height
-                    ),
-                    sourceDirection: ImageTextDirection(rawValue: block.direction.rawValue) ?? .unknown,
-                    directionConfidence: block.directionConfidence,
-                    directionReason: block.directionReason
+            let blocks = { () -> [ImageTranslationBlock] in
+                return ImageOCRLayoutEngine.layout(
+                    layoutObservations,
+                    allowsVerticalText: allowsVerticalText,
+                    prefersMangaReadingOrder: sourceLanguage == .japanese
+                ).map { block in
+                    ImageTranslationBlock(
+                        original: block.text,
+                        confidence: block.confidence,
+                        boundingBox: NormalizedImageRect(
+                            x: block.rect.x,
+                            y: block.rect.y,
+                            width: block.rect.width,
+                            height: block.rect.height
+                        ),
+                        sourceDirection: ImageTextDirection(rawValue: block.direction.rawValue) ?? .unknown,
+                        directionConfidence: block.directionConfidence,
+                        directionReason: block.directionReason,
+                        ocrProvenance: block.provenance
+                    )
+                }
+            }()
+            return ImageOCRRecognitionOutput(
+                blocks: blocks,
+                shadowLedger: Self.makeShadowLedger(
+                    observations: observations,
+                    selectedObservations: finalObservations
                 )
-            }
+            )
         }
 
         return try await task.value
@@ -301,7 +330,9 @@ struct VisionOCRService: Sendable {
                 let request = MangaOCRRequest(
                     textRect: rect,
                     cropRect: blockCropRect,
-                    cropOrientation: cropOrientation
+                    cropOrientation: cropOrientation,
+                    regionID: block.ocrProvenance?.candidates.compactMap(\.regionID).first,
+                    lineID: block.ocrProvenance?.candidates.compactMap(\.lineID).first
                 )
                 if let result = try await MangaOCRService.shared
                     .recognize(image: image, requests: [request])
@@ -314,7 +345,19 @@ struct VisionOCRService: Sendable {
                     return Self.recognizedBlock(
                         block,
                         text: text,
-                        confidence: result.confidence
+                        confidence: result.confidence,
+                        candidateProvenance: ImageOCRCandidateProvenance(
+                            engine: .bundledMangaOCR,
+                            role: result.lineID == nil ? .detectorTextRegion : .verticalLine,
+                            cropVariant: result.cropVariant,
+                            geometrySource: result.geometrySource,
+                            regionID: result.regionID,
+                            lineID: result.lineID,
+                            rawConfidence: result.confidence,
+                            detectorConfidence: result.detectorConfidence,
+                            rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
+                            verticalTextRegionOwner: result.verticalTextRegionOwner
+                        )
                     )
                 }
             } catch is CancellationError {
@@ -383,7 +426,8 @@ struct VisionOCRService: Sendable {
         return Self.recognizedBlock(
             block,
             text: text,
-            confidence: best.confidence
+            confidence: best.confidence,
+            candidateProvenance: best.candidateProvenance
         )
     }
 
@@ -448,16 +492,91 @@ struct VisionOCRService: Sendable {
         }
     }
 
+    private static func makeShadowLedger(
+        observations: [VisionOCRObservation],
+        selectedObservations: [VisionOCRObservation]
+    ) -> ImageOCRShadowLedger {
+        var selectedKeyCounts: [String: Int] = [:]
+        for observation in selectedObservations {
+            let key = shadowObservationKey(observation)
+            selectedKeyCounts[key, default: 0] += 1
+        }
+        let ordered = observations.sorted {
+            shadowObservationKey($0) < shadowObservationKey($1)
+        }
+        var candidates: [ImageOCRCandidate] = []
+        var selectedIDs: [String] = []
+        candidates.reserveCapacity(ordered.count)
+        for (index, observation) in ordered.enumerated() {
+            let key = shadowObservationKey(observation)
+            let isSelected = (selectedKeyCounts[key] ?? 0) > 0
+            if isSelected {
+                selectedKeyCounts[key, default: 0] -= 1
+            }
+            let candidateID = "candidate-\(index)"
+            candidates.append(
+                ImageOCRCandidate(
+                    candidateID: candidateID,
+                    text: observation.text,
+                    confidence: observation.confidence,
+                    rect: observation.rect,
+                    provenance: observation.candidateProvenance,
+                    selectionReason: isSelected
+                        ? .selectedByExistingFusion
+                        : .shadowOnly
+                )
+            )
+            if isSelected {
+                selectedIDs.append(candidateID)
+            }
+        }
+        return ImageOCRShadowLedger(
+            candidates: candidates,
+            selectedCandidateIDs: selectedIDs
+        )
+    }
+
+    private static func shadowObservationKey(_ observation: VisionOCRObservation) -> String {
+        let rect = observation.rect
+        let geometry = [rect.x, rect.y, rect.width, rect.height]
+            .map { String(Int(($0 * 100_000).rounded())) }
+            .joined(separator: ",")
+        let provenance = observation.candidateProvenance
+        return [
+            observation.text,
+            geometry,
+            provenance.engine.rawValue,
+            provenance.role.rawValue,
+            provenance.cropVariant.rawValue,
+            provenance.regionID?.rawValue ?? "",
+            provenance.lineID?.rawValue ?? "",
+            String(provenance.verticalTextRegionOwner ?? -1),
+            String(observation.confidence)
+        ].joined(separator: "|")
+    }
+
     private static func recognizedBlock(
         _ block: ImageTranslationBlock,
         text: String,
-        confidence: Float
+        confidence: Float,
+        candidateProvenance: ImageOCRCandidateProvenance
     ) -> ImageTranslationBlock {
         var recognized = block
+        var retainedProvenance = candidateProvenance
+        if retainedProvenance.regionID == nil {
+            retainedProvenance.regionID = block.ocrProvenance?.candidates.compactMap(\.regionID).first
+        }
+        if retainedProvenance.lineID == nil {
+            retainedProvenance.lineID = block.ocrProvenance?.candidates.compactMap(\.lineID).first
+        }
         recognized.original = text
         recognized.confidence = confidence.isFinite
             ? min(max(confidence, 0), 1)
             : block.confidence
+        recognized.ocrProvenance = ImageOCRBlockProvenance.make(
+            from: [retainedProvenance],
+            selectionReason: .scopedRerecognition
+        )
         return recognized
     }
 
@@ -656,7 +775,8 @@ struct VisionOCRService: Sendable {
                 rect: $0.rect,
                 sourceDirectionHint: $0.sourceDirectionHint,
                 preservesDetectorTextRegionBoundary: $0.preservesDetectorTextRegionBoundary,
-                verticalTextRegionOwner: $0.verticalTextRegionOwner
+                verticalTextRegionOwner: $0.verticalTextRegionOwner,
+                provenance: $0.candidateProvenance
             )
         }
         let verticalBlocks = ImageOCRLayoutEngine.layout(
@@ -907,7 +1027,8 @@ struct VisionOCRService: Sendable {
                     region
                 ),
                 cropQuad: region.cropQuadHint,
-                cropQuadIsVertical: region.cropQuadHint != nil
+                cropQuadIsVertical: region.cropQuadHint != nil,
+                regionID: region.regionID
             )
         }
         guard !requests.isEmpty else {
@@ -940,7 +1061,19 @@ struct VisionOCRService: Sendable {
                 sourceDirectionHint: .vertical,
                 observationRole: .detectorTextRegion,
                 preservesDetectorTextRegionBoundary:
-                    Self.isReliableJapaneseMangaOCRResult(result)
+                    Self.isReliableJapaneseMangaOCRResult(result),
+                provenance: ImageOCRCandidateProvenance(
+                    engine: .bundledMangaOCR,
+                    role: result.lineID == nil ? .detectorTextRegion : .verticalLine,
+                    cropVariant: result.cropVariant,
+                    geometrySource: result.geometrySource,
+                    regionID: result.regionID,
+                    lineID: result.lineID,
+                    rawConfidence: result.confidence,
+                    detectorConfidence: result.detectorConfidence,
+                    rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
+                    verticalTextRegionOwner: result.verticalTextRegionOwner
+                )
             )
         }
     }
@@ -995,6 +1128,7 @@ struct VisionOCRService: Sendable {
                 characterCount: 0,
                 detector: .comicTextBubble,
                 detectorConfidence: detectorRegion.confidence,
+                regionID: detectorRegion.regionID,
                 cropRectHint: japaneseDetectorCropHint(
                     detectorRegion.rect,
                     from: visionRegions
@@ -2277,6 +2411,19 @@ struct VisionOCRService: Sendable {
     /// using recognized text, but only inside one already-established Japanese
     /// vertical layout block. That is the safe boundary available on iOS when
     /// the upstream RT-DETR exposes a bbox but no Koharu `line_polygons`.
+    private static func japaneseLineID(
+        for rect: ImageOCRLayoutRect,
+        owner: Int?
+    ) -> ImageOCRLineID {
+        let ownerKey = owner.map(String.init) ?? "ownerless"
+        let values = [rect.x, rect.y, rect.width, rect.height].map {
+            Int(($0 * 100_000).rounded())
+        }
+        return ImageOCRLineID(
+            "line-\(ownerKey)-\(values.map { String($0) }.joined(separator: "-"))"
+        )
+    }
+
     private static func japaneseGeometryOnlyVerticalLineCandidates(
         in image: CGImage,
         observations: [VisionOCRObservation],
@@ -2326,6 +2473,7 @@ struct VisionOCRService: Sendable {
                 continue
             }
             let owner = block.verticalTextRegionOwner
+            let regionID = block.provenance?.candidates.compactMap(\.regionID).first
 
             let blockArea = max(block.rect.width * block.rect.height, 0.0001)
             let candidateArea = region.rect.width * region.rect.height
@@ -2348,6 +2496,11 @@ struct VisionOCRService: Sendable {
             }
             guard !duplicatesTextBackedGeometry else { continue }
 
+            let lineID = japaneseLineID(
+                for: region.rect,
+                owner: owner
+            )
+
             candidates.append(
                 VisionOCRObservation(
                     text: "",
@@ -2358,7 +2511,18 @@ struct VisionOCRService: Sendable {
                     rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
                     sourceDirectionHint: .vertical,
                     observationRole: .verticalLine,
-                    verticalTextRegionOwner: owner
+                    verticalTextRegionOwner: owner,
+                    provenance: ImageOCRCandidateProvenance(
+                        engine: .vision,
+                        role: .geometryOnly,
+                        cropVariant: .lineQuad,
+                        geometrySource: .lineQuad,
+                        regionID: regionID,
+                        lineID: lineID,
+                        rawConfidence: 0,
+                        rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
+                        verticalTextRegionOwner: owner
+                    )
                 )
             )
         }
@@ -2397,7 +2561,13 @@ struct VisionOCRService: Sendable {
                 cropOrientation: .koharuVerticalLine270,
                 cropQuad: candidate.lineRegionQuad,
                 cropQuadIsVertical: candidate.lineRegionQuad != nil,
-                verticalTextRegionOwner: candidate.verticalTextRegionOwner
+                verticalTextRegionOwner: candidate.verticalTextRegionOwner,
+                regionID: candidate.candidateProvenance.regionID,
+                lineID: candidate.candidateProvenance.lineID
+                    ?? japaneseLineID(
+                        for: lineRect,
+                        owner: candidate.verticalTextRegionOwner
+                    )
             )
         }
 
@@ -2441,7 +2611,18 @@ struct VisionOCRService: Sendable {
                     rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
                     sourceDirectionHint: .vertical,
                     observationRole: .verticalLine,
-                    verticalTextRegionOwner: result.verticalTextRegionOwner
+                    verticalTextRegionOwner: result.verticalTextRegionOwner,
+                    provenance: ImageOCRCandidateProvenance(
+                        engine: .bundledMangaOCR,
+                        role: .verticalLine,
+                        cropVariant: result.cropVariant,
+                        geometrySource: result.geometrySource,
+                        lineID: result.lineID,
+                        rawConfidence: result.confidence,
+                        detectorConfidence: result.detectorConfidence,
+                        rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
+                        verticalTextRegionOwner: result.verticalTextRegionOwner
+                    )
                 )
             )
         }
@@ -4396,6 +4577,44 @@ private struct VisionOCRObservation: Equatable, Sendable {
     /// Ephemeral Koharu `block_index` equivalent for a uniquely matched
     /// Japanese vertical TextRegion. This never enters the persisted block.
     var verticalTextRegionOwner: Int? = nil
+    /// Explicit provenance is supplied by bundled Manga OCR and stable
+    /// detector/line identities. Ordinary Vision observations derive the
+    /// equivalent v3.281 record from their existing role and geometry.
+    var provenance: ImageOCRCandidateProvenance? = nil
+
+    var candidateProvenance: ImageOCRCandidateProvenance {
+        if let provenance { return provenance }
+        let role: ImageOCRCandidateRole
+        let cropVariant: ImageOCRCropVariant
+        let geometrySource: ImageOCRGeometrySource
+        switch observationRole {
+        case .page:
+            role = .page
+            cropVariant = .page
+            geometrySource = .bbox
+        case .crop:
+            role = .crop
+            cropVariant = .blockBBox
+            geometrySource = .bbox
+        case .verticalLine:
+            role = .verticalLine
+            cropVariant = lineRegionQuad == nil ? .lineBBox : .lineQuad
+            geometrySource = lineRegionQuad == nil ? .bbox : .lineQuad
+        case .detectorTextRegion:
+            role = .detectorTextRegion
+            cropVariant = .detectorBBox
+            geometrySource = .bbox
+        }
+        return ImageOCRCandidateProvenance(
+            engine: observationRole == .detectorTextRegion ? .bundledMangaOCR : .vision,
+            role: role,
+            cropVariant: cropVariant,
+            geometrySource: geometrySource,
+            rawConfidence: confidence,
+            rotationApplied: rotationApplied,
+            verticalTextRegionOwner: verticalTextRegionOwner
+        )
+    }
 }
 
 private struct JapaneseVerticalCropFragment: Sendable {
@@ -4409,6 +4628,7 @@ private struct JapanesePixelFirstRegion: Sendable {
     var characterCount: Int
     var detector: JapanesePixelFirstDetector = .vision
     var detectorConfidence: Float = 0
+    var regionID: ImageOCRRegionID? = nil
     /// Optional tight character-envelope crop. This never replaces `rect` in
     /// layout or ownership decisions and is only populated after strict
     /// detector-coverage gates pass.
@@ -4423,12 +4643,12 @@ private enum JapanesePixelFirstDetector: Sendable {
     case comicTextBubble
 }
 
-struct ImageOCRLayoutPoint: Equatable, Sendable {
+struct ImageOCRLayoutPoint: Equatable, Codable, Sendable {
     var x: Double
     var y: Double
 }
 
-struct ImageOCRLayoutQuad: Equatable, Sendable {
+struct ImageOCRLayoutQuad: Equatable, Codable, Sendable {
     var points: [ImageOCRLayoutPoint]
 
     var boundingRect: ImageOCRLayoutRect {

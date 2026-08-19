@@ -30,6 +30,7 @@ xcrun coremlcompiler compile \
   "$resources"
 
 xcrun swiftc -parse-as-library \
+  "$repo_root/AITRANS/Models/ImageOCRProvenance.swift" \
   "$repo_root/AITRANS/Services/ImageOCRLayoutEngine.swift" \
   "$repo_root/AITRANS/Services/ComicTextBubbleDetectorService.swift" \
   "$repo_root/scripts/fixtures/v3262-koharu-detector-triangle-harness.swift" \

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-translation-model-comparison",
+  "datasetVersion": "v3.287-contract-example",
+  "contractExampleOnly": true,
+  "manifestSha256": "bab286a12645f6258cffed1e1bb0c5a27cca485d771d54db6d16c5cbff5f5f32",
+  "requiredLanguagePairs": [
+    ["ja", "zh-CN"],
+    ["ja", "en"],
+    ["en", "zh-CN"]
+  ],
+  "source": {
+    "path": "clean-corpus.json",
+    "sha256": "9e6ee75d14d7a0ea6c97ec3191295467798cd07ca85cbbd79a11f54aa066c910",
+    "format": "json",
+    "license": "repository-controlled-contract-fixture",
+    "permittedUses": ["benchmark-contract"]
+  },
+  "cases": [
+    {
+      "caseID": "ja-zh-contract-001",
+      "split": "dev",
+      "inputKind": "cleanSource",
+      "sourceLanguage": "ja",
+      "targetLanguage": "zh-CN",
+      "sourceText": "今度こそ",
+      "sourceTextNFC": "今度こそ",
+      "referenceTranslation": "这次一定要",
+      "referenceStatus": "contractExampleOnly",
+      "textType": "dialogue",
+      "maxTranslationCharacters": 20
+    },
+    {
+      "caseID": "ja-en-contract-001",
+      "split": "dev",
+      "inputKind": "cleanSource",
+      "sourceLanguage": "ja",
+      "targetLanguage": "en",
+      "sourceText": "持ち帰る！",
+      "sourceTextNFC": "持ち帰る！",
+      "referenceTranslation": "Take it home!",
+      "referenceStatus": "contractExampleOnly",
+      "textType": "dialogue",
+      "maxTranslationCharacters": 24
+    },
+    {
+      "caseID": "en-zh-contract-001",
+      "split": "dev",
+      "inputKind": "cleanSource",
+      "sourceLanguage": "en",
+      "targetLanguage": "zh-CN",
+      "sourceText": "Do not look back.",
+      "sourceTextNFC": "Do not look back.",
+      "referenceTranslation": "不要回头。",
+      "referenceStatus": "contractExampleOnly",
+      "textType": "dialogue",
+      "maxTranslationCharacters": 20
+    }
+  ]
+}

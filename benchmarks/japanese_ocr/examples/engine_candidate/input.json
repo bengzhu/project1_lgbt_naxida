@@ -1,0 +1,152 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-ocr-engine-candidate",
+  "datasetSha256": "ccf9e12e3c94994fc0b7592df347d9ad525c6ab7e83d087f18c34b3858cdb28b",
+  "run": {
+    "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+    "evaluatorVersion": "v3.284-contract",
+    "invocationMode": "cloud-only-shadow"
+  },
+  "corpus": {
+    "status": "contractExampleOnly",
+    "source": "repository synthetic crop envelope",
+    "sourceLicense": "repository-controlled-contract",
+    "datasetVerified": false,
+    "pageCount": 1,
+    "humanRegionCount": 0,
+    "holdoutPageCount": 0
+  },
+  "contractExampleOnly": true,
+  "cropSet": [
+    {
+      "pageID": "contract-example-jap",
+      "regionID": "contract-r-niko",
+      "cropLevel": "oracleCrop",
+      "cropID": "oracle-contract-r-niko",
+      "cropSha256": "5555555555555555555555555555555555555555555555555555555555555555",
+      "source": "contract-example-known-region",
+      "expectedText": "ニコッ",
+      "expectedTextNFC": "ニコッ",
+      "referenceOnly": false
+    },
+    {
+      "pageID": "contract-example-jap",
+      "regionID": "shared-detected-crop-0",
+      "cropLevel": "detectedCrop",
+      "cropID": "detected-contract-crop-0",
+      "cropSha256": "6666666666666666666666666666666666666666666666666666666666666666",
+      "source": "contract-example-shared-detector-crop",
+      "expectedText": null,
+      "expectedTextNFC": null,
+      "referenceOnly": false
+    }
+  ],
+  "engines": [
+    {
+      "engineID": "bundled-manga-ocr",
+      "engineVersion": "contract-example",
+      "candidateRole": "baseline",
+      "sourceRevision": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+      "runtimeRevision": "coreml-contract",
+      "model": {
+        "id": "AITRANS bundled Manga OCR",
+        "version": "contract-example",
+        "revision": "manga-ocr-contract-revision",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "license": "Apache-2.0"
+      },
+      "artifact": {
+        "artifactID": "bundled-manga-ocr-contract",
+        "source": "repository bundled Core ML contract metadata",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "sizeBytes": 1024,
+        "quantization": "INT8",
+        "license": "Apache-2.0",
+        "downloadPolicy": "bundled"
+      },
+      "license": "Apache-2.0",
+      "referenceOnly": false,
+      "artifactStatus": "available",
+      "failureReason": null,
+      "distribution": "bundled",
+      "defaultEnabled": true
+    },
+    {
+      "engineID": "candidate-ocr-vl",
+      "engineVersion": "not-provided",
+      "candidateRole": "candidate",
+      "sourceRevision": "not-provided",
+      "runtimeRevision": "not-provided",
+      "model": {
+        "id": "candidate-ocr-vl",
+        "version": "not-provided",
+        "revision": "not-provided",
+        "sha256": null,
+        "license": "not-provided"
+      },
+      "artifact": {
+        "artifactID": "candidate-ocr-vl-missing",
+        "source": "not-provided",
+        "sha256": null,
+        "sizeBytes": null,
+        "quantization": null,
+        "license": "not-provided",
+        "downloadPolicy": "notAvailable"
+      },
+      "license": "not-provided",
+      "referenceOnly": true,
+      "artifactStatus": "missing",
+      "failureReason": "candidate artifact, license package, and runtime were not provided",
+      "distribution": "cloudOnlyReference",
+      "defaultEnabled": false
+    }
+  ],
+  "results": [
+    {"engineID": "bundled-manga-ocr", "pageID": "contract-example-jap", "regionID": "contract-r-niko", "cropLevel": "oracleCrop", "cropID": "oracle-contract-r-niko", "status": "success", "text": "ニコッ", "rawText": "ニコッ", "confidence": 0.88, "failureReason": null, "referenceOnly": false},
+    {"engineID": "bundled-manga-ocr", "pageID": "contract-example-jap", "regionID": "shared-detected-crop-0", "cropLevel": "detectedCrop", "cropID": "detected-contract-crop-0", "status": "success", "text": "ニコッ", "rawText": "ニコッ", "confidence": 0.88, "failureReason": null, "referenceOnly": false},
+    {"engineID": "candidate-ocr-vl", "pageID": "contract-example-jap", "regionID": "contract-r-niko", "cropLevel": "oracleCrop", "cropID": "oracle-contract-r-niko", "status": "failure", "text": "", "rawText": null, "confidence": null, "failureReason": "candidate artifact, license package, and runtime were not provided", "referenceOnly": true},
+    {"engineID": "candidate-ocr-vl", "pageID": "contract-example-jap", "regionID": "shared-detected-crop-0", "cropLevel": "detectedCrop", "cropID": "detected-contract-crop-0", "status": "failure", "text": "", "rawText": null, "confidence": null, "failureReason": "candidate artifact, license package, and runtime were not provided", "referenceOnly": true}
+  ],
+  "measurementRuns": [
+    {
+      "measurementID": "bundled-contract-device",
+      "engineID": "bundled-manga-ocr",
+      "deviceID": "contract-example-device",
+      "deviceClass": "contract-example",
+      "platform": "macOS",
+      "hardware": "synthetic-device",
+      "os": "contract-example",
+      "runtime": "CoreML-contract",
+      "status": "partial",
+      "coldLatencyMs": [42.0, 45.0],
+      "warmLatencyMs": [9.1, 9.4, 9.2],
+      "peakMemoryBytes": 104857600,
+      "energyMilliwattHours": null,
+      "sampleCount": 5,
+      "measurementSource": "contract-example-synthetic",
+      "failureReason": "contract fixture does not capture energy on a target device",
+      "referenceOnly": false,
+      "targetDevice": false
+    },
+    {
+      "measurementID": "candidate-missing-device",
+      "engineID": "candidate-ocr-vl",
+      "deviceID": "not-provided",
+      "deviceClass": "unknown",
+      "platform": "unknown",
+      "hardware": "not-provided",
+      "os": "not-provided",
+      "runtime": "not-provided",
+      "status": "missing",
+      "coldLatencyMs": [],
+      "warmLatencyMs": [],
+      "peakMemoryBytes": null,
+      "energyMilliwattHours": null,
+      "sampleCount": 0,
+      "measurementSource": "not-provided",
+      "failureReason": "candidate artifact is missing; no runtime measurement exists",
+      "referenceOnly": true,
+      "targetDevice": false
+    }
+  ]
+}

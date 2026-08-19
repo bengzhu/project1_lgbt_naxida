@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.local/benchmarks/japanese_translation/fixture-manifest.schema.json",
+  "title": "AITRANS Japanese translation fixture manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "datasetVersion", "manifestSha256", "sourceLanguage", "targetLanguage", "fixtures"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-translation" },
+    "datasetVersion": { "type": "string", "minLength": 1 },
+    "manifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "sourceLanguage": { "const": "ja" },
+    "targetLanguage": { "enum": ["zh-CN", "en"] },
+    "fixtures": { "type": "array", "items": { "$ref": "#/$defs/fixture" } }
+  },
+  "$defs": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "format", "license", "permittedUses"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "format": { "enum": ["json", "txt"] },
+        "license": { "type": "string", "minLength": 1 },
+        "permittedUses": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockID", "order", "sourceText", "sourceTextNFC", "textType"],
+      "properties": {
+        "blockID": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer", "minimum": 0 },
+        "sourceText": { "type": "string", "minLength": 1 },
+        "sourceTextNFC": { "type": "string", "minLength": 1 },
+        "textType": { "enum": ["dialogue", "narration", "SFX", "title", "other"] },
+        "maxTranslationCharacters": { "type": "integer", "minimum": 1 },
+        "referenceTranslation": { "type": ["string", "null"] }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixtureID", "split", "inputKind", "pairedFixtureID", "input", "annotationStatus", "exampleOnly", "blocks"],
+      "properties": {
+        "fixtureID": { "type": "string", "minLength": 1 },
+        "split": { "enum": ["train", "dev", "holdout"] },
+        "inputKind": { "enum": ["cleanSource", "ocrCorrupted"] },
+        "pairedFixtureID": { "type": "string", "minLength": 1 },
+        "input": { "$ref": "#/$defs/input" },
+        "annotationStatus": { "enum": ["human", "contractExampleOnly", "pending"] },
+        "exampleOnly": { "type": "boolean" },
+        "blocks": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/block" } }
+      }
+    }
+  }
+}

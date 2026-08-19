@@ -43,6 +43,7 @@ class ImageOCRDirectionContractTests(unittest.TestCase):
                 [
                     "xcrun", "--sdk", "macosx", "swiftc",
                     "-module-cache-path", str(Path(temporary_directory) / "module-cache"),
+                    "AITRANS/Models/ImageOCRProvenance.swift",
                     "AITRANS/Services/ImageOCRLayoutEngine.swift",
                     "scripts/test-v207-image-ocr-direction-evaluator.swift",
                     "-o", str(executable),

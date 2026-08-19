@@ -102,9 +102,17 @@ struct ImageTranslationView: View {
                         status: statusTitle,
                         statusTone: statusTone
                     )
-                    ImageTranslationPanel {
-                        revealImagePreview(using: proxy)
-                    }
+                    ImageTranslationPanel(
+                        revealPreview: {
+                            revealImagePreview(using: proxy)
+                        },
+                        submitGeometryEdit: { blockID, boundingBox in
+                            store.rerecognizeImageTranslationBlock(
+                                blockID,
+                                boundingBox: boundingBox
+                            )
+                        }
+                    )
                 }
                 .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
                 .padding(.vertical, AppTheme.Spacing.section)
@@ -207,6 +215,7 @@ struct ImageTranslationPanel: View {
         ImageTranslationRestoreFocusOrigin?
     @State private var selectedImageTranslationBlockID: UUID?
     @State private var editingImageTranslationBlock: ImageTranslationBlock?
+    @State private var isImageBlockStructureEditorPresented = false
     @State private var restoreConfirmationBlock: ImageTranslationBlock?
     @State private var showRestoreAllIgnoredConfirmation = false
     @State private var pendingRestoreConfirmationDismissalFocusID: String?
@@ -215,6 +224,7 @@ struct ImageTranslationPanel: View {
     @State private var pendingCorrectionSheetDismissalRevision: Int?
     @AccessibilityFocusState private var reviewAccessibilityFocusID: String?
     let revealPreview: () -> Void
+    let submitGeometryEdit: (UUID, NormalizedImageRect) -> Void
 
     var body: some View {
         imageTranslationPanelReviewObservers
@@ -265,6 +275,21 @@ struct ImageTranslationPanel: View {
                 }
             )
             .environmentObject(store)
+        }
+        .sheet(isPresented: $isImageBlockStructureEditorPresented) {
+            ImageOCRBlockStructureEditor(
+                blocks: store.imageTranslationBlocks,
+                canEdit: store.canEditImageTranslationStructure,
+                split: { blockID, offset in
+                    store.splitImageTranslationBlock(blockID, atCharacterOffset: offset)
+                },
+                merge: { firstID, secondID in
+                    store.mergeImageTranslationBlocks(firstID, secondID)
+                },
+                move: { blockID, index in
+                    store.moveImageTranslationBlock(blockID, to: index)
+                }
+            )
         }
         .confirmationDialog(
             "恢复 Vision OCR？",
@@ -328,6 +353,7 @@ struct ImageTranslationPanel: View {
             reviewAccessibilityFocusRequestID &+= 1
             selectedImageTranslationBlockID = nil
             editingImageTranslationBlock = nil
+            isImageBlockStructureEditorPresented = false
             restoreConfirmationBlock = nil
             showRestoreAllIgnoredConfirmation = false
             clearPendingRestoreConfirmationDismissalFocus()
@@ -564,9 +590,21 @@ struct ImageTranslationPanel: View {
                     .accessibilityHint(
                         canReviewImageTranslation
                             ? "清除本次复查进度并定位第一个待复查文字块"
-                            : imageReviewUnavailableDetail
+                        : imageReviewUnavailableDetail
                     )
                 }
+
+                AppSecondaryButton(
+                    title: "编辑文字块结构",
+                    systemImage: "rectangle.3.group",
+                    action: { isImageBlockStructureEditorPresented = true }
+                )
+                .disabled(!store.canEditImageTranslationStructure)
+                .accessibilityHint(
+                    store.canEditImageTranslationStructure
+                        ? "手动拆分、合并相邻文字块或调整阅读顺序；不重新运行 OCR。拆分和合并会清除受影响块译文，之后可逐块重试翻译。"
+                        : imageModificationUnavailableDetail
+                )
             }
 
             Picker("覆盖方式", selection: overlayModeBinding) {
@@ -581,6 +619,21 @@ struct ImageTranslationPanel: View {
                     ? "选择译文以旁贴或覆盖方式呈现"
                     : imageModificationUnavailableDetail
             )
+
+            if let renderSafety = store.imageTranslationRenderSafetyReport,
+               renderSafety.requiresAttention {
+                AppStatusRow(
+                    title: renderSafety.title,
+                    detail: renderSafety.detail,
+                    tone: .warning
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(renderSafety.title)
+                .accessibilityValue(renderSafety.detail)
+                .accessibilityHint(
+                    "这是只读的矩形 overlay 预检，不会改变原图、OCR、翻译或导出算法；请在导出后人工确认文字没有被裁切或遮挡"
+                )
+            }
 
             imageStatusAccessibilityRow(
                 AppStatusRow(
@@ -790,6 +843,9 @@ struct ImageTranslationPanel: View {
                             },
                             toggleReviewCompletion: {
                                 toggleReviewCompletion(block.id, focusInPreview: false)
+                            },
+                            submitGeometryEdit: { blockID, boundingBox in
+                                submitGeometryEdit(blockID, boundingBox)
                             }
                         )
                     }
@@ -3622,121 +3678,130 @@ private struct ImageTranslationBlockRow: View {
     let restoreVisionOCR: () -> Void
     let setDirectionOverride: (ImageTextDirection?) -> Void
     let toggleReviewCompletion: () -> Void
+    let submitGeometryEdit: (UUID, NormalizedImageRect) -> Void
+
+    @State private var isGeometryEditorPresented = false
 
     var body: some View {
         HStack(alignment: .center, spacing: AppTheme.Spacing.compact) {
-            Button(action: select) {
-                HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
-                    Text(displayConfidence, format: .percent.precision(.fractionLength(0)))
-                        .font(.caption.monospacedDigit().bold())
-                        .foregroundStyle(Color.appAccent)
-                        .frame(width: 46, alignment: .leading)
-                    VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
-                        Text(block.translation.isEmpty ? "等待翻译" : block.translation)
-                            .font(.subheadline.bold())
-                            .foregroundStyle(Color.appTextPrimary)
-                        Text(displayOriginalText)
-                            .font(.caption)
-                            .foregroundStyle(Color.appTextSecondary)
-                        if !ImageOCRGeometryPresentation.isLocatable(for: block) {
-                            Label("图片定位不可用", systemImage: "location.slash")
-                                .font(.caption)
-                                .foregroundStyle(Color.appWarning)
-                        }
-                        if !ImageOCRResultSummary.hasUnknownDirection(block) {
-                            Label(
-                                ImageOCRDirectionPresentation.displayTitle(for: block),
-                                systemImage: "text.alignleft"
-                            )
-                            .font(.caption)
-                            .foregroundStyle(Color.appTextSecondary)
-                        }
-                        if isManuallyCorrected {
-                            Label("已人工修正", systemImage: "pencil.circle.fill")
-                                .font(.caption)
-                                .foregroundStyle(Color.appSuccess)
-                        }
-                        if ImageOCRResultSummary.requiresReview(block) {
-                            VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
-                                if ImageOCRResultSummary.hasLowConfidence(block) {
-                                    Label("低置信", systemImage: "exclamationmark.triangle.fill")
-                                        .foregroundStyle(Color.appWarning)
-                                }
-                                if ImageOCRResultSummary.hasUnknownDirection(block) {
-                                    Label("方向待定", systemImage: "questionmark.diamond.fill")
-                                        .foregroundStyle(Color.appWarning)
-                                }
-                                if isReviewCompleted {
-                                    Label("本次已复查", systemImage: "checkmark.circle.fill")
-                                        .foregroundStyle(Color.appSuccess)
-                                }
-                            }
-                            .font(.caption)
-                        }
-                    }
-                    Spacer(minLength: 0)
-                    if isSelected {
-                        Image(systemName: "viewfinder.circle.fill")
+            VStack(alignment: .leading, spacing: 0) {
+                Button(action: select) {
+                    HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
+                        Text(displayConfidence, format: .percent.precision(.fractionLength(0)))
+                            .font(.caption.monospacedDigit().bold())
                             .foregroundStyle(Color.appAccent)
-                            .accessibilityHidden(true)
+                            .frame(width: 46, alignment: .leading)
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
+                            Text(block.translation.isEmpty ? "等待翻译" : block.translation)
+                                .font(.subheadline.bold())
+                                .foregroundStyle(Color.appTextPrimary)
+                            Text(displayOriginalText)
+                                .font(.caption)
+                                .foregroundStyle(Color.appTextSecondary)
+                            if !ImageOCRGeometryPresentation.isLocatable(for: block) {
+                                Label("图片定位不可用", systemImage: "location.slash")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.appWarning)
+                            }
+                            if !ImageOCRResultSummary.hasUnknownDirection(block) {
+                                Label(
+                                    ImageOCRDirectionPresentation.displayTitle(for: block),
+                                    systemImage: "text.alignleft"
+                                )
+                                .font(.caption)
+                                .foregroundStyle(Color.appTextSecondary)
+                            }
+                            if isManuallyCorrected {
+                                Label("已人工修正", systemImage: "pencil.circle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.appSuccess)
+                            }
+                            if ImageOCRResultSummary.requiresReview(block) {
+                                VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
+                                    if ImageOCRResultSummary.hasLowConfidence(block) {
+                                        Label("低置信", systemImage: "exclamationmark.triangle.fill")
+                                            .foregroundStyle(Color.appWarning)
+                                    }
+                                    if ImageOCRResultSummary.hasUnknownDirection(block) {
+                                        Label("方向待定", systemImage: "questionmark.diamond.fill")
+                                            .foregroundStyle(Color.appWarning)
+                                    }
+                                    if isReviewCompleted {
+                                        Label("本次已复查", systemImage: "checkmark.circle.fill")
+                                            .foregroundStyle(Color.appSuccess)
+                                    }
+                                }
+                                .font(.caption)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                        if isSelected {
+                            Image(systemName: "viewfinder.circle.fill")
+                                .foregroundStyle(Color.appAccent)
+                                .accessibilityHidden(true)
+                        }
                     }
+                    .padding(.vertical, AppTheme.Spacing.control)
+                    .contentShape(.rect)
                 }
-                .padding(.vertical, AppTheme.Spacing.control)
-                .contentShape(.rect)
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
+                .accessibilityValue(accessibilityValue)
+                .accessibilityHint(accessibilityHint)
+                .accessibilityFocused(
+                    accessibilityFocus,
+                    equals: "image-review-row-\(block.id.uuidString)"
+                )
+                .modifier(
+                    ImageReviewRowEditAccessibilityModifier(
+                        canEdit: canEdit,
+                        edit: edit
+                    )
+                )
+                .modifier(
+                    ImageReviewRowRestoreAccessibilityModifier(
+                        isManuallyCorrected: isManuallyCorrected,
+                        canEdit: canEdit,
+                        restoreVisionOCR: restoreVisionOCR
+                    )
+                )
+                .modifier(
+                    ImageReviewRowDirectionOverrideAccessibilityModifier(
+                        canEdit: canEdit,
+                        setDirectionOverride: setDirectionOverride
+                    )
+                )
+                .modifier(
+                    ImageReviewRowRerecognitionAccessibilityModifier(
+                        canRerecognize: canRerecognize,
+                        isRerecognizing: isRerecognizing,
+                        rerecognize: rerecognize,
+                        cancelRerecognize: cancelRerecognize
+                    )
+                )
+                .modifier(
+                    ImageReviewRowReviewAccessibilityModifier(
+                        isReviewRequired: ImageOCRResultSummary.requiresReview(block),
+                        isReviewCompleted: isReviewCompleted,
+                        canReview: canReview,
+                        toggleReviewCompletion: toggleReviewCompletion
+                    )
+                )
+                .modifier(
+                    ImageReviewRowRetryAccessibilityModifier(
+                        canRetryTranslation: canRetryTranslation,
+                        isRetryingTranslation: isRetryingTranslation,
+                        retryTranslation: retryTranslation,
+                        cancelRetryTranslation: cancelRetryTranslation
+                    )
+                )
+
+                ImageOCRProvenanceDisclosureView(block: block)
+                    .padding(.bottom, AppTheme.Spacing.compact)
             }
-            .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
-            .accessibilityValue(accessibilityValue)
-            .accessibilityHint(accessibilityHint)
-            .accessibilityFocused(
-                accessibilityFocus,
-                equals: "image-review-row-\(block.id.uuidString)"
-            )
-            .modifier(
-                ImageReviewRowEditAccessibilityModifier(
-                    canEdit: canEdit,
-                    edit: edit
-                )
-            )
-            .modifier(
-                ImageReviewRowRestoreAccessibilityModifier(
-                    isManuallyCorrected: isManuallyCorrected,
-                    canEdit: canEdit,
-                    restoreVisionOCR: restoreVisionOCR
-                )
-            )
-            .modifier(
-                ImageReviewRowDirectionOverrideAccessibilityModifier(
-                    canEdit: canEdit,
-                    setDirectionOverride: setDirectionOverride
-                )
-            )
-            .modifier(
-                ImageReviewRowRerecognitionAccessibilityModifier(
-                    canRerecognize: canRerecognize,
-                    isRerecognizing: isRerecognizing,
-                    rerecognize: rerecognize,
-                    cancelRerecognize: cancelRerecognize
-                )
-            )
-            .modifier(
-                ImageReviewRowReviewAccessibilityModifier(
-                    isReviewRequired: ImageOCRResultSummary.requiresReview(block),
-                    isReviewCompleted: isReviewCompleted,
-                    canReview: canReview,
-                    toggleReviewCompletion: toggleReviewCompletion
-                )
-            )
-            .modifier(
-                ImageReviewRowRetryAccessibilityModifier(
-                    canRetryTranslation: canRetryTranslation,
-                    isRetryingTranslation: isRetryingTranslation,
-                    retryTranslation: retryTranslation,
-                    cancelRetryTranslation: cancelRetryTranslation
-                )
-            )
 
             VStack(spacing: AppTheme.Spacing.compact) {
                 Button("修正识别文字", systemImage: "pencil", action: edit)
@@ -3761,6 +3826,18 @@ private struct ImageTranslationBlockRow: View {
                                 ? "恢复此文字块的 Vision OCR 原文与初始译文"
                                 : modificationUnavailableHint
                         )
+                }
+
+                if canEdit,
+                   ImageOCRResultSummary.requiresReview(block),
+                   block.boundingBox.normalizedToUnit() != nil {
+                    Button("调整文字框", systemImage: "rectangle") {
+                        isGeometryEditorPresented = true
+                    }
+                    .labelStyle(.iconOnly)
+                    .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+                    .foregroundStyle(Color.appAccent)
+                    .accessibilityHint("打开当前文字框编辑；提交后只重新识别此文字块，取消不会改变原框或复查进度")
                 }
 
                 ImageOCRDirectionOverrideMenu(
@@ -3829,6 +3906,14 @@ private struct ImageTranslationBlockRow: View {
         .padding(.horizontal, AppTheme.Spacing.compact)
         .background(isSelected ? Color.appAccent.opacity(0.12) : Color.clear)
         .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
+        .sheet(isPresented: $isGeometryEditorPresented) {
+            ImageOCRGeometryEditor(block: block) { boundingBox in
+                submitGeometryEdit(
+                    block.id,
+                    boundingBox
+                )
+            }
+        }
     }
 
     private var accessibilityValue: String {
@@ -3920,6 +4005,11 @@ private struct ImageTranslationBlockRow: View {
             actions.append("取消重新识别此文字块")
         } else if canRerecognize {
             actions.append("重新识别此文字块")
+        }
+        if canEdit,
+           ImageOCRResultSummary.requiresReview(block),
+           block.boundingBox.normalizedToUnit() != nil {
+            actions.append("调整文字框")
         }
         guard !actions.isEmpty else { return base }
         return "\(base)；VoiceOver 可执行：\(actions.joined(separator: "、"))"

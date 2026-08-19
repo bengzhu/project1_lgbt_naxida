@@ -6587,10 +6587,21 @@ struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
     var translation: String
     var confidence: Float
     var boundingBox: NormalizedImageRect
+    /// The detector/Vision geometry captured when this block was created.
+    /// Reviewer edits change `boundingBox` only; this optional field keeps a
+    /// Codable automatic baseline for the v3.289 geometry editor and remains
+    /// nil for legacy payloads that never recorded one.
+    var automaticBoundingBox: NormalizedImageRect?
     var sourceDirection: ImageTextDirection?
     var sourceDirectionOverride: ImageTextDirection?
     var directionConfidence: Double?
     var directionReason: String?
+    /// Optional v3.288 translation style hint. OCR does not infer this by
+    /// default; callers may provide dialogue/narration/SFX/title metadata.
+    var textKind: TranslationTextKind?
+    /// Optional v3.281 OCR provenance. Older persisted image sessions decode
+    /// with this field unset; the transient shadow ledger is never persisted.
+    var ocrProvenance: ImageOCRBlockProvenance?
 
     init(
         id: UUID = UUID(),
@@ -6598,20 +6609,42 @@ struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
         translation: String = "",
         confidence: Float,
         boundingBox: NormalizedImageRect,
+        automaticBoundingBox: NormalizedImageRect? = nil,
         sourceDirection: ImageTextDirection? = nil,
         sourceDirectionOverride: ImageTextDirection? = nil,
         directionConfidence: Double? = nil,
-        directionReason: String? = nil
+        directionReason: String? = nil,
+        textKind: TranslationTextKind? = nil,
+        ocrProvenance: ImageOCRBlockProvenance? = nil
     ) {
         self.id = id
         self.original = original
         self.translation = translation
         self.confidence = confidence
         self.boundingBox = boundingBox
+        self.automaticBoundingBox = (automaticBoundingBox ?? boundingBox).normalizedToUnit()
         self.sourceDirection = sourceDirection
         self.sourceDirectionOverride = sourceDirectionOverride
         self.directionConfidence = directionConfidence
         self.directionReason = directionReason
+        self.textKind = textKind
+        self.ocrProvenance = ocrProvenance
+    }
+
+    /// Persisted block geometry remains part of equality, while provenance
+    /// stays diagnostic-only so a shadow refresh cannot look like a new OCR or
+    /// translation result to Store/UI change detection.
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+            && lhs.original == rhs.original
+            && lhs.translation == rhs.translation
+            && lhs.confidence == rhs.confidence
+            && lhs.boundingBox == rhs.boundingBox
+            && lhs.automaticBoundingBox == rhs.automaticBoundingBox
+            && lhs.sourceDirection == rhs.sourceDirection
+            && lhs.sourceDirectionOverride == rhs.sourceDirectionOverride
+            && lhs.directionConfidence == rhs.directionConfidence
+            && lhs.directionReason == rhs.directionReason
     }
 
     /// Keeps detector/Vision provenance intact while allowing a reviewer to
@@ -6646,6 +6679,82 @@ struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
                 false
             }
         }
+    }
+}
+
+/// The durable portion of an ignored image block. Runtime-only Store maps
+/// (including the transient OCR ledger) stay out of the application snapshot,
+/// while a reviewer can still restore an ignored block after relaunch.
+struct ImageTranslationIgnoredBlockPersistenceSnapshot: Equatable, Codable, Sendable {
+    var block: ImageTranslationBlock
+    var originalOrder: Int
+    var visionOriginalBlock: ImageTranslationBlock?
+    var wasManuallyCorrected: Bool
+}
+
+/// Versioned, optional persistence for one image translation session.
+///
+/// The source image is referenced by a filename relative to the managed
+/// `ImageTranslations` directory and authenticated by byte count plus SHA-256
+/// at restore time. This keeps the JSON portable enough to decode while making
+/// path traversal, replacement files, and incomplete snapshots fail closed.
+struct ImageTranslationPersistenceSnapshot: Equatable, Codable, Sendable {
+    static let currentSchemaVersion = 1
+
+    var schemaVersion: Int
+    var sourceFileRelativePath: String
+    var sourceFileSHA256: String
+    var sourceFileByteCount: Int64
+    var filename: String
+    var state: ImageTranslationState
+    var sourceLanguage: SupportedLanguage
+    var targetLanguage: SupportedLanguage
+    var blocks: [ImageTranslationBlock]
+    var ignoredBlockSnapshots: [ImageTranslationIgnoredBlockPersistenceSnapshot]
+    var visionOriginalBlocks: [ImageTranslationBlock]
+    var reviewedBlockIDs: [UUID]
+    var correctedBlockIDs: [UUID]
+    var ignoredBlockIDs: [UUID]
+    var originalBlockOrder: [UUID]
+    var overlayMode: ImageTranslationOverlayMode
+    var transcriptLineID: UUID?
+
+    init(
+        sourceFileRelativePath: String,
+        sourceFileSHA256: String,
+        sourceFileByteCount: Int64,
+        filename: String,
+        state: ImageTranslationState,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage,
+        blocks: [ImageTranslationBlock],
+        ignoredBlockSnapshots: [ImageTranslationIgnoredBlockPersistenceSnapshot],
+        visionOriginalBlocks: [ImageTranslationBlock],
+        reviewedBlockIDs: [UUID],
+        correctedBlockIDs: [UUID],
+        ignoredBlockIDs: [UUID],
+        originalBlockOrder: [UUID],
+        overlayMode: ImageTranslationOverlayMode,
+        transcriptLineID: UUID? = nil,
+        schemaVersion: Int = currentSchemaVersion
+    ) {
+        self.schemaVersion = schemaVersion
+        self.sourceFileRelativePath = sourceFileRelativePath
+        self.sourceFileSHA256 = sourceFileSHA256
+        self.sourceFileByteCount = sourceFileByteCount
+        self.filename = filename
+        self.state = state
+        self.sourceLanguage = sourceLanguage
+        self.targetLanguage = targetLanguage
+        self.blocks = blocks
+        self.ignoredBlockSnapshots = ignoredBlockSnapshots
+        self.visionOriginalBlocks = visionOriginalBlocks
+        self.reviewedBlockIDs = reviewedBlockIDs
+        self.correctedBlockIDs = correctedBlockIDs
+        self.ignoredBlockIDs = ignoredBlockIDs
+        self.originalBlockOrder = originalBlockOrder
+        self.overlayMode = overlayMode
+        self.transcriptLineID = transcriptLineID
     }
 }
 
@@ -6906,6 +7015,7 @@ struct ModelGenerationRequest: Sendable {
     var prompt: PromptTemplate
     var sampling: GenerationSampling
     var translationProfile: TranslationRequestProfile = .standard
+    var translationContext: TranslationPromptContext = .empty
 }
 
 struct ModelGenerationResult: Sendable {
@@ -7069,4 +7179,44 @@ struct AppPersistenceSnapshot: Equatable, Codable, Sendable {
     var history: [TranslationSessionRecord]
     var prompts: [PromptTemplate]
     var settings: AppSettings
+    var translationTerms: [TranslationTermMemoryEntry]
+    var imageTranslationSession: ImageTranslationPersistenceSnapshot?
+
+    init(
+        activeSession: TranslationSessionRecord?,
+        history: [TranslationSessionRecord],
+        prompts: [PromptTemplate],
+        settings: AppSettings,
+        translationTerms: [TranslationTermMemoryEntry] = [],
+        imageTranslationSession: ImageTranslationPersistenceSnapshot? = nil
+    ) {
+        self.activeSession = activeSession
+        self.history = history
+        self.prompts = prompts
+        self.settings = settings
+        self.translationTerms = translationTerms
+        self.imageTranslationSession = imageTranslationSession
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case activeSession
+        case history
+        case prompts
+        case settings
+        case translationTerms
+        case imageTranslationSession
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        activeSession = try container.decodeIfPresent(TranslationSessionRecord.self, forKey: .activeSession)
+        history = try container.decodeIfPresent([TranslationSessionRecord].self, forKey: .history) ?? []
+        prompts = try container.decodeIfPresent([PromptTemplate].self, forKey: .prompts) ?? []
+        settings = try container.decode(AppSettings.self, forKey: .settings)
+        translationTerms = try container.decodeIfPresent([TranslationTermMemoryEntry].self, forKey: .translationTerms) ?? []
+        imageTranslationSession = try container.decodeIfPresent(
+            ImageTranslationPersistenceSnapshot.self,
+            forKey: .imageTranslationSession
+        )
+    }
 }

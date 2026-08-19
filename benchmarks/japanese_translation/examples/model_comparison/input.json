@@ -1,0 +1,156 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-translation-model-comparison",
+  "datasetSha256": "bab286a12645f6258cffed1e1bb0c5a27cca485d771d54db6d16c5cbff5f5f32",
+  "run": {
+    "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+    "evaluatorVersion": "v3.287-contract",
+    "invocationMode": "cloud-only-shadow"
+  },
+  "corpus": {
+    "status": "contractExampleOnly",
+    "manifestPath": "benchmarks/japanese_translation/examples/model_comparison/manifest.json",
+    "manifestSha256": "bab286a12645f6258cffed1e1bb0c5a27cca485d771d54db6d16c5cbff5f5f32",
+    "datasetVerified": false,
+    "caseCount": 3,
+    "holdoutCaseCount": 0,
+    "humanReviewStatus": "notStarted"
+  },
+  "contractExampleOnly": true,
+  "selection": {
+    "defaultModelID": "gemma-270m-floor",
+    "productSelectionChanged": false,
+    "groundTruthUsedForSelection": false,
+    "promotionStatus": "notEligible",
+    "reason": "comparison-only envelope; no model or product selection is changed"
+  },
+  "models": [
+    {
+      "modelID": "gemma-270m-floor",
+      "modelFamily": "Gemma",
+      "comparisonRole": "floor",
+      "modelFilename": "gemma-3-270m-it-q4_0.gguf",
+      "modelSha256": null,
+      "quantization": "Q4_0",
+      "sizeBytes": null,
+      "license": "contract-example-only",
+      "licenseReviewed": false,
+      "artifactStatus": "notProvided",
+      "distribution": "cloudOnlyReference",
+      "referenceOnly": true,
+      "defaultEnabled": true,
+      "contextLength": 1024,
+      "template": {
+        "source": "embedded",
+        "templateID": "gemma",
+        "templateSha256": null,
+        "fallbackProfileID": "gemma",
+        "applyAPI": "llama_chat_apply_template"
+      },
+      "decoding": {
+        "profileID": "sampled-v1",
+        "mode": "sampled",
+        "seed": null,
+        "temperature": 0.2,
+        "topK": 40,
+        "topP": 0.9,
+        "minP": 0.05
+      }
+    },
+    {
+      "modelID": "qwen-1.5b-candidate",
+      "modelFamily": "Qwen",
+      "comparisonRole": "candidate",
+      "modelFilename": "qwen-1.5b-instruct-q4_k_m.gguf",
+      "modelSha256": null,
+      "quantization": "Q4_K_M",
+      "sizeBytes": null,
+      "license": "contract-example-only",
+      "licenseReviewed": false,
+      "artifactStatus": "notProvided",
+      "distribution": "cloudOnlyReference",
+      "referenceOnly": true,
+      "defaultEnabled": false,
+      "contextLength": 4096,
+      "template": {
+        "source": "embedded",
+        "templateID": "chatml",
+        "templateSha256": null,
+        "fallbackProfileID": null,
+        "applyAPI": "llama_chat_apply_template"
+      },
+      "decoding": {
+        "profileID": "sampled-v1",
+        "mode": "sampled",
+        "seed": null,
+        "temperature": 0.2,
+        "topK": 40,
+        "topP": 0.9,
+        "minP": 0.05
+      }
+    },
+    {
+      "modelID": "sakura-7b-candidate",
+      "modelFamily": "Sakura",
+      "comparisonRole": "candidate",
+      "modelFilename": "sakura-7b-instruct-q4_k_m.gguf",
+      "modelSha256": null,
+      "quantization": "Q4_K_M",
+      "sizeBytes": null,
+      "license": "contract-example-only",
+      "licenseReviewed": false,
+      "artifactStatus": "notProvided",
+      "distribution": "cloudOnlyReference",
+      "referenceOnly": true,
+      "defaultEnabled": false,
+      "contextLength": 8192,
+      "template": {
+        "source": "missingRejected",
+        "templateID": null,
+        "templateSha256": null,
+        "fallbackProfileID": null,
+        "applyAPI": "llama_chat_apply_template"
+      },
+      "decoding": {
+        "profileID": "sampled-v1",
+        "mode": "sampled",
+        "seed": null,
+        "temperature": 0.2,
+        "topK": 40,
+        "topP": 0.9,
+        "minP": 0.05
+      }
+    }
+  ],
+  "predictions": [
+    {"predictionID": "p-floor-ja-zh", "modelID": "gemma-270m-floor", "caseID": "ja-zh-contract-001", "split": "dev", "status": "success", "output": "这次一定要", "promptTemplateID": "gemma", "decodingProfileID": "sampled-v1", "contextOverflow": false, "failureReason": null, "referenceOnly": true},
+    {"predictionID": "p-floor-ja-en", "modelID": "gemma-270m-floor", "caseID": "ja-en-contract-001", "split": "dev", "status": "success", "output": "Take it home!", "promptTemplateID": "gemma", "decodingProfileID": "sampled-v1", "contextOverflow": false, "failureReason": null, "referenceOnly": true},
+    {"predictionID": "p-floor-en-zh", "modelID": "gemma-270m-floor", "caseID": "en-zh-contract-001", "split": "dev", "status": "success", "output": "不要回头。", "promptTemplateID": "gemma", "decodingProfileID": "sampled-v1", "contextOverflow": false, "failureReason": null, "referenceOnly": true},
+    {"predictionID": "p-qwen-ja-zh", "modelID": "qwen-1.5b-candidate", "caseID": "ja-zh-contract-001", "split": "dev", "status": "success", "output": "这次一定要", "promptTemplateID": "chatml", "decodingProfileID": "sampled-v1", "contextOverflow": false, "failureReason": null, "referenceOnly": true},
+    {"predictionID": "p-qwen-ja-en", "modelID": "qwen-1.5b-candidate", "caseID": "ja-en-contract-001", "split": "dev", "status": "success", "output": "Take it home!", "promptTemplateID": "chatml", "decodingProfileID": "sampled-v1", "contextOverflow": false, "failureReason": null, "referenceOnly": true},
+    {"predictionID": "p-qwen-en-zh", "modelID": "qwen-1.5b-candidate", "caseID": "en-zh-contract-001", "split": "dev", "status": "success", "output": "不要回头。", "promptTemplateID": "chatml", "decodingProfileID": "sampled-v1", "contextOverflow": false, "failureReason": null, "referenceOnly": true},
+    {"predictionID": "p-sakura-ja-zh", "modelID": "sakura-7b-candidate", "caseID": "ja-zh-contract-001", "split": "dev", "status": "success", "output": "这次一定要", "promptTemplateID": "missing-template", "decodingProfileID": "sampled-v1", "contextOverflow": false, "failureReason": null, "referenceOnly": true},
+    {"predictionID": "p-sakura-ja-en", "modelID": "sakura-7b-candidate", "caseID": "ja-en-contract-001", "split": "dev", "status": "success", "output": "Bring it back!", "promptTemplateID": "missing-template", "decodingProfileID": "sampled-v1", "contextOverflow": false, "failureReason": null, "referenceOnly": true},
+    {"predictionID": "p-sakura-en-zh", "modelID": "sakura-7b-candidate", "caseID": "en-zh-contract-001", "split": "dev", "status": "success", "output": "别回头。", "promptTemplateID": "missing-template", "decodingProfileID": "sampled-v1", "contextOverflow": false, "failureReason": null, "referenceOnly": true}
+  ],
+  "measurements": [
+    {"measurementID": "m-floor-ja-zh-cold", "modelID": "gemma-270m-floor", "caseID": "ja-zh-contract-001", "warmState": "cold", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 220.0, "firstTokenMilliseconds": 60.0, "peakMemoryBytes": 398458880, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-floor-ja-zh-warm", "modelID": "gemma-270m-floor", "caseID": "ja-zh-contract-001", "warmState": "warm", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 45.0, "firstTokenMilliseconds": 9.0, "peakMemoryBytes": 325058560, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-floor-ja-en-cold", "modelID": "gemma-270m-floor", "caseID": "ja-en-contract-001", "warmState": "cold", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 210.0, "firstTokenMilliseconds": 58.0, "peakMemoryBytes": 398458880, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-floor-ja-en-warm", "modelID": "gemma-270m-floor", "caseID": "ja-en-contract-001", "warmState": "warm", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 42.0, "firstTokenMilliseconds": 8.0, "peakMemoryBytes": 325058560, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-floor-en-zh-cold", "modelID": "gemma-270m-floor", "caseID": "en-zh-contract-001", "warmState": "cold", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 230.0, "firstTokenMilliseconds": 62.0, "peakMemoryBytes": 398458880, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-floor-en-zh-warm", "modelID": "gemma-270m-floor", "caseID": "en-zh-contract-001", "warmState": "warm", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 48.0, "firstTokenMilliseconds": 10.0, "peakMemoryBytes": 325058560, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-qwen-ja-zh-cold", "modelID": "qwen-1.5b-candidate", "caseID": "ja-zh-contract-001", "warmState": "cold", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 500.0, "firstTokenMilliseconds": 110.0, "peakMemoryBytes": 943718400, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-qwen-ja-zh-warm", "modelID": "qwen-1.5b-candidate", "caseID": "ja-zh-contract-001", "warmState": "warm", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 90.0, "firstTokenMilliseconds": 20.0, "peakMemoryBytes": 859832320, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-qwen-ja-en-cold", "modelID": "qwen-1.5b-candidate", "caseID": "ja-en-contract-001", "warmState": "cold", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 480.0, "firstTokenMilliseconds": 105.0, "peakMemoryBytes": 943718400, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-qwen-ja-en-warm", "modelID": "qwen-1.5b-candidate", "caseID": "ja-en-contract-001", "warmState": "warm", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 85.0, "firstTokenMilliseconds": 19.0, "peakMemoryBytes": 859832320, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-qwen-en-zh-cold", "modelID": "qwen-1.5b-candidate", "caseID": "en-zh-contract-001", "warmState": "cold", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 520.0, "firstTokenMilliseconds": 115.0, "peakMemoryBytes": 943718400, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-qwen-en-zh-warm", "modelID": "qwen-1.5b-candidate", "caseID": "en-zh-contract-001", "warmState": "warm", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 95.0, "firstTokenMilliseconds": 22.0, "peakMemoryBytes": 859832320, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-sakura-ja-zh-cold", "modelID": "sakura-7b-candidate", "caseID": "ja-zh-contract-001", "warmState": "cold", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 1400.0, "firstTokenMilliseconds": 260.0, "peakMemoryBytes": 3221225472, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-sakura-ja-zh-warm", "modelID": "sakura-7b-candidate", "caseID": "ja-zh-contract-001", "warmState": "warm", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 260.0, "firstTokenMilliseconds": 55.0, "peakMemoryBytes": 3006477107, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-sakura-ja-en-cold", "modelID": "sakura-7b-candidate", "caseID": "ja-en-contract-001", "warmState": "cold", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 1350.0, "firstTokenMilliseconds": 250.0, "peakMemoryBytes": 3221225472, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-sakura-ja-en-warm", "modelID": "sakura-7b-candidate", "caseID": "ja-en-contract-001", "warmState": "warm", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 240.0, "firstTokenMilliseconds": 50.0, "peakMemoryBytes": 3006477107, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-sakura-en-zh-cold", "modelID": "sakura-7b-candidate", "caseID": "en-zh-contract-001", "warmState": "cold", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 1500.0, "firstTokenMilliseconds": 280.0, "peakMemoryBytes": 3221225472, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false},
+    {"measurementID": "m-sakura-en-zh-warm", "modelID": "sakura-7b-candidate", "caseID": "en-zh-contract-001", "warmState": "warm", "sampleIndex": 0, "status": "complete", "latencyMilliseconds": 280.0, "firstTokenMilliseconds": 60.0, "peakMemoryBytes": 3006477107, "contextOverflow": false, "deviceID": "contract-device", "deviceClass": "contract", "platform": "macOS", "hardware": "synthetic-device", "os": "contract", "runtime": "llama-contract", "measurementSource": "synthetic-contract", "targetDevice": false}
+  ]
+}

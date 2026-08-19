@@ -54,6 +54,13 @@
 		0A00000100000000000000E0 /* MangaOCREncoderINT8Batch.mlpackage in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000E1 /* MangaOCREncoderINT8Batch.mlpackage */; };
 		0A00000100000000000000E2 /* MangaOCRDecoderINT8Batch.mlpackage in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000E3 /* MangaOCRDecoderINT8Batch.mlpackage */; };
 		0A00000100000000000000D6 /* ComicTextBubbleDetectorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D5 /* ComicTextBubbleDetectorService.swift */; };
+		0A00000100000000000000E4 /* ImageOCRProvenance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000E5 /* ImageOCRProvenance.swift */; };
+		0A00000100000000000000E6 /* LocalModelPromptProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000E7 /* LocalModelPromptProfile.swift */; };
+		0A00000100000000000000E8 /* TranslationContextQuality.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000E9 /* TranslationContextQuality.swift */; };
+		0A00000100000000000000EA /* ImageOCRProvenanceDisclosureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000EB /* ImageOCRProvenanceDisclosureView.swift */; };
+		0A00000100000000000000EC /* ImageOCRGeometryEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000ED /* ImageOCRGeometryEditor.swift */; };
+		0A00000100000000000000EE /* ImageOCRBlockStructureEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000EF /* ImageOCRBlockStructureEditor.swift */; };
+		0A00000100000000000000F1 /* ImageTranslationRenderSafety.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000F0 /* ImageTranslationRenderSafety.swift */; };
 		0A00000100000000000000D8 /* ComicTextBubbleDetectorINT8.mlpackage in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D7 /* ComicTextBubbleDetectorINT8.mlpackage */; };
 		0A00000100000000000000DA /* ComicTextDetector-LICENSE-APACHE in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D9 /* ComicTextDetector-LICENSE-APACHE */; };
 		0A00000100000000000000DC /* ComicTextDetector-NOTICE.md in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000DB /* ComicTextDetector-NOTICE.md */; };
@@ -124,6 +131,13 @@
 		0A00000100000000000000E1 /* MangaOCREncoderINT8Batch.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = MangaOCREncoderINT8Batch.mlpackage; sourceTree = "<group>"; };
 		0A00000100000000000000E3 /* MangaOCRDecoderINT8Batch.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = MangaOCRDecoderINT8Batch.mlpackage; sourceTree = "<group>"; };
 		0A00000100000000000000D5 /* ComicTextBubbleDetectorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComicTextBubbleDetectorService.swift; sourceTree = "<group>"; };
+		0A00000100000000000000E5 /* ImageOCRProvenance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRProvenance.swift; sourceTree = "<group>"; };
+		0A00000100000000000000E7 /* LocalModelPromptProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelPromptProfile.swift; sourceTree = "<group>"; };
+		0A00000100000000000000E9 /* TranslationContextQuality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationContextQuality.swift; sourceTree = "<group>"; };
+		0A00000100000000000000EB /* ImageOCRProvenanceDisclosureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRProvenanceDisclosureView.swift; sourceTree = "<group>"; };
+		0A00000100000000000000ED /* ImageOCRGeometryEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRGeometryEditor.swift; sourceTree = "<group>"; };
+		0A00000100000000000000EF /* ImageOCRBlockStructureEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRBlockStructureEditor.swift; sourceTree = "<group>"; };
+		0A00000100000000000000F0 /* ImageTranslationRenderSafety.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTranslationRenderSafety.swift; sourceTree = "<group>"; };
 		0A00000100000000000000D7 /* ComicTextBubbleDetectorINT8.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = ComicTextBubbleDetectorINT8.mlpackage; sourceTree = "<group>"; };
 		0A00000100000000000000D9 /* ComicTextDetector-LICENSE-APACHE */ = {isa = PBXFileReference; lastKnownFileType = text; path = "ComicTextDetector-LICENSE-APACHE"; sourceTree = "<group>"; };
 		0A00000100000000000000DB /* ComicTextDetector-NOTICE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "ComicTextDetector-NOTICE.md"; sourceTree = "<group>"; };
@@ -186,6 +200,10 @@
 		0A0000010000000000000034 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				0A00000100000000000000E5 /* ImageOCRProvenance.swift */,
+				0A00000100000000000000E7 /* LocalModelPromptProfile.swift */,
+				0A00000100000000000000E9 /* TranslationContextQuality.swift */,
+				0A00000100000000000000F0 /* ImageTranslationRenderSafety.swift */,
 				0A0000010000000000000013 /* TranscriptModels.swift */,
 				0A00000100000000000000C1 /* ImageOCRResultSummary.swift */,
 				0A00000100000000000000C3 /* ImageOCRReviewFilter.swift */,
@@ -218,6 +236,9 @@
 		0A0000010000000000000036 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				0A00000100000000000000EB /* ImageOCRProvenanceDisclosureView.swift */,
+				0A00000100000000000000ED /* ImageOCRGeometryEditor.swift */,
+				0A00000100000000000000EF /* ImageOCRBlockStructureEditor.swift */,
 				0A000001000000000000001A /* AppTheme.swift */,
 				0A000001000000000000002B /* AppComponents.swift */,
 				0A0000010000000000000012 /* ContentView.swift */,
@@ -369,12 +390,19 @@
 			files = (
 				0A0000010000000000000001 /* AITRANSApp.swift in Sources */,
 				0A0000010000000000000002 /* ContentView.swift in Sources */,
+				0A00000100000000000000E4 /* ImageOCRProvenance.swift in Sources */,
+				0A00000100000000000000E6 /* LocalModelPromptProfile.swift in Sources */,
+				0A00000100000000000000E8 /* TranslationContextQuality.swift in Sources */,
 				0A0000010000000000000003 /* TranscriptModels.swift in Sources */,
 				0A0000010000000000000004 /* TranslationSessionStore.swift in Sources */,
 				0A0000010000000000000005 /* MockGemmaService.swift in Sources */,
 				0A0000010000000000000007 /* GemmaLocalService.swift in Sources */,
 				0A0000010000000000000008 /* AppTheme.swift in Sources */,
 				0A0000010000000000000009 /* ImageTranslationViews.swift in Sources */,
+				0A00000100000000000000EA /* ImageOCRProvenanceDisclosureView.swift in Sources */,
+				0A00000100000000000000EC /* ImageOCRGeometryEditor.swift in Sources */,
+				0A00000100000000000000EE /* ImageOCRBlockStructureEditor.swift in Sources */,
+				0A00000100000000000000F1 /* ImageTranslationRenderSafety.swift in Sources */,
 				0A00000100000000000000BE /* ImageOCRLayoutEngine.swift in Sources */,
 				0A00000100000000000000C0 /* ImageOCRResultSummary.swift in Sources */,
 				0A00000100000000000000C2 /* ImageOCRReviewFilter.swift in Sources */,
@@ -537,7 +565,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.279;
+				MARKETING_VERSION = 3.290;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -564,7 +592,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.279;
+				MARKETING_VERSION = 3.290;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

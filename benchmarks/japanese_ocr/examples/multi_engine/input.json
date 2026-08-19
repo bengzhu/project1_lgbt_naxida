@@ -1,0 +1,109 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-ocr-multi-engine",
+  "datasetSha256": "ccf9e12e3c94994fc0b7592df347d9ad525c6ab7e83d087f18c34b3858cdb28b",
+  "cropSet": [
+    {
+      "pageID": "contract-example-jap",
+      "regionID": "contract-r-niko",
+      "cropLevel": "oracleCrop",
+      "cropID": "oracle-contract-r-niko",
+      "cropSha256": "5555555555555555555555555555555555555555555555555555555555555555",
+      "source": "contract-example-known-region",
+      "expectedText": "ニコッ",
+      "expectedTextNFC": "ニコッ",
+      "referenceOnly": false
+    },
+    {
+      "pageID": "contract-example-jap",
+      "regionID": "shared-detected-crop-0",
+      "cropLevel": "detectedCrop",
+      "cropID": "detected-contract-crop-0",
+      "cropSha256": "6666666666666666666666666666666666666666666666666666666666666666",
+      "source": "contract-example-shared-detector-crop",
+      "expectedText": null,
+      "expectedTextNFC": null,
+      "referenceOnly": false
+    }
+  ],
+  "engines": [
+    {
+      "engineID": "vision",
+      "engineVersion": "contract-example",
+      "sourceRevision": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+      "runtimeRevision": "apple-vision-contract",
+      "model": {
+        "id": "Apple Vision OCR",
+        "version": "contract-example",
+        "revision": "vision-contract-revision",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "license": "Apple system framework"
+      },
+      "license": "Apple system framework",
+      "referenceOnly": false,
+      "artifactStatus": "available",
+      "failureReason": null
+    },
+    {
+      "engineID": "bundled-manga-ocr",
+      "engineVersion": "contract-example",
+      "sourceRevision": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+      "runtimeRevision": "coreml-contract",
+      "model": {
+        "id": "AITRANS bundled Manga OCR",
+        "version": "contract-example",
+        "revision": "manga-ocr-contract-revision",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "license": "Apache-2.0"
+      },
+      "license": "Apache-2.0",
+      "referenceOnly": false,
+      "artifactStatus": "available",
+      "failureReason": null
+    },
+    {
+      "engineID": "koharu-mit48",
+      "engineVersion": "contract-example",
+      "sourceRevision": "35f3e6d1a418d9617fd922e2bc865fe5b8fff818",
+      "runtimeRevision": "llama.cpp:b8935",
+      "model": {
+        "id": "mayocream/mit48px-ocr",
+        "version": "contract-example",
+        "revision": "205395b155a041b068fd754a6e417cd71b4cb1de",
+        "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "license": "GPL-3.0"
+      },
+      "license": "GPL-3.0-only reference; cloud-only",
+      "referenceOnly": true,
+      "artifactStatus": "available",
+      "failureReason": null
+    },
+    {
+      "engineID": "koharu-paddleocr-vl",
+      "engineVersion": "contract-example",
+      "sourceRevision": "35f3e6d1a418d9617fd922e2bc865fe5b8fff818",
+      "runtimeRevision": "koharu-paddleocr-vl-contract",
+      "model": {
+        "id": "PaddlePaddle/PaddleOCR-VL",
+        "version": "contract-example",
+        "revision": "paddleocr-vl-contract-revision",
+        "sha256": null,
+        "license": "contract-example-only"
+      },
+      "license": "contract-example-only; cloud-only",
+      "referenceOnly": true,
+      "artifactStatus": "missing",
+      "failureReason": "contract example does not ship a PaddleOCR-VL artifact"
+    }
+  ],
+  "results": [
+    {"engineID": "vision", "pageID": "contract-example-jap", "regionID": "contract-r-niko", "cropLevel": "oracleCrop", "cropID": "oracle-contract-r-niko", "status": "success", "text": "ニコッ", "rawText": "ニコッ", "confidence": 0.91, "failureReason": null, "referenceOnly": false},
+    {"engineID": "vision", "pageID": "contract-example-jap", "regionID": "shared-detected-crop-0", "cropLevel": "detectedCrop", "cropID": "detected-contract-crop-0", "status": "success", "text": "ニコッ", "rawText": "ニコッ", "confidence": 0.91, "failureReason": null, "referenceOnly": false},
+    {"engineID": "bundled-manga-ocr", "pageID": "contract-example-jap", "regionID": "contract-r-niko", "cropLevel": "oracleCrop", "cropID": "oracle-contract-r-niko", "status": "success", "text": "ニコッ", "rawText": "ニコッ", "confidence": 0.88, "failureReason": null, "referenceOnly": false},
+    {"engineID": "bundled-manga-ocr", "pageID": "contract-example-jap", "regionID": "shared-detected-crop-0", "cropLevel": "detectedCrop", "cropID": "detected-contract-crop-0", "status": "success", "text": "ニコッ", "rawText": "ニコッ", "confidence": 0.88, "failureReason": null, "referenceOnly": false},
+    {"engineID": "koharu-mit48", "pageID": "contract-example-jap", "regionID": "contract-r-niko", "cropLevel": "oracleCrop", "cropID": "oracle-contract-r-niko", "status": "success", "text": "ニコッ", "rawText": "ニコッ", "confidence": 0.59093773, "failureReason": null, "referenceOnly": true},
+    {"engineID": "koharu-mit48", "pageID": "contract-example-jap", "regionID": "shared-detected-crop-0", "cropLevel": "detectedCrop", "cropID": "detected-contract-crop-0", "status": "success", "text": "ニコッ", "rawText": "ニコッ", "confidence": 0.59093773, "failureReason": null, "referenceOnly": true},
+    {"engineID": "koharu-paddleocr-vl", "pageID": "contract-example-jap", "regionID": "contract-r-niko", "cropLevel": "oracleCrop", "cropID": "oracle-contract-r-niko", "status": "failure", "text": "", "rawText": null, "confidence": null, "failureReason": "contract example does not ship a PaddleOCR-VL artifact", "referenceOnly": true},
+    {"engineID": "koharu-paddleocr-vl", "pageID": "contract-example-jap", "regionID": "shared-detected-crop-0", "cropLevel": "detectedCrop", "cropID": "detected-contract-crop-0", "status": "failure", "text": "", "rawText": null, "confidence": null, "failureReason": "contract example does not ship a PaddleOCR-VL artifact", "referenceOnly": true}
+  ]
+}

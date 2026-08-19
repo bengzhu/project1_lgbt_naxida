@@ -1,0 +1,7 @@
+{
+  "inputKind": "ocrCorrupted",
+  "blocks": [
+    { "blockID": "b1", "order": 0, "text": "今度こ" },
+    { "blockID": "b2", "order": 1, "text": "持ち帰る" }
+  ]
+}

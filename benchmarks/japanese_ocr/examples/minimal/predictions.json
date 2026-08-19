@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-ocr",
+  "datasetSha256": "ccf9e12e3c94994fc0b7592df347d9ad525c6ab7e83d087f18c34b3858cdb28b",
+  "run": {
+    "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+    "engineID": "contract-example-engine",
+    "engineVersion": "1",
+    "model": { "id": "contract-example-model", "version": "1", "sha256": "1111111111111111111111111111111111111111111111111111111111111111", "license": "Apache-2.0" },
+    "license": "Apache-2.0",
+    "device": "offline-contract-example",
+    "parameters": { "mode": "schema-contract" }
+  },
+  "predictions": [
+    {
+      "predictionID": "contract-p-niko",
+      "pageID": "contract-example-jap",
+      "split": "dev",
+      "evaluationLevel": "oracleCrop",
+      "regionID": "contract-r-niko",
+      "lineID": null,
+      "status": "success",
+      "text": "ニコッ",
+      "rawText": "ニコッ",
+      "confidence": 0.59093773,
+      "bbox": [0.4683098591549296, 0.65625, 0.04049295774647887, 0.0575],
+      "polygon": [[0.4683098591549296, 0.65625], [0.5088028169014085, 0.65625], [0.5088028169014085, 0.71375], [0.4683098591549296, 0.71375]],
+      "writingDirection": "vertical",
+      "readingOrder": 0,
+      "engine": "contract-example-engine",
+      "cropVariant": "contract-example-oracle-crop",
+      "referenceOnly": false,
+      "failureReason": null
+    }
+  ]
+}

@@ -34,7 +34,7 @@ class JapaneseBidirectionalOrientationOCRContractTests(unittest.TestCase):
         self.workflow = read(".github/workflows/ci-results.yml")
         self.recognize = braced_body(
             self.vision,
-            "func recognizeTextBlocks(in imageData: Data, sourceLanguage: SupportedLanguage)",
+            "func recognizeTextBlocksWithShadowLedger(",
         )
 
     def test_japanese_runs_only_the_two_bounded_rotated_directions(self) -> None:

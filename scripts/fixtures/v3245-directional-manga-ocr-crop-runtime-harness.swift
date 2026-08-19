@@ -2,7 +2,7 @@ import CoreGraphics
 import Foundation
 import ImageIO
 
-enum SupportedLanguage: Equatable {
+enum SupportedLanguage: Equatable, Sendable {
     case japanese
     case simplifiedChinese
 
@@ -16,20 +16,20 @@ enum SupportedLanguage: Equatable {
     }
 }
 
-struct NormalizedImageRect {
+struct NormalizedImageRect: Sendable {
     var x: Double
     var y: Double
     var width: Double
     var height: Double
 }
 
-enum ImageTextDirection: String {
+enum ImageTextDirection: String, Sendable {
     case horizontal
     case vertical
     case unknown
 }
 
-struct ImageTranslationBlock {
+struct ImageTranslationBlock: Sendable {
     var original: String
     var confidence: Float
     var boundingBox: NormalizedImageRect
@@ -37,6 +37,7 @@ struct ImageTranslationBlock {
     var sourceDirectionOverride: ImageTextDirection? = nil
     var directionConfidence: Double
     var directionReason: String
+    var ocrProvenance: ImageOCRBlockProvenance? = nil
 
     var effectiveSourceDirection: ImageTextDirection {
         sourceDirectionOverride ?? sourceDirection

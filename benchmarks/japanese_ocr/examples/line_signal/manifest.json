@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-ocr",
+  "datasetVersion": "v3.283-line-signal-contract",
+  "manifestSha256": "15027ef0b03ed42868d4c78c6fcb1baa240adde5d9bd3127f83b2fe697db4c6c",
+  "coordinateSpace": "normalizedTopLeft",
+  "fixtures": [
+    {
+      "pageID": "line-signal-contract-jap",
+      "split": "dev",
+      "asset": {
+        "path": "../../../../test/jap.jpg",
+        "sha256": "6b02626cd9ddf7ec3c81fad42d7d017af00789092758570a35160f9baed27a40",
+        "width": 1136,
+        "height": 1600,
+        "source": "repository test fixture; line-signal contract example only",
+        "license": "repository-controlled-test-fixture",
+        "permittedUses": ["benchmark-contract"]
+      },
+      "annotationStatus": "contractExampleOnly",
+      "exampleOnly": true,
+      "legacyRegression": false,
+      "regions": [
+        {
+          "regionID": "line-signal-region-niko",
+          "bbox": [0.4683098591549296, 0.65625, 0.04049295774647887, 0.0575],
+          "polygon": [[0.4683098591549296, 0.65625], [0.5088028169014085, 0.65625], [0.5088028169014085, 0.71375], [0.4683098591549296, 0.71375]],
+          "linePolygons": [
+            [[0.4683098591549296, 0.65625], [0.5088028169014085, 0.65625], [0.5088028169014085, 0.71375], [0.4683098591549296, 0.71375]]
+          ],
+          "sourceText": "ニコッ",
+          "sourceTextNFC": "ニコッ",
+          "writingDirection": "vertical",
+          "readingOrder": 0,
+          "textType": "SFX",
+          "tags": ["vertical", "SFX", "smallText", "lineSignal"]
+        },
+        {
+          "regionID": "line-signal-region-column",
+          "bbox": [0.2, 0.1, 0.08, 0.24],
+          "polygon": [[0.2, 0.1], [0.28, 0.1], [0.28, 0.34], [0.2, 0.34]],
+          "linePolygons": [
+            [[0.21, 0.1], [0.27, 0.1], [0.27, 0.18], [0.21, 0.18]],
+            [[0.21, 0.18], [0.27, 0.18], [0.27, 0.26], [0.21, 0.26]],
+            [[0.21, 0.26], [0.27, 0.26], [0.27, 0.34], [0.21, 0.34]]
+          ],
+          "sourceText": "縦書き候補",
+          "sourceTextNFC": "縦書き候補",
+          "writingDirection": "vertical",
+          "readingOrder": 1,
+          "textType": "dialogue",
+          "tags": ["vertical", "dialogue", "lineSignal"]
+        }
+      ]
+    }
+  ]
+}

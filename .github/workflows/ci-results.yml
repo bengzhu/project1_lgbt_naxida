@@ -260,11 +260,31 @@ permissions:
 # if grep -Fx 'scripts/test-v3278-koharu-line-coverage-owner-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3279-koharu-block-fallback-replacement-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3279-koharu-block-fallback-replacement-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3281-image-ocr-provenance-no-selection-change-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3281-image-ocr-provenance-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3282-japanese-ocr-multi-engine-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3283-japanese-ocr-line-signal-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3284-japanese-ocr-engine-candidate-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3285-japanese-ocr-engine-selector-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3285-image-ocr-selector-policy-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3286-local-gguf-chat-template-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3286-local-gguf-chat-template-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3287-japanese-translation-model-comparison-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/run-japanese-translation-model-comparison-cloud-smoke.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3288-japanese-translation-context-qa-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/run-japanese-translation-context-qa-cloud-smoke.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3289-image-ocr-provenance-disclosure-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3289-image-ocr-geometry-editor-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3289-image-ocr-geometry-baseline-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3289-image-translation-session-persistence-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3289-image-ocr-block-structure-editor-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3290-image-translation-render-safety-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3290-image-translation-render-safety-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
     name: Build and publish CI result bundle
-    needs: [koharu_mit48_reference_parity]
+    needs: [koharu_mit48_reference_parity, japanese_benchmark]
     if: always()
     runs-on: macos-latest
     env:
@@ -953,6 +973,39 @@ jobs:
             ui_interaction_contract_required=true
           fi
           if grep -Fx 'scripts/test-v3279-koharu-block-fallback-replacement-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3281-image-ocr-provenance-no-selection-change-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3281-image-ocr-provenance-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3285-image-ocr-selector-policy-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3286-local-gguf-chat-template-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3289-image-ocr-provenance-disclosure-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3289-image-ocr-geometry-editor-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3289-image-ocr-geometry-baseline-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3289-image-translation-session-persistence-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3289-image-ocr-block-structure-editor-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3290-image-translation-render-safety-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
+          if grep -Fx 'scripts/test-v3290-image-translation-render-safety-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
@@ -1829,6 +1882,16 @@ jobs:
             bash scripts/test-v3278-koharu-line-coverage-owner-runtime.sh
             python3 -B scripts/test-v3279-koharu-block-fallback-replacement-contract.py
             bash scripts/test-v3279-koharu-block-fallback-replacement-runtime.sh
+            python3 -B scripts/test-v3281-image-ocr-provenance-no-selection-change-contract.py
+            bash scripts/test-v3281-image-ocr-provenance-runtime.sh
+            python3 -B scripts/test-v3289-image-ocr-geometry-editor-contract.py
+            python3 -B scripts/test-v3289-image-ocr-geometry-baseline-contract.py
+            python3 -B scripts/test-v3289-image-translation-session-persistence-contract.py
+            python3 -B scripts/test-v3289-image-ocr-block-structure-editor-contract.py
+            python3 -B scripts/test-v3290-image-translation-render-safety-contract.py
+            bash scripts/test-v3285-image-ocr-selector-policy-runtime.sh
+            bash scripts/test-v3286-local-gguf-chat-template-runtime.sh
+            bash scripts/test-v3290-image-translation-render-safety-runtime.sh
             bash scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh
           } 2>&1 | tee "$RESULT_ROOT/ui-interaction-contract.log"
 
@@ -3122,6 +3185,13 @@ jobs:
           manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
 
+      - name: Enforce Japanese benchmark dependency
+        id: japanese_benchmark_gate
+        if: always()
+        shell: bash
+        run: |
+          test "${{ needs.japanese_benchmark.result }}" = "success"
+
       - name: Write failure summary
         if: always()
         shell: bash
@@ -3374,6 +3444,10 @@ jobs:
           set -euo pipefail
           state=success
           description="Task-scoped full validation passed"
+          if [ "${{ steps.japanese_benchmark_gate.outcome }}" != "success" ]; then
+            state=failure
+            description="Task-scoped full validation failed: Japanese benchmark contract failed"
+          fi
           if [ "${{ steps.ci_scope.outputs.receipt_propagation_allowed }}" = "true" ]; then
             description="Reused successful parent full validation"
           fi
@@ -3398,6 +3472,10 @@ jobs:
         if: always()
         shell: bash
         run: |
+          if [ "${{ steps.japanese_benchmark_gate.outcome }}" != "success" ]; then
+            echo "Japanese benchmark contract did not pass."
+            exit 1
+          fi
           if [ "${{ steps.koharu_mit48_gate.outcome }}" != "success" ]; then
             echo "Cloud Koharu MIT48 parity did not pass."
             exit 1
@@ -3406,6 +3484,209 @@ jobs:
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi
+
+  japanese_benchmark:
+    name: Japanese OCR and translation benchmark contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290 benchmark schemas and fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B scripts/test-v3280-japanese-benchmark-contract.py
+          python3 -B scripts/test-v3282-japanese-ocr-multi-engine-contract.py
+          python3 -B scripts/test-v3283-japanese-ocr-line-signal-contract.py
+          python3 -B scripts/test-v3284-japanese-ocr-engine-candidate-contract.py
+          python3 -B scripts/test-v3285-japanese-ocr-engine-selector-contract.py
+          python3 -B scripts/test-v3286-local-gguf-chat-template-contract.py
+          python3 -B scripts/test-v3287-japanese-translation-model-comparison-contract.py
+          python3 -B scripts/test-v3288-japanese-translation-context-qa-contract.py
+          python3 -B scripts/test-v3289-image-ocr-provenance-disclosure-contract.py
+          python3 -B scripts/test-v3289-image-ocr-geometry-editor-contract.py
+          python3 -B scripts/test-v3289-image-ocr-geometry-baseline-contract.py
+          python3 -B scripts/test-v3289-image-translation-session-persistence-contract.py
+          python3 -B scripts/test-v3289-image-ocr-block-structure-editor-contract.py
+          python3 -B scripts/test-v3290-image-translation-render-safety-contract.py
+
+      - name: Score schema-only benchmark fixtures
+        shell: bash
+        env:
+          BENCHMARK_REPO_ROOT: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          result_root="$RUNNER_TEMP/aitrans-japanese-benchmark"
+          mkdir -p "$result_root"
+          cp benchmarks/japanese_translation/examples/model_profiles/manifest.json "$result_root/japanese-translation-model-profile-manifest.json"
+          cp benchmarks/japanese_translation/examples/model_comparison/manifest.json "$result_root/japanese-translation-model-comparison-manifest.json"
+          cp benchmarks/japanese_translation/examples/model_comparison/input.json "$result_root/japanese-translation-model-comparison-input.json"
+          cp benchmarks/japanese_translation/examples/translation_context_qa/input.json "$result_root/japanese-translation-context-qa-input.json"
+          benchmark_sha="$(git rev-parse HEAD)"
+          export benchmark_sha
+          python3 - "$result_root/japanese-translation-model-comparison-input.json" <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          payload["run"]["appSha"] = os.environ["benchmark_sha"]
+          path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          python3 - "$GITHUB_WORKSPACE/benchmarks/japanese_ocr/fixtures/predictions.empty.json" "$result_root/ocr-legacy-predictions.json" <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          source = Path(sys.argv[1])
+          destination = Path(sys.argv[2])
+          payload = json.loads(source.read_text(encoding="utf-8"))
+          payload["run"]["appSha"] = os.environ["benchmark_sha"]
+          destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          python3 scripts/evaluate-japanese-ocr-benchmark.py \
+            --manifest benchmarks/japanese_ocr/fixtures/manifest.json \
+            --predictions "$result_root/ocr-legacy-predictions.json" \
+            --output "$result_root/japanese-ocr-legacy-reference-report.json" \
+            --allow-no-ground-truth
+          python3 - "$GITHUB_WORKSPACE/benchmarks/japanese_ocr/examples/minimal/predictions.json" "$result_root/ocr-contract-predictions.json" <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          source = Path(sys.argv[1])
+          destination = Path(sys.argv[2])
+          payload = json.loads(source.read_text(encoding="utf-8"))
+          payload["run"]["appSha"] = os.environ["benchmark_sha"]
+          destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          python3 scripts/evaluate-japanese-ocr-benchmark.py \
+            --manifest benchmarks/japanese_ocr/examples/minimal/manifest.json \
+            --predictions "$result_root/ocr-contract-predictions.json" \
+            --output "$result_root/japanese-ocr-contract-example-report.json"
+          python3 - "$GITHUB_WORKSPACE/benchmarks/japanese_translation/examples/minimal/predictions.json" "$result_root/translation-predictions.json" <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          source = Path(sys.argv[1])
+          destination = Path(sys.argv[2])
+          payload = json.loads(source.read_text(encoding="utf-8"))
+          payload["run"]["appSha"] = os.environ["benchmark_sha"]
+          destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          python3 scripts/evaluate-japanese-translation-benchmark.py \
+            --manifest benchmarks/japanese_translation/examples/minimal/manifest.json \
+            --predictions "$result_root/translation-predictions.json" \
+            --output "$result_root/japanese-translation-benchmark-report.json"
+          JAPANESE_TRANSLATION_MODEL_COMPARISON_MANIFEST="$GITHUB_WORKSPACE/benchmarks/japanese_translation/examples/model_comparison/manifest.json" \
+          JAPANESE_TRANSLATION_MODEL_COMPARISON_INPUT="$result_root/japanese-translation-model-comparison-input.json" \
+          JAPANESE_TRANSLATION_MODEL_COMPARISON_OUTPUT="$result_root/japanese-translation-model-comparison-report.json" \
+          bash scripts/run-japanese-translation-model-comparison-cloud-smoke.sh
+          JAPANESE_TRANSLATION_CONTEXT_QA_INPUT="$GITHUB_WORKSPACE/benchmarks/japanese_translation/examples/translation_context_qa/input.json" \
+          JAPANESE_TRANSLATION_CONTEXT_QA_OUTPUT="$result_root/japanese-translation-context-qa-report.json" \
+          bash scripts/run-japanese-translation-context-qa-cloud-smoke.sh
+          cp "$result_root/japanese-ocr-contract-example-report.json" "$result_root/japanese-ocr-benchmark-report.json"
+          python3 - "$result_root" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          root = Path(sys.argv[1])
+          ocr = json.loads((root / "japanese-ocr-benchmark-report.json").read_text(encoding="utf-8"))
+          translation = json.loads((root / "japanese-translation-benchmark-report.json").read_text(encoding="utf-8"))
+          model_comparison = json.loads((root / "japanese-translation-model-comparison-report.json").read_text(encoding="utf-8"))
+          context_qa = json.loads((root / "japanese-translation-context-qa-report.json").read_text(encoding="utf-8"))
+          legacy = json.loads((root / "japanese-ocr-legacy-reference-report.json").read_text(encoding="utf-8"))
+          summary = "\n".join([
+              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290 Japanese benchmark",
+              "",
+              "- OCR contract example status: " + ocr["status"],
+              "- OCR legacy/reference status: " + legacy["status"] + " (excluded from accuracy)",
+              "- Translation structural QA status: " + translation["status"],
+              "- Translation model comparison status: " + model_comparison["status"],
+              "- Translation context/QA status: " + context_qa["status"],
+              "- Dataset SHA (OCR): " + ocr["datasetSha256"],
+              "- Dataset SHA (translation): " + translation["datasetSha256"],
+              "- Quality claim: schema/contract evidence only; no general OCR or translation quality claim.",
+          ]) + "\n"
+          (root / "japanese-benchmark-summary.md").write_text(summary, encoding="utf-8")
+          PY
+          cp "$result_root"/japanese-ocr-benchmark-report.json "$GITHUB_WORKSPACE/ci-results-japanese-ocr-benchmark-report.json"
+          cp "$result_root"/japanese-translation-benchmark-report.json "$GITHUB_WORKSPACE/ci-results-japanese-translation-benchmark-report.json"
+          cp "$result_root"/japanese-translation-model-comparison-report.json "$GITHUB_WORKSPACE/ci-results-japanese-translation-model-comparison-report.json"
+          cp "$result_root"/japanese-translation-context-qa-report.json "$GITHUB_WORKSPACE/ci-results-japanese-translation-context-qa-report.json"
+          cp "$result_root"/japanese-benchmark-summary.md "$GITHUB_WORKSPACE/ci-results-japanese-benchmark-summary.md"
+
+      - name: Aggregate v3.282 same-crop oracle contract
+        shell: bash
+        env:
+          JAPANESE_OCR_MULTI_ENGINE_INPUT: ${{ github.workspace }}/benchmarks/japanese_ocr/examples/multi_engine/input.json
+          JAPANESE_OCR_MULTI_ENGINE_OUTPUT: ${{ runner.temp }}/aitrans-japanese-benchmark/japanese-ocr-multi-engine-report.json
+        run: |
+          set -euo pipefail
+          bash scripts/run-japanese-ocr-multi-engine-cloud-smoke.sh
+          cp "$JAPANESE_OCR_MULTI_ENGINE_OUTPUT" "$GITHUB_WORKSPACE/ci-results-japanese-ocr-multi-engine-report.json"
+
+      - name: Aggregate v3.283 native line/TextRegion shadow contract
+        shell: bash
+        env:
+          JAPANESE_OCR_LINE_SIGNAL_MANIFEST: ${{ github.workspace }}/benchmarks/japanese_ocr/examples/line_signal/manifest.json
+          JAPANESE_OCR_LINE_SIGNAL_INPUT: ${{ github.workspace }}/benchmarks/japanese_ocr/examples/line_signal/input.json
+          JAPANESE_OCR_LINE_SIGNAL_OUTPUT: ${{ runner.temp }}/aitrans-japanese-benchmark/japanese-ocr-line-signal-report.json
+        run: |
+          set -euo pipefail
+          bash scripts/run-japanese-ocr-line-signal-cloud-smoke.sh
+          cp "$JAPANESE_OCR_LINE_SIGNAL_OUTPUT" "$GITHUB_WORKSPACE/ci-results-japanese-ocr-line-signal-report.json"
+
+      - name: Aggregate v3.284 OCR engine candidate shadow contract
+        shell: bash
+        env:
+          JAPANESE_OCR_ENGINE_CANDIDATE_INPUT: ${{ github.workspace }}/benchmarks/japanese_ocr/examples/engine_candidate/input.json
+          JAPANESE_OCR_ENGINE_CANDIDATE_OUTPUT: ${{ runner.temp }}/aitrans-japanese-benchmark/japanese-ocr-engine-candidate-report.json
+        run: |
+          set -euo pipefail
+          bash scripts/run-japanese-ocr-engine-candidate-cloud-smoke.sh
+          cp "$JAPANESE_OCR_ENGINE_CANDIDATE_OUTPUT" "$GITHUB_WORKSPACE/ci-results-japanese-ocr-engine-candidate-report.json"
+
+      - name: Aggregate v3.285 GT-isolated OCR selector shadow contract
+        shell: bash
+        env:
+          JAPANESE_OCR_ENGINE_SELECTOR_INPUT: ${{ github.workspace }}/benchmarks/japanese_ocr/examples/engine_selector/input.json
+          JAPANESE_OCR_ENGINE_SELECTOR_OUTPUT: ${{ runner.temp }}/aitrans-japanese-benchmark/japanese-ocr-engine-selector-report.json
+        run: |
+          set -euo pipefail
+          bash scripts/run-japanese-ocr-engine-selector-cloud-smoke.sh
+          cp "$JAPANESE_OCR_ENGINE_SELECTOR_OUTPUT" "$GITHUB_WORKSPACE/ci-results-japanese-ocr-engine-selector-report.json"
+
+      - name: Upload Japanese benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: japanese-benchmark-v3.290-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/aitrans-japanese-benchmark
+            ci-results-japanese-ocr-benchmark-report.json
+            ci-results-japanese-ocr-multi-engine-report.json
+            ci-results-japanese-ocr-line-signal-report.json
+            ci-results-japanese-ocr-engine-candidate-report.json
+            ci-results-japanese-ocr-engine-selector-report.json
+            ci-results-japanese-translation-benchmark-report.json
+            ci-results-japanese-translation-model-comparison-report.json
+            ci-results-japanese-translation-context-qa-report.json
+            ci-results-japanese-benchmark-summary.md
+          retention-days: 14
 
   koharu_mit48_reference_parity:
     name: Cloud Koharu MIT48 reference parity

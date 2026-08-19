@@ -2,7 +2,7 @@ import Foundation
 
 enum ImageOCRLayoutDirection: String, Sendable { case horizontal, vertical, unknown }
 
-struct ImageOCRLayoutRect: Equatable, Sendable {
+struct ImageOCRLayoutRect: Equatable, Codable, Sendable {
     var x: Double
     var y: Double
     var width: Double
@@ -71,6 +71,9 @@ struct ImageOCRLayoutObservation: Equatable, Sendable {
     /// vertical TextRegion. It is used only while line observations are fused;
     /// the persisted image translation model never receives this value.
     var verticalTextRegionOwner: Int? = nil
+    /// Engine/crop provenance follows the observation through the unchanged
+    /// geometry and owner-first layout rules.
+    var provenance: ImageOCRCandidateProvenance? = nil
 }
 
 struct ImageOCRLayoutBlock: Equatable, Sendable {
@@ -83,6 +86,9 @@ struct ImageOCRLayoutBlock: Equatable, Sendable {
     /// Recognition-pass owner context. A final block exposes an owner only
     /// when all owned observations agree; it is not copied into UI state.
     var verticalTextRegionOwner: Int? = nil
+    /// Small persisted provenance projection; the complete candidate ledger
+    /// remains a separate shadow output.
+    var provenance: ImageOCRBlockProvenance? = nil
 }
 
 enum ImageOCRLayoutEngine {
@@ -919,7 +925,10 @@ private struct Cluster {
             direction: direction,
             directionConfidence: observations.reduce(0) { $0 + $1.confidence } / Double(observations.count),
             directionReason: Array(Set(observations.map(\.reason))).sorted().joined(separator: ","),
-            verticalTextRegionOwner: verticalTextRegionOwner
+            verticalTextRegionOwner: verticalTextRegionOwner,
+            provenance: ImageOCRBlockProvenance.make(
+                from: observations.compactMap { $0.observation.provenance }
+            )
         )
     }
 }

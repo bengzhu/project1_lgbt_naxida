@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.invalid/schema/japanese-ocr-multi-engine-report-v1.json",
+  "title": "AITRANS Japanese OCR multi-engine comparison report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "status", "datasetSha256", "alignment", "engines", "tables", "qualityClaim"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "benchmark": {"const": "japanese-ocr-multi-engine"},
+    "status": {"enum": ["success", "blocked"]},
+    "datasetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "alignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["keyFields", "joinedByArrayIndex", "engineCount", "comparisonKeyCount"],
+      "properties": {
+        "keyFields": {"const": ["datasetSha256", "pageID", "regionID", "cropLevel"]},
+        "joinedByArrayIndex": {"const": false},
+        "engineCount": {"type": "integer", "minimum": 1},
+        "comparisonKeyCount": {"type": "integer", "minimum": 1}
+      }
+    },
+    "engines": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/engine"}},
+    "tables": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["oracleCrop", "detectedCrop"],
+      "properties": {
+        "oracleCrop": {"$ref": "#/$defs/table"},
+        "detectedCrop": {"$ref": "#/$defs/table"}
+      }
+    },
+    "qualityClaim": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "revision", "sha256", "license"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "revision": {"type": "string", "minLength": 1},
+        "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "license": {"type": "string", "minLength": 1}
+      }
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engineID", "engineVersion", "sourceRevision", "runtimeRevision", "model", "license", "referenceOnly", "artifactStatus", "failureReason"],
+      "properties": {
+        "engineID": {"type": "string", "minLength": 1},
+        "engineVersion": {"type": "string", "minLength": 1},
+        "sourceRevision": {"type": "string", "minLength": 1},
+        "runtimeRevision": {"type": "string", "minLength": 1},
+        "model": {"$ref": "#/$defs/model"},
+        "license": {"type": "string", "minLength": 1},
+        "referenceOnly": {"type": "boolean"},
+        "artifactStatus": {"enum": ["available", "missing", "failed"]},
+        "failureReason": {"type": ["string", "null"]}
+      }
+    },
+    "engineResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engineID", "status", "text", "rawText", "confidence", "failureReason"],
+      "properties": {
+        "engineID": {"type": "string", "minLength": 1},
+        "status": {"enum": ["success", "empty", "failure"]},
+        "text": {"type": "string"},
+        "rawText": {"type": ["string", "null"]},
+        "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "failureReason": {"type": ["string", "null"]}
+      }
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "pageID", "regionID", "cropLevel", "cropID", "cropSha256", "referenceText", "engines"],
+      "properties": {
+        "key": {"type": "string", "minLength": 1},
+        "pageID": {"type": "string", "minLength": 1},
+        "regionID": {"type": "string", "minLength": 1},
+        "cropLevel": {"enum": ["oracleCrop", "detectedCrop"]},
+        "cropID": {"type": "string", "minLength": 1},
+        "cropSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "referenceText": {"type": ["string", "null"]},
+        "engines": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/engineResult"}}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sampleCount", "successCount", "emptyCount", "failureCount", "successRate", "exactMatchRate", "nfcExactMatchRate", "characterErrorRate", "editDistance", "referenceCharacters", "substitutions", "insertions", "deletions"],
+      "properties": {
+        "sampleCount": {"type": "integer", "minimum": 0},
+        "successCount": {"type": "integer", "minimum": 0},
+        "emptyCount": {"type": "integer", "minimum": 0},
+        "failureCount": {"type": "integer", "minimum": 0},
+        "successRate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "exactMatchRate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "nfcExactMatchRate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "characterErrorRate": {"type": ["number", "null"], "minimum": 0},
+        "editDistance": {"type": "integer", "minimum": 0},
+        "referenceCharacters": {"type": "integer", "minimum": 0},
+        "substitutions": {"type": "integer", "minimum": 0},
+        "insertions": {"type": "integer", "minimum": 0},
+        "deletions": {"type": "integer", "minimum": 0}
+      }
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sampleCount", "rows", "engineMetrics"],
+      "properties": {
+        "sampleCount": {"type": "integer", "minimum": 0},
+        "rows": {"type": "array", "items": {"$ref": "#/$defs/row"}},
+        "engineMetrics": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["engineID", "metrics"],
+            "properties": {
+              "engineID": {"type": "string", "minLength": 1},
+              "metrics": {"$ref": "#/$defs/metrics"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

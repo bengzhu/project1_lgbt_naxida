@@ -1,6 +1,14 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+当前 v3.290 图片翻译结果流程：`completed image session -> existing rectangle overlay renderer/export -> report-only ImageTranslationRenderSafety.analyze -> accessible warning only`。预检只读检查 invalid geometry、空文字、旁贴裁切／覆盖、源块重叠和跨块碰撞；它不参与 OCR、翻译、候选选择、renderer、export、持久化或复查状态。
+
+当前 v3.289 图片复查流程：`persisted block -> read-only provenance disclosure -> low-confidence/direction-uncertain scoped bbox draft -> commit -> scoped rerecognition or restore`；draft 拖动不启动 OCR，提交与 rerecognition 仍由 block identity、request/content ID、generation 和 scoped cancel 保护。图片会话快照只在受管文件的 path/type/regular-file/byte-count/SHA-256 全部匹配时恢复；split／merge 生成新 block identity 并失效受影响译文／旧 OCR evidence，order mutation 保留可用 metadata 与 review progress。
+
+当前 v3.288 日语翻译流程：`OCR/layout blocks -> bounded Japanese batch (<=8 blocks, <=1,800 chars) -> confirmed/candidate/revoked terminology + read-only previous completed-batch summary -> strict tagged output -> per-block QA -> retry failed blocks only -> partial persistence/scoped cancel`。跨 batch summary 只作为下一批 prompt context，不能成为 pending input 或标签；QA 不重跑 OCR、检测、布局或整页翻译，已成功 block 保持不变。
+
+当前验证边界：本机只执行无进程合同、Python AST、workflow YAML、shell/plist 与 diff 检查；Swift/Xcode/Core ML/Rust/GGUF/App/runtime 与真实模型、授权语料、目标设备证据在云端或外部提供。synthetic contract、report-only safety 和固定样图不能替代 OCR/CER、翻译盲评或 v3.289 holdout。
+
 v3.265 Vision vertical line quad：`line polygon -> local canonical DeviceRGB crop -> shared Koharu target geometry -> direct projective bilinear sampling -> rotate270 -> Vision line reread`；direct geometry／sampling failure 才回退 Core Image natural projection，detector bbox ownership、budget、OCR／翻译／布局边界不变。
 
 v3.264 垂直 quad crop：`canonical DeviceRGB crop -> destination-to-source projective map -> image-rs-compatible bilinear (floor/four-neighbor/constant-black border) -> bounded quad-axis canvas -> rotate270 -> Manga OCR weak fallback`；bbox primary、natural projection fallback、OCR／翻译／布局边界不变。

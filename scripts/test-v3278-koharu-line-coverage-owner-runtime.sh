@@ -17,6 +17,7 @@ trap cleanup EXIT HUP INT TERM
 
 executable="$runtime_root/KoharuLineCoverageOwnerEvaluator"
 xcrun swiftc -parse-as-library \
+  "$repo_root/AITRANS/Models/ImageOCRProvenance.swift" \
   "$repo_root/AITRANS/Services/ImageOCRLayoutEngine.swift" \
   "$repo_root/scripts/fixtures/v3278-koharu-line-coverage-owner-evaluator.swift" \
   -o "$executable"

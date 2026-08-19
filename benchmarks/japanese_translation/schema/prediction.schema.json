@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.local/benchmarks/japanese_translation/prediction.schema.json",
+  "title": "AITRANS Japanese translation prediction batch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmark", "datasetSha256", "run", "predictions"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-translation" },
+    "datasetSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "run": { "$ref": "#/$defs/run" },
+    "predictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["predictionID", "fixtureID", "split", "engineID", "model", "provider", "promptTemplate", "decoding", "rawResponse"],
+        "properties": {
+          "predictionID": { "type": "string", "minLength": 1 },
+          "fixtureID": { "type": "string", "minLength": 1 },
+          "split": { "enum": ["train", "dev", "holdout"] },
+          "engineID": { "type": "string", "minLength": 1 },
+          "model": { "type": "string", "minLength": 1 },
+          "provider": { "type": "string", "minLength": 1 },
+          "promptTemplate": { "type": "string", "minLength": 1 },
+          "decoding": { "type": "object" },
+          "rawResponse": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appSha", "engineID", "engineVersion", "model", "provider", "promptTemplate", "decoding", "license", "device"],
+      "properties": {
+        "appSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "engineID": { "type": "string", "minLength": 1 },
+        "engineVersion": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "provider": { "type": "string", "minLength": 1 },
+        "promptTemplate": { "type": "string", "minLength": 1 },
+        "decoding": { "type": "object" },
+        "license": { "type": "string", "minLength": 1 },
+        "device": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
