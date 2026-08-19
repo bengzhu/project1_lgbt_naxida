@@ -1,6 +1,8 @@
 # 项目流程图
 v3.292 共享语料 readiness：`corpus manifest -> authorization/annotation/split/prediction/holdout gate -> blocked/readyForHoldout report -> no product path`；缺少授权语料、分层标注、同 crop 预测或冻结协议时不进入产品 OCR/翻译选择，也不打开 holdout 后调参。
 
+v3.293 readiness 完整性：`canonical 4-engine × 3-crop dev matrix -> row status/dataset accounting/policy flags -> blocked/readyForHoldout`；缩小 required matrix、failed/missing row、分割计数不覆盖 dataset 或 holdout/product-selection flag 违反均 fail closed，不改变产品路径。
+
 v3.290 图片翻译完成后：`translated session -> existing rectangle overlay/export -> report-only render-safety preflight -> VoiceOver warning (optional)`；invalid geometry、空文字、旁贴裁切／覆盖、源块重叠和跨块 collision 只进入诊断报告，不改变主 renderer、export、OCR、翻译或 persistence。
 
 v3.289 图片复查：`persisted block -> provenance disclosure (read-only) -> scoped bbox draft -> commit -> scoped rerecognition/cancel`；会话快照先做受管文件 identity fail-closed 校验，split/merge 创建新 block identity 并清理受影响译文／旧 OCR evidence，order mutation 保留可用 metadata 与 review progress。

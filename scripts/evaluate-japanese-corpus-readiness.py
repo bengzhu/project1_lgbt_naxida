@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate the v3.292 shared Japanese corpus and holdout readiness envelope.
+"""Evaluate the v3.293 shared Japanese corpus and holdout readiness envelope.
 
 The evaluator is intentionally model- and product-path agnostic.  It validates
 authorization, dataset identity, annotation coverage, split isolation, the
@@ -31,6 +31,28 @@ REQUIRED_ENGINES = (
     "apple-vision",
     "koharu-mit48",
     "koharu-paddleocr-vl",
+)
+ENGINE_ARTIFACT_PREFIX = {
+    "aitrans-bundled-manga-ocr": "aitrans",
+    "apple-vision": "vision",
+    "koharu-mit48": "mit48",
+    "koharu-paddleocr-vl": "paddle",
+}
+EXPECTED_REFERENCE_ONLY = {
+    "aitrans-bundled-manga-ocr": False,
+    "apple-vision": True,
+    "koharu-mit48": True,
+    "koharu-paddleocr-vl": True,
+}
+CROP_ARTIFACT_SUFFIX = {
+    "oracleCrop": "oracle",
+    "detectedCrop": "detected",
+    "fullPage": "full",
+}
+EXPECTED_PREDICTION_MATRIX = frozenset(
+    (engine, crop_level, "dev")
+    for engine in REQUIRED_ENGINES
+    for crop_level in CROP_LEVELS
 )
 REQUIRED_ANNOTATION_FIELDS = {
     "blockPolygon",
@@ -174,6 +196,10 @@ def _validate_splits(splits: Any) -> dict[str, dict[str, Any]]:
         _require(split["groundTruthStatus"] in {"missing", "available", "failed"}, f"{label}.groundTruthStatus is invalid")
         if split["status"] == "available":
             _require(split["pageCount"] > 0 and local_assets, f"{label} available split is empty")
+            _require(
+                split["pageCount"] == len(local_assets),
+                f"{label} pageCount does not match its page asset IDs",
+            )
             _require(split["annotationStatus"] == "complete", f"{label} available split needs complete annotations")
             _require(split["groundTruthStatus"] == "available", f"{label} available split needs ground truth")
         by_id[split_id] = split
@@ -205,8 +231,12 @@ def _validate_matrix_row(row: Any, label: str) -> tuple[str, str, str]:
         _require(key in row, f"{label} missing {key}")
     artifact_id = _string(row["artifactID"], f"{label}.artifactID")
     engine_id = _string(row["engineID"], f"{label}.engineID")
+    _require(engine_id in ENGINE_ARTIFACT_PREFIX, f"{label}.engineID is not a required engine")
     _require(row["cropLevel"] in CROP_LEVELS, f"{label}.cropLevel is invalid")
     _require(row["splitID"] in SPLITS, f"{label}.splitID is invalid")
+    _require(row["splitID"] == "dev", f"{label}.splitID must be dev before one-time holdout")
+    expected_artifact_id = f"{ENGINE_ARTIFACT_PREFIX[engine_id]}-{CROP_ARTIFACT_SUFFIX[row['cropLevel']]}"
+    _require(artifact_id == expected_artifact_id, f"{label}.artifactID is not canonical for its engine/crop")
     _require(row["status"] in {"missing", "available", "failed"}, f"{label}.status is invalid")
     if row["path"] is not None:
         _string(row["path"], f"{label}.path")
@@ -216,6 +246,10 @@ def _validate_matrix_row(row: Any, label: str) -> tuple[str, str, str]:
     _string(row["license"], f"{label}.license")
     _require(isinstance(row["authorized"], bool), f"{label}.authorized must be boolean")
     _require(isinstance(row["referenceOnly"], bool), f"{label}.referenceOnly must be boolean")
+    _require(
+        row["referenceOnly"] == EXPECTED_REFERENCE_ONLY[engine_id],
+        f"{label}.referenceOnly does not match its engine",
+    )
     _nonnegative_int(row["predictionCount"], f"{label}.predictionCount")
     if row["status"] == "available":
         _require(row["path"] is not None and row["sha256"] is not None, f"{label} available row needs path and SHA-256")
@@ -246,6 +280,10 @@ def _validate_prediction_matrix(matrix: Any) -> tuple[set[tuple[str, str, str]],
         _require(key not in actual_keys, f"duplicate prediction row: {key}")
         _require(key in required_keys, f"unexpected prediction row: {key}")
         actual_keys.add(key)
+    _require(
+        required_keys == set(EXPECTED_PREDICTION_MATRIX),
+        "predictionMatrix.requiredRows must contain the canonical four-engine dev matrix",
+    )
     return required_keys, actual_keys
 
 
@@ -263,6 +301,8 @@ def _validate_holdout_policy(policy: Any) -> None:
     for key in ("datasetFrozen", "policyFrozenBeforeHoldout", "holdoutEvaluatedOnce", "holdoutUsedForProductSelection", "groundTruthUsedForDecision"):
         _require(isinstance(policy[key], bool), f"holdoutPolicy.{key} must be boolean")
     _require(policy["holdoutTunedAfterEvaluation"] is False, "holdoutTunedAfterEvaluation must remain false")
+    _require(policy["holdoutUsedForProductSelection"] is False, "holdoutUsedForProductSelection must remain false")
+    _require(policy["groundTruthUsedForDecision"] is False, "holdoutPolicy.groundTruthUsedForDecision must remain false")
     _sha(policy["protocolSha256"], "holdoutPolicy.protocolSha256", nullable=True)
     if policy["status"] == "verified":
         _require(policy["splitIsolation"] == "verified", "verified holdout policy needs verified split isolation")
@@ -339,9 +379,21 @@ def evaluate_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
         reasons.append(f"prediction matrix is {matrix['status']}")
     if validated["actualRows"] != validated["requiredRows"]:
         reasons.append("oracle/detected/full prediction matrix is incomplete")
+        for missing_key in sorted(validated["requiredRows"] - validated["actualRows"]):
+            reasons.append(f"prediction row is missing: {missing_key[0]}/{missing_key[1]}/{missing_key[2]}")
     for row in matrix["rows"]:
-        if row["datasetSha256"] != dataset["sha256"]:
+        if row["status"] != "available":
+            reasons.append(f"prediction row {row['artifactID']} is {row['status']}")
+        elif row["datasetSha256"] != dataset["sha256"]:
             reasons.append(f"prediction row {row['artifactID']} is tied to a different dataset SHA")
+
+    if dataset["status"] == "available":
+        total_pages = sum(split["pageCount"] for split in splits.values())
+        total_regions = sum(split["regionCount"] for split in splits.values())
+        if total_pages != dataset["pageCount"]:
+            reasons.append("split page counts do not cover the dataset page count")
+        if total_regions != dataset["annotatedRegionCount"]:
+            reasons.append("split region counts do not cover the dataset annotation count")
 
     policy = manifest["holdoutPolicy"]
     if policy["status"] != "verified":

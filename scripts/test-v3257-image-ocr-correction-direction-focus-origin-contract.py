@@ -132,7 +132,7 @@ class ImageOCRCorrectionDirectionFocusOriginContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_are_advanced(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.292", "3.292"])
+        self.assertEqual(versions, ["3.293", "3.293"])
         previous = "python3 -B scripts/test-v3256-image-review-direction-filter-focus-contract.py"
         current = "python3 -B scripts/test-v3257-image-ocr-correction-direction-focus-origin-contract.py"
         self.assertIn(previous, self.workflow)
