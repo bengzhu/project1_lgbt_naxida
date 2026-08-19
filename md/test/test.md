@@ -3,6 +3,7 @@
 - readiness evaluator 固定要求 4 engine × 3 crop level 的 12 个 `dev` rows，canonical artifact ID 与 reference-only 角色锁定；缺 row、failed/missing row、dataset split 计数不一致或 holdout/product-selection safety flag 违反均 fail closed。
 - 新合同：`scripts/test-v3293-japanese-corpus-matrix-integrity-contract.py`；只验证 schema/evaluator/route 边界，不读取 ground truth，不运行模型，不改变产品 OCR/翻译路径。真实授权语料、预测 artifact、目标设备 evidence、OCR/CER、翻译盲评与 holdout 仍未提供。
 - 本地结果：v3.293 `6/6`、v3.292 `8/8`；`319` 个 tracked `scripts/test-v*.py` 中 `292` 个无进程入口合同通过、`27` 个实际调用 `subprocess` 的合同跳过；`338` 个 Python AST、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，readiness fixture 仍为 `blocked`。
+- exact-SHA full [32304497238](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32304497238) 精确对应 `1de9c297834200233c19b9491f253bb9ba8c1bbe`：Koharu parity `96234590642`、Japanese benchmark/readiness `96234590825`、主 bundle `96236313725` 成功；Xcode 26.6、UI interaction、Speech/Home/Paste、JUnit `10/10` 与 `AITRANS CI/full-validation=success` receipt 通过，`ui_evidence_mode=skip`、`probe_mode=skip`。readiness report 为 `blocked`，manifest SHA `8a761ecdb2ac96f4a3781800638807d62ba2f96a4c71bc6d26fdd09384127cbd`，12 个矩阵 row、真实授权 corpus、目标设备 evidence、OCR/CER、翻译盲评和 holdout 均缺失，三个安全 flag 均为 `false`；这不是质量或 holdout 证据。
 
 ### v3.292 共享日语 OCR/translation corpus 与 holdout readiness 合同
 
