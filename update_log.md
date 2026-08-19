@@ -4,7 +4,13 @@ v3.293 只核验 readiness manifest 的 canonical 12-row matrix 声明；本轮�
 
 新增 `--artifact-root` intake、schema/report `1.1.0` 边界及 `scripts/test-v3294-japanese-corpus-artifact-intake-contract.py`。evaluator 拒绝绝对路径、`..` 逃逸、symlink、非 regular file、artifact path 复用、SHA mismatch，以及 dataset SHA、canonical engine、crop/evaluation level、`dev` split、`referenceOnly`、prediction ID/count、page/region coverage 不一致。contract-only fixture 仍没有真实 artifact，因此保持 `status=blocked`、`artifactIntakeStatus=notRequired`、`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false`。
 
-本轮不改变 OCR、翻译、selector、UI、renderer、持久化、请求/像素预算或模型路径；不把 ground truth 读入产品决策，不把 contract fixture 当成质量证据。真实授权 corpus、12 个 prediction artifact、模型/运行身份、目标设备证据、OCR/CER、翻译盲评和一次性 holdout 仍缺失；本地不运行 Xcode/Swift/Core ML/Rust/GGUF/App runtime。云端 exact-SHA full、PR、合入和合入后 CI receipt 待本轮验证完成后补记。
+本轮不改变 OCR、翻译、selector、UI、renderer、持久化、请求/像素预算或模型路径；不把 ground truth 读入产品决策，不把 contract fixture 当成质量证据。真实授权 corpus、12 个 prediction artifact、模型/运行身份、目标设备证据、OCR/CER、翻译盲评和一次性 holdout 仍缺失；本地不运行 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+
+本地安全回归：v3.294 合同 `8/8`；`293` 个无进程入口合同、`1,454` 个测试通过，`27` 个实际导入 `subprocess` 的合同按约束跳过；`339` 个 tracked Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist 与 `git diff --check` 通过。readiness contract-only report 为 `status=blocked`、`artifactIntakeStatus=notRequired`，三个产品/ground-truth safety flag 均为 `false`。
+
+exact-SHA full [32311133176](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32311133176) 精确验证候选 SHA `db20203a72880e606c48dd85084f57a1eccc4366`：benchmark `96254177073`、Koharu parity `96254177322`、主 bundle `96255495225` 全部成功；Xcode 26.6、UI interaction、JUnit `10/10`（0 failures）和 `AITRANS CI/full-validation=success` receipt 成立，`probe_mode=skip`。云端 readiness report 的 manifest SHA 为 `c3163a95b46a40396f66874bbeac815198a716c5f091f6b5baa43e8383af51d8`，仍为 `blocked` / `notRequired`，`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false`。
+
+PR [#364](https://github.com/bengzhu/project1_lgbt_naxida/pull/364) fast CI [32312669866](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32312669866) 成功后，以 merge SHA `a4ffb3cf9867be39f7f37e7183efe5bd9fe9b071` 合入 `smalldata_test`；合入后 push CI [32312752741](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32312752741) 的 benchmark `96258905284`、主 bundle `96258978383`、JUnit `10/10` 与相同 manifest/readiness report 全部成功，Koharu 按父链复用。`main` 未修改。真实授权 corpus、prediction artifacts、目标设备证据和 v3.289 holdout 仍是下一步唯一外部前置条件。
 
 ## v3.293：共享语料四引擎矩阵完整性与 fail-closed policy 闸门（2026-08-20）
 

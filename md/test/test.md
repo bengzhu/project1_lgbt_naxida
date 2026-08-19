@@ -3,6 +3,10 @@
 - readiness schema 升级为 `1.1.0`；`--artifact-root` 只接受 root 内的 regular、非 symlink 文件，并核验 dataset/source manifest 与 12 个 prediction artifact 的实际 SHA-256、payload identity、唯一 prediction ID、`predictionCount` 及 `dev` page/region coverage。
 - 新合同：`scripts/test-v3294-japanese-corpus-artifact-intake-contract.py`；覆盖成功 materialization、缺 root、SHA 篡改、路径越界、symlink、payload dataset/count 不匹配和 page/region coverage 不完整。contract-only fixture 仍无真实 artifact，readiness 为 `blocked`、`artifactIntakeStatus=notRequired`。
 - 本轮只收口证据文件物化与 fail-closed 身份边界，不修改产品 OCR、翻译、selector、UI、renderer、持久化、请求/像素预算或模型路径；未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，也未使用真实授权 corpus、prediction artifact、目标设备证据或 holdout。
+- 本地结果：v3.294 合同 `8/8`；全量安全回归 `293` 个无进程入口合同、`1,454` 个测试通过，`27` 个实际导入 `subprocess` 的合同按约束跳过；`339` 个 tracked Python AST、`144` 个 JSON、`3` 个 YAML、`32` 个 shell、`4` 个 plist 与 `git diff --check` 通过。
+- exact-SHA full [32311133176](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32311133176) 精确对应候选 `db20203a72880e606c48dd85084f57a1eccc4366`：benchmark `96254177073`、Koharu parity `96254177322`、主 bundle `96255495225` 成功；Xcode 26.6、UI interaction、JUnit `10/10`（0 failures）和 `AITRANS CI/full-validation=success` receipt 通过，`probe_mode=skip`。
+- 云端 corpus readiness report 的 manifest SHA 为 `c3163a95b46a40396f66874bbeac815198a716c5f091f6b5baa43e8383af51d8`，`status=blocked`、`artifactIntakeStatus=notRequired`，`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false`；这不是 OCR/CER、翻译盲评、设备或 holdout 证据。
+- PR [#364](https://github.com/bengzhu/project1_lgbt_naxida/pull/364) fast CI [32312669866](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32312669866) 成功后，以 merge SHA `a4ffb3cf9867be39f7f37e7183efe5bd9fe9b071` 合入 `smalldata_test`；合入后 push CI [32312752741](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32312752741) 的 benchmark `96258905284`、主 bundle `96258978383`、JUnit `10/10` 与 readiness report 均通过，Koharu 按父链复用。`main` 未修改。
 
 ### v3.293 共享语料四引擎矩阵完整性合同
 
