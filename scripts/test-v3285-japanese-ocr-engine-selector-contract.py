@@ -213,7 +213,7 @@ class JapaneseOCREngineSelectorContractTests(unittest.TestCase):
             "scripts/test-v3285-image-ocr-selector-policy-runtime.sh",
             "japanese-ocr-engine-selector-report.json",
             "Aggregate v3.285 GT-isolated OCR selector shadow contract",
-            "japanese-benchmark-v3.293-",
+            "japanese-benchmark-v3.294-",
         ):
             self.assertIn(marker, self.workflow)
         evaluator_source = read("scripts/evaluate-japanese-ocr-engine-selector.py")
@@ -242,7 +242,7 @@ class JapaneseOCREngineSelectorContractTests(unittest.TestCase):
         self.assertIn("v3.285", self.route)
         self.assertIn("GT 隔离", self.route)
         self.assertIn("rollback", self.route)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.293", "3.293"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.294", "3.294"])
         for marker in (
             "struct ImageOCRSelectorPolicy",
             "struct ImageOCRSelectorEngineSignal",

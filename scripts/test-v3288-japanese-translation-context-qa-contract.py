@@ -242,13 +242,13 @@ class TranslationContextQAContractTests(unittest.TestCase):
             "scripts/test-v3288-japanese-translation-context-qa-contract.py",
             "scripts/run-japanese-translation-context-qa-cloud-smoke.sh",
             "translation-context-qa-report.json",
-            "japanese-benchmark-v3.293-",
+            "japanese-benchmark-v3.294-",
         ):
             self.assertIn(marker, self.workflow)
         self.assertIn("TranslationContextQuality.swift in Sources", self.project)
         self.assertIn("TranslationContextQuality.swift", self.project)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.293", "3.293"])
+        self.assertEqual(versions, ["3.294", "3.294"])
         self.assertIn("v3.288", self.route)
         self.assertIn("v3.288", self.update_log)
         for marker in (

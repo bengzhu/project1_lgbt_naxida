@@ -1,3 +1,11 @@
+## v3.294：共享语料 artifact intake 完整性与 fail-closed 闸门（2026-08-20）
+
+v3.293 只核验 readiness manifest 的 canonical 12-row matrix 声明；本轮继续沿证据路线收口，要求外部 dataset、source manifest 和 prediction artifact 在显式 `artifactRoot` 内真实物化，并验证实际 SHA-256 与 prediction envelope 身份，避免“manifest 声称 available、文件实际错配”误触发 readiness 晋级。
+
+新增 `--artifact-root` intake、schema/report `1.1.0` 边界及 `scripts/test-v3294-japanese-corpus-artifact-intake-contract.py`。evaluator 拒绝绝对路径、`..` 逃逸、symlink、非 regular file、artifact path 复用、SHA mismatch，以及 dataset SHA、canonical engine、crop/evaluation level、`dev` split、`referenceOnly`、prediction ID/count、page/region coverage 不一致。contract-only fixture 仍没有真实 artifact，因此保持 `status=blocked`、`artifactIntakeStatus=notRequired`、`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false`。
+
+本轮不改变 OCR、翻译、selector、UI、renderer、持久化、请求/像素预算或模型路径；不把 ground truth 读入产品决策，不把 contract fixture 当成质量证据。真实授权 corpus、12 个 prediction artifact、模型/运行身份、目标设备证据、OCR/CER、翻译盲评和一次性 holdout 仍缺失；本地不运行 Xcode/Swift/Core ML/Rust/GGUF/App runtime。云端 exact-SHA full、PR、合入和合入后 CI receipt 待本轮验证完成后补记。
+
 ## v3.293：共享语料四引擎矩阵完整性与 fail-closed policy 闸门（2026-08-20）
 
 本轮按 P0.3 的证据边界修正 v3.292 readiness evaluator 的可缩小矩阵漏洞：固定 AITRANS/Vision/Koharu MIT48/Koharu PaddleOCR-VL × `oracleCrop`/`detectedCrop`/`fullPage` 的 12 个 `dev` rows，canonical artifact ID 与 `referenceOnly` engine 角色不可伪装；actual `missing`/`failed` row、dataset SHA 不匹配、split page/region 总数不覆盖 dataset，以及 holdout/product-selection 安全 flag 违反均保持 `blocked`/直接拒绝，不改变产品路径。

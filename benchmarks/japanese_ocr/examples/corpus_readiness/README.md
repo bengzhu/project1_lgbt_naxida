@@ -3,11 +3,14 @@
 This directory contains only a contract example. It is not an authorized
 dataset, a ground-truth source, a prediction artifact, or a holdout result.
 
-The v3.293 evaluator keeps the gate `blocked` until all of the following are
+The v3.294 evaluator keeps the gate `blocked` until all of the following are
 provided outside the repository and frozen before any holdout is opened. Its
 matrix integrity gate is fixed to the twelve `dev` rows formed by four engines
 and three crop levels; failed rows and unsafe holdout flags cannot become
-`readyForHoldout`.
+`readyForHoldout`. When an available manifest is supplied, the cloud-only
+intake also requires an explicit artifact root and verifies regular-file paths,
+dataset/source-manifest/prediction SHA-256 values, payload identity and dev
+page/region coverage.
 
 - an authorized dataset with a stable SHA-256 and permitted uses;
 - at least 20 complete pages and 150 annotated TextRegions with polygon/line,

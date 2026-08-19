@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aitrans.invalid/schema/japanese-corpus-readiness-manifest-v1.json",
+  "$id": "https://aitrans.invalid/schema/japanese-corpus-readiness-manifest-v1.1.json",
   "title": "AITRANS shared Japanese OCR/translation corpus readiness manifest",
   "type": "object",
   "additionalProperties": false,
@@ -18,7 +18,7 @@
     "promotion"
   ],
   "properties": {
-    "schemaVersion": { "const": "1.0.0" },
+    "schemaVersion": { "const": "1.1.0" },
     "benchmark": { "const": "japanese-corpus-readiness" },
     "contractExampleOnly": { "type": "boolean" },
     "manifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
@@ -59,7 +59,10 @@
         "license",
         "authorized",
         "permittedUses",
-        "sourceManifestPath"
+        "artifactPath",
+        "artifactSha256",
+        "sourceManifestPath",
+        "sourceManifestSha256"
       ],
       "properties": {
         "status": { "enum": ["missing", "available", "failed"] },
@@ -71,7 +74,10 @@
         "license": { "type": "string", "minLength": 1 },
         "authorized": { "type": "boolean" },
         "permittedUses": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-        "sourceManifestPath": { "type": ["string", "null"] }
+        "artifactPath": { "type": ["string", "null"] },
+        "artifactSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "sourceManifestPath": { "type": ["string", "null"] },
+        "sourceManifestSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" }
       }
     },
     "split": {
@@ -83,6 +89,7 @@
         "pageCount",
         "regionCount",
         "assetIDs",
+        "regionIDs",
         "annotationStatus",
         "groundTruthStatus"
       ],
@@ -92,6 +99,11 @@
         "pageCount": { "type": "integer", "minimum": 0 },
         "regionCount": { "type": "integer", "minimum": 0 },
         "assetIDs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "regionIDs": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "uniqueItems": true

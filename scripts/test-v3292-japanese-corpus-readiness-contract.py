@@ -55,7 +55,7 @@ class JapaneseCorpusReadinessContractTests(unittest.TestCase):
         self.assertFalse(self.schema["additionalProperties"])
         self.assertFalse(self.report_schema["additionalProperties"])
         self.assertEqual(self.schema["properties"]["benchmark"]["const"], "japanese-corpus-readiness")
-        self.assertEqual(self.manifest["schemaVersion"], "1.0.0")
+        self.assertEqual(self.manifest["schemaVersion"], "1.1.0")
         self.assertTrue(self.manifest["contractExampleOnly"])
 
     def test_manifest_hash_split_and_prediction_matrix_are_explicit(self) -> None:
@@ -149,11 +149,11 @@ class JapaneseCorpusReadinessContractTests(unittest.TestCase):
             "scripts/test-v3292-japanese-corpus-readiness-contract.py",
             "scripts/run-japanese-corpus-readiness-cloud-smoke.sh",
             "japanese-corpus-readiness-report.json",
-            "japanese-benchmark-v3.293-",
+            "japanese-benchmark-v3.294-",
         ):
             self.assertIn(marker, self.workflow)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.293", "3.293"])
+        self.assertEqual(versions, ["3.294", "3.294"])
         for marker in (
             "v3.292",
             "共享日语 OCR/translation corpus",
