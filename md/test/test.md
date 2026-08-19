@@ -10,6 +10,7 @@
 - 第七个 exact-SHA full [32277233442](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32277233442) 的 Koharu parity `96147655198`、benchmark `96147654855`、Xcode 与 UI evidence 成功，但 v3.285 Swift evaluator 因把 throwing encode/decode 放入 `precondition` autoclosure 而编译失败；主 job `96149631229` 为 JUnit `10` 项 `1` 失败。当前修复先绑定 `encodedPolicy`/`decodedPolicy`，再执行等价断言，合同同步锁定该边界，仍待下一 exact-SHA full receipt。
 
 - 第八个 exact-SHA full [32280583163](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32280583163) 的 benchmark `96158153691`、Koharu parity `96158154043`、Xcode 与 UI evidence 成功，但主 job `96160258529` 的 JUnit `10` 项有 `1` 项失败。唯一错误是 v3.286 evaluator 将 `JSONDecoder.decode` 放进 `precondition` autoclosure；当前修复先绑定 `decoded` 再执行断言，合同新增 `precondition(try ...)` 禁止项，仍待新 SHA 的完整 receipt。
+- 第九个 exact-SHA full [32284079603](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32284079603) 对最终 SHA `c14096954ef2f9aa75d7a6ba58482a9baf2cc973` 成功：Koharu parity `96169412154`、benchmark `96169412411`、主 macOS `96170995494` 的 UI interaction、Xcode、14 张 UI evidence、JUnit、manifest、artifact 与 `AITRANS CI/full-validation=success` receipt 全部通过；合入后的 push CI [32284048360](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32284048360) 也成功。v3.290 已在 `smalldata_test`，`main` 未修改；真实 GGUF、授权语料、目标设备证据和 v3.289 holdout 仍缺失。
 
 ### v3.289 图片复查、会话快照与结构 mutation 合同
 
