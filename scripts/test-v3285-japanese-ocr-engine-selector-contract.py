@@ -218,6 +218,18 @@ class JapaneseOCREngineSelectorContractTests(unittest.TestCase):
         evaluator_source = read("scripts/evaluate-japanese-ocr-engine-selector.py")
         self.assertNotIn("AITRANS/", evaluator_source)
         self.assertIn("xcrun swiftc", self.runtime_shell)
+        runtime_sources = (
+            "AITRANS/Models/ImageOCRProvenance.swift",
+            "AITRANS/Services/ImageOCRLayoutEngine.swift",
+            "scripts/fixtures/v3285-image-ocr-selector-policy-evaluator.swift",
+        )
+        previous_position = -1
+        for relative in runtime_sources:
+            source = f'"$repo_root/{relative}"'
+            position = self.runtime_shell.find(source)
+            self.assertGreater(position, previous_position, relative)
+            previous_position = position
+        self.assertNotIn("AITRANS/Models/TranscriptModels.swift", self.runtime_shell)
         self.assertIn("v3285-image-ocr-selector-policy-evaluator.swift", self.runtime_shell)
         self.assertIn("v3.285 image OCR selector policy evaluator passed", self.runtime_shell)
         self.assertIn("ground truth", self.protocol_readme)

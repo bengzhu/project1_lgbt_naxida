@@ -16,6 +16,8 @@
 
 第五个候选为当前 HEAD `a31c7110` 的 CI [32268208057](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32268208057)：benchmark/static 成功，但 UI interaction contract 在 v3.281 provenance runtime 处失败。artifact 显示 `TranscriptModels.swift` 还引用三个只由 Manga overlay probe 提供的历史 payload 类型，而 v3.281 与 v3.290 standalone fixture 为保持最小编译闭包没有携带它们，导致 `MangaOverlayBubbleGeometryDiagnostics`、`MangaOverlaySliceOCRDiagnostics` 和 `MangaOverlayCropFallbackSelfTest` 未定义。两个 fixture 现在各自加入 `Equatable, Codable, Sendable` 空 stub，并由 v3.288 合同锁定；这些 stub 只服务 evaluator 隔离，不进入产品 target，也不改变 v3.281/v3.290 行为。该 run 仍不是成功 receipt，需由下一次 exact-SHA full 重新验收 UI/Xcode/JUnit 与 receipt。
 
+第六个强制 UI evidence full [32272593193](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32272593193) 的 Koharu MIT48 parity `96132362772`、benchmark `96132363000`、Xcode 与 UI evidence 均成功，但 UI interaction contract 仍失败；主 job `96134348013` 的 JUnit 为 `10` 项 `1` 失败。失败已收敛到 v3.285 standalone selector runtime 只编译 `ImageOCRProvenance.swift`，遗漏其 `ImageOCRCandidate.rect` 所需的 `ImageOCRLayoutRect`；本修复为 runtime 补入 `ImageOCRLayoutEngine.swift`，并由 v3.285 合同锁定 `provenance -> layout -> fixture` 的最小 dependency closure，同时禁止带入 `TranscriptModels.swift`。该 run 仍不是成功 receipt，下一 exact-SHA full 必须重新验收 UI interaction、Xcode、JUnit `10/10` 与 `AITRANS CI/full-validation=success`。
+
 真实 BubbleMask/SegmentMask、授权语料、目标设备测量和成品盲评仍缺失；本版只建立风险提示协议，不声称 mask、inpainting、OCR/CER、翻译质量、Koharu parity 或 holdout 改善。未新增 metrics/version_history 条目，下一步仍需先取得真实外部 artifact/corpus/device evidence。
 
 ## v3.289：图片复查、会话快照与结构 mutation 边界（2026-08-19）
