@@ -4,6 +4,7 @@
 - v3.291 合同锁定 canonical manifest SHA、双 artifact role、model/runtime/file/size/SHA/quantization/license/distribution 身份，以及 `referenceOnly`、`defaultEnabled`、`productPathEnabled`、`productSelectionChanged`、`groundTruthUsedForDecision` 的安全边界；CI Japanese benchmark artifact 同时包含 `japanese-render-mask-artifact-report.json`。
 - 本轮仅允许 Python 合同、AST、workflow YAML、shell/plist 与 `git diff --check`；不运行本地 Swift/Xcode/Core ML/Rust/GGUF/App runtime。即使 cloud readiness evaluator 成功，也不代表真实 mask、inpainting、shaped renderer、OCR/CER、翻译质量或设备性能已验证。
 - 本地结果：v3.291 合同 `10/10`；317 个 `scripts/test-v*.py` AST 全部成功，290 个无进程入口合同通过、27 个实际调用 `subprocess` 的合同跳过；3 个 workflow YAML、31 个 shell、4 个 plist、工程版本两处 `3.291` 与 `git diff --check` 通过。纯 evaluator 报告 `blocked`，cloud-only wrapper、Xcode/Swift/Core ML/Rust/GGUF/App runtime 和真实外部 artifact/corpus/device 证据仍未在本地执行或提供。
+- exact-SHA full [32289021728](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32289021728) 对 SHA `d801f69c306716d7d5e60823d790b8a0e28b4def` 成功：Koharu parity `96185284954`、Japanese benchmark/readiness `96185285045`、主 full `96187425952` 均通过，Xcode/UI interaction/Speech/Home/Paste、JUnit `10/10` 与 `AITRANS CI/full-validation=success` receipt 成功；UI evidence、simulator/manga probe 按配置 skip。云端 readiness report 为 `blocked`，BubbleMask/SegmentMask、授权语料和 target-device evidence 均缺失，三个 product/ground-truth flags 均为 `false`。这只证明 readiness contract/report-only 边界；真实 mask artifact、native mask/inpainting/shaped renderer、OCR/CER、翻译质量和设备性能仍未验证，v3.291 尚未合入 `smalldata_test`。
 
 ### v3.290 矩形 overlay 渲染安全预检合同
 
