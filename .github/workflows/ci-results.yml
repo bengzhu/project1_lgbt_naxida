@@ -3498,7 +3498,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291 benchmark schemas and fixtures
+      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292 benchmark schemas and fixtures
         shell: bash
         run: |
           set -euo pipefail
@@ -3517,6 +3517,7 @@ jobs:
           python3 -B scripts/test-v3289-image-ocr-block-structure-editor-contract.py
           python3 -B scripts/test-v3290-image-translation-render-safety-contract.py
           python3 -B scripts/test-v3291-mask-artifact-readiness-contract.py
+          python3 -B scripts/test-v3292-japanese-corpus-readiness-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3602,6 +3603,9 @@ jobs:
           JAPANESE_RENDER_MASK_MANIFEST="$GITHUB_WORKSPACE/benchmarks/japanese_render/examples/mask_artifacts/manifest.json" \
           JAPANESE_RENDER_MASK_OUTPUT="$result_root/japanese-render-mask-artifact-report.json" \
           bash scripts/run-japanese-mask-artifact-readiness-cloud-smoke.sh
+          JAPANESE_CORPUS_READINESS_MANIFEST="$GITHUB_WORKSPACE/benchmarks/japanese_ocr/examples/corpus_readiness/manifest.json" \
+          JAPANESE_CORPUS_READINESS_OUTPUT="$result_root/japanese-corpus-readiness-report.json" \
+          bash scripts/run-japanese-corpus-readiness-cloud-smoke.sh
           cp "$result_root/japanese-ocr-contract-example-report.json" "$result_root/japanese-ocr-benchmark-report.json"
           python3 - "$result_root" <<'PY'
           import json
@@ -3614,9 +3618,10 @@ jobs:
           model_comparison = json.loads((root / "japanese-translation-model-comparison-report.json").read_text(encoding="utf-8"))
           context_qa = json.loads((root / "japanese-translation-context-qa-report.json").read_text(encoding="utf-8"))
           mask_readiness = json.loads((root / "japanese-render-mask-artifact-report.json").read_text(encoding="utf-8"))
+          corpus_readiness = json.loads((root / "japanese-corpus-readiness-report.json").read_text(encoding="utf-8"))
           legacy = json.loads((root / "japanese-ocr-legacy-reference-report.json").read_text(encoding="utf-8"))
           summary = "\n".join([
-              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291 Japanese benchmark",
+              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292 Japanese benchmark",
               "",
               "- OCR contract example status: " + ocr["status"],
               "- OCR legacy/reference status: " + legacy["status"] + " (excluded from accuracy)",
@@ -3625,6 +3630,8 @@ jobs:
               "- Translation context/QA status: " + context_qa["status"],
               "- Render mask artifact readiness status: " + mask_readiness["status"],
               "- Render mask product path enabled: " + str(mask_readiness["productPathEnabled"]).lower(),
+              "- Shared corpus readiness status: " + corpus_readiness["status"],
+              "- Shared corpus product path enabled: " + str(corpus_readiness["productPathEnabled"]).lower(),
               "- Dataset SHA (OCR): " + ocr["datasetSha256"],
               "- Dataset SHA (translation): " + translation["datasetSha256"],
               "- Quality claim: schema/contract evidence only; no general OCR or translation quality claim.",
@@ -3636,6 +3643,7 @@ jobs:
           cp "$result_root"/japanese-translation-model-comparison-report.json "$GITHUB_WORKSPACE/ci-results-japanese-translation-model-comparison-report.json"
           cp "$result_root"/japanese-translation-context-qa-report.json "$GITHUB_WORKSPACE/ci-results-japanese-translation-context-qa-report.json"
           cp "$result_root"/japanese-render-mask-artifact-report.json "$GITHUB_WORKSPACE/ci-results-japanese-render-mask-artifact-report.json"
+          cp "$result_root"/japanese-corpus-readiness-report.json "$GITHUB_WORKSPACE/ci-results-japanese-corpus-readiness-report.json"
           cp "$result_root"/japanese-benchmark-summary.md "$GITHUB_WORKSPACE/ci-results-japanese-benchmark-summary.md"
 
       - name: Aggregate v3.282 same-crop oracle contract
@@ -3682,7 +3690,7 @@ jobs:
       - name: Upload Japanese benchmark artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: japanese-benchmark-v3.291-${{ github.run_id }}
+          name: japanese-benchmark-v3.292-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json
@@ -3694,6 +3702,7 @@ jobs:
             ci-results-japanese-translation-model-comparison-report.json
             ci-results-japanese-translation-context-qa-report.json
             ci-results-japanese-render-mask-artifact-report.json
+            ci-results-japanese-corpus-readiness-report.json
             ci-results-japanese-benchmark-summary.md
           retention-days: 14
 

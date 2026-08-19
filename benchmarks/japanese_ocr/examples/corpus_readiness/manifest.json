@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-corpus-readiness",
+  "contractExampleOnly": true,
+  "manifestSha256": "8a761ecdb2ac96f4a3781800638807d62ba2f96a4c71bc6d26fdd09384127cbd",
+  "run": {
+    "appSha": "0000000000000000000000000000000000000000",
+    "evaluatorVersion": "v3.292-contract",
+    "invocationMode": "cloud-only-shadow"
+  },
+  "dataset": {
+    "status": "missing",
+    "datasetID": "shared-japanese-corpus-pending",
+    "datasetVersion": "not-provided",
+    "sha256": null,
+    "pageCount": 0,
+    "annotatedRegionCount": 0,
+    "license": "not-provided",
+    "authorized": false,
+    "permittedUses": [],
+    "sourceManifestPath": null
+  },
+  "splits": [
+    { "splitID": "train", "status": "missing", "pageCount": 0, "regionCount": 0, "assetIDs": [], "annotationStatus": "missing", "groundTruthStatus": "missing" },
+    { "splitID": "dev", "status": "missing", "pageCount": 0, "regionCount": 0, "assetIDs": [], "annotationStatus": "missing", "groundTruthStatus": "missing" },
+    { "splitID": "holdout", "status": "missing", "pageCount": 0, "regionCount": 0, "assetIDs": [], "annotationStatus": "missing", "groundTruthStatus": "missing" }
+  ],
+  "annotationProfile": {
+    "requiredFields": [
+      "blockPolygon",
+      "linePolygonOrLineOrder",
+      "writingDirection",
+      "exactSourceText",
+      "blockReadingOrder",
+      "bubbleAssociation",
+      "textType"
+    ],
+    "requiredTextTypes": ["dialogue", "narration", "SFX", "title", "other"],
+    "requiredScenarios": [
+      "verticalDialogue",
+      "horizontalDialogue",
+      "slantedText",
+      "narration",
+      "SFX",
+      "smallText",
+      "lowContrast",
+      "halftoneBackground",
+      "nonWhiteBubble",
+      "noBubbleText",
+      "mixedScript"
+    ],
+    "minimumFullPages": 20,
+    "minimumAnnotatedRegions": 150
+  },
+  "predictionMatrix": {
+    "status": "missing",
+    "requiredRows": [
+      { "artifactID": "aitrans-oracle", "engineID": "aitrans-bundled-manga-ocr", "cropLevel": "oracleCrop", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": false, "predictionCount": 0 },
+      { "artifactID": "aitrans-detected", "engineID": "aitrans-bundled-manga-ocr", "cropLevel": "detectedCrop", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": false, "predictionCount": 0 },
+      { "artifactID": "aitrans-full", "engineID": "aitrans-bundled-manga-ocr", "cropLevel": "fullPage", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": false, "predictionCount": 0 },
+      { "artifactID": "vision-oracle", "engineID": "apple-vision", "cropLevel": "oracleCrop", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": true, "predictionCount": 0 },
+      { "artifactID": "vision-detected", "engineID": "apple-vision", "cropLevel": "detectedCrop", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": true, "predictionCount": 0 },
+      { "artifactID": "vision-full", "engineID": "apple-vision", "cropLevel": "fullPage", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": true, "predictionCount": 0 },
+      { "artifactID": "mit48-oracle", "engineID": "koharu-mit48", "cropLevel": "oracleCrop", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": true, "predictionCount": 0 },
+      { "artifactID": "mit48-detected", "engineID": "koharu-mit48", "cropLevel": "detectedCrop", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": true, "predictionCount": 0 },
+      { "artifactID": "mit48-full", "engineID": "koharu-mit48", "cropLevel": "fullPage", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": true, "predictionCount": 0 },
+      { "artifactID": "paddle-oracle", "engineID": "koharu-paddleocr-vl", "cropLevel": "oracleCrop", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": true, "predictionCount": 0 },
+      { "artifactID": "paddle-detected", "engineID": "koharu-paddleocr-vl", "cropLevel": "detectedCrop", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": true, "predictionCount": 0 },
+      { "artifactID": "paddle-full", "engineID": "koharu-paddleocr-vl", "cropLevel": "fullPage", "splitID": "dev", "status": "missing", "path": null, "sha256": null, "datasetSha256": null, "sourceRevision": "not-provided", "license": "not-provided", "authorized": false, "referenceOnly": true, "predictionCount": 0 }
+    ],
+    "rows": []
+  },
+  "holdoutPolicy": {
+    "status": "missing",
+    "splitIsolation": "missing",
+    "datasetFrozen": false,
+    "policyFrozenBeforeHoldout": false,
+    "holdoutEvaluatedOnce": false,
+    "holdoutTunedAfterEvaluation": false,
+    "holdoutUsedForProductSelection": false,
+    "groundTruthUsedForDecision": false,
+    "protocolSha256": null
+  },
+  "promotion": {
+    "status": "blocked",
+    "productPathEnabled": false,
+    "productSelectionChanged": false,
+    "groundTruthUsedForDecision": false,
+    "reasons": [
+      "contract-only example",
+      "authorized shared corpus is not provided",
+      "holdout protocol is not frozen"
+    ],
+    "requiredEvidence": [
+      "authorized dataset and stable SHA-256",
+      "20 complete pages and 150 annotated TextRegions",
+      "disjoint train/dev/holdout asset IDs",
+      "four-engine oracle/detected/full prediction matrix",
+      "protocol frozen before one-time holdout"
+    ]
+  }
+}

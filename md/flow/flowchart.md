@@ -1,5 +1,5 @@
 # 项目流程图
-v3.291 成品 readiness：`mask manifest -> artifact/license/corpus/target-device gate -> blocked report -> no product path`；缺少真实 BubbleMask/SegmentMask、授权语料或目标设备证据时不进入 native mask、inpainting 或 shaped renderer。
+v3.292 共享语料 readiness：`corpus manifest -> authorization/annotation/split/prediction/holdout gate -> blocked/readyForHoldout report -> no product path`；缺少授权语料、分层标注、同 crop 预测或冻结协议时不进入产品 OCR/翻译选择，也不打开 holdout 后调参。
 
 v3.290 图片翻译完成后：`translated session -> existing rectangle overlay/export -> report-only render-safety preflight -> VoiceOver warning (optional)`；invalid geometry、空文字、旁贴裁切／覆盖、源块重叠和跨块 collision 只进入诊断报告，不改变主 renderer、export、OCR、翻译或 persistence。
 

@@ -3,7 +3,7 @@
 
 当前 v3.290 图片翻译结果流程：`completed image session -> existing rectangle overlay renderer/export -> report-only ImageTranslationRenderSafety.analyze -> accessible warning only`。预检只读检查 invalid geometry、空文字、旁贴裁切／覆盖、源块重叠和跨块碰撞；它不参与 OCR、翻译、候选选择、renderer、export、持久化或复查状态。
 
-当前 v3.291 成品 readiness 流程：`contract-only mask manifest -> fail-closed artifact/license/corpus/device evaluator -> blocked report -> no product-path change`。BubbleMask/SegmentMask artifact、授权语料和 target-device latency/memory/energy 缺失时只生成 cloud-only report，不读取 proxy、不进入 inpainting、renderer、ImageTranslationBlock 或模型选择。
+当前 v3.292 证据 readiness 流程：`shared corpus manifest -> split/annotation/prediction/holdout freeze gate -> blocked/readyForHoldout report -> no product-path change`；共享授权语料、四引擎同 crop 预测矩阵或 holdout 冻结条件缺失时只生成 cloud-only report，不读取 ground truth 做产品决策、不进入 OCR/翻译模型选择。
 
 当前 v3.289 图片复查流程：`persisted block -> read-only provenance disclosure -> low-confidence/direction-uncertain scoped bbox draft -> commit -> scoped rerecognition or restore`；draft 拖动不启动 OCR，提交与 rerecognition 仍由 block identity、request/content ID、generation 和 scoped cancel 保护。图片会话快照只在受管文件的 path/type/regular-file/byte-count/SHA-256 全部匹配时恢复；split／merge 生成新 block identity 并失效受影响译文／旧 OCR evidence，order mutation 保留可用 metadata 与 review progress。
 

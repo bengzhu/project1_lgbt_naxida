@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.invalid/schema/japanese-corpus-readiness-report-v1.json",
+  "title": "AITRANS shared Japanese OCR/translation corpus readiness report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "benchmark",
+    "manifestSha256",
+    "status",
+    "datasetStatus",
+    "splitIsolationStatus",
+    "annotationStatus",
+    "predictionMatrixStatus",
+    "holdoutPolicyStatus",
+    "productPathEnabled",
+    "productSelectionChanged",
+    "groundTruthUsedForDecision",
+    "reasons",
+    "requiredEvidence"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-corpus-readiness" },
+    "manifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "enum": ["blocked", "readyForHoldout"] },
+    "datasetStatus": { "enum": ["missing", "available", "failed"] },
+    "splitIsolationStatus": { "enum": ["missing", "verified", "failed"] },
+    "annotationStatus": { "enum": ["missing", "partial", "complete"] },
+    "predictionMatrixStatus": { "enum": ["missing", "available", "failed"] },
+    "holdoutPolicyStatus": { "enum": ["missing", "verified", "failed"] },
+    "productPathEnabled": { "const": false },
+    "productSelectionChanged": { "const": false },
+    "groundTruthUsedForDecision": { "const": false },
+    "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "requiredEvidence": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}
