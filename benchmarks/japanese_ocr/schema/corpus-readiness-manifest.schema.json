@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.invalid/schema/japanese-corpus-readiness-manifest-v1.json",
+  "title": "AITRANS shared Japanese OCR/translation corpus readiness manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "benchmark",
+    "contractExampleOnly",
+    "manifestSha256",
+    "run",
+    "dataset",
+    "splits",
+    "annotationProfile",
+    "predictionMatrix",
+    "holdoutPolicy",
+    "promotion"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-corpus-readiness" },
+    "contractExampleOnly": { "type": "boolean" },
+    "manifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "run": { "$ref": "#/$defs/run" },
+    "dataset": { "$ref": "#/$defs/dataset" },
+    "splits": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/split" }
+    },
+    "annotationProfile": { "$ref": "#/$defs/annotationProfile" },
+    "predictionMatrix": { "$ref": "#/$defs/predictionMatrix" },
+    "holdoutPolicy": { "$ref": "#/$defs/holdoutPolicy" },
+    "promotion": { "$ref": "#/$defs/promotion" }
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appSha", "evaluatorVersion", "invocationMode"],
+      "properties": {
+        "appSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "evaluatorVersion": { "type": "string", "minLength": 1 },
+        "invocationMode": { "const": "cloud-only-shadow" }
+      }
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "datasetID",
+        "datasetVersion",
+        "sha256",
+        "pageCount",
+        "annotatedRegionCount",
+        "license",
+        "authorized",
+        "permittedUses",
+        "sourceManifestPath"
+      ],
+      "properties": {
+        "status": { "enum": ["missing", "available", "failed"] },
+        "datasetID": { "type": "string", "minLength": 1 },
+        "datasetVersion": { "type": "string", "minLength": 1 },
+        "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "pageCount": { "type": "integer", "minimum": 0 },
+        "annotatedRegionCount": { "type": "integer", "minimum": 0 },
+        "license": { "type": "string", "minLength": 1 },
+        "authorized": { "type": "boolean" },
+        "permittedUses": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "sourceManifestPath": { "type": ["string", "null"] }
+      }
+    },
+    "split": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "splitID",
+        "status",
+        "pageCount",
+        "regionCount",
+        "assetIDs",
+        "annotationStatus",
+        "groundTruthStatus"
+      ],
+      "properties": {
+        "splitID": { "enum": ["train", "dev", "holdout"] },
+        "status": { "enum": ["missing", "available", "failed"] },
+        "pageCount": { "type": "integer", "minimum": 0 },
+        "regionCount": { "type": "integer", "minimum": 0 },
+        "assetIDs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "annotationStatus": { "enum": ["missing", "partial", "complete"] },
+        "groundTruthStatus": { "enum": ["missing", "available", "failed"] }
+      }
+    },
+    "annotationProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredFields",
+        "requiredTextTypes",
+        "requiredScenarios",
+        "minimumFullPages",
+        "minimumAnnotatedRegions"
+      ],
+      "properties": {
+        "requiredFields": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "blockPolygon",
+              "linePolygonOrLineOrder",
+              "writingDirection",
+              "exactSourceText",
+              "blockReadingOrder",
+              "bubbleAssociation",
+              "textType"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "requiredTextTypes": {
+          "type": "array",
+          "items": { "enum": ["dialogue", "narration", "SFX", "title", "other"] },
+          "uniqueItems": true
+        },
+        "requiredScenarios": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "verticalDialogue",
+              "horizontalDialogue",
+              "slantedText",
+              "narration",
+              "SFX",
+              "smallText",
+              "lowContrast",
+              "halftoneBackground",
+              "nonWhiteBubble",
+              "noBubbleText",
+              "mixedScript"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "minimumFullPages": { "type": "integer", "minimum": 20 },
+        "minimumAnnotatedRegions": { "type": "integer", "minimum": 150 }
+      }
+    },
+    "matrixRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactID",
+        "engineID",
+        "cropLevel",
+        "splitID",
+        "status",
+        "path",
+        "sha256",
+        "datasetSha256",
+        "sourceRevision",
+        "license",
+        "authorized",
+        "referenceOnly",
+        "predictionCount"
+      ],
+      "properties": {
+        "artifactID": { "type": "string", "minLength": 1 },
+        "engineID": { "type": "string", "minLength": 1 },
+        "cropLevel": { "enum": ["oracleCrop", "detectedCrop", "fullPage"] },
+        "splitID": { "enum": ["train", "dev", "holdout"] },
+        "status": { "enum": ["missing", "available", "failed"] },
+        "path": { "type": ["string", "null"] },
+        "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "datasetSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "sourceRevision": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "authorized": { "type": "boolean" },
+        "referenceOnly": { "type": "boolean" },
+        "predictionCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "predictionMatrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "requiredRows", "rows"],
+      "properties": {
+        "status": { "enum": ["missing", "available", "failed"] },
+        "requiredRows": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/matrixRow" }
+        },
+        "rows": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/matrixRow" }
+        }
+      }
+    },
+    "holdoutPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "splitIsolation",
+        "datasetFrozen",
+        "policyFrozenBeforeHoldout",
+        "holdoutEvaluatedOnce",
+        "holdoutTunedAfterEvaluation",
+        "holdoutUsedForProductSelection",
+        "groundTruthUsedForDecision",
+        "protocolSha256"
+      ],
+      "properties": {
+        "status": { "enum": ["missing", "verified", "failed"] },
+        "splitIsolation": { "enum": ["missing", "verified", "failed"] },
+        "datasetFrozen": { "type": "boolean" },
+        "policyFrozenBeforeHoldout": { "type": "boolean" },
+        "holdoutEvaluatedOnce": { "type": "boolean" },
+        "holdoutTunedAfterEvaluation": { "const": false },
+        "holdoutUsedForProductSelection": { "const": false },
+        "groundTruthUsedForDecision": { "const": false },
+        "protocolSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "productPathEnabled",
+        "productSelectionChanged",
+        "groundTruthUsedForDecision",
+        "reasons",
+        "requiredEvidence"
+      ],
+      "properties": {
+        "status": { "enum": ["blocked", "readyForHoldout"] },
+        "productPathEnabled": { "const": false },
+        "productSelectionChanged": { "const": false },
+        "groundTruthUsedForDecision": { "const": false },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "requiredEvidence": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

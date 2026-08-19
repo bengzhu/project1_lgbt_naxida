@@ -1,3 +1,11 @@
+## v3.292：共享日语 OCR/translation corpus 与 holdout readiness 闸门（2026-08-20）
+
+真实授权完整页、人工 TextRegion/line 标注、同 crop 预测 artifact、目标设备测量和盲评仍未提供。本轮按 P0.1/P0.2/P0.3 只建立 evidence envelope：manifest 固定 dataset SHA、20 个完整页/150 个 TextRegion 最低门槛、七类标注字段、11 类场景、train/dev/holdout 隔离、AITRANS/Vision/MIT48/PaddleOCR-VL 四引擎的 oracle/detected/full 矩阵，以及 holdout 前冻结且禁止事后调参的 protocol；不创建或伪造真实 corpus。
+
+新增 `benchmarks/japanese_ocr/schema/corpus-readiness-manifest.schema.json`、`corpus-readiness-report.schema.json`、contract-only `benchmarks/japanese_ocr/examples/corpus_readiness/manifest.json`（canonical SHA `8a761ecdb2ac96f4a3781800638807d62ba2f96a4c71bc6d26fdd09384127cbd`）、纯 Python evaluator、cloud-only wrapper 和 v3.292 contract。报告只允许 `blocked` / `readyForHoldout`，`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false` 固定不变，不进入 OCR/翻译模型选择。
+
+本轮本地安全回归：v3.292 合同 `8/8`；`318` 个 tracked `scripts/test-v*.py` 全部 AST 解析成功，290 个无 `subprocess` 入口合同通过，27 个实际调用 `subprocess` 的历史合同跳过；3 个 workflow YAML、31 个 shell、4 个 plist、工程版本两处 `3.292` 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；contract-only evaluator 为 `blocked`，真实授权 corpus、预测 artifact、目标设备 evidence、一次性 holdout 和盲评仍是硬门，不声称 CER、翻译质量或 Koharu parity 提升。
+
 ## v3.291：BubbleMask / SegmentMask artifact readiness 前置闸门（2026-08-20）
 
 本轮按 P2 成品链路线建立独立的 readiness envelope，不接入产品 mask 主路。新增严格 manifest/report schema、contract-only 缺证据 fixture、纯 Python fail-closed evaluator、cloud-only wrapper 和 v3.291 contract；BubbleMask、SegmentMask、授权 render-quality 语料与目标设备 latency/memory/energy 均显式记录为 `missing`，报告必须为 `blocked`。manifest 的 canonical JSON 自哈希为 `b3616fd2fe6715a5537f0765661ffae7a357f488ae3d3986fdfd994a0db81efa`。

@@ -1,3 +1,9 @@
+### v3.292 共享日语 OCR/translation corpus 与 holdout readiness 合同
+
+- 新增严格 corpus manifest/report schema、contract-only 缺证据 manifest、纯 Python fail-closed evaluator、cloud-only wrapper 和 `scripts/test-v3292-japanese-corpus-readiness-contract.py`；真实授权 dataset、20 页/150 TextRegion、三分割、四引擎同 crop 预测矩阵和 holdout freeze 均显式为 missing。
+- readiness 只允许 `blocked` 或 `readyForHoldout`，固定 `productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false`；不选择 OCR/翻译模型，不接入产品路径，不把 contract fixture 当作质量证据。
+- 本地结果：v3.292 合同 `8/8`；`318` 个 tracked `scripts/test-v*.py` 全部 AST 解析成功，290 个无 `subprocess` 入口合同通过、27 个实际调用 `subprocess` 的历史合同跳过；3 个 workflow YAML、31 个 shell、4 个 plist、工程版本两处 `3.292` 与 `git diff --check` 通过。contract-only evaluator 为 `blocked`；即使未来输出 `readyForHoldout`，也不等于真实 holdout、OCR/CER、翻译盲评或目标设备性能证据。
+
 ### v3.291 BubbleMask / SegmentMask artifact readiness 合同
 
 - 新增 `benchmarks/japanese_render/` 的严格 manifest/report schema、缺证据 contract-only manifest、纯 Python evaluator、cloud-only wrapper 和 `scripts/test-v3291-mask-artifact-readiness-contract.py`；BubbleMask、SegmentMask、授权语料、license review 与 target-device runs 均显式 missing，报告状态固定为 `blocked`。

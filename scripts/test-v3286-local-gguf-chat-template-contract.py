@@ -163,11 +163,11 @@ class LocalGGUFChatTemplateContractTests(unittest.TestCase):
             "scripts/test-v3286-local-gguf-chat-template-contract.py",
             "scripts/test-v3286-local-gguf-chat-template-runtime.sh",
             "japanese-translation-model-profile-manifest.json",
-            "japanese-benchmark-v3.291-",
+            "japanese-benchmark-v3.292-",
         ):
             self.assertIn(marker, self.workflow)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.291", "3.291"])
+        self.assertEqual(versions, ["3.292", "3.292"])
         self.assertIn("v3.286", self.route)
         self.assertIn("v3.286", self.update_log)
         for marker in (
