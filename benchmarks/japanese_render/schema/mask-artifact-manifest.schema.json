@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.invalid/schema/japanese-render-mask-artifact-manifest-v1.json",
+  "title": "AITRANS render mask artifact readiness manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "benchmark",
+    "contractExampleOnly",
+    "manifestSha256",
+    "run",
+    "evaluationCorpus",
+    "artifacts",
+    "targetDeviceEvidence",
+    "promotion"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-render-mask-artifacts" },
+    "contractExampleOnly": { "type": "boolean" },
+    "manifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "run": { "$ref": "#/$defs/run" },
+    "evaluationCorpus": { "$ref": "#/$defs/evaluationCorpus" },
+    "artifacts": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "targetDeviceEvidence": { "$ref": "#/$defs/targetDeviceEvidence" },
+    "promotion": { "$ref": "#/$defs/promotion" }
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appSha", "evaluatorVersion", "invocationMode"],
+      "properties": {
+        "appSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "evaluatorVersion": { "type": "string", "minLength": 1 },
+        "invocationMode": { "const": "cloud-only-shadow" }
+      }
+    },
+    "evaluationCorpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "path", "sha256", "license", "authorized", "permittedUses"],
+      "properties": {
+        "status": { "enum": ["missing", "available", "failed"] },
+        "path": { "type": ["string", "null"] },
+        "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "license": { "type": "string", "minLength": 1 },
+        "authorized": { "type": "boolean" },
+        "permittedUses": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactID",
+        "role",
+        "modelID",
+        "modelRevision",
+        "runtimeID",
+        "runtimeRevision",
+        "filename",
+        "sha256",
+        "sizeBytes",
+        "quantization",
+        "sourceRevision",
+        "license",
+        "licenseReviewed",
+        "distribution",
+        "referenceOnly",
+        "defaultEnabled",
+        "artifactStatus"
+      ],
+      "properties": {
+        "artifactID": { "type": "string", "minLength": 1 },
+        "role": { "enum": ["BubbleMask", "SegmentMask"] },
+        "modelID": { "type": "string", "minLength": 1 },
+        "modelRevision": { "type": "string", "minLength": 1 },
+        "runtimeID": { "type": "string", "minLength": 1 },
+        "runtimeRevision": { "type": "string", "minLength": 1 },
+        "filename": { "type": ["string", "null"] },
+        "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "sizeBytes": { "type": ["integer", "null"], "minimum": 1 },
+        "quantization": { "type": ["string", "null"] },
+        "sourceRevision": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "licenseReviewed": { "type": "boolean" },
+        "distribution": { "enum": ["bundled", "userProvided", "cloudOnlyReference", "notDistributable"] },
+        "referenceOnly": { "type": "boolean" },
+        "defaultEnabled": { "type": "boolean" },
+        "artifactStatus": { "enum": ["missing", "available", "failed"] }
+      }
+    },
+    "targetDeviceEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "runs"],
+      "properties": {
+        "status": { "enum": ["missing", "available", "failed"] },
+        "runs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/deviceRun" }
+        }
+      }
+    },
+    "deviceRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runID",
+        "artifactID",
+        "deviceID",
+        "deviceClass",
+        "platform",
+        "hardware",
+        "os",
+        "runtime",
+        "status",
+        "targetDevice",
+        "coldLatencyMs",
+        "warmLatencyMs",
+        "peakMemoryBytes",
+        "energyMilliwattHours",
+        "sampleCount",
+        "measurementSource",
+        "failureReason"
+      ],
+      "properties": {
+        "runID": { "type": "string", "minLength": 1 },
+        "artifactID": { "type": "string", "minLength": 1 },
+        "deviceID": { "type": "string", "minLength": 1 },
+        "deviceClass": { "type": "string", "minLength": 1 },
+        "platform": { "type": "string", "minLength": 1 },
+        "hardware": { "type": "string", "minLength": 1 },
+        "os": { "type": "string", "minLength": 1 },
+        "runtime": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["missing", "complete", "partial", "failed"] },
+        "targetDevice": { "type": "boolean" },
+        "coldLatencyMs": { "type": ["number", "null"], "minimum": 0 },
+        "warmLatencyMs": { "type": ["number", "null"], "minimum": 0 },
+        "peakMemoryBytes": { "type": ["integer", "null"], "minimum": 1 },
+        "energyMilliwattHours": { "type": ["number", "null"], "minimum": 0 },
+        "sampleCount": { "type": "integer", "minimum": 0 },
+        "measurementSource": { "type": "string", "minLength": 1 },
+        "failureReason": { "type": ["string", "null"] }
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "productPathEnabled",
+        "productSelectionChanged",
+        "groundTruthUsedForDecision",
+        "reasons",
+        "requiredEvidence"
+      ],
+      "properties": {
+        "status": { "enum": ["blocked", "ready"] },
+        "productPathEnabled": { "const": false },
+        "productSelectionChanged": { "const": false },
+        "groundTruthUsedForDecision": { "const": false },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "requiredEvidence": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

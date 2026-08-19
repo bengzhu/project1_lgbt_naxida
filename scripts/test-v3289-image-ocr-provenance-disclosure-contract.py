@@ -62,13 +62,13 @@ class ImageOCRProvenanceDisclosureContractTests(unittest.TestCase):
             "ImageOCRProvenanceDisclosureView.swift in Sources",
             "path = ImageOCRProvenanceDisclosureView.swift;",
             "scripts/test-v3289-image-ocr-provenance-disclosure-contract.py",
-            "japanese-benchmark-v3.290-",
+            "japanese-benchmark-v3.291-",
             "v3.289",
         ):
             self.assertIn(marker, self.project + self.workflow + self.route)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.290", "3.290"],
+            ["3.291", "3.291"],
         )
 
     def test_static_contract_has_no_process_entry(self) -> None:

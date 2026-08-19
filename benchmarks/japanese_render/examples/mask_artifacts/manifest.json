@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0.0",
+  "benchmark": "japanese-render-mask-artifacts",
+  "contractExampleOnly": true,
+  "manifestSha256": "b3616fd2fe6715a5537f0765661ffae7a357f488ae3d3986fdfd994a0db81efa",
+  "run": {
+    "appSha": "3f9dab0abf8a0150394cedaa78cad8256b15fa7e",
+    "evaluatorVersion": "v3.291-contract",
+    "invocationMode": "cloud-only-shadow"
+  },
+  "evaluationCorpus": {
+    "status": "missing",
+    "path": null,
+    "sha256": null,
+    "license": "not-provided",
+    "authorized": false,
+    "permittedUses": ["contract-only"]
+  },
+  "artifacts": [
+    {
+      "artifactID": "bubble-mask-contract-missing",
+      "role": "BubbleMask",
+      "modelID": "speech-bubble-segmentation-contract",
+      "modelRevision": "not-provided",
+      "runtimeID": "mask-runtime-contract",
+      "runtimeRevision": "not-provided",
+      "filename": null,
+      "sha256": null,
+      "sizeBytes": null,
+      "quantization": null,
+      "sourceRevision": "not-provided",
+      "license": "not-provided",
+      "licenseReviewed": false,
+      "distribution": "notDistributable",
+      "referenceOnly": true,
+      "defaultEnabled": false,
+      "artifactStatus": "missing"
+    },
+    {
+      "artifactID": "segment-mask-contract-missing",
+      "role": "SegmentMask",
+      "modelID": "comic-text-segmentation-contract",
+      "modelRevision": "not-provided",
+      "runtimeID": "mask-runtime-contract",
+      "runtimeRevision": "not-provided",
+      "filename": null,
+      "sha256": null,
+      "sizeBytes": null,
+      "quantization": null,
+      "sourceRevision": "not-provided",
+      "license": "not-provided",
+      "licenseReviewed": false,
+      "distribution": "notDistributable",
+      "referenceOnly": true,
+      "defaultEnabled": false,
+      "artifactStatus": "missing"
+    }
+  ],
+  "targetDeviceEvidence": {
+    "status": "missing",
+    "runs": []
+  },
+  "promotion": {
+    "status": "blocked",
+    "productPathEnabled": false,
+    "productSelectionChanged": false,
+    "groundTruthUsedForDecision": false,
+    "reasons": [
+      "contract-only example",
+      "authorized render-quality corpus is missing",
+      "BubbleMask artifact is missing",
+      "SegmentMask artifact is missing",
+      "license review is missing",
+      "target-device measurements are missing"
+    ],
+    "requiredEvidence": [
+      "authorized corpus manifest and SHA-256",
+      "BubbleMask and SegmentMask model/runtime revisions",
+      "artifact filename, size, SHA-256 and quantization",
+      "license review and distribution decision",
+      "target-device cold/warm latency, peak memory and energy",
+      "independent mask/inpainting/shaped-renderer quality benchmark"
+    ]
+  }
+}

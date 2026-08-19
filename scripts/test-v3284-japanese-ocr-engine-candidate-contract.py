@@ -181,7 +181,7 @@ class JapaneseOCREngineCandidateContractTests(unittest.TestCase):
             "scripts/run-japanese-ocr-engine-candidate-cloud-smoke.sh",
             "japanese-ocr-engine-candidate-report.json",
             "Aggregate v3.284 OCR engine candidate shadow contract",
-            "japanese-benchmark-v3.290-",
+            "japanese-benchmark-v3.291-",
         ):
             self.assertIn(marker, self.workflow)
         evaluator_source = read("scripts/evaluate-japanese-ocr-engine-candidate.py")
@@ -191,7 +191,7 @@ class JapaneseOCREngineCandidateContractTests(unittest.TestCase):
         self.assertIn("v3.284", self.route)
         self.assertIn("CER/exact/latency/memory/energy/license", self.route)
         self.assertIn("不默认启用", self.route)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.290", "3.290"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.291", "3.291"])
 
 
 if __name__ == "__main__":

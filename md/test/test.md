@@ -1,3 +1,10 @@
+### v3.291 BubbleMask / SegmentMask artifact readiness 合同
+
+- 新增 `benchmarks/japanese_render/` 的严格 manifest/report schema、缺证据 contract-only manifest、纯 Python evaluator、cloud-only wrapper 和 `scripts/test-v3291-mask-artifact-readiness-contract.py`；BubbleMask、SegmentMask、授权语料、license review 与 target-device runs 均显式 missing，报告状态固定为 `blocked`。
+- v3.291 合同锁定 canonical manifest SHA、双 artifact role、model/runtime/file/size/SHA/quantization/license/distribution 身份，以及 `referenceOnly`、`defaultEnabled`、`productPathEnabled`、`productSelectionChanged`、`groundTruthUsedForDecision` 的安全边界；CI Japanese benchmark artifact 同时包含 `japanese-render-mask-artifact-report.json`。
+- 本轮仅允许 Python 合同、AST、workflow YAML、shell/plist 与 `git diff --check`；不运行本地 Swift/Xcode/Core ML/Rust/GGUF/App runtime。即使 cloud readiness evaluator 成功，也不代表真实 mask、inpainting、shaped renderer、OCR/CER、翻译质量或设备性能已验证。
+- 本地结果：v3.291 合同 `10/10`；317 个 `scripts/test-v*.py` AST 全部成功，290 个无进程入口合同通过、27 个实际调用 `subprocess` 的合同跳过；3 个 workflow YAML、31 个 shell、4 个 plist、工程版本两处 `3.291` 与 `git diff --check` 通过。纯 evaluator 报告 `blocked`，cloud-only wrapper、Xcode/Swift/Core ML/Rust/GGUF/App runtime 和真实外部 artifact/corpus/device 证据仍未在本地执行或提供。
+
 ### v3.290 矩形 overlay 渲染安全预检合同
 
 - 已完成图片会话在 `adjacent`／`replace` overlay 导出前只生成 report-only `ImageTranslationRenderSafety.Report`：检查 invalid geometry、空文字、旁贴裁切、旁贴覆盖原块、源块重叠和跨块 collision；结果面板只提供 VoiceOver 可读 warning，不改 OCR、翻译、renderer、export、持久化或复查状态。

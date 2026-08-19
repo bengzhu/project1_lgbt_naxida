@@ -1,3 +1,11 @@
+## v3.291：BubbleMask / SegmentMask artifact readiness 前置闸门（2026-08-20）
+
+本轮按 P2 成品链路线建立独立的 readiness envelope，不接入产品 mask 主路。新增严格 manifest/report schema、contract-only 缺证据 fixture、纯 Python fail-closed evaluator、cloud-only wrapper 和 v3.291 contract；BubbleMask、SegmentMask、授权 render-quality 语料与目标设备 latency/memory/energy 均显式记录为 `missing`，报告必须为 `blocked`。manifest 的 canonical JSON 自哈希为 `b3616fd2fe6715a5537f0765661ffae7a357f488ae3d3986fdfd994a0db81efa`。
+
+`referenceOnly=true`、`defaultEnabled=false`、`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false` 固定不变；evaluator 不读取 `MangaOverlayProbeService`，不修改 `ImageTranslationBlock`、renderer、inpainting 或模型选择。CI 的 Japanese benchmark job 执行该合同、生成并上传 `japanese-render-mask-artifact-report.json`。本轮只收口证据闸门，不声称 mask、清字、inpainting、OCR/CER、翻译质量或目标设备性能改善；真实 artifact、授权语料、设备证据和后续独立成品 benchmark 仍待外部提供。
+
+本地安全回归：v3.291 合同 `10/10`；`317` 个 Python 合同 AST 全部解析，其中 `290` 个无进程入口合同通过、`27` 个含实际 `subprocess` 入口的合同跳过；`3` 个 workflow YAML、`31` 个 shell、`4` 个 plist、工程版本两处 `3.291` 和 `git diff --check` 通过。纯 evaluator 报告 `blocked`，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；exact-SHA cloud full、Xcode/JUnit/receipt 和真实外部证据仍待后续。
+
 ## v3.290：矩形 overlay 渲染安全预检（2026-08-19）
 
 本版只增加导出前的 report-only 几何预检：已完成图片会话的 `adjacent`/`replace` 矩形 overlay 检查无效 bbox、空文字、旁贴裁切、旁贴覆盖原块、源块重叠和跨块碰撞，并在结果面板以 VoiceOver 可读的 warning 暴露风险。`ImageTranslationRenderSafety.Report` 明确记录 `reportOnly=true`、`groundTruthUsedForDecision=false`，不改变 OCR、翻译、候选选择、持久化、复查状态或现有 renderer/export。

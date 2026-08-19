@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aitrans.invalid/schema/japanese-render-mask-artifact-report-v1.json",
+  "title": "AITRANS render mask artifact readiness report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "benchmark",
+    "manifestSha256",
+    "status",
+    "artifactStatusByRole",
+    "targetDeviceEvidenceStatus",
+    "productPathEnabled",
+    "productSelectionChanged",
+    "groundTruthUsedForDecision",
+    "reasons",
+    "requiredEvidence"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "benchmark": { "const": "japanese-render-mask-artifacts" },
+    "manifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "enum": ["blocked", "ready"] },
+    "artifactStatusByRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["BubbleMask", "SegmentMask"],
+      "properties": {
+        "BubbleMask": { "enum": ["missing", "available", "failed"] },
+        "SegmentMask": { "enum": ["missing", "available", "failed"] }
+      }
+    },
+    "targetDeviceEvidenceStatus": { "enum": ["missing", "available", "failed"] },
+    "productPathEnabled": { "const": false },
+    "productSelectionChanged": { "const": false },
+    "groundTruthUsedForDecision": { "const": false },
+    "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "requiredEvidence": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}
