@@ -1,5 +1,11 @@
 import Foundation
 
+// TranscriptModels.swift references these probe-only payloads, but this
+// standalone evaluator intentionally does not compile MangaOverlayProbeService.
+struct MangaOverlayBubbleGeometryDiagnostics: Equatable, Codable, Sendable {}
+struct MangaOverlaySliceOCRDiagnostics: Equatable, Codable, Sendable {}
+struct MangaOverlayCropFallbackSelfTest: Equatable, Codable, Sendable {}
+
 @main
 struct ImageOCRProvenanceEvaluator {
     static func main() throws {

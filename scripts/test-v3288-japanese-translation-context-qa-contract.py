@@ -223,6 +223,20 @@ class TranslationContextQAContractTests(unittest.TestCase):
             self.assertIn("ImageOCRLayoutEngine.swift", source, relative)
             self.assertIn("TranslationContextQuality.swift", source, relative)
 
+    def test_new_standalone_fixtures_stub_probe_only_transcript_payloads(self) -> None:
+        required_stubs = (
+            "struct MangaOverlayBubbleGeometryDiagnostics: Equatable, Codable, Sendable {}",
+            "struct MangaOverlaySliceOCRDiagnostics: Equatable, Codable, Sendable {}",
+            "struct MangaOverlayCropFallbackSelfTest: Equatable, Codable, Sendable {}",
+        )
+        for relative in (
+            "scripts/fixtures/v3281-image-ocr-provenance-evaluator.swift",
+            "scripts/fixtures/v3290-image-translation-render-safety-evaluator.swift",
+        ):
+            source = read(relative)
+            for marker in required_stubs:
+                self.assertIn(marker, source, relative)
+
     def test_workflow_project_route_and_contract_are_explicit(self) -> None:
         for marker in (
             "scripts/test-v3288-japanese-translation-context-qa-contract.py",
