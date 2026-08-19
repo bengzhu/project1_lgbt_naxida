@@ -4,7 +4,9 @@
 
 新增 `scripts/test-v3290-image-translation-render-safety-contract.py` 与 cloud-only Swift evaluator/runtime，工程版本为 `3.290`。v3.289 及更早历史合同只同步当前工程版本断言和 benchmark artifact 名称；v3.289 的历史 feature marker 保持不变。SwiftUI 静态审计同时修正了预检详情和质量失败提示中的字符串插值，并把新 model 文件归入 Xcode Models group。
 
-本地允许范围验证：v3.290 合同 `7/7`；v3.288 跨批次 QA 合同 `7/7`；全量 `316` 个 Python 合同中 `289` 个无进程入口合同通过、`27` 个含 `subprocess` 的合同跳过、`0` 失败；`334` 个 Python AST、`3` 个 workflow YAML、`29` 个 shell、`4` 个 plist、工程版本两处 `3.290` 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，也未运行云端 evaluator。
+首个 exact-SHA 候选 `af15d67b781667d6624bede0788e27dc94a3ba40` 的 push CI [32258069825](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32258069825) 中 benchmark job `96084404294` 成功，主 job `96084502068` 失败，JUnit `10` 项有 `3` 项失败：static checks、UI interaction contract、Xcode build。根因是结构编辑器把只在 iOS 26 才满足所需 collection conformance 的 raw `blocks.enumerated()` 交给 SwiftUI `ForEach`，以及历史 standalone `TranscriptModels.swift` evaluators 没有携带新增 provenance/layout/context 类型。修复将索引数组在 View 初始化时物化，并为所有 7 个直接 evaluator 补齐 `ImageOCRProvenance.swift`、`ImageOCRLayoutEngine.swift`、`TranslationContextQuality.swift` dependency closure。额外审计发现并修复 v3.288 context prompt 四处普通括号字面量，术语、上一批摘要、文字类型和长度现在使用真实 Swift 插值；合同已锁定该边界。
+
+修复后的本地允许范围验证：v3.290 合同 `7/7`、v3.289 structure 合同 `7/7`、v3.288 跨批次 QA 合同 `8/8`；全量 `316` 个 Python 合同中 `289` 个无进程入口合同通过、`27` 个含 `subprocess` 的合同跳过、`0` 失败；`334` 个 tracked Python AST、`3` 个 workflow YAML、`30` 个 tracked shell、`4` 个 plist、工程版本两处 `3.290` 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；修复仍须由下一次 exact-SHA cloud full 的 Xcode/JUnit/receipt 验收。
 
 真实 BubbleMask/SegmentMask、授权语料、目标设备测量和成品盲评仍缺失；本版只建立风险提示协议，不声称 mask、inpainting、OCR/CER、翻译质量、Koharu parity 或 holdout 改善。未新增 metrics/version_history 条目，下一步仍需先取得真实外部 artifact/corpus/device evidence。
 

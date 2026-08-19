@@ -6,6 +6,9 @@ TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
 xcrun swiftc \
+  "$ROOT_DIR/AITRANS/Models/ImageOCRProvenance.swift" \
+  "$ROOT_DIR/AITRANS/Services/ImageOCRLayoutEngine.swift" \
+  "$ROOT_DIR/AITRANS/Models/TranslationContextQuality.swift" \
   "$ROOT_DIR/AITRANS/Models/TranscriptModels.swift" \
   "$ROOT_DIR/AITRANS/Models/ImageTranslationRenderSafety.swift" \
   "$ROOT_DIR/scripts/fixtures/v3290-image-translation-render-safety-evaluator.swift" \

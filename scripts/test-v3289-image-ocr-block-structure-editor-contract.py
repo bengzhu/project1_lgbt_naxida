@@ -161,6 +161,16 @@ class ImageOCRBlockStructureEditorContractTests(unittest.TestCase):
             self.assertIn(marker, self.editor)
         for forbidden in ("TranslationSessionStore", "recognizeTextBlocks", "generate", "Task {"):
             self.assertNotIn(forbidden, self.editor)
+        self.assertIn(
+            "private let indexedBlocks: [(offset: Int, element: ImageTranslationBlock)]",
+            self.editor,
+        )
+        self.assertIn("indexedBlocks = Array(blocks.enumerated())", self.editor)
+        self.assertEqual(
+            self.editor.count("ForEach(indexedBlocks, id: \\.element.id)"),
+            3,
+        )
+        self.assertNotIn("ForEach(blocks.enumerated()", self.editor)
         for marker in (
             "ImageOCRBlockStructureEditor(",
             "store.splitImageTranslationBlock",

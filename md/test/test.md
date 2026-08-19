@@ -1,8 +1,8 @@
 ### v3.290 矩形 overlay 渲染安全预检合同
 
 - 已完成图片会话在 `adjacent`／`replace` overlay 导出前只生成 report-only `ImageTranslationRenderSafety.Report`：检查 invalid geometry、空文字、旁贴裁切、旁贴覆盖原块、源块重叠和跨块 collision；结果面板只提供 VoiceOver 可读 warning，不改 OCR、翻译、renderer、export、持久化或复查状态。
-- `scripts/test-v3290-image-translation-render-safety-contract.py` 与 cloud-only `scripts/test-v3290-image-translation-render-safety-runtime.sh` 覆盖 clear、invalid、edge clipping、source overlap 与 cross-block collision；新合同 `7/7` 通过。工程版本为 `3.290`，新 model 已归入 Models group。
-- 本地只允许安全合同、AST/YAML/shell/plist 与 `git diff --check`：全量 `316` 个 Python 合同中 `289` 个通过、`27` 个含 `subprocess` 入口跳过、`0` 失败；AST `334`、workflow `3`、shell `29`、plist `4`、工程版本两处 `3.290`。未运行 Xcode／Swift／Core ML／Rust／GGUF／App runtime，也未取得 cloud evaluator receipt；该预检不证明 mask、清字、OCR/CER、翻译或设备性能改善。
+- `scripts/test-v3290-image-translation-render-safety-contract.py` 与 cloud-only `scripts/test-v3290-image-translation-render-safety-runtime.sh` 覆盖 clear、invalid、edge clipping、source overlap 与 cross-block collision；新合同 `7/7` 通过。工程版本为 `3.290`，新 model 已归入 Models group。首个 exact-SHA CI [32258069825](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32258069825) 的 benchmark job 成功，但主 job 因 iOS 17 deployment 下 raw `EnumeratedSequence` 的 SwiftUI collection availability，以及 standalone evaluator 缺失 provenance/layout/context dependency closure 而失败；两类边界均已修复并加合同。
+- 本地只允许安全合同、AST/YAML/shell/plist 与 `git diff --check`：全量 `316` 个 Python 合同中 `289` 个通过、`27` 个含 `subprocess` 入口跳过、`0` 失败；v3.288 context 合同因新增 prompt 插值/evaluator closure 断言为 `8/8`，AST `334`、workflow `3`、tracked shell `30`、plist `4`、工程版本两处 `3.290`。未运行 Xcode／Swift／Core ML／Rust／GGUF／App runtime；修复后的 cloud evaluator/Xcode/JUnit receipt 仍待下一次 exact-SHA full，该预检不证明 mask、清字、OCR/CER、翻译或设备性能改善。
 
 ### v3.289 图片复查、会话快照与结构 mutation 合同
 
@@ -13,7 +13,7 @@
 ### v3.288 术语记忆、跨 batch context 与 block-level translation QA 合同
 
 - 项目术语／人名／称呼记忆显式区分 `confirmed`、`candidate`、`revoked`；上一批只读 completed summary 只进入下一批 prompt context，禁止进入待翻译标签或包含 pending input。严格检查 tags、原文泄漏、数字、确认术语、目标语言密度和长度，只生成失败 block 集合。
-- 图片日语 batch 继续受最多 `8` blocks／`1,800` chars 约束；QA 失败只补译失败 block，保留已完成译文、OCR/layout、部分持久化与 scoped cancel，不重跑 OCR、检测、布局或整页。最新跨批次泄漏合同 `7/7` 通过，包含 `previousContextLeakage`、撤销术语、数字、长度、duplicate/out-of-order tags 与取消／持久化 fail-closed mutation。
+- 图片日语 batch 继续受最多 `8` blocks／`1,800` chars 约束；QA 失败只补译失败 block，保留已完成译文、OCR/layout、部分持久化与 scoped cancel，不重跑 OCR、检测、布局或整页。最新合同 `8/8` 通过，除 `previousContextLeakage`、撤销术语、数字、长度、duplicate/out-of-order tags 与取消／持久化 fail-closed mutation 外，也锁定类型、确认术语、上一批摘要和长度限制必须以真实 Swift 插值进入 prompt，并锁定 standalone model evaluator dependency closure。
 - evaluator 与 fixture 固定 `blocked`／`promotion=notEligible`／`productSelectionChanged=false`；不选择模型、不证明 Gemma/Qwen/Sakura 或 Koharu 翻译质量。真实 GGUF/template、授权 clean-text corpus、盲评和 target-device evidence 仍是进入 holdout 的前置条件。
 
 ### v3.265 Vision Koharu 垂直 line quad 共享采样合同

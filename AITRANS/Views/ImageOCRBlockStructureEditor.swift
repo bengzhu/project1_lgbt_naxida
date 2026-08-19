@@ -11,6 +11,7 @@ struct ImageOCRBlockStructureEditor: View {
     let split: (UUID, Int) -> Bool
     let merge: (UUID, UUID) -> Bool
     let move: (UUID, Int) -> Bool
+    private let indexedBlocks: [(offset: Int, element: ImageTranslationBlock)]
 
     @State private var selectedBlockID: UUID?
     @State private var selectedMergeBlockIDs: Set<UUID> = []
@@ -29,6 +30,7 @@ struct ImageOCRBlockStructureEditor: View {
         self.split = split
         self.merge = merge
         self.move = move
+        indexedBlocks = Array(blocks.enumerated())
         _selectedBlockID = State(initialValue: blocks.first?.id)
     }
 
@@ -40,7 +42,7 @@ struct ImageOCRBlockStructureEditor: View {
                         Text("当前没有可编辑的文字块")
                             .foregroundStyle(Color.appTextSecondary)
                     } else {
-                        ForEach(blocks.enumerated(), id: \.element.id) { index, block in
+                        ForEach(indexedBlocks, id: \.element.id) { index, block in
                             Button {
                                 selectedBlockID = block.id
                             } label: {
@@ -83,7 +85,7 @@ struct ImageOCRBlockStructureEditor: View {
                 }
 
                 Section("调整阅读顺序") {
-                    ForEach(blocks.enumerated(), id: \.element.id) { index, block in
+                    ForEach(indexedBlocks, id: \.element.id) { index, block in
                         HStack(spacing: AppTheme.Spacing.control) {
                             Text("\(index + 1)")
                                 .font(.caption.monospacedDigit().bold())
@@ -126,7 +128,7 @@ struct ImageOCRBlockStructureEditor: View {
                 }
 
                 Section("合并相邻文字块") {
-                    ForEach(blocks.enumerated(), id: \.element.id) { index, block in
+                    ForEach(indexedBlocks, id: \.element.id) { index, block in
                         Button {
                             toggleMergeSelection(block.id)
                         } label: {

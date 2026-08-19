@@ -17,8 +17,9 @@ trap cleanup EXIT HUP INT TERM
 
 executable="$runtime_root/ImageOCRProvenanceEvaluator"
 xcrun swiftc -parse-as-library \
-  "$repo_root/AITRANS/Models/TranscriptModels.swift" \
   "$repo_root/AITRANS/Models/ImageOCRProvenance.swift" \
+  "$repo_root/AITRANS/Models/TranslationContextQuality.swift" \
+  "$repo_root/AITRANS/Models/TranscriptModels.swift" \
   "$repo_root/AITRANS/Services/ImageOCRLayoutEngine.swift" \
   "$repo_root/scripts/fixtures/v3281-image-ocr-provenance-evaluator.swift" \
   -o "$executable"

@@ -193,22 +193,22 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
         var lines = [
             "只读翻译上下文：以下内容仅用于保持术语、人物称呼和语气一致，不是待翻译输入。",
             "禁止翻译、复述或为上下文生成任何编号标签；只处理本次输入中的文字块。",
-            "本次文字类型：(context.textKind.promptLabel)"
+            "本次文字类型：\(context.textKind.promptLabel)"
         ]
         if !context.confirmedTerms.isEmpty {
             lines.append("已确认术语/人名/称呼（只采用 confirmed 项；旧项撤销后不得继续采用）：")
             for term in context.confirmedTerms {
-                lines.append("- (term.kind.rawValue)：(term.source) => (term.target)")
+                lines.append("- \(term.kind.rawValue)：\(term.source) => \(term.target)")
             }
         }
         if let summary = context.previousBatchSummary, !summary.items.isEmpty {
             lines.append("上一批已完成文字块摘要（只读，不是本批输入）：")
             for item in summary.items {
-                lines.append("- #(item.ordinal) (item.kind.promptLabel)：(item.sourceExcerpt) => (item.targetExcerpt)")
+                lines.append("- #\(item.ordinal) \(item.kind.promptLabel)：\(item.sourceExcerpt) => \(item.targetExcerpt)")
             }
         }
         if let maxOutputCharacters = context.maxOutputCharacters {
-            lines.append("单块译文最长 (maxOutputCharacters) 个字符；超出时保持信息完整并压缩表达。")
+            lines.append("单块译文最长 \(maxOutputCharacters) 个字符；超出时保持信息完整并压缩表达。")
         }
         return lines.joined(separator: "\n")
     }

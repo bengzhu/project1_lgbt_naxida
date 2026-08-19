@@ -28,6 +28,9 @@ class KoharuGeometryCoverageContractTests(unittest.TestCase):
                 [
                     "xcrun", "--sdk", "macosx", "swiftc",
                     "-module-cache-path", str(Path(temporary_directory) / "module-cache"),
+                    "AITRANS/Models/ImageOCRProvenance.swift",
+                    "AITRANS/Services/ImageOCRLayoutEngine.swift",
+                    "AITRANS/Models/TranslationContextQuality.swift",
                     "AITRANS/Models/TranscriptModels.swift",
                     "scripts/test-v201-koharu-geometry-coverage-evaluator.swift",
                     "-o", str(executable),

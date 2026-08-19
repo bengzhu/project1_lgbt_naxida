@@ -142,6 +142,10 @@ class ImageTranslationRenderSafetyContractTests(unittest.TestCase):
             "xcrun swiftc",
             "v3290-image-translation-render-safety-evaluator.swift",
             "ImageTranslationRenderSafety.swift",
+            "ImageOCRProvenance.swift",
+            "ImageOCRLayoutEngine.swift",
+            "TranslationContextQuality.swift",
+            "TranscriptModels.swift",
         ):
             self.assertIn(marker, self.runtime)
 

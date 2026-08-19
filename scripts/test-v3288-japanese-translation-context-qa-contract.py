@@ -168,8 +168,19 @@ class TranslationContextQAContractTests(unittest.TestCase):
         for marker in (
             "只读翻译上下文",
             "禁止翻译、复述或为上下文生成任何编号标签",
+            r'"本次文字类型：\(context.textKind.promptLabel)"',
+            r'"- \(term.kind.rawValue)：\(term.source) => \(term.target)"',
+            r'"- #\(item.ordinal) \(item.kind.promptLabel)：\(item.sourceExcerpt) => \(item.targetExcerpt)"',
+            r'"单块译文最长 \(maxOutputCharacters) 个字符；超出时保持信息完整并压缩表达。"',
         ):
             self.assertIn(marker, self.context_source)
+        for forbidden in (
+            "本次文字类型：(context.textKind.promptLabel)",
+            "- (term.kind.rawValue)：(term.source) => (term.target)",
+            "- #(item.ordinal) (item.kind.promptLabel)：(item.sourceExcerpt) => (item.targetExcerpt)",
+            "单块译文最长 (maxOutputCharacters) 个字符",
+        ):
+            self.assertNotIn(forbidden, self.context_source)
         for marker in (
             "@Published var translationTermMemory",
             "func upsertTranslationTerm(",
@@ -182,6 +193,23 @@ class TranslationContextQAContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.store)
         self.assertNotIn("recognizeTextBlocks(in: data", self.store[self.store.index("private func translateJapaneseImageBatch("):self.store.index("private static func imageTranslationBatches(")])
+
+    def test_standalone_transcript_model_evaluators_include_dependency_closure(self) -> None:
+        evaluator_sources = (
+            "scripts/test-v200-koharu-shadow-coverage-contract.py",
+            "scripts/test-v201-koharu-geometry-coverage-contract.py",
+            "scripts/test-v3242-image-japanese-vertical-punctuation-contract.py",
+            "scripts/test-v3243-image-japanese-direction-override-contract.py",
+            "scripts/test-v367-image-block-geometry-safety-contract.py",
+            "scripts/test-v3281-image-ocr-provenance-runtime.sh",
+            "scripts/test-v3290-image-translation-render-safety-runtime.sh",
+        )
+        for relative in evaluator_sources:
+            source = read(relative)
+            self.assertIn("TranscriptModels.swift", source, relative)
+            self.assertIn("ImageOCRProvenance.swift", source, relative)
+            self.assertIn("ImageOCRLayoutEngine.swift", source, relative)
+            self.assertIn("TranslationContextQuality.swift", source, relative)
 
     def test_workflow_project_route_and_contract_are_explicit(self) -> None:
         for marker in (
