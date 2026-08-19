@@ -129,6 +129,12 @@ class KoharuVerticalQuadWarpContractTests(unittest.TestCase):
         self.assertIn(f"python3 -B {contract}", self.workflow)
         self.assertIn(f"bash {runtime}", self.workflow)
         self.assertIn("v3264-koharu-vertical-quad-warp-harness.swift", self.runtime)
+        self.assertIn("AITRANS/Models/ImageOCRProvenance.swift", self.runtime)
+        self.assertIn("AITRANS/Services/ImageOCRLayoutEngine.swift", self.runtime)
+        self.assertLess(
+            self.runtime.index("AITRANS/Models/ImageOCRProvenance.swift"),
+            self.runtime.index("AITRANS/Services/MangaOCRService.swift"),
+        )
         self.assertIn("projective+bilinear", self.runtime)
 
     def test_version_is_3264(self) -> None:
