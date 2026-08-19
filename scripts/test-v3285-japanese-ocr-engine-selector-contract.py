@@ -47,6 +47,7 @@ class JapaneseOCREngineSelectorContractTests(unittest.TestCase):
         cls.protocol_readme = read("benchmarks/japanese_ocr/engine_selector/README.md")
         cls.shell = read("scripts/run-japanese-ocr-engine-selector-cloud-smoke.sh")
         cls.runtime_shell = read("scripts/test-v3285-image-ocr-selector-policy-runtime.sh")
+        cls.fixture = read("scripts/fixtures/v3285-image-ocr-selector-policy-evaluator.swift")
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
@@ -218,6 +219,10 @@ class JapaneseOCREngineSelectorContractTests(unittest.TestCase):
         evaluator_source = read("scripts/evaluate-japanese-ocr-engine-selector.py")
         self.assertNotIn("AITRANS/", evaluator_source)
         self.assertIn("xcrun swiftc", self.runtime_shell)
+        self.assertIn("let encodedPolicy = try JSONEncoder().encode(policy)", self.fixture)
+        self.assertIn("let decodedPolicy = try JSONDecoder().decode(", self.fixture)
+        self.assertIn("precondition(decodedPolicy == policy)", self.fixture)
+        self.assertNotIn("precondition(try JSONDecoder().decode(", self.fixture)
         runtime_sources = (
             "AITRANS/Models/ImageOCRProvenance.swift",
             "AITRANS/Services/ImageOCRLayoutEngine.swift",

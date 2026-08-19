@@ -18,6 +18,8 @@
 
 第六个强制 UI evidence full [32272593193](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32272593193) 的 Koharu MIT48 parity `96132362772`、benchmark `96132363000`、Xcode 与 UI evidence 均成功，但 UI interaction contract 仍失败；主 job `96134348013` 的 JUnit 为 `10` 项 `1` 失败。失败已收敛到 v3.285 standalone selector runtime 只编译 `ImageOCRProvenance.swift`，遗漏其 `ImageOCRCandidate.rect` 所需的 `ImageOCRLayoutRect`；本修复为 runtime 补入 `ImageOCRLayoutEngine.swift`，并由 v3.285 合同锁定 `provenance -> layout -> fixture` 的最小 dependency closure，同时禁止带入 `TranscriptModels.swift`。该 run 仍不是成功 receipt，下一 exact-SHA full 必须重新验收 UI interaction、Xcode、JUnit `10/10` 与 `AITRANS CI/full-validation=success`。
 
+第七个 exact-SHA full [32277233442](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32277233442) 的 Koharu parity `96147655198`、benchmark `96147654855`、UI interaction 其余合同、Xcode 与 UI evidence 均完成，但 UI interaction contract 的 v3.285 Swift evaluator 在 `precondition(try JSONEncoder/JSONDecoder...)` 处触发 non-throwing autoclosure 编译错误；主 job `96149631229` 因此 JUnit `10` 项 `1` 失败并未发布成功 receipt。当前修复把 throwing encode/decode 提前为局部变量，再对 decoded value 做 `precondition`，并由 v3.285 合同锁定该边界。
+
 真实 BubbleMask/SegmentMask、授权语料、目标设备测量和成品盲评仍缺失；本版只建立风险提示协议，不声称 mask、inpainting、OCR/CER、翻译质量、Koharu parity 或 holdout 改善。未新增 metrics/version_history 条目，下一步仍需先取得真实外部 artifact/corpus/device evidence。
 
 ## v3.289：图片复查、会话快照与结构 mutation 边界（2026-08-19）

@@ -6,10 +6,12 @@ struct ImageOCRSelectorPolicyEvaluator {
         let policy = ImageOCRSelectorPolicy()
         precondition(policy.featureFlagEnabled == false)
         precondition(policy.isFailClosed)
-        precondition(try JSONDecoder().decode(
+        let encodedPolicy = try JSONEncoder().encode(policy)
+        let decodedPolicy = try JSONDecoder().decode(
             ImageOCRSelectorPolicy.self,
-            from: JSONEncoder().encode(policy)
-        ) == policy)
+            from: encodedPolicy
+        )
+        precondition(decodedPolicy == policy)
 
         let baseline = ImageOCRSelectorEngineSignal(
             engineID: "bundled-manga-ocr",
