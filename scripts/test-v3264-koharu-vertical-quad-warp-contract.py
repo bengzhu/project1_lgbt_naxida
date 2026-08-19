@@ -130,7 +130,11 @@ class KoharuVerticalQuadWarpContractTests(unittest.TestCase):
         self.assertIn(f"bash {runtime}", self.workflow)
         self.assertIn("v3264-koharu-vertical-quad-warp-harness.swift", self.runtime)
         self.assertIn("AITRANS/Models/ImageOCRProvenance.swift", self.runtime)
-        self.assertIn("AITRANS/Services/ImageOCRLayoutEngine.swift", self.runtime)
+        self.assertNotIn("AITRANS/Services/ImageOCRLayoutEngine.swift", self.runtime)
+        self.assertIn(
+            "struct ImageOCRLayoutRect: Equatable, Codable, Sendable",
+            self.harness,
+        )
         self.assertLess(
             self.runtime.index("AITRANS/Models/ImageOCRProvenance.swift"),
             self.runtime.index("AITRANS/Services/MangaOCRService.swift"),

@@ -6,7 +6,7 @@ struct ImageOCRLayoutPoint: Equatable, Sendable {
     var y: Double
 }
 
-struct ImageOCRLayoutRect: Equatable, Sendable {
+struct ImageOCRLayoutRect: Equatable, Codable, Sendable {
     var x: Double
     var y: Double
     var width: Double

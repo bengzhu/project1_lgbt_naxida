@@ -10,7 +10,9 @@
 
 第二个候选 `593d3ac63517e840da40d9a223ede414cf6be075` 的 CI [32261112799](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32261112799) 中 benchmark job `96094333122` 成功，首轮 `EnumeratedSequence` availability 错误已消失，但 main job `96094457578` 仍为 JUnit `7/10`。artifact 暴露出 v3.288 中两个此前被遮住的编译错误：out-of-order QA 的 `guard` mismatch body 缺少 `continue`，以及多语句 `makeRequest` 缺少显式 `return`。两处已修复并加合同；standalone evaluator 统一使用 `-parse-as-library`，v200/v201/v367 也会在编译失败时输出完整 Swift stderr。该 run 不作为成功 receipt，后续 exact-SHA full 仍是验收门。
 
-第三个候选 `17a66debc694f4435cc17cf74dfd23cb14660fd1` 的 CI [32263359545](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32263359545) 已达到 benchmark/static/Xcode success，JUnit `9/10`，仅 UI interaction contract 失败。原因是历史 v3.264 quad-warp runtime 单独编译 `MangaOCRService.swift` 时漏带 v3.281 的 `ImageOCRProvenance.swift` 与 `ImageOCRLayoutEngine.swift`；其余直接编译 Manga OCR 的 runtime 均已有这两个输入。现已只补齐该 runtime dependency closure 并加合同，不改 warp 算法、checksum 或产品路径；该 run 仍不作为 full receipt。
+第三个候选 `17a66debc694f4435cc17cf74dfd23cb14660fd1` 的 CI [32263359545](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32263359545) 已达到 benchmark/static/Xcode success，JUnit `9/10`，仅 UI interaction contract 失败。原因是历史 v3.264 quad-warp runtime 单独编译 `MangaOCRService.swift` 时漏带 v3.281 的 provenance ID/enum 类型；其余直接编译 Manga OCR 的 runtime 均已有 provenance 输入。该 run 仍不作为 full receipt。
+
+第四个候选 `07daa0c75821ee847c8b4d5d2a0034963fa0117a` 的 CI [32266041339](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32266041339) 仍为 JUnit `9/10`：首次修复同时编译完整 layout engine 与 v3.264 harness 自有的轻量 `ImageOCRLayoutRect`，产生同名歧义。最终 runtime 只加入 `ImageOCRProvenance.swift`，harness rect 增加 `Codable` 以闭合 provenance candidate conformance，并由合同禁止引入完整 layout engine；warp 算法、checksum 和产品代码不变。
 
 真实 BubbleMask/SegmentMask、授权语料、目标设备测量和成品盲评仍缺失；本版只建立风险提示协议，不声称 mask、inpainting、OCR/CER、翻译质量、Koharu parity 或 holdout 改善。未新增 metrics/version_history 条目，下一步仍需先取得真实外部 artifact/corpus/device evidence。
 
