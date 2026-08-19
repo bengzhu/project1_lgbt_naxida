@@ -10,6 +10,8 @@ exact-SHA full [32289021728](https://github.com/bengzhu/project1_lgbt_naxida/act
 
 文档 receipt SHA `4ced9fe203410aa7ea7906f58640dce9f1172859` 的 exact-SHA full [32292249313](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32292249313) 成功：Koharu parity `96195515343`、Japanese benchmark/readiness `96195515791`、主 full `96197364348` 全部成功，JUnit `10/10` 与 `AITRANS CI/full-validation=success` receipt 通过；仅文档变更使 Xcode、UI interaction/UI evidence、simulator/manga probe 按 scope skip。新 readiness report 仍为 `blocked`，BubbleMask/SegmentMask、授权语料和 target-device evidence 缺失，`productPathEnabled=false`、`productSelectionChanged=false`、`groundTruthUsedForDecision=false`；v3.291 未合入 `smalldata_test`。
 
+随后 PR [#361](https://github.com/bengzhu/project1_lgbt_naxida/pull/361) 以 merge SHA `dbec9488763153c609d3f192657c9473b464575f` 合入 `smalldata_test`；合入后 push CI [32293394134](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32293394134) 的 benchmark 与主 bundle 全部成功，JUnit `10/10`、`AITRANS CI/full-validation=success` receipt 通过。v3.290 实现/receipt `c1409695` 位于该目标分支父链中；readiness 仍为 `blocked`，真实 mask artifact、授权语料、target-device evidence 和 holdout 仍待外部提供。
+
 ## v3.290：矩形 overlay 渲染安全预检（2026-08-19）
 
 本版只增加导出前的 report-only 几何预检：已完成图片会话的 `adjacent`/`replace` 矩形 overlay 检查无效 bbox、空文字、旁贴裁切、旁贴覆盖原块、源块重叠和跨块碰撞，并在结果面板以 VoiceOver 可读的 warning 暴露风险。`ImageTranslationRenderSafety.Report` 明确记录 `reportOnly=true`、`groundTruthUsedForDecision=false`，不改变 OCR、翻译、候选选择、持久化、复查状态或现有 renderer/export。
