@@ -1,4 +1,6 @@
 # 项目流程图
+v3.300 混合文字块序号对齐：`OCR/layout blocks -> bounded batch -> global block ordinal + read-only kind metadata -> tagged translation -> QA/retry`；第二批 `[9]` 等标签对应“第 9 块”提示，metadata 不进入输入/输出标签或持久化。
+
 v3.299 混合文字块提示：`OCR/layout blocks -> bounded batch -> ordered read-only kind metadata -> tagged translation -> QA/retry`；类型提示不进入 `[N]` 输入标签、OCR/layout 或持久化。
 
 v3.298 翻译多行保真：`raw output -> metadata-line filtering -> newline-preserving candidate -> existing validation/QA`；不再用 `last line` 截断合法对白，明确提示/表格元信息仍被移除。

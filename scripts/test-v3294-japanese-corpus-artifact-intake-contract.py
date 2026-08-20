@@ -341,14 +341,14 @@ class JapaneseCorpusArtifactIntakeContractTests(unittest.TestCase):
             "predictionCount does not match",
             "v3.294",
             "test-v3294-japanese-corpus-artifact-intake-contract.py",
-            "japanese-benchmark-v3.299-",
+            "japanese-benchmark-v3.300-",
         ):
             self.assertIn(marker, self.source + self.wrapper + self.workflow + self.route + self.update_log + self.test_log)
         self.assertNotIn("subprocess", self.source)
         self.assertNotIn("MangaOverlayProbeService", self.source)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.299", "3.299"],
+            ["3.300", "3.300"],
         )
 
 

@@ -1,3 +1,11 @@
+## v3.300：混合文字块提示与全局标签序号对齐（2026-08-20）
+
+v3.299 已按 batch 顺序传递对白、旁白、拟声词和标题提示，但第二批输入的标签会从 `[9]` 开始，提示仍从“第 1 块”计数，存在类型提示与实际 tagged block 错配的风险。本轮让 `TranslationPromptContext` 传递有界的 `batchStartIndex`，混合类型提示按真实全局 block 序号生成；例如标签 `[9]` 对应“第 9 块”，仍明确是只读 metadata，不是待翻译输入或输出标签。
+
+`batchTextKinds` 仍最多 8 项；tag 顺序与完整性、8 blocks/1,800 字符、QA/fallback、取消、OCR/layout、结果与持久化边界不变。新增 `scripts/test-v3300-japanese-translation-kind-index-contract.py`，工程版本为 `3.300`。本轮只修正 prompt metadata 的 block 对齐，不声称真实 OCR/CER、翻译质量、盲评或目标设备证据。
+
+本轮本地安全回归：v3.299 合同 `6/6`、v3.300 合同 `6/6`；`299` 个无进程入口合同共 `1,493` 个测试通过，`27` 个实际含 `subprocess` 入口的历史合同按约束跳过；`346` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist 与 `project.pbxproj` 版本条目及 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；真实模型、授权语料、目标设备证据、翻译盲评和 holdout 仍未由本轮本地检查证明。
+
 ## v3.299：混合文字块逐块翻译语气提示（2026-08-20）
 
 普通图片日语 batch 过去只把第一块的 `textKind` 放入 `TranslationPromptContext`，同一批混有旁白、拟声词或标题时，后续块会得到错误的统一语气提示。本轮新增有界 `batchTextKinds`，按输入顺序把每个 block 的类型作为只读 prompt metadata 传入；只有类型确实混合时才显示逐块提示，避免单类型 batch 产生额外噪声。

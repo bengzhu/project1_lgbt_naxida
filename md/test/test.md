@@ -1,3 +1,9 @@
+### v3.300 混合文字块提示全局序号合同
+
+- 第二批标签从 `[9]` 开始时，类型提示同步使用“第 9 块”等全局序号；类型 metadata 仍只读，不成为待翻译输入或输出标签。
+- `batchTextKinds` 最多 8 项；tag 顺序、8 blocks/1,800 字符、QA/fallback、取消、OCR/layout、结果和持久化边界保持。
+- 新合同：`scripts/test-v3300-japanese-translation-kind-index-contract.py`；工程版本为 `3.300`。仅证明 block ordinal 对齐，不声称真实 OCR/CER、翻译盲评或设备证据。
+
 ### v3.299 混合文字块逐块翻译语气提示合同
 
 - 图片日语 batch 逐块传递 `textKind`；混合类型时 prompt 只读显示按顺序的“第 N 块”提示，单类型 batch 保留原有提示。

@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+当前 v3.300 日语图片翻译流程：`OCR/layout blocks -> bounded batch -> global-ordinal read-only kind hints -> strict tagged translation -> per-block QA/retry`。类型提示与跨 batch 的 `[N]` 输入序号对齐，不进入待翻译文本、输出标签、OCR/layout、持久化或取消边界。
+
 当前 v3.299 日语图片翻译流程：`OCR/layout blocks -> bounded batch -> read-only per-block text-kind hints -> strict tagged translation -> per-block QA/retry`。混合 batch 只把对应 block 的对白/旁白/拟声词/标题提示给模型，不改变输入标签、OCR、布局、持久化或取消边界。
 
 当前 v3.298 日语图片翻译输出流程：`raw model output -> remove explicit prompt metadata -> preserve all remaining lines -> shared validation/QA -> accept or fail closed`。标准 Local translation 不再只取最后一行；合法多行对白和普通 bullet 行保持原顺序，拒答/泄漏/目标语言等既有质量门仍生效。

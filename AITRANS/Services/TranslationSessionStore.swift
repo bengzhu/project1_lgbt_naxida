@@ -1326,7 +1326,8 @@ final class TranslationSessionStore: ObservableObject {
                         confirmedTerms: translationTermMemory,
                         previousBatchSummary: previousBatchSummary,
                         textKind: batchTextKinds.first ?? .dialogue,
-                        batchTextKinds: batchTextKinds
+                        batchTextKinds: batchTextKinds,
+                        batchStartIndex: batch.startIndex
                     )
                 )
                 guard translations.count == batch.blocks.count else {

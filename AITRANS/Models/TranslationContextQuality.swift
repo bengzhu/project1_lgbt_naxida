@@ -114,13 +114,18 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
     /// These are prompt metadata only; they never become pending input or
     /// persisted block content.
     var batchTextKinds: [TranslationTextKind]
+    /// Zero-based start offset for the tagged image batch. When present, the
+    /// mixed-kind prompt can use the same global block ordinals as `[N]` input
+    /// tags without making those metadata lines part of the input.
+    var batchStartIndex: Int?
 
     static let empty = TranslationPromptContext(
         confirmedTerms: [],
         previousBatchSummary: nil,
         textKind: .dialogue,
         maxOutputCharacters: nil,
-        batchTextKinds: []
+        batchTextKinds: [],
+        batchStartIndex: nil
     )
 
     init(
@@ -128,13 +133,15 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
         previousBatchSummary: TranslationReadOnlyBatchSummary? = nil,
         textKind: TranslationTextKind = .dialogue,
         maxOutputCharacters: Int? = nil,
-        batchTextKinds: [TranslationTextKind] = []
+        batchTextKinds: [TranslationTextKind] = [],
+        batchStartIndex: Int? = nil
     ) {
         self.confirmedTerms = confirmedTerms
         self.previousBatchSummary = previousBatchSummary
         self.textKind = textKind
         self.maxOutputCharacters = maxOutputCharacters
         self.batchTextKinds = batchTextKinds
+        self.batchStartIndex = batchStartIndex
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -143,6 +150,7 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
         case textKind
         case maxOutputCharacters
         case batchTextKinds
+        case batchStartIndex
     }
 
     init(from decoder: Decoder) throws {
@@ -168,6 +176,10 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
             [TranslationTextKind].self,
             forKey: .batchTextKinds
         ) ?? []
+        batchStartIndex = try container.decodeIfPresent(
+            Int.self,
+            forKey: .batchStartIndex
+        )
     }
 
     var isEmpty: Bool {
@@ -176,6 +188,7 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
             && maxOutputCharacters == nil
             && textKind == .dialogue
             && batchTextKinds.isEmpty
+            && batchStartIndex == nil
     }
 
     func normalized(
@@ -224,7 +237,8 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
             previousBatchSummary: summary,
             textKind: textKind,
             maxOutputCharacters: maxOutputCharacters,
-            batchTextKinds: Array(batchTextKinds.prefix(8))
+            batchTextKinds: Array(batchTextKinds.prefix(8)),
+            batchStartIndex: batchStartIndex.map { max($0, 0) }
         )
     }
 
@@ -239,7 +253,8 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
         if Set(context.batchTextKinds).count > 1 {
             lines.append("本批包含多种文字类型；按输入顺序使用以下提示调整语气（提示不是待翻译输入）：")
             for (index, kind) in context.batchTextKinds.enumerated() {
-                lines.append("第\(index + 1)块：\(kind.promptLabel)")
+                let ordinal = (context.batchStartIndex ?? 0) + index + 1
+                lines.append("第\(ordinal)块：\(kind.promptLabel)")
             }
         } else {
             lines.append("本次文字类型：\(context.textKind.promptLabel)")
