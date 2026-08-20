@@ -267,6 +267,8 @@ struct VisionOCRService: Sendable {
                         ocrProvenance: block.provenance
                     )
                     if sourceLanguage == .japanese {
+                        // Apply the conservative hint after layout; it is
+                        // metadata only and never changes OCR geometry/order.
                         imageBlock.textKind = TranslationTextKindClassifier.inferJapaneseKind(
                             text: imageBlock.original,
                             boundingBox: imageBlock.boundingBox
