@@ -1,3 +1,9 @@
+### v3.299 混合文字块逐块翻译语气提示合同
+
+- 图片日语 batch 逐块传递 `textKind`；混合类型时 prompt 只读显示按顺序的“第 N 块”提示，单类型 batch 保留原有提示。
+- `batchTextKinds` 最多 8 项，不进入待翻译输入、`[N]` 标签、OCR/layout、结果或持久化；现有严格 tag/QA、失败块重试、取消和 8 blocks/1,800 字符边界保持。
+- 新合同：`scripts/test-v3299-japanese-translation-kind-context-contract.py`；工程版本为 `3.299`。仅证明 prompt metadata 与产品边界，不声称真实 OCR/CER、翻译盲评或设备证据。
+
 ### v3.298 普通翻译多行输出保真合同
 
 - `GemmaLocalService.cleanTranslationOutput` 保留所有清洗后的译文行并以换行连接，不再只取 `lines.last`；普通 `- ` 对白行保留，明确 prompt/instruction bullet 和表格元信息继续移除。

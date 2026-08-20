@@ -1,6 +1,6 @@
 import Foundation
 
-enum TranslationTextKind: String, Codable, Sendable {
+enum TranslationTextKind: String, Codable, Sendable, Hashable {
     case dialogue
     case narration
     case sfx
@@ -110,24 +110,64 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
     var previousBatchSummary: TranslationReadOnlyBatchSummary?
     var textKind: TranslationTextKind
     var maxOutputCharacters: Int?
+    /// Optional per-block style hints for a mixed image translation batch.
+    /// These are prompt metadata only; they never become pending input or
+    /// persisted block content.
+    var batchTextKinds: [TranslationTextKind]
 
     static let empty = TranslationPromptContext(
         confirmedTerms: [],
         previousBatchSummary: nil,
         textKind: .dialogue,
-        maxOutputCharacters: nil
+        maxOutputCharacters: nil,
+        batchTextKinds: []
     )
 
     init(
         confirmedTerms: [TranslationTermMemoryEntry] = [],
         previousBatchSummary: TranslationReadOnlyBatchSummary? = nil,
         textKind: TranslationTextKind = .dialogue,
-        maxOutputCharacters: Int? = nil
+        maxOutputCharacters: Int? = nil,
+        batchTextKinds: [TranslationTextKind] = []
     ) {
         self.confirmedTerms = confirmedTerms
         self.previousBatchSummary = previousBatchSummary
         self.textKind = textKind
         self.maxOutputCharacters = maxOutputCharacters
+        self.batchTextKinds = batchTextKinds
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case confirmedTerms
+        case previousBatchSummary
+        case textKind
+        case maxOutputCharacters
+        case batchTextKinds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        confirmedTerms = try container.decode(
+            [TranslationTermMemoryEntry].self,
+            forKey: .confirmedTerms
+        )
+        previousBatchSummary = try container.decodeIfPresent(
+            TranslationReadOnlyBatchSummary.self,
+            forKey: .previousBatchSummary
+        )
+        textKind = try container.decode(
+            TranslationTextKind.self,
+            forKey: .textKind
+        )
+        maxOutputCharacters = try container.decodeIfPresent(
+            Int.self,
+            forKey: .maxOutputCharacters
+        )
+        // Older transient context payloads predate v3.299.
+        batchTextKinds = try container.decodeIfPresent(
+            [TranslationTextKind].self,
+            forKey: .batchTextKinds
+        ) ?? []
     }
 
     var isEmpty: Bool {
@@ -135,6 +175,7 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
             && previousBatchSummary == nil
             && maxOutputCharacters == nil
             && textKind == .dialogue
+            && batchTextKinds.isEmpty
     }
 
     func normalized(
@@ -182,7 +223,8 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
             confirmedTerms: Array(terms),
             previousBatchSummary: summary,
             textKind: textKind,
-            maxOutputCharacters: maxOutputCharacters
+            maxOutputCharacters: maxOutputCharacters,
+            batchTextKinds: Array(batchTextKinds.prefix(8))
         )
     }
 
@@ -192,9 +234,16 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
 
         var lines = [
             "只读翻译上下文：以下内容仅用于保持术语、人物称呼和语气一致，不是待翻译输入。",
-            "禁止翻译、复述或为上下文生成任何编号标签；只处理本次输入中的文字块。",
-            "本次文字类型：\(context.textKind.promptLabel)"
+            "禁止翻译、复述或为上下文生成任何编号标签；只处理本次输入中的文字块。"
         ]
+        if Set(context.batchTextKinds).count > 1 {
+            lines.append("本批包含多种文字类型；按输入顺序使用以下提示调整语气（提示不是待翻译输入）：")
+            for (index, kind) in context.batchTextKinds.enumerated() {
+                lines.append("第\(index + 1)块：\(kind.promptLabel)")
+            }
+        } else {
+            lines.append("本次文字类型：\(context.textKind.promptLabel)")
+        }
         if !context.confirmedTerms.isEmpty {
             lines.append("已确认术语/人名/称呼（只采用 confirmed 项；旧项撤销后不得继续采用）：")
             for term in context.confirmedTerms {

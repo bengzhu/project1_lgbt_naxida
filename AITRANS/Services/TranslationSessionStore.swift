@@ -1316,6 +1316,7 @@ final class TranslationSessionStore: ObservableObject {
             for batch in batches {
                 try Task.checkCancellation()
                 guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
+                let batchTextKinds = batch.blocks.map { $0.textKind ?? .dialogue }
                 let translations = try await translateJapaneseImageBatch(
                     batch.blocks,
                     startIndex: batch.startIndex,
@@ -1324,7 +1325,8 @@ final class TranslationSessionStore: ObservableObject {
                     translationContext: TranslationPromptContext(
                         confirmedTerms: translationTermMemory,
                         previousBatchSummary: previousBatchSummary,
-                        textKind: batch.blocks.first?.textKind ?? .dialogue
+                        textKind: batchTextKinds.first ?? .dialogue,
+                        batchTextKinds: batchTextKinds
                     )
                 )
                 guard translations.count == batch.blocks.count else {

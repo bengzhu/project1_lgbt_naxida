@@ -1,4 +1,6 @@
 # 项目流程图
+v3.299 混合文字块提示：`OCR/layout blocks -> bounded batch -> ordered read-only kind metadata -> tagged translation -> QA/retry`；类型提示不进入 `[N]` 输入标签、OCR/layout 或持久化。
+
 v3.298 翻译多行保真：`raw output -> metadata-line filtering -> newline-preserving candidate -> existing validation/QA`；不再用 `last line` 截断合法对白，明确提示/表格元信息仍被移除。
 
 v3.297 翻译输出策略：`raw model output -> shared explicit-refusal/meta-only classifier -> existing batch/single-block QA -> accept/reject`；不再用宽泛 substring 把合法对白误判为占位答复，真实拒答仍 fail closed。

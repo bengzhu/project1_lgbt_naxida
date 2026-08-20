@@ -164,12 +164,12 @@ class JapaneseCorpusMatrixIntegrityContractTests(unittest.TestCase):
             "holdoutUsedForProductSelection",
             "split page counts do not cover",
             "scripts/test-v3293-japanese-corpus-matrix-integrity-contract.py",
-            "japanese-benchmark-v3.298-",
+            "japanese-benchmark-v3.299-",
             "v3.293",
             "canonical four-engine dev matrix",
         ):
             self.assertIn(marker, self.source + self.workflow + self.route + self.update_log + self.test_log)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.298", "3.298"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.299", "3.299"])
 
 
 if __name__ == "__main__":

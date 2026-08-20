@@ -1,3 +1,11 @@
+## v3.299：混合文字块逐块翻译语气提示（2026-08-20）
+
+普通图片日语 batch 过去只把第一块的 `textKind` 放入 `TranslationPromptContext`，同一批混有旁白、拟声词或标题时，后续块会得到错误的统一语气提示。本轮新增有界 `batchTextKinds`，按输入顺序把每个 block 的类型作为只读 prompt metadata 传入；只有类型确实混合时才显示逐块提示，避免单类型 batch 产生额外噪声。
+
+类型 metadata 不进入待翻译文本、`[N]` 标签、OCR/layout、翻译结果或持久化；严格 tag/QA、8 blocks/1,800 字符、失败块重试、取消、UI、renderer 与非日语路径不变。新增 `scripts/test-v3299-japanese-translation-kind-context-contract.py`，工程版本为 `3.299`。本轮只证明 prompt metadata 边界，不声称真实 OCR/CER、翻译质量、盲评或目标设备证据。
+
+本轮本地安全回归：v3.299 合同 `6/6`；`298` 个无进程入口合同共 `1,487` 个测试通过，`27` 个实际含 `subprocess` 入口的历史合同按约束跳过；`345` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist 与 `project.pbxproj` 版本条目及 `git diff --check` 通过。环境没有 `plutil`，plist 由 `plistlib` 校验；未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。真实 GGUF、授权语料、目标设备证据、翻译盲评和 v3.289 holdout 仍未由本轮本地检查证明。
+
 ## v3.298：普通翻译多行输出保真（2026-08-20，已完成实现与本地安全回归）
 
 在 v3.297 占位答复策略统一基础上继续修复普通日语图片翻译输出边界。审计发现标准 Local translation cleaner 会把清洗后的多行候选直接取最后一行，合法的两行对白或以 `- ` 开头的对白会被截断；这不是模型能力问题，而是候选归一化丢失内容。
