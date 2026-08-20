@@ -392,7 +392,8 @@ struct VisionOCRService: Sendable {
                             rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
                             verticalTextRegionOwner: result.verticalTextRegionOwner
                         ),
-                        selectionReason: selectionReason
+                        selectionReason: selectionReason,
+                        reconcileJapaneseTextKind: true
                     )
                 }
             } catch is CancellationError {
@@ -463,7 +464,8 @@ struct VisionOCRService: Sendable {
             text: text,
             confidence: best.confidence,
             candidateProvenance: best.candidateProvenance,
-            selectionReason: selectionReason
+            selectionReason: selectionReason,
+            reconcileJapaneseTextKind: japanese
         )
     }
 
@@ -596,7 +598,8 @@ struct VisionOCRService: Sendable {
         text: String,
         confidence: Float,
         candidateProvenance: ImageOCRCandidateProvenance,
-        selectionReason: ImageOCRSelectionReason = .scopedRerecognition
+        selectionReason: ImageOCRSelectionReason = .scopedRerecognition,
+        reconcileJapaneseTextKind: Bool = false
     ) -> ImageTranslationBlock {
         var recognized = block
         var retainedProvenance = candidateProvenance
@@ -614,6 +617,16 @@ struct VisionOCRService: Sendable {
             from: [retainedProvenance],
             selectionReason: selectionReason
         )
+        if reconcileJapaneseTextKind {
+            // The automatic crop/recovery result may change the text shape
+            // after the page-level hint was inferred. Reconcile only the
+            // conservative Japanese SFX hint; narration/title/dialogue stay
+            // caller-provided and ambiguous text remains nil.
+            recognized.textKind = TranslationTextKindClassifier.inferJapaneseKind(
+                text: recognized.original,
+                boundingBox: recognized.boundingBox
+            )
+        }
         return recognized
     }
 

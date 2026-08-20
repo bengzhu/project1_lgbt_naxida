@@ -2710,6 +2710,11 @@ final class TranslationSessionStore: ObservableObject {
                 replacement.original = recognizedOriginal
                 replacement.translation = cleanTranslation
                 replacement.confidence = recognized.confidence
+                // Scoped OCR can change the Japanese text shape. Carry the
+                // reconciled automatic SFX hint with the accepted OCR result;
+                // otherwise this block would still be translated with its
+                // stale pre-reread dialogue metadata.
+                replacement.textKind = recognized.textKind
                 applyEditedImageTranslationBoundingBox(
                     editedBoundingBox,
                     to: &replacement
