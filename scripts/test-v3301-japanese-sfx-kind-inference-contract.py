@@ -109,24 +109,58 @@ class JapaneseSFXKindInferenceContractTests(unittest.TestCase):
 
     def test_cloud_runtime_harness_receives_the_new_kind_dependency(self) -> None:
         self.assertIn("TranslationContextQuality.swift in Sources", self.project)
-        self.assertIn(
-            '"$repo_root/AITRANS/Models/TranslationContextQuality.swift"',
-            self.runtime,
+        runtime_harnesses = (
+            (
+                "scripts/test-v3214-image-japanese-manga-ocr-runtime.sh",
+                "scripts/fixtures/v3214-manga-ocr-runtime-harness.swift",
+            ),
+            (
+                "scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime.sh",
+                "scripts/fixtures/v3218-long-page-manga-ocr-runtime-harness.swift",
+            ),
+            (
+                "scripts/test-v3238-image-japanese-quad-bbox-fallback-runtime.sh",
+                "scripts/fixtures/v3238-manga-ocr-quad-bbox-fallback-runtime-harness.swift",
+            ),
+            (
+                "scripts/test-v3239-image-japanese-manga-ocr-bbox-primary-runtime.sh",
+                "scripts/fixtures/v3239-manga-ocr-bbox-primary-runtime-harness.swift",
+            ),
+            (
+                "scripts/test-v3245-image-japanese-directional-manga-ocr-crop-runtime.sh",
+                "scripts/fixtures/v3245-directional-manga-ocr-crop-runtime-harness.swift",
+            ),
+            (
+                "scripts/test-v3254-image-japanese-region-diagnostic-runtime.sh",
+                "scripts/fixtures/v3254-japanese-region-diagnostic-harness.swift",
+            ),
         )
-        self.assertIn(
-            "scripts/fixtures/v3214-manga-ocr-runtime-harness",
-            self.workflow,
-        )
-        for marker in (
+        harness_markers = (
             "enum SupportedLanguage: String, CaseIterable, Identifiable, Codable, Sendable",
             'case englishUS = "英语(美国)"',
             'case french = "法语"',
             'case german = "德语"',
             "var id: String { rawValue }",
-        ):
-            self.assertIn(marker, self.runtime_harness)
-        self.assertIn("func normalizedToUnit() -> Self?", self.runtime_harness)
-        self.assertIn("var textKind: TranslationTextKind? = nil", self.runtime_harness)
+            "func normalizedToUnit() -> Self?",
+            "var textKind: TranslationTextKind? = nil",
+        )
+        for runtime_path, harness_path in runtime_harnesses:
+            runtime = read(runtime_path)
+            harness = read(harness_path)
+            self.assertIn(
+                '"$repo_root/AITRANS/Models/TranslationContextQuality.swift"',
+                runtime,
+                runtime_path,
+            )
+            self.assertIn(harness_path.removesuffix(".swift"), runtime, runtime_path)
+            for marker in harness_markers:
+                self.assertIn(marker, harness, harness_path)
+            self.assertIn(runtime_path, self.workflow)
+            self.assertIn(
+                harness_path.removeprefix("scripts/fixtures/").removesuffix(".swift"),
+                self.workflow,
+                harness_path,
+            )
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         combined = self.workflow + self.route + self.flow + self.update_log + self.test_log
