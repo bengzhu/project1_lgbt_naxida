@@ -158,7 +158,7 @@ class KoharuBlockFallbackReplacementContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.300", "3.300"],
+            ["3.301", "3.301"],
         )
 
 

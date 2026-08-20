@@ -6596,8 +6596,9 @@ struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
     var sourceDirectionOverride: ImageTextDirection?
     var directionConfidence: Double?
     var directionReason: String?
-    /// Optional v3.288 translation style hint. OCR does not infer this by
-    /// default; callers may provide dialogue/narration/SFX/title metadata.
+    /// Optional v3.288/v3.301 translation style hint. New Japanese OCR blocks
+    /// infer only high-signal SFX; narration/title/dialogue remain caller
+    /// metadata so ambiguous geometry never changes translation style.
     var textKind: TranslationTextKind?
     /// Optional v3.281 OCR provenance. Older persisted image sessions decode
     /// with this field unset; the transient shadow ledger is never persisted.
@@ -6645,6 +6646,7 @@ struct ImageTranslationBlock: Identifiable, Equatable, Codable, Sendable {
             && lhs.sourceDirectionOverride == rhs.sourceDirectionOverride
             && lhs.directionConfidence == rhs.directionConfidence
             && lhs.directionReason == rhs.directionReason
+            && lhs.textKind == rhs.textKind
     }
 
     /// Keeps detector/Vision provenance intact while allowing a reviewer to

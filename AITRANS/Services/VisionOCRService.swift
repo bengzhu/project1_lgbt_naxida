@@ -252,7 +252,7 @@ struct VisionOCRService: Sendable {
                     allowsVerticalText: allowsVerticalText,
                     prefersMangaReadingOrder: sourceLanguage == .japanese
                 ).map { block in
-                    ImageTranslationBlock(
+                    var imageBlock = ImageTranslationBlock(
                         original: block.text,
                         confidence: block.confidence,
                         boundingBox: NormalizedImageRect(
@@ -266,6 +266,15 @@ struct VisionOCRService: Sendable {
                         directionReason: block.directionReason,
                         ocrProvenance: block.provenance
                     )
+                    if sourceLanguage == .japanese {
+                        // Apply the conservative hint after layout; it is
+                        // metadata only and never changes OCR geometry/order.
+                        imageBlock.textKind = TranslationTextKindClassifier.inferJapaneseKind(
+                            text: imageBlock.original,
+                            boundingBox: imageBlock.boundingBox
+                        )
+                    }
+                    return imageBlock
                 }
             }()
             let blocks = sourceLanguage == .japanese

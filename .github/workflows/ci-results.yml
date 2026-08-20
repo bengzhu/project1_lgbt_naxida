@@ -601,7 +601,7 @@ jobs:
           paste_matrix_contract_required=false
           koharu_contract_required=false
           workflow_changed=false
-          if grep -E '^(AITRANS/|AITRANS\.xcodeproj/|build-apple/|test/|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          if grep -E '^(AITRANS/|AITRANS\.xcodeproj/|build-apple/|test/|scripts/fixtures/v3214-manga-ocr-runtime-harness\.swift$|scripts/fixtures/v3218-long-page-manga-ocr-runtime-harness\.swift$|scripts/fixtures/v3238-manga-ocr-quad-bbox-fallback-runtime-harness\.swift$|scripts/fixtures/v3239-manga-ocr-bbox-primary-runtime-harness\.swift$|scripts/fixtures/v3245-directional-manga-ocr-crop-runtime-harness\.swift$|scripts/fixtures/v3254-japanese-region-diagnostic-harness\.swift$|scripts/test-v3214-image-japanese-manga-ocr-runtime\.sh$|scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime\.sh$|scripts/test-v3238-image-japanese-quad-bbox-fallback-runtime\.sh$|scripts/test-v3239-image-japanese-manga-ocr-bbox-primary-runtime\.sh$|scripts/test-v3245-image-japanese-directional-manga-ocr-crop-runtime\.sh$|scripts/test-v3254-image-japanese-region-diagnostic-runtime\.sh$|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             app_build_changed=true
           fi
           if grep -Fx '.github/workflows/ci-results.yml' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
@@ -610,7 +610,7 @@ jobs:
           if grep -E '^(AITRANS/Services/(TranslationSessionStore|SpeechQualityEvaluator|SpeechQualityProbeService)\.swift|AITRANS/Models/(TranscriptModels|SpeechQualityModels)\.swift|AITRANS/Views/(AudioTranslationView|ProViews|DeveloperConsoleView)\.swift|scripts/(test-speech-recognition-contract|test-speech-quality-contract|test-speech-quality-evaluator)\.(py|swift)|scripts/validate-speech-corpus\.py|test/speech_corpus/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             speech_contract_required=true
           fi
-          if grep -E '^(AITRANS/Views/|AITRANS/Models/ImageOCR(ResultSummary|ReviewFilter)\.swift|AITRANS/Services/(ImageOCRLayoutEngine|TranslationSessionStore|VisionOCRService|ImagePreviewService|MangaOCRService)\.swift|AITRANS/Resources/MangaOCR/|scripts/test-v(187-ui-interaction|202-image-import-run-isolation|203-image-cancel-retry|204-image-export-lifecycle|205-image-workspace-recovery|206-image-share-lifecycle|207-image-ocr-direction|208-image-share-feedback|209-image-render-feedback|300-image-ocr-rerun|310-image-ocr-review-filter|310-image-preview-downsample|34-image-retry-language|35-image-retry-credential-display|36-image-retry-language-reset|37-image-source-pro-feedback|38-image-entry-pro-gate|39-image-clear-confirmation)-(contract\.py|evaluator\.swift)|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+          if grep -E '^(AITRANS/Views/|AITRANS/Models/ImageOCR(ResultSummary|ReviewFilter)\.swift|AITRANS/Services/(ImageOCRLayoutEngine|TranslationSessionStore|VisionOCRService|ImagePreviewService|MangaOCRService)\.swift|AITRANS/Resources/MangaOCR/|scripts/fixtures/v3214-manga-ocr-runtime-harness\.swift$|scripts/fixtures/v3218-long-page-manga-ocr-runtime-harness\.swift$|scripts/fixtures/v3238-manga-ocr-quad-bbox-fallback-runtime-harness\.swift$|scripts/fixtures/v3239-manga-ocr-bbox-primary-runtime-harness\.swift$|scripts/fixtures/v3245-directional-manga-ocr-crop-runtime-harness\.swift$|scripts/fixtures/v3254-japanese-region-diagnostic-harness\.swift$|scripts/test-v3214-image-japanese-manga-ocr-runtime\.sh$|scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime\.sh$|scripts/test-v3238-image-japanese-quad-bbox-fallback-runtime\.sh$|scripts/test-v3239-image-japanese-manga-ocr-bbox-primary-runtime\.sh$|scripts/test-v3245-image-japanese-directional-manga-ocr-crop-runtime\.sh$|scripts/test-v3254-image-japanese-region-diagnostic-runtime\.sh$|scripts/test-v(187-ui-interaction|202-image-import-run-isolation|203-image-cancel-retry|204-image-export-lifecycle|205-image-workspace-recovery|206-image-share-lifecycle|207-image-ocr-direction|208-image-share-feedback|209-image-render-feedback|300-image-ocr-rerun|310-image-ocr-review-filter|310-image-preview-downsample|34-image-retry-language|35-image-retry-credential-display|36-image-retry-language-reset|37-image-source-pro-feedback|38-image-entry-pro-gate|39-image-clear-confirmation)-(contract\.py|evaluator\.swift)|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             ui_interaction_contract_required=true
           fi
           if grep -E '^(AITRANS/Views/TextTranslationView\.swift|AITRANS/Views/AppPreviewSupport\.swift|scripts/test-v188-home-ui-contract\.py|scripts/test-v189-paste-manual-matrix-contract\.py|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
@@ -3523,7 +3523,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300 benchmark schemas and fixtures
+      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301 benchmark schemas and fixtures
         shell: bash
         run: |
           set -euo pipefail
@@ -3551,6 +3551,7 @@ jobs:
           python3 -B scripts/test-v3298-translation-multiline-output-contract.py
           python3 -B scripts/test-v3299-japanese-translation-kind-context-contract.py
           python3 -B scripts/test-v3300-japanese-translation-kind-index-contract.py
+          python3 -B scripts/test-v3301-japanese-sfx-kind-inference-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3654,7 +3655,7 @@ jobs:
           corpus_readiness = json.loads((root / "japanese-corpus-readiness-report.json").read_text(encoding="utf-8"))
           legacy = json.loads((root / "japanese-ocr-legacy-reference-report.json").read_text(encoding="utf-8"))
           summary = "\n".join([
-              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300 Japanese benchmark",
+              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301 Japanese benchmark",
               "",
               "- OCR contract example status: " + ocr["status"],
               "- OCR legacy/reference status: " + legacy["status"] + " (excluded from accuracy)",
@@ -3723,7 +3724,7 @@ jobs:
       - name: Upload Japanese benchmark artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: japanese-benchmark-v3.300-${{ github.run_id }}
+          name: japanese-benchmark-v3.301-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json

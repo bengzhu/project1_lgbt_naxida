@@ -172,7 +172,7 @@ class ImageJapaneseWeakBlockRecoveryContractTests(unittest.TestCase):
             )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.300", "3.300"],
+            ["3.301", "3.301"],
         )
 
     def test_static_contract_has_no_process_entry(self) -> None:

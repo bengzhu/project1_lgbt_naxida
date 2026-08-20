@@ -2,16 +2,27 @@ import CoreGraphics
 import Foundation
 import ImageIO
 
-enum SupportedLanguage: Equatable, Sendable {
-    case japanese
-    case simplifiedChinese
+enum SupportedLanguage: String, CaseIterable, Identifiable, Codable, Sendable {
+    case englishUS = "英语(美国)"
+    case simplifiedChinese = "简体中文"
+    case japanese = "日语"
+    case french = "法语"
+    case german = "德语"
+
+    var id: String { rawValue }
 
     var visionRecognitionLanguageIdentifiers: [String] {
         switch self {
+        case .englishUS:
+            ["en-US", "en"]
         case .japanese:
             ["ja-JP", "ja", "en-US", "en"]
         case .simplifiedChinese:
             ["zh-Hans", "zh-CN", "en-US", "en"]
+        case .french:
+            ["fr-FR", "fr", "en-US", "en"]
+        case .german:
+            ["de-DE", "de", "en-US", "en"]
         }
     }
 }
@@ -21,6 +32,25 @@ struct NormalizedImageRect: Sendable {
     var y: Double
     var width: Double
     var height: Double
+
+    func normalizedToUnit() -> Self? {
+        guard x.isFinite, y.isFinite, width.isFinite, height.isFinite,
+              width > 0, height > 0 else { return nil }
+        let right = x + width
+        let bottom = y + height
+        guard right.isFinite, bottom.isFinite else { return nil }
+        let left = min(max(x, 0), 1)
+        let clippedRight = min(max(right, 0), 1)
+        let top = min(max(y, 0), 1)
+        let clippedBottom = min(max(bottom, 0), 1)
+        guard clippedRight > left, clippedBottom > top else { return nil }
+        return Self(
+            x: left,
+            y: top,
+            width: clippedRight - left,
+            height: clippedBottom - top
+        )
+    }
 }
 
 enum ImageTextDirection: String, Sendable {
@@ -37,6 +67,7 @@ struct ImageTranslationBlock: Sendable {
     var sourceDirectionOverride: ImageTextDirection? = nil
     var directionConfidence: Double
     var directionReason: String
+    var textKind: TranslationTextKind? = nil
     var ocrProvenance: ImageOCRBlockProvenance? = nil
 
     var effectiveSourceDirection: ImageTextDirection {
